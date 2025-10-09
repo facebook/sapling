@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {Set as ImSet} from 'immutable';
+import type {Repository} from 'isl-server/src/Repository';
+import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import fs from 'node:fs';
 import {ComparisonType, type Comparison} from 'shared/Comparison';
 import * as vscode from 'vscode';
@@ -43,12 +46,26 @@ const mockShouldOpenBeside = shouldOpenBeside as jest.MockedFunction<typeof shou
 
 describe('open-file-diff', () => {
   const openDiffView = vscodeCommands['sapling.open-file-diff'];
+
   const repoRoot = '/repo/root';
   const filePath = 'path/to/file';
+  const submodulePath = 'path/to/submodule';
   const fileUri = vscode.Uri.file(`${repoRoot}/${filePath}`);
+  const submoduleUri = vscode.Uri.file(`${repoRoot}/${submodulePath}`);
+
+  // Create a proper mock repository
+  const mockRepo = {
+    info: {
+      repoRoot,
+    },
+    getSubmodulePathCache: jest.fn(),
+  } as unknown as jest.Mocked<Repository>;
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    jest.spyOn(repositoryCache, 'cachedRepositoryForPath').mockReturnValue(mockRepo);
+    mockRepo.getSubmodulePathCache.mockReturnValue(ImSet([submodulePath]));
     mockShouldOpenBeside.mockReturnValue(false);
   });
 
@@ -66,6 +83,26 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       fileUri,
       'file (Uncommitted Changes)',
+      {viewColumn: undefined},
+    );
+  });
+
+  it('uncommitted changes, submodule', async () => {
+    mockFsAccess.mockRejectedValue(undefined); // Path exists
+
+    const comparison: Comparison = {type: ComparisonType.UncommittedChanges};
+    await openDiffView(submoduleUri, comparison);
+
+    const expectedLeftRev = '.';
+    const expectedLeftUri = encodeSaplingDiffUri(submoduleUri, expectedLeftRev);
+    const expectedRightRev = 'wdir()';
+    const expectedRightUri = encodeSaplingDiffUri(submoduleUri, expectedRightRev);
+
+    expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
+      'vscode.diff',
+      expectedLeftUri,
+      expectedRightUri,
+      'submodule (Uncommitted Changes)',
       {viewColumn: undefined},
     );
   });
@@ -89,7 +126,7 @@ describe('open-file-diff', () => {
     );
   });
 
-  it('head changes', async () => {
+  it('head changes, regular file', async () => {
     mockFsAccess.mockResolvedValue(undefined); // File exists
 
     const comparison: Comparison = {type: ComparisonType.HeadChanges};
@@ -107,7 +144,27 @@ describe('open-file-diff', () => {
     );
   });
 
-  it('stack changes', async () => {
+  it('head changes, submodule', async () => {
+    mockFsAccess.mockRejectedValue(undefined); // Path exists
+
+    const comparison: Comparison = {type: ComparisonType.HeadChanges};
+    await openDiffView(submoduleUri, comparison);
+
+    const expectedLeftRev = '.^';
+    const expectedLeftUri = encodeSaplingDiffUri(submoduleUri, expectedLeftRev);
+    const expectedRightRev = 'wdir()';
+    const expectedRightUri = encodeSaplingDiffUri(submoduleUri, expectedRightRev);
+
+    expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
+      'vscode.diff',
+      expectedLeftUri,
+      expectedRightUri,
+      'submodule (Head Changes)',
+      {viewColumn: undefined},
+    );
+  });
+
+  it('stack changes, regular file', async () => {
     mockFsAccess.mockResolvedValue(undefined); // File exists
 
     const comparison: Comparison = {type: ComparisonType.StackChanges};
@@ -125,7 +182,27 @@ describe('open-file-diff', () => {
     );
   });
 
-  it('committed changes', async () => {
+  it('stack changes, submodule', async () => {
+    mockFsAccess.mockRejectedValue(undefined); // Path exists
+
+    const comparison: Comparison = {type: ComparisonType.StackChanges};
+    await openDiffView(submoduleUri, comparison);
+
+    const expectedLeftRev = 'ancestor(.,interestingmaster())';
+    const expectedLeftUri = encodeSaplingDiffUri(submoduleUri, expectedLeftRev);
+    const expectedRightRev = 'wdir()';
+    const expectedRightUri = encodeSaplingDiffUri(submoduleUri, expectedRightRev);
+
+    expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
+      'vscode.diff',
+      expectedLeftUri,
+      expectedRightUri,
+      'submodule (Stack Changes)',
+      {viewColumn: undefined},
+    );
+  });
+
+  it('committed changes, regular file', async () => {
     const comparison: Comparison = {type: ComparisonType.Committed, hash: 'abc123'};
     await openDiffView(fileUri, comparison);
 
@@ -139,6 +216,24 @@ describe('open-file-diff', () => {
       expectedLeftUri,
       expectedRightUri,
       'file (In abc123)',
+      {viewColumn: undefined},
+    );
+  });
+
+  it('committed changes, submodule', async () => {
+    const comparison: Comparison = {type: ComparisonType.Committed, hash: 'abc123'};
+    await openDiffView(submoduleUri, comparison);
+
+    const expectedLeftRev = 'abc123^';
+    const expectedLeftUri = encodeSaplingDiffUri(submoduleUri, expectedLeftRev);
+    const expectedRightRev = 'abc123';
+    const expectedRightUri = encodeSaplingDiffUri(submoduleUri, expectedRightRev);
+
+    expect(mockExecuteVSCodeCommand).toHaveBeenCalledWith(
+      'vscode.diff',
+      expectedLeftUri,
+      expectedRightUri,
+      'submodule (In abc123)',
       {viewColumn: undefined},
     );
   });

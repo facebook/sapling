@@ -8,7 +8,7 @@
 import type {Repository} from 'isl-server/src/Repository';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {Operation} from 'isl/src/operations/Operation';
-import type {RepoRelativePath} from 'isl/src/types';
+import type {AbsolutePath, RepoRelativePath} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
 import {repoRelativePathForAbsolutePath} from 'isl-server/src/Repository';
@@ -185,13 +185,24 @@ function getLeftUri(uri: vscode.Uri, comparison: Comparison): vscode.Uri {
  *
  * There are cases, however, where editable right side does NOT make sense:
  * - comparing against a history commit (since changes on the right side may not be present)
+ * - comparing submodule changes (since both side are commit hashes instead of file content)
  */
 async function getRightUri(uri: vscode.Uri, comparison: Comparison): Promise<vscode.Uri> {
   const rightRev = currRevsetForComparison(comparison);
-  if (comparison.type === ComparisonType.Committed) {
+  if (comparison.type === ComparisonType.Committed || isSubmodule(uri.fsPath)) {
     return encodeSaplingDiffUri(uri, rightRev);
   }
   return (await fileExists(uri)) ? uri : encodeDeletedFileUri(uri);
+}
+
+function isSubmodule(path: AbsolutePath): boolean {
+  const repo = repositoryCache.cachedRepositoryForPath(path);
+  if (repo === undefined) {
+    return false;
+  }
+  const submodulePaths = repo.getSubmodulePathCache();
+  const relPath = repoRelativePathForAbsolutePath(path, repo);
+  return submodulePaths?.has(relPath) ?? false;
 }
 
 function openRemoteFileLink(
