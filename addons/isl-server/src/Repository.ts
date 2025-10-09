@@ -44,6 +44,7 @@ import type {TrackEventName} from './analytics/eventNames';
 import type {ConfigLevel, ResolveCommandConflictOutput} from './commands';
 import type {RepositoryContext} from './serverTypes';
 
+import {Set as ImSet} from 'immutable';
 import {
   CommandRunner,
   CommitCloudBackupStatus,
@@ -116,6 +117,7 @@ export class Repository {
   private uncommittedChanges: FetchedUncommittedChanges | null = null;
   private smartlogCommits: FetchedCommits | null = null;
   private submodulesByRoot: SubmodulesByRoot | undefined = undefined;
+  private submodulePathCache: ImSet<RepoRelativePath> | undefined = undefined;
 
   private mergeConflictsEmitter = new TypedEventEmitter<'change', MergeConflicts | undefined>();
   private uncommittedChangesEmitter = new TypedEventEmitter<'change', FetchedUncommittedChanges>();
@@ -1075,6 +1077,14 @@ export class Repository {
     return this.submodulesByRoot;
   }
 
+  getSubmodulePathCache(): ImSet<RepoRelativePath> | undefined {
+    if (this.submodulePathCache === undefined) {
+      const paths = this.submodulesByRoot?.get(this.info.repoRoot)?.value?.map(m => m.path);
+      this.submodulePathCache = paths ? ImSet(paths) : undefined;
+    }
+    return this.submodulePathCache;
+  }
+
   async fetchSubmoduleMap(): Promise<void> {
     if (this.info.repoRoots == null) {
       return;
@@ -1106,6 +1116,7 @@ export class Repository {
     );
 
     this.submodulesByRoot = submoduleMap;
+    this.submodulePathCache = undefined; // Invalidate path cache
     this.submodulesChangesEmitter.emit('change', submoduleMap);
   }
 
