@@ -49,7 +49,21 @@ patchhelptext: str = _(
 """
 )
 
-curses = util.import_curses()
+curses = None
+
+
+def import_curses(ui):
+    global curses
+
+    if curses is None:
+        if ui.configbool("experimental", "termwiz-curses"):
+            from . import curses_compat
+
+            curses = curses_compat
+        else:
+            curses = util.import_curses()
+
+    return curses
 
 
 def checkcurses(ui):
@@ -58,6 +72,8 @@ def checkcurses(ui):
     This method returns True if curses is found (and that python is built with
     it) and that the user has the correct flag for the ui.
     """
+    import_curses(ui)
+
     return curses and ui.interface("chunkselector") == "curses"
 
 
@@ -533,6 +549,8 @@ def chunkselector(ui, headerlist, operation=None):
     curses interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
     """
+    import_curses(ui)
+
     ui.write(_("starting interactive selection\n"))
     chunkselector = curseschunkselector(headerlist, ui, operation)
     origsigtstp = sentinel = object()
