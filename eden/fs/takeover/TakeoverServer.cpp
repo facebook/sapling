@@ -175,33 +175,33 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
               serverVersionList);
         }
 
-        auto& state = state_.get();
+        auto& currentState = state_.get();
 
         // Initiate the takeover shutdown.
-        state.protocolVersion = supported.value();
+        currentState.protocolVersion = supported.value();
         auto protocolCapabilities =
-            TakeoverData::versionToCapabilities(state.protocolVersion);
+            TakeoverData::versionToCapabilities(currentState.protocolVersion);
         if (protocolCapabilities & TakeoverCapabilities::CAPABILITY_MATCHING) {
-          state.protocolCapabilities =
+          currentState.protocolCapabilities =
               TakeoverData::computeCompatibleCapabilities(
                   *query.capabilities(), supportedCapabilities_);
         } else {
-          state.protocolCapabilities = protocolCapabilities;
+          currentState.protocolCapabilities = protocolCapabilities;
         }
 
         XLOGF(
             DBG7,
             "Protocol version: {}; Protocol Capabilities: {}",
-            state.protocolVersion,
-            state.protocolCapabilities);
+            currentState.protocolVersion,
+            currentState.protocolCapabilities);
 
-        state.shouldPing =
-            (state.protocolCapabilities & TakeoverCapabilities::PING);
-        state.shouldChunk =
-            (state.protocolCapabilities &
+        currentState.shouldPing =
+            (currentState.protocolCapabilities & TakeoverCapabilities::PING);
+        currentState.shouldChunk =
+            (currentState.protocolCapabilities &
              TakeoverCapabilities::CHUNKED_MESSAGE);
 
-        state.shouldChunk =
+        currentState.shouldChunk =
             server_->getTakeoverHandler()->shouldChunkTakeoverData();
 
         return server_->getTakeoverHandler()->startTakeoverShutdown();
@@ -261,8 +261,8 @@ Future<Unit> TakeoverServer::ConnHandler::pingThenSendTakeoverData(
       .via(server_->eventBase_)
       .thenValue([this](auto&&) {
         auto timeout = std::chrono::seconds(FLAGS_pingReceiveTimeout);
-        auto& state = state_.get();
-        return state.socket.receive(timeout);
+        auto& currentState = state_.get();
+        return currentState.socket.receive(timeout);
       })
       .thenTry([this, data = std::move(data)](
                    folly::Try<UnixSocket::Message>&& msg) mutable {
