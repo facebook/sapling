@@ -180,6 +180,7 @@ function useFetchActiveDiffDetails(diffId?: string) {
         type: 'fetchDiffSummaries',
         diffIds: [diffId],
       });
+      tracker.track('DiffFetchSource', {extras: {source: 'active_diff_details'}});
     }
   }, [diffId]);
 }

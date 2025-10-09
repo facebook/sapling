@@ -563,6 +563,9 @@ export default class ServerToClientAPI {
         repo.fetchUncommittedChanges();
         repo.checkForMergeConflicts();
         repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
+        repo.initialConnectionContext.tracker.track('DiffFetchSource', {
+          extras: {source: 'manual_refresh'},
+        });
         generatedFilesDetector.clear(); // allow generated files to be rechecked
         break;
       }

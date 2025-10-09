@@ -22,6 +22,7 @@ import {
   parseCommitMessageFields,
 } from '../CommitInfoView/CommitMessageFields';
 import {Internal} from '../Internal';
+import {getTracker} from '../analytics/globalTracker';
 import {atomFamilyWeak, atomWithOnChange, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState} from '../messageSyncing';
 import {dagWithPreviews} from '../previews';
@@ -133,11 +134,12 @@ registerDisposable(
 
 registerCleanup(
   allDiffSummaries,
-  serverAPI.onSetup(() =>
+  serverAPI.onSetup(() => {
     serverAPI.postMessage({
       type: 'fetchDiffSummaries',
-    }),
-  ),
+    });
+    getTracker()?.track('DiffFetchSource', {extras: {source: 'webview_startup'}});
+  }),
   import.meta.hot,
 );
 

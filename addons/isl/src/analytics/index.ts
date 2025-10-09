@@ -21,5 +21,5 @@ window.globalIslClientTracker = tracker;
 function sendDataToServer(data: TrackDataWithEventName) {
   // In open source, we don't even need to bother sending these messages to the server,
   // since we don't track anything anyway.
-  Internal.sendAnalyticsDataToServer?.(data);
+  Internal?.sendAnalyticsDataToServer?.(data);
 }

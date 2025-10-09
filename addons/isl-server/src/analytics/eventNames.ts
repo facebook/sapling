@@ -53,6 +53,7 @@ export type TrackEventName =
   | 'DiscardOperation'
   | 'DiagnosticsConfirmationOpportunity'
   | 'DiagnosticsConfirmationAction'
+  | 'DiffFetchSource'
   | 'EnterMergeConflicts'
   | 'ExitMergeConflicts'
   | 'FetchPendingSloc'

@@ -240,6 +240,9 @@ export class Repository {
           // but our UI doesn't cache old values, thus all other diffs would appear empty
           this.getAllDiffIds(),
         );
+        this.initialConnectionContext.tracker.track('DiffFetchSource', {
+          extras: {source: 'watch_for_changes', kind, pollKind},
+        });
       }
     };
     this.watchForChanges = new WatchForChanges(info, ctx.logger, this.pageFocusTracker, callback);
@@ -304,6 +307,9 @@ export class Repository {
             // but our UI doesn't cache old values, thus all other diffs would appear empty
             this.getAllDiffIds(),
           );
+          this.initialConnectionContext.tracker.track('DiffFetchSource', {
+            extras: {source: 'saw_new_diffs'},
+          });
         }
       }
     });
