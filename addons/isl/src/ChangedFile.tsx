@@ -214,12 +214,7 @@ function FileActions({
 
   const actions: Array<React.ReactNode> = [];
 
-  if (
-    platform.openDiff != null &&
-    !conflictStatuses.has(file.status) &&
-    // Disable for now until vscode.diff no longer attempts to open paths as files for uncommitted submodule changes
-    file.mode !== ChangedFileMode.Submodule
-  ) {
+  if (platform.openDiff != null && !conflictStatuses.has(file.status)) {
     actions.push(
       <Tooltip title={t('Open diff view')} key="open-diff-view" delayMs={1000}>
         <Button
