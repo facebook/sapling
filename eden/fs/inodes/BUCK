@@ -152,6 +152,7 @@ cpp_library(
     deps = [
         "fbsource//third-party/cpptoml:cpptoml",
         "fbsource//third-party/fmt:fmt",
+        "fbsource//third-party/re2:re2",
         ":file_content_store",
         "//eden/common/telemetry:log_info",
         "//eden/common/telemetry:structured_logger_factory",
@@ -268,7 +269,6 @@ cpp_library(
         ("boost", None, "boost_filesystem"),
         "boost",
         "gflags",
-        "re2",
     ],
     exported_external_deps = [
         "gflags",
