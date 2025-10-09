@@ -15,6 +15,7 @@ use anyhow::Error;
 use anyhow::Result;
 use auth_consts::AUTH_SET;
 use auth_consts::ONCALL;
+use auth_consts::ONCALL_GROUP_TYPE;
 use auth_consts::REPO;
 use auth_consts::SANDCASTLE_CMD;
 use auth_consts::SANDCASTLE_TAG;
@@ -261,7 +262,9 @@ async fn validate_repo_acl(
         permission.action == "maintainers"
             && permission.entries.iter().any(|entry| {
                 entry.identity.id_data == hipster_group
-                    && (entry.identity.id_type == AUTH_SET || entry.identity.id_type == ONCALL)
+                    && (entry.identity.id_type == AUTH_SET
+                        || entry.identity.id_type == ONCALL
+                        || entry.identity.id_type == ONCALL_GROUP_TYPE)
             })
     }) {
         return Err(scs_errors::invalid_request(format!(
