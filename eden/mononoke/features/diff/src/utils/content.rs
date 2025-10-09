@@ -8,7 +8,6 @@
 use std::str::FromStr;
 
 use anyhow::Context;
-use anyhow::Error;
 use bytes::Bytes;
 use context::CoreContext;
 use filestore::FetchKey;
@@ -250,15 +249,16 @@ pub async fn load_diff_file<R: MononokeRepo>(
     input: &DiffSingleInput,
     default_path: NonRootMPath,
     options: &DiffFileOpts,
-) -> Result<Option<xdiff::DiffFile<String, Vec<u8>>>, Error> {
+) -> Result<Option<xdiff::DiffFile<String, Vec<u8>>>, DiffError> {
     let (content_id, _changeset_id, path, lfs_pointer) =
         extract_input_data(ctx, repo, input, default_path).await?;
 
     if let Some(id) = content_id {
         let contents = if options.file_type == DiffFileType::GitSubmodule {
             // Handle Git submodule: load commit hash regardless of omit_content
+
             let commit_hash_bytes = load_content(ctx, repo, input).await?.ok_or_else(|| {
-                Error::msg(format!(
+                DiffError::Internal(anyhow::anyhow!(
                     "Failed to load submodule content for content_id: {:?}",
                     id
                 ))
@@ -283,7 +283,10 @@ pub async fn load_diff_file<R: MononokeRepo>(
         } else {
             // Otherwise load the full content
             let bytes = load_content(ctx, repo, input).await?.ok_or_else(|| {
-                Error::msg(format!("Failed to load content for content_id: {:?}", id))
+                DiffError::Internal(anyhow::anyhow!(
+                    "Failed to load content for content_id: {:?}",
+                    id
+                ))
             })?;
             xdiff::FileContent::Inline(bytes.to_vec())
         };
