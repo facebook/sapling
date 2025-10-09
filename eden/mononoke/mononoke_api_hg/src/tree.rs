@@ -115,7 +115,28 @@ impl<R: MononokeRepo> HgAugmentedTreeContext<R> {
         let envelope =
             fetch_augmented_manifest_envelope_opt(ctx, blobstore, augmented_manifest_id).await?;
 
-        // TODO(T239041722): check if tree belongs to restricted path
+        let restricted_paths_enabled = justknobs::eval(
+            "scm/mononoke:enabled_restricted_paths_access_logging",
+            None, // hashing
+            // Adding a switch value to be able to disable writes only
+            Some("hg_augmented_tree_context_new_check_exists"),
+        )?;
+        if restricted_paths_enabled {
+            let ctx_clone = ctx.clone();
+            let manifest_id = ManifestId::new(augmented_manifest_id.as_bytes().into());
+            let restricted_paths = repo_ctx.repo_ctx().repo().restricted_paths_arc();
+
+            // Spawn asynchronous task for logging restricted path access
+            let _spawned_task = mononoke::spawn_task(async move {
+                let _is_restricted = restricted_paths
+                    .log_access_by_manifest_if_restricted(
+                        &ctx_clone,
+                        manifest_id,
+                        ManifestType::HgAugmented,
+                    )
+                    .await;
+            });
+        }
 
         if let Some(envelope) = envelope {
             let preloaded_manifest =
