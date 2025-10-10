@@ -127,20 +127,19 @@ class histeditrule:
         # Add a marker showing which patch they apply to, and also omit the
         # description for 'roll' (since it will get discarded). Example display:
         #
-        #  #10 pick   316392:06a16c25c053   add option to skip tests
-        #  #11 ^roll  316393:71313c964cc5
-        #  #12 pick   316394:ab31f3973b0d   include mfbt for mozilla-config.h
-        #  #13 ^fold  316395:14ce5803f4c3   fix warnings
+        #  #10 pick   06a16c25c053   add option to skip tests
+        #  #11 ^roll  71313c964cc5
+        #  #12 pick   ab31f3973b0d   include mfbt for mozilla-config.h
+        #  #13 ^fold  14ce5803f4c3   fix warnings
         #
         # The carets point to the changeset being folded into ("roll this
         # changeset into the changeset above").
         action = ACTION_LABELS.get(self.action, self.action)
         h = self.ctx.hex()[0:12]
-        r = self.ctx.rev()
         desc = self.ctx.description().splitlines()[0].strip()
         if self.action == "roll":
             desc = ""
-        return "#{0:<2} {1:<6} {2}:{3}   {4}".format(self.origpos, action, r, h, desc)
+        return "#{0:<2} {1:<6} {2}   {3}".format(self.origpos, action, h, desc)
 
     def checkconflicts(self, other):
         if other.pos > self.pos and other.origpos <= self.origpos:
