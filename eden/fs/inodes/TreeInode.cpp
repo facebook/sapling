@@ -4506,7 +4506,7 @@ TreeInode::invalidateChildrenNotMaterialized(
   return getLoadedOrRememberedTreeChildren(this, getInodeMap(), context)
       .thenValue([context = context.copy(), cutoff, cancellationToken](
                      const std::vector<TreeInodePtr>& treeChildren) {
-        // Check for cancellation before processing children
+        // Check for cancellation before processing each children
         if (cancellationToken.isCancellationRequested()) {
           return ImmediateFuture<std::vector<std::pair<uint64_t, bool>>>(
               std::vector<std::pair<uint64_t, bool>>());
@@ -4518,6 +4518,12 @@ TreeInode::invalidateChildrenNotMaterialized(
         for (auto& tree : treeChildren) {
           futures.push_back(tree->invalidateChildrenNotMaterialized(
               cutoff, context, cancellationToken));
+        }
+
+        // Check for cancellation after processing each children
+        if (cancellationToken.isCancellationRequested()) {
+          return ImmediateFuture<std::vector<std::pair<uint64_t, bool>>>(
+              std::vector<std::pair<uint64_t, bool>>());
         }
 
         return collectAllSafe(std::move(futures));
@@ -4598,6 +4604,11 @@ TreeInode::invalidateChildrenNotMaterialized(
               // get deleted.
               // The directory itself will be deleted later in the parent's
               // invalidation.
+
+              // Check for cancellation before invalidation
+              if (cancellationToken.isCancellationRequested()) {
+                return std::make_pair(uint64_t{0}, false);
+              }
 
               auto invalidateResult =
                   self->nfsInvalidateCacheEntryForGC(*contents);
@@ -4688,8 +4699,14 @@ TreeInode::invalidateChildrenNotMaterialized(
 
 #ifdef __APPLE__
       .thenTry(
-          [this](folly::Try<std::pair<uint64_t, bool>>&& result)
+          [this,
+           cancellationToken](folly::Try<std::pair<uint64_t, bool>>&& result)
               -> ImmediateFuture<std::pair<uint64_t, bool>> {
+            // Check for cancellation before waiting for invalidation to
+            // complete
+            if (cancellationToken.isCancellationRequested()) {
+              return std::make_pair(uint64_t{0}, false);
+            }
             auto* nfsdChannel = getMount()->getNfsdChannel();
             if (nfsdChannel) {
               return nfsdChannel->completeInvalidations().thenTry(
