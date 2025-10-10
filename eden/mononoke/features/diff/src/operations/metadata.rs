@@ -9,13 +9,10 @@ use std::ops::Range;
 
 use anyhow::Context;
 use bytes::Bytes;
-#[cfg(test)]
 use context::CoreContext;
 use futures::try_join;
 use lazy_static::lazy_static;
-use mononoke_api::FileContext;
-use mononoke_api::MononokeRepo;
-use mononoke_api::RepoContext;
+use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use regex::Regex;
 #[cfg(test)]
@@ -28,9 +25,11 @@ use crate::types::DiffContentType;
 use crate::types::DiffFileType;
 use crate::types::DiffGeneratedStatus;
 use crate::types::DiffSingleInput;
+use crate::types::Repo;
 use crate::types::MetadataDiff;
 use crate::types::MetadataFileInfo;
 use crate::types::MetadataLinesCount;
+use crate::utils::content::get_file_info_from_changeset_path;
 
 // This logic comes from `mononoke_api/src/changeset_path_diff.rs`
 
@@ -158,13 +157,27 @@ impl TextFile {
 }
 
 impl ParsedFileContent {
-    async fn new<R: MononokeRepo>(file: FileContext<R>) -> Result<Self, DiffError> {
-        let metadata = file.metadata().await.map_err(DiffError::internal)?;
+    async fn new(
+        ctx: &CoreContext,
+        repo: &impl Repo,
+        content_id: ContentId,
+    ) -> Result<Self, DiffError> {
+        // Load content metadata from blobstore
+        let metadata = crate::utils::content::get_content_metadata(ctx, repo, &content_id)
+            .await?;
 
         let parsed_content = if metadata.is_binary {
             ParsedFileContent::Binary
         } else if metadata.is_utf8 {
-            let file_content = file.content_concat().await.map_err(DiffError::internal)?;
+            // Load the actual content
+            let file_content = {
+                let blobstore = repo.repo_blobstore();
+                let fetch_key = filestore::FetchKey::Canonical(content_id);
+                filestore::fetch_concat_opt(&blobstore, ctx, &fetch_key)
+                    .await
+                    .map_err(DiffError::internal)?
+                    .ok_or_else(|| DiffError::content_not_found(content_id))?
+            };
             ParsedFileContent::Text(TextFile::new(file_content, metadata)?)
         } else {
             ParsedFileContent::NonUtf8
@@ -253,12 +266,12 @@ fn file_deleted(old_text_file: &TextFile) -> MetadataLinesCount {
     }
 }
 
-fn convert_file_type_to_diff(file_type: mononoke_api::FileType) -> DiffFileType {
+fn convert_file_type_to_diff(file_type: mononoke_types::FileType) -> DiffFileType {
     match file_type {
-        mononoke_api::FileType::Regular => DiffFileType::Regular,
-        mononoke_api::FileType::Executable => DiffFileType::Executable,
-        mononoke_api::FileType::Symlink => DiffFileType::Symlink,
-        mononoke_api::FileType::GitSubmodule => DiffFileType::GitSubmodule,
+        mononoke_types::FileType::Regular => DiffFileType::Regular,
+        mononoke_types::FileType::Executable => DiffFileType::Executable,
+        mononoke_types::FileType::Symlink => DiffFileType::Symlink,
+        mononoke_types::FileType::GitSubmodule => DiffFileType::GitSubmodule,
     }
 }
 
@@ -297,50 +310,40 @@ fn create_file_info(
     }
 }
 
-async fn get_file_details_from_input<R: MononokeRepo>(
-    repo: &RepoContext<R>,
+async fn get_file_details_from_input(
+    ctx: &CoreContext,
+    repo: &impl Repo,
     input: &DiffSingleInput,
 ) -> Result<(Option<DiffFileType>, Option<ParsedFileContent>), DiffError> {
     match input {
         DiffSingleInput::ChangesetPath(changeset_input) => {
             let non_root_mpath = changeset_input.path.clone();
 
-            let changeset_ctx = repo
-                .changeset(changeset_input.changeset_id)
-                .await
-                .map_err(DiffError::internal)?
-                .ok_or_else(|| DiffError::changeset_not_found(changeset_input.changeset_id))?;
+            let file_info = get_file_info_from_changeset_path(
+                ctx,
+                repo,
+                changeset_input.changeset_id,
+                non_root_mpath,
+            ).await?;
 
-            let path_content_ctx = changeset_ctx
-                .path_with_content(non_root_mpath)
-                .await
-                .map_err(DiffError::internal)?;
-
-            let file_type = path_content_ctx
-                .file_type()
-                .await
-                .map_err(DiffError::internal)?
-                .map(convert_file_type_to_diff);
-
-            let file = path_content_ctx.file().await.map_err(DiffError::internal)?;
+            let (content_id, file_type) = match file_info {
+                Some((cid, ft)) => (Some(cid), Some(convert_file_type_to_diff(ft))),
+                None => (None, None),
+            };
 
             // For Git submodules, we don't parse file content for metadata purposes
-            let parsed_file_content = match (file, &file_type) {
-                (Some(_file), Some(DiffFileType::GitSubmodule)) => None,
-                (Some(file), _) => Some(ParsedFileContent::new(file).await?),
+            let parsed_file_content = match (&content_id, &file_type) {
+                (_, Some(DiffFileType::GitSubmodule)) => None,
+                (Some(content_id), _) => {
+                    Some(ParsedFileContent::new(ctx, repo, *content_id).await?)
+                },
                 (None, _) => None,
             };
 
             Ok((file_type, parsed_file_content))
         }
         DiffSingleInput::Content(content_input) => {
-            let file_ctx = repo
-                .file(content_input.content_id)
-                .await
-                .map_err(DiffError::internal)?
-                .ok_or_else(|| DiffError::content_not_found(content_input.content_id))?;
-
-            let parsed_file_content = Some(ParsedFileContent::new(file_ctx).await?);
+            let parsed_file_content = Some(ParsedFileContent::new(ctx, repo, content_input.content_id).await?);
 
             // For content-only inputs, we don't have file type information
             Ok((None, parsed_file_content))
@@ -348,8 +351,9 @@ async fn get_file_details_from_input<R: MononokeRepo>(
     }
 }
 
-pub async fn metadata<R: MononokeRepo>(
-    repo: RepoContext<R>,
+pub async fn metadata(
+    ctx: &CoreContext,
+    repo: &impl Repo,
     base: Option<DiffSingleInput>,
     other: Option<DiffSingleInput>,
 ) -> Result<MetadataDiff, DiffError> {
@@ -358,14 +362,14 @@ pub async fn metadata<R: MononokeRepo>(
     let (base_file_details, other_file_details) = try_join!(
         async {
             if let Some(base_input) = &base {
-                get_file_details_from_input(&repo, base_input).await.map(Some)
+                get_file_details_from_input(ctx, repo, base_input).await.map(Some)
             } else {
                 Ok(Some((None, None)))
             }
         },
         async {
             if let Some(other_input) = &other {
-                get_file_details_from_input(&repo, other_input).await.map(Some)
+                get_file_details_from_input(ctx, repo, other_input).await.map(Some)
             } else {
                 Ok(Some((None, None)))
             }
@@ -394,27 +398,22 @@ pub async fn metadata<R: MononokeRepo>(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
 
     use fbinit::FacebookInit;
-    use mononoke_api::Repo;
-    use mononoke_api::RepoContext;
     use mononoke_macros::mononoke;
     use test_repo_factory;
+    use tests_utils::BasicTestRepo;
     use tests_utils::CreateCommitContext;
 
     use super::*;
     use crate::types::DiffInputChangesetPath;
     use crate::types::DiffSingleInput;
 
-    async fn init_test_repo(ctx: &CoreContext) -> Result<RepoContext<Repo>, DiffError> {
-        let repo: Repo = test_repo_factory::build_empty(ctx.fb)
+    async fn init_test_repo(ctx: &CoreContext) -> Result<BasicTestRepo, DiffError> {
+        let repo = test_repo_factory::build_empty(ctx.fb)
             .await
             .map_err(DiffError::internal)?;
-        let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo))
-            .await
-            .map_err(DiffError::internal)?;
-        Ok(repo_ctx)
+        Ok(repo)
     }
 
     fn create_non_root_path(path: &str) -> Result<NonRootMPath, DiffError> {
@@ -426,15 +425,15 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_metadata_basic(fb: FacebookInit) -> Result<(), DiffError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo_ctx = init_test_repo(&ctx).await?;
+        let repo = init_test_repo(&ctx).await?;
 
         // Create test commits with different content
-        let base_cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
+        let base_cs = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("file.txt", "line1\nline2\nline3\n")
             .commit()
             .await?;
 
-        let other_cs = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![base_cs])
+        let other_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
             .add_file("file.txt", "line1\nmodified line2\nline3\n")
             .commit()
             .await?;
@@ -450,7 +449,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(repo_ctx, Some(base_input), Some(other_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input)).await?;
 
         // Check file info
         assert_eq!(
@@ -493,15 +492,15 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_metadata_binary_files(fb: FacebookInit) -> Result<(), DiffError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo_ctx = init_test_repo(&ctx).await?;
+        let repo = init_test_repo(&ctx).await?;
 
         // Create test commits with binary content (contains null bytes)
-        let base_cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
+        let base_cs = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("binary.bin", b"binary\x00content\x01here".as_slice())
             .commit()
             .await?;
 
-        let other_cs = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![base_cs])
+        let other_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
             .add_file("binary.bin", b"different\x00binary\x02data".as_slice())
             .commit()
             .await?;
@@ -517,7 +516,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(repo_ctx, Some(base_input), Some(other_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input)).await?;
 
         // Check that content type is binary
         assert_eq!(
@@ -538,14 +537,14 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_metadata_file_creation(fb: FacebookInit) -> Result<(), DiffError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo_ctx = init_test_repo(&ctx).await?;
+        let repo = init_test_repo(&ctx).await?;
 
         // Test with one empty file and one with content
-        let base_cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
+        let base_cs = CreateCommitContext::new_root(&ctx, &repo)
             .commit()
             .await?;
 
-        let other_cs = CreateCommitContext::new(&ctx, repo_ctx.repo(), vec![base_cs])
+        let other_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
             .add_file("new_file.txt", "new content\nline2\n")
             .commit()
             .await?;
@@ -561,7 +560,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(repo_ctx, Some(base_input), Some(other_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input)).await?;
 
         // Base file doesn't exist
         assert_eq!(metadata_diff.base_file_info.file_type, None);
@@ -589,10 +588,10 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_metadata_with_none_inputs(fb: FacebookInit) -> Result<(), DiffError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo_ctx = init_test_repo(&ctx).await?;
+        let repo = init_test_repo(&ctx).await?;
 
         // Create a test commit with content
-        let cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
+        let cs = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("file.txt", "some content\nline2\n")
             .commit()
             .await?;
@@ -605,7 +604,8 @@ mod tests {
 
         // Test None vs Some - should show addition
         let metadata_diff = metadata(
-            repo_ctx.clone(),
+            &ctx,
+            &repo,
             None,
             Some(input.clone()),
         )
@@ -631,7 +631,8 @@ mod tests {
 
         // Test Some vs None - should show deletion
         let metadata_diff = metadata(
-            repo_ctx.clone(),
+            &ctx,
+            &repo,
             Some(input),
             None,
         )
@@ -656,7 +657,7 @@ mod tests {
         assert_eq!(lines_count.deleted_lines, 2);
 
         // Test None vs None - should show no difference
-        let metadata_diff = metadata(repo_ctx, None, None).await?;
+        let metadata_diff = metadata(&ctx, &repo, None, None).await?;
 
         // Both files don't exist
         assert_eq!(metadata_diff.base_file_info.file_type, None);
@@ -673,11 +674,11 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_metadata_generated_file(fb: FacebookInit) -> Result<(), DiffError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo_ctx = init_test_repo(&ctx).await?;
+        let repo = init_test_repo(&ctx).await?;
 
         // Create a generated file
         let generated_content = "// @generated\nGenerated content\nMore generated content\n";
-        let cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
+        let cs = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("generated.txt", generated_content)
             .commit()
             .await?;
@@ -688,7 +689,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(repo_ctx, None, Some(input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, None, Some(input)).await?;
 
         // Check that generated status is detected
         assert_eq!(
@@ -711,7 +712,7 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_metadata_partially_generated_file(fb: FacebookInit) -> Result<(), DiffError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo_ctx = init_test_repo(&ctx).await?;
+        let repo = init_test_repo(&ctx).await?;
 
         // Create a partially generated file with manual sections
         let partially_generated_content = concat!(
@@ -723,7 +724,7 @@ mod tests {
             "// END MANUAL SECTION\n",
             "Generated section 2\n"
         );
-        let cs = CreateCommitContext::new_root(&ctx, repo_ctx.repo())
+        let cs = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("partial.txt", partially_generated_content)
             .commit()
             .await?;
@@ -734,7 +735,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(repo_ctx, None, Some(input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, None, Some(input)).await?;
 
         // Check that partially generated status is detected
         assert_eq!(

@@ -11,6 +11,8 @@
 //! the underlying xdiff library to provide compatibility with the diff service
 //! and future migration paths.
 
+#![feature(trait_alias)]
+
 pub mod error;
 pub mod operations;
 pub mod types;
