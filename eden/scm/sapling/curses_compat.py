@@ -198,6 +198,18 @@ class Surface:
     def noutrefresh(self):
         self.refresh(immediate=False)
 
+    def box(self):
+        width, height = self.surface.dimensions()
+        if width < 2 or height < 2:
+            return
+        top_line = "┌" + "─" * (width - 2) + "┐"
+        self.addstr(0, 0, top_line)
+        bottom_line = "└" + "─" * (width - 2) + "┘"
+        self.addstr(height - 1, 0, bottom_line)
+        for y in range(1, height - 1):
+            self.addstr(y, 0, "│")
+            self.addstr(y, width - 1, "│")
+
 
 def doupdate():
     global _screen_resized
