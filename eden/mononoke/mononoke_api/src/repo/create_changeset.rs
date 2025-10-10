@@ -389,6 +389,29 @@ impl CreateChange {
             CreateChange::Tracked(..) | CreateChange::Untracked(..) => CreateChangeType::Change,
         }
     }
+
+    fn content_id(&self) -> Result<Option<FileId>, MononokeError> {
+        match self {
+            CreateChange::Tracked(
+                CreateChangeFile {
+                    contents: CreateChangeFileContents::Existing { file_id, .. },
+                    ..
+                },
+                ..,
+            ) => Ok(Some(*file_id)),
+            CreateChange::Untracked(CreateChangeFile {
+                contents: CreateChangeFileContents::Existing { file_id, .. },
+                ..
+            }) => Ok(Some(*file_id)),
+            CreateChange::UntrackedDeletion => Ok(None),
+            CreateChange::Untracked(CreateChangeFile {
+                git_lfs: Some(_git_lfs),
+                ..
+            }) => Err(anyhow!("Error: git_lfs not supported for untracked changes").into()),
+            CreateChange::Deletion => Ok(None),
+            _ => Err(anyhow!("Programming error: create change must be resolved first").into()),
+        }
+    }
 }
 
 /// Commit info for a newly created commit.
@@ -488,6 +511,71 @@ async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
             )))
         }
     }
+}
+async fn verify_no_noop_file_changes<R: MononokeRepo>(
+    parent_ctxs: &[ChangesetContext<R>],
+    stack_changes: Option<PathTree<Option<FileId>>>,
+    file_changes: &SortedVectorMap<NonRootMPath, CreateChange>,
+) -> Result<(), MononokeError> {
+    stream::iter(file_changes)
+        .map(Ok)
+        .try_for_each_concurrent(10, async |(path, change)| {
+            let content_id = if let Some(content_id) = change.content_id()? {
+                content_id
+            } else {
+                // Deletions are irrelevant for this check.
+                return Ok(());
+            };
+
+            // Check if the PathTree of stack changes cover this path i.e. the
+            // state of this path is determined by the previous changes in the
+            // stack and not by the parents.
+            if let Some(stack_changes) = &stack_changes
+                && let Some(stack_change) = stack_changes.get(path.as_mpath())
+            {
+                if *stack_change == Some(content_id) {
+                    return Err(MononokeError::InvalidRequest(format!(
+                        "Found no-op file change at path '{}'. File changes that don't change file content are not allowed",
+                        path
+                    )));
+                }
+            } else {
+                let parents = stream::iter(parent_ctxs)
+                    .map(Ok::<_, MononokeError>)
+                    .map_ok(async |parent_ctx| {
+                        let file_ctx = parent_ctx
+                            .path_with_content(path.as_mpath().clone())
+                            .await?
+                            .file()
+                            .await?;
+
+                        if let Some(file_ctx) = file_ctx {
+                            Ok(Some(file_ctx.id().await?))
+                        } else {
+                            Ok(None)
+                        }
+                    })
+                    .boxed()
+                    .try_buffered(10)
+                    // Filter out parents that don't have the file.
+                    .try_filter_map(futures::future::ok)
+                    .try_collect::<Vec<_>>()
+                    .await?;
+
+                // If all parents have the same content id and it's the same as
+                // the current content id, then it's a no-op change
+                if let Ok(parent_content_id) = parents.into_iter().all_equal_value() {
+                    if parent_content_id == content_id {
+                        return Err(MononokeError::InvalidRequest(format!(
+                            "Found no-op file change at path '{}'. File changes that don't change file content are not allowed",
+                            path
+                        )));
+                    }
+                }
+            }
+            Ok(())
+        })
+        .await
 }
 
 /// Returns `true` if any prefix of the path has a change.  Use for
@@ -702,9 +790,16 @@ impl<R: MononokeRepo> RepoContext<R> {
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
+        skip_noop_changes_check: bool,
     ) -> Result<CreatedChangeset<R>, MononokeError> {
         let changesets = self
-            .create_changeset_stack(parents, vec![info], vec![changes], bubble)
+            .create_changeset_stack(
+                parents,
+                vec![info],
+                vec![changes],
+                bubble,
+                skip_noop_changes_check,
+            )
             .await?;
         changesets
             .into_iter()
@@ -729,6 +824,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
+        skip_noop_changes_check: bool,
     ) -> Result<Vec<CreatedChangeset<R>>, MononokeError> {
         self.start_write()?;
         self.authorization_context()
@@ -987,6 +1083,52 @@ impl<R: MononokeRepo> RepoContext<R> {
             verify_no_merge_conflicts_fut,
             resolve_file_changes_fut,
         )?;
+
+        if !skip_noop_changes_check
+            && justknobs::eval(
+                "scm/mononoke:create_changeset_stack_noop_file_changes_check",
+                None,
+                None,
+            )?
+        {
+            // When to build another stack of PathTrees that contains the content_id for each file change
+            let mut stack_changes_stack = vec![None];
+            let mut stack_changes = PathTree::default();
+            for (index, path_changes) in file_changes_stack.iter().enumerate() {
+                if index < file_changes_stack.len() - 1 {
+                    for (path, change) in path_changes.iter() {
+                        match change.content_id()? {
+                            Some(content_id) => {
+                                stack_changes
+                                    .insert_and_prune(path.clone().into(), Some(content_id));
+                            }
+                            None => {
+                                stack_changes.insert(path.clone().into(), None);
+                            }
+                        }
+                    }
+                    stack_changes_stack.push(Some(stack_changes.clone()))
+                }
+            }
+
+            stream::iter(
+                file_changes_stack
+                    .iter()
+                    .zip(stack_changes_stack.into_iter()),
+            )
+            .map(Ok)
+            .try_for_each_concurrent(10, async |(file_changes, stack_changes)| {
+                verify_no_noop_file_changes(&stack_parent_ctxs, stack_changes, file_changes)
+                    .timed()
+                    .await
+                    .log_future_stats(
+                        self.ctx().scuba().clone(),
+                        "Verify no no-op file changes",
+                        None,
+                    )
+            })
+            .await?;
+        };
 
         let mut new_changesets = Vec::new();
         let mut new_changeset_ids = Vec::new();

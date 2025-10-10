@@ -517,7 +517,13 @@ impl SourceControlServiceImpl {
         let bubble = None;
 
         let created_changeset = repo
-            .create_changeset(parents, info, changes, bubble)
+            .create_changeset(
+                parents,
+                info,
+                changes,
+                bubble,
+                params.skip_noop_changes_check,
+            )
             .await?;
 
         // If you ask for a git identity back, then we'll assume that you supplied one to us
@@ -574,7 +580,13 @@ impl SourceControlServiceImpl {
             .await?;
         let bubble = None;
         let stack = repo
-            .create_changeset_stack(stack_parents, info_stack, changes_stack, bubble)
+            .create_changeset_stack(
+                stack_parents,
+                info_stack,
+                changes_stack,
+                bubble,
+                params.skip_noop_changes_check,
+            )
             .await?;
         // If you ask for a git identity back, then we'll assume that you supplied one to us
         // and set it. Later, when we can derive a git commit hash, this'll become more

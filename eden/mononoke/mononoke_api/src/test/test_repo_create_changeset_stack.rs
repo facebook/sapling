@@ -58,7 +58,7 @@ async fn create_changeset_stack<R: MononokeRepo>(
         })
         .collect::<Vec<_>>();
     Ok(repo
-        .create_changeset_stack(stack_parents, info_stack, changes_stack, bubble)
+        .create_changeset_stack(stack_parents, info_stack, changes_stack, bubble, false)
         .await?
         .into_iter()
         .map(|created_changeset| created_changeset.changeset_ctx)
@@ -94,7 +94,7 @@ async fn create_changesets_sequentially<R: MononokeRepo>(
             git_extra_headers: git_extra_headers.clone(),
         };
         let commit = repo
-            .create_changeset(parents, info, changes, bubble)
+            .create_changeset(parents, info, changes, bubble, false)
             .await?
             .changeset_ctx;
         parents = vec![commit.id()];
@@ -325,6 +325,155 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
     ];
     assert!(
         compare_create_stack(&stack_repo, &seq_repo, changes, initial_parents.clone())
+            .await?
+            .is_none()
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_create_commit_stack_noop_file_changes_check(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let (test_stack_repo, commits, _) = Linear::get_repo_and_dag(fb).await;
+    let mononoke = Mononoke::new_test(vec![
+        ("test_stack".to_string(), test_stack_repo),
+        ("test_seq".to_string(), Linear::get_repo(fb).await),
+    ])
+    .await?;
+    let stack_repo = mononoke
+        .repo(ctx.clone(), "test_stack")
+        .await?
+        .expect("repo exists")
+        .build()
+        .await?;
+    let seq_repo = mononoke
+        .repo(ctx.clone(), "test_seq")
+        .await?
+        .expect("repo exists")
+        .build()
+        .await?;
+
+    // Noop file changes that don't change file content should fail
+    let changes = vec![btreemap! {
+        MPath::try_from("10")? =>
+        CreateChange::Tracked(
+            CreateChangeFile::new_regular("modified10\n"),
+            None,
+        ),
+    }];
+    assert!(
+        compare_create_stack(&stack_repo, &seq_repo, changes, vec![commits["K"]])
+            .await?
+            .is_none()
+    );
+
+    // Noop file changes for files introduced in the stack should fail
+    let changes = vec![
+        btreemap! {
+            MPath::try_from("NEW_PATH")? =>
+            CreateChange::Tracked(
+                CreateChangeFile::new_regular("NEW_CONTENT\n"),
+                None,
+            )
+        },
+        btreemap! {
+            MPath::try_from("NEW_PATH")? =>
+            CreateChange::Tracked(
+                CreateChangeFile::new_regular("NEW_CONTENT\n"),
+                None,
+            ),
+        },
+    ];
+    assert!(
+        compare_create_stack(&stack_repo, &seq_repo, changes, vec![commits["K"]])
+            .await?
+            .is_none()
+    );
+
+    // File changes that resolve merge conflicts are not no-op changes
+    // and should succeed
+    let changes = vec![btreemap! {
+        MPath::try_from("MERGE_CONFLICT_PATH")? =>
+        CreateChange::Tracked(
+            CreateChangeFile::new_regular("CONTENT_P1\n"),
+            None,
+        )
+    }];
+    let p1 = compare_create_stack(&stack_repo, &seq_repo, changes, vec![commits["K"]])
+        .await?
+        .unwrap()
+        .pop()
+        .unwrap()
+        .id();
+
+    let changes = vec![btreemap! {
+        MPath::try_from("MERGE_CONFLICT_PATH")? =>
+        CreateChange::Tracked(
+            CreateChangeFile::new_regular("CONTENT_P2\n"),
+            None,
+        )
+    }];
+    let p2 = compare_create_stack(&stack_repo, &seq_repo, changes, vec![commits["K"]])
+        .await?
+        .unwrap()
+        .pop()
+        .unwrap()
+        .id();
+
+    let changes = vec![btreemap! {
+        MPath::try_from("MERGE_CONFLICT_PATH")? =>
+        CreateChange::Tracked(
+            CreateChangeFile::new_regular("CONTENT_P1\n"),
+            None,
+        ),
+    }];
+    assert!(
+        compare_create_stack(&stack_repo, &seq_repo, changes, vec![p1, p2])
+            .await?
+            .is_some()
+    );
+
+    // If the file content is the same across all parents and the new
+    // commit doesn't change the file content, it's a noop change
+    let changes = vec![btreemap! {
+        MPath::try_from("NEW_PATH")? =>
+        CreateChange::Tracked(
+            CreateChangeFile::new_regular("CONTENT\n"),
+            None,
+        )
+    }];
+    let p1 = compare_create_stack(&stack_repo, &seq_repo, changes, vec![commits["K"]])
+        .await?
+        .unwrap()
+        .pop()
+        .unwrap()
+        .id();
+
+    let changes = vec![btreemap! {
+        MPath::try_from("NEW_PATH")? =>
+        CreateChange::Tracked(
+            CreateChangeFile::new_regular("CONTENT\n"),
+            None,
+        )
+    }];
+    let p2 = compare_create_stack(&stack_repo, &seq_repo, changes, vec![commits["K"]])
+        .await?
+        .unwrap()
+        .pop()
+        .unwrap()
+        .id();
+
+    let changes = vec![btreemap! {
+        MPath::try_from("NEW_PATH")? =>
+        CreateChange::Tracked(
+            CreateChangeFile::new_regular("CONTENT\n"),
+            None,
+        ),
+    }];
+    assert!(
+        compare_create_stack(&stack_repo, &seq_repo, changes, vec![p1, p2])
             .await?
             .is_none()
     );

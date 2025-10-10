@@ -222,7 +222,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         };
 
         let created_changeset = small_repo_ctx
-            .create_changeset(parents, create_info, changes, None)
+            .create_changeset(parents, create_info, changes, None, true)
             .await?;
         Ok(created_changeset.changeset_ctx)
     }

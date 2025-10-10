@@ -39,11 +39,16 @@ use crate::MononokeError;
 use crate::MononokeRepo;
 use crate::RepoContext;
 use crate::StoreRequest;
+use crate::repo::create_changeset;
 use crate::repo::create_changeset::CreateChangeFileContents;
 
 #[mononoke::fbinit_test]
 async fn test_create_commit(fb: FacebookInit) -> Result<(), Error> {
-    create_commit(fb, DerivableType::SkeletonManifestsV2).await?;
+    create_commit(
+        fb,
+        &[DerivableType::SkeletonManifestsV2, DerivableType::Fsnodes],
+    )
+    .await?;
 
     Ok(())
 }
@@ -53,7 +58,7 @@ async fn test_create_commit(fb: FacebookInit) -> Result<(), Error> {
 // to).
 async fn create_commit(
     fb: FacebookInit,
-    derived_data_to_derive: DerivableType,
+    derived_data_to_derive: &[DerivableType],
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, commits, _) = Linear::get_repo_and_dag(fb).await;
@@ -110,6 +115,7 @@ async fn create_commit(
             },
             changes.clone(),
             bubble,
+            false,
         )
         .await?
         .changeset_ctx;
@@ -142,6 +148,7 @@ async fn create_commit(
             },
             changes,
             bubble,
+            false,
         )
         .await?
         .changeset_ctx;
@@ -189,7 +196,7 @@ async fn validate_unnecessary_derived_data_is_not_derived<R: MononokeRepo>(
     repo: &RepoContext<R>,
     parent_cs_id: ChangesetId,
     cs_id: ChangesetId,
-    derived_data_to_derive: DerivableType,
+    derived_data_to_derive: &[DerivableType],
 ) -> Result<(), Error> {
     for ty in &repo.repo().repo_derived_data_arc().active_config().types {
         let not_derived = repo
@@ -199,7 +206,7 @@ async fn validate_unnecessary_derived_data_is_not_derived<R: MononokeRepo>(
             .pending(ctx, &[parent_cs_id, cs_id], None, *ty)
             .await?;
         // It's expected to derive skeleton manifests for the parent commit
-        if *ty == derived_data_to_derive {
+        if derived_data_to_derive.contains(ty) {
             assert_eq!(not_derived, vec![cs_id]);
         } else {
             assert_eq!(not_derived, vec![parent_cs_id, cs_id]);
@@ -252,6 +259,7 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
             },
             changes,
             bubble,
+            false,
         )
         .await
         .map(|created_changeset| created_changeset.changeset_ctx)
@@ -361,6 +369,7 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
             },
             changes.clone(),
             bubble,
+            false,
         )
         .await
         .map(|created_changeset| created_changeset.changeset_ctx)
@@ -442,6 +451,7 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
             },
             changes.clone(),
             bubble,
+            false,
         )
         .await
         .map(|created_changeset| created_changeset.changeset_ctx)
@@ -539,6 +549,7 @@ async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result
             },
             changes.clone(),
             bubble,
+            false,
         )
         .await
         .map(|created_changeset| created_changeset.changeset_ctx)

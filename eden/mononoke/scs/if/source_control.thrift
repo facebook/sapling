@@ -1030,6 +1030,9 @@ struct RepoCreateCommitParams {
 
   /// Service identity to use for this commit creation.
   5: optional string service_identity;
+
+  /// Whether to skip the no-op changes check
+  6: bool skip_noop_changes_check = false;
 }
 
 struct RepoCreateStackParamsCommit {
@@ -1057,6 +1060,9 @@ struct RepoCreateStackParams {
 
   /// Service identity to use for this stack creation.
   5: optional string service_identity;
+
+  /// Whether to skip the no-op changes check
+  6: bool skip_noop_changes_check = false;
 }
 
 struct RepoCreateBookmarkParams {

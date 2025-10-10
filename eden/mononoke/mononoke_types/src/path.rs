@@ -902,6 +902,10 @@ impl NonRootMPath {
         let s: String = format!("{}", self);
         re.is_match(&s)
     }
+
+    pub fn as_mpath(&self) -> &MPath {
+        &self.0
+    }
 }
 
 impl ThriftConvert for MPath {

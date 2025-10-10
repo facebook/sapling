@@ -653,6 +653,7 @@ async fn upload_bonsai_changeset(
                 None => None,
             }
             .as_ref(),
+            true,
         )
         .await
         .with_context(|| anyhow!("When creating bonsai changeset"))?
