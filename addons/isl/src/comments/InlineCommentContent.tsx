@@ -30,13 +30,11 @@ const styles = stylex.create({
   commentAuthor: {
     lineHeight: '17px',
     textWrap: 'nowrap',
+    opacity: 0.75,
   },
   versionAbbr: {
     opacity: 0.5,
     whiteSpace: 'nowrap',
-  },
-  commentContent: {
-    opacity: 0.75,
   },
   primaryBadge: {
     backgroundColor: 'var(--button-primary-background)',
@@ -110,23 +108,25 @@ export default function InlineCommentContent({
 }) {
   const label = getSuggestionBadgeLabel(comment.suggestedChange);
   return (
-    <Row>
-      <Column alignStart xstyle={styles.avatarColumn}>
-        <AvatarImg username={comment.author} url={comment.authorAvatarUri} xstyle={styles.avatar} />
-      </Column>
-      <Column alignStart xstyle={styles.commentColumn}>
-        <Row xstyle={styles.commentAuthorRow}>
-          <div {...stylex.props(styles.commentAuthor)}>{comment.authorName}</div>
-          {label && <CommentCardBadge label={label} icon="code" />}
-          {isHidden && (
-            <CommentCardBadge label={{text: 'Hidden', isPrimary: false}} icon="eye-closed" />
-          )}
-          {isHeadComment && !isLatestVersion && versionAbbr && (
-            <div {...stylex.props(styles.versionAbbr)}>[Original comment on {versionAbbr}]</div>
-          )}
-        </Row>
-        <Row xstyle={styles.commentContent}>{comment.content}</Row>
-      </Column>
-    </Row>
+    <Column alignStart xstyle={styles.commentColumn}>
+      <Row xstyle={styles.commentAuthorRow}>
+        <Column alignStart xstyle={styles.avatarColumn}>
+          <AvatarImg
+            username={comment.author}
+            url={comment.authorAvatarUri}
+            xstyle={styles.avatar}
+          />
+        </Column>
+        <div {...stylex.props(styles.commentAuthor)}>{comment.authorName}</div>
+        {label && <CommentCardBadge label={label} icon="code" />}
+        {isHidden && (
+          <CommentCardBadge label={{text: 'Hidden', isPrimary: false}} icon="eye-closed" />
+        )}
+        {isHeadComment && !isLatestVersion && versionAbbr && (
+          <div {...stylex.props(styles.versionAbbr)}>[Original comment on {versionAbbr}]</div>
+        )}
+      </Row>
+      <Row>{comment.content}</Row>
+    </Column>
   );
 }
