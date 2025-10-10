@@ -26,6 +26,8 @@ use edenfs_client::methods::EdenThriftMethod;
 use edenfs_utils::bytes_from_path;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
+use num_format::Locale;
+use num_format::ToFormattedString;
 use sysinfo::Pid;
 use sysinfo::System;
 use thrift_types::edenfs::MountId;
@@ -108,9 +110,9 @@ impl Traversal {
                     .unwrap(),
             );
             let initial_files_display = if max_files == usize::MAX {
-                "0".to_string()
+                "0"
             } else {
-                format!("0/{}", max_files)
+                &format!("0/{}", max_files.to_formatted_string(&Locale::en))
             };
             pb.set_message(format!(
                 "{} files | 0 dirs | 0 files/s",
@@ -246,9 +248,13 @@ impl Traversal {
             let files_per_second = self.file_count as f64 / elapsed;
 
             let files_display = if self.max_files == usize::MAX {
-                self.file_count.to_string()
+                self.file_count.to_formatted_string(&Locale::en)
             } else {
-                format!("{}/{}", self.file_count, self.max_files)
+                format!(
+                    "{}/{}",
+                    self.file_count.to_formatted_string(&Locale::en),
+                    self.max_files.to_formatted_string(&Locale::en)
+                )
             };
 
             let show_throughput = !matches!(self.read_mode, ReadMode::Skip);
@@ -267,22 +273,22 @@ impl Traversal {
                             let mb_per_second =
                                 total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
                             format!(
-                                "{} files | {} dirs | {:.0} files/s | {:.2} MiB/s | queue: {} | {:.2} MiB memory | {:.2}% CPU",
+                                "{} files | {} dirs | {} files/s | {:.2} MiB/s | queue: {} | {:.2} MiB memory | {:.2}% CPU",
                                 files_display,
-                                self.dir_count,
-                                files_per_second,
+                                self.dir_count.to_formatted_string(&Locale::en),
+                                (files_per_second as u64).to_formatted_string(&Locale::en),
                                 mb_per_second,
-                                queue_size,
+                                queue_size.to_formatted_string(&Locale::en),
                                 memory_mb,
                                 cpu_usage
                             )
                         } else {
                             format!(
-                                "{} files | {} dirs | {:.0} files/s | queue: {} | {:.2} MiB memory | {:.2}% CPU",
+                                "{} files | {} dirs | {} files/s | queue: {} | {:.2} MiB memory | {:.2}% CPU",
                                 files_display,
-                                self.dir_count,
-                                files_per_second,
-                                queue_size,
+                                self.dir_count.to_formatted_string(&Locale::en),
+                                (files_per_second as u64).to_formatted_string(&Locale::en),
+                                queue_size.to_formatted_string(&Locale::en),
                                 memory_mb,
                                 cpu_usage
                             )
@@ -293,17 +299,20 @@ impl Traversal {
                             let mb_per_second =
                                 total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
                             format!(
-                                "{} files | {} dirs | {:.0} files/s | {:.2} MiB/s | queue: {}",
+                                "{} files | {} dirs | {} files/s | {:.2} MiB/s | queue: {}",
                                 files_display,
-                                self.dir_count,
-                                files_per_second,
+                                self.dir_count.to_formatted_string(&Locale::en),
+                                (files_per_second as u64).to_formatted_string(&Locale::en),
                                 mb_per_second,
-                                queue_size
+                                queue_size.to_formatted_string(&Locale::en)
                             )
                         } else {
                             format!(
-                                "{} files | {} dirs | {:.0} files/s | queue: {}",
-                                files_display, self.dir_count, files_per_second, queue_size
+                                "{} files | {} dirs | {} files/s | queue: {}",
+                                files_display,
+                                self.dir_count.to_formatted_string(&Locale::en),
+                                (files_per_second as u64).to_formatted_string(&Locale::en),
+                                queue_size.to_formatted_string(&Locale::en)
                             )
                         }
                     }
@@ -312,13 +321,20 @@ impl Traversal {
                 let mb_per_second =
                     total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
                 format!(
-                    "{} files | {} dirs | {:.0} files/s | {:.2} MiB/s | queue: {}",
-                    files_display, self.dir_count, files_per_second, mb_per_second, queue_size
+                    "{} files | {} dirs | {} files/s | {:.2} MiB/s | queue: {}",
+                    files_display,
+                    self.dir_count.to_formatted_string(&Locale::en),
+                    (files_per_second as u64).to_formatted_string(&Locale::en),
+                    mb_per_second,
+                    queue_size.to_formatted_string(&Locale::en)
                 )
             } else {
                 format!(
-                    "{} files | {} dirs | {:.0} files/s | queue: {}",
-                    files_display, self.dir_count, files_per_second, queue_size
+                    "{} files | {} dirs | {} files/s | queue: {}",
+                    files_display,
+                    self.dir_count.to_formatted_string(&Locale::en),
+                    (files_per_second as u64).to_formatted_string(&Locale::en),
+                    queue_size.to_formatted_string(&Locale::en)
                 )
             };
 
