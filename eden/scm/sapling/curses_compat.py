@@ -37,10 +37,9 @@ class Surface:
         smincol=None,
         smaxrow=None,
         smaxcol=None,
+        immediate=True,
     ):
         """write changes to the actual screen"""
-        global _screen_resized
-
         # draw this surface to screen
         # pminrow, pmincol - left-hand corner of this (self) surface.
         # sminrow, smincol, smaxrow, smaxcol - rectangle of the (draw
@@ -69,26 +68,8 @@ class Surface:
             )
             main_surface.surface.add_changes(changes)
 
-        changes = []
-
-        # Force clear & redraw after screen resize.
-        repaint = False
-        if _screen_resized:
-            repaint = True
-            changes.append(CHANGE_CLEAR_SCREEN)
-            _screen_resized = False
-
-        # Make the terminal match the main surface, with minimal changes (just diff).
-        terminal = _get_main_terminal()
-        changes += terminal.surface.diff_screens(main_surface.surface)
-        changes += CHANGES_RESET_ATTR
-
-        terminal.surface.add_changes(changes)
-
-        if repaint:
-            terminal.repaint()
-        else:
-            terminal.flush()
+        if immediate:
+            doupdate()
 
     def resize(self, height, width):
         self.surface.resize(width, height)
@@ -179,6 +160,35 @@ class Surface:
         while code == -1:
             code = self.getch()
         return keyname(code).decode()
+
+    def noutrefresh(self):
+        self.refresh(immediate=False)
+
+
+def doupdate():
+    global _screen_resized
+
+    main_surface = _get_main_surface()
+    changes = []
+
+    # Force clear & redraw after screen resize.
+    repaint = False
+    if _screen_resized:
+        repaint = True
+        changes.append(CHANGE_CLEAR_SCREEN)
+        _screen_resized = False
+
+    # Make the terminal match the main surface, with minimal changes (just diff).
+    terminal = _get_main_terminal()
+    changes += terminal.surface.diff_screens(main_surface.surface)
+    changes += CHANGES_RESET_ATTR
+
+    terminal.surface.add_changes(changes)
+
+    if repaint:
+        terminal.repaint()
+    else:
+        terminal.flush()
 
 
 # The real terminal. It's not directly written to.
