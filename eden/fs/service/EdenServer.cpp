@@ -2109,6 +2109,19 @@ void EdenServer::mountFinished(
   const auto& mountPath = edenMount->getPath();
   XLOGF(INFO, "mount point \"{}\" stopped", mountPath);
 
+  // Although it's uncommon for a GC to be running during unmount, we should
+  // confirm any running GC exited before proceeding. Typically, GC stops on
+  // the first cancellation request attempt, but if not, we allow additional
+  // retries to ensure a clean unmount.
+  // In most cases, this function returns immediately, but in the case of a
+  // long-running or blocked GC, it may take a few (maximum 3) seconds to
+  // complete. If GC won't stop after 3 seconds, the unmount will proceed
+  // anyway, and probably the shutting down edenfs process will be killed by a
+  // crash instead of clean exit. We can send a SIGKILL signal or throw an
+  // exception here, but both of them has same results.
+  stopAllGarbageCollections(
+      3 /*maxRetries*/, std::chrono::seconds(1) /*retryDelay*/);
+
   // Save the unmount and takeover Promises
   folly::SharedPromise<Unit> unmountPromise;
   std::optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
@@ -3005,8 +3018,10 @@ void EdenServer::garbageCollectAllMounts() {
 bool EdenServer::stopAllGarbageCollections(
     uint8_t maxRetries,
     std::chrono::seconds retryInterval) {
-  // First stop the periodic GC
-  gcTask_.updateInterval(std::chrono::seconds(0));
+  // First stop the periodic GC - must run on EventBase thread
+  // This should be cheap, so we just block on this to finish.
+  mainEventBase_->runImmediatelyOrRunInEventBaseThreadAndWait(
+      [this]() { gcTask_.updateInterval(std::chrono::seconds(0)); });
 
   // By default, folly futures and thread pools do not provide a built-in way
   // to forcibly stop a running task. We can cancel any running GC and wait
