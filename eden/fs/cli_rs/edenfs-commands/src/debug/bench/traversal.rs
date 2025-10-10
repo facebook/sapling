@@ -86,6 +86,7 @@ struct Traversal {
     file_receiver: Option<mpsc::Receiver<PathBuf>>,
     queue_size: Arc<AtomicUsize>,
     worker_handle: Option<thread::JoinHandle<()>>,
+    worker_done: Arc<std::sync::atomic::AtomicBool>,
 }
 
 // ============================================================================
@@ -134,6 +135,7 @@ impl Traversal {
         let cancellation_token = setup_cancellation();
         let (file_sender, file_receiver) = mpsc::channel::<PathBuf>();
         let queue_size = Arc::new(AtomicUsize::new(0));
+        let worker_done = Arc::new(std::sync::atomic::AtomicBool::new(false));
 
         Self {
             file_count: 0,
@@ -162,6 +164,7 @@ impl Traversal {
             file_receiver: Some(file_receiver),
             queue_size,
             worker_handle: None,
+            worker_done,
         }
     }
 
@@ -179,6 +182,7 @@ impl Traversal {
         let total_bytes_read = self.total_bytes_read.clone();
         let read_duration = self.read_duration.clone();
         let open_duration = self.open_duration.clone();
+        let worker_done = self.worker_done.clone();
 
         let handle = thread::spawn(move || {
             let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
@@ -202,6 +206,8 @@ impl Traversal {
                     &mut buffer,
                 ));
             }
+
+            worker_done.store(true, Ordering::Release);
         });
 
         self.worker_handle = Some(handle);
@@ -358,7 +364,15 @@ impl Traversal {
 
     fn shutdown_worker(&mut self) {
         if let Some(handle) = self.worker_handle.take() {
+            while !self.worker_done.load(Ordering::Acquire) {
+                thread::sleep(std::time::Duration::from_millis(100));
+                self.update_progress();
+            }
+
             let _ = handle.join();
+
+            // One final update to show completion
+            self.update_progress();
         }
     }
 
