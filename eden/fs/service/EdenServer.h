@@ -360,10 +360,20 @@ class EdenServer : private TakeoverHandler {
       const ObjectFetchContextPtr& context);
 
   /**
-   * Cancel any currently running garbage collection operations.
-   * This will cause any in-progress GC operations to terminate early.
+   * Stop all garbage collection tasks and wait for any running GC to finish.
+   * This function first stops the periodic GC task, then send the cancellation
+   * token to any ongoing GC operations, and then checks if GC is still running
+   * with configurable retry attempts and sleep interval.
+   *
+   * @param maxRetries Maximum number of retry attempts to check if GC has
+   * stopped
+   * @param retryInterval Time interval to wait between retry attempts
+   * @return true if all GC operations were successfully stopped, false
+   * otherwise
    */
-  void cancelAllGarbageCollections();
+  bool stopAllGarbageCollections(
+      uint8_t maxRetries,
+      std::chrono::seconds retryInterval);
 
   bool isWorkingCopyGCRunningForAnyMount() const;
 

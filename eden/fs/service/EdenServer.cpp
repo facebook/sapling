@@ -2710,20 +2710,8 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
 
     // We should confirm that no garbage collection is running during graceful
     // restart.
-    // First stop the periodic GC
-    gcTask_.updateInterval(std::chrono::seconds(0));
-    // By default, folly futures and thread pools do not provide a built-in way
-    // to forcibly stop a running task. We can cancel any running GC and wait
-    // for them to stop.
-    cancelAllGarbageCollections();
-    bool isGCRunning = isWorkingCopyGCRunningForAnyMount();
-    uint8_t checkingGCAttempts = 0;
-    while (isGCRunning && checkingGCAttempts < 3) {
-      std::this_thread::sleep_for(std::chrono::seconds(20));
-      isGCRunning = isWorkingCopyGCRunningForAnyMount();
-      checkingGCAttempts++;
-    }
-    if (isGCRunning) {
+    if (!stopAllGarbageCollections(
+            3 /*maxRetries*/, std::chrono::seconds(1)) /*retryInterval*/) {
       // We are still waiting for the GC to finish. This is unexpected and
       // should not happen. We should not proceed with the graceful restart.
       return makeFuture<TakeoverData>(std::runtime_error(
@@ -3014,11 +3002,29 @@ void EdenServer::garbageCollectAllMounts() {
   }
 }
 
-void EdenServer::cancelAllGarbageCollections() {
-  // Cancel any ongoing garbage collection operations
-  gcCancelSource_.requestCancellation();
+bool EdenServer::stopAllGarbageCollections(
+    uint8_t maxRetries,
+    std::chrono::seconds retryInterval) {
+  // First stop the periodic GC
+  gcTask_.updateInterval(std::chrono::seconds(0));
 
-  XLOGF(DBG1, "Cancelled all garbage collection operations");
+  // By default, folly futures and thread pools do not provide a built-in way
+  // to forcibly stop a running task. We can cancel any running GC and wait
+  // for them to stop. This is not guaranteed to work if the GC is stuck in
+  // some operation, but it should work in most cases.
+  gcCancelSource_.requestCancellation();
+  XLOGF(DBG1, "Cancel request sent to all ongoing garbage collections");
+
+  bool isGCRunning = isWorkingCopyGCRunningForAnyMount();
+  uint8_t currentAttempts = 0;
+
+  while (isGCRunning && currentAttempts < maxRetries) {
+    std::this_thread::sleep_for(retryInterval);
+    isGCRunning = isWorkingCopyGCRunningForAnyMount();
+    currentAttempts++;
+  }
+
+  return !isGCRunning;
 }
 
 bool EdenServer::isWorkingCopyGCRunningForAnyMount() const {
