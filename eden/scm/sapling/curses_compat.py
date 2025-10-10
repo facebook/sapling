@@ -148,14 +148,14 @@ class Surface:
         pass
 
     def getch(self):
-        # special: -2: screen resized
+        # special: KEY_RESIZE: screen resized
         terminal = _get_main_terminal()
         event = terminal.poll_input()
         if event is None:
             return -1
         if event.get("Resized"):
             if _check_for_screen_resize():
-                return -2
+                return KEY_RESIZE
         key_event = event.get("Key")
         if key_event is None:
             return -1
@@ -332,9 +332,27 @@ def def_prog_mode():
 def wrapper(func, *args, **kwargs):
     surface = _get_main_surface()
     try:
+        raw()
         func(surface, *args, **kwargs)
     finally:
         endwin()
+
+
+def curs_set(visible):
+    terminal = _get_main_terminal()
+    terminal.surface.add_change(CHANGE_SHOW_CURSOR if visible else CHANGE_HIDE_CURSOR)
+    terminal.flush()
+
+
+def resizeterm(*_args):
+    # Resize is handled automatically. Just repaint.
+    if _check_for_screen_resize():
+        surface = _get_main_surface()
+        surface.refresh()
+
+
+def echo():
+    noraw()
 
 
 def _check_for_screen_resize():
@@ -369,6 +387,8 @@ class Modifiers:
     ENHANCED_KEY = 1 << 12
 
 
+KEY_RESIZE = -2
+
 # See also curses.__dict__
 _TERMWIZ_TO_CURSES = {
     "Backspace": [263, "KEY_BACKSPACE"],
@@ -389,6 +409,7 @@ _TERMWIZ_TO_CURSES = {
     "Delete": [330, "KEY_DC"],
     "Help": [363, "KEY_HELP"],
     "Copy": [358, "KEY_COPY"],
+    "Resize": [KEY_RESIZE, "KEY_RESIZE"],
 }
 _CURSES_KEY_CODE_TO_NAME = dict(_TERMWIZ_TO_CURSES.values())
 
