@@ -326,12 +326,17 @@ class InodeMap {
    * TreeInode locks (since deleting it may cause its parent Inode to become
    * unreferenced, triggering another immediate call to onInodeUnreferenced(),
    * which will acquire these locks).
+   *
+   * If mustPersistInodeNumbers is true, directories will be persisted to the
+   * overlay if not already present. This is a "just-in-time" mechanism to
+   * persist their entries' inode numbers.
    */
   void unloadInode(
       InodeBase* inode,
       TreeInode* parent,
       PathComponentPiece name,
       bool isUnlinked,
+      bool mustPersistInodeNumbers,
       const InodeMapLock& lock);
 
   /////////////////////////////////////////////////////////////////////////
@@ -670,6 +675,7 @@ class InodeMap {
       TreeInode* parent,
       PathComponentPiece name,
       bool isUnlinked,
+      bool mustPersistInodeNumbers,
       const folly::Synchronized<Members>::LockedPtr& lock);
 
   /**
@@ -678,12 +684,17 @@ class InodeMap {
    *
    * This returns an UnloadedInode if we need to remember this inode in the
    * unloadedInodes_ map, or std::nullopt if we can forget about it completely.
+   *
+   * If mustPersistInodeNumbers is true, directories will be persisted to the
+   * overlay if not already present. This is a "just-in-time" mechanism to
+   * persist their entries' inode numbers.
    */
   std::optional<UnloadedInode> updateOverlayForUnload(
       InodeBase* inode,
       TreeInode* parent,
       PathComponentPiece name,
       bool isUnlinked,
+      bool mustPersistInodeNumbers,
       const folly::Synchronized<Members>::LockedPtr& lock);
 
   void insertLoadedInode(

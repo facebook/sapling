@@ -1603,7 +1603,12 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         // the files on disk must also be present in the overlay, and thus the
         // checkout code will take care of doing the right invalidation for
         // these.
-        rootInode->unloadChildrenUnreferencedByFs();
+        //
+        // We pass mustPersistInodeNumbers=false here because we don't want the
+        // user to wait for us to just-in-time write a lot of directories to the
+        // overlay. The assumption is it is okay to regenerate inode numbers at
+        // checkout time for inodes with fs-ref-count==0.
+        rootInode->unloadChildrenUnreferencedByFs(false);
 
         return serverState_->getFaultInjector()
             .checkAsync("inodeCheckout", getPath().view())

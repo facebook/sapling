@@ -1671,6 +1671,16 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * When true, no longer eagerly write directories to the overlay on read.
+   * Instead, non-materialized directories are written to the overlay when they
+   * are unloaded, except during checkout.
+   */
+  ConfigSetting<bool> lazyInodePersistence{
+      "experimental:lazy-inode-persistence",
+      false,
+      this};
+
   // [blobcache]
 
   /**

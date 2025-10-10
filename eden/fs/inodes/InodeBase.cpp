@@ -247,7 +247,7 @@ std::unique_ptr<InodeBase> InodeBase::markUnlinked(
   auto* inodeMap = getMount()->getInodeMap();
   auto inodeMapLock = inodeMap->lockForUnload();
   if (isPtrAcquireCountZero() && getFsRefcount() == 0) {
-    inodeMap->unloadInode(this, parent, name, true, inodeMapLock);
+    inodeMap->unloadInode(this, parent, name, true, false, inodeMapLock);
     // We have to delete ourself now.
     // Do this by returning a unique_ptr to ourself, so that our caller will
     // destroy us.  This ensures we get destroyed after releasing the InodeMap

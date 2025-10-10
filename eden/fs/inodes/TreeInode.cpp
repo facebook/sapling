@@ -1080,8 +1080,16 @@ DirContents TreeInode::saveDirFromTree(
       overlay,
       mount->getCheckoutConfig()->getCaseSensitive(),
       mount->getCheckoutConfig()->getEnableWindowsSymlinks());
-  // buildDirFromTree just allocated inode numbers; they should be saved.
-  overlay->saveOverlayDir(inodeNumber, dir);
+
+  if (mount->getEdenConfig()->lazyInodePersistence.getValue()) {
+    // lazyInodePersistence means we persist inode numbers in memory rather
+    // than persisting by writing out directories to the overlay. So, don't
+    // write overlay entries when reading directories.
+  } else {
+    // buildDirFromTree just allocated inode numbers; they should be saved.
+    overlay->saveOverlayDir(inodeNumber, dir);
+  }
+
   return dir;
 }
 
@@ -4331,7 +4339,8 @@ size_t unloadChildrenIf(
     InodeMap* const inodeMap,
     std::vector<TreeInodePtr>& treeChildren,
     Recurse&& recurse,
-    Predicate&& predicate) {
+    Predicate&& predicate,
+    bool mustPersistInodeNumbers) {
   size_t unloadCount = 0;
 
   // Recurse into children here. Children hold strong references to their
@@ -4366,10 +4375,15 @@ size_t unloadChildrenIf(
         // Allocate space in the vector. This can throw std::bad_alloc.
         toDelete.emplace_back();
 
-        // Forget other references to this inode.
+        // Forget other pointer references to this inode.
         (void)entry.second.clearInode(); // clearInode will not throw.
         inodeMap->unloadInode(
-            entryInode, self, entry.first, false, inodeMapLock);
+            entryInode,
+            self,
+            entry.first,
+            false,
+            mustPersistInodeNumbers,
+            inodeMapLock);
 
         // If unloadInode threw, we'll leak the entryInode, but it's no big
         // deal. This assignment cannot throw.
@@ -4415,17 +4429,21 @@ size_t TreeInode::unloadChildrenNow() {
       getInodeMap(),
       treeChildren,
       [](TreeInode& child) { return child.unloadChildrenNow(); },
-      [](InodeBase*) { return true; });
+      [](InodeBase*) { return true; },
+      true);
 }
 
-size_t TreeInode::unloadChildrenUnreferencedByFs() {
+size_t TreeInode::unloadChildrenUnreferencedByFs(bool mustPersistInodeNumbers) {
   auto treeChildren = getTreeChildren(this);
   return unloadChildrenIf(
       this,
       getInodeMap(),
       treeChildren,
-      [](TreeInode& child) { return child.unloadChildrenUnreferencedByFs(); },
-      [](InodeBase* child) { return child->getFsRefcount() == 0; });
+      [mustPersistInodeNumbers](TreeInode& child) {
+        return child.unloadChildrenUnreferencedByFs(mustPersistInodeNumbers);
+      },
+      [](InodeBase* child) { return child->getFsRefcount() == 0; },
+      mustPersistInodeNumbers);
 }
 
 namespace {
@@ -4809,9 +4827,8 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
       [&](TreeInode& child) {
         return child.unloadChildrenLastAccessedBefore(cutoff);
       },
-      [&](InodeBase* child) {
-        return toUnload.count(child->getNodeId()) != 0;
-      });
+      [&](InodeBase* child) { return toUnload.count(child->getNodeId()) != 0; },
+      true);
 }
 
 InodeMetadata TreeInode::getMetadata() const {
