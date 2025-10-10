@@ -21,13 +21,15 @@ class error(RuntimeError):
 
 
 class Surface:
-    def __init__(self, width, height):
+    def __init__(self, width, height, begin_y=0, begin_x=0):
         if width == 0 or height == 0:
             main_surface = _get_main_surface()
             screen_width, screen_height = main_surface.surface.dimensions()
             width = width or screen_width
             height = height or screen_height
         self.surface = termwiz.Surface(width, height)
+        self.begin_y = begin_y
+        self.begin_x = begin_x
 
     def refresh(
         self,
@@ -52,7 +54,9 @@ class Surface:
                 for x in [pminrow, pmincol, smincol, smaxcol, smaxrow, smaxcol]
             ):
                 screen_width, screen_height = main_surface.surface.dimensions()
-                pminrow = sminrow = pmincol = smincol = 0
+                pminrow = pmincol = 0
+                sminrow = self.begin_y
+                smincol = self.begin_x
                 smaxrow = screen_height - 1
                 smaxcol = screen_width - 1
             width = smaxcol - smincol + 1
@@ -208,9 +212,7 @@ def newpad(nlines, ncols):
 
 
 def newwin(nlines, ncols, begin_y=0, begin_x=0):
-    if begin_x != 0 or begin_y != 0:
-        raise NotImplementedError("newwin supports begin_y=begin_x=0 only")
-    return Surface(ncols, nlines)
+    return Surface(ncols, nlines, begin_y, begin_x)
 
 
 def raw():
