@@ -88,12 +88,42 @@ class Surface:
         # refresh() calls so it seems okay to ignore the repaint here.
         self.erase()
 
-    def addstr(self, text, attr=None):
-        """write to this surface, changes are buffered until refresh()"""
+    def addstr(self, *args):
+        """write to this surface, changes are buffered until refresh()
+
+        addstr(str[, attr])
+        addstr(y, x, str[, attr])
+        """
+        y = x = 0
+        attr = None
+        match len(args):
+            case 1:
+                text = args[0]
+            case 2:
+                text, attr = args
+            case 3:
+                y, x, text = args
+            case 4:
+                y, x, text, attr = args
+            case _:
+                raise TypeError("wrong arguments passed to addstr")
+
         changes = []
+        if y != 0 or x != 0:
+            changes.append(
+                termwiz.Change(
+                    {
+                        "CursorPosition": {
+                            "x": {"Absolute": x},
+                            "y": {"Absolute": y},
+                        }
+                    }
+                )
+            )
         if attr is not None:
             changes += _curses_attr_to_termwiz_changes(attr)
-        text = text.decode()
+        if isinstance(text, bytes):
+            text = text.decode()
         # avoid scroll down when appending at the last line.
         if self.surface.dimensions()[1] <= self.surface.cursor_position()[1] + 1:
             text = text.rstrip("\n")
