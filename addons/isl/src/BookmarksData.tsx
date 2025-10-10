@@ -16,6 +16,8 @@ import {lazyAtom, localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtil
 import {latestCommits} from './serverAPIState';
 import {registerDisposable} from './utils';
 
+export const REMOTE_MASTER_BOOKMARK = 'remote/master';
+
 export type BookmarksData = {
   /** These bookmarks should be hidden from the automatic set of remote bookmarks */
   hiddenRemoteBookmarks: Array<string>;

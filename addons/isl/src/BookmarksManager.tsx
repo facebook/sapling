@@ -33,6 +33,7 @@ import {
   fetchedStablesAtom,
   recommendedBookmarksAtom,
   recommendedBookmarksAvailableAtom,
+  REMOTE_MASTER_BOOKMARK,
   remoteBookmarks,
   removeManualStable,
 } from './BookmarksData';
@@ -104,13 +105,11 @@ function BookmarksManager(_props: {dismiss: () => void}) {
     bookmarksData.useRecommendedBookmark &&
     recommendedBookmarksAvailable;
 
-  // Order recommended bookmarks first if enabled, then the rest
+  // Place recommended bookmarks (and remote/master) first if enabled, then the rest
+  const priority = new Set(recommendedBookmarks).add(REMOTE_MASTER_BOOKMARK);
   const orderedBookmarks =
     enableRecommended && recommendedBookmarks.size > 0
-      ? [
-          ...bookmarks.filter(b => recommendedBookmarks.has(b)),
-          ...bookmarks.filter(b => !recommendedBookmarks.has(b)),
-        ]
+      ? [...bookmarks.filter(b => priority.has(b)), ...bookmarks.filter(b => !priority.has(b))]
       : bookmarks;
 
   return (
@@ -375,7 +374,11 @@ function BookmarksList({
                 ? Internal.RecommendedBookmarkInfo?.()
                 : undefined
               : bookmark.info;
-          const disabled = kind === 'remote' && enableRecommended && !isRecommended;
+          const disabled =
+            kind === 'remote' &&
+            enableRecommended &&
+            !isRecommended &&
+            name !== REMOTE_MASTER_BOOKMARK;
 
           return (
             <Checkbox

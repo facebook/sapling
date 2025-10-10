@@ -33,6 +33,7 @@ import {
   recommendedBookmarksAtom,
   recommendedBookmarksAvailableAtom,
   recommendedBookmarksGKAtom,
+  REMOTE_MASTER_BOOKMARK,
 } from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
@@ -335,9 +336,15 @@ function filterBookmarks(
 
   const hiddenBookmarks = new Set(bookmarksData.hiddenRemoteBookmarks);
 
-  // Show only bookmarks that are not hidden AND are recommended (unless recommended bookmarks are off)
-  const bookmarkFilter = (b: string) =>
-    !hiddenBookmarks.has(b) && (!enableRecommended || recommendedBookmarks.has(b));
+  const bookmarkFilter = (b: string) => {
+    // Always hide hidden bookmarks
+    if (hiddenBookmarks.has(b)) {
+      return false;
+    }
+
+    // If recommended bookmarks are enabled, hide all bookmarks except the recommended ones and master
+    return !enableRecommended || recommendedBookmarks.has(b) || b === REMOTE_MASTER_BOOKMARK;
+  };
 
   return {
     ...commit,
