@@ -55,6 +55,7 @@ use references::rename_all;
 use repo_derived_data::ArcRepoDerivedData;
 use sql::history_ops::GetOutput;
 use sql::history_ops::GetType;
+use sql::history_ops::HistoryDeleteArgs;
 use sql::versions_ops::UpdateVersionArgs;
 
 use crate::ctx::CommitCloudContext;
@@ -62,6 +63,7 @@ use crate::references::cast_references_data;
 use crate::references::fetch_references;
 use crate::references::update_references_data;
 use crate::references::versions::WorkspaceVersion;
+use crate::sql::ops::Delete;
 use crate::sql::ops::GenericGet;
 use crate::sql::ops::Get;
 use crate::sql::ops::Insert;
@@ -106,6 +108,9 @@ pub enum Phase {
     Public,
     Draft,
 }
+
+const HISTORY_KEEP_VERSIONS: u64 = 500;
+const HISTORY_KEEP_DAYS: u64 = 30;
 
 impl Display for Phase {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -345,6 +350,29 @@ impl CommitCloud {
             )
             .await
             .map_err(CommitCloudInternalError::Error)?;
+
+        if latest_version >= HISTORY_KEEP_VERSIONS {
+            let delete_limit =
+                justknobs::get_as::<u64>("scm/mononoke:commitcloud_history_gc_chunk_size", None)
+                    .unwrap_or(0);
+
+            // Delete old history entries
+            txn = Delete::<WorkspaceHistory>::delete(
+                &self.storage,
+                txn,
+                &self.ctx,
+                cc_ctx.reponame.clone(),
+                cc_ctx.workspace.clone(),
+                HistoryDeleteArgs {
+                    latest_version,
+                    keep_version: HISTORY_KEEP_VERSIONS,
+                    keep_days: HISTORY_KEEP_DAYS,
+                    delete_limit,
+                },
+            )
+            .await
+            .map_err(CommitCloudInternalError::Error)?;
+        }
 
         txn.commit()
             .await

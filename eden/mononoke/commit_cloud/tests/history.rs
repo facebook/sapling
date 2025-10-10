@@ -27,9 +27,9 @@ use sql_construct::SqlConstruct;
 #[mononoke::fbinit_test]
 async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
     use commit_cloud::references::history::WorkspaceHistory;
-    use commit_cloud::sql::history_ops::DeleteArgs;
     use commit_cloud::sql::history_ops::GetOutput;
     use commit_cloud::sql::history_ops::GetType;
+    use commit_cloud::sql::history_ops::HistoryDeleteArgs;
     use commit_cloud::sql::ops::GenericGet;
 
     let ctx = CoreContext::test_mock(fb);
@@ -139,9 +139,10 @@ async fn test_history(fb: FacebookInit) -> anyhow::Result<()> {
         &ctx,
         reponame.clone(),
         workspace.clone(),
-        DeleteArgs {
+        HistoryDeleteArgs {
+            latest_version: 1,
             keep_days: 0,
-            keep_version: 1,
+            keep_version: 0,
             delete_limit: 1,
         },
     )

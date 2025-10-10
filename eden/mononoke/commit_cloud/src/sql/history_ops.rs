@@ -41,7 +41,8 @@ pub enum GetOutput {
     VersionTimestamp((u64, Timestamp)),
 }
 
-pub struct DeleteArgs {
+pub struct HistoryDeleteArgs {
+    pub latest_version: u64,
     pub keep_days: u64,
     pub keep_version: u64,
     pub delete_limit: u64,
@@ -191,7 +192,7 @@ impl GenericGet<WorkspaceHistory> for SqlCommitCloud {
 
 #[async_trait]
 impl Delete<WorkspaceHistory> for SqlCommitCloud {
-    type DeleteArgs = DeleteArgs;
+    type DeleteArgs = HistoryDeleteArgs;
 
     async fn delete(
         &self,
@@ -206,7 +207,7 @@ impl Delete<WorkspaceHistory> for SqlCommitCloud {
             &reponame,
             &workspace,
             &args.keep_days,
-            &args.keep_version,
+            &(args.latest_version - args.keep_version),
             &args.delete_limit,
         )
         .await?;
