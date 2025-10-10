@@ -65,8 +65,18 @@ export async function activate(
     context.subscriptions.push(new DeletedFileContentProvider());
     let inlineCommentsProvider;
     if (enabledSCMApiFeatures.has('comments') && Internal.inlineCommentsProvider) {
-      if (enabledSCMApiFeatures.has('newInlineComments')) {
-        Internal.registerNewInlineCommentsProvider?.(context, extensionTracker, logger, reposList);
+      if (
+        enabledSCMApiFeatures.has('newInlineComments') &&
+        Internal.registerNewInlineCommentsProvider
+      ) {
+        context.subscriptions.push(
+          ...Internal.registerNewInlineCommentsProvider(
+            context,
+            extensionTracker,
+            logger,
+            reposList,
+          ),
+        );
       } else {
         inlineCommentsProvider = Internal.inlineCommentsProvider(context, reposList, ctx, []);
         if (inlineCommentsProvider != null) {
