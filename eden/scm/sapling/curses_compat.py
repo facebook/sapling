@@ -48,12 +48,11 @@ class Surface:
         main_surface = _get_main_surface()
         if self is not main_surface:
             # Draw to the main surface first. This happens all in memory.
-            self_width, self_height = main_surface.surface.dimensions()
-            screen_width, screen_height = main_surface.surface.dimensions()
             if all(
                 x is None
-                for x in [pminrow, pmincol, smincol, smincol, smaxrow, smaxcol]
+                for x in [pminrow, pmincol, smincol, smaxcol, smaxrow, smaxcol]
             ):
+                screen_width, screen_height = main_surface.surface.dimensions()
                 pminrow = sminrow = pmincol = smincol = 0
                 smaxrow = screen_height - 1
                 smaxcol = screen_width - 1
