@@ -20,7 +20,10 @@ use super::types;
 use crate::ExitCode;
 
 #[derive(Parser, Debug)]
-#[clap(about = "Run benchmarks for EdenFS and OS-native file systems on Linux, macOS, and Windows")]
+#[clap(
+    about = "Run benchmarks for EdenFS and OS-native file systems on Linux, macOS, and Windows",
+    long_about = "Benchmark filesystem operations including traversal, I/O, and database performance"
+)]
 pub enum BenchCmd {
     #[clap(about = "Run filesystem/thrift I/O benchmarks")]
     FsIo {
@@ -57,38 +60,62 @@ pub enum BenchCmd {
         chunk_size: usize,
     },
 
-    #[clap(about = "Run traversal benchmark")]
+    #[clap(
+        about = "Run filesystem traversal benchmark",
+        long_about = "Benchmark filesystem traversal performance including file reading, directory scanning, and I/O throughput. Supports multiple directories and various reading modes."
+    )]
     Traversal {
-        /// Directories to traverse (can be specified multiple times)
-        #[clap(long, required = true)]
+        /// Directories to traverse (can be specified multiple times: --dir=/path1 --dir=/path2)
+        #[clap(
+            long,
+            required = true,
+            help = "Directory to traverse",
+            long_help = "Directories to traverse. Can be specified multiple times to benchmark across multiple directory trees. Each directory will be traversed sequentially and results will be combined."
+        )]
         dir: Vec<String>,
 
-        /// Path to fbsource directory, required for thrift IO
-        #[clap(long)]
+        /// Path to fbsource directory, required for thrift IO mode
+        #[clap(
+            long,
+            help = "Use thrift I/O instead of filesystem calls",
+            long_help = "Path to fbsource directory for thrift I/O mode. When specified, files will be read using EdenFS thrift calls instead of direct filesystem operations."
+        )]
         thrift_io: Option<String>,
 
-        /// Max number of files to read when traversing the file system
-        #[clap(long)]
+        /// Maximum number of files to process (default: unlimited)
+        #[clap(
+            long,
+            help = "Limit number of files to process",
+            long_help = "Maximum number of files to process during traversal. If not specified, all files in the directory tree will be processed."
+        )]
         max_files: Option<usize>,
 
-        /// Whether to follow symbolic links during traversal
-        #[clap(long)]
+        /// Follow symbolic links during directory traversal
+        #[clap(long, help = "Follow symbolic links")]
         follow_symlinks: bool,
 
-        /// Disable progress bars in benchmarks
-        #[clap(long)]
+        /// Disable progress bars and real-time updates
+        #[clap(long, help = "Disable progress display")]
         no_progress: bool,
 
-        /// Enable CPU and memory usage monitoring during traversal
-        #[clap(long)]
+        /// Monitor CPU and memory usage during the benchmark
+        #[clap(
+            long,
+            help = "Enable resource monitoring",
+            long_help = "Enable CPU and memory usage monitoring during traversal. Shows additional metrics including memory consumption and CPU utilization."
+        )]
         resource_usage: bool,
 
-        /// Output results in JSON format
-        #[clap(long)]
+        /// Output results in JSON format for programmatic processing
+        #[clap(long, help = "Output JSON format")]
         json: bool,
 
-        /// Skip the file reading benchmark and display only traversal results
-        #[clap(long)]
+        /// Skip file reading and only measure directory traversal performance
+        #[clap(
+            long,
+            help = "Skip file I/O, only traverse",
+            long_help = "Skip the file reading benchmark and only measure directory traversal performance. Useful for testing pure filesystem traversal speed without I/O overhead."
+        )]
         skip_read: bool,
     },
 }
