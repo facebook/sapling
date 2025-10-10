@@ -448,7 +448,7 @@ impl Traversal {
 // ============================================================================
 
 pub async fn bench_traversal(
-    dir_path: &str,
+    dir_paths: &[String],
     max_files: usize,
     follow_symlinks: bool,
     no_progress: bool,
@@ -456,9 +456,12 @@ pub async fn bench_traversal(
     skip_read: bool,
     thrift_io: Option<&str>,
 ) -> Result<Benchmark> {
-    let path = Path::new(dir_path);
-    if !path.exists() || !path.is_dir() {
-        return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
+    // Validate all directories first
+    for dir_path in dir_paths {
+        let path = Path::new(dir_path);
+        if !path.exists() || !path.is_dir() {
+            return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
+        }
     }
 
     let read_mode = if skip_read {
@@ -480,7 +483,11 @@ pub async fn bench_traversal(
     );
 
     traversal.start_worker_thread();
-    traversal.traverse_path(path).await?;
+    // Traverse all directories
+    for dir_path in dir_paths {
+        let path = Path::new(dir_path);
+        traversal.traverse_path(path).await?;
+    }
     traversal.signal_completion();
     traversal.shutdown_worker();
 

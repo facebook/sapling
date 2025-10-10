@@ -59,9 +59,9 @@ pub enum BenchCmd {
 
     #[clap(about = "Run traversal benchmark")]
     Traversal {
-        /// Directory to traverse
-        #[clap(long)]
-        dir: String,
+        /// Directories to traverse (can be specified multiple times)
+        #[clap(long, required = true)]
+        dir: Vec<String>,
 
         /// Path to fbsource directory, required for thrift IO
         #[clap(long)]
@@ -171,10 +171,20 @@ impl crate::Subcommand for BenchCmd {
                 skip_read,
             } => {
                 if !*json {
-                    println!(
-                        "Running filesystem traversal benchmark on directory: {}",
-                        dir
-                    );
+                    if dir.len() == 1 {
+                        println!(
+                            "Running filesystem traversal benchmark on directory: {}",
+                            dir[0]
+                        );
+                    } else {
+                        println!(
+                            "Running filesystem traversal benchmark on {} directories:",
+                            dir.len()
+                        );
+                        for directory in dir {
+                            println!("  - {}", directory);
+                        }
+                    }
                 }
 
                 let effective_max_files = max_files.unwrap_or(usize::MAX);
