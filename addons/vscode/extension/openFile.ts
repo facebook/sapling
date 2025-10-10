@@ -6,7 +6,7 @@
  */
 
 import type {Repository} from 'isl-server/src/Repository';
-import type {AbsolutePath} from 'isl/src/types';
+import type {AbsolutePath, RepoRelativePath} from 'isl/src/types';
 
 import * as pathModule from 'node:path';
 import * as vscode from 'vscode';
@@ -18,20 +18,47 @@ function looksLikeImageUri(uri: vscode.Uri): boolean {
   return IMAGE_EXTENSIONS.has(ext);
 }
 
-export default function openFile(
-  repo: Repository | undefined,
-  filePath: string,
+/**
+ * Opens a file in the editor within a provided repository, optionally at a specific line number.
+ * The file path should be relative to the repository root.
+ */
+export function openFileInRepo(
+  repo: Repository,
+  filePath: RepoRelativePath,
   line?: number,
   preview?: boolean,
   onError?: (err: Error) => void,
   onOpened?: (editor: vscode.TextEditor) => void,
   disableScroll: boolean = false,
 ) {
-  if (repo == null) {
-    return;
-  }
   const path: AbsolutePath = pathModule.join(repo.info.repoRoot, filePath);
-  const uri = vscode.Uri.file(path);
+  openFileImpl(path, line, preview, onError, onOpened, disableScroll);
+}
+
+/**
+ * Opens a file in the editor, optionally at a specific line number.
+ * The file path should be absolute.
+ */
+export function openFile(
+  filePath: AbsolutePath,
+  line?: number,
+  preview?: boolean,
+  onError?: (err: Error) => void,
+  onOpened?: (editor: vscode.TextEditor) => void,
+  disableScroll: boolean = false,
+): void {
+  openFileImpl(filePath, line, preview, onError, onOpened, disableScroll);
+}
+
+function openFileImpl(
+  filePath: AbsolutePath,
+  line?: number,
+  preview?: boolean,
+  onError?: (err: Error) => void,
+  onOpened?: (editor: vscode.TextEditor) => void,
+  disableScroll: boolean = false,
+): void {
+  const uri = vscode.Uri.file(filePath);
   if (looksLikeImageUri(uri)) {
     vscode.commands.executeCommand('vscode.open', uri).then(undefined, err => {
       vscode.window.showErrorMessage('cannot open file' + (err.message ?? String(err)));

@@ -26,7 +26,7 @@ import {executeVSCodeCommand} from './commands';
 import {PERSISTED_STORAGE_KEY_PREFIX} from './config';
 import {t} from './i18n';
 import {Internal} from './Internal';
-import openFile from './openFile';
+import {openFileInRepo} from './openFile';
 import {ActionTriggerType} from './types';
 
 export type VSCodeServerPlatform = ServerPlatform & {
@@ -66,7 +66,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
               return;
             }
             // don't use preview mode for opening multiple files, since they would overwrite each other
-            openFile(
+            openFileInRepo(
               repo,
               path,
               message.options?.line,
@@ -92,7 +92,9 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/openFile': {
-          openFile(repo, message.path, message.options?.line, undefined);
+          if (repo != null) {
+            openFileInRepo(repo, message.path, message.options?.line, undefined);
+          }
           break;
         }
         case 'platform/openDiff': {
