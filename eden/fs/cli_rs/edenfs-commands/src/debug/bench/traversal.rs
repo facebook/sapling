@@ -12,6 +12,12 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::mpsc;
+use std::thread;
 use std::time::Instant;
 
 use anyhow::Result;
@@ -52,15 +58,15 @@ struct Traversal {
     dir_count: usize,
     symlink_skipped_count: usize,
     symlink_traversed_count: usize,
-    successful_reads: usize,
+    successful_reads: Arc<AtomicUsize>,
     total_dir_entries: usize,
-    total_bytes_read: u64,
+    total_bytes_read: Arc<AtomicU64>,
 
     // Durations
     start_time: Instant,
     read_dir_duration: std::time::Duration,
-    read_duration: std::time::Duration,
-    open_duration: std::time::Duration,
+    read_duration: Arc<AtomicU64>,
+    open_duration: Arc<AtomicU64>,
 
     // Configuration
     max_files: usize,
@@ -73,8 +79,11 @@ struct Traversal {
     system: Option<System>,
     pid: Option<Pid>,
 
-    // Working buffer
-    buffer: Vec<u8>,
+    // Worker thread
+    file_sender: Option<mpsc::Sender<PathBuf>>,
+    file_receiver: Option<mpsc::Receiver<PathBuf>>,
+    queue_size: Arc<AtomicUsize>,
+    worker_handle: Option<thread::JoinHandle<()>>,
 }
 
 // ============================================================================
@@ -87,7 +96,6 @@ impl Traversal {
         resource_usage: bool,
         max_files: usize,
         follow_symlinks: bool,
-        cancellation_token: CancellationToken,
         read_mode: ReadMode,
     ) -> Self {
         let progress_bar = if no_progress {
@@ -120,36 +128,81 @@ impl Traversal {
             (None, None)
         };
 
+        // Create internal components
+        let cancellation_token = setup_cancellation();
+        let (file_sender, file_receiver) = mpsc::channel::<PathBuf>();
+        let queue_size = Arc::new(AtomicUsize::new(0));
+
         Self {
-            // Counters
             file_count: 0,
             dir_count: 0,
             symlink_skipped_count: 0,
             symlink_traversed_count: 0,
-            successful_reads: 0,
+            successful_reads: Arc::new(AtomicUsize::new(0)),
             total_dir_entries: 0,
-            total_bytes_read: 0,
+            total_bytes_read: Arc::new(AtomicU64::new(0)),
 
-            // Durations
             start_time: Instant::now(),
             read_dir_duration: std::time::Duration::new(0, 0),
-            read_duration: std::time::Duration::new(0, 0),
-            open_duration: std::time::Duration::new(0, 0),
+            read_duration: Arc::new(AtomicU64::new(0)),
+            open_duration: Arc::new(AtomicU64::new(0)),
 
-            // Configuration
             max_files,
             follow_symlinks,
             read_mode,
             cancellation_token,
 
-            // UI and monitoring
             progress_bar,
             system,
             pid,
 
-            // Working buffer
-            buffer: Vec::with_capacity(types::BYTES_IN_MEGABYTE),
+            file_sender: Some(file_sender),
+            file_receiver: Some(file_receiver),
+            queue_size,
+            worker_handle: None,
         }
+    }
+
+    fn start_worker_thread(&mut self) {
+        // Take the receiver from the struct
+        let file_receiver = self
+            .file_receiver
+            .take()
+            .expect("Worker thread already started");
+
+        let read_mode = self.read_mode.clone();
+        let cancellation_token = self.cancellation_token.clone();
+        let queue_size = self.queue_size.clone();
+        let successful_reads = self.successful_reads.clone();
+        let total_bytes_read = self.total_bytes_read.clone();
+        let read_duration = self.read_duration.clone();
+        let open_duration = self.open_duration.clone();
+
+        let handle = thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
+            let mut buffer = Vec::with_capacity(types::BYTES_IN_MEGABYTE);
+
+            while let Ok(path) = file_receiver.recv() {
+                if cancellation_token.is_cancelled() {
+                    break;
+                }
+
+                queue_size.fetch_sub(1, Ordering::Relaxed);
+
+                let _ = rt.block_on(process_file_worker(
+                    path,
+                    &read_mode,
+                    &cancellation_token,
+                    &successful_reads,
+                    &total_bytes_read,
+                    &read_duration,
+                    &open_duration,
+                    &mut buffer,
+                ));
+            }
+        });
+
+        self.worker_handle = Some(handle);
     }
 
     fn add_file(&mut self) {
@@ -199,6 +252,10 @@ impl Traversal {
             };
 
             let show_throughput = !matches!(self.read_mode, ReadMode::Skip);
+            let queue_size = self.queue_size.load(Ordering::Relaxed);
+
+            // Use atomic counters directly
+            let total_bytes_read = self.total_bytes_read.load(Ordering::Relaxed);
 
             let message = if let (Some(system), Some(pid)) = (&mut self.system, &self.pid) {
                 system.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[*pid]), false);
@@ -207,24 +264,25 @@ impl Traversal {
                         let memory_mb = process.memory() as f64 / types::BYTES_IN_MEGABYTE as f64;
                         let cpu_usage = process.cpu_usage();
                         if show_throughput {
-                            let mb_per_second = self.total_bytes_read as f64
-                                / types::BYTES_IN_MEGABYTE as f64
-                                / elapsed;
+                            let mb_per_second =
+                                total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
                             format!(
-                                "{} files | {} dirs | {:.0} files/s | {:.2} MiB/s | {:.2} MiB memory | {:.2}% CPU",
+                                "{} files | {} dirs | {:.0} files/s | {:.2} MiB/s | queue: {} | {:.2} MiB memory | {:.2}% CPU",
                                 files_display,
                                 self.dir_count,
                                 files_per_second,
                                 mb_per_second,
+                                queue_size,
                                 memory_mb,
                                 cpu_usage
                             )
                         } else {
                             format!(
-                                "{} files | {} dirs | {:.0} files/s | {:.2} MiB memory | {:.2}% CPU",
+                                "{} files | {} dirs | {:.0} files/s | queue: {} | {:.2} MiB memory | {:.2}% CPU",
                                 files_display,
                                 self.dir_count,
                                 files_per_second,
+                                queue_size,
                                 memory_mb,
                                 cpu_usage
                             )
@@ -232,101 +290,39 @@ impl Traversal {
                     }
                     None => {
                         if show_throughput {
-                            let mb_per_second = self.total_bytes_read as f64
-                                / types::BYTES_IN_MEGABYTE as f64
-                                / elapsed;
+                            let mb_per_second =
+                                total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
                             format!(
-                                "{} files | {} dirs | {:.0} files/s | {:.2} MiB/s",
-                                files_display, self.dir_count, files_per_second, mb_per_second
+                                "{} files | {} dirs | {:.0} files/s | {:.2} MiB/s | queue: {}",
+                                files_display,
+                                self.dir_count,
+                                files_per_second,
+                                mb_per_second,
+                                queue_size
                             )
                         } else {
                             format!(
-                                "{} files | {} dirs | {:.0} files/s",
-                                files_display, self.dir_count, files_per_second
+                                "{} files | {} dirs | {:.0} files/s | queue: {}",
+                                files_display, self.dir_count, files_per_second, queue_size
                             )
                         }
                     }
                 }
             } else if show_throughput {
                 let mb_per_second =
-                    self.total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
+                    total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
                 format!(
-                    "{} files | {} dirs | {:.0} files/s | {:.2} MiB/s",
-                    files_display, self.dir_count, files_per_second, mb_per_second
+                    "{} files | {} dirs | {:.0} files/s | {:.2} MiB/s | queue: {}",
+                    files_display, self.dir_count, files_per_second, mb_per_second, queue_size
                 )
             } else {
                 format!(
-                    "{} files | {} dirs | {:.0} files/s",
-                    files_display, self.dir_count, files_per_second
+                    "{} files | {} dirs | {:.0} files/s | queue: {}",
+                    files_display, self.dir_count, files_per_second, queue_size
                 )
             };
 
             pb.set_message(message);
-        }
-    }
-
-    async fn traverse_file(&mut self, path: PathBuf) -> Result<()> {
-        match &self.read_mode {
-            ReadMode::Skip => Ok(()),
-            ReadMode::Fs => {
-                if self.cancellation_token.is_cancelled() {
-                    return Ok(());
-                }
-
-                let start = Instant::now();
-                let mut file = match File::open(&path) {
-                    Ok(f) => f,
-                    Err(_) => return Ok(()),
-                };
-                self.open_duration += start.elapsed();
-
-                let start = Instant::now();
-                if let Ok(bytes_read) = file.read_to_end(&mut self.buffer) {
-                    self.total_bytes_read += bytes_read as u64;
-                    self.successful_reads += 1;
-                }
-                self.read_duration += start.elapsed();
-                self.buffer.clear();
-
-                Ok(())
-            }
-            ReadMode::Thrift { client, repo_path } => {
-                if self.cancellation_token.is_cancelled() {
-                    return Ok(());
-                }
-
-                let abs_path = path.canonicalize()?;
-                let rel_file_path = abs_path
-                    .strip_prefix(repo_path)
-                    .map_err(|_| {
-                        anyhow::anyhow!(
-                            "File path does not start with repo path (after canonicalization)"
-                        )
-                    })?
-                    .to_path_buf();
-
-                let start = Instant::now();
-                let request = get_thrift_request(repo_path.clone(), rel_file_path)?;
-                let response = client
-                    .with_thrift(|thrift| {
-                        (
-                            thrift.getFileContent(&request),
-                            EdenThriftMethod::GetFileContent,
-                        )
-                    })
-                    .await?;
-                self.read_duration += start.elapsed();
-
-                match response.blob {
-                    ScmBlobOrError::blob(blob) => {
-                        self.total_bytes_read += blob.len() as u64;
-                        self.successful_reads += 1;
-                    }
-                    _ => {}
-                }
-
-                Ok(())
-            }
         }
     }
 
@@ -338,6 +334,34 @@ impl Traversal {
         if let Some(pb) = &self.progress_bar {
             pb.finish_and_clear();
         }
+    }
+
+    fn signal_completion(&mut self) {
+        self.file_sender = None;
+    }
+
+    fn shutdown_worker(&mut self) {
+        if let Some(handle) = self.worker_handle.take() {
+            let _ = handle.join();
+        }
+    }
+
+    fn get_total_successful_reads(&self) -> usize {
+        self.successful_reads.load(Ordering::Relaxed)
+    }
+
+    fn get_total_bytes_read(&self) -> u64 {
+        self.total_bytes_read.load(Ordering::Relaxed)
+    }
+
+    fn get_total_read_duration(&self) -> std::time::Duration {
+        let nanos = self.read_duration.load(Ordering::Relaxed);
+        std::time::Duration::from_nanos(nanos)
+    }
+
+    fn get_total_open_duration(&self) -> std::time::Duration {
+        let nanos = self.open_duration.load(Ordering::Relaxed);
+        std::time::Duration::from_nanos(nanos)
     }
 
     pub async fn traverse_path(&mut self, path: &Path) -> Result<()> {
@@ -383,7 +407,12 @@ impl Traversal {
                 } else if file_type.is_file() {
                     if self.file_count < self.max_files {
                         self.add_file();
-                        self.traverse_file(entry_path).await?;
+                        if let Some(ref sender) = self.file_sender {
+                            if sender.send(entry_path).is_err() {
+                                break;
+                            }
+                            self.queue_size.fetch_add(1, Ordering::Relaxed);
+                        }
                     } else {
                         self.add_read_dir_stats(read_dir_duration, entry_count);
                         return Ok(());
@@ -416,8 +445,6 @@ pub async fn bench_traversal(
         return Err(anyhow::anyhow!("Invalid directory path: {}", dir_path));
     }
 
-    let cancellation_token = setup_cancellation();
-
     let read_mode = if skip_read {
         ReadMode::Skip
     } else if let Some(fbsource_path) = thrift_io {
@@ -433,11 +460,14 @@ pub async fn bench_traversal(
         resource_usage,
         max_files,
         follow_symlinks,
-        cancellation_token.clone(),
         read_mode.clone(),
     );
 
+    traversal.start_worker_thread();
     traversal.traverse_path(path).await?;
+    traversal.signal_completion();
+    traversal.shutdown_worker();
+
     traversal.finish_progress_bar();
 
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
@@ -449,6 +479,83 @@ pub async fn bench_traversal(
 // ============================================================================
 // Private Helper Functions
 // ============================================================================
+
+async fn process_file_worker(
+    path: PathBuf,
+    read_mode: &ReadMode,
+    cancellation_token: &CancellationToken,
+    successful_reads: &Arc<AtomicUsize>,
+    total_bytes_read: &Arc<AtomicU64>,
+    read_duration: &Arc<AtomicU64>,
+    open_duration: &Arc<AtomicU64>,
+    buffer: &mut Vec<u8>,
+) -> Result<()> {
+    match read_mode {
+        ReadMode::Skip => Ok(()),
+        ReadMode::Fs => {
+            if cancellation_token.is_cancelled() {
+                return Ok(());
+            }
+
+            let start = Instant::now();
+            let mut file = match File::open(&path) {
+                Ok(f) => f,
+                Err(_) => return Ok(()),
+            };
+            let open_elapsed = start.elapsed();
+            open_duration.fetch_add(open_elapsed.as_nanos() as u64, Ordering::Relaxed);
+
+            let start = Instant::now();
+            if let Ok(bytes_read) = file.read_to_end(buffer) {
+                total_bytes_read.fetch_add(bytes_read as u64, Ordering::Relaxed);
+                successful_reads.fetch_add(1, Ordering::Relaxed);
+            }
+            let read_elapsed = start.elapsed();
+            read_duration.fetch_add(read_elapsed.as_nanos() as u64, Ordering::Relaxed);
+            buffer.clear();
+
+            Ok(())
+        }
+        ReadMode::Thrift { client, repo_path } => {
+            if cancellation_token.is_cancelled() {
+                return Ok(());
+            }
+
+            let abs_path = path.canonicalize()?;
+            let rel_file_path = abs_path
+                .strip_prefix(repo_path)
+                .map_err(|_| {
+                    anyhow::anyhow!(
+                        "File path does not start with repo path (after canonicalization)"
+                    )
+                })?
+                .to_path_buf();
+
+            let start = Instant::now();
+            let request = get_thrift_request(repo_path.clone(), rel_file_path)?;
+            let response = client
+                .with_thrift(|thrift| {
+                    (
+                        thrift.getFileContent(&request),
+                        EdenThriftMethod::GetFileContent,
+                    )
+                })
+                .await?;
+            let read_elapsed = start.elapsed();
+            read_duration.fetch_add(read_elapsed.as_nanos() as u64, Ordering::Relaxed);
+
+            match response.blob {
+                ScmBlobOrError::blob(blob) => {
+                    total_bytes_read.fetch_add(blob.len() as u64, Ordering::Relaxed);
+                    successful_reads.fetch_add(1, Ordering::Relaxed);
+                }
+                _ => {}
+            }
+
+            Ok(())
+        }
+    }
+}
 
 fn get_thrift_request(
     repo_path: PathBuf,
@@ -551,13 +658,16 @@ fn add_traversal_metrics(
         Some(0),
     );
 
-    if traversal.successful_reads > 0 {
-        let avg_file_size = traversal.total_bytes_read as f64 / traversal.successful_reads as f64;
+    let total_successful_reads = traversal.get_total_successful_reads();
+    let total_bytes_read = traversal.get_total_bytes_read();
+
+    if total_successful_reads > 0 {
+        let avg_file_size = total_bytes_read as f64 / total_successful_reads as f64;
         let avg_file_size_kb = avg_file_size / types::BYTES_IN_KILOBYTE as f64;
 
         result.add_metric(
             "Total files read",
-            traversal.successful_reads as f64,
+            total_successful_reads as f64,
             types::Unit::Files,
             Some(0),
         );
@@ -569,18 +679,19 @@ fn add_traversal_metrics(
         );
         result.add_metric(
             "Total data read",
-            traversal.total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64,
+            total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64,
             types::Unit::MiB,
             Some(2),
         );
 
         match read_mode {
             ReadMode::Thrift { .. } => {
+                let total_read_duration = traversal.get_total_read_duration();
                 let avg_read_dur =
-                    traversal.read_duration.as_secs_f64() / traversal.successful_reads as f64;
-                let mb_per_second = traversal.total_bytes_read as f64
+                    total_read_duration.as_secs_f64() / total_successful_reads as f64;
+                let mb_per_second = total_bytes_read as f64
                     / types::BYTES_IN_MEGABYTE as f64
-                    / traversal.read_duration.as_secs_f64();
+                    / total_read_duration.as_secs_f64();
 
                 result.add_metric("Throughput", mb_per_second, types::Unit::MiBps, Some(2));
                 result.add_metric(
@@ -591,15 +702,15 @@ fn add_traversal_metrics(
                 );
             }
             ReadMode::Fs => {
+                let total_open_duration = traversal.get_total_open_duration();
+                let total_read_duration = traversal.get_total_read_duration();
                 let avg_open_dur =
-                    traversal.open_duration.as_secs_f64() / traversal.successful_reads as f64;
+                    total_open_duration.as_secs_f64() / total_successful_reads as f64;
                 let avg_read_dur =
-                    traversal.read_duration.as_secs_f64() / traversal.successful_reads as f64;
-                let total_duration =
-                    (traversal.open_duration + traversal.read_duration).as_secs_f64();
-                let mb_per_second = traversal.total_bytes_read as f64
-                    / types::BYTES_IN_MEGABYTE as f64
-                    / total_duration;
+                    total_read_duration.as_secs_f64() / total_successful_reads as f64;
+                let total_duration = (total_open_duration + total_read_duration).as_secs_f64();
+                let mb_per_second =
+                    total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / total_duration;
 
                 result.add_metric(
                     "open() + read() throughput",
