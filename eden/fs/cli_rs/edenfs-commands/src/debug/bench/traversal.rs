@@ -16,8 +16,6 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
-use std::sync::mpsc;
-use std::thread;
 use std::time::Instant;
 
 use anyhow::Result;
@@ -33,6 +31,8 @@ use sysinfo::System;
 use thrift_types::edenfs::MountId;
 use thrift_types::edenfs::ScmBlobOrError;
 use thrift_types::edenfs::SyncBehavior;
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 use super::types;
@@ -49,7 +49,7 @@ enum ReadMode {
     Skip,
     Fs,
     Thrift {
-        client: std::sync::Arc<edenfs_client::client::EdenFsClient>,
+        client: Arc<edenfs_client::client::EdenFsClient>,
         repo_path: PathBuf,
     },
 }
@@ -81,11 +81,10 @@ struct Traversal {
     system: Option<System>,
     pid: Option<Pid>,
 
-    // Worker thread
-    file_sender: Option<mpsc::Sender<PathBuf>>,
-    file_receiver: Option<mpsc::Receiver<PathBuf>>,
+    // Worker task
+    file_sender: Option<mpsc::UnboundedSender<PathBuf>>,
     queue_size: Arc<AtomicUsize>,
-    worker_handle: Option<thread::JoinHandle<()>>,
+    worker_handle: Option<JoinHandle<()>>,
     worker_done: Arc<std::sync::atomic::AtomicBool>,
 }
 
@@ -133,7 +132,6 @@ impl Traversal {
 
         // Create internal components
         let cancellation_token = setup_cancellation();
-        let (file_sender, file_receiver) = mpsc::channel::<PathBuf>();
         let queue_size = Arc::new(AtomicUsize::new(0));
         let worker_done = Arc::new(std::sync::atomic::AtomicBool::new(false));
 
@@ -160,21 +158,102 @@ impl Traversal {
             system,
             pid,
 
-            file_sender: Some(file_sender),
-            file_receiver: Some(file_receiver),
+            file_sender: None,
             queue_size,
             worker_handle: None,
             worker_done,
         }
     }
 
-    fn start_worker_thread(&mut self) {
-        // Take the receiver from the struct
-        let file_receiver = self
-            .file_receiver
-            .take()
-            .expect("Worker thread already started");
+    async fn traverse_file(
+        path: PathBuf,
+        _buffer: &mut Vec<u8>,
+        read_mode: &ReadMode,
+        cancellation_token: &CancellationToken,
+        successful_reads: Arc<AtomicUsize>,
+        total_bytes_read: Arc<AtomicU64>,
+        read_duration: Arc<AtomicU64>,
+        open_duration: Arc<AtomicU64>,
+    ) -> Result<()> {
+        if cancellation_token.is_cancelled() {
+            return Ok(());
+        }
 
+        match read_mode {
+            ReadMode::Skip => Ok(()),
+            ReadMode::Fs => {
+                // Spawn blocking task for synchronous file I/O
+                let path_clone = path.clone();
+                let result = tokio::task::spawn_blocking(move || {
+                    let start = Instant::now();
+                    let file = File::open(&path_clone)?;
+                    let open_elapsed = start.elapsed();
+
+                    let start = Instant::now();
+                    let mut buffer = Vec::with_capacity(types::BYTES_IN_MEGABYTE);
+                    let mut file = file;
+                    let bytes_read = file.read_to_end(&mut buffer)?;
+                    let read_elapsed = start.elapsed();
+
+                    Ok::<_, std::io::Error>((bytes_read, open_elapsed, read_elapsed))
+                })
+                .await;
+
+                match result {
+                    Ok(Ok((bytes_read, open_elapsed, read_elapsed))) => {
+                        open_duration.fetch_add(open_elapsed.as_nanos() as u64, Ordering::Relaxed);
+                        read_duration.fetch_add(read_elapsed.as_nanos() as u64, Ordering::Relaxed);
+                        total_bytes_read.fetch_add(bytes_read as u64, Ordering::Relaxed);
+                        successful_reads.fetch_add(1, Ordering::Relaxed);
+                    }
+                    _ => {
+                        // Silently ignore errors (file might have been deleted, permission issues, etc.)
+                    }
+                }
+
+                Ok(())
+            }
+            ReadMode::Thrift { client, repo_path } => {
+                let abs_path = path.canonicalize()?;
+                let rel_file_path = abs_path
+                    .strip_prefix(repo_path)
+                    .map_err(|_| {
+                        anyhow::anyhow!(
+                            "File path does not start with repo path (after canonicalization)"
+                        )
+                    })?
+                    .to_path_buf();
+
+                let start = Instant::now();
+                let request = get_thrift_request(repo_path.clone(), rel_file_path)?;
+                let response = client
+                    .with_thrift(|thrift| {
+                        (
+                            thrift.getFileContent(&request),
+                            EdenThriftMethod::GetFileContent,
+                        )
+                    })
+                    .await?;
+                let read_elapsed = start.elapsed();
+                read_duration.fetch_add(read_elapsed.as_nanos() as u64, Ordering::Relaxed);
+
+                match response.blob {
+                    ScmBlobOrError::blob(blob) => {
+                        total_bytes_read.fetch_add(blob.len() as u64, Ordering::Relaxed);
+                        successful_reads.fetch_add(1, Ordering::Relaxed);
+                    }
+                    _ => {}
+                }
+
+                Ok(())
+            }
+        }
+    }
+
+    fn start_worker_task(&mut self) {
+        let (file_sender, mut file_receiver) = mpsc::unbounded_channel::<PathBuf>();
+
+        // Clone the fields needed for the worker task
         let read_mode = self.read_mode.clone();
         let cancellation_token = self.cancellation_token.clone();
         let queue_size = self.queue_size.clone();
@@ -184,32 +263,42 @@ impl Traversal {
         let open_duration = self.open_duration.clone();
         let worker_done = self.worker_done.clone();
 
-        let handle = thread::spawn(move || {
-            let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
+        let handle = tokio::spawn(async move {
             let mut buffer = Vec::with_capacity(types::BYTES_IN_MEGABYTE);
 
-            while let Ok(path) = file_receiver.recv() {
-                if cancellation_token.is_cancelled() {
-                    break;
+            loop {
+                tokio::select! {
+                    _ = cancellation_token.cancelled() => {
+                        break;
+                    }
+                    path_opt = file_receiver.recv() => {
+                        match path_opt {
+                            Some(path) => {
+                                queue_size.fetch_sub(1, Ordering::Relaxed);
+                                let _ = Self::traverse_file(
+                                    path,
+                                    &mut buffer,
+                                    &read_mode,
+                                    &cancellation_token,
+                                    successful_reads.clone(),
+                                    total_bytes_read.clone(),
+                                    read_duration.clone(),
+                                    open_duration.clone(),
+                                ).await;
+                            }
+                            None => {
+                                // Channel closed, exit worker
+                                break;
+                            }
+                        }
+                    }
                 }
-
-                queue_size.fetch_sub(1, Ordering::Relaxed);
-
-                let _ = rt.block_on(process_file_worker(
-                    path,
-                    &read_mode,
-                    &cancellation_token,
-                    &successful_reads,
-                    &total_bytes_read,
-                    &read_duration,
-                    &open_duration,
-                    &mut buffer,
-                ));
             }
 
             worker_done.store(true, Ordering::Release);
         });
 
+        self.file_sender = Some(file_sender);
         self.worker_handle = Some(handle);
     }
 
@@ -358,18 +447,18 @@ impl Traversal {
         }
     }
 
-    fn signal_completion(&mut self) {
-        self.file_sender = None;
-    }
+    async fn shutdown_worker(&mut self) {
+        // Drop the sender to signal the worker to stop
+        drop(self.file_sender.take());
 
-    fn shutdown_worker(&mut self) {
+        // Wait for worker to finish
         if let Some(handle) = self.worker_handle.take() {
             while !self.worker_done.load(Ordering::Acquire) {
-                thread::sleep(std::time::Duration::from_millis(100));
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 self.update_progress();
             }
 
-            let _ = handle.join();
+            let _ = handle.await;
 
             // One final update to show completion
             self.update_progress();
@@ -394,7 +483,7 @@ impl Traversal {
         std::time::Duration::from_nanos(nanos)
     }
 
-    pub async fn traverse_path(&mut self, path: &Path) -> Result<()> {
+    async fn traverse_path(&mut self, path: &Path) -> Result<()> {
         if path.is_dir() {
             self.traverse_directory(path).await?;
         }
@@ -438,6 +527,7 @@ impl Traversal {
                     if self.file_count < self.max_files {
                         self.add_file();
                         if let Some(ref sender) = self.file_sender {
+                            // Using send instead of blocking send since we have unbounded channel
                             if sender.send(entry_path).is_err() {
                                 break;
                             }
@@ -496,15 +586,15 @@ pub async fn bench_traversal(
         read_mode.clone(),
     );
 
-    traversal.start_worker_thread();
+    traversal.start_worker_task();
+
     // Traverse all directories
     for dir_path in dir_paths {
         let path = Path::new(dir_path);
         traversal.traverse_path(path).await?;
     }
-    traversal.signal_completion();
-    traversal.shutdown_worker();
 
+    traversal.shutdown_worker().await;
     traversal.finish_progress_bar();
 
     let mut result = Benchmark::new(BenchmarkType::FsTraversal);
@@ -516,83 +606,6 @@ pub async fn bench_traversal(
 // ============================================================================
 // Private Helper Functions
 // ============================================================================
-
-async fn process_file_worker(
-    path: PathBuf,
-    read_mode: &ReadMode,
-    cancellation_token: &CancellationToken,
-    successful_reads: &Arc<AtomicUsize>,
-    total_bytes_read: &Arc<AtomicU64>,
-    read_duration: &Arc<AtomicU64>,
-    open_duration: &Arc<AtomicU64>,
-    buffer: &mut Vec<u8>,
-) -> Result<()> {
-    match read_mode {
-        ReadMode::Skip => Ok(()),
-        ReadMode::Fs => {
-            if cancellation_token.is_cancelled() {
-                return Ok(());
-            }
-
-            let start = Instant::now();
-            let mut file = match File::open(&path) {
-                Ok(f) => f,
-                Err(_) => return Ok(()),
-            };
-            let open_elapsed = start.elapsed();
-            open_duration.fetch_add(open_elapsed.as_nanos() as u64, Ordering::Relaxed);
-
-            let start = Instant::now();
-            if let Ok(bytes_read) = file.read_to_end(buffer) {
-                total_bytes_read.fetch_add(bytes_read as u64, Ordering::Relaxed);
-                successful_reads.fetch_add(1, Ordering::Relaxed);
-            }
-            let read_elapsed = start.elapsed();
-            read_duration.fetch_add(read_elapsed.as_nanos() as u64, Ordering::Relaxed);
-            buffer.clear();
-
-            Ok(())
-        }
-        ReadMode::Thrift { client, repo_path } => {
-            if cancellation_token.is_cancelled() {
-                return Ok(());
-            }
-
-            let abs_path = path.canonicalize()?;
-            let rel_file_path = abs_path
-                .strip_prefix(repo_path)
-                .map_err(|_| {
-                    anyhow::anyhow!(
-                        "File path does not start with repo path (after canonicalization)"
-                    )
-                })?
-                .to_path_buf();
-
-            let start = Instant::now();
-            let request = get_thrift_request(repo_path.clone(), rel_file_path)?;
-            let response = client
-                .with_thrift(|thrift| {
-                    (
-                        thrift.getFileContent(&request),
-                        EdenThriftMethod::GetFileContent,
-                    )
-                })
-                .await?;
-            let read_elapsed = start.elapsed();
-            read_duration.fetch_add(read_elapsed.as_nanos() as u64, Ordering::Relaxed);
-
-            match response.blob {
-                ScmBlobOrError::blob(blob) => {
-                    total_bytes_read.fetch_add(blob.len() as u64, Ordering::Relaxed);
-                    successful_reads.fetch_add(1, Ordering::Relaxed);
-                }
-                _ => {}
-            }
-
-            Ok(())
-        }
-    }
-}
 
 fn get_thrift_request(
     repo_path: PathBuf,
