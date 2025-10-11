@@ -147,7 +147,7 @@ adir/file
     def _path_exists_in_repo(self, path: str) -> bool:
         return os.path.exists(self.repo.get_path(path))
 
-    def ensure_filtered_and_unfiltered(
+    def assert_filtered_and_unfiltered(
         self, filtered: Set[str], unfiltered: Set[str]
     ) -> None:
         for f in filtered:
@@ -273,28 +273,28 @@ class FilteredFSBasic(FilteredFSBase):
         filtered_files = initial_files.copy()
 
         # File exists initially
-        self.ensure_filtered_and_unfiltered(set(), initial_files)
+        self.assert_filtered_and_unfiltered(set(), initial_files)
 
         # File is omitted after enabling filter
         self.enable_filters("a/nested_filter_file")
-        self.ensure_filtered_and_unfiltered(
+        self.assert_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
 
         # File reappears after disabling filter
         self.reset_filters()
-        self.ensure_filtered_and_unfiltered(set(), initial_files)
+        self.assert_filtered_and_unfiltered(set(), initial_files)
 
     def test_filters_follow_v2_rules(self) -> None:
         initial_files = {"bdir", "bdir/README.md", "bdir/noexec.sh", "bdir/test.sh"}
         filtered_files = {"bdir/noexec.sh", "bdir/test.sh"}
 
         # Files exist initially
-        self.ensure_filtered_and_unfiltered(set(), initial_files)
+        self.assert_filtered_and_unfiltered(set(), initial_files)
 
         # Files are omitted after enabling filter
         self.enable_filters("filters/v2")
-        self.ensure_filtered_and_unfiltered(
+        self.assert_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
 
@@ -310,11 +310,11 @@ class FilteredFSBasic(FilteredFSBase):
         filtered_files = {"bdir/noexec.sh", "bdir/test.sh", "adir/file"}
 
         # Files exist initially
-        self.ensure_filtered_and_unfiltered(set(), initial_files)
+        self.assert_filtered_and_unfiltered(set(), initial_files)
 
         # Files are omitted after enabling filter
         self.enable_filters("filters/v1_filter1", "filters/v1_filter2")
-        self.ensure_filtered_and_unfiltered(
+        self.assert_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
 
@@ -328,34 +328,34 @@ class FilteredFSBasic(FilteredFSBase):
         filtered_files = initial_files.copy()
 
         # Directory and children initially exist
-        self.ensure_filtered_and_unfiltered(set(), initial_files)
+        self.assert_filtered_and_unfiltered(set(), initial_files)
 
         # Directory and children are omitted after enabling filter
         self.enable_filters("a/nested_filter_file")
-        self.ensure_filtered_and_unfiltered(
+        self.assert_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
 
         # Directory and children reappear after disabling filter
         self.reset_filters()
-        self.ensure_filtered_and_unfiltered(set(), initial_files)
+        self.assert_filtered_and_unfiltered(set(), initial_files)
 
     def test_some_children_filtered(self) -> None:
         initial_files = {"dir2", "dir2/README", "dir2/not_filtered"}
         filtered_files = {"dir2/README"}
 
         # Directory and children exist initially
-        self.ensure_filtered_and_unfiltered(set(), initial_files)
+        self.assert_filtered_and_unfiltered(set(), initial_files)
 
         # Only one child is omitted after enabling filter
         self.enable_filters("a/nested_filter_file")
-        self.ensure_filtered_and_unfiltered(
+        self.assert_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
 
         # All children reappear after disabling filter
         self.reset_filters()
-        self.ensure_filtered_and_unfiltered(set(), initial_files)
+        self.assert_filtered_and_unfiltered(set(), initial_files)
 
     def test_filter_shows_correct_include_exclude(self) -> None:
         self.assertEqual(self.show_active_filters(), "")
@@ -412,7 +412,7 @@ class FilteredFSBasic(FilteredFSBase):
     def test_enable_filters_dne(self) -> None:
         initial_files = {"foo", "dir2/README", "filtered_out", "dir2/not_filtered"}
         self.enable_filters("does_not_exist")
-        self.ensure_filtered_and_unfiltered(set(), initial_files)
+        self.assert_filtered_and_unfiltered(set(), initial_files)
 
     def test_checkout_old_commit(self) -> None:
         self.repo.write_file("new_filter", self.testFilter1)
@@ -423,14 +423,14 @@ class FilteredFSBasic(FilteredFSBase):
         initial_files = {"foo", "dir2/README", "filtered_out", "dir2/not_filtered"}
         filtered_files = {"foo", "dir2/README", "filtered_out"}
         self.enable_filters("new_filter")
-        self.ensure_filtered_and_unfiltered(
+        self.assert_filtered_and_unfiltered(
             filtered_files, initial_files.difference(filtered_files)
         )
 
         # Checking out a commit that's older than the commit that introduced the
         # filter will not fail; it will simply apply the null filter
         self.hg("update", self.initial_commit)
-        self.ensure_filtered_and_unfiltered(set(), initial_files)
+        self.assert_filtered_and_unfiltered(set(), initial_files)
 
     def test_ods_counters_exist(self) -> None:
         self.enable_filters("top_level_filter")
@@ -466,7 +466,7 @@ class FilteredFSBasic(FilteredFSBase):
         self.assert_status_empty()
 
         # The newly unfiltered files should be unfiltered
-        self.ensure_filtered_and_unfiltered(set(), {"dir2/not_filtered", "dir2/README"})
+        self.assert_filtered_and_unfiltered(set(), {"dir2/not_filtered", "dir2/README"})
 
 
 @filteredhg_test
