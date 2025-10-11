@@ -29,10 +29,16 @@ class FakeFuse;
 class FakePrivHelper final : public PrivHelper {
  public:
   FakePrivHelper() = default;
+  ~FakePrivHelper() override = default;
 
   class MountDelegate {
    public:
+    MountDelegate() = default;
     virtual ~MountDelegate();
+    MountDelegate(const MountDelegate&) = delete;
+    MountDelegate& operator=(const MountDelegate&) = delete;
+    MountDelegate(MountDelegate&&) = delete;
+    MountDelegate& operator=(MountDelegate&&) = delete;
 
     virtual folly::Future<folly::File> fuseMount() = 0;
     virtual folly::Future<folly::Unit> fuseUnmount() = 0;
@@ -97,6 +103,8 @@ class FakePrivHelper final : public PrivHelper {
  private:
   FakePrivHelper(FakePrivHelper const&) = delete;
   FakePrivHelper& operator=(FakePrivHelper const&) = delete;
+  FakePrivHelper(FakePrivHelper&&) = delete;
+  FakePrivHelper& operator=(FakePrivHelper&&) = delete;
 
   std::shared_ptr<MountDelegate> getMountDelegate(folly::StringPiece mountPath);
 
@@ -109,6 +117,11 @@ class FakeFuseMountDelegate : public FakePrivHelper::MountDelegate {
   explicit FakeFuseMountDelegate(
       AbsolutePath mountPath,
       std::shared_ptr<FakeFuse>) noexcept;
+  ~FakeFuseMountDelegate() override = default;
+  FakeFuseMountDelegate(const FakeFuseMountDelegate&) = delete;
+  FakeFuseMountDelegate& operator=(const FakeFuseMountDelegate&) = delete;
+  FakeFuseMountDelegate(FakeFuseMountDelegate&&) = delete;
+  FakeFuseMountDelegate& operator=(FakeFuseMountDelegate&&) = delete;
 
   folly::Future<folly::File> fuseMount() override;
   folly::Future<folly::Unit> fuseUnmount() override;
