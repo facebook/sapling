@@ -23,7 +23,7 @@ pub const NUMBER_OF_SUB_DIRS: usize = 256;
 pub const BYTES_IN_KILOBYTE: usize = 1024;
 pub const BYTES_IN_MEGABYTE: usize = 1024 * BYTES_IN_KILOBYTE;
 pub const BYTES_IN_GIGABYTE: usize = 1024 * BYTES_IN_MEGABYTE;
-pub const TRAVERSAL_PROGRESS_UPDATE_INTERVAL: usize = 1000;
+pub const PROGRESS_BAR_UPDATE_INTERVAL_SECS: u64 = 1;
 
 /// Represents the type of benchmark being performed
 #[derive(Debug, Clone, Serialize)]

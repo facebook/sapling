@@ -8,8 +8,6 @@
 //! Filesystem traversal benchmarking
 
 use std::fs;
-use std::fs::File;
-use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -26,7 +24,6 @@ use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use num_format::Locale;
 use num_format::ToFormattedString;
-use sysinfo::Pid;
 use sysinfo::System;
 use thrift_types::edenfs::MountId;
 use thrift_types::edenfs::ScmBlobOrError;
@@ -54,21 +51,28 @@ enum ReadMode {
     },
 }
 
+/// Counters for tracking traversal progress.
+/// All atomic counters are wrapped in Arc for efficient sharing across tasks.
+/// Cloning this struct is cheap - it only clones the Arc references, not the underlying data.
+#[derive(Clone)]
+struct TraversalCounters {
+    files: Arc<AtomicUsize>,
+    dirs: Arc<AtomicUsize>,
+    symlinks_skipped: Arc<AtomicUsize>,
+    symlinks_traversed: Arc<AtomicUsize>,
+    files_read: Arc<AtomicUsize>,
+    total_dir_entries: Arc<AtomicUsize>,
+    total_bytes_read: Arc<AtomicU64>,
+    dir_read_duration_nanos: Arc<AtomicU64>,
+    file_read_duration_nanos: Arc<AtomicU64>,
+    file_open_duration_nanos: Arc<AtomicU64>,
+    queue_size: Arc<AtomicUsize>,
+    start_time: Instant,
+}
+
 struct Traversal {
     // Counters
-    file_count: usize,
-    dir_count: usize,
-    symlink_skipped_count: usize,
-    symlink_traversed_count: usize,
-    successful_reads: Arc<AtomicUsize>,
-    total_dir_entries: usize,
-    total_bytes_read: Arc<AtomicU64>,
-
-    // Durations
-    start_time: Instant,
-    read_dir_duration: std::time::Duration,
-    read_duration: Arc<AtomicU64>,
-    open_duration: Arc<AtomicU64>,
+    counters: TraversalCounters,
 
     // Configuration
     max_files: usize,
@@ -76,138 +80,325 @@ struct Traversal {
     read_mode: ReadMode,
     cancellation_token: CancellationToken,
 
-    // UI and monitoring
-    progress_bar: Option<ProgressBar>,
-    system: Option<System>,
-    pid: Option<Pid>,
-
-    // Worker task
-    file_sender: Option<mpsc::UnboundedSender<PathBuf>>,
-    queue_size: Arc<AtomicUsize>,
-    worker_handle: Option<JoinHandle<()>>,
-    worker_done: Arc<std::sync::atomic::AtomicBool>,
+    // Task handles
+    reader_handle: Option<JoinHandle<()>>,
+    traversal_handle: Option<JoinHandle<Result<()>>>,
+    progress_handle: Option<JoinHandle<()>>,
 }
 
 // ============================================================================
 // Type Implementations
 // ============================================================================
 
-impl Traversal {
-    fn new(
-        no_progress: bool,
-        resource_usage: bool,
+impl TraversalCounters {
+    fn new() -> Self {
+        Self {
+            files: Arc::new(AtomicUsize::new(0)),
+            dirs: Arc::new(AtomicUsize::new(0)),
+            symlinks_skipped: Arc::new(AtomicUsize::new(0)),
+            symlinks_traversed: Arc::new(AtomicUsize::new(0)),
+            files_read: Arc::new(AtomicUsize::new(0)),
+            total_dir_entries: Arc::new(AtomicUsize::new(0)),
+            total_bytes_read: Arc::new(AtomicU64::new(0)),
+            dir_read_duration_nanos: Arc::new(AtomicU64::new(0)),
+            file_read_duration_nanos: Arc::new(AtomicU64::new(0)),
+            file_open_duration_nanos: Arc::new(AtomicU64::new(0)),
+            queue_size: Arc::new(AtomicUsize::new(0)),
+            start_time: Instant::now(),
+        }
+    }
+
+    fn total_elapsed_time(&self) -> f64 {
+        self.start_time.elapsed().as_secs_f64()
+    }
+
+    fn report_progress(
+        &self,
         max_files: usize,
-        follow_symlinks: bool,
-        read_mode: ReadMode,
-    ) -> Self {
-        let progress_bar = if no_progress {
-            None
+        read_mode: &ReadMode,
+        system_info: Option<(f64, f64)>, // (memory_mb, cpu_usage)
+    ) -> String {
+        let elapsed = self.start_time.elapsed().as_secs_f64();
+        let files_val = self.files.load(Ordering::Relaxed);
+        let dirs_val = self.dirs.load(Ordering::Relaxed);
+        let total_bytes_read_val = self.total_bytes_read.load(Ordering::Relaxed);
+        let queue_size_val = self.queue_size.load(Ordering::Relaxed);
+
+        let files_per_second = files_val as f64 / elapsed;
+
+        let files_display = if max_files == usize::MAX {
+            files_val.to_formatted_string(&Locale::en)
         } else {
-            let pb = ProgressBar::new_spinner();
-            pb.set_style(
-                ProgressStyle::default_spinner()
-                    .template("[{elapsed_precise}] {msg}")
-                    .unwrap(),
-            );
-            let initial_files_display = if max_files == usize::MAX {
-                "0"
+            format!(
+                "{}/{}",
+                files_val.to_formatted_string(&Locale::en),
+                max_files.to_formatted_string(&Locale::en)
+            )
+        };
+
+        let show_throughput = !match read_mode {
+            ReadMode::Skip => true,
+            _ => false,
+        };
+
+        if let Some((memory_mb, cpu_usage)) = system_info {
+            if show_throughput {
+                let mb_per_second =
+                    total_bytes_read_val as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
+                format!(
+                    "{} files | {} dirs | {} files/s | {:.2} MiB/s | queue: {} | {:.2} MiB memory | {:.2}% CPU",
+                    files_display,
+                    dirs_val.to_formatted_string(&Locale::en),
+                    (files_per_second as u64).to_formatted_string(&Locale::en),
+                    mb_per_second,
+                    queue_size_val.to_formatted_string(&Locale::en),
+                    memory_mb,
+                    cpu_usage
+                )
             } else {
-                &format!("0/{}", max_files.to_formatted_string(&Locale::en))
-            };
-            pb.set_message(format!(
-                "{} files | 0 dirs | 0 files/s",
-                initial_files_display
-            ));
-            Some(pb)
-        };
-
-        let (system, pid) = if resource_usage {
-            let mut sys = System::new_all();
-            let process_id = sysinfo::get_current_pid().expect("Failed to get current process ID");
-            sys.refresh_all();
-            (Some(sys), Some(process_id))
+                format!(
+                    "{} files | {} dirs | {} files/s | queue: {} | {:.2} MiB memory | {:.2}% CPU",
+                    files_display,
+                    dirs_val.to_formatted_string(&Locale::en),
+                    (files_per_second as u64).to_formatted_string(&Locale::en),
+                    queue_size_val.to_formatted_string(&Locale::en),
+                    memory_mb,
+                    cpu_usage
+                )
+            }
+        } else if show_throughput {
+            let mb_per_second =
+                total_bytes_read_val as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
+            format!(
+                "{} files | {} dirs | {} files/s | {:.2} MiB/s | queue: {}",
+                files_display,
+                dirs_val.to_formatted_string(&Locale::en),
+                (files_per_second as u64).to_formatted_string(&Locale::en),
+                mb_per_second,
+                queue_size_val.to_formatted_string(&Locale::en)
+            )
         } else {
-            (None, None)
+            format!(
+                "{} files | {} dirs | {} files/s | queue: {}",
+                files_display,
+                dirs_val.to_formatted_string(&Locale::en),
+                (files_per_second as u64).to_formatted_string(&Locale::en),
+                queue_size_val.to_formatted_string(&Locale::en)
+            )
+        }
+    }
+
+    fn report_benchmark(&self, read_mode: &ReadMode) -> Result<Benchmark> {
+        let mut result = Benchmark::new(BenchmarkType::FsTraversal);
+
+        let total_elapsed_time = self.total_elapsed_time();
+
+        if total_elapsed_time <= 0.0 {
+            return Err(anyhow::anyhow!(
+                "Total elapsed time is less or equal to zero."
+            ));
+        }
+
+        let files = self.files.load(Ordering::Relaxed);
+        let dirs = self.dirs.load(Ordering::Relaxed);
+        let total_dir_entries = self.total_dir_entries.load(Ordering::Relaxed);
+        let dir_read_duration_nanos = self.dir_read_duration_nanos.load(Ordering::Relaxed);
+
+        let files_per_second = files as f64 / total_elapsed_time;
+
+        let avg_read_dir_latency = if dirs > 0 {
+            (dir_read_duration_nanos as f64 / 1_000_000.0) / dirs as f64
+        } else {
+            0.0
         };
 
+        let avg_dir_size = if dirs > 0 {
+            total_dir_entries as f64 / dirs as f64
+        } else {
+            0.0
+        };
+
+        result.add_metric(
+            "Traversal throughput",
+            files_per_second,
+            types::Unit::FilesPerSecond,
+            Some(0),
+        );
+        result.add_metric(
+            "Average read_dir() latency",
+            avg_read_dir_latency,
+            types::Unit::Ms,
+            Some(4),
+        );
+        result.add_metric(
+            "Average directory size",
+            avg_dir_size,
+            types::Unit::Files,
+            Some(2),
+        );
+        result.add_metric(
+            "Total files scanned",
+            files as f64,
+            types::Unit::Files,
+            Some(0),
+        );
+        result.add_metric("Total directories", dirs as f64, types::Unit::Dirs, Some(0));
+        result.add_metric(
+            "Total symlinks skipped",
+            self.symlinks_skipped.load(Ordering::Relaxed) as f64,
+            types::Unit::Symlinks,
+            Some(0),
+        );
+        result.add_metric(
+            "Total symlinks traversed",
+            self.symlinks_traversed.load(Ordering::Relaxed) as f64,
+            types::Unit::Symlinks,
+            Some(0),
+        );
+
+        let files_read = self.files_read.load(Ordering::Relaxed);
+        let total_bytes_read = self.total_bytes_read.load(Ordering::Relaxed);
+
+        if files_read > 0 {
+            let avg_file_size = total_bytes_read as f64 / files_read as f64;
+            let avg_file_size_kb = avg_file_size / types::BYTES_IN_KILOBYTE as f64;
+
+            result.add_metric(
+                "Total files read",
+                files_read as f64,
+                types::Unit::Files,
+                Some(0),
+            );
+            result.add_metric(
+                "Average file size",
+                avg_file_size_kb,
+                types::Unit::KiB,
+                Some(2),
+            );
+            result.add_metric(
+                "Total data read",
+                total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64,
+                types::Unit::MiB,
+                Some(2),
+            );
+
+            match read_mode {
+                ReadMode::Thrift { .. } => {
+                    let file_read_duration_nanos =
+                        self.file_read_duration_nanos.load(Ordering::Relaxed);
+                    let total_read_duration_secs =
+                        file_read_duration_nanos as f64 / 1_000_000_000.0;
+                    let avg_read_dur_ms =
+                        (file_read_duration_nanos as f64 / 1_000_000.0) / files_read as f64;
+                    let mb_per_second = total_bytes_read as f64
+                        / types::BYTES_IN_MEGABYTE as f64
+                        / total_read_duration_secs;
+
+                    result.add_metric("Throughput", mb_per_second, types::Unit::MiBps, Some(2));
+                    result.add_metric(
+                        "Average thrift read latency",
+                        avg_read_dur_ms,
+                        types::Unit::Ms,
+                        Some(4),
+                    );
+                }
+                ReadMode::Fs => {
+                    let file_open_duration_nanos =
+                        self.file_open_duration_nanos.load(Ordering::Relaxed);
+                    let file_read_duration_nanos =
+                        self.file_read_duration_nanos.load(Ordering::Relaxed);
+                    let total_duration_nanos = file_open_duration_nanos + file_read_duration_nanos;
+                    let total_duration_secs = total_duration_nanos as f64 / 1_000_000_000.0;
+
+                    let avg_open_dur_ms =
+                        (file_open_duration_nanos as f64 / 1_000_000.0) / files_read as f64;
+                    let avg_read_dur_ms =
+                        (file_read_duration_nanos as f64 / 1_000_000.0) / files_read as f64;
+                    let mb_per_second = total_bytes_read as f64
+                        / types::BYTES_IN_MEGABYTE as f64
+                        / total_duration_secs;
+
+                    result.add_metric(
+                        "open() + read() throughput",
+                        mb_per_second,
+                        types::Unit::MiBps,
+                        Some(2),
+                    );
+                    result.add_metric("open() latency", avg_open_dur_ms, types::Unit::Ms, Some(4));
+                    result.add_metric(
+                        "Average read() latency",
+                        avg_read_dur_ms,
+                        types::Unit::Ms,
+                        Some(4),
+                    );
+                }
+                ReadMode::Skip => {}
+            }
+        }
+
+        Ok(result)
+    }
+}
+
+impl Traversal {
+    fn new(max_files: usize, follow_symlinks: bool, read_mode: ReadMode) -> Self {
         // Create internal components
         let cancellation_token = setup_cancellation();
-        let queue_size = Arc::new(AtomicUsize::new(0));
-        let worker_done = Arc::new(std::sync::atomic::AtomicBool::new(false));
 
         Self {
-            file_count: 0,
-            dir_count: 0,
-            symlink_skipped_count: 0,
-            symlink_traversed_count: 0,
-            successful_reads: Arc::new(AtomicUsize::new(0)),
-            total_dir_entries: 0,
-            total_bytes_read: Arc::new(AtomicU64::new(0)),
-
-            start_time: Instant::now(),
-            read_dir_duration: std::time::Duration::new(0, 0),
-            read_duration: Arc::new(AtomicU64::new(0)),
-            open_duration: Arc::new(AtomicU64::new(0)),
-
+            counters: TraversalCounters::new(),
             max_files,
             follow_symlinks,
             read_mode,
             cancellation_token,
-
-            progress_bar,
-            system,
-            pid,
-
-            file_sender: None,
-            queue_size,
-            worker_handle: None,
-            worker_done,
+            reader_handle: None,
+            traversal_handle: None,
+            progress_handle: None,
         }
     }
 
-    async fn traverse_file(
+    async fn read_file(
         path: PathBuf,
-        _buffer: &mut Vec<u8>,
         read_mode: &ReadMode,
-        cancellation_token: &CancellationToken,
-        successful_reads: Arc<AtomicUsize>,
-        total_bytes_read: Arc<AtomicU64>,
-        read_duration: Arc<AtomicU64>,
-        open_duration: Arc<AtomicU64>,
+        buffer: &mut Vec<u8>,
+        counters: &TraversalCounters,
     ) -> Result<()> {
-        if cancellation_token.is_cancelled() {
-            return Ok(());
-        }
-
         match read_mode {
             ReadMode::Skip => Ok(()),
             ReadMode::Fs => {
-                // Spawn blocking task for synchronous file I/O
-                let path_clone = path.clone();
-                let result = tokio::task::spawn_blocking(move || {
-                    let start = Instant::now();
-                    let file = File::open(&path_clone)?;
-                    let open_elapsed = start.elapsed();
+                // Use tokio::fs for async file I/O
+                buffer.clear();
 
-                    let start = Instant::now();
-                    let mut buffer = Vec::with_capacity(types::BYTES_IN_MEGABYTE);
-                    let mut file = file;
-                    let bytes_read = file.read_to_end(&mut buffer)?;
-                    let read_elapsed = start.elapsed();
+                let start = Instant::now();
+                let file_result = tokio::fs::File::open(&path).await;
+                let open_elapsed = start.elapsed();
 
-                    Ok::<_, std::io::Error>((bytes_read, open_elapsed, read_elapsed))
-                })
-                .await;
+                match file_result {
+                    Ok(mut file) => {
+                        let start = Instant::now();
 
-                match result {
-                    Ok(Ok((bytes_read, open_elapsed, read_elapsed))) => {
-                        open_duration.fetch_add(open_elapsed.as_nanos() as u64, Ordering::Relaxed);
-                        read_duration.fetch_add(read_elapsed.as_nanos() as u64, Ordering::Relaxed);
-                        total_bytes_read.fetch_add(bytes_read as u64, Ordering::Relaxed);
-                        successful_reads.fetch_add(1, Ordering::Relaxed);
+                        match tokio::io::AsyncReadExt::read_to_end(&mut file, buffer).await {
+                            Ok(bytes_read) => {
+                                let read_elapsed = start.elapsed();
+
+                                counters
+                                    .file_open_duration_nanos
+                                    .fetch_add(open_elapsed.as_nanos() as u64, Ordering::Relaxed);
+                                counters
+                                    .file_read_duration_nanos
+                                    .fetch_add(read_elapsed.as_nanos() as u64, Ordering::Relaxed);
+                                counters
+                                    .total_bytes_read
+                                    .fetch_add(bytes_read as u64, Ordering::Relaxed);
+                                counters.files_read.fetch_add(1, Ordering::Relaxed);
+                            }
+                            Err(_) => {
+                                // Silently ignore read errors
+                            }
+                        }
                     }
-                    _ => {
-                        // Silently ignore errors (file might have been deleted, permission issues, etc.)
+                    Err(_) => {
+                        // Silently ignore open errors (file might have been deleted, permission issues, etc.)
                     }
                 }
 
@@ -235,12 +426,16 @@ impl Traversal {
                     })
                     .await?;
                 let read_elapsed = start.elapsed();
-                read_duration.fetch_add(read_elapsed.as_nanos() as u64, Ordering::Relaxed);
+                counters
+                    .file_read_duration_nanos
+                    .fetch_add(read_elapsed.as_nanos() as u64, Ordering::Relaxed);
 
                 match response.blob {
                     ScmBlobOrError::blob(blob) => {
-                        total_bytes_read.fetch_add(blob.len() as u64, Ordering::Relaxed);
-                        successful_reads.fetch_add(1, Ordering::Relaxed);
+                        counters
+                            .total_bytes_read
+                            .fetch_add(blob.len() as u64, Ordering::Relaxed);
+                        counters.files_read.fetch_add(1, Ordering::Relaxed);
                     }
                     _ => {}
                 }
@@ -250,259 +445,86 @@ impl Traversal {
         }
     }
 
-    fn start_worker_task(&mut self) {
+    fn start_reader_task(&mut self) -> mpsc::UnboundedSender<PathBuf> {
         let (file_sender, mut file_receiver) = mpsc::unbounded_channel::<PathBuf>();
 
-        // Clone the fields needed for the worker task
+        // Clone the fields needed for the reader task
         let read_mode = self.read_mode.clone();
         let cancellation_token = self.cancellation_token.clone();
-        let queue_size = self.queue_size.clone();
-        let successful_reads = self.successful_reads.clone();
-        let total_bytes_read = self.total_bytes_read.clone();
-        let read_duration = self.read_duration.clone();
-        let open_duration = self.open_duration.clone();
-        let worker_done = self.worker_done.clone();
+        let counters = self.counters.clone();
 
         let handle = tokio::spawn(async move {
             let mut buffer = Vec::with_capacity(types::BYTES_IN_MEGABYTE);
 
             loop {
-                tokio::select! {
-                    _ = cancellation_token.cancelled() => {
-                        break;
-                    }
-                    path_opt = file_receiver.recv() => {
-                        match path_opt {
-                            Some(path) => {
-                                queue_size.fetch_sub(1, Ordering::Relaxed);
-                                let _ = Self::traverse_file(
-                                    path,
-                                    &mut buffer,
-                                    &read_mode,
-                                    &cancellation_token,
-                                    successful_reads.clone(),
-                                    total_bytes_read.clone(),
-                                    read_duration.clone(),
-                                    open_duration.clone(),
-                                ).await;
-                            }
-                            None => {
-                                // Channel closed, exit worker
-                                break;
-                            }
-                        }
-                    }
+                if cancellation_token.is_cancelled() {
+                    break;
                 }
-            }
 
-            worker_done.store(true, Ordering::Release);
-        });
-
-        self.file_sender = Some(file_sender);
-        self.worker_handle = Some(handle);
-    }
-
-    fn add_file(&mut self) {
-        self.file_count += 1;
-        if (self.file_count + self.dir_count)
-            .is_multiple_of(types::TRAVERSAL_PROGRESS_UPDATE_INTERVAL)
-        {
-            self.update_progress();
-        }
-    }
-
-    fn add_dir(&mut self) {
-        self.dir_count += 1;
-        if (self.file_count + self.dir_count)
-            .is_multiple_of(types::TRAVERSAL_PROGRESS_UPDATE_INTERVAL)
-        {
-            self.update_progress();
-        }
-    }
-
-    fn add_traversed_symlink(&mut self) {
-        self.symlink_traversed_count += 1;
-    }
-
-    fn add_skipped_symlink(&mut self) {
-        self.symlink_skipped_count += 1;
-    }
-
-    fn add_read_dir_stats(&mut self, duration: std::time::Duration, entry_count: usize) {
-        self.read_dir_duration += duration;
-        self.total_dir_entries += entry_count;
-    }
-
-    fn update_progress(&mut self) {
-        if let Some(pb) = &self.progress_bar {
-            let elapsed = self.start_time.elapsed().as_secs_f64();
-            if elapsed <= 0.0 {
-                return;
-            }
-
-            let files_per_second = self.file_count as f64 / elapsed;
-
-            let files_display = if self.max_files == usize::MAX {
-                self.file_count.to_formatted_string(&Locale::en)
-            } else {
-                format!(
-                    "{}/{}",
-                    self.file_count.to_formatted_string(&Locale::en),
-                    self.max_files.to_formatted_string(&Locale::en)
-                )
-            };
-
-            let show_throughput = !matches!(self.read_mode, ReadMode::Skip);
-            let queue_size = self.queue_size.load(Ordering::Relaxed);
-
-            // Use atomic counters directly
-            let total_bytes_read = self.total_bytes_read.load(Ordering::Relaxed);
-
-            let message = if let (Some(system), Some(pid)) = (&mut self.system, &self.pid) {
-                system.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[*pid]), false);
-                match system.process(*pid) {
-                    Some(process) => {
-                        let memory_mb = process.memory() as f64 / types::BYTES_IN_MEGABYTE as f64;
-                        let cpu_usage = process.cpu_usage();
-                        if show_throughput {
-                            let mb_per_second =
-                                total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
-                            format!(
-                                "{} files | {} dirs | {} files/s | {:.2} MiB/s | queue: {} | {:.2} MiB memory | {:.2}% CPU",
-                                files_display,
-                                self.dir_count.to_formatted_string(&Locale::en),
-                                (files_per_second as u64).to_formatted_string(&Locale::en),
-                                mb_per_second,
-                                queue_size.to_formatted_string(&Locale::en),
-                                memory_mb,
-                                cpu_usage
-                            )
-                        } else {
-                            format!(
-                                "{} files | {} dirs | {} files/s | queue: {} | {:.2} MiB memory | {:.2}% CPU",
-                                files_display,
-                                self.dir_count.to_formatted_string(&Locale::en),
-                                (files_per_second as u64).to_formatted_string(&Locale::en),
-                                queue_size.to_formatted_string(&Locale::en),
-                                memory_mb,
-                                cpu_usage
-                            )
-                        }
+                match file_receiver.recv().await {
+                    Some(path) => {
+                        counters.queue_size.fetch_sub(1, Ordering::Relaxed);
+                        let _ = Self::read_file(path, &read_mode, &mut buffer, &counters).await;
                     }
                     None => {
-                        if show_throughput {
-                            let mb_per_second =
-                                total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
-                            format!(
-                                "{} files | {} dirs | {} files/s | {:.2} MiB/s | queue: {}",
-                                files_display,
-                                self.dir_count.to_formatted_string(&Locale::en),
-                                (files_per_second as u64).to_formatted_string(&Locale::en),
-                                mb_per_second,
-                                queue_size.to_formatted_string(&Locale::en)
-                            )
-                        } else {
-                            format!(
-                                "{} files | {} dirs | {} files/s | queue: {}",
-                                files_display,
-                                self.dir_count.to_formatted_string(&Locale::en),
-                                (files_per_second as u64).to_formatted_string(&Locale::en),
-                                queue_size.to_formatted_string(&Locale::en)
-                            )
-                        }
+                        // Channel closed, exit reader
+                        break;
                     }
                 }
-            } else if show_throughput {
-                let mb_per_second =
-                    total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / elapsed;
-                format!(
-                    "{} files | {} dirs | {} files/s | {:.2} MiB/s | queue: {}",
-                    files_display,
-                    self.dir_count.to_formatted_string(&Locale::en),
-                    (files_per_second as u64).to_formatted_string(&Locale::en),
-                    mb_per_second,
-                    queue_size.to_formatted_string(&Locale::en)
-                )
-            } else {
-                format!(
-                    "{} files | {} dirs | {} files/s | queue: {}",
-                    files_display,
-                    self.dir_count.to_formatted_string(&Locale::en),
-                    (files_per_second as u64).to_formatted_string(&Locale::en),
-                    queue_size.to_formatted_string(&Locale::en)
-                )
-            };
-
-            pb.set_message(message);
-        }
-    }
-
-    fn total_elapsed_time(&self) -> f64 {
-        self.start_time.elapsed().as_secs_f64()
-    }
-
-    fn finish_progress_bar(&self) {
-        if let Some(pb) = &self.progress_bar {
-            pb.finish_and_clear();
-        }
-    }
-
-    async fn shutdown_worker(&mut self) {
-        // Drop the sender to signal the worker to stop
-        drop(self.file_sender.take());
-
-        // Wait for worker to finish
-        if let Some(handle) = self.worker_handle.take() {
-            while !self.worker_done.load(Ordering::Acquire) {
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                self.update_progress();
             }
+        });
 
-            let _ = handle.await;
-
-            // One final update to show completion
-            self.update_progress();
-        }
+        self.reader_handle = Some(handle);
+        file_sender
     }
 
-    fn get_total_successful_reads(&self) -> usize {
-        self.successful_reads.load(Ordering::Relaxed)
+    fn start_traversal_task(
+        &mut self,
+        paths: Vec<PathBuf>,
+        file_sender: mpsc::UnboundedSender<PathBuf>,
+    ) {
+        let max_files = self.max_files;
+        let follow_symlinks = self.follow_symlinks;
+        let cancellation_token = self.cancellation_token.clone();
+        let counters = self.counters.clone();
+
+        let handle = tokio::task::spawn_blocking(move || {
+            Self::traverse_directories_blocking(
+                paths,
+                max_files,
+                follow_symlinks,
+                file_sender,
+                &counters,
+                cancellation_token,
+            )
+        });
+
+        self.traversal_handle = Some(handle);
     }
 
-    fn get_total_bytes_read(&self) -> u64 {
-        self.total_bytes_read.load(Ordering::Relaxed)
-    }
-
-    fn get_total_read_duration(&self) -> std::time::Duration {
-        let nanos = self.read_duration.load(Ordering::Relaxed);
-        std::time::Duration::from_nanos(nanos)
-    }
-
-    fn get_total_open_duration(&self) -> std::time::Duration {
-        let nanos = self.open_duration.load(Ordering::Relaxed);
-        std::time::Duration::from_nanos(nanos)
-    }
-
-    async fn traverse_path(&mut self, path: &Path) -> Result<()> {
-        if path.is_dir() {
-            self.traverse_directory(path).await?;
-        }
-        Ok(())
-    }
-
-    async fn traverse_directory(&mut self, path: &Path) -> Result<()> {
-        let mut stack = vec![path.to_path_buf()];
+    fn traverse_directories_blocking(
+        paths: Vec<PathBuf>,
+        max_files: usize,
+        follow_symlinks: bool,
+        file_sender: mpsc::UnboundedSender<PathBuf>,
+        counters: &TraversalCounters,
+        cancellation_token: CancellationToken,
+    ) -> Result<()> {
+        let mut stack = paths;
 
         while let Some(current_path) = stack.pop() {
-            if self.cancellation_token.is_cancelled() {
+            if cancellation_token.is_cancelled() {
                 return Ok(());
             }
 
-            self.add_dir();
+            counters.dirs.fetch_add(1, Ordering::Relaxed);
 
             let start_time = Instant::now();
             let entries = fs::read_dir(&current_path)?;
-            let read_dir_duration = start_time.elapsed();
+            let duration = start_time.elapsed();
+            counters
+                .dir_read_duration_nanos
+                .fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
 
             let mut entry_count = 0;
 
@@ -514,36 +536,142 @@ impl Traversal {
 
                 if file_type.is_dir() {
                     if file_type.is_symlink() {
-                        if self.follow_symlinks {
-                            self.add_traversed_symlink();
+                        if follow_symlinks {
+                            counters.symlinks_traversed.fetch_add(1, Ordering::Relaxed);
                             stack.push(entry_path);
                         } else {
-                            self.add_skipped_symlink();
+                            counters.symlinks_skipped.fetch_add(1, Ordering::Relaxed);
                         }
                     } else {
                         stack.push(entry_path);
                     }
                 } else if file_type.is_file() {
-                    if self.file_count < self.max_files {
-                        self.add_file();
-                        if let Some(ref sender) = self.file_sender {
-                            // Using send instead of blocking send since we have unbounded channel
-                            if sender.send(entry_path).is_err() {
-                                break;
-                            }
-                            self.queue_size.fetch_add(1, Ordering::Relaxed);
+                    let current_file_count = counters.files.fetch_add(1, Ordering::Relaxed);
+                    if current_file_count < max_files {
+                        if file_sender.send(entry_path).is_err() {
+                            // Channel closed, stop traversal
+                            counters
+                                .total_dir_entries
+                                .fetch_add(entry_count, Ordering::Relaxed);
+                            return Ok(());
                         }
+                        counters.queue_size.fetch_add(1, Ordering::Relaxed);
                     } else {
-                        self.add_read_dir_stats(read_dir_duration, entry_count);
+                        // Reached max files
+                        counters
+                            .total_dir_entries
+                            .fetch_add(entry_count, Ordering::Relaxed);
                         return Ok(());
                     }
                 }
             }
 
-            self.add_read_dir_stats(read_dir_duration, entry_count);
+            counters
+                .total_dir_entries
+                .fetch_add(entry_count, Ordering::Relaxed);
         }
 
         Ok(())
+    }
+
+    fn start_progress_task(
+        &mut self,
+        no_progress: bool,
+        resource_usage: bool,
+        traversal_handle: JoinHandle<Result<()>>,
+        reader_handle: JoinHandle<()>,
+    ) {
+        let max_files = self.max_files;
+        let read_mode = self.read_mode.clone();
+        let counters = self.counters.clone();
+
+        let handle = tokio::spawn(async move {
+            tokio::pin!(traversal_handle);
+            tokio::pin!(reader_handle);
+
+            if no_progress {
+                // Just wait for completion, no progress bar
+                let _ = traversal_handle.await;
+                let _ = reader_handle.await;
+            } else {
+                // Display progress bar while waiting
+                let pb = ProgressBar::new_spinner();
+                pb.set_style(
+                    ProgressStyle::default_spinner()
+                        .template("[{elapsed_precise}] {msg}")
+                        .unwrap(),
+                );
+
+                let initial_files_display = if max_files == usize::MAX {
+                    "0"
+                } else {
+                    &format!("0/{}", max_files.to_formatted_string(&Locale::en))
+                };
+                pb.set_message(format!(
+                    "{} files | 0 dirs | 0 files/s",
+                    initial_files_display
+                ));
+
+                let (mut system, pid) = if resource_usage {
+                    let mut sys = System::new_all();
+                    let process_id = sysinfo::get_current_pid().ok();
+                    sys.refresh_all();
+                    (Some(sys), process_id)
+                } else {
+                    (None, None)
+                };
+
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+                    types::PROGRESS_BAR_UPDATE_INTERVAL_SECS,
+                ));
+
+                let mut traversal_done = false;
+                let mut reader_done = false;
+
+                loop {
+                    tokio::select! {
+                        _ = interval.tick() => {
+                            let elapsed = counters.start_time.elapsed().as_secs_f64();
+                            if elapsed > 0.0 {
+                                let system_info = if let (Some(sys), Some(pid_val)) = (&mut system, pid) {
+                                    sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[pid_val]), false);
+                                    sys.process(pid_val).map(|process| {
+                                        let memory_mb = process.memory() as f64 / types::BYTES_IN_MEGABYTE as f64;
+                                        let cpu_usage = process.cpu_usage() as f64;
+                                        (memory_mb, cpu_usage)
+                                    })
+                                } else {
+                                    None
+                                };
+
+                                let message = counters.report_progress(max_files, &read_mode, system_info);
+                                pb.set_message(message);
+                            }
+
+                            if traversal_done && reader_done {
+                                pb.finish_and_clear();
+                                break;
+                            }
+                        }
+                        _ = &mut traversal_handle, if !traversal_done => {
+                            traversal_done = true;
+                        }
+                        _ = &mut reader_handle, if !reader_done => {
+                            reader_done = true;
+                        }
+                    }
+                }
+            }
+        });
+
+        self.progress_handle = Some(handle);
+    }
+
+    async fn wait_for_completion(&mut self) {
+        // Progress task waits for everything, so just wait for it
+        if let Some(handle) = self.progress_handle.take() {
+            let _ = handle.await;
+        }
     }
 }
 
@@ -578,29 +706,32 @@ pub async fn bench_traversal(
         ReadMode::Fs
     };
 
-    let mut traversal = Traversal::new(
-        no_progress,
-        resource_usage,
-        max_files,
-        follow_symlinks,
-        read_mode.clone(),
-    );
+    let mut traversal = Traversal::new(max_files, follow_symlinks, read_mode.clone());
 
-    traversal.start_worker_task();
+    // Start reader task, get sender
+    let file_sender = traversal.start_reader_task();
 
-    // Traverse all directories
-    for dir_path in dir_paths {
-        let path = Path::new(dir_path);
-        traversal.traverse_path(path).await?;
-    }
+    // Start traversal task, passing sender
+    let paths: Vec<PathBuf> = dir_paths.iter().map(PathBuf::from).collect();
+    traversal.start_traversal_task(paths, file_sender);
 
-    traversal.shutdown_worker().await;
-    traversal.finish_progress_bar();
+    // Extract handles
+    let reader_handle = traversal
+        .reader_handle
+        .take()
+        .expect("reader_handle must exist");
+    let traversal_handle = traversal
+        .traversal_handle
+        .take()
+        .expect("traversal_handle must exist");
 
-    let mut result = Benchmark::new(BenchmarkType::FsTraversal);
-    add_traversal_metrics(&mut result, &traversal, &read_mode)?;
+    // Start progress task with handles
+    traversal.start_progress_task(no_progress, resource_usage, traversal_handle, reader_handle);
 
-    Ok(result)
+    // Wait for everything to complete
+    traversal.wait_for_completion().await;
+
+    traversal.counters.report_benchmark(&read_mode)
 }
 
 // ============================================================================
@@ -636,154 +767,4 @@ fn setup_cancellation() -> CancellationToken {
     }
 
     token
-}
-
-fn add_traversal_metrics(
-    result: &mut Benchmark,
-    traversal: &Traversal,
-    read_mode: &ReadMode,
-) -> Result<()> {
-    let total_elapsed_time = traversal.total_elapsed_time();
-
-    if total_elapsed_time <= 0.0 {
-        return Err(anyhow::anyhow!(
-            "Total elapsed time is less or equal to zero."
-        ));
-    }
-
-    let files_per_second = traversal.file_count as f64 / total_elapsed_time;
-
-    let avg_read_dir_latency = if traversal.dir_count > 0 {
-        traversal.read_dir_duration.as_secs_f64() * 1000.0 / traversal.dir_count as f64
-    } else {
-        0.0
-    };
-
-    let avg_dir_size = if traversal.dir_count > 0 {
-        traversal.total_dir_entries as f64 / traversal.dir_count as f64
-    } else {
-        0.0
-    };
-
-    result.add_metric(
-        "Traversal throughput",
-        files_per_second,
-        types::Unit::FilesPerSecond,
-        Some(0),
-    );
-    result.add_metric(
-        "Average read_dir() latency",
-        avg_read_dir_latency,
-        types::Unit::Ms,
-        Some(4),
-    );
-    result.add_metric(
-        "Average directory size",
-        avg_dir_size,
-        types::Unit::Files,
-        Some(2),
-    );
-    result.add_metric(
-        "Total files scanned",
-        traversal.file_count as f64,
-        types::Unit::Files,
-        Some(0),
-    );
-    result.add_metric(
-        "Total directories",
-        traversal.dir_count as f64,
-        types::Unit::Dirs,
-        Some(0),
-    );
-    result.add_metric(
-        "Total symlinks skipped",
-        traversal.symlink_skipped_count as f64,
-        types::Unit::Symlinks,
-        Some(0),
-    );
-    result.add_metric(
-        "Total symlinks traversed",
-        traversal.symlink_traversed_count as f64,
-        types::Unit::Symlinks,
-        Some(0),
-    );
-
-    let total_successful_reads = traversal.get_total_successful_reads();
-    let total_bytes_read = traversal.get_total_bytes_read();
-
-    if total_successful_reads > 0 {
-        let avg_file_size = total_bytes_read as f64 / total_successful_reads as f64;
-        let avg_file_size_kb = avg_file_size / types::BYTES_IN_KILOBYTE as f64;
-
-        result.add_metric(
-            "Total files read",
-            total_successful_reads as f64,
-            types::Unit::Files,
-            Some(0),
-        );
-        result.add_metric(
-            "Average file size",
-            avg_file_size_kb,
-            types::Unit::KiB,
-            Some(2),
-        );
-        result.add_metric(
-            "Total data read",
-            total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64,
-            types::Unit::MiB,
-            Some(2),
-        );
-
-        match read_mode {
-            ReadMode::Thrift { .. } => {
-                let total_read_duration = traversal.get_total_read_duration();
-                let avg_read_dur =
-                    total_read_duration.as_secs_f64() / total_successful_reads as f64;
-                let mb_per_second = total_bytes_read as f64
-                    / types::BYTES_IN_MEGABYTE as f64
-                    / total_read_duration.as_secs_f64();
-
-                result.add_metric("Throughput", mb_per_second, types::Unit::MiBps, Some(2));
-                result.add_metric(
-                    "Average thrift read latency",
-                    avg_read_dur * 1000.0,
-                    types::Unit::Ms,
-                    Some(4),
-                );
-            }
-            ReadMode::Fs => {
-                let total_open_duration = traversal.get_total_open_duration();
-                let total_read_duration = traversal.get_total_read_duration();
-                let avg_open_dur =
-                    total_open_duration.as_secs_f64() / total_successful_reads as f64;
-                let avg_read_dur =
-                    total_read_duration.as_secs_f64() / total_successful_reads as f64;
-                let total_duration = (total_open_duration + total_read_duration).as_secs_f64();
-                let mb_per_second =
-                    total_bytes_read as f64 / types::BYTES_IN_MEGABYTE as f64 / total_duration;
-
-                result.add_metric(
-                    "open() + read() throughput",
-                    mb_per_second,
-                    types::Unit::MiBps,
-                    Some(2),
-                );
-                result.add_metric(
-                    "open() latency",
-                    avg_open_dur * 1000.0,
-                    types::Unit::Ms,
-                    Some(4),
-                );
-                result.add_metric(
-                    "Average read() latency",
-                    avg_read_dur * 1000.0,
-                    types::Unit::Ms,
-                    Some(4),
-                );
-            }
-            ReadMode::Skip => {}
-        }
-    }
-
-    Ok(())
 }
