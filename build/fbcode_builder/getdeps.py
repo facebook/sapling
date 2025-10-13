@@ -452,6 +452,7 @@ class InstallSysDepsCmd(ProjectCmdBase):
                     ]
                     + packages
                 )
+                cmd_argss.append(["pip", "install", "cython"])
                 cmd_argss.append(["pip", "install", "pex"])
         elif manager == "homebrew":
             packages = sorted(set(all_packages["homebrew"]))
@@ -1238,8 +1239,10 @@ jobs:
                     or builder_name == "cargo"
                     or mbuilder_name == "cargo"
                 ):
-                    out.write("    - name: Install Rust Stable\n")
-                    out.write("      uses: dtolnay/rust-toolchain@stable\n")
+                    out.write("    - name: Install Rust Nightly\n")
+                    out.write("      uses: dtolnay/rust-toolchain@nightly\n")
+                    out.write("    - name: Install rustfmt\n")
+                    out.write("      run: rustup component add rustfmt\n")
                     break
 
             # Normal deps that have manifests
