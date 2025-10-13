@@ -823,7 +823,7 @@ class EdenServer : private TakeoverHandler {
   /**
    * HeartbeatManager to handle all heartbeat-related operations
    */
-  std::unique_ptr<HeartbeatManager> heartbeatManager_;
+  std::shared_ptr<HeartbeatManager> heartbeatManager_;
 
   /**
    * Common state shared by all of the EdenMount objects.

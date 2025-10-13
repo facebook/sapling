@@ -512,7 +512,7 @@ EdenServer::EdenServer(
               sessionInfo,
               edenStats.copy())},
       heartbeatManager_{
-          std::make_unique<HeartbeatManager>(edenDir_, structuredLogger_)},
+          std::make_shared<HeartbeatManager>(edenDir_, structuredLogger_)},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(edenStats),
