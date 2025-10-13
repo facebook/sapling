@@ -151,3 +151,28 @@ Pulling a submodule:
   $ cat sub/c
   cat: sub/c: $ENOENT$
   [1]
+
+Set up a new submodule
+
+  $ cd
+  $ git init -q -b main newsub
+  $ cd newsub
+  $ touch d
+  $ sl commit -m 'Add d' -A d
+  $ cd ../parent
+  $ git submodule --quiet add -b main ../newsub
+  $ sl status newsub
+  ? newsub
+
+(bad: sl add fails)
+
+  $ sl add newsub
+  newsub not added: only files and symlinks supported currently
+  [1]
+
+Submodules unsupported for purge
+
+  $ sl purge newsub
+  warning: newsub cannot be removed
+  $ sl status newsub
+  ? newsub
