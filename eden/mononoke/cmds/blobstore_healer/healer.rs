@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::iter::Sum;
-use std::ops::Add;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -27,30 +25,4 @@ pub struct HealResult {
 #[async_trait]
 pub trait Healer {
     async fn heal(&self, ctx: &CoreContext, minimum_age: ChronoDuration) -> Result<HealResult>;
-}
-
-#[derive(Default, Debug, PartialEq)]
-pub(crate) struct HealStats {
-    pub queue_add: usize,
-    pub queue_del: usize,
-    pub put_success: usize,
-    pub put_failure: usize,
-}
-
-impl Add for HealStats {
-    type Output = Self;
-    fn add(self, other: Self) -> Self {
-        Self {
-            queue_add: self.queue_add + other.queue_add,
-            queue_del: self.queue_del + other.queue_del,
-            put_success: self.put_success + other.put_success,
-            put_failure: self.put_failure + other.put_failure,
-        }
-    }
-}
-
-impl Sum for HealStats {
-    fn sum<I: Iterator<Item = HealStats>>(iter: I) -> HealStats {
-        iter.fold(Default::default(), Add::add)
-    }
 }

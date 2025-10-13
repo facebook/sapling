@@ -39,7 +39,6 @@ use crate::MononokeError;
 use crate::MononokeRepo;
 use crate::RepoContext;
 use crate::StoreRequest;
-use crate::repo::create_changeset;
 use crate::repo::create_changeset::CreateChangeFileContents;
 
 #[mononoke::fbinit_test]

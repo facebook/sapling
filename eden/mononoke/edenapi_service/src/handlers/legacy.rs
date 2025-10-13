@@ -32,6 +32,7 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
 
+#[allow(dead_code)]
 const TIMEOUT_SECS: Duration = Duration::from_secs(4 * 60 * 60);
 
 /// Legacy streaming changelog handler from wireproto.

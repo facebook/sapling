@@ -16,7 +16,6 @@ use sql::sql_common::mysql::ValueError;
 use sql::sql_common::mysql::opt_try_from_rowfield;
 
 use crate::NonRootMPath;
-use crate::RepoPath;
 use crate::datetime::Timestamp;
 use crate::globalrev::Globalrev;
 use crate::hash::Blake2;
