@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::OnceLock;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -125,9 +126,26 @@ pub trait LiveCommitSyncConfig: Send + Sync {
     ) -> Result<Option<CommonCommitSyncConfig>>;
 }
 
+static REPO_CONFIG: OnceLock<Result<Arc<ConfigHandle<RawCommitSyncAllVersions>>, Error>> =
+    OnceLock::new();
+
+fn get_config_hadle_for_all_versions(
+    config_store: &ConfigStore,
+) -> Result<Arc<ConfigHandle<RawCommitSyncAllVersions>>, Error> {
+    let result = REPO_CONFIG.get_or_init(|| {
+        config_store
+            .get_config_handle(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string())
+            .map(Arc::new)
+    });
+    match result {
+        Ok(arc) => Ok(arc.clone()),
+        Err(e) => Err(anyhow::anyhow!(e)),
+    }
+}
+
 #[derive(Clone)]
 pub struct CfgrLiveCommitSyncConfig {
-    config_handle_for_all_versions: ConfigHandle<RawCommitSyncAllVersions>,
+    config_handle_for_all_versions: Arc<ConfigHandle<RawCommitSyncAllVersions>>,
     push_redirect_config: Option<Arc<dyn PushRedirectionConfig>>,
 }
 
@@ -136,8 +154,7 @@ impl CfgrLiveCommitSyncConfig {
         config_store: &ConfigStore,
         push_redirect_config: Arc<dyn PushRedirectionConfig>,
     ) -> Result<Self, Error> {
-        let config_handle_for_all_versions =
-            config_store.get_config_handle(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string())?;
+        let config_handle_for_all_versions = get_config_hadle_for_all_versions(config_store)?;
         Ok(Self {
             config_handle_for_all_versions,
             push_redirect_config: Some(push_redirect_config),
