@@ -24,8 +24,10 @@ use crate::PushAuthoredBy;
 #[derive(Clone, Debug, Deserialize)]
 pub struct BlockMergeCommitsConfig {
     disable_merge_bypass: bool,
+    #[serde(default)]
     disable_merge_bypass_on_bookmarks: Vec<String>,
-    commit_message_bypass_tag: String,
+    #[serde(default)]
+    commit_message_bypass_tag: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -58,9 +60,11 @@ impl ChangesetHook for BlockMergeCommitsHook {
             return Ok(HookExecution::Accepted);
         }
 
-        let is_bypass_tag = changeset
-            .message()
-            .contains(&self.config.commit_message_bypass_tag);
+        let is_bypass_tag = if let Some(tag) = &self.config.commit_message_bypass_tag {
+            changeset.message().contains(tag)
+        } else {
+            false
+        };
 
         let bookmark = bookmark.to_string();
 

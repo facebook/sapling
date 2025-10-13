@@ -25,6 +25,7 @@ const DEFAULT_TITLE_LENGTH: usize = 80;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct LimitCommitMessageLengthConfig {
+    #[serde(default)]
     display_title_length: Option<usize>,
     length_limit: usize,
 }
