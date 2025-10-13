@@ -101,7 +101,9 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
   }
 #ifdef _WIN32
   (void)fileContentStore;
-  if (inodeCatalogType == InodeCatalogType::Legacy) {
+  if (inodeCatalogType == InodeCatalogType::Legacy ||
+      inodeCatalogType == InodeCatalogType::LegacyDev ||
+      inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
     throw std::runtime_error(
         "Legacy overlay type is not supported. Please reclone.");
   } else if (inodeCatalogType == InodeCatalogType::LMDB) {
@@ -126,6 +128,13 @@ std::unique_ptr<InodeCatalog> makeInodeCatalog(
     return std::make_unique<FsInodeCatalogDev>(
         static_cast<FsFileContentStoreDev*>(fileContentStore));
   }
+  if (inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
+    XLOG(
+        WARN,
+        "Ephemeral legacy overlay being used. This will cause data loss.");
+    return std::make_unique<EphemeralFsInodeCatalog>(
+        static_cast<FsFileContentStore*>(fileContentStore));
+  }
   XLOG(DBG4, "Legacy overlay being used.");
   return std::make_unique<FsInodeCatalog>(
       static_cast<FsFileContentStore*>(fileContentStore));
@@ -141,7 +150,10 @@ std::unique_ptr<FileContentStore> makeFileContentStore(
   (void)logger;
   return nullptr;
 #else
-  if (inodeCatalogType == InodeCatalogType::Legacy) {
+  // LegacyEphemeral only applies to the inode catalog, not the file content
+  // store
+  if (inodeCatalogType == InodeCatalogType::Legacy ||
+      inodeCatalogType == InodeCatalogType::LegacyEphemeral) {
     return std::make_unique<FsFileContentStore>(localDir);
   } else if (inodeCatalogType == InodeCatalogType::LegacyDev) {
     return std::make_unique<FsFileContentStoreDev>(localDir);
@@ -269,7 +281,8 @@ void Overlay::close() {
   // fileContentStore, it could call close() on the core in its own close()
   // method. We could get rid of this codeblock in that case.
   if (fileContentStore_ && inodeCatalogType_ != InodeCatalogType::Legacy &&
-      inodeCatalogType_ != InodeCatalogType::LegacyDev) {
+      inodeCatalogType_ != InodeCatalogType::LegacyDev &&
+      inodeCatalogType_ != InodeCatalogType::LegacyEphemeral) {
     fileContentStore_->close();
   }
 }
@@ -364,6 +377,13 @@ void Overlay::initOverlay(
           "Corrupted LMDB overlay " + localDir_.asString() +
           ": could not load next inode number");
     }
+
+    if (inodeCatalogType_ == InodeCatalogType::LegacyEphemeral) {
+      throw std::runtime_error(
+          "EphemeralFsInodeCatalog::initOverlay should either throw or always "
+          "return a nextInodeNumber, but optNextInodeNumber is missing");
+    }
+
     // If the next-inode-number data is missing it means that this overlay was
     // not shut down cleanly the last time it was used.  If this was caused by a
     // hard system reboot this can sometimes cause corruption and/or missing

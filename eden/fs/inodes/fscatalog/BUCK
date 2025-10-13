@@ -7,11 +7,13 @@ cpp_library(
     name = "fsinodecatalog",
     srcs =
         [
+            "EphemeralFsInodeCatalog.cpp",
             "FsInodeCatalog.cpp",
             "InodePath.cpp",
         ],
     headers =
         [
+            "EphemeralFsInodeCatalog.h",
             "FsInodeCatalog.h",
             "InodePath.h",
         ],
@@ -29,7 +31,6 @@ cpp_library(
     ],
     exported_deps = [
         "fbsource//third-party/googletest:gtest",
-        "fbsource//third-party/googletest:gtest_headers",
         "//eden/common/utils:path",
         "//eden/fs/inodes:file_content_store",
         "//eden/fs/inodes:inode_catalog",

@@ -17,6 +17,7 @@ enum class InodeCatalogType : uint8_t {
   InMemory = 2,
   LMDB = 3,
   LegacyDev = 4,
+  LegacyEphemeral = 5,
 };
 
 constexpr InodeCatalogType kInodeCatalogTypeDefault =

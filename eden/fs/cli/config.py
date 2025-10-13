@@ -126,6 +126,7 @@ SUPPORTED_INODE_CATALOG_TYPES: Set[str] = {
     "inmemory",
     "lmdb",
     "legacydev",
+    "legacyephemeral",
 }
 
 # Create a readme file with this name in the mount point directory.
@@ -1679,6 +1680,7 @@ class EdenCheckout:
             if sys.platform == "win32" and inode_catalog_type in [
                 "legacy",
                 "legacydev",
+                "legacyephemeral",
             ]:
                 raise CheckoutConfigCorruptedError(
                     "Legacy inode catalog (overlay) type not supported on Windows. "
@@ -2291,7 +2293,11 @@ def create_checkout_config(
                 f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
             )
     overlay_type = overlay_type.lower()
-    if sys.platform == "win32" and overlay_type in ["legacy", "legacydev"]:
+    if sys.platform == "win32" and overlay_type in [
+        "legacy",
+        "legacydev",
+        "legacyephemeral",
+    ]:
         raise Exception(
             "Legacy overlay (inode catalog) type not supported on Windows. "
             "Use Sqlite or InMemory on Windows."

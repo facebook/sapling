@@ -18,6 +18,8 @@ constexpr auto inodeCatalogTypeStr = [] {
   mapping[folly::to_underlying(InodeCatalogType::InMemory)] = "InMemory";
   mapping[folly::to_underlying(InodeCatalogType::LMDB)] = "LMDB";
   mapping[folly::to_underlying(InodeCatalogType::LegacyDev)] = "LegacyDev";
+  mapping[folly::to_underlying(InodeCatalogType::LegacyEphemeral)] =
+      "LegacyEphemeral";
   return mapping;
 }();
 

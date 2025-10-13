@@ -28,6 +28,7 @@
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 
 #ifndef _WIN32
+#include "eden/fs/inodes/fscatalog/EphemeralFsInodeCatalog.h"
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
 #include "eden/fs/inodes/fscatalog_dev/FsInodeCatalogDev.h"
 #endif

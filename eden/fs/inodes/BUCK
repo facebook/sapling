@@ -138,6 +138,7 @@ cpp_library(
                 "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
                 "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
                 "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
+                "//eden/fs/inodes/fscatalog:fsinodecatalog",
             ],
         ),
         (
@@ -146,6 +147,7 @@ cpp_library(
                 "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
                 "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
                 "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
+                "//eden/fs/inodes/fscatalog:fsinodecatalog",
             ],
         ),
     ],
