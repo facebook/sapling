@@ -29,6 +29,7 @@ rust_binary(
         "//common/rust/mysql:mysql_client",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/panichandler:panichandler",
         "//common/rust/srserver:srserver",
         "//eden/mononoke/async_requests:async_requests_client",

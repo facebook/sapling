@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::time::Duration;
 
 use anyhow::Result;
 use fbinit::FacebookInit;
@@ -36,6 +37,15 @@ impl ShardedProcessExecutor {
         mut self,
         _logger: &Logger,
         _terminate_signal_receiver: Receiver<bool>,
+    ) -> Result<()> {
+        unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
+    }
+
+    pub async fn block_and_execute_with_quiesce_timeout(
+        mut self,
+        _logger: &Logger,
+        _terminate_signal_receiver: Receiver<bool>,
+        _quiesce_timeout: Option<Duration>,
     ) -> Result<()> {
         unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }

@@ -10,6 +10,7 @@ use std::env;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -48,6 +49,8 @@ define_stats! {
     restored_connection_to_shardmanager: timeseries(Rate, Sum),
     lost_connection_to_shardmanager: timeseries(Rate, Sum),
     shard_setup_failures: timeseries(Rate, Sum),
+    manual_shard_eviction_by_timeout: timeseries(Rate, Sum),
+    manual_shard_eviction_by_repomap: timeseries(Rate, Sum),
 }
 
 /// Enum representing the states in which the repo-add
@@ -894,6 +897,10 @@ impl ShardedProcessHandler {
             })
         }
     }
+
+    pub async fn repo_map_empty(&self) -> bool {
+        self.repo_map.read().await.is_empty()
+    }
 }
 
 impl sm::ShardManagerHandler for ShardedProcessHandler {
@@ -1180,9 +1187,19 @@ impl ShardedProcessExecutor {
     /// Blocking call to begin execution of the underlying process based on the repos
     /// assigned by ShardManager
     pub async fn block_and_execute(
+        self,
+        logger: &Logger,
+        terminate_signal_receiver: Receiver<bool>,
+    ) -> Result<()> {
+        self.block_and_execute_with_quiesce_timeout(logger, terminate_signal_receiver, None)
+            .await
+    }
+
+    pub async fn block_and_execute_with_quiesce_timeout(
         mut self,
         logger: &Logger,
         terminate_signal_receiver: Receiver<bool>,
+        quiesce_timeout: Option<Duration>,
     ) -> Result<()> {
         info!(logger, "Initiating sharded execution for service");
         let shards = self.client.get_my_shards()?;
@@ -1199,9 +1216,30 @@ impl ShardedProcessExecutor {
         // Keep running until the terminate signal is received. Once the signal is received,
         // exit.
         terminate_signal_receiver.await?;
-        info!(logger, "ShardManager shutdown initiated...");
-        // Termination was requested, exit.
-        self.client.request_failover_and_remove_handler()?;
+        if let Some(timeout) = quiesce_timeout {
+            let sleep = tokio::time::sleep(timeout);
+            tokio::pin!(sleep);
+            loop {
+                tokio::select! {
+                    _ = &mut sleep => {
+                        info!(logger, "Wait timeout expired evicting...");
+                        STATS::manual_shard_eviction_by_timeout.add_value(1);
+                        break;
+                    }
+                    repo_empty = self.handler.repo_map_empty() => {
+                        if repo_empty {
+                            info!(logger, "All repos moved, evicting...");
+                            STATS::manual_shard_eviction_by_repomap.add_value(1);
+                            break;
+                        } else {
+                            info!(logger, "repos present, not evicting...");
+                            // Sleep a bit before next check to avoid busy loop
+                            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                        }
+                    }
+                }
+            }
+        }
         Ok(())
     }
 }

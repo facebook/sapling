@@ -347,7 +347,23 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 // on its own dedicated task spawned off the common tokio runtime.
                 runtime.spawn({
                     let logger = app.logger().clone();
-                    { async move { executor.block_and_execute(&logger, receiver).await } }
+                    {
+                        async move {
+                            let timeout_secs = justknobs::get_as::<u64>(
+                                "scm/mononoke:shardmanager_shutdown_timeout_secs",
+                                Some("git_server"),
+                            )
+                            .unwrap();
+                            let quiesce_timeout = std::time::Duration::from_secs(timeout_secs);
+                            executor
+                                .block_and_execute_with_quiesce_timeout(
+                                    &logger,
+                                    receiver,
+                                    Some(quiesce_timeout),
+                                )
+                                .await
+                        }
+                    }
                 });
             }
 

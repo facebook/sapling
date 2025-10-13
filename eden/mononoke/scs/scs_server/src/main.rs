@@ -411,9 +411,19 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         runtime.spawn({
             let logger = logger.clone();
             {
+                let timeout_secs = justknobs::get_as::<u64>(
+                    "scm/mononoke:shardmanager_shutdown_timeout_secs",
+                    Some("scs_server"),
+                )
+                .unwrap();
+                let quiesce_timeout = std::time::Duration::from_secs(timeout_secs);
                 async move {
                     executor
-                        .block_and_execute(&logger, sm_shutdown_receiver)
+                        .block_and_execute_with_quiesce_timeout(
+                            &logger,
+                            sm_shutdown_receiver,
+                            Some(quiesce_timeout),
+                        )
                         .await
                 }
             }
