@@ -265,6 +265,9 @@ void Overlay::close() {
 #endif // !_WIN32
 
   inodeCatalog_->close(optNextInodeNumber);
+  // TODO(helsel): if SQLiteInodeCatalog maintained a pointer to the
+  // fileContentStore, it could call close() on the core in its own close()
+  // method. We could get rid of this codeblock in that case.
   if (fileContentStore_ && inodeCatalogType_ != InodeCatalogType::Legacy &&
       inodeCatalogType_ != InodeCatalogType::LegacyDev) {
     fileContentStore_->close();
@@ -343,6 +346,10 @@ void Overlay::initOverlay(
     // would double-initialize the FileContentStore the objects.
     //
     // If we had a SQLiteFileContentStore, this code block would be unnecessary.
+    // Alternatively, if SqliteInodeCatalog maintained a pointer to the
+    // fileContentStore, it could call `initialize` on the fileContentStore in
+    // its own `initialize` method and also make this code block unnecessary.
+    // TODO(helsel): teach SqliteInodeCatalog to manage its own fileContentStore
     fileContentStore_->initialize(/*createIfNonExisting=*/true);
   }
   if (!optNextInodeNumber.has_value()) {
@@ -352,7 +359,7 @@ void Overlay::initOverlay(
     // load the inode number, if this case is hit, then the assumption about
     // LMDB being resilient is incorrect (unless the user manually corrupted
     // their overlay directory).
-    if (inodeCatalogType_ != InodeCatalogType::Legacy) {
+    if (inodeCatalogType_ == InodeCatalogType::LMDB) {
       throw std::runtime_error(
           "Corrupted LMDB overlay " + localDir_.asString() +
           ": could not load next inode number");
