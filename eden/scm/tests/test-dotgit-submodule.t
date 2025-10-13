@@ -180,3 +180,24 @@ Submodules unsupported for purge
 
   $ sl purge newsub
   warning: newsub cannot be removed
+
+Commit a submodule change
+
+  $ sl add newsub
+  $ sl diff newsub -c 'wdir()'
+  diff --git a/newsub b/newsub
+  new file mode 160000
+  --- /dev/null
+  +++ b/newsub
+  @@ -0,0 +1,1 @@
+  +Subproject commit 7ef4220022059b9b1e1d8ec4eea6f7abd011894f
+
+  $ sl commit -m 'Add newsub'
+
+  $ sl diff newsub -c .
+  diff --git a/newsub b/newsub
+  new file mode 160000
+  --- /dev/null
+  +++ b/newsub
+  @@ -0,0 +1,1 @@
+  +Subproject commit 7ef4220022059b9b1e1d8ec4eea6f7abd011894f
