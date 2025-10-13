@@ -179,7 +179,7 @@ Forget a submodule
 Submodules unsupported for purge
 
   $ sl purge newsub
-  warning: newsub cannot be removed
+  warning: cannot remove newsub: it is a submodule (not supported)
 
 Commit a submodule change
 

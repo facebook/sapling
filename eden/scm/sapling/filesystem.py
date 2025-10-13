@@ -62,7 +62,12 @@ class physicalfilesystem:
 
         files = list(files)
         if not dryrun:
+            flags = self.dirstate._repo[None].flags
             for f in files:
+                if "m" in flags(f):
+                    msg = _("cannot remove %s: it is a submodule (not supported)") % f
+                    errors.append(msg)
+                    continue
                 remove(util.unlink, f)
 
         # Only evaluate dirs after deleting files, since the lazy evaluation
