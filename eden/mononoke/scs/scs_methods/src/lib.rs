@@ -15,6 +15,8 @@ mod into_response;
 pub mod specifiers;
 
 #[cfg(fbcode_build)]
+mod diff;
+#[cfg(fbcode_build)]
 mod methods;
 #[cfg(fbcode_build)]
 mod scuba_params;

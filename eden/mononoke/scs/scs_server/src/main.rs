@@ -23,6 +23,7 @@ use clientinfo::ClientEntryPoint;
 use cloned::cloned;
 use cmdlib_logging::ScribeLoggingArgs;
 use connection_security_checker::ConnectionSecurityChecker;
+use diff_service_client::DiffServiceClient;
 use environment::BookmarkCacheDerivedData;
 use environment::BookmarkCacheKind;
 use environment::BookmarkCacheOptions;
@@ -303,6 +304,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let git_source_of_truth_config = runtime.block_on(create_git_source_of_truth_config(fb))?;
 
+    // Create diff service client (optional - can fail gracefully)
+    let diff_service_client = DiffServiceClient::new(fb).ok();
+
     let source_control_server = {
         let maybe_factory_group = if let ThriftServerMode::FactoryGroup = args.thift_server_mode {
             let worker_counts: [usize; NUM_PRIORITY_QUEUES] =
@@ -335,6 +339,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             async_requests_queue_client,
             git_source_of_truth_config,
             args.watchdog_method_max_poll,
+            diff_service_client,
         ))?
     };
 

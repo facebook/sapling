@@ -7,7 +7,6 @@
 
 use context::CoreContext;
 use mononoke_api::FileId;
-use mononoke_api::headerless_unified_diff;
 use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
 
@@ -91,12 +90,20 @@ impl SourceControlServiceImpl {
             .ok_or_else(|| scs_errors::file_not_found(other_file_id.to_string()))
             .context("failed to resolve other file")?;
 
-        let diff = headerless_unified_diff(&other_file, &base_file, context_lines)
-            .await?
-            .into_response();
+        // Use diff router to handle local vs remote routing
+        let diff = self
+            .diff_router()
+            .headerless_unified_diff(
+                repo.ctx(),
+                repo.repo().repo_identity.name(),
+                &other_file,
+                &base_file,
+                context_lines,
+            )
+            .await?;
 
         Ok(thrift::FileDiffResponse {
-            diff,
+            diff: diff.into_response(),
             ..Default::default()
         })
     }
