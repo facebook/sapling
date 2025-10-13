@@ -100,7 +100,7 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
   (void)threadPool;
   return false;
 #else
-  bool crashDetected = false;
+  bool silentExitDetected = false;
   folly::StringPiece heartbeatFileNamePrefix =
       edenDir_.getHeartbeatFileNamePrefix();
   std::string edenHeartbeatPathFileNameStr = getHeartbeatFileName();
@@ -145,6 +145,13 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
 #else
         time_t bootTime = 0;
 #endif
+        // Remove the heartbeat file for clean up
+        std::remove(entry.path().string().c_str());
+        if (silentExitDetected) {
+          // We have already detected a silent exit. No need to log
+          // the event again. Only remove the heartbeat file and continue
+          continue;
+        }
         // Log the event to Scuba
         // Run the time-consuming operation in the background
         auto future = folly::makeSemiFuture().deferValue([self =
@@ -186,17 +193,15 @@ bool HeartbeatManager::checkForPreviousHeartbeat(
               memoryPressureErrorStr});
         });
         folly::futures::detachOn(threadPool, std::move(future));
-        // Remove the heartbeat file for clean up
-        std::remove(entry.path().string().c_str());
         // Remove any existing daemon exit signal file to clean up
         // signals for the new edenFS daemon
         removeDaemonExitSignalFile();
-        crashDetected = true;
+        silentExitDetected = true;
       }
     }
   }
 
-  return crashDetected;
+  return silentExitDetected;
 #endif
 }
 
