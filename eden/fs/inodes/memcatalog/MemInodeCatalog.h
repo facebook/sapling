@@ -19,20 +19,6 @@ namespace overlay {
 class OverlayDir;
 }
 
-class NonEmptyError : public std::exception {
- public:
-  explicit NonEmptyError(std::string&& str)
-      : message_(
-            fmt::format("Invalid operation on non-empty entity: {}", str)) {}
-
-  const char* what() const noexcept override {
-    return message_.c_str();
-  }
-
- private:
-  std::string message_;
-};
-
 /**
  * MemInodeCatalog provides interfaces to manipulate the overlay. It stores the
  * overlay's file system attributes and is responsible for obtaining and
