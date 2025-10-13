@@ -58,6 +58,7 @@ pub struct HookManager {
     hooks: HashMap<String, Hook>,
     bookmark_hooks: HashMap<BookmarkKey, Vec<String>>,
     regex_hooks: Vec<(Regex, Vec<String>)>,
+    inverse_regex_hooks: Vec<(Regex, Vec<String>)>,
     repo: HookRepo,
     reviewers_membership: ArcMembershipChecker,
     admin_membership: ArcMembershipChecker,
@@ -115,6 +116,7 @@ impl HookManager {
             hooks,
             bookmark_hooks: HashMap::new(),
             regex_hooks: Vec::new(),
+            inverse_regex_hooks: Vec::new(),
             repo,
             reviewers_membership: reviewers_membership.into(),
             admin_membership: admin_membership.into(),
@@ -132,6 +134,7 @@ impl HookManager {
             hooks: HashMap::new(),
             bookmark_hooks: HashMap::new(),
             regex_hooks: Vec::new(),
+            inverse_regex_hooks: Vec::new(),
             repo,
             reviewers_membership: NeverMember::new().into(),
             admin_membership: NeverMember::new().into(),
@@ -180,6 +183,9 @@ impl HookManager {
             BookmarkOrRegex::Regex(regex) => {
                 self.regex_hooks.push((regex.into_inner(), hooks));
             }
+            BookmarkOrRegex::InverseRegex(regex) => {
+                self.inverse_regex_hooks.push((regex.into_inner(), hooks));
+            }
         }
     }
 
@@ -200,10 +206,21 @@ impl HookManager {
             return true;
         }
 
-        let bookmark = bookmark.as_str();
-        self.regex_hooks
+        let bookmark_str = bookmark.as_str();
+
+        // Check regular regex hooks
+        if self
+            .regex_hooks
             .iter()
-            .any(|(regex, _)| regex.is_match(bookmark))
+            .any(|(regex, _)| regex.is_match(bookmark_str))
+        {
+            return true;
+        }
+
+        // Check inverse regex hooks (match if regex does NOT match)
+        self.inverse_regex_hooks
+            .iter()
+            .any(|(regex, _)| !regex.is_match(bookmark_str))
     }
 
     pub fn repo_name(&self) -> &String {
@@ -220,11 +237,21 @@ impl HookManager {
         };
 
         let bookmark_str = bookmark.to_string();
+
+        // Add hooks from regular regex patterns
         for (regex, r_hooks) in &self.regex_hooks {
             if regex.is_match(&bookmark_str) {
                 hooks.extend(r_hooks.iter().map(|a| a.as_str()));
             }
         }
+
+        // Add hooks from inverse regex patterns (match if regex does NOT match)
+        for (regex, ir_hooks) in &self.inverse_regex_hooks {
+            if !regex.is_match(&bookmark_str) {
+                hooks.extend(ir_hooks.iter().map(|a| a.as_str()));
+            }
+        }
+
         hooks.into_iter()
     }
 

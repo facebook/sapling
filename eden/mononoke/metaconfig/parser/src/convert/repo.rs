@@ -215,9 +215,9 @@ impl Convert for RawBookmarkConfig {
     type Output = BookmarkParams;
 
     fn convert(self) -> Result<Self::Output> {
-        let bookmark_or_regex = match (self.regex, self.name) {
-            (None, Some(name)) => BookmarkOrRegex::Bookmark(BookmarkKey::new(name).unwrap()),
-            (Some(regex), None) => match Regex::new(&regex) {
+        let bookmark_or_regex = match (self.regex, self.name, self.inverse_regex) {
+            (None, Some(name), None) => BookmarkOrRegex::Bookmark(BookmarkKey::new(name).unwrap()),
+            (Some(regex), None, None) => match Regex::new(&regex) {
                 Ok(regex) => BookmarkOrRegex::Regex(ComparableRegex::new(regex)),
                 Err(err) => {
                     return Err(ConfigurationError::InvalidConfig(format!(
@@ -227,9 +227,19 @@ impl Convert for RawBookmarkConfig {
                     .into());
                 }
             },
+            (None, None, Some(inverse_regex)) => match Regex::new(&inverse_regex) {
+                Ok(regex) => BookmarkOrRegex::InverseRegex(ComparableRegex::new(regex)),
+                Err(err) => {
+                    return Err(ConfigurationError::InvalidConfig(format!(
+                        "invalid bookmark inverse regex: {}",
+                        err
+                    ))
+                    .into());
+                }
+            },
             _ => {
                 return Err(ConfigurationError::InvalidConfig(
-                    "bookmark's params need to specify regex xor name".into(),
+                    "bookmark's params need to specify exactly one of: name, regex, or inverse_regex".into(),
                 )
                 .into());
             }

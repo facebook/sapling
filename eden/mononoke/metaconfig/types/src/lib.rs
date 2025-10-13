@@ -615,6 +615,8 @@ pub enum BookmarkOrRegex {
     Bookmark(BookmarkKey),
     /// Matches bookmarks with a regex
     Regex(ComparableRegex),
+    /// Matches bookmarks that do NOT match a regex
+    InverseRegex(ComparableRegex),
 }
 
 impl BookmarkOrRegex {
@@ -623,6 +625,7 @@ impl BookmarkOrRegex {
         match self {
             BookmarkOrRegex::Bookmark(bm) => bm.eq(bookmark),
             BookmarkOrRegex::Regex(re) => re.is_match(&bookmark.to_string()),
+            BookmarkOrRegex::InverseRegex(re) => !re.is_match(&bookmark.to_string()),
         }
     }
 }
