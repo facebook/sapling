@@ -259,7 +259,7 @@ new mode 100755
 });
 
 describe('guessSubmodule', () => {
-  it('valid submodule patches', () => {
+  it('modified submodules', () => {
     const patch = `
 diff --git a/external/brotli b/external/brotli
 --- a/external/brotli
@@ -278,6 +278,20 @@ diff --git a/external/rust/cxx b/external/rust/cxx
     expect(parsed.length).toEqual(2);
     expect(guessIsSubmodule(parsed[0])).toEqual(true);
     expect(guessIsSubmodule(parsed[1])).toEqual(true);
+  });
+
+  it('added submodule', () => {
+    const patch = `
+diff --git a/path/to/submodule b/path/to/submodule
+new file mode 160000
+--- /dev/null
++++ b/path/to/submodule
+@@ -0,0 +1,1 @@
++Subproject commit 7ef4220022059b9b1e1d8ec4eea6f7abd011894f
+`;
+    const parsed = parsePatch(patch);
+    expect(parsed.length).toEqual(1);
+    expect(guessIsSubmodule(parsed[0])).toEqual(true);
   });
 
   it('invalid file modification', () => {

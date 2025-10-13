@@ -280,6 +280,14 @@ export function parsePatch(patch: string): ParsedDiff[] {
  * -Subproject commit <hash>
  * +Subproject commit <hash>
  *
+ * Diff pattern for adding a submodule:
+ *
+ *  diff --git a/path/to/submodule b/path/to/submodule
+ *  new file mode 160000
+ *  --- /dev/null
+ *  +++ b/path/to/submodule
+ *  @@ -0,0 +1,1 @@
+ *  +Subproject commit <hash>
  */
 export function guessIsSubmodule(patch: ParsedDiff): boolean {
   if (patch.hunks.length !== 1) {
@@ -289,13 +297,15 @@ export function guessIsSubmodule(patch: ParsedDiff): boolean {
   const oldLine = /^-Subproject commit [0-9A-Fa-f]{7,64}$/;
   const newLine = /^\+Subproject commit [0-9A-Fa-f]{7,64}$/;
   return (
-    hunk.newLines === 1 &&
-    hunk.newStart === 1 &&
-    hunk.oldLines === 1 &&
-    hunk.oldStart === 1 &&
-    hunk.lines.length === 2 &&
-    oldLine.exec(hunk.lines[0]) !== null &&
-    newLine.exec(hunk.lines[1]) !== null
+    (patch.type === DiffType.Modified &&
+      hunk.newLines === 1 &&
+      hunk.newStart === 1 &&
+      hunk.oldLines === 1 &&
+      hunk.oldStart === 1 &&
+      hunk.lines.length === 2 &&
+      oldLine.exec(hunk.lines[0]) !== null &&
+      newLine.exec(hunk.lines[1]) !== null) ||
+    (patch.type === DiffType.Added && patch.newMode === '160000')
   );
 }
 
