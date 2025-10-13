@@ -16,9 +16,9 @@ import {stagedThrottler} from './StagedThrottler';
 import {ONE_MINUTE_MS} from './constants';
 import {Watchman} from './watchman';
 
-const DEFAULT_POLL_INTERVAL = 5 * ONE_MINUTE_MS;
+const DEFAULT_POLL_INTERVAL = 15 * ONE_MINUTE_MS;
 // When the page is hidden, aggressively reduce polling.
-const HIDDEN_POLL_INTERVAL = 60 * ONE_MINUTE_MS;
+const HIDDEN_POLL_INTERVAL = 3 * 60 * ONE_MINUTE_MS;
 // When visible or focused, poll frequently
 const VISIBLE_POLL_INTERVAL = 2 * ONE_MINUTE_MS;
 const FOCUSED_POLL_INTERVAL = 0.5 * ONE_MINUTE_MS;

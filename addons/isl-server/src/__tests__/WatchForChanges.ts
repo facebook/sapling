@@ -71,10 +71,10 @@ describe('WatchForChanges', () => {
   });
 
   it('polls for changes on an interval', () => {
-    // |-----------1-----------2-----------3-----------4-----------5-----------6 (minutes)
-    //                                                                  ^ poll
+    // |-----------1-----------2-----------3-----------4-----------5-----------6-----------7-----------8-----------9----------10----------11----------12----------13----------14----------15----------16 (minutes)
+    //                                                                                                                                                                                          ^ poll
     expect(onChange).not.toHaveBeenCalled();
-    jest.advanceTimersByTime(5.5 * ONE_MINUTE_MS);
+    jest.advanceTimersByTime(15.5 * ONE_MINUTE_MS);
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith('everything', undefined);
   });
@@ -176,26 +176,26 @@ describe('WatchForChanges', () => {
     jest.advanceTimersByTime(1 * ONE_MINUTE_MS);
     expect(onChange).toHaveBeenCalledTimes(3);
     focusTracker.setState('page0', 'hidden');
-    // fast focused interval is removed, and we revert to 5 min interval
-    jest.advanceTimersByTime(5 * ONE_MINUTE_MS);
+    // fast focused interval is removed, and we revert to 15 min interval
+    jest.advanceTimersByTime(15 * ONE_MINUTE_MS);
     expect(onChange).toHaveBeenCalledTimes(4);
   });
 
   it('polls less when watchman appears healthy', () => {
-    // |*----------1-----------2-----------3-----------4-----------5-----------6 (minutes)
-    //  |                                                               ^ poll
+    // |*----------1-----------2-----------3-----------4-----------5-----------6-----------7-----------8-----------9----------10----------11----------12----------13----------14----------15----------16 (minutes)
+    //  |                                                                                                                                                                                         ^ poll
     //  focused
 
     (watch.watchman.status as string) = 'healthy';
     focusTracker.setState('page0', 'focused');
     expect(onChange).toHaveBeenCalledTimes(0);
-    jest.advanceTimersByTime(5.5 * ONE_MINUTE_MS);
+    jest.advanceTimersByTime(15.5 * ONE_MINUTE_MS);
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
   it('results from watchman reset polling timers', async () => {
-    // |-----------1-----------2----- ... ----6-----------7 (minutes)
-    //                  |                           ^       (poll)
+    // |-----------1-----------2----- ... ----15----------16 (minutes)
+    //                  |                            ^       (poll)
     //            watchman result
 
     watch.dispose(); // don't use pre-existing WatchForChanges
@@ -229,9 +229,9 @@ describe('WatchForChanges', () => {
     emitter2.emit('change', undefined);
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith('uncommitted changes');
-    jest.advanceTimersByTime(4.0 * ONE_MINUTE_MS); // original timer didn't cause a poll
+    jest.advanceTimersByTime(14.0 * ONE_MINUTE_MS); // original timer didn't cause a poll
     expect(onChange).toHaveBeenCalledTimes(1);
-    jest.advanceTimersByTime(2.0 * ONE_MINUTE_MS); // 5 minutes after watchman change, a new poll occurred
+    jest.advanceTimersByTime(2.0 * ONE_MINUTE_MS); // 15 minutes after watchman change, a new poll occurred
     expect(onChange).toHaveBeenCalledTimes(2);
     expect(onChange).toHaveBeenCalledWith('everything', undefined);
 
