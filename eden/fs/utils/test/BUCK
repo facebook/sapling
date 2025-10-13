@@ -127,10 +127,8 @@ cpp_benchmark(
     srcs = ["GlobBenchMark.cpp"],
     deps = [
         "fbsource//third-party/benchmark:benchmark",
+        "fbsource//third-party/re2:re2",
         "//eden/fs/utils:matcher",
         "//watchman/thirdparty/wildmatch:wildmatch",
-    ],
-    external_deps = [
-        "re2",
     ],
 )
