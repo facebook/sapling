@@ -94,6 +94,16 @@ mononoke_queries! {
          WHERE repo_name IN {repo_names}"
     }
 
+    write DeleteSourceOfTruthByRepoNames(
+        source_of_truth: GitSourceOfTruth,
+        >list repo_names: RepositoryName
+    ) {
+        none,
+        "DELETE FROM git_repositories_source_of_truth
+         WHERE source_of_truth = {source_of_truth}
+         AND repo_name IN {repo_names}"
+    }
+
 }
 
 fn row_to_entry(
@@ -192,6 +202,21 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
             &self.connections.write_connection,
             ctx.sql_query_telemetry(),
             &source_of_truth,
+            repo_names,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn delete_source_of_truth_by_repo_names_for_reserved_repos(
+        &self,
+        ctx: &CoreContext,
+        repo_names: &[RepositoryName],
+    ) -> Result<()> {
+        DeleteSourceOfTruthByRepoNames::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &GitSourceOfTruth::Reserved,
             repo_names,
         )
         .await?;

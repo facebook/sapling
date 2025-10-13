@@ -56,6 +56,12 @@ pub trait GitSourceOfTruthConfig: Send + Sync {
         repo_names: &[RepositoryName],
     ) -> Result<()>;
 
+    async fn delete_source_of_truth_by_repo_names_for_reserved_repos(
+        &self,
+        ctx: &CoreContext,
+        repo_names: &[RepositoryName],
+    ) -> Result<()>;
+
     async fn get_max_id(&self, ctx: &CoreContext) -> Result<Option<RepositoryId>>;
 
     async fn get_by_repo_name(
@@ -107,6 +113,14 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
         &self,
         _ctx: &CoreContext,
         _source_of_truth: GitSourceOfTruth,
+        _repo_names: &[RepositoryName],
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    async fn delete_source_of_truth_by_repo_names_for_reserved_repos(
+        &self,
+        _ctx: &CoreContext,
         _repo_names: &[RepositoryName],
     ) -> Result<()> {
         Ok(())
@@ -223,6 +237,20 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
         for repo_name in repo_names {
             map.entry(repo_name.clone())
                 .and_modify(|entry| entry.source_of_truth = source_of_truth);
+        }
+        Ok(())
+    }
+
+    async fn delete_source_of_truth_by_repo_names_for_reserved_repos(
+        &self,
+        _ctx: &CoreContext,
+        repo_names: &[RepositoryName],
+    ) -> Result<()> {
+        let mut map = self.entries.lock().expect("poisoned lock");
+        for repo_name in repo_names {
+            if map[repo_name].source_of_truth == GitSourceOfTruth::Reserved {
+                map.remove(repo_name);
+            }
         }
         Ok(())
     }

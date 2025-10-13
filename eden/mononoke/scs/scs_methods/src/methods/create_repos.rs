@@ -629,6 +629,25 @@ async fn update_source_of_truth_to_mononoke(
     Ok(())
 }
 
+async fn delete_source_of_truth_for_reserved_repos(
+    ctx: CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    params: &thrift::CreateReposParams,
+) -> Result<(), scs_errors::ServiceError> {
+    git_source_of_truth_config
+        .delete_source_of_truth_by_repo_names_for_reserved_repos(
+            &ctx,
+            &params
+                .repos
+                .iter()
+                .map(|request| RepositoryName(request.repo_name.clone()))
+                .collect::<Vec<_>>(),
+        )
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+    Ok(())
+}
+
 #[cfg(fbcode_build)]
 async fn create_repos_in_mononoke(
     ctx: CoreContext,
@@ -668,17 +687,43 @@ async fn create_repos_in_mononoke(
 
     // We have reserved the repo ids. Now it's time to actually create the repos, safe in the
     // knowledge that no-one will compete with us
-    create_repo_configs_in_mononoke(ctx.clone(), params.dry_run, repo_ids_and_requests).await?;
-
-    retry(
-        |_| update_source_of_truth_to_mononoke(ctx.clone(), git_source_of_truth_config, params),
-        Duration::from_millis(1_000),
-    )
-    .binary_exponential_backoff()
-    .max_attempts(5)
-    .await?;
-
-    Ok(())
+    match create_repo_configs_in_mononoke(ctx.clone(), params.dry_run, repo_ids_and_requests).await
+    {
+        Ok(()) => {
+            retry(
+                |_| {
+                    update_source_of_truth_to_mononoke(
+                        ctx.clone(),
+                        git_source_of_truth_config,
+                        params,
+                    )
+                },
+                Duration::from_millis(1_000),
+            )
+            .binary_exponential_backoff()
+            .max_attempts(5)
+            .await?;
+            Ok(())
+        }
+        Err(e) => {
+            // We failed to land the mutation, so it is safe to "release the lock" on these repo
+            // ids and names, which will allow a future attempt to succeed.
+            retry(
+                |_| {
+                    delete_source_of_truth_for_reserved_repos(
+                        ctx.clone(),
+                        git_source_of_truth_config,
+                        params,
+                    )
+                },
+                Duration::from_millis(1_000),
+            )
+            .binary_exponential_backoff()
+            .max_attempts(5)
+            .await?;
+            Err(e)
+        }
+    }
 }
 
 #[cfg(not(fbcode_build))]
