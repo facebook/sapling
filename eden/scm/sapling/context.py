@@ -1923,14 +1923,20 @@ class workingctx(committablectx):
                         ui.warn(_("%s does not exist!\n") % uipath(f))
                     rejected.append(f)
                     continue
-                if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
+                if not (
+                    stat.S_ISREG(st.st_mode)
+                    or stat.S_ISLNK(st.st_mode)
+                    or (stat.S_ISDIR(st.st_mode) and "m" in self.flags(f))
+                ):
                     if not quiet:
+                        supportedtypes = (
+                            "files, symlinks, and submodules"
+                            if git.isgitstore(self._repo)
+                            else "files and symlinks"
+                        )
                         ui.warn(
-                            _(
-                                "%s not added: only files and symlinks "
-                                "supported currently\n"
-                            )
-                            % uipath(f)
+                            _("%s not added: only %s supported currently\n")
+                            % (uipath(f), supportedtypes)
                         )
                     rejected.append(f)
                 elif ds[f] in "amn":

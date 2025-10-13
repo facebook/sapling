@@ -164,15 +164,19 @@ Set up a new submodule
   $ sl status newsub
   ? newsub
 
-(bad: sl add fails)
+Add a new submodule
 
   $ sl add newsub
-  newsub not added: only files and symlinks supported currently
-  [1]
+  $ sl status newsub
+  A newsub
+
+Forget a submodule
+
+  $ sl forget newsub
+  $ sl status newsub
+  ? newsub
 
 Submodules unsupported for purge
 
   $ sl purge newsub
   warning: newsub cannot be removed
-  $ sl status newsub
-  ? newsub
