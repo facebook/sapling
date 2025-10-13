@@ -107,6 +107,11 @@ impl Default for BookmarkCacheOptions {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct RemoteDiffOptions {
+    pub diff_remotely: bool,
+}
+
 /// Struct representing the configuration associated with a MononokeApp instance which
 /// is immutable post the point of app construction.
 pub struct MononokeEnvironment {
@@ -124,6 +129,7 @@ pub struct MononokeEnvironment {
     pub rendezvous_options: RendezVousOptions,
     pub megarepo_configs_options: MononokeMegarepoConfigsOptions,
     pub remote_derivation_options: RemoteDerivationOptions,
+    pub remote_diff_options: RemoteDiffOptions,
     pub disabled_hooks: HashMap<String, HashSet<String>>,
     pub acl_provider: Arc<dyn AclProvider>,
     pub bookmark_cache_options: BookmarkCacheOptions,

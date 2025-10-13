@@ -33,6 +33,7 @@ use clientinfo::ClientInfo;
 use cloned::cloned;
 use connection_security_checker::ConnectionSecurityChecker;
 use diff_service_client::DiffServiceClient;
+use environment::RemoteDiffOptions;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
 use factory_group::FactoryGroup;
@@ -158,6 +159,7 @@ pub struct SourceControlServiceImpl {
     pub(crate) git_source_of_truth_config: Arc<dyn GitSourceOfTruthConfig>,
     pub(crate) watchdog_max_poll: u64,
     pub(crate) diff_service_client: Option<DiffServiceClient>,
+    pub(crate) remote_diff_options: RemoteDiffOptions,
 }
 
 pub struct SourceControlServiceThriftImpl(Arc<SourceControlServiceImpl>);
@@ -201,6 +203,7 @@ impl SourceControlServiceImpl {
             git_source_of_truth_config,
             watchdog_max_poll,
             diff_service_client,
+            remote_diff_options: app.environment().remote_diff_options.clone(),
         })
     }
 
@@ -669,6 +672,7 @@ impl SourceControlServiceImpl {
     pub(crate) fn diff_router(&'_ self) -> crate::diff::DiffRouter<'_> {
         crate::diff::DiffRouter {
             diff_service_client: &self.diff_service_client,
+            diff_options: &self.remote_diff_options,
         }
     }
 }

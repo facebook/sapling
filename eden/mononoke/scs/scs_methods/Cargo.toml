@@ -24,6 +24,7 @@ connection_security_checker = { version = "0.1.0", path = "../../common/connecti
 context = { version = "0.1.0", path = "../../server/context" }
 dedupmap = { version = "0.1.0", path = "../../common/dedupmap" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
+environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 faster-hex = "0.6.1"
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

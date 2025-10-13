@@ -7,6 +7,7 @@
 
 use context::CoreContext;
 use diff_service_client::DiffServiceClient;
+use environment::RemoteDiffOptions;
 use futures::StreamExt;
 use mononoke_api::FileContext;
 use mononoke_api::HeaderlessUnifiedDiff;
@@ -15,19 +16,23 @@ use mononoke_api::headerless_unified_diff;
 use scs_errors::ServiceError;
 
 /// Router for diff operations that can use either local mononoke_api
-/// or remote diff_service based on JustKnobs configuration.
+/// or remote diff_service based on command line args and JustKnobs configuration.
 pub struct DiffRouter<'a> {
     pub(crate) diff_service_client: &'a Option<DiffServiceClient>,
+    pub(crate) diff_options: &'a RemoteDiffOptions,
 }
 
 impl<'a> DiffRouter<'a> {
     /// Check if remote diff should be used for this repo
     fn should_use_remote_diff(&self, repo_name: &str) -> bool {
-        justknobs::eval("scm/mononoke:remote_diff", None, Some(repo_name)).unwrap_or(false)
+        // If remote diffs are enabled we check the JK to make sure the feature is active
+        let jk_enabled =
+            justknobs::eval("scm/mononoke:remote_diff", None, Some(repo_name)).unwrap_or(false);
+        self.diff_options.diff_remotely && jk_enabled
     }
 
     /// Generate headerless unified diff between two files.
-    /// Routes to either local mononoke_api or remote diff_service based on JustKnobs.
+    /// Routes to either local mononoke_api or remote diff_service based on command line args and JustKnobs.
     pub async fn headerless_unified_diff(
         &self,
         ctx: &CoreContext,

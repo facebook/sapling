@@ -60,6 +60,7 @@ use crate::args::ConfigArgs;
 use crate::args::GFlagsArgs;
 use crate::args::JustKnobsArgs;
 use crate::args::MysqlArgs;
+use crate::args::RemoteDiffArgs;
 use crate::args::RuntimeArgs;
 use crate::args::parse_config_spec_to_path;
 use crate::extension::AppExtension;
@@ -111,6 +112,9 @@ pub struct EnvironmentArgs {
 
     #[clap(flatten, next_help_heading = "REMOTE DERIVATION OPTIONS")]
     remote_derivation_args: RemoteDerivationArgs,
+
+    #[clap(flatten, next_help_heading = "REMOTE DIFF OPTIONS")]
+    remote_diff_args: RemoteDiffArgs,
 
     #[clap(flatten, next_help_heading = "STORAGE OPTIONS")]
     readonly_storage_args: ReadOnlyStorageArgs,
@@ -310,6 +314,7 @@ impl MononokeAppBuilder {
             readonly_storage_args,
             acl_args,
             remote_derivation_args,
+            remote_diff_args,
             rendezvous_args,
             just_knobs_args,
             gflags_args,
@@ -372,6 +377,8 @@ impl MononokeAppBuilder {
 
         let remote_derivation_options = remote_derivation_args.into();
 
+        let remote_diff_options = remote_diff_args.into();
+
         let acl_provider =
             create_acl_provider(self.fb, &acl_args).context("Failed to create ACL provider")?;
 
@@ -400,6 +407,7 @@ impl MononokeAppBuilder {
             rendezvous_options,
             megarepo_configs_options,
             remote_derivation_options,
+            remote_diff_options,
             disabled_hooks: HashMap::new(),
             bookmark_cache_options: self.bookmark_cache_options.clone(),
             filter_repos: None,
