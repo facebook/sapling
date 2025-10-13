@@ -12,6 +12,7 @@ mod tests;
 
 use std::collections::HashSet;
 
+use anyhow::Context;
 use anyhow::Error;
 use fbinit::FacebookInit;
 use metaconfig_types::RepoConfig;
@@ -67,7 +68,8 @@ pub async fn load_hooks(
                 hook_manager.get_reviewers_perm_checker(),
                 hook_manager.repo_name(),
             )
-            .await?
+            .await
+            .with_context(|| format!("Failed to create bookmark hook '{}'", hook.name))?
             {
                 BookmarkHook(hook)
             } else if let Some(hook) = make_changeset_hook(
@@ -77,10 +79,13 @@ pub async fn load_hooks(
                 hook_manager.get_reviewers_perm_checker(),
                 hook_manager.repo_name(),
             )
-            .await?
+            .await
+            .with_context(|| format!("Failed to create changeset hook '{}'", hook.name))?
             {
                 ChangesetHook(hook)
-            } else if let Some(hook) = make_file_hook(fb, &hook)? {
+            } else if let Some(hook) = make_file_hook(fb, &hook)
+                .with_context(|| format!("Failed to create file hook '{}'", hook.name))?
+            {
                 FileHook(hook)
             } else {
                 return Err(ErrorKind::InvalidRustHook(hook.name.clone()).into());
