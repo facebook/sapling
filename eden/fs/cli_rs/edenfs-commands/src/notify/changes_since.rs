@@ -41,6 +41,9 @@ pub struct ChangesSinceCmd {
     /// Path to the mount point
     mount_point: Option<PathBuf>,
 
+    #[clap(long, help = "Relative root to use for the output")]
+    relative_root: Option<PathBuf>,
+
     #[clap(long, help = "Include VCS roots in the output")]
     include_vcs_roots: bool,
 
@@ -134,7 +137,7 @@ impl crate::Subcommand for ChangesSinceCmd {
             .get_changes_since(
                 &self.mount_point,
                 &position,
-                &None,
+                &self.relative_root,
                 &self.included_roots,
                 &self.included_suffixes,
                 &self.excluded_roots,
@@ -152,7 +155,7 @@ impl crate::Subcommand for ChangesSinceCmd {
                     &self.mount_point,
                     self.throttle,
                     position,
-                    &None,
+                    &self.relative_root,
                     &self.included_roots,
                     &self.included_suffixes,
                     &self.excluded_roots,
