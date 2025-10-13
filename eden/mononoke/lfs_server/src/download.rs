@@ -122,7 +122,7 @@ async fn fetch_by_key(
     // Query a stream out of the Filestore
     let fetched = filestore::fetch_range_with_size(
         ctx.repo.repo_blobstore().clone(),
-        ctx.ctx.clone(),
+        &ctx.ctx,
         &key,
         range.unwrap_or_else(Range::all),
     )

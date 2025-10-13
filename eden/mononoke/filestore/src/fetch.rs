@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::borrow::Borrow;
 use std::cmp::max;
 use std::cmp::min;
 
@@ -111,10 +110,10 @@ impl RangeInner {
 
 pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
-    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
+    ctx: &CoreContext,
     file_contents: FileContents,
     range: Range,
-) -> Result<impl Stream<Item = Result<Bytes, Error>> + 'a, Error> {
+) -> Result<impl Stream<Item = Result<Bytes, Error>> + use<'a, B>, Error> {
     let Range {
         inner: range,
         strict,
@@ -208,28 +207,33 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
                 }
             };
 
-            stream::iter(chunk_iter.map(move |(chunk_range, chunk)| {
-                // Send some (maybe all) of this chunk.
-                let chunk_id = chunk.chunk_id();
+            stream::iter(chunk_iter.map({
                 cloned!(ctx, blobstore);
-                async move {
-                    let bytes = chunk_id
-                        .load(ctx.borrow(), &blobstore)
-                        .await
-                        .map_err(move |err| match err {
-                            LoadableError::Error(err) => err,
-                            LoadableError::Missing(_) => ErrorKind::ChunkNotFound(chunk_id).into(),
-                        })
-                        .map(ContentChunk::into_bytes)?;
+                move |(chunk_range, chunk)| {
+                    // Send some (maybe all) of this chunk.
+                    let chunk_id = chunk.chunk_id();
+                    cloned!(ctx, blobstore);
+                    async move {
+                        let bytes = chunk_id
+                            .load(&ctx, &blobstore)
+                            .await
+                            .map_err(move |err| match err {
+                                LoadableError::Error(err) => err,
+                                LoadableError::Missing(_) => {
+                                    ErrorKind::ChunkNotFound(chunk_id).into()
+                                }
+                            })
+                            .map(ContentChunk::into_bytes)?;
 
-                    let bytes = match chunk_range {
-                        RangeInner::Span { start, end } => {
-                            bytes.slice((start as usize)..(end as usize))
-                        }
-                        RangeInner::All => bytes,
-                    };
+                        let bytes = match chunk_range {
+                            RangeInner::Span { start, end } => {
+                                bytes.slice((start as usize)..(end as usize))
+                            }
+                            RangeInner::All => bytes,
+                        };
 
-                    Ok(bytes)
+                        Ok(bytes)
+                    }
                 }
             }))
             .buffered(buffer_size)
@@ -242,19 +246,16 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
 
 pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
-    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
+    ctx: &CoreContext,
     content_id: ContentId,
     range: Range,
-) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + 'a, u64)>, Error> {
-    let maybe_file_contents = {
-        cloned!(ctx, blobstore);
-        async move { content_id.load(ctx.borrow(), &blobstore).await }.await
-    }
-    .map(Some)
-    .or_else(|err| match err {
-        LoadableError::Error(err) => Err(err),
-        LoadableError::Missing(_) => Ok(None),
-    })?;
+) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + use<'a, B>, u64)>, Error> {
+    let maybe_file_contents = { content_id.load(ctx, &blobstore).await }
+        .map(Some)
+        .or_else(|err| match err {
+            LoadableError::Error(err) => Err(err),
+            LoadableError::Missing(_) => Ok(None),
+        })?;
 
     let file_contents = match maybe_file_contents {
         Some(file_contents) => file_contents,

@@ -92,7 +92,7 @@ where
         content_id: ContentId,  // for fetching
         digest: MononokeDigest, // for uploading
     ) -> Result<UploadOutcome, Error> {
-        let stream = filestore::fetch(blobstore, ctx.clone(), &content_id.into())
+        let stream = filestore::fetch(blobstore, ctx, &content_id.into())
             .await?
             .ok_or(ErrorKind::MissingInBlobstore(content_id))?;
         if digest.1 <= MAX_BYTES_FOR_INLINE_UPLOAD {

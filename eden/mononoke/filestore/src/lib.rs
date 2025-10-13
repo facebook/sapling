@@ -8,8 +8,6 @@
 #![feature(never_type)]
 #![type_length_limit = "2000000"]
 
-use std::borrow::Borrow;
-
 use anyhow::Error;
 use anyhow::anyhow;
 use blobstore::Blobstore;
@@ -270,29 +268,19 @@ pub async fn exists<B: Blobstore>(
 /// be determined or if opening the file failed. File contents are returned in chunks configured by
 /// FilestoreConfig::read_chunk_size - this defines the max chunk size, but they may be shorter
 /// (not just the final chunks - any of them). Chunks are guaranteed to have non-zero size.
-pub async fn fetch_with_size<
-    'a,
-    B: Blobstore + Clone + 'a,
-    T: Borrow<CoreContext> + Clone + Send + Sync + 'a,
->(
+pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
-    ctx: T,
+    ctx: &CoreContext,
     key: &FetchKey,
-) -> Result<
-    Option<(
-        impl Stream<Item = Result<Bytes, Error>> + use<'a, B, T>,
-        u64,
-    )>,
-    Error,
-> {
-    let content_id =
-        key.load(ctx.borrow(), &blobstore)
-            .await
-            .map(Some)
-            .or_else(|err| match err {
-                LoadableError::Error(err) => Err(err),
-                LoadableError::Missing(_) => Ok(None),
-            })?;
+) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + use<'a, B>, u64)>, Error> {
+    let content_id = key
+        .load(ctx, &blobstore)
+        .await
+        .map(Some)
+        .or_else(|err| match err {
+            LoadableError::Error(err) => Err(err),
+            LoadableError::Missing(_) => Ok(None),
+        })?;
 
     match content_id {
         Some(content_id) => {
@@ -307,30 +295,20 @@ pub async fn fetch_with_size<
 ///
 /// Requests for data beyond the end of the file will return only the part of
 /// the file that overlaps with the requested range, if any.
-pub async fn fetch_range_with_size<
-    'a,
-    B: Blobstore + Clone + 'a,
-    T: Borrow<CoreContext> + Clone + Send + Sync + 'a,
->(
+pub async fn fetch_range_with_size<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
-    ctx: T,
+    ctx: &CoreContext,
     key: &FetchKey,
     range: Range,
-) -> Result<
-    Option<(
-        impl Stream<Item = Result<Bytes, Error>> + use<'a, B, T>,
-        u64,
-    )>,
-    Error,
-> {
-    let content_id =
-        key.load(ctx.borrow(), &blobstore)
-            .await
-            .map(Some)
-            .or_else(|err| match err {
-                LoadableError::Error(err) => Err(err),
-                LoadableError::Missing(_) => Ok(None),
-            })?;
+) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + use<'a, B>, u64)>, Error> {
+    let content_id = key
+        .load(ctx, &blobstore)
+        .await
+        .map(Some)
+        .or_else(|err| match err {
+            LoadableError::Error(err) => Err(err),
+            LoadableError::Missing(_) => Ok(None),
+        })?;
 
     match content_id {
         Some(content_id) => fetch::fetch_with_size(blobstore, ctx, content_id, range).await,
@@ -339,15 +317,11 @@ pub async fn fetch_range_with_size<
 }
 
 /// This function has the same functionality as fetch_with_size, but doesn't return the file size.
-pub async fn fetch<
-    'a,
-    B: Blobstore + Clone + 'a,
-    T: Borrow<CoreContext> + Clone + Send + Sync + 'a,
->(
+pub async fn fetch<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
-    ctx: T,
+    ctx: &CoreContext,
     key: &FetchKey,
-) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + use<'a, B, T>>, Error> {
+) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + use<'a, B>>, Error> {
     let res = fetch_with_size(blobstore, ctx, key).await?;
     Ok(res.map(|(stream, _len)| stream))
 }
@@ -428,15 +402,16 @@ pub async fn fetch_concat_exact<'a, B: Blobstore>(
 ///
 /// Mostly behaves as the `fetch`, except it is pushing missing content error into stream if
 /// data associated with the key was not found.
-pub fn fetch_stream<'a, B: Blobstore + Clone + 'a>(
+pub fn fetch_stream<'a, B: Blobstore + Clone + 'a, K: Into<FetchKey>>(
     blobstore: B,
-    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
-    key: impl Into<FetchKey>,
-) -> impl Stream<Item = Result<Bytes, Error>> + 'a {
+    ctx: &CoreContext,
+    key: K,
+) -> impl Stream<Item = Result<Bytes, Error>> + use<'a, B, K> {
+    let ctx = ctx.clone();
     let key: FetchKey = key.into();
 
     async move {
-        let stream = fetch(blobstore, ctx, &key)
+        let stream = fetch(blobstore, &ctx, &key)
             .await?
             .ok_or(errors::ErrorKind::MissingContent(key))?;
         Result::<_, Error>::Ok(stream)

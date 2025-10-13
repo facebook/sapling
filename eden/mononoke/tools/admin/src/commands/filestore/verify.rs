@@ -55,29 +55,25 @@ pub async fn verify(
         .ok_or_else(|| anyhow!("Content not found"))?;
 
     let (content_id, sha1, sha256, git_sha1, seeded_blake3) = futures::future::join5(
+        filestore::fetch(&blobstore, ctx, &FetchKey::Canonical(metadata.content_id)),
         filestore::fetch(
             &blobstore,
-            ctx.clone(),
-            &FetchKey::Canonical(metadata.content_id),
-        ),
-        filestore::fetch(
-            &blobstore,
-            ctx.clone(),
+            ctx,
             &FetchKey::Aliased(Alias::Sha1(metadata.sha1)),
         ),
         filestore::fetch(
             &blobstore,
-            ctx.clone(),
+            ctx,
             &FetchKey::Aliased(Alias::Sha256(metadata.sha256)),
         ),
         filestore::fetch(
             &blobstore,
-            ctx.clone(),
+            ctx,
             &FetchKey::Aliased(Alias::GitSha1(metadata.git_sha1.sha1())),
         ),
         filestore::fetch(
             &blobstore,
-            ctx.clone(),
+            ctx,
             &FetchKey::Aliased(Alias::SeededBlake3(metadata.seeded_blake3)),
         ),
     )

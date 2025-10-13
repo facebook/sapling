@@ -679,7 +679,7 @@ async fn file_content_step<V: VisitOne>(
     checker: &Checker<V>,
     id: ContentId,
 ) -> Result<StepOutput, StepError> {
-    let maybe_s = filestore::fetch(repo.repo_blobstore().clone(), ctx, &id.into()).await?;
+    let maybe_s = filestore::fetch(repo.repo_blobstore().clone(), &ctx, &id.into()).await?;
     let s = match maybe_s {
         Some(s) => s.map_ok(FileBytes),
         None => {

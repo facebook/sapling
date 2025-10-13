@@ -70,7 +70,7 @@ impl ContentManager {
     }
 
     async fn flush_batch(
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_blobstore: RepoBlobstore,
         content_es: &Arc<dyn EdenapiSender + Send + Sync>,
         current_batch: &mut Vec<ContentId>,
@@ -86,7 +86,7 @@ impl ContentManager {
 
             let full_items = stream::iter(contents)
                 .map(|id| {
-                    cloned!(ctx, repo_blobstore);
+                    cloned!(repo_blobstore);
                     async move {
                         let bytes = filestore::fetch(repo_blobstore, ctx, &id.into())
                             .await?
@@ -168,7 +168,7 @@ impl Manager for ContentManager {
 
                         if current_batch_size >= self.max_blob_bytes || current_batch.len() >= self.config.batch_size as usize {
                             if let Err(e) = ContentManager::flush_batch(
-                                ctx.clone(),
+                                &ctx,
                                 self.repo_blobstore.clone(),
                                 &content_es,
                                 &mut current_batch,
@@ -185,7 +185,7 @@ impl Manager for ContentManager {
                     _ = flush_timer.tick() => {
                         if current_batch_size > 0 || !pending_messages.is_empty() {
                             if let Err(e) = ContentManager::flush_batch(
-                                ctx.clone(),
+                                &ctx,
                                 self.repo_blobstore.clone(),
                                 &content_es,
                                 &mut current_batch,

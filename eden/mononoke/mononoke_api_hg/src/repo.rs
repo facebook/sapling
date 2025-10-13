@@ -256,7 +256,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         Ok(filestore::fetch(
             self.bubble_blobstore(upload_token.data.bubble_id.map(BubbleId::new))
                 .await?,
-            self.ctx().clone(),
+            self.ctx(),
             &match upload_token.data.id {
                 AnyId::AnyFileContentId(file_id) => file_id.into(),
                 e => {

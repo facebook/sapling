@@ -348,9 +348,8 @@ pub async fn get_statistics_from_entry(
             let size = envelope.content_size();
             let content_id = envelope.content_id();
             let lines = if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {
-                let content =
-                    filestore::fetch_stream(repo.repo_blobstore(), ctx.clone(), content_id)
-                        .map_ok(FileBytes);
+                let content = filestore::fetch_stream(repo.repo_blobstore(), ctx, content_id)
+                    .map_ok(FileBytes);
                 number_of_lines_unless_redacted(content)
                     .await
                     .context("Failed to compute number of lines")?

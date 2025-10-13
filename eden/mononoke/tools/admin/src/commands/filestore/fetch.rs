@@ -46,7 +46,7 @@ pub async fn fetch(ctx: &CoreContext, repo: &Repo, fetch_args: FilestoreFetchArg
         }
         None => repo.repo_blobstore().clone(),
     };
-    let mut stream = filestore::fetch(blobstore, ctx.clone(), &fetch_key)
+    let mut stream = filestore::fetch(blobstore, ctx, &fetch_key)
         .await
         .context("Failed to fetch from filestore")?
         .ok_or_else(|| anyhow!("Content not found"))?;

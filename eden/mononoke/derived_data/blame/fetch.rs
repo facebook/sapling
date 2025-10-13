@@ -64,7 +64,7 @@ pub async fn fetch_content_for_blame_with_limit(
     let file_unode = file_unode_id.load(ctx, blobstore).await?;
     let content_id = *file_unode.content_id();
     let (mut stream, size) =
-        filestore::fetch_with_size(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
+        filestore::fetch_with_size(blobstore, ctx, &FetchKey::Canonical(content_id))
             .await?
             .ok_or_else(|| anyhow!("Missing content: {}", content_id))?;
     if size > filesize_limit {

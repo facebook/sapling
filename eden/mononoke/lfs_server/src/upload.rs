@@ -317,7 +317,7 @@ async fn sync_internal_and_upstream(
 ) -> Result<(), Error> {
     let key = FetchKey::Aliased(Alias::Sha256(oid));
 
-    let res = filestore::fetch(ctx.repo.repo_blobstore().clone(), ctx.ctx.clone(), &key).await?;
+    let res = filestore::fetch(ctx.repo.repo_blobstore().clone(), &ctx.ctx, &key).await?;
 
     match res {
         Some(stream) => {

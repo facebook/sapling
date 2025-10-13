@@ -181,12 +181,8 @@ pub async fn list_working_copy_with_types(
             .right_stream()
     }
     .map_ok(|(path, content_id, file_type)| async move {
-        let maybe_content = filestore::fetch(
-            repo.repo_blobstore(),
-            ctx.clone(),
-            &FetchKey::Canonical(content_id),
-        )
-        .await?;
+        let maybe_content =
+            filestore::fetch(repo.repo_blobstore(), ctx, &FetchKey::Canonical(content_id)).await?;
         let s = match maybe_content {
             Some(s) => s,
             None => {
