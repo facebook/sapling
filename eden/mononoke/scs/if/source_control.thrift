@@ -1734,7 +1734,10 @@ struct CreateReposParams {
   2: bool dry_run;
 }
 
-struct CreateReposToken {}
+struct CreateReposToken {
+  // Mutation id of the config landing config change
+  1: optional i64 mutation_id;
+}
 
 /// Synchronization target
 @rust.Ord
