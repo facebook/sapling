@@ -423,6 +423,19 @@ def subtree_inspect(ui, repo, *args, **opts):
     ui.write(f"{result_json}\n")
 
 
+def has_change_outside_paths(ctx1, ctx2, paths):
+    """check if there are any changes outside the specified paths"""
+    if ctx1 == ctx2:
+        return False
+
+    exclude = [f"path:{path}" for path in paths]
+    matcher = matchmod.match(ctx1.repo().root, "", exclude=exclude)
+    m1 = ctx1.manifest()
+    m2 = ctx2.manifest()
+
+    return not m1.identical(m2, matcher)
+
+
 def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
     """get the best merge base for subtree merge
 
@@ -479,6 +492,16 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
     if from_path == to_path:
         nodes = [from_ctx.node(), to_ctx.node()]
         gca = dag.gcaone(nodes)
+        gca_ctx = repo[gca]
+        if has_change_outside_paths(gca_ctx, from_ctx, [from_path]):
+            repo.ui.warn(
+                _(
+                    "changes outside the specified from_path are ignored!\n"
+                    "(use '@prog@ diff -r %s -r %s --stat' to see all changed files)\n"
+                )
+                % (gca_ctx, from_ctx),
+                notice="warning",
+            )
         return registerdiffgrafts(repo[gca], 0)
 
     ui = repo.ui
