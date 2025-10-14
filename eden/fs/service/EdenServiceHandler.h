@@ -8,6 +8,7 @@
 #pragma once
 
 #include <fb303/BaseService.h>
+#include <folly/CancellationToken.h>
 #include <folly/coro/Task.h>
 #include <optional>
 #include "eden/common/os/ProcessId.h"
@@ -512,6 +513,26 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   folly::SemiFuture<std::unique_ptr<GetFileContentResponse>>
   semifuture_getFileContent(
       std::unique_ptr<GetFileContentRequest> request) override;
+
+  void insertCancellationSource(
+      uint64_t requestId,
+      folly::CancellationSource cancellationSource);
+
+  std::optional<folly::CancellationSource> getCancellationSource(
+      uint64_t requestId);
+
+  bool removeCancellationSource(uint64_t requestId);
+
+  bool requestCancellation(uint64_t requestId);
+
+  size_t getActiveCancellationSourceCount() const;
+
+  void insertUncancelableRequest(uint64_t requestId);
+
+  std::optional<RequestStatus> getRequestStatus(uint64_t requestId);
+
+  std::optional<folly::CancellationToken> getCancellationToken(
+      uint64_t requestId);
 
  private:
   EdenMountHandle lookupMount(const MountId& mountId);

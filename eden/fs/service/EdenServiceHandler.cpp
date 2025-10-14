@@ -6362,4 +6362,92 @@ OptionalProcessId EdenServiceHandler::getAndRegisterClientPid() {
 #endif
 }
 
+void EdenServiceHandler::insertCancellationSource(
+    uint64_t requestId,
+    folly::CancellationSource cancellationSource) {
+  auto lockedStore = requestCancellationStore_.wlock();
+  lockedStore->emplace(
+      requestId, RequestCancellationInfo(std::move(cancellationSource)));
+  XLOGF(
+      DBG6,
+      "Inserted cancellation source for request ID: {}. Total active: {}",
+      requestId,
+      lockedStore->size());
+}
+
+std::optional<folly::CancellationSource>
+EdenServiceHandler::getCancellationSource(uint64_t requestId) {
+  auto lockedStore = requestCancellationStore_.rlock();
+  auto it = lockedStore->find(requestId);
+  if (it != lockedStore->end() && it->second.isCancelable()) {
+    return it->second.cancellationSource;
+  }
+  return std::nullopt;
+}
+
+bool EdenServiceHandler::removeCancellationSource(uint64_t requestId) {
+  auto lockedStore = requestCancellationStore_.wlock();
+  auto erased = lockedStore->erase(requestId);
+  if (erased > 0) {
+    XLOGF(
+        DBG6,
+        "Removed cancellation source for request ID: {}. Remaining active: {}",
+        requestId,
+        lockedStore->size());
+  }
+  return erased > 0;
+}
+
+bool EdenServiceHandler::requestCancellation(uint64_t requestId) {
+  auto lockedStore = requestCancellationStore_.wlock();
+  auto it = lockedStore->find(requestId);
+  if (it != lockedStore->end()) {
+    bool success = it->second.requestCancellation();
+    if (success) {
+      XLOGF(DBG3, "Requested cancellation for request ID: {}", requestId);
+    } else {
+      XLOGF(DBG4, "Request ID {} is not cancelable", requestId);
+    }
+    return success;
+  }
+  XLOGF(DBG4, "No cancellation source found for request ID: {}", requestId);
+  return false;
+}
+
+size_t EdenServiceHandler::getActiveCancellationSourceCount() const {
+  auto lockedStore = requestCancellationStore_.rlock();
+  return lockedStore->size();
+}
+
+void EdenServiceHandler::insertUncancelableRequest(uint64_t requestId) {
+  auto lockedStore = requestCancellationStore_.wlock();
+  lockedStore->emplace(
+      requestId, RequestCancellationInfo::createUncancelable());
+  XLOGF(
+      DBG6,
+      "Inserted uncancelable request for request ID: {}. Total active: {}",
+      requestId,
+      lockedStore->size());
+}
+
+std::optional<RequestStatus> EdenServiceHandler::getRequestStatus(
+    uint64_t requestId) {
+  auto lockedStore = requestCancellationStore_.rlock();
+  auto it = lockedStore->find(requestId);
+  if (it != lockedStore->end()) {
+    return it->second.status;
+  }
+  return std::nullopt;
+}
+
+std::optional<folly::CancellationToken>
+EdenServiceHandler::getCancellationToken(uint64_t requestId) {
+  auto lockedStore = requestCancellationStore_.rlock();
+  auto it = lockedStore->find(requestId);
+  if (it != lockedStore->end() && it->second.isCancelable()) {
+    return it->second.cancellationSource->getToken();
+  }
+  return std::nullopt;
+}
+
 } // namespace facebook::eden
