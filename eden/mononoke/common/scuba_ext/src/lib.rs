@@ -141,66 +141,26 @@ impl MononokeScubaSampleBuilder {
         self.inner
             .add("client_correlator", client_info.correlator.as_str());
 
-        // For context, see D76895703 or https://fburl.com/workplace/et4ezqp3.
-        // Check the JK that disables reads for all blobstore ids being used
-        // and log the ones that were disabled in this request.
-        let disabled_reads_blobstore_ids = (1..4)
-            .map(|id| id.to_string())
-            .filter(|id| {
-                justknobs::eval(
-                    "scm/mononoke:disable_blobstore_reads",
-                    Some(client_info.correlator.as_str()),
-                    Some(id),
-                )
-                .unwrap_or(false)
-            })
-            .collect::<Vec<_>>();
-
-        if !disabled_reads_blobstore_ids.is_empty() {
-            self.inner
-                .add("disabled_reads_blobstore_ids", disabled_reads_blobstore_ids);
-        }
-
-        let read_bookmarks_from_xdb_replica = justknobs::eval(
-            "scm/mononoke:read_bookmarks_from_xdb_replica",
-            Some(client_info.correlator.as_str()),
-            None,
-        )
-        .unwrap_or(false);
-
-        self.inner.add(
-            "read_bookmarks_from_xdb_replica",
-            read_bookmarks_from_xdb_replica,
-        );
-
-        let use_maybe_stale_freshness_for_bookmarks = [
-            "mononoke_api::repo::git::get_bookmark_state",
-            "cache_warmup::do_cache_warmup",
-        ]
-        .into_iter()
-        .map(|id| id.to_string())
-        .filter(|id| {
-            justknobs::eval(
-                "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",
-                Some(client_info.correlator.as_str()),
-                Some(id),
-            )
-            .unwrap_or(false)
-        })
-        .collect::<Vec<_>>();
-
-        if !use_maybe_stale_freshness_for_bookmarks.is_empty() {
-            self.inner.add(
-                "use_maybe_stale_freshness_for_bookmarks",
-                use_maybe_stale_freshness_for_bookmarks,
-            );
-        }
-
         // Add all the JKs (with their switches) that are hashed consistently
         // against client correlator, so all Scuba logs can be split by
         // feature being enabled or disabled.
         // This generalizes what was done in D76728908 and D81212709.
         let jk_and_switches: Vec<(&'static str, Vec<&'static str>)> = vec![
+            (
+                // For context, see D76895703 or https://fburl.com/workplace/et4ezqp3.
+                // Check the JK that disables reads for all blobstore ids being used
+                // and log the ones that were disabled in this request.
+                "scm/mononoke:disable_blobstore_reads",
+                vec!["1", "2", "3", "4"],
+            ),
+            ("scm/mononoke:read_bookmarks_from_xdb_replica", vec![]),
+            (
+                "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",
+                vec![
+                    "mononoke_api::repo::git::get_bookmark_state",
+                    "cache_warmup::do_cache_warmup",
+                ],
+            ),
             (
                 "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary",
                 vec!["git"],

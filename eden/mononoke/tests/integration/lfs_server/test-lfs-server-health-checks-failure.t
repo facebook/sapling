@@ -68,7 +68,6 @@
       "http_method": "GET",
       "http_path": "/health_check",
       "http_user_agent": "curl/*", (glob)
-      "read_bookmarks_from_xdb_replica": "true",
       "request_id": "*", (glob)
       "sandcastle_alias": null,
       "sandcastle_nonce": null,
