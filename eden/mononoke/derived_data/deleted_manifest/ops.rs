@@ -282,9 +282,6 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
 
                                         Ok((return_entry, recurse))
                                     }
-                                    // Rustc bug: 1.50.0 considers the None pattern wrongly unreachable.
-                                    // https://github.com/rust-lang/rust/issues/82012
-                                    #[allow(unreachable_patterns)]
                                     None | Some(Pattern::Path) => {
                                         // need to recurse
                                         let mut recurse = vec![];
