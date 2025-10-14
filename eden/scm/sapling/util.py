@@ -50,6 +50,7 @@ import traceback
 import types
 import warnings
 import zlib
+from reprlib import recursive_repr as _recursive_repr
 from typing import (
     Any,
     BinaryIO,
@@ -698,7 +699,14 @@ class sortdict(collections.OrderedDict):
     [b'a', b'b', b'c']
     """
 
-    pass
+    # XXX: this override can be removed once we no longer
+    # support Python versions ealier than 3.12
+    @_recursive_repr()
+    def __repr__(self):
+        "od.__repr__() <==> repr(od)"
+        if not self:
+            return "%s()" % (self.__class__.__name__,)
+        return "%s(%r)" % (self.__class__.__name__, list(self.items()))
 
 
 class altsortdict(sortdict):
