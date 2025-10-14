@@ -178,6 +178,7 @@ def extsetup(ui) -> None:
     _setupadd(ui)
     _setupdirstate(ui)
     _setupdiff(ui)
+    _setupcat(ui)
 
 
 def reposetup(ui, repo) -> None:
@@ -497,6 +498,19 @@ def _setuplog(ui) -> None:
         return revs
 
     extensions.wrapfunction(cmdutil, "_logrevs", _logrevs)
+
+
+def _setupcat(ui) -> None:
+    def _cat(orig, ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts):
+        # Enforce sparse matcher check for edensparse repos. Disallows access
+        # to filtered file content.
+        if _isedensparse(repo) and not repo.ui.configbool("sparse", "killsparsecat"):
+            sparsematch = repo.sparsematch()
+            matcher = matchmod.intersectmatchers(matcher, sparsematch)
+
+        return orig(ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts)
+
+    extensions.wrapfunction(cmdutil, "cat", _cat)
 
 
 def _tracktelemetry(

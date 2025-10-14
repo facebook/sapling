@@ -489,10 +489,43 @@ class FilteredFSBasic(FilteredFSBase):
         out = self.hg("cat", "adir/file")
         self.assertEqual(out, "foo!\n")
 
-        # FIXME: cat doesn't respect filters yet
         # cat should fail for filtered files
-        out = self.hg("cat", "bdir/test.sh")
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.hg("cat", "bdir/test.sh")
+        self.assertEqual(context.exception.returncode, 1)
+        self.assertEqual(context.exception.stderr, b"")
+
+        # Killswitch should prevent cat from respecting active filter
+        out = self.hg("cat", "bdir/test.sh", "--config", "sparse.killsparsecat=true")
         self.assertEqual(out, "#!/bin/bash\necho test\n")
+
+    # Ensures intersectmatch logic works correctly when provided both a file
+    # matcher and sparsematcher
+    def test_filtered_cat_from_subdirectory(self) -> None:
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+        out = self.hg("cat", "file", cwd=self.get_path("adir"))
+        self.assertEqual(out, "foo!\n")
+
+        self.enable_filters("filters/v1_filter1")
+        self.assert_filtered_and_unfiltered(
+            initial_files.difference(unfiltered_files), unfiltered_files
+        )
+
+        # cat should fail for filtered files
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.hg("cat", "test.sh", cwd=self.get_path("bdir"))
+        self.assertEqual(context.exception.returncode, 1)
+        self.assertEqual(context.exception.stderr, b"")
 
 
 @filteredhg_test

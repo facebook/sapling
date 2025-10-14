@@ -74,6 +74,7 @@ from .sparse import (
     _checknonexistingprofiles,
     _common_config_opts,
     _config,
+    _setupcat,
     _setupcommit,
     _setupdiff,
     _setupupdates,
@@ -105,6 +106,7 @@ def extsetup(ui) -> None:
     if extensions.isenabled(ui, "sparse"):
         return
     _setupdiff(ui)
+    _setupcat(ui)
 
 
 def _wraprepo(ui, repo) -> None:
