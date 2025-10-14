@@ -49,6 +49,8 @@ use sql_construct::SqlConstruct;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
 
+pub const TEST_CLIENT_MAIN_ID: &str = "user:myusername0";
+
 pub struct RestrictedPathsTestData {
     pub ctx: CoreContext,
     pub repo: TestRepo,
@@ -73,18 +75,112 @@ pub struct RestrictedPathsTestDataBuilder {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ScubaAccessLogSample {
-    pub repo_id: RepositoryId,
-    pub restricted_paths: Vec<NonRootMPath>,
-    pub manifest_id: Option<ManifestId>,
-    pub manifest_type: Option<ManifestType>,
-    pub full_path: Option<NonRootMPath>,
-    pub client_identities: Vec<String>,
-    pub client_main_id: String,
-    pub has_authorization: bool,
-    pub acls: Vec<MononokeIdentity>,
+    repo_id: RepositoryId,
+    restricted_paths: Vec<NonRootMPath>,
+    manifest_id: Option<ManifestId>,
+    manifest_type: Option<ManifestType>,
+    full_path: Option<NonRootMPath>,
+    client_identities: Vec<String>,
+    client_main_id: String,
+    has_authorization: bool,
+    acls: Vec<MononokeIdentity>,
 }
 
-pub const TEST_CLIENT_MAIN_ID: &str = "user:myusername0";
+#[derive(Debug, Clone)]
+pub struct ScubaAccessLogSampleBuilder {
+    repo_id: Option<RepositoryId>,
+    restricted_paths: Vec<NonRootMPath>,
+    manifest_id: Option<ManifestId>,
+    manifest_type: Option<ManifestType>,
+    full_path: Option<NonRootMPath>,
+    client_identities: Vec<String>,
+    client_main_id: Option<String>,
+    has_authorization: Option<bool>,
+    acls: Vec<MononokeIdentity>,
+}
+
+impl ScubaAccessLogSampleBuilder {
+    pub fn new() -> Self {
+        Self {
+            repo_id: None,
+            restricted_paths: Vec::new(),
+            manifest_id: None,
+            manifest_type: None,
+            full_path: None,
+            client_identities: Vec::new(),
+            client_main_id: None,
+            has_authorization: None,
+            acls: Vec::new(),
+        }
+    }
+
+    pub fn with_repo_id(mut self, repo_id: RepositoryId) -> Self {
+        self.repo_id = Some(repo_id);
+        self
+    }
+
+    pub fn with_restricted_paths(mut self, restricted_paths: Vec<NonRootMPath>) -> Self {
+        self.restricted_paths = restricted_paths;
+        self
+    }
+
+    pub fn with_manifest_id(mut self, manifest_id: ManifestId) -> Self {
+        self.manifest_id = Some(manifest_id);
+        self
+    }
+
+    pub fn with_manifest_type(mut self, manifest_type: ManifestType) -> Self {
+        self.manifest_type = Some(manifest_type);
+        self
+    }
+
+    pub fn with_full_path(mut self, full_path: NonRootMPath) -> Self {
+        self.full_path = Some(full_path);
+        self
+    }
+
+    pub fn with_client_identities(mut self, client_identities: Vec<String>) -> Self {
+        self.client_identities = client_identities;
+        self
+    }
+
+    pub fn with_client_main_id(mut self, client_main_id: String) -> Self {
+        self.client_main_id = Some(client_main_id);
+        self
+    }
+
+    pub fn with_has_authorization(mut self, has_authorization: bool) -> Self {
+        self.has_authorization = Some(has_authorization);
+        self
+    }
+
+    pub fn with_acls(mut self, acls: Vec<MononokeIdentity>) -> Self {
+        self.acls = acls;
+        self
+    }
+
+    pub fn build(self) -> Result<ScubaAccessLogSample> {
+        let repo_id = self.repo_id.ok_or_else(|| anyhow!("repo_id is required"))?;
+        let client_main_id = self
+            .client_main_id
+            .ok_or_else(|| anyhow!("client_main_id is required"))?;
+        let has_authorization = self
+            .has_authorization
+            .ok_or_else(|| anyhow!("has_authorization is required"))?;
+
+        Ok(ScubaAccessLogSample {
+            repo_id,
+            restricted_paths: self.restricted_paths,
+            manifest_id: self.manifest_id,
+            manifest_type: self.manifest_type,
+            full_path: self.full_path,
+            client_identities: self.client_identities,
+            client_main_id,
+            has_authorization,
+            acls: self.acls,
+        })
+    }
+}
 
 impl RestrictedPathsTestDataBuilder {
     pub fn new() -> Self {
