@@ -101,7 +101,6 @@ except ModuleNotFoundError:
 
 from . import (
     cmd_util,
-    hg_util,
     rage as rage_mod,
     stats_print,
     subcmd as subcmd_mod,
@@ -919,7 +918,6 @@ class HgDirstateCmd(Subcmd):
 
 def _print_hg_nonnormal_file(
     rel_path: Path,
-    # pyre-fixme[2]: Parameter annotation cannot contain `Any`.
     dirstate_tuple: Tuple[str, Any, int],
     out: ui_mod.Output,
 ) -> None:
@@ -958,7 +956,6 @@ def _dirstate_merge_state_to_name(merge_state: int) -> str:
         raise Exception(f"Unrecognized merge_state value: {merge_state}")
 
 
-# pyre-fixme[3]: Return annotation cannot contain `Any`.
 def _get_dirstate_data(
     checkout: EdenCheckout,
 ) -> Tuple[Tuple[bytes, bytes], Dict[str, Tuple[str, Any, int]], Dict[str, str]]:
@@ -1729,10 +1726,7 @@ def _print_raw_journal_deltas(
     deltas: Iterator[DebugJournalDelta], pattern: Optional[Pattern[bytes]]
 ) -> None:
     matcher: Callable[[bytes], bool] = (
-        (lambda x: True)
-        if pattern is None
-        # pyre-fixme[33]: Given annotation cannot be `Any`.
-        else cast(Any, pattern.match)
+        (lambda x: True) if pattern is None else cast(Any, pattern.match)
     )
 
     labels = {
@@ -1819,7 +1813,7 @@ class DebugThriftCmd(Subcmd):
             return 0
 
         if not args.function_name:
-            print(f"Error: no function name specified", file=sys.stderr)
+            print("Error: no function name specified", file=sys.stderr)
             print(
                 "Use the --list argument to see a list of available functions, or "
                 "specify a function name",
