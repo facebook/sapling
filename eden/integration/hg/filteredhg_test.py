@@ -95,7 +95,7 @@ adir/file
         repo.write_file("hello", "hola\n")
         repo.write_file("adir/file", "foo!\n")
         repo.write_file("bdir/test.sh", "#!/bin/bash\necho test\n", mode=0o755)
-        repo.write_file("bdir/noexec.sh", "#!/bin/bash\necho test\n")
+        repo.write_file("bdir/noexec.sh", "#!/bin/bash\necho test2\n")
         repo.write_file("bdir/README.md", "This is a README file.\n")
         repo.write_file("dir2/not_filtered", "I shouldn't be filtered")
         repo.symlink("slink", os.path.join("adir", "file"))
@@ -526,6 +526,35 @@ class FilteredFSBasic(FilteredFSBase):
             self.hg("cat", "test.sh", cwd=self.get_path("bdir"))
         self.assertEqual(context.exception.returncode, 1)
         self.assertEqual(context.exception.stderr, b"")
+
+    def test_filtered_grep(self) -> None:
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+        self.enable_filters("filters/v1_filter1")
+        self.assert_filtered_and_unfiltered(
+            initial_files.difference(unfiltered_files), unfiltered_files
+        )
+
+        # grep should "succeed" for unfiltered files
+        # NOTE: it current returns status code 123 despite succeeding... I will
+        # fix this in follow-up diffs
+        out = self.hg("grep", "foo!", check=False)
+        self.assertRegex(out, r"adir(/|\\)file:foo!\n")
+
+        # Grep respects filters for local searches (with "grep"), but it won't
+        # respect filters when searching with biggrep or similar tools. This is
+        # difficult to test.
+        out = self.hg("grep", "'echo test2'", check=False)
+        self.assertEqual(out, "")
 
 
 @filteredhg_test
