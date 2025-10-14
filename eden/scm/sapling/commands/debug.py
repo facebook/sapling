@@ -637,7 +637,7 @@ def _debugbundle2(ui, gen: bundle2.unbundle20, all=None, **opts) -> None:
     if not isinstance(gen, bundle2.unbundle20):
         raise error.Abort(_("not a bundle2 file"))
     ui.write(_x("Stream params: %s\n" % _quasirepr(gen.params)))
-    parttypes = opts.get(r"part_type", [])
+    parttypes = opts.get("part_type", [])
     for part in gen.iterparts():
         if parttypes and part.type not in parttypes:
             continue
@@ -847,7 +847,7 @@ def debugcleanremotenames(ui, repo) -> Optional[int]:
 def debugcolor(ui, **opts) -> None:
     """show available color, effects or style"""
     ui.write(_x("color mode: %s\n") % ui._colormode)
-    if opts.get(r"style"):
+    if opts.get("style"):
         return _debugdisplaystyle(ui)
     else:
         return _debugdisplaycolor(ui)
@@ -1009,8 +1009,8 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
 
     Otherwise, the changelog DAG of the current repo is emitted.
     """
-    spaces = opts.get(r"spaces")
-    dots = opts.get(r"dots")
+    spaces = opts.get("spaces")
+    dots = opts.get("dots")
     if file_:
         rlog = revlog.revlog(vfsmod.vfs(os.getcwd(), audit=False), file_)
         revs = set((int(r) for r in revs))
@@ -1023,8 +1023,8 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
 
     elif repo:
         cl = repo.changelog
-        bookmarks = opts.get(r"bookmarks")
-        branches = opts.get(r"branches")
+        bookmarks = opts.get("bookmarks")
+        branches = opts.get("branches")
         if bookmarks:
             labels = {}
             for l, n in repo._bookmarks.items():
@@ -1157,8 +1157,8 @@ def debugstate(ui, repo, **opts) -> Optional[int]:
             ui.write("%s %s %12s %s\n" % (status, display_mode, merge_str, path))
         return 0
 
-    nodates = opts.get(r"nodates")
-    datesort = opts.get(r"datesort")
+    nodates = opts.get("nodates")
+    datesort = opts.get("datesort")
 
     timestr = ""
     if datesort:
@@ -1589,7 +1589,7 @@ def debugfilerevision(ui, repo, *pats, **opts) -> None:
 )
 def debugfileset(ui, repo, expr, **opts) -> None:
     """parse and apply a fileset specification"""
-    ctx = scmutil.revsingle(repo, opts.get(r"rev"), None)
+    ctx = scmutil.revsingle(repo, opts.get("rev"), None)
     if ui.verbose:
         tree = fileset.parse(expr)
         ui.note(fileset.prettyformat(tree), "\n")
@@ -1647,11 +1647,11 @@ def debuggetbundle(
         raise error.Abort("getbundle() not supported by target repository")
     args = {}
     if common:
-        args[r"common"] = [bin(s) for s in common]
+        args["common"] = [bin(s) for s in common]
     if head:
-        args[r"heads"] = [bin(s) for s in head]
+        args["heads"] = [bin(s) for s in head]
     # TODO: get desired bundlecaps from command line.
-    args[r"bundlecaps"] = None
+    args["bundlecaps"] = None
     bundle = repo.getbundle("debug", **args)
 
     bundletype = opts.get("type", "bzip2").lower()
@@ -2163,16 +2163,16 @@ def debuglocks(ui, repo, **opts) -> int:
     ):
         raise error.Abort(_("forcing lock release no longer supported"))
 
-    wait = opts.get(r"wait") or False
+    wait = opts.get("wait") or False
 
     locks = []
     try:
-        if opts.get(r"set_wlock"):
+        if opts.get("set_wlock"):
             try:
                 locks.append(repo.wlock(wait))
             except error.LockHeld:
                 raise error.Abort(_("wlock is already held"))
-        if opts.get(r"set_lock"):
+        if opts.get("set_lock"):
             try:
                 locks.append(repo.lock(wait))
             except error.LockHeld:
@@ -2466,15 +2466,15 @@ def debugpathcomplete(ui, repo, *specs, **opts) -> None:
                 )
 
     acceptable = ""
-    if opts[r"normal"]:
+    if opts["normal"]:
         acceptable += "nm"
-    if opts[r"added"]:
+    if opts["added"]:
         acceptable += "a"
-    if opts[r"removed"]:
+    if opts["removed"]:
         acceptable += "r"
     if not acceptable:
         acceptable = "nmar"
-    fullpaths = bool(opts[r"full"])
+    fullpaths = bool(opts["full"])
     cwd = repo.getcwd()
     rootdir = repo.root + os.sep
     fixpaths = os.sep != "/"
@@ -2812,7 +2812,7 @@ def debugrebuilddirstate(ui, repo, rev, **opts) -> None:
 
         changedfiles = None
         # See command doc for what minimal does.
-        if opts.get(r"minimal"):
+        if opts.get("minimal"):
             manifestfiles = set(ctx.manifest().keys())
             dirstatefiles = set(dirstate)
             manifestonly = manifestfiles - dirstatefiles
@@ -3186,7 +3186,7 @@ def debugsuccessorssets(ui, repo, *revs, **opts) -> None:
         ctx = repo[rev]
         ui.write("%s\n" % ctx2str(ctx))
         for succsset in sorted(
-            successorssets(repo, ctx.node(), closest=opts[r"closest"], cache=cache)
+            successorssets(repo, ctx.node(), closest=opts["closest"], cache=cache)
         ):
             if succsset:
                 ui.write("    ")
@@ -3216,15 +3216,15 @@ def debugtemplate(ui, repo, tmpl, **opts) -> None:
     Use --verbose to print the parsed tree.
     """
     revs = None
-    if opts[r"rev"]:
+    if opts["rev"]:
         if repo is None:
             raise error.RepoError(
                 _("there is no @Product@ repository here (.hg not found)")
             )
-        revs = scmutil.revrange(repo, opts[r"rev"])
+        revs = scmutil.revrange(repo, opts["rev"])
 
     props = {}
-    for d in opts[r"define"]:
+    for d in opts["define"]:
         try:
             k, v = (e.strip() for e in d.split("=", 1))
             if not k or k == "ui":

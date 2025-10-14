@@ -670,7 +670,7 @@ class ui:
         usebytes: bool = False,
     ) -> "List[str]":
         msgs = []
-        for item in r"error", r"notice", r"component":
+        for item in "error", "notice", "component":
             itemvalue = opts.get(item)
             if itemvalue:
                 itemvalue = "%s:" % itemvalue
@@ -681,7 +681,7 @@ class ui:
                 msgs.extend((itemvalue, " "))
         msgs.extend(args)
         if addlabels:
-            label = opts.get(r"label", "")
+            label = opts.get("label", "")
             msgs = [self.label(m, label, usebytes=usebytes) for m in msgs]
         return msgs
 
@@ -706,9 +706,9 @@ class ui:
         is set.  The prefix will be labelled with the "ui.prefix.PREFIXNAME"
         label.
         """
-        if self._outputui is not None and not opts.get(r"prompt", False):
+        if self._outputui is not None and not opts.get("prompt", False):
             self._outputui.write(*args, **opts)
-        elif self._buffers and not opts.get(r"prompt", False):
+        elif self._buffers and not opts.get("prompt", False):
             msgs = self._addprefixesandlabels(args, opts, bool(self._bufferapplylabels))
             self._buffers[-1].extend(msgs)
             if self._bufferstates[-1][3]:
@@ -729,9 +729,9 @@ class ui:
         Can be used only when we're outputting the file contents to stdout,
         for example in diff, cat, or blame commands.
         """
-        if self._outputui is not None and not opts.get(r"prompt", False):
+        if self._outputui is not None and not opts.get("prompt", False):
             self._outputui.writebytes(*args, **opts)
-        elif self._buffers and not opts.get(r"prompt", False):
+        elif self._buffers and not opts.get("prompt", False):
             msgs = self._addprefixesandlabels(
                 args, opts, self._bufferapplylabels, usebytes=True
             )
@@ -1152,7 +1152,7 @@ class ui:
         This adds an output label of "ui.status".
         """
         if not self.quiet:
-            opts[r"label"] = opts.get(r"label", "") + " ui.status"
+            opts["label"] = opts.get("label", "") + " ui.status"
             self.write(*msg, **opts)
 
     def status_err(self, *msg, **opts):

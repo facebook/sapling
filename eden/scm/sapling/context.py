@@ -310,7 +310,7 @@ class basectx:
         return changectx(self._repo, nullid)
 
     def _fileinfo(self, path):
-        if r"_manifest" in self.__dict__:
+        if "_manifest" in self.__dict__:
             try:
                 return self._manifest.find(path)
             except KeyError:
@@ -768,11 +768,11 @@ class basefilectx:
 
     @propertycache
     def _changeid(self):
-        if r"_changeid" in self.__dict__:
+        if "_changeid" in self.__dict__:
             return self._changeid
-        elif r"_changectx" in self.__dict__:
+        elif "_changectx" in self.__dict__:
             return self._changectx.rev()
-        elif r"_descendantrev" in self.__dict__:
+        elif "_descendantrev" in self.__dict__:
             # this file context was created from a revision with a known
             # descendant, we can (lazily) correct for linkrev aliases
             return self._adjustlinkrev(self._descendantrev)
@@ -781,7 +781,7 @@ class basefilectx:
 
     @propertycache
     def _filenode(self):
-        if r"_fileid" in self.__dict__:
+        if "_fileid" in self.__dict__:
             return self._filelog.lookup(self._fileid)
         else:
             return self._changectx.filenode(self._path)
@@ -1767,7 +1767,7 @@ class committablectx(basectx):
         return []
 
     def flags(self, path):
-        if r"_manifest" in self.__dict__:
+        if "_manifest" in self.__dict__:
             try:
                 return self._manifest.flags(path)
             except KeyError:
