@@ -189,7 +189,6 @@ export type TrackEventName =
   | 'ReadWarmCommit'
   | 'RecommendedBookmarksStatus'
   | 'RecommendedBookmarksToggle'
-  | 'RecommendedBookmarksReminderShown'
   | 'RecommendedBookmarksReminderResponse';
 
 export type TrackErrorName =
