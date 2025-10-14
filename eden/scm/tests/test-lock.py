@@ -10,6 +10,7 @@ import tempfile
 import unittest
 
 import silenttestrunner
+import testutil
 
 from sapling import lock, util, vfs as vfsmod
 
@@ -172,7 +173,7 @@ class testlock(unittest.TestCase):
             lock = state.makelock()
             state.assertacquirecalled(True)
 
-            pid = os.fork()
+            pid = testutil.fork_suppress_multithread_warning()
             if pid == 0:
                 lock._pidoffset = os.getpid()
                 lock.release()

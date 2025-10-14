@@ -11,6 +11,8 @@ import time
 import unittest
 
 import silenttestrunner
+import testutil
+
 from sapling import error, util, vfs
 from sapling.ext import extutil
 
@@ -76,7 +78,7 @@ class ExtutilTests(unittest.TestCase):
         )
 
     def otherprocesslock(self, opener, name):
-        pid = os.fork()
+        pid = testutil.fork_suppress_multithread_warning()
         if pid == 0:
             try:
                 with extutil.flock(opener.join(name), "other process lock", timeout=0):

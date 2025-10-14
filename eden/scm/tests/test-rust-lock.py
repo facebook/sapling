@@ -8,6 +8,7 @@ import tempfile
 import unittest
 
 import silenttestrunner
+import testutil
 
 from sapling import error, lock, ui, util, vfs
 
@@ -83,7 +84,7 @@ class testrustlock(unittest.TestCase):
         def testfork(self):
             l = lock.lock(self.vfs, "foo")
 
-            pid = os.fork()
+            pid = testutil.fork_suppress_multithread_warning()
             if pid == 0:
                 l.release()
                 self.assertLocked("foo")
