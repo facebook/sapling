@@ -146,6 +146,18 @@ impl DagItemInfo {
     pub fn head_cs_id(&self) -> ChangesetId {
         self.head_cs_id
     }
+
+    pub fn enqueue_timestamp(&self) -> Option<Timestamp> {
+        self.enqueue_timestamp
+    }
+
+    pub fn client_info(&self) -> Option<&ClientInfo> {
+        self.client_info.as_ref()
+    }
+
+    pub fn bubble_id(&self) -> Option<BubbleId> {
+        self.bubble_id
+    }
 }
 
 impl DerivationDagItem {

@@ -14,11 +14,18 @@ use std::iter::Iterator;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use clientinfo::ClientInfo;
 use context::CoreContext;
 use derived_data_manager::DerivedDataManager;
 use ephemeral_blobstore::Bubble;
+use ephemeral_blobstore::BubbleId;
 use futures::stream::BoxStream;
+use mononoke_types::ChangesetId;
+use mononoke_types::DerivableType;
 use mononoke_types::RepositoryId;
+use mononoke_types::Timestamp;
+use serde::Deserialize;
+use serde::Serialize;
 
 pub use crate::dag_items::DagItemId;
 pub use crate::dag_items::DagItemInfo;
@@ -123,5 +130,54 @@ pub enum DequeueResponse {
 
 pub struct DerivationQueueSummary<'a> {
     pub queue_size: usize,
-    pub items: BoxStream<'a, Result<DerivationDagItem, InternalError>>,
+    pub items: BoxStream<'a, Result<DerivationQueueSummaryItem, InternalError>>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DerivationQueueSummaryItem {
+    dag_item_id: DagItemId,
+    dag_item_info: DagItemInfo,
+    is_ready: bool,
+}
+
+impl DerivationQueueSummaryItem {
+    pub fn new(dag_item_id: DagItemId, dag_item_info: DagItemInfo, is_ready: bool) -> Self {
+        Self {
+            dag_item_id,
+            dag_item_info,
+            is_ready,
+        }
+    }
+
+    pub fn derived_data_type(&self) -> DerivableType {
+        self.dag_item_id.derived_data_type
+    }
+
+    pub fn enqueue_timestamp(&self) -> Option<Timestamp> {
+        self.dag_item_info.enqueue_timestamp()
+    }
+
+    pub fn retry_count(&self) -> u64 {
+        self.dag_item_info.retry_count()
+    }
+
+    pub fn head_cs_id(&self) -> ChangesetId {
+        self.dag_item_info.head_cs_id()
+    }
+
+    pub fn root_cs_id(&self) -> ChangesetId {
+        self.dag_item_id.root_cs_id()
+    }
+
+    pub fn bubble_id(&self) -> Option<BubbleId> {
+        self.dag_item_info.bubble_id()
+    }
+
+    pub fn client_info(&self) -> Option<&ClientInfo> {
+        self.dag_item_info.client_info()
+    }
+
+    pub fn is_ready(&self) -> bool {
+        self.is_ready
+    }
 }

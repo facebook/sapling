@@ -95,7 +95,8 @@ async fn print_table(
         "type",
         "bubble",
         "head",
-        "root"
+        "root",
+        "is ready",
     ];
     if args.client_info {
         titles.add_cell(cell!["client info"]);
@@ -104,8 +105,7 @@ async fn print_table(
 
     println!("Number of items in the queue: {}", summary.queue_size);
     let mut item_stream = summary.items.take(args.limit);
-    while let Some(result) = item_stream.next().await {
-        let item = result?;
+    while let Some(item) = item_stream.try_next().await? {
         let dd_type = item.derived_data_type();
         if derived_data_types.contains(&dd_type) {
             let timestamp = item
@@ -122,6 +122,7 @@ async fn print_table(
                 format!("{:?}", item.bubble_id()),
                 item.head_cs_id(),
                 item.root_cs_id(),
+                item.is_ready()
             ];
             if args.client_info {
                 row.add_cell(cell![format!("{:?}", item.client_info())]);
