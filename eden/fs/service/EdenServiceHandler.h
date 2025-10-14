@@ -49,6 +49,37 @@ extern const char* const kServiceName;
 
 const int EXPENSIVE_GLOB_FILES_DURATION = 5;
 
+enum class RequestStatus { ACTIVE, REQUESTED, UNCANCELABLE };
+
+struct RequestCancellationInfo {
+  std::optional<folly::CancellationSource> cancellationSource;
+  RequestStatus status = RequestStatus::ACTIVE;
+
+  RequestCancellationInfo() = default;
+
+  explicit RequestCancellationInfo(folly::CancellationSource source)
+      : cancellationSource(std::move(source)), status(RequestStatus::ACTIVE) {}
+
+  static RequestCancellationInfo createUncancelable() {
+    RequestCancellationInfo info;
+    info.status = RequestStatus::UNCANCELABLE;
+    return info;
+  }
+
+  bool isCancelable() const {
+    return cancellationSource.has_value();
+  }
+
+  bool requestCancellation() {
+    if (cancellationSource.has_value() && status == RequestStatus::ACTIVE) {
+      status = RequestStatus::REQUESTED;
+      cancellationSource->requestCancellation();
+      return true;
+    }
+    return false;
+  }
+};
+
 struct ThriftRequestTraceEvent : TraceEventBase {
   enum Type : unsigned char {
     START,
@@ -514,6 +545,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   folly::Synchronized<std::unordered_map<uint64_t, ThriftRequestTraceEvent>>
       outstandingThriftRequests_;
+
+  folly::Synchronized<std::unordered_map<uint64_t, RequestCancellationInfo>>
+      requestCancellationStore_;
 
   const std::vector<std::string> originalCommandLine_;
   EdenServer* const server_;
