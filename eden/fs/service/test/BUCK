@@ -95,3 +95,15 @@ cpp_unittest(
         "//eden/fs/service:pretty_printers",
     ],
 )
+
+cpp_unittest(
+    name = "eden_service_handler_cancellation_test",
+    srcs = ["EdenServiceHandlerCancellationTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/service:server",
+        "//folly:cancellation_token",
+        "//folly/futures:core",
+    ],
+)
