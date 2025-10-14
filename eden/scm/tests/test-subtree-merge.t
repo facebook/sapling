@@ -497,18 +497,19 @@ test subtree merge from the same directory from a different branch
   > B C  # B/foo/x = 1a\n2\n3\n
   > |/   # C/foo/x = 1\n2\n3a\n
   > A    # A/foo/x = 1\n2\n3\n
+  >      # drawdag.defaultfiles=false
   > EOS
   $ hg go -q $B
   $ hg log -G -T '{node|short} {desc}'
-  o  8c8c93854742 D
+  o  2578b3b03499 D
   │
-  o  b1b40873e5ea C
+  o  cc3a72c65da8 C
   │
-  │ @  c4fbbcdf676b B
+  │ @  55ff286fb56f B
   ├─╯
-  o  b4cb27eee4e2 A
+  o  2f10237b4399 A
   $ hg subtree merge -r $C --from-path foo --to-path foo
-  merge base: b4cb27eee4e2
+  merge base: 2f10237b4399
   merging foo/x
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
@@ -525,7 +526,7 @@ test subtree merge from the same directory from a different branch
 
   $ hg go -q $A
   $ hg subtree merge -r $D --from-path foo --to-path foo
-  merge base: b4cb27eee4e2
+  merge base: 2f10237b4399
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
   $ hg diff

@@ -1,5 +1,6 @@
 configs unrelated to subtree
   $ setconfig diff.git=True
+  $ setconfig drawdag.defaultfiles=false
 
 the allow-any-source-commit config makes it easier to wirte tests
   $ setconfig subtree.allow-any-source-commit=True
@@ -23,7 +24,7 @@ test subtree merge with top level directories
   abort: path should be at least 2 levels deep: 'foo'
   [255]
   $ hg subtree merge -r $D --from-path bar --to-path bar
-  merge base: 882d8eb0d4d6
+  merge base: 58265194a7b2
   merging bar/x
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
