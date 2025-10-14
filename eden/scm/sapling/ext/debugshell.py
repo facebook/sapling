@@ -12,6 +12,7 @@
 """a python shell with repo, changelog & manifest objects"""
 
 import io
+import linecache
 import shlex
 import sys
 import time
@@ -111,6 +112,13 @@ def _exec(ui, source, env, path=None):
         # Provide "__loader__.get_source" for linecache to use in traceback.
         # The filename cannot be "<...>". See linecache impl for details.
         path = "debugshell:script"
+        # Python 3.12 fix: ensure linecache serves the in-memory source.
+        linecache.cache[path] = (
+            len(source),
+            None,  # means the file didn't come from a real file on disk
+            source.splitlines(True),
+            path,
+        )
 
         class DebugShellLoader:
             def __init__(self, source):
