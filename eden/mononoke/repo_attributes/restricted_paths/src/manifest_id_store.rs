@@ -160,7 +160,7 @@ mononoke_queries! {
         manifest_id: ManifestId,
         manifest_type: ManifestType,
     ) -> (NonRootMPath) {
-        "SELECT
+        "SELECT DISTINCT
             path
          FROM 
             restricted_paths_manifest_ids
