@@ -1954,6 +1954,12 @@ struct CreateGitTagParams {
   9: optional bool target_is_tag;
 }
 
+/// Params for repo_tag_info method
+struct RepoTagInfoRequest {
+  /// The list of tag names for which the metadata is requested mapped to the equivalent commit hash
+  1: map<string, binary> tag_to_hash_map;
+}
+
 /// Method response structures
 
 struct RepoResolveBookmarkResponse {
@@ -2441,6 +2447,24 @@ struct CreateGitTreeResponse {}
 struct CreateGitTagResponse {
   /// The changeset ID of the changeset that was created for the git tag
   1: binary created_changeset_id;
+}
+
+struct TagInfo {
+  ///  The Git Sha of the object that the tag points to. In case of annotated tags, its the annotated tag id and in case of simple tags its the commit id
+  1: string object_id;
+  /// The name of the tag
+  2: string tag_name;
+  /// The tagger for the tag. In case of simple tags, this will be empty
+  3: optional string tagger;
+  /// The message associated with the tag in case of annotated tags. For simple tags, this is the commit message
+  4: string message;
+  /// The time when the tag (for annotated tags) or the commit it points to (for simple tags) was created
+  5: i32 creation_epoch;
+}
+
+struct RepoTagInfoResponse {
+  /// The list of tag infos for the requested tags
+  1: list<TagInfo> tag_infos;
 }
 
 /// Specifies a commit cloud workspace
@@ -3422,6 +3446,16 @@ service SourceControlService extends fb303_core.BaseService {
   CreateGitTagResponse create_git_tag(
     1: RepoSpecifier repo,
     2: CreateGitTagParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Fetch tag metadata for annotated tags in the repo
+  RepoTagInfoResponse repo_tag_info(
+    1: RepoSpecifier repo,
+    2: RepoTagInfoRequest params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

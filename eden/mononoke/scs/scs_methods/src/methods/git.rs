@@ -7,6 +7,8 @@
 
 use std::sync::Arc;
 
+use bonsai_tag_mapping::BonsaiTagMappingRef;
+use bonsai_tag_mapping::Freshness;
 use bytes::Bytes;
 use context::CoreContext;
 use everstore_client::EverstoreClient;
@@ -15,12 +17,17 @@ use everstore_client::cpp_client::EverstoreCppClient;
 use everstore_client::file_mock_client::EverstoreFileMockClient;
 use everstore_client::write::WriteRequestOptionsBuilder;
 use fbtypes::FBType;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use futures::stream;
 use futures_util::try_join;
 use git_types::GitError;
+use git_types::fetch_non_blob_git_object;
 use mononoke_api::ChangesetId;
 use mononoke_api::errors::MononokeError;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTag;
 use mononoke_types::bonsai_changeset::BonsaiAnnotatedTagTarget;
+use repo_blobstore::RepoBlobstoreArc;
 use scs_errors::ServiceErrorResultExt;
 use scs_errors::internal_error;
 use scs_errors::invalid_request;
@@ -271,6 +278,132 @@ impl SourceControlServiceImpl {
             .repo_upload_packfile_base_item(git_hash, params.raw_content)
             .await?;
         Ok(thrift::RepoUploadPackfileBaseItemResponse {
+            ..Default::default()
+        })
+    }
+    /// Fetch tag metadata for annotated tags in the repo
+    pub(crate) async fn repo_tag_info(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoTagInfoRequest,
+    ) -> Result<thrift::RepoTagInfoResponse, scs_errors::ServiceError> {
+        let repo_ctx = self
+            .repo_for_service(ctx, &repo, None)
+            .await
+            .with_context(|| format!("Error in opening repo using specifier {:?}", repo))?;
+
+        let blobstore = repo_ctx.repo().repo_blobstore_arc();
+
+        let tag_infos = stream::iter(params.tag_to_hash_map)
+            .map(|(tag_name, commit_hash)| {
+                let repo = repo_ctx.repo().clone();
+                let ctx = repo_ctx.ctx().clone();
+                let blobstore = blobstore.clone();
+                async move {
+                    let entry = repo.bonsai_tag_mapping()
+                        .get_entry_by_tag_name(&ctx, tag_name.clone(), Freshness::MaybeStale)
+                        .await
+                        .map_err(|err| {
+                            internal_error(format!(
+                                "Error fetching tag mapping for tag '{}'. Cause: {:#}",
+                                tag_name, err
+                            ))
+                        })?;
+
+                    if let Some(entry) = entry {
+                        let tag_hash_oid = entry.tag_hash.to_object_id().map_err(|err| {
+                            internal_error(format!(
+                                "Error in creating Git ObjectId from tag hash for tag '{}'. Cause: {:#}",
+                                tag_name, err
+                            ))
+                        })?;
+
+                        let tag_object =
+                            fetch_non_blob_git_object(&ctx, &blobstore, &tag_hash_oid)
+                                .await
+                                .map_err(|err| {
+                                    internal_error(format!(
+                                        "Error fetching tag object for tag '{}'. Cause: {:#}",
+                                        tag_name, err
+                                    ))
+                                })?;
+
+                        let (tagger, message, creation_epoch) = tag_object
+                            .with_parsed_as_tag(|tag| {
+                                let tagger_name = tag.tagger.as_ref().map(|t| t.name.to_string());
+                                let message = tag.message.to_string();
+                                let time = tag
+                                    .tagger
+                                    .as_ref()
+                                    .and_then(|t| t.time().ok().map(|gix_time| gix_time.seconds))
+                                    .unwrap_or(0);
+                                (tagger_name, message, time as i32)
+                            })
+                            .ok_or_else(|| {
+                                internal_error(format!(
+                                    "Expected tag object for '{}' but got a different object type",
+                                    tag_name
+                                ))
+                            })?;
+
+                        Ok::<_, scs_errors::ServiceError>(thrift::TagInfo {
+                            object_id: tag_hash_oid.to_hex().to_string(),
+                            tag_name: entry.tag_name,
+                            tagger,
+                            message,
+                            creation_epoch,
+                            ..Default::default()
+                        })
+                    } else {
+                        let commit_hash_oid =
+                            gix_hash::oid::try_from_bytes(&commit_hash).map_err(|_| {
+                                invalid_request(format!(
+                                    "Invalid commit hash for tag '{}': {:x?}",
+                                    tag_name, commit_hash
+                                ))
+                            })?;
+
+                        let commit_object =
+                            fetch_non_blob_git_object(&ctx, &blobstore, commit_hash_oid)
+                                .await
+                                .map_err(|err| {
+                                    internal_error(format!(
+                                        "Error fetching commit object for tag '{}'. Cause: {:#}",
+                                        tag_name, err
+                                    ))
+                                })?;
+
+                        let (message, creation_epoch) = commit_object
+                            .with_parsed_as_commit(|commit| {
+                                let message = commit.message.to_string();
+                                let time = commit.author.time().ok().map(|t| t.seconds).unwrap_or(0);
+                                (message, time as i32)
+                            })
+                            .ok_or_else(|| {
+                                internal_error(format!(
+                                    "Expected commit object for tag '{}' but got a different object type",
+                                    tag_name
+                                ))
+                            })?;
+
+                        Ok::<_, scs_errors::ServiceError>(thrift::TagInfo {
+                            object_id: commit_hash_oid.to_hex().to_string(),
+                            tag_name,
+                            tagger: None,
+                            message,
+                            creation_epoch,
+                            ..Default::default()
+                        })
+                    }
+                }
+            })
+            .buffer_unordered(50)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        Ok(thrift::RepoTagInfoResponse {
+            tag_infos,
             ..Default::default()
         })
     }

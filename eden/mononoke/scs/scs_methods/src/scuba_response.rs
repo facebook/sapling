@@ -350,6 +350,12 @@ impl AddScubaResponse for thrift::AsyncPingResponse {
     }
 }
 
+impl AddScubaResponse for thrift::RepoTagInfoResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("response_tag_info_count", self.tag_infos.len());
+    }
+}
+
 // For the streaming response we log the initial response first, stream is wrapped with log_result later
 impl<R, S, I> AddScubaResponse for (R, S)
 where

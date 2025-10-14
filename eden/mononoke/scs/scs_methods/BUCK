@@ -93,6 +93,8 @@ rust_library(
         "//crypto/crypto_service/if:crypto-rust-srclients",
         "//eden/mononoke/git_source_of_truth:git_source_of_truth",
         "//login/if:login_objects_thrift-rust",
+        "//eden/mononoke/repo_attributes/bonsai_tag_mapping:bonsai_tag_mapping",
+        "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:lazy_static",
         "//eden/mononoke/facebook/ods3_schemas:MononokeScsRequest_ods3-rs_bindings",

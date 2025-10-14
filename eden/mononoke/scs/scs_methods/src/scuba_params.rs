@@ -741,6 +741,12 @@ impl AddScubaParams for thrift::AsyncPingToken {
     }
 }
 
+impl AddScubaParams for thrift::RepoTagInfoRequest {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_tag_count", self.tag_to_hash_map.len());
+    }
+}
+
 pub(crate) fn report_megarepo_target(
     target: &thrift::MegarepoTarget,
     scuba: &mut MononokeScubaSampleBuilder,
