@@ -413,6 +413,10 @@ class ThriftRequestScope {
     return sourceLocation_.function_name();
   }
 
+  uint64_t getRequestId() const {
+    return requestId_;
+  }
+
  private:
   std::shared_ptr<TraceBus<ThriftRequestTraceEvent>> traceBus_;
   uint64_t requestId_;
