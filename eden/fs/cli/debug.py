@@ -338,6 +338,13 @@ class ProcessFetchCmd(Subcmd):
             default=False,
             help="Show mount base name for each process",
         )
+        parser.add_argument(
+            "-t",
+            "--time-window",
+            type=int,
+            default=16,
+            help="Time window in seconds for access data collection (default: 16)",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         # pyre-fixme[31]: Expression `Process())]` is not a valid type.
@@ -350,9 +357,9 @@ class ProcessFetchCmd(Subcmd):
 
         eden = cmd_util.get_eden_instance(args)
         with eden.get_thrift_client_legacy() as client:
-            # Get the data in the past 16 seconds. All data is collected only within
+            # Get the data in the past args.time_window seconds. All data is collected only within
             # this period except that fetchCountsByPid is from the beginning of start
-            counts = client.getAccessCounts(16)
+            counts = client.getAccessCounts(args.time_window)
 
             for mount, accesses in counts.accessesByMount.items():
                 # Get recent process accesses
