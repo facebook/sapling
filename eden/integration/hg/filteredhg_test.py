@@ -556,6 +556,37 @@ class FilteredFSBasic(FilteredFSBase):
         out = self.hg("grep", "'echo test2'", check=False)
         self.assertEqual(out, "")
 
+    def test_filtered_grep_from_subdirectory(self) -> None:
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+        self.enable_filters("filters/v1_filter1")
+        self.assert_filtered_and_unfiltered(
+            initial_files.difference(unfiltered_files), unfiltered_files
+        )
+
+        # grep should "succeed" for unfiltered files
+        # NOTE: it current returns status code 123 despite succeeding... I will
+        # fix this in follow-up diffs
+        out = self.hg("grep", "foo!", "file", cwd=self.get_path("adir"), check=False)
+        self.assertRegex(out, r"file:foo!\n")
+
+        # Grep respects filters for local searches (with "grep"), but it won't
+        # respect filters when searching with biggrep or similar tools. This is
+        # difficult to test.
+        out = self.hg(
+            "grep", "'echo test2'", "noexec.sh", cwd=self.get_path("bdir"), check=False
+        )
+        self.assertEqual(out, "")
+
 
 @filteredhg_test
 # pyre-ignore[13]: T62487924

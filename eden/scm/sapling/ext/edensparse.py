@@ -77,6 +77,7 @@ from .sparse import (
     _setupcat,
     _setupcommit,
     _setupdiff,
+    _setupgrep,
     _setupupdates,
     _showsubcmdlogic,
     getcommonopts,
@@ -107,6 +108,7 @@ def extsetup(ui) -> None:
         return
     _setupdiff(ui)
     _setupcat(ui)
+    _setupgrep(ui)
 
 
 def _wraprepo(ui, repo) -> None:
