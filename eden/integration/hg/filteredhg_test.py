@@ -468,6 +468,32 @@ class FilteredFSBasic(FilteredFSBase):
         # The newly unfiltered files should be unfiltered
         self.assert_filtered_and_unfiltered(set(), {"dir2/not_filtered", "dir2/README"})
 
+    def test_filtered_cat(self) -> None:
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+        self.enable_filters("filters/v1_filter1")
+        self.assert_filtered_and_unfiltered(
+            initial_files.difference(unfiltered_files), unfiltered_files
+        )
+
+        # cat should succeed for unfiltered files
+        out = self.hg("cat", "adir/file")
+        self.assertEqual(out, "foo!\n")
+
+        # FIXME: cat doesn't respect filters yet
+        # cat should fail for filtered files
+        out = self.hg("cat", "bdir/test.sh")
+        self.assertEqual(out, "#!/bin/bash\necho test\n")
+
 
 @filteredhg_test
 # pyre-ignore[13]: T62487924
