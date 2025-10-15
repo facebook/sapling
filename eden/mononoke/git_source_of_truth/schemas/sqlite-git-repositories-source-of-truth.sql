@@ -16,9 +16,11 @@ CREATE TABLE IF NOT EXISTS `git_repositories_source_of_truth` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `repo_id` INTEGER NOT NULL,
   `repo_name` VARCHAR(255) NOT NULL,
-  `source_of_truth` VARCHAR(20) NOT NULL DEFAULT ('locked') REFERENCES `source_of_truth_type` (`source_of_truth`)
+  `source_of_truth` VARCHAR(20) NOT NULL DEFAULT ('locked') REFERENCES `source_of_truth_type` (`source_of_truth`),
+  `mutation_id` INTEGER DEFAULT NULL
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS `repo_id_idx` ON `git_repositories_source_of_truth` (`repo_id`);
 CREATE UNIQUE INDEX IF NOT EXISTS `repo_name_idx` ON `git_repositories_source_of_truth` (`repo_name`);
 CREATE INDEX IF NOT EXISTS `source_of_truth_idx` ON `git_repositories_source_of_truth` (`source_of_truth`);
+CREATE INDEX IF NOT EXISTS `mutation_id_idx` ON `git_repositories_source_of_truth` (`mutation_id`);

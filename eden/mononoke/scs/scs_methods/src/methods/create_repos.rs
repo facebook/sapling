@@ -515,7 +515,7 @@ async fn create_repo_configs_in_mononoke(
     ctx: CoreContext,
     dry_run: bool,
     repos_ids_and_requests: Vec<(RepositoryId, thrift::RepoCreationRequest)>,
-) -> Result<(), scs_errors::ServiceError> {
+) -> Result<Option<i64>, scs_errors::ServiceError> {
     let configo_client = ConfigoClient::with_client(
         ctx.fb,
         make_ConfigoService_srclient!(ctx.fb)
@@ -559,60 +559,64 @@ async fn create_repo_configs_in_mononoke(
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
 
-    if !dry_run {
-        let content = mutation
-            .content()
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-        let mut signatures = BTreeMap::new();
-        let crypto_project = CryptoProject {
-            name: "SCM".to_owned(),
-            ..Default::default()
-        };
-
-        let crypto_service = crypto_service_srclients::make_CryptoService_srclient!(ctx.fb)
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-
-        for file in content.modifiedFiles {
-            if &file.path
-                == "materialized_configs/scm/mononoke/repos/quick_repo_definitions.materialized_JSON"
-                || file
-                    .path
-                    .starts_with("materialized_configs/shardmanager/spec/user/mononoke")
-            {
-                // These files are not signed, so do not sign them or landing the mutation will
-                // fail with "Error attaching signatures for mutation"
-                continue;
-            }
-            if let Some((path, sig)) = configo_crypto_utils::sign_config(
-                ctx.fb,
-                &crypto_service,
-                &file,
-                crypto_project.clone(),
-            )
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
-            {
-                signatures.insert(path, sig);
-            }
-        }
-        mutation
-            .attach_signatures(signatures)
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-
-        mutation
-            .land(LAND_TIMEOUT)
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+    if dry_run {
+        return Ok(None);
     }
-    Ok(())
+
+    let content = mutation
+        .content()
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+    let mut signatures = BTreeMap::new();
+    let crypto_project = CryptoProject {
+        name: "SCM".to_owned(),
+        ..Default::default()
+    };
+
+    let crypto_service = crypto_service_srclients::make_CryptoService_srclient!(ctx.fb)
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+    for file in content.modifiedFiles {
+        if &file.path
+            == "materialized_configs/scm/mononoke/repos/quick_repo_definitions.materialized_JSON"
+            || file
+                .path
+                .starts_with("materialized_configs/shardmanager/spec/user/mononoke")
+        {
+            // These files are not signed, so do not sign them or landing the mutation will
+            // fail with "Error attaching signatures for mutation"
+            continue;
+        }
+        if let Some((path, sig)) = configo_crypto_utils::sign_config(
+            ctx.fb,
+            &crypto_service,
+            &file,
+            crypto_project.clone(),
+        )
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
+        {
+            signatures.insert(path, sig);
+        }
+    }
+    mutation
+        .attach_signatures(signatures)
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+    let mutation_id = mutation
+        .land(LAND_TIMEOUT)
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+    Ok(Some(mutation_id))
 }
 
 async fn update_source_of_truth_to_mononoke(
     ctx: CoreContext,
     git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
     params: &thrift::CreateReposParams,
+    mutation_id: Option<i64>,
 ) -> Result<(), scs_errors::ServiceError> {
     git_source_of_truth_config
         .update_source_of_truth_by_repo_names(
@@ -623,6 +627,7 @@ async fn update_source_of_truth_to_mononoke(
                 .iter()
                 .map(|request| RepositoryName(request.repo_name.clone()))
                 .collect::<Vec<_>>(),
+            mutation_id,
         )
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
@@ -653,7 +658,7 @@ async fn create_repos_in_mononoke(
     ctx: CoreContext,
     git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
     params: &thrift::CreateReposParams,
-) -> Result<(), scs_errors::ServiceError> {
+) -> Result<Option<i64>, scs_errors::ServiceError> {
     // ## What:
     // Create these repositories in Mononoke.
     //
@@ -689,13 +694,14 @@ async fn create_repos_in_mononoke(
     // knowledge that no-one will compete with us
     match create_repo_configs_in_mononoke(ctx.clone(), params.dry_run, repo_ids_and_requests).await
     {
-        Ok(()) => {
+        Ok(mutation_id) => {
             retry(
                 |_| {
                     update_source_of_truth_to_mononoke(
                         ctx.clone(),
                         git_source_of_truth_config,
                         params,
+                        mutation_id,
                     )
                 },
                 Duration::from_millis(1_000),
@@ -703,7 +709,7 @@ async fn create_repos_in_mononoke(
             .binary_exponential_backoff()
             .max_attempts(5)
             .await?;
-            Ok(())
+            Ok(mutation_id)
         }
         Err(e) => {
             // We failed to land the mutation, so it is safe to "release the lock" on these repo
@@ -745,13 +751,17 @@ impl SourceControlServiceImpl {
         ensure_acls_allow_repo_creation(ctx.clone(), &params.repos, self.acl_provider.as_ref())
             .await?;
         update_repos_acls(ctx.clone(), &params).await?;
-        create_repos_in_mononoke(ctx, self.git_source_of_truth_config.as_ref(), &params).await?;
+        let mutation_id =
+            create_repos_in_mononoke(ctx, self.git_source_of_truth_config.as_ref(), &params)
+                .await?;
 
         Ok(thrift::CreateReposToken {
+            mutation_id,
             ..Default::default()
         })
     }
 
+    #[cfg(fbcode_build)]
     // This impl does nothing right now - but will do more in the near future.
     pub(crate) async fn create_repos_poll(
         &self,

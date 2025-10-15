@@ -28,11 +28,13 @@ mononoke_queries! {
         RepositoryId,
         RepositoryName,
         GitSourceOfTruth,
+        Option<i64>,
     ) {
         "SELECT id,
             repo_id,
             repo_name,
-            source_of_truth
+            source_of_truth,
+            mutation_id
          FROM git_repositories_source_of_truth
          WHERE id = {id}"
     }
@@ -42,11 +44,13 @@ mononoke_queries! {
         RepositoryId,
         RepositoryName,
         GitSourceOfTruth,
+        Option<i64>,
     ) {
         "SELECT id,
             repo_id,
             repo_name,
-            source_of_truth
+            source_of_truth,
+            mutation_id
          FROM git_repositories_source_of_truth
          WHERE repo_name = {repo_name}"
     }
@@ -62,11 +66,13 @@ mononoke_queries! {
         RepositoryId,
         RepositoryName,
         GitSourceOfTruth,
+        Option<i64>,
     ) {
         "SELECT id,
             repo_id,
             repo_name,
-            source_of_truth
+            source_of_truth,
+            mutation_id
          FROM git_repositories_source_of_truth
          WHERE source_of_truth = {source_of_truth}"
     }
@@ -86,11 +92,12 @@ mononoke_queries! {
 
     write UpdateSourceOfTruthByRepoNames(
         source_of_truth: GitSourceOfTruth,
+        mutation_id: Option<i64>,
         >list repo_names: RepositoryName
     ) {
         none,
         "UPDATE git_repositories_source_of_truth
-         SET source_of_truth = {source_of_truth}
+         SET source_of_truth = {source_of_truth}, mutation_id = {mutation_id}
          WHERE repo_name IN {repo_names}"
     }
 
@@ -107,14 +114,21 @@ mononoke_queries! {
 }
 
 fn row_to_entry(
-    row: (RowId, RepositoryId, RepositoryName, GitSourceOfTruth),
+    row: (
+        RowId,
+        RepositoryId,
+        RepositoryName,
+        GitSourceOfTruth,
+        Option<i64>,
+    ),
 ) -> GitSourceOfTruthConfigEntry {
-    let (id, repo_id, repo_name, source_of_truth) = row;
+    let (id, repo_id, repo_name, source_of_truth, mutation_id) = row;
     GitSourceOfTruthConfigEntry {
         id,
         repo_id,
         repo_name,
         source_of_truth,
+        mutation_id,
     }
 }
 
@@ -197,11 +211,13 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
         ctx: &CoreContext,
         source_of_truth: GitSourceOfTruth,
         repo_names: &[RepositoryName],
+        mutation_id: Option<i64>,
     ) -> Result<()> {
         UpdateSourceOfTruthByRepoNames::query(
             &self.connections.write_connection,
             ctx.sql_query_telemetry(),
             &source_of_truth,
+            &mutation_id,
             repo_names,
         )
         .await?;
@@ -541,6 +557,7 @@ mod test {
                 RepositoryName("test2".to_string()),
                 RepositoryName("test4".to_string()),
             ],
+            None,
         )
         .await?;
 
@@ -687,6 +704,57 @@ mod test {
         .await?;
 
         assert_eq!(push.get_locked(&ctx).await?.len(), 2);
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_insert_repos_with_mutation_id(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SqlGitSourceOfTruthConfigBuilder::with_sqlite_in_memory()?;
+        let push = builder.clone().build();
+
+        // insert many
+        push.insert_repos(
+            &ctx,
+            &[(
+                RepositoryId::new(1),
+                RepositoryName("test1".to_string()),
+                GitSourceOfTruth::Reserved,
+            )],
+        )
+        .await?;
+
+        // get each and confirm it worked
+        let entry = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("test1".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Reserved);
+
+        push.update_source_of_truth_by_repo_names(
+            &ctx,
+            GitSourceOfTruth::Mononoke,
+            &[RepositoryName("test1".to_string())],
+            Some(123),
+        )
+        .await?;
+
+        let entry = push
+            .get_by_repo_name(
+                &ctx,
+                &RepositoryName("test1".to_string()),
+                Staleness::MostRecent,
+            )
+            .await?;
+        assert!(entry.is_some());
+        let entry = entry.unwrap();
+        assert_eq!(entry.source_of_truth, GitSourceOfTruth::Mononoke);
+        assert_eq!(entry.mutation_id.unwrap(), 123);
         Ok(())
     }
 

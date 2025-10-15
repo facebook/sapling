@@ -54,6 +54,7 @@ pub trait GitSourceOfTruthConfig: Send + Sync {
         ctx: &CoreContext,
         source_of_truth: GitSourceOfTruth,
         repo_names: &[RepositoryName],
+        mutation_id: Option<i64>,
     ) -> Result<()>;
 
     async fn delete_source_of_truth_by_repo_names_for_reserved_repos(
@@ -114,6 +115,7 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
         _ctx: &CoreContext,
         _source_of_truth: GitSourceOfTruth,
         _repo_names: &[RepositoryName],
+        _mutation_id: Option<i64>,
     ) -> Result<()> {
         Ok(())
     }
@@ -192,6 +194,7 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
                 repo_id,
                 repo_name,
                 source_of_truth,
+                mutation_id: None,
             },
         );
         Ok(())
@@ -221,6 +224,7 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
                     repo_id: *repo_id,
                     repo_name: repo_name.clone(),
                     source_of_truth: *source_of_truth,
+                    mutation_id: None,
                 },
             );
         }
@@ -232,6 +236,7 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
         _ctx: &CoreContext,
         source_of_truth: GitSourceOfTruth,
         repo_names: &[RepositoryName],
+        _mutation_id: Option<i64>,
     ) -> Result<()> {
         let mut map = self.entries.lock().expect("poisoned lock");
         for repo_name in repo_names {

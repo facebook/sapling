@@ -146,4 +146,5 @@ pub struct GitSourceOfTruthConfigEntry {
     pub repo_id: RepositoryId,
     pub repo_name: RepositoryName,
     pub source_of_truth: GitSourceOfTruth,
+    pub mutation_id: Option<i64>,
 }
