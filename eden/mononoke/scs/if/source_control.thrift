@@ -2339,8 +2339,18 @@ struct FileDiffResponse {
   1: Diff diff;
 }
 
+enum CreateReposStatus {
+  // It a good practice to keep this as the first enum value so that defaults do not interpret as a valid value
+  UNKNOWN = 0,
+  IN_PROGRESS = 1,
+  FAILED = 2,
+  ABORTED = 3,
+  SUCCESS = 4,
+}
+
 struct CreateReposResponse {
-/// Indicates successful repo creation.
+  1: CreateReposStatus status;
+  2: optional string message;
 }
 
 struct CreateReposPollResponse {
