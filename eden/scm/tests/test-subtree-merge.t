@@ -57,7 +57,7 @@ test subtree merge from copy source -> copy dest
   copying foo to foo2
   $ echo "source" >> foo/x && hg ci -m "update foo"
   $ echo "dest" >> foo2/y && hg ci -m "update foo2"
-  $ hg log -r "subtreemergebase("foo", "foo2")" -T '{node|short}\n'
+  $ hg log -r 'subtreemergebase("foo", "foo2")' -T '{node|short}\n'
   9998a5c40732
   $ hg subtree merge --from-path foo --to-path foo2
   searching for merge base ...
@@ -88,7 +88,7 @@ test subtree merge from copy dest -> copy source
   copying foo to foo2
   $ echo "source" >> foo/x && hg ci -m "update foo"
   $ echo "dest" >> foo2/y && hg ci -m "update foo2"
-  $ hg log -r "subtreemergebase("foo2", "foo")" -T '{node|short}\n'
+  $ hg log -r 'subtreemergebase("foo2", "foo")' -T '{node|short}\n'
   9998a5c40732
   $ hg subtree merge --from-path foo2 --to-path foo
   searching for merge base ...
@@ -118,7 +118,7 @@ test subtree merge from normal copy source -> copy dest
   $ hg cp -q foo foo2 && hg ci -m 'cp foo -> foo2'
   $ echo "source" >> foo/x && hg ci -m "update foo"
   $ echo "dest" >> foo2/y && hg ci -m "update foo2"
-  $ hg log -r "subtreemergebase("foo", "foo2")" -T '{node|short}\n'
+  $ hg log -r 'subtreemergebase("foo", "foo2")' -T '{node|short}\n'
   9998a5c40732
   $ hg subtree merge --from-path foo --to-path foo2
   searching for merge base ...
@@ -158,7 +158,7 @@ test subtree merge from noraml copy dest -> copy source
   o  9998a5c40732 B
   │
   o  d908813f0f7c A
-  $ hg log -r "subtreemergebase("foo2", "foo")" -T '{node|short}\n'
+  $ hg log -r 'subtreemergebase("foo2", "foo")' -T '{node|short}\n'
   9998a5c40732
   $ hg subtree merge --from-path foo2 --to-path foo 
   searching for merge base ...
@@ -196,7 +196,7 @@ test subtree merge without copy info: foo2 -> foo
   o  9998a5c40732 B
   │
   o  d908813f0f7c A
-  $ hg log -r "subtreemergebase("foo2", "foo")" -T '{node|short}\n'
+  $ hg log -r 'subtreemergebase("foo2", "foo")' -T '{node|short}\n'
   9998a5c40732
   $ hg subtree merge --from-path foo2 --to-path foo
   searching for merge base ...
@@ -232,7 +232,7 @@ test subtree merge without copy info: foo -> foo2
   o  9998a5c40732 B
   │
   o  d908813f0f7c A
-  $ hg log -r "subtreemergebase("foo", "foo2")" -T '{node|short}\n'
+  $ hg log -r 'subtreemergebase("foo", "foo2")' -T '{node|short}\n'
   9998a5c40732
   $ hg subtree merge --from-path foo --to-path foo2
   searching for merge base ...
@@ -262,7 +262,7 @@ test subtree merge from copy dest -> copy source, with new file in copy dest
   copying foo to foo2
   $ echo 1 >> foo2/new
   $ hg ci -Aqm "add foo2/new"
-  $ hg log -r "subtreemergebase("foo2", "foo")" -T '{node|short}\n'
+  $ hg log -r 'subtreemergebase("foo2", "foo")' -T '{node|short}\n'
   9998a5c40732
   $ hg subtree merge --from-path foo2 --to-path foo
   searching for merge base ...
@@ -293,7 +293,7 @@ test subtree merge from copy dest -> copy source with conflicts
   copying foo to foo2
   $ echo "source" >> foo/x && hg ci -m "update foo/x"
   $ echo "dest" >> foo2/x && hg ci -m "update foo2/x"
-  $ hg log -r "subtreemergebase("foo2", "foo")" -T '{node|short}\n'
+  $ hg log -r 'subtreemergebase("foo2", "foo")' -T '{node|short}\n'
   9998a5c40732
   $ hg subtree merge --from-path foo2 --to-path foo -t :merge3
   searching for merge base ...
@@ -929,7 +929,7 @@ test subtree merge with subtree copy overwriting a path
   o  e4d1c0766aec B
   │
   o  0a99ffb8a8f3 A
-  $ hg log -r "subtreemergebase("foo", "foo2")" -T '{node|short}\n'
+  $ hg log -r 'subtreemergebase("foo", "foo2")' -T '{node|short}\n'
   0a99ffb8a8f3
   $ hg subtree merge --from-path foo --to-path foo2
   searching for merge base ...
