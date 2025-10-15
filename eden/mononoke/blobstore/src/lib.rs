@@ -739,7 +739,7 @@ pub trait StoreLoadable<S> {
 
 /// For convenience, all Blobstore Loadables are StoreLoadable through any Blobstore.
 #[async_trait]
-impl<L: Loadable + Sync + std::fmt::Debug, S: Blobstore> StoreLoadable<S> for L {
+impl<L: Loadable + Sync + std::fmt::Debug, S: KeyedBlobstore> StoreLoadable<S> for L {
     type Value = <L as Loadable>::Value;
 
     async fn load<'a>(
