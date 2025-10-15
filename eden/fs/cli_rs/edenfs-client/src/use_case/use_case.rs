@@ -38,13 +38,17 @@ pub enum UseCaseId {
     ExampleUseCase,
     Flow,
     Hack,
+    IslServerNode,
     MeerkatCli,
+    NodeClient,
     ScmEdenContainer,
     RedirectFfi,
     #[strum(serialize = "testifyd")]
     TestifyDaemon,
     WatchActiveCommit,
     StarlarkMcp,
+    #[strum(serialize = "vscode")]
+    VSCode,
 }
 
 pub struct UseCase {
