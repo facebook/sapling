@@ -2150,10 +2150,25 @@ pub struct DirectoryBranchClusterFixedCluster {
 }
 
 /// Configuration for restricted paths and their associated ACLs
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RestrictedPathsConfig {
     /// Map from path prefixes to ACL names for restricted path restrictions
     pub path_acls: HashMap<NonRootMPath, MononokeIdentity>,
+    /// Whether the in-memory cache of manifest ids should be used instead of
+    /// directly querying the manifest id store DB
+    pub use_manifest_id_cache: bool,
+    /// Interval to update the in-memory cache of manifest ids
+    pub cache_update_interval_ms: u64,
+}
+
+impl Default for RestrictedPathsConfig {
+    fn default() -> Self {
+        Self {
+            path_acls: HashMap::new(),
+            use_manifest_id_cache: true,
+            cache_update_interval_ms: 1000,
+        }
+    }
 }
 
 impl RestrictedPathsConfig {

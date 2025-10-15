@@ -1151,6 +1151,17 @@ impl Convert for RawRestrictedPathsConfig {
             })
             .collect::<Result<HashMap<_, _>>>()?;
 
-        Ok(RestrictedPathsConfig { path_acls })
+        let use_manifest_id_cache = self.use_manifest_id_cache.unwrap_or(true);
+        let cache_update_interval_ms = self
+            .cache_update_interval_ms
+            .map(|v| v.try_into())
+            .transpose()?
+            .unwrap_or(RestrictedPathsConfig::default().cache_update_interval_ms);
+
+        Ok(RestrictedPathsConfig {
+            path_acls,
+            use_manifest_id_cache,
+            cache_update_interval_ms,
+        })
     }
 }

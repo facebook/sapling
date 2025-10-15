@@ -467,6 +467,8 @@ async fn setup_test_repo(
     acls: Option<Acls>,
 ) -> Result<TestRepo> {
     let repo_id = RepositoryId::new(0);
+    let use_manifest_id_cache = true;
+    let cache_update_interval_ms = 100;
     let acl_file = setup_acl_file(acls)?;
 
     let acl_provider = InternalAclProvider::from_file(&acl_file)
@@ -480,7 +482,11 @@ async fn setup_test_repo(
             .with_repo_id(repo_id),
     );
 
-    let config = RestrictedPathsConfig { path_acls };
+    let config = RestrictedPathsConfig {
+        path_acls,
+        use_manifest_id_cache,
+        cache_update_interval_ms,
+    };
     let repo_restricted_paths = Arc::new(RestrictedPaths::new(
         config,
         manifest_id_store,

@@ -243,6 +243,8 @@ mod tests {
     fn test_with_config(fb: FacebookInit) -> Result<()> {
         let repo_id = RepositoryId::new(0);
         let mut path_acls = HashMap::new();
+        let use_manifest_id_cache = true;
+        let cache_update_interval_ms = 100;
 
         let acl_provider = DummyAclProvider::new(fb)?;
         path_acls.insert(
@@ -259,7 +261,11 @@ mod tests {
                 .expect("Failed to create Sqlite connection")
                 .with_repo_id(repo_id),
         );
-        let config = RestrictedPathsConfig { path_acls };
+        let config = RestrictedPathsConfig {
+            path_acls,
+            use_manifest_id_cache,
+            cache_update_interval_ms,
+        };
         let repo_restricted_paths = RestrictedPaths::new(config, manifest_id_store, acl_provider);
 
         assert!(repo_restricted_paths.has_restricted_paths());
@@ -270,6 +276,8 @@ mod tests {
     fn test_path_matching(fb: FacebookInit) -> Result<()> {
         let repo_id = RepositoryId::new(0);
         let mut path_acls = HashMap::new();
+        let use_manifest_id_cache = true;
+        let cache_update_interval_ms = 100;
 
         let acl_provider = DummyAclProvider::new(fb)?;
         let restricted_acl = MononokeIdentity::from_str("SERVICE_IDENTITY:restricted_acl")?;
@@ -284,7 +292,11 @@ mod tests {
                 .with_repo_id(repo_id),
         );
 
-        let config = RestrictedPathsConfig { path_acls };
+        let config = RestrictedPathsConfig {
+            path_acls,
+            use_manifest_id_cache,
+            cache_update_interval_ms,
+        };
         let repo_restricted_paths = RestrictedPaths::new(config, manifest_id_store, acl_provider);
 
         // Test exact match
