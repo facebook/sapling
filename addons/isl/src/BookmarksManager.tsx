@@ -91,7 +91,7 @@ export function BookmarksManagerMenu() {
     </Tooltip>
   );
 
-  const Reminder = Internal.RecommendedBookmarkReminder;
+  const Reminder = Internal.RecommendedBookmarkPrompt;
   return Reminder ? <Reminder>{menuButton}</Reminder> : menuButton;
 }
 

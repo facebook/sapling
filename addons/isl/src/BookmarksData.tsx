@@ -106,7 +106,7 @@ function fetchRecommendedBookmarks(recommendedBookmarks: Array<string>) {
 }
 
 /**
- * Tracks when the user was last shown the bookmark recommendation prompt.
+ * For determining if reminders to use recommended bookmarks should be shown
  */
 export const recommendedBookmarksReminder = localStorageBackedAtom<{
   shouldShow: boolean;
@@ -115,6 +115,14 @@ export const recommendedBookmarksReminder = localStorageBackedAtom<{
   shouldShow: true,
   lastShown: 0,
 });
+
+/**
+ * For determining if recommended bookmarks onboarding tip should be shown
+ */
+export const recommendedBookmarksOnboarding = localStorageBackedAtom<boolean>(
+  'isl.recommended-bookmarks-onboarding',
+  true,
+);
 
 export const recommendedBookmarksGKAtom = atom(get => {
   const flag = get(featureFlagLoadable(Internal.featureFlags?.RecommendedBookmarks));

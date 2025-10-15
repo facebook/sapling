@@ -883,6 +883,7 @@ export type LocalStorageName =
   | 'isl.drawer-state'
   | 'isl.bookmarks'
   | 'isl.recommended-bookmarks-reminder'
+  | 'isl.recommended-bookmarks-onboarding'
   | 'isl.ui-zoom'
   | 'isl.has-shown-getting-started'
   | 'isl.dismissed-split-suggestion'
