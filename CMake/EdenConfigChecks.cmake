@@ -110,6 +110,7 @@ endif()
 
 find_package(python-toml REQUIRED)
 find_package(python-filelock REQUIRED)
+find_package(python-psutil REQUIRED)
 
 # pexpect is used by some of the integration tests.
 # If we don't find it we simply won't run those tests.
