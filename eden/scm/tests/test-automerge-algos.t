@@ -279,7 +279,7 @@ Unsuccessful merge for Python file when 'sort-inserts' is False:
   import c
   >>>>>>> source: 07adb317b9bf - test: C
 
-Successful sort-inserts merge for Buck file:
+Successful sort-inserts merge for Buck file(cross phases):
 
   $ newrepo
   $ setconfig automerge.mode=accept
@@ -294,9 +294,28 @@ Successful sort-inserts merge for Buck file:
   merging BUCK
    lines 1-2 have been resolved by automerge algorithms
   $ hg cat -r tip BUCK
-  "//a/b/bar:bar",
   "repo//third-party/foo:foo",
+  "//a/b/bar:bar",
   "//a/b/c:t",
+
+Successful sort-inserts merge for Buck file(within phases):
+
+  $ newrepo
+  $ setconfig automerge.mode=accept
+  $ setconfig automerge.merge-algos=sort-inserts
+  $ drawdag <<'EOS'
+  > B C # C/BUCK="//a/b/c/api/base/model:model",\n"//a/b/c/cancellation:cancellation",\n
+  > |/  # B/BUCK="//a/b/c/api/base:base",\n"//a/b/c/cancellation:cancellation",\n
+  > A   # A/BUCK="//a/b/c/cancellation:cancellation",\n
+  > EOS
+  $ hg rebase -r $C -d $B
+  rebasing 74708167909f "C"
+  merging BUCK
+   lines 1-2 have been resolved by automerge algorithms
+  $ hg cat -r tip BUCK
+  "//a/b/c/api/base:base",
+  "//a/b/c/api/base/model:model",
+  "//a/b/c/cancellation:cancellation",
 
 Unsuccessful sort-inserts merge for normal Python statements:
   $ newrepo

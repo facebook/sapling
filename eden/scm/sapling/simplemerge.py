@@ -235,7 +235,12 @@ def automerge_sort_inserts(m3, base_lines, a_lines, b_lines) -> Optional[List[by
     if all(matchfn(line) for line in a_lines) and all(
         matchfn(line) for line in b_lines
     ):
-        merged_lines = sorted(set(a_lines + b_lines))
+        # For buck target files, we use the sorting algorithm from buildifier
+        # aka. [bazelbuild/buildtools](https://github.com/bazelbuild/buildtools)
+        if m3.file_type == "buck":
+            merged_lines = buildifier_sorted(a_lines + b_lines)
+        else:
+            merged_lines = sorted(set(a_lines + b_lines))
         return merged_lines
 
     return None
@@ -1093,3 +1098,83 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         localctx.write(mergedtext, flags)
 
     return conflictscount
+
+
+def buildifier_sorted(items):
+    """
+    Sort a list of strings using the same algorithm as [sortStringExprs](https://github.com/bazelbuild/buildtools/blob/1429e15ae755/build/rewrite.go#L636)
+
+    The sorting algorithm:
+    1. Groups strings into phases based on prefix:
+       - Phase 0: default (no special prefix)
+       - Phase 1: starts with ":"
+       - Phase 2: starts with "//"
+       - Phase 3: starts with "@"
+    2. Within each phase, splits strings by '.' and ':' for comparison
+    3. Compares element-by-element, then by the list of elements after split, then by value, then by original index
+    4. Removes duplicates from sorted result
+
+    >>> buildifier_sorted([])
+    []
+    >>> items = [
+    ...    b'"repo/what:ever"'
+    ... ]
+    >>> buildifier_sorted(items)
+    [b'"repo/what:ever"']
+    >>> items = [
+    ... b'"//myrepo/what/listener:listener",',
+    ... b'"//myrepo/what:cameradestinationpicker",',
+    ... ]
+    >>> buildifier_sorted(items) # doctest: +NORMALIZE_WHITESPACE
+    [b'"//myrepo/what:cameradestinationpicker",',
+     b'"//myrepo/what/listener:listener",']
+    >>> items = [
+    ...    b'"//myrepo/whatase/httpmethod:httpmethod",',
+    ...    b'"//myrepo/whatase/httprequest:httprequest",',
+    ...    b'"//myrepo/whatase/model:model",',
+    ...    b'"//myrepo/whatase:base",',
+    ... ]
+    >>> buildifier_sorted(items) # doctest: +NORMALIZE_WHITESPACE
+    [b'"//myrepo/whatase:base",',
+     b'"//myrepo/whatase/httpmethod:httpmethod",',
+     b'"//myrepo/whatase/httprequest:httprequest",',
+     b'"//myrepo/whatase/model:model",']
+    """
+
+    def _make_sort_key(index, value):
+        key = {
+            "value": value,
+            "original": index,
+            "phase": 0,
+            "split": [],
+        }
+
+        # Handle both bytes and strings
+        # Note the leading b"" is needed for matching
+        if value.startswith(b'":'):
+            key["phase"] = 1
+        elif value.startswith(b'"//'):
+            key["phase"] = 2
+        elif value.startswith(b'"@'):
+            key["phase"] = 3
+
+        key["split"] = value.replace(b":", b".").split(b".")
+
+        return key
+
+    if len(items) < 2:
+        return items
+
+    keys = []
+    for index, item in enumerate(items):
+        keys.append(_make_sort_key(index, item))
+
+    # https://github.com/bazelbuild/buildtools/blob/1429e15ae755a6762d0edf9198062dc6ed04408d/build/rewrite.go#L737
+    keys.sort(key=lambda k: (k["phase"], k["split"], k["value"], k["original"]))
+
+    result = []
+    for key in keys:
+        if len(result) == 0 or key["value"] != result[-1]:
+            result.append(key["value"])
+
+    return result
