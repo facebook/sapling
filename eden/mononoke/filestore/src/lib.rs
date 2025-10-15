@@ -11,8 +11,6 @@
 use anyhow::Error;
 use anyhow::anyhow;
 use blobstore::Blobstore;
-use blobstore::Loadable;
-use blobstore::LoadableError;
 use bytes::Bytes;
 use bytes::BytesMut;
 use cloned::cloned;
@@ -198,16 +196,7 @@ pub async fn get_metadata<B: Blobstore>(
     ctx: &CoreContext,
     key: &FetchKey,
 ) -> Result<Option<ContentMetadataV2>, Error> {
-    let maybe_id = key
-        .load(ctx, blobstore)
-        .await
-        .map(Some)
-        .or_else(|err| match err {
-            LoadableError::Error(err) => Err(err),
-            LoadableError::Missing(_) => Ok(None),
-        })?;
-
-    match maybe_id {
+    match key.content_id(ctx, blobstore).await? {
         Some(id) => metadata::get_metadata(blobstore, ctx, id).await,
         None => Ok(None),
     }
@@ -221,16 +210,7 @@ pub async fn get_metadata_readonly<B: Blobstore>(
     ctx: &CoreContext,
     key: &FetchKey,
 ) -> Result<Option<Option<ContentMetadataV2>>, Error> {
-    let maybe_id = key
-        .load(ctx, blobstore)
-        .await
-        .map(Some)
-        .or_else(|err| match err {
-            LoadableError::Error(err) => Err(err),
-            LoadableError::Missing(_) => Ok(None),
-        })?;
-
-    match maybe_id {
+    match key.content_id(ctx, blobstore).await? {
         Some(id) => metadata::get_metadata_readonly(blobstore, ctx, id)
             .await
             .map(Some),
@@ -245,16 +225,7 @@ pub async fn exists<B: Blobstore>(
     ctx: &CoreContext,
     key: &FetchKey,
 ) -> Result<bool, Error> {
-    let maybe_id = key
-        .load(ctx, blobstore)
-        .await
-        .map(Some)
-        .or_else(|err| match err {
-            LoadableError::Error(err) => Err(err),
-            LoadableError::Missing(_) => Ok(None),
-        })?;
-
-    match maybe_id {
+    match key.content_id(ctx, blobstore).await? {
         Some(id) => blobstore
             .is_present(ctx, &id.blobstore_key())
             .await?
@@ -273,16 +244,7 @@ pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
     ctx: &CoreContext,
     key: &FetchKey,
 ) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + use<'a, B>, u64)>, Error> {
-    let content_id = key
-        .load(ctx, &blobstore)
-        .await
-        .map(Some)
-        .or_else(|err| match err {
-            LoadableError::Error(err) => Err(err),
-            LoadableError::Missing(_) => Ok(None),
-        })?;
-
-    match content_id {
+    match key.content_id(ctx, &blobstore).await? {
         Some(content_id) => {
             fetch::fetch_with_size(blobstore, ctx, content_id, fetch::Range::all()).await
         }
@@ -301,16 +263,7 @@ pub async fn fetch_range_with_size<'a, B: Blobstore + Clone + 'a>(
     key: &FetchKey,
     range: Range,
 ) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + use<'a, B>, u64)>, Error> {
-    let content_id = key
-        .load(ctx, &blobstore)
-        .await
-        .map(Some)
-        .or_else(|err| match err {
-            LoadableError::Error(err) => Err(err),
-            LoadableError::Missing(_) => Ok(None),
-        })?;
-
-    match content_id {
+    match key.content_id(ctx, &blobstore).await? {
         Some(content_id) => fetch::fetch_with_size(blobstore, ctx, content_id, range).await,
         None => Ok(None),
     }

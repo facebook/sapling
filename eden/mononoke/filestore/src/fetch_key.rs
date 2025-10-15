@@ -10,6 +10,7 @@ use std::fmt::Display;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use blobstore::Blobstore;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
@@ -29,6 +30,20 @@ use strum::EnumIter;
 pub enum FetchKey {
     Canonical(ContentId),
     Aliased(Alias),
+}
+
+impl FetchKey {
+    pub async fn content_id<B: Blobstore>(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &B,
+    ) -> Result<Option<ContentId>> {
+        match self.load(ctx, blobstore).await {
+            Ok(content_id) => Ok(Some(content_id)),
+            Err(LoadableError::Missing(_)) => Ok(None),
+            Err(LoadableError::Error(err)) => Err(err),
+        }
+    }
 }
 
 impl Display for FetchKey {
