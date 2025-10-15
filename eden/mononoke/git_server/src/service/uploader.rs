@@ -353,6 +353,7 @@ pub async fn upload_objects(
     let prefs = GitimportPreferences {
         backfill_derivation: BackfillDerivation::OnlySpecificTypes(vec![
             DerivableType::GitDeltaManifestsV2,
+            DerivableType::GitDeltaManifestsV3,
         ]),
         concurrency,
         lfs,
