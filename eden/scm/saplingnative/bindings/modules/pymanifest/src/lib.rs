@@ -356,6 +356,12 @@ py_class!(pub class treemanifest |py| {
         Ok(result)
     }
 
+    /// Returns true if there are any differences between this manifest and `other`
+    /// matching the given matcher. Returns early on the first difference found.
+    def hasdiff(&self, other: &treemanifest, matcher: PyObject) -> PyResult<bool> {
+        Ok(!self.identical(py, other, matcher)?)
+    }
+
     /// Find modified directories. Return [(path: str, exist_left: bool, exist_right: bool)].
     /// Modified directories are added, removed, or metadata changed (direct file or subdir added,
     /// removed, similar to when OS updates mtime of a directory). File content change does not

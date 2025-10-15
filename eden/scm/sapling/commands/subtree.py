@@ -433,7 +433,7 @@ def has_change_outside_paths(ctx1, ctx2, paths):
     m1 = ctx1.manifest()
     m2 = ctx2.manifest()
 
-    return not m1.identical(m2, matcher)
+    return m1.hasdiff(m2, matcher)
 
 
 def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
