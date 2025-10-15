@@ -65,14 +65,6 @@ impl RestrictedPathsManifestIdCache {
             manifest_id_store: manifest_id_store.clone(),
         };
 
-        ctx.scuba().clone().log_with_msg(
-            "Starting restricted paths cache updater",
-            Some(format!(
-                "refresh_interval_secs: {}",
-                refresh_interval.as_secs()
-            )),
-        );
-
         // Do initial refresh
         updater.refresh_cache().await?;
 
@@ -194,18 +186,13 @@ impl CacheUpdater {
 
     /// Spawn a background thread that periodically refreshes the cache.
     pub async fn spawn(self, terminate: oneshot::Receiver<()>, refresh_interval: Duration) {
-        let ctx = self.ctx.clone();
-
         let loop_fut = async move {
             loop {
                 // Refresh the cache
                 let refresh_result = self.refresh_cache().await;
 
-                if let Err(err) = refresh_result {
-                    self.ctx.scuba().clone().log_with_msg(
-                        "Failed to refresh restricted paths cache",
-                        Some(format!("{:#}", err)),
-                    );
+                if let Err(_err) = refresh_result {
+                    // TODO(T239041722): log errors with tracing
                 }
 
                 // Sleep for the refresh interval
@@ -216,9 +203,7 @@ impl CacheUpdater {
 
         let fut = async move {
             let _ = select(terminate, loop_fut).await; // select terminates when either of its inputs return
-            ctx.scuba()
-                .clone()
-                .log_with_msg("Stopped restricted paths cache updater", None);
+            // TODO(T239041722): log termination with tracing
         };
 
         mononoke::spawn_task(fut);

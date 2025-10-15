@@ -45,6 +45,9 @@ pub struct RestrictedPaths {
     manifest_id_store: ArcRestrictedPathsManifestIdStore,
     /// ACL provider for authorization checks
     acl_provider: Arc<dyn AclProvider>,
+    /// Optional in-memory cache for manifest ID lookups, instead of direct DB
+    /// queries
+    manifest_id_cache: Option<Arc<RestrictedPathsManifestIdCache>>,
 }
 
 impl RestrictedPaths {
@@ -52,11 +55,13 @@ impl RestrictedPaths {
         config: RestrictedPathsConfig,
         manifest_id_store: Arc<dyn RestrictedPathsManifestIdStore>,
         acl_provider: Arc<dyn AclProvider>,
+        manifest_id_cache: Option<Arc<RestrictedPathsManifestIdCache>>,
     ) -> Self {
         Self {
             config,
             manifest_id_store,
             acl_provider,
+            manifest_id_cache,
         }
     }
 
@@ -138,10 +143,21 @@ impl RestrictedPaths {
             return Ok(true);
         }
 
-        let paths = self
-            .manifest_id_store
-            .get_paths_by_manifest_id(ctx, &manifest_id, &manifest_type)
-            .await?;
+        // Try to use cache first, fall back to DB query if cache is not available
+        let paths = if let Some(manifest_id_cache) = &self.manifest_id_cache {
+            // Read from cache
+            let cache_guard = manifest_id_cache.cache().read().unwrap();
+            cache_guard
+                .get(&manifest_type)
+                .and_then(|type_map| type_map.get(&manifest_id))
+                .cloned()
+                .unwrap_or_default()
+        } else {
+            // Fall back to DB query if cache is not available
+            self.manifest_id_store
+                .get_paths_by_manifest_id(ctx, &manifest_id, &manifest_type)
+                .await?
+        };
 
         if paths.is_empty() {
             return Ok(true);
@@ -233,6 +249,7 @@ mod tests {
             RestrictedPathsConfig::default(),
             manifest_id_store,
             acl_provider,
+            None,
         );
 
         assert!(!repo_restricted_paths.has_restricted_paths());
@@ -270,7 +287,8 @@ mod tests {
             use_manifest_id_cache,
             cache_update_interval_ms,
         };
-        let repo_restricted_paths = RestrictedPaths::new(config, manifest_id_store, acl_provider);
+        let repo_restricted_paths =
+            RestrictedPaths::new(config, manifest_id_store, acl_provider, None);
 
         assert!(repo_restricted_paths.has_restricted_paths());
         Ok(())
@@ -301,7 +319,8 @@ mod tests {
             use_manifest_id_cache,
             cache_update_interval_ms,
         };
-        let repo_restricted_paths = RestrictedPaths::new(config, manifest_id_store, acl_provider);
+        let repo_restricted_paths =
+            RestrictedPaths::new(config, manifest_id_store, acl_provider, None);
 
         // Test exact match
         let exact_path = NonRootMPath::new("restricted/dir").unwrap();

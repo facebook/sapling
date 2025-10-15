@@ -129,6 +129,7 @@ use repo_stats_logger::RepoStatsLogger;
 use restricted_paths::ArcRestrictedPaths;
 use restricted_paths::ArcRestrictedPathsManifestIdStore;
 use restricted_paths::RestrictedPaths;
+use restricted_paths::RestrictedPathsManifestIdCacheBuilder;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql::rusqlite::Connection as SqliteConnection;
@@ -734,7 +735,7 @@ impl TestRepoFactory {
     }
 
     /// Restricted paths
-    pub fn restricted_paths(
+    pub async fn restricted_paths(
         &self,
         repo_config: &ArcRepoConfig,
         restricted_paths_manifest_id_store: &ArcRestrictedPathsManifestIdStore,
@@ -742,12 +743,25 @@ impl TestRepoFactory {
         if let Some(restricted_paths) = &self.restricted_paths {
             return Ok(restricted_paths.clone());
         }
+        let restricted_paths_config = repo_config.restricted_paths_config.clone();
+
+        // Build the manifest id cache with the specified refresh interval
+        let cache = RestrictedPathsManifestIdCacheBuilder::new(
+            self.ctx.clone(),
+            restricted_paths_manifest_id_store.clone(),
+        )
+        .with_refresh_interval(std::time::Duration::from_millis(
+            restricted_paths_config.cache_update_interval_ms,
+        ))
+        .build()
+        .await?;
 
         let acl_provider = DummyAclProvider::new(self.fb)?;
         Ok(Arc::new(RestrictedPaths::new(
-            repo_config.restricted_paths_config.clone(),
+            restricted_paths_config,
             restricted_paths_manifest_id_store.clone(),
             acl_provider,
+            Some(Arc::new(cache)),
         )))
     }
 

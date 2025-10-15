@@ -255,7 +255,6 @@ impl RestrictedPathsTestDataBuilder {
             .metadata(Arc::new(metadata))
             .build();
         let ctx = CoreContext::test_mock_session(session_container);
-        let repo = setup_test_repo(&ctx, self.restricted_paths, self.acls).await?;
 
         let temp_file = tempfile::NamedTempFile::new()?;
         let log_file_path = temp_file.path().to_path_buf();
@@ -263,6 +262,8 @@ impl RestrictedPathsTestDataBuilder {
         unsafe {
             std::env::set_var("ACCESS_LOG_SCUBA_FILE_PATH", &log_file_path);
         }
+
+        let repo = setup_test_repo(&ctx, self.restricted_paths, self.acls).await?;
 
         Ok(RestrictedPathsTestData {
             ctx,
@@ -327,6 +328,9 @@ impl RestrictedPathsTestData {
             .repo_derived_data()
             .derive::<RootHgAugmentedManifestId>(&self.ctx, bcs_id)
             .await?;
+
+        // Sleep to ensure that the restricted paths cache was updated
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         let _all_directories = hg_mfid
             // TODO(T239041722): list files as well to ensure access is logged when a file is requested
@@ -468,7 +472,7 @@ async fn setup_test_repo(
 ) -> Result<TestRepo> {
     let repo_id = RepositoryId::new(0);
     let use_manifest_id_cache = true;
-    let cache_update_interval_ms = 100;
+    let cache_update_interval_ms = 5;
     let acl_file = setup_acl_file(acls)?;
 
     let acl_provider = InternalAclProvider::from_file(&acl_file)
@@ -487,18 +491,31 @@ async fn setup_test_repo(
         use_manifest_id_cache,
         cache_update_interval_ms,
     };
+
+    // Build the manifest id cache with the specified refresh interval
+    let cache = Arc::new(
+        RestrictedPathsManifestIdCacheBuilder::new(ctx.clone(), manifest_id_store.clone())
+            .with_refresh_interval(std::time::Duration::from_millis(
+                config.cache_update_interval_ms,
+            ))
+            .build()
+            .await?,
+    );
+
     let repo_restricted_paths = Arc::new(RestrictedPaths::new(
         config,
-        manifest_id_store,
+        manifest_id_store.clone(),
         acl_provider,
+        Some(cache),
     ));
 
     // Create the test repo
     let mut factory = TestRepoFactory::new(ctx.fb)?;
     let repo = factory
-        .with_restricted_paths(repo_restricted_paths.clone())
+        .with_restricted_paths(repo_restricted_paths)
         .build()
         .await?;
+
     Ok(repo)
 }
 
