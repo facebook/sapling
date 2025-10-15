@@ -63,12 +63,12 @@ pub enum ManifestType {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Derivative)]
 #[derivative(Debug)]
 pub struct RestrictedPathManifestIdEntry {
-    manifest_type: ManifestType,
-    manifest_id: ManifestId,
+    pub manifest_type: ManifestType,
+    pub manifest_id: ManifestId,
     #[derivative(Debug(format_with = "fmt_path_bytes"))]
-    path: PathBytes,
+    pub path: PathBytes,
     #[derivative(Debug(format_with = "fmt_path_hash_bytes"))]
-    path_hash: PathHashBytes,
+    pub path_hash: PathHashBytes,
     // TODO(T239041722): add changeset id to log changeset to which the manifest belongs to
 }
 

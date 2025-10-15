@@ -20,6 +20,7 @@ facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 hex = { version = "0.4.3", features = ["alloc"] }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 path_hash = { version = "0.1.0", path = "../../common/path_hash" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
@@ -29,6 +30,7 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 strum = { version = "0.27.1", features = ["derive"] }
+tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 blobstore = { version = "0.1.0", path = "../../blobstore" }
@@ -42,7 +44,6 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metadata = { version = "0.1.0", path = "../../common/metadata" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_api_hg = { version = "0.1.0", path = "../../mononoke_api_hg" }
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_derived_data" }
@@ -51,4 +52,3 @@ serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw
 tempfile = "3.22"
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

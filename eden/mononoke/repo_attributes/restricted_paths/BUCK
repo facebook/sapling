@@ -12,7 +12,6 @@ rust_library(
     test_deps = [
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/common/sql_construct:sql_construct",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -22,6 +21,7 @@ rust_library(
         "fbsource//third-party/rust:hex",
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:strum",
+        "fbsource//third-party/rust:tokio",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/common/path_hash:path_hash",
@@ -29,6 +29,7 @@ rust_library(
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/server/context:context",

@@ -11,6 +11,7 @@
 //! and to store the manifest ids of these paths from every revision.
 
 mod access_log;
+mod cache;
 mod manifest_id_store;
 
 use std::sync::Arc;
@@ -23,6 +24,9 @@ use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
 
 use crate::access_log::log_access_to_restricted_path;
+pub use crate::cache::ManifestIdCache;
+pub use crate::cache::RestrictedPathsManifestIdCache;
+pub use crate::cache::RestrictedPathsManifestIdCacheBuilder;
 pub use crate::manifest_id_store::ArcRestrictedPathsManifestIdStore;
 pub use crate::manifest_id_store::ManifestId;
 pub use crate::manifest_id_store::ManifestType;
