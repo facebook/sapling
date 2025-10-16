@@ -9,6 +9,7 @@
 
 use std::fs::File;
 use std::io::BufReader;
+use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::OnceLock;
@@ -17,6 +18,7 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
+use dialoguer::Input;
 use edenfs_client::instance::EdenFsInstance;
 use edenfs_client::use_case::UseCaseId;
 use edenfs_client::utils::get_config_dir;
@@ -123,6 +125,13 @@ pub struct MainCommand {
         help = "The use case for the CLI command. See https://fburl.com/code/98v1jxgk for valid use cases."
     )]
     use_case: Option<String>,
+
+    #[clap(
+        global = true,
+        long,
+        help = "Keep the window open after the command finishes."
+    )]
+    press_to_continue: bool,
 }
 
 /// The first level of edenfsctl subcommands.
@@ -271,7 +280,17 @@ impl MainCommand {
             .build()
             .context("unable to start async runtime")?;
 
-        runtime.block_on(self.dispatch())
+        // Since self is moved into block on, save continue
+        let press_to_continue = self.press_to_continue;
+        let exit_code = runtime.block_on(self.dispatch());
+
+        if press_to_continue && std::io::stdin().is_terminal() {
+            let _ = Input::<String>::new()
+                .with_prompt("Press Enter (twice on windows) to exit...")
+                .allow_empty(true)
+                .interact()?;
+        }
+        exit_code
     }
 
     /// Execute subcommands. This function returns only a return code since all the error handling
