@@ -630,7 +630,11 @@ async fn find_closest_ancestor_root(
 
     loop {
         if depth > 0 && depth % 1000 == 0 {
-            info!(ctx.logger(), "pushrebase depth: {}", depth);
+            info!(
+                ctx.logger(),
+                "pushrebase depth: {depth}, searching from bookmark {bookmark} at {onto_bookmark_cs_id} back to one of {} possible roots",
+                roots.len()
+            );
         }
 
         if let Some(recursion_limit) = config.recursion_limit {
