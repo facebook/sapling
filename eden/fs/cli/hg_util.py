@@ -7,6 +7,7 @@
 # pyre-strict
 
 import binascii
+import json
 import os
 import subprocess
 import typing
@@ -33,6 +34,50 @@ portablefilenames = ignore
 
 # Don't name ".hg" or ".sl" - we don't want the state dir to appear to be a repo itself.
 _OFF_MOUNT_REPO_DIR_NAME = "sl-repo-dir"
+
+
+# Parses the output of `sl config <section>.<key>` where only 0 or 1 value is returned
+def parse_config_output(out: str, is_json: bool = True) -> str:
+    # Cover case where `sl config` command failed silently
+    if out == "":
+        return ""
+
+    if is_json:
+        json_res = json.loads(out)
+        if len(json_res) == 0:
+            return ""
+
+        # We expect only 1 result if the config name existed
+        assert len(json_res) == 1
+        return json_res[0]["value"]
+    else:
+        return out.replace("\\n", "\n").replace("\\t", "\t")
+
+
+def get_filter_warning(
+    backing_repo_path: Path,
+) -> str:
+    args = [
+        os.environ.get("EDEN_HG_BINARY", "hg"),
+        "config",
+        "sparse.filter-warning",
+        "-Tjson",
+    ]
+
+    result = subprocess.run(
+        args,
+        capture_output=True,
+        encoding="utf-8",
+        check=False,
+        env=get_environment_suitable_for_subprocess(),
+        cwd=backing_repo_path,
+        timeout=60,
+    )
+
+    output = parse_config_output(result.stdout)
+    if result.returncode == 0 and output != "":
+        output += "\n\n"
+    return output
 
 
 def get_filter_id(
@@ -144,9 +189,10 @@ def setup_hg_dir(
     # If the checkout is using FilteredFS, we need to write an initial
     # .hg/sparse file that indicates no filter is active.
     if checkout.get_config().scm_type == "filteredhg":
-        (checkout_hg_dir / "sparse").write_text(
-            "".join([f"%include {f}\n" for f in sorted(filter_paths or [])])
-        )
+        filter_warning = get_filter_warning(checkout.get_backing_repo_path())
+        filters = "".join([f"%include {f}\n" for f in sorted(filter_paths or [])])
+        filter_content = (filter_warning + filters) if filter_paths is not None else ""
+        (checkout_hg_dir / "sparse").write_text(filter_content)
 
 
 def get_backing_hg_dir(checkout: EdenCheckout) -> Path:

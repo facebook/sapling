@@ -10,6 +10,8 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from eden.fs.cli.hg_util import parse_config_output
+
 from eden.fs.service.eden.thrift_types import GetCurrentSnapshotInfoRequest, MountId
 
 from eden.integration.hg.lib.hg_extension_test_base import (
@@ -261,14 +263,15 @@ baz
             backing_store="filteredhg", filter_paths=["tools/scm/filter/filter2"]
         )
 
-        filter_warning = self.hg("config", "sparse.filter-warning", cwd=str(repo_path))
+        filter_warning = parse_config_output(
+            self.hg("config", "sparse.filter-warning", "-Tjson", cwd=str(repo_path))
+        )
         self.assertNotEqual(filter_warning, "")
         filter_file = repo_path / self._get_relative_filter_config_path()
 
-        # FIXME: The filter warning should be written at clone time
         with open(filter_file, "r") as f:
             filter_config = f.read()
-            self.assertNotIn(
+            self.assertIn(
                 filter_warning,
                 filter_config,
             )
@@ -283,14 +286,15 @@ baz
         )
         repo_path = Path(repo.path)
 
-        filter_warning = self.hg("config", "sparse.filter-warning", cwd=str(repo_path))
+        filter_warning = parse_config_output(
+            self.hg("config", "sparse.filter-warning", "-Tjson", cwd=str(repo_path))
+        )
         self.assertNotEqual(filter_warning, "")
         filter_file = repo_path / self._get_relative_filter_config_path()
 
-        # FIXME: The filter warning should be written at clone time
         with open(filter_file, "r") as f:
             filter_config = f.read()
-            self.assertNotIn(
+            self.assertIn(
                 filter_warning,
                 filter_config,
             )
