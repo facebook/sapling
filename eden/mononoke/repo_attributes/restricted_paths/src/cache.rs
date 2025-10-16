@@ -25,6 +25,7 @@ use metaconfig_types::RestrictedPathsConfig;
 use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepoPath;
+use tracing::Instrument;
 
 use crate::RestrictedPathManifestIdEntry;
 use crate::manifest_id_store::ArcRestrictedPathsManifestIdStore;
@@ -56,14 +57,14 @@ impl RestrictedPathsManifestIdCache {
         let cache = Arc::new(RwLock::new(HashMap::new()));
         let (sender, receiver) = oneshot::channel();
 
-        // TODO(T239041722): log an info trace during startup
-
         // Perform initial cache refresh
         let updater = CacheUpdater {
             ctx: ctx.clone(),
             cache: cache.clone(),
             manifest_id_store: manifest_id_store.clone(),
         };
+
+        tracing::debug!("Starting restricted paths cache updater");
 
         // Do initial refresh
         updater.refresh_cache().await?;
@@ -191,8 +192,8 @@ impl CacheUpdater {
                 // Refresh the cache
                 let refresh_result = self.refresh_cache().await;
 
-                if let Err(_err) = refresh_result {
-                    // TODO(T239041722): log errors with tracing
+                if let Err(err) = refresh_result {
+                    tracing::error!("Failed to refresh restricted paths cache: {:#}", err);
                 }
 
                 // Sleep for the refresh interval
@@ -203,8 +204,11 @@ impl CacheUpdater {
 
         let fut = async move {
             let _ = select(terminate, loop_fut).await; // select terminates when either of its inputs return
-            // TODO(T239041722): log termination with tracing
-        };
+            tracing::debug!("Stopped restricted paths cache updater");
+        }
+        .instrument(tracing::debug_span!(
+            "Restricted paths manifest id cache updater"
+        ));
 
         mononoke::spawn_task(fut);
     }

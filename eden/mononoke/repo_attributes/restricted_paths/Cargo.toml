@@ -31,6 +31,7 @@ sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 strum = { version = "0.27.1", features = ["derive"] }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 blobstore = { version = "0.1.0", path = "../../blobstore" }

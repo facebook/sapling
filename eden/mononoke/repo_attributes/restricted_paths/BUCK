@@ -22,6 +22,7 @@ rust_library(
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/common/path_hash:path_hash",
