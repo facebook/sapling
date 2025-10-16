@@ -376,6 +376,7 @@ function ReviewCodeButton({
         serverAPI.postMessage({
           type: 'platform/runAICodeReviewChat',
           source: 'smartAction',
+          reviewScope: commit ? 'current commit' : 'uncommitted changes',
         });
         dismiss();
         e.stopPropagation();

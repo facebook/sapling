@@ -688,6 +688,11 @@ export type DiagnosticAllowlistValue =
   | {allow: Set<string>; block?: undefined};
 export type DiagnosticAllowlist = Map<'warning' | 'error', Map<string, DiagnosticAllowlistValue>>;
 
+export type CodeReviewScope =
+  | 'uncommitted changes'
+  | 'current commit'
+  | 'current commit and uncommitted changes';
+
 /* protocol */
 
 /**
@@ -760,6 +765,7 @@ export type PlatformSpecificClientToServerMessages =
   | {
       type: 'platform/runAICodeReviewChat';
       source: 'commitInfoView' | 'smartAction';
+      reviewScope: CodeReviewScope;
     }
   | {
       type: 'platform/subscribeToAIReviewComments';

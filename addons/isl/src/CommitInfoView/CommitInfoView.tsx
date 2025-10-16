@@ -329,41 +329,50 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 editedField={editedFieldValue}
                 setEditedField={setField}
                 extra={
-                  !isCommitMode && field.key === 'Title' ? (
+                  field.key === 'Title' ? (
                     <>
-                      <CommitTitleByline commit={commit} />
-                      {isFoldPreview && <FoldPreviewBanner />}
-                      <ShowingRemoteMessageBanner
-                        commit={commit}
-                        latestFields={parsedFields}
-                        editedCommitMessageKey={isCommitMode ? 'head' : commit.hash}
-                      />
                       {aiCodeReviewUpsellEnabled &&
                         Internal.aiCodeReview?.enabled &&
                         commit.isDot &&
-                        !isPublic && <AICodeReviewUpsell />}
-                      {!isPublic && isIrrelevantToCwd ? (
-                        <Tooltip
-                          title={
-                            <T
-                              replace={{
-                                $prefix: <pre>{commit.maxCommonPathPrefix}</pre>,
-                                $cwd: <pre>{cwd}</pre>,
-                              }}>
-                              This commit only contains files within: $prefix These are irrelevant
-                              to your current working directory: $cwd
-                            </T>
-                          }>
-                          <Banner kind={BannerKind.default}>
-                            <IrrelevantCwdIcon />
-                            <div style={{paddingLeft: 'var(--halfpad)'}}>
-                              <T replace={{$cwd: <code>{cwd}</code>}}>
-                                All files in this commit are outside $cwd
-                              </T>
-                            </div>
-                          </Banner>
-                        </Tooltip>
-                      ) : null}
+                        !isPublic && (
+                          <AICodeReviewUpsell
+                            isCommitMode={isCommitMode}
+                            hasUncommittedChanges={uncommittedChanges.length > 0}
+                          />
+                        )}
+                      {!isCommitMode ? (
+                        <>
+                          <CommitTitleByline commit={commit} />
+                          {isFoldPreview && <FoldPreviewBanner />}
+                          <ShowingRemoteMessageBanner
+                            commit={commit}
+                            latestFields={parsedFields}
+                            editedCommitMessageKey={isCommitMode ? 'head' : commit.hash}
+                          />
+                          {!isPublic && isIrrelevantToCwd ? (
+                            <Tooltip
+                              title={
+                                <T
+                                  replace={{
+                                    $prefix: <pre>{commit.maxCommonPathPrefix}</pre>,
+                                    $cwd: <pre>{cwd}</pre>,
+                                  }}>
+                                  This commit only contains files within: $prefix These are
+                                  irrelevant to your current working directory: $cwd
+                                </T>
+                              }>
+                              <Banner kind={BannerKind.default}>
+                                <IrrelevantCwdIcon />
+                                <div style={{paddingLeft: 'var(--halfpad)'}}>
+                                  <T replace={{$cwd: <code>{cwd}</code>}}>
+                                    All files in this commit are outside $cwd
+                                  </T>
+                                </div>
+                              </Banner>
+                            </Tooltip>
+                          ) : null}
+                        </>
+                      ) : undefined}
                     </>
                   ) : undefined
                 }

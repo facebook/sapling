@@ -347,9 +347,9 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/runAICodeReviewChat': {
-          const {source} = message;
+          const {source, reviewScope} = message;
           await Internal.promptAIAgent?.(
-            {type: 'reviewCode', repoPath: repo?.info.repoRoot},
+            {type: 'reviewCode', repoPath: repo?.info.repoRoot, reviewScope},
             source === 'commitInfoView'
               ? ActionTriggerType.ISL2CommitInfoView
               : ActionTriggerType.ISL2SmartActions,
