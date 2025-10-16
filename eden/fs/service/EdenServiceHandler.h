@@ -119,8 +119,10 @@ struct ThriftRequestTraceEvent : TraceEventBase {
 /*
  * Handler for the EdenService thrift interface
  */
-class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
-                           public fb303::BaseService {
+class EdenServiceHandler
+    : virtual public StreamingEdenServiceSvIf,
+      public fb303::BaseService,
+      public std::enable_shared_from_this<EdenServiceHandler> {
  public:
   explicit EdenServiceHandler(
       std::vector<std::string> originalCommandLine,
