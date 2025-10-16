@@ -58,7 +58,7 @@
 
 # Push all the changes made so far
   $ git_client push origin --all --follow-tags
-  error: unable to parse remote unpack status: Push rejected: Pushed packfile is too large for repo repo
+  error: remote unpack failed: Push rejected: Pushed packfile is too large for repo repo
   To https://*/repos/git/ro/repo.git (glob)
    ! [remote rejected] master_bookmark -> master_bookmark (Push rejected: Pushed packfile is too large for repo repo)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'

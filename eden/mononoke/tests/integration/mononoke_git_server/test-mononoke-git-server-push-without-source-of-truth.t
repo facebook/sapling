@@ -53,7 +53,7 @@
 
 # Push all the changes made so far. This push should fail since Mononoke is not the Source of Truth for this repo
   $ git_client push origin --all --follow-tags
-  error: unable to parse remote unpack status: Push rejected: Mononoke is not the source of truth for repo repo
+  error: remote unpack failed: Push rejected: Mononoke is not the source of truth for repo repo
   To https://*/repos/git/ro/repo.git (glob)
    ! [remote rejected] master_bookmark -> master_bookmark (Push rejected: Mononoke is not the source of truth for repo repo)
    ! [remote rejected] new_branch -> new_branch (Push rejected: Mononoke is not the source of truth for repo repo)

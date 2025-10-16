@@ -37,9 +37,18 @@
   $ git commit -aqm "new LFS change"
   $ quiet git_client push
   Uploading LFS objects: 100% (1/1), 60 B | 0 B/s, done. (?)
-  error: RPC failed; HTTP 500 curl 22 The requested URL returned error: 500
-  fatal: the remote end hung up unexpectedly
-  Everything up-to-date
+  error: remote unpack failed: LFS files missing in Git LFS server. Please upload before pushing. Error:
+   find_file_changes
+  
+  Caused by:
+      https://localhost:$LOCAL_PORT/repo/download_sha256/acf1e132a0104ccc9477f3255882466443c5ea4486e9255e994fcd8bf1e0c754 response Response { status: 404, version: HTTP/1.1* (glob)
+  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
+   ! [remote rejected] master_bookmark -> master_bookmark (LFS files missing in Git LFS server. Please upload before pushing. Error:
+   find_file_changes
+  
+  Caused by:
+      https://localhost:$LOCAL_PORT/repo/download_sha256/acf1e132a0104ccc9477f3255882466443c5ea4486e9255e994fcd8bf1e0c754 response Response { status: 404, version: HTTP/1.1* (glob)
+  error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]
   $ mononoke_admin fetch -R repo -B heads/master_bookmark
   BonsaiChangesetId: e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2

@@ -151,7 +151,7 @@ async fn push(
             GitImportLfs::new_disabled()
         };
         // Upload the objects corresponding to the push to the underlying store
-        let (ref_map, ref_updates) = upload_objects(
+        let upload_objects_result = upload_objects(
             ctx,
             request_context.repo.clone(),
             object_store.clone(),
@@ -160,12 +160,28 @@ async fn push(
             concurrency,
         )
         .try_timed()
-        .await?
-        .log_future_stats(
-            scuba.clone(),
-            "GitImport, Derivation and Bonsai creation completed",
-            "Push".to_string(),
-        );
+        .await;
+        let (ref_map, ref_updates) = match upload_objects_result {
+            Ok(result) => result.log_future_stats(
+                scuba.clone(),
+                "GitImport, Derivation and Bonsai creation completed",
+                "Push".to_string(),
+            ),
+            Err(e) => {
+                let err_msg = format!("{:?}", e);
+                if err_msg.contains("find_file_changes") && err_msg.contains("status: 404") {
+                    return reject_push_with_message(
+                        state,
+                        &ref_updates,
+                        format!("LFS files missing in Git LFS server. Please upload before pushing. Error:\n {}", err_msg),
+                        true /* with_unpack_error */
+                    )
+                    .await;
+                } else {
+                    return Err(e);
+                }
+            }
+        };
 
         // We were successful in parsing the pack and uploading the objects to underlying store. Indicate this to the client
         write_text_packetline(PACK_OK, &mut output)
@@ -341,7 +357,13 @@ async fn reject_non_sot_push(
 ) -> anyhow::Result<Response<Body>> {
     let error_message =
         format!("Push rejected: Mononoke is not the source of truth for repo {repo_name}");
-    reject_push_with_message(state, ref_updates, error_message).await
+    reject_push_with_message(
+        state,
+        ref_updates,
+        error_message,
+        true, /* with_unpack_error */
+    )
+    .await
 }
 
 async fn reject_too_large_push(
@@ -350,17 +372,29 @@ async fn reject_too_large_push(
     ref_updates: &[RefUpdate],
 ) -> anyhow::Result<Response<Body>> {
     let error_message = format!("Push rejected: Pushed packfile is too large for repo {repo_name}");
-    reject_push_with_message(state, ref_updates, error_message).await
+    reject_push_with_message(
+        state,
+        ref_updates,
+        error_message,
+        true, /* with_unpack_error */
+    )
+    .await
 }
 
 async fn reject_push_with_message(
     state: &mut State,
     ref_updates: &[RefUpdate],
     error_message: String,
+    with_unpack_error: bool,
 ) -> anyhow::Result<Response<Body>> {
     let mut output = vec![];
     let error_message = packetline_truncated_string(error_message);
-    write_text_packetline(error_message.as_bytes(), &mut output).await?;
+    if with_unpack_error {
+        let unpack_error = format!("unpack {}", error_message);
+        write_text_packetline(unpack_error.as_bytes(), &mut output).await?;
+    } else {
+        write_text_packetline(PACK_OK, &mut output).await?;
+    }
     for ref_update in ref_updates {
         write_text_packetline(
             format!("{} {} {}", REF_ERR, ref_update.ref_name, &error_message).as_bytes(),
