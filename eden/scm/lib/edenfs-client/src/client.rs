@@ -108,20 +108,8 @@ impl EdenFsClient {
     }
 
     fn root_options_from_filter(filter: Option<FilterId>) -> RootIdOptions {
-        // TODO(T238835643): deprecate filterId field
-        let (filter_id, fid) = match filter {
-            Some(filter) => {
-                let fid = filter.id().ok();
-                let filter_id = match fid.as_ref() {
-                    None => None,
-                    Some(fid) => String::from_utf8(fid.to_vec()).ok(),
-                };
-                (filter_id, fid)
-            }
-            None => (None, None),
-        };
+        let fid = filter.map(|filt| filt.id().ok()).flatten();
         edenfs::RootIdOptions {
-            filterId: filter_id,
             fid,
             ..Default::default()
         }
