@@ -638,16 +638,16 @@ impl CheckoutConfig {
 pub struct SnapshotState {
     pub working_copy_parent: String,
     pub last_checkout_hash: String,
-    pub parent_filter_id: Option<String>,
-    pub last_filter_id: Option<String>,
+    pub parent_filter_id: Option<Vec<u8>>,
+    pub last_filter_id: Option<Vec<u8>>,
 }
 
 impl SnapshotState {
     fn new(
         working_copy_parent: String,
         last_checkout_hash: String,
-        parent_filter_id: Option<String>,
-        last_filter_id: Option<String>,
+        parent_filter_id: Option<Vec<u8>>,
+        last_filter_id: Option<Vec<u8>>,
     ) -> Self {
         Self {
             working_copy_parent,
@@ -704,7 +704,7 @@ impl EdenFsCheckout {
     pub fn parse_snapshot_component(
         &self,
         component_buf: &Vec<u8>,
-    ) -> Result<(String, Option<String>)> {
+    ) -> Result<(String, Option<Vec<u8>>)> {
         let checkout_config = CheckoutConfig::parse_config(self.data_dir.clone())?;
 
         if checkout_config.repository.repo_type == RepositoryType::FilteredHg {
@@ -715,14 +715,15 @@ impl EdenFsCheckout {
                 .context("Could not decode varint in Snapshot file")?;
             let filter_offset = varint_len + (component_hash_len as usize);
 
-            // We can then parse out the RootId, FilterId, and convert them into strings.
+            // We can then parse out the RootId and convert it into a string. The FilterId is not
+            // guaranteed to be valid UTF-8, so we return the raw bytes.
             let decoded_hash = std::str::from_utf8(&component_buf[varint_len..filter_offset])
                 .from_err()?
                 .to_string();
-            let decoded_filter = std::str::from_utf8(&component_buf[filter_offset..])
-                .from_err()?
-                .to_string();
-            Ok((decoded_hash, Some(decoded_filter)))
+            Ok((
+                decoded_hash,
+                Some(Vec::from(&component_buf[filter_offset..])),
+            ))
         } else {
             // The entire buffer corresponds to the hash. There is no filter id present.
             let decoded_hash = std::str::from_utf8(component_buf).from_err()?.to_string();
@@ -751,14 +752,14 @@ impl EdenFsCheckout {
 
             // We must parse out the working copy parent hash. For Filtered repos, we also have to
             // parse out the active filter id.
-            let (decoded_hash, decoded_filter) = self
+            let (decoded_hash, filter_bytes) = self
                 .parse_snapshot_component(&buf)
                 .context("Could not parse snapshot component")?;
             Ok(SnapshotState::new(
                 decoded_hash.clone(),
                 decoded_hash,
-                decoded_filter.clone(),
-                decoded_filter,
+                filter_bytes.clone(),
+                filter_bytes,
             ))
         } else if header == SNAPSHOT_MAGIC_3 {
             let _pid = f.read_u32::<BigEndian>().from_err()?;

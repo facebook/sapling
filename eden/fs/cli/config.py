@@ -255,8 +255,8 @@ class ListMountInfo(typing.NamedTuple):
 class SnapshotState(typing.NamedTuple):
     working_copy_parent: str
     last_checkout_hash: str
-    parent_filter_id: Optional[str] = None
-    last_filter_id: Optional[str] = None
+    parent_filter_id: Optional[bytes] = None
+    last_filter_id: Optional[bytes] = None
 
 
 class AbstractEdenInstance:
@@ -1715,7 +1715,7 @@ class EdenCheckout:
             off_mount_repo_dir=off_mount_repo_dir,
         )
 
-    def parse_snapshot_component(self, buf: bytes) -> Tuple[str, Optional[str]]:
+    def parse_snapshot_component(self, buf: bytes) -> Tuple[str, Optional[bytes]]:
         """Parse a component from the snapshot file.
 
         Returns a tuple containing the parsed hash and a filter id (if
@@ -1723,18 +1723,17 @@ class EdenCheckout:
         component's filter id.
         """
         decoded_hash = ""
-        decoded_filter = None
+        filter_bytes = None
         if self.get_config().scm_type == "filteredhg":
             hash_len, varint_len = util.decode_varint(buf)
             filter_offset = varint_len + hash_len
             encoded_hash = buf[varint_len:filter_offset]
-            encoded_filter = buf[filter_offset:]
-            decoded_filter = encoded_filter.decode()
+            filter_bytes = buf[filter_offset:]
             decoded_hash = encoded_hash.decode()
         else:
             decoded_hash = buf.decode()
 
-        return decoded_hash, decoded_filter
+        return decoded_hash, filter_bytes
 
     def get_snapshot(self) -> SnapshotState:
         """Return the hex version of the parent hash in the SNAPSHOT file."""
@@ -1754,12 +1753,12 @@ class EdenCheckout:
                 parent = f.read(bodyLength)
                 if len(parent) != bodyLength:
                     raise RuntimeError("SNAPSHOT file too short")
-                decoded_parent, decoded_filter = self.parse_snapshot_component(parent)
+                decoded_parent, filter_bytes = self.parse_snapshot_component(parent)
                 return SnapshotState(
                     working_copy_parent=decoded_parent,
                     last_checkout_hash=decoded_parent,
-                    parent_filter_id=decoded_filter,
-                    last_filter_id=decoded_filter,
+                    parent_filter_id=filter_bytes,
+                    last_filter_id=filter_bytes,
                 )
             elif header == SNAPSHOT_MAGIC_3:
                 (pid,) = struct.unpack(">L", f.read(4))
@@ -1787,18 +1786,18 @@ class EdenCheckout:
                 if len(checked_out_revision) != checked_out_length:
                     raise RuntimeError("SNAPSHOT file too short")
 
-                working_copy_parent, parent_filter = self.parse_snapshot_component(
-                    working_copy_parent
+                working_copy_parent, parent_filter_bytes = (
+                    self.parse_snapshot_component(working_copy_parent)
                 )
                 (
                     checked_out_revision,
-                    checked_out_filter,
+                    checked_out_filter_bytes,
                 ) = self.parse_snapshot_component(checked_out_revision)
                 return SnapshotState(
                     working_copy_parent=working_copy_parent,
                     last_checkout_hash=checked_out_revision,
-                    parent_filter_id=parent_filter,
-                    last_filter_id=checked_out_filter,
+                    parent_filter_id=parent_filter_bytes,
+                    last_filter_id=checked_out_filter_bytes,
                 )
             else:
                 raise RuntimeError("SNAPSHOT file has invalid header")
