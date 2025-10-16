@@ -369,11 +369,11 @@ impl RestrictedPathsTestData {
         // Verify expectations if they were set
         if let Some(expected_manifest_entries) = self.expected_manifest_entries.clone() {
             assert_eq!(
-                manifest_id_store_entries
+                expected_manifest_entries
                     .into_iter()
                     .sorted()
                     .collect::<Vec<_>>(),
-                expected_manifest_entries
+                manifest_id_store_entries
                     .into_iter()
                     .sorted()
                     .collect::<Vec<_>>()
@@ -381,7 +381,7 @@ impl RestrictedPathsTestData {
         }
 
         if let Some(expected_scuba_logs) = &self.expected_scuba_logs {
-            assert_eq!(scuba_logs, *expected_scuba_logs);
+            assert_eq!(*expected_scuba_logs, scuba_logs);
         }
 
         Ok(())
