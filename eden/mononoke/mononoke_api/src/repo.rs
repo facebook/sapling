@@ -590,12 +590,7 @@ fn report_bookmark_staleness(
     if staleness >= 10 {
         debug!(
             ctx.logger(),
-            "Reporting staleness of {} in repo {} to be {}s: latest value is {}, cache points to {}",
-            bookmark,
-            repo.repo_identity().id(),
-            staleness,
-            blobrepo_bcs_id,
-            service_bcs_id,
+            "Reporting staleness of {bookmark} to be {staleness}s: latest value is {blobrepo_bcs_id}, cache points to {service_bcs_id}",
         );
     }
 

@@ -45,6 +45,7 @@ rust_library(
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:vec1",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/bounded_traversal:bounded_traversal",

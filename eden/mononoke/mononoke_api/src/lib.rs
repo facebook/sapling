@@ -16,6 +16,7 @@ pub use bookmarks::BookmarkKey;
 use mononoke_repos::MononokeRepos;
 pub use mononoke_types::RepositoryId;
 use repo_identity::RepoIdentityRef;
+use tracing::Instrument;
 
 use crate::repo::RepoContextBuilder;
 
@@ -192,7 +193,11 @@ impl<R: MononokeRepo> Mononoke<R> {
     /// Report configured monitoring stats
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
         for repo in self.repos.iter() {
-            crate::repo::report_monitoring_stats(ctx, &repo).await?;
+            let span =
+                tracing::info_span!("bookmark monitoring", repo = %repo.repo_identity().name());
+            crate::repo::report_monitoring_stats(ctx, &repo)
+                .instrument(span)
+                .await?;
         }
 
         Ok(())
