@@ -456,11 +456,15 @@ impl FilterGenerator {
             // Parse each line that starts with "%include" to extract filter paths
             let mut filter_paths = Vec::new();
             for line in filter_contents.lines() {
-                if line.starts_with("%include ") {
+                let trimmed = line.trim();
+                if trimmed.starts_with("%include ") {
                     if let Some(path) = line.strip_prefix("%include ") {
                         filter_paths.push(RepoPathBuf::from_string(path.trim().into())?);
                     }
-                } else if !line.is_empty() {
+                } else if trimmed.starts_with("#") {
+                    // Skip comments
+                    continue;
+                } else if !trimmed.is_empty() {
                     return Err(anyhow::anyhow!(
                         "Unexpected edensparse config format: {}",
                         line
@@ -695,9 +699,27 @@ mod tests {
     #[test]
     fn test_read_filter_config_valid_includes() {
         let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
-        let contents = "%include path/to/filter1.txt\n%include path/to/filter2.txt\n";
+        let contents = "\t%include path/to/filter1.txt\n%include path/to/filter2.txt\n";
         create_sparse_file(&filter_gen.dot_dir, contents).unwrap();
         let result = filter_gen.read_filter_config().unwrap().unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].to_string(), "path/to/filter1.txt");
+        assert_eq!(result[1].to_string(), "path/to/filter2.txt");
+    }
+
+    #[test]
+    fn test_read_filter_config_with_comments() {
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::Legacy, None);
+        let contents =
+            "\t%include path/to/filter1.txt\n# This is a comment\n%include path/to/filter2.txt\n";
+        create_sparse_file(&filter_gen.dot_dir, contents).unwrap();
+        let result = filter_gen.read_filter_config().unwrap().unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].to_string(), "path/to/filter1.txt");
+        assert_eq!(result[1].to_string(), "path/to/filter2.txt");
+
+        let contents = "# A multi\n# Line comment\n%include path/to/filter1.txt\n\n\t# This is a comment\n%include path/to/filter2.txt\n";
+        create_sparse_file(&filter_gen.dot_dir, contents).unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].to_string(), "path/to/filter1.txt");
         assert_eq!(result[1].to_string(), "path/to/filter2.txt");
