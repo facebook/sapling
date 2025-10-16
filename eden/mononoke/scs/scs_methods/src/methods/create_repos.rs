@@ -769,7 +769,11 @@ impl SourceControlServiceImpl {
         _token: thrift::CreateReposToken,
     ) -> Result<thrift::CreateReposPollResponse, scs_errors::ServiceError> {
         Ok(thrift::CreateReposPollResponse {
-            result: Some(Default::default()),
+            result: Some(thrift::CreateReposResponse {
+                status: thrift::CreateReposStatus::SUCCESS,
+                message: None,
+                ..Default::default()
+            }),
             ..Default::default()
         })
     }
