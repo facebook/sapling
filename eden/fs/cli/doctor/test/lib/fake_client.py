@@ -151,7 +151,7 @@ class FakeClient:
     def getCurrentSnapshotInfo(
         self, params: eden_ttypes.GetCurrentSnapshotInfoRequest
     ) -> eden_ttypes.GetCurrentSnapshotInfoResponse:
-        return eden_ttypes.GetCurrentSnapshotInfoResponse(filterId=None)
+        return eden_ttypes.GetCurrentSnapshotInfoResponse(fid=None)
 
     def matchFilesystem(
         self, params: eden_ttypes.MatchFileSystemRequest

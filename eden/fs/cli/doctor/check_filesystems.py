@@ -1020,13 +1020,7 @@ def get_modified_files(instance: EdenInstance, checkout: EdenCheckout) -> List[P
                 mountId=MountId(mountPoint=bytes(checkout.path))
             )
         )
-        active_filter = snapshot_info.filterId
         rootId = RootIdOptions()
-
-        # TODO(T238835643): deprecate filterId field
-        if active_filter is not None:
-            rootId.filterId = active_filter
-
         active_fid = snapshot_info.fid
         if active_fid is not None:
             rootId.fid = active_fid
