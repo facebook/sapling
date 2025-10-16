@@ -746,6 +746,26 @@ async function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<WarningCh
   return confirmed ? WarningCheckResult.BYPASS : WarningCheckResult.FAIL;
 }
 
+async function raceWithTimeout(
+  promise: Promise<boolean> | boolean | undefined,
+  warningName: string,
+  timeoutMs = 1000,
+): Promise<boolean | undefined> {
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<boolean>((_resolve, reject) =>
+        setTimeout(() => reject(new Error('Rebase warning timed out')), timeoutMs),
+      ),
+    ]);
+  } catch (err) {
+    tracker.track('RebaseWarningTimeout', {
+      extras: {warning: warningName, error: err instanceof Error ? err.message : String(err)},
+    });
+    return false;
+  }
+}
+
 async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<WarningCheckResult> {
   const isRebaseOffWarmWarningEnabled = readAtom(rebaseOffWarmWarningEnabled);
   if (!isRebaseOffWarmWarningEnabled) {
@@ -758,13 +778,14 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<WarningChe
   // iterate through stable commit metadata and see if this commit is warmed up commit
   const dag = readAtom(dagWithPreviews);
   const src = findPublicBaseAncestor(dag);
-
   const destBase = findPublicBaseAncestor(dag, dest.hash);
 
-  const warning = Promise.resolve(
-    src ? Internal.maybeWarnAboutRebaseOffWarm?.(src, destBase) : src,
+  const warning = await raceWithTimeout(
+    src ? Internal.maybeWarnAboutRebaseOffWarm?.(src, destBase) : false,
+    'RebaseOffWarm',
   );
-  if (await warning) {
+
+  if (warning) {
     const buttons = [
       t('Opt Out of Future Warnings'),
       {label: t('Cancel'), primary: true},
@@ -814,11 +835,12 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<Warni
     return Promise.resolve(WarningCheckResult.PASS);
   }
 
-  const warning = Promise.resolve(
+  const warning = await raceWithTimeout(
     src ? Internal.maybeWarnAboutRebaseOntoMaster?.(src, destBase) : false,
+    'RebaseOntoMaster',
   );
 
-  if (await warning) {
+  if (warning) {
     const buttons = [
       t('Opt Out of Future Warnings'),
       {label: t('Cancel'), primary: true},
@@ -939,11 +961,13 @@ async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<WarningC
     // can't determine if we can show warning
     return Promise.resolve(WarningCheckResult.PASS);
   }
-  const warning = Promise.resolve(
+
+  const warning = await raceWithTimeout(
     Internal.maybeWarnAboutDistantRebase?.(currentBase, destBase) ?? false,
+    'DistantRebase',
   );
 
-  if (await warning) {
+  if (warning) {
     const buttons = [
       t('Opt Out of Future Warnings'),
       {label: t('Cancel'), primary: true},

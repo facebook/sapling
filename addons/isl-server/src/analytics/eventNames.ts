@@ -110,6 +110,7 @@ export type TrackEventName =
   | 'PullOperation'
   | 'PullRevOperation'
   | 'PurgeOperation'
+  | 'RebaseWarningTimeout'
   | 'RebaseKeepOperation'
   | 'RebaseAllDraftCommitsOperation'
   | 'RebaseOperation'
