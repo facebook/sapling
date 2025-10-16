@@ -168,7 +168,13 @@ adir/file
         lines = self._read_file_from_repo(
             self._get_relative_filter_config_path()
         ).splitlines()
-        return {line.removeprefix("%include ") for line in lines}
+        # Filter out lines that start with "#" (comments), accounting for leading whitespace
+        filtered_lines = [
+            line
+            for line in lines
+            if not (line.lstrip().startswith("#") or not line.strip())
+        ]
+        return {line.removeprefix("%include ") for line in filtered_lines}
 
     def read_active_filters(self) -> Optional[Set[str]]:
         # Empty filter files are valid
@@ -392,7 +398,6 @@ class FilteredFSBasic(FilteredFSBase):
         )
         self.assert_unresolved(unresolved=["foo"])
         self.assert_status({"foo": "M"}, op="rebase")
-        print(self.read_file("foo"))
         self.assert_file_regex(
             "foo",
             """\
