@@ -93,6 +93,9 @@ baz
         repo.write_file("filtered", "I should be filtered by filter2")
         self.initial_commit = repo.commit("Initial commit.")
 
+    def _get_relative_filter_config_path(self) -> str:
+        return os.path.join(".hg", "sparse")
+
     def eden_clone_filteredhg_repo(
         self,
         backing_store: Optional[str] = None,
@@ -252,6 +255,49 @@ baz
             backing_store="filteredhg", filter_paths=["tools/scm/filter/filter2"]
         )
         self.assert_paths_filtered_unfiltered(repo_path, ["filtered"], ["foo", "bar"])
+
+    def test_filter_file_contains_warning_eden_clone(self) -> None:
+        repo_path = self.eden_clone_filteredhg_repo(
+            backing_store="filteredhg", filter_paths=["tools/scm/filter/filter2"]
+        )
+
+        filter_warning = self.hg("config", "sparse.filter-warning", cwd=str(repo_path))
+        self.assertNotEqual(filter_warning, "")
+        filter_file = repo_path / self._get_relative_filter_config_path()
+
+        # FIXME: The filter warning should be written at clone time
+        with open(filter_file, "r") as f:
+            filter_config = f.read()
+            self.assertNotIn(
+                filter_warning,
+                filter_config,
+            )
+            self.assertIn(
+                "%include tools/scm/filter/filter2",
+                filter_config,
+            )
+
+    def test_filter_file_contains_warning_hg_clone(self) -> None:
+        repo = self.hg_clone_filteredhg_repo(
+            repo_name="ffs", filter_paths=[(None, "tools/scm/filter/filter2")]
+        )
+        repo_path = Path(repo.path)
+
+        filter_warning = self.hg("config", "sparse.filter-warning", cwd=str(repo_path))
+        self.assertNotEqual(filter_warning, "")
+        filter_file = repo_path / self._get_relative_filter_config_path()
+
+        # FIXME: The filter warning should be written at clone time
+        with open(filter_file, "r") as f:
+            filter_config = f.read()
+            self.assertNotIn(
+                filter_warning,
+                filter_config,
+            )
+            self.assertIn(
+                "%include tools/scm/filter/filter2",
+                filter_config,
+            )
 
     def test_clone_filter_without_backing_store_arg_fails(self) -> None:
         with self.assertRaises(subprocess.CalledProcessError) as context:

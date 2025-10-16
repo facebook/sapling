@@ -496,6 +496,13 @@ class FilteredHgTestCase(EdenHgTestCase, metaclass=abc.ABCMeta):
         hgrc["experimental"]["filter-version"] = "V1"
         hgrc["experimental"]["use-filter-storage"] = "True"
 
+        # Add configs that insert warnings into .hg/sparse
+        if not hgrc.has_section("sparse"):
+            hgrc.add_section("sparse")
+        hgrc["sparse"]["filter-warning"] = (
+            "# WARNING: DO NOT MODIFY THIS FILE\n  # THIS IS OWNED BY SAPLING"
+        )
+
 
 class JournalEntry:
     """
