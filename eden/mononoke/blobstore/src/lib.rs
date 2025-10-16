@@ -588,16 +588,9 @@ pub struct BlobstoreKeyRange {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub enum BlobstoreKeyToken {
-    // For fileblob and manifold
-    StringToken(String),
-    // its an enum as other stores might have non-string tokens
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum BlobstoreKeyParam {
     Start(BlobstoreKeyRange),
-    Continuation(BlobstoreKeyToken),
+    Continuation(String),
 }
 
 impl From<RangeInclusive<String>> for BlobstoreKeyParam {
