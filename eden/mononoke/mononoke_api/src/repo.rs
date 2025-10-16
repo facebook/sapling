@@ -583,15 +583,19 @@ fn report_bookmark_staleness(
     repo: &impl RepoIdentityRef,
     bookmark: &BookmarkKey,
     staleness: i64,
+    blobrepo_bcs_id: ChangesetId,
+    service_bcs_id: ChangesetId,
 ) {
-    // Don't log if staleness is 0 to make output less spammy
-    if staleness > 0 {
+    // Don't log if staleness is less than 10 to make output less spammy
+    if staleness >= 10 {
         debug!(
             ctx.logger(),
-            "Reporting staleness of {} in repo {} to be {}s",
+            "Reporting staleness of {} in repo {} to be {}s: latest value is {}, cache points to {}",
             bookmark,
             repo.repo_identity().id(),
-            staleness
+            staleness,
+            blobrepo_bcs_id,
+            service_bcs_id,
         );
     }
 
@@ -648,18 +652,6 @@ async fn report_bookmark_age_difference(
         // This way of reporting shows for how long the oldest commit not in cache hasn't been
         // imported, and it should work correctly both for high and low commit rates.
 
-        // Do not log if there's no lag to make output less spammy
-        if blobrepo_bcs_id != service_bcs_id {
-            debug!(
-                ctx.logger(),
-                "Reporting bookmark age difference for {}: latest {} value is {}, cache points to {}",
-                repo.repo_identity().id(),
-                bookmark,
-                blobrepo_bcs_id,
-                service_bcs_id,
-            );
-        }
-
         let difference = if blobrepo_bcs_id == service_bcs_id {
             0
         } else {
@@ -685,7 +677,14 @@ async fn report_bookmark_age_difference(
             let current_timestamp = current_timestamp.as_secs() as i64;
             current_timestamp - compare_timestamp
         };
-        report_bookmark_staleness(ctx, repo, bookmark, difference);
+        report_bookmark_staleness(
+            ctx,
+            repo,
+            bookmark,
+            difference,
+            blobrepo_bcs_id,
+            service_bcs_id,
+        );
     }
 
     Ok(())
