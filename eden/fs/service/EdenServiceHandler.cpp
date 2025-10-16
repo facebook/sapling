@@ -184,15 +184,9 @@ std::string resolveRootId(
     const RootIdOptions& rootIdOptions,
     const EdenMountHandle& mount) {
   if (mountIsUsingFilteredFS(mount)) {
-    // Prefer using fid field as we deprecate filterId field which can only
-    // contain valid UTF-8 bytes
     if (rootIdOptions.fid()) {
       return FilteredBackingStore::createFilteredRootId(
           rootId, *rootIdOptions.fid());
-    } else if (rootIdOptions.filterId()) {
-      // TODO(T238835643): deprecate filterId field
-      return FilteredBackingStore::createFilteredRootId(
-          rootId, *rootIdOptions.filterId());
     } else {
       return FilteredBackingStore::createNullFilteredRootId(rootId);
     }
@@ -212,8 +206,6 @@ std::string resolveRootIdWithLastFilter(
   auto filterId =
       handle.getEdenMount().getCheckoutConfig()->getLastActiveFilter();
   RootIdOptions rootIdOptions{};
-  // TODO(T238835643): deprecate filterId field
-  rootIdOptions.filterId().from_optional(filterId);
   rootIdOptions.fid().from_optional(std::move(filterId));
   return resolveRootId(std::move(rootId), rootIdOptions, handle);
 }
@@ -918,10 +910,7 @@ EdenServiceHandler::semifuture_checkOutRevision(
       params->hgRootManifest().has_value() ? logHash(*params->hgRootManifest())
                                            : "(unspecified hg root manifest)",
       rootIdOptions.fid().has_value() ? *rootIdOptions.fid()
-                                      : "no fid provided",
-      // TODO(T238835643): deprecate filterId field
-      rootIdOptions.filterId().has_value() ? *rootIdOptions.filterId()
-                                           : "no filter id provided");
+                                      : "no fid provided");
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri());
   auto& fetchContext = helper->getFetchContext();
 
@@ -964,10 +953,7 @@ EdenServiceHandler::semifuture_resetParentCommits(
       params->hgRootManifest().has_value() ? logHash(*params->hgRootManifest())
                                            : "(unspecified hg root manifest)",
       rootIdOptions.fid().has_value() ? *rootIdOptions.fid()
-                                      : "no fid provided",
-      // TODO(T238835643): deprecate filterId field
-      rootIdOptions.filterId().has_value() ? *rootIdOptions.filterId()
-                                           : "no filter provided");
+                                      : "no fid provided");
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri());
 
   auto mountHandle = lookupMount(mountPoint);
@@ -1013,9 +999,7 @@ void EdenServiceHandler::getCurrentSnapshotInfo(
       mountHandle.getEdenMount().getCheckoutConfig()->getLastActiveFilter();
 
   if (filterId.has_value()) {
-    out.fid() = filterId.value();
-    // TODO(T238835643): deprecate filterId field
-    out.filterId() = std::move(filterId.value());
+    out.fid() = std::move(filterId.value());
   }
 }
 
@@ -4605,12 +4589,7 @@ EdenServiceHandler::semifuture_getScmStatusV2(
       folly::to<string>("listIgnored=", *params->listIgnored()),
       folly::to<string>(
           "fid=",
-          rootIdOptions.fid().has_value() ? *rootIdOptions.fid() : "(none)"),
-      // TODO(T238835643): deprecate filterId field
-      folly::to<string>(
-          "filterId=",
-          rootIdOptions.filterId().has_value() ? *rootIdOptions.filterId()
-                                               : "(none)"));
+          rootIdOptions.fid().has_value() ? *rootIdOptions.fid() : "(none)"));
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri());
 
   auto& fetchContext = helper->getFetchContext();

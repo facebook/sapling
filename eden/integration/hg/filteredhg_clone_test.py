@@ -357,7 +357,6 @@ baz
                     mountId=MountId(mountPoint=os.fsencode(path))
                 )
             )
-            self.assertEqual("null", result.filterId)
             self.assertEqual(b"null", result.fid)
 
     async def test_eden_get_filter(self) -> None:
@@ -407,5 +406,4 @@ class NonFilteredTestCase(EdenHgTestCase):
                     mountId=MountId(mountPoint=os.fsencode(path))
                 )
             )
-            self.assertIsNone(result.filterId)
             self.assertIsNone(result.fid)
