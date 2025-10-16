@@ -1139,7 +1139,14 @@ macro_rules! impl_thrift_methods {
                     let watchdog_max_poll = self.0.watchdog_max_poll;
                     let (ctx, session_uuid, repo_name) = create_ctx!(svc, $method_name, req_ctxt, $( $param_name ),*).await?;
                     let handler = {
-                        cloned!(ctx);
+                        cloned!(ctx, repo_name);
+                        let span = tracing::info_span!("scs method", repo = tracing::field::Empty, client_correlator = tracing::field::Empty);
+                        if let Some(repo_name) = &repo_name {
+                            span.record("repo", repo_name);
+                        }
+                        if let Some(client_correlator) = ctx.client_correlator() {
+                            span.record("client_correlator", client_correlator);
+                        }
                         async move {
                             let start_mem_stats = log_start(&ctx, stringify!($method_name));
                             STATS::total_request_start.add_value(1);
@@ -1157,6 +1164,7 @@ macro_rules! impl_thrift_methods {
                             log_result(ctx, "Request complete", SCSRequestType::Normal, SCSRequestEvent::Complete, stringify!($method_name), repo_name, &stats, &res, start_mem_stats.as_ref());
                             res.map_err(Into::into)
                         }
+                        .instrument(span)
                     };
 
                     if let Some(factory_group) = &self.0.factory_group {
@@ -1193,9 +1201,12 @@ macro_rules! impl_thrift_stream_methods {
                     let (ctx, session_uuid, repo_name) = create_ctx!(svc, $method_name, req_ctxt, $( $param_name ),*).await?;
                     let handler = {
                         cloned!(ctx, repo_name);
-                        let span = tracing::info_span!("scs method", repo = tracing::field::Empty, method = %stringify!($method_name));
+                        let span = tracing::info_span!("scs method", repo = tracing::field::Empty, client_correlator = tracing::field::Empty);
                         if let Some(repo_name) = &repo_name {
                             span.record("repo", repo_name);
+                        }
+                        if let Some(client_correlator) = ctx.client_correlator() {
+                            span.record("client_correlator", client_correlator);
                         }
                         async move {
                             let start_mem_stats = log_start(&ctx, stringify!($method_name));
