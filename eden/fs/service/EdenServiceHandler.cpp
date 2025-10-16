@@ -339,7 +339,9 @@ class ThriftRequestScope {
       EdenStatsPtr edenStats,
       ThriftStats::DurationPtr statPtr,
       OptionalProcessId pid,
-      JoinFn&& join)
+      JoinFn&& join,
+      std::shared_ptr<EdenServiceHandler> serviceHandler,
+      bool enableCancellation = false)
       : traceBus_{std::move(traceBus)},
         requestId_(generateUniqueID()),
         sourceLocation_{sourceLocation},
@@ -352,7 +354,18 @@ class ThriftRequestScope {
             sourceLocation_.function_name())},
         prefetchFetchContext_{makeRefPtr<PrefetchFetchContext>(
             pid,
-            sourceLocation_.function_name())} {
+            sourceLocation_.function_name())},
+        handler_(serviceHandler) {
+    if (auto handler = handler_.lock()) {
+      if (enableCancellation) {
+        folly::CancellationSource cancellationSource;
+        handler->insertCancellationSource(
+            requestId_, std::move(cancellationSource));
+      } else {
+        handler->insertUncancelableRequest(requestId_);
+      }
+    }
+
     FB_LOG_RAW(
         itcLogger_,
         level,
@@ -367,6 +380,10 @@ class ThriftRequestScope {
   }
 
   ~ThriftRequestScope() {
+    if (auto handler = handler_.lock()) {
+      handler->removeCancellationSource(requestId_);
+    }
+
     // Logging completion time for the request
     // The line number points to where the object was originally created
     auto elapsed = itcTimer_.elapsed();
@@ -428,6 +445,9 @@ class ThriftRequestScope {
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
   RefPtr<ThriftFetchContext> thriftFetchContext_;
   RefPtr<PrefetchFetchContext> prefetchFetchContext_;
+
+  // allow EdenServiceHandler destruction for in-flight thrift requests
+  std::weak_ptr<EdenServiceHandler> handler_;
 };
 
 template <typename ReturnType>
@@ -653,7 +673,9 @@ bool checkAllowedQuery(
 
 // When not attached to Future it will log the completion of the operation and
 // time taken to complete it.
-#define INSTRUMENT_THRIFT_CALL(level, ...)                    \
+
+#define INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(             \
+    level, enableCancellation, ...)                           \
   ([&](SourceLocation loc) {                                  \
     static folly::Logger logger(                              \
         fmt::format("eden.thrift.{}", loc.function_name()));  \
@@ -668,10 +690,13 @@ bool checkAllowedQuery(
         [&] {                                                 \
           return fmt::to_string(                              \
               fmt::join(std::make_tuple(__VA_ARGS__), ", ")); \
-        });                                                   \
+        },                                                    \
+        this->shared_from_this(),                             \
+        enableCancellation);                                  \
   }(EDEN_CURRENT_SOURCE_LOCATION))
 
-#define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...)    \
+#define INSTRUMENT_THRIFT_CALL_WITH_STAT_AND_CANCELLATION(    \
+    level, stat, enableCancellation, ...)                     \
   ([&](SourceLocation loc) {                                  \
     static folly::Logger logger(                              \
         fmt::format("eden.thrift.{}", loc.function_name()));  \
@@ -686,8 +711,20 @@ bool checkAllowedQuery(
         [&] {                                                 \
           return fmt::to_string(                              \
               fmt::join(std::make_tuple(__VA_ARGS__), ", ")); \
-        });                                                   \
+        },                                                    \
+        this->shared_from_this(),                             \
+        enableCancellation);                                  \
   }(EDEN_CURRENT_SOURCE_LOCATION))
+
+// Backward compatibility: INSTRUMENT_THRIFT_CALL defaults to uncancelable
+#define INSTRUMENT_THRIFT_CALL(level, ...) \
+  INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(level, false, __VA_ARGS__)
+
+// Backward compatibility: INSTRUMENT_THRIFT_CALL_WITH_STAT defaults to
+// uncancelable
+#define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...) \
+  INSTRUMENT_THRIFT_CALL_WITH_STAT_AND_CANCELLATION(       \
+      level, stat, false, __VA_ARGS__)
 
 ThriftRequestTraceEvent ThriftRequestTraceEvent::start(
     uint64_t requestId,
