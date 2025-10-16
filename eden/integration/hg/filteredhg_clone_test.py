@@ -329,7 +329,7 @@ baz
         self.hg("filteredfs", "switch", "filter0", cwd=str(repo_path))
         with open(filter_file, "r") as f:
             filter_config = f.read()
-            self.assertNotIn(
+            self.assertIn(
                 filter_warning,
                 filter_config,
             )

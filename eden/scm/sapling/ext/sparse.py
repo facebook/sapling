@@ -975,6 +975,9 @@ class SparseMixin:
                 "\n".join(sorted(include)),
                 "\n".join(sorted(exclude)),
             )
+        filter_warning = self.ui.config("sparse", "filter-warning")
+        if filter_warning is not None and raw != "":
+            raw = f"{filter_warning}\n\n{raw}"
         self.localvfs.writeutf8("sparse", raw)
         self.invalidatesparsecache()
 
