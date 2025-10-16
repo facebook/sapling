@@ -254,7 +254,11 @@ macro_rules! define_handler {
     ($name:ident, $func:path, [$($flavour:ident),*]) => {
         fn $name(mut state: State) -> Pin<Box<HandlerFuture>> {
             let request_id = state.short_request_id();
-            let span = tracing::info_span!("slapi handler", method = %stringify!($name), %request_id);
+            let span = tracing::info_span!("slapi handler", method = %stringify!($name), %request_id, client_correlator = tracing::field::Empty);
+            let rctx = RequestContext::borrow_from(&state);
+            if let Some(client_correlator) = rctx.ctx.client_correlator() {
+                span.record("client_correlator", client_correlator);
+            }
             async move {
 
                 let slapi_flavour = SlapiCommitIdentityScheme::borrow_from(&state).clone();
@@ -327,7 +331,11 @@ where
     <Handler as SaplingRemoteApiHandler>::Request: std::fmt::Debug,
 {
     let request_id = state.short_request_id();
-    let span = tracing::info_span!("slapi handler", method = %Handler::API_METHOD, %request_id);
+    let span = tracing::info_span!("slapi handler", method = %Handler::API_METHOD, %request_id, client_correlator = tracing::field::Empty);
+    let rctx = RequestContext::borrow_from(&state);
+    if let Some(client_correlator) = rctx.ctx.client_correlator() {
+        span.record("client_correlator", client_correlator);
+    }
 
     let (future_stats, res) = async {
         let path = Handler::PathExtractor::take_from(&mut state);
