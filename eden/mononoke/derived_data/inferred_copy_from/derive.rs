@@ -367,13 +367,16 @@ async fn find_basename_matched_copies(
 
                 basenames.insert(path.basename().to_string());
                 // Restrict search to any of the touched N-level directory
-                if let Some(path_prefix) = path.take_prefix_components(dir_lookup_level)? {
+                if path.num_components() > dir_lookup_level
+                    && let Some(path_prefix) = path.take_prefix_components(dir_lookup_level)?
+                {
                     path_prefixes.insert(MPath::from(path_prefix));
                 }
             }
         }
     }
-    if basenames.is_empty() {
+    // Don't attempt to search if we can't restrict it to any directories
+    if basenames.is_empty() || path_prefixes.is_empty() {
         return Ok((vec![], HashMap::new()));
     }
 
