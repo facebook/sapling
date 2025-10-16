@@ -303,6 +303,41 @@ baz
                 filter_config,
             )
 
+    def test_filter_warning_remains_after_switch(self) -> None:
+        repo = self.hg_clone_filteredhg_repo(
+            repo_name="ffs", filter_paths=[(None, "tools/scm/filter/filter2")]
+        )
+        repo_path = Path(repo.path)
+
+        filter_warning = parse_config_output(
+            self.hg("config", "sparse.filter-warning", "-Tjson", cwd=str(repo_path))
+        )
+        self.assertNotEqual(filter_warning, "")
+        filter_file = repo_path / self._get_relative_filter_config_path()
+
+        with open(filter_file, "r") as f:
+            filter_config = f.read()
+            self.assertIn(
+                filter_warning,
+                filter_config,
+            )
+            self.assertIn(
+                "%include tools/scm/filter/filter2",
+                filter_config,
+            )
+
+        self.hg("filteredfs", "switch", "filter0", cwd=str(repo_path))
+        with open(filter_file, "r") as f:
+            filter_config = f.read()
+            self.assertNotIn(
+                filter_warning,
+                filter_config,
+            )
+            self.assertIn(
+                "%include filter0",
+                filter_config,
+            )
+
     def test_clone_filter_without_backing_store_arg_fails(self) -> None:
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.eden_clone_filteredhg_repo(filter_paths=["tools/scm/filter/filter1"])
