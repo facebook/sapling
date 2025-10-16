@@ -278,6 +278,7 @@ function SubmoduleSelectorGroup({
             }
           }}
           hideRightBorder={i < numRoots - 1 || submodulesToBeSelected != undefined}
+          root={prevRoot}
           key={prevRoot}
         />,
       );
@@ -294,7 +295,8 @@ function SubmoduleSelectorGroup({
           }
         }}
         hideRightBorder={false}
-        key={repoRoots[numRoots - 1]}
+        root={directRepoRoot}
+        key={directRepoRoot}
       />,
     );
   }
@@ -431,11 +433,13 @@ function SubmoduleSelector<T extends {label: ReactNode; id: string}>({
   options,
   selected,
   onChangeSelected,
+  root,
   hideRightBorder = true,
 }: {
   options: ReadonlyArray<T>;
   selected?: T;
   onChangeSelected: (newSelected: T) => unknown;
+  root: AbsolutePath;
   hideRightBorder?: boolean;
 }) {
   const selectedValue = options.find(opt => opt.id === selected?.id)?.id;
@@ -444,7 +448,7 @@ function SubmoduleSelector<T extends {label: ReactNode; id: string}>({
     <Tooltip
       trigger="hover"
       placement="bottom"
-      component={() => <SubmoduleHint path={selectedValue} />}>
+      component={() => <SubmoduleHint path={selectedValue} root={root} />}>
       <Icon
         icon="chevron-right"
         {...stylex.props(
@@ -482,6 +486,6 @@ function SubmoduleSelector<T extends {label: ReactNode; id: string}>({
   );
 }
 
-function SubmoduleHint({path}: {path: string | undefined}) {
-  return <T>{path ? `Submodule at: ${path}` : 'Select a submodule'}</T>;
+function SubmoduleHint({path, root}: {path: RepoRelativePath | undefined; root: AbsolutePath}) {
+  return <T>{path ? `Submodule at: ${path}` : `Select a submodule under: ${root}`}</T>;
 }
