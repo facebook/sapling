@@ -163,7 +163,9 @@ impl MononokeScubaSampleBuilder {
             ExperimentJKData {
                 jk_name: "scm/mononoke:read_bookmarks_from_xdb_replica",
                 switch_values: vec![],
-                consistent_hashing: Some(client_info.correlator.as_str()),
+                // Using the client main id as the consistent hash to measure the impact
+                // on USC.
+                consistent_hashing: client_info.main_id.as_deref(),
             },
             ExperimentJKData {
                 jk_name: "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",

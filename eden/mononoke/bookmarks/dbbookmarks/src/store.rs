@@ -526,16 +526,19 @@ impl SqlBookmarks {
     ) -> impl Future<Output = Result<Option<(ChangesetId, Option<u64>)>>> + 'static + use<> {
         STATS::get_bookmark.add_value(1);
 
-        let client_correlator = ctx
+        let client_main_id = ctx
             .metadata()
             .client_info()
-            .and_then(|ci| ci.request_info.as_ref().map(|cri| cri.correlator.as_str()));
+            .and_then(|ci| ci.request_info.as_ref())
+            .and_then(|cri| cri.main_id.as_deref());
 
         // Callsites that don't require the most recent bookmark value should
         // read from a replica. More context on D81212709.
         let read_from_replica = justknobs::eval(
             "scm/mononoke:read_bookmarks_from_xdb_replica",
-            client_correlator,
+            // Using the client main id as the consistent hash to measure the impact
+            // on USC.
+            client_main_id,
             None,
         )
         .unwrap_or(false);
