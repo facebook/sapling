@@ -1340,55 +1340,33 @@ pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsChe
     #[cfg(windows)]
     let path = strip_unc_prefix(path);
 
-    // Check if it is a mounted checkout
-    let (checkout_root, checkout_state_dir) = get_checkout_root_state(&path)?;
+    // Check if path is a mounted checkout
+    let (checkout_root, checkout_state_dir) = match get_checkout_root_state(&path)? {
+        (Some(checkout_root), Some(checkout_state_dir)) => (checkout_root, checkout_state_dir),
+        _ => {
+            // Find `checkout_path` that `path` is a sub path of
+            let all_checkouts = instance.get_configured_mounts_map()?;
+            if let Some((checkout_path, checkout_name)) = all_checkouts
+                .iter()
+                .find(|&(checkout_path, _)| path.starts_with(checkout_path))
+            {
+                let checkout_state_dir = instance.config_directory(checkout_name);
+                (checkout_path.into(), checkout_state_dir)
+            } else {
+                return Err(EdenFsError::Other(anyhow!(
+                    "Checkout path {} is not handled by EdenFS",
+                    path.display()
+                )));
+            }
+        }
+    };
 
-    if checkout_root.is_none() {
-        // Find `checkout_path` that `path` is a sub path of
-        let all_checkouts = instance.get_configured_mounts_map()?;
-        if let Some(item) = all_checkouts
-            .iter()
-            .find(|&(checkout_path, _)| path.starts_with(checkout_path))
-        {
-            let (checkout_path, checkout_name) = item;
-            let checkout_state_dir = instance.config_directory(checkout_name);
-            let config = CheckoutConfig::parse_config(&checkout_state_dir)?;
-            Ok(EdenFsCheckout::from_config(
-                PathBuf::from(checkout_path),
-                checkout_state_dir,
-                config,
-            ))
-        } else {
-            Err(EdenFsError::Other(anyhow!(
-                "Checkout path {} is not handled by EdenFS",
-                path.display()
-            )))
-        }
-    } else if checkout_state_dir.is_none() {
-        let all_checkouts = instance.get_configured_mounts_map()?;
-        let checkout_path = checkout_root.unwrap();
-        if let Some(checkout_name) = all_checkouts.get(&checkout_path) {
-            let checkout_state_dir = instance.config_directory(checkout_name);
-            let config = CheckoutConfig::parse_config(&checkout_state_dir)?;
-            Ok(EdenFsCheckout::from_config(
-                checkout_path,
-                checkout_state_dir,
-                config,
-            ))
-        } else {
-            Err(EdenFsError::Other(anyhow!(
-                "unknown checkout {}",
-                checkout_path.display()
-            )))
-        }
-    } else {
-        let config = CheckoutConfig::parse_config(checkout_state_dir.as_ref().unwrap())?;
-        Ok(EdenFsCheckout::from_config(
-            checkout_root.unwrap(),
-            checkout_state_dir.unwrap(),
-            config,
-        ))
-    }
+    let config = CheckoutConfig::parse_config(&checkout_state_dir)?;
+    Ok(EdenFsCheckout::from_config(
+        checkout_root,
+        checkout_state_dir,
+        config,
+    ))
 }
 
 #[cfg(test)]
