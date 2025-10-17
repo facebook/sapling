@@ -299,11 +299,6 @@ class EdenServiceHandler
   streamSelectedChangesSince(
       std::unique_ptr<StreamSelectedChangesSinceParams> params) override;
 
-  folly::SemiFuture<std::unique_ptr<ScmStatus>> semifuture_getScmStatus(
-      std::unique_ptr<std::string> mountPoint,
-      bool listIgnored,
-      std::unique_ptr<std::string> commitHash) override;
-
   folly::SemiFuture<std::unique_ptr<ScmStatus>>
   semifuture_getScmStatusBetweenRevisions(
       std::unique_ptr<std::string> mountPoint,

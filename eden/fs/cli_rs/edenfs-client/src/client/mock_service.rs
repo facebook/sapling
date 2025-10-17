@@ -268,13 +268,6 @@ mock! {
             params: &GetScmStatusParams,
         ) -> BoxFuture<'static, Result<GetScmStatusResult, GetScmStatusV2Error>>;
 
-        fn getScmStatus(
-            &self,
-            mount_point: &PathString,
-            list_ignored: bool,
-            commit: &ThriftRootId,
-        ) -> BoxFuture<'static, Result<ScmStatus, GetScmStatusError>>;
-
         fn getScmStatusBetweenRevisions(
             &self,
             mount_point: &PathString,

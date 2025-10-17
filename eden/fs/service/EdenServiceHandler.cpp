@@ -4626,45 +4626,6 @@ EdenServiceHandler::semifuture_getScmStatusV2(
       .semi();
 }
 
-folly::SemiFuture<std::unique_ptr<ScmStatus>>
-EdenServiceHandler::semifuture_getScmStatus(
-    unique_ptr<string> mountPoint,
-    bool listIgnored,
-    unique_ptr<string> commitHash) {
-  auto* context = getRequestContext();
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG2,
-      *mountPoint,
-      folly::to<string>("listIgnored=", listIgnored ? "true" : "false"),
-      folly::to<string>("commitHash=", logHash(*commitHash)));
-  auto& fetchContext = helper->getFetchContext();
-
-  // Unlike getScmStatusV2(), this older getScmStatus() call does not enforce
-  // that the caller specified the current commit.  In the future we might
-  // want to enforce that even for this call, if we confirm that all existing
-  // callers of this method can deal with the error.
-  auto mountHandle = lookupMount(mountPoint);
-
-  // parseRootId assumes that the passed in id will contain information
-  // about the active filter. This legacy code path does not respect filters,
-  // so the last active filter will always be passed in if it exists. For
-  // non-FFS repos, the last filterID will be std::nullopt.
-  std::string parsedCommit =
-      resolveRootIdWithLastFilter(std::move(*commitHash), mountHandle);
-  auto id = mountHandle.getObjectStore().parseRootId(parsedCommit);
-  return wrapImmediateFuture(
-             std::move(helper),
-             mountHandle.getEdenMount().diff(
-                 mountHandle.getRootInode(),
-                 id,
-                 context->getConnectionContext()->getCancellationToken(),
-                 fetchContext,
-                 listIgnored,
-                 /*enforceCurrentParent=*/false))
-      .ensure([mountHandle] {})
-      .semi();
-}
-
 folly::SemiFuture<unique_ptr<ScmStatus>>
 EdenServiceHandler::semifuture_getScmStatusBetweenRevisions(
     unique_ptr<string> mountPoint,
