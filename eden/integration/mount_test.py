@@ -23,6 +23,7 @@ from eden.fs.service.eden.thrift_types import (
     EdenError,
     EdenErrorType,
     FaultDefinition,
+    GetScmStatusParams,
     MountState,
     RemoveFaultArg,
     ResetParentCommitsParams,
@@ -189,8 +190,13 @@ class MountTest(testcase.EdenRepoTest):
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
         with self.assertRaisesRegex(EdenError, error_regex) as ctx:
-            await client.getScmStatus(
-                mountPoint=bytes(mount_path), listIgnored=False, commit=null_commit
+            await client.getScmStatusV2(
+                GetScmStatusParams(
+                    mountPoint=bytes(self.mount, encoding="utf-8"),
+                    commit=null_commit,
+                    listIgnored=False,
+                    rootIdOptions=None,
+                )
             )
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
