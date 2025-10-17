@@ -26,6 +26,7 @@ thrift_library(
 thrift_library(
     name = "commitsync",
     languages = [
+        "python",
         "rust",
         "py-deprecated",
     ],
