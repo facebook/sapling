@@ -26,7 +26,7 @@ import {atom, useAtom, useAtomValue} from 'jotai';
 import React, {useState} from 'react';
 import {firstLine, notEmpty} from 'shared/utils';
 import {spacing} from '../../components/theme/tokens.stylex';
-import {Bookmark} from './Bookmark';
+import {Bookmark, getBookmarkAddons} from './Bookmark';
 import {
   addManualStable,
   bookmarksDataStorage,
@@ -368,12 +368,14 @@ function BookmarksList({
             bookmarksData.useRecommendedBookmark &&
             recommendedBookmarksAvailable;
           const isRecommended = recommendedBookmarksGK && recommendedBookmarks.has(name);
-          const tooltip =
-            typeof bookmark === 'string'
-              ? isRecommended
-                ? Internal.RecommendedBookmarkInfo?.()
-                : undefined
-              : bookmark.info;
+          const tooltipOverride = typeof bookmark === 'string' ? undefined : bookmark.info;
+          const {icon, tooltip} = getBookmarkAddons(
+            name,
+            isRecommended,
+            recommendedBookmarksAvailable,
+            tooltipOverride,
+          );
+
           const disabled =
             kind === 'remote' &&
             enableRecommended &&
@@ -386,21 +388,15 @@ function BookmarksList({
               checked={!bookmarksData.hiddenRemoteBookmarks.includes(name)}
               disabled={disabled}
               onChange={checked => {
-                const shouldBeDeselected = !checked;
                 let hiddenRemoteBookmarks = bookmarksData.hiddenRemoteBookmarks;
-                if (shouldBeDeselected) {
+                if (!checked) {
                   hiddenRemoteBookmarks = [...hiddenRemoteBookmarks, name];
                 } else {
                   hiddenRemoteBookmarks = hiddenRemoteBookmarks.filter(b => b !== name);
                 }
                 setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
               }}>
-              <Bookmark
-                fullLength
-                key={name}
-                kind={kind}
-                tooltip={tooltip}
-                isRecommended={isRecommended}>
+              <Bookmark fullLength key={name} kind={kind} tooltip={tooltip} icon={icon}>
                 {name}
               </Bookmark>
               {extra}

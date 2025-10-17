@@ -20,7 +20,12 @@ import {useState} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
 import {spacing} from '../../components/theme/tokens.stylex';
 import {tracker} from './analytics';
-import {bookmarksDataStorage, recommendedBookmarksAtom} from './BookmarksData';
+import {
+  bookmarksDataStorage,
+  recommendedBookmarksAtom,
+  recommendedBookmarksAvailableAtom,
+  REMOTE_MASTER_BOOKMARK,
+} from './BookmarksData';
 import {Row} from './ComponentUtils';
 import {useFeatureFlagSync} from './featureFlags';
 import {T, t} from './i18n';
@@ -61,18 +66,33 @@ function logExposureOncePerSession(location: string) {
   logged.add(location);
 }
 
+export function getBookmarkAddons(
+  name: string,
+  showRecommendedIcon: boolean,
+  showWarningOnMaster: boolean,
+  tooltipOverride?: string,
+): {icon: string | undefined; tooltip: React.ReactNode | undefined} {
+  if (showWarningOnMaster && name === REMOTE_MASTER_BOOKMARK) {
+    return {icon: 'warning', tooltip: tooltipOverride ?? Internal.MasterBookmarkInfo?.()};
+  }
+  if (showRecommendedIcon) {
+    return {icon: 'star-full', tooltip: tooltipOverride ?? Internal.RecommendedBookmarkInfo?.()};
+  }
+  return {icon: undefined, tooltip: tooltipOverride};
+}
+
 export function Bookmark({
   children,
   kind,
   fullLength,
   tooltip,
-  isRecommended,
+  icon,
 }: {
   children: string;
   kind: BookmarkKind;
   fullLength?: boolean;
   tooltip?: string | React.ReactNode;
-  isRecommended?: boolean;
+  icon?: string;
 }) {
   const bookmark = children;
   const contextMenu = useContextMenu(makeBookmarkContextMenuOptions);
@@ -103,9 +123,7 @@ export function Bookmark({
         styles.bookmarkTag,
         fullLength === true && styles.fullLength,
       ]}>
-      {isRecommended && (
-        <Icon icon="star-full" size="XS" style={{display: 'flex', height: '12px'}} />
-      )}
+      {icon && <Icon icon={icon} size="XS" style={{display: 'flex', height: '12px'}} />}
       {bookmark}
     </Tag>
   );
@@ -124,6 +142,7 @@ export function AllBookmarksTruncated({
   const bookmarksData = useAtomValue(bookmarksDataStorage);
   const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
   const recommendedBookmarksGK = useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks);
+  const recommendedBookmarksAvailable = useAtomValue(recommendedBookmarksAvailableAtom);
 
   const finalBookmarks = (
     [
@@ -146,14 +165,15 @@ export function AllBookmarksTruncated({
             recommendedBookmarksGK &&
             (recommendedBookmarks.has(value) ||
               (typeof bookmark === 'object' && bookmark.isRecommended === true));
-          const tooltip =
-            typeof bookmark === 'string'
-              ? isRecommended
-                ? Internal.RecommendedBookmarkInfo?.()
-                : undefined
-              : bookmark.description;
+          const tooltipOverride = typeof bookmark === 'string' ? undefined : bookmark.description;
+          const {icon, tooltip} = getBookmarkAddons(
+            value,
+            isRecommended,
+            recommendedBookmarksAvailable,
+            tooltipOverride,
+          );
 
-          return {value, kind, tooltip, isRecommended};
+          return {value, kind, tooltip, icon};
         }),
     )
     .flat();
@@ -164,8 +184,8 @@ export function AllBookmarksTruncated({
 
   return (
     <>
-      {shownBookmarks.map(({value, kind, tooltip, isRecommended}) => (
-        <Bookmark key={value} kind={kind} tooltip={tooltip} isRecommended={isRecommended}>
+      {shownBookmarks.map(({value, kind, tooltip, icon}) => (
+        <Bookmark key={value} kind={kind} tooltip={tooltip} icon={icon}>
           {value}
         </Bookmark>
       ))}
@@ -173,13 +193,8 @@ export function AllBookmarksTruncated({
         <Tooltip
           component={() => (
             <Column alignStart>
-              {hiddenBookmarks.map(({value, kind, tooltip, isRecommended}) => (
-                <Bookmark
-                  key={value}
-                  kind={kind}
-                  tooltip={tooltip}
-                  isRecommended={isRecommended}
-                  fullLength>
+              {hiddenBookmarks.map(({value, kind, tooltip, icon}) => (
+                <Bookmark key={value} kind={kind} tooltip={tooltip} icon={icon} fullLength>
                   {value}
                 </Bookmark>
               ))}
