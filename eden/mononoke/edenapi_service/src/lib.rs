@@ -70,7 +70,10 @@ pub fn build<R: Send + Sync + Clone + 'static>(
     let log_middleware = if test_friendly_logging {
         LogMiddleware::test_friendly()
     } else {
-        LogMiddleware::slog(logger.clone())
+        LogMiddleware::slog(
+            logger.clone(),
+            "scm/mononoke:request_log_enabled".to_string(),
+        )
     };
 
     // Set up the router and handler for serving HTTP requests, along with custom middleware.

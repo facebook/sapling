@@ -12,6 +12,7 @@ use std::time::Duration;
 
 use gotham::state::FromState;
 use gotham::state::State;
+use http::HeaderMap;
 use hyper::Body;
 use hyper::Method;
 use hyper::Response;
@@ -31,12 +32,13 @@ use crate::state_ext::StateExt;
 
 const DIRECTION_REQUEST_IN: &str = "IN  >";
 const DIRECTION_RESPONSE_OUT: &str = "OUT <";
+const TRACE_HEADER: &str = "x-log-middleware-trace";
 
 // We have to turn out formats into macros to avoid duplicating them:
 
 macro_rules! SLOG_FORMAT {
     () => {
-        "{} {} {} {} \"{} {} {:?}\" {} {} {} {}"
+        "{} {} {} {} \"{} {} {:?}\" {} {} {} {} {}"
     };
 }
 
@@ -71,7 +73,7 @@ impl Display for DurationForDisplay {
 #[derive(Clone)]
 pub enum LogMiddleware {
     TestFriendly,
-    Slog(Logger),
+    Slog { logger: Logger, jk_name: String },
 }
 
 enum LogEntry {
@@ -84,13 +86,18 @@ impl LogMiddleware {
         Self::TestFriendly
     }
 
-    pub fn slog(logger: Logger) -> Self {
-        Self::Slog(logger)
+    pub fn slog(logger: Logger, jk_name: String) -> Self {
+        Self::Slog { logger, jk_name }
     }
 }
 
-fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Option<()> {
-    if !justknobs::eval("scm/mononoke:request_log_enabled", None, None).unwrap_or(false) {
+fn log_request_slog(
+    logger: &Logger,
+    state: &mut State,
+    entry: LogEntry,
+    jk_name: &str,
+) -> Option<()> {
+    if !justknobs::eval(jk_name, None, None).unwrap_or(false) {
         return None;
     }
 
@@ -107,16 +114,28 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
     let method = Method::borrow_from(state).clone();
     let version = *Version::borrow_from(state);
     let request_id = state.short_request_id().to_string();
-    let address = MetadataState::try_borrow_from(state)
-        .and_then(|metadata| metadata.metadata().client_ip())
-        .map(|addr| addr.to_string());
-    let client_port = MetadataState::try_borrow_from(state)
-        .and_then(|metadata| metadata.metadata().client_port())
-        .map(|port| port.to_string());
+
+    let (address, client_port) = if let Some(metadata) = MetadataState::try_borrow_from(state) {
+        (
+            metadata.metadata().client_ip().map(|x| x.to_string()),
+            metadata.metadata().client_port().map(|x| x.to_string()),
+        )
+    } else if let Some(sockaddr) = gotham::state::client_addr(state) {
+        (
+            Some(sockaddr.ip().to_string()),
+            Some(sockaddr.port().to_string()),
+        )
+    } else {
+        (None, None)
+    };
+
+    let trace_token = HeaderMap::try_borrow_from(state)
+        .and_then(|x| x.get(TRACE_HEADER))
+        .and_then(|x| x.to_str().ok())
+        .map(|x| x.get(..20).unwrap_or(x).to_string());
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
     let logger = logger.new(o!("request_id" => request_id));
-
     match entry {
         LogEntry::RequestIn => {
             info!(
@@ -133,6 +152,7 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
                 "-",
                 "-",
                 load,
+                trace_token.as_ref().map_or("-", String::as_ref),
             );
         }
         LogEntry::ResponseOut(status) => {
@@ -151,6 +171,7 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
                     info.meta.as_ref().map_or(0, |m| m.body().bytes_sent),
                     DurationForDisplay::from(info.duration),
                     load,
+                    trace_token.as_ref().map_or("-", String::as_ref),
                 );
             });
         }
@@ -187,8 +208,8 @@ impl LogMiddleware {
             Self::TestFriendly => {
                 log_request_test_friendly(state, entry);
             }
-            Self::Slog(logger) => {
-                log_request_slog(logger, state, entry);
+            Self::Slog { logger, jk_name } => {
+                log_request_slog(logger, state, entry, jk_name);
             }
         }
     }
