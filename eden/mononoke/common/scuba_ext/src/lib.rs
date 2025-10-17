@@ -133,7 +133,7 @@ impl MononokeScubaSampleBuilder {
         self
     }
 
-    pub fn add_client_request_info(&mut self, client_info: &ClientRequestInfo) -> &mut Self {
+    pub fn add_client_request_info<'a>(&mut self, client_info: &'a ClientRequestInfo) -> &mut Self {
         self.inner
             .add_opt("client_main_id", client_info.main_id.as_deref());
         self.inner
@@ -141,37 +141,51 @@ impl MononokeScubaSampleBuilder {
         self.inner
             .add("client_correlator", client_info.correlator.as_str());
 
+        struct ExperimentJKData<'a> {
+            jk_name: &'static str,
+            switch_values: Vec<&'static str>,
+            consistent_hashing: Option<&'a str>,
+        }
+
         // Add all the JKs (with their switches) that are hashed consistently
         // against client correlator, so all Scuba logs can be split by
         // feature being enabled or disabled.
         // This generalizes what was done in D76728908 and D81212709.
-        let jk_and_switches: Vec<(&'static str, Vec<&'static str>)> = vec![
-            (
+        let jk_and_switches: Vec<ExperimentJKData> = vec![
+            ExperimentJKData {
                 // For context, see D76895703 or https://fburl.com/workplace/et4ezqp3.
                 // Check the JK that disables reads for all blobstore ids being used
                 // and log the ones that were disabled in this request.
-                "scm/mononoke:disable_blobstore_reads",
-                vec!["1", "2", "3", "4"],
-            ),
-            ("scm/mononoke:read_bookmarks_from_xdb_replica", vec![]),
-            (
-                "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",
-                vec![
+                jk_name: "scm/mononoke:disable_blobstore_reads",
+                switch_values: vec!["1", "2", "3", "4"],
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
+            ExperimentJKData {
+                jk_name: "scm/mononoke:read_bookmarks_from_xdb_replica",
+                switch_values: vec![],
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
+            ExperimentJKData {
+                jk_name: "scm/mononoke:use_maybe_stale_freshness_for_bookmarks",
+                switch_values: vec![
                     "mononoke_api::repo::git::get_bookmark_state",
                     "cache_warmup::do_cache_warmup",
                 ],
-            ),
-            (
-                "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary",
-                vec!["git"],
-            ),
-            (
-                "scm/mononoke:retry_query_from_replica_with_consistency_check",
-                vec!["newfilenodes::reader", "bonsai_hg_mapping"],
-            ),
-            (
-                "scm/mononoke:enabled_restricted_paths_access_logging",
-                vec![
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
+            ExperimentJKData {
+                jk_name: "scm/mononoke:disable_bonsai_mapping_read_fallback_to_primary",
+                switch_values: vec!["git"],
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
+            ExperimentJKData {
+                jk_name: "scm/mononoke:retry_query_from_replica_with_consistency_check",
+                switch_values: vec!["newfilenodes::reader", "bonsai_hg_mapping"],
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
+            ExperimentJKData {
+                jk_name: "scm/mononoke:enabled_restricted_paths_access_logging",
+                switch_values: vec![
                     "hg_manifest_write",
                     "hg_tree_context_new_check_exists",
                     "changeset_path_context_new",
@@ -179,34 +193,42 @@ impl MononokeScubaSampleBuilder {
                     "hg_augmented_manifest_write",
                     "hg_augmented_tree_context_new_check_exists",
                 ],
-            ),
-            ("scm/mononoke:rendezvous_bonsai_git_mapping", vec![]),
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
+            ExperimentJKData {
+                jk_name: "scm/mononoke:rendezvous_bonsai_git_mapping",
+                switch_values: vec![],
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
         ];
         let enabled_experiments_jk: Vec<String> = jk_and_switches
             .into_iter()
-            .flat_map(|(jk, opt_switches)| {
-                // Get the JK value for each switch
-                opt_switches
-                    .into_iter()
-                    .map(Some)
-                    // Also make sure you get the value without any switch
-                    .chain(vec![(None)])
-                    .filter_map(move |opt_switch| {
-                        let enabled = justknobs::eval(
-                            jk,
-                            Some(client_info.correlator.as_str()),
-                            opt_switch.clone(),
-                        )
-                        .unwrap_or(false);
-                        // If it's enabled, log either the JK name (no switch)
-                        // or `<JK>::<switch>`
-                        enabled.then(|| {
-                            opt_switch
-                                .map(|switch| format!("{jk}::{switch}"))
-                                .unwrap_or(jk.to_string())
+            .flat_map(
+                |ExperimentJKData {
+                     jk_name,
+                     switch_values,
+                     consistent_hashing,
+                 }| {
+                    // Get the JK value for each switch
+                    switch_values
+                        .into_iter()
+                        .map(Some)
+                        // Also make sure you get the value without any switch
+                        .chain(vec![(None)])
+                        .filter_map(move |opt_switch| {
+                            let enabled =
+                                justknobs::eval(jk_name, consistent_hashing, opt_switch.clone())
+                                    .unwrap_or(false);
+                            // If it's enabled, log either the JK name (no switch)
+                            // or `<JK>::<switch>`
+                            enabled.then(|| {
+                                opt_switch
+                                    .map(|switch| format!("{jk_name}::{switch}"))
+                                    .unwrap_or(jk_name.to_string())
+                            })
                         })
-                    })
-            })
+                },
+            )
             .collect();
 
         self.inner
