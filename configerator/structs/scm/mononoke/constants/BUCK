@@ -5,6 +5,7 @@ oncall("source_control")
 thrift_library(
     name = "constants",
     languages = [
+        "python",
         "rust",
         "py-deprecated",
     ],

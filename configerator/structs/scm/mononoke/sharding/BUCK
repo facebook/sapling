@@ -5,6 +5,7 @@ oncall("source_control")
 thrift_library(
     name = "sharding",
     languages = [
+        "python",
         "rust",
         "py-deprecated",
     ],
