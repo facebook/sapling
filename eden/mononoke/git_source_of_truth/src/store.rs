@@ -92,13 +92,33 @@ mononoke_queries! {
 
     write UpdateSourceOfTruthByRepoNames(
         source_of_truth: GitSourceOfTruth,
-        mutation_id: Option<i64>,
         >list repo_names: RepositoryName
     ) {
         none,
         "UPDATE git_repositories_source_of_truth
-         SET source_of_truth = {source_of_truth}, mutation_id = {mutation_id}
+         SET source_of_truth = {source_of_truth}
          WHERE repo_name IN {repo_names}"
+    }
+
+    write UpdateSourceOfTruthByMutationId(
+        source_of_truth: GitSourceOfTruth,
+        mutation_id: i64,
+    ) {
+        none,
+        "UPDATE git_repositories_source_of_truth
+         SET source_of_truth = {source_of_truth}
+         WHERE mutation_id = {mutation_id}"
+    }
+
+    write UpdateMutationIdByRepoNames(
+        source_of_truth: GitSourceOfTruth,
+        mutation_id: i64,
+        >list repo_names: RepositoryName
+    ) {
+        none,
+        "UPDATE git_repositories_source_of_truth
+         SET mutation_id = {mutation_id}
+         WHERE repo_name IN {repo_names} AND source_of_truth = {source_of_truth}"
     }
 
     write DeleteSourceOfTruthByRepoNames(
@@ -109,6 +129,16 @@ mononoke_queries! {
         "DELETE FROM git_repositories_source_of_truth
          WHERE source_of_truth = {source_of_truth}
          AND repo_name IN {repo_names}"
+    }
+
+    write DeleteSourceOfTruthByMutationId(
+        source_of_truth: GitSourceOfTruth,
+        mutation_id: &i64,
+    ) {
+        none,
+        "DELETE FROM git_repositories_source_of_truth
+         WHERE source_of_truth = {source_of_truth}
+         AND mutation_id = {mutation_id}"
     }
 
 }
@@ -211,12 +241,43 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
         ctx: &CoreContext,
         source_of_truth: GitSourceOfTruth,
         repo_names: &[RepositoryName],
-        mutation_id: Option<i64>,
     ) -> Result<()> {
         UpdateSourceOfTruthByRepoNames::query(
             &self.connections.write_connection,
             ctx.sql_query_telemetry(),
             &source_of_truth,
+            repo_names,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn update_source_of_truth_by_mutation_id(
+        &self,
+        ctx: &CoreContext,
+        source_of_truth: GitSourceOfTruth,
+        mutation_id: i64,
+    ) -> Result<()> {
+        UpdateSourceOfTruthByMutationId::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &source_of_truth,
+            &mutation_id,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn update_mutation_id_by_repo_names_for_reserved_repos(
+        &self,
+        ctx: &CoreContext,
+        repo_names: &[RepositoryName],
+        mutation_id: i64,
+    ) -> Result<()> {
+        UpdateMutationIdByRepoNames::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &GitSourceOfTruth::Reserved,
             &mutation_id,
             repo_names,
         )
@@ -234,6 +295,21 @@ impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {
             ctx.sql_query_telemetry(),
             &GitSourceOfTruth::Reserved,
             repo_names,
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn delete_source_of_truth_for_mutation_id(
+        &self,
+        ctx: &CoreContext,
+        mutation_id: &i64,
+    ) -> Result<()> {
+        DeleteSourceOfTruthByMutationId::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            &GitSourceOfTruth::Reserved,
+            &mutation_id,
         )
         .await?;
         Ok(())
@@ -557,7 +633,6 @@ mod test {
                 RepositoryName("test2".to_string()),
                 RepositoryName("test4".to_string()),
             ],
-            None,
         )
         .await?;
 
@@ -736,13 +811,16 @@ mod test {
         let entry = entry.unwrap();
         assert_eq!(entry.source_of_truth, GitSourceOfTruth::Reserved);
 
-        push.update_source_of_truth_by_repo_names(
+        let mutation_id = 123;
+        push.update_mutation_id_by_repo_names_for_reserved_repos(
             &ctx,
-            GitSourceOfTruth::Mononoke,
             &[RepositoryName("test1".to_string())],
-            Some(123),
+            mutation_id,
         )
         .await?;
+
+        push.update_source_of_truth_by_mutation_id(&ctx, GitSourceOfTruth::Mononoke, mutation_id)
+            .await?;
 
         let entry = push
             .get_by_repo_name(

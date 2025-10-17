@@ -54,13 +54,32 @@ pub trait GitSourceOfTruthConfig: Send + Sync {
         ctx: &CoreContext,
         source_of_truth: GitSourceOfTruth,
         repo_names: &[RepositoryName],
-        mutation_id: Option<i64>,
+    ) -> Result<()>;
+
+    async fn update_source_of_truth_by_mutation_id(
+        &self,
+        ctx: &CoreContext,
+        source_of_truth: GitSourceOfTruth,
+        mutation_id: i64,
+    ) -> Result<()>;
+
+    async fn update_mutation_id_by_repo_names_for_reserved_repos(
+        &self,
+        ctx: &CoreContext,
+        repo_names: &[RepositoryName],
+        mutation_id: i64,
     ) -> Result<()>;
 
     async fn delete_source_of_truth_by_repo_names_for_reserved_repos(
         &self,
         ctx: &CoreContext,
         repo_names: &[RepositoryName],
+    ) -> Result<()>;
+
+    async fn delete_source_of_truth_for_mutation_id(
+        &self,
+        ctx: &CoreContext,
+        mutation_id: &i64,
     ) -> Result<()>;
 
     async fn get_max_id(&self, ctx: &CoreContext) -> Result<Option<RepositoryId>>;
@@ -115,7 +134,24 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
         _ctx: &CoreContext,
         _source_of_truth: GitSourceOfTruth,
         _repo_names: &[RepositoryName],
-        _mutation_id: Option<i64>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    async fn update_source_of_truth_by_mutation_id(
+        &self,
+        _ctx: &CoreContext,
+        _source_of_truth: GitSourceOfTruth,
+        _mutation_id: i64,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    async fn update_mutation_id_by_repo_names_for_reserved_repos(
+        &self,
+        _ctx: &CoreContext,
+        _repo_names: &[RepositoryName],
+        _mutation_id: i64,
     ) -> Result<()> {
         Ok(())
     }
@@ -124,6 +160,14 @@ impl GitSourceOfTruthConfig for NoopGitSourceOfTruthConfig {
         &self,
         _ctx: &CoreContext,
         _repo_names: &[RepositoryName],
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    async fn delete_source_of_truth_for_mutation_id(
+        &self,
+        _ctx: &CoreContext,
+        _mutation_id: &i64,
     ) -> Result<()> {
         Ok(())
     }
@@ -236,12 +280,40 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
         _ctx: &CoreContext,
         source_of_truth: GitSourceOfTruth,
         repo_names: &[RepositoryName],
-        _mutation_id: Option<i64>,
     ) -> Result<()> {
         let mut map = self.entries.lock().expect("poisoned lock");
         for repo_name in repo_names {
             map.entry(repo_name.clone())
                 .and_modify(|entry| entry.source_of_truth = source_of_truth);
+        }
+        Ok(())
+    }
+
+    async fn update_source_of_truth_by_mutation_id(
+        &self,
+        _ctx: &CoreContext,
+        source_of_truth: GitSourceOfTruth,
+        mutation_id: i64,
+    ) -> Result<()> {
+        let mut map = self.entries.lock().expect("poisoned lock");
+        for entry in map.values_mut() {
+            if entry.mutation_id == Some(mutation_id) {
+                entry.source_of_truth = source_of_truth;
+            }
+        }
+        Ok(())
+    }
+
+    async fn update_mutation_id_by_repo_names_for_reserved_repos(
+        &self,
+        _ctx: &CoreContext,
+        repo_names: &[RepositoryName],
+        mutation_id: i64,
+    ) -> Result<()> {
+        let mut map = self.entries.lock().expect("poisoned lock");
+        for repo_name in repo_names {
+            map.entry(repo_name.clone())
+                .and_modify(|entry| entry.mutation_id = Some(mutation_id));
         }
         Ok(())
     }
@@ -257,6 +329,16 @@ impl GitSourceOfTruthConfig for TestGitSourceOfTruthConfig {
                 map.remove(repo_name);
             }
         }
+        Ok(())
+    }
+
+    async fn delete_source_of_truth_for_mutation_id(
+        &self,
+        _ctx: &CoreContext,
+        mutation_id: &i64,
+    ) -> Result<()> {
+        let mut map = self.entries.lock().expect("poisoned lock");
+        map.retain(|_, entry| entry.mutation_id != Some(*mutation_id));
         Ok(())
     }
 

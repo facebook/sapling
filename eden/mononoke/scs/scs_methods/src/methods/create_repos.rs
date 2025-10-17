@@ -21,6 +21,7 @@ use auth_consts::SERVICE_IDENTITY;
 use configo::ConfigoClient;
 use configo_thrift_srclients::make_ConfigoService_srclient;
 use configo_thrift_srclients::thrift::CryptoProject;
+use configo_thrift_srclients::thrift::MutationState;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures_retry::retry;
@@ -511,11 +512,11 @@ fn make_quick_repo_definition(
     })
 }
 
-async fn create_repo_configs_in_mononoke(
+async fn prepare_repo_configs_mutation_nowait(
     ctx: CoreContext,
     dry_run: bool,
     repos_ids_and_requests: Vec<(RepositoryId, thrift::RepoCreationRequest)>,
-) -> Result<Option<i64>, scs_errors::ServiceError> {
+) -> Result<i64, scs_errors::ServiceError> {
     let configo_client = ConfigoClient::with_client(
         ctx.fb,
         make_ConfigoService_srclient!(ctx.fb)
@@ -560,7 +561,7 @@ async fn create_repo_configs_in_mononoke(
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
 
     if dry_run {
-        return Ok(None);
+        return Ok(mutation.mutation_id);
     }
 
     let content = mutation
@@ -608,20 +609,30 @@ async fn create_repo_configs_in_mononoke(
         .land(LAND_TIMEOUT)
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-
-    Ok(Some(mutation_id))
+    Ok(mutation_id)
 }
 
-async fn update_source_of_truth_to_mononoke(
+async fn update_source_of_truth_to_mononoke_for_mutation_id(
+    ctx: CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    mutation_id: i64,
+) -> Result<(), scs_errors::ServiceError> {
+    git_source_of_truth_config
+        .update_source_of_truth_by_mutation_id(&ctx, GitSourceOfTruth::Mononoke, mutation_id)
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+    Ok(())
+}
+
+async fn update_mutation_id_by_repo_names_for_reserved_repos(
     ctx: CoreContext,
     git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
     params: &thrift::CreateReposParams,
-    mutation_id: Option<i64>,
+    mutation_id: i64,
 ) -> Result<(), scs_errors::ServiceError> {
     git_source_of_truth_config
-        .update_source_of_truth_by_repo_names(
+        .update_mutation_id_by_repo_names_for_reserved_repos(
             &ctx,
-            GitSourceOfTruth::Mononoke,
             &params
                 .repos
                 .iter()
@@ -648,6 +659,18 @@ async fn delete_source_of_truth_for_reserved_repos(
                 .map(|request| RepositoryName(request.repo_name.clone()))
                 .collect::<Vec<_>>(),
         )
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+    Ok(())
+}
+
+async fn delete_source_of_truth_for_mutation_id(
+    ctx: CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    mutation_id: i64,
+) -> Result<(), scs_errors::ServiceError> {
+    git_source_of_truth_config
+        .delete_source_of_truth_for_mutation_id(&ctx, &mutation_id)
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
     Ok(())
@@ -692,12 +715,13 @@ async fn create_repos_in_mononoke(
 
     // We have reserved the repo ids. Now it's time to actually create the repos, safe in the
     // knowledge that no-one will compete with us
-    match create_repo_configs_in_mononoke(ctx.clone(), params.dry_run, repo_ids_and_requests).await
+    match prepare_repo_configs_mutation_nowait(ctx.clone(), params.dry_run, repo_ids_and_requests)
+        .await
     {
         Ok(mutation_id) => {
             retry(
                 |_| {
-                    update_source_of_truth_to_mononoke(
+                    update_mutation_id_by_repo_names_for_reserved_repos(
                         ctx.clone(),
                         git_source_of_truth_config,
                         params,
@@ -709,7 +733,7 @@ async fn create_repos_in_mononoke(
             .binary_exponential_backoff()
             .max_attempts(5)
             .await?;
-            Ok(mutation_id)
+            Ok(Some(mutation_id))
         }
         Err(e) => {
             // We failed to land the mutation, so it is safe to "release the lock" on these repo
@@ -765,16 +789,116 @@ impl SourceControlServiceImpl {
     // This impl does nothing right now - but will do more in the near future.
     pub(crate) async fn create_repos_poll(
         &self,
-        _ctx: CoreContext,
-        _token: thrift::CreateReposToken,
+        ctx: CoreContext,
+        token: thrift::CreateReposToken,
     ) -> Result<thrift::CreateReposPollResponse, scs_errors::ServiceError> {
+        if token.mutation_id.is_none() {
+            return Err(scs_errors::invalid_request("mutation_id is not set".to_string()).into());
+        }
+
+        let mutation_id = token.mutation_id.unwrap();
+        let configo_client = make_ConfigoService_srclient!(ctx.fb)
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+        let resp = configo_client
+            .status(&mutation_id)
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+        if resp.error {
+            // We failed to land the mutation, so it is safe to "release the lock" on these repo
+            // ids and names, which will allow a future attempt to succeed.
+            self.cleanup_repos(ctx, mutation_id).await?;
+            return Err(scs_errors::internal_error(format!(
+                "Configo mutation error: {}",
+                resp.errorMessage
+            ))
+            .into());
+        }
+
+        let mutation = resp.mutation.ok_or_else(|| {
+            scs_errors::internal_error(format!("Mutation state not available for {mutation_id}"))
+        })?;
+
+        if mutation.stateInfo.isError {
+            self.cleanup_repos(ctx, token.mutation_id.unwrap()).await?;
+            return Err(scs_errors::internal_error(format!(
+                "Configo mutation error: {}",
+                mutation.stateInfo.errorMessage
+            ))
+            .into());
+        }
+
+        let status = match mutation.stateInfo.state {
+            MutationState::LANDED => {
+                retry(
+                    |_| {
+                        update_source_of_truth_to_mononoke_for_mutation_id(
+                            ctx.clone(),
+                            self.git_source_of_truth_config.as_ref(),
+                            mutation_id,
+                        )
+                    },
+                    Duration::from_millis(1_000),
+                )
+                .binary_exponential_backoff()
+                .max_attempts(5)
+                .await?;
+                Some(thrift::CreateReposStatus::SUCCESS)
+            }
+            MutationState::FAILED => {
+                self.cleanup_repos(ctx, mutation_id).await?;
+                Some(thrift::CreateReposStatus::FAILED)
+            }
+            MutationState::ABORTED => {
+                self.cleanup_repos(ctx, mutation_id).await?;
+                Some(thrift::CreateReposStatus::ABORTED)
+            }
+            MutationState::CANARYING
+            | MutationState::PREPARING
+            | MutationState::LANDING
+            | MutationState::SERVICE_CANARYING
+            | MutationState::VALIDATING
+            | MutationState::PREPARED => Some(thrift::CreateReposStatus::IN_PROGRESS),
+            _ => None,
+        };
+
+        if status.is_none() {
+            return Err(scs_errors::internal_error(format!(
+                "Unexpected Configo mutation state: {}",
+                mutation.stateInfo.state
+            ))
+            .into());
+        }
+        let message = Some(format!("Mutation state: {}", mutation.stateInfo.state));
         Ok(thrift::CreateReposPollResponse {
             result: Some(thrift::CreateReposResponse {
-                status: thrift::CreateReposStatus::SUCCESS,
-                message: None,
+                status: status.unwrap(),
+                message,
                 ..Default::default()
             }),
             ..Default::default()
         })
+    }
+
+    async fn cleanup_repos(
+        &self,
+        ctx: CoreContext,
+        mutation_id: i64,
+    ) -> Result<(), scs_errors::ServiceError> {
+        let (_result, _attempts) = retry(
+            |_| {
+                delete_source_of_truth_for_mutation_id(
+                    ctx.clone(),
+                    self.git_source_of_truth_config.as_ref(),
+                    mutation_id,
+                )
+            },
+            Duration::from_millis(1_000),
+        )
+        .binary_exponential_backoff()
+        .max_attempts(5)
+        .await?;
+        Ok(())
     }
 }
