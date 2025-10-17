@@ -561,6 +561,7 @@ export default class ServerToClientAPI {
         logger?.log('refresh requested');
         repo.fetchSmartlogCommits();
         repo.fetchUncommittedChanges();
+        repo.fetchSubmoduleMap();
         repo.checkForMergeConflicts();
         repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
         repo.initialConnectionContext.tracker.track('DiffFetchSource', {
