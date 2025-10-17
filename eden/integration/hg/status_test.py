@@ -93,13 +93,8 @@ class StatusTest(EdenHgTestCase):
         self.assert_status({"ignore_me": "I"})
 
     async def thoroughly_get_scm_status(
-        self, client, mountPoint, commit, listIgnored, expected_status
+        self, client, mountPoint, commit, expected_status
     ) -> None:
-        status_from_get_scm_status = await client.getScmStatus(
-            mountPoint=bytes(mountPoint, encoding="utf-8"),
-            commit=commit,
-            listIgnored=False,
-        )
         status_from_get_scm_status_v2_result = await client.getScmStatusV2(
             GetScmStatusParams(
                 mountPoint=bytes(mountPoint, encoding="utf-8"),
@@ -111,9 +106,9 @@ class StatusTest(EdenHgTestCase):
         status_from_get_scm_status_v2 = status_from_get_scm_status_v2_result.status
 
         self.assertEqual(
-            status_from_get_scm_status,
             status_from_get_scm_status_v2,
-            "getScmStatus and getScmStatusV2 should agree",
+            expected_status,
+            "getScmStatusV2 result should match expected result",
         )
 
     async def test_status_thrift_apis(self) -> None:
@@ -129,11 +124,11 @@ class StatusTest(EdenHgTestCase):
             # Test with a clean status.
             expected_status = ScmStatus(entries={}, errors={})
             await self.thoroughly_get_scm_status(
-                client, self.mount, initial_commit, False, expected_status
+                client, self.mount, initial_commit, expected_status
             )
 
             if enable_status_cache:
-                await self.counter_check(client, miss_cnt=1, hit_cnt=1)
+                await self.counter_check(client, miss_cnt=1, hit_cnt=0)
             else:
                 await self.counter_check(client, miss_cnt=0, hit_cnt=0)
 
@@ -148,7 +143,7 @@ class StatusTest(EdenHgTestCase):
 
             # `hg add` would trigger a call to getScmStatusV2
             if enable_status_cache:
-                await self.counter_check(client, miss_cnt=2, hit_cnt=1)
+                await self.counter_check(client, miss_cnt=2, hit_cnt=0)
             else:
                 await self.counter_check(client, miss_cnt=0, hit_cnt=0)
 
@@ -164,11 +159,11 @@ class StatusTest(EdenHgTestCase):
 
             expected_status = ScmStatus(entries=expected_entries, errors={})
             await self.thoroughly_get_scm_status(
-                client, self.mount, initial_commit, False, expected_status
+                client, self.mount, initial_commit, expected_status
             )
 
             if enable_status_cache:
-                await self.counter_check(client, miss_cnt=3, hit_cnt=2)
+                await self.counter_check(client, miss_cnt=3, hit_cnt=0)
             else:
                 await self.counter_check(client, miss_cnt=0, hit_cnt=0)
 
