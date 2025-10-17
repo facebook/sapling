@@ -243,13 +243,12 @@ impl RedirectCmd {
         let checkout = find_checkout(instance, &mount)?;
         let client_name = instance.client_name(&mount)?;
         let config_dir = instance.config_directory(&client_name);
-        let mut checkout_config =
-            CheckoutConfig::parse_config(config_dir.clone()).with_context(|| {
-                format!(
-                    "Failed to parse checkout config using config dir {}",
-                    &config_dir.display()
-                )
-            })?;
+        let mut checkout_config = CheckoutConfig::parse_config(&config_dir).with_context(|| {
+            format!(
+                "Failed to parse checkout config using config dir {}",
+                &config_dir.display()
+            )
+        })?;
         // Remove the redirection targets from the config so that proj-fs pre-delete notification does not block deletion on symlink
         // This will be re-created when mounting the checkout again.
         checkout_config
@@ -314,8 +313,8 @@ impl RedirectCmd {
         // provide a way to remove bogus redirection paths.  After we've deployed
         // the improved `add` validation for a while, we can use it here also.
         if let Some(redir) = redirs.get(repo_path) {
-            let mut checkout_config = CheckoutConfig::parse_config(config_dir.clone())
-                .with_context(|| {
+            let mut checkout_config =
+                CheckoutConfig::parse_config(&config_dir).with_context(|| {
                     format!(
                         "Failed to parse checkout config using config dir {}",
                         &config_dir.display()

@@ -418,7 +418,7 @@ where
 impl CheckoutConfig {
     /// Reads checkout config information from config.toml and
     /// returns an Err if it is not properly formatted or does not exist.
-    pub fn parse_config(state_dir: PathBuf) -> Result<CheckoutConfig> {
+    pub fn parse_config(state_dir: &Path) -> Result<CheckoutConfig> {
         let config_path = state_dir.join(MOUNT_CONFIG);
         let content = String::from_utf8(std::fs::read(config_path).from_err()?).from_err()?;
         let config: CheckoutConfig = toml::from_str(&content).from_err()?;
@@ -705,7 +705,7 @@ impl EdenFsCheckout {
         &self,
         component_buf: &Vec<u8>,
     ) -> Result<(String, Option<Vec<u8>>)> {
-        let checkout_config = CheckoutConfig::parse_config(self.data_dir.clone())?;
+        let checkout_config = CheckoutConfig::parse_config(&self.data_dir)?;
 
         if checkout_config.repository.repo_type == RepositoryType::FilteredHg {
             // FilteredRootIds are in the form: <VarInt><RootId><FilterId>. We first parse out the
@@ -1240,7 +1240,7 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
         configs.push((
             mount_path,
             instance.config_directory(&client_name),
-            CheckoutConfig::parse_config(instance.config_directory(&client_name))?,
+            CheckoutConfig::parse_config(&instance.config_directory(&client_name))?,
         ));
     }
 
@@ -1352,10 +1352,11 @@ pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsChe
         {
             let (checkout_path, checkout_name) = item;
             let checkout_state_dir = instance.config_directory(checkout_name);
+            let config = CheckoutConfig::parse_config(&checkout_state_dir)?;
             Ok(EdenFsCheckout::from_config(
                 PathBuf::from(checkout_path),
-                checkout_state_dir.clone(),
-                CheckoutConfig::parse_config(checkout_state_dir)?,
+                checkout_state_dir,
+                config,
             ))
         } else {
             Err(EdenFsError::Other(anyhow!(
@@ -1368,10 +1369,11 @@ pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsChe
         let checkout_path = checkout_root.unwrap();
         if let Some(checkout_name) = all_checkouts.get(&checkout_path) {
             let checkout_state_dir = instance.config_directory(checkout_name);
+            let config = CheckoutConfig::parse_config(&checkout_state_dir)?;
             Ok(EdenFsCheckout::from_config(
                 checkout_path,
-                checkout_state_dir.clone(),
-                CheckoutConfig::parse_config(checkout_state_dir)?,
+                checkout_state_dir,
+                config,
             ))
         } else {
             Err(EdenFsError::Other(anyhow!(
@@ -1380,10 +1382,11 @@ pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsChe
             )))
         }
     } else {
+        let config = CheckoutConfig::parse_config(checkout_state_dir.as_ref().unwrap())?;
         Ok(EdenFsCheckout::from_config(
             checkout_root.unwrap(),
-            checkout_state_dir.as_ref().unwrap().clone(),
-            CheckoutConfig::parse_config(checkout_state_dir.unwrap())?,
+            checkout_state_dir.unwrap(),
+            config,
         ))
     }
 }
@@ -1439,7 +1442,7 @@ mod tests {
         redir_type: RedirectionType,
         config_dir: &Path,
     ) -> Result<()> {
-        let config = CheckoutConfig::parse_config(config_dir.into())?;
+        let config = CheckoutConfig::parse_config(config_dir)?;
         let config_redir_type = config.redirections.get(repo_path);
         match config_redir_type {
             Some(r_type) => {
@@ -1463,7 +1466,7 @@ mod tests {
         should_be_inserted: bool,
     ) -> Result<()> {
         // parse config from test_path
-        let mut config = CheckoutConfig::parse_config(config_dir.into())?;
+        let mut config = CheckoutConfig::parse_config(config_dir)?;
 
         // create map of redirections we want to add to the checkout config
         let mut redir_map: BTreeMap<PathBuf, Redirection> = BTreeMap::new();

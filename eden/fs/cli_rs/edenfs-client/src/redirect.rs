@@ -1618,13 +1618,12 @@ pub async fn try_add_redirection(
     // support a user with a local ad-hoc override for global- or profile-
     // specified configuration.
     configured_redirs.insert(repo_path.to_owned(), redir);
-    let mut checkout_config =
-        CheckoutConfig::parse_config(config_dir.into()).with_context(|| {
-            format!(
-                "Failed to parse checkout config using config dir {}",
-                config_dir.display()
-            )
-        })?;
+    let mut checkout_config = CheckoutConfig::parse_config(config_dir).with_context(|| {
+        format!(
+            "Failed to parse checkout config using config dir {}",
+            config_dir.display()
+        )
+    })?;
     // and persist the configuration so that we can re-apply it in a subsequent
     // call to `edenfsctl redirect fixup`
     checkout_config

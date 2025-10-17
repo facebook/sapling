@@ -258,7 +258,7 @@ impl PrefetchProfileCmd {
             )
         })?;
         let config_dir = instance.config_directory(&client_name);
-        let checkout_config = CheckoutConfig::parse_config(config_dir);
+        let checkout_config = CheckoutConfig::parse_config(&config_dir);
         match checkout_config {
             Ok(checkout_config) => {
                 let profiles = checkout_config.get_prefetch_profiles().ok();
@@ -290,7 +290,7 @@ impl PrefetchProfileCmd {
             edenfs_telemetry::prefetch_profile::activate_event(profile_name, client_name.as_str());
 
         let config_dir = instance.config_directory(&client_name);
-        let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
+        let checkout_config = CheckoutConfig::parse_config(&config_dir);
         let result = checkout_config
             .and_then(|mut config| config.activate_profile(profile_name, config_dir));
         match result {
@@ -331,7 +331,7 @@ impl PrefetchProfileCmd {
         );
 
         let config_dir = instance.config_directory(&client_name);
-        let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
+        let checkout_config = CheckoutConfig::parse_config(&config_dir);
 
         let result = checkout_config
             .and_then(|mut config| config.activate_predictive_profile(config_dir, num_dirs));
@@ -369,7 +369,7 @@ impl PrefetchProfileCmd {
         );
 
         let config_dir = instance.config_directory(&client_name);
-        let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
+        let checkout_config = CheckoutConfig::parse_config(&config_dir);
         let result = checkout_config
             .and_then(|mut config| config.deactivate_profile(profile_name, config_dir));
         if let Err(e) = result {
@@ -399,7 +399,7 @@ impl PrefetchProfileCmd {
             edenfs_telemetry::prefetch_profile::deactivate_predictive_event(client_name.as_str());
 
         let config_dir = instance.config_directory(&client_name);
-        let checkout_config = CheckoutConfig::parse_config(config_dir.clone());
+        let checkout_config = CheckoutConfig::parse_config(&config_dir);
         let result =
             checkout_config.and_then(|mut config| config.deactivate_predictive_profile(config_dir));
         if let Err(e) = result {
@@ -430,13 +430,12 @@ impl PrefetchProfileCmd {
             )
         })?;
         let config_dir = instance.config_directory(&client_name);
-        let checkout_config =
-            CheckoutConfig::parse_config(config_dir.clone()).with_context(|| {
-                anyhow!(
-                    "Failed to parse config located in config_dir: {}",
-                    &config_dir.display()
-                )
-            })?;
+        let checkout_config = CheckoutConfig::parse_config(&config_dir).with_context(|| {
+            anyhow!(
+                "Failed to parse config located in config_dir: {}",
+                &config_dir.display()
+            )
+        })?;
         let profiles_to_prefetch = if profile_names.is_empty() {
             match checkout_config.get_prefetch_profiles() {
                 Ok(res) if !res.is_empty() => res,
@@ -515,13 +514,12 @@ impl PrefetchProfileCmd {
             )
         })?;
         let config_dir = instance.config_directory(&client_name);
-        let checkout_config =
-            CheckoutConfig::parse_config(config_dir.clone()).with_context(|| {
-                anyhow!(
-                    "Failed to parse config located in config_dir: {}",
-                    &config_dir.display()
-                )
-            })?;
+        let checkout_config = CheckoutConfig::parse_config(&config_dir).with_context(|| {
+            anyhow!(
+                "Failed to parse config located in config_dir: {}",
+                &config_dir.display()
+            )
+        })?;
 
         if if_active && !checkout_config.predictive_prefetch_is_active() {
             eprintln!(
