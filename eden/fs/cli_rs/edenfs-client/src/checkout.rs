@@ -1244,17 +1244,15 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
         ));
     }
 
-    // Get active mounted checkouts info from eden daemon
+    // Get active mounted checkouts info from eden daemon. Error from listMounts indicates that the
+    // Eden daemon is not running or is unhealthy.
     let client = instance.get_client();
-    let mounted_checkouts = match client
+    let mounted_checkouts = (client
         .with_thrift_with_timeouts(Some(Duration::from_secs(3)), None, |thrift| {
             (thrift.listMounts(), EdenThriftMethod::ListMounts)
         })
-        .await
-    {
-        Ok(result) => Some(result),
-        Err(_) => None, // eden daemon is not running or not healthy
-    };
+        .await)
+        .ok();
 
     // Combine mount info from active mounts and mount info from config files
     let mut mount_points = BTreeMap::new();
