@@ -1345,6 +1345,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitFindFilesParams,
         ) -> Result<thrift::CommitFindFilesResponse, service::CommitFindFilesExn>;
 
+        async fn commit_changed_paths_approx(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitChangedPathsApproxParams,
+        ) -> Result<thrift::CommitChangedPathsApproxResponse, service::CommitChangedPathsApproxExn>;
+
         async fn commit_history(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitHistoryParams,

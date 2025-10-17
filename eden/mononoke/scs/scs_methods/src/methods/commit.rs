@@ -1589,4 +1589,25 @@ impl SourceControlServiceImpl {
             ..Default::default()
         })
     }
+
+    /// Returns the raw changed paths recorded in a Bonsai changeset
+    pub(crate) async fn commit_changed_paths_approx(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        _params: thrift::CommitChangedPathsApproxParams,
+    ) -> Result<thrift::CommitChangedPathsApproxResponse, scs_errors::ServiceError> {
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let bonsai = changeset.bonsai_changeset().await?;
+        let paths = bonsai
+            .file_changes_map()
+            .keys()
+            .map(|path| path.to_string())
+            .collect::<BTreeSet<_>>();
+
+        Ok(thrift::CommitChangedPathsApproxResponse {
+            paths,
+            ..Default::default()
+        })
+    }
 }

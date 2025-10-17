@@ -1375,6 +1375,12 @@ struct CommitFindFilesParams {
   5: optional list<string> basename_suffixes;
 }
 
+struct CommitChangedPathsApproxParams {}
+
+struct CommitChangedPathsApproxResponse {
+  1: set<string> paths;
+}
+
 /// Parameters for the `commit_history` method.
 ///
 /// By default, this will include all commits that are ancestors of
@@ -2889,6 +2895,21 @@ service SourceControlService extends fb303_core.BaseService {
   CommitFileDiffsResponse commit_file_diffs(
     1: CommitSpecifier commit,
     2: CommitFileDiffsParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Returns the raw changed paths recorded in a Bonsai
+  /// NOTE: This is a reasonable approximation and cheaper to execute compare to
+  /// the fully accurate version backed by commit_compare.
+  ///
+  /// Example of the inaccuracy: someone deleted directory foo/bar and added
+  /// a file called foo/bar, this method will not correctly report foo/bar.
+  CommitChangedPathsApproxResponse commit_changed_paths_approx(
+    1: CommitSpecifier commit,
+    2: CommitChangedPathsApproxParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

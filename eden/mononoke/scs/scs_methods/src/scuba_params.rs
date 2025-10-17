@@ -455,6 +455,8 @@ impl AddScubaParams for thrift::CommitDirectoryBranchClustersParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitChangedPathsApproxParams {}
+
 impl AddScubaParams for thrift::CommitPathExistsParams {}
 
 impl AddScubaParams for thrift::CommitPathInfoParams {}

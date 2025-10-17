@@ -126,6 +126,8 @@ impl AddScubaResponse for thrift::CommitDirectoryBranchClustersResponse {
     }
 }
 
+impl AddScubaResponse for thrift::CommitChangedPathsApproxResponse {}
+
 impl AddScubaResponse for thrift::CommitLinearHistoryResponse {}
 
 impl AddScubaResponse for thrift::CommitListDescendantBookmarksResponse {}
