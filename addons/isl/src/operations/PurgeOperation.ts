@@ -25,7 +25,7 @@ export class PurgeOperation extends Operation {
   }
 
   getArgs() {
-    const args: Array<CommandArg> = ['purge', '--files'];
+    const args: Array<CommandArg> = ['purge', '--files', '--abort-on-err'];
     if (this.files.length > 0) {
       // Tag file arguments specially so the remote repo can convert them to the proper cwd-relative format.
       args.push({

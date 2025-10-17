@@ -138,7 +138,12 @@ describe('RevertOperation', () => {
         expectMessageSentToServer({
           type: 'runOperation',
           operation: {
-            args: ['purge', '--files', {type: 'repo-relative-file-list', paths: ['untracked.txt']}],
+            args: [
+              'purge',
+              '--files',
+              '--abort-on-err',
+              {type: 'repo-relative-file-list', paths: ['untracked.txt']},
+            ],
             id: expect.anything(),
             runner: CommandRunner.Sapling,
             trackEventName: 'PurgeOperation',
@@ -194,7 +199,7 @@ describe('RevertOperation', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: {
-          args: ['purge', '--files'],
+          args: ['purge', '--files', '--abort-on-err'],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
           trackEventName: 'PurgeOperation',
@@ -228,7 +233,12 @@ describe('RevertOperation', () => {
       expectMessageSentToServer({
         type: 'runOperation',
         operation: {
-          args: ['purge', '--files', {type: 'repo-relative-file-list', paths: ['untracked2.txt']}],
+          args: [
+            'purge',
+            '--files',
+            '--abort-on-err',
+            {type: 'repo-relative-file-list', paths: ['untracked2.txt']},
+          ],
           id: expect.anything(),
           runner: CommandRunner.Sapling,
           trackEventName: 'PurgeOperation',
@@ -280,6 +290,7 @@ describe('RevertOperation', () => {
           args: [
             'purge',
             '--files',
+            '--abort-on-err',
             {type: 'repo-relative-file-list', paths: ['myFile1.txt', 'movedTo.txt']},
           ],
           id: expect.anything(),
