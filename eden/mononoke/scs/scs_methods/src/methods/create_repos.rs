@@ -19,6 +19,8 @@ use auth_consts::SANDCASTLE_TAG;
 use auth_consts::SERVICE_IDENTITY;
 #[cfg(fbcode_build)]
 use configo::ConfigoClient;
+use configo::mutation::Mutation;
+use configo_thrift_srclients::ConfigoServiceClient;
 use configo_thrift_srclients::make_ConfigoService_srclient;
 use configo_thrift_srclients::thrift::CryptoProject;
 use configo_thrift_srclients::thrift::MutationState;
@@ -51,6 +53,8 @@ use repos::QuickRepoDefinitionShardingConfig;
 use repos::QuickRepoDefinitionTShirtSize;
 use repos::QuickRepoDefinitions;
 use repos::RawCommitIdentityScheme;
+use slog::info;
+use slog::warn;
 use source_control as thrift;
 use thrift::RepoSizeBucket;
 
@@ -514,7 +518,7 @@ fn make_quick_repo_definition(
 
 async fn prepare_repo_configs_mutation_nowait(
     ctx: CoreContext,
-    dry_run: bool,
+    _dry_run: bool,
     repos_ids_and_requests: Vec<(RepositoryId, thrift::RepoCreationRequest)>,
 ) -> Result<i64, scs_errors::ServiceError> {
     let configo_client = ConfigoClient::with_client(
@@ -556,60 +560,10 @@ async fn prepare_repo_configs_mutation_nowait(
             ),
             summary,
         )
-        .prepare(PREPARE_TIMEOUT)
+        .prepare_nowait()
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-
-    if dry_run {
-        return Ok(mutation.mutation_id);
-    }
-
-    let content = mutation
-        .content()
-        .await
-        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-    let mut signatures = BTreeMap::new();
-    let crypto_project = CryptoProject {
-        name: "SCM".to_owned(),
-        ..Default::default()
-    };
-
-    let crypto_service = crypto_service_srclients::make_CryptoService_srclient!(ctx.fb)
-        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-
-    for file in content.modifiedFiles {
-        if &file.path
-            == "materialized_configs/scm/mononoke/repos/quick_repo_definitions.materialized_JSON"
-            || file
-                .path
-                .starts_with("materialized_configs/shardmanager/spec/user/mononoke")
-        {
-            // These files are not signed, so do not sign them or landing the mutation will
-            // fail with "Error attaching signatures for mutation"
-            continue;
-        }
-        if let Some((path, sig)) = configo_crypto_utils::sign_config(
-            ctx.fb,
-            &crypto_service,
-            &file,
-            crypto_project.clone(),
-        )
-        .await
-        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
-        {
-            signatures.insert(path, sig);
-        }
-    }
-    mutation
-        .attach_signatures(signatures)
-        .await
-        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-
-    let mutation_id = mutation
-        .land(LAND_TIMEOUT)
-        .await
-        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-    Ok(mutation_id)
+    Ok(mutation.id)
 }
 
 async fn update_source_of_truth_to_mononoke_for_mutation_id(
@@ -817,10 +771,18 @@ impl SourceControlServiceImpl {
         }
 
         let mutation = resp.mutation.ok_or_else(|| {
+            warn!(
+                ctx.logger(),
+                "mutation state is not present {}", mutation_id
+            );
             scs_errors::internal_error(format!("Mutation state not available for {mutation_id}"))
         })?;
 
         if mutation.stateInfo.isError {
+            info!(
+                ctx.logger(),
+                "cleaning up, mutation state info has error {}", mutation_id
+            );
             self.cleanup_repos(ctx, token.mutation_id.unwrap()).await?;
             return Err(scs_errors::internal_error(format!(
                 "Configo mutation error: {}",
@@ -854,12 +816,16 @@ impl SourceControlServiceImpl {
                 self.cleanup_repos(ctx, mutation_id).await?;
                 Some(thrift::CreateReposStatus::ABORTED)
             }
+            MutationState::PREPARED => {
+                self.initiate_land(ctx.clone(), configo_client.clone(), mutation_id)
+                    .await?;
+                Some(thrift::CreateReposStatus::IN_PROGRESS)
+            }
             MutationState::CANARYING
             | MutationState::PREPARING
             | MutationState::LANDING
             | MutationState::SERVICE_CANARYING
-            | MutationState::VALIDATING
-            | MutationState::PREPARED => Some(thrift::CreateReposStatus::IN_PROGRESS),
+            | MutationState::VALIDATING => Some(thrift::CreateReposStatus::IN_PROGRESS),
             _ => None,
         };
 
@@ -899,6 +865,66 @@ impl SourceControlServiceImpl {
         .binary_exponential_backoff()
         .max_attempts(5)
         .await?;
+        Ok(())
+    }
+
+    async fn initiate_land(
+        &self,
+        ctx: CoreContext,
+        configo_client: ConfigoServiceClient,
+        mutation_id: i64,
+    ) -> Result<(), scs_errors::ServiceError> {
+        let mutation = Mutation::new(ctx.fb, configo_client, mutation_id);
+        let content = mutation.content().await.map_err(|e| {
+            scs_errors::internal_error(format!("Failed to get mutation content: {e:#}"))
+        })?;
+
+        let mut signatures = BTreeMap::new();
+        let crypto_project = CryptoProject {
+            name: "SCM".to_owned(),
+            ..Default::default()
+        };
+
+        let crypto_service = crypto_service_srclients::make_CryptoService_srclient!(ctx.fb)
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+        for file in content.modifiedFiles {
+            if &file.path
+                == "materialized_configs/scm/mononoke/repos/quick_repo_definitions.materialized_JSON"
+                || file
+                    .path
+                    .starts_with("materialized_configs/shardmanager/spec/user/mononoke")
+            {
+                // These files are not signed, so do not sign them or landing the mutation will
+                // fail with "Error attaching signatures for mutation"
+                continue;
+            }
+            if let Some((path, sig)) = configo_crypto_utils::sign_config(
+                ctx.fb,
+                &crypto_service,
+                &file,
+                crypto_project.clone(),
+            )
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
+            {
+                signatures.insert(path, sig);
+            }
+        }
+        mutation
+            .attach_signatures(signatures)
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+        let mutation_id = mutation
+            .land_nowait()
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+        info!(
+            ctx.logger(),
+            "inititated land for mutation id  {}", mutation_id.id
+        );
         Ok(())
     }
 }
