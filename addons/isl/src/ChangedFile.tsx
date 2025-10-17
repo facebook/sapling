@@ -299,6 +299,12 @@ function FileActions({
         </Tooltip>,
       );
     } else if (file.status === '?') {
+      const removeHint =
+        file.mode === ChangedFileMode.Submodule
+          ? t(
+              'Please manually remove the submodule and clean up properly to avoid leaving unwanted side effects.',
+            )
+          : t('Remove file');
       actions.push(
         <Tooltip title={t('Start tracking this file')} key="add" delayMs={1000}>
           <Button
@@ -309,9 +315,10 @@ function FileActions({
             <Icon icon="add" />
           </Button>
         </Tooltip>,
-        <Tooltip title={t('Remove this file from the filesystem')} key="remove" delayMs={1000}>
+        <Tooltip title={removeHint} key="remove" delayMs={1000}>
           <Button
             className="file-show-on-hover"
+            disabled={file.mode === ChangedFileMode.Submodule}
             key={file.path}
             icon
             data-testid="file-action-delete"

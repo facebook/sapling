@@ -229,6 +229,13 @@
 .uncommitted-changes:hover vscode-button:disabled.show-on-hover {
   opacity: 0.4;
 }
+/* make disabled buttons show up on hover for each changed file */
+:is(button, vscode-button).file-show-on-hover:disabled {
+  opacity: 0 !important;
+}
+.changed-file:hover :is(button, vscode-button).file-show-on-hover:disabled {
+  opacity: 0.4 !important;
+}
 
 .changed-file-list .button-rows,
 .uncommitted-changes .button-rows {
