@@ -98,7 +98,11 @@ from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
 from facebook.eden.ttypes import (
     ChangeOwnershipRequest,
+    GetCurrentSnapshotInfoRequest,
+    GetScmStatusParams,
+    MountId,
     MountState,
+    RootIdOptions,
     SendNotificationRequest,
 )
 from fb303_core.ttypes import fb303_status
@@ -690,11 +694,26 @@ Legacy bind mount dirs listed above are unused and can be removed!
 
         self.usage_for_dir(overlay_dir, "materialized")
         with instance.get_thrift_client_legacy() as client:
-            scm_status = client.getScmStatus(
-                bytes(checkout.path), True, checkout.get_snapshot()[0].encode()
+            # We are required to pass the active FilterId to getScmStatusV2. We
+            # can find the active FilterId with GetCurrentSnapshotInfo
+            snapshot_info = client.getCurrentSnapshotInfo(
+                GetCurrentSnapshotInfoRequest(
+                    mountId=MountId(mountPoint=bytes(checkout.path))
+                )
+            )
+            active_fid = snapshot_info.fid
+            rootId = RootIdOptions(fid=active_fid)
+
+            scm_status = client.getScmStatusV2(
+                GetScmStatusParams(
+                    mountPoint=bytes(str(checkout.path), encoding="utf-8"),
+                    commit=checkout.get_snapshot()[0].encode(),
+                    listIgnored=True,
+                    rootIdOptions=rootId,
+                )
             )
 
-            for rel_path, _file_status in scm_status.entries.items():
+            for rel_path, _file_status in scm_status.status.entries.items():
                 try:
                     st = os.lstat(os.path.join(bytes(checkout.path), rel_path))
                     self.aggregated_usage_counts["ignored"] += st.st_size
