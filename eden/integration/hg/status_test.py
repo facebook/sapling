@@ -22,9 +22,11 @@ from eden.fs.service.eden.thrift_types import (
     EdenErrorType,
     FaultDefinition,
     GetBlockedFaultsRequest,
+    GetCurrentSnapshotInfoRequest,
     GetScmStatusParams,
+    MountId,
+    RootIdOptions,
     ScmFileStatus,
-    ScmStatus,
     SynchronizeWorkingCopyParams,
     UnblockFaultArg,
 )
@@ -92,28 +94,19 @@ class StatusTest(EdenHgTestCase):
         self.touch("ignore_me")
         self.assert_status({"ignore_me": "I"})
 
-    async def thoroughly_get_scm_status(
-        self, client, mountPoint, commit, expected_status
-    ) -> None:
-        status_from_get_scm_status_v2_result = await client.getScmStatusV2(
+    async def verify_status(self, client, commit, listIgnored, expect_status) -> None:
+        res = await client.getScmStatusV2(
             GetScmStatusParams(
-                mountPoint=bytes(mountPoint, encoding="utf-8"),
+                mountPoint=bytes(self.mount, encoding="utf-8"),
                 commit=commit,
-                listIgnored=False,
-                rootIdOptions=None,
+                listIgnored=listIgnored,
             )
         )
-        status_from_get_scm_status_v2 = status_from_get_scm_status_v2_result.status
-
-        self.assertEqual(
-            status_from_get_scm_status_v2,
-            expected_status,
-            "getScmStatusV2 result should match expected result",
-        )
+        self.assertEqual(expect_status, dict(res.status.entries))
 
     async def test_status_thrift_apis(self) -> None:
-        """Test both the getScmStatusV2() and getScmStatus() thrift APIs."""
-        # This confirms that both thrift APIs continue to work,
+        """Test the getScmStatusV2() thrift API."""
+        # This confirms that the thrift API continue to work,
         # independently of the one currently used by hg.
         initial_commit_hex = self.repo.get_head_hash()
         initial_commit = binascii.unhexlify(initial_commit_hex)
@@ -122,10 +115,7 @@ class StatusTest(EdenHgTestCase):
 
         async with self.get_thrift_client() as client:
             # Test with a clean status.
-            expected_status = ScmStatus(entries={}, errors={})
-            await self.thoroughly_get_scm_status(
-                client, self.mount, initial_commit, expected_status
-            )
+            await self.verify_status(client, initial_commit, False, {})
 
             if enable_status_cache:
                 await self.counter_check(client, miss_cnt=1, hit_cnt=0)
@@ -157,10 +147,7 @@ class StatusTest(EdenHgTestCase):
                 b"untracked.txt": ScmFileStatus.ADDED,
             }
 
-            expected_status = ScmStatus(entries=expected_entries, errors={})
-            await self.thoroughly_get_scm_status(
-                client, self.mount, initial_commit, expected_status
-            )
+            await self.verify_status(client, initial_commit, False, expected_entries)
 
             if enable_status_cache:
                 await self.counter_check(client, miss_cnt=3, hit_cnt=0)
@@ -293,10 +280,10 @@ class StatusTest(EdenHgTestCase):
         self.repo.update(commit_with_ignored)
 
         async with self.get_thrift_client() as client:
-            status_from_get_scm_status = await client.getScmStatus(
+            status_from_get_scm_status = await client.getScmStatusBetweenRevisions(
                 mountPoint=self.mount_path_bytes,
-                commit=commit_with_ignored_removed.encode(),
-                listIgnored=False,
+                oldHash=commit_with_ignored_removed.encode(),
+                newHash=commit_with_ignored.encode(),
             )
 
         hg_status = self.repo.status(rev=commit_with_ignored_removed)
@@ -397,43 +384,33 @@ class StatusTest(EdenHgTestCase):
             hit_cnt += 2
             await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
-            async def verify_status(commit, listIgnored, expect_status) -> None:
-                res = await client.getScmStatusV2(
-                    GetScmStatusParams(
-                        mountPoint=bytes(self.mount, encoding="utf-8"),
-                        commit=commit,
-                        listIgnored=listIgnored,
-                    )
-                )
-                self.assertEqual(expect_status, dict(res.status.entries))
-
-            await verify_status(second_commit, True, {})  # miss
+            await self.verify_status(client, second_commit, True, {})  # miss
             miss_cnt += 1
             await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
-            await verify_status(second_commit, True, {})  # hit
+            await self.verify_status(client, second_commit, True, {})  # hit
             hit_cnt += 1
             await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
-            await verify_status(second_commit, False, {})  # miss
+            await self.verify_status(client, second_commit, False, {})  # miss
             miss_cnt += 1
             await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             # cache miss because a commit will update the working directory
             # so the cached result from the previous assert_status call is lost
             # at this point
-            await verify_status(
-                initial_commit, True, {b"world.txt": 0}
+            await self.verify_status(
+                client, initial_commit, True, {b"world.txt": 0}
             )  # '0' means ADDED
             miss_cnt += 1
             await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
             # cache miss due to the same reason as above
-            await verify_status(initial_commit, False, {b"world.txt": 0})
+            await self.verify_status(client, initial_commit, False, {b"world.txt": 0})
             miss_cnt += 1
             await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
-            await verify_status(initial_commit, False, {b"world.txt": 0})
+            await self.verify_status(client, initial_commit, False, {b"world.txt": 0})
             hit_cnt += 1
             await self.counter_check(client, miss_cnt=miss_cnt, hit_cnt=hit_cnt)
 
@@ -447,99 +424,101 @@ class StatusTest(EdenHgTestCase):
             return
 
         async with self.get_thrift_client() as client:
-            # disable enforce parent check
-            await self.use_customized_config(
-                client,
-                {"hg": ["enforce-parents = false"]},
-            )
+            async with self.get_thrift_client() as client2:
+                # disable enforce parent check
+                await self.use_customized_config(
+                    client,
+                    {"hg": ["enforce-parents = false"]},
+                )
 
-            # at the beginning, all counters should be 0
-            await self.counter_check(client, miss_cnt=0, hit_cnt=0)
+                # at the beginning, all counters should be 0
+                await self.counter_check(client, miss_cnt=0, hit_cnt=0)
 
-            def two_threads_call_in_parallel(func, args_1=(), args_2=()) -> None:
-                t1 = Thread(target=func, args=args_1)
-                t2 = Thread(target=func, args=args_2)
-                t1.start()
-                t2.start()
-                t1.join(THREAD_JOIN_TIMEOUT_SECONDS)
-                t2.join(THREAD_JOIN_TIMEOUT_SECONDS)
+                def two_threads_call_in_parallel(func, args_1=(), args_2=()) -> None:
+                    t1 = Thread(target=func, args=args_1)
+                    t2 = Thread(target=func, args=args_2)
+                    t1.start()
+                    t2.start()
+                    t1.join(THREAD_JOIN_TIMEOUT_SECONDS)
+                    t2.join(THREAD_JOIN_TIMEOUT_SECONDS)
 
-            def two_threads_async_call_in_parallel(func, args_1=(), args_2=()) -> None:
-                t1 = Thread(target=util.run_async_func_in_thread, args=(func, *args_1))
-                t2 = Thread(target=util.run_async_func_in_thread, args=(func, *args_2))
-                t1.start()
-                t2.start()
-                t1.join(THREAD_JOIN_TIMEOUT_SECONDS)
-                t2.join(THREAD_JOIN_TIMEOUT_SECONDS)
-
-            two_threads_call_in_parallel(
-                self.assert_status_empty,
-            )
-
-            # we can't assert the exact number of hits and misses since
-            # we don't know if both two threads miss or only one of them misses.
-
-            self.touch("world.txt")
-            two_threads_call_in_parallel(
-                self.assert_status,
-                (self, {"world.txt": "?"}),
-                (self, {"world.txt": "?"}),
-            )
-
-            self.hg("add", "world.txt")
-            second_commit = self.repo.commit("adding world")
-
-            async def verify_status(cls, commit, listIgnored, expect_status) -> None:
-                async with cls.get_thrift_client() as thread_client:
-                    res = await thread_client.getScmStatusV2(
-                        GetScmStatusParams(
-                            mountPoint=bytes(self.mount, encoding="utf-8"),
-                            commit=commit,
-                            listIgnored=listIgnored,
-                        )
+                def two_threads_async_call_in_parallel(
+                    func, args_1=(), args_2=()
+                ) -> None:
+                    t1 = Thread(
+                        target=util.run_async_func_in_thread, args=(func, *args_1)
                     )
-                    cls.assertEqual(expect_status, dict(res.status.entries))
+                    t2 = Thread(
+                        target=util.run_async_func_in_thread, args=(func, *args_2)
+                    )
+                    t1.start()
+                    t2.start()
+                    t1.join(THREAD_JOIN_TIMEOUT_SECONDS)
+                    t2.join(THREAD_JOIN_TIMEOUT_SECONDS)
 
-            commit_list = [initial_commit, second_commit]
-            listIgnoredFlags = [True, False]
-            arg_pairs = [(x, y) for x in commit_list for y in listIgnoredFlags]
-            # arg_pairs = list(zip(commit_list, listIgnoredFlags))
-            random.shuffle(arg_pairs)
-
-            # testing concurrent calls with same arguments
-            print(f"arg_pairs: {arg_pairs}")
-            for commit, flag in arg_pairs:
-                arg_tuple = (
-                    self,
-                    commit,
-                    flag,
-                    {b"world.txt": 0} if commit == initial_commit else {},
+                two_threads_call_in_parallel(
+                    self.assert_status_empty,
                 )
 
-                two_threads_async_call_in_parallel(
-                    verify_status, args_1=arg_tuple, args_2=arg_tuple
+                # we can't assert the exact number of hits and misses since
+                # we don't know if both two threads miss or only one of them misses.
+
+                self.touch("world.txt")
+                two_threads_call_in_parallel(
+                    self.assert_status,
+                    (self, {"world.txt": "?"}),
+                    (self, {"world.txt": "?"}),
                 )
 
-            # "testing concurrent calls with different arguments"
-            arg_pairs_1 = random.sample(arg_pairs, len(arg_pairs))
-            arg_pairs_2 = random.sample(arg_pairs, len(arg_pairs))
-            print(f"arg_pairs_1: {arg_pairs_1}")
-            print(f"arg_pairs_2: {arg_pairs_2}")
-            for i in range(len(arg_pairs)):
-                arg_tuple_1 = (
-                    self,
-                    *arg_pairs_1[i],
-                    {b"world.txt": 0} if arg_pairs_1[i][0] == initial_commit else {},
-                )
-                arg_tuple_2 = (
-                    self,
-                    *arg_pairs_2[i],
-                    {b"world.txt": 0} if arg_pairs_2[i][0] == initial_commit else {},
-                )
+                self.hg("add", "world.txt")
+                second_commit = self.repo.commit("adding world")
 
-                two_threads_async_call_in_parallel(
-                    verify_status, args_1=arg_tuple_1, args_2=arg_tuple_2
-                )
+                commit_list = [initial_commit, second_commit]
+                listIgnoredFlags = [True, False]
+                arg_pairs = [(x, y) for x in commit_list for y in listIgnoredFlags]
+                # arg_pairs = list(zip(commit_list, listIgnoredFlags))
+                random.shuffle(arg_pairs)
+
+                # testing concurrent calls with same arguments
+                print(f"arg_pairs: {arg_pairs}")
+                for commit, flag in arg_pairs:
+                    arg_tuple = (
+                        self,
+                        commit,
+                        flag,
+                        {b"world.txt": 0} if commit == initial_commit else {},
+                    )
+
+                    two_threads_async_call_in_parallel(
+                        self.verify_status, args_1=arg_tuple, args_2=arg_tuple
+                    )
+
+                # "testing concurrent calls with different arguments"
+                arg_pairs_1 = random.sample(arg_pairs, len(arg_pairs))
+                arg_pairs_2 = random.sample(arg_pairs, len(arg_pairs))
+                print(f"arg_pairs_1: {arg_pairs_1}")
+                print(f"arg_pairs_2: {arg_pairs_2}")
+                for i in range(len(arg_pairs)):
+                    arg_tuple_1 = (
+                        self,
+                        client,
+                        *arg_pairs_1[i],
+                        {b"world.txt": 0}
+                        if arg_pairs_1[i][0] == initial_commit
+                        else {},
+                    )
+                    arg_tuple_2 = (
+                        self,
+                        client2,
+                        *arg_pairs_2[i],
+                        {b"world.txt": 0}
+                        if arg_pairs_2[i][0] == initial_commit
+                        else {},
+                    )
+
+                    two_threads_async_call_in_parallel(
+                        self.verify_status, args_1=arg_tuple_1, args_2=arg_tuple_2
+                    )
 
     async def wait_for_status_cache_block_hit(self, client):
         poll_interval_seconds = 0.1
@@ -722,7 +701,6 @@ class StatusTest(EdenHgTestCase):
                     mountPoint=bytes(self.mount, encoding="utf-8"),
                     commit=initial_commit,
                     listIgnored=False,
-                    rootIdOptions=None,
                 )
             )
             initial_status_with_error = initial_status_with_error_result.status
@@ -740,7 +718,6 @@ class StatusTest(EdenHgTestCase):
                     mountPoint=bytes(self.mount, encoding="utf-8"),
                     commit=initial_commit,
                     listIgnored=False,
-                    rootIdOptions=None,
                 )
             )
             status_without_error = status_without_error_result.status
