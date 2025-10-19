@@ -35,3 +35,45 @@ test warning about changes outside the specified from path
    2
   -3
   +3c
+  $ hg go -C . -q
+
+  $ hg subtree merge --from-path foo --to-path foo --from-path bar --to-path bar -r $C
+  merge base: a1383e79789b
+  merging foo/x
+  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (subtree merge, don't forget to commit)
+  $ hg diff
+  diff --git a/bar/y b/bar/y
+  --- a/bar/y
+  +++ b/bar/y
+  @@ -1,3 +1,3 @@
+   1
+   2
+  -3
+  +3c
+  diff --git a/foo/x b/foo/x
+  --- a/foo/x
+  +++ b/foo/x
+  @@ -1,3 +1,3 @@
+   1b
+   2
+  -3
+  +3c
+  $ hg ci -m "merge foo and bar"
+  $ hg subtree inspect -r .
+  {
+    "merges": [
+      {
+        "version": 1,
+        "from_commit": "531d8f7a575503618e6891284405bb00ffd8d977",
+        "from_path": "bar",
+        "to_path": "bar"
+      },
+      {
+        "version": 1,
+        "from_commit": "531d8f7a575503618e6891284405bb00ffd8d977",
+        "from_path": "foo",
+        "to_path": "foo"
+      }
+    ]
+  }

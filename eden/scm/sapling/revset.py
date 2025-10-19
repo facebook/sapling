@@ -2580,7 +2580,7 @@ def subtreemergebase(repo, subset, x):
 
     with repo.ui.configoverride({("ui", "quiet"): True}):
         merge_base_ctx = subtree._subtree_merge_base(
-            repo, ctx, to_path, from_ctx, from_path, opts={}
+            repo, ctx, [to_path], from_ctx, [from_path], opts={}
         )
     return subset & smartset.baseset({merge_base_ctx.rev()}, repo=repo)
 

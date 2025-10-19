@@ -30,6 +30,21 @@ test subtree merge path validation
   abort: overlapping --from-path 'foo' and --to-path 'foo/bar'
   [255]
 
+test subtree merge with multiple from/to paths
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  > B   # B/foo/x = bbb\n
+  > |
+  > A   # A/foo/x = foo\n
+  >     # A/bar/x = var\n
+  >     # A/baz/x = baz\n
+  >     # drawdag.defaultfiles=false
+  > EOS
+  $ hg go -q $B
+  $ hg subtree merge --from-path foo --to-path bar --from-path foo --to-path baz
+  abort: exactly one from/to path pair required for directory branch merge
+  [255]
+
 test subtree merge max file count
   $ newclientrepo
   $ drawdag <<'EOS'

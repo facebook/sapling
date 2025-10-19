@@ -6,6 +6,7 @@
 import json
 import os
 from collections import defaultdict
+from typing import List
 
 from .. import (
     cloneuri,
@@ -323,8 +324,7 @@ def subtree_merge(ui, repo, **opts):
     from_paths = scmutil.rootrelpaths(ctx, opts.get("from_path"))
     to_paths = scmutil.rootrelpaths(ctx, opts.get("to_path"))
 
-    if len(from_paths) != 1 or len(to_paths) != 1:
-        raise error.Abort(_("must provide exactly one --from-path and --to-path"))
+    validate_subtree_merge_path_size(from_paths, to_paths)
     subtreeutil.validate_path_overlap(from_paths, to_paths)
     subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
     subtreeutil.validate_path_exist(ui, ctx, to_paths, abort_on_missing=True)
@@ -333,7 +333,7 @@ def subtree_merge(ui, repo, **opts):
     subtreeutil.validate_file_count(repo, from_ctx, from_paths)
 
     merge_base_ctx = _subtree_merge_base(
-        repo, ctx, to_paths[0], from_ctx, from_paths[0], opts
+        repo, ctx, to_paths, from_ctx, from_paths, opts
     )
     ui.status("merge base: %s\n" % merge_base_ctx)
     cmdutil.registerdiffgrafts(from_paths, to_paths, from_ctx)
@@ -436,7 +436,32 @@ def has_change_outside_paths(ctx1, ctx2, paths):
     return m1.hasdiff(m2, matcher)
 
 
-def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
+def validate_subtree_merge_path_size(
+    from_paths: List[str], to_paths: List[str]
+) -> None:
+    """Validate path size for subtree merge operations.
+
+    Only allows multiple from/to paths for full-repo branch merge where
+    from_path == to_path for all pairs.
+    """
+    subtreeutil.validate_path_size(from_paths, to_paths, abort_on_empty=True)
+    if len(from_paths) == 1:
+        return None
+
+    if is_full_repo_branch_merge(from_paths, to_paths):
+        return None
+
+    raise error.Abort(
+        _("exactly one from/to path pair required for directory branch merge")
+    )
+
+
+def is_full_repo_branch_merge(from_paths, to_paths):
+    # Multiple paths require exact matching for full-repo branch merge
+    return all(a == b for a, b in zip(from_paths, to_paths))
+
+
+def _subtree_merge_base(repo, to_ctx, to_paths, from_ctx, from_paths, opts):
     """get the best merge base for subtree merge
 
     There are two major use cases for subtree merge:
@@ -487,13 +512,17 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
             hint=_("valid strategies: %s") % ", ".join(MERGE_BASE_STRATEGIES),
         )
 
+    to_path, from_path = to_paths[0], from_paths[0]
     paths = [to_path, from_path]
+
     dag = repo.changelog.dag
-    if from_path == to_path:
+    if is_full_repo_branch_merge(from_paths, to_paths):
         nodes = [from_ctx.node(), to_ctx.node()]
         gca = dag.gcaone(nodes)
+        if not gca:
+            raise error.Abort("no common ancestor found for full-repo branches")
         gca_ctx = repo[gca]
-        if has_change_outside_paths(gca_ctx, from_ctx, [from_path]):
+        if has_change_outside_paths(gca_ctx, from_ctx, from_paths):
             repo.ui.warn(
                 _(
                     "changes outside the specified from_path are ignored!\n"
@@ -502,7 +531,8 @@ def _subtree_merge_base(repo, to_ctx, to_path, from_ctx, from_path, opts):
                 % (gca_ctx, from_ctx),
                 notice="warning",
             )
-        return registerdiffgrafts(repo[gca], 0)
+        cmdutil.registerdiffgrafts(from_paths, to_paths, gca_ctx)
+        return gca_ctx
 
     ui = repo.ui
     ui.status(_("searching for merge base ...\n"))
