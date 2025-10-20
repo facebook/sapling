@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -30,8 +29,8 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::ValueSource;
 use eagerepo::EagerRepo;
+use filters::util::filter_paths_from_config;
 use migration::feature::deprecate;
-use minibytes::Text;
 use regex::Regex;
 use repo::repo::Repo;
 use repourl::RepoUrl;
@@ -138,36 +137,6 @@ fn log_clone_info(clone_type_str: &str, reponame: &str, ctx: &ReqCtx<CloneOpts>)
     tracing::debug!(target: "clone_info", rust_clone="true", repo=reponame, clone_type=clone_type_str, is_update_clone=!ctx.opts.noupdate);
     if !ctx.opts.enable_profile.is_empty() {
         tracing::debug!(target: "clone_info", cloned_sparse_profiles=ctx.opts.enable_profile.join(" "));
-    }
-}
-
-fn filter_paths_from_config(config: &mut impl Config) -> Option<Vec<Text>> {
-    // Get unique set of filter paths
-    let filter_paths = config
-        .keys("clone")
-        .iter()
-        .filter_map(|k| {
-            if k.starts_with("eden-sparse-filter") {
-                tracing::debug!("found filter config key: {}", k);
-                config.get("clone", k)
-            } else {
-                None
-            }
-        })
-        .collect::<HashSet<_>>();
-    if filter_paths.is_empty() {
-        None
-    } else if filter_paths.len() > 1 {
-        // If more than 1 filter path is supplied, remove "" as that represents the null filter and
-        // cannot be combined with other filters
-        Some(
-            filter_paths
-                .into_iter()
-                .filter(|e| !e.as_ref().is_empty())
-                .collect::<Vec<_>>(),
-        )
-    } else {
-        Some(filter_paths.into_iter().collect())
     }
 }
 
