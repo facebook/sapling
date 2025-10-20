@@ -119,6 +119,9 @@ use git_source_of_truth::SqlGitSourceOfTruthConfigBuilder;
 use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::CachedGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
+use git_types::ArcCgdmChangesetDivider;
+use git_types::CGDMComponentsReloader;
+use git_types::DummyCgdmChangesetDivider;
 use hook_manager::HookRepo;
 use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
@@ -1987,6 +1990,34 @@ impl RepoFactory {
                 Ok(Arc::new(CommitGraph::new(preloaded_commit_graph_storage)))
             }
             _ => Ok(Arc::new(CommitGraph::new(maybe_cached_storage))),
+        }
+    }
+
+    pub async fn cgdm_changeset_divider(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+    ) -> Result<ArcCgdmChangesetDivider> {
+        match &repo_config.git_configs.preloaded_cgdm_blobstore_key {
+            Some(preloaded_cgdm_key) => {
+                let blobstore_without_cache = self
+                    .mutable_repo_blobstore_from_blobstore(
+                        repo_identity,
+                        &self
+                            .blobstore_no_cache(&repo_config.storage_config.blobstore)
+                            .await?,
+                    )
+                    .await?;
+                Ok(Arc::new(
+                    CGDMComponentsReloader::from_blobstore(
+                        &self.ctx(Some(repo_identity)),
+                        Arc::new(blobstore_without_cache),
+                        preloaded_cgdm_key.to_string(),
+                    )
+                    .await?,
+                ))
+            }
+            None => Ok(Arc::new(DummyCgdmChangesetDivider)),
         }
     }
 

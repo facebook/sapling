@@ -32,6 +32,7 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 git_ref_content_mapping = { version = "0.1.0", path = "../../git_ref_content_mapping" }
 git_source_of_truth = { version = "0.1.0", path = "../../git_source_of_truth" }
 git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
+git_types = { version = "0.1.0", path = "../../git/git_types" }
 hook_manager = { version = "0.1.0", path = "../../repo_attributes/hook_manager/hook_manager" }
 live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
 maplit = "1.0"

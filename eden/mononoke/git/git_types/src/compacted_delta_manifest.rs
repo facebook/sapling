@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -23,6 +24,7 @@ use context::CoreContext;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
+use metaconfig_types::GitDeltaManifestVersion;
 use mononoke_macros::mononoke;
 use mononoke_types::Blob;
 use mononoke_types::BlobstoreKey;
@@ -35,10 +37,13 @@ use mononoke_types::impl_typed_hash;
 use mononoke_types::typed_hash::IdContext;
 use reloader::Loader;
 use reloader::Reloader;
+use repo_derived_data::RepoDerivedData;
 
 use crate::BaseObject;
+use crate::GitDeltaManifestEntryOps;
 use crate::GitPackfileBaseItem;
 use crate::delta_manifest_v3::GDMV3Entry;
+use crate::fetch_git_delta_manifest;
 use crate::fetch_non_blob_git_object_bytes;
 use crate::thrift;
 
@@ -302,6 +307,121 @@ impl Loader<CGDMComponents> for CGDMComponentsLoader {
             }
         })
         .await?
+    }
+}
+
+#[derive(Clone)]
+pub struct CGDMGroup {
+    pub cs_ids: Vec<ChangesetId>,
+    pub cgdm_id: Option<CompactedGitDeltaManifestId>,
+    pub cgdm_commits_id: Option<CGDMCommitPackfileItemsId>,
+}
+
+impl CGDMGroup {
+    pub async fn into_gdm_entries(
+        self,
+        ctx: &CoreContext,
+        derived_data: &RepoDerivedData,
+        blobstore: &Arc<dyn Blobstore>,
+        git_delta_manifest_version: GitDeltaManifestVersion,
+    ) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send>>> {
+        if let Some(cgdm_id) = self.cgdm_id {
+            let gdm = cgdm_id.load(ctx, blobstore).await?;
+            Ok(gdm
+                .entries
+                .into_iter()
+                .map(|entry| Box::new(entry) as Box<dyn GitDeltaManifestEntryOps + Send>)
+                .collect())
+        } else {
+            stream::iter(self.cs_ids)
+                .map(anyhow::Ok)
+                .map_ok(async |cs_id| {
+                    let delta_manifest = fetch_git_delta_manifest(
+                        ctx,
+                        derived_data,
+                        blobstore,
+                        git_delta_manifest_version,
+                        cs_id,
+                    )
+                    .await?;
+                    // Most delta manifests would contain tens of entries. These entries are just metadata and
+                    // not the actual object so its safe to load them all into memory instead of chaining streams
+                    // which significantly slows down the entire process.
+                    Ok(stream::iter(
+                        delta_manifest
+                            .into_entries(ctx, blobstore)
+                            .try_collect::<Vec<_>>()
+                            .await?,
+                    )
+                    .map(Ok))
+                })
+                .try_buffered(100)
+                .try_flatten()
+                .try_collect::<Vec<_>>()
+                .await
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct CGDMDividedChangesets {
+    pub groups: Vec<CGDMGroup>,
+    pub individual_cs_ids: Vec<ChangesetId>,
+}
+
+#[facet::facet]
+pub trait CgdmChangesetDivider {
+    fn divide(&self, cs_ids: Vec<ChangesetId>) -> CGDMDividedChangesets;
+}
+
+pub struct DummyCgdmChangesetDivider;
+
+impl CgdmChangesetDivider for DummyCgdmChangesetDivider {
+    fn divide(&self, cs_ids: Vec<ChangesetId>) -> CGDMDividedChangesets {
+        CGDMDividedChangesets {
+            groups: vec![],
+            individual_cs_ids: cs_ids,
+        }
+    }
+}
+
+impl CgdmChangesetDivider for CGDMComponentsReloader {
+    fn divide(&self, cs_ids: Vec<ChangesetId>) -> CGDMDividedChangesets {
+        let mut components: BTreeMap<u64, Vec<ChangesetId>> = Default::default();
+        let mut individual_cs_ids = vec![];
+
+        for cs_id in cs_ids {
+            if let Some(component_id) = self.component_id(cs_id) {
+                components.entry(component_id).or_default().push(cs_id);
+            } else {
+                individual_cs_ids.push(cs_id);
+            }
+        }
+
+        CGDMDividedChangesets {
+            groups: components
+                .into_iter()
+                .map(|(component_id, cs_ids)| CGDMGroup {
+                    // only include the IDs for full components
+                    cgdm_id: if Some(cs_ids.len() as u64)
+                        == self.component_changeset_count(component_id)
+                    {
+                        self.cgdm_id(component_id)
+                    } else {
+                        None
+                    },
+                    cgdm_commits_id: if Some(cs_ids.len() as u64)
+                        == self.component_changeset_count(component_id)
+                    {
+                        self.cgdm_commits_id(component_id)
+                    } else {
+                        None
+                    },
+                    cs_ids,
+                })
+                .collect(),
+            individual_cs_ids,
+        }
     }
 }
 

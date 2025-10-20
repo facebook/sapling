@@ -57,6 +57,8 @@ use git_source_of_truth::SqlGitSourceOfTruthConfigBuilder;
 use git_symbolic_refs::ArcGitSymbolicRefs;
 use git_symbolic_refs::CachedGitSymbolicRefs;
 use git_symbolic_refs::SqlGitSymbolicRefsBuilder;
+use git_types::ArcCgdmChangesetDivider;
+use git_types::DummyCgdmChangesetDivider;
 use hook_manager::HookRepo;
 use hook_manager::manager::ArcHookManager;
 use hook_manager::manager::HookManager;
@@ -958,6 +960,11 @@ impl TestRepoFactory {
             SqlCommitGraphStorageBuilder::from_sql_connections(self.metadata_db.clone())
                 .build(RendezVousOptions::for_test(), repo_identity.id());
         Ok(Arc::new(CommitGraph::new(Arc::new(sql_storage))))
+    }
+
+    /// CGDM changeset divider
+    pub fn cgdm_changeset_divider(&self) -> Result<ArcCgdmChangesetDivider> {
+        Ok(Arc::new(DummyCgdmChangesetDivider))
     }
 
     /// Commit graph writer
