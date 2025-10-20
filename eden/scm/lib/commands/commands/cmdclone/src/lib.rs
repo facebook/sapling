@@ -205,9 +205,9 @@ fn run_eden(
     }();
 
     let config_filter = if let Ok((_, ref backing_repo)) = backing_clone_result {
-        filter_paths_from_config(&mut backing_repo.config())
+        filter_paths_from_config(backing_repo.config())
     } else {
-        filter_paths_from_config(&mut config)
+        filter_paths_from_config(config)
     };
 
     let edenfs_filter = match (ctx.opts.enable_profile.len(), config_filter) {

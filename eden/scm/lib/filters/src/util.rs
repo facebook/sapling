@@ -12,7 +12,7 @@ use configmodel::Config;
 use configmodel::Text;
 use types::RepoPathBuf;
 
-pub fn filter_paths_from_config(config: &mut impl Config) -> Option<HashSet<Text>> {
+pub fn filter_paths_from_config(config: impl Config) -> Option<HashSet<Text>> {
     // Get unique set of filter paths
     let filter_paths = config
         .keys("clone")
@@ -125,7 +125,7 @@ pub(crate) mod tests {
         let mut config: BTreeMap<String, String> = BTreeMap::new();
         config.insert("clone.other".to_string(), "value".to_string());
 
-        let result = filter_paths_from_config(&mut config);
+        let result = filter_paths_from_config(config);
         assert_eq!(result, None);
     }
 
@@ -137,7 +137,7 @@ pub(crate) mod tests {
             "path/to/filter".to_string(),
         );
 
-        let result = filter_paths_from_config(&mut config);
+        let result = filter_paths_from_config(config);
         let paths = result.unwrap();
         assert_eq!(paths.len(), 1);
         assert!(paths.contains("path/to/filter"));
@@ -148,7 +148,7 @@ pub(crate) mod tests {
         let mut config: BTreeMap<String, String> = BTreeMap::new();
         config.insert("clone.eden-sparse-filter".to_string(), "".to_string());
 
-        let result = filter_paths_from_config(&mut config);
+        let result = filter_paths_from_config(config);
         let paths = result.unwrap();
         assert_eq!(paths.len(), 1);
         assert!(paths.contains(""));
@@ -166,7 +166,7 @@ pub(crate) mod tests {
             "path/to/filter2".to_string(),
         );
 
-        let result = filter_paths_from_config(&mut config);
+        let result = filter_paths_from_config(config);
         assert!(result.is_some());
         let paths = result.unwrap();
         assert_eq!(paths.len(), 2);
@@ -186,7 +186,7 @@ pub(crate) mod tests {
             "path/to/filter".to_string(),
         );
 
-        let result = filter_paths_from_config(&mut config);
+        let result = filter_paths_from_config(config);
         let paths = result.unwrap();
         assert_eq!(paths.len(), 1);
         assert!(paths.contains("path/to/filter"));
