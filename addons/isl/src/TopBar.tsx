@@ -28,11 +28,13 @@ import {T} from './i18n';
 import {maybeRemoveForgottenOperation, useClearAllOptimisticState} from './operationsState';
 import {haveCommitsLoadedYet, haveRemotePath, isFetchingCommits} from './serverAPIState';
 
+import {Internal} from './Internal';
 import './TopBar.css';
 
 export function TopBar() {
   const loaded = useAtomValue(haveCommitsLoadedYet);
   const canPush = useAtomValue(haveRemotePath);
+
   if (!loaded) {
     return null;
   }
@@ -45,6 +47,7 @@ export function TopBar() {
         <ShelvedChangesMenu />
         <BulkActionsMenu />
         <BookmarksManagerMenu />
+        {Internal.FullRepoBranchButton && <Internal.FullRepoBranchButton />}
         <FetchingDataIndicator />
       </span>
       <span className="button-group">
