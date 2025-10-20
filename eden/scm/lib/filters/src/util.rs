@@ -44,7 +44,7 @@ pub fn filter_paths_from_config(config: &mut impl Config) -> Option<HashSet<Text
 
 // Parses the filter file and returns a list of active filter paths. Returns an error when the
 // filter file is malformed or can't be read.
-pub fn read_filter_config(dot_dir: &Path) -> anyhow::Result<Option<Vec<RepoPathBuf>>> {
+pub fn read_filter_config(dot_dir: &Path) -> anyhow::Result<Option<HashSet<RepoPathBuf>>> {
     // The filter file may be in 3 different states:
     //
     // 1) It may not exist, which indicates FilteredFS is not active
@@ -65,12 +65,12 @@ pub fn read_filter_config(dot_dir: &Path) -> anyhow::Result<Option<Vec<RepoPathB
         Ok(None)
     } else {
         // Parse each line that starts with "%include" to extract filter paths
-        let mut filter_paths = Vec::new();
+        let mut filter_paths = HashSet::new();
         for line in filter_contents.lines() {
             let trimmed = line.trim();
             if trimmed.starts_with("%include ") {
                 if let Some(path) = line.strip_prefix("%include ") {
-                    filter_paths.push(RepoPathBuf::from_string(path.trim().into())?);
+                    filter_paths.insert(RepoPathBuf::from_string(path.trim().into())?);
                 }
             } else if trimmed.starts_with("#") {
                 // Skip comments
@@ -220,8 +220,8 @@ pub(crate) mod tests {
         let (_tempdir, dot_dir) = setup_config_test(Some(contents));
         let result = read_filter_config(&dot_dir).unwrap().unwrap();
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].to_string(), "path/to/filter1.txt");
-        assert_eq!(result[1].to_string(), "path/to/filter2.txt");
+        assert!(result.contains(&RepoPathBuf::from_string("path/to/filter1.txt".into()).unwrap()));
+        assert!(result.contains(&RepoPathBuf::from_string("path/to/filter2.txt".into()).unwrap()));
     }
 
     #[test]
@@ -231,15 +231,15 @@ pub(crate) mod tests {
         let (_tempdir, dot_dir) = setup_config_test(Some(contents));
         let result = read_filter_config(&dot_dir).unwrap().unwrap();
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].to_string(), "path/to/filter1.txt");
-        assert_eq!(result[1].to_string(), "path/to/filter2.txt");
+        assert!(result.contains(&RepoPathBuf::from_string("path/to/filter1.txt".into()).unwrap()));
+        assert!(result.contains(&RepoPathBuf::from_string("path/to/filter2.txt".into()).unwrap()));
 
         let contents = "# A multi\n# Line comment\n%include path/to/filter1.txt\n\n\t# This is a comment\n%include path/to/filter2.txt\n";
         let (_tempdir, dot_dir) = setup_config_test(Some(contents));
         let result = read_filter_config(&dot_dir).unwrap().unwrap();
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].to_string(), "path/to/filter1.txt");
-        assert_eq!(result[1].to_string(), "path/to/filter2.txt");
+        assert!(result.contains(&RepoPathBuf::from_string("path/to/filter1.txt".into()).unwrap()));
+        assert!(result.contains(&RepoPathBuf::from_string("path/to/filter2.txt".into()).unwrap()));
     }
 
     #[test]

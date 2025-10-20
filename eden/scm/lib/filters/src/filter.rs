@@ -274,7 +274,8 @@ impl FilterGenerator {
     // Takes a commit and returns the corresponding FilterID that should be passed to Eden.
     pub fn active_filter_id(&mut self, commit_id: HgId) -> Result<Option<FilterId>, anyhow::Error> {
         if let Some(filter_paths) = read_filter_config(&self.dot_dir)? {
-            let filter_id = self.generate_filter_id(commit_id, &filter_paths)?;
+            let filter_id =
+                self.generate_filter_id(commit_id, &filter_paths.into_iter().collect::<Vec<_>>())?;
             Ok(Some(filter_id))
         } else {
             Ok(None)
