@@ -34,6 +34,15 @@ mod windows {
     use tokio::io::AsyncWrite;
     use tokio::io::ReadBuf;
 
+    /// Helper function to prevent vtable mismatches in optimized builds by cloning
+    /// the waker at the async-io runtime boundary. This ensures consistent waker
+    /// identity across cross-runtime calls.
+    fn with_cloned_waker<T>(cx: &Context<'_>, f: impl FnOnce(&mut Context<'_>) -> T) -> T {
+        let cloned_waker = cx.waker().clone();
+        let mut preserving_cx = Context::from_waker(&cloned_waker);
+        f(&mut preserving_cx)
+    }
+
     pub struct OwnedReadHalf {
         inner: Arc<UnixStream>,
     }
@@ -82,18 +91,34 @@ mod windows {
             cx: &mut Context<'_>,
             buf: &[u8],
         ) -> Poll<Result<usize, io::Error>> {
-            futures::AsyncWrite::poll_write(Pin::new(&mut self.inner.async_ref()), cx, buf)
+            with_cloned_waker(cx, |preserving_cx| {
+                futures::AsyncWrite::poll_write(
+                    Pin::new(&mut self.inner.async_ref()),
+                    preserving_cx,
+                    buf,
+                )
+            })
         }
 
         fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
-            futures::AsyncWrite::poll_flush(Pin::new(&mut self.inner.async_ref()), cx)
+            with_cloned_waker(cx, |preserving_cx| {
+                futures::AsyncWrite::poll_flush(
+                    Pin::new(&mut self.inner.async_ref()),
+                    preserving_cx,
+                )
+            })
         }
 
         fn poll_shutdown(
             self: Pin<&mut Self>,
             cx: &mut Context<'_>,
         ) -> Poll<Result<(), io::Error>> {
-            futures::AsyncWrite::poll_close(Pin::new(&mut self.inner.async_ref()), cx)
+            with_cloned_waker(cx, |preserving_cx| {
+                futures::AsyncWrite::poll_close(
+                    Pin::new(&mut self.inner.async_ref()),
+                    preserving_cx,
+                )
+            })
         }
     }
 
@@ -130,21 +155,23 @@ mod windows {
             cx: &mut Context<'_>,
             buf: &mut ReadBuf<'_>,
         ) -> Poll<Result<(), io::Error>> {
-            let result = futures::AsyncRead::poll_read(
-                Pin::new(&mut self.async_ref()),
-                cx,
-                buf.initialize_unfilled(),
-            );
+            with_cloned_waker(cx, |preserving_cx| {
+                let result = futures::AsyncRead::poll_read(
+                    Pin::new(&mut self.async_ref()),
+                    preserving_cx,
+                    buf.initialize_unfilled(),
+                );
 
-            match result {
-                Poll::Ready(Ok(written)) => {
-                    tracing::trace!(?written, "UnixStream::poll_read");
-                    buf.set_filled(written);
-                    Poll::Ready(Ok(()))
+                match result {
+                    Poll::Ready(Ok(written)) => {
+                        tracing::trace!(?written, "UnixStream::poll_read");
+                        buf.set_filled(written);
+                        Poll::Ready(Ok(()))
+                    }
+                    Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+                    Poll::Pending => Poll::Pending,
                 }
-                Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
-                Poll::Pending => Poll::Pending,
-            }
+            })
         }
     }
 
@@ -164,18 +191,24 @@ mod windows {
             cx: &mut Context<'_>,
             buf: &[u8],
         ) -> Poll<Result<usize, io::Error>> {
-            futures::AsyncWrite::poll_write(self.inner_mut(), cx, buf)
+            with_cloned_waker(cx, |preserving_cx| {
+                futures::AsyncWrite::poll_write(self.inner_mut(), preserving_cx, buf)
+            })
         }
 
         fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
-            futures::AsyncWrite::poll_flush(self.inner_mut(), cx)
+            with_cloned_waker(cx, |preserving_cx| {
+                futures::AsyncWrite::poll_flush(self.inner_mut(), preserving_cx)
+            })
         }
 
         fn poll_shutdown(
             self: Pin<&mut Self>,
             cx: &mut Context<'_>,
         ) -> Poll<Result<(), io::Error>> {
-            futures::AsyncWrite::poll_close(self.inner_mut(), cx)
+            with_cloned_waker(cx, |preserving_cx| {
+                futures::AsyncWrite::poll_close(self.inner_mut(), preserving_cx)
+            })
         }
     }
 
@@ -198,20 +231,22 @@ mod windows {
             &self,
             cx: &mut Context<'_>,
         ) -> Poll<io::Result<(UnixStream, uds_windows::SocketAddr)>> {
-            match self.0.poll_readable(cx) {
-                Poll::Ready(Ok(())) => {
-                    let result = self.0.read_with(|io| io.accept());
-                    let mut result = Box::pin(result);
-                    result.as_mut().poll(cx).map(|x| {
-                        x.and_then(|(stream, addr)| {
-                            let stream = UnixStream::from_std(stream)?;
-                            Ok((stream, addr))
+            with_cloned_waker(cx, |preserving_cx| {
+                match self.0.poll_readable(preserving_cx) {
+                    Poll::Ready(Ok(())) => {
+                        let result = self.0.read_with(|io| io.accept());
+                        let mut result = Box::pin(result);
+                        result.as_mut().poll(preserving_cx).map(|x| {
+                            x.and_then(|(stream, addr)| {
+                                let stream = UnixStream::from_std(stream)?;
+                                Ok((stream, addr))
+                            })
                         })
-                    })
+                    }
+                    Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+                    Poll::Pending => Poll::Pending,
                 }
-                Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
-                Poll::Pending => Poll::Pending,
-            }
+            })
         }
     }
 }
