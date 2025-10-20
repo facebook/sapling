@@ -30,6 +30,7 @@ use futures::TryStreamExt;
 use git_ref_content_mapping::GitRefContentMappingEntry;
 use git_ref_content_mapping::GitRefContentMappingRef;
 use git_symbolic_refs::GitSymbolicRefsRef;
+use git_types::CgdmChangesetDividerArc;
 use git_types::GitError;
 use gix_hash::ObjectId;
 use hook_manager::BookmarkState;
@@ -365,6 +366,7 @@ pub trait Repo = RepoIdentityRef
     + CommitGraphRef
     + CommitGraphWriterRef
     + RepoConfigRef
+    + CgdmChangesetDividerArc
     + Send
     + Sync;
 

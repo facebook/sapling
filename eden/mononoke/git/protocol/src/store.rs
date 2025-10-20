@@ -169,7 +169,7 @@ pub(crate) async fn changeset_delta_manifest_entries(
     derived_data: ArcRepoDerivedData,
     git_delta_manifest_version: GitDeltaManifestVersion,
     changeset_id: ChangesetId,
-) -> Result<Vec<(ChangesetId, Box<dyn GitDeltaManifestEntryOps + Send>)>> {
+) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send>>> {
     let delta_manifest = fetch_git_delta_manifest(
         &ctx,
         &derived_data,
@@ -183,7 +183,6 @@ pub(crate) async fn changeset_delta_manifest_entries(
     // which significantly slows down the entire process.
     delta_manifest
         .into_entries(&ctx, &blobstore.boxed())
-        .map_ok(|entry| (changeset_id, entry))
         .try_collect::<Vec<_>>()
         .await
 }

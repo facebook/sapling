@@ -22,6 +22,7 @@ use commit_graph::CommitGraphWriter;
 use filestore::FilestoreConfig;
 use git_ref_content_mapping::GitRefContentMapping;
 use git_symbolic_refs::GitSymbolicRefs;
+use git_types::CgdmChangesetDivider;
 use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
 use repo_blobstore::RepoBlobstore;
@@ -69,6 +70,8 @@ pub struct Repo {
     pub filestore_config: FilestoreConfig,
     #[facet]
     pub git_bundle_uri: dyn GitBundleUri,
+    #[facet]
+    cgdm_changeset_divider: dyn CgdmChangesetDivider,
 }
 
 #[derive(Subcommand)]

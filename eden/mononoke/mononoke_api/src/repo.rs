@@ -99,6 +99,7 @@ use futures_watchdog::WatchdogExt;
 use git_ref_content_mapping::GitRefContentMapping;
 use git_source_of_truth::GitSourceOfTruthConfig;
 use git_symbolic_refs::GitSymbolicRefs;
+use git_types::CgdmChangesetDivider;
 use git_types::MappedGitCommitId;
 use hook_manager::manager::HookManager;
 use hook_manager::manager::HookManagerArc;
@@ -336,6 +337,9 @@ pub struct Repo {
 
     #[facet]
     restricted_paths: RestrictedPaths,
+
+    #[facet]
+    pub cgdm_changeset_divider: dyn CgdmChangesetDivider,
 }
 
 pub trait MononokeRepo = RepoLike + RepoWithBubble + Clone + 'static;

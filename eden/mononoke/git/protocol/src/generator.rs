@@ -12,6 +12,7 @@ use std::task::Poll;
 use anyhow::Context;
 use anyhow::Ok;
 use anyhow::Result;
+use blobstore::Loadable;
 use buffered_weighted::FutureWithWeight;
 use buffered_weighted::GlobalWeight;
 use buffered_weighted::MemoryBound;
@@ -24,6 +25,8 @@ use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::FuturesOrdered;
 use futures_stats::TimedTryFutureExt;
+use git_types::CGDMDividedChangesets;
+use git_types::CGDMGroup;
 use git_types::GitDeltaManifestEntryOps;
 use git_types::GitIdentifier;
 use git_types::GitTreeId;
@@ -33,8 +36,11 @@ use git_types::fetch_non_blob_git_object;
 use git_types::tree::GitEntry;
 use gix_hash::ObjectId;
 use manifest::ManifestOps;
+use metaconfig_types::GitDeltaManifestVersion;
 use mononoke_types::ChangesetId;
 use mononoke_types::hash::GitSha1;
+use repo_blobstore::ArcRepoBlobstore;
+use repo_derived_data::ArcRepoDerivedData;
 use rustc_hash::FxHashSet;
 use scuba_ext::FutureStatsScubaExt;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -75,7 +81,6 @@ use crate::utils::delta_base;
 use crate::utils::entry_weight;
 use crate::utils::filter_object;
 use crate::utils::tag_entries_to_hashes;
-use crate::utils::to_commit_stream;
 use crate::utils::to_git_object_stream;
 
 const DEFAULT_GIT_GENERATOR_BUFFER_BYTES: usize = 104_857_600; // 100 MB
@@ -144,7 +149,7 @@ async fn boundary_trees_and_blobs(
 /// set of base objects that are expected to be present at the client
 async fn trees_and_blobs_count(
     fetch_container: FetchContainer,
-    target_commits: BoxStream<'_, Result<ChangesetId>>,
+    divided_changesets: CGDMDividedChangesets,
     explicitly_requested_objects: Vec<ObjectId>,
 ) -> Result<(usize, FxHashSet<ObjectId>)> {
     let FetchContainer {
@@ -171,8 +176,51 @@ async fn trees_and_blobs_count(
                     .collect::<Vec<_>>()
             })
     });
+
+    let groups_body_stream = stream::iter(divided_changesets.groups)
+        .map(Ok)
+        .map_ok(async |group| {
+            // Get the FxHashSet of the tree and blob object Ids that will be included
+            // in the packfile
+            let objects = stream::iter(
+                group
+                    .into_gdm_entries(
+                        &ctx,
+                        &derived_data,
+                        &blobstore.boxed(),
+                        git_delta_manifest_version,
+                    )
+                    .await?,
+            )
+            .map(Ok)
+            .try_filter_map(async |entry| {
+                let (kind, size) = (entry.full_object_kind(), entry.full_object_size());
+                // If the entry does not pass the filter, then it should not be included in the count
+                if !filter_object(filter.clone(), entry.path(), kind, size) {
+                    return Ok(None);
+                }
+                let delta = delta_base(
+                    entry.as_ref(),
+                    delta_inclusion,
+                    filter.clone(),
+                    chain_breaking_mode,
+                );
+                let output = (
+                    entry.full_object_oid(),
+                    delta.map(|delta| delta.base_object_oid()),
+                );
+                Ok(Some(output))
+            })
+            .try_collect::<Vec<_>>()
+            .await
+            .context("Error while listing entries from GitDeltaManifest for a group")?;
+            Ok(objects)
+        })
+        .try_buffered(concurrency.trees_and_blobs);
+
     // Sum up the entries in the delta manifest for each commit included in packfile
-    let body_stream = target_commits
+    let individual_cs_ids_body_stream = stream::iter(divided_changesets.individual_cs_ids)
+        .map(Ok)
         .map_ok(async |changeset_id| {
             let delta_manifest = fetch_git_delta_manifest(
                 &ctx,
@@ -219,7 +267,8 @@ async fn trees_and_blobs_count(
         .into_iter()
         .collect::<FxHashSet<_>>();
     boundary_stream
-        .chain(body_stream)
+        .chain(groups_body_stream)
+        .chain(individual_cs_ids_body_stream)
         .try_fold(
             (object_set, FxHashSet::default()),
             async |(mut object_set, mut base_set), objects_with_bases| {
@@ -260,11 +309,61 @@ async fn boundary_stream(
     Ok(stream::iter(objects).boxed())
 }
 
+#[async_trait::async_trait]
+trait GDMEntryProvider {
+    async fn gdm_entries(
+        self,
+        ctx: Arc<CoreContext>,
+        blobstore: ArcRepoBlobstore,
+        derived_data: ArcRepoDerivedData,
+        git_delta_manifest_version: GitDeltaManifestVersion,
+    ) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send>>>;
+}
+
+#[async_trait::async_trait]
+impl GDMEntryProvider for ChangesetId {
+    async fn gdm_entries(
+        self,
+        ctx: Arc<CoreContext>,
+        blobstore: ArcRepoBlobstore,
+        derived_data: ArcRepoDerivedData,
+        git_delta_manifest_version: GitDeltaManifestVersion,
+    ) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send>>> {
+        changeset_delta_manifest_entries(
+            ctx,
+            blobstore,
+            derived_data,
+            git_delta_manifest_version,
+            self,
+        )
+        .await
+    }
+}
+
+#[async_trait::async_trait]
+impl GDMEntryProvider for CGDMGroup {
+    async fn gdm_entries(
+        self,
+        ctx: Arc<CoreContext>,
+        blobstore: ArcRepoBlobstore,
+        derived_data: ArcRepoDerivedData,
+        git_delta_manifest_version: GitDeltaManifestVersion,
+    ) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send>>> {
+        self.into_gdm_entries(
+            &ctx,
+            &derived_data,
+            &blobstore.boxed(),
+            git_delta_manifest_version,
+        )
+        .await
+    }
+}
+
 /// Creates a stream of packfile items for the given changesets
-fn packfile_stream_from_changesets<'a>(
+fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'a>(
     fetch_container: FetchContainer,
     base_set: Arc<FxHashSet<ObjectId>>,
-    cs_ids: Vec<ChangesetId>,
+    changesets: Vec<T>,
 ) -> BoxStream<'a, Result<PackfileItem>> {
     let FetchContainer {
         ctx,
@@ -289,7 +388,7 @@ fn packfile_stream_from_changesets<'a>(
     // we always poll the first layer (delta_manifest_entries_futures). Storing any completed future output in a `VecDeque`
     // buffer (delta_manifest_entries_buffer).
 
-    let mut cs_ids = cs_ids.into_iter().collect::<VecDeque<_>>();
+    let mut changesets = changesets.into_iter().collect::<VecDeque<_>>();
     let mut delta_manifest_entries_buffer = VecDeque::new();
     let mut delta_manifest_entries_futures = FuturesOrdered::new();
     let mut packfile_items_futures = FuturesOrdered::new();
@@ -298,7 +397,7 @@ fn packfile_stream_from_changesets<'a>(
     let mut buffer_weight = GlobalWeight::new(max_buffer); // ~100 MB
 
     stream::poll_fn(move |cx| {
-        if cs_ids.is_empty()
+        if changesets.is_empty()
             && delta_manifest_entries_futures.is_empty()
             && delta_manifest_entries_buffer.is_empty()
             && packfile_items_futures.is_empty()
@@ -309,13 +408,12 @@ fn packfile_stream_from_changesets<'a>(
         while delta_manifest_entries_futures.len() + delta_manifest_entries_buffer.len()
             < concurrency.trees_and_blobs
         {
-            if let Some(cs_id) = cs_ids.pop_front() {
-                delta_manifest_entries_futures.push_back(changeset_delta_manifest_entries(
+            if let Some(changeset) = changesets.pop_front() {
+                delta_manifest_entries_futures.push_back(changeset.gdm_entries(
                     ctx.clone(),
                     blobstore.clone(),
                     derived_data.clone(),
                     fetch_container.git_delta_manifest_version,
-                    cs_id,
                 ));
             } else {
                 break;
@@ -337,7 +435,7 @@ fn packfile_stream_from_changesets<'a>(
         }
 
         loop {
-            if let Some((_, entry)) = delta_manifest_entries_buffer.front() {
+            if let Some(entry) = delta_manifest_entries_buffer.front() {
                 // If `packfile_items_futures` is empty, then we have to poll the next item regardless of the current memory usage to
                 // ensure that the stream makes progress
                 if !packfile_items_futures.is_empty() {
@@ -357,7 +455,7 @@ fn packfile_stream_from_changesets<'a>(
                 }
             }
 
-            if let Some((_cs_id, entry)) = delta_manifest_entries_buffer.pop_front() {
+            if let Some(entry) = delta_manifest_entries_buffer.pop_front() {
                 let weight = entry_weight(
                     entry.as_ref(),
                     delta_inclusion,
@@ -400,7 +498,7 @@ fn packfile_stream_from_changesets<'a>(
 /// In case the packfile item can be represented as a delta, then use the detla variant instead of the raw object
 async fn tree_and_blob_packfile_stream<'a>(
     fetch_container: FetchContainer,
-    target_commits: Vec<ChangesetId>,
+    divided_changesets: CGDMDividedChangesets,
     base_set: Arc<FxHashSet<ObjectId>>,
     tree_and_blob_shas: Vec<ObjectId>,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
@@ -429,8 +527,17 @@ async fn tree_and_blob_packfile_stream<'a>(
         .try_filter_map(futures::future::ok)
         .boxed();
 
-    let packfile_item_stream =
-        packfile_stream_from_changesets(fetch_container, base_set, target_commits);
+    let groups_packfile_item_stream = packfile_stream_from_changesets(
+        fetch_container.clone(),
+        base_set.clone(),
+        divided_changesets.groups,
+    );
+
+    let individual_cs_ids_packfile_item_stream = packfile_stream_from_changesets(
+        fetch_container,
+        base_set,
+        divided_changesets.individual_cs_ids,
+    );
 
     let requested_trees_and_blobs = stream::iter(tree_and_blob_shas.into_iter().map(Ok))
         .map_ok(move |oid| {
@@ -450,7 +557,8 @@ async fn tree_and_blob_packfile_stream<'a>(
         .try_buffered(concurrency.trees_and_blobs)
         .boxed();
     Ok(boundary_packfile_item_stream
-        .chain(packfile_item_stream)
+        .chain(groups_packfile_item_stream)
+        .chain(individual_cs_ids_packfile_item_stream)
         .chain(requested_trees_and_blobs)
         .boxed())
 }
@@ -460,9 +568,22 @@ async fn tree_and_blob_packfile_stream<'a>(
 async fn commit_packfile_stream<'a>(
     fetch_container: FetchContainer,
     repo: &'a impl Repo,
-    target_commits: Vec<ChangesetId>,
+    divided_changesets: CGDMDividedChangesets,
 ) -> Result<(BoxStream<'a, Result<PackfileItem>>, usize)> {
-    let mut commit_count = target_commits.len();
+    let mut commit_count = divided_changesets.individual_cs_ids.len();
+    let mut final_commits = divided_changesets.individual_cs_ids;
+    let mut cgdm_commits_ids = vec![];
+
+    for group in divided_changesets.groups {
+        commit_count += group.cs_ids.len();
+
+        if let Some(cgdm_commits_id) = group.cgdm_commits_id {
+            cgdm_commits_ids.push(cgdm_commits_id);
+        } else {
+            final_commits.extend(group.cs_ids);
+        }
+    }
+
     let FetchContainer {
         blobstore,
         ctx,
@@ -471,6 +592,28 @@ async fn commit_packfile_stream<'a>(
         shallow_info,
         ..
     } = fetch_container;
+
+    let groups_commit_stream = stream::iter(cgdm_commits_ids)
+        .map(Ok)
+        .map_ok({
+            cloned!(ctx, blobstore);
+            move |cgdm_commits_id| {
+                cloned!(ctx, blobstore);
+                async move {
+                    Ok(stream::iter(
+                        cgdm_commits_id
+                            .load(&ctx, &blobstore)
+                            .await?
+                            .into_packfile_items()?,
+                    )
+                    .map(Ok))
+                }
+            }
+        })
+        .try_buffered(concurrency.commits)
+        .try_flatten()
+        .boxed();
+
     let shallow_commits = match shallow_info.as_ref() {
         Some(shallow_info) => shallow_info
             .packfile_commits
@@ -481,7 +624,8 @@ async fn commit_packfile_stream<'a>(
         None => Vec::new(),
     };
     commit_count += shallow_commits.len();
-    let final_commits = [target_commits, shallow_commits].concat();
+    final_commits.extend(shallow_commits);
+
     let git_commits = bonsai_git_mappings_by_bonsai(&ctx, repo, final_commits)
         .await?
         .into_values()
@@ -500,9 +644,11 @@ async fn commit_packfile_stream<'a>(
                 .await
             }
         })
-        .try_buffered(concurrency.commits)
-        .boxed();
-    Ok((commit_stream, commit_count))
+        .try_buffered(concurrency.commits);
+    Ok((
+        groups_commit_stream.chain(commit_stream).boxed(),
+        commit_count,
+    ))
 }
 
 /// Convert the provided tag entries into a stream of packfile items
@@ -674,6 +820,7 @@ pub async fn generate_pack_item_stream<'a>(
         request.packfile_item_inclusion,
         Arc::new(None),
         request.chain_breaking_mode,
+        repo.cgdm_changeset_divider_arc(),
     )?;
     // Get all the commits that are reachable from the bookmarks
     let mut target_commits = repo
@@ -698,14 +845,14 @@ pub async fn generate_pack_item_stream<'a>(
         .context("Error while getting content refs during upload-pack")?;
     // Reverse the list of commits so that we can prevent delta cycles from appearing in the packfile
     target_commits.reverse();
+    let divided_changesets = fetch_container
+        .cgdm_changeset_divider
+        .divide(target_commits);
     // STEP 1: Get the count of distinct blob and tree objects to be included in the packfile/bundle.
-    let (trees_and_blobs_count, base_set) = trees_and_blobs_count(
-        fetch_container.clone(),
-        to_commit_stream(target_commits.clone()),
-        vec![],
-    )
-    .await
-    .context("Error while calculating object count")?;
+    let (trees_and_blobs_count, base_set) =
+        trees_and_blobs_count(fetch_container.clone(), divided_changesets.clone(), vec![])
+            .await
+            .context("Error while calculating object count")?;
 
     // STEP 2: Create a mapping of all known bookmarks (i.e. branches, tags) and the commit that they point to. The commit should be represented
     // as a Git hash instead of a Bonsai hash since it will be part of the packfile/bundle
@@ -722,7 +869,7 @@ pub async fn generate_pack_item_stream<'a>(
     // we have already counted these items as part of object count.
     let tree_and_blob_stream = tree_and_blob_packfile_stream(
         fetch_container.clone(),
-        target_commits.clone(),
+        divided_changesets.clone(),
         Arc::new(base_set),
         vec![],
     )
@@ -732,7 +879,7 @@ pub async fn generate_pack_item_stream<'a>(
     // STEP 4: Get the stream of commit packfile items to include in the pack/bundle. Note that we have already counted these items
     // as part of object count.
     let (commit_stream, commits_count) =
-        commit_packfile_stream(fetch_container.clone(), repo, target_commits.clone())
+        commit_packfile_stream(fetch_container.clone(), repo, divided_changesets)
             .await
             .context("Error while generating commit packfile item stream")?;
 
@@ -818,6 +965,7 @@ pub async fn fetch_response<'a>(
         packfile_item_inclusion,
         shallow_info.clone(),
         request.chain_breaking_mode,
+        repo.cgdm_changeset_divider_arc(),
     )?;
     // Convert the base commits and head commits, which are represented as Git hashes, into Bonsai hashes
     // If the input contains tag object Ids, fetch the corresponding tag names
@@ -867,13 +1015,16 @@ pub async fn fetch_response<'a>(
     );
     // Reverse the list of commits so that we can prevent delta cycles from appearing in the packfile
     target_commits.reverse();
+    let divided_changesets = fetch_container
+        .cgdm_changeset_divider
+        .divide(target_commits.clone());
     progress_writer
         .send("Counting number of objects to be sent in packfile\n".to_string())
         .await?;
     // Get the count of unique blob and tree objects to be included in the packfile
     let (trees_and_blobs_count, base_set) = trees_and_blobs_count(
         fetch_container.clone(),
-        to_commit_stream(target_commits.clone()),
+        divided_changesets.clone(),
         translated_sha_heads.non_tag_non_commit_oids.clone(),
     )
     .try_timed()
@@ -891,7 +1042,7 @@ pub async fn fetch_response<'a>(
         .await?;
     let tree_and_blob_stream = tree_and_blob_packfile_stream(
         fetch_container.clone(),
-        target_commits.clone(),
+        divided_changesets.clone(),
         Arc::new(base_set),
         translated_sha_heads.non_tag_non_commit_oids,
     )
@@ -909,7 +1060,7 @@ pub async fn fetch_response<'a>(
         .send("Generating commits stream\n".to_string())
         .await?;
     let (commit_stream, commits_count) =
-        commit_packfile_stream(fetch_container.clone(), repo, target_commits.clone())
+        commit_packfile_stream(fetch_container.clone(), repo, divided_changesets)
             .try_timed()
             .await
             .context("Error while generating commit packfile item stream during fetch")?

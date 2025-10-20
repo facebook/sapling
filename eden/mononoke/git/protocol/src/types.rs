@@ -20,6 +20,7 @@ use bookmarks::BookmarkKey;
 use context::CoreContext;
 use faster_hex::hex_string;
 use futures::stream::BoxStream;
+use git_types::ArcCgdmChangesetDivider;
 use git_types::DeltaObjectKind;
 use git_types::GDMV2Entry;
 use git_types::GDMV2ObjectEntry;
@@ -756,6 +757,7 @@ pub(crate) struct FetchContainer {
     pub(crate) packfile_item_inclusion: PackfileItemInclusion,
     pub(crate) shallow_info: Arc<Option<ShallowInfoResponse>>,
     pub(crate) chain_breaking_mode: ChainBreakingMode,
+    pub(crate) cgdm_changeset_divider: ArcCgdmChangesetDivider,
 }
 
 impl FetchContainer {
@@ -768,6 +770,7 @@ impl FetchContainer {
         packfile_item_inclusion: PackfileItemInclusion,
         shallow_info: Arc<Option<ShallowInfoResponse>>,
         chain_breaking_mode: ChainBreakingMode,
+        cgdm_changeset_divider: ArcCgdmChangesetDivider,
     ) -> Result<Self> {
         let git_delta_manifest_version = repo
             .repo_config()
@@ -786,6 +789,7 @@ impl FetchContainer {
             blobstore: repo.repo_blobstore_arc(),
             derived_data: repo.repo_derived_data_arc(),
             chain_breaking_mode,
+            cgdm_changeset_divider,
         })
     }
 }

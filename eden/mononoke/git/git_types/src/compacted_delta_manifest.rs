@@ -42,6 +42,7 @@ use repo_derived_data::RepoDerivedData;
 use crate::BaseObject;
 use crate::GitDeltaManifestEntryOps;
 use crate::GitPackfileBaseItem;
+use crate::PackfileItem;
 use crate::delta_manifest_v3::GDMV3Entry;
 use crate::fetch_git_delta_manifest;
 use crate::fetch_non_blob_git_object_bytes;
@@ -56,6 +57,15 @@ pub struct CompactedGitDeltaManifest {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CGDMCommitPackfileItems {
     pub commit_packfile_items: Vec<GitPackfileBaseItem>,
+}
+
+impl CGDMCommitPackfileItems {
+    pub fn into_packfile_items(self) -> Result<Vec<PackfileItem>> {
+        self.commit_packfile_items
+            .into_iter()
+            .map(|packfile_item| Ok(PackfileItem::new_encoded_base(packfile_item.try_into()?)))
+            .collect()
+    }
 }
 
 impl ThriftConvert for CGDMCommitPackfileItems {

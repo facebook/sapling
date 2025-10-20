@@ -16,6 +16,7 @@ use commit_graph::CommitGraphWriterRef;
 use filestore::FilestoreConfigRef;
 use git_ref_content_mapping::GitRefContentMappingRef;
 use git_symbolic_refs::GitSymbolicRefsRef;
+use git_types::CgdmChangesetDividerArc;
 use metaconfig_types::RepoConfigRef;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataArc;
@@ -50,5 +51,6 @@ pub trait Repo = RepoIdentityRef
     + CommitGraphWriterRef
     + BookmarksCacheRef
     + RepoConfigRef
+    + CgdmChangesetDividerArc
     + Send
     + Sync;
