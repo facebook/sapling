@@ -330,6 +330,10 @@ def def_prog_mode():
 
 
 def wrapper(func, *args, **kwargs):
+    # force a redraw (by setting _screen_resized) when re-entering the wrapper.
+    global _main_terminal, _screen_resized
+    if _main_terminal is not None:
+        _screen_resized = True
     surface = _get_main_surface()
     try:
         raw()
