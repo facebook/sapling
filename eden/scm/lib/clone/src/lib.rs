@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::HashSet;
 use std::env;
 use std::ffi::OsStr;
 use std::io::Write;
@@ -148,7 +149,7 @@ pub fn eden_clone(
     backing_repo: &Repo,
     working_copy: &Path,
     target: Option<HgId>,
-    filters: Option<Vec<Text>>,
+    filters: Option<HashSet<Text>>,
 ) -> Result<()> {
     let config = backing_repo.config();
 

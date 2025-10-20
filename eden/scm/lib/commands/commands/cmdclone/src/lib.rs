@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::collections::hash_set;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -216,7 +218,11 @@ fn run_eden(
                     "Ignoring clone.eden-sparse-filter because --enable-profile was specified",
                 );
             }
-            Some(vec![ctx.opts.enable_profile[0].clone().into()])
+            Some(
+                vec![ctx.opts.enable_profile[0].clone().into()]
+                    .into_iter()
+                    .collect::<HashSet<_>>(),
+            )
         }
         _ => None,
     };

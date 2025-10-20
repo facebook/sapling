@@ -12,7 +12,7 @@ use configmodel::Config;
 use configmodel::Text;
 use types::RepoPathBuf;
 
-pub fn filter_paths_from_config(config: &mut impl Config) -> Option<Vec<Text>> {
+pub fn filter_paths_from_config(config: &mut impl Config) -> Option<HashSet<Text>> {
     // Get unique set of filter paths
     let filter_paths = config
         .keys("clone")
@@ -35,10 +35,10 @@ pub fn filter_paths_from_config(config: &mut impl Config) -> Option<Vec<Text>> {
             filter_paths
                 .into_iter()
                 .filter(|e| !e.as_ref().is_empty())
-                .collect::<Vec<_>>(),
+                .collect::<HashSet<_>>(),
         )
     } else {
-        Some(filter_paths.into_iter().collect())
+        Some(filter_paths)
     }
 }
 
@@ -140,7 +140,7 @@ pub(crate) mod tests {
         let result = filter_paths_from_config(&mut config);
         let paths = result.unwrap();
         assert_eq!(paths.len(), 1);
-        assert_eq!(paths[0].as_ref(), "path/to/filter");
+        assert!(paths.contains("path/to/filter"));
     }
 
     #[test]
@@ -151,7 +151,7 @@ pub(crate) mod tests {
         let result = filter_paths_from_config(&mut config);
         let paths = result.unwrap();
         assert_eq!(paths.len(), 1);
-        assert_eq!(paths[0].as_ref(), "");
+        assert!(paths.contains(""));
     }
 
     #[test]
@@ -170,9 +170,8 @@ pub(crate) mod tests {
         assert!(result.is_some());
         let paths = result.unwrap();
         assert_eq!(paths.len(), 2);
-        let mut path_strings: Vec<String> = paths.iter().map(|p| p.as_ref().to_string()).collect();
-        path_strings.sort();
-        assert_eq!(path_strings, vec!["path/to/filter1", "path/to/filter2"]);
+        assert!(paths.contains("path/to/filter1"));
+        assert!(paths.contains("path/to/filter2"));
     }
 
     #[test]
@@ -190,7 +189,7 @@ pub(crate) mod tests {
         let result = filter_paths_from_config(&mut config);
         let paths = result.unwrap();
         assert_eq!(paths.len(), 1);
-        assert_eq!(paths[0].as_ref(), "path/to/filter");
+        assert!(paths.contains("path/to/filter"));
     }
 
     #[test]
