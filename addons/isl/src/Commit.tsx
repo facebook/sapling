@@ -23,6 +23,7 @@ import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {MS_PER_DAY} from 'shared/constants';
 import {useAutofocusRef} from 'shared/hooks';
+import rejectAfterTimeout from 'shared/rejectAfterTimeout';
 import {notEmpty, nullthrows} from 'shared/utils';
 import {spacing} from '../../components/theme/tokens.stylex';
 import {AllBookmarksTruncated, Bookmark, Bookmarks, createBookmarkAtCommit} from './Bookmark';
@@ -746,18 +747,16 @@ async function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<WarningCh
   return confirmed ? WarningCheckResult.BYPASS : WarningCheckResult.FAIL;
 }
 
-async function raceWithTimeout(
+async function trackWarningTimeout(
   promise: Promise<boolean> | boolean | undefined,
   warningName: string,
-  timeoutMs = 1000,
-): Promise<boolean | undefined> {
+): Promise<boolean> {
   try {
-    return await Promise.race([
-      promise,
-      new Promise<boolean>((_resolve, reject) =>
-        setTimeout(() => reject(new Error('Rebase warning timed out')), timeoutMs),
-      ),
-    ]);
+    return await rejectAfterTimeout(
+      Promise.resolve(promise ?? false),
+      1000,
+      'Rebase warning timed out',
+    );
   } catch (err) {
     tracker.track('RebaseWarningTimeout', {
       extras: {warning: warningName, error: err instanceof Error ? err.message : String(err)},
@@ -768,19 +767,16 @@ async function raceWithTimeout(
 
 async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<WarningCheckResult> {
   const isRebaseOffWarmWarningEnabled = readAtom(rebaseOffWarmWarningEnabled);
-  if (!isRebaseOffWarmWarningEnabled) {
+  if (!isRebaseOffWarmWarningEnabled || dest.stableCommitMetadata == null) {
     return WarningCheckResult.PASS;
   }
 
-  if (dest.stableCommitMetadata == null) {
-    return WarningCheckResult.PASS;
-  }
   // iterate through stable commit metadata and see if this commit is warmed up commit
   const dag = readAtom(dagWithPreviews);
   const src = findPublicBaseAncestor(dag);
   const destBase = findPublicBaseAncestor(dag, dest.hash);
 
-  const warning = await raceWithTimeout(
+  const warning = await trackWarningTimeout(
     src ? Internal.maybeWarnAboutRebaseOffWarm?.(src, destBase) : false,
     'RebaseOffWarm',
   );
@@ -832,10 +828,10 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<Warni
 
   if (!destBase) {
     // can't determine if we can show warning
-    return Promise.resolve(WarningCheckResult.PASS);
+    return WarningCheckResult.PASS;
   }
 
-  const warning = await raceWithTimeout(
+  const warning = await trackWarningTimeout(
     src ? Internal.maybeWarnAboutRebaseOntoMaster?.(src, destBase) : false,
     'RebaseOntoMaster',
   );
@@ -959,10 +955,10 @@ async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<WarningC
   const destBase = findPublicBaseAncestor(dag, onto.hash);
   if (!currentBase || !destBase) {
     // can't determine if we can show warning
-    return Promise.resolve(WarningCheckResult.PASS);
+    return WarningCheckResult.PASS;
   }
 
-  const warning = await raceWithTimeout(
+  const warning = await trackWarningTimeout(
     Internal.maybeWarnAboutDistantRebase?.(currentBase, destBase) ?? false,
     'DistantRebase',
   );
