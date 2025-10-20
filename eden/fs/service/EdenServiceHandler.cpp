@@ -4875,6 +4875,76 @@ EdenServiceHandler::co_debugGetBlobImpl(
   co_return response;
 }
 
+folly::coro::Task<std::unique_ptr<::facebook::eden::CancelRequestsResponse>>
+EdenServiceHandler::co_cancelRequests(
+    apache::thrift::RequestParams params,
+    std::unique_ptr<::facebook::eden::CancelRequestsParams> p_params) {
+  auto requestContext = params.getRequestContext();
+  auto helper =
+      INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(DBG3, false, requestContext);
+  auto response = std::make_unique<CancelRequestsResponse>();
+
+  if (!p_params || p_params->requestIds()->size() == 0) {
+    co_return response;
+  }
+
+  const auto& requestIds = *p_params->requestIds();
+  response->results()->reserve(requestIds.size());
+  XLOGF(DBG3, "cancelRequests called for {} request IDs", requestIds.size());
+
+  for (const auto requestId : requestIds) {
+    XLOGF(DBG3, "Processing cancellation for requestId: {}", requestId);
+
+    CancellationStatusOrError result;
+
+    // Attempt to cancel the request
+    if (requestCancellation(requestId)) {
+      CancellationStatus success;
+      success.requestId() = requestId;
+      result.success_ref() = std::move(success);
+      XLOGF(DBG3, "Successfully cancelled request {}", requestId);
+    } else {
+      EdenError error;
+      error.errorType() = EdenErrorType::CANCELLATION_ERROR;
+
+      // Check if the request is known but not cancelable
+      if (auto status = getRequestStatus(requestId)) {
+        switch (*status) {
+          case RequestStatus::UNCANCELABLE:
+            error.errorCode() = EINVAL; // Not cancellable
+            error.message() =
+                fmt::format("Request {} is not cancellable", requestId);
+            XLOGF(DBG3, "Request {} is not cancellable", requestId);
+            break;
+          case RequestStatus::REQUESTED:
+            error.errorCode() = EALREADY; // Already cancelled
+            error.message() =
+                fmt::format("Request {} was already cancelled", requestId);
+            XLOGF(DBG3, "Request {} was already cancelled", requestId);
+            break;
+          case RequestStatus::ACTIVE:
+            error.errorCode() = EBUSY; // Failed to cancel active request
+            error.message() =
+                fmt::format("Request {} failed to cancel", requestId);
+            XLOGF(DBG3, "Request {} failed to cancel", requestId);
+            break;
+        }
+      } else {
+        error.errorCode() = ENOENT; // Request not found
+        error.message() = fmt::format("Request {} not found", requestId);
+        XLOGF(DBG3, "Request {} not found", requestId);
+      }
+
+      result.error_ref() = std::move(error);
+    }
+
+    response->results()->push_back(std::move(result));
+  }
+
+  XLOGF(DBG3, "Processed {} cancellation requests", requestIds.size());
+  co_return response;
+}
+
 folly::SemiFuture<std::unique_ptr<DebugGetScmBlobResponse>>
 EdenServiceHandler::debugGetBlobImpl(
     std::unique_ptr<DebugGetScmBlobRequest> request) {
