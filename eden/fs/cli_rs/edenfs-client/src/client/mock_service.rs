@@ -527,6 +527,10 @@ mock! {
             &self,
             params: &CancelRequestsParams,
         ) -> BoxFuture<'static, Result<CancelRequestsResponse, CancelRequestsError>>;
+
+        fn getActiveRequests(
+            &self,
+        ) -> BoxFuture<'static, Result<GetActiveRequestsResponse, GetActiveRequestsError>>;
     }
 
     #[allow(non_snake_case)]
