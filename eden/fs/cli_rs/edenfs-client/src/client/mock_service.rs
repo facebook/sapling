@@ -522,6 +522,11 @@ mock! {
             &self,
             request: &GetFileContentRequest,
         ) -> BoxFuture<'static, Result<GetFileContentResponse, GetFileContentError>>;
+
+        fn cancelRequests(
+            &self,
+            params: &CancelRequestsParams,
+        ) -> BoxFuture<'static, Result<CancelRequestsResponse, CancelRequestsError>>;
     }
 
     #[allow(non_snake_case)]
