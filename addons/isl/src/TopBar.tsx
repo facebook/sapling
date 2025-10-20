@@ -24,7 +24,7 @@ import {SettingsGearButton} from './SettingsTooltip';
 import {ShelvedChangesMenu} from './ShelvedChanges';
 import {tracker} from './analytics';
 import {DebugToolsButton} from './debug/DebugToolsButton';
-import {t} from './i18n';
+import {T} from './i18n';
 import {maybeRemoveForgottenOperation, useClearAllOptimisticState} from './operationsState';
 import {haveCommitsLoadedYet, haveRemotePath, isFetchingCommits} from './serverAPIState';
 
@@ -70,7 +70,7 @@ function RefreshButton() {
     <Tooltip
       delayMs={DOCUMENTATION_DELAY}
       placement="bottom"
-      title={t('Re-fetch latest commits and uncommitted changes.')}>
+      title={<T>Re-fetch latest commits and uncommitted changes.</T>}>
       <Button
         onClick={() => {
           tracker.track('ClickedRefresh');
