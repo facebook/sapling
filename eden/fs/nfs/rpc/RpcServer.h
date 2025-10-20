@@ -203,7 +203,7 @@ class RpcConnectionHandler : public folly::DelayedDestruction,
    * externally, so we can monitor these errors.
    */
   void recordParsingError(
-      RpcParsingError& err,
+      const RpcParsingError& err,
       std::unique_ptr<folly::IOBuf> input);
 
   /**

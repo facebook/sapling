@@ -391,7 +391,7 @@ std::unique_ptr<folly::IOBuf> finalizeFragment(
 } // namespace
 
 void RpcConnectionHandler::recordParsingError(
-    RpcParsingError& err,
+    const RpcParsingError& err,
     std::unique_ptr<folly::IOBuf> input) {
   std::string message = fmt::format(
       "{} during {}. Full request {}.",
