@@ -980,13 +980,6 @@ impl MononokeApp {
         self.repo_factory.blobstore(config).await
     }
 
-    pub async fn open_blobstore_no_cache_with_overridden_blob_config(
-        &self,
-        config: &BlobConfig,
-    ) -> Result<Arc<dyn Blobstore>> {
-        self.repo_factory.blobstore_no_cache(config).await
-    }
-
     pub async fn redaction_config_blobstore(&self) -> Result<Arc<RedactionConfigBlobstore>> {
         self.repo_factory
             .redaction_config_blobstore_from_config(
