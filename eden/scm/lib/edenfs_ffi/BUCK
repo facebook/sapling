@@ -39,7 +39,7 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/config/model:configmodel",
-        "//eden/scm/lib/edenfs-client:edenfs-client",
+        "//eden/scm/lib/filters:filters",
         "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/metrics:metrics",
         "//eden/scm/lib/pathmatcher:pathmatcher",

@@ -8,7 +8,6 @@
 //! # Communicating to EdenFS via Thrift
 
 mod client;
-pub mod filter;
 mod types;
 
 pub use crate::client::EdenFsClient;

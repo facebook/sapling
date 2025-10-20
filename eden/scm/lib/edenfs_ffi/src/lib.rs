@@ -16,7 +16,7 @@ use anyhow::anyhow;
 use configmodel::config::ConfigExt;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
-use edenfs_client::filter::FilterGenerator;
+use filters::filter::FilterGenerator;
 use metrics::Counter;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;

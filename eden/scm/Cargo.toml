@@ -105,6 +105,7 @@ members = [
   "lib/edenfs_ffi",
   "lib/encoding",
   "lib/exchange",
+  "lib/filters",
   "lib/formatter",
   "lib/fsinfo",
   "lib/fsyncglob",

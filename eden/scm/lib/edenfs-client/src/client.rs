@@ -18,6 +18,8 @@ use async_runtime::block_on;
 use clientinfo::get_client_request_info;
 use configmodel::Config;
 use fbthrift_socket::SocketTransport;
+use filters::filter::FilterGenerator;
+use filters::id::FilterId;
 use parking_lot::Mutex;
 use serde::Deserialize;
 use thrift_types::edenfs;
@@ -31,8 +33,6 @@ use tracing::error;
 use types::HgId;
 use types::RepoPathBuf;
 
-use crate::filter::FilterGenerator;
-use crate::filter::FilterId;
 use crate::types::CheckoutConflict;
 use crate::types::CheckoutMode;
 use crate::types::EdenError;

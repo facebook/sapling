@@ -10,8 +10,7 @@ use std::str::FromStr;
 
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
-#[cfg(feature = "fb")]
-use edenfs_client::filter::FilterGenerator;
+use filters::filter::FilterGenerator;
 use repo::repo::Repo;
 #[cfg(feature = "fb")]
 use types::HgId;

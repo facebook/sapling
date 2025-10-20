@@ -12,7 +12,7 @@ license = "GPL-2.0-only"
 [dependencies]
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
 sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
-sapling-edenfs-client = { version = "0.1.0", path = "../../../edenfs-client" }
+sapling-filters = { version = "0.1.0", path = "../../../filters" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-types = { version = "0.1.0", path = "../../../types" }
 

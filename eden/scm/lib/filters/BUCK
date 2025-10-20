@@ -3,37 +3,37 @@ load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 oncall("sapling")
 
 rust_library(
-    name = "edenfs-client",
+    name = "filters",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {},
         "features": {"fb": ["sapling-identity/fb"]},
-        "lib": {"name": "edenfs-client"},
+        "lib": {"name": "filters"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "sapling-edenfs-client",
+            "name": "sapling-filters",
             "repository": "https://github.com/facebook/sapling",
         },
     }},
     features = ["fb"],
+    named_deps = {
+        "blake3-constants": "//blake3:blake3-constants-rust-nothrift",
+    },
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:fs-err",
-        "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:blake3",
+        "fbsource//third-party/rust:derivative",
         "fbsource//third-party/rust:serde",
-        "fbsource//third-party/rust:toml",
         "fbsource//third-party/rust:tracing",
-        "//common/rust/shed/fbthrift_ext:socket",
-        "//common/rust/shed/tokio-uds-compat:tokio-uds-compat",
-        "//eden/scm/lib/async-runtime:async-runtime",
-        "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/config/model:configmodel",
-        "//eden/scm/lib/filters:filters",
-        "//eden/scm/lib/hg-metrics:hg-metrics",
-        "//eden/scm/lib/identity:identity",
-        "//eden/scm/lib/thrift-types:thrift-types",
+        "//eden/scm/lib/indexedlog:indexedlog",
+        "//eden/scm/lib/mincode:mincode",
+        "//eden/scm/lib/revisionstore:revisionstore",
         "//eden/scm/lib/types:types",
     ],
 )
