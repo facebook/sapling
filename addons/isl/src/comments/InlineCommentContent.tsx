@@ -74,7 +74,7 @@ function getSuggestionBadgeLabel(
   return {text: 'Suggestion', isPrimary: true};
 }
 
-function CommentCardBadge({
+export function CommentCardBadge({
   label,
   icon,
 }: {
