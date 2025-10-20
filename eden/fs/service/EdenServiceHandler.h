@@ -488,9 +488,11 @@ class EdenServiceHandler
    * Thrift worker thread and registers it with the ProcessInfoCache.
    *
    * This must be run from a Thrift worker thread, because the calling pid is
-   * stored in a thread local variable.
+   * stored in a thread local variable. For coroutines, pass the request
+   * context explicitly to avoid thread-local storage issues.
    */
-  OptionalProcessId getAndRegisterClientPid();
+  OptionalProcessId getAndRegisterClientPid(
+      apache::thrift::Cpp2RequestContext* requestContext = nullptr);
 
   folly::SemiFuture<std::unique_ptr<StartFileAccessMonitorResult>>
   semifuture_startFileAccessMonitor(

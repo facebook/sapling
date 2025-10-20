@@ -662,12 +662,16 @@ bool checkAllowedQuery(
 // wrapFuture() to attach a log message on the completion of the Future. This
 // must be called in a Thrift worker thread because the calling pid of
 // getAndRegisterClientPid is stored in a thread local variable.
+//
+// For coroutine methods, thread-local storage is unreliable due to
+// potential thread switching. Use INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION
+// directly and pass the request context explicitly.
 
 // When not attached to Future it will log the completion of the operation and
 // time taken to complete it.
 
 #define INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(             \
-    level, enableCancellation, ...)                           \
+    level, enableCancellation, requestContext, ...)           \
   ([&](SourceLocation loc) {                                  \
     static folly::Logger logger(                              \
         fmt::format("eden.thrift.{}", loc.function_name()));  \
@@ -678,7 +682,7 @@ bool checkAllowedQuery(
         loc,                                                  \
         nullptr,                                              \
         nullptr,                                              \
-        getAndRegisterClientPid(),                            \
+        getAndRegisterClientPid(requestContext),              \
         [&] {                                                 \
           return fmt::to_string(                              \
               fmt::join(std::make_tuple(__VA_ARGS__), ", ")); \
@@ -688,7 +692,7 @@ bool checkAllowedQuery(
   }(EDEN_CURRENT_SOURCE_LOCATION))
 
 #define INSTRUMENT_THRIFT_CALL_WITH_STAT_AND_CANCELLATION(    \
-    level, stat, enableCancellation, ...)                     \
+    level, stat, enableCancellation, requestContext, ...)     \
   ([&](SourceLocation loc) {                                  \
     static folly::Logger logger(                              \
         fmt::format("eden.thrift.{}", loc.function_name()));  \
@@ -699,7 +703,7 @@ bool checkAllowedQuery(
         loc,                                                  \
         server_->getStats().copy(),                           \
         stat,                                                 \
-        getAndRegisterClientPid(),                            \
+        getAndRegisterClientPid(requestContext),              \
         [&] {                                                 \
           return fmt::to_string(                              \
               fmt::join(std::make_tuple(__VA_ARGS__), ", ")); \
@@ -710,13 +714,13 @@ bool checkAllowedQuery(
 
 // Backward compatibility: INSTRUMENT_THRIFT_CALL defaults to uncancelable
 #define INSTRUMENT_THRIFT_CALL(level, ...) \
-  INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(level, false, __VA_ARGS__)
+  INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(level, false, nullptr, __VA_ARGS__)
 
 // Backward compatibility: INSTRUMENT_THRIFT_CALL_WITH_STAT defaults to
 // uncancelable
 #define INSTRUMENT_THRIFT_CALL_WITH_STAT(level, stat, ...) \
   INSTRUMENT_THRIFT_CALL_WITH_STAT_AND_CANCELLATION(       \
-      level, stat, false, __VA_ARGS__)
+      level, stat, false, nullptr, __VA_ARGS__)
 
 ThriftRequestTraceEvent ThriftRequestTraceEvent::start(
     uint64_t requestId,
@@ -6320,12 +6324,17 @@ void EdenServiceHandler::getConfig(
   result = config->toThriftConfigData();
 }
 
-OptionalProcessId EdenServiceHandler::getAndRegisterClientPid() {
+OptionalProcessId EdenServiceHandler::getAndRegisterClientPid(
+    apache::thrift::Cpp2RequestContext* requestContext) {
 #ifndef _WIN32
   // The Cpp2RequestContext for a thrift request is kept in a thread local
   // on the thread which the request originates. This means this must be run
   // on the Thread in which a thrift request originates.
-  auto connectionContext = getRequestContext();
+  //
+  // For coroutines, thread-local storage is unreliable due to potential thread
+  // switching. Use the explicit request context if supplied.
+  auto connectionContext =
+      requestContext ? requestContext : getRequestContext();
   // if connectionContext will be a null pointer in an async method, so we
   // need to check for this
   if (connectionContext) {
