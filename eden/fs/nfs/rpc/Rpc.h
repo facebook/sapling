@@ -186,7 +186,7 @@ class RpcParsingError : public std::exception {
     return rpcParseFailure_.c_str();
   }
 
-  const std::string& getProcedureContext() {
+  const std::string& getProcedureContext() const noexcept {
     return procedureContext_;
   }
 
