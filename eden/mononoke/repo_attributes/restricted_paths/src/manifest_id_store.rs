@@ -57,6 +57,7 @@ pub struct ManifestId(SmallVec<[u8; 32]>);
 pub enum ManifestType {
     Hg,
     HgAugmented,
+    Fsnode,
 }
 
 /// Entry representing a restricted path with its manifest type and id
@@ -150,7 +151,7 @@ mononoke_queries! {
     )) {
         insert_or_ignore,
         "{insert_or_ignore} INTO restricted_paths_manifest_ids
-        (repo_id, manifest_type, manifest_id, path, path_hash) 
+        (repo_id, manifest_type, manifest_id, path, path_hash)
         VALUES {values}
         "
     }
@@ -162,9 +163,9 @@ mononoke_queries! {
     ) -> (NonRootMPath) {
         "SELECT DISTINCT
             path
-         FROM 
+         FROM
             restricted_paths_manifest_ids
-         WHERE 
+         WHERE
             repo_id = {repo_id}
             AND manifest_id = {manifest_id}
             AND manifest_type = {manifest_type}
@@ -173,10 +174,10 @@ mononoke_queries! {
 
     read SelectAllEntries(repo_id: RepositoryId) -> (ManifestType, ManifestId, NonRootMPath) {
         "SELECT
-            manifest_type, 
-            manifest_id, 
+            manifest_type,
+            manifest_id,
             path
-         FROM 
+         FROM
             restricted_paths_manifest_ids
          WHERE
             repo_id = {repo_id}
@@ -320,12 +321,14 @@ impl From<ManifestType> for Value {
 
 const HG: &[u8] = b"Hg";
 const HG_AUGMENTED: &[u8] = b"HgAugmented";
+const FSNODE: &[u8] = b"Fsnode";
 
 impl ConvIr<ManifestType> for ManifestType {
     fn new(v: Value) -> FromValueResult<Self> {
         match v {
             Value::Bytes(ref b) if b == HG => Ok(ManifestType::Hg),
             Value::Bytes(ref b) if b == HG_AUGMENTED => Ok(ManifestType::HgAugmented),
+            Value::Bytes(ref b) if b == FSNODE => Ok(ManifestType::Fsnode),
             v => Err(FromValueError(v)),
         }
     }
