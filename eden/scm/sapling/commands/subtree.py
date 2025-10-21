@@ -301,7 +301,7 @@ def subtree_graft(ui, repo, **opts):
     ]
     + mergetoolopts
     + subtree_path_opts,
-    _("[OPTION]... --from-path PATH --to-path PATH"),
+    _("[OPTION]... --from-path PATH --to-path PATH ..."),
 )
 def subtree_merge(ui, repo, **opts):
     """merge a path of the specified commit into a different path of the current commit
@@ -312,8 +312,15 @@ def subtree_merge(ui, repo, **opts):
 
     If "-r/--rev" option is not specified, "-r ." is used as the default value.
 
+    For full-repo branch subtree-merges (where from-path equals to-path), multiple path
+    pairs are supported::
+
+      @prog@ subtree merge -r A \\
+        --from-path dir1 --to-path dir1 \\
+        --from-path dir2 --to-path dir2
+
     By default @Product@ scans the history of both "--from-path" and "to-path" to
-    find the best merge base. If one side’s history is massive, that can get slow.
+    find the best merge base. If one side's history is massive, that can get slow.
     Narrow the search with "--merge-base-strategy":
 
     - only-from: walk only the from-path's history
