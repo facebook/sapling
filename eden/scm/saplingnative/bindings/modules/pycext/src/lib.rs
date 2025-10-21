@@ -52,14 +52,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(py, evalframe_set_pass_through(enabled: bool = true)),
     )?;
 
-    #[cfg(windows)]
-    unsafe {
-        let curses = PyObject::from_borrowed_ptr(py, PyInit__curses());
-        let panel = PyObject::from_borrowed_ptr(py, PyInit__curses_panel());
-        m.add(py, "_curses", curses)?;
-        m.add(py, "_curses_panel", panel)?;
-    }
-
     m.add_class::<TraceProf>(py)?;
 
     Ok(m)
