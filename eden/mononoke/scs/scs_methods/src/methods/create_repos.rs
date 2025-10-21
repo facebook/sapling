@@ -51,7 +51,6 @@ use repo_authorization::AuthorizationContext;
 use repos::QuickRepoDefinition;
 use repos::QuickRepoDefinitionShardingConfig;
 use repos::QuickRepoDefinitionTShirtSize;
-use repos::QuickRepoDefinitions;
 use repos::RawCommitIdentityScheme;
 use slog::info;
 use slog::warn;
@@ -60,9 +59,16 @@ use thrift::RepoSizeBucket;
 
 use crate::source_control_impl::SourceControlServiceImpl;
 
-const QUICK_REPO_DEFINITIONS_CONFIG_NAME: &str =
-    "source/scm/mononoke/repos/quick_repo_definitions.cconf";
 const DIFF_AUTHOR: &str = "scm_server_infra";
+const REPO_DEFINITIONS_BASE_PATH: &str = "source/scm/mononoke/repos/definitions";
+const REPO_DEFINITION_THRIFT_TYPE: &str = "QuickRepoDefinition";
+const REPO_DEFINITION_THRIFT_PATH: &str = "source/scm/mononoke/repos/repos.thrift";
+
+const SIGNATURE_SKIP_FOLDERS: [&str; 3] = [
+    "materialized_configs/scm/mononoke/repos/definitions",
+    "materialized_configs/shardmanager/spec/user/mononoke",
+    "materialized_configs/scm/mononoke/repos/quick_repo_definitions.materialized_JSON",
+];
 
 async fn ensure_acls_allow_repo_creation(
     ctx: CoreContext,
@@ -486,6 +492,26 @@ fn to_tshirt_size(
     }
 }
 
+/// Generates the file path for a repo definition file.
+/// Path format: source/scm/mononoke/repos/definitions/repo_{shard}/repo_{repoid}.cconf
+/// where shard is the first two digits of the repo_id.
+fn make_repo_definition_file_path(repo_id: &RepositoryId) -> String {
+    let repo_id_str = repo_id.id().to_string();
+    let shard = if repo_id_str.len() >= 2 {
+        &repo_id_str[..2]
+    } else {
+        // For repo IDs less than 10, use "0" as shard
+        "0"
+    };
+
+    format!(
+        "{}/repo_{}/repo_{}.cconf",
+        REPO_DEFINITIONS_BASE_PATH,
+        shard,
+        repo_id.id()
+    )
+}
+
 fn make_quick_repo_definition(
     (repo_id, request): &(RepositoryId, thrift::RepoCreationRequest),
 ) -> Result<QuickRepoDefinition, scs_errors::ServiceError> {
@@ -525,22 +551,20 @@ async fn prepare_repo_configs_mutation_nowait(
             .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?,
     );
     let mut txn = configo_client.managed_transaction();
-    {
-        let mut thrift_object = txn
-            .get_thrift_object::<QuickRepoDefinitions>(
-                QUICK_REPO_DEFINITIONS_CONFIG_NAME.to_string(),
-            )
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
 
-        let new_repo_definitions = repos_ids_and_requests
-            .iter()
-            .map(make_quick_repo_definition)
-            .collect::<Result<Vec<_>, _>>()?;
+    // Create individual repo definition files
+    for (repo_id, request) in &repos_ids_and_requests {
+        let repo_definition = make_quick_repo_definition(&(repo_id.clone(), request.clone()))?;
+        let file_path = make_repo_definition_file_path(repo_id);
 
-        thrift_object
-            .quick_repo_definitions
-            .extend_from_slice(&new_repo_definitions);
+        // Set the thrift object for this repo
+        txn.set_thrift_object(
+            repo_definition,
+            file_path,
+            REPO_DEFINITION_THRIFT_TYPE.to_string(),
+            REPO_DEFINITION_THRIFT_PATH.to_string(),
+            None, // No crypto project
+        );
     }
 
     let summary = repos_ids_and_requests
@@ -889,11 +913,9 @@ impl SourceControlServiceImpl {
             .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
 
         for file in content.modifiedFiles {
-            if &file.path
-                == "materialized_configs/scm/mononoke/repos/quick_repo_definitions.materialized_JSON"
-                || file
-                    .path
-                    .starts_with("materialized_configs/shardmanager/spec/user/mononoke")
+            if SIGNATURE_SKIP_FOLDERS
+                .iter()
+                .any(|skip| file.path.starts_with(skip))
             {
                 // These files are not signed, so do not sign them or landing the mutation will
                 // fail with "Error attaching signatures for mutation"
@@ -926,5 +948,45 @@ impl SourceControlServiceImpl {
             "inititated land for mutation id  {}", mutation_id.id
         );
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    #[mononoke::test]
+    fn test_make_repo_definition_file_path_large_id() {
+        // Test with a large repo ID (5 digits)
+        let repo_id = RepositoryId::new(12345);
+        let path = make_repo_definition_file_path(&repo_id);
+        assert_eq!(
+            path,
+            "source/scm/mononoke/repos/definitions/repo_12/repo_12345.cconf"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_repo_definition_file_path_three_digit_id() {
+        // Test with a three-digit repo ID
+        let repo_id = RepositoryId::new(456);
+        let path = make_repo_definition_file_path(&repo_id);
+        assert_eq!(
+            path,
+            "source/scm/mononoke/repos/definitions/repo_45/repo_456.cconf"
+        );
+    }
+
+    #[mononoke::test]
+    fn test_make_repo_definition_file_path_single_digit_id() {
+        // Test with a single-digit repo ID (should use "0" as shard)
+        let repo_id = RepositoryId::new(5);
+        let path = make_repo_definition_file_path(&repo_id);
+        assert_eq!(
+            path,
+            "source/scm/mononoke/repos/definitions/repo_0/repo_5.cconf"
+        );
     }
 }
