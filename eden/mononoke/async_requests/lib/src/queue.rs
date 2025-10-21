@@ -14,7 +14,6 @@ use anyhow::Error;
 use anyhow::anyhow;
 use blobstore::Blobstore;
 use blobstore::PutBehaviour;
-use blobstore::Storable;
 use context::CoreContext;
 use futures::StreamExt;
 use futures::TryStreamExt;

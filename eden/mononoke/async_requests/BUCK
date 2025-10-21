@@ -28,7 +28,6 @@ rust_library(
         "//eden/mononoke/async_requests/if:async_requests_types-thrift-rust",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:memblob",
-        "//eden/mononoke/common/futures_watchdog:futures_watchdog",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/megarepo_api:megarepo_config",
         "//eden/mononoke/megarepo_api:megarepo_error",

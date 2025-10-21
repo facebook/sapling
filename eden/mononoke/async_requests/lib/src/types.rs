@@ -18,10 +18,9 @@ pub use async_requests_types_thrift::AsynchronousRequestResult as ThriftAsynchro
 pub use async_requests_types_thrift::AsynchronousRequestResultId as ThriftAsynchronousRequestResultId;
 use async_trait::async_trait;
 use blobstore::Blobstore;
-use blobstore::impl_loadable_storable;
+use blobstore::BlobstoreBytes;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures_watchdog::WatchdogExt;
 pub use megarepo_config::SyncTargetConfig;
 pub use megarepo_config::Target;
 use mononoke_api::Mononoke;
@@ -157,7 +156,12 @@ macro_rules! impl_async_svc_stored_type {
                 let bytes = blobstore.get(ctx, key).await?;
                 Self::check_prefix(key)?;
                 match bytes {
-                    Some(bytes) => Ok(bytes.into_bytes().try_into()?),
+                    Some(bytes) => {
+                        let data = bytes.into_raw_bytes();
+                        let thrift: $value_thrift_type = compact_protocol::deserialize(data.as_ref())
+                            .map_err(|e| AsyncRequestsError::internal(anyhow!("Failed to deserialize: {}", e)))?;
+                        Ok(Self::from_thrift(thrift))
+                    },
                     None => Err(AsyncRequestsError::internal(anyhow!("Missing blob: {}", key))),
                 }
             }
@@ -187,6 +191,19 @@ macro_rules! impl_async_svc_stored_type {
                 &self.thrift
             }
 
+            pub async fn store(self, ctx: &CoreContext, blobstore: &Arc<dyn Blobstore>) -> Result<$handle_type> {
+                let data = compact_protocol::serialize(&self.thrift);
+                let bytes = BlobstoreBytes::from_bytes(data);
+                let key = self.id.blobstore_key();
+                blobstore.put(ctx, key, bytes).await?;
+                Ok(self.id)
+            }
+
+            pub async fn load(ctx: &CoreContext, blobstore: &Arc<dyn Blobstore>, id: $handle_type) -> Result<Self> {
+                let key = id.blobstore_key();
+                Self::load_from_key(ctx, blobstore, &key).await
+                    .map_err(|e| e.into())
+            }
         }
 
         // Conversions between thrift types and their Rust counterparts
@@ -217,13 +234,6 @@ macro_rules! impl_async_svc_stored_type {
             fn from(other: $value_type) -> Self {
                 other.thrift
             }
-        }
-
-        impl_loadable_storable! {
-            handle_type => $handle_type,
-            handle_thrift_type => $handle_thrift_type,
-            value_type => $value_type,
-            value_thrift_type => $value_thrift_type,
         }
     }
 }
@@ -880,9 +890,7 @@ impl<R: MononokeRepo> IntoApiFormat<thrift::MegarepoSyncTargetConfig, R> for Syn
 
 #[cfg(test)]
 mod test {
-    use blobstore::Loadable;
     use blobstore::PutBehaviour;
-    use blobstore::Storable;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use memblob::Memblob;
@@ -941,8 +949,7 @@ mod test {
                 .await
                 .expect(&format!("Failed to store {}", stringify!($type)));
 
-            let obj2 = id
-                .load(&$ctx, &$blobstore)
+            let obj2 = $type::load(&$ctx, &$blobstore, id)
                 .await
                 .expect(&format!("Failed to load {}", stringify!($type)));
 
@@ -952,7 +959,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn test_megaerpo_add_target_params_type(fb: FacebookInit) {
-        let blobstore = Memblob::new(PutBehaviour::IfAbsent);
+        let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::new(PutBehaviour::IfAbsent));
         let ctx = CoreContext::test_mock(fb);
         test_store_load!(AsynchronousRequestParams, ctx, blobstore);
         test_store_load!(AsynchronousRequestResult, ctx, blobstore);
