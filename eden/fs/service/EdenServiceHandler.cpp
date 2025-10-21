@@ -6272,6 +6272,20 @@ void EdenServiceHandler::injectFault(unique_ptr<FaultDefinition> fault) {
         *fault->keyClass(), *fault->keyValueRegex(), *fault->count());
     return;
   }
+  if (*fault->blockWithCancel()) {
+    // At the time of injection we do not have the actual request's cancellation
+    // token. This fault needs to call updateBlockWithCancelToken to update the
+    // token.
+    folly::CancellationSource placeholderSource;
+    std::string blockWithCancelKeyClass = *fault->keyClass();
+    injector.injectBlockWithCancel(
+        blockWithCancelKeyClass,
+        *fault->keyValueRegex(),
+        placeholderSource.getToken(),
+        std::chrono::milliseconds{5000}, // 5 second timeout
+        *fault->count());
+    return;
+  }
   if (*fault->kill()) {
     injector.injectKill(
         *fault->keyClass(), *fault->keyValueRegex(), *fault->count());
