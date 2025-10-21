@@ -63,8 +63,6 @@ use crate::source_control_impl::SourceControlServiceImpl;
 const QUICK_REPO_DEFINITIONS_CONFIG_NAME: &str =
     "source/scm/mononoke/repos/quick_repo_definitions.cconf";
 const DIFF_AUTHOR: &str = "scm_server_infra";
-const PREPARE_TIMEOUT: Duration = Duration::from_secs(60 * 30);
-const LAND_TIMEOUT: Duration = Duration::from_secs(60 * 90);
 
 async fn ensure_acls_allow_repo_creation(
     ctx: CoreContext,
@@ -817,8 +815,10 @@ impl SourceControlServiceImpl {
                 Some(thrift::CreateReposStatus::ABORTED)
             }
             MutationState::PREPARED => {
-                self.initiate_land(ctx.clone(), configo_client.clone(), mutation_id)
-                    .await?;
+                if !mutation.stateInfo.isSigned {
+                    self.initiate_land(ctx.clone(), configo_client, mutation_id)
+                        .await?;
+                }
                 Some(thrift::CreateReposStatus::IN_PROGRESS)
             }
             MutationState::CANARYING
