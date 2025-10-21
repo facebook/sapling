@@ -16,6 +16,16 @@ python_unittest(
 )
 
 python_unittest(
+    name = "cancellation",
+    srcs = ["cancellation_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
     name = "casing",
     srcs = ["casing_test.py"],
     env = artifacts["env"],
