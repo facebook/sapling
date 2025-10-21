@@ -11,15 +11,13 @@
 # GNU General Public License version 2 or any later version.
 
 
-import re
+import os, re
 from typing import Dict, List, Optional, Pattern, Union
 
 import bindings
 
 from . import encoding, util
 from .i18n import _
-
-curses = util.import_curses()
 
 # start and stop parameters for effects
 _defaulteffects = {
@@ -396,8 +394,11 @@ def supportedcolors(ui):
 
     # Colors reported by terminfo. Might be smaller than the real value.
     ticolors = 8
-    if curses:
+
+    if os.name != "nt":
         try:
+            import curses
+
             curses.setupterm()
             ticolors = curses.tigetnum("colors")
         except Exception:

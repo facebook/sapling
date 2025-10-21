@@ -20,7 +20,15 @@ import re
 import signal
 from typing import Dict, Optional
 
-from . import encoding, error, patch as patchmod, progress, scmutil, util
+from . import (
+    curses_compat as curses,
+    encoding,
+    error,
+    patch as patchmod,
+    progress,
+    scmutil,
+    util,
+)
 from .i18n import _
 
 # patch comments based on the git one
@@ -49,22 +57,6 @@ patchhelptext: str = _(
 """
 )
 
-curses = None
-
-
-def import_curses(ui):
-    global curses
-
-    if curses is None:
-        if ui.configbool("experimental", "termwiz-curses"):
-            from . import curses_compat
-
-            curses = curses_compat
-        else:
-            curses = util.import_curses()
-
-    return curses
-
 
 def checkcurses(ui):
     """Return True if the user wants to use curses
@@ -72,8 +64,6 @@ def checkcurses(ui):
     This method returns True if curses is found (and that python is built with
     it) and that the user has the correct flag for the ui.
     """
-    import_curses(ui)
-
     return curses and ui.interface("chunkselector") == "curses"
 
 
@@ -549,8 +539,6 @@ def chunkselector(ui, headerlist, operation=None):
     curses interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
     """
-    import_curses(ui)
-
     ui.write(_("starting interactive selection\n"))
     chunkselector = curseschunkselector(headerlist, ui, operation)
     origsigtstp = sentinel = object()

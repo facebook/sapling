@@ -27,30 +27,19 @@ import functools
 import os
 from typing import List, Optional
 
-from sapling import cmdutil, destutil, error, node, registrar, scmutil, util
+from sapling import (
+    cmdutil,
+    curses_compat as curses,
+    destutil,
+    error,
+    node,
+    registrar,
+    scmutil,
+    util,
+)
 from sapling.i18n import _
 
 from . import histedit
-
-curses = None
-
-
-def import_curses(ui):
-    global curses
-
-    if curses is None:
-        use_termwiz = ui.configbool("experimental", "termwiz-curses-chistedit", None)
-        if use_termwiz is None:
-            use_termwiz = ui.configbool("experimental", "termwiz-curses")
-        if use_termwiz:
-            from .. import curses_compat
-
-            curses = curses_compat
-        else:
-            curses = util.import_curses()
-
-    return curses
-
 
 KEY_LIST = ["pick", "edit", "fold", "drop", "mess", "roll"]
 ACTION_LABELS = {"fold": "^fold", "roll": "^roll"}
@@ -564,10 +553,6 @@ testedwith = "ships-with-fb-ext"
 def chistedit(ui, repo, *freeargs, **opts):
     """Provides a ncurses interface to histedit. Press ? in chistedit mode
     to see an extensive help. Requires python-curses to be installed."""
-
-    import_curses(ui)
-    if curses is None:
-        raise error.Abort(_("Python curses library required"))
 
     # disable color
     ui._colormode = None
