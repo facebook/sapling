@@ -21,6 +21,8 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use repo_metadata_checkpoint::RepoMetadataCheckpointRef;
 
+#[cfg(fbcode_build)]
+pub use crate::log::RepoMetadataLogger;
 pub use crate::process::repo_metadata_for_bookmark;
 
 pub trait Repo = RepoConfigRef
