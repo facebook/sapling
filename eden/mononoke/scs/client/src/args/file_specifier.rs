@@ -71,7 +71,7 @@ impl FileSpecifierArgs {
                 path_args,
             } => {
                 let repo = repo_args.into_repo_specifier();
-                let conn = app.get_connection(Some(&repo.name))?;
+                let conn = app.get_connection(Some(&repo.name)).await?;
                 let commit_id = commit_id_args.into_commit_id();
                 let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
                 let path = path_args.path;

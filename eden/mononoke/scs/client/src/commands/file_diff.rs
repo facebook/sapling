@@ -99,7 +99,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         thrift::FileSpecifier::by_sha256_content_hash(spec) => &spec.repo.name,
         _ => return Err(anyhow::anyhow!("Unknown file specifier type")),
     };
-    let conn = app.get_connection(Some(repo_name))?;
+    let conn = app.get_connection(Some(repo_name)).await?;
 
     let response = conn.file_diff(&base_file_specifier, &params).await?;
 

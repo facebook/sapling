@@ -94,7 +94,7 @@ impl Render for SubmoduleExpansionUpdateOutput {
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let large_repo = args.large_repo_args.clone().into_repo_specifier();
-    let large_repo_conn = app.get_connection(Some(&large_repo.name))?;
+    let large_repo_conn = app.get_connection(Some(&large_repo.name)).await?;
 
     let new_submodule_commit_or_delete = args.new_submodule_git_commit.map(|commit_hash| {
         // TODO(T179531912): support other hashes

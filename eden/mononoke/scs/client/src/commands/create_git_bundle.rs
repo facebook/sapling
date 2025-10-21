@@ -67,7 +67,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     if commit_ids.len() != 2 {
         bail!("expected 2 commit_ids (got {})", commit_ids.len())
     }
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
     let service_identity = args.service_id_args.service_id;
 

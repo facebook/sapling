@@ -81,7 +81,7 @@ impl Render for RepoInfoOutput {
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let params = thrift::RepoInfoParams {
         ..Default::default()
     };

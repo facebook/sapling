@@ -52,7 +52,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let params = thrift::ListReposParams {
         ..Default::default()
     };
-    let conn = app.get_connection(None)?;
+    let conn = app.get_connection(None).await?;
 
     if let Some(stress) = args.stress {
         let runner = stress.new_runner(conn.get_client_corrrelator());

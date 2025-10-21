@@ -71,8 +71,8 @@ pub(crate) struct ScscApp {
 }
 
 impl ScscApp {
-    fn get_connection(&self, repo: Option<&str>) -> anyhow::Result<ScsClient> {
-        self.connection_args.get_connection(self.fb, repo)
+    async fn get_connection(&self, repo: Option<&str>) -> anyhow::Result<ScsClient> {
+        self.connection_args.get_connection(self.fb, repo).await
     }
 }
 

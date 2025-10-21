@@ -8,6 +8,7 @@
 //! Connection management.
 
 use anyhow::Error;
+use anyhow::Result;
 use fbinit::FacebookInit;
 use scs_client_raw::SCS_DEFAULT_TIER;
 use scs_client_raw::ScsClient;
@@ -33,7 +34,11 @@ pub(super) struct ConnectionArgs {
 }
 
 impl ConnectionArgs {
-    pub fn get_connection(&self, fb: FacebookInit, repo: Option<&str>) -> Result<ScsClient, Error> {
+    pub async fn get_connection(
+        &self,
+        fb: FacebookInit,
+        repo: Option<&str>,
+    ) -> Result<ScsClient, Error> {
         let disable_sr =
             std::env::var("MONONOKE_INTEGRATION_TEST_DISABLE_SR").is_ok_and(|v| v == "true");
         if self.host.is_some() && disable_sr {

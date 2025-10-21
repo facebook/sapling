@@ -149,7 +149,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         bail!("expected at least one commit ID");
     }
 
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
 
     let resolved_commit_ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
     let ids_index: HashMap<String, String> = resolved_commit_ids

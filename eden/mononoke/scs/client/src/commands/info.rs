@@ -170,7 +170,7 @@ impl Render for FileInfoOutput {
 
 async fn commit_info(app: ScscApp, args: CommandArgs, repo: thrift::RepoSpecifier) -> Result<()> {
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
         repo,
@@ -196,7 +196,7 @@ async fn commit_info(app: ScscApp, args: CommandArgs, repo: thrift::RepoSpecifie
 }
 
 async fn bookmark_info(app: ScscApp, args: CommandArgs, repo: thrift::RepoSpecifier) -> Result<()> {
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let bookmark_name = args
         .commit_id_args
         .clone()
@@ -231,7 +231,7 @@ async fn path_info(
     path: String,
 ) -> Result<()> {
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
         repo: repo.clone(),
@@ -278,7 +278,7 @@ async fn multiple_path_info(
     paths: Vec<String>,
 ) -> Result<()> {
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let id = resolve_commit_id(&conn, &repo, &commit_id).await?;
     let commit = thrift::CommitSpecifier {
         repo,

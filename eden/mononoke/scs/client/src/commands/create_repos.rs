@@ -27,7 +27,7 @@ pub(super) struct CommandArgs {
 }
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
-    let conn = app.get_connection(None)?;
+    let conn = app.get_connection(None).await?;
     let repos = args
         .repo_names
         .into_iter()

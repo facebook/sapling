@@ -46,7 +46,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         payload: "anything".to_string(),
         ..Default::default()
     };
-    let conn = app.get_connection(None)?;
+    let conn = app.get_connection(None).await?;
 
     let token = conn.async_ping(&params).await?;
     println!(
@@ -62,7 +62,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             }
 
             // reopening the connection on retry might allow SR to send us to a different server
-            let conn = app.get_connection(None)?;
+            let conn = app.get_connection(None).await?;
             let res = conn.async_ping_poll(&token).await;
             match res {
                 Ok(res) => match res {

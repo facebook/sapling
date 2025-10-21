@@ -54,7 +54,7 @@ impl Render for IsAncestorOutput {
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
     let commit_ids = args.commit_ids_args.clone().into_commit_ids();
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
     if ids.len() != 2 {
         bail!("expected 2 commit_ids (got {})", commit_ids.len())

@@ -38,7 +38,7 @@ pub(super) struct CommandArgs {
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.into_repo_specifier();
     let commit_id = args.commit_id_args.into_commit_id();
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let old_target = match commit_id {
         Some(commit_id) => Some(resolve_commit_id(&conn, &repo, &commit_id).await?),
         None => None,

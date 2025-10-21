@@ -203,7 +203,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let prefix = args.prefix.clone();
     let include_scratch = args.include_scratch;
 
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let bookmarks = match args.commit_ids_args.clone().into_commit_ids().as_slice() {
         [commit_id] => {
             let id = resolve_commit_id(&conn, &repo, commit_id).await?;

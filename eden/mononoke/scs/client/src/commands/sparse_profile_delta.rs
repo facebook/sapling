@@ -92,7 +92,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         bail!("expected 2 commit_ids (got {})", commit_ids.len())
     }
 
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let commit_ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
 
     let profiles = args.sparse_profiles_args.clone().into_sparse_profiles();
@@ -118,7 +118,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         }
 
         // reopening the connection on retry might allow SR to send us to a different server
-        let conn = app.get_connection(Some(&repo.name))?;
+        let conn = app.get_connection(Some(&repo.name)).await?;
         let res = conn.commit_sparse_profile_delta_poll(&token).await;
         match res {
             Ok(res) => match res {

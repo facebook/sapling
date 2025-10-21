@@ -214,7 +214,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         bail!("expected 1 or 2 commit_ids (got {})", commit_ids.len())
     }
     let paths = args.path.clone();
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let commit_ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
     let identity_schemes = args.scheme_args.clone().into_request_schemes();
 

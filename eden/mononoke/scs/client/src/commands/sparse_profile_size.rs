@@ -64,7 +64,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
 
     let commit_id = args.commit_id_args.clone().into_commit_id();
-    let conn = app.get_connection(Some(&repo.name))?;
+    let conn = app.get_connection(Some(&repo.name)).await?;
     let commit_id = resolve_commit_id(&conn, &repo, &commit_id).await?;
 
     let profiles = args.sparse_profiles_args.clone().into_sparse_profiles();
@@ -89,7 +89,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
         }
 
         // reopening the connection on retry might allow SR to send us to a different server
-        let conn = app.get_connection(Some(&repo.name))?;
+        let conn = app.get_connection(Some(&repo.name)).await?;
         let res = conn.commit_sparse_profile_size_poll(&token).await;
         match res {
             Ok(res) => match res {
