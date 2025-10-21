@@ -13,6 +13,9 @@ rust_binary(
             [
                 "//common/rust/build_info:build_info",
                 "//common/rust/thrift/srclient:srclient",
+                "//tupperware/api/if:common-rust",
+                "//tupperware/api/if:tupperware-rust",
+                "//tupperware/api/if:tupperware-rust-srclients",
             ],
         ),
         (
