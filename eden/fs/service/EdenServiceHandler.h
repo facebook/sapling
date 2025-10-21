@@ -519,6 +519,10 @@ class EdenServiceHandler
       std::unique_ptr<::facebook::eden::CancelRequestsParams> p_params)
       override;
 
+  folly::coro::Task<
+      std::unique_ptr<::facebook::eden::GetActiveRequestsResponse>>
+  co_getActiveRequests(apache::thrift::RequestParams params) override;
+
   void insertCancellationSource(
       uint64_t requestId,
       folly::CancellationSource cancellationSource);

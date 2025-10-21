@@ -5824,6 +5824,77 @@ EdenServiceHandler::semifuture_getFileContent(
       .semi();
 }
 
+folly::coro::Task<std::unique_ptr<::facebook::eden::GetActiveRequestsResponse>>
+EdenServiceHandler::co_getActiveRequests(apache::thrift::RequestParams params) {
+  auto requestContext = params.getRequestContext();
+  auto helper =
+      INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(DBG3, false, requestContext);
+
+  XLOG(DBG3) << "getActiveRequests called";
+
+  auto response = std::make_unique<GetActiveRequestsResponse>();
+  std::vector<ActiveRequestInfo> activeRequests;
+
+  auto currentRequestId = helper->getRequestId();
+  auto lockedStore = requestCancellationStore_.rlock();
+  for (const auto& [requestId, cancellationInfo] : *lockedStore) {
+    // Skip our own request
+    if (requestId == currentRequestId) {
+      continue;
+    }
+
+    ActiveRequestInfo requestInfo;
+    requestInfo.requestId() = requestId;
+    requestInfo.cancelable() = cancellationInfo.isCancelable();
+
+    std::optional<std::string_view> method;
+    std::optional<pid_t> reqClientPid;
+    std::chrono::system_clock::time_point systemTime;
+    {
+      auto lockedOutstanding = outstandingThriftRequests_.rlock();
+      auto it = lockedOutstanding->find(requestId);
+      if (it != lockedOutstanding->end()) {
+        method = it->second.method;
+        reqClientPid = it->second.clientPid
+            ? std::optional<pid_t>(it->second.clientPid.value().get())
+            : std::nullopt;
+        systemTime = it->second.systemTime;
+      }
+    }
+
+    if (method.has_value()) {
+      requestInfo.method() = std::string(method.value());
+      requestInfo.clientPid() = reqClientPid.value_or(0);
+
+      requestInfo.startTimeNs() =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(
+              systemTime.time_since_epoch())
+              .count();
+
+      if (reqClientPid) {
+        auto processInfoCache =
+            server_->getServerState()->getProcessInfoCache();
+        auto processName =
+            processInfoCache->getProcessName(reqClientPid.value());
+        if (processName.has_value() && !processName->empty()) {
+          requestInfo.processName() = *processName;
+        }
+      }
+    } else {
+      requestInfo.method() = "unknown";
+      requestInfo.clientPid() = 0;
+    }
+
+    activeRequests.push_back(std::move(requestInfo));
+  }
+
+  response->requests() = std::move(activeRequests);
+  XLOG(DBG3) << "getActiveRequests returning " << response->requests()->size()
+             << " active requests";
+
+  co_return response;
+}
+
 void EdenServiceHandler::listRedirections(
     ListRedirectionsResponse& response,
     std::unique_ptr<ListRedirectionsRequest> request) {
