@@ -148,7 +148,6 @@ where
         metadata: CommitMetadata,
         changes: SortedVectorMap<NonRootMPath, Self::Change>,
         acc: &GitimportAccumulator,
-        _dry_run: bool,
     ) -> Result<Self::IntermediateChangeset, Error> {
         generate_changeset_for_commit(metadata, changes, acc).await
     }
@@ -156,12 +155,11 @@ where
     async fn finalize_batch(
         &self,
         ctx: &CoreContext,
-        dry_run: bool,
         backfill_derivation: BackfillDerivation,
         changesets: Vec<(hash::GitSha1, Self::IntermediateChangeset)>,
         _acc: &GitimportAccumulator,
     ) -> Result<Vec<(hash::GitSha1, ChangesetId)>, Error> {
-        finalize_batch(self.repo(), ctx, dry_run, backfill_derivation, changesets).await
+        finalize_batch(self.repo(), ctx, backfill_derivation, changesets).await
     }
 
     async fn upload_object(

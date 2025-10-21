@@ -194,7 +194,6 @@ where
 
 #[derive(Clone, Debug)]
 pub struct GitimportPreferences {
-    pub dry_run: bool,
     /// Only for logging purposes,
     /// useful when several repos are imported simultaneously.
     pub gitrepo_name: Option<String>,
@@ -214,7 +213,6 @@ pub struct GitimportPreferences {
 impl Default for GitimportPreferences {
     fn default() -> Self {
         GitimportPreferences {
-            dry_run: false,
             gitrepo_name: None,
             concurrency: 20,
             submodules: true,

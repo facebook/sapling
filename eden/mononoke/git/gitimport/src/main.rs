@@ -16,20 +16,13 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::anyhow;
-use blobrepo_override::DangerousOverride;
-use blobstore::Blobstore;
 use blobstore::Loadable;
-use bonsai_hg_mapping::ArcBonsaiHgMapping;
-use bonsai_hg_mapping::MemWritesBonsaiHgMapping;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarkCategory;
 use bookmarks::BookmarkKind;
 use bookmarks::BookmarkPagination;
 use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarksRef;
-use cacheblob::LeaseOps;
-use cacheblob::MemWritesBlobstore;
-use cacheblob::dummy::DummyLease;
 use clap::Parser;
 use clap::Subcommand;
 use clientinfo::ClientEntryPoint;
@@ -273,18 +266,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         repo.repo_identity().id(),
     );
 
-    let dry_run = app.readonly_storage().0;
-    let repo = if dry_run {
-        repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
-            Arc::new(MemWritesBlobstore::new(blobstore))
-        })
-        .dangerous_override(|bonsai_hg_mapping| -> ArcBonsaiHgMapping {
-            Arc::new(MemWritesBonsaiHgMapping::new(bonsai_hg_mapping))
-        })
-        .dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>)
-    } else {
-        repo
-    };
     let backfill_derivation = if args.bypass_derived_data_backfilling {
         if args.generate_bookmarks {
             warn!(
@@ -332,9 +313,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         lfs,
         ..Default::default()
     };
-    // if we are readonly, then we'll set up some overrides to still be able to do meaningful
-    // things below.
-    prefs.dry_run = dry_run;
 
     if let Some(path) = args.git_command_path {
         prefs.git_command_path = PathBuf::from(path);

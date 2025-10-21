@@ -154,7 +154,6 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
         metadata: CommitMetadata,
         changes: SortedVectorMap<NonRootMPath, Self::Change>,
         acc: &GitimportAccumulator,
-        dry_run: bool,
     ) -> Result<Self::IntermediateChangeset, Error>;
 
     /// Generate a single Bonsai changeset ID for corresponding Git
@@ -173,7 +172,6 @@ pub trait GitUploader: Clone + Send + Sync + 'static {
     async fn finalize_batch(
         &self,
         ctx: &CoreContext,
-        dry_run: bool,
         backfill_derivation: BackfillDerivation,
         changesets: Vec<(hash::GitSha1, Self::IntermediateChangeset)>,
         acc: &GitimportAccumulator,
@@ -393,7 +391,6 @@ pub async fn generate_changeset_for_commit(
 pub async fn finalize_batch(
     repo: &impl Repo,
     ctx: &CoreContext,
-    dry_run: bool,
     backfill_derivation: BackfillDerivation,
     changesets: Vec<(hash::GitSha1, BonsaiChangeset)>,
 ) -> Result<Vec<(hash::GitSha1, ChangesetId)>, Error> {
@@ -409,11 +406,6 @@ pub async fn finalize_batch(
         .iter()
         .map(|entry| (entry.git_sha1, entry.bcs_id))
         .collect();
-
-    if dry_run {
-        // Short circuit the steps that write
-        return Ok(ret);
-    }
 
     // We know that the commits are in order (this is guaranteed by the Walk), so we
     // can insert them as-is, one by one, without extra dependency / ordering checks.

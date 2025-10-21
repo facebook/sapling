@@ -392,7 +392,6 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     acc: GitimportAccumulator,
 ) -> Result<LinkedHashMap<ObjectId, ChangesetId>> {
     let nb_commits_to_import = all_commits.len();
-    let dry_run = prefs.dry_run;
     let backfill_derivation = prefs.backfill_derivation.clone();
     let acc = Arc::new(acc);
     let ctx = &ctx.clone_with_repo_name(&repo_name);
@@ -467,7 +466,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                 );
                 async move {
                     let finalized_chunk_res = uploader
-                        .finalize_batch(&ctx, dry_run, backfill_derivation, incoming, &acc)
+                        .finalize_batch(&ctx, backfill_derivation, incoming, &acc)
                         .try_timed()
                         .await
                         .context("finalize_batch");
@@ -523,7 +522,6 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                         extracted_commit.metadata,
                         file_changes,
                         &acc,
-                        dry_run,
                     )
                     .try_timed()
                     .await
@@ -982,13 +980,11 @@ pub async fn import_tree_as_single_bonsai_changeset<Uploader: GitUploader>(
             extracted_commit.metadata,
             file_changes,
             &acc,
-            prefs.dry_run,
         )
         .and_then(|int_cs| {
             uploader
                 .finalize_batch(
                     ctx,
-                    prefs.dry_run,
                     prefs.backfill_derivation.clone(),
                     vec![(sha1, int_cs)],
                     &acc,

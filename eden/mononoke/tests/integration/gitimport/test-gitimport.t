@@ -80,6 +80,7 @@
   }
 
 
+
 # Validate if creating the commit also uploaded the packfile items for the imported git objects
   $ ls $TESTTMP/blobstore/blobs | grep "git_packfile_base_item"
   blob-repo0000.git_packfile_base_item.433eb172726bc7b6d60e8d68efb0f0ef4e67a667
@@ -134,18 +135,6 @@
   $ gitimport "$GIT_REPO" --suppress-ref-mapping missing-for-commit e8615d6f149b876be0a2f30a1c5bf0c42bf8e136
   [INFO] using repo "repo" repoid RepositoryId(0)
   [INFO] Nothing to import for repo $TESTTMP/repo-git.
-
-# Also check that a readonly import works
-  $ gitimport "$GIT_REPO" --with-readonly-storage=true --derive-hg --skip-head-symref full-repo
-  [INFO] using repo "repo" repoid RepositoryId(0)
-  [INFO] GitRepo:$TESTTMP/repo-git 2 of 2 commit(s) already exist
-  [INFO] Hg: Sha1(8ce3eae44760b500bf3f2c3922a95dcd3c908e9e): HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839)))
-  [INFO] Hg: Sha1(e8615d6f149b876be0a2f30a1c5bf0c42bf8e136): HgManifestId(HgNodeHash(Sha1(d92f8d2d10e61e62f65acf25cdd638ea214f267f)))
-  [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(da93dc81badd8d407db0f3219ec0ec78f1ef750ebfa95735bb483310371af80c)))
-  [INFO] Ref: "refs/remotes/origin/a_ref_prefixed_by_remotes_origin": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
-  [INFO] Ref: "refs/tags/changing_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
-  [INFO] Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
-  [INFO] Ref: "refs/tags/recursive_tag": Some(ChangesetId(Blake2(032cd4dce0406f1c1dd1362b6c3c9f9bdfa82f2fc5615e237a890be4fe08b044)))
 
 # Add an empty tag and a simple tag (i.e. non-annotated tag)
   $ cd "$GIT_REPO"
