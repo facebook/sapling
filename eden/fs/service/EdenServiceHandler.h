@@ -323,7 +323,9 @@ class EdenServiceHandler
       std::unique_ptr<DebugGetScmBlobRequest> request);
 
   folly::coro::Task<std::unique_ptr<DebugGetScmBlobResponse>>
-  co_debugGetBlobImpl(std::unique_ptr<DebugGetScmBlobRequest> request);
+  co_debugGetBlobImpl(
+      apache::thrift::Cpp2RequestContext* requestContext,
+      std::unique_ptr<DebugGetScmBlobRequest> request);
 
   folly::SemiFuture<std::unique_ptr<DebugGetBlobMetadataResponse>>
   semifuture_debugGetBlobMetadata(

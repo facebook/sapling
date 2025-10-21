@@ -4761,7 +4761,14 @@ EdenServiceHandler::semifuture_debugGetBlob(
   bool use_coroutines = config->enableCoroutinesInDebugGetBlob.getValue();
 
   if (use_coroutines) {
-    return co_debugGetBlobImpl(std::move(request)).semi();
+    auto requestContext = getRequestContext();
+    return co_debugGetBlobImpl(requestContext, std::move(request))
+        .semi()
+        .deferError(
+            [](folly::exception_wrapper&& ex)
+                -> std::unique_ptr<DebugGetScmBlobResponse> {
+              throw newEdenError(ex);
+            });
   } else {
     return debugGetBlobImpl(std::move(request));
   }
@@ -4769,12 +4776,24 @@ EdenServiceHandler::semifuture_debugGetBlob(
 
 folly::coro::Task<std::unique_ptr<DebugGetScmBlobResponse>>
 EdenServiceHandler::co_debugGetBlobImpl(
+    apache::thrift::Cpp2RequestContext* requestContext,
     std::unique_ptr<DebugGetScmBlobRequest> request) {
   const auto& mountid = request->mountId();
   const auto& idStr = request->id();
   const auto& origins = request->origins();
-  auto helper =
-      INSTRUMENT_THRIFT_CALL(DBG2, *mountid, logHash(*idStr), *origins);
+
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
+      DBG2, true, requestContext, *mountid, logHash(*idStr), *origins);
+  auto cancellationToken = getCancellationToken(helper->getRequestId());
+
+  auto& faultInjector = server_->getServerState()->getFaultInjector();
+  if (faultInjector.hasBlockWithCancelFault("debugGetBlob", idStr->c_str())) {
+    co_await faultInjector
+        .waitForCancelOrTimeout(
+            "debugGetBlob", *cancellationToken, idStr->c_str())
+        .semi(); // Throws
+  }
+
   auto mountHandle = lookupMount(*mountid);
   auto edenMount = mountHandle.getEdenMountPtr();
   auto id = edenMount->getObjectStore()->parseObjectId(*idStr);
@@ -4782,10 +4801,10 @@ EdenServiceHandler::co_debugGetBlobImpl(
   auto store = edenMount->getObjectStore();
   std::vector<folly::coro::Task<ScmBlobWithOrigin>> blobTasks;
 
-  // We use co_invoke to have the same collectAll pattern from the Futures-based
-  // getBlob.
-  // co_invoke is not recommend for 'hot paths' due to overhead.
-  // From benchmarking, no performance regressions were found.
+  // We use co_invoke to have the same collectAll pattern from the
+  // Futures-based getBlob. co_invoke is not recommend for 'hot
+  // paths' due to overhead. From benchmarking, no performance
+  // regressions were found.
   if (originFlags.contains(FROMWHERE_MEMORY_CACHE)) {
     blobTasks.push_back(folly::coro::co_invoke(
         [edenMount, id]() -> folly::coro::Task<ScmBlobWithOrigin> {
