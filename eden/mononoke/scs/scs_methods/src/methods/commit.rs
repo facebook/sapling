@@ -225,7 +225,9 @@ impl CommitFileDiffsItem {
                 self.raw_diff(ctx, context_lines, repo_name, diff_router)
                     .await
             }
-            thrift::DiffFormat::METADATA_DIFF => self.metadata_diff(ctx).await,
+            thrift::DiffFormat::METADATA_DIFF => {
+                self.metadata_diff(ctx, repo_name, diff_router).await
+            }
             unknown => Err(scs_errors::invalid_request(format!(
                 "invalid diff format: {:?}",
                 unknown
@@ -256,8 +258,12 @@ impl CommitFileDiffsItem {
     async fn metadata_diff(
         &self,
         ctx: &CoreContext,
+        repo_name: &str,
+        diff_router: &crate::diff::DiffRouter<'_>,
     ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
-        let metadata_diff = self.path_diff_context.metadata_diff(ctx).await?;
+        let metadata_diff = diff_router
+            .metadata_diff(ctx, repo_name, &self.path_diff_context)
+            .await?;
         Ok(CommitFileDiffsResponseElement::MetadataDiff { metadata_diff })
     }
 }
