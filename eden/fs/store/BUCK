@@ -191,6 +191,7 @@ cpp_library(
         "//eden/fs/telemetry:log_info",
         "//eden/fs/telemetry:task_trace",
         "//eden/fs/utils:eden_error",
+        "//fb303:service_data",
         "//folly:conv",
         "//folly:exception_wrapper",
         "//folly:portability",

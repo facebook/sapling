@@ -98,6 +98,31 @@ struct TreeCacheTest : ::testing::Test {
   }
 };
 
+struct TreeCacheShardedTest : ::testing::Test {
+ protected:
+  std::shared_ptr<ReloadableConfig> edenConfig;
+  std::shared_ptr<TreeCache> cache;
+
+  void SetUp() override {
+    std::shared_ptr<EdenConfig> rawEdenConfig{
+        EdenConfig::createTestEdenConfig()};
+
+    rawEdenConfig->inMemoryTreeCacheSize.setValue(
+        cacheMaxSize, ConfigSourceType::Default, true);
+    rawEdenConfig->inMemoryTreeCacheMinimumItems.setValue(
+        cacheMinEntries, ConfigSourceType::Default, true);
+    // Enable ShardedCacheType by setting prefetchOptimizations=true and
+    // treeCacheShards>0
+    rawEdenConfig->prefetchOptimizations.setValue(
+        true, ConfigSourceType::Default, true);
+    rawEdenConfig->treeCacheShards.setValue(4, ConfigSourceType::Default, true);
+
+    edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
+
+    cache = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
+  }
+};
+
 TEST_F(TreeCacheTest, testAssumptions) {
   // This test just exists to catch if the underlying assumptions of the rest of
   // the tests are violated rather than the caching code being incorrect. This
@@ -176,4 +201,23 @@ TEST_F(TreeCacheTest, testSizeOverflowLargeInsert) {
       std::shared_ptr<const Tree>{nullptr}, cache->get(tree2->getObjectId()));
   EXPECT_TRUE(cache->contains(tree4->getObjectId()));
   EXPECT_EQ(tree4, cache->get(tree4->getObjectId()));
+}
+
+TEST_F(TreeCacheShardedTest, testShardedCacheBasicOperations) {
+  cache->insert(tree0_id, tree0);
+  cache->insert(tree1_id, tree1);
+
+  EXPECT_TRUE(cache->contains(tree0->getObjectId()));
+  EXPECT_TRUE(cache->contains(tree1->getObjectId()));
+
+  EXPECT_EQ(tree0, cache->get(tree0->getObjectId()));
+  EXPECT_EQ(tree1, cache->get(tree1->getObjectId()));
+
+  auto nonExistentId =
+      ObjectId::fromHex("1111111111111111111111111111111111111111");
+  EXPECT_EQ(nullptr, cache->get(nonExistentId));
+
+  cache->clear();
+  EXPECT_FALSE(cache->contains(tree0->getObjectId()));
+  EXPECT_FALSE(cache->contains(tree1->getObjectId()));
 }

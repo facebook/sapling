@@ -1766,6 +1766,15 @@ class EdenConfig : private ConfigSettingManager {
       16,
       this};
 
+  /**
+   * Number of shards for the tree cache. Higher number means lower lock
+   * contention, but more imperfect LRU property (each shard has its own LRU).
+   *
+   * If set to 0, the legacy ObjectCache implementation is used instead of
+   * ShardedLruCache.
+   */
+  ConfigSetting<uint64_t> treeCacheShards{"treecache:shards", 32, this};
+
   // [notifications]
 
   /**
