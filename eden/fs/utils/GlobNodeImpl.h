@@ -257,7 +257,7 @@ class GlobNodeImpl {
           context,
           rootPath,
           RelativePathPiece{""},
-          std::forward<ROOT>(root),
+          ROOT(root),
           fileBlobsToPrefetch,
           globResult,
           originRootId));
