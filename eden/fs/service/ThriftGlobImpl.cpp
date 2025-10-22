@@ -148,9 +148,13 @@ ThriftGlobImpl::ThriftGlobImpl(const GlobParams& params)
       rootIds_{*params.revisions()},
       searchRootUser_{*params.searchRoot()} {}
 
-ThriftGlobImpl::ThriftGlobImpl(const PrefetchParams& params)
+ThriftGlobImpl::ThriftGlobImpl(
+    const PrefetchParams& params,
+    bool prefetchOptimizations)
     : includeDotfiles_{true},
       prefetchFiles_{!*params.directoriesOnly()},
+      suppressFileList_{
+          prefetchOptimizations && !*params.returnPrefetchedFiles()},
       rootIds_{*params.revisions()},
       searchRootUser_{*params.searchRoot()} {}
 

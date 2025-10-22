@@ -32,7 +32,9 @@ using ObjectFetchContextPtr = RefPtr<ObjectFetchContext>;
 class ThriftGlobImpl {
  public:
   explicit ThriftGlobImpl(const GlobParams& params);
-  explicit ThriftGlobImpl(const PrefetchParams& params);
+  explicit ThriftGlobImpl(
+      const PrefetchParams& params,
+      bool prefetchOptimizations);
 
   // TODO: shared_ptr<EdenMount> is not sufficient to ensure an EdenMount is
   // usable for the duration of this glob. Either pass EdenMountHandle or

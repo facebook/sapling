@@ -4422,7 +4422,11 @@ folly::SemiFuture<folly::Unit> EdenServiceHandler::semifuture_prefetchFiles(
     params->revisions() =
         resolveRootsWithLastFilter(params->revisions().value(), mountHandle);
   }
-  ThriftGlobImpl globber{*params};
+  ThriftGlobImpl globber{
+      *params,
+      server_->getServerState()
+          ->getEdenConfig()
+          ->prefetchOptimizations.getValue()};
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG2,
       *params->mountPoint(),
@@ -4478,7 +4482,11 @@ EdenServiceHandler::semifuture_prefetchFilesV2(
     params->revisions() =
         resolveRootsWithLastFilter(params->revisions().value(), mountHandle);
   }
-  ThriftGlobImpl globber{*params};
+  ThriftGlobImpl globber{
+      *params,
+      server_->getServerState()
+          ->getEdenConfig()
+          ->prefetchOptimizations.getValue()};
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG2,
       *params->mountPoint(),
