@@ -444,6 +444,50 @@ export default class ServerToClientAPI {
             });
             break;
           }
+          case 'subscribedFullRepoBranches': {
+            const fullRepoBranchModule = repo.fullRepoBranchModule;
+            if (fullRepoBranchModule == null) {
+              return;
+            }
+
+            const postSubscribedFullRepoBranches = (
+              result: Array<InternalTypes['FullRepoBranch']>,
+            ) => {
+              this.postMessage({
+                type: 'subscriptionResult',
+                kind: 'subscribedFullRepoBranches',
+                subscriptionID,
+                data: result,
+              });
+            };
+
+            const subscribedFullRepoBranches = fullRepoBranchModule.getSubscribedFullRepoBranches();
+            if (subscribedFullRepoBranches != null) {
+              postSubscribedFullRepoBranches(subscribedFullRepoBranches);
+            }
+            const disposables: Array<Disposable> = [];
+            // send changes as they come from file watcher
+            disposables.push(
+              fullRepoBranchModule.subscribeToSubscribedFullRepoBranchesChanges(
+                postSubscribedFullRepoBranches,
+              ),
+            );
+            // trigger a fetch on startup
+            fullRepoBranchModule.pullSubscribedFullRepoBranches();
+
+            disposables.push(
+              fullRepoBranchModule.subscribeToSubscribedFullRepoBranchesBeginFetching(() =>
+                this.postMessage({type: 'beganFetchingSubscribedFullRepoBranchesEvent'}),
+              ),
+            );
+
+            this.subscriptions.set(subscriptionID, {
+              dispose: () => {
+                disposables.forEach(d => d.dispose());
+              },
+            });
+            break;
+          }
         }
         break;
       }

@@ -36,6 +36,7 @@ import {
   REMOTE_MASTER_BOOKMARK,
 } from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
+import type {InternalTypes} from './InternalTypes';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
 import {readInterestingAtoms, serializeAtomsState} from './debug/getInterestingAtoms';
@@ -165,6 +166,7 @@ export const mostRecentSubscriptionIds: Record<SubscriptionKind, string> = {
   uncommittedChanges: '',
   mergeConflicts: '',
   submodules: '',
+  subscribedFullRepoBranches: '',
 };
 
 /**
@@ -497,4 +499,13 @@ export const submodulePathsByRoot = atomFamilyWeak<AbsolutePath, Atom<ImSet<stri
         ?.value?.map(m => m.path);
       return paths ? ImSet(paths) : undefined;
     }),
+);
+
+export const subscribedFullRepoBranches = atom<Array<InternalTypes['FullRepoBranch']>>([]);
+
+registerCleanup(
+  subscribedFullRepoBranches,
+  subscriptionEffect('subscribedFullRepoBranches', data => {
+    writeAtom(subscribedFullRepoBranches, _ => data);
+  }),
 );

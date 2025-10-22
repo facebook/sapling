@@ -826,7 +826,8 @@ export type SubscriptionKind =
   | 'uncommittedChanges'
   | 'smartlogCommits'
   | 'mergeConflicts'
-  | 'submodules';
+  | 'submodules'
+  | 'subscribedFullRepoBranches';
 
 export const allConfigNames = [
   // these config names are for compatibility.
@@ -1051,6 +1052,7 @@ export type SubscriptionResultsData = {
   smartlogCommits: FetchedCommits;
   mergeConflicts: MergeConflicts | undefined;
   submodules: SubmodulesByRoot;
+  subscribedFullRepoBranches: Array<InternalTypes['FullRepoBranch']>;
 };
 
 export type SubscriptionResult<K extends SubscriptionKind> = {
@@ -1065,8 +1067,12 @@ export type ServerToClientMessage =
   | SubscriptionResult<'uncommittedChanges'>
   | SubscriptionResult<'mergeConflicts'>
   | SubscriptionResult<'submodules'>
-  | BeganFetchingSmartlogCommitsEvent
+  | SubscriptionResult<'subscribedFullRepoBranches'>
   | BeganFetchingUncommittedChangesEvent
+  | BeganFetchingSmartlogCommitsEvent
+  | {
+      type: 'beganFetchingSubscribedFullRepoBranchesEvent';
+    }
   | FileABugProgressMessage
   | {type: 'heartbeat'; id: string}
   | {type: 'stress'; id: number; time: number; message: string}

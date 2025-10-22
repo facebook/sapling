@@ -390,3 +390,10 @@ export function ejeca(
 
   return ecp as unknown as EjecaChildProcess;
 }
+
+/**
+ * Extract the actually useful stderr part of the Ejeca Error, to avoid the long command args being printed first.
+ */
+export function simplifyEjecaError(error: EjecaError): Error {
+  return new Error(error.stderr.trim() || error.message);
+}

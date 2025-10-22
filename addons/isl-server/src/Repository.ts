@@ -37,7 +37,7 @@ import type {
   ValidatedRepoInfo,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
-import type {EjecaChildProcess, EjecaError, EjecaOptions} from 'shared/ejeca';
+import type {EjecaChildProcess, EjecaOptions} from 'shared/ejeca';
 import type {CodeReviewProvider} from './CodeReviewProvider';
 import type {KindOfChange, PollKind} from './WatchForChanges';
 import type {TrackEventName} from './analytics/eventNames';
@@ -57,7 +57,7 @@ import {revsetArgsForComparison} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
 import {RateLimiter} from 'shared/RateLimiter';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
-import {ejeca} from 'shared/ejeca';
+import {ejeca, simplifyEjecaError} from 'shared/ejeca';
 import {exists} from 'shared/fs';
 import {removeLeadingPathSep} from 'shared/pathUtils';
 import {notEmpty, nullthrows, randomId} from 'shared/utils';
@@ -180,6 +180,8 @@ export class Repository {
    * Avoid using this, and prefer using the correct context for a given connection.
    */
   public initialConnectionContext: RepositoryContext;
+
+  public fullRepoBranchModule = Internal.RepositoryFullRepoBranchModule?.create(this);
 
   /**  Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s. */
   constructor(
@@ -335,6 +337,10 @@ export class Repository {
       });
     });
     this.disposables.push(headTracker.dispose);
+
+    if (this.fullRepoBranchModule != null) {
+      this.disposables.push(() => this.fullRepoBranchModule?.dispose());
+    }
   }
 
   public nextVisibleCommitRangeInDays(): number | undefined {
@@ -1685,11 +1691,4 @@ export function absolutePathForFileInRepo(
 
 function isUnhealthyEdenFs(cwd: string): Promise<boolean> {
   return exists(path.join(cwd, 'README_EDEN.txt'));
-}
-
-/**
- * Extract the actually useful stderr part of the Ejeca Error, to avoid the long command args being printed first.
- * */
-function simplifyEjecaError(error: EjecaError): Error {
-  return new Error(error.stderr.trim() || error.message);
 }

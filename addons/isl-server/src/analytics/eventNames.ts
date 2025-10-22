@@ -190,7 +190,8 @@ export type TrackEventName =
   | 'ReadWarmCommit'
   | 'RecommendedBookmarksStatus'
   | 'RecommendedBookmarksToggle'
-  | 'RecommendedBookmarksReminderResponse';
+  | 'RecommendedBookmarksReminderResponse'
+  | 'PullFullRepoBranchOperation';
 
 export type TrackErrorName =
   | 'BlameError'
