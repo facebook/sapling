@@ -318,6 +318,15 @@ class SaplingBackingStore final : public BackingStore {
   FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,
       sameRequestsDifferentFetchCause);
+  FRIEND_TEST(
+      SaplingBackingStoreNoFaultInjectorTest,
+      prefetchBlobsWithDuplicatesNoOptimizations);
+  FRIEND_TEST(
+      SaplingBackingStoreNoFaultInjectorTest,
+      prefetchBlobsWithDuplicatesWithOptimizations);
+  FRIEND_TEST(
+      SaplingBackingStoreNoFaultInjectorTest,
+      prefetchBlobsWithDuplicatesResolvesAllCallbacks);
   FRIEND_TEST(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch);
   FRIEND_TEST(
       SaplingBackingStoreWithFaultInjectorIgnoreConfigTest,

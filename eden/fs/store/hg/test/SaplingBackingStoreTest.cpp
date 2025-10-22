@@ -545,6 +545,126 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
       ::testing::ElementsAre(PathComponent{"foo"}, PathComponent{"src"}));
 }
 
+TEST_F(
+    SaplingBackingStoreNoFaultInjectorTest,
+    prefetchBlobsWithDuplicatesNoOptimizations) {
+  testEdenConfig->ignorePrefetchResult.setValue(
+      false, ConfigSourceType::UserConfig);
+  testEdenConfig->prefetchOptimizations.setValue(
+      false, ConfigSourceType::UserConfig);
+
+  auto tree = queuedBackingStore
+                  ->getRootTree(commit1, ObjectFetchContext::getNullContext())
+                  .get(kTestTimeout);
+
+  std::vector<ObjectId> blobIds;
+  for (auto& [name, entry] : *tree.tree) {
+    if (!entry.isTree()) {
+      blobIds.push_back(entry.getObjectId());
+      blobIds.push_back(entry.getObjectId());
+    }
+  }
+
+  ASSERT_FALSE(blobIds.empty());
+
+  auto prefetchResult =
+      queuedBackingStore
+          ->prefetchBlobs(
+              folly::range(blobIds), ObjectFetchContext::getNullContext())
+          .get(kTestTimeout);
+
+  EXPECT_EQ(prefetchResult, folly::unit);
+}
+
+TEST_F(
+    SaplingBackingStoreNoFaultInjectorTest,
+    prefetchBlobsWithDuplicatesWithOptimizations) {
+  testEdenConfig->ignorePrefetchResult.setValue(
+      true, ConfigSourceType::UserConfig);
+  testEdenConfig->prefetchOptimizations.setValue(
+      true, ConfigSourceType::UserConfig);
+
+  auto tree = queuedBackingStore
+                  ->getRootTree(commit1, ObjectFetchContext::getNullContext())
+                  .get(kTestTimeout);
+
+  std::vector<ObjectId> blobIds;
+  for (auto& [name, entry] : *tree.tree) {
+    if (!entry.isTree()) {
+      blobIds.push_back(entry.getObjectId());
+      blobIds.push_back(entry.getObjectId());
+    }
+  }
+
+  ASSERT_FALSE(blobIds.empty());
+
+  auto prefetchResult =
+      queuedBackingStore
+          ->prefetchBlobs(
+              folly::range(blobIds), ObjectFetchContext::getNullContext())
+          .get(kTestTimeout);
+
+  EXPECT_EQ(prefetchResult, folly::unit);
+}
+
+TEST_F(
+    SaplingBackingStoreNoFaultInjectorTest,
+    prefetchBlobsWithDuplicatesResolvesAllCallbacks) {
+  auto tree = queuedBackingStore
+                  ->getRootTree(commit1, ObjectFetchContext::getNullContext())
+                  .get(kTestTimeout);
+
+  ObjectId firstBlobId;
+  for (auto& [name, entry] : *tree.tree) {
+    if (!entry.isTree()) {
+      firstBlobId = entry.getObjectId();
+      break;
+    }
+  }
+
+  ASSERT_NE(firstBlobId.size(), 0);
+
+  auto proxyHash =
+      HgProxyHash::load(localStore.get(), firstBlobId, "getBlob", *stats);
+
+  std::vector<sapling::SaplingRequest> requests;
+  requests.reserve(3);
+  for (size_t i = 0; i < 3; ++i) {
+    requests.emplace_back(
+        proxyHash.byteHash(),
+        proxyHash.path(),
+        firstBlobId,
+        ObjectFetchContext::Cause::Unknown,
+        ObjectFetchContext::getNullContext().copy());
+  }
+
+  std::vector<bool> callbackInvoked(3, false);
+  std::atomic<size_t> callbackCount{0};
+
+  // Call SaplingNativeBackingStore::getBlobBatch() directly.
+  queuedBackingStore->store_.getBlobBatch(
+      folly::range(requests),
+      sapling::FetchMode::AllowRemote,
+      true,
+      [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
+        ASSERT_LT(index, 3) << "Callback index out of range: " << index;
+        callbackInvoked[index] = true;
+        callbackCount++;
+        if (content.hasException()) {
+          ADD_FAILURE() << "Callback " << index << " received exception: "
+                        << content.exception().what();
+        }
+      });
+
+  EXPECT_EQ(callbackCount.load(), 3)
+      << "Expected all 3 callbacks to be invoked for duplicate blob IDs";
+
+  for (size_t i = 0; i < callbackInvoked.size(); ++i) {
+    EXPECT_TRUE(callbackInvoked[i])
+        << "Callback for duplicate blob at index " << i << " was not invoked.";
+  }
+}
+
 TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
   Hash20 testId{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
 

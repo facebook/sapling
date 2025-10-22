@@ -719,9 +719,7 @@ where
             }
         } else {
             let ignore_result = fctx.mode().ignore_result();
-
             let mut key_to_index = indexed_keys(&keys);
-            let mut remaining = keys.len();
             let mut errors = Vec::new();
             match self.get_batch_iter(fctx, keys) {
                 Err(e) => errors.push(e),
@@ -734,22 +732,23 @@ where
                             }
                             Ok(v) => v,
                         };
-                        if let Some(entry) = key_to_index.get_mut(&key) {
-                            if let Some(index) = *entry {
-                                *entry = None;
-                                remaining = remaining.saturating_sub(1);
-                                let result = Ok(Some(data.into()));
-                                resolve(index, result);
+                        if let Some(indices) = key_to_index.remove(&key) {
+                            for idx in indices.as_slice().iter().skip(1) {
+                                resolve(*idx, Ok(Some(data.clone().into())));
+                            }
+                            if let Some(first_idx) = indices.as_slice().first() {
+                                resolve(*first_idx, Ok(Some(data.into())));
                             }
                         }
                     }
                 }
             }
-            if remaining > 0 {
+
+            if !key_to_index.is_empty() {
                 if ignore_result {
                     // In ignore_result mode, we (intentionally) don't get any results. Propagate as `None`.
-                    for (_key, entry) in key_to_index.into_iter() {
-                        if let Some(index) = entry {
+                    for (_key, indices) in key_to_index.into_iter() {
+                        for &index in indices.as_slice() {
                             resolve(index, Ok(None));
                         }
                     }
@@ -757,14 +756,17 @@ where
                     // In ffi.rs, the error is converted to a String where, later, empty string is assumed to mean no error.
                     // Ensure we have some error.
                     if errors.is_empty() {
-                        errors.push(anyhow!("{remaining} items in batch missing, but got no errors from get_batch_iter"));
+                        errors.push(anyhow!(
+                            "{} items in batch missing, but got no errors from get_batch_iter",
+                            key_to_index.len()
+                        ));
                     }
 
                     // Report errors. We don't know the index -> error mapping so
                     // we bundle all errors we received.
                     let error = ErrorCollection(Arc::new(errors));
-                    for (_key, entry) in key_to_index.into_iter() {
-                        if let Some(index) = entry {
+                    for (_key, indices) in key_to_index.into_iter() {
+                        for &index in indices.as_slice() {
                             resolve(index, Err(error.clone().into()));
                         }
                     }
@@ -882,13 +884,41 @@ impl std::error::Error for ErrorCollection {
     }
 }
 
+// Avoid Vec allocation for common case of a single index (i.e. no duplicates).
+enum IndexList {
+    Single(usize),
+    Multiple(Vec<usize>),
+}
+
+impl IndexList {
+    fn add(&mut self, index: usize) {
+        match self {
+            IndexList::Single(first) => {
+                *self = IndexList::Multiple(vec![*first, index]);
+            }
+            IndexList::Multiple(vec) => {
+                vec.push(index);
+            }
+        }
+    }
+
+    fn as_slice(&self) -> &[usize] {
+        match self {
+            IndexList::Single(idx) => std::slice::from_ref(idx),
+            IndexList::Multiple(vec) => vec.as_slice(),
+        }
+    }
+}
+
 /// Index &[Key] so they can be converted back to the index.
-fn indexed_keys(keys: &[Key]) -> HashMap<Key, Option<usize>> {
-    keys.iter()
-        .cloned()
-        .enumerate()
-        .map(|(i, k)| (k, Some(i)))
-        .collect()
+fn indexed_keys(keys: &[Key]) -> HashMap<Key, IndexList> {
+    let mut map = HashMap::with_capacity(keys.len());
+    for (i, key) in keys.iter().enumerate() {
+        map.entry(key.clone())
+            .and_modify(|list: &mut IndexList| list.add(i))
+            .or_insert(IndexList::Single(i));
+    }
+    map
 }
 
 impl Drop for BackingStore {
