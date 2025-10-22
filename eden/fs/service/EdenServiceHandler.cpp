@@ -1830,6 +1830,9 @@ void convertHgImportTraceEventToHgEvent(
     case HgImportTraceEvent::TREE_AUX:
       te.resourceType() = HgResourceType::TREEMETA;
       break;
+    case HgImportTraceEvent::BLOB_BATCH:
+      te.resourceType() = HgResourceType::BLOBBATCH;
+      break;
   }
 
   switch (event.importPriority) {

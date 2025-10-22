@@ -41,9 +41,11 @@ constexpr size_t kStartingInodeWidth = 5;
 static const auto kTreeEmoji =
     reinterpret_cast<const char*>(u8"\U0001F332"); // 🌲
 static const auto kTreeAuxEmoji =
-    reinterpret_cast<const char*>(u8"U000100B7"); // 𐂷
+    reinterpret_cast<const char*>(u8"\U000100B7"); // 𐂷
 static const auto kBlobEmoji =
     reinterpret_cast<const char*>(u8"\U0001F4C4"); // 📄
+static const auto kBlobBatchEmoji =
+    reinterpret_cast<const char*>(u8"\U0001F4DA"); // 📚
 static const auto kBlobAuxEmoji =
     reinterpret_cast<const char*>(u8"\U0001F5C2\U00000020"); // 🗂️
 static const auto kRequestStartEmoji =
@@ -101,6 +103,7 @@ static const std::unordered_map<HgResourceType, const char*> kResourceTypes = {
     {HgResourceType::TREE, kTreeEmoji},
     {HgResourceType::BLOBMETA, kBlobAuxEmoji},
     {HgResourceType::TREEMETA, kTreeAuxEmoji},
+    {HgResourceType::BLOBBATCH, kBlobBatchEmoji},
 };
 
 static const std::unordered_map<HgImportPriority, const char*>

@@ -65,6 +65,7 @@ Resource Type:
 \U0001f332 Tree (directory content)
 \U0001f5c2\U00000020 Blob Aux Data (sha1, size, blake3)
 \U000100b7 Tree Aux Data (digest size, digest hash)
+\U0001f4da Blob Batch (prefetch file content)
 
 Import Priority (--verbose):
 \U0001f535 LOW

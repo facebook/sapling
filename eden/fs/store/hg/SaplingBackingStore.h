@@ -58,6 +58,7 @@ struct HgImportTraceEvent : TraceEventBase {
     TREE,
     BLOB_AUX,
     TREE_AUX,
+    BLOB_BATCH,
   };
 
   static HgImportTraceEvent queue(
