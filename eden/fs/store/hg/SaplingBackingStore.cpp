@@ -1776,10 +1776,14 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
 folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& context) {
-  return HgProxyHash::getBatch(localStore_.get(), ids, *stats_)
+  bool prefetchOptimizations =
+      config_->getEdenConfig()->prefetchOptimizations.getValue();
+
+  return HgProxyHash::getBatch(
+             localStore_.get(), ids, *stats_, prefetchOptimizations)
       // The caller guarantees that ids will live at least longer than this
       // future, thus we don't need to deep-copy it.
-      .thenTry([context = context.copy(), this, ids](
+      .thenTry([context = context.copy(), prefetchOptimizations, this, ids](
                    folly::Try<std::vector<HgProxyHash>> tryHashes) {
         if (tryHashes.hasException()) {
           logMissingProxyHash();
@@ -1795,14 +1799,15 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
             folly::Range{proxyHashes.data(), proxyHashes.size()},
             ObjectFetchContext::ObjectType::Blob);
 
-        if (config_->getEdenConfig()->ignorePrefetchResult.getValue() &&
-            config_->getEdenConfig()->prefetchOptimizations.getValue()) {
+        if (prefetchOptimizations &&
+            config_->getEdenConfig()->ignorePrefetchResult.getValue()) {
           // We perform two optimizations here:
           //
-          // 1. We don't go through the queue. We already have a big batch of
-          // blobs to fetch - shuffling them through the queue one-at-a-time is
-          // very expensive. And then on the other side, they are chopped down
-          // into smaller batches, which loses more throughput.
+          // 1. We don't go through the queue. We already have a big batch
+          // of blobs to fetch - shuffling them through the queue
+          // one-at-a-time is very expensive. And then on the other side,
+          // they are chopped down into smaller batches, which loses more
+          // throughput.
           //
           // 2. We pass allowIgnoreResult=true, which lets sapling skip work
           // fetching the blobs (because we don't actually care about the
@@ -1820,8 +1825,8 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
           }
 
           // Use makeNotReadyImmediateFuture to force going through the
-          // executor. This can be a large batch, and we don't want to block the
-          // caller.
+          // executor. This can be a large batch, and we don't want to block
+          // the caller.
           return makeNotReadyImmediateFuture()
               .thenValue([this,
                           proxyHashes = std::move(proxyHashes),
@@ -1849,9 +1854,9 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
                 store_.getBlobBatch(
                     folly::range(requests),
                     sapling::FetchMode::AllowRemote,
-                    // We aren't going through the queue, so we are certain we
-                    // can IGNORE_RESULT without impacting other fetches for the
-                    // same id.
+                    // We aren't going through the queue, so we are certain
+                    // we can IGNORE_RESULT without impacting other fetches
+                    // for the same id.
                     true,
                     [&](size_t index,
                         folly::Try<std::unique_ptr<folly::IOBuf>> content) {
@@ -1886,11 +1891,11 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
               })
               .semi();
         } else {
-          // Do not check for whether blobs are already present locally, this
-          // check is useful for latency oriented workflows, not for throughput
-          // oriented ones. Mercurial will anyway not re-fetch a blob that is
-          // already present locally, so the check for local blob is pure
-          // overhead when prefetching.
+          // Do not check for whether blobs are already present locally,
+          // this check is useful for latency oriented workflows, not for
+          // throughput oriented ones. Mercurial will anyway not re-fetch a
+          // blob that is already present locally, so the check for local
+          // blob is pure overhead when prefetching.
           std::vector<ImmediateFuture<GetBlobResult>> futures;
           futures.reserve(ids.size());
 

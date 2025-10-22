@@ -103,8 +103,11 @@ class HgProxyHash {
    * The caller is responsible for keeping the ObjectIdRange alive for the
    * duration of the future.
    */
-  static ImmediateFuture<std::vector<HgProxyHash>>
-  getBatch(LocalStore* store, ObjectIdRange blobHashes, EdenStats& stats);
+  static ImmediateFuture<std::vector<HgProxyHash>> getBatch(
+      LocalStore* store,
+      ObjectIdRange blobHashes,
+      EdenStats& stats,
+      bool prefetchOptimizations);
 
   /**
    * Load HgProxyHash data for the given eden blob hash from the LocalStore.

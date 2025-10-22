@@ -67,52 +67,70 @@ std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
 ImmediateFuture<std::vector<HgProxyHash>> HgProxyHash::getBatch(
     LocalStore* store,
     ObjectIdRange blobHashes,
-    EdenStats& edenStats) {
-  std::vector<HgProxyHash> results;
-  results.reserve(blobHashes.size());
-  std::vector<size_t> byteRangesIndexes;
-  for (size_t index = 0; index < blobHashes.size(); index++) {
-    if (auto embedded = tryParseEmbeddedProxyHash(blobHashes.at(index))) {
-      results.emplace_back(*embedded);
-    } else {
-      byteRangesIndexes.push_back(index);
-      results.emplace_back();
+    EdenStats& edenStats,
+    bool prefetchOptimizations) {
+  auto processBatch = [store, blobHashes, &edenStats]() {
+    std::vector<HgProxyHash> results;
+    results.reserve(blobHashes.size());
+    std::vector<size_t> byteRangesIndexes;
+    for (size_t index = 0; index < blobHashes.size(); index++) {
+      if (auto embedded = tryParseEmbeddedProxyHash(blobHashes.at(index))) {
+        results.emplace_back(*embedded);
+      } else {
+        byteRangesIndexes.push_back(index);
+        results.emplace_back();
+      }
     }
+
+    // If all hashes are embedded, we can just return them
+    if (byteRangesIndexes.empty()) {
+      return ImmediateFuture<std::vector<HgProxyHash>>{std::move(results)};
+    }
+
+    // Otherwise, we have some non-embedded hashes.
+    std::vector<ByteRange> byteRanges;
+    byteRanges.reserve(byteRangesIndexes.size());
+    for (auto& index : byteRangesIndexes) {
+      byteRanges.emplace_back(blobHashes.at(index).getBytes());
+    }
+
+    edenStats.increment(
+        &SaplingBackingStoreStats::loadProxyHash, byteRanges.size());
+    return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
+        .thenValue([results = std::move(results),
+                    byteRanges, // can't move - see https://fburl.com/585912384
+                    byteRangesIndexes = std::move(byteRangesIndexes)](
+                       std::vector<StoreResult>&& data) mutable {
+          XCHECK_EQ(data.size(), byteRanges.size());
+
+          // Now that we have retrieved the HgProxyHashes from the local store,
+          // we can walk through them and update the results.
+          for (size_t i = 0; i < data.size(); i++) {
+            // Convert ByteRanges to HgProxyHashes - by pairing them with the
+            // store results.
+            auto index = byteRangesIndexes.at(i);
+            results.at(index) = HgProxyHash{
+                ObjectId{byteRanges.at(i)},
+                data.at(i),
+                "prefetchFiles getBatch"};
+          }
+
+          return results;
+        });
+  };
+
+  constexpr size_t kAsyncThreshold = 1000;
+
+  // If over the threshold, force the ObjectId->HgProxyHash conversion to be
+  // async.
+  if (prefetchOptimizations && blobHashes.size() > kAsyncThreshold) {
+    return makeNotReadyImmediateFuture().thenValue(
+        [processBatch = std::move(processBatch)](auto&&) {
+          return processBatch();
+        });
+  } else {
+    return processBatch();
   }
-
-  // If all hashes are embedded, we can just return them
-  if (byteRangesIndexes.empty()) {
-    return std::move(results);
-  }
-
-  // Otherwise, we have some non-embedded hashes.
-  std::vector<ByteRange> byteRanges;
-  byteRanges.reserve(byteRangesIndexes.size());
-  for (auto& index : byteRangesIndexes) {
-    byteRanges.emplace_back(blobHashes.at(index).getBytes());
-  }
-
-  edenStats.increment(
-      &SaplingBackingStoreStats::loadProxyHash, byteRanges.size());
-  return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
-      .thenValue([results = std::move(results),
-                  byteRanges, // can't move - see https://fburl.com/585912384
-                  byteRangesIndexes = std::move(byteRangesIndexes)](
-                     std::vector<StoreResult>&& data) mutable {
-        XCHECK_EQ(data.size(), byteRanges.size());
-
-        // Now that we have retrieved the HgProxyHashes from the local store, we
-        // can walk through them and update the results.
-        for (size_t i = 0; i < data.size(); i++) {
-          // Convert ByteRanges to HgProxyHashes - by pairing them with the
-          // store results.
-          auto index = byteRangesIndexes.at(i);
-          results.at(index) = HgProxyHash{
-              ObjectId{byteRanges.at(i)}, data.at(i), "prefetchFiles getBatch"};
-        }
-
-        return results;
-      });
 }
 
 HgProxyHash HgProxyHash::load(
