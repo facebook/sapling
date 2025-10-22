@@ -217,9 +217,14 @@ impl CommitFileDiffsItem {
         ctx: &CoreContext,
         format: thrift::DiffFormat,
         context_lines: usize,
+        repo_name: &str,
+        diff_router: &crate::diff::DiffRouter<'_>,
     ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
         match format {
-            thrift::DiffFormat::RAW_DIFF => self.raw_diff(ctx, context_lines).await,
+            thrift::DiffFormat::RAW_DIFF => {
+                self.raw_diff(ctx, context_lines, repo_name, diff_router)
+                    .await
+            }
             thrift::DiffFormat::METADATA_DIFF => self.metadata_diff(ctx).await,
             unknown => Err(scs_errors::invalid_request(format!(
                 "invalid diff format: {:?}",
@@ -233,15 +238,17 @@ impl CommitFileDiffsItem {
         &self,
         ctx: &CoreContext,
         context_lines: usize,
+        repo_name: &str,
+        diff_router: &crate::diff::DiffRouter<'_>,
     ) -> Result<CommitFileDiffsResponseElement, scs_errors::ServiceError> {
         let mode = if self.placeholder {
             UnifiedDiffMode::OmitContent
         } else {
             UnifiedDiffMode::Inline
         };
-        let diff = self
-            .path_diff_context
-            .unified_diff(ctx, context_lines, mode)
+
+        let diff = diff_router
+            .unified_diff(ctx, repo_name, &self.path_diff_context, mode, context_lines)
             .await?;
         Ok(CommitFileDiffsResponseElement::RawDiff { diff })
     }
@@ -472,6 +479,7 @@ impl SourceControlServiceImpl {
             }
         };
         borrowed!(repo);
+        let repo_name = repo.repo().repo_identity.name();
 
         // Resolve the paths into ChangesetPathContentContext
         // To make it more efficient we do a batch request
@@ -676,9 +684,17 @@ impl SourceControlServiceImpl {
 
         let path_diffs = stream::iter(items)
             .map(|item| {
-                cloned!(ctx);
+                cloned!(ctx, repo_name);
                 async move {
-                    let element = item.response_element(&ctx, params.format, context).await?;
+                    let element = item
+                        .response_element(
+                            &ctx,
+                            params.format,
+                            context,
+                            repo_name,
+                            &self.diff_router(),
+                        )
+                        .await?;
                     Ok::<_, scs_errors::ServiceError>((item, element))
                 }
             })
