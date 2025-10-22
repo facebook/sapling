@@ -161,6 +161,9 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     const ObjectFetchContextPtr& fetchContext) {
   bool windowsSymlinksEnabled =
       edenMount->getCheckoutConfig()->getEnableWindowsSymlinks();
+  bool dedupePrefetchFiles =
+      serverState->getEdenConfig()->globDedupePrefetchFiles.getValue() ||
+      !serverState->getEdenConfig()->prefetchOptimizations.getValue();
 
   auto fileBlobsToPrefetch =
       prefetchFiles_ ? std::make_shared<PrefetchList>() : nullptr;
@@ -257,6 +260,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
   auto prefetchFuture =
       collectAll(std::move(globFutures))
           .thenValue([fileBlobsToPrefetch,
+                      dedupePrefetchFiles,
                       globResults = std::move(globResults),
                       suppressFileList = suppressFileList_](
                          std::vector<folly::Try<folly::Unit>>&& tries) {
@@ -272,13 +276,13 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
               sortedResults.erase(resultsNewEnd, sortedResults.end());
             }
 
-            // fileBlobsToPrefetch is deduplicated as an optimization.
-            // The BackingStore layer does not necessarily deduplicate fetches
-            // (although Sapling will, per-batch), so lets avoid causing too
-            // many duplicates here.
-            if (fileBlobsToPrefetch) {
-              // Use set and pop-and-swap to deduplicate (instead of sorting).
-              // The list can be very large, and there should be few duplicates.
+            // Deduplicate files as an optimization. The BackingStore does not
+            // necessarily dedupe fetches (although SaplingBackingStore does
+            // in the scmstore::FileStore, per batch).
+            //
+            // Note that normally duplicates are rare, and deduping a list of
+            // millions of files can take 5s, so it typically is not worth it.
+            if (dedupePrefetchFiles && fileBlobsToPrefetch) {
               auto fileBlobsToPrefetchLocked = fileBlobsToPrefetch->wlock();
               folly::F14FastSet<ObjectId> seen;
               size_t i = 0;

@@ -2044,6 +2044,15 @@ class EdenConfig : private ConfigSettingManager {
       {},
       this};
 
+  /**
+   * When true, maintain previous behavior where we sort/dedupe list of file ids
+   * when prefetching.
+   */
+  ConfigSetting<bool> globDedupePrefetchFiles{
+      "glob:dedupe-prefetch-files",
+      false,
+      this};
+
   // [doctor]
 
   /**
