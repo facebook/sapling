@@ -964,6 +964,7 @@ export class Repository {
         // stable locations hashes may be newer than the repo has, wrap in `present()` to only include if available.
         ...this.stableLocations.map(location => `present(${location.hash})`),
         ...this.recommendedBookmarks.map(bookmark => `present(${bookmark})`),
+        ...(this.fullRepoBranchModule?.genRevset() ?? []),
       ]
         .filter(notEmpty)
         .join(' + ')})`;

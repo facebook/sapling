@@ -607,6 +607,7 @@ export default class ServerToClientAPI {
         repo.fetchUncommittedChanges();
         repo.fetchSubmoduleMap();
         repo.checkForMergeConflicts();
+        repo.fullRepoBranchModule?.pullSubscribedFullRepoBranches();
         repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
         repo.initialConnectionContext.tracker.track('DiffFetchSource', {
           extras: {source: 'manual_refresh'},
