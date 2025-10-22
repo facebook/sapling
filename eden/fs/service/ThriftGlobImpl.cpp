@@ -195,11 +195,12 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     // invalidate the earlier commitId references
     globFutures.reserve(rootIds_.size());
     originRootIds->reserve(rootIds_.size());
-    globTree = std::make_shared<GlobTree>(
-        includeDotfiles_,
+    auto caseSensitivity =
         serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue()
-            ? edenMount->getCheckoutConfig()->getCaseSensitive()
-            : CaseSensitivity::Sensitive);
+        ? edenMount->getCheckoutConfig()->getCaseSensitive()
+        : CaseSensitivity::Sensitive;
+    globTree = std::make_shared<GlobTree>(
+        bool(includeDotfiles_), caseSensitivity, bool(prefetchOptimizations));
     compileGlobs(globs, *globTree);
     for (auto& rootId : rootIds_) {
       const RootId& originRootId = originRootIds->emplace_back(
@@ -240,11 +241,12 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
               }));
     }
   } else {
-    globNode = std::make_shared<GlobNode>(
-        includeDotfiles_,
+    auto caseSensitivity =
         serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue()
-            ? edenMount->getCheckoutConfig()->getCaseSensitive()
-            : CaseSensitivity::Sensitive);
+        ? edenMount->getCheckoutConfig()->getCaseSensitive()
+        : CaseSensitivity::Sensitive;
+    globNode = std::make_shared<GlobNode>(
+        bool(includeDotfiles_), caseSensitivity, bool(prefetchOptimizations));
     compileGlobs(globs, *globNode);
     const RootId& originRootId =
         originRootIds->emplace_back(edenMount->getCheckedOutRootId());

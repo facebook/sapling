@@ -21,8 +21,11 @@ class GlobNode : public GlobNodeImpl {
  public:
   // Two-parameter constructor is intended to create the root of a set of
   // globs that will be parsed into the overall glob tree.
-  explicit GlobNode(bool includeDotfiles, CaseSensitivity caseSensitive)
-      : GlobNodeImpl(includeDotfiles, caseSensitive) {}
+  explicit GlobNode(
+      bool includeDotfiles,
+      CaseSensitivity caseSensitive,
+      bool prefetchOptimizations = false)
+      : GlobNodeImpl(includeDotfiles, caseSensitive, prefetchOptimizations) {}
 
   using PrefetchList = folly::Synchronized<std::vector<ObjectId>>;
 
@@ -30,8 +33,14 @@ class GlobNode : public GlobNodeImpl {
       folly::StringPiece pattern,
       bool includeDotfiles,
       bool hasSpecials,
-      CaseSensitivity caseSensitive)
-      : GlobNodeImpl(pattern, includeDotfiles, hasSpecials, caseSensitive) {}
+      CaseSensitivity caseSensitive,
+      bool prefetchOptimizations = false)
+      : GlobNodeImpl(
+            pattern,
+            includeDotfiles,
+            hasSpecials,
+            caseSensitive,
+            prefetchOptimizations) {}
 
   /**
    * Evaluate the compiled glob against the provided TreeInode and path.

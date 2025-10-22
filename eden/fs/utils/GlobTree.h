@@ -16,15 +16,24 @@ class GlobTree : public GlobNodeImpl {
  public:
   // Two-parameter constructor is intended to create the root of a set of
   // globs that will be parsed into the overall glob tree.
-  explicit GlobTree(bool includeDotfiles, CaseSensitivity caseSensitive)
-      : GlobNodeImpl(includeDotfiles, caseSensitive) {}
+  explicit GlobTree(
+      bool includeDotfiles,
+      CaseSensitivity caseSensitive,
+      bool prefetchOptimizations = false)
+      : GlobNodeImpl(includeDotfiles, caseSensitive, prefetchOptimizations) {}
 
   GlobTree(
       folly::StringPiece pattern,
       bool includeDotfiles,
       bool hasSpecials,
-      CaseSensitivity caseSensitive)
-      : GlobNodeImpl(pattern, includeDotfiles, hasSpecials, caseSensitive) {}
+      CaseSensitivity caseSensitive,
+      bool prefetchOptimizations = false)
+      : GlobNodeImpl(
+            pattern,
+            includeDotfiles,
+            hasSpecials,
+            caseSensitive,
+            prefetchOptimizations) {}
 
   /**
    * Evaluate the compiled glob against the provided Tree.

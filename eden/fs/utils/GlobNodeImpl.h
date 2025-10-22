@@ -38,8 +38,13 @@ class GlobNodeImpl {
  public:
   // Two-parameter constructor is intended to create the root of a set of
   // globs that will be parsed into the overall glob tree.
-  explicit GlobNodeImpl(bool includeDotfiles, CaseSensitivity caseSensitive)
-      : caseSensitive_(caseSensitive), includeDotfiles_(includeDotfiles) {}
+  explicit GlobNodeImpl(
+      bool includeDotfiles,
+      CaseSensitivity caseSensitive,
+      bool prefetchOptimizations = false)
+      : caseSensitive_(caseSensitive),
+        includeDotfiles_(includeDotfiles),
+        prefetchOptimizations_(prefetchOptimizations) {}
 
   virtual ~GlobNodeImpl() = default;
 
@@ -49,7 +54,8 @@ class GlobNodeImpl {
       folly::StringPiece pattern,
       bool includeDotfiles,
       bool hasSpecials,
-      CaseSensitivity caseSensitive);
+      CaseSensitivity caseSensitive,
+      bool prefetchOptimizations = false);
 
   // Compile and add a new glob pattern to the tree.
   // Compilation splits the pattern into nodes, with one node for each
@@ -141,6 +147,7 @@ class GlobNodeImpl {
     TaskTraceBlock block{"GlobNodeImpl::evaluateRecursiveComponentImpl"};
     std::vector<RelativePath> subDirNames;
     std::vector<ImmediateFuture<folly::Unit>> futures;
+    std::vector<ObjectId> localFileBlobsToPrefetch;
     {
       const auto& contents = root.lockContents();
       for (auto& entry : root.iterate(contents)) {
@@ -157,8 +164,13 @@ class GlobNodeImpl {
             }
             if (fileBlobsToPrefetch &&
                 root.entryShouldPrefetch(&entry.second)) {
-              fileBlobsToPrefetch->wlock()->emplace_back(
-                  entry.second.getObjectId());
+              if (prefetchOptimizations_) {
+                localFileBlobsToPrefetch.emplace_back(
+                    entry.second.getObjectId());
+              } else {
+                fileBlobsToPrefetch->wlock()->emplace_back(
+                    entry.second.getObjectId());
+              }
             }
             // No sense running multiple matches for this same file.
             break;
@@ -197,6 +209,14 @@ class GlobNodeImpl {
           }
         }
       }
+    }
+
+    if (fileBlobsToPrefetch && !localFileBlobsToPrefetch.empty()) {
+      auto locked = fileBlobsToPrefetch->wlock();
+      locked->insert(
+          locked->end(),
+          std::make_move_iterator(localFileBlobsToPrefetch.begin()),
+          std::make_move_iterator(localFileBlobsToPrefetch.end()));
     }
 
     // Recursively load child inodes and evaluate matches
@@ -252,6 +272,7 @@ class GlobNodeImpl {
     TaskTraceBlock block{"GlobNodeImpl::evaluateImpl"};
     std::vector<std::pair<PathComponentPiece, GlobNodeImpl*>> recurse;
     std::vector<ImmediateFuture<folly::Unit>> futures;
+    std::vector<ObjectId> localFileBlobsToPrefetch;
 
     if (!recursiveChildren_.empty()) {
       futures.emplace_back(evaluateRecursiveComponentImpl<ROOT, ROOTPtr>(
@@ -318,8 +339,13 @@ class GlobNodeImpl {
 
               if (fileBlobsToPrefetch &&
                   root.entryShouldPrefetch(&entry->second)) {
-                fileBlobsToPrefetch->wlock()->emplace_back(
-                    entry->second.getObjectId());
+                if (prefetchOptimizations_) {
+                  localFileBlobsToPrefetch.emplace_back(
+                      entry->second.getObjectId());
+                } else {
+                  fileBlobsToPrefetch->wlock()->emplace_back(
+                      entry->second.getObjectId());
+                }
               }
             }
 
@@ -338,8 +364,13 @@ class GlobNodeImpl {
                 }
                 if (fileBlobsToPrefetch &&
                     root.entryShouldPrefetch(&entry.second)) {
-                  fileBlobsToPrefetch->wlock()->emplace_back(
-                      entry.second.getObjectId());
+                  if (prefetchOptimizations_) {
+                    localFileBlobsToPrefetch.emplace_back(
+                        entry.second.getObjectId());
+                  } else {
+                    fileBlobsToPrefetch->wlock()->emplace_back(
+                        entry.second.getObjectId());
+                  }
                 }
               }
               // Not the leaf of a pattern; if this is a dir, we need to
@@ -349,6 +380,14 @@ class GlobNodeImpl {
           }
         }
       }
+    }
+
+    if (fileBlobsToPrefetch && !localFileBlobsToPrefetch.empty()) {
+      auto locked = fileBlobsToPrefetch->wlock();
+      locked->insert(
+          locked->end(),
+          std::make_move_iterator(localFileBlobsToPrefetch.begin()),
+          std::make_move_iterator(localFileBlobsToPrefetch.end()));
     }
 
     // Recursively load child inodes and evaluate matches
@@ -436,6 +475,8 @@ class GlobNodeImpl {
   // - this node is "**" or "*"
   // - it was created with includeDotfiles=true.
   bool alwaysMatch_{false};
+  // Unified flag to control all the prefetch optimizations
+  bool prefetchOptimizations_{false};
 };
 
 } // namespace facebook::eden

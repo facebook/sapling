@@ -39,10 +39,13 @@ GlobNodeImpl::GlobNodeImpl(
     StringPiece pattern,
     bool includeDotfiles,
     bool hasSpecials,
-    CaseSensitivity caseSensitive)
+    CaseSensitivity caseSensitive,
+    bool prefetchOptimizations)
     : pattern_(pattern.str()),
+      caseSensitive_(caseSensitive),
       includeDotfiles_(includeDotfiles),
-      hasSpecials_(hasSpecials) {
+      hasSpecials_(hasSpecials),
+      prefetchOptimizations_(prefetchOptimizations) {
   if (includeDotfiles && (pattern == "**" || pattern == "*")) {
     alwaysMatch_ = true;
   } else {
@@ -102,7 +105,11 @@ void GlobNodeImpl::parse(StringPiece pattern) {
     auto node = lookupToken(container, token);
     if (!node) {
       container->emplace_back(std::make_unique<GlobNodeImpl>(
-          token, includeDotfiles_, hasSpecials, caseSensitive_));
+          token,
+          includeDotfiles_,
+          hasSpecials,
+          caseSensitive_,
+          prefetchOptimizations_));
       node = container->back().get();
     }
 
