@@ -10,6 +10,11 @@ use std::time::Duration;
 use context::CoreContext;
 use diff_service_client::DiffInput;
 use diff_service_client::DiffServiceClient;
+use diff_service_if_clients::errors::DiffBlocksError;
+use diff_service_if_clients::errors::DiffHunksError;
+use diff_service_if_clients::errors::DiffUnifiedError;
+use diff_service_if_clients::errors::DiffUnifiedHeaderlessError;
+use diff_service_if_clients::errors::MetadataDiffError;
 use environment::RemoteDiffOptions;
 use futures::StreamExt;
 use futures_retry::retry;
@@ -31,12 +36,74 @@ const DIFF_SERVICE_RETRY_BASE_DELAY: Duration = Duration::from_secs(1);
 const DIFF_SERVICE_MAX_RETRY_ATTEMPTS: usize = 5;
 const DIFF_SERVICE_BACKOFF_MULTIPLIER: f64 = 1.5;
 
+/// Trait for extracting RequestError from diff service error types.
+/// All diff service operations throw the same error types (RequestError and InternalError),
+/// so this trait allows us to uniformly check for transient errors across all operations.
+trait DiffServiceError {
+    fn request_error(&self) -> Option<&diff_service_if::RequestError>;
+}
+
+impl DiffServiceError for DiffUnifiedHeaderlessError {
+    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
+        match self {
+            Self::ex(req_err) => Some(req_err),
+            _ => None,
+        }
+    }
+}
+
+impl DiffServiceError for DiffUnifiedError {
+    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
+        match self {
+            Self::ex(req_err) => Some(req_err),
+            _ => None,
+        }
+    }
+}
+
+impl DiffServiceError for DiffHunksError {
+    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
+        match self {
+            Self::ex(req_err) => Some(req_err),
+            _ => None,
+        }
+    }
+}
+
+impl DiffServiceError for DiffBlocksError {
+    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
+        match self {
+            Self::ex(req_err) => Some(req_err),
+            _ => None,
+        }
+    }
+}
+
+impl DiffServiceError for MetadataDiffError {
+    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
+        match self {
+            Self::ex(req_err) => Some(req_err),
+            _ => None,
+        }
+    }
+}
+
 /// Check if an error from the diff service is transient and should be retried.
-/// Currently checks for "repo not found" errors which can be transient during
-/// repo initialization or deployment.
-fn is_transient_diff_error(e: &impl std::fmt::Debug) -> bool {
-    let error_string = format!("{:?}", e).to_ascii_lowercase();
-    error_string.contains("repo") && error_string.contains("not found")
+/// This checks for errors marked as transient by the diff service (e.g., repo not found
+/// during shard reallocation, repo initialization, etc.).
+///
+/// This function works with any diff service error type (DiffUnifiedError,
+/// DiffUnifiedHeaderlessError, DiffHunksError, DiffBlocksError, MetadataDiffError)
+/// since they all throw the same RequestError exception type.
+fn is_transient_diff_error<E: DiffServiceError>(e: &E) -> bool {
+    if let Some(request_error) = e.request_error() {
+        matches!(
+            &request_error.reason,
+            diff_service_if::RequestErrorReason::transient_error(_)
+        )
+    } else {
+        false
+    }
 }
 
 /// Router for diff operations that can use either local mononoke_api

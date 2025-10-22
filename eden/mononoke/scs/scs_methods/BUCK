@@ -75,6 +75,7 @@ rust_library(
         "//eden/mononoke/mononoke_api_hg:mononoke_api_hg",
         "//eden/mononoke/facebook/diff_service:diff_service_client",
         "//eden/mononoke/facebook/diff_service/if:diff_service_if-rust",
+        "//eden/mononoke/facebook/diff_service/if:diff_service_if-rust-clients",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/mononoke_configs:mononoke_configs",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
