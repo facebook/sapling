@@ -580,10 +580,17 @@ impl AuthorizationContext {
                 } else {
                     "repos"
                 };
+                let check_custom_permission =
+                    repo_name.starts_with("metainternal/") || repo_name.starts_with("par-msl/");
                 let acl = acl_provider.repo_acl(acl_name).await;
                 if let Ok(acl) = acl {
-                    acl.check_set(ctx.metadata().identities(), &["create"])
-                        .await
+                    if check_custom_permission {
+                        acl.check_set(ctx.metadata().identities(), &["orchard_create"])
+                            .await
+                    } else {
+                        acl.check_set(ctx.metadata().identities(), &["create"])
+                            .await
+                    }
                 } else {
                     false
                 }
