@@ -105,8 +105,8 @@ impl<'a> DiffRouter<'a> {
         let other_content_id = other_file.id().await?;
         let base_content_id = base_file.id().await?;
 
-        let base_input = diff_service_client::DiffInput::content(base_content_id);
-        let other_input = diff_service_client::DiffInput::content(other_content_id);
+        let base_input = Some(diff_service_client::DiffInput::content(base_content_id));
+        let other_input = Some(diff_service_client::DiffInput::content(other_content_id));
 
         let options = Some(diff_service_if::DiffUnifiedHeaderlessOptions {
             context_lines: context_lines as i32,
@@ -219,30 +219,22 @@ impl<'a> DiffRouter<'a> {
             diff_service_client.clone(),
         );
 
-        if let (Some(base), Some(other)) = (base_input, other_input) {
-            let (response, mut stream) = repo_client
-                .diff_unified(ctx, base, other, options)
-                .await
-                .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
-            let mut raw_diff = Vec::new();
-            while let Some(chunk) = stream.next().await {
-                let chunk = chunk.map_err(|e| {
-                    scs_errors::internal_error(format!("diff service stream error: {}", e))
-                })?;
-                raw_diff.extend_from_slice(&chunk.content);
-            }
-
-            Ok(UnifiedDiff {
-                raw_diff,
-                is_binary: response.is_binary,
-            })
-        } else {
-            // TODO The service should change to accept optionals as inputs
-            Err(
-                scs_errors::internal_error("Empty inputs are not supported for unified diffs")
-                    .into(),
-            )
+        let (response, mut stream) = repo_client
+            .diff_unified(ctx, base_input, other_input, options)
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
+        let mut raw_diff = Vec::new();
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|e| {
+                scs_errors::internal_error(format!("diff service stream error: {}", e))
+            })?;
+            raw_diff.extend_from_slice(&chunk.content);
         }
+
+        Ok(UnifiedDiff {
+            raw_diff,
+            is_binary: response.is_binary,
+        })
     }
 
     async fn remote_metadata_diff(
@@ -271,146 +263,126 @@ impl<'a> DiffRouter<'a> {
             .map(|c| Self::input_from_changeset(c, None))
             .transpose()?;
 
-        // If either input is missing (file added/deleted), fall back to local implementation
-        // since the remote service currently requires both inputs
-        match (base_input, other_input) {
-            (Some(base), Some(other)) => {
-                let repo_client = diff_service_client::RepoDiffServiceClient::new(
-                    repo_name.to_string(),
-                    diff_service_client.clone(),
-                );
+        let repo_client = diff_service_client::RepoDiffServiceClient::new(
+            repo_name.to_string(),
+            diff_service_client.clone(),
+        );
 
-                let response = repo_client
-                    .metadata_diff(ctx, base, other)
-                    .await
-                    .map_err(|e| {
-                        scs_errors::internal_error(format!("diff service error: {}", e))
-                    })?;
+        let response = repo_client
+            .metadata_diff(ctx, base_input, other_input)
+            .await
+            .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
 
-                // Convert the diff_service_if enums to mononoke_api enums
-                let convert_file_type = |ft: Option<diff_service_if::DiffFileType>| -> Result<
-                    Option<mononoke_api::FileType>,
-                    ServiceError,
-                > {
-                    ft.map(
-                        |file_type| -> Result<mononoke_api::FileType, ServiceError> {
-                            match file_type {
-                                diff_service_if::DiffFileType::REGULAR => {
-                                    Ok(mononoke_api::FileType::Regular)
-                                }
-                                diff_service_if::DiffFileType::EXECUTABLE => {
-                                    Ok(mononoke_api::FileType::Executable)
-                                }
-                                diff_service_if::DiffFileType::SYMLINK => {
-                                    Ok(mononoke_api::FileType::Symlink)
-                                }
-                                diff_service_if::DiffFileType::GIT_SUBMODULE => {
-                                    Ok(mononoke_api::FileType::GitSubmodule)
-                                }
-                                unknown => Err(scs_errors::internal_error(format!(
-                                    "Unknown file type from diff service: {:?}",
-                                    unknown
-                                ))
-                                .into()),
-                            }
-                        },
-                    )
-                    .transpose()
-                };
-
-                let convert_content_type = |ct: Option<diff_service_if::DiffContentType>| -> Result<
-                    Option<mononoke_api::FileContentType>,
-                    ServiceError,
-                > {
-                    ct.map(
-                        |content_type| -> Result<mononoke_api::FileContentType, ServiceError> {
-                            match content_type {
-                                diff_service_if::DiffContentType::TEXT => {
-                                    Ok(mononoke_api::FileContentType::Text)
-                                }
-                                diff_service_if::DiffContentType::NON_UTF8 => {
-                                    Ok(mononoke_api::FileContentType::NonUtf8)
-                                }
-                                diff_service_if::DiffContentType::BINARY => {
-                                    Ok(mononoke_api::FileContentType::Binary)
-                                }
-                                unknown => Err(scs_errors::internal_error(format!(
-                                    "Unknown content type from diff service: {:?}",
-                                    unknown
-                                ))
-                                .into()),
-                            }
-                        },
-                    )
-                    .transpose()
-                };
-
-                let convert_generated_status = |gs: Option<
-                    diff_service_if::DiffGeneratedStatus,
-                >|
-                 -> Result<
-                    Option<mononoke_api::FileGeneratedStatus>,
-                    ServiceError,
-                > {
-                    gs.map(
-                        |generated_status| -> Result<mononoke_api::FileGeneratedStatus, ServiceError> {
-                            match generated_status {
-                                diff_service_if::DiffGeneratedStatus::FULLY => {
-                                    Ok(mononoke_api::FileGeneratedStatus::FullyGenerated)
-                                }
-                                diff_service_if::DiffGeneratedStatus::PARTIALLY => {
-                                    Ok(mononoke_api::FileGeneratedStatus::PartiallyGenerated)
-                                }
-                                diff_service_if::DiffGeneratedStatus::NON_GENERATED => {
-                                    Ok(mononoke_api::FileGeneratedStatus::NotGenerated)
-                                }
-                                unknown => Err(scs_errors::internal_error(format!(
-                                    "Unknown generated status from diff service: {:?}",
-                                    unknown
-                                ))
-                                .into()),
-                            }
-                        },
-                    )
-                    .transpose()
-                };
-
-                // Convert the response back to mononoke_api::MetadataDiff
-                Ok(mononoke_api::MetadataDiff {
-                    old_file_info: mononoke_api::MetadataDiffFileInfo {
-                        file_type: convert_file_type(response.other_file_info.file_type)?,
-                        file_content_type: convert_content_type(
-                            response.other_file_info.content_type,
-                        )?,
-                        file_generated_status: convert_generated_status(
-                            response.other_file_info.generated_status,
-                        )?,
-                    },
-                    new_file_info: mononoke_api::MetadataDiffFileInfo {
-                        file_type: convert_file_type(response.base_file_info.file_type)?,
-                        file_content_type: convert_content_type(
-                            response.base_file_info.content_type,
-                        )?,
-                        file_generated_status: convert_generated_status(
-                            response.base_file_info.generated_status,
-                        )?,
-                    },
-                    lines_count: response.lines_count.map(|lc| {
-                        mononoke_api::MetadataDiffLinesCount {
-                            added_lines_count: lc.added_lines as usize,
-                            deleted_lines_count: lc.deleted_lines as usize,
-                            significant_added_lines_count: lc.significant_added_lines as usize,
-                            significant_deleted_lines_count: lc.significant_deleted_lines as usize,
-                            first_added_line_number: lc.first_added_line_number.map(|n| n as usize),
+        // Convert the diff_service_if enums to mononoke_api enums
+        let convert_file_type = |ft: Option<diff_service_if::DiffFileType>| -> Result<
+            Option<mononoke_api::FileType>,
+            ServiceError,
+        > {
+            ft.map(
+                |file_type| -> Result<mononoke_api::FileType, ServiceError> {
+                    match file_type {
+                        diff_service_if::DiffFileType::REGULAR => {
+                            Ok(mononoke_api::FileType::Regular)
                         }
-                    }),
-                })
-            }
-            // TODO The service should change to accept optionals as inputs
-            _ => Err(scs_errors::internal_error(
-                "Empty inputs are not supported for metadata diffs",
+                        diff_service_if::DiffFileType::EXECUTABLE => {
+                            Ok(mononoke_api::FileType::Executable)
+                        }
+                        diff_service_if::DiffFileType::SYMLINK => {
+                            Ok(mononoke_api::FileType::Symlink)
+                        }
+                        diff_service_if::DiffFileType::GIT_SUBMODULE => {
+                            Ok(mononoke_api::FileType::GitSubmodule)
+                        }
+                        unknown => Err(scs_errors::internal_error(format!(
+                            "Unknown file type from diff service: {:?}",
+                            unknown
+                        ))
+                        .into()),
+                    }
+                },
             )
-            .into()),
-        }
+            .transpose()
+        };
+
+        let convert_content_type = |ct: Option<diff_service_if::DiffContentType>| -> Result<
+            Option<mononoke_api::FileContentType>,
+            ServiceError,
+        > {
+            ct.map(
+                |content_type| -> Result<mononoke_api::FileContentType, ServiceError> {
+                    match content_type {
+                        diff_service_if::DiffContentType::TEXT => {
+                            Ok(mononoke_api::FileContentType::Text)
+                        }
+                        diff_service_if::DiffContentType::NON_UTF8 => {
+                            Ok(mononoke_api::FileContentType::NonUtf8)
+                        }
+                        diff_service_if::DiffContentType::BINARY => {
+                            Ok(mononoke_api::FileContentType::Binary)
+                        }
+                        unknown => Err(scs_errors::internal_error(format!(
+                            "Unknown content type from diff service: {:?}",
+                            unknown
+                        ))
+                        .into()),
+                    }
+                },
+            )
+            .transpose()
+        };
+
+        let convert_generated_status = |gs: Option<diff_service_if::DiffGeneratedStatus>| -> Result<
+            Option<mononoke_api::FileGeneratedStatus>,
+            ServiceError,
+        > {
+            gs.map(
+                |generated_status| -> Result<mononoke_api::FileGeneratedStatus, ServiceError> {
+                    match generated_status {
+                        diff_service_if::DiffGeneratedStatus::FULLY => {
+                            Ok(mononoke_api::FileGeneratedStatus::FullyGenerated)
+                        }
+                        diff_service_if::DiffGeneratedStatus::PARTIALLY => {
+                            Ok(mononoke_api::FileGeneratedStatus::PartiallyGenerated)
+                        }
+                        diff_service_if::DiffGeneratedStatus::NON_GENERATED => {
+                            Ok(mononoke_api::FileGeneratedStatus::NotGenerated)
+                        }
+                        unknown => Err(scs_errors::internal_error(format!(
+                            "Unknown generated status from diff service: {:?}",
+                            unknown
+                        ))
+                        .into()),
+                    }
+                },
+            )
+            .transpose()
+        };
+
+        // Convert the response back to mononoke_api::MetadataDiff
+        Ok(mononoke_api::MetadataDiff {
+            old_file_info: mononoke_api::MetadataDiffFileInfo {
+                file_type: convert_file_type(response.other_file_info.file_type)?,
+                file_content_type: convert_content_type(response.other_file_info.content_type)?,
+                file_generated_status: convert_generated_status(
+                    response.other_file_info.generated_status,
+                )?,
+            },
+            new_file_info: mononoke_api::MetadataDiffFileInfo {
+                file_type: convert_file_type(response.base_file_info.file_type)?,
+                file_content_type: convert_content_type(response.base_file_info.content_type)?,
+                file_generated_status: convert_generated_status(
+                    response.base_file_info.generated_status,
+                )?,
+            },
+            lines_count: response
+                .lines_count
+                .map(|lc| mononoke_api::MetadataDiffLinesCount {
+                    added_lines_count: lc.added_lines as usize,
+                    deleted_lines_count: lc.deleted_lines as usize,
+                    significant_added_lines_count: lc.significant_added_lines as usize,
+                    significant_deleted_lines_count: lc.significant_deleted_lines as usize,
+                    first_added_line_number: lc.first_added_line_number.map(|n| n as usize),
+                }),
+        })
     }
 }
