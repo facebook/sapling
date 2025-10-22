@@ -337,6 +337,16 @@ std::shared_ptr<folly::Executor> makeCheckoutRevisionThreads(
   return nullptr;
 }
 
+std::shared_ptr<folly::Executor> makePrefetchFilesV2Threads(
+    bool usePrefetchExecutor,
+    std::shared_ptr<const EdenConfig>& edenConfig) {
+  if (usePrefetchExecutor) {
+    return std::make_shared<UnboundedQueueExecutor>(
+        edenConfig->numPrefetchThreads.getValue(), "PrefetchFilesV2ThreadPool");
+  }
+  return nullptr;
+}
+
 } // namespace
 
 namespace facebook::eden {
@@ -547,6 +557,11 @@ EdenServer::EdenServer(
           edenConfig->thriftUseCheckoutExecutor.getValue()},
       checkoutRevisionExecutor_{
           makeCheckoutRevisionThreads(thriftUseCheckoutExecutor_, edenConfig)},
+      thriftUsePrefetchExecutor_{
+          edenConfig->thriftUsePrefetchExecutor.getValue() &&
+          edenConfig->prefetchOptimizations.getValue()},
+      prefetchFilesV2Executor_{
+          makePrefetchFilesV2Threads(thriftUsePrefetchExecutor_, edenConfig)},
       progressManager_{
           std::make_unique<folly::Synchronized<EdenServer::ProgressManager>>()},
       startupStatusChannel_{std::move(startupStatusChannel)} {

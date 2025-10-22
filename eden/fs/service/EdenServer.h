@@ -444,6 +444,22 @@ class EdenServer : private TakeoverHandler {
     return thriftUseSerialExecution_ && thriftUseResourcePools_;
   }
 
+  /**
+   * Returns true if the thrift server is configured to use a dedicated
+   * executor for prefetchFilesV2.
+   */
+  bool usingPrefetchExecutor() const {
+    return thriftUsePrefetchExecutor_;
+  }
+
+  /**
+   * Returns the dedicated executor for prefetchFilesV2, or null if not
+   * configured.
+   */
+  const std::shared_ptr<folly::Executor>& getPrefetchFilesV2Executor() const {
+    return prefetchFilesV2Executor_;
+  }
+
   const EdenStatsPtr& getStats() const;
 
   /**
@@ -871,6 +887,19 @@ class EdenServer : private TakeoverHandler {
    * thriftUseCheckoutExecutor_ is false.
    */
   std::shared_ptr<folly::Executor> checkoutRevisionExecutor_;
+
+  /**
+   * If the Thrift Server created at startup is configured to use a dedicated
+   * executor for the prefetchFilesV2 endpoint.
+   */
+  bool thriftUsePrefetchExecutor_;
+
+  /**
+   * Dedicated executor for prefetchFilesV2 Thrift endpoint. This will be null
+   * if the config to use a dedicated executor is not set at daemon startup, if
+   * thriftUsePrefetchExecutor_ is false.
+   */
+  std::shared_ptr<folly::Executor> prefetchFilesV2Executor_;
 
   /**
    * Remounting progress state.

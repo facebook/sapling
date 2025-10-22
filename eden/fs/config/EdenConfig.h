@@ -410,6 +410,25 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether Eden should use a dedicated executor for prefetchFilesV2 requests.
+   * This is meant to help with prefetch performance while using serial
+   * execution for other Thrift requests.
+   */
+  ConfigSetting<bool> thriftUsePrefetchExecutor{
+      "thrift:use-prefetch-executor",
+      true,
+      this};
+
+  /**
+   * Number of threads that will service the prefetchFilesV2 Thrift endpoint
+   * when using its own executor.
+   */
+  ConfigSetting<uint64_t> numPrefetchThreads{
+      "thrift:prefetch-num-servicing-threads",
+      std::thread::hardware_concurrency(),
+      this};
+
+  /**
    * How often to collect Thrift server metrics. The default value mirrors the
    * value from facebook::fb303::TServerCounters::kDefaultSampleRate
    */

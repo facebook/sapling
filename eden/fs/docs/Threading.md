@@ -90,6 +90,23 @@ Thrift CPU threads. The IO threads receive incoming requests, but
 serialization/deserialization and actually handling the request is done on the
 CPU threads.
 
+### Dedicated Executor for prefetchFilesV2
+
+Eden can use a dedicated executor for the `prefetchFilesV2` Thrift endpoint
+(`EdenServer::prefetchFilesV2Executor_`). This is controlled by the
+`thrift:use-prefetch-executor` config setting (defaults to true) and is also
+currently gated by the `experimental.prefetch-optimizations` flag. When enabled,
+prefetch requests are offloaded to a dedicated thread pool to avoid overloading
+the Thrift CPU worker pool, similar to how checkout operations use a dedicated
+executor.
+
+The number of threads in this pool is configurable via
+`thrift:prefetch-num-servicing-threads` (defaults to `ncores` as of Oct 2025).
+The thread pool is named "PrefetchFilesV2ThreadPool" and uses an unbounded queue
+to prevent deadlocks. This dedicated executor helps improve the performance of
+`eden prefetch` commands by enabling parallel execution across multiple cores,
+rather than being limited to serial execution on the Thrift CPU worker pool.
+
 ## Sapling Requests
 
 Note that each SaplingBackingStore has its own pools, and there is one
