@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::sync::Arc;
+
 use storemodel::Bytes;
 use storemodel::SerializationFormat;
 use storemodel::StaticSerializeTreeFunc;
@@ -18,9 +20,9 @@ use crate::TreeElement;
 use crate::store::Entry;
 
 pub(crate) fn setup_basic_tree_parser_constructor() {
-    fn parse_tree(data: Bytes, format: SerializationFormat) -> anyhow::Result<Box<dyn TreeEntry>> {
+    fn parse_tree(data: Bytes, format: SerializationFormat) -> anyhow::Result<Arc<dyn TreeEntry>> {
         let entry = Entry(data, format);
-        Ok(Box::new(entry))
+        Ok(Arc::new(entry))
     }
     fn construct_parse_tree(_: &()) -> anyhow::Result<Option<StaticSerializedTreeParseFunc>> {
         Ok(Some(parse_tree))

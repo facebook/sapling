@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::pin::Pin;
+use std::sync::Arc;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -409,7 +410,7 @@ pub fn sapling_backingstore_get_tree(
 // object.
 fn add_tree_to_builder(
     mut builder: Pin<&mut ffi::TreeBuilder>,
-    tree: Box<dyn TreeEntry>,
+    tree: Arc<dyn TreeEntry>,
 ) -> Result<()> {
     // TODO: Make the aux data available in `TreeEntry::iter()` so we don't have to do this HashMap business.
     let aux_map: HashMap<HgId, ScmStoreFileAuxData> =

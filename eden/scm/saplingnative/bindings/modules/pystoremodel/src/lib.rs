@@ -206,7 +206,7 @@ py_class!(pub class FileStore |py| {
 });
 
 py_class!(pub class TreeEntry |py| {
-    data inner: Box<dyn NativeTreeEntry>;
+    data inner: Arc<dyn NativeTreeEntry>;
 
     def __iter__(&self) -> PyResult<PyIter> {
         let inner = self.inner(py);

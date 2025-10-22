@@ -325,7 +325,7 @@ impl BackingStore {
     }
 
     #[instrument(level = "trace", skip(self))]
-    pub fn get_tree(&self, fctx: FetchContext, node: &[u8]) -> Result<Option<Box<dyn TreeEntry>>> {
+    pub fn get_tree(&self, fctx: FetchContext, node: &[u8]) -> Result<Option<Arc<dyn TreeEntry>>> {
         self.maybe_reload().treestore.single(fctx, node)
     }
 
@@ -335,7 +335,7 @@ impl BackingStore {
     #[instrument(level = "trace", skip(self, resolve))]
     pub fn get_tree_batch<F>(&self, fctx: FetchContext, keys: Vec<Key>, resolve: F)
     where
-        F: Fn(usize, Result<Option<Box<dyn TreeEntry>>>),
+        F: Fn(usize, Result<Option<Arc<dyn TreeEntry>>>),
     {
         self.maybe_reload()
             .treestore
@@ -672,7 +672,7 @@ fn touch_file_mtime() -> Option<SystemTime> {
 /// remote fetch function, provide `batch_with_callback` for ease-of-use.
 trait LocalRemoteImpl<IntermediateType, OutputType = IntermediateType>
 where
-    IntermediateType: Into<OutputType>,
+    IntermediateType: Into<OutputType> + Clone,
 {
     fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<IntermediateType>>;
     fn get_single(&self, fctx: FetchContext, path: &RepoPath, id: HgId)
@@ -809,8 +809,8 @@ impl LocalRemoteImpl<FileAuxData> for Arc<dyn FileStore> {
 }
 
 /// Read tree content.
-impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
-    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Box<dyn TreeEntry>>> {
+impl LocalRemoteImpl<Arc<dyn TreeEntry>> for Arc<dyn TreeStore> {
+    fn get_local_single(&self, path: &RepoPath, id: HgId) -> Result<Option<Arc<dyn TreeEntry>>> {
         self.get_local_tree(path, id)
     }
     fn get_single(
@@ -818,7 +818,7 @@ impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
         fctx: FetchContext,
         path: &RepoPath,
         id: HgId,
-    ) -> Result<Box<dyn TreeEntry>> {
+    ) -> Result<Arc<dyn TreeEntry>> {
         match self
             .get_tree_iter(fctx, vec![Key::new(path.to_owned(), id)])?
             .next()
@@ -832,7 +832,7 @@ impl LocalRemoteImpl<Box<dyn TreeEntry>> for Arc<dyn TreeStore> {
         &self,
         fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> Result<BoxIterator<Result<(Key, Box<dyn TreeEntry>)>>> {
+    ) -> Result<BoxIterator<Result<(Key, Arc<dyn TreeEntry>)>>> {
         self.get_tree_iter(fctx, keys)
     }
 }

@@ -302,7 +302,7 @@ pub trait ReadRootTreeIds {
 }
 
 /// Abstracted tree entry.
-pub trait TreeEntry: Send + 'static {
+pub trait TreeEntry: Send + Sync + 'static {
     /// Iterate through the tree items.
     /// Note the iteration order is serialization format defined.
     /// Practically, Git appends `/` to directories when sorting them.
@@ -356,7 +356,7 @@ pub trait TreeStore: KeyStore {
         &self,
         path: &RepoPath,
         id: HgId,
-    ) -> anyhow::Result<Option<Box<dyn TreeEntry>>> {
+    ) -> anyhow::Result<Option<Arc<dyn TreeEntry>>> {
         let data = match self.get_local_content(path, id)? {
             None => return Ok(None),
             Some(v) => v,
@@ -367,22 +367,19 @@ pub trait TreeStore: KeyStore {
     fn get_remote_tree_iter(
         &self,
         _keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Arc<dyn TreeEntry>)>>> {
         // Function proto, let subclasses implement
         anyhow::bail!("Remote content iterator is not implemented")
     }
 
     /// List trees with optional auxiliary metadata.
-    /// Get tree entries auxiliary metadata for the given files.
-    /// Contact remote server on demand. Might block.
     ///
-    /// Ignores fctx in the default implementation
     /// Currently mainly used by EdenFS.
     fn get_tree_iter(
         &self,
         _fctx: FetchContext,
         keys: Vec<Key>,
-    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Box<dyn TreeEntry>)>>> {
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Arc<dyn TreeEntry>)>>> {
         let store = self.clone_tree_store();
         let iter = keys
             .into_iter()
@@ -551,7 +548,7 @@ impl<T: FileStore + TreeStore> StoreOutput for Arc<T> {
 
 #[doc(hidden)]
 pub type StaticSerializedTreeParseFunc =
-    fn(Bytes, SerializationFormat) -> anyhow::Result<Box<dyn TreeEntry>>;
+    fn(Bytes, SerializationFormat) -> anyhow::Result<Arc<dyn TreeEntry>>;
 
 #[doc(hidden)]
 pub type StaticSerializeTreeFunc =
@@ -563,7 +560,7 @@ pub type StaticSerializeTreeFunc =
 pub fn basic_parse_tree(
     data: Bytes,
     format: SerializationFormat,
-) -> anyhow::Result<Box<dyn TreeEntry>> {
+) -> anyhow::Result<Arc<dyn TreeEntry>> {
     // Only call `call_constructor` once to avoid overhead in `factory`.
     static TREE_PARSER: OnceCell<StaticSerializedTreeParseFunc> = OnceCell::new();
     let parse = TREE_PARSER
