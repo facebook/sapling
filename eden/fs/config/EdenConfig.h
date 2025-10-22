@@ -1681,6 +1681,16 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * Unified flag to control all the prefetch optimizations I'm working on so we
+   * can run an experiment using a single config flag. The various optimizations
+   * are also controlled by separate config flags that are enabled by default.
+   */
+  ConfigSetting<bool> prefetchOptimizations{
+      "experimental:prefetch-optimizations",
+      false,
+      this};
+
   // [blobcache]
 
   /**
