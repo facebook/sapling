@@ -512,6 +512,63 @@ async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
         }
     }
 }
+
+async fn is_noop_file_change<R: MononokeRepo>(
+    parent_ctxs: &[ChangesetContext<R>],
+    stack_changes: Option<&PathTree<Option<FileId>>>,
+    path: &NonRootMPath,
+    change: &CreateChange,
+) -> Result<bool, MononokeError> {
+    let content_id = if let Some(content_id) = change.content_id()? {
+        content_id
+    } else {
+        // Deletions are irrelevant for this check.
+        return Ok(false);
+    };
+
+    // Check if the PathTree of stack changes cover this path i.e. the
+    // state of this path is determined by the previous changes in the
+    // stack and not by the parents.
+    if let Some(stack_changes) = stack_changes
+        && let Some(stack_change) = stack_changes.get(path.as_mpath())
+    {
+        if *stack_change == Some(content_id) {
+            return Ok(true);
+        }
+    } else {
+        let parents = stream::iter(parent_ctxs)
+            .map(Ok::<_, MononokeError>)
+            .map_ok(async |parent_ctx| {
+                let file_ctx = parent_ctx
+                    .path_with_content(path.as_mpath().clone())
+                    .await?
+                    .file()
+                    .await?;
+
+                if let Some(file_ctx) = file_ctx {
+                    Ok(Some(file_ctx.id().await?))
+                } else {
+                    Ok(None)
+                }
+            })
+            .boxed()
+            .try_buffered(10)
+            // Filter out parents that don't have the file.
+            .try_filter_map(futures::future::ok)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        // If all parents have the same content id and it's the same as
+        // the current content id, then it's a no-op change
+        if let Ok(parent_content_id) = parents.into_iter().all_equal_value() {
+            if parent_content_id == content_id {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
+}
+
 async fn verify_no_noop_file_changes<R: MononokeRepo>(
     parent_ctxs: &[ChangesetContext<R>],
     stack_changes: Option<PathTree<Option<FileId>>>,
@@ -520,58 +577,11 @@ async fn verify_no_noop_file_changes<R: MononokeRepo>(
     stream::iter(file_changes)
         .map(Ok)
         .try_for_each_concurrent(10, async |(path, change)| {
-            let content_id = if let Some(content_id) = change.content_id()? {
-                content_id
-            } else {
-                // Deletions are irrelevant for this check.
-                return Ok(());
-            };
-
-            // Check if the PathTree of stack changes cover this path i.e. the
-            // state of this path is determined by the previous changes in the
-            // stack and not by the parents.
-            if let Some(stack_changes) = &stack_changes
-                && let Some(stack_change) = stack_changes.get(path.as_mpath())
-            {
-                if *stack_change == Some(content_id) {
-                    return Err(MononokeError::InvalidRequest(format!(
-                        "Found no-op file change at path '{}'. File changes that don't change file content are not allowed",
-                        path
-                    )));
-                }
-            } else {
-                let parents = stream::iter(parent_ctxs)
-                    .map(Ok::<_, MononokeError>)
-                    .map_ok(async |parent_ctx| {
-                        let file_ctx = parent_ctx
-                            .path_with_content(path.as_mpath().clone())
-                            .await?
-                            .file()
-                            .await?;
-
-                        if let Some(file_ctx) = file_ctx {
-                            Ok(Some(file_ctx.id().await?))
-                        } else {
-                            Ok(None)
-                        }
-                    })
-                    .boxed()
-                    .try_buffered(10)
-                    // Filter out parents that don't have the file.
-                    .try_filter_map(futures::future::ok)
-                    .try_collect::<Vec<_>>()
-                    .await?;
-
-                // If all parents have the same content id and it's the same as
-                // the current content id, then it's a no-op change
-                if let Ok(parent_content_id) = parents.into_iter().all_equal_value() {
-                    if parent_content_id == content_id {
-                        return Err(MononokeError::InvalidRequest(format!(
-                            "Found no-op file change at path '{}'. File changes that don't change file content are not allowed",
-                            path
-                        )));
-                    }
-                }
+            if is_noop_file_change(parent_ctxs, stack_changes.as_ref(), path, change).await? {
+                return Err(MononokeError::InvalidRequest(format!(
+                    "Found no-op file change at path '{}'. File changes that don't change file content are not allowed",
+                    path
+                )));
             }
             Ok(())
         })
@@ -738,6 +748,20 @@ pub struct CreatedChangeset<R> {
     pub changeset_ctx: ChangesetContext<R>,
 }
 
+#[derive(PartialEq, Eq)]
+pub enum CreateChangesetCheckMode {
+    /// Skip the check completely
+    Skip,
+    /// Make the check and fail the request if it fails
+    Check,
+    /// Fix the request to make the check pass
+    Fix,
+}
+
+pub struct CreateChangesetChecks {
+    pub noop_file_changes_check: CreateChangesetCheckMode,
+}
+
 impl<R: MononokeRepo> RepoContext<R> {
     pub(crate) async fn save_changesets(
         &self,
@@ -790,16 +814,10 @@ impl<R: MononokeRepo> RepoContext<R> {
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
-        skip_noop_changes_check: bool,
+        checks: CreateChangesetChecks,
     ) -> Result<CreatedChangeset<R>, MononokeError> {
         let changesets = self
-            .create_changeset_stack(
-                parents,
-                vec![info],
-                vec![changes],
-                bubble,
-                skip_noop_changes_check,
-            )
+            .create_changeset_stack(parents, vec![info], vec![changes], bubble, checks)
             .await?;
         changesets
             .into_iter()
@@ -824,7 +842,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         // If some, this changeset is a snapshot. Currently unsupported to upload a
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
-        skip_noop_changes_check: bool,
+        checks: CreateChangesetChecks,
     ) -> Result<Vec<CreatedChangeset<R>>, MononokeError> {
         self.start_write()?;
         self.authorization_context()
@@ -1084,7 +1102,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             resolve_file_changes_fut,
         )?;
 
-        if !skip_noop_changes_check
+        if checks.noop_file_changes_check == CreateChangesetCheckMode::Check
             && justknobs::eval(
                 "scm/mononoke:create_changeset_stack_noop_file_changes_check",
                 None,

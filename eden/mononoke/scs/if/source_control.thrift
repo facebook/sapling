@@ -1031,8 +1031,9 @@ struct RepoCreateCommitParams {
   /// Service identity to use for this commit creation.
   5: optional string service_identity;
 
-  /// Whether to skip the no-op changes check
-  6: bool skip_noop_changes_check = false;
+  // 6: deleted
+
+  7: CreateCommitChecks checks;
 }
 
 struct RepoCreateStackParamsCommit {
@@ -1061,8 +1062,20 @@ struct RepoCreateStackParams {
   /// Service identity to use for this stack creation.
   5: optional string service_identity;
 
-  /// Whether to skip the no-op changes check
-  6: bool skip_noop_changes_check = false;
+  // 6: deleted
+
+  7: CreateCommitChecks checks;
+}
+
+struct CreateCommitChecks {
+  /// Check for no-op file changes
+  1: CreateCommitCheckMode noop_file_changes_check = CreateCommitCheckMode.CHECK;
+}
+
+enum CreateCommitCheckMode {
+  CHECK = 0,
+  SKIP = 1,
+  FIX = 2,
 }
 
 struct RepoCreateBookmarkParams {

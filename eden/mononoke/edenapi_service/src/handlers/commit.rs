@@ -82,6 +82,8 @@ use maplit::hashmap;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_api::CoreContext;
+use mononoke_api::CreateChangesetCheckMode;
+use mononoke_api::CreateChangesetChecks;
 use mononoke_api::CreateInfo;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
@@ -653,7 +655,9 @@ async fn upload_bonsai_changeset(
                 None => None,
             }
             .as_ref(),
-            true,
+            CreateChangesetChecks {
+                noop_file_changes_check: CreateChangesetCheckMode::Skip,
+            },
         )
         .await
         .with_context(|| anyhow!("When creating bonsai changeset"))?

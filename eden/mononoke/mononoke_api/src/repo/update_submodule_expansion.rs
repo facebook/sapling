@@ -38,6 +38,8 @@ use crate::changeset_path::ChangesetPathHistoryContext;
 use crate::errors::MononokeError;
 use crate::file::FileType;
 use crate::repo::RepoContext;
+use crate::repo::create_changeset::CreateChangesetCheckMode;
+use crate::repo::create_changeset::CreateChangesetChecks;
 use crate::repo::create_changeset::CreateInfo;
 
 pub enum SubmoduleExpansionUpdate {
@@ -222,7 +224,15 @@ impl<R: MononokeRepo> RepoContext<R> {
         };
 
         let created_changeset = small_repo_ctx
-            .create_changeset(parents, create_info, changes, None, true)
+            .create_changeset(
+                parents,
+                create_info,
+                changes,
+                None,
+                CreateChangesetChecks {
+                    noop_file_changes_check: CreateChangesetCheckMode::Skip,
+                },
+            )
             .await?;
         Ok(created_changeset.changeset_ctx)
     }

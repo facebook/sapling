@@ -33,6 +33,7 @@ use mononoke_api::CreateChange;
 use mononoke_api::CreateChangeFile;
 use mononoke_api::CreateChangeFileContents;
 use mononoke_api::CreateChangeGitLfs;
+use mononoke_api::CreateChangesetChecks;
 use mononoke_api::CreateCopyInfo;
 use mononoke_api::CreateInfo;
 use mononoke_api::FileId;
@@ -522,7 +523,7 @@ impl SourceControlServiceImpl {
                 info,
                 changes,
                 bubble,
-                params.skip_noop_changes_check,
+                CreateChangesetChecks::from_request(&params.checks)?,
             )
             .await?;
 
@@ -585,7 +586,7 @@ impl SourceControlServiceImpl {
                 info_stack,
                 changes_stack,
                 bubble,
-                params.skip_noop_changes_check,
+                CreateChangesetChecks::from_request(&params.checks)?,
             )
             .await?;
         // If you ask for a git identity back, then we'll assume that you supplied one to us

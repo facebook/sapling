@@ -29,6 +29,8 @@ use mononoke_api::ChangesetIdPrefix;
 use mononoke_api::ChangesetPrefixSpecifier;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::CopyInfo;
+use mononoke_api::CreateChangesetCheckMode;
+use mononoke_api::CreateChangesetChecks;
 use mononoke_api::CreateCopyInfo;
 use mononoke_api::CreateInfo;
 use mononoke_api::FileId;
@@ -365,6 +367,32 @@ impl FromRequest<thrift::RepoCreateCommitParamsCommitInfo> for CreateInfo {
             extra,
             git_extra_headers,
         })
+    }
+}
+
+impl FromRequest<thrift::CreateCommitChecks> for CreateChangesetChecks {
+    fn from_request(checks: &thrift::CreateCommitChecks) -> Result<Self, thrift::RequestError> {
+        Ok(CreateChangesetChecks {
+            noop_file_changes_check: CreateChangesetCheckMode::from_request(
+                &checks.noop_file_changes_check,
+            )?,
+        })
+    }
+}
+
+impl FromRequest<thrift::CreateCommitCheckMode> for CreateChangesetCheckMode {
+    fn from_request(
+        check_mode: &thrift::CreateCommitCheckMode,
+    ) -> Result<Self, thrift::RequestError> {
+        match *check_mode {
+            thrift::CreateCommitCheckMode::SKIP => Ok(CreateChangesetCheckMode::Skip),
+            thrift::CreateCommitCheckMode::CHECK => Ok(CreateChangesetCheckMode::Check),
+            thrift::CreateCommitCheckMode::FIX => Ok(CreateChangesetCheckMode::Fix),
+            val => Err(scs_errors::invalid_request(format!(
+                "unsupported create commit check mode ({})",
+                val
+            ))),
+        }
     }
 }
 

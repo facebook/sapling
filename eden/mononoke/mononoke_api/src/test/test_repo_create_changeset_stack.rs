@@ -24,6 +24,8 @@ use crate::ChangesetId;
 use crate::CoreContext;
 use crate::CreateChange;
 use crate::CreateChangeFile;
+use crate::CreateChangesetCheckMode;
+use crate::CreateChangesetChecks;
 use crate::CreateCopyInfo;
 use crate::CreateInfo;
 use crate::Mononoke;
@@ -58,7 +60,15 @@ async fn create_changeset_stack<R: MononokeRepo>(
         })
         .collect::<Vec<_>>();
     Ok(repo
-        .create_changeset_stack(stack_parents, info_stack, changes_stack, bubble, false)
+        .create_changeset_stack(
+            stack_parents,
+            info_stack,
+            changes_stack,
+            bubble,
+            CreateChangesetChecks {
+                noop_file_changes_check: CreateChangesetCheckMode::Check,
+            },
+        )
         .await?
         .into_iter()
         .map(|created_changeset| created_changeset.changeset_ctx)
@@ -94,7 +104,15 @@ async fn create_changesets_sequentially<R: MononokeRepo>(
             git_extra_headers: git_extra_headers.clone(),
         };
         let commit = repo
-            .create_changeset(parents, info, changes, bubble, false)
+            .create_changeset(
+                parents,
+                info,
+                changes,
+                bubble,
+                CreateChangesetChecks {
+                    noop_file_changes_check: CreateChangesetCheckMode::Check,
+                },
+            )
             .await?
             .changeset_ctx;
         parents = vec![commit.id()];
