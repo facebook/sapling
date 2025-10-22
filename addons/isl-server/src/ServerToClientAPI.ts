@@ -1184,6 +1184,22 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchSubscribedFullRepoBranches': {
+        Internal.fetchSubscribedFullRepoBranches?.(ctx, repo)
+          .then((branches: Array<InternalTypes['FullRepoBranch']>) => {
+            this.postMessage({
+              type: 'fetchedSubscribedFullRepoBranches',
+              result: {value: branches},
+            });
+          })
+          .catch((error: EjecaError) => {
+            this.postMessage({
+              type: 'fetchedSubscribedFullRepoBranches',
+              result: {error},
+            });
+          });
+        break;
+      }
       default: {
         if (
           repo.codeReviewProvider?.handleClientToServerMessage?.(data, message =>

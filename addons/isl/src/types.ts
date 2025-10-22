@@ -1040,6 +1040,10 @@ export type ClientToServerMessage =
       args: Array<string>;
       cwd: string;
       requestId: string;
+    }
+  | {
+      type: 'fetchSubscribedFullRepoBranches';
+      id: string;
     };
 
 export type SubscriptionResultsData = {
@@ -1195,6 +1199,10 @@ export type ServerToClientMessage =
             stderr: string;
           }
       ) & {requestId: string};
+    }
+  | {
+      type: 'fetchedSubscribedFullRepoBranches';
+      result: Result<Array<InternalTypes['FullRepoBranch']>>;
     };
 
 export type Disposable = {
