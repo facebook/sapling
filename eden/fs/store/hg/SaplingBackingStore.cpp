@@ -414,6 +414,7 @@ void SaplingBackingStore::getBlobBatch(
   store_.getBlobBatch(
       folly::range(requests),
       fetchMode,
+      false,
       // store_->getBlobBatch is blocking, hence we can take these by reference.
       [&](size_t index, folly::Try<std::unique_ptr<folly::IOBuf>> content) {
         if (content.hasException()) {
@@ -447,8 +448,12 @@ void SaplingBackingStore::getBlobBatch(
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
         auto result = content.hasException()
             ? folly::Try<BlobPtr>{content.exception()}
-            : folly::Try{
-                  std::make_shared<BlobPtr::element_type>(*content.value())};
+            : content.value()
+            ? folly::Try{std::make_shared<BlobPtr::element_type>(
+                  *content.value())}
+            : folly::Try<BlobPtr>{std::runtime_error{fmt::format(
+                  "unexpected getBlobBatch nullptr result for node={}",
+                  folly::hexlify(requests[index].node))}};
         for (auto& importRequest : importRequestList) {
           importRequest->getPromise<BlobPtr>()->setWith(
               [&]() -> folly::Try<BlobPtr> { return result; });
