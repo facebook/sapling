@@ -200,7 +200,10 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
         ? edenMount->getCheckoutConfig()->getCaseSensitive()
         : CaseSensitivity::Sensitive;
     globTree = std::make_shared<GlobTree>(
-        bool(includeDotfiles_), caseSensitivity, bool(prefetchOptimizations));
+        bool(includeDotfiles_),
+        caseSensitivity,
+        bool(prefetchOptimizations),
+        serverState->getEdenConfig()->globRecursiveAsyncDepth.getValue());
     compileGlobs(globs, *globTree);
     for (auto& rootId : rootIds_) {
       const RootId& originRootId = originRootIds->emplace_back(
@@ -241,12 +244,18 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
               }));
     }
   } else {
-    auto caseSensitivity =
+    bool includeDotfiles = includeDotfiles_;
+    CaseSensitivity caseSensitive =
         serverState->getEdenConfig()->globUseMountCaseSensitivity.getValue()
         ? edenMount->getCheckoutConfig()->getCaseSensitive()
         : CaseSensitivity::Sensitive;
+    uint32_t asyncDepth =
+        serverState->getEdenConfig()->globRecursiveAsyncDepth.getValue();
     globNode = std::make_shared<GlobNode>(
-        bool(includeDotfiles_), caseSensitivity, bool(prefetchOptimizations));
+        includeDotfiles,
+        caseSensitive,
+        bool(prefetchOptimizations),
+        asyncDepth);
     compileGlobs(globs, *globNode);
     const RootId& originRootId =
         originRootIds->emplace_back(edenMount->getCheckedOutRootId());

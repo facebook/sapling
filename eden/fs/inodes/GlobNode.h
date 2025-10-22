@@ -24,8 +24,13 @@ class GlobNode : public GlobNodeImpl {
   explicit GlobNode(
       bool includeDotfiles,
       CaseSensitivity caseSensitive,
-      bool prefetchOptimizations = false)
-      : GlobNodeImpl(includeDotfiles, caseSensitive, prefetchOptimizations) {}
+      bool prefetchOptimizations = false,
+      uint32_t recursiveAsyncDepth = 3)
+      : GlobNodeImpl(
+            includeDotfiles,
+            caseSensitive,
+            prefetchOptimizations,
+            recursiveAsyncDepth) {}
 
   using PrefetchList = folly::Synchronized<std::vector<ObjectId>>;
 

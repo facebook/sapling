@@ -2053,6 +2053,16 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * The number of recursive glob levels that should always use async execution
+   * through the folly executor. This prevents excessive synchronous recursion
+   * in glob operations and improves concurrency.
+   */
+  ConfigSetting<uint32_t> globRecursiveAsyncDepth{
+      "glob:recursive-async-depth",
+      3,
+      this};
+
   // [doctor]
 
   /**

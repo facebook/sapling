@@ -41,10 +41,12 @@ class GlobNodeImpl {
   explicit GlobNodeImpl(
       bool includeDotfiles,
       CaseSensitivity caseSensitive,
-      bool prefetchOptimizations = false)
+      bool prefetchOptimizations = false,
+      int32_t recursiveAsyncDepth = 3)
       : caseSensitive_(caseSensitive),
         includeDotfiles_(includeDotfiles),
-        prefetchOptimizations_(prefetchOptimizations) {}
+        prefetchOptimizations_(prefetchOptimizations),
+        recursiveAsyncDepth_(recursiveAsyncDepth) {}
 
   virtual ~GlobNodeImpl() = default;
 
@@ -55,7 +57,8 @@ class GlobNodeImpl {
       bool includeDotfiles,
       bool hasSpecials,
       CaseSensitivity caseSensitive,
-      bool prefetchOptimizations = false);
+      bool prefetchOptimizations = false,
+      uint32_t recursiveAsyncDepth = 3);
 
   // Compile and add a new glob pattern to the tree.
   // Compilation splits the pattern into nodes, with one node for each
@@ -143,7 +146,8 @@ class GlobNodeImpl {
       ROOT&& root,
       PrefetchList* fileBlobsToPrefetch,
       ResultList* globResult,
-      const RootId& originRootId) const {
+      const RootId& originRootId,
+      size_t currentDepth = 0) const {
     TaskTraceBlock block{"GlobNodeImpl::evaluateRecursiveComponentImpl"};
     std::vector<RelativePath> subDirNames;
     std::vector<ImmediateFuture<folly::Unit>> futures;
@@ -183,8 +187,20 @@ class GlobNodeImpl {
           if (root.entryShouldLoadChildTree(&entry.second)) {
             subDirNames.emplace_back(std::move(candidateName));
           } else {
+            // If we are at an early depth, force getTree() through the executor
+            // lest we get trapped in a single core when everything is
+            // immediately ready.
+            auto asyncTrigger =
+                prefetchOptimizations_ && (currentDepth < recursiveAsyncDepth_)
+                ? makeNotReadyImmediateFuture()
+                : ImmediateFuture<folly::Unit>(folly::unit);
             futures.emplace_back(
-                store->getTree(entry.second.getObjectId(), context)
+                std::move(asyncTrigger)
+                    .thenValue([store,
+                                objectId = entry.second.getObjectId(),
+                                context = context.copy()](auto&&) {
+                      return store->getTree(objectId, context);
+                    })
                     .thenValue(
                         [candidateName = std::move(candidateName),
                          rootPath = rootPath.copy(),
@@ -193,7 +209,8 @@ class GlobNodeImpl {
                          this,
                          fileBlobsToPrefetch,
                          globResult,
-                         &originRootId](std::shared_ptr<const Tree> tree) {
+                         &originRootId,
+                         currentDepth](std::shared_ptr<const Tree> tree) {
                           return evaluateRecursiveComponentImpl<
                               TreeRoot,
                               TreeRootPtr>(
@@ -204,7 +221,8 @@ class GlobNodeImpl {
                               TreeRoot(std::move(tree)),
                               fileBlobsToPrefetch,
                               globResult,
-                              originRootId);
+                              originRootId,
+                              currentDepth + 1);
                         }));
           }
         }
@@ -232,7 +250,8 @@ class GlobNodeImpl {
                           this,
                           fileBlobsToPrefetch,
                           globResult,
-                          &originRootId](ROOTPtr dir) {
+                          &originRootId,
+                          currentDepth](ROOTPtr dir) {
                 return evaluateRecursiveComponentImpl<ROOT, ROOTPtr>(
                     store,
                     context,
@@ -241,7 +260,8 @@ class GlobNodeImpl {
                     ROOT(std::move(dir)),
                     fileBlobsToPrefetch,
                     globResult,
-                    originRootId);
+                    originRootId,
+                    currentDepth + 1);
               }));
     }
 
@@ -283,7 +303,8 @@ class GlobNodeImpl {
           ROOT(root),
           fileBlobsToPrefetch,
           globResult,
-          originRootId));
+          originRootId,
+          0));
     }
 
     auto recurseIfNecessary = [&](PathComponentPiece name,
@@ -477,6 +498,9 @@ class GlobNodeImpl {
   bool alwaysMatch_{false};
   // Unified flag to control all the prefetch optimizations
   bool prefetchOptimizations_{false};
+  // The number of recursive glob levels that should always use async execution
+  // through the folly executor.
+  uint32_t recursiveAsyncDepth_{3};
 };
 
 } // namespace facebook::eden
