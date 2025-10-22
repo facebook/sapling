@@ -273,20 +273,25 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
             }
 
             // fileBlobsToPrefetch is deduplicated as an optimization.
-            // The BackingStore layer does not deduplicate fetches, so lets
-            // avoid causing too many duplicates here.
+            // The BackingStore layer does not necessarily deduplicate fetches
+            // (although Sapling will, per-batch), so lets avoid causing too
+            // many duplicates here.
             if (fileBlobsToPrefetch) {
+              // Use set and pop-and-swap to deduplicate (instead of sorting).
+              // The list can be very large, and there should be few duplicates.
               auto fileBlobsToPrefetchLocked = fileBlobsToPrefetch->wlock();
-              std::sort(
-                  fileBlobsToPrefetchLocked->begin(),
-                  fileBlobsToPrefetchLocked->end(),
-                  std::less<ObjectId>{});
-              auto fileBlobsToPrefetchNewEnd = std::unique(
-                  fileBlobsToPrefetchLocked->begin(),
-                  fileBlobsToPrefetchLocked->end(),
-                  std::equal_to<ObjectId>());
-              fileBlobsToPrefetchLocked->erase(
-                  fileBlobsToPrefetchNewEnd, fileBlobsToPrefetchLocked->end());
+              folly::F14FastSet<ObjectId> seen;
+              size_t i = 0;
+              while (i < fileBlobsToPrefetchLocked->size()) {
+                if (seen.insert((*fileBlobsToPrefetchLocked)[i]).second) {
+                  ++i;
+                } else {
+                  std::swap(
+                      (*fileBlobsToPrefetchLocked)[i],
+                      fileBlobsToPrefetchLocked->back());
+                  fileBlobsToPrefetchLocked->pop_back();
+                }
+              }
             }
 
             return sortedResults;
