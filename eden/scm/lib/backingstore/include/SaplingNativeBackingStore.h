@@ -47,12 +47,24 @@ struct SaplingRequest {
   // SaplingImportRequest - be cognizant of lifetimes.
   NodeId node;
   RepoPath path;
-  ObjectId& oid;
+  const ObjectId& oid;
 
   FetchCause cause;
   ObjectFetchContextPtr context;
   // TODO: sapling::FetchMode mode;
   // TODO: sapling::ClientRequestInfo cri;
+
+  SaplingRequest(
+      NodeId node_,
+      RepoPath path_,
+      const ObjectId& oid_,
+      FetchCause cause_,
+      ObjectFetchContextPtr context_)
+      : node(node_),
+        path(path_),
+        oid(oid_),
+        cause(cause_),
+        context(std::move(context_)) {}
 };
 
 /**

@@ -1659,6 +1659,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Controls whether we optimize blob prefetching with the Sapling
+   * IGNORE_RESULT flag, which reduces work by not propagating the actual
+   * blob result.
+   */
+  ConfigSetting<bool> ignorePrefetchResult{
+      "experimental:ignore-prefetch-result",
+      true,
+      this};
+
+  /**
    * Controls whether eden rm command attempts to clean up mount directory
    * recursively. eden rm currently assumes nothing exist after unmounting and
    * directly removes the directory, which leads to ENOTEMPTY for lots of users.

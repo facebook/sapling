@@ -674,13 +674,12 @@ SaplingBackingStore::prepareRequests(
         importRequestsIdPair.second.first;
     ObjectFetchContext::Cause fetchCause =
         getHighestPriorityFetchCause(importRequestsForId);
-    requests.push_back(sapling::SaplingRequest{
+    requests.emplace_back(
         importRequestsIdPair.first,
         importRequestsForId[0]->getRequest<T>()->proxyHash.path(),
         importRequestsForId[0]->getRequest<T>()->id,
         fetchCause,
-        importRequestsForId[0]->getContext().copy(),
-    });
+        importRequestsForId[0]->getContext().copy());
   }
 
   return std::make_pair(std::move(importRequestsMap), std::move(requests));
@@ -1785,33 +1784,129 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
         if (tryHashes.hasException()) {
           logMissingProxyHash();
         }
-        auto& proxyHashes = tryHashes.value();
+        auto proxyHashes = std::move(tryHashes).value();
+
+        if (proxyHashes.empty()) {
+          return ImmediateFuture<folly::Unit>{folly::unit}.semi();
+        }
 
         logBackingStoreFetch(
             *context,
             folly::Range{proxyHashes.data(), proxyHashes.size()},
             ObjectFetchContext::ObjectType::Blob);
 
-        // Do not check for whether blobs are already present locally, this
-        // check is useful for latency oriented workflows, not for throughput
-        // oriented ones. Mercurial will anyway not re-fetch a blob that is
-        // already present locally, so the check for local blob is pure
-        // overhead when prefetching.
-        std::vector<ImmediateFuture<GetBlobResult>> futures;
-        futures.reserve(ids.size());
+        if (config_->getEdenConfig()->ignorePrefetchResult.getValue() &&
+            config_->getEdenConfig()->prefetchOptimizations.getValue()) {
+          // We perform two optimizations here:
+          //
+          // 1. We don't go through the queue. We already have a big batch of
+          // blobs to fetch - shuffling them through the queue one-at-a-time is
+          // very expensive. And then on the other side, they are chopped down
+          // into smaller batches, which loses more throughput.
+          //
+          // 2. We pass allowIgnoreResult=true, which lets sapling skip work
+          // fetching the blobs (because we don't actually care about the
+          // content).
 
-        for (size_t i = 0; i < ids.size(); i++) {
-          const auto& id = ids[i];
-          const auto& proxyHash = proxyHashes[i];
+          std::vector<sapling::SaplingRequest> requests;
+          requests.reserve(ids.size());
+          for (size_t i = 0; i < ids.size(); i++) {
+            requests.emplace_back(
+                proxyHashes[i].byteHash(),
+                proxyHashes[i].path(),
+                ids[i],
+                context->getCause(),
+                context.copy());
+          }
 
-          futures.emplace_back(getBlobEnqueue(
-              id,
-              proxyHash,
-              context,
-              SaplingImportRequest::FetchType::Prefetch));
+          // Use makeNotReadyImmediateFuture to force going through the
+          // executor. This can be a large batch, and we don't want to block the
+          // caller.
+          return makeNotReadyImmediateFuture()
+              .thenValue([this,
+                          proxyHashes = std::move(proxyHashes),
+                          requests = std::move(requests),
+                          context = context.copy()](auto&&) {
+                auto importTracker =
+                    RequestMetricsScope{&pendingImportPrefetchWatches_};
+
+                auto unique = generateUniqueID();
+                traceBus_->publish(HgImportTraceEvent::start(
+                    unique,
+                    HgImportTraceEvent::BLOB_BATCH,
+                    proxyHashes[0], // use the first item in batch
+                    context->getPriority().getClass(),
+                    context->getCause(),
+                    context->getClientPid()));
+
+                folly::stop_watch<std::chrono::milliseconds> watch;
+                XLOGF(
+                    DBG4,
+                    "Batch fetching {} blobs from Sapling",
+                    requests.size());
+
+                size_t failureCount = 0;
+                store_.getBlobBatch(
+                    folly::range(requests),
+                    sapling::FetchMode::AllowRemote,
+                    // We aren't going through the queue, so we are certain we
+                    // can IGNORE_RESULT without impacting other fetches for the
+                    // same id.
+                    true,
+                    [&](size_t index,
+                        folly::Try<std::unique_ptr<folly::IOBuf>> content) {
+                      if (content.hasException()) {
+                        failureCount++;
+                        XLOGF(
+                            ERR,
+                            "Failed to batch import node={} path={} from Sapling: {}",
+                            folly::hexlify(requests[index].node),
+                            requests[index].path,
+                            content.exception().what().toStdString());
+                      }
+                    });
+
+                traceBus_->publish(HgImportTraceEvent::finish(
+                    unique,
+                    HgImportTraceEvent::BLOB_BATCH,
+                    proxyHashes[0], // use the first item in batch
+                    context->getPriority().getClass(),
+                    context->getCause(),
+                    context->getClientPid(),
+                    context->getFetchedSource()));
+
+                stats_->increment(
+                    &SaplingBackingStoreStats::prefetchBlobFailure,
+                    failureCount);
+                stats_->increment(
+                    &SaplingBackingStoreStats::prefetchBlobSuccess,
+                    requests.size() - failureCount);
+                stats_->addDuration(
+                    &SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
+              })
+              .semi();
+        } else {
+          // Do not check for whether blobs are already present locally, this
+          // check is useful for latency oriented workflows, not for throughput
+          // oriented ones. Mercurial will anyway not re-fetch a blob that is
+          // already present locally, so the check for local blob is pure
+          // overhead when prefetching.
+          std::vector<ImmediateFuture<GetBlobResult>> futures;
+          futures.reserve(ids.size());
+
+          for (size_t i = 0; i < ids.size(); i++) {
+            const auto& id = ids[i];
+            const auto& proxyHash = proxyHashes[i];
+
+            futures.emplace_back(getBlobEnqueue(
+                id,
+                proxyHash,
+                context,
+                SaplingImportRequest::FetchType::Prefetch));
+          }
+
+          return collectAllSafe(std::move(futures)).unit().semi();
         }
-
-        return collectAllSafe(std::move(futures)).unit();
       })
       .semi();
 }
