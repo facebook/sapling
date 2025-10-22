@@ -1716,24 +1716,7 @@ class EdenCheckout:
         )
 
     def parse_snapshot_component(self, buf: bytes) -> Tuple[str, Optional[bytes]]:
-        """Parse a component from the snapshot file.
-
-        Returns a tuple containing the parsed hash and a filter id (if
-        applicable). For unfiltered repos, None is always returned for the
-        component's filter id.
-        """
-        decoded_hash = ""
-        filter_bytes = None
-        if self.get_config().scm_type == "filteredhg":
-            hash_len, varint_len = util.decode_varint(buf)
-            filter_offset = varint_len + hash_len
-            encoded_hash = buf[varint_len:filter_offset]
-            filter_bytes = buf[filter_offset:]
-            decoded_hash = encoded_hash.decode()
-        else:
-            decoded_hash = buf.decode()
-
-        return decoded_hash, filter_bytes
+        return parse_snapshot_component(buf, self.get_config().scm_type)
 
     def get_snapshot(self) -> SnapshotState:
         """Return the hex version of the parent hash in the SNAPSHOT file."""
@@ -1842,6 +1825,27 @@ class EdenCheckout:
         new_config = old_config._replace(inode_catalog_type=new_inode_catalog_type)
 
         self.save_config(new_config)
+
+
+def parse_snapshot_component(buf: bytes, scm_type: str) -> Tuple[str, Optional[bytes]]:
+    """Parse a component from the snapshot file.
+
+    Returns a tuple containing the parsed hash and a filter id (if
+    applicable). For unfiltered repos, None is always returned for the
+    component's filter id.
+    """
+    decoded_hash = ""
+    filter_bytes = None
+    if scm_type == "filteredhg":
+        hash_len, varint_len = util.decode_varint(buf)
+        filter_offset = varint_len + hash_len
+        encoded_hash = buf[varint_len:filter_offset]
+        filter_bytes = buf[filter_offset:]
+        decoded_hash = encoded_hash.decode()
+    else:
+        decoded_hash = buf.decode()
+
+    return decoded_hash, filter_bytes
 
 
 _MIGRATE_EXISTING_TO_NFS = "core.migrate_existing_to_nfs"
