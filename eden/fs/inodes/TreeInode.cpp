@@ -1081,7 +1081,7 @@ DirContents TreeInode::saveDirFromTree(
       mount->getCheckoutConfig()->getCaseSensitive(),
       mount->getCheckoutConfig()->getEnableWindowsSymlinks());
 
-  if (mount->getEdenConfig()->lazyInodePersistence.getValue()) {
+  if (mount->getInodeMap()->lazyInodePersistence()) {
     // lazyInodePersistence means we persist inode numbers in memory rather
     // than persisting by writing out directories to the overlay. So, don't
     // write overlay entries when reading directories.

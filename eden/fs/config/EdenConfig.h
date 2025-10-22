@@ -1696,6 +1696,9 @@ class EdenConfig : private ConfigSettingManager {
    * When true, no longer eagerly write directories to the overlay on read.
    * Instead, non-materialized directories are written to the overlay when they
    * are unloaded, except during checkout.
+   *
+   * Note that this can cause significant pauses during shutdown as we must
+   * write out all directories to the overlay.
    */
   ConfigSetting<bool> lazyInodePersistence{
       "experimental:lazy-inode-persistence",

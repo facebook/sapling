@@ -109,7 +109,9 @@ InodeMap::InodeMap(
     : mount_{mount},
       config_{std::move(config)},
       stats_{std::move(stats)},
-      structuredLogger_{std::move(logger)} {}
+      structuredLogger_{std::move(logger)},
+      lazyInodePersistence_{
+          config_->getEdenConfig()->lazyInodePersistence.getValue()} {}
 
 InodeMap::~InodeMap() {
   // TODO: We need to clean up the EdenMount / InodeMap destruction process a
@@ -1181,7 +1183,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
 
   auto* asTree = dynamic_cast<TreeInode*>(inode);
 
-  if (mount_->getEdenConfig()->lazyInodePersistence.getValue()) {
+  if (lazyInodePersistence_) {
     // Do a just-in-time write of directory to overlay if we need to persist
     // the entries' inode numbers. This avoids needing to write to overlay in
     // the read path.

@@ -417,6 +417,16 @@ class InodeMap {
    */
   InodeCounts getInodeCounts() const;
 
+  /**
+   * Returns whether lazy inode persistence is enabled.
+   *
+   * Lazy inode persistence means we delay persisting inodes to the overlay
+   * until the inode must be unloaded.
+   */
+  bool lazyInodePersistence() const {
+    return lazyInodePersistence_;
+  }
+
   void recordPeriodicInodeUnload(size_t numInodesToUnload);
   /*
    * Return all referenced inodes (loaded and unloaded inodes whose
@@ -783,6 +793,10 @@ class InodeMap {
    * This number will only increase for the life time of this inode map.
    */
   std::atomic<size_t> numPeriodicallyUnloadedLinkedInodes_{0};
+
+  // Snapshot of experimental:lazy-inode-persistence config (we don't want it to
+  // change while eden is running).
+  bool lazyInodePersistence_{false};
 };
 
 /**
