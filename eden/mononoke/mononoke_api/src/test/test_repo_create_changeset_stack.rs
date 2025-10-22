@@ -38,6 +38,39 @@ async fn create_changeset_stack<R: MononokeRepo>(
     changes_stack: Vec<BTreeMap<MPath, CreateChange>>,
     stack_parents: Vec<ChangesetId>,
 ) -> Result<Vec<ChangesetContext<R>>, MononokeError> {
+    create_changeset_stack_impl(
+        repo,
+        changes_stack,
+        stack_parents,
+        CreateChangesetChecks {
+            noop_file_changes_check: CreateChangesetCheckMode::Check,
+        },
+    )
+    .await
+}
+
+async fn create_changeset_stack_fix_request<R: MononokeRepo>(
+    repo: &RepoContext<R>,
+    changes_stack: Vec<BTreeMap<MPath, CreateChange>>,
+    stack_parents: Vec<ChangesetId>,
+) -> Result<Vec<ChangesetContext<R>>, MononokeError> {
+    create_changeset_stack_impl(
+        repo,
+        changes_stack,
+        stack_parents,
+        CreateChangesetChecks {
+            noop_file_changes_check: CreateChangesetCheckMode::Fix,
+        },
+    )
+    .await
+}
+
+async fn create_changeset_stack_impl<R: MononokeRepo>(
+    repo: &RepoContext<R>,
+    changes_stack: Vec<BTreeMap<MPath, CreateChange>>,
+    stack_parents: Vec<ChangesetId>,
+    checks: CreateChangesetChecks,
+) -> Result<Vec<ChangesetContext<R>>, MononokeError> {
     let author = String::from("Test Author <test@example.com>");
     let author_date = FixedOffset::east_opt(0)
         .unwrap()
@@ -60,15 +93,7 @@ async fn create_changeset_stack<R: MononokeRepo>(
         })
         .collect::<Vec<_>>();
     Ok(repo
-        .create_changeset_stack(
-            stack_parents,
-            info_stack,
-            changes_stack,
-            bubble,
-            CreateChangesetChecks {
-                noop_file_changes_check: CreateChangesetCheckMode::Check,
-            },
-        )
+        .create_changeset_stack(stack_parents, info_stack, changes_stack, bubble, checks)
         .await?
         .into_iter()
         .map(|created_changeset| created_changeset.changeset_ctx)
@@ -382,9 +407,21 @@ async fn test_create_commit_stack_noop_file_changes_check(fb: FacebookInit) -> R
         ),
     }];
     assert!(
-        compare_create_stack(&stack_repo, &seq_repo, changes, vec![commits["K"]])
+        compare_create_stack(&stack_repo, &seq_repo, changes.clone(), vec![commits["K"]])
             .await?
             .is_none()
+    );
+
+    // If we specify CreateChangesetCheckMode::Fix for the noop check then the
+    // creation request succeeds and the noop file change is removed
+    assert!(
+        create_changeset_stack_fix_request(&stack_repo, changes, vec![commits["K"]])
+            .await?
+            .first()
+            .unwrap()
+            .file_changes()
+            .await?
+            .is_empty()
     );
 
     // Noop file changes for files introduced in the stack should fail

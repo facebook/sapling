@@ -29,6 +29,7 @@ use futures::stream::Stream;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_stats::TimedFutureExt;
+use futures_stats::TimedTryFutureExt;
 use itertools::Itertools;
 use manifest::PathTree;
 use metaconfig_types::RepoConfigRef;
@@ -588,6 +589,30 @@ async fn verify_no_noop_file_changes<R: MononokeRepo>(
         .await
 }
 
+async fn remove_noop_file_changes<R: MononokeRepo>(
+    parent_ctxs: &[ChangesetContext<R>],
+    stack_changes: Option<PathTree<Option<FileId>>>,
+    file_changes: SortedVectorMap<NonRootMPath, CreateChange>,
+) -> Result<SortedVectorMap<NonRootMPath, CreateChange>, MononokeError> {
+    stream::iter(file_changes)
+        .map(Ok)
+        .map_ok(async |(path, change)| {
+            let is_noop =
+                is_noop_file_change(parent_ctxs, stack_changes.as_ref(), &path, &change).await?;
+            Ok((is_noop, path, change))
+        })
+        .try_buffered(10)
+        .try_filter_map(async |(is_noop, path, change)| {
+            if is_noop {
+                Ok(None)
+            } else {
+                Ok(Some((path, change)))
+            }
+        })
+        .try_collect()
+        .await
+}
+
 /// Returns `true` if any prefix of the path has a change.  Use for
 /// detecting when a directory is replaced by a file.
 fn is_prefix_changed(path: &MPath, paths: &PathTree<CreateChangeType>) -> bool {
@@ -1095,14 +1120,14 @@ impl<R: MononokeRepo> RepoContext<R> {
             .await
         };
 
-        let ((), (), (), file_changes_stack) = try_join!(
+        let ((), (), (), mut file_changes_stack) = try_join!(
             verify_deleted_files_existed_fut,
             verify_prefix_files_deleted_fut,
             verify_no_merge_conflicts_fut,
             resolve_file_changes_fut,
         )?;
 
-        if checks.noop_file_changes_check == CreateChangesetCheckMode::Check
+        if checks.noop_file_changes_check != CreateChangesetCheckMode::Skip
             && justknobs::eval(
                 "scm/mononoke:create_changeset_stack_noop_file_changes_check",
                 None,
@@ -1129,23 +1154,47 @@ impl<R: MononokeRepo> RepoContext<R> {
                 }
             }
 
-            stream::iter(
-                file_changes_stack
-                    .iter()
-                    .zip(stack_changes_stack.into_iter()),
-            )
-            .map(Ok)
-            .try_for_each_concurrent(10, async |(file_changes, stack_changes)| {
-                verify_no_noop_file_changes(&stack_parent_ctxs, stack_changes, file_changes)
-                    .timed()
-                    .await
-                    .log_future_stats(
-                        self.ctx().scuba().clone(),
-                        "Verify no no-op file changes",
-                        None,
+            if checks.noop_file_changes_check == CreateChangesetCheckMode::Fix {
+                file_changes_stack = stream::iter(
+                    file_changes_stack
+                        .into_iter()
+                        .zip(stack_changes_stack.into_iter()),
+                )
+                .map(Ok)
+                .map_ok(async |(file_changes, stack_changes)| {
+                    Ok::<_, MononokeError>(
+                        remove_noop_file_changes(&stack_parent_ctxs, stack_changes, file_changes)
+                            .try_timed()
+                            .await?
+                            .log_future_stats(
+                                self.ctx().scuba().clone(),
+                                "Removing no no-op file changes",
+                                None,
+                            ),
                     )
-            })
-            .await?;
+                })
+                .try_buffered(10)
+                .try_collect::<Vec<_>>()
+                .await?;
+            } else {
+                stream::iter(
+                    file_changes_stack
+                        .iter()
+                        .zip(stack_changes_stack.into_iter()),
+                )
+                .map(Ok)
+                .try_for_each_concurrent(10, async |(file_changes, stack_changes)| {
+                    verify_no_noop_file_changes(&stack_parent_ctxs, stack_changes, file_changes)
+                        .timed()
+                        .await
+                        .log_future_stats(
+                            self.ctx().scuba().clone(),
+                            "Verify no no-op file changes",
+                            None,
+                        )
+                })
+                .await?;
+            }
         };
 
         let mut new_changesets = Vec::new();
