@@ -3783,16 +3783,8 @@ folly::SemiFuture<std::unique_ptr<ReturnType>> serialDetachIfBackgrounded(
         .semi();
   }
 
-  folly::Executor::KeepAlive<> serial;
-  if (server->getServerState()
-          ->getEdenConfig()
-          ->thriftUseSmallSerialExecutor.getValue()) {
-    serial = folly::SerialExecutor::create(
-        server->getServer()->getThreadManager().get());
-  } else {
-    serial = folly::SerialExecutor::create(
-        server->getServer()->getThreadManager().get());
-  }
+  folly::Executor::KeepAlive<> serial = folly::SerialExecutor::create(
+      server->getServer()->getThreadManager().get());
 
   if (background) {
     folly::futures::detachOn(serial, std::move(future).semi());
@@ -3832,16 +3824,8 @@ folly::SemiFuture<folly::Unit> serialDetachIfBackgrounded(
         .semi();
   }
 
-  folly::Executor::KeepAlive<> serial;
-  if (server->getServerState()
-          ->getEdenConfig()
-          ->thriftUseSmallSerialExecutor.getValue()) {
-    serial = folly::SerialExecutor::create(
-        server->getServer()->getThreadManager().get());
-  } else {
-    serial = folly::SerialExecutor::create(
-        server->getServer()->getThreadManager().get());
-  }
+  folly::Executor::KeepAlive<> serial = folly::SerialExecutor::create(
+      server->getServer()->getThreadManager().get());
 
   if (background) {
     folly::futures::detachOn(serial, std::move(future).semi());

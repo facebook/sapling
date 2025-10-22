@@ -372,14 +372,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Use a SerialExecutor for serial Thrift requests.
-   */
-  ConfigSetting<bool> thriftUseSmallSerialExecutor{
-      "thrift:use-small-serial-executor",
-      true,
-      this};
-
-  /**
    * Whether Eden should use resource pools
    */
   ConfigSetting<bool> thriftUseResourcePools{
