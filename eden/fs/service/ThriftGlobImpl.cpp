@@ -165,9 +165,11 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
     const ObjectFetchContextPtr& fetchContext) {
   bool windowsSymlinksEnabled =
       edenMount->getCheckoutConfig()->getEnableWindowsSymlinks();
+  bool prefetchOptimizations =
+      serverState->getEdenConfig()->prefetchOptimizations.getValue();
   bool dedupePrefetchFiles =
       serverState->getEdenConfig()->globDedupePrefetchFiles.getValue() ||
-      !serverState->getEdenConfig()->prefetchOptimizations.getValue();
+      !prefetchOptimizations;
 
   auto fileBlobsToPrefetch =
       prefetchFiles_ ? std::make_shared<PrefetchList>() : nullptr;
@@ -216,22 +218,26 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                     std::move(rootTree.tree),
                     searchRoot);
               })
-              .thenValue(
-                  [edenMount,
-                   globTree,
-                   fetchContext = fetchContext.copy(),
-                   fileBlobsToPrefetch,
-                   globResults,
-                   &originRootId](std::shared_ptr<const Tree>&& tree) mutable {
-                    return globTree->evaluate(
-                        edenMount->getObjectStore(),
-                        fetchContext,
-                        RelativePathPiece(),
-                        std::move(tree),
-                        fileBlobsToPrefetch.get(),
-                        *globResults,
-                        originRootId);
-                  }));
+              .thenValue([edenMount,
+                          globTree,
+                          fetchContext = fetchContext.copy(),
+                          fileBlobsToPrefetch,
+                          globResults,
+                          &originRootId,
+                          prefetchOptimizations,
+                          suppressFileList = suppressFileList_](
+                             std::shared_ptr<const Tree>&& tree) mutable {
+                return globTree->evaluate(
+                    edenMount->getObjectStore(),
+                    fetchContext,
+                    RelativePathPiece(),
+                    std::move(tree),
+                    fileBlobsToPrefetch.get(),
+                    suppressFileList && prefetchOptimizations
+                        ? nullptr
+                        : globResults.get(),
+                    originRootId);
+              }));
     }
   } else {
     globNode = std::make_shared<GlobNode>(
@@ -249,14 +255,18 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                         edenMount,
                         fileBlobsToPrefetch,
                         globResults,
-                        &originRootId](InodePtr inode) mutable {
+                        &originRootId,
+                        prefetchOptimizations,
+                        suppressFileList =
+                            suppressFileList_](InodePtr inode) mutable {
               return globNode->evaluate(
                   edenMount->getObjectStore(),
                   fetchContext,
                   RelativePathPiece(),
                   inode.asTreePtr(),
                   fileBlobsToPrefetch.get(),
-                  *globResults,
+                  suppressFileList && prefetchOptimizations ? nullptr
+                                                            : globResults.get(),
                   originRootId);
             }));
   }

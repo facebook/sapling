@@ -35,6 +35,7 @@ class GlobTree : public GlobNodeImpl {
    * @param tree metadata structure of files
    * @param fileBlobstoPrefetch a nullable list of files to fetch during
    * globbing
+   * @param globResult nullable list where results will be appended if provided
    */
   ImmediateFuture<folly::Unit> evaluate(
       std::shared_ptr<ObjectStore> store,
@@ -42,7 +43,7 @@ class GlobTree : public GlobNodeImpl {
       RelativePathPiece rootPath,
       std::shared_ptr<const Tree> tree,
       PrefetchList* fileBlobsToPrefetch,
-      ResultList& globResult,
+      ResultList* globResult,
       const RootId& originRootId) const;
 };
 

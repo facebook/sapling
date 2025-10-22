@@ -55,7 +55,7 @@ folly::Future<std::vector<GlobResult>> evaluateGlob(
           RelativePathPiece(),
           rootInode,
           prefetchIds.get(),
-          *globResults,
+          globResults.get(),
           commitId)
       .thenValue([globResults](auto&&) {
         std::vector<GlobResult> result;

@@ -19,7 +19,7 @@ ImmediateFuture<folly::Unit> GlobTree::evaluate(
     RelativePathPiece rootPath,
     std::shared_ptr<const Tree> tree,
     PrefetchList* fileBlobsToPrefetch,
-    ResultList& globResult,
+    ResultList* globResult,
     const RootId& originRootId) const {
   return evaluateImpl<GlobNodeImpl::TreeRoot, GlobNodeImpl::TreeRootPtr>(
              store.get(),

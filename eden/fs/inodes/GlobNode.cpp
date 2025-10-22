@@ -94,7 +94,7 @@ ImmediateFuture<folly::Unit> GlobNode::evaluate(
     RelativePathPiece rootPath,
     TreeInodePtr root,
     PrefetchList* fileBlobsToPrefetch,
-    ResultList& globResult,
+    ResultList* globResult,
     const RootId& originRootId) const {
   return evaluateImpl<TreeInodePtrRoot, TreeInodePtr>(
              store.get(),

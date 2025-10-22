@@ -136,7 +136,7 @@ class GlobNodeImpl {
       RelativePathPiece startOfRecursive,
       ROOT&& root,
       PrefetchList* fileBlobsToPrefetch,
-      ResultList& globResult,
+      ResultList* globResult,
       const RootId& originRootId) const {
     TaskTraceBlock block{"GlobNodeImpl::evaluateRecursiveComponentImpl"};
     std::vector<RelativePath> subDirNames;
@@ -149,10 +149,12 @@ class GlobNodeImpl {
         for (auto& node : recursiveChildren_) {
           if (node->alwaysMatch_ ||
               node->matcher_.match(candidateName.view())) {
-            globResult.wlock()->emplace_back(
-                rootPath + candidateName,
-                entry.second.getDtype(),
-                originRootId);
+            if (globResult) {
+              globResult->wlock()->emplace_back(
+                  rootPath + candidateName,
+                  entry.second.getDtype(),
+                  originRootId);
+            }
             if (fileBlobsToPrefetch &&
                 root.entryShouldPrefetch(&entry.second)) {
               fileBlobsToPrefetch->wlock()->emplace_back(
@@ -178,7 +180,7 @@ class GlobNodeImpl {
                          context = context.copy(),
                          this,
                          fileBlobsToPrefetch,
-                         &globResult,
+                         globResult,
                          &originRootId](std::shared_ptr<const Tree> tree) {
                           return evaluateRecursiveComponentImpl<
                               TreeRoot,
@@ -209,7 +211,7 @@ class GlobNodeImpl {
                           context = context.copy(),
                           this,
                           fileBlobsToPrefetch,
-                          &globResult,
+                          globResult,
                           &originRootId](ROOTPtr dir) {
                 return evaluateRecursiveComponentImpl<ROOT, ROOTPtr>(
                     store,
@@ -245,7 +247,7 @@ class GlobNodeImpl {
       RelativePathPiece rootPath,
       ROOT&& root,
       PrefetchList* fileBlobsToPrefetch,
-      ResultList& globResult,
+      ResultList* globResult,
       const RootId& originRootId) const {
     TaskTraceBlock block{"GlobNodeImpl::evaluateImpl"};
     std::vector<std::pair<PathComponentPiece, GlobNodeImpl*>> recurse;
@@ -280,7 +282,7 @@ class GlobNodeImpl {
                        context = context.copy(),
                        innerNode = node,
                        fileBlobsToPrefetch,
-                       &globResult,
+                       globResult,
                        &originRootId](std::shared_ptr<const Tree> dir) mutable {
                         return innerNode->evaluateImpl<TreeRoot, TreeRootPtr>(
                             store,
@@ -309,8 +311,10 @@ class GlobNodeImpl {
             name = entry->first;
 
             if (node->isLeaf_) {
-              globResult.wlock()->emplace_back(
-                  rootPath + name, entry->second.getDtype(), originRootId);
+              if (globResult) {
+                globResult->wlock()->emplace_back(
+                    rootPath + name, entry->second.getDtype(), originRootId);
+              }
 
               if (fileBlobsToPrefetch &&
                   root.entryShouldPrefetch(&entry->second)) {
@@ -328,8 +332,10 @@ class GlobNodeImpl {
             PathComponentPiece name = entry.first;
             if (node->alwaysMatch_ || node->matcher_.match(name.view())) {
               if (node->isLeaf_) {
-                globResult.wlock()->emplace_back(
-                    rootPath + name, entry.second.getDtype(), originRootId);
+                if (globResult) {
+                  globResult->wlock()->emplace_back(
+                      rootPath + name, entry.second.getDtype(), originRootId);
+                }
                 if (fileBlobsToPrefetch &&
                     root.entryShouldPrefetch(&entry.second)) {
                   fileBlobsToPrefetch->wlock()->emplace_back(
@@ -355,7 +361,7 @@ class GlobNodeImpl {
                           candidateName = rootPath + item.first,
                           node = item.second,
                           fileBlobsToPrefetch,
-                          &globResult,
+                          globResult,
                           &originRootId](ROOTPtr dir) {
                 return node->evaluateImpl<ROOT, ROOTPtr>(
                     store,
