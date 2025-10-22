@@ -1712,6 +1712,17 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  /**
+   * When true, EdenFS will convert the backing store to a FilteredBackingStore
+   * with the "null" filter when it restarts. The real filter info will be
+   * written to a special file under .hg folder and will be applied next time
+   * when we checkout the repo.
+   */
+  ConfigSetting<bool> enableEdensparseMigration{
+      "experimental:enable-edensparse-migration",
+      false,
+      this};
+
   // [blobcache]
 
   /**
