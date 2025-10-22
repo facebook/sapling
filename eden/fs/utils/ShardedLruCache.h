@@ -56,14 +56,23 @@ class ShardedLruCache {
     return it->second;
   }
 
+  bool contains(const ObjectId& key) const {
+    auto& shard = getShard(key);
+    auto cache = shard.rlock();
+    return cache->exists(key);
+  }
+
+  void clear() {
+    for (auto& shard : shards_) {
+      auto cache = shard.cache.wlock();
+      cache->clear();
+    }
+  }
+
  private:
   using Cache = folly::EvictingCacheMap<ObjectId, T>;
 
   struct Shard {
-    /*
-     * TODO: It never makes sense to rlock an LRU cache, since cache hits mutate
-     * the data structure. Thus, should we use a more appropriate type of lock?
-     */
     folly::Synchronized<Cache> cache;
 
     explicit Shard(size_t size, PruneHookCall pruneHook)
@@ -75,6 +84,10 @@ class ShardedLruCache {
   };
 
   folly::Synchronized<Cache>& getShard(const ObjectId& key) {
+    return shards_[key.getHashCode() % shards_.size()].cache;
+  }
+
+  const folly::Synchronized<Cache>& getShard(const ObjectId& key) const {
     return shards_[key.getHashCode() % shards_.size()].cache;
   }
 
