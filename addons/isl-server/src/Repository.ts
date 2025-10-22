@@ -985,6 +985,11 @@ export class Repository {
         throw new Error(ErrorShortMessages.NoCommitsFetched);
       }
       attachStableLocations(commits, this.stableLocations);
+
+      if (this.fullRepoBranchModule) {
+        this.fullRepoBranchModule.populateSmartlogCommits(commits);
+      }
+
       this.smartlogCommits = {
         fetchStartTimestamp,
         fetchCompletedTimestamp: Date.now(),

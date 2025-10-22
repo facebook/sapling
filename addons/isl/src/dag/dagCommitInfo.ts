@@ -6,6 +6,7 @@
  */
 
 import type {List, RecordOf} from 'immutable';
+import type {InternalTypes} from '../InternalTypes';
 import type {CommitPreview, WithPreviewType} from '../previews';
 import type {CommitRev} from '../stackEdit/commitStackState';
 import type {
@@ -66,6 +67,7 @@ const CommitInfoExtRecord = Record<CommitInfoExtProps>({
   isFollower: undefined,
   stableCommitMetadata: undefined,
   maxCommonPathPrefix: '',
+  fullRepoBranch: undefined,
 
   // WithPreviewType
   previewType: undefined,
@@ -182,6 +184,10 @@ export class DagCommitInfo extends SelfUpdate<CommitInfoExtRecord> {
 
   get stableCommitMetadata(): ReadonlyArray<StableCommitMetadata> | undefined {
     return this.inner.stableCommitMetadata;
+  }
+
+  get fullRepoBranch(): InternalTypes['FullRepoBranch'] | undefined {
+    return this.inner.fullRepoBranch;
   }
 
   get previewType(): CommitPreview | undefined {

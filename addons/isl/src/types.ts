@@ -392,6 +392,8 @@ export type CommitInfo = {
    * This can be useful to determine if a commit is relevant to your cwd.
    */
   maxCommonPathPrefix: RepoRelativePath;
+
+  fullRepoBranch?: InternalTypes['FullRepoBranch'];
 };
 export type SuccessorInfo = {
   hash: string;

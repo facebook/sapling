@@ -6,6 +6,7 @@
  */
 
 import type {ContextMenuItem} from 'shared/ContextMenu';
+import type {InternalTypes} from './InternalTypes';
 import type {CommitInfo} from './types';
 
 import * as stylex from '@stylexjs/stylex';
@@ -134,15 +135,20 @@ export function AllBookmarksTruncated({
   stable,
   remote,
   local,
+  fullRepoBranch,
 }: {
   stable: ReadonlyArray<string | {value: string; description: string; isRecommended?: boolean}>;
   remote: ReadonlyArray<string>;
   local: ReadonlyArray<string>;
+  fullRepoBranch?: InternalTypes['FullRepoBranch'] | undefined;
 }) {
   const bookmarksData = useAtomValue(bookmarksDataStorage);
   const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
   const recommendedBookmarksGK = useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks);
   const recommendedBookmarksAvailable = useAtomValue(recommendedBookmarksAvailableAtom);
+
+  const FullRepoBranchBookmark = Internal.FullRepoBranchBookmark;
+  const compareFullRepoBranch = Internal.compareFullRepoBranch;
 
   const finalBookmarks = (
     [
@@ -158,6 +164,9 @@ export function AllBookmarksTruncated({
             !bookmarksData.hiddenRemoteBookmarks.includes(
               typeof bookmark === 'string' ? bookmark : bookmark.value,
             ),
+        )
+        .filter(bookmark =>
+          compareFullRepoBranch ? compareFullRepoBranch(fullRepoBranch, bookmark) : true,
         )
         .map(bookmark => {
           const value = typeof bookmark === 'string' ? bookmark : bookmark.value;
@@ -177,13 +186,16 @@ export function AllBookmarksTruncated({
         }),
     )
     .flat();
-  const NUM_TO_SHOW = 3;
+  const NUM_TO_SHOW = fullRepoBranch == null ? 3 : 2;
   const shownBookmarks = finalBookmarks.slice(0, NUM_TO_SHOW);
   const hiddenBookmarks = finalBookmarks.slice(NUM_TO_SHOW);
   const numTruncated = hiddenBookmarks.length;
 
   return (
     <>
+      {fullRepoBranch && FullRepoBranchBookmark && (
+        <FullRepoBranchBookmark branch={fullRepoBranch} />
+      )}
       {shownBookmarks.map(({value, kind, tooltip, icon}) => (
         <Bookmark key={value} kind={kind} tooltip={tooltip} icon={icon}>
           {value}

@@ -489,6 +489,7 @@ export const Commit = memo(
                   : /* draft commits with remote bookmarks are probably branching PRs, rendered above. */ []
               }
               stable={commit?.stableCommitMetadata ?? []}
+              fullRepoBranch={commit.fullRepoBranch}
             />
             {isPublic ? <CommitDate date={commit.date} /> : null}
             {isNarrow ? commitActions : null}
