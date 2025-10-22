@@ -5,11 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::time::Duration;
+
 use context::CoreContext;
 use diff_service_client::DiffInput;
 use diff_service_client::DiffServiceClient;
 use environment::RemoteDiffOptions;
 use futures::StreamExt;
+use futures_retry::retry;
 use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::ChangesetPathDiffContext;
 use mononoke_api::FileContext;
@@ -22,6 +25,19 @@ use mononoke_api::UnifiedDiffMode;
 use mononoke_api::headerless_unified_diff;
 use mononoke_types::NonRootMPath;
 use scs_errors::ServiceError;
+
+// Retry configuration for transient diff service errors
+const DIFF_SERVICE_RETRY_BASE_DELAY: Duration = Duration::from_secs(1);
+const DIFF_SERVICE_MAX_RETRY_ATTEMPTS: usize = 5;
+const DIFF_SERVICE_BACKOFF_MULTIPLIER: f64 = 1.5;
+
+/// Check if an error from the diff service is transient and should be retried.
+/// Currently checks for "repo not found" errors which can be transient during
+/// repo initialization or deployment.
+fn is_transient_diff_error(e: &impl std::fmt::Debug) -> bool {
+    let error_string = format!("{:?}", e).to_ascii_lowercase();
+    error_string.contains("repo") && error_string.contains("not found")
+}
 
 /// Router for diff operations that can use either local mononoke_api
 /// or remote diff_service based on command line args and JustKnobs configuration.
@@ -119,10 +135,39 @@ impl<'a> DiffRouter<'a> {
             diff_service_client.clone(),
         );
 
-        let (response, mut stream) = repo_client
-            .diff_unified_headerless(ctx, base_input, other_input, options)
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
+        // Retry the diff service call with exponential backoff for transient errors
+        let (result, _attempts) = retry(
+            |attempt| {
+                // Clone the values so they can be moved into the async block
+                let repo_client = repo_client.clone();
+                let base_input = base_input.clone();
+                let other_input = other_input.clone();
+                let options = options.clone();
+
+                async move {
+                    if attempt > 1 {
+                        slog::info!(
+                            ctx.logger(),
+                            "Retrying diff service call for repo '{}', attempt {}",
+                            repo_name,
+                            attempt
+                        );
+                    }
+
+                    repo_client
+                        .diff_unified_headerless(ctx, base_input, other_input, options)
+                        .await
+                }
+            },
+            DIFF_SERVICE_RETRY_BASE_DELAY,
+        )
+        .exponential_backoff(DIFF_SERVICE_BACKOFF_MULTIPLIER)
+        .max_attempts(DIFF_SERVICE_MAX_RETRY_ATTEMPTS)
+        .retry_if(|_attempt, e| is_transient_diff_error(e))
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
+
+        let (response, mut stream) = result;
 
         let mut raw_diff = Vec::new();
         while let Some(chunk) = stream.next().await {
