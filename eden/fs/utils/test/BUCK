@@ -75,6 +75,18 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "sharded_lru_cache",
+    srcs = ["ShardedLruCacheTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gmock",
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/model:model",
+        "//eden/fs/utils:sharded_lru_cache",
+    ],
+)
+
+cpp_unittest(
     name = "glob_test",
     srcs = ["GlobMatcherTest.cpp"],
     supports_static_listing = False,

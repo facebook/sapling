@@ -28,10 +28,15 @@ namespace facebook::eden {
 template <class T>
 class ShardedLruCache {
  public:
-  ShardedLruCache(size_t numShards, size_t maxSize) {
+  using PruneHookCall = std::function<void(const ObjectId&, T&&)>;
+
+  ShardedLruCache(
+      size_t numShards,
+      size_t maxSize,
+      PruneHookCall pruneHook = nullptr) {
     shards_.reserve(numShards);
     for (size_t i = 0; i < numShards; ++i) {
-      shards_.emplace_back(maxSize / numShards);
+      shards_.emplace_back(maxSize / numShards, pruneHook);
     }
   }
 
@@ -61,7 +66,12 @@ class ShardedLruCache {
      */
     folly::Synchronized<Cache> cache;
 
-    explicit Shard(size_t size) : cache{std::in_place, size} {}
+    explicit Shard(size_t size, PruneHookCall pruneHook)
+        : cache{std::in_place, size} {
+      if (pruneHook) {
+        cache.wlock()->setPruneHook(pruneHook);
+      }
+    }
   };
 
   folly::Synchronized<Cache>& getShard(const ObjectId& key) {
