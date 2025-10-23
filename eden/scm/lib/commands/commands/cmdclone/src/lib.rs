@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::collections::hash_set;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -29,6 +28,7 @@ use configloader::hg::PinnedConfig;
 use configloader::hg::RepoInfo;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use configmodel::Text;
 use configmodel::ValueSource;
 use eagerepo::EagerRepo;
 use filters::util::filter_paths_from_config;
@@ -210,22 +210,24 @@ fn run_eden(
         filter_paths_from_config(config)
     };
 
-    let edenfs_filter = match (ctx.opts.enable_profile.len(), config_filter) {
-        (0, config_filter) => config_filter,
-        (1, config_filter) => {
-            if config_filter.is_some() {
-                logger.info(
-                    "Ignoring clone.eden-sparse-filter because --enable-profile was specified",
-                );
-            }
-            Some(
-                vec![ctx.opts.enable_profile[0].clone().into()]
-                    .into_iter()
-                    .collect::<HashSet<_>>(),
-            )
-        }
-        _ => None,
+    // We should consider both filters from the command line options and from config settings
+    let arg_filters = ctx
+        .opts
+        .enable_profile
+        .iter()
+        .map(|o| o.clone().into())
+        .collect::<HashSet<Text>>();
+    let config_filters = config_filter.unwrap_or_default();
+    let filters = arg_filters
+        .union(&config_filters)
+        .cloned()
+        .collect::<HashSet<Text>>();
+    let edenfs_filter = if filters.is_empty() {
+        None
+    } else {
+        Some(filters)
     };
+
     let clone_type_str = if edenfs_filter.is_some() {
         "eden_sparse"
     } else {
