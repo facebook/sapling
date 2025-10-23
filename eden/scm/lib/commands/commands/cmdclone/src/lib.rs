@@ -287,12 +287,32 @@ fn run_non_eden(
         }
     };
 
-    clone::init_working_copy(
-        &ctx.core,
-        &mut repo,
-        target_rev,
-        ctx.opts.enable_profile.clone(),
-    )?;
+    let (section, prefix) = ("clone", "additional-sparse-profiles.");
+    let keys = config.keys_prefixed(section, prefix);
+    let config_profiles =
+        keys.iter()
+            .filter_map(|key| match config.must_get::<String>(section, key) {
+                Ok(value) => Some(value),
+                Err(e) => {
+                    tracing::warn!(
+                        "skipping prefixed config '{}.{}' with key '{}': {:?}",
+                        section,
+                        prefix,
+                        key,
+                        e
+                    );
+                    None
+                }
+            });
+    let sparse_profiles = ctx
+        .opts
+        .enable_profile
+        .iter()
+        .cloned()
+        .chain(config_profiles)
+        .collect();
+
+    clone::init_working_copy(&ctx.core, &mut repo, target_rev, sparse_profiles)?;
 
     Ok(())
 }

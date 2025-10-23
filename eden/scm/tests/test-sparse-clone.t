@@ -53,3 +53,26 @@ Verify sparse clone with a non-existing sparse profile warns
   readme.txt
   webpage.sparse
   $ cd ..
+
+Verify that configured sparse profiles are enabled on clone
+
+  $ cd $TESTTMP
+  $ hg clone --enable-profile webpage.sparse test:e1 --config clone.additional-sparse-profiles.backend="backend.sparse" clone6
+  Cloning * into $TESTTMP/clone6 (glob)
+  Checking out 'master'
+  2 files updated
+  $ cd clone6
+  $ ls
+  data.py
+  index.html
+  $ cd ..
+
+  $ cd $TESTTMP
+  $ hg clone test:e1 --config clone.additional-sparse-profiles.backend="backend.sparse" clone7
+  Cloning * into $TESTTMP/clone7 (glob)
+  Checking out 'master'
+  1 files updated
+  $ cd clone7
+  $ ls
+  data.py
+  $ cd ..
