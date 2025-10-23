@@ -77,7 +77,7 @@ impl RepoBlobstore {
     }
 
     #[allow(clippy::let_and_return)]
-    fn build(
+    pub fn build(
         blobstore: Arc<dyn Blobstore>,
         prefix: String,
         redacted_blobstore_config: RedactedBlobstoreConfig,

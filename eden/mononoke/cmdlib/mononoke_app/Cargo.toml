@@ -46,10 +46,10 @@ mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_repos = { version = "0.1.0", path = "../../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
-prefixblob = { version = "0.1.0", path = "../../blobstore/prefixblob" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 regex = "1.11.1"
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
+repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 running = { version = "0.1.0", path = "../../common/running" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }

@@ -51,10 +51,9 @@ use mononoke_configs::MononokeConfigs;
 #[allow(unused)]
 use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
-use prefixblob::PrefixBlobstore;
-use redactedblobstore::RedactedBlobstore;
 use redactedblobstore::RedactedBlobstoreConfig;
 use redactedblobstore::RedactionConfigBlobstore;
+use repo_blobstore::RepoBlobstore;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
 use running::run_until_terminated;
@@ -942,17 +941,11 @@ impl MononokeApp {
         )
         .await?;
 
-        let blobstore = if let Some(repo_id) = repo_id {
-            PrefixBlobstore::new(blobstore, repo_id.prefix())
-        } else {
-            PrefixBlobstore::new(blobstore, String::new())
-        };
-
         if repo_blobstore_args.bypass_redaction {
             redaction = Redaction::Disabled;
         }
 
-        let blobstore = if redaction == Redaction::Enabled {
+        let redacted_blobs = if redaction == Redaction::Enabled {
             let redacted_blobs = self
                 .repo_factory
                 .redacted_blobs(
@@ -961,16 +954,25 @@ impl MononokeApp {
                     &Arc::new(self.repo_configs().common.clone()),
                 )
                 .await?;
-            RedactedBlobstore::new(
-                blobstore,
-                RedactedBlobstoreConfig::new(Some(redacted_blobs), self.redaction_scuba_builder()?),
-            )
-            .boxed()
+            Some(redacted_blobs)
         } else {
-            Arc::new(blobstore)
+            None
         };
 
-        Ok(blobstore)
+        let redacted_blobstore_config =
+            RedactedBlobstoreConfig::new(redacted_blobs, self.redaction_scuba_builder()?);
+
+        let prefix = if let Some(repo_id) = repo_id {
+            repo_id.prefix()
+        } else {
+            String::new()
+        };
+
+        Ok(Arc::new(RepoBlobstore::build(
+            blobstore,
+            prefix,
+            redacted_blobstore_config,
+        )))
     }
 
     pub async fn open_blobstore_with_overridden_blob_config(
