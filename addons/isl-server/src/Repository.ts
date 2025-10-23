@@ -181,7 +181,10 @@ export class Repository {
    */
   public initialConnectionContext: RepositoryContext;
 
-  public fullRepoBranchModule = Internal.RepositoryFullRepoBranchModule?.create(this);
+  public fullRepoBranchModule = Internal.RepositoryFullRepoBranchModule?.create(
+    this,
+    this.smartlogCommitsChangesEmitter,
+  );
 
   /**  Prefer using `RepositoryCache.getOrCreate()` to access and dispose `Repository`s. */
   constructor(
