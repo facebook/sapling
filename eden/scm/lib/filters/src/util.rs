@@ -6,11 +6,15 @@
  */
 
 use std::collections::HashSet;
+use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
 
+use anyhow::Context;
 use configmodel::Config;
 use configmodel::Text;
 use types::RepoPathBuf;
+use util::file::atomic_write;
 
 pub fn filter_paths_from_config(config: impl Config) -> Option<HashSet<Text>> {
     // Get unique set of filter paths
@@ -44,7 +48,7 @@ pub fn filter_paths_from_config(config: impl Config) -> Option<HashSet<Text>> {
 
 // Parses the filter file and returns a list of active filter paths. Returns an error when the
 // filter file is malformed or can't be read.
-pub fn read_filter_config(dot_dir: &Path) -> anyhow::Result<Option<HashSet<RepoPathBuf>>> {
+pub(crate) fn read_filter_config(dot_dir: &Path) -> anyhow::Result<Option<HashSet<RepoPathBuf>>> {
     // The filter file may be in 3 different states:
     //
     // 1) It may not exist, which indicates FilteredFS is not active
@@ -52,7 +56,7 @@ pub fn read_filter_config(dot_dir: &Path) -> anyhow::Result<Option<HashSet<RepoP
     // 3) It may contain the paths to the active filters (one per line, each starting with "%include").
     //
     // We error out if the path exists, but we can't read the file.
-    let config_contents = std::fs::read_to_string(dot_dir.join("sparse"));
+    let config_contents = std::fs::read_to_string(filter_config_path(dot_dir));
     let filter_contents = match config_contents {
         Ok(c) => c,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -85,6 +89,38 @@ pub fn read_filter_config(dot_dir: &Path) -> anyhow::Result<Option<HashSet<RepoP
 
         Ok(Some(filter_paths))
     }
+}
+
+// Writes a properly formatted filter config at the requested location. The file will be
+// written regardless of whether FilteredFS is active.
+#[allow(dead_code)]
+pub(crate) fn write_filter_config(
+    config_path: &Path,
+    header: Option<String>,
+    filter_paths: &HashSet<RepoPathBuf>,
+) -> anyhow::Result<()> {
+    let contents = if filter_paths.is_empty() {
+        "".to_string()
+    } else {
+        let content = filter_paths
+            .iter()
+            .map(|p| format!("%include {}", p))
+            .collect::<Vec<String>>()
+            .join("\n");
+        if let Some(header) = header {
+            format!("{}\n\n{}", header, content)
+        } else {
+            content
+        }
+    };
+
+    atomic_write(config_path, |f| write!(f, "{contents}"))
+        .with_context(|| format!("writing filter config: {}", config_path.display()))?;
+    Ok(())
+}
+
+pub(crate) fn filter_config_path(dot_dir: &Path) -> PathBuf {
+    dot_dir.join("sparse")
 }
 
 #[cfg(test)]
