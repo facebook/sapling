@@ -64,6 +64,8 @@ pub enum LfsScubaKey {
     SandcastleVCS,
     ClientTwJob,
     ClientTwTask,
+    ClientAtlas,
+    ClientAtlasEnvId,
     /// Fetch cause
     FetchCause,
     /// Whether or not the client attempted to fetch from CAS.
@@ -97,6 +99,8 @@ impl AsRef<str> for LfsScubaKey {
             SandcastleVCS => "sandcastle_vcs",
             ClientTwJob => "client_tw_job",
             ClientTwTask => "client_tw_task",
+            ClientAtlas => "client_atlas",
+            ClientAtlasEnvId => "client_atlas_env_id",
             FetchCause => "fetch_cause",
             FetchFromCASAttempted => "fetch_from_cas_attempted",
         }
@@ -196,6 +200,10 @@ impl ScubaHandler for LfsScubaHandler {
             scuba.add_opt(LfsScubaKey::ClientTwJob, client_info.fb.tw_job());
 
             scuba.add_opt(LfsScubaKey::ClientTwTask, client_info.fb.tw_task());
+
+            scuba.add_opt(LfsScubaKey::ClientAtlas, client_info.fb.is_atlas());
+
+            scuba.add_opt(LfsScubaKey::ClientAtlasEnvId, client_info.fb.atlas_env_id());
         }
 
         scuba.add_opt(LfsScubaKey::FetchCause, self.fetch_cause);

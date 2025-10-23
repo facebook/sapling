@@ -271,6 +271,16 @@ impl Metadata {
         self.client_info.as_ref().and_then(|ci| ci.fb.tw_task())
     }
 
+    pub fn clientinfo_atlas(&self) -> Option<bool> {
+        self.client_info.as_ref().and_then(|ci| ci.fb.is_atlas())
+    }
+
+    pub fn clientinfo_atlas_env_id(&self) -> Option<&str> {
+        self.client_info
+            .as_ref()
+            .and_then(|ci| ci.fb.atlas_env_id())
+    }
+
     pub fn fetch_cause(&self) -> Option<&str> {
         self.fetch_cause.as_deref()
     }

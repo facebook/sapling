@@ -79,6 +79,10 @@ pub enum HttpScubaKey {
     SandcastleNonce,
     /// VCS type of the sandcastle job, if any.
     SandcastleVCS,
+    /// Whether running on Atlas.
+    ClientAtlas,
+    /// Atlas environment ID, if any.
+    ClientAtlasEnvId,
     /// A unique ID identifying this request.
     RequestId,
     /// How long it took to send headers.
@@ -129,6 +133,8 @@ impl AsRef<str> for HttpScubaKey {
             SandcastleAlias => "sandcastle_alias",
             SandcastleNonce => "sandcastle_nonce",
             SandcastleVCS => "sandcastle_vcs",
+            ClientAtlas => "client_atlas",
+            ClientAtlasEnvId => "client_atlas_env_id",
             RequestId => "request_id",
             HeadersDurationMs => "headers_duration_ms",
             DurationMs => "duration_ms",
@@ -324,6 +330,12 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
 
         let sandcastle_vcs = metadata.sandcastle_vcs();
         scuba.add(HttpScubaKey::SandcastleVCS, sandcastle_vcs);
+
+        let client_atlas = metadata.clientinfo_atlas();
+        scuba.add(HttpScubaKey::ClientAtlas, client_atlas);
+
+        let client_atlas_env_id = metadata.clientinfo_atlas_env_id();
+        scuba.add(HttpScubaKey::ClientAtlasEnvId, client_atlas_env_id);
 
         let fetch_cause = metadata.fetch_cause();
         scuba.add(HttpScubaKey::FetchCause, fetch_cause);

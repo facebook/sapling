@@ -280,6 +280,10 @@ impl MononokeScubaSampleBuilder {
             .add_opt("client_tw_job", metadata.clientinfo_tw_job());
         self.inner
             .add_opt("client_tw_task", metadata.clientinfo_tw_task());
+        self.inner
+            .add_opt("client_atlas", metadata.clientinfo_atlas());
+        self.inner
+            .add_opt("client_atlas_env_id", metadata.clientinfo_atlas_env_id());
 
         self.inner.add_opt("fetch_cause", metadata.fetch_cause());
         self.inner.add(

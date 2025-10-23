@@ -39,6 +39,14 @@ impl FbClientInfo {
     pub fn sandcastle_vcs(&self) -> Option<&str> {
         None
     }
+
+    pub fn is_atlas(&self) -> Option<bool> {
+        None
+    }
+
+    pub fn atlas_env_id(&self) -> Option<&str> {
+        None
+    }
 }
 
 pub fn get_fb_client_info() -> FbClientInfo {
