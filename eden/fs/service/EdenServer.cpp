@@ -50,6 +50,7 @@
 
 #include <csignal>
 
+#include "common/network/Hostname.h"
 #include "eden/common/telemetry/RequestMetricsScope.h"
 #include "eden/common/telemetry/SessionInfo.h"
 #include "eden/common/telemetry/StructuredLoggerFactory.h"
@@ -112,7 +113,6 @@
 
 #ifdef EDEN_HAVE_SERVER_OBSERVER
 #include "common/fb303/cpp/ThreadPoolExecutorCounters.h" // @manual
-#include "common/network/Hostname.h"
 #include "eden/fs/service/facebook/ServerObserver.h" // @manual
 #endif
 
