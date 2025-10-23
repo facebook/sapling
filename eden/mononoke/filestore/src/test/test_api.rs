@@ -21,6 +21,7 @@ use futures::stream;
 use futures::stream::TryStreamExt;
 use lazy_static::lazy_static;
 use memblob::KeyedMemblob;
+use memblob::Memblob;
 use mononoke_macros::mononoke;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -1135,7 +1136,7 @@ async fn filestore_store_error(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
-    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
+    let blob = KeyedMemblob::new(Memblob::new(PutBehaviour::Overwrite));
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1172,7 +1173,7 @@ async fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
-    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
+    let blob = KeyedMemblob::new(Memblob::new(PutBehaviour::Overwrite));
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1209,7 +1210,7 @@ async fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
-    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
+    let blob = KeyedMemblob::new(Memblob::new(PutBehaviour::Overwrite));
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1245,7 +1246,7 @@ async fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> {
-    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
+    let blob = KeyedMemblob::new(Memblob::new(PutBehaviour::Overwrite));
 
     let conf = FilestoreConfig {
         chunk_size: Some(1),
@@ -1359,7 +1360,7 @@ async fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) 
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit) -> Result<()> {
-    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
+    let blob = KeyedMemblob::new(Memblob::new(PutBehaviour::Overwrite));
 
     let large = FilestoreConfig {
         chunk_size: Some(100),
@@ -1397,7 +1398,7 @@ async fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit)
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Result<()> {
-    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
+    let blob = KeyedMemblob::new(Memblob::new(PutBehaviour::Overwrite));
 
     let large = FilestoreConfig {
         chunk_size: Some(5),
