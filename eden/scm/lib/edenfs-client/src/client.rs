@@ -42,9 +42,12 @@ use crate::types::LocalTryFrom;
 use crate::types::ProgressInfo;
 
 /// EdenFS client for Sapling CLI integration.
+#[allow(dead_code)]
 pub struct EdenFsClient {
     eden_config: EdenConfig,
     filter_generator: Option<Mutex<FilterGenerator>>,
+    dot_dir: PathBuf,
+    sl_config: Arc<dyn Config>,
 }
 
 impl EdenFsClient {
@@ -53,14 +56,16 @@ impl EdenFsClient {
     pub fn from_wdir(
         wdir_root: &Path,
         shared_dot_dir: &Path,
-        config: &dyn Config,
+        config: Arc<dyn Config>,
     ) -> anyhow::Result<Self> {
         let dot_dir = wdir_root.join(identity::must_sniff_dir(wdir_root)?.dot_dir());
         let eden_config = EdenConfig::from_root(wdir_root)?;
-        let filter_generator = FilterGenerator::from_dot_dirs(&dot_dir, shared_dot_dir, config)?;
+        let filter_generator = FilterGenerator::from_dot_dirs(&dot_dir, shared_dot_dir, &config)?;
         Ok(Self {
             eden_config,
             filter_generator: Some(Mutex::new(filter_generator)),
+            dot_dir,
+            sl_config: config.clone(),
         })
     }
 

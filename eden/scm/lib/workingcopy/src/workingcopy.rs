@@ -180,7 +180,7 @@ impl WorkingCopy {
             vfs.clone(),
             dot_dir,
             shared_dot_dir,
-            config,
+            config.clone(),
             file_system_type.clone(),
             tree_resolver.clone(),
             filestore.clone(),
@@ -299,7 +299,7 @@ impl WorkingCopy {
         vfs: VFS,
         dot_dir: &Path,
         shared_dot_dir: &Path,
-        config: &dyn Config,
+        config: Arc<dyn Config>,
         file_system_type: FileSystemType,
         tree_resolver: ArcReadTreeManifest,
         store: ArcFileStore,
@@ -327,10 +327,13 @@ impl WorkingCopy {
                 panic!("cannot use EdenFS in a non-EdenFS build");
                 #[cfg(feature = "eden")]
                 {
-                    let client =
-                        Arc::new(EdenFsClient::from_wdir(vfs.root(), shared_dot_dir, config)?);
+                    let client = Arc::new(EdenFsClient::from_wdir(
+                        vfs.root(),
+                        shared_dot_dir,
+                        config.clone(),
+                    )?);
                     Box::new(EdenFileSystem::new(
-                        config,
+                        &config,
                         client,
                         vfs.clone(),
                         dot_dir,
@@ -342,7 +345,7 @@ impl WorkingCopy {
                 vfs.clone(),
                 dot_dir,
                 store.clone(),
-                config,
+                &config,
             )?),
         })
     }
