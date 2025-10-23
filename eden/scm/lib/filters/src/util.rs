@@ -93,7 +93,6 @@ pub(crate) fn read_filter_config(dot_dir: &Path) -> anyhow::Result<Option<HashSe
 
 // Writes a properly formatted filter config at the requested location. The file will be
 // written regardless of whether FilteredFS is active.
-#[allow(dead_code)]
 pub(crate) fn write_filter_config(
     config_path: &Path,
     header: Option<String>,

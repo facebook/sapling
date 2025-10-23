@@ -7,4 +7,5 @@
 
 pub mod filter;
 pub mod id;
+pub mod migration;
 pub mod util;
