@@ -10,7 +10,8 @@ import abc
 import configparser
 import os
 import time
-from typing import Optional, Set
+from pathlib import Path
+from typing import List, Optional, Set, Tuple
 
 from eden.integration.hg.lib.hg_extension_test_base import (
     filteredhg_test,
@@ -671,3 +672,249 @@ class FilteredFSRepoCacheNeverExpiresTest(FilteredFSBase):
 
         # We should see cache cleanups have occurred
         self.assertEqual(final_cache_cleanups, initial_cache_cleanups)
+
+
+@filteredhg_test
+# pyre-ignore[13]: T62487924
+class FilteredFSInPlaceMigration(FilteredFSBase):
+    configs_for_single_filter_migration: Optional[List[Tuple[Optional[str], str]]] = [
+        ("v1f1", "filters/v1_filter1")
+    ]
+    configs_for_legacy_filter_migration: Optional[List[Tuple[Optional[str], str]]] = [
+        (None, "filters/v1_filter1")
+    ]
+    configs_for_multi_filter_migration: Optional[List[Tuple[Optional[str], str]]] = [
+        (None, "filters/v1_filter1"),
+        ("v1f2", "filters/v1_filter2"),
+    ]
+    active_filter_configs: Optional[List[Tuple[Optional[str], str]]] = None
+
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
+        super().populate_backing_repo(repo)
+
+    def get_migration_file_path(self) -> Path:
+        return Path(self.get_path(".hg/edensparse_migration"))
+
+    def request_migration(self) -> None:
+        self.get_migration_file_path().touch()
+
+    def hg(
+        self,
+        *args: str,
+        encoding: str = "utf-8",
+        input: Optional[str] = None,
+        hgeditor: Optional[str] = None,
+        cwd: Optional[str] = None,
+        check: bool = True,
+    ) -> str:
+        """Run hg command with the given arguments and additional filter configs"""
+        additional_args = []
+        filter_configs = self.active_filter_configs
+        for name, value in filter_configs or []:
+            config_name = "clone.eden-sparse-filter"
+            if name:
+                config_name += f".{name}"
+            additional_args.extend(["--config", f"{config_name}={value}"])
+        args += tuple(additional_args)
+        return super().hg(
+            *args,
+            encoding=encoding,
+            input=input,
+            hgeditor=hgeditor,
+            cwd=cwd,
+            check=check,
+        )
+
+    def test_migration_requested_no_configs(self) -> None:
+        self.active_filter_configs = None
+        self.assertEqual(self.get_active_filter_paths(), set())
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+        self.request_migration()
+
+        # initiate a checkout operation (should attempt a migration to "null" filter)
+        self.hg("checkout", ".")
+
+        # FIXME: migration file should be deleted after a successful migration
+        self.assertTrue(self.get_migration_file_path().exists())
+
+        # migration completed, no filters are active since no filter configs were enabled
+        self.assertEqual(self.get_active_filter_paths(), set())
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+    def test_basic_in_place_migration(self) -> None:
+        """Test that we can migrate from a null-filtered checkout to a filtered checkout"""
+        # enables some filter configs that all `self.hg()` calls will use
+        self.active_filter_configs = self.configs_for_single_filter_migration
+
+        self.assertEqual(self.get_active_filter_paths(), set())
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        # unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+        self.request_migration()
+
+        # status doesn't trigger a migration
+        self.assert_status_empty()
+
+        # initiate a checkout operation (should attempt a migration to the new filters)
+        self.hg("checkout", ".")
+
+        # FIXME: the migration file should be deleted after a successful migration
+        self.assertTrue(self.get_migration_file_path().exists())
+
+        # FIXME: the filters should be active after a successful migration
+        self.assertNotEqual(self.get_active_filter_paths(), {"filters/v1_filter1"})
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+        # migration shouldn't leave behind any dirty files
+        self.assert_status_empty()
+
+    def test_in_place_migration_dirty_status_no_conflicts(self) -> None:
+        # enables some filter configs that all `self.hg()` calls will use
+        self.active_filter_configs = self.configs_for_single_filter_migration
+
+        self.assertEqual(self.get_active_filter_paths(), set())
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        # unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+        self.request_migration()
+
+        # dirty the working copy
+        self.repo.write_file("hello", "something different")
+        self.assert_status({"hello": "M"})
+
+        # initiate a checkout operation (should attempt a migration to the new filters)
+        self.hg("checkout", ".")
+
+        # FIXME: the migration file should be deleted after a successful migration
+        self.assertTrue(self.get_migration_file_path().exists())
+
+        # FIXME: the filters should be active after a successful migration
+        self.assertNotEqual(self.get_active_filter_paths(), {"filters/v1_filter1"})
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+        # migration left behind only the initial dirty file
+        self.assert_status({"hello": "M"})
+
+    def test_in_place_migration_dirty_status_with_conflicts(self) -> None:
+        # enables some filter configs that all `self.hg()` calls will use
+        self.active_filter_configs = self.configs_for_single_filter_migration
+
+        self.assertEqual(self.get_active_filter_paths(), set())
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        # unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+        self.request_migration()
+
+        # dirty the working copy
+        self.repo.write_file("bdir/test.sh", "something different")
+        self.assert_status({"bdir/test.sh": "M"})
+
+        # FIXME: initiate a checkout operation (should attempt a migration to the new filters and fail, raising an error)
+        # with self.assertRaises(hgrepo.HgError) as _:
+        self.hg("checkout", ".")
+
+        # migration file should still exist after a failed migration
+        self.assertTrue(self.get_migration_file_path().exists())
+
+        # working copy is still dirty
+        self.assert_status({"bdir/test.sh": "M"})
+
+        # migration failed, so no filters are active
+        self.assertEqual(self.get_active_filter_paths(), set())
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+        # we can force a migration
+        self.hg("checkout", ".", "-C")
+        self.assert_status_empty()
+        # FIXME: the migration file should be deleted after a successful migration
+        self.assertTrue(self.get_migration_file_path().exists())
+        # FIXME: the filters should be active after a successful migration
+        self.assertNotEqual(self.get_active_filter_paths(), {"filters/v1_filter1"})
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+    def test_in_place_migration_legacy_filter(self) -> None:
+        """Test that we can migrate from a null-filtered checkout to a filtered checkout"""
+        # enables some filter configs that all `self.hg()` calls will use
+        self.active_filter_configs = self.configs_for_legacy_filter_migration
+
+        self.assertEqual(self.get_active_filter_paths(), set())
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        # unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+        self.request_migration()
+
+        # initiate a checkout operation (should attempt a migration to the new filters)
+        self.hg("checkout", ".")
+
+        # FIXME: the migration file should be deleted after a successful migration
+        self.assertTrue(os.path.exists(self.get_migration_file_path()))
+
+        # FIXME: the filters should be active after a successful migration
+        self.assertNotEqual(self.get_active_filter_paths(), {"filters/v1_filter1"})
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+    def test_in_place_migration_multi_filter(self) -> None:
+        """Test that we can migrate from a null-filtered checkout to a filtered checkout"""
+        # enables some filter configs that all `self.hg()` calls will use
+        self.active_filter_configs = self.configs_for_multi_filter_migration
+
+        self.assertEqual(self.get_active_filter_paths(), set())
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        # unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+        self.request_migration()
+
+        # initiate a checkout operation (should attempt a migration to the new filters)
+        self.hg("checkout", ".")
+
+        # FIXME: the migration file should be deleted after a successful migration
+        self.assertTrue(Path(self.get_migration_file_path()).exists())
+
+        # FIXME: the filters should be active after a successful migration
+        self.assertNotEqual(
+            self.get_active_filter_paths(), {"filters/v1_filter1", "filters/v1_filter2"}
+        )
+        self.assert_filtered_and_unfiltered(set(), initial_files)
