@@ -2086,7 +2086,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
           if (dispatcher_->getStats() && handlerEntry.countFailure) {
             dispatcher_->getStats()->increment(handlerEntry.countFailure);
           }
-          if (auto* err = res.exception().get_exception<RpcParsingError>()) {
+          if (auto* err =
+                  res.exception().get_mutable_exception<RpcParsingError>()) {
             err->setProcedureContext(std::string{handlerEntry.name});
           }
         } else if (dispatcher_->getStats() && handlerEntry.countSuccessful) {
