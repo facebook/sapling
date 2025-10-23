@@ -12,6 +12,7 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use cloned::cloned;
 use futures_lazy_shared::LazyShared;
+use mononoke_macros::mononoke;
 // Trees are identified by their FsnodeId.
 pub use mononoke_types::FsnodeId as TreeId;
 use mononoke_types::fsnode::Fsnode;
@@ -20,6 +21,9 @@ pub use mononoke_types::fsnode::FsnodeEntry as TreeEntry;
 // Summary information about the files in a tree.
 pub use mononoke_types::fsnode::FsnodeSummary as TreeSummary;
 use repo_blobstore::RepoBlobstoreRef;
+use restricted_paths::ManifestId;
+use restricted_paths::ManifestType;
+use restricted_paths::RestrictedPathsArc;
 
 use crate::errors::MononokeError;
 use crate::repo::MononokeRepo;
@@ -71,19 +75,43 @@ impl<R: MononokeRepo> TreeContext<R> {
             .require_full_repo_read(repo_ctx.ctx(), repo_ctx.repo())
             .await?;
 
-        // TODO(T239041722): check if tree belongs to restricted path
-
         // Try to load the fsnode immediately to see if it exists. Unlike
         // `new`, if the fsnode is missing, we simply return `Ok(None)`.
         match id
             .load(repo_ctx.ctx(), repo_ctx.repo().repo_blobstore())
             .await
         {
-            Ok(fsnode) => Ok(Some(Self {
-                repo_ctx,
-                id,
-                fsnode: LazyShared::new_ready(Ok(fsnode)),
-            })),
+            Ok(fsnode) => {
+                // Log restricted path access if enabled
+                let restricted_paths_enabled = justknobs::eval(
+                    "scm/mononoke:enabled_restricted_paths_access_logging",
+                    None,
+                    Some("fsnodes_new_check_exists"),
+                )?;
+
+                if restricted_paths_enabled {
+                    let ctx_clone = repo_ctx.ctx().clone();
+                    let manifest_id = ManifestId::from(id.to_string());
+                    let restricted_paths = repo_ctx.repo().restricted_paths_arc();
+
+                    // Spawn asynchronous task for logging restricted path access
+                    let _spawned_task = mononoke::spawn_task(async move {
+                        let _is_restricted = restricted_paths
+                            .log_access_by_manifest_if_restricted(
+                                &ctx_clone,
+                                manifest_id,
+                                ManifestType::Fsnode,
+                            )
+                            .await;
+                    });
+                }
+
+                Ok(Some(Self {
+                    repo_ctx,
+                    id,
+                    fsnode: LazyShared::new_ready(Ok(fsnode)),
+                }))
+            }
             Err(LoadableError::Missing(_)) => Ok(None),
             Err(e) => Err(MononokeError::from(Error::from(e))),
         }
