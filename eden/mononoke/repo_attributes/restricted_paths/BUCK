@@ -55,6 +55,7 @@ rust_unittest(
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mercurial:mercurial_types",

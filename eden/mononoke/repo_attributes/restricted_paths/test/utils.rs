@@ -20,6 +20,7 @@ use clientinfo::ClientRequestInfo;
 use context::CoreContext;
 use context::SessionContainer;
 use fbinit::FacebookInit;
+use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::ManifestOps;
@@ -327,6 +328,13 @@ impl RestrictedPathsTestData {
             .repo
             .repo_derived_data()
             .derive::<RootHgAugmentedManifestId>(&self.ctx, bcs_id)
+            .await?;
+
+        // Derive Fsnode
+        let _root_fsnode_id = self
+            .repo
+            .repo_derived_data()
+            .derive::<RootFsnodeId>(&self.ctx, bcs_id)
             .await?;
 
         // Sleep to ensure that the restricted paths cache was updated
