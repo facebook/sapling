@@ -331,10 +331,37 @@ impl<'a> DiffRouter<'a> {
             diff_service_client.clone(),
         );
 
-        let (response, mut stream) = repo_client
-            .diff_unified(ctx, base_input, other_input, options)
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
+        let (result, _attempts) = retry(
+            |attempt| {
+                let repo_client = repo_client.clone();
+                let base_input = base_input.clone();
+                let other_input = other_input.clone();
+                let options = options.clone();
+
+                async move {
+                    if attempt > 1 {
+                        slog::info!(
+                            ctx.logger(),
+                            "Retrying diff service call for repo '{}', attempt {}",
+                            repo_name,
+                            attempt
+                        );
+                    }
+
+                    repo_client
+                        .diff_unified(ctx, base_input, other_input, options)
+                        .await
+                }
+            },
+            DIFF_SERVICE_RETRY_BASE_DELAY,
+        )
+        .exponential_backoff(DIFF_SERVICE_BACKOFF_MULTIPLIER)
+        .max_attempts(DIFF_SERVICE_MAX_RETRY_ATTEMPTS)
+        .retry_if(|_attempt, e| is_transient_diff_error(e))
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
+
+        let (response, mut stream) = result;
         let mut raw_diff = Vec::new();
         while let Some(chunk) = stream.next().await {
             let chunk = chunk.map_err(|e| {
@@ -380,10 +407,34 @@ impl<'a> DiffRouter<'a> {
             diff_service_client.clone(),
         );
 
-        let response = repo_client
-            .metadata_diff(ctx, base_input, other_input)
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
+        let (response, _attempts) = retry(
+            |attempt| {
+                let repo_client = repo_client.clone();
+                let base_input = base_input.clone();
+                let other_input = other_input.clone();
+
+                async move {
+                    if attempt > 1 {
+                        slog::info!(
+                            ctx.logger(),
+                            "Retrying diff service call for repo '{}', attempt {}",
+                            repo_name,
+                            attempt
+                        );
+                    }
+
+                    repo_client
+                        .metadata_diff(ctx, base_input, other_input)
+                        .await
+                }
+            },
+            DIFF_SERVICE_RETRY_BASE_DELAY,
+        )
+        .exponential_backoff(DIFF_SERVICE_BACKOFF_MULTIPLIER)
+        .max_attempts(DIFF_SERVICE_MAX_RETRY_ATTEMPTS)
+        .retry_if(|_attempt, e| is_transient_diff_error(e))
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
 
         // Convert the diff_service_if enums to mononoke_api enums
         let convert_file_type = |ft: Option<diff_service_if::DiffFileType>| -> Result<
