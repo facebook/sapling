@@ -308,7 +308,7 @@ impl RestrictedPathsTestData {
             .changeset(bcs_id)
             .await?
             .ok_or(anyhow!("failed to get changeset context"))?;
-        let hg_repo_ctx = repo_ctx.hg();
+        let hg_repo_ctx = repo_ctx.clone().hg();
 
         let _files_added = self
             .file_path_changes
@@ -331,7 +331,7 @@ impl RestrictedPathsTestData {
             .await?;
 
         // Derive Fsnode
-        let _root_fsnode_id = self
+        let root_fsnode_id = self
             .repo
             .repo_derived_data()
             .derive::<RootFsnodeId>(&self.ctx, bcs_id)
@@ -353,6 +353,18 @@ impl RestrictedPathsTestData {
                     .await?
                     .ok_or(anyhow!("No HgAugmentedManifest for path {path:?}"))?;
                 cs_ctx.path(path.clone()).await?;
+                Ok(path)
+            })
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        // Access all fsnode tree entries
+        let fsnode_id = root_fsnode_id.into_fsnode_id();
+        let _all_fsnode_directories = fsnode_id
+            .list_tree_entries(self.ctx.clone(), blobstore.clone())
+            .and_then(async |(path, fsnode_id)| {
+                // Access Fsnode by loading it from blobstore
+                let _tree = repo_ctx.tree(fsnode_id).await?;
                 Ok(path)
             })
             .try_collect::<Vec<_>>()
