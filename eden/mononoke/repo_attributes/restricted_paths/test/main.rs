@@ -59,6 +59,9 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
         )
         .with_client_main_id(TEST_CLIENT_MAIN_ID.to_string());
 
+    let expected_fsnode_id =
+        ManifestId::from("e11f63c6ae1c9d8c6e8460805c4f549b9c324c9f17abe12398338a2be32a7977");
+
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
         .with_file_path_changes(vec![("user_project/foo/bar/a", None)])
@@ -71,6 +74,11 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
             RestrictedPathManifestIdEntry::new(
                 ManifestType::HgAugmented,
                 expected_manifest_id.clone(),
+                RepoPath::dir("user_project/foo")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id.clone(),
                 RepoPath::dir("user_project/foo")?,
             )?,
         ])
@@ -140,6 +148,9 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
         )
         .with_client_main_id(TEST_CLIENT_MAIN_ID.to_string());
 
+    let expected_fsnode_id =
+        ManifestId::from("537548f0637858f6ebbba3e7f6c4d0c4e1ee7f88ca50fe3acff964115de0a0a3");
+
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
         .with_file_path_changes(vec![("restricted/dir/a", None)])
@@ -152,6 +163,11 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
             RestrictedPathManifestIdEntry::new(
                 ManifestType::HgAugmented,
                 expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id.clone(),
                 RepoPath::dir("restricted/dir")?,
             )?,
         ])
@@ -203,6 +219,9 @@ async fn test_single_dir_many_restricted_changes(fb: FacebookInit) -> Result<()>
 
     let expected_manifest_id = ManifestId::from("3132e75d8439632fc89f193cbf4f02b2b5428c6e");
 
+    let expected_fsnode_id =
+        ManifestId::from("34cc689ef0f1eeb886531a16d5953939e19d46fe6b16f7d7056d4c02a1c572ae");
+
     // Base sample with fields common to ALL expected samples
     let base_sample = ScubaAccessLogSampleBuilder::new()
         .with_repo_id(RepositoryId::new(0))
@@ -226,6 +245,11 @@ async fn test_single_dir_many_restricted_changes(fb: FacebookInit) -> Result<()>
             RestrictedPathManifestIdEntry::new(
                 ManifestType::HgAugmented,
                 expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id.clone(),
                 RepoPath::dir("restricted/dir")?,
             )?,
         ])
@@ -287,6 +311,9 @@ async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result
         )
         .with_client_main_id(TEST_CLIENT_MAIN_ID.to_string());
 
+    let expected_fsnode_id =
+        ManifestId::from("537548f0637858f6ebbba3e7f6c4d0c4e1ee7f88ca50fe3acff964115de0a0a3");
+
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
         .with_file_path_changes(vec![
@@ -302,6 +329,11 @@ async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result
             RestrictedPathManifestIdEntry::new(
                 ManifestType::HgAugmented,
                 expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id.clone(),
                 RepoPath::dir("restricted/dir")?,
             )?,
         ])
@@ -360,6 +392,11 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
     let expected_hg_manifest_id_one = ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1");
     let expected_hg_manifest_id_two = ManifestId::from("f5ca206223b4d531f0d65ff422273f901bc7a024");
 
+    let expected_fsnode_id_one =
+        ManifestId::from("5acb66d820607d6caa806153c7471b3499ca21d8c5eeff5078fa8f0403fe4f13");
+    let expected_fsnode_id_two =
+        ManifestId::from("e4351278ef7c2029a40ca6cbd6132e675d3e5199cfd0b16a7eba80d648221054");
+
     // Base sample with fields common to ALL expected samples
     let base_sample = ScubaAccessLogSampleBuilder::new()
         .with_repo_id(RepositoryId::new(0))
@@ -393,6 +430,16 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
                 expected_hg_manifest_id_two.clone(),
+                RepoPath::dir("restricted/two")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id_one.clone(),
+                RepoPath::dir("restricted/one")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id_two.clone(),
                 RepoPath::dir("restricted/two")?,
             )?,
         ])
@@ -479,6 +526,11 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
     let expected_hg_manifest_id_restricted =
         ManifestId::from("e53be16502cbc6afeb30ef30de7f6d9841fd4cb1");
 
+    let expected_fsnode_id_user =
+        ManifestId::from("f8f67a4a72a3bbd512be9a9348614c555cc6ac6a21570ce6c7f93c89a623157b");
+    let expected_fsnode_id_restricted =
+        ManifestId::from("5acb66d820607d6caa806153c7471b3499ca21d8c5eeff5078fa8f0403fe4f13");
+
     // Base sample with fields common to ALL expected samples
     let base_sample = ScubaAccessLogSampleBuilder::new()
         .with_repo_id(RepositoryId::new(0))
@@ -515,6 +567,16 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
             RestrictedPathManifestIdEntry::new(
                 ManifestType::HgAugmented,
                 expected_hg_manifest_id_user.clone(),
+                RepoPath::dir("user_project/foo")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id_restricted.clone(),
+                RepoPath::dir("restricted/one")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id_user.clone(),
                 RepoPath::dir("user_project/foo")?,
             )?,
         ])
@@ -600,6 +662,11 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
     let expected_hg_manifest_id_subdir =
         ManifestId::from("5629398cf56074c359a05b1f170eb2590efe11c3");
 
+    let expected_fsnode_id_root =
+        ManifestId::from("2000ed8d83bc282584fce88e6a67e2c23f53b72d6eb41e32a89211e60c80e3b9");
+    let expected_fsnode_id_subdir =
+        ManifestId::from("a9d72b0ed490fe8da33d1ec0e7b6890a6447cc6ba220532927bb866eb9c36768");
+
     // Base sample with fields common to ALL expected samples
     let base_sample = ScubaAccessLogSampleBuilder::new()
         .with_repo_id(RepositoryId::new(0))
@@ -639,6 +706,16 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
                 expected_hg_manifest_id_subdir.clone(),
+                RepoPath::dir("project/restricted")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id_root.clone(),
+                RepoPath::dir("project")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id_subdir.clone(),
                 RepoPath::dir("project/restricted")?,
             )?,
         ])
@@ -728,6 +805,8 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
     let identical_content = "same file content";
 
     let expected_manifest_id = ManifestId::from("0464bc4205fd3b4651678b66778299a352bac0d8");
+    let expected_fsnode_id =
+        ManifestId::from("c259976b56b9826eea5ca4c3a68d4e43a2f1745884918a96ac0dabb635f73598");
 
     // Base sample with fields common to ALL expected samples
     let base_sample = ScubaAccessLogSampleBuilder::new()
@@ -755,6 +834,11 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
             RestrictedPathManifestIdEntry::new(
                 ManifestType::HgAugmented,
                 expected_manifest_id.clone(),
+                RepoPath::dir("restricted")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id.clone(),
                 RepoPath::dir("restricted")?,
             )?,
         ])

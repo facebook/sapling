@@ -46,6 +46,7 @@ use mononoke_types::FileType;
 use mononoke_types::FsnodeId;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
+use mononoke_types::RepoPath;
 use mononoke_types::SortedVectorTrieMap;
 use mononoke_types::fsnode::Fsnode;
 use mononoke_types::fsnode::FsnodeDirectory;
@@ -55,6 +56,9 @@ use mononoke_types::fsnode::FsnodeSummary;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::path::MPath;
+use restricted_paths::ManifestType;
+use restricted_paths::RestrictedPathManifestIdEntry;
+use restricted_paths::RestrictedPaths;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::FsnodeDerivationError;
@@ -69,6 +73,7 @@ pub(crate) async fn derive_fsnodes_stack(
     parent: Option<FsnodeId>,
 ) -> Result<HashMap<ChangesetId, FsnodeId>, Error> {
     let blobstore = derivation_ctx.blobstore();
+    let restricted_paths = derivation_ctx.restricted_paths();
 
     let content_ids = file_changes
         .iter()
@@ -92,24 +97,27 @@ pub(crate) async fn derive_fsnodes_stack(
         })
         .collect::<Vec<_>>();
 
-    let res = derive_manifests_for_simple_stack_of_commits(
-        ctx.clone(),
-        blobstore.clone(),
-        parent,
-        manifest_changes,
-        {
-            cloned!(blobstore, ctx);
-            move |tree_info, _cs_id| {
-                cloned!(blobstore, ctx);
-                async move { create_fsnode(&ctx, &blobstore, None, tree_info).await }
-            }
-        },
-        move |leaf_info, _cs_id| {
-            cloned!(prefetched_content_metadata);
-            async move { check_fsnode_leaf(prefetched_content_metadata, leaf_info).await }
-        },
-    )
-    .await?;
+    let res =
+        derive_manifests_for_simple_stack_of_commits(
+            ctx.clone(),
+            blobstore.clone(),
+            parent,
+            manifest_changes,
+            {
+                cloned!(blobstore, ctx, restricted_paths);
+                move |tree_info, _cs_id| {
+                    cloned!(blobstore, ctx, restricted_paths);
+                    async move {
+                        create_fsnode(&ctx, &blobstore, &restricted_paths, None, tree_info).await
+                    }
+                }
+            },
+            move |leaf_info, _cs_id| {
+                cloned!(prefetched_content_metadata);
+                async move { check_fsnode_leaf(prefetched_content_metadata, leaf_info).await }
+            },
+        )
+        .await?;
 
     Ok(res.into_iter().collect())
 }
@@ -127,6 +135,7 @@ pub(crate) async fn derive_fsnode(
     subtree_changes: Vec<ManifestParentReplacement<FsnodeId, FsnodeFile>>,
 ) -> Result<FsnodeId> {
     let blobstore = derivation_ctx.blobstore();
+    let restricted_paths = derivation_ctx.restricted_paths();
     let content_ids = changes
         .iter()
         .filter_map(|(_mpath, content_id_and_file_type)| {
@@ -146,10 +155,13 @@ pub(crate) async fn derive_fsnode(
         changes,
         subtree_changes,
         {
-            cloned!(blobstore, ctx);
+            cloned!(blobstore, ctx, restricted_paths);
             move |tree_info, sender| {
-                cloned!(blobstore, ctx);
-                async move { create_fsnode(&ctx, &blobstore, Some(sender), tree_info).await }
+                cloned!(blobstore, ctx, restricted_paths);
+                async move {
+                    create_fsnode(&ctx, &blobstore, &restricted_paths, Some(sender), tree_info)
+                        .await
+                }
             }
         },
         move |leaf_info, _sender| {
@@ -169,7 +181,8 @@ pub(crate) async fn derive_fsnode(
                 parents,
                 subentries: Default::default(),
             };
-            let (_, tree_id) = create_fsnode(ctx, blobstore, None, tree_info).await?;
+            let (_, tree_id) =
+                create_fsnode(ctx, blobstore, &restricted_paths, None, tree_info).await?;
             Ok(tree_id)
         }
     }
@@ -259,6 +272,7 @@ async fn collect_fsnode_subentries(
 async fn create_fsnode(
     ctx: &CoreContext,
     blobstore: &Arc<dyn KeyedBlobstore>,
+    restricted_paths: &Arc<RestrictedPaths>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<
         FsnodeId,
@@ -329,8 +343,11 @@ async fn create_fsnode(
     let blob = fsnode.into_blob();
     let fsnode_id = *blob.id();
     let key = fsnode_id.blobstore_key();
-    cloned!(blobstore, ctx);
-    let f = async move { blobstore.put(&ctx, key, blob.into()).await };
+
+    let f = {
+        cloned!(blobstore, ctx);
+        async move { blobstore.put(&ctx, key, blob.into()).await }
+    };
 
     match sender {
         Some(sender) => sender
@@ -338,6 +355,37 @@ async fn create_fsnode(
             .map_err(|err| format_err!("failed to send fsnode future {}", err))?,
         None => f.await?,
     };
+
+    let restricted_paths_enabled = justknobs::eval(
+        "scm/mononoke:enabled_restricted_paths_access_logging",
+        None,
+        Some("fsnodes_write"),
+    )?;
+
+    let path = &tree_info.path;
+    if restricted_paths_enabled
+        && let Some(non_root_path) = path.clone().into_optional_non_root_path()
+        && restricted_paths.is_restricted_path(&non_root_path)
+    {
+        let entry = RestrictedPathManifestIdEntry::new(
+            ManifestType::Fsnode,
+            fsnode_id.to_string().into(),
+            RepoPath::DirectoryPath(non_root_path),
+        )?;
+
+        if let Err(e) = restricted_paths
+            .manifest_id_store()
+            .add_entry(ctx, entry)
+            .await
+        {
+            // Log error but don't fail manifest derivation
+            slog::warn!(
+                ctx.logger(),
+                "Failed to track restricted path at {path}: {e}"
+            );
+        }
+    }
+
     Ok((Some(summary), fsnode_id))
 }
 

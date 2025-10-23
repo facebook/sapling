@@ -194,6 +194,7 @@ impl MononokeScubaSampleBuilder {
                     "changeset_path_content_context_new",
                     "hg_augmented_manifest_write",
                     "hg_augmented_tree_context_new_check_exists",
+                    "fsnodes_write",
                 ],
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
