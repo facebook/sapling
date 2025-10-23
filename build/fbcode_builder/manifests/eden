@@ -105,6 +105,9 @@ fbcode/configerator/structs/scm/hg/public_autocargo = configerator/structs/scm/h
 ^.*/facebook/.*$
 ^.*/fb/.*$
 
+[cmake.defines]
+PYTHON_EXTENSIONS=ON
+
 [cmake.defines.all(fb=on,os=windows)]
 ENABLE_GIT=OFF
 INSTALL_PYTHON_LIB=ON

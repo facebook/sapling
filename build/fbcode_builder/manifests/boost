@@ -68,6 +68,7 @@ job_weight_mib = 512
 patchfile = boost_comparator_operator_fix.patch
 
 [b2.args]
+link=static,shared
 --with-atomic
 --with-chrono
 --with-container

@@ -8,6 +8,7 @@
 namespace py3 facebook.eden
 namespace cpp2 facebook.eden.overlay
 namespace py facebook.eden.overlay
+namespace py3 eden.fs.overlay
 
 typedef binary Hash
 typedef string PathComponent
