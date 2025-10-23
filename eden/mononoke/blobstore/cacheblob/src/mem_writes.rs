@@ -114,17 +114,8 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
         result
     }
 
-    pub fn get_inner(&self) -> T {
-        self.inner.clone()
-    }
-
     pub fn get_cache(&self) -> &Arc<Mutex<Cache>> {
         &self.cache
-    }
-
-    pub fn set_no_access_to_inner(&self, no_access_to_inner: bool) {
-        self.no_access_to_inner
-            .store(no_access_to_inner, Ordering::Relaxed);
     }
 }
 
