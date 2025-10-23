@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -95,7 +95,7 @@ impl<Store, V: Clone + Send + Sync> TrieMapOps<Store, V> for SortedVectorTrieMap
 }
 
 #[async_trait]
-impl<Store: Blobstore> TrieMapOps<Store, Entry<TestShardedManifestDirectory, ()>>
+impl<Store: KeyedBlobstore> TrieMapOps<Store, Entry<TestShardedManifestDirectory, ()>>
     for LoadableShardedMapV2Node<TestShardedManifestEntry>
 {
     async fn expand(
@@ -137,7 +137,7 @@ impl<Store: Blobstore> TrieMapOps<Store, Entry<TestShardedManifestDirectory, ()>
 }
 
 #[async_trait]
-impl<Store: Blobstore> TrieMapOps<Store, Entry<BssmV3Directory, ()>>
+impl<Store: KeyedBlobstore> TrieMapOps<Store, Entry<BssmV3Directory, ()>>
     for LoadableShardedMapV2Node<BssmV3Entry>
 {
     async fn expand(
@@ -169,7 +169,7 @@ impl<Store: Blobstore> TrieMapOps<Store, Entry<BssmV3Directory, ()>>
 }
 
 #[async_trait]
-impl<Store: Blobstore> TrieMapOps<Store, Entry<SkeletonManifestV2, ()>>
+impl<Store: KeyedBlobstore> TrieMapOps<Store, Entry<SkeletonManifestV2, ()>>
     for LoadableShardedMapV2Node<SkeletonManifestV2Entry>
 {
     async fn expand(
@@ -204,7 +204,7 @@ impl<Store: Blobstore> TrieMapOps<Store, Entry<SkeletonManifestV2, ()>>
 }
 
 #[async_trait]
-impl<Store: Blobstore> TrieMapOps<Store, Entry<CaseConflictSkeletonManifest, ()>>
+impl<Store: KeyedBlobstore> TrieMapOps<Store, Entry<CaseConflictSkeletonManifest, ()>>
     for LoadableShardedMapV2Node<CcsmEntry>
 {
     async fn expand(
@@ -243,7 +243,7 @@ impl<Store: Blobstore> TrieMapOps<Store, Entry<CaseConflictSkeletonManifest, ()>
 }
 
 #[async_trait]
-impl<Store: Blobstore> TrieMapOps<Store, Entry<ContentManifestId, ContentManifestFile>>
+impl<Store: KeyedBlobstore> TrieMapOps<Store, Entry<ContentManifestId, ContentManifestFile>>
     for LoadableShardedMapV2Node<ContentManifestEntry>
 {
     async fn expand(

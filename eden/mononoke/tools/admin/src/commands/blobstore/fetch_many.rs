@@ -7,7 +7,7 @@
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use clap::Args;
 use context::CoreContext;
 use futures::StreamExt;
@@ -69,7 +69,7 @@ impl std::iter::Sum for Stats {
 
 pub async fn fetch_many(
     ctx: &CoreContext,
-    blobstore: &dyn Blobstore,
+    blobstore: &dyn KeyedBlobstore,
     args: BlobstoreFetchManyArgs,
 ) -> Result<()> {
     let text = std::fs::read_to_string(args.keys_file).context("Reading keys file")?;

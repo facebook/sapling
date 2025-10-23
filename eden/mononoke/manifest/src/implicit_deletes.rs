@@ -134,10 +134,10 @@ mod test {
     use std::fmt::Debug;
     use std::sync::Arc;
 
-    use blobstore::Blobstore;
+    use blobstore::KeyedBlobstore;
     use blobstore::Storable;
     use fbinit::FacebookInit;
-    use memblob::Memblob;
+    use memblob::KeyedMemblob;
     use mononoke_macros::mononoke;
     use mononoke_types::FileType;
 
@@ -157,7 +157,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_get_implicit_deletes_single_parent(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
 
         // Parent manifest looks like:
         // p1/
@@ -224,7 +224,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_implicit_deletes(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
         // Parent 1 manifest looks like:
         // p1/
         //   p2/

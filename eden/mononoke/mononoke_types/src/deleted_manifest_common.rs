@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::fmt::Debug;
 
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use context::CoreContext;
 use futures::stream::BoxStream;
@@ -31,7 +31,7 @@ pub trait DeletedManifestCommon:
     /// adding the subentries from `subentries_to_add` (where `None` means "remove")
     async fn copy_and_update_subentries(
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         current: Option<Self>,
         linknode: Option<ChangesetId>,
         subentries_to_add: BTreeMap<MPathElement, Option<Self::Id>>,
@@ -41,7 +41,7 @@ pub trait DeletedManifestCommon:
     async fn lookup(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         basename: &MPathElement,
     ) -> Result<Option<Self::Id>>;
 
@@ -50,7 +50,7 @@ pub trait DeletedManifestCommon:
     fn into_subentries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> BoxStream<'a, Result<(MPathElement, Self::Id)>>;
 
     /// Returns whether this node has no subentries.

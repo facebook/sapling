@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -76,7 +76,7 @@ impl InferredCopyFrom {
     pub async fn lookup(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         path: &MPath,
     ) -> Result<Option<InferredCopyFromEntry>> {
         self.subentries
@@ -86,7 +86,7 @@ impl InferredCopyFrom {
 
     pub async fn from_subentries(
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         subentries: impl IntoIterator<Item = (MPath, InferredCopyFromEntry)>,
     ) -> Result<Self> {
         Ok(Self {
@@ -104,7 +104,7 @@ impl InferredCopyFrom {
     pub fn into_subentries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> BoxStream<'a, Result<(MPath, InferredCopyFromEntry)>> {
         self.subentries
             .into_entries(ctx, blobstore)
@@ -117,7 +117,7 @@ impl InferredCopyFrom {
     pub fn into_prefix_subentries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         prefix: &'a [u8],
     ) -> BoxStream<'a, Result<(MPath, InferredCopyFromEntry)>> {
         self.subentries

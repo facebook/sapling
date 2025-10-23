@@ -26,6 +26,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use base_app::BaseApp;
 use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
@@ -886,7 +887,7 @@ impl MononokeApp {
     pub async fn open_blobstore(
         &self,
         repo_blobstore_args: &RepoBlobstoreArgs,
-    ) -> Result<Arc<dyn Blobstore>> {
+    ) -> Result<Arc<dyn KeyedBlobstore>> {
         let repo_configs = self.repo_configs();
         let storage_configs = self.storage_configs();
         let (mut repo_id, mut redaction, mut storage_config) =

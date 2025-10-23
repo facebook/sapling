@@ -12,7 +12,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -100,7 +100,7 @@ impl UploadHgTreeEntry {
     pub fn upload(
         self,
         ctx: CoreContext,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: Arc<dyn KeyedBlobstore>,
     ) -> Result<(
         HgManifestId,
         BoxFuture<'static, Result<(HgManifestId, RepoPath)>>,
@@ -170,7 +170,7 @@ impl UploadHgTreeEntry {
     pub fn upload_as_entry(
         self,
         ctx: CoreContext,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: Arc<dyn KeyedBlobstore>,
     ) -> Result<(
         HgManifestId,
         BoxFuture<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>,
@@ -201,7 +201,7 @@ impl UploadHgFileContents {
     fn execute(
         self,
         ctx: CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
     ) -> (
@@ -324,7 +324,7 @@ impl UploadHgFileContents {
 
     fn compute_metadata(
         ctx: CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         content_id: ContentId,
         copy_from: Option<(NonRootMPath, HgFileNodeId)>,
     ) -> impl Future<Output = Result<Bytes>> + Send + use<> {
@@ -347,7 +347,7 @@ impl UploadHgFileContents {
 
     fn compute_filenode_id(
         ctx: CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         content_id: ContentId,
         metadata: Bytes,
         p1: Option<HgFileNodeId>,
@@ -394,7 +394,7 @@ impl UploadHgFileEntry {
     pub async fn upload(
         self,
         ctx: CoreContext,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: Arc<dyn KeyedBlobstore>,
         path: Option<&NonRootMPath>, // This is used for logging
     ) -> Result<HgFileNodeId, Error> {
         STATS::upload_hg_file_entry.add_value(1);
@@ -463,7 +463,7 @@ impl UploadHgFileEntry {
     pub async fn upload_with_path(
         self,
         ctx: CoreContext,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: Arc<dyn KeyedBlobstore>,
         path: NonRootMPath,
     ) -> Result<(HgFileNodeId, RepoPath), Error> {
         let filenode_id = self.upload(ctx, blobstore.clone(), Some(&path)).await?;
@@ -473,7 +473,7 @@ impl UploadHgFileEntry {
     pub async fn upload_as_entry(
         self,
         ctx: CoreContext,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: Arc<dyn KeyedBlobstore>,
         path: NonRootMPath,
     ) -> Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
         let filenode_id = self.upload(ctx, blobstore.clone(), Some(&path)).await?;

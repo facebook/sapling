@@ -13,9 +13,14 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
 use anyhow::Error;
 use anyhow::format_err;
 use blobstore::Blobstore;
+use blobstore::BlobstoreBytes;
+use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::KeyedBlobstore;
 use blobstore_factory::BlobstoreOptions;
 use blobstore_factory::ReadOnlyStorage;
 use blobstore_factory::make_sql_blobstore_xdb;
@@ -115,7 +120,7 @@ fn log_perf<I, E: Debug>(stats: FutureStats, res: &Result<I, E>, len: u64) {
     };
 }
 
-async fn read<B: Blobstore>(
+async fn read<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     content_metadata: &ContentMetadataV2,
@@ -143,7 +148,7 @@ async fn read<B: Blobstore>(
 async fn run_benchmark_filestore<'a>(
     ctx: &'a CoreContext,
     args: &BenchmarkArgs,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
 ) -> Result<(), Error> {
     let config = FilestoreConfig {
         chunk_size: Some(args.chunk_size),
@@ -297,6 +302,71 @@ async fn open_blobstore(
     Ok(blobstore)
 }
 
+// Benchmarking Keyed Blobstore
+// This is a no-op Keyed Blobstore as we are benchmarking the blobstores through the Filestore, which uses KeyedBlobstore
+#[derive(Debug)]
+struct NoopKeyedBlobstore {
+    inner: Arc<dyn Blobstore>,
+}
+
+impl NoopKeyedBlobstore {
+    fn new(inner: Arc<dyn Blobstore>) -> Self {
+        Self { inner }
+    }
+}
+
+impl std::fmt::Display for NoopKeyedBlobstore {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "NoopKeyedBlobstore<{}>", self.inner)
+    }
+}
+
+#[async_trait::async_trait]
+impl KeyedBlobstore for NoopKeyedBlobstore {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>, Error> {
+        self.inner.get(ctx, key).await
+    }
+
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<(), Error> {
+        self.inner.put(ctx, key, value).await
+    }
+
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent, Error> {
+        self.inner.is_present(ctx, key).await
+    }
+
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<(), Error> {
+        let value = self
+            .inner
+            .get(ctx, old_key)
+            .await?
+            .with_context(|| format!("key {} not present", old_key))?;
+        Ok(self.inner.put(ctx, new_key, value.into_bytes()).await?)
+    }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<(), Error> {
+        self.inner.unlink(ctx, key).await
+    }
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = MononokeAppBuilder::new(fb).build::<BenchmarkArgs>()?;
@@ -314,6 +384,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         app.readonly_storage(),
         config_store,
     ))?;
+
+    let blobstore = Arc::new(NoopKeyedBlobstore::new(blobstore));
 
     runtime.block_on(run_benchmark_filestore(&ctx, &args, blobstore))?;
 

@@ -12,7 +12,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::future::FutureExt;
 use futures::stream;
@@ -107,7 +107,7 @@ impl HgSubtreeChanges {
     pub async fn to_manifest_replacements(
         &self,
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
     ) -> Result<Vec<ManifestParentReplacement<HgManifestId, (FileType, HgFileNodeId)>>> {
         // Deep copies, merges and imports do not modify the parents: they just adjust history.
         stream::iter(self.copies.iter())
@@ -222,7 +222,7 @@ impl HgSubtreeCopy {
     pub async fn to_manifest_replacement(
         &self,
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
     ) -> Result<ManifestParentReplacement<HgManifestId, (FileType, HgFileNodeId)>> {
         let entry = self
             .from_commit

@@ -15,7 +15,7 @@ use anyhow::anyhow;
 use anyhow::format_err;
 use async_stream::try_stream;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use bonsai_hg_mapping::BonsaiHgMappingRef;

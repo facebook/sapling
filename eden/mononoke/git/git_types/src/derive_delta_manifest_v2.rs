@@ -15,9 +15,9 @@ use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
+use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use bytes::Bytes;
 use cloned::cloned;
@@ -137,7 +137,7 @@ async fn derive_single(
 
 async fn gdm_v2_entries_root(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     current_tree: GitTreeId,
 ) -> Result<Vec<(MPath, GDMV2Entry)>> {
     // For root commits we store an entry for each object in the tree with
@@ -167,7 +167,7 @@ async fn gdm_v2_entries_root(
 
 async fn gdm_v2_entries_non_root(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     config: &GitDeltaManifestV2Config,
     current_tree: GitTreeId,
     parent_trees: Vec<GitTreeId>,
@@ -236,7 +236,7 @@ async fn gdm_v2_entries_non_root(
 /// For each diff we store a tuple of the old and new tree members.
 async fn group_diffs_by_path(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     current_tree: GitTreeId,
     parent_trees: Vec<GitTreeId>,
 ) -> Result<HashMap<MPath, Vec<(Option<Entry<GitTreeId, GitLeaf>>, Entry<GitTreeId, GitLeaf>)>>> {
@@ -270,7 +270,7 @@ async fn group_diffs_by_path(
 
 async fn create_delta_entry(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     config: &GitDeltaManifestV2Config,
     path: MPath,
     old_entry: Option<Entry<GitTreeId, GitLeaf>>,

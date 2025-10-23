@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -27,7 +27,7 @@ use super::Entry;
 use super::Manifest;
 
 #[async_trait]
-impl<Store: Blobstore> Manifest<Store> for TestManifest {
+impl<Store: KeyedBlobstore> Manifest<Store> for TestManifest {
     type TreeId = TestManifestDirectory;
     type Leaf = ();
     type TrieMapType = SortedVectorTrieMap<Entry<TestManifestDirectory, ()>>;
@@ -78,7 +78,7 @@ fn convert_test_manifest(
 }
 
 #[async_trait]
-impl<Store: Blobstore> Manifest<Store> for TestShardedManifest {
+impl<Store: KeyedBlobstore> Manifest<Store> for TestShardedManifest {
     type TreeId = TestShardedManifestDirectory;
     type Leaf = ();
     type TrieMapType = LoadableShardedMapV2Node<TestShardedManifestEntry>;

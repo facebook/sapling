@@ -558,10 +558,10 @@ impl<ManifestId, Leaf> ManifestParentReplacement<ManifestId, Leaf> {
 mod test {
     use std::sync::Arc;
 
-    use blobstore::Blobstore;
+    use blobstore::KeyedBlobstore;
     use blobstore::Storable;
     use fbinit::FacebookInit;
-    use memblob::Memblob;
+    use memblob::KeyedMemblob;
     use mononoke_macros::mononoke;
 
     use super::*;
@@ -592,7 +592,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_unfold_file_from_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
         let root = NonRootMPath::new("a")?;
 
         let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
@@ -654,7 +654,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_unfold_file_mode_change(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
         let root = NonRootMPath::new("a")?;
 
         let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
@@ -685,7 +685,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_unfold_file_from_dirs(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
         let root = NonRootMPath::new("a")?;
 
         let leaf_id = TestLeaf::new("1").store(&ctx, &store).await?;
@@ -747,7 +747,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_unfold_dir_from_dirs(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
         let root = NonRootMPath::new("a")?;
 
         let leaf1_id = TestLeaf::new("1").store(&ctx, &store).await?;
@@ -821,7 +821,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_unfold_dir_from_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
         let root = NonRootMPath::new("a")?;
 
         let tree_id = TestManifest::new().store(&ctx, &store).await?;
@@ -850,7 +850,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_unfold_missing_from_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
         let root = NonRootMPath::new("a")?;
 
         let mut work_entry: WorkEntry<TestManifestId, _> = WorkEntry {
@@ -876,7 +876,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_unfold_missing_from_dirs(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
         let root = NonRootMPath::new("a")?;
 
         let tree3_id = TestManifest::new().store(&ctx, &store).await?;
@@ -938,7 +938,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_unfold_subtree_replacements(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let store: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+        let store: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
         let root = NonRootMPath::new("a")?;
 
         let leaf2_id = TestLeaf::new("2").store(&ctx, &store).await?;

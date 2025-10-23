@@ -15,7 +15,7 @@ use anyhow::bail;
 use anyhow::ensure;
 use async_trait::async_trait;
 use blobrepo_common::changed_files::compute_changed_files;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use bytes::Bytes;
@@ -70,7 +70,7 @@ define_stats! {
 
 async fn can_reuse_filenode(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parent: HgFileNodeId,
     change: &TrackedFileChange,
 ) -> Result<Option<HgFileNodeId>, Error> {
@@ -89,7 +89,7 @@ async fn can_reuse_filenode(
 
 pub(crate) async fn store_file_change<'a>(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     p1: Option<HgFileNodeId>,
     p2: Option<HgFileNodeId>,
     path: &'a NonRootMPath,
@@ -180,7 +180,7 @@ pub(crate) async fn store_file_change<'a>(
 
 async fn resolve_paths(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     manifest_id: Option<HgManifestId>,
     paths: Vec<NonRootMPath>,
 ) -> Result<HashMap<NonRootMPath, HgFileNodeId>, Error> {
@@ -202,7 +202,7 @@ async fn resolve_paths(
 
 pub async fn get_manifest_from_bonsai(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     restricted_paths: ArcRestrictedPaths,
     bcs: BonsaiChangeset,
     parent_manifests: Vec<HgManifestId>,
@@ -329,7 +329,7 @@ pub async fn get_manifest_from_bonsai(
 
 pub(crate) async fn derive_from_parents(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     bonsai: BonsaiChangeset,
     parents: Vec<MappedHgChangesetId>,
     subtree_change_sources: HashMap<ChangesetId, HgChangesetId>,
@@ -377,7 +377,7 @@ pub(crate) async fn derive_from_parents(
 
 pub async fn derive_simple_hg_changeset_stack_without_copy_info(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     bonsais: Vec<BonsaiChangeset>,
     parent: Option<MappedHgChangesetId>,
     options: &HgChangesetDeriveOptions,
@@ -453,7 +453,7 @@ pub async fn derive_simple_hg_changeset_stack_without_copy_info(
 
 async fn generate_hg_changeset(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     bcs: BonsaiChangeset,
     manifest_id: HgManifestId,
     parents: Vec<HgBlobChangeset>,

@@ -7,7 +7,7 @@
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use clap::Parser;
 use context::SessionClass;
 use git_types::CGDMComponents;

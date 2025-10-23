@@ -9,7 +9,7 @@ use std::io::Write;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use fbinit::FacebookInit;
 use filestore::Sha1IncrementalHasher;
 use filestore::hash_bytes;

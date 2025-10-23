@@ -381,6 +381,7 @@ pub trait Blobstore: fmt::Display + fmt::Debug + Send + Sync {
 }
 
 #[async_trait]
+#[auto_impl(&, Arc, Box)]
 pub trait KeyedBlobstore: fmt::Display + fmt::Debug + Send + Sync {
     /// Fetch the value associated with `key`, or None if no value is present
     async fn get<'a>(
@@ -422,55 +423,6 @@ pub trait KeyedBlobstore: fmt::Display + fmt::Debug + Send + Sync {
     /// Similar to unlink(2), this removes a key, resulting in content being removed if its the last key pointing to it.
     /// An error is returned if the key does not exist
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()>;
-}
-
-#[async_trait]
-impl<T: Blobstore> KeyedBlobstore for T {
-    async fn get<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<Option<BlobstoreGetData>> {
-        self.get(ctx, key).await
-    }
-
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.put(ctx, key, value).await
-    }
-
-    async fn is_present<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<BlobstoreIsPresent> {
-        Ok(if self.get(ctx, key).await?.is_some() {
-            BlobstoreIsPresent::Present
-        } else {
-            BlobstoreIsPresent::Absent
-        })
-    }
-
-    async fn copy<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        old_key: &'a str,
-        new_key: String,
-    ) -> Result<()> {
-        let value = self
-            .get(ctx, old_key)
-            .await?
-            .with_context(|| format!("key {} not present", old_key))?;
-        Ok(self.put(ctx, new_key, value.bytes).await?)
-    }
-
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        self.unlink(ctx, key).await
-    }
 }
 
 /// Mononoke binaries will not overwrite existing blobstore keys by default
@@ -763,7 +715,7 @@ pub struct GenericBlobstoreCopier<'a, A, B> {
 }
 
 #[async_trait]
-impl<'a, A: Blobstore, B: Blobstore> BlobCopier for GenericBlobstoreCopier<'a, A, B> {
+impl<'a, A: KeyedBlobstore, B: KeyedBlobstore> BlobCopier for GenericBlobstoreCopier<'a, A, B> {
     async fn copy(&self, ctx: &CoreContext, key: String) -> Result<()> {
         let value = self
             .source

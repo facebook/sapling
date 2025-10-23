@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use anyhow::anyhow;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use blobstore::StoreLoadable;
 use cloned::cloned;
@@ -51,7 +51,7 @@ use restricted_paths::RestrictedPaths;
 /// Derive an HgAugmentedManifestId from an HgManifestId and parents.
 pub async fn derive_from_hg_manifest_and_parents(
     ctx: &CoreContext,
-    blobstore: &(impl Blobstore + 'static),
+    blobstore: &(impl KeyedBlobstore + 'static),
     hg_manifest_id: HgManifestId,
     parents: Vec<HgAugmentedManifestId>,
     content_metadata_cache: &HashMap<ContentId, ContentMetadataV2>,
@@ -381,7 +381,7 @@ pub async fn derive_from_hg_manifest_and_parents(
 
 async fn get_metadata<'a>(
     ctx: &CoreContext,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
     content_metadata_cache: &'a HashMap<ContentId, ContentMetadataV2>,
     content_id: ContentId,
 ) -> Result<Cow<'a, ContentMetadataV2>> {
@@ -399,7 +399,7 @@ async fn get_metadata<'a>(
 
 pub async fn derive_from_full_hg_manifest(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     hg_manifest_id: HgManifestId,
 ) -> Result<HgAugmentedManifestId> {
     let root_entry = derive_manifest_from_predecessor(

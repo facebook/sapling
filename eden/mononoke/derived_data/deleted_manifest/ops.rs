@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bounded_traversal::bounded_traversal_stream;
 use cloned::cloned;
@@ -223,7 +223,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     fn find_entries<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         paths_or_prefixes: impl IntoIterator<Item = impl Into<PathOrPrefix>>,
     ) -> BoxStream<'a, Result<(MPath, Self::Id), Error>> {
         let root_id = self.id().clone();
@@ -325,7 +325,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     async fn find_entry(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         path: MPath,
     ) -> Result<Option<Self::Id>, Error> {
         let s = self.find_entries(ctx, blobstore, vec![PathOrPrefix::Path(path)]);
@@ -340,7 +340,7 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
     fn list_all_entries<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> BoxStream<'a, Result<(MPath, Self::Id), Error>> {
         let root_id = self.id().clone();
         (async_stream::stream! {

@@ -10,7 +10,6 @@ use std::fmt::Display;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
@@ -33,7 +32,7 @@ pub enum FetchKey {
 }
 
 impl FetchKey {
-    pub async fn content_id<B: Blobstore>(
+    pub async fn content_id<B: KeyedBlobstore>(
         &self,
         ctx: &CoreContext,
         blobstore: &B,

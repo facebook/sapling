@@ -13,7 +13,7 @@ use anyhow::Error;
 use anyhow::bail;
 use anyhow::format_err;
 use blobrepo_errors::ErrorKind;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
@@ -59,7 +59,7 @@ struct ParentIndex(usize);
 
 pub async fn derive_simple_hg_manifest_stack_without_copy_info(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     manifest_changes: Vec<ManifestChanges<TrackedFileChange>>,
     parent: Option<HgManifestId>,
     restricted_paths: ArcRestrictedPaths,
@@ -142,7 +142,7 @@ pub async fn derive_simple_hg_manifest_stack_without_copy_info(
 /// Derive mercurial manifest from parent manifests and bonsai file changes.
 pub async fn derive_hg_manifest(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     restricted_paths: ArcRestrictedPaths,
     parents: impl IntoIterator<Item = HgManifestId>,
     changes: impl IntoIterator<Item = (NonRootMPath, Option<(FileType, HgFileNodeId)>)> + 'static,
@@ -209,7 +209,7 @@ pub async fn derive_hg_manifest(
 /// object from `TreeInfo`.
 async fn create_hg_manifest(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<
         Traced<ParentIndex, HgManifestId>,
@@ -382,7 +382,7 @@ async fn create_hg_manifest(
 /// object from `LeafInfo`.
 async fn create_hg_file(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     leaf_info: LeafInfo<Traced<ParentIndex, (FileType, HgFileNodeId)>, (FileType, HgFileNodeId)>,
 ) -> Result<((), Traced<ParentIndex, (FileType, HgFileNodeId)>), Error> {
     let LeafInfo {
@@ -406,7 +406,7 @@ async fn create_hg_file(
 
 async fn resolve_conflict(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     path: NonRootMPath,
     parents: &[Traced<ParentIndex, (FileType, HgFileNodeId)>],
 ) -> Result<(FileType, HgFileNodeId), Error> {

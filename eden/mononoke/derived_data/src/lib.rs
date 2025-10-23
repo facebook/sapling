@@ -55,7 +55,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use context::SessionClass;
 use filestore::FetchKey;
@@ -103,7 +103,7 @@ pub fn override_ctx(mut ctx: CoreContext, repo: impl RepoIdentityRef) -> CoreCon
 /// Prefetch content metadata for a set of content ids.
 pub async fn prefetch_content_metadata(
     ctx: &CoreContext,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
     content_ids: impl IntoIterator<Item = ContentId>,
 ) -> Result<HashMap<ContentId, ContentMetadataV2>> {
     stream::iter(content_ids)

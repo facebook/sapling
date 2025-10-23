@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
+use blobstore::KeyedBlobstore;
 use bonsai_hg_mapping::MemWritesBonsaiHgMapping;
 use cacheblob::MemWritesBlobstore;
 use context::CoreContext;

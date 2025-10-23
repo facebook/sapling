@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::StreamExt;
 use futures::TryFutureExt;
@@ -33,7 +33,7 @@ use mononoke_types::path::MPath;
 /// It sorts the returned Vec<NonRootMPath> in the order expected by Mercurial.
 pub async fn compute_changed_files(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     root: HgManifestId,
     p1: Option<HgManifestId>,
     p2: Option<HgManifestId>,
@@ -76,7 +76,7 @@ pub async fn compute_changed_files(
 
 async fn compute_changed_files_pair(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     to: HgManifestId,
     from: HgManifestId,
 ) -> Result<HashSet<NonRootMPath>, Error> {
@@ -98,7 +98,7 @@ async fn compute_changed_files_pair(
 
 async fn compute_removed_files(
     ctx: &CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     child: HgManifestId,
     parent: Option<HgManifestId>,
 ) -> Result<Vec<NonRootMPath>, Error> {
@@ -114,7 +114,7 @@ async fn compute_removed_files(
 
 async fn compute_files_with_status(
     ctx: &CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     child: HgManifestId,
     parent: Option<HgManifestId>,
     filter_map: impl Fn(Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>) -> MPath,

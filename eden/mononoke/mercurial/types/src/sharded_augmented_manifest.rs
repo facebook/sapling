@@ -14,7 +14,6 @@ use anyhow::bail;
 use async_trait::async_trait;
 use base64::Engine;
 use blake3::Hasher as Blake3Hasher;
-use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
@@ -110,7 +109,7 @@ impl ShardedHgAugmentedManifest {
     pub async fn lookup(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         name: &MPathElement,
     ) -> Result<Option<HgAugmentedManifestEntry>> {
         self.subentries.lookup(ctx, blobstore, name.as_ref()).await
@@ -119,7 +118,7 @@ impl ShardedHgAugmentedManifest {
     pub fn into_subentries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> BoxStream<'a, Result<(MPathElement, HgAugmentedManifestEntry)>> {
         self.subentries
             .into_entries(ctx, blobstore)
@@ -130,7 +129,7 @@ impl ShardedHgAugmentedManifest {
     pub fn into_subentries_skip<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         skip: usize,
     ) -> BoxStream<'a, Result<(MPathElement, HgAugmentedManifestEntry)>> {
         self.subentries
@@ -142,7 +141,7 @@ impl ShardedHgAugmentedManifest {
     pub fn into_prefix_subentries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         prefix: &'a [u8],
     ) -> BoxStream<'a, Result<(MPathElement, HgAugmentedManifestEntry)>> {
         self.subentries
@@ -154,7 +153,7 @@ impl ShardedHgAugmentedManifest {
     pub fn into_prefix_subentries_after<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         prefix: &'a [u8],
         after: &'a [u8],
     ) -> BoxStream<'a, Result<(MPathElement, HgAugmentedManifestEntry)>> {
@@ -312,7 +311,7 @@ impl ShardedHgAugmentedManifest {
     pub fn into_content_addressed_manifest_blob<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> BoxStream<'a, Result<Bytes>> {
         let prefix_bytes = self.serialize_content_addressed_prefix();
         stream::once(std::future::ready(prefix_bytes))
@@ -337,7 +336,7 @@ impl ShardedHgAugmentedManifest {
     pub async fn compute_content_addressed_digest(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
     ) -> Result<(Blake3, u64)> {
         let mut calculator = AugmentedManifestDigestCalculator::new();
         self.write_content_addressed_prefix(&mut calculator)?;
@@ -627,14 +626,14 @@ impl HgAugmentedManifestEnvelope {
     pub fn into_content_addressed_manifest_blob<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> BoxStream<'a, Result<Bytes>> {
         self.augmented_manifest
             .into_content_addressed_manifest_blob(ctx, blobstore)
     }
 }
 
-pub async fn fetch_augmented_manifest_envelope_opt<B: Blobstore>(
+pub async fn fetch_augmented_manifest_envelope_opt<B: KeyedBlobstore>(
     ctx: &CoreContext,
     blobstore: &B,
     augmented_node_id: HgAugmentedManifestId,
@@ -709,7 +708,7 @@ fn convert_hg_augmented_manifest_entry(
 }
 
 #[async_trait]
-impl<Store: Blobstore> Manifest<Store> for HgAugmentedManifestEnvelope {
+impl<Store: KeyedBlobstore> Manifest<Store> for HgAugmentedManifestEnvelope {
     type TreeId = HgAugmentedManifestId;
 
     type Leaf = HgAugmentedFileLeafNode;

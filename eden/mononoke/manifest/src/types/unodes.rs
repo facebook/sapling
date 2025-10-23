@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -23,7 +23,7 @@ use super::Entry;
 use super::Manifest;
 
 #[async_trait]
-impl<Store: Blobstore> Manifest<Store> for ManifestUnode {
+impl<Store: KeyedBlobstore> Manifest<Store> for ManifestUnode {
     type TreeId = ManifestUnodeId;
     type Leaf = FileUnodeId;
     type TrieMapType = SortedVectorTrieMap<Entry<ManifestUnodeId, FileUnodeId>>;

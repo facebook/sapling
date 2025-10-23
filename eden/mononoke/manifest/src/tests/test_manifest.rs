@@ -14,7 +14,6 @@ use std::sync::Arc;
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
@@ -166,7 +165,7 @@ impl Storable for TestManifest {
 }
 
 #[async_trait]
-impl<Store: Blobstore> Manifest<Store> for TestManifest {
+impl<Store: KeyedBlobstore> Manifest<Store> for TestManifest {
     type Leaf = (FileType, TestLeafId);
     type TreeId = TestManifestId;
     type TrieMapType = SortedVectorTrieMap<Entry<Self::TreeId, Self::Leaf>>;
@@ -208,7 +207,7 @@ impl<Store: Blobstore> Manifest<Store> for TestManifest {
 // code still works if this estimate is wrong, but it may schedule the
 // wrong number of child manifest expansions when this happens.
 #[async_trait]
-impl<Store: Blobstore> OrderedManifest<Store> for TestManifest {
+impl<Store: KeyedBlobstore> OrderedManifest<Store> for TestManifest {
     async fn list_weighted(
         &self,
         _ctx: &CoreContext,
@@ -238,7 +237,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for TestManifest {
 
 pub(crate) async fn derive_test_manifest(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<TestManifestId>,
     changes_str: BTreeMap<&str, Option<&str>>,
 ) -> Result<Option<TestManifestId>> {
@@ -294,7 +293,7 @@ pub(crate) async fn derive_test_manifest(
 
 pub(crate) async fn derive_stack_of_test_manifests(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parent: Option<TestManifestId>,
     changes_str_per_cs_id: BTreeMap<ChangesetId, BTreeMap<&str, Option<&str>>>,
 ) -> Result<BTreeMap<ChangesetId, TestManifestId>> {
@@ -358,7 +357,7 @@ pub(crate) async fn derive_stack_of_test_manifests(
     Ok(res)
 }
 
-pub(crate) async fn list_test_manifest<'a, B: Blobstore>(
+pub(crate) async fn list_test_manifest<'a, B: KeyedBlobstore>(
     ctx: &'a CoreContext,
     blobstore: &'a B,
     mf_id: TestManifestId,

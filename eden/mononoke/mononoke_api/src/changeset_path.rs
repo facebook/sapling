@@ -11,7 +11,7 @@ use std::fmt;
 use anyhow::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
@@ -479,7 +479,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
 
     async fn linknode_from_id(
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         root: impl RootDeletedManifestIdCommon + 'static,
         path: MPath,
     ) -> Result<Option<ChangesetId>, MononokeError> {

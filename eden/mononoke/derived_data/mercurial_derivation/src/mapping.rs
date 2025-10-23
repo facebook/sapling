@@ -14,9 +14,9 @@ use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
+use blobstore::KeyedBlobstore;
 use blobstore::StoreLoadable;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use bytes::Bytes;
@@ -319,7 +319,7 @@ async fn track_all_restricted_paths(
     restricted_paths: ArcRestrictedPaths,
     hg_cs_id: HgChangesetId,
     root_hg_aug_mfid: HgAugmentedManifestId,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
 ) -> Result<()> {
     // Check if restricted paths tracking is enabled via justknobs
     let restricted_paths_enabled = justknobs::eval(

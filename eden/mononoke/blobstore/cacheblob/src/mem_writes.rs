@@ -12,11 +12,14 @@ use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::future;
 use futures::stream::StreamExt;
@@ -166,6 +169,175 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
 
     async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
         Err(anyhow!("MemWritesBlobstore does not support unlink"))
+    }
+}
+
+/// A KeyedBlobstore wrapper that reads from the underlying blobstore but writes to memory.
+#[derive(Clone, Debug)]
+pub struct MemWritesKeyedBlobstore<T> {
+    inner: T,
+    cache: Arc<Mutex<Cache>>,
+    // Mutex to ensure only one task is flushing the cache at a time.
+    // Note: this doesn't wrap the cache as read access is permitted while
+    // the mutex is held.
+    flush_mutex: Arc<AsyncMutex<()>>,
+    no_access_to_inner: Arc<AtomicBool>,
+}
+
+impl<T: std::fmt::Display> std::fmt::Display for MemWritesKeyedBlobstore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "MemWritesKeyedBlobstore<{}>", self.inner)
+    }
+}
+
+impl<T: KeyedBlobstore + Clone> MemWritesKeyedBlobstore<T> {
+    pub fn new(blobstore: T) -> Self {
+        Self {
+            inner: blobstore,
+            cache: Default::default(),
+            flush_mutex: Default::default(),
+            no_access_to_inner: Default::default(),
+        }
+    }
+
+    /// Write all in-memory entries to underlying blobstore.
+    ///
+    /// NOTE: In case of error all pending changes will be lost.
+    pub async fn persist<'a>(&'a self, ctx: &'a CoreContext) -> Result<()> {
+        if self.no_access_to_inner.load(Ordering::Relaxed) {
+            return Err(anyhow!(
+                "unexpected write to memory blobstore when access to inner blobstore was disabled"
+            ));
+        }
+
+        // Obtain the flush mutex.  This should ensure that only one persist
+        // happens at a time.
+        let _flush_guard = self.flush_mutex.lock().await;
+
+        let items = self.cache.with(|cache| {
+            if cache.flushing.is_some() {
+                // This should be prevented by the flush guard.
+                return Err(anyhow!(
+                    "unexpected persist while another persist is ongoing"
+                ));
+            }
+            let flushing = Arc::new(mem::take(&mut cache.live));
+            cache.flushing = Some(flushing.clone());
+            Ok(flushing)
+        })?;
+
+        let flush = async_stream::stream! {
+            for (key, value) in items.iter() {
+                 yield self.inner.put(ctx, key.clone(), value.clone());
+            }
+        };
+
+        let result = flush
+            .buffered(4096)
+            .try_for_each(|_| future::ready(Ok(())))
+            .await;
+
+        // Discard flushing items, whether or not we were successful at
+        // flushing the cache.
+        self.cache.with(|cache| {
+            cache.flushing = None;
+        });
+
+        result
+    }
+
+    pub fn get_inner(&self) -> T {
+        self.inner.clone()
+    }
+
+    pub fn get_cache(&self) -> &Arc<Mutex<Cache>> {
+        &self.cache
+    }
+
+    pub fn set_no_access_to_inner(&self, no_access_to_inner: bool) {
+        self.no_access_to_inner
+            .store(no_access_to_inner, Ordering::Relaxed);
+    }
+}
+
+#[async_trait]
+impl<T: KeyedBlobstore + Clone> KeyedBlobstore for MemWritesKeyedBlobstore<T> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let value = self.cache.with(|cache| {
+            if let Some(value) = cache.live.get(key) {
+                Some(value.clone())
+            } else if let Some(flushing) = cache.flushing.as_ref() {
+                flushing.get(key).cloned()
+            } else {
+                None
+            }
+        });
+
+        match value {
+            Some(value) => Ok(Some(value.into())),
+            None => {
+                if self.no_access_to_inner.load(Ordering::Relaxed) {
+                    return Ok(None);
+                }
+
+                Ok(self.inner.get(ctx, key).await?)
+            }
+        }
+    }
+
+    async fn put<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
+        self.cache.with(|cache| cache.live.insert(key, value));
+        Ok(())
+    }
+
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        let in_cache = self.cache.with(|cache| {
+            cache.live.contains_key(key)
+                || cache
+                    .flushing
+                    .as_ref()
+                    .is_some_and(|flushing| flushing.contains_key(key))
+        });
+
+        if in_cache {
+            return Ok(BlobstoreIsPresent::Present);
+        }
+
+        if self.no_access_to_inner.load(Ordering::Relaxed) {
+            return Ok(BlobstoreIsPresent::Absent);
+        }
+
+        self.inner.is_present(ctx, key).await
+    }
+
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        let value = self
+            .get(ctx, old_key)
+            .await?
+            .with_context(|| format!("key {} not present", old_key))?;
+        self.put(ctx, new_key, value.into()).await
+    }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
+        Err(anyhow!("MemWritesKeyedBlobstore does not support unlink"))
     }
 }
 

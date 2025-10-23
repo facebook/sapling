@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
 use cloned::cloned;
@@ -100,7 +100,7 @@ async fn get_ccsm_subtree_changes(
 
 async fn empty_directory_id(
     ctx: &CoreContext,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
 ) -> Result<CaseConflictSkeletonManifestId> {
     let leaf = CaseConflictSkeletonManifest::empty();
     leaf.into_blob().store(ctx, blobstore).await
@@ -115,7 +115,7 @@ fn mf_entry_to_ccsm_entry(entry: Entry<CaseConflictSkeletonManifest, ()>) -> Ccs
 
 async fn create_case_conflict_skeleton_manifest(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     subentries: TreeInfoSubentries<
         CaseConflictSkeletonManifest,
         (),
@@ -141,7 +141,7 @@ async fn create_case_conflict_skeleton_manifest(
 
 pub(crate) async fn inner_derive(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<CaseConflictSkeletonManifest>,
     changes: Vec<(NonRootMPath, Option<()>)>,
     subtree_changes: Vec<ManifestParentReplacement<CaseConflictSkeletonManifest, ()>>,

@@ -11,8 +11,8 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 
 use anyhow::Error;
-use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::future::try_join_all;
 use manifest::Entry;
@@ -28,7 +28,7 @@ use crate::FastlogParent;
 
 pub(crate) async fn create_new_batch(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     unode_parents: Vec<Entry<ManifestUnodeId, FileUnodeId>>,
     linknode: ChangesetId,
 ) -> Result<FastlogBatch, Error> {
@@ -158,7 +158,7 @@ fn convert_to_raw_list(
     res
 }
 
-pub async fn fetch_fastlog_batch_by_unode_id<B: Blobstore>(
+pub async fn fetch_fastlog_batch_by_unode_id<B: KeyedBlobstore>(
     ctx: &CoreContext,
     blobstore: &B,
     unode_entry: &Entry<ManifestUnodeId, FileUnodeId>,
@@ -173,7 +173,7 @@ pub async fn fetch_fastlog_batch_by_unode_id<B: Blobstore>(
     }
 }
 
-pub(crate) async fn save_fastlog_batch_by_unode_id<B: Blobstore>(
+pub(crate) async fn save_fastlog_batch_by_unode_id<B: KeyedBlobstore>(
     ctx: &CoreContext,
     blobstore: &B,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
@@ -201,7 +201,7 @@ pub fn unode_entry_to_fastlog_batch_key(
     format!("fastlogbatch.{}", key_part)
 }
 
-pub async fn fetch_flattened<B: Blobstore>(
+pub async fn fetch_flattened<B: KeyedBlobstore>(
     batch: &FastlogBatch,
     ctx: &CoreContext,
     blobstore: &B,

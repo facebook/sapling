@@ -8,7 +8,7 @@
 use std::cmp::Ordering;
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
@@ -36,7 +36,7 @@ pub enum ErrorKind {
 /// Fetch a file from the blobstore and reupload it in a chunked form.
 /// NOTE: This could actually unchunk a file if the chunk size threshold
 /// is increased after the file is written.
-pub async fn force_rechunk<B: Blobstore + Clone + 'static>(
+pub async fn force_rechunk<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     config: FilestoreConfig,
     ctx: &CoreContext,
@@ -59,7 +59,7 @@ pub async fn force_rechunk<B: Blobstore + Clone + 'static>(
 /// this fn won't do anything.
 /// Returns a future, resolving to the `ContentMetadataV2` of the
 /// processed `ContentId` and whether it was *actually* rechunked
-pub async fn rechunk<B: Blobstore + Clone + 'static>(
+pub async fn rechunk<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     filestore_config: FilestoreConfig,
     ctx: &CoreContext,
@@ -139,7 +139,7 @@ fn uses_larger_chunks(
 /// Note: this fn expects `expected_chunk_size` and `concurrency`
 /// instead of `FilestoreConfig` to emphasize that it can only be
 /// called, if the filestore's chunk size is not `None`
-async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone + 'static>(
+async fn rechunk_if_uses_larger_chunk_size<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     expected_chunk_size: u64,
     concurrency: usize,
@@ -182,7 +182,7 @@ async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone + 'static>(
 /// Unconditionally rechunk `file_contents` using the `filestore_config`
 /// NOTE: This could actually unchunk a file if the chunk size threshold
 /// is increased after the file is written.
-async fn do_rechunk_file_contents<B: Blobstore + Clone + 'static>(
+async fn do_rechunk_file_contents<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     filestore_config: FilestoreConfig,
     ctx: &CoreContext,

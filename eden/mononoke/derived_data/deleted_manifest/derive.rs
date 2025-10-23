@@ -15,7 +15,7 @@ use anyhow::Error;
 use anyhow::anyhow;
 use atomic_counter::AtomicCounter;
 use atomic_counter::RelaxedCounter;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
@@ -144,7 +144,7 @@ struct DeletedManifestUnfoldNode<Manifest: DeletedManifestCommon> {
 
 async fn get_changes_bonsai(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     bonsai: &BonsaiChangeset,
     unode: ManifestUnodeId,
     parents: impl Iterator<Item = ManifestUnodeId>,
@@ -179,7 +179,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
     /// Derives a Deleted Manifest for a single commit.
     pub(crate) async fn derive(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         bonsai: BonsaiChangeset,
         parents: Vec<(ChangesetId, Manifest::Id, ManifestUnodeId)>,
         current_unode: ManifestUnodeId,
@@ -334,7 +334,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
 
     async fn do_unfold(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         mut changes: PathTree<()>,
         parents_dm_ids: MultiMap<Manifest::Id, ChangesetId>,
         parents_unode_ids: MultiMap<UnodeEntry, ChangesetId>,
@@ -564,7 +564,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
     async fn save_manifest(
         manifest: Manifest,
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
         created: Arc<Mutex<HashSet<String>>>,
     ) -> Result<Manifest::Id, Error> {
@@ -586,7 +586,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
 
     async fn do_create(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         cs_id: ChangesetId,
         change: DeletedManifestChange<Manifest>,
         subentries_to_update: BTreeMap<MPathElement, Option<Manifest::Id>>,
@@ -980,7 +980,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_stack_derive(fb: FacebookInit) -> Result<()> {
         let repo: TestRepo = build_repo(fb).await.unwrap();
-        let blobstore = repo.repo_blobstore_arc() as Arc<dyn Blobstore>;
+        let blobstore = repo.repo_blobstore_arc() as Arc<dyn KeyedBlobstore>;
         let derivation_ctx = &repo.repo_derived_data().manager().derivation_context(None);
 
         let ctx = CoreContext::test_mock(fb);
@@ -1014,7 +1014,7 @@ mod test {
             .await?;
 
         borrowed!(ctx, commits);
-        let blobstore: &Arc<dyn Blobstore> = &blobstore;
+        let blobstore: &Arc<dyn KeyedBlobstore> = &blobstore;
 
         let derive = |stack: Vec<&'static str>| async move {
             let bonsais = future::try_join_all(stack.iter().map(|c| {

@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
@@ -42,7 +42,7 @@ use crate::mapping::RootTestShardedManifestDirectory;
 
 async fn empty_directory(
     ctx: &CoreContext,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
 ) -> Result<TestShardedManifestDirectory> {
     let leaf = TestShardedManifest::empty();
     let id = leaf.into_blob().store(ctx, blobstore).await?;
@@ -123,7 +123,7 @@ fn mf_entry_to_test_sharded_mf_entry(
 
 async fn create_test_sharded_manifest_directory(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     subentries: TreeInfoSubentries<
         TestShardedManifestDirectory,
         (),
@@ -158,7 +158,7 @@ async fn create_test_sharded_manifest_directory(
 
 async fn inner_derive(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<TestShardedManifestDirectory>,
     changes: Vec<(NonRootMPath, Option<()>)>,
     subtree_changes: Vec<ManifestParentReplacement<TestShardedManifestDirectory, ()>>,

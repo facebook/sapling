@@ -6,12 +6,11 @@
  */
 
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::format_err;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
@@ -19,6 +18,7 @@ use fbinit::FacebookInit;
 use futures::future;
 use futures::future::TryFutureExt;
 use futures::stream;
+use memblob::KeyedMemblob;
 use mononoke_macros::mononoke;
 use quickcheck::Arbitrary;
 use quickcheck::Gen;
@@ -36,7 +36,7 @@ use crate::incremental_hash::Sha256IncrementalHasher;
 use crate::incremental_hash::hash_bytes;
 
 /// Fetching through any alias should return the same outcome.
-async fn check_consistency<B: Blobstore>(
+async fn check_consistency<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     bytes: &Bytes,
@@ -74,7 +74,7 @@ async fn check_consistency<B: Blobstore>(
     }
 }
 
-async fn check_metadata<B: Blobstore>(
+async fn check_metadata<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     bytes: &Bytes,
@@ -95,14 +95,16 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
     let mut r#gen = Gen::new(128);
 
-    let memblob = Arc::new(memblob::Memblob::default());
-    let blob = FailingBlobstore::new(memblob.clone(), 0.75, 0.75);
+    let memblob = KeyedMemblob::default();
+
+    let blob = FailingBlobstore::new(KeyedMemblob::default(), 0.75, 0.75);
+
     let config = FilestoreConfig {
         chunk_size: Some(16),
         concurrency: 5,
     };
     let ctx = CoreContext::test_mock(fb);
-    borrowed!(ctx, blob, memblob: &Arc<_>);
+    borrowed!(ctx, blob, memblob);
 
     for _ in 0..1000 {
         let bytes = Bytes::from(Vec::arbitrary(&mut r#gen));
@@ -135,9 +137,10 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
 async fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
     let mut r#gen = Gen::new(128);
 
-    let memblob = Arc::new(memblob::Memblob::default());
+    let memblob = KeyedMemblob::default();
+
     let ctx = CoreContext::test_mock(fb);
-    borrowed!(ctx, memblob: &Arc<_>);
+    borrowed!(ctx, memblob);
 
     for _ in 0..100usize {
         let bytes = Bytes::from(Vec::arbitrary(&mut r#gen));

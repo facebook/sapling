@@ -11,6 +11,7 @@ use std::fmt;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::format_err;
 use async_trait::async_trait;
@@ -18,10 +19,12 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreEnumerationData;
 use blobstore::BlobstoreGetData;
+use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreKeyParam;
 use blobstore::BlobstoreKeySource;
 use blobstore::BlobstorePutOps;
 use blobstore::DEFAULT_PUT_BEHAVIOUR;
+use blobstore::KeyedBlobstore;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -226,6 +229,94 @@ impl fmt::Debug for Memblob {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Memblob")
             .field("state", &self.state.lock().expect("lock poisoned"))
+            .finish()
+    }
+}
+
+// Keyed memblob, used in tests only, which wraps a Memblob
+#[derive(Clone)]
+pub struct KeyedMemblob {
+    inner: Memblob,
+}
+
+impl std::fmt::Display for KeyedMemblob {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "KeyedMemblob")
+    }
+}
+
+impl KeyedMemblob {
+    pub fn new(inner: Memblob) -> Self {
+        Self { inner }
+    }
+
+    /// Access the inner Memblob for enumeration purposes
+    pub fn as_inner(&self) -> &Memblob {
+        &self.inner
+    }
+}
+
+impl Default for KeyedMemblob {
+    fn default() -> Self {
+        Self::new(Memblob::default())
+    }
+}
+
+#[async_trait]
+impl KeyedBlobstore for KeyedMemblob {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        self.inner.get(ctx, key).await
+    }
+
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
+        self.inner.put(ctx, key, value).await
+    }
+
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        Ok(if self.inner.get(ctx, key).await?.is_some() {
+            BlobstoreIsPresent::Present
+        } else {
+            BlobstoreIsPresent::Absent
+        })
+    }
+
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        let value = self
+            .inner
+            .get(ctx, old_key)
+            .await?
+            .with_context(|| format!("key {} not present", old_key))?;
+        Ok(self.inner.put(ctx, new_key, value.into_bytes()).await?)
+    }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.inner.unlink(key.to_string()).await?;
+        Ok(())
+    }
+}
+
+impl fmt::Debug for KeyedMemblob {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Memblob")
+            .field("state", &self.inner.state.lock().expect("lock poisoned"))
             .finish()
     }
 }

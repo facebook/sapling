@@ -11,8 +11,8 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
@@ -170,7 +170,7 @@ impl BonsaiDerivable for RootFastlog {
     }
 }
 
-async fn fetch_unode_parents<B: Blobstore>(
+async fn fetch_unode_parents<B: KeyedBlobstore>(
     ctx: &CoreContext,
     blobstore: &B,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,

@@ -14,7 +14,7 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
 use async_recursion::async_recursion;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
 use bounded_traversal::OrderedTraversal;
@@ -156,7 +156,7 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
     pub async fn load(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
     ) -> Result<ShardedMapV2Node<Value>> {
         match self {
             Self::Inlined(inlined) => Ok(inlined),
@@ -174,7 +174,7 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
     pub async fn inlined(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
     ) -> Result<LoadableShardedMapV2Node<Value>> {
         match self {
             inlined @ Self::Inlined(_) => Ok(inlined),
@@ -186,7 +186,7 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
     pub async fn stored(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
     ) -> Result<LoadableShardedMapV2Node<Value>> {
         match self {
             Self::Inlined(inlined) => Ok(Self::Stored(ShardedMapV2StoredNode {
@@ -202,7 +202,7 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
     pub async fn expand(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
     ) -> Result<(Option<Value>, Vec<(u8, Self)>)> {
         let ShardedMapV2Node {
             prefix,
@@ -342,7 +342,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     /// Create a ShardedMapV2Node out of an iterator of key-value pairs.
     pub async fn from_entries(
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         entries: impl IntoIterator<Item = (impl AsRef<[u8]>, Value)>,
     ) -> Result<Self> {
         Self::from_entries_and_partial_maps(
@@ -362,7 +362,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     /// Returns an error if the key for a partial map is a prefix of any other key in the input TrieMap.
     pub async fn from_entries_and_partial_maps(
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         entries: TrieMap<Either<Value, LoadableShardedMapV2Node<Value>>>,
     ) -> Result<Self> {
         Self::from_entries_inner(ctx, blobstore, entries)
@@ -374,7 +374,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     #[async_recursion]
     async fn from_entries_inner(
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         entries: TrieMap<Either<Value, LoadableShardedMapV2Node<Value>>>,
     ) -> Result<LoadableShardedMapV2Node<Value>> {
         let (lcp, entries) = entries.split_longest_common_prefix();
@@ -452,7 +452,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     pub async fn lookup(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         key: &[u8],
     ) -> Result<Option<Value>> {
         // If the key starts with the prefix of this node then strip it, otherwise
@@ -502,7 +502,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     pub async fn get_partial_map(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         key_prefix: &[u8],
     ) -> Result<Option<LoadableShardedMapV2Node<Value>>> {
         if let Some(remaining_prefix) = self.prefix.strip_prefix(key_prefix) {
@@ -555,7 +555,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     pub async fn get_entries_and_partial_maps(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         lookup_keys: TrieMap<LookupKind>,
         concurrency: usize,
     ) -> Result<TrieMap<Either<Value, LoadableShardedMapV2Node<Value>>>> {
@@ -642,7 +642,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     pub fn into_entries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
         self.into_prefix_entries_impl(ctx, blobstore, &[], None, 0)
     }
@@ -650,7 +650,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     pub fn into_entries_skip<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         skip: usize,
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
         self.into_prefix_entries_impl(ctx, blobstore, &[], None, skip)
@@ -661,7 +661,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     pub fn into_prefix_entries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         prefix: &'a [u8],
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
         self.into_prefix_entries_impl(ctx, blobstore, prefix, None, 0)
@@ -672,7 +672,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     pub fn into_prefix_entries_after<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         prefix: &'a [u8],
         after: &'a [u8],
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
@@ -862,7 +862,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     fn into_prefix_entries_impl<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         prefix: &'a [u8],
         after: Option<&'a [u8]>,
         skip: usize,
@@ -921,7 +921,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     pub fn into_entries_unordered<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         concurrency: usize,
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
         bounded_traversal::bounded_traversal_stream(
@@ -963,7 +963,7 @@ impl<Value: ShardedMapV2Value> ShardedMapV2Node<Value> {
     pub fn difference_stream<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         other_maps: Vec<Self>,
         concurrency: usize,
     ) -> impl Stream<Item = Result<(SmallBinary, DifferenceStreamItem<Value>)>> + 'a
@@ -1157,7 +1157,7 @@ mod test {
     use blobstore::Storable;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use memblob::Memblob;
+    use memblob::KeyedMemblob;
     use mononoke_macros::mononoke;
 
     use super::*;
@@ -1273,7 +1273,7 @@ mod test {
     }
 
     #[derive(Clone)]
-    struct MapHelper(CoreContext, Memblob);
+    struct MapHelper(CoreContext, KeyedMemblob);
     impl MapHelper {
         async fn from_entries_removed_prefix(
             &self,
@@ -1609,6 +1609,7 @@ mod test {
         async fn assert_all_keys(&self, keys: &[&str]) -> Result<()> {
             let data = self
                 .1
+                .as_inner()
                 .enumerate(
                     &self.0,
                     &BlobstoreKeyParam::Start(BlobstoreKeyRange {
@@ -1675,7 +1676,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_sharded_map_v2_example(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         let helper = MapHelper(ctx, blobstore);
 
         let from_entries_map = helper.from_entries(EXAMPLE_ENTRIES).await?;
@@ -2005,7 +2006,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_sharded_map_v2_from_entries_only_maps(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         let helper = MapHelper(ctx, blobstore);
 
         let map_ab = helper
@@ -2034,7 +2035,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_sharded_map_v2_from_entries_maps_and_values(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         let helper = MapHelper(ctx, blobstore);
 
         let map_ab = helper
@@ -2061,7 +2062,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_sharded_map_v2_from_entries_conflict_detection(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         let helper = MapHelper(ctx, blobstore);
 
         let map_first_six = helper
@@ -2146,7 +2147,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_sharded_map_v2_difference_stream(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         let helper = MapHelper(ctx, blobstore);
 
         let map = helper
@@ -2272,7 +2273,7 @@ mod test {
         queries: Vec<String>,
     ) -> bool {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
 
         let helper = MapHelper(ctx, blobstore);
 
@@ -2343,7 +2344,7 @@ mod test {
         lookup_keys: TrieMap<LookupKind>,
     ) -> bool {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
 
         let helper = MapHelper(ctx, blobstore);
 

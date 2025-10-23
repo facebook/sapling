@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use blobstore::Loadable;
-use cacheblob::MemWritesBlobstore;
+use cacheblob::MemWritesKeyedBlobstore;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
@@ -41,7 +41,7 @@ async fn get_manifests(
         .manifestid();
 
     // First derive the manifest in full using a temporary side blobstore.
-    let blobstore = Arc::new(MemWritesBlobstore::new(repo.repo_blobstore().clone()));
+    let blobstore = Arc::new(MemWritesKeyedBlobstore::new(repo.repo_blobstore().clone()));
     let full_aug_id = derive_hg_augmented_manifest::derive_from_full_hg_manifest(
         ctx.clone(),
         blobstore.clone(),

@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use context::CoreContext;
 use futures::future;
@@ -38,7 +38,7 @@ fn check_hash<T: std::fmt::Debug + PartialEq + Copy>(
     Ok(())
 }
 
-pub async fn finalize<B: Blobstore>(
+pub async fn finalize<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     req: Option<&StoreRequest>,

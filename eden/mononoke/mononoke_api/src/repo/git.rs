@@ -6,7 +6,7 @@
  */
 
 use anyhow::Context;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_tag_mapping::BonsaiTagMappingEntry;
@@ -195,7 +195,7 @@ pub async fn upload_non_blob_git_object<B>(
     raw_content: Vec<u8>,
 ) -> anyhow::Result<(), GitError>
 where
-    B: Blobstore + Clone,
+    B: KeyedBlobstore + Clone,
 {
     git_types::upload_non_blob_git_object(ctx, blobstore, git_hash, raw_content).await
 }
@@ -208,7 +208,7 @@ pub async fn upload_packfile_base_item<B>(
     raw_content: Vec<u8>,
 ) -> anyhow::Result<(), GitError>
 where
-    B: Blobstore + Clone,
+    B: KeyedBlobstore + Clone,
 {
     git_types::upload_packfile_base_item(ctx, blobstore, git_hash, raw_content).await?;
     Ok(())

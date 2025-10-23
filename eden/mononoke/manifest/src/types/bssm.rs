@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -30,7 +30,7 @@ pub(crate) fn bssm_v3_to_mf_entry(entry: BssmV3Entry) -> Entry<BssmV3Directory, 
 }
 
 #[async_trait]
-impl<Store: Blobstore> Manifest<Store> for BssmV3Directory {
+impl<Store: KeyedBlobstore> Manifest<Store> for BssmV3Directory {
     type TreeId = BssmV3Directory;
     type Leaf = ();
     type TrieMapType = LoadableShardedMapV2Node<BssmV3Entry>;
@@ -132,7 +132,7 @@ fn convert_bssm_v3_to_weighted(
 }
 
 #[async_trait]
-impl<Store: Blobstore> OrderedManifest<Store> for BssmV3Directory {
+impl<Store: KeyedBlobstore> OrderedManifest<Store> for BssmV3Directory {
     async fn list_weighted(
         &self,
         ctx: &CoreContext,

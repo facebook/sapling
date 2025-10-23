@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use blobstore::Storable;
@@ -47,7 +47,7 @@ pub enum RebuildBackmappingError {
 /// Finds the metadata for a ContentId. Returns None if the content does not exist, and returns
 /// the metadata otherwise. This might recompute the metadata on the fly if it is found to
 /// be missing but the content exists.
-pub async fn get_metadata<B: Blobstore>(
+pub async fn get_metadata<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     content_id: ContentId,
@@ -97,7 +97,7 @@ pub async fn get_metadata<B: Blobstore>(
 
 /// Finds the metadata for a ContentId. Returns None if the content metadata does not exist
 /// and returns Some(metadata) if it already exists. Does not recompute it on the fly.
-pub async fn get_metadata_readonly<B: Blobstore>(
+pub async fn get_metadata_readonly<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     content_id: ContentId,
@@ -117,7 +117,7 @@ pub async fn get_metadata_readonly<B: Blobstore>(
 /// its metadata. To rebuild the metadata, we peek at the content in the blobstore to get
 /// its size, then produce a stream of its contents and compute aliases over it. Finally, store
 /// the metadata, and return it.
-async fn rebuild_metadata<B: Blobstore>(
+async fn rebuild_metadata<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     content_id: ContentId,

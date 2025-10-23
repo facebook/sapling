@@ -11,7 +11,7 @@ use std::collections::VecDeque;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::anyhow;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMappingRef;
 use cloned::cloned;
@@ -408,7 +408,7 @@ async fn get_maybe_missing_filenode(
 }
 
 async fn get_filenode_from_envelope(
-    blobstore: impl Blobstore + 'static,
+    blobstore: impl KeyedBlobstore + 'static,
     ctx: &CoreContext,
     path: &RepoPath,
     node: HgFileNodeId,

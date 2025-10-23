@@ -7,7 +7,6 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
@@ -218,7 +217,7 @@ impl TestShardedManifest {
     pub async fn lookup(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         name: &MPathElement,
     ) -> Result<Option<TestShardedManifestEntry>> {
         self.subentries.lookup(ctx, blobstore, name.as_ref()).await
@@ -227,7 +226,7 @@ impl TestShardedManifest {
     pub fn into_subentries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> BoxStream<'a, Result<(MPathElement, TestShardedManifestEntry)>> {
         self.subentries
             .into_entries(ctx, blobstore)
@@ -238,7 +237,7 @@ impl TestShardedManifest {
     pub fn into_subentries_skip<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         skip: usize,
     ) -> BoxStream<'a, Result<(MPathElement, TestShardedManifestEntry)>> {
         self.subentries
@@ -250,7 +249,7 @@ impl TestShardedManifest {
     pub fn into_prefix_subentries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         prefix: &'a [u8],
     ) -> BoxStream<'a, Result<(MPathElement, TestShardedManifestEntry)>> {
         self.subentries
@@ -262,7 +261,7 @@ impl TestShardedManifest {
     pub fn into_prefix_subentries_after<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         prefix: &'a [u8],
         after: &'a [u8],
     ) -> BoxStream<'a, Result<(MPathElement, TestShardedManifestEntry)>> {

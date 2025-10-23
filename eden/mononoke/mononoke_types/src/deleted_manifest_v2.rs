@@ -8,7 +8,6 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use blobstore::Blobstore;
 use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use bytes::Bytes;
@@ -121,7 +120,7 @@ impl DeletedManifestCommon for DeletedManifestV2 {
 
     async fn copy_and_update_subentries(
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         current: Option<Self>,
         linknode: Option<ChangesetId>,
         subentries_to_update: BTreeMap<MPathElement, Option<Self::Id>>,
@@ -156,7 +155,7 @@ impl DeletedManifestCommon for DeletedManifestV2 {
     async fn lookup(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         basename: &MPathElement,
     ) -> Result<Option<Self::Id>> {
         self.subentries
@@ -167,7 +166,7 @@ impl DeletedManifestCommon for DeletedManifestV2 {
     fn into_subentries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> BoxStream<'a, Result<(MPathElement, Self::Id)>> {
         self.subentries
             .into_entries(ctx, blobstore)
@@ -208,7 +207,7 @@ impl DeletedManifestV2 {
     pub fn into_sharded_subentries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> BoxStream<'a, Result<ShardedTraversalOutput<'a, DeletedManifestV2Id>>> {
         self.subentries.into_sharded_entries(ctx, blobstore).boxed()
     }

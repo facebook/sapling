@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use anyhow::Result;
 use anyhow::bail;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
@@ -63,7 +62,11 @@ use crate::upload_non_blob_git_object;
 pub struct GitTreeId(pub ObjectId);
 
 impl GitTreeId {
-    pub(crate) async fn size(&self, ctx: &CoreContext, blobstore: &impl Blobstore) -> Result<u64> {
+    pub(crate) async fn size(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &impl KeyedBlobstore,
+    ) -> Result<u64> {
         Ok(fetch_non_blob_git_object(ctx, blobstore, &self.0)
             .await?
             .size())
@@ -75,7 +78,7 @@ impl GitTreeId {
 pub struct GitLeaf(pub ObjectId, pub tree::EntryMode);
 
 impl GitLeaf {
-    async fn oid_from_content_id<B: Blobstore>(
+    async fn oid_from_content_id<B: KeyedBlobstore>(
         ctx: &CoreContext,
         blobstore: &B,
         content_id: ContentId,
@@ -87,7 +90,7 @@ impl GitLeaf {
         metadata.git_sha1.to_object_id()
     }
 
-    pub async fn new<B: Blobstore + Clone>(
+    pub async fn new<B: KeyedBlobstore + Clone>(
         ctx: &CoreContext,
         blobstore: &B,
         file_change: &BasicFileChange,
@@ -111,7 +114,7 @@ impl GitLeaf {
         Ok(Self(oid, entry_kind.into()))
     }
 
-    pub async fn from_content_id_and_file_type<B: Blobstore>(
+    pub async fn from_content_id_and_file_type<B: KeyedBlobstore>(
         ctx: &CoreContext,
         blobstore: &B,
         content_id: ContentId,
@@ -143,7 +146,11 @@ impl GitLeaf {
         tree::EntryKind::from(self.1) == tree::EntryKind::Commit
     }
 
-    pub(crate) async fn size(&self, ctx: &CoreContext, blobstore: &impl Blobstore) -> Result<u64> {
+    pub(crate) async fn size(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &impl KeyedBlobstore,
+    ) -> Result<u64> {
         if self.is_submodule() {
             anyhow::bail!("Fetching size of GitLeaf item that is a submodule is not supported");
         }
@@ -161,7 +168,7 @@ pub trait GitEntry {
     fn identifier(&self) -> Result<GitIdentifier>;
     fn is_submodule(&self) -> bool;
     fn kind(&self) -> DeltaObjectKind;
-    async fn size(&self, ctx: &CoreContext, blobstore: &impl Blobstore) -> Result<u64>;
+    async fn size(&self, ctx: &CoreContext, blobstore: &impl KeyedBlobstore) -> Result<u64>;
 }
 
 impl GitEntry for Entry<GitTreeId, GitLeaf> {
@@ -195,7 +202,7 @@ impl GitEntry for Entry<GitTreeId, GitLeaf> {
         }
     }
 
-    async fn size(&self, ctx: &CoreContext, blobstore: &impl Blobstore) -> Result<u64> {
+    async fn size(&self, ctx: &CoreContext, blobstore: &impl KeyedBlobstore) -> Result<u64> {
         match self {
             Entry::Tree(tree_id) => tree_id.size(ctx, blobstore).await,
             Entry::Leaf(leaf) => leaf.size(ctx, blobstore).await,
@@ -336,7 +343,7 @@ impl Loadable for GitTreeId {
     }
 }
 
-pub(crate) async fn get_git_file_changes<B: Blobstore + Clone + 'static>(
+pub(crate) async fn get_git_file_changes<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     filestore_config: FilestoreConfig,
     ctx: &CoreContext,
@@ -435,7 +442,7 @@ pub(crate) async fn get_git_subtree_changes(
         .await
 }
 
-pub(crate) async fn derive_git_tree<B: Blobstore + Clone + 'static>(
+pub(crate) async fn derive_git_tree<B: KeyedBlobstore + Clone + 'static>(
     ctx: &CoreContext,
     blobstore: B,
     parents: Vec<GitTreeId>,

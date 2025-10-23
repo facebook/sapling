@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::TryStreamExt;
@@ -67,7 +67,7 @@ impl HgPreloadedAugmentedManifest {
     pub async fn load_from_sharded<'a>(
         sharded_manifest: HgAugmentedManifestEnvelope,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> Result<Self> {
         let augmented_manifest_id = sharded_manifest.augmented_manifest_id;
         let augmented_manifest_size = sharded_manifest.augmented_manifest_size;

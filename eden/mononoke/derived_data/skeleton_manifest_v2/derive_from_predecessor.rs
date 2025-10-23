@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
@@ -26,7 +26,7 @@ use crate::mapping::RootSkeletonManifestV2Id;
 
 pub(crate) async fn inner_derive_from_predecessor(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     predecessor: SkeletonManifestId,
     chunk_size: usize,
 ) -> Result<SkeletonManifestV2> {

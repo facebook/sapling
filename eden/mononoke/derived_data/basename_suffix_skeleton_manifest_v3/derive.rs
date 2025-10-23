@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
 use cloned::cloned;
@@ -48,7 +48,7 @@ use crate::path::BssmPath;
 /// deletes, then applying the bssm transform to the paths.
 async fn get_bssm_path_changes(
     ctx: &CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     bcs: &BonsaiChangeset,
     skeleton_manifest: SkeletonManifestId,
     parent_skeleton_manifests: Vec<SkeletonManifestId>,
@@ -119,7 +119,7 @@ async fn get_bssm_path_changes(
 
 async fn empty_directory_id(
     ctx: &CoreContext,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
 ) -> Result<BssmV3DirectoryId> {
     let leaf = BssmV3Directory::empty();
     leaf.into_blob().store(ctx, blobstore).await
@@ -134,7 +134,7 @@ fn mf_entry_to_bssm_v3_entry(entry: Entry<BssmV3Directory, ()>) -> BssmV3Entry {
 
 async fn create_bssm_v3_directory(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     subentries: TreeInfoSubentries<BssmV3Directory, (), (), LoadableShardedMapV2Node<BssmV3Entry>>,
 ) -> Result<BssmV3Directory> {
     let subentries: TrieMap<_> = subentries
@@ -155,7 +155,7 @@ async fn create_bssm_v3_directory(
 
 pub(crate) async fn inner_derive(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<BssmV3Directory>,
     changes: Vec<(NonRootMPath, Option<()>)>,
 ) -> Result<Option<BssmV3Directory>> {

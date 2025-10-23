@@ -12,7 +12,7 @@ use std::sync::atomic::Ordering;
 
 use anyhow::Result;
 use async_recursion::async_recursion;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkKey;
@@ -61,7 +61,7 @@ struct Repo(
 async fn validate(
     visited: &RwLock<HashSet<TestShardedManifestDirectory>>,
     ctx: &CoreContext,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
     dir: TestShardedManifestDirectory,
 ) -> Result<()> {
     if visited.read().unwrap().contains(&dir) {

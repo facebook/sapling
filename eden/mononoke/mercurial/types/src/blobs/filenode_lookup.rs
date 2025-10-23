@@ -23,7 +23,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use ascii::AsciiString;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::Future;
@@ -86,7 +86,7 @@ impl FileNodeIdPointer {
     }
 }
 
-pub fn store_filenode_id<'a, B: Blobstore>(
+pub fn store_filenode_id<'a, B: KeyedBlobstore>(
     ctx: &'a CoreContext,
     blobstore: &'a B,
     key: FileNodeIdPointer,
@@ -96,7 +96,7 @@ pub fn store_filenode_id<'a, B: Blobstore>(
     blobstore.put(ctx, key.0, contents)
 }
 
-pub async fn lookup_filenode_id<B: Blobstore>(
+pub async fn lookup_filenode_id<B: KeyedBlobstore>(
     ctx: &CoreContext,
     blobstore: &B,
     key: FileNodeIdPointer,

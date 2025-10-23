@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use anyhow::bail;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
@@ -61,7 +61,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
     // optimises the usual case (commits touch mostly different files) quite well.
     pub(crate) async fn derive_simple_stack(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         parent: Option<Manifest::Id>,
         all_changes: Vec<(ChangesetId, Vec<(NonRootMPath, PathChange)>)>,
     ) -> Result<Vec<Manifest::Id>> {
@@ -100,7 +100,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
     /// should be created for it.
     async fn finalize_stack(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         commit_stack: Vec<ChangesetId>,
         parent_id: Option<Manifest::Id>,
         mfid_by_cs: ByChangeset<Option<Manifest::Id>>,
@@ -141,7 +141,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
 
     async fn unfold_batch(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         unfold_node: UnfoldNode<Manifest>,
     ) -> Result<(
         FoldNode<Manifest>,
@@ -214,7 +214,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
     /// the manifests for the commits with modifications.
     async fn apply_changes_to_stack_and_create_mfs(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         commit_stack: &[ChangesetId],
         mut parent: Option<Manifest>,
         mut modified_subentries_by_cs: ByChangeset<BTreeMap<MPathElement, Option<Manifest::Id>>>,
@@ -278,7 +278,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
 
     async fn fold_batch(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         commit_stack: &[ChangesetId],
         fold_node: FoldNode<Manifest>,
         subentries: impl Iterator<Item = FoldOutput<Manifest>>,
@@ -314,7 +314,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
     async fn save_mf(
         mf: Manifest,
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
     ) -> Result<Manifest::Id> {
         let mf_id = mf.id();
         let key = mf_id.blobstore_key();

@@ -18,7 +18,7 @@ use anyhow::Ok;
 use anyhow::Result;
 use anyhow::bail;
 use async_recursion::async_recursion;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
 use bounded_traversal::OrderedTraversal;
@@ -88,7 +88,7 @@ impl<Value: MapValue> ShardedMapEdge<Value> {
     async fn load_child(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
     ) -> Result<ShardedMapNode<Value>> {
         self.child.load(ctx, blobstore).await
     }
@@ -117,7 +117,7 @@ impl<Value: MapValue> ShardedMapChild<Value> {
     pub async fn load(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
     ) -> Result<ShardedMapNode<Value>> {
         match self {
             Self::Inlined(inlined) => Ok(inlined),
@@ -200,7 +200,7 @@ impl<Value: MapValue> ShardedTrieMap<Value> {
     pub async fn expand(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
     ) -> Result<(Option<Value>, Vec<(u8, Self)>)> {
         match self {
             Self::Edge(edge) => match edge.load_child(ctx, blobstore).await? {
@@ -272,7 +272,7 @@ impl<Value: MapValue> ShardedTrieMap<Value> {
     pub async fn into_stream<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> Result<BoxStream<'a, Result<(SmallVec<[u8; 24]>, Value)>>> {
         match self {
             Self::Edge(edge) => Ok(edge
@@ -305,7 +305,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     pub async fn lookup(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         key: &[u8],
     ) -> Result<Option<Value>> {
         Ok(match self {
@@ -434,7 +434,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     #[async_recursion]
     pub async fn from_entries(
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         entries: BTreeMap<Bytes, Either<Value, ShardedMapEdge<Value>>>,
     ) -> Result<Self> {
         let shard_size = Self::shard_size()?;
@@ -589,7 +589,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     pub async fn update(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         replacements: BTreeMap<Bytes, Option<Value>>,
         // Called for all deletions
         deleter: impl Fn(Value) + Send + Copy + 'async_recursion,
@@ -786,7 +786,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     pub fn into_entries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
         self.into_prefix_entries(ctx, blobstore, &[])
     }
@@ -796,7 +796,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     pub fn into_sharded_entries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> impl Stream<Item = Result<ShardedTraversalOutput<'a, Value>>> + 'a {
         self.into_sharded_prefix_entries(ctx, blobstore, &[])
     }
@@ -804,7 +804,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     pub fn into_prefix_entries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         prefix: &'a [u8],
     ) -> impl Stream<Item = Result<(SmallBinary, Value)>> + 'a {
         bounded_traversal_ordered_stream(
@@ -897,7 +897,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
     fn into_sharded_prefix_entries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         prefix: &'a [u8],
     ) -> impl Stream<Item = Result<ShardedTraversalOutput<'a, Value>>> + 'a {
         bounded_traversal_ordered_stream(
@@ -929,7 +929,7 @@ impl<Value: MapValue> ShardedMapNode<Value> {
 
     async fn sharded_traversal_step<'a>(
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         mut cur_prefix: SmallBinary,
         remaining_prefix: &'a [u8],
         child: ShardedMapChild<Value>,
@@ -1138,7 +1138,7 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::TryStreamExt;
-    use memblob::Memblob;
+    use memblob::KeyedMemblob;
     use mononoke_macros::mononoke;
     use pretty_assertions::assert_eq;
     use quickcheck::Arbitrary;
@@ -1256,11 +1256,11 @@ mod test {
     }
 
     #[derive(Clone)]
-    struct MapHelper(TestShardedMap, CoreContext, Memblob);
+    struct MapHelper(TestShardedMap, CoreContext, KeyedMemblob);
     impl MapHelper {
         async fn from_entries(
             ctx: CoreContext,
-            blobstore: Memblob,
+            blobstore: KeyedMemblob,
             entries: Vec<(&str, Either<MyType, ShardedMapEdge<MyType>>)>,
         ) -> Result<Self> {
             let map = Self(
@@ -1524,7 +1524,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn lookup_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
 
         let map = MapHelper(example_map(), ctx, blobstore);
         // Case 2 > Case 1
@@ -1546,7 +1546,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn into_entries_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
 
         let map = MapHelper(example_map(), ctx, blobstore);
         map.assert_example_map().await
@@ -1575,11 +1575,13 @@ mod test {
 
     async fn assert_all_keys(
         ctx: &CoreContext,
-        blobstore: &impl BlobstoreKeySource,
+        blobstore: &KeyedMemblob,
         keys: Vec<&str>,
     ) -> Result<()> {
         assert_eq!(
-            get_all_keys(ctx, blobstore).await?.collect::<Vec<_>>(),
+            get_all_keys(ctx, blobstore.as_inner())
+                .await?
+                .collect::<Vec<_>>(),
             keys.into_iter().map(String::from).collect::<Vec<_>>()
         );
         Ok(())
@@ -1587,17 +1589,20 @@ mod test {
 
     async fn assert_key_count(
         ctx: &CoreContext,
-        blobstore: &impl BlobstoreKeySource,
+        blobstore: &KeyedMemblob,
         count: usize,
     ) -> Result<()> {
-        assert_eq!(get_all_keys(ctx, blobstore).await?.count(), count);
+        assert_eq!(
+            get_all_keys(ctx, blobstore.as_inner()).await?.count(),
+            count
+        );
         Ok(())
     }
 
     #[mononoke::fbinit_test]
     async fn store_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         let map = example_map();
         map.into_blob().store(&ctx, &blobstore).await?;
         assert_all_keys(&ctx, &blobstore, vec!["mytype.mapnode.blake2.9239707907ceb346d7146c601f131ab7c598a8e98441c2934817c964f0a2c270"]).await?;
@@ -1607,7 +1612,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn update_basic_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         let mut map = MapHelper(Default::default(), ctx.clone(), blobstore.clone());
         map.assert_entries(&[]).await?;
         map.add_remove(EXAMPLE_ENTRIES, &[]).await?;
@@ -1676,7 +1681,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn update_tricky_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         let mut map = MapHelper(Default::default(), ctx.clone(), blobstore.clone());
         map.add_remove(
             &[
@@ -1721,7 +1726,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn update_tricky_deletes_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         let mut map = MapHelper(Default::default(), ctx.clone(), blobstore.clone());
         map.add_remove(EXAMPLE_ENTRIES, &[]).await?;
         // Removing something that is not a prefix of the intermediate node
@@ -1753,7 +1758,7 @@ mod test {
     async fn update_cases_test(fb: FacebookInit) -> Result<()> {
         // Let's try to do updates that cause different cases and assert it all works out
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         let mut map = MapHelper(Default::default(), ctx.clone(), blobstore.clone());
         // Case 1
         map.add_remove(&[("_a", 1), ("_b", 2), ("_c", 3)], &[])
@@ -1793,7 +1798,7 @@ mod test {
     async fn update_case_3_test(fb: FacebookInit) -> Result<()> {
         // Let's try an update that causes case 3 and do detailed asserting
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         let mut map = MapHelper(Default::default(), ctx.clone(), blobstore.clone());
         map.add_remove(
             &[
@@ -1833,7 +1838,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_from_entries_only_values(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
 
         let map = MapHelper::from_entries(
             ctx,
@@ -1851,7 +1856,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_from_entries_only_maps(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
 
         let map_ab = MapHelper::from_entries(
             ctx.clone(),
@@ -1902,7 +1907,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_from_entries_maps_and_values(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
 
         let map_ab = MapHelper::from_entries(
             ctx.clone(),
@@ -1935,7 +1940,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_from_entries_conflict_detection(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
 
         let map_first_six = MapHelper::from_entries(
             ctx.clone(),
@@ -2065,7 +2070,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn test_sharded_trie_map(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
 
         let map = ShardedMapNode::from_entries(
             &ctx,
@@ -2158,10 +2163,10 @@ mod test {
     #[mononoke::fbinit_test]
     fn round_trip_quickcheck(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = Memblob::default();
+        let blobstore = KeyedMemblob::default();
         use tokio::runtime::Runtime;
 
-        struct Roundtrip(Runtime, CoreContext, Memblob);
+        struct Roundtrip(Runtime, CoreContext, KeyedMemblob);
         impl Testable for Roundtrip {
             fn result(&self, r#gen: &mut Gen) -> TestResult {
                 let res = self.0.block_on(async {

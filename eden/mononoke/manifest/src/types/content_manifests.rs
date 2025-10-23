@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -23,7 +23,7 @@ use super::Entry;
 use super::Manifest;
 
 #[async_trait]
-impl<Store: Blobstore> Manifest<Store> for ContentManifest {
+impl<Store: KeyedBlobstore> Manifest<Store> for ContentManifest {
     type TreeId = ContentManifestId;
     type Leaf = ContentManifestFile;
     type TrieMapType = LoadableShardedMapV2Node<ContentManifestEntry>;

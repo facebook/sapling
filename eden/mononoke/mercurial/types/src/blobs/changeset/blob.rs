@@ -14,7 +14,6 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::bail;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
@@ -230,7 +229,7 @@ impl HgBlobChangeset {
         }))
     }
 
-    pub async fn save<'a, B: Blobstore>(
+    pub async fn save<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,

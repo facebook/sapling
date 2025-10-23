@@ -12,7 +12,7 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use context::CoreContext;
 use futures::stream::BoxStream;
@@ -35,7 +35,7 @@ use crate::thrift;
 pub async fn fetch_git_delta_manifest(
     ctx: &CoreContext,
     derived_data: &RepoDerivedData,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
     git_delta_manifest_version: GitDeltaManifestVersion,
     cs_id: ChangesetId,
 ) -> Result<Box<dyn GitDeltaManifestOps + Send + Sync>> {
@@ -178,7 +178,7 @@ pub trait GitDeltaManifestOps {
     fn into_entries<'a>(
         self: Box<Self>,
         ctx: &'a CoreContext,
-        blobstore: &'a Arc<dyn Blobstore>,
+        blobstore: &'a Arc<dyn KeyedBlobstore>,
     ) -> BoxStream<'a, Result<Box<dyn GitDeltaManifestEntryOps + Send>>>;
 }
 
@@ -234,6 +234,6 @@ pub trait ObjectDeltaOps {
     async fn instruction_bytes(
         &self,
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
     ) -> Result<Vec<u8>>;
 }

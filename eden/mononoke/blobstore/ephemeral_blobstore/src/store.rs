@@ -864,10 +864,10 @@ impl RepoEphemeralStore {
 #[cfg(test)]
 mod test {
     use anyhow::anyhow;
-    use blobstore::Blobstore;
     use blobstore::BlobstoreBytes;
     use blobstore::BlobstoreEnumerableWithUnlink;
     use blobstore::BlobstoreKeyParam;
+    use blobstore::KeyedBlobstore;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use maplit::hashset;

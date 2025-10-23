@@ -20,7 +20,7 @@ use anyhow::Context;
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo_hg::BlobRepoHg;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::BookmarkKey;
@@ -365,7 +365,7 @@ pub async fn get_statistics_from_entry(
 pub async fn get_statistics_from_changeset(
     ctx: &CoreContext,
     repo: &Repo,
-    blobstore: &(impl Blobstore + Clone + 'static),
+    blobstore: &(impl KeyedBlobstore + Clone + 'static),
     hg_cs_id: &HgChangesetId,
 ) -> Result<RepoStatistics, Error> {
     info!(

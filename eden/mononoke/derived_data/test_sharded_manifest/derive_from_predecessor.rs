@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
@@ -47,7 +47,7 @@ fn mf_entry_to_test_sharded_mf_entry(
 
 async fn create_test_sharded_manifest_directory(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     subentries: SortedVectorMap<MPathElement, ((), Entry<TestShardedManifestDirectory, ()>)>,
 ) -> Result<TestShardedManifestDirectory> {
     let subentries_map = subentries
@@ -77,7 +77,7 @@ async fn create_test_sharded_manifest_directory(
 
 pub(crate) async fn inner_derive_from_predecessor(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     predecessor: TestManifestDirectory,
 ) -> Result<TestShardedManifestDirectory> {
     derive_manifest_from_predecessor(

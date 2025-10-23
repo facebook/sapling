@@ -9,7 +9,7 @@ use std::cmp::Ordering;
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
@@ -61,7 +61,7 @@ impl BasenameOrSuffix {
 
 impl RootBssmV3DirectoryId {
     /// Finds all files with given basenames in the given directories.
-    pub async fn find_files_filter_basenames<'a, T: Blobstore + Clone + 'static>(
+    pub async fn find_files_filter_basenames<'a, T: KeyedBlobstore + Clone + 'static>(
         &self,
         ctx: &'a CoreContext,
         blobstore: T,

@@ -10,7 +10,7 @@
 
 use anyhow::Error;
 use anyhow::anyhow;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use bytes::Bytes;
 use bytes::BytesMut;
 use cloned::cloned;
@@ -191,7 +191,7 @@ impl StoreRequest {
 /// Fetch the metadata for the underlying content. This will return None if the content does
 /// not exist. It might recompute metadata on the fly if the content exists but the metadata does
 /// not.
-pub async fn get_metadata<B: Blobstore>(
+pub async fn get_metadata<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -205,7 +205,7 @@ pub async fn get_metadata<B: Blobstore>(
 /// Fetch the metadata for the underlying content. This will return None if the content does
 /// not exist, Some(None) if the metadata does not exist, and Some(Some(ContentMetadata))
 /// when metadata found. It will not recompute metadata on the fly
-pub async fn get_metadata_readonly<B: Blobstore>(
+pub async fn get_metadata_readonly<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -220,7 +220,7 @@ pub async fn get_metadata_readonly<B: Blobstore>(
 
 /// Return true if the given key exists. A successful return means the key definitely
 /// either exists or doesn't; an error means the existence could not be determined.
-pub async fn exists<B: Blobstore>(
+pub async fn exists<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -239,7 +239,7 @@ pub async fn exists<B: Blobstore>(
 /// be determined or if opening the file failed. File contents are returned in chunks configured by
 /// FilestoreConfig::read_chunk_size - this defines the max chunk size, but they may be shorter
 /// (not just the final chunks - any of them). Chunks are guaranteed to have non-zero size.
-pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
+pub async fn fetch_with_size<'a, B: KeyedBlobstore + Clone + 'a>(
     blobstore: B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -257,7 +257,7 @@ pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
 ///
 /// Requests for data beyond the end of the file will return only the part of
 /// the file that overlaps with the requested range, if any.
-pub async fn fetch_range_with_size<'a, B: Blobstore + Clone + 'a>(
+pub async fn fetch_range_with_size<'a, B: KeyedBlobstore + Clone + 'a>(
     blobstore: B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -270,7 +270,7 @@ pub async fn fetch_range_with_size<'a, B: Blobstore + Clone + 'a>(
 }
 
 /// This function has the same functionality as fetch_with_size, but doesn't return the file size.
-pub async fn fetch<'a, B: Blobstore + Clone + 'a>(
+pub async fn fetch<'a, B: KeyedBlobstore + Clone + 'a>(
     blobstore: B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -280,7 +280,7 @@ pub async fn fetch<'a, B: Blobstore + Clone + 'a>(
 }
 
 /// Fetch the contents of a blob concatenated together.
-async fn fetch_concat_impl<B: Blobstore>(
+async fn fetch_concat_impl<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -318,7 +318,7 @@ async fn fetch_concat_impl<B: Blobstore>(
 
 /// Fetch the contents of a blob concatenated together. This bad for buffering, and you shouldn't
 /// add new callsites. This is only for compatibility with existing callsites.
-pub async fn fetch_concat_opt<B: Blobstore>(
+pub async fn fetch_concat_opt<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -327,7 +327,7 @@ pub async fn fetch_concat_opt<B: Blobstore>(
 }
 
 /// Similar to `fetch_concat_opt`, but requires the blob to be present, or errors out.
-pub async fn fetch_concat<B: Blobstore>(
+pub async fn fetch_concat<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: impl Into<FetchKey>,
@@ -339,7 +339,7 @@ pub async fn fetch_concat<B: Blobstore>(
 
 /// Similar to `fetch_concat, but requires the content to be a known exact
 /// size.  Suitable for use when the size is known and relatively small.
-pub async fn fetch_concat_exact<'a, B: Blobstore>(
+pub async fn fetch_concat_exact<'a, B: KeyedBlobstore>(
     blobstore: &'a B,
     ctx: &'a CoreContext,
     key: impl Into<FetchKey>,
@@ -355,7 +355,7 @@ pub async fn fetch_concat_exact<'a, B: Blobstore>(
 ///
 /// Mostly behaves as the `fetch`, except it is pushing missing content error into stream if
 /// data associated with the key was not found.
-pub fn fetch_stream<'a, B: Blobstore + Clone + 'a, K: Into<FetchKey>>(
+pub fn fetch_stream<'a, B: KeyedBlobstore + Clone + 'a, K: Into<FetchKey>>(
     blobstore: B,
     ctx: &CoreContext,
     key: K,
@@ -373,7 +373,7 @@ pub fn fetch_stream<'a, B: Blobstore + Clone + 'a, K: Into<FetchKey>>(
 }
 
 /// This function has the same functionality as fetch_range_with_size, but doesn't return the file size.
-pub async fn fetch_range<'a, B: Blobstore>(
+pub async fn fetch_range<'a, B: KeyedBlobstore>(
     blobstore: &'a B,
     ctx: &'a CoreContext,
     key: &FetchKey,
@@ -386,7 +386,7 @@ pub async fn fetch_range<'a, B: Blobstore>(
 /// Fetch the start of a file. Returns a Future that resolves with Some(Bytes) if the file was
 /// found, and None otherwise. If Bytes are found, this function is guaranteed to return as many
 /// Bytes as requested unless the file is shorter than that.
-pub async fn peek<B: Blobstore>(
+pub async fn peek<B: KeyedBlobstore>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -406,7 +406,7 @@ pub async fn peek<B: Blobstore>(
 /// Store a file from a stream. This is guaranteed atomic - either the store will succeed
 /// for the entire file, or it will fail and the file will logically not exist (however
 /// there's no guarantee that any partially written parts will be cleaned up).
-pub async fn store<B: Blobstore + Clone + 'static>(
+pub async fn store<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     config: FilestoreConfig,
     ctx: &CoreContext,
@@ -435,7 +435,7 @@ pub async fn store<B: Blobstore + Clone + 'static>(
 /// size. This function is intended as a transition function while we convert writers to streams
 /// and refactor them to not expect to be able to obtain the ContentId for the content they
 /// uploaded immediately. Do NOT add new callsites.
-pub fn store_bytes<B: Blobstore + Clone + 'static>(
+pub fn store_bytes<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     config: FilestoreConfig,
     ctx: &CoreContext,

@@ -9,13 +9,13 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use borrowed::borrowed;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
 use maplit::btreemap;
-use memblob::Memblob;
+use memblob::KeyedMemblob;
 use mononoke_macros::mononoke;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
@@ -49,7 +49,7 @@ fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<NonRootMPath,
 
 #[mononoke::fbinit_test]
 async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
-    let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blobstore);
 
@@ -311,7 +311,7 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn test_derive_stack_of_manifests(fb: FacebookInit) -> Result<()> {
-    let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blobstore);
 
@@ -715,7 +715,7 @@ fn describe_diff_item(diff: Diff<Entry<TestManifestId, (FileType, TestLeafId)>>)
 
 #[mononoke::fbinit_test]
 async fn test_find_entries(fb: FacebookInit) -> Result<()> {
-    let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blobstore);
 
@@ -856,7 +856,7 @@ async fn test_find_entries(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn test_diff(fb: FacebookInit) -> Result<()> {
-    let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blobstore);
 
@@ -1078,7 +1078,7 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<()> {
-    let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+    let blobstore: Arc<dyn KeyedBlobstore> = Arc::new(KeyedMemblob::default());
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blobstore);
 

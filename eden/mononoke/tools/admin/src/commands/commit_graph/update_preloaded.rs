@@ -11,7 +11,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use clap::Args;
 use cloned::cloned;
 use commit_graph_types::edges::ChangesetEdges;

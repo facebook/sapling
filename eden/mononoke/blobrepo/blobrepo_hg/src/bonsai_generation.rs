@@ -8,7 +8,7 @@
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;

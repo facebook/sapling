@@ -14,6 +14,7 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::GenericBlobstoreCopier;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::RepositoryId;
@@ -53,8 +54,8 @@ impl<T: Blobstore + Clone> AbstractRepoBlobstore<T> {
 pub struct RepoBlobstore(AbstractRepoBlobstore<Arc<dyn Blobstore>>);
 
 impl RepoBlobstore {
-    pub fn boxed(&self) -> Arc<dyn Blobstore> {
-        self.0.0.boxed()
+    pub fn boxed(&self) -> Arc<dyn KeyedBlobstore> {
+        Arc::new(self.clone())
     }
 
     pub fn new(
@@ -101,13 +102,13 @@ impl std::fmt::Display for RepoBlobstore {
 }
 
 #[async_trait]
-impl Blobstore for RepoBlobstore {
+impl KeyedBlobstore for RepoBlobstore {
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        self.0.0.get(ctx, key).await
+        Blobstore::get(&self.0.0, ctx, key).await
     }
     async fn put<'a>(
         &'a self,
@@ -115,14 +116,14 @@ impl Blobstore for RepoBlobstore {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        self.0.0.put(ctx, key, value).await
+        Blobstore::put(&self.0.0, ctx, key, value).await
     }
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
-        self.0.0.is_present(ctx, key).await
+        Blobstore::is_present(&self.0.0, ctx, key).await
     }
     async fn copy<'a>(
         &'a self,
@@ -130,10 +131,10 @@ impl Blobstore for RepoBlobstore {
         old_key: &'a str,
         new_key: String,
     ) -> Result<()> {
-        self.0.0.copy(ctx, old_key, new_key).await
+        Blobstore::copy(&self.0.0, ctx, old_key, new_key).await
     }
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        self.0.0.unlink(ctx, key).await
+        Blobstore::unlink(&self.0.0, ctx, key).await
     }
 }
 

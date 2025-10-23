@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use mononoke_types::hash::GitSha1;
 
@@ -30,7 +30,7 @@ impl MappedGitCommitId {
     pub async fn fetch_root_tree(
         &self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
     ) -> Result<GitTreeId> {
         let git_hash = self.oid().to_object_id()?;
         let git_object = fetch_non_blob_git_object(ctx, blobstore, &git_hash).await?;

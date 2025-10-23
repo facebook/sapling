@@ -12,7 +12,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use clap::Parser;
 use context::CoreContext;
 use context::SessionClass;

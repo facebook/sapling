@@ -9,7 +9,7 @@ use std::collections::VecDeque;
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
 use bytes::Bytes;
@@ -56,7 +56,7 @@ pub fn max_entries_in_fastlog_batch() -> usize {
 }
 
 impl FastlogBatch {
-    pub async fn new_from_raw_list<'a, B: Blobstore>(
+    pub async fn new_from_raw_list<'a, B: KeyedBlobstore>(
         ctx: &'a CoreContext,
         blobstore: &'a B,
         raw_list: impl IntoIterator<Item = (ChangesetId, Vec<ParentOffset>)>,
@@ -86,7 +86,7 @@ impl FastlogBatch {
 
     // Prepending a child with a single parent is a special case - we only need to prepend one entry
     // with ParentOffset(1).
-    pub async fn prepend_child_with_single_parent<'a, B: Blobstore>(
+    pub async fn prepend_child_with_single_parent<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,
@@ -109,7 +109,7 @@ impl FastlogBatch {
         }
     }
 
-    pub fn fetch_raw_list<'a, B: Blobstore>(
+    pub fn fetch_raw_list<'a, B: KeyedBlobstore>(
         &'a self,
         ctx: &'a CoreContext,
         blobstore: &'a B,
@@ -248,7 +248,7 @@ mod test {
     use borrowed::borrowed;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use memblob::Memblob;
+    use memblob::KeyedMemblob;
     use mononoke_macros::mononoke;
     use pretty_assertions::assert_eq;
     use quickcheck::TestResult;
@@ -258,7 +258,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn test_fastlog_batch_empty(fb: FacebookInit) -> Result<()> {
-        let blobstore = Arc::new(Memblob::default());
+        let blobstore = Arc::new(KeyedMemblob::default());
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx, blobstore: &Arc<_>);
 
@@ -272,7 +272,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn test_fastlog_batch_single(fb: FacebookInit) -> Result<()> {
-        let blobstore = Arc::new(Memblob::default());
+        let blobstore = Arc::new(KeyedMemblob::default());
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx, blobstore: &Arc<_>);
 
@@ -288,7 +288,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn test_fastlog_batch_large(fb: FacebookInit) -> Result<()> {
-        let blobstore = Arc::new(Memblob::default());
+        let blobstore = Arc::new(KeyedMemblob::default());
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx, blobstore: &Arc<_>);
 
@@ -310,7 +310,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn test_fastlog_batch_overflow(fb: FacebookInit) -> Result<()> {
-        let blobstore = Arc::new(Memblob::default());
+        let blobstore = Arc::new(KeyedMemblob::default());
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx, blobstore: &Arc<_>);
 
@@ -333,7 +333,7 @@ mod test {
 
     #[quickcheck_async::tokio]
     async fn fastlog_roundtrip(fb: FacebookInit, hashes: Vec<(ChangesetId, i32)>) -> TestResult {
-        let blobstore = Arc::new(Memblob::default());
+        let blobstore = Arc::new(KeyedMemblob::default());
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx, blobstore: &Arc<_>);
 

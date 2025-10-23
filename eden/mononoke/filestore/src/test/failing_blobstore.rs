@@ -7,9 +7,9 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use rand::Rng;
@@ -44,7 +44,7 @@ impl<B: std::fmt::Display> std::fmt::Display for FailingBlobstore<B> {
 }
 
 #[async_trait]
-impl<B: Blobstore> Blobstore for FailingBlobstore<B> {
+impl<B: KeyedBlobstore> KeyedBlobstore for FailingBlobstore<B> {
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -77,6 +77,19 @@ impl<B: Blobstore> Blobstore for FailingBlobstore<B> {
     ) -> Result<BlobstoreIsPresent> {
         if thread_rng().gen_bool(self.read_success_probability) {
             self.inner.is_present(ctx, key).await
+        } else {
+            Err(FailingBlobstoreError.into())
+        }
+    }
+
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        if thread_rng().gen_bool(self.write_success_probability) {
+            self.inner.copy(ctx, old_key, new_key).await
         } else {
             Err(FailingBlobstoreError.into())
         }

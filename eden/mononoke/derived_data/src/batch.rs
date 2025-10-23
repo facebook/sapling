@@ -9,7 +9,7 @@ use std::cmp::Ordering as CmpOrdering;
 use std::collections::BTreeMap;
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use context::CoreContext;
 use futures::stream;
@@ -56,7 +56,7 @@ impl From<FileConflicts> for SplitOptions {
 
 pub async fn split_batch_in_linear_stacks(
     ctx: &CoreContext,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
     batch: Vec<ChangesetId>,
     split_opts: SplitOptions,
 ) -> Result<Vec<LinearStack>, Error> {

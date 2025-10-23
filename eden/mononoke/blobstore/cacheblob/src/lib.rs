@@ -27,3 +27,4 @@ pub use crate::memcache_cache_lease::new_memcache_blobstore;
 
 mod mem_writes;
 pub use crate::mem_writes::MemWritesBlobstore;
+pub use crate::mem_writes::MemWritesKeyedBlobstore;

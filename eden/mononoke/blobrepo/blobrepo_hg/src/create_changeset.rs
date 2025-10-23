@@ -15,7 +15,7 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::format_err;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use bonsai_hg_mapping::BonsaiHgMappingArc;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use cloned::cloned;
@@ -328,7 +328,7 @@ impl CreateChangeset {
 /// Convert Mercurial subtree changes into manifest replacements and bonsai subtree changes
 async fn resolve_subtree_changes(
     ctx: &CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     subtree_changes: Option<&(HgSubtreeChanges, HashMap<HgChangesetId, ChangesetHandle>)>,
 ) -> Result<(
     Vec<ManifestParentReplacement<HgManifestId, (FileType, HgFileNodeId)>>,

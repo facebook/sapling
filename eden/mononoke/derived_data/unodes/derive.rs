@@ -12,7 +12,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::format_err;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
@@ -320,7 +320,7 @@ pub(crate) async fn derive_unode_manifest_with_subtree_changes(
 async fn create_unode_manifest(
     ctx: CoreContext,
     linknode: ChangesetId,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<
         ManifestUnodeId,
@@ -368,7 +368,7 @@ async fn create_unode_manifest(
 async fn create_unode_file(
     ctx: CoreContext,
     linknode: ChangesetId,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     leaf_info: LeafInfo<FileUnodeId, (ContentId, FileType)>,
 ) -> Result<((), FileUnodeId), Error> {
@@ -376,7 +376,7 @@ async fn create_unode_file(
 
     async fn save_unode(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
         parents: Vec<FileUnodeId>,
         content_id: ContentId,
@@ -532,7 +532,7 @@ async fn create_unode_file(
 
 async fn reuse_manifest_parent(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parents: &[ManifestUnodeId],
     subentries: &SortedVectorMap<MPathElement, UnodeEntry>,
 ) -> Result<Option<ManifestUnodeId>, Error> {
@@ -552,7 +552,7 @@ async fn reuse_manifest_parent(
 
 async fn reuse_file_parent(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parents: &[FileUnodeId],
     content_id: &ContentId,
     file_type: FileType,

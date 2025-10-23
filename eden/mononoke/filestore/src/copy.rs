@@ -8,7 +8,7 @@
 use anyhow::Context;
 use anyhow::Result;
 use blobstore::BlobCopier;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
 use context::CoreContext;
@@ -29,7 +29,7 @@ use crate::FileContents;
 use crate::FilestoreConfig;
 
 pub async fn copy(
-    original_blobstore: &impl Blobstore,
+    original_blobstore: &impl KeyedBlobstore,
     copier: &(impl BlobCopier + Sync),
     config: FilestoreConfig,
     ctx: &CoreContext,

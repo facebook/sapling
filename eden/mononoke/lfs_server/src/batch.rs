@@ -11,7 +11,7 @@ use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use filestore::Alias;
@@ -687,6 +687,7 @@ mod test {
     use std::sync::atomic::Ordering;
 
     use async_trait::async_trait;
+    use blobstore::Blobstore;
     use blobstore::BlobstoreBytes;
     use blobstore::BlobstoreGetData;
     use bytes::Bytes;

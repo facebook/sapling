@@ -8,7 +8,7 @@
 use anyhow::Error;
 use anyhow::Result;
 use assert_matches::assert_matches;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::PutBehaviour;
 use borrowed::borrowed;
 use bytes::Bytes;
@@ -20,6 +20,7 @@ use futures::future::TryFutureExt;
 use futures::stream;
 use futures::stream::TryStreamExt;
 use lazy_static::lazy_static;
+use memblob::KeyedMemblob;
 use mononoke_macros::mononoke;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
@@ -81,7 +82,7 @@ async fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -125,7 +126,7 @@ async fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -151,7 +152,7 @@ async fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
 async fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -181,7 +182,7 @@ async fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
 async fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -211,7 +212,7 @@ async fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
 async fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -241,7 +242,7 @@ async fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
 async fn filestore_put_get_seeded_blake3(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -272,7 +273,7 @@ async fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(1),
         concurrency: 5,
@@ -300,7 +301,7 @@ async fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -346,7 +347,7 @@ async fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob);
 
@@ -365,7 +366,7 @@ async fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -389,12 +390,7 @@ async fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    assert!(
-        blob.unlink(part_id.blobstore_key())
-            .await
-            .unwrap()
-            .is_some()
-    );
+    assert!(blob.unlink(ctx, &part_id.blobstore_key()).await.is_ok());
 
     // This should fail
     let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id)).await;
@@ -406,7 +402,7 @@ async fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -435,7 +431,7 @@ async fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -478,7 +474,7 @@ async fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -520,7 +516,7 @@ async fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -566,7 +562,7 @@ async fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -612,7 +608,7 @@ async fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_put_seeded_blake3(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -661,7 +657,7 @@ async fn filestore_get_range(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -709,7 +705,7 @@ async fn filestore_get_invalid_range(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -762,7 +758,7 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
         concurrency: 5,
     };
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     let full_data = &b"foobarbazquxxyz"[..];
@@ -879,7 +875,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
         is_partially_generated: false,
     });
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -893,12 +889,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     .await?;
 
     // Remove the metadata
-    assert!(
-        blob.unlink(metadata.blobstore_key())
-            .await
-            .unwrap()
-            .is_some()
-    );
+    assert!(blob.unlink(ctx, &metadata.blobstore_key()).await.is_ok());
 
     // Getting the metadata should cause it to get recomputed
     let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await?;
@@ -906,12 +897,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     assert_eq!(res, expected);
 
     // Now, delete the content (this shouldn't normally happen, but we're injecting failure here).
-    assert!(
-        blob.unlink(content_id.blobstore_key())
-            .await
-            .unwrap()
-            .is_some()
-    );
+    assert!(blob.unlink(ctx, &content_id.blobstore_key()).await.is_ok());
 
     // Query the metadata again. It should succeed because it's saved.
     let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await?;
@@ -919,12 +905,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     assert_eq!(res, expected);
 
     // Delete the metadata now.
-    assert!(
-        blob.unlink(metadata.blobstore_key())
-            .await
-            .unwrap()
-            .is_some()
-    );
+    assert!(blob.unlink(ctx, &metadata.blobstore_key()).await.is_ok());
 
     // And then, query it again. This should now return None, because the metadata isn't there,
     // and we can't recreate it.
@@ -939,7 +920,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob);
 
@@ -993,7 +974,7 @@ async fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -1026,7 +1007,7 @@ async fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
         concurrency: 5,
     };
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -1054,7 +1035,7 @@ async fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -1082,7 +1063,7 @@ async fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
     let req = request(&bytes);
     let content_id = canonical(&bytes);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 
@@ -1105,7 +1086,7 @@ async fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
-    let blob: memblob::Memblob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
 
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob);
@@ -1125,8 +1106,7 @@ async fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_store_error(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
-    let blob = FailingBlobstore::new(blob, 1.0, 0.0); // Blobstore you can't write to.
+    let blob = FailingBlobstore::new(KeyedMemblob::default(), 1.0, 0.0); // Blobstore you can't write to.
     let ctx = CoreContext::test_mock(fb);
     let req = request(HELLO_WORLD);
     borrowed!(ctx, blob, req);
@@ -1155,7 +1135,7 @@ async fn filestore_store_error(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::new(PutBehaviour::Overwrite);
+    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1192,7 +1172,7 @@ async fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::new(PutBehaviour::Overwrite);
+    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1229,7 +1209,7 @@ async fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::new(PutBehaviour::Overwrite);
+    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1265,7 +1245,7 @@ async fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
 
     let conf = FilestoreConfig {
         chunk_size: Some(1),
@@ -1294,7 +1274,7 @@ async fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(1),
         concurrency: 5,
@@ -1336,7 +1316,7 @@ async fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
 /// Test a case, where both old and new filestore config do not require
 /// chunking of the file (e.g. file size is smaller than a single chunk)
 async fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
 
     let large1 = FilestoreConfig {
         chunk_size: Some(100),
@@ -1379,7 +1359,7 @@ async fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) 
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::new(PutBehaviour::Overwrite);
+    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
 
     let large = FilestoreConfig {
         chunk_size: Some(100),
@@ -1417,7 +1397,7 @@ async fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit)
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::new(PutBehaviour::Overwrite);
+    let blob = KeyedMemblob::new(memblob::Memblob::new(PutBehaviour::Overwrite));
 
     let large = FilestoreConfig {
         chunk_size: Some(5),
@@ -1455,7 +1435,7 @@ async fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Resu
 
 #[mononoke::fbinit_test]
 async fn filestore_test_rechunk_if_needed_tiny_chunks(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
 
     let large = FilestoreConfig {
         chunk_size: Some(4),
@@ -1480,6 +1460,7 @@ async fn filestore_test_rechunk_if_needed_tiny_chunks(fb: FacebookInit) -> Resul
     assert_fetches_as(ctx, blob, full_id, vec!["foob", "ar"]).await?;
 
     // We expect the rechunk is not needed
+
     let (_, rechunked) = filestore::rechunk::rechunk(
         &FailingBlobstore::new(blob.clone(), 1.0, 0.0),
         large,
@@ -1491,7 +1472,7 @@ async fn filestore_test_rechunk_if_needed_tiny_chunks(fb: FacebookInit) -> Resul
     assert_fetches_as(ctx, blob, full_id, vec!["foob", "ar"]).await
 }
 
-async fn assert_fetches_as<B: Blobstore, S: Into<Bytes>>(
+async fn assert_fetches_as<B: KeyedBlobstore, S: Into<Bytes>>(
     ctx: &CoreContext,
     blobstore: &B,
     content_id: ContentId,
@@ -1516,7 +1497,7 @@ async fn filestore_exists(fb: FacebookInit) -> Result<()> {
     let content_id = canonical(HELLO_WORLD);
     let alias = Alias::Sha1(*HELLO_WORLD_SHA1);
 
-    let blob = memblob::Memblob::default();
+    let blob = KeyedMemblob::default();
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx, blob, req);
 

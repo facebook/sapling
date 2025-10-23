@@ -12,7 +12,6 @@ use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::Loadable;
 use bytes::Bytes;

@@ -11,10 +11,10 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
-use cacheblob::MemWritesBlobstore;
+use cacheblob::MemWritesKeyedBlobstore;
 use context::CoreContext;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
@@ -40,15 +40,15 @@ pub struct DerivationContext {
     config_name: String,
     config: DerivedDataTypesConfig,
     pub(crate) rederivation: Option<Arc<dyn Rederivation>>,
-    pub(crate) blobstore: Arc<dyn Blobstore>,
+    pub(crate) blobstore: Arc<dyn KeyedBlobstore>,
     filestore_config: FilestoreConfig,
 
     /// Write cache layered over the blobstore.  This is the same object
     /// with two views, so we can return a reference to the `Arc<dyn
     /// Blobstore>` version if needed.
     blobstore_write_cache: Option<(
-        Arc<dyn Blobstore>,
-        Arc<MemWritesBlobstore<Arc<dyn Blobstore>>>,
+        Arc<dyn KeyedBlobstore>,
+        Arc<MemWritesKeyedBlobstore<Arc<dyn KeyedBlobstore>>>,
     )>,
     restricted_paths: ArcRestrictedPaths,
 }
@@ -60,7 +60,7 @@ impl DerivationContext {
         filenodes: Arc<dyn Filenodes>,
         config_name: String,
         config: DerivedDataTypesConfig,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: Arc<dyn KeyedBlobstore>,
         filestore_config: FilestoreConfig,
         restricted_paths: ArcRestrictedPaths,
     ) -> Self {
@@ -132,7 +132,7 @@ impl DerivationContext {
         }
     }
 
-    pub(crate) fn with_replaced_blobstore(&self, blobstore: Arc<dyn Blobstore>) -> Self {
+    pub(crate) fn with_replaced_blobstore(&self, blobstore: Arc<dyn KeyedBlobstore>) -> Self {
         Self {
             blobstore,
             ..self.clone()
@@ -265,7 +265,7 @@ impl DerivationContext {
     }
 
     /// The blobstore that should be used for storing and retrieving blobs.
-    pub fn blobstore(&self) -> &Arc<dyn Blobstore> {
+    pub fn blobstore(&self) -> &Arc<dyn KeyedBlobstore> {
         match &self.blobstore_write_cache {
             Some((blobstore, _)) => blobstore,
             None => &self.blobstore,
@@ -335,7 +335,8 @@ impl DerivationContext {
     /// a call to `flush` to make them persistent.
     pub(crate) fn enable_write_batching(&mut self) {
         if self.blobstore_write_cache.is_none() {
-            let blobstore = Arc::new(MemWritesBlobstore::new(self.blobstore.clone()));
+            let blobstore = Arc::new(MemWritesKeyedBlobstore::new(self.blobstore.clone()));
+
             self.blobstore_write_cache = Some((blobstore.clone(), blobstore));
         }
     }

@@ -97,7 +97,7 @@ impl ThriftConvert for CGDMCommitPackfileItems {
 impl CGDMCommitPackfileItems {
     pub async fn new(
         ctx: &CoreContext,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: Arc<dyn KeyedBlobstore>,
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         cs_ids: &[ChangesetId],
     ) -> Result<Self> {
@@ -332,7 +332,7 @@ impl CGDMGroup {
         self,
         ctx: &CoreContext,
         derived_data: &RepoDerivedData,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         git_delta_manifest_version: GitDeltaManifestVersion,
     ) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send>>> {
         if let Some(cgdm_id) = self.cgdm_id {

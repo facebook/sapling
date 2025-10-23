@@ -8,7 +8,7 @@
 use std::io::Write;
 
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::stream::TryStreamExt;
 use manifest::Entry;
@@ -21,7 +21,7 @@ use unicode_width::UnicodeWidthStr;
 /// Displays a Mercurial manifest, one entry per line.
 pub async fn display_hg_manifest(
     ctx: &CoreContext,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
     mut w: impl Write,
     manifest: &HgBlobManifest,
 ) -> Result<()> {

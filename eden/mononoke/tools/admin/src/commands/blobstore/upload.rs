@@ -10,8 +10,8 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
+use blobstore::KeyedBlobstore;
 use clap::Args;
 use context::CoreContext;
 
@@ -28,7 +28,7 @@ pub struct BlobstoreUploadArgs {
 
 pub async fn upload(
     ctx: &CoreContext,
-    blobstore: &dyn Blobstore,
+    blobstore: &dyn KeyedBlobstore,
     upload_args: BlobstoreUploadArgs,
 ) -> Result<()> {
     let data = tokio::fs::read(upload_args.value_file)

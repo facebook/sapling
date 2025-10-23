@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::StoreLoadable;
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
@@ -111,7 +111,7 @@ impl SkeletonManifest {
     pub async fn first_case_conflict<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> Result<Option<(NonRootMPath, NonRootMPath)>> {
         let mut sk_mf = Cow::Borrowed(self);
         let mut path = MPath::ROOT;
@@ -152,7 +152,7 @@ impl SkeletonManifest {
     pub async fn first_new_case_conflict<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         parents: Vec<SkeletonManifest>,
         excluded_paths: &PrefixTrie,
     ) -> Result<Option<(NonRootMPath, NonRootMPath)>> {

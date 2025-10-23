@@ -405,12 +405,13 @@ mod tests {
     use std::sync::Arc;
 
     use anyhow::anyhow;
-    use blobstore::Blobstore;
+    use blobstore::KeyedBlobstore;
     use blobstore::PutBehaviour;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
     use futures::stream::TryStreamExt;
     use maplit::btreemap;
+    use memblob::KeyedMemblob;
     use memblob::Memblob;
     use mononoke_macros::mononoke;
     use mononoke_types::FileType;
@@ -427,7 +428,7 @@ mod tests {
 
     async fn get_trie_map(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         mf: TestManifestId,
         path: &str,
         prefix: &str,
@@ -455,7 +456,7 @@ mod tests {
 
     async fn get_entry(
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
         mf: TestManifestId,
         path: &str,
     ) -> Result<Entry<TestManifestId, (FileType, TestLeafId)>> {
@@ -466,7 +467,8 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn test_compare_manifest_single_parent(fb: FacebookInit) -> Result<()> {
-        let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::new(PutBehaviour::Overwrite));
+        let blobstore: Arc<dyn KeyedBlobstore> =
+            Arc::new(KeyedMemblob::new(Memblob::new(PutBehaviour::Overwrite)));
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx, blobstore);
 
@@ -555,7 +557,8 @@ mod tests {
 
     #[mononoke::fbinit_test]
     async fn test_compare_manifest_tree(fb: FacebookInit) -> Result<()> {
-        let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::new(PutBehaviour::Overwrite));
+        let blobstore: Arc<dyn KeyedBlobstore> =
+            Arc::new(KeyedMemblob::new(Memblob::new(PutBehaviour::Overwrite)));
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx, blobstore);
 

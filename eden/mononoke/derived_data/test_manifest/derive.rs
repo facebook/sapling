@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
@@ -38,7 +38,7 @@ use crate::mapping::RootTestManifestDirectory;
 
 async fn empty_directory(
     ctx: &CoreContext,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
 ) -> Result<TestManifestDirectory> {
     let leaf = TestManifest::empty();
     let id = leaf.into_blob().store(ctx, blobstore).await?;
@@ -103,7 +103,7 @@ pub async fn get_test_manifest_subtree_changes(
 
 async fn create_test_manifest_directory(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     subentries: impl Iterator<Item = (MPathElement, (Option<()>, Entry<TestManifestDirectory, ()>))>,
 ) -> Result<TestManifestDirectory> {
     let mut max_basename_length = 0;
@@ -136,7 +136,7 @@ async fn create_test_manifest_directory(
 
 async fn inner_derive(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<TestManifestDirectory>,
     changes: Vec<(NonRootMPath, Option<()>)>,
     subtree_changes: Vec<ManifestParentReplacement<TestManifestDirectory, ()>>,

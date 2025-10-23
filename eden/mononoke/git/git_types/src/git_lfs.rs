@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use anyhow::anyhow;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
@@ -30,7 +30,7 @@ pub fn format_lfs_pointer(sha256: Sha256, size: u64) -> String {
 
 /// Given a file change generates a Git LFS pointer that points to actual file contents
 /// and stores it in the blobstore. Returns oid of the LFS pointer.
-pub async fn generate_and_store_git_lfs_pointer<B: Blobstore + Clone + 'static>(
+pub async fn generate_and_store_git_lfs_pointer<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     filestore_config: FilestoreConfig,
     ctx: &CoreContext,

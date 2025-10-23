@@ -8,7 +8,7 @@
 mod errors;
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::BytesMut;
@@ -76,7 +76,7 @@ where
     async fn get_file_digest<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         content_id: &ContentId,
     ) -> Result<MononokeDigest, Error> {
         let meta = filestore::get_metadata(blobstore, ctx, &content_id.to_owned().into())
@@ -88,7 +88,7 @@ where
     async fn fetch_upload_file<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         content_id: ContentId,  // for fetching
         digest: MononokeDigest, // for uploading
     ) -> Result<UploadOutcome, Error> {
@@ -114,7 +114,7 @@ where
     pub async fn upload_file_content<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         filenode_id: &HgFileNodeId,
         digest: Option<&MononokeDigest>,
         prior_lookup: bool,
@@ -143,7 +143,7 @@ where
     pub async fn upload_file_by_content_id<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         content_id: &ContentId,
         prior_lookup: bool,
     ) -> Result<UploadOutcome, Error> {
@@ -164,7 +164,7 @@ where
     pub async fn upload_file_contents<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         ids: impl IntoIterator<Item = (HgFileNodeId, Option<MononokeDigest>)>,
         prior_lookup: bool,
     ) -> Vec<Result<(HgFileNodeId, UploadOutcome), Error>> {
@@ -185,7 +185,7 @@ where
     pub async fn upload_files_by_content_id<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         ids: impl IntoIterator<Item = ContentId>,
         prior_lookup: bool,
     ) -> Vec<Result<(ContentId, UploadOutcome), Error>> {
@@ -203,7 +203,7 @@ where
     pub async fn ensure_upload_file_contents<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         ids: impl IntoIterator<Item = (HgFileNodeId, Option<MononokeDigest>)>,
         prior_lookup: bool,
     ) -> Result<Vec<(HgFileNodeId, UploadOutcome)>, Error> {
@@ -216,7 +216,7 @@ where
     pub async fn ensure_upload_files_by_content_id<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         ids: Vec<ContentId>,
         prior_lookup: bool,
     ) -> Result<Vec<(ContentId, UploadOutcome)>, Error> {
@@ -232,7 +232,7 @@ where
     pub async fn upload_augmented_tree<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         manifest_id: &HgAugmentedManifestId,
         digest: Option<&MononokeDigest>,
         prior_lookup: bool,
@@ -278,7 +278,7 @@ where
     pub async fn upload_augmented_trees<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         manifest_ids: impl IntoIterator<Item = (HgAugmentedManifestId, Option<MononokeDigest>)>,
         prior_lookup: bool,
     ) -> Vec<Result<(HgAugmentedManifestId, UploadOutcome), Error>> {
@@ -297,7 +297,7 @@ where
     pub async fn ensure_upload_augmented_trees<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         manifest_ids: impl IntoIterator<Item = (HgAugmentedManifestId, Option<MononokeDigest>)>,
         prior_lookup: bool,
     ) -> Result<Vec<(HgAugmentedManifestId, UploadOutcome)>, Error> {
@@ -310,7 +310,7 @@ where
     pub async fn is_augmented_tree_uploaded<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
         manifest_id: &HgAugmentedManifestId,
     ) -> Result<bool, Error> {
         let augmented_manifest_envelope = match manifest_id.load(ctx, blobstore).await {

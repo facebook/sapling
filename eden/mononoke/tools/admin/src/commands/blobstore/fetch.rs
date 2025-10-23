@@ -10,8 +10,8 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
+use blobstore::KeyedBlobstore;
 use bytes::Bytes;
 use bytes::BytesMut;
 use changeset_info::ChangesetInfo;
@@ -227,7 +227,7 @@ impl Decoded {
 
 async fn decode(
     ctx: &CoreContext,
-    blobstore: &dyn Blobstore,
+    blobstore: &dyn KeyedBlobstore,
     key: &str,
     data: BlobstoreGetData,
     mut decode_as: DecodeAs,
@@ -365,7 +365,7 @@ async fn decode(
 
 pub async fn fetch(
     ctx: &CoreContext,
-    blobstore: &dyn Blobstore,
+    blobstore: &dyn KeyedBlobstore,
     fetch_args: BlobstoreFetchArgs,
 ) -> Result<()> {
     let value = blobstore
@@ -434,7 +434,7 @@ pub async fn fetch(
 
 async fn render_hg_augmented_manifest(
     ctx: &CoreContext,
-    blobstore: &dyn Blobstore,
+    blobstore: &dyn KeyedBlobstore,
     mf: ShardedHgAugmentedManifest,
 ) -> Result<String> {
     let data = mf

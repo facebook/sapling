@@ -14,7 +14,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::format_err;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
@@ -140,7 +140,7 @@ pub(crate) async fn derive_skeleton_manifest_with_subtree_changes(
 /// from the parent skeleton manifests to avoid fetching too much.
 async fn collect_skeleton_subentries(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parents: &[SkeletonManifestId],
     subentries: BTreeMap<
         MPathElement,
@@ -230,7 +230,7 @@ async fn collect_skeleton_subentries(
 /// Create a new skeleton manifest for the tree described by `tree_info`.
 async fn create_skeleton_manifest(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<
         SkeletonManifestId,

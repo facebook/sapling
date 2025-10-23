@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use anyhow::anyhow;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
@@ -49,7 +49,7 @@ pub async fn fetch_content_for_blame(
         .config()
         .blame_filesize_limit
         .unwrap_or(DEFAULT_BLAME_FILESIZE_LIMIT);
-    let blobstore = repo.repo_blobstore_arc() as Arc<dyn Blobstore>;
+    let blobstore = repo.repo_blobstore_arc() as Arc<dyn KeyedBlobstore>;
     fetch_content_for_blame_with_limit(ctx, &blobstore, file_unode_id, filesize_limit).await
 }
 
@@ -57,7 +57,7 @@ pub async fn fetch_content_for_blame(
 /// too large or binary data is detected then the fetch may be rejected.
 pub async fn fetch_content_for_blame_with_limit(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     file_unode_id: FileUnodeId,
     filesize_limit: u64,
 ) -> Result<FetchOutcome> {

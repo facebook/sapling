@@ -10,7 +10,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bytes::Bytes;
 use cloned::cloned;
@@ -105,7 +105,7 @@ pub(crate) async fn derive_blame_v2(
 async fn create_blame_v2(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     renames: Arc<UnodeRenameSources>,
     csid: ChangesetId,
     path: NonRootMPath,
@@ -210,7 +210,7 @@ enum BlameParentSource {
 async fn fetch_blame_parent(
     ctx: &CoreContext,
     derivation_ctx: &DerivationContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parent_info: BlameParentSource,
     path: NonRootMPath,
     filesize_limit: u64,

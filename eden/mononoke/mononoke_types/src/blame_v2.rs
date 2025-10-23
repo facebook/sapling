@@ -20,7 +20,6 @@ use anyhow::anyhow;
 use anyhow::bail;
 use async_trait::async_trait;
 use bit_set::BitSet;
-use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
@@ -105,7 +104,7 @@ impl Loadable for BlameV2Id {
 ///
 /// NOTE: `Blame` is not a `Storable` object and can only be associated with
 ///       some file unode id.
-pub async fn store_blame<'a, B: Blobstore>(
+pub async fn store_blame<'a, B: KeyedBlobstore>(
     ctx: &'a CoreContext,
     blobstore: &'a B,
     file_unode_id: FileUnodeId,

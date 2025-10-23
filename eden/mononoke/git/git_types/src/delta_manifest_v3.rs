@@ -12,7 +12,6 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
@@ -61,7 +60,7 @@ pub enum GitDeltaManifestV3 {
 impl GitDeltaManifestV3 {
     pub async fn from_entries(
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         entries: Vec<GDMV3Entry>,
         max_inlinable_size: usize,
     ) -> Result<Self> {
@@ -105,7 +104,7 @@ impl GitDeltaManifestV3 {
     pub fn into_entries<'a>(
         self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl Blobstore,
+        blobstore: &'a impl KeyedBlobstore,
     ) -> BoxStream<'a, Result<GDMV3Entry>> {
         match self {
             Self::Inlined(entries) => stream::iter(entries).map(Ok).boxed(),
@@ -190,7 +189,7 @@ pub struct GDMV3ObjectEntry {
 impl GDMV3ObjectEntry {
     pub async fn from_tree_entry(
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         entry: &Entry<GitTreeId, GitLeaf>,
         inlined_bytes: Option<Bytes>,
     ) -> Result<Self> {
@@ -230,7 +229,7 @@ pub struct GDMV3Instructions {
 impl GDMV3Instructions {
     pub async fn from_raw_delta(
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
         delta: Vec<u8>,
         chunk_size: u64,
         max_inlinable_size: u64,
@@ -307,7 +306,7 @@ impl GDMV3InstructionBytes {
     pub async fn into_raw_bytes(
         self,
         ctx: &CoreContext,
-        blobstore: &impl Blobstore,
+        blobstore: &impl KeyedBlobstore,
     ) -> Result<Vec<u8>> {
         match self {
             GDMV3InstructionBytes::Inlined(bytes) => Ok(bytes.into()),
@@ -429,7 +428,7 @@ impl GitDeltaManifestOps for GitDeltaManifestV3 {
     fn into_entries<'a>(
         self: Box<Self>,
         ctx: &'a CoreContext,
-        blobstore: &'a Arc<dyn Blobstore>,
+        blobstore: &'a Arc<dyn KeyedBlobstore>,
     ) -> BoxStream<'a, Result<Box<dyn GitDeltaManifestEntryOps + Send>>> {
         GitDeltaManifestV3::into_entries(*self, ctx, blobstore)
             .map_ok(|entry| -> Box<dyn GitDeltaManifestEntryOps + Send> { Box::new(entry) })
@@ -495,7 +494,7 @@ impl ObjectDeltaOps for GDMV3DeltaEntry {
     async fn instruction_bytes(
         &self,
         ctx: &CoreContext,
-        blobstore: &Arc<dyn Blobstore>,
+        blobstore: &Arc<dyn KeyedBlobstore>,
     ) -> Result<Vec<u8>> {
         self.instructions
             .instruction_bytes
@@ -507,7 +506,7 @@ impl ObjectDeltaOps for GDMV3DeltaEntry {
 
 #[cfg(test)]
 mod tests {
-    use delayblob::DelayedBlobstore;
+    use delayblob::DelayedKeyedBlobstore;
     use fbinit::FacebookInit;
     use flate2::write::ZlibDecoder;
     use memblob::Memblob;
@@ -518,7 +517,7 @@ mod tests {
     #[mononoke::fbinit_test]
     async fn test_gdm_v3_delta_instructions_round_trip(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let blobstore = DelayedBlobstore::new(
+        let blobstore = DelayedKeyedBlobstore::new(
             Memblob::default(),
             rand_distr::Normal::new(0.005, 0.005).unwrap(),
             rand_distr::Normal::new(0.05, 0.05).unwrap(),

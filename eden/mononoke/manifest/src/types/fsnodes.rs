@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -25,7 +25,7 @@ use super::OrderedManifest;
 use super::Weight;
 
 #[async_trait]
-impl<Store: Blobstore> Manifest<Store> for Fsnode {
+impl<Store: KeyedBlobstore> Manifest<Store> for Fsnode {
     type TreeId = FsnodeId;
     type Leaf = FsnodeFile;
     type TrieMapType = SortedVectorTrieMap<Entry<FsnodeId, FsnodeFile>>;
@@ -74,7 +74,7 @@ fn convert_fsnode(fsnode_entry: &FsnodeEntry) -> Entry<FsnodeId, FsnodeFile> {
 }
 
 #[async_trait]
-impl<Store: Blobstore> OrderedManifest<Store> for Fsnode {
+impl<Store: KeyedBlobstore> OrderedManifest<Store> for Fsnode {
     async fn lookup_weighted(
         &self,
         _ctx: &CoreContext,

@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::Bookmarks;
@@ -802,7 +802,7 @@ async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
     bcs: BonsaiChangeset,
     parent_mf_ids: Vec<Root::Id>,
 ) -> Result<(ChangesetId, Root::Id, Vec<(MPath, Status)>), Error> {
-    let blobstore = repo.repo_blobstore_arc() as Arc<dyn Blobstore>;
+    let blobstore = repo.repo_blobstore_arc() as Arc<dyn KeyedBlobstore>;
     let bcs_id = bcs.get_changeset_id();
 
     repo.repo_derived_data()

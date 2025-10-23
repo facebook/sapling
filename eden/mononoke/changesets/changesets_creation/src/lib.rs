@@ -10,7 +10,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use anyhow::anyhow;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use cloned::cloned;
 use commit_graph::ChangesetParents;
 use commit_graph::ChangesetSubtreeSources;

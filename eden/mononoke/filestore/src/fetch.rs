@@ -9,7 +9,7 @@ use std::cmp::max;
 use std::cmp::min;
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use bytes::Bytes;
@@ -108,7 +108,7 @@ impl RangeInner {
     }
 }
 
-pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
+pub fn stream_file_bytes<'a, B: KeyedBlobstore + Clone + 'a>(
     blobstore: B,
     ctx: &CoreContext,
     file_contents: FileContents,
@@ -244,7 +244,7 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
     Ok(stream)
 }
 
-pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
+pub async fn fetch_with_size<'a, B: KeyedBlobstore + Clone + 'a>(
     blobstore: B,
     ctx: &CoreContext,
     content_id: ContentId,

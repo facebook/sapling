@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Result;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use blobstore::Storable;
 use cloned::cloned;
@@ -96,7 +96,7 @@ async fn get_skeleton_manifest_subtree_changes(
 
 async fn empty_manifest_id(
     ctx: &CoreContext,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
 ) -> Result<SkeletonManifestV2Id> {
     let empty_manifest = SkeletonManifestV2::empty();
     empty_manifest.into_blob().store(ctx, blobstore).await
@@ -113,7 +113,7 @@ fn mf_entry_to_skeleton_manifest_v2_entry(
 
 async fn create_skeleton_manifest_v2(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     subentries: TreeInfoSubentries<
         SkeletonManifestV2,
         (),
@@ -140,7 +140,7 @@ async fn create_skeleton_manifest_v2(
 
 pub(crate) async fn inner_derive(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &Arc<dyn KeyedBlobstore>,
     parents: Vec<SkeletonManifestV2>,
     changes: Vec<(NonRootMPath, Option<()>)>,
     subtree_changes: Vec<ManifestParentReplacement<SkeletonManifestV2, ()>>,

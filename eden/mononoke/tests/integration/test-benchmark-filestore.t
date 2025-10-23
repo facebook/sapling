@@ -12,7 +12,7 @@
   $ echo "foobar" > "${TESTTMP}/foo"
 
   $ GLOG_minloglevel=5 "$MONONOKE_BENCHMARK_FILESTORE" "${CACHE_ARGS[@]}" "${COMMON_ARGS[@]}" --mononoke-config-path "$TESTTMP"/mononoke-config "${TESTTMP}/foo" memory
-  Test with FilestoreConfig { * }, writing into ThrottledBlob { * } (glob)
+  Test with FilestoreConfig { * }, writing into NoopKeyedBlobstore { * } (glob)
   Write start: 7 B
   Success: * (glob)
   Write committed: "content.blake2.e8ab2cbe03f03318289331d6e7c3173dbb530cce996f94208d86e7421e5c3f28"

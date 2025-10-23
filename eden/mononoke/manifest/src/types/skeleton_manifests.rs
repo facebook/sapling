@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -37,7 +37,7 @@ pub(crate) fn skeleton_manifest_v2_to_mf_entry(
 }
 
 #[async_trait]
-impl<Store: Blobstore> Manifest<Store> for SkeletonManifestV2 {
+impl<Store: KeyedBlobstore> Manifest<Store> for SkeletonManifestV2 {
     type TreeId = SkeletonManifestV2;
     type Leaf = ();
     type TrieMapType = LoadableShardedMapV2Node<SkeletonManifestV2Entry>;
@@ -124,7 +124,7 @@ impl<Store: Blobstore> Manifest<Store> for SkeletonManifestV2 {
 }
 
 #[async_trait]
-impl<Store: Blobstore> Manifest<Store> for SkeletonManifest {
+impl<Store: KeyedBlobstore> Manifest<Store> for SkeletonManifest {
     type TreeId = SkeletonManifestId;
     type Leaf = ();
     type TrieMapType = SortedVectorTrieMap<Entry<SkeletonManifestId, ()>>;
@@ -192,7 +192,7 @@ fn convert_skeleton_manifest_v2_to_weighted(
 }
 
 #[async_trait]
-impl<Store: Blobstore> OrderedManifest<Store> for SkeletonManifestV2 {
+impl<Store: KeyedBlobstore> OrderedManifest<Store> for SkeletonManifestV2 {
     async fn list_weighted(
         &self,
         ctx: &CoreContext,
@@ -220,7 +220,7 @@ impl<Store: Blobstore> OrderedManifest<Store> for SkeletonManifestV2 {
 }
 
 #[async_trait]
-impl<Store: Blobstore> OrderedManifest<Store> for SkeletonManifest {
+impl<Store: KeyedBlobstore> OrderedManifest<Store> for SkeletonManifest {
     async fn lookup_weighted(
         &self,
         _ctx: &CoreContext,

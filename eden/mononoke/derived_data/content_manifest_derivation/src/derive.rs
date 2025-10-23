@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use anyhow::anyhow;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
@@ -108,7 +108,7 @@ pub async fn get_content_manifest_subtree_changes(
 
 async fn empty_directory(
     ctx: &CoreContext,
-    blobstore: &impl Blobstore,
+    blobstore: &impl KeyedBlobstore,
 ) -> Result<ContentManifestId> {
     ContentManifest::empty()
         .into_blob()
@@ -125,7 +125,7 @@ fn create_entry(entry: Entry<ContentManifestId, ContentManifestFile>) -> Content
 
 async fn create_content_manifest_directory(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn KeyedBlobstore>,
     sender: &mpsc::UnboundedSender<BoxFuture<'static, Result<()>>>,
     subentries: TreeInfoSubentries<
         ContentManifestId,

@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use blobstore::Blobstore;
+use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -30,7 +30,7 @@ pub(crate) fn ccsm_to_mf_entry(entry: CcsmEntry) -> Entry<CaseConflictSkeletonMa
 }
 
 #[async_trait]
-impl<Store: Blobstore> Manifest<Store> for CaseConflictSkeletonManifest {
+impl<Store: KeyedBlobstore> Manifest<Store> for CaseConflictSkeletonManifest {
     type TreeId = CaseConflictSkeletonManifest;
     type Leaf = ();
     type TrieMapType = LoadableShardedMapV2Node<CcsmEntry>;
@@ -132,7 +132,7 @@ fn convert_ccsm_to_weighted(
 }
 
 #[async_trait]
-impl<Store: Blobstore> OrderedManifest<Store> for CaseConflictSkeletonManifest {
+impl<Store: KeyedBlobstore> OrderedManifest<Store> for CaseConflictSkeletonManifest {
     async fn list_weighted(
         &self,
         ctx: &CoreContext,

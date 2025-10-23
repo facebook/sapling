@@ -14,6 +14,7 @@ test = false
 
 [dependencies]
 anyhow = "1.0.98"
+async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bytes = { version = "1.10", features = ["serde"] }
