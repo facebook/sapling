@@ -14,6 +14,7 @@ use fbinit::FacebookInit;
 use slog::Logger;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot::Receiver;
+use tokio::sync::oneshot::Sender;
 
 use crate::RepoShardedProcess;
 
@@ -46,6 +47,7 @@ impl ShardedProcessExecutor {
         _logger: &Logger,
         _terminate_signal_receiver: Receiver<bool>,
         _quiesce_timeout: Option<Duration>,
+        _quiesce_completion_sender: Option<Sender<bool>>,
     ) -> Result<()> {
         unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }

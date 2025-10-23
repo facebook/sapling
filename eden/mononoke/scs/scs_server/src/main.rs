@@ -51,6 +51,7 @@ use panichandler::Fate;
 use scs_methods::source_control_impl::SourceControlServiceImpl;
 use sharding_ext::RepoShard;
 use slog::info;
+use slog::warn;
 use source_control_services::make_SourceControlService_server;
 use sql_construct::SqlConstruct;
 use sql_storage::Destination;
@@ -285,6 +286,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let will_exit = Arc::new(AtomicBool::new(false));
     let (sm_shutdown_sender, sm_shutdown_receiver) = tokio::sync::oneshot::channel::<bool>();
+    let (quiesce_sender, quiesce_receiver) = tokio::sync::oneshot::channel::<bool>();
 
     if let Some(max_memory) = args.max_memory {
         memory::set_max_memory(max_memory);
@@ -398,6 +400,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         writer.write_all(b"\n")?;
     }
 
+    let timeout_secs = justknobs::get_as::<u64>(
+        "scm/mononoke:shardmanager_shutdown_timeout_secs",
+        Some("scs_server"),
+    )
+    .unwrap();
+    let quiesce_timeout = std::time::Duration::from_secs(timeout_secs);
+
     if let Some(executor) = args.sharded_executor_args.build_executor(
         fb,
         runtime.clone(),
@@ -411,18 +420,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         runtime.spawn({
             let logger = logger.clone();
             {
-                let timeout_secs = justknobs::get_as::<u64>(
-                    "scm/mononoke:shardmanager_shutdown_timeout_secs",
-                    Some("scs_server"),
-                )
-                .unwrap();
-                let quiesce_timeout = std::time::Duration::from_secs(timeout_secs);
                 async move {
                     executor
                         .block_and_execute_with_quiesce_timeout(
                             &logger,
                             sm_shutdown_receiver,
                             Some(quiesce_timeout),
+                            Some(quiesce_sender),
                         )
                         .await
                 }
@@ -434,6 +438,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     // stats aggregation.
     app.start_stats_aggregation()?;
 
+    let cloned_logger = logger.clone();
     app.wait_until_terminated(
         move || {
             let _ = sm_shutdown_sender.send(true);
@@ -442,13 +447,20 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         args.shutdown_timeout_args.shutdown_grace_period,
         async {
             // Note that async blocks are lazy, so this isn't called until first poll
+            match quiesce_receiver.await {
+                Ok(_) => info!(
+                    &cloned_logger.clone(),
+                    "received signal from quiesce sender"
+                ),
+                Err(_) => warn!(&cloned_logger, "quiesce sender dropped"),
+            };
             let _ = task::spawn_blocking(move || {
                 // Calling `stop` blocks until the service has completed all requests.
                 service_framework.stop();
             })
             .await;
         },
-        args.shutdown_timeout_args.shutdown_timeout,
+        args.shutdown_timeout_args.shutdown_timeout + quiesce_timeout,
         None,
     )?;
 

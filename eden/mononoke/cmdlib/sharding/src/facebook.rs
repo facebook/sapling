@@ -33,6 +33,7 @@ use stats::prelude::*;
 use tokio::runtime::Handle;
 use tokio::sync::RwLock;
 use tokio::sync::oneshot::Receiver;
+use tokio::sync::oneshot::Sender;
 use tokio::task::JoinHandle;
 use tokio::time;
 
@@ -898,8 +899,8 @@ impl ShardedProcessHandler {
         }
     }
 
-    pub async fn repo_map_empty(&self) -> bool {
-        self.repo_map.read().await.is_empty()
+    pub async fn repo_map_len(&self) -> usize {
+        self.repo_map.read().await.len()
     }
 }
 
@@ -1191,7 +1192,7 @@ impl ShardedProcessExecutor {
         logger: &Logger,
         terminate_signal_receiver: Receiver<bool>,
     ) -> Result<()> {
-        self.block_and_execute_with_quiesce_timeout(logger, terminate_signal_receiver, None)
+        self.block_and_execute_with_quiesce_timeout(logger, terminate_signal_receiver, None, None)
             .await
     }
 
@@ -1200,6 +1201,7 @@ impl ShardedProcessExecutor {
         logger: &Logger,
         terminate_signal_receiver: Receiver<bool>,
         quiesce_timeout: Option<Duration>,
+        quiesce_completion_sender: Option<Sender<bool>>,
     ) -> Result<()> {
         info!(logger, "Initiating sharded execution for service");
         let shards = self.client.get_my_shards()?;
@@ -1226,19 +1228,23 @@ impl ShardedProcessExecutor {
                         STATS::manual_shard_eviction_by_timeout.add_value(1);
                         break;
                     }
-                    repo_empty = self.handler.repo_map_empty() => {
-                        if repo_empty {
+                    repo_count = self.handler.repo_map_len() => {
+                        if repo_count == 0 {
                             info!(logger, "All repos moved, evicting...");
                             STATS::manual_shard_eviction_by_repomap.add_value(1);
                             break;
                         } else {
-                            info!(logger, "repos present, not evicting...");
+                            info!(logger, "repos present count={}, not evicting...", repo_count);
                             // Sleep a bit before next check to avoid busy loop
                             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                         }
                     }
                 }
             }
+        }
+
+        if let Some(quiesce_completion_sender) = quiesce_completion_sender {
+            let _ = quiesce_completion_sender.send(true);
         }
         Ok(())
     }

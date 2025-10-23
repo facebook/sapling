@@ -67,6 +67,7 @@ use mononoke_app::monitoring::MonitoringAppExtension;
 use ods_counters::OdsCounterManager;
 use rate_limiting::RateLimitEnvironment;
 use slog::info;
+use slog::warn;
 use tokio::net::TcpListener;
 
 use crate::middleware::Ods3Middleware;
@@ -220,6 +221,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
     let will_exit = Arc::new(AtomicBool::new(false));
     let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
+    let (quiesce_sender, quiesce_receiver) = tokio::sync::oneshot::channel::<bool>();
     let runtime = app.runtime().clone();
     // Service name is used for shallow or deep sharding. If sharding itself is disabled, provide
     // service name as None while opening repos.
@@ -251,6 +253,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             })
         })
     };
+
+    let quiesce_timeout_secs = justknobs::get_as::<u64>(
+        "scm/mononoke:shardmanager_shutdown_timeout_secs",
+        Some("git_server"),
+    )
+    .unwrap();
+    let quiesce_timeout = std::time::Duration::from_secs(quiesce_timeout_secs);
 
     let requests_counter = Arc::new(AtomicI64::new(0));
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
@@ -352,17 +361,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     let logger = app.logger().clone();
                     {
                         async move {
-                            let timeout_secs = justknobs::get_as::<u64>(
-                                "scm/mononoke:shardmanager_shutdown_timeout_secs",
-                                Some("git_server"),
-                            )
-                            .unwrap();
-                            let quiesce_timeout = std::time::Duration::from_secs(timeout_secs);
                             executor
                                 .block_and_execute_with_quiesce_timeout(
                                     &logger,
                                     receiver,
                                     Some(quiesce_timeout),
+                                    Some(quiesce_sender),
                                 )
                                 .await
                         }
@@ -398,6 +402,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             Ok(())
         }
     };
+    let cloned_logger = app.logger().clone();
     app.run_until_terminated(
         server,
         move || {
@@ -406,6 +411,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         },
         args.shutdown_timeout_args.shutdown_grace_period,
         async move {
+            match quiesce_receiver.await {
+                Ok(_) => info!(
+                    &cloned_logger.clone(),
+                    "received signal from quiesce sender"
+                ),
+                Err(_) => warn!(&cloned_logger, "quiesce sender dropped"),
+            };
             let _ = shutdown_tx.send(());
             // Currently we kill off in-flight requests as soon as we've closed the listener.
             // If this is a problem in prod, this would be the point at which to wait
@@ -413,7 +425,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             // To do this properly, we'd need to track the `Connection` futures that Gotham
             // gets from Hyper, tell them to gracefully shutdown, then wait for them to complete
         },
-        args.shutdown_timeout_args.shutdown_timeout,
+        args.shutdown_timeout_args.shutdown_timeout + quiesce_timeout,
         // TODO
         Some(requests_counter),
     )?;

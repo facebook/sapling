@@ -105,6 +105,7 @@
     "scm/mononoke:retry_query_from_replica_with_consistency_check_jitter": 50,
     "scm/mononoke:retry_query_from_replica_with_consistency_check_interval_ms": 200,
     "scm/mononoke:retry_query_from_replica_with_consistency_check_hlc_drift_tolerance_ns": 0,
-    "scm/mononoke:cgdm_reloading_interval_secs": 5
+    "scm/mononoke:cgdm_reloading_interval_secs": 5,
+    "scm/mononoke:shardmanager_shutdown_timeout_secs": 10
   }
 }
