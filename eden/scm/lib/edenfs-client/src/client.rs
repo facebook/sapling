@@ -17,9 +17,12 @@ use anyhow::anyhow;
 use async_runtime::block_on;
 use clientinfo::get_client_request_info;
 use configmodel::Config;
+use configmodel::ConfigExt;
 use fbthrift_socket::SocketTransport;
 use filters::filter::FilterGenerator;
 use filters::id::FilterId;
+use filters::migration::cleanup_migration;
+use filters::migration::prepare_migration;
 use parking_lot::Mutex;
 use serde::Deserialize;
 use thrift_types::edenfs;
@@ -42,7 +45,6 @@ use crate::types::LocalTryFrom;
 use crate::types::ProgressInfo;
 
 /// EdenFS client for Sapling CLI integration.
-#[allow(dead_code)]
 pub struct EdenFsClient {
     eden_config: EdenConfig,
     filter_generator: Option<Mutex<FilterGenerator>>,
@@ -51,6 +53,36 @@ pub struct EdenFsClient {
 }
 
 impl EdenFsClient {
+    fn pre_checkout_routine(mode: CheckoutMode, dot_dir: &Path, config: &dyn Config) -> Result<()> {
+        // Migration is only attempted during non-dry-run checkouts
+        if config
+            .get_opt("edenfs", "edensparse-migration")?
+            .unwrap_or(true)
+        {
+            if matches!(mode, CheckoutMode::Force | CheckoutMode::Normal) {
+                prepare_migration(dot_dir, config)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn post_checkout_routine(
+        mode: CheckoutMode,
+        dot_dir: &Path,
+        config: &dyn Config,
+        success: bool,
+    ) -> Result<()> {
+        if config
+            .get_opt("edenfs", "edensparse-migration")?
+            .unwrap_or(true)
+        {
+            if matches!(mode, CheckoutMode::Force | CheckoutMode::Normal) {
+                cleanup_migration(dot_dir, success)?;
+            }
+        }
+        Ok(())
+    }
+
     /// Construct a client and FilterGenerator using the supplied working dir
     /// root. The latter is used to pass a FilterId to each thrift call.
     pub fn from_wdir(
@@ -241,6 +273,7 @@ impl EdenFsClient {
         tree: HgId,
         mode: CheckoutMode,
     ) -> anyhow::Result<Vec<CheckoutConflict>> {
+        Self::pre_checkout_routine(mode, &self.dot_dir, &self.sl_config)?;
         let tree_vec = tree.into_byte_array().into();
         let thrift_client = block_on(self.get_thrift_client())?;
 
@@ -262,14 +295,16 @@ impl EdenFsClient {
             &node_vec,
             &thrift_mode,
             &params,
-        )))?;
+        )));
+
+        Self::post_checkout_routine(mode, &self.dot_dir, &self.sl_config, thrift_result.is_ok())?;
 
         hg_metrics::increment_counter(
             "edenclientcheckout_time",
             start_time.elapsed().as_millis() as u64,
         );
 
-        let result = thrift_result
+        let result = thrift_result?
             .into_iter()
             .filter_map(|c| CheckoutConflict::local_try_from(c).ok())
             .collect::<Vec<_>>();

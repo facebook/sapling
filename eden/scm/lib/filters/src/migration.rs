@@ -91,7 +91,6 @@ fn prepare_migration_context(
     Ok(())
 }
 
-#[allow(dead_code)]
 pub fn prepare_migration(dot_dir: &Path, config: &dyn Config) -> anyhow::Result<()> {
     if is_migration_required(dot_dir) {
         let active_filters = read_filter_config(dot_dir)?.unwrap_or_default();
@@ -102,18 +101,20 @@ pub fn prepare_migration(dot_dir: &Path, config: &dyn Config) -> anyhow::Result<
     Ok(())
 }
 
-#[allow(dead_code)]
 pub fn cleanup_migration(dot_dir: &Path, success: bool) -> anyhow::Result<()> {
-    if success {
-        // Note: failure doesn't matter; next migration attempt will notice there's no work to be
-        // done, short circuit, an reattempt cleanup
-        unlink_if_exists(migration_marker_path(dot_dir)).ok();
-    } else {
-        std::fs::rename(migration_backup_path(dot_dir), filter_config_path(dot_dir))
-            .context("restoring filter migration backup state")?;
+    if is_migration_required(dot_dir) {
+        if success {
+            // Failure doesn't matter; next migration attempt will notice there's no work to be
+            // done, short circuit, an reattempt cleanup
+            unlink_if_exists(migration_marker_path(dot_dir)).ok();
+        } else {
+            std::fs::rename(migration_backup_path(dot_dir), filter_config_path(dot_dir))
+                .context("restoring filter migration backup state")?;
+        }
+
+        // Unconditionally cleanup the migration backup file
+        unlink_if_exists(migration_backup_path(dot_dir))?;
     }
 
-    // Unconditionally cleanup the migration backup file
-    unlink_if_exists(migration_backup_path(dot_dir))?;
     Ok(())
 }
