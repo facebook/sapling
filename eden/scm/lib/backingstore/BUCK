@@ -16,11 +16,19 @@ fb_native.constraint_value(
 )
 
 cpp_library(
+    name = "sapling_backingstore_error",
+    headers = {
+        "SaplingBackingStoreError.h": "include/SaplingBackingStoreError.h",
+    },
+)
+
+cpp_library(
     name = "sapling_native_backingstore",
     srcs = glob(["src/**/*.cpp"]),
     headers = glob(["include/**/*.h"]),
     undefined_symbols = True,
     deps = [
+        ":sapling_backingstore_error",
         "//folly:string",
         "//folly/io:iobuf",
         "//folly/logging:logging",
@@ -28,6 +36,7 @@ cpp_library(
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
         ":backingstore@header",
+        ":sapling_backingstore_error",
         "//eden/common/utils:case_sensitivity",
         "//eden/common/utils:path",
         "//eden/fs/config:config",

@@ -40,7 +40,7 @@ Restart eden with error injected into eagerepo tree fetching.
 
 Checkout fails since it can't fetch the tree:
   $ hg go -C $B
-  abort: EdenError: sapling::SaplingFetchError: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/server/trees: failpoint. Headers: {}
+  abort: EdenError: sapling::SaplingBackingStoreError: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/server/trees: failpoint. Headers: {}
   
   Caused by:
       0: Network Error: server responded 500 Internal Server Error for eager://$TESTTMP/server/trees: failpoint. Headers: {}

@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "eden/fs/model/Tree.h"
+#include "eden/scm/lib/backingstore/include/SaplingBackingStoreError.h"
 #include "eden/scm/lib/backingstore/include/ffi.h"
 #include "eden/scm/lib/backingstore/src/ffi.rs.h" // @manual
 
@@ -29,10 +30,10 @@ void sapling_backingstore_get_tree_batch_handler(
           if (tree) {
             return ResolveResult{tree};
           } else {
-            return ResolveResult{SaplingFetchError{"no tree found"}};
+            return ResolveResult{SaplingBackingStoreError{"no tree found"}};
           }
         } else {
-          return ResolveResult{SaplingFetchError{std::string(error)}};
+          return ResolveResult{SaplingBackingStoreError{std::string(error)}};
         }
       }));
 }
@@ -49,7 +50,7 @@ void sapling_backingstore_get_tree_aux_batch_handler(
         if (error.empty()) {
           return ResolveResult{aux};
         } else {
-          return ResolveResult{SaplingFetchError{std::string(error)}};
+          return ResolveResult{SaplingBackingStoreError{std::string(error)}};
         }
       }));
 }
@@ -69,7 +70,7 @@ void sapling_backingstore_get_blob_batch_handler(
               return ResolveResult{std::move(blob)};
             } else {
               return ResolveResult{
-                  SaplingFetchError{std::string(std::move(error))}};
+                  SaplingBackingStoreError{std::string(std::move(error))}};
             }
           }));
 }
@@ -86,7 +87,7 @@ void sapling_backingstore_get_file_aux_batch_handler(
         if (error.empty()) {
           return ResolveResult{aux};
         } else {
-          return ResolveResult{SaplingFetchError{std::string(error)}};
+          return ResolveResult{SaplingBackingStoreError{std::string(error)}};
         }
       }));
 }
