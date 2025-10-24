@@ -51,7 +51,6 @@ import {Row} from './ComponentUtils';
 import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
-import {SmartActionsMenu} from './SmartActionsMenu';
 import {AbsorbButton} from './StackActions';
 import {confirmSuggestedEditsForFiles} from './SuggestedEdits';
 import {UnsavedFilesCount, confirmUnsavedFiles} from './UnsavedFiles';
@@ -59,6 +58,7 @@ import {tracker} from './analytics';
 import {latestCommitMessageFields} from './codeReview/CodeReviewInfo';
 import {islDrawerState} from './drawerState';
 import {externalMergeToolAtom} from './externalMergeTool';
+import {useFeatureFlagSync} from './featureFlags';
 import {T, t} from './i18n';
 import {DownwardArrow} from './icons/DownwardIcon';
 import {localStorageBackedAtom, readAtom, useAtomGet, writeAtom} from './jotaiUtils';
@@ -96,11 +96,11 @@ import {
   submodulePathsByRoot,
   uncommittedChangesFetchError,
 } from './serverAPIState';
+import {SmartActionsDropdown} from './smartActions/SmartActionsDropdown';
+import {SmartActionsMenu} from './smartActions/SmartActionsMenu';
 import {ChangedFileMode, GeneratedStatus} from './types';
 
-import {SmartActionsDropdown} from './SmartActionsDropdown';
 import './UncommittedChanges.css';
-import {useFeatureFlagSync} from './featureFlags';
 
 export type UIChangedFile = {
   path: RepoRelativePath;

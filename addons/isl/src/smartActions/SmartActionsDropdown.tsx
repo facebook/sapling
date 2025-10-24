@@ -12,8 +12,8 @@ import {Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {useRef} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
-import {useFeatureFlagSync} from './featureFlags';
-import {Internal} from './Internal';
+import {useFeatureFlagSync} from '../featureFlags';
+import {Internal} from '../Internal';
 
 export function SmartActionsDropdown() {
   const smartActionsMenuEnabled = useFeatureFlagSync(Internal.featureFlags?.SmartActionsMenu);

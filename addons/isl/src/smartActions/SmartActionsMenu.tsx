@@ -11,19 +11,19 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {Suspense, useState} from 'react';
 import {randomId} from 'shared/utils';
-import {tracker} from './analytics';
-import serverAPI from './ClientToServerAPI';
-import {diffCommentData} from './codeReview/codeReviewAtoms';
-import {diffSummary} from './codeReview/CodeReviewInfo';
-import {DropdownFields} from './DropdownFields';
-import {useFeatureFlagAsync, useFeatureFlagSync} from './featureFlags';
-import {T} from './i18n';
-import {Internal} from './Internal';
-import {BaseSplitButton} from './stackEdit/ui/BaseSplitButton';
-import type {CommitInfo} from './types';
+import {tracker} from '../analytics';
+import serverAPI from '../ClientToServerAPI';
+import {diffCommentData} from '../codeReview/codeReviewAtoms';
+import {diffSummary} from '../codeReview/CodeReviewInfo';
+import {DropdownFields} from '../DropdownFields';
+import {useFeatureFlagAsync, useFeatureFlagSync} from '../featureFlags';
+import {T} from '../i18n';
+import {Internal} from '../Internal';
+import {BaseSplitButton} from '../stackEdit/ui/BaseSplitButton';
+import type {CommitInfo} from '../types';
 
-import platform from './platform';
-import {repositoryInfo} from './serverAPIState';
+import platform from '../platform';
+import {repositoryInfo} from '../serverAPIState';
 import './SmartActionsMenu.css';
 
 export function SmartActionsMenu({commit}: {commit?: CommitInfo}) {
