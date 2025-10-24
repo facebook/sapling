@@ -116,6 +116,7 @@ cpp_library(
         "fbsource//third-party/fmt:fmt",
         "//eden/common/utils:utf8",
         "//eden/fs/service:thrift-cpp2-types",
+        "//eden/scm/lib/backingstore:sapling_backingstore_error",
         "//folly:exception_wrapper",
     ],
 )

@@ -48,10 +48,18 @@ EdenError newEdenError(const folly::exception_wrapper& ew) {
   EdenError err;
   if (!ew.with_exception([&err](const EdenError& ex) { err = ex; }) &&
       !ew.with_exception(
-          [&err](const std::system_error& ex) { err = newEdenError(ex); })) {
+          [&err](const std::system_error& ex) { err = newEdenError(ex); }) &&
+      !ew.with_exception([&err](const sapling::SaplingBackingStoreError& ex) {
+        err = newEdenError(ex);
+      })) {
     err = newEdenError(
         EdenErrorType::GENERIC_ERROR, folly::exceptionStr(ew).toStdString());
   }
   return err;
 }
+
+EdenError newEdenError(const sapling::SaplingBackingStoreError& ex) {
+  return newEdenError(static_cast<const std::exception&>(ex));
+}
+
 } // namespace facebook::eden

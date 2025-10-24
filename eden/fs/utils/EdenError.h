@@ -14,6 +14,7 @@
 
 #include "eden/common/utils/Utf8.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/scm/lib/backingstore/SaplingBackingStoreError.h"
 
 namespace facebook::eden {
 /*
@@ -80,4 +81,12 @@ EdenError newEdenError(const std::exception& ex);
  * Construct an EdenError from a folly::exception_wrapper.
  */
 EdenError newEdenError(const folly::exception_wrapper& ew);
+
+/**
+ * Construct an EdenError from a SaplingBackingStoreError
+ *
+ * This automatically extracts the error code and tries to convert the
+ * error to more specific EdenErrorTypes
+ */
+EdenError newEdenError(const sapling::SaplingBackingStoreError& ex);
 } // namespace facebook::eden
