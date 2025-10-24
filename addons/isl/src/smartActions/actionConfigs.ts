@@ -32,6 +32,7 @@ export const smartActionsConfig: SmartActionConfig[] = [
   {
     id: 'resolve-failed-signals',
     label: 'Fix failed signals',
+    description: 'Use AI to help resolve failing Sandcastle signals on your diff.',
     trackEventName: 'ResolveFailedSignals',
     featureFlag: 'AIResolveFailedSignals',
     platformRestriction: ['vscode'],
@@ -73,6 +74,7 @@ export const smartActionsConfig: SmartActionConfig[] = [
   {
     id: 'resolve-comments',
     label: 'Resolve all comments',
+    description: 'Use AI to get suggestions to address all outstanding comments on your diff.',
     trackEventName: 'ResolveAllComments',
     featureFlag: 'InlineCommentAIResolve',
     platformRestriction: ['vscode'],
@@ -111,6 +113,7 @@ export const smartActionsConfig: SmartActionConfig[] = [
   {
     id: 'fill-commit-info',
     label: 'Fill commit info',
+    description: `Use AI to automatically fill in the commit message (title, summary, test plan) for your uncommitted changes.`,
     trackEventName: 'FillCommitMessage',
     featureFlag: 'AIGenerateCommitMessage',
     platformRestriction: ['vscode'],
@@ -126,6 +129,7 @@ export const smartActionsConfig: SmartActionConfig[] = [
   {
     id: 'review-code',
     label: 'Review code',
+    description: `Use AI to review your code and provide suggestions for improvement.`,
     trackEventName: 'ReviewCommit',
     featureFlag: 'AICodeReviewUpsell',
     platformRestriction: ['vscode'],
@@ -141,6 +145,7 @@ export const smartActionsConfig: SmartActionConfig[] = [
   {
     id: 'validate-changes',
     label: 'Validate changes',
+    description: `Use AI to validate your uncommitted changes and provide suggestions for improvement.`,
     trackEventName: 'ValidateChanges',
     featureFlag: 'AIValidateChanges',
     platformRestriction: ['vscode'],
@@ -154,6 +159,7 @@ export const smartActionsConfig: SmartActionConfig[] = [
   {
     id: 'generate-tests',
     label: 'Generate tests for changes',
+    description: `Use AI to generate tests for your changes.`,
     trackEventName: 'GenerateTests',
     featureFlag: 'AIGenerateTestsForModifiedCode',
     platformRestriction: ['vscode'],
@@ -167,6 +173,7 @@ export const smartActionsConfig: SmartActionConfig[] = [
   {
     id: 'resolve-merge-conflicts',
     label: 'Resolve merge conflicts',
+    description: `Use AI to help resolve merge conflicts.`,
     trackEventName: 'ResolveAllConflicts',
     featureFlag: 'AIResolveConflicts',
     platformRestriction: ['vscode'],

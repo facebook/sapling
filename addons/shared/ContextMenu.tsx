@@ -9,7 +9,7 @@ import {Icon} from 'isl-components/Icon';
 import {findParentWithClassName} from 'isl-components/utils';
 import {getZoomLevel} from 'isl-components/zoom';
 import {atom, useAtom, useSetAtom} from 'jotai';
-import {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 
 import './ContextMenu.css';
 
@@ -45,7 +45,7 @@ export function useContextMenu<T>(
 
 type ContextMenuData = {x: number; y: number; items: Array<ContextMenuItem>};
 export type ContextMenuItem =
-  | {type?: undefined; label: string | React.ReactNode; onClick?: () => void}
+  | {type?: undefined; label: string | React.ReactNode; onClick?: () => void; tooltip?: string}
   | {
       type: 'submenu';
       label: string | React.ReactNode;
@@ -165,7 +165,24 @@ function ContextMenuList({
   const [submenuNavigation, setSubmenuNavigation] = useState<
     {x: number; y: number; children: Array<ContextMenuItem>} | undefined
   >(undefined);
+  const [tooltip, setTooltip] = useState<{x: number; y: number; tooltip: string} | undefined>(
+    undefined,
+  );
   const ref = useRef<HTMLDivElement | null>(null);
+
+  function getCoordinatesForSubElement(e: React.PointerEvent) {
+    const target = e.currentTarget as HTMLElement;
+    const parent = ref.current;
+    if (!parent) {
+      return;
+    }
+    const parentRect = parent?.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
+    // attach to top right corner
+    const x = -1 * parentRect.left + rect.right;
+    const y = -1 * parentRect.top + rect.top;
+    return {x, y};
+  }
 
   return (
     <>
@@ -178,21 +195,17 @@ function ContextMenuList({
               key={i}
               className={'context-menu-item context-menu-submenu'}
               onPointerEnter={e => {
-                const target = e.currentTarget as HTMLElement;
-                const parent = ref.current;
-                if (!parent) {
+                const coordinates = getCoordinatesForSubElement(e);
+                if (!coordinates) {
                   return;
                 }
-                const parentRect = parent?.getBoundingClientRect();
-                const rect = target.getBoundingClientRect();
-                // attach to top right corner
-                const x = -1 * parentRect.left + rect.right;
-                const y = -1 * parentRect.top + rect.top;
+                const {x, y} = coordinates;
                 setSubmenuNavigation({
                   x,
                   y,
                   children: item.children,
                 });
+                setTooltip(undefined);
               }}>
               <span>{item.label}</span>
               <Icon icon="chevron-right" />
@@ -200,7 +213,19 @@ function ContextMenuList({
           ) : (
             <div
               key={i}
-              onPointerEnter={() => setSubmenuNavigation(undefined)}
+              onPointerEnter={e => {
+                if (item.tooltip) {
+                  const coordinates = getCoordinatesForSubElement(e);
+                  if (!coordinates) {
+                    return;
+                  }
+                  const {x, y} = coordinates;
+                  setTooltip({x, y, tooltip: item.tooltip});
+                } else {
+                  setTooltip(undefined);
+                }
+                setSubmenuNavigation(undefined);
+              }}
               onClick={() => {
                 clickItem(item);
               }}
@@ -215,6 +240,13 @@ function ContextMenuList({
           className="context-menu-submenu-navigation"
           style={{position: 'absolute', top: submenuNavigation.y, left: submenuNavigation.x}}>
           <ContextMenuList items={submenuNavigation.children} clickItem={clickItem} />
+        </div>
+      )}
+      {tooltip != null && (
+        <div
+          className="context-menu-tooltip"
+          style={{position: 'absolute', top: tooltip.y, left: tooltip.x}}>
+          {tooltip.tooltip}
         </div>
       )}
     </>

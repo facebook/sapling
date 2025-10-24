@@ -6,7 +6,8 @@
  */
 
 .context-menu-container,
-.context-menu-submenu-navigation {
+.context-menu-submenu-navigation,
+.context-menu-tooltip {
   position: absolute;
   padding: var(--halfpad);
   background-color: var(--tooltip-background);

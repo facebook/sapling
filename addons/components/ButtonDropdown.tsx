@@ -11,6 +11,7 @@ import * as stylex from '@stylexjs/stylex';
 import {Button, buttonStyles} from './Button';
 import {Icon} from './Icon';
 import {colors, spacing} from './theme/tokens.stylex';
+import {Tooltip, type TooltipProps} from './Tooltip';
 
 export const styles = stylex.create({
   container: {
@@ -96,6 +97,7 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   pickerDisabled,
   icon,
   customSelectComponent,
+  primaryTooltip,
   ...rest
 }: {
   options: ReadonlyArray<T>;
@@ -108,6 +110,7 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   /** Icon to place in the button */
   icon?: React.ReactNode;
   customSelectComponent?: React.ReactNode;
+  primaryTooltip?: TooltipProps;
   'data-testId'?: string;
 }) {
   const selectedOption = options.find(opt => opt.id === selected.id) ?? options[0];
@@ -116,16 +119,21 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   // const useBuiltinBorder = ['Default Light Modern', 'Default Dark Modern'].includes(
   //   themeName as string,
   // );
+
+  const buttonComponent = (
+    <Button
+      kind={kind}
+      onClick={buttonDisabled ? undefined : () => onClick(selected)}
+      disabled={buttonDisabled}
+      xstyle={[styles.button, kind === 'icon' && styles.iconButton]}
+      {...rest}>
+      {icon ?? null} {selected.label}
+    </Button>
+  );
+
   return (
     <div {...stylex.props(styles.container)}>
-      <Button
-        kind={kind}
-        onClick={buttonDisabled ? undefined : () => onClick(selected)}
-        disabled={buttonDisabled}
-        xstyle={[styles.button, kind === 'icon' && styles.iconButton]}
-        {...rest}>
-        {icon ?? null} {selected.label}
-      </Button>
+      {primaryTooltip ? <Tooltip {...primaryTooltip}>{buttonComponent}</Tooltip> : buttonComponent}
       {customSelectComponent ?? (
         <select
           {...stylex.props(

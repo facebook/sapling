@@ -32,9 +32,11 @@ function getTooltipGroup(group: string): EventTarget {
   return found;
 }
 
-type TooltipProps = {
+/**
+ * Useful for passing custom props to a usage of Tooltip that you don't directly control.
+ */
+export type TooltipProps = {
   inline?: boolean;
-  children: ReactNode;
   placement?: Placement;
   /**
    * Applies delay to visual appearance of tooltip.
@@ -71,6 +73,8 @@ type TooltipProps = {
     additionalToggles?: EventTarget;
   }
 >;
+
+type TooltipPropsWithChildren = {children: ReactNode} & TooltipProps;
 
 type VisibleState =
   | true /* primary content (prefers component) is visible */
@@ -122,7 +126,7 @@ export function Tooltip({
   additionalToggles,
   group,
   inline: inlineProp,
-}: TooltipProps) {
+}: TooltipPropsWithChildren) {
   const inline = inlineProp ?? false;
   const trigger = triggerProp ?? 'hover';
   const placement = placementProp ?? 'top';

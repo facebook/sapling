@@ -20,6 +20,7 @@ export type FeatureFlagKey = keyof NonNullable<(typeof Internal)['featureFlags']
 export type SmartActionConfig = {
   id: string;
   label: string;
+  description?: string;
   icon?: string;
   trackEventName: string;
   featureFlag?: FeatureFlagKey;
