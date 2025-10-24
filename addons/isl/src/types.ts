@@ -915,6 +915,7 @@ export type LocalStorageName =
   | 'isl.rebase-onto-master-warning-enabled'
   | 'isl.experimental-features-local-override'
   | 'isl.partial-abort'
+  | 'isl.smart-actions-order'
   // The keys below are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:'
   | 'isl.first-pass-comments:';

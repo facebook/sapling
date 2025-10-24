@@ -34,3 +34,9 @@ export type ActionContext = {
   repoPath?: string;
   conflicts?: MergeConflicts;
 };
+
+export type ActionMenuItem = {
+  id: string;
+  label: string;
+  config: SmartActionConfig;
+};

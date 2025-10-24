@@ -24,13 +24,8 @@ import {optimisticMergeConflicts} from '../previews';
 import {repositoryInfo} from '../serverAPIState';
 import type {CommitInfo, PlatformSpecificClientToServerMessages} from '../types';
 import {smartActionsConfig} from './actionConfigs';
-import type {ActionContext, SmartActionConfig} from './types';
-
-type ActionMenuItem = {
-  id: string;
-  label: string;
-  config: SmartActionConfig;
-};
+import {bumpSmartAction, useSortedActions} from './smartActionsOrdering';
+import type {ActionContext, ActionMenuItem, SmartActionConfig} from './types';
 
 const smartActionFeatureFlagsAtom = atom<Promise<Record<string, boolean>>>(async () => {
   const flags: Record<string, boolean> = {};
@@ -103,15 +98,17 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
     return items;
   }, [featureFlagsLoadable, context]);
 
+  const sortedActionItems = useSortedActions(availableActionItems);
+
   const [selectedAction, setSelectedAction] = useState<ActionMenuItem | undefined>(undefined);
 
   // Update selected action when available actions change
   useEffect(() => {
-    setSelectedAction(availableActionItems[0]);
-  }, [availableActionItems]);
+    setSelectedAction(sortedActionItems[0]);
+  }, [sortedActionItems]);
 
   const contextMenu = useContextMenu(() =>
-    availableActionItems.map(actionItem => ({
+    sortedActionItems.map(actionItem => ({
       label: (
         // Mark the current action as selected
         <Row>
@@ -132,17 +129,17 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
   if (
     !smartActionsMenuEnabled ||
     !Internal.showSmartActions ||
-    availableActionItems.length === 0 ||
+    sortedActionItems.length === 0 ||
     !selectedAction
   ) {
     return null;
   }
 
-  if (availableActionItems.length === 1) {
+  if (sortedActionItems.length === 1) {
     return (
-      <Button kind="icon" onClick={() => runSmartAction(availableActionItems[0].config, context)}>
+      <Button kind="icon" onClick={() => runSmartAction(sortedActionItems[0].config, context)}>
         <Icon icon="lightbulb-sparkle" />
-        {availableActionItems[0].label}
+        {sortedActionItems[0].label}
       </Button>
     );
   }
@@ -153,7 +150,11 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
       options={[]}
       selected={selectedAction}
       icon={<Icon icon="lightbulb-sparkle" />}
-      onClick={action => runSmartAction(action.config, context)}
+      onClick={action => {
+        runSmartAction(action.config, context);
+        // Update the cache with the most recent action
+        bumpSmartAction(action.id);
+      }}
       onChangeSelected={() => {}}
       customSelectComponent={
         <Button
