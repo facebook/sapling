@@ -89,4 +89,5 @@ EdenError newEdenError(const folly::exception_wrapper& ew);
  * error to more specific EdenErrorTypes
  */
 EdenError newEdenError(const sapling::SaplingBackingStoreError& ex);
+
 } // namespace facebook::eden

@@ -25,6 +25,16 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "eden_error_test",
+    srcs = ["EdenErrorTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/utils:eden_error",
+    ],
+)
+
+cpp_unittest(
     name = "proc_util",
     srcs = ["ProcUtilTest.cpp"],
     env = {

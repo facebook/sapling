@@ -109,6 +109,7 @@ cpp_library(
         "NotImplemented.h",
     ],
     deps = [
+        "fbsource//third-party/re2:re2",
         "//eden/common/utils:system_error",
         "//eden/common/utils/windows:win_error",
     ],
