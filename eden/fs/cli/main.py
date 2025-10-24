@@ -2269,6 +2269,14 @@ class RestartCmd(Subcmd):
                 "the names of the env vars, not their desired values."
             ),
         )
+        parser.add_argument(
+            "-y",
+            "--yes",
+            dest="prompt",
+            default=True,
+            action="store_false",
+            help="Do not prompt for confirmation before restarting eden.",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         self.args = args
@@ -2301,7 +2309,9 @@ class RestartCmd(Subcmd):
             if self.args.restart_type == RESTART_MODE_GRACEFUL:
                 return self._graceful_restart(instance)
             else:
-                status = self._full_restart(instance, edenfs_pid, args.migrate_to)
+                status = self._full_restart(
+                    instance, edenfs_pid, args.migrate_to, args.prompt
+                )
                 success = status == 0
                 instance.log_sample("full_restart", success=success)
                 return status
@@ -2450,6 +2460,7 @@ class RestartCmd(Subcmd):
         instance: EdenInstance,
         old_pid: int,
         migrate_to: Optional[str],
+        prompt: bool,
     ) -> int:
         print(
             """\
@@ -2460,7 +2471,7 @@ re-open these files after EdenFS is restarted.
 """
         )
         if not self.args.force_restart and sys.stdin.isatty():
-            if not prompt_confirmation("Proceed?"):
+            if prompt and not prompt_confirmation("Proceed?"):
                 print("Not confirmed.")
                 return 1
 
