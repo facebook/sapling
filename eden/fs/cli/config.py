@@ -53,11 +53,19 @@ from . import configinterpolator, configutil, telemetry, util, version
 if sys.platform == "win32":
     from .file_handler_tools import WinFileHandlerReleaser
 from .util import (
+    CLONE_SUCCEEDED,
     FUSE_MOUNT_PROTOCOL_STRING,
     HealthStatus,
+    INTENTIONALLY_UNMOUNTED,
+    MOUNT_CONFIG,
     NFS_MOUNT_PROTOCOL_STRING,
     print_stderr,
     PRJFS_MOUNT_PROTOCOL_STRING,
+    SNAPSHOT,
+    SNAPSHOT_MAGIC_1,
+    SNAPSHOT_MAGIC_2,
+    SNAPSHOT_MAGIC_3,
+    SNAPSHOT_MAGIC_4,
     Spinner,
     write_file_atomically,
 )
@@ -88,16 +96,6 @@ DYNAMIC_CONFIG = "edenfs_dynamic.rc"
 CLIENTS_DIR = "clients"
 CONFIG_JSON = "config.json"
 CONFIG_JSON_LOCK = "config.json.lock"
-
-# These are files in a client directory.
-CLONE_SUCCEEDED = "clone-succeeded"
-MOUNT_CONFIG = "config.toml"
-SNAPSHOT = "SNAPSHOT"
-INTENTIONALLY_UNMOUNTED = "intentionally-unmounted"
-SNAPSHOT_MAGIC_1 = b"eden\x00\x00\x00\x01"
-SNAPSHOT_MAGIC_2 = b"eden\x00\x00\x00\x02"
-SNAPSHOT_MAGIC_3 = b"eden\x00\x00\x00\x03"
-SNAPSHOT_MAGIC_4 = b"eden\x00\x00\x00\x04"
 
 # List of supported repository types. This should stay in sync with the list
 # in the Rust CLI at fs/cli_rs/edenfs-client/src/checkout.rs and the list in

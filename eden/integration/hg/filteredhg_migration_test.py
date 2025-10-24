@@ -69,7 +69,7 @@ adir
         if not os.path.exists(filter_config_file_path):
             return f"filter config file '{filter_config_file_path}' does not exist"
 
-        # check filter config file content, there should be entries popilated
+        # check filter config file content, there should be entries populated
         lines = self.read_file(filter_config_file_path).splitlines()
         lines = {line.removeprefix("%include ") for line in lines}
         is_null_filter = len(lines) == 0  # empty config file means "null" filter

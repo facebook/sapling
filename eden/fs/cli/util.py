@@ -10,6 +10,7 @@
 import abc
 import asyncio
 import binascii
+import enum
 import errno
 import functools
 import getpass
@@ -18,6 +19,7 @@ import random
 import re
 import shlex
 import stat
+import struct
 import subprocess
 import sys
 import time
@@ -46,12 +48,18 @@ from fb303_core.ttypes import fb303_status
 from thrift import Thrift
 
 if TYPE_CHECKING:
-    from .config import EdenInstance
+    from .config import EdenCheckout, EdenInstance
 
 if sys.platform != "win32":
     import pwd
 else:
     import winreg
+
+
+class EdensparseMigrationStep(enum.Enum):
+    PRE_EDEN_START = "pre_eden_start"
+    POST_EDEN_START = "post_eden_start"
+
 
 MIGRATION_MARKER = "edensparse_migration"
 
@@ -73,6 +81,18 @@ INODE_CATALOG_TYPE_IN_MEMORY_STRING = "inmemory"
 CHEF_LOG_PATH_DARWIN = "/var/chef/outputs/chef.last.run_stats"
 CHEF_LOG_PATH_LINUX = "/var/chef/outputs/chef.last.run_stats"
 CHEF_LOG_PATH_WIN32 = "C:\\chef\\outputs\\chef.last.run_stats"
+
+
+# These are files in a client directory
+CLONE_SUCCEEDED = "clone-succeeded"
+MOUNT_CONFIG = "config.toml"
+SNAPSHOT = "SNAPSHOT"
+INTENTIONALLY_UNMOUNTED = "intentionally-unmounted"
+SNAPSHOT_MAGIC_1 = b"eden\x00\x00\x00\x01"
+SNAPSHOT_MAGIC_2 = b"eden\x00\x00\x00\x02"
+SNAPSHOT_MAGIC_3 = b"eden\x00\x00\x00\x03"
+SNAPSHOT_MAGIC_4 = b"eden\x00\x00\x00\x04"
+NULL_FILTER = b"null"
 
 
 class EdenStartError(Exception):
@@ -454,10 +474,17 @@ class HgRepo(Repo):
         return f"HgRepo(source={self.source!r}, working_dir={self.working_dir!r})"
 
     # pyre-fixme[2]: Parameter must be annotated.
-    def _run_hg(self, args: List[str], stderr_output=None) -> bytes:
+    def _run_hg(
+        self,
+        args: List[str],
+        stderr_output: Optional[int] = None,
+        cwd: Optional[str] = None,
+    ) -> bytes:
+        if cwd is None:
+            cwd = self.working_dir
         cmd = [self._hg_binary] + args
         out_bytes = subprocess.check_output(
-            cmd, cwd=self.working_dir, env=self._env, stderr=stderr_output
+            cmd, cwd=cwd, env=self._env, stderr=stderr_output
         )
         out = out_bytes
         return out
@@ -1037,3 +1064,162 @@ def can_enable_windows_symlinks() -> bool:
         # 22H2 is 19045 and Windows 11 starts at 22000. Also, see:
         # https://en.wikipedia.org/wiki/List_of_Microsoft_Windows_versions
         return build and build >= (19045, 4957)
+
+
+def maybe_edensparse_migration(
+    instance: "EdenInstance", step: EdensparseMigrationStep
+) -> None:
+    """
+    edensparse migration include two steps:
+    1. Manipulate eden state files including:
+       - Update content from SNAPSHOT file to apply the 'null' filter
+       - Update config toml file to switch scm_type to "filteredhg"
+    2. Update Sapling config files including:
+       - Create an empty .hg/sparse file
+       - Add "edensparse" to .hg/requires
+       - Config Sapling to disable "extensions.sparse" and enable "extensions.edensparse"
+       - Finally create an empty marker file to indicate part 1 of migration is complete
+    """
+
+    should_migrate = instance.get_config_bool(
+        "experimental.enable-edensparse-migration", False
+    )
+
+    if not should_migrate:
+        return
+
+    if step not in {
+        EdensparseMigrationStep.PRE_EDEN_START,
+        EdensparseMigrationStep.POST_EDEN_START,
+    }:
+        raise RuntimeError(f"Invalid edensparse migration step {step}")
+
+    MIGRATION_MARKER = "edensparse_migration"
+
+    for checkout in instance.get_checkouts():
+
+        def configure_sapling(checkout: "EdenCheckout") -> None:
+            hg_repo = checkout.get_backing_repo()
+            hg_repo._run_hg(
+                ["config", "--local", "extensions.sparse", "!"], cwd=str(checkout.path)
+            )
+            hg_repo._run_hg(
+                ["config", "--local", "extensions.edensparse", ""],
+                cwd=str(checkout.path),
+            )
+
+        def update_snapshot_file(checkout: "EdenCheckout") -> None:
+            # Update snapshot file to apply the 'null' filter
+            # This should be done before updating the config file to switch scm_type to "filteredhg"
+            # because the config is needed to correctly parse the snapshot file
+            snapshot_path = checkout.state_dir / SNAPSHOT
+            if not snapshot_path.exists():
+                # TODO: What to do if there is no snapshot file?
+                raise RuntimeError(f"Missing SNAPSHOT file {snapshot_path}")
+            with snapshot_path.open("rb") as f:
+                header = f.read(8)
+                if header == SNAPSHOT_MAGIC_2:
+                    (bodyLength,) = struct.unpack(">L", f.read(4))
+                    parent = f.read(bodyLength)
+                    if len(parent) != bodyLength:
+                        raise RuntimeError("SNAPSHOT file too short")
+                    decoded_parent, decoded_filter = checkout.parse_snapshot_component(
+                        parent
+                    )
+                    if decoded_filter is None:
+                        # Apply the 'null' filter
+                        checkout.save_snapshot(
+                            create_filtered_rootid(decoded_parent, b"null")
+                        )
+                elif header == SNAPSHOT_MAGIC_4:
+                    (working_copy_parent_length,) = struct.unpack(">L", f.read(4))
+                    working_copy_parent = f.read(working_copy_parent_length)
+                    if len(working_copy_parent) != working_copy_parent_length:
+                        raise RuntimeError("SNAPSHOT file too short")
+                    (checked_out_length,) = struct.unpack(">L", f.read(4))
+                    checked_out_revision = f.read(checked_out_length)
+                    if len(checked_out_revision) != checked_out_length:
+                        raise RuntimeError("SNAPSHOT file too short")
+
+                    working_copy_parent, parent_filter = (
+                        checkout.parse_snapshot_component(working_copy_parent)
+                    )
+                    (
+                        checked_out_revision,
+                        checked_out_filter,
+                    ) = checkout.parse_snapshot_component(checked_out_revision)
+
+                    # TODO: Could there be a case where only one of the filters is None?
+                    if parent_filter is None and checked_out_filter is None:
+                        # Apply the 'null' filter
+                        working_copy_parent_filtered_rootid = create_filtered_rootid(
+                            working_copy_parent, NULL_FILTER
+                        )
+                        checkout_out_filtered_rootid = create_filtered_rootid(
+                            checked_out_revision, NULL_FILTER
+                        )
+                        encoded_working_copy_parent_filtered_rootid = (
+                            struct.pack(">L", len(working_copy_parent_filtered_rootid))
+                            + working_copy_parent_filtered_rootid
+                        )
+                        encoded_checkout_out_filtered_rootid = (
+                            struct.pack(">L", len(checkout_out_filtered_rootid))
+                            + checkout_out_filtered_rootid
+                        )
+
+                        # Write everything back to the snapshot file so "null" filter is applied
+                        # for both working copy parent and checked out revision
+                        write_file_atomically(
+                            snapshot_path,
+                            SNAPSHOT_MAGIC_4
+                            + encoded_working_copy_parent_filtered_rootid
+                            + encoded_checkout_out_filtered_rootid,
+                        )
+                else:
+                    # TODO: No migration needed for case 1 and 3.
+                    pass
+
+        def create_empty_sparse_file(checkout: "EdenCheckout") -> None:
+            hg_dir = checkout.hg_dot_path
+            sparse_file = os.path.join(hg_dir, "sparse")
+            if not os.path.exists(sparse_file):
+                with open(sparse_file, "w") as f:
+                    f.write("")
+
+        def update_hg_requires(checkout: "EdenCheckout") -> None:
+            hg_dir = checkout.hg_dot_path
+            # add "edensparse" to .hg/requires
+            requires_file = os.path.join(hg_dir, "requires")
+
+            # read all lines from requires file and check if "edensparse" is already present
+            # if not, add "edensparse" to the end of the line list
+            # sort the list and write it back to the requires file
+            # Read all lines from requires file and check if "edensparse" is already present.
+            # If not, add "edensparse" to the end of the line list, sort, and write back.
+            with open(requires_file, "r") as f:
+                lines = f.readlines()
+
+            lines_clean = [line.strip() for line in lines]
+            if "edensparse" not in lines_clean:
+                lines_clean.append("edensparse")
+                lines_clean = sorted(set(lines_clean))
+                # Write back with newline after each entry
+                with open(requires_file, "w") as f:
+                    for line in lines_clean:
+                        f.write(f"{line}\n")
+
+        def update_config_toml_file(checkout: "EdenCheckout") -> None:
+            config = checkout.get_config()  # config.toml
+            config = config._replace(scm_type="filteredhg")
+            checkout.save_config(config)
+
+        if step == EdensparseMigrationStep.PRE_EDEN_START:
+            update_snapshot_file(checkout)
+            update_config_toml_file(checkout)
+        else:
+            create_empty_sparse_file(checkout)
+            update_hg_requires(checkout)
+            configure_sapling(checkout)
+
+            marker_file = os.path.join(checkout.hg_dot_path, MIGRATION_MARKER)
+            open(marker_file, "a").close()
