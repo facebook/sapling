@@ -1719,71 +1719,7 @@ class EdenCheckout:
         return parse_snapshot_component(buf, self.get_config().scm_type)
 
     def get_snapshot(self) -> SnapshotState:
-        """Return the hex version of the parent hash in the SNAPSHOT file."""
-        snapshot_path = self.state_dir / SNAPSHOT
-        if not snapshot_path.exists():
-            raise RuntimeError(f"Missing SNAPSHOT file {snapshot_path}")
-        with snapshot_path.open("rb") as f:
-            header = f.read(8)
-            if header == SNAPSHOT_MAGIC_1:
-                decoded_parent = binascii.hexlify(f.read(20)).decode()
-                return SnapshotState(
-                    working_copy_parent=decoded_parent,
-                    last_checkout_hash=decoded_parent,
-                )
-            elif header == SNAPSHOT_MAGIC_2:
-                (bodyLength,) = struct.unpack(">L", f.read(4))
-                parent = f.read(bodyLength)
-                if len(parent) != bodyLength:
-                    raise RuntimeError("SNAPSHOT file too short")
-                decoded_parent, filter_bytes = self.parse_snapshot_component(parent)
-                return SnapshotState(
-                    working_copy_parent=decoded_parent,
-                    last_checkout_hash=decoded_parent,
-                    parent_filter_id=filter_bytes,
-                    last_filter_id=filter_bytes,
-                )
-            elif header == SNAPSHOT_MAGIC_3:
-                (pid,) = struct.unpack(">L", f.read(4))
-
-                (fromLength,) = struct.unpack(">L", f.read(4))
-                fromParent = f.read(fromLength)
-                if len(fromParent) != fromLength:
-                    raise RuntimeError("SNAPSHOT file too short")
-                (toLength,) = struct.unpack(">L", f.read(4))
-                toParent = f.read(toLength)
-                if len(fromParent) != toLength:
-                    raise RuntimeError("SNAPSHOT file too short")
-
-                decoded_to, _ = self.parse_snapshot_component(toParent)
-                decoded_from, _ = self.parse_snapshot_component(fromParent)
-
-                raise InProgressCheckoutError(decoded_from, decoded_to, pid)
-            elif header == SNAPSHOT_MAGIC_4:
-                (working_copy_parent_length,) = struct.unpack(">L", f.read(4))
-                working_copy_parent = f.read(working_copy_parent_length)
-                if len(working_copy_parent) != working_copy_parent_length:
-                    raise RuntimeError("SNAPSHOT file too short")
-                (checked_out_length,) = struct.unpack(">L", f.read(4))
-                checked_out_revision = f.read(checked_out_length)
-                if len(checked_out_revision) != checked_out_length:
-                    raise RuntimeError("SNAPSHOT file too short")
-
-                working_copy_parent, parent_filter_bytes = (
-                    self.parse_snapshot_component(working_copy_parent)
-                )
-                (
-                    checked_out_revision,
-                    checked_out_filter_bytes,
-                ) = self.parse_snapshot_component(checked_out_revision)
-                return SnapshotState(
-                    working_copy_parent=working_copy_parent,
-                    last_checkout_hash=checked_out_revision,
-                    parent_filter_id=parent_filter_bytes,
-                    last_filter_id=checked_out_filter_bytes,
-                )
-            else:
-                raise RuntimeError("SNAPSHOT file has invalid header")
+        return get_snapshot(self.state_dir / SNAPSHOT, self.get_config().scm_type)
 
     def save_snapshot(self, commit_id: bytes) -> None:
         """Write a new parent commit ID into the SNAPSHOT file."""
@@ -1825,6 +1761,73 @@ class EdenCheckout:
         new_config = old_config._replace(inode_catalog_type=new_inode_catalog_type)
 
         self.save_config(new_config)
+
+
+def get_snapshot(snapshot_path: Path, scm_type: str) -> SnapshotState:
+    """Return the hex version of the parent hash in the SNAPSHOT file."""
+    if not snapshot_path.exists():
+        raise RuntimeError(f"Missing SNAPSHOT file {snapshot_path}")
+    with snapshot_path.open("rb") as f:
+        header = f.read(8)
+        if header == SNAPSHOT_MAGIC_1:
+            decoded_parent = binascii.hexlify(f.read(20)).decode()
+            return SnapshotState(
+                working_copy_parent=decoded_parent,
+                last_checkout_hash=decoded_parent,
+            )
+        elif header == SNAPSHOT_MAGIC_2:
+            (bodyLength,) = struct.unpack(">L", f.read(4))
+            parent = f.read(bodyLength)
+            if len(parent) != bodyLength:
+                raise RuntimeError("SNAPSHOT file too short")
+            decoded_parent, filter_bytes = parse_snapshot_component(parent, scm_type)
+            return SnapshotState(
+                working_copy_parent=decoded_parent,
+                last_checkout_hash=decoded_parent,
+                parent_filter_id=filter_bytes,
+                last_filter_id=filter_bytes,
+            )
+        elif header == SNAPSHOT_MAGIC_3:
+            (pid,) = struct.unpack(">L", f.read(4))
+
+            (fromLength,) = struct.unpack(">L", f.read(4))
+            fromParent = f.read(fromLength)
+            if len(fromParent) != fromLength:
+                raise RuntimeError("SNAPSHOT file too short")
+            (toLength,) = struct.unpack(">L", f.read(4))
+            toParent = f.read(toLength)
+            if len(fromParent) != toLength:
+                raise RuntimeError("SNAPSHOT file too short")
+
+            decoded_to, _ = parse_snapshot_component(toParent, scm_type)
+            decoded_from, _ = parse_snapshot_component(fromParent, scm_type)
+
+            raise InProgressCheckoutError(decoded_from, decoded_to, pid)
+        elif header == SNAPSHOT_MAGIC_4:
+            (working_copy_parent_length,) = struct.unpack(">L", f.read(4))
+            working_copy_parent = f.read(working_copy_parent_length)
+            if len(working_copy_parent) != working_copy_parent_length:
+                raise RuntimeError("SNAPSHOT file too short")
+            (checked_out_length,) = struct.unpack(">L", f.read(4))
+            checked_out_revision = f.read(checked_out_length)
+            if len(checked_out_revision) != checked_out_length:
+                raise RuntimeError("SNAPSHOT file too short")
+
+            working_copy_parent, parent_filter_bytes = parse_snapshot_component(
+                working_copy_parent, scm_type
+            )
+            (
+                checked_out_revision,
+                checked_out_filter_bytes,
+            ) = parse_snapshot_component(checked_out_revision, scm_type)
+            return SnapshotState(
+                working_copy_parent=working_copy_parent,
+                last_checkout_hash=checked_out_revision,
+                parent_filter_id=parent_filter_bytes,
+                last_filter_id=checked_out_filter_bytes,
+            )
+        else:
+            raise RuntimeError("SNAPSHOT file has invalid header")
 
 
 def parse_snapshot_component(buf: bytes, scm_type: str) -> Tuple[str, Optional[bytes]]:
