@@ -19,6 +19,7 @@ import serverAPI from '../ClientToServerAPI';
 import {useFeatureFlagAsync, useFeatureFlagSync} from '../featureFlags';
 import {Internal} from '../Internal';
 import platform from '../platform';
+import {optimisticMergeConflicts} from '../previews';
 import {repositoryInfo} from '../serverAPIState';
 import type {CommitInfo, PlatformSpecificClientToServerMessages} from '../types';
 import {smartActionsConfig} from './actionConfigs';
@@ -33,10 +34,12 @@ type ActionMenuItem = {
 export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
   const smartActionsMenuEnabled = useFeatureFlagSync(Internal.featureFlags?.SmartActionsMenu);
   const repo = useAtomValue(repositoryInfo);
+  const conflicts = useAtomValue(optimisticMergeConflicts);
 
   const context: ActionContext = {
     commit,
     repoPath: repo?.repoRoot,
+    conflicts,
   };
 
   // Load all feature flags
@@ -96,6 +99,15 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
     !selectedAction
   ) {
     return null;
+  }
+
+  if (availableActionItems.length === 1) {
+    return (
+      <Button kind="icon" onClick={() => runSmartAction(availableActionItems[0].config, context)}>
+        <Icon icon="lightbulb-sparkle" />
+        {availableActionItems[0].label}
+      </Button>
+    );
   }
 
   return (

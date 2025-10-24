@@ -958,6 +958,8 @@ function MergeConflictButtons({
 
   const externalMergeTool = useAtomValue(externalMergeToolAtom);
 
+  const useV2SmartActions = useFeatureFlagSync(Internal.featureFlags?.SmartActionsRedesign);
+
   return (
     <Row style={{flexWrap: 'wrap', marginBottom: 'var(--pad)'}}>
       <Button
@@ -985,12 +987,16 @@ function MergeConflictButtons({
         <Icon slot="start" icon={isRunningAbort ? 'loading' : 'circle-slash'} />
         <T>Abort</T>
       </Button>
-      {Internal.ResolveMergeConflictsWithAIButton ? (
-        <Internal.ResolveMergeConflictsWithAIButton
-          conflicts={conflicts}
-          disabled={allConflictsResolved || shouldDisableButtons}
-        />
-      ) : null}
+      {useV2SmartActions ? (
+        <SmartActionsDropdown />
+      ) : (
+        Internal.ResolveMergeConflictsWithAIButton && (
+          <Internal.ResolveMergeConflictsWithAIButton
+            conflicts={conflicts}
+            disabled={allConflictsResolved || shouldDisableButtons}
+          />
+        )
+      )}
       {externalMergeTool == null ? (
         platform.upsellExternalMergeTool ? (
           <Tooltip

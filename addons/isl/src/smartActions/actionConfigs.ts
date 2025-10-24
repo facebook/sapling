@@ -6,6 +6,7 @@
  */
 
 import {randomId} from 'shared/utils';
+import {tracker} from '../analytics';
 import {diffCommentData} from '../codeReview/codeReviewAtoms';
 import {diffSummary} from '../codeReview/CodeReviewInfo';
 import {Internal} from '../Internal';
@@ -39,7 +40,7 @@ export const smartActionsConfig: SmartActionConfig[] = [
       id: randomId(),
       source: 'smartAction',
     }),
-    shouldShow: context => !context.commit, // Only for uncommitted changes
+    shouldShow: context => !context.conflicts && !context.commit, // Only for uncommitted changes
   },
 
   // Validate changes
@@ -52,7 +53,7 @@ export const smartActionsConfig: SmartActionConfig[] = [
     getMessagePayload: () => ({
       type: 'platform/validateChangesWithAI',
     }),
-    shouldShow: context => !context.commit, // Only for uncommitted changes
+    shouldShow: context => !context.conflicts && !context.commit, // Only for uncommitted changes
   },
 
   // Generate tests
@@ -65,6 +66,7 @@ export const smartActionsConfig: SmartActionConfig[] = [
     getMessagePayload: () => ({
       type: 'platform/createTestForModifiedCodeWithAI',
     }),
+    shouldShow: context => !context.conflicts,
   },
 
   // Review code
@@ -79,6 +81,7 @@ export const smartActionsConfig: SmartActionConfig[] = [
       source: 'smartAction',
       reviewScope: context.commit ? 'current commit' : 'uncommitted changes',
     }),
+    shouldShow: context => !context.conflicts,
   },
 
   // Resolve comments
@@ -107,6 +110,9 @@ export const smartActionsConfig: SmartActionConfig[] = [
       };
     },
     shouldShow: context => {
+      if (context.conflicts != null) {
+        return false;
+      }
       const diffId = context.commit?.diffId;
       if (diffId == null) {
         return false;
@@ -146,11 +152,33 @@ export const smartActionsConfig: SmartActionConfig[] = [
       };
     },
     shouldShow: context => {
+      if (context.conflicts != null) {
+        return false;
+      }
       const diffId = context.commit?.diffId;
       if (diffId == null) {
         return false;
       }
       return hasDiffFailedSignals(diffId);
+    },
+  },
+
+  // Resolve merge conflicts
+  {
+    id: 'resolve-merge-conflicts',
+    label: 'Resolve merge conflicts',
+    trackEventName: 'ResolveAllConflicts',
+    featureFlag: 'AIResolveConflicts',
+    platformRestriction: ['vscode'],
+    shouldShow: context => context.conflicts != null, // Only for merge conflicts
+    getMessagePayload: context => {
+      const conflicts = context.conflicts;
+      assert(conflicts != null, 'Must be in merge conflict state to resolve conflicts');
+      tracker.track('DevmateResolveAllConflicts');
+      return {
+        type: 'platform/resolveAllConflictsWithAI',
+        conflicts,
+      };
     },
   },
 ] satisfies SmartActionConfig[];

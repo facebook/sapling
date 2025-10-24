@@ -6,7 +6,12 @@
  */
 
 import type {Internal} from '../Internal';
-import type {CommitInfo, PlatformName, PlatformSpecificClientToServerMessages} from '../types';
+import type {
+  CommitInfo,
+  MergeConflicts,
+  PlatformName,
+  PlatformSpecificClientToServerMessages,
+} from '../types';
 
 export type PlatformRestriction = Array<PlatformName>;
 export type FeatureFlagKey = keyof NonNullable<(typeof Internal)['featureFlags']>;
@@ -27,4 +32,5 @@ export type SmartActionConfig = {
 export type ActionContext = {
   commit?: CommitInfo;
   repoPath?: string;
+  conflicts?: MergeConflicts;
 };
