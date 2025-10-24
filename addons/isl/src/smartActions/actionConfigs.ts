@@ -28,100 +28,6 @@ export const smartActionsConfig: SmartActionConfig[] = [
   // Auto-split commit
   // TODO: Implement
 
-  // Fill commit info
-  {
-    id: 'fill-commit-info',
-    label: 'Fill commit info',
-    trackEventName: 'FillCommitMessage',
-    featureFlag: 'AIGenerateCommitMessage',
-    platformRestriction: ['vscode'],
-    getMessagePayload: () => ({
-      type: 'platform/fillCommitMessageWithAI',
-      id: randomId(),
-      source: 'smartAction',
-    }),
-    shouldShow: context => !context.conflicts && !context.commit, // Only for uncommitted changes
-  },
-
-  // Validate changes
-  {
-    id: 'validate-changes',
-    label: 'Validate changes',
-    trackEventName: 'ValidateChanges',
-    featureFlag: 'AIValidateChanges',
-    platformRestriction: ['vscode'],
-    getMessagePayload: () => ({
-      type: 'platform/validateChangesWithAI',
-    }),
-    shouldShow: context => !context.conflicts && !context.commit, // Only for uncommitted changes
-  },
-
-  // Generate tests
-  {
-    id: 'generate-tests',
-    label: 'Generate tests for changes',
-    trackEventName: 'GenerateTests',
-    featureFlag: 'AIGenerateTestsForModifiedCode',
-    platformRestriction: ['vscode'],
-    getMessagePayload: () => ({
-      type: 'platform/createTestForModifiedCodeWithAI',
-    }),
-    shouldShow: context => !context.conflicts,
-  },
-
-  // Review code
-  {
-    id: 'review-code',
-    label: 'Review code',
-    trackEventName: 'ReviewCommit',
-    featureFlag: 'AICodeReviewUpsell',
-    platformRestriction: ['vscode'],
-    getMessagePayload: context => ({
-      type: 'platform/runAICodeReviewChat',
-      source: 'smartAction',
-      reviewScope: context.commit ? 'current commit' : 'uncommitted changes',
-    }),
-    shouldShow: context => !context.conflicts,
-  },
-
-  // Resolve comments
-  {
-    id: 'resolve-comments',
-    label: 'Resolve all comments',
-    trackEventName: 'ResolveAllComments',
-    featureFlag: 'InlineCommentAIResolve',
-    platformRestriction: ['vscode'],
-    getMessagePayload: context => {
-      const diffId = context.commit?.diffId;
-      assert(diffId != null, 'Diff ID is required for resolving comments');
-
-      const diffComments = readAtom(diffCommentData(diffId));
-      let comments: DiffComment[] = [];
-      if (diffComments.state === 'hasData') {
-        comments = diffComments.data;
-      }
-
-      return {
-        type: 'platform/resolveAllCommentsWithAI',
-        diffId,
-        comments,
-        filePaths: [...(context.commit?.filePathsSample ?? [])],
-        repoPath: context.repoPath,
-      };
-    },
-    shouldShow: context => {
-      if (context.conflicts != null) {
-        return false;
-      }
-      const diffId = context.commit?.diffId;
-      if (diffId == null) {
-        return false;
-      }
-      const diffComments = readAtom(diffCommentData(diffId));
-      return diffComments.state === 'hasData' && diffComments.data.length > 0;
-    },
-  },
-
   // Resolve failed signals
   {
     id: 'resolve-failed-signals',
@@ -163,6 +69,100 @@ export const smartActionsConfig: SmartActionConfig[] = [
     },
   },
 
+  // Resolve comments
+  {
+    id: 'resolve-comments',
+    label: 'Resolve all comments',
+    trackEventName: 'ResolveAllComments',
+    featureFlag: 'InlineCommentAIResolve',
+    platformRestriction: ['vscode'],
+    getMessagePayload: context => {
+      const diffId = context.commit?.diffId;
+      assert(diffId != null, 'Diff ID is required for resolving comments');
+
+      const diffComments = readAtom(diffCommentData(diffId));
+      let comments: DiffComment[] = [];
+      if (diffComments.state === 'hasData') {
+        comments = diffComments.data;
+      }
+
+      return {
+        type: 'platform/resolveAllCommentsWithAI',
+        diffId,
+        comments,
+        filePaths: [...(context.commit?.filePathsSample ?? [])],
+        repoPath: context.repoPath,
+      };
+    },
+    shouldShow: context => {
+      if (context.conflicts != null) {
+        return false;
+      }
+      const diffId = context.commit?.diffId;
+      if (diffId == null) {
+        return false;
+      }
+      const diffComments = readAtom(diffCommentData(diffId));
+      return diffComments.state === 'hasData' && diffComments.data.length > 0;
+    },
+  },
+
+  // Fill commit info
+  {
+    id: 'fill-commit-info',
+    label: 'Fill commit info',
+    trackEventName: 'FillCommitMessage',
+    featureFlag: 'AIGenerateCommitMessage',
+    platformRestriction: ['vscode'],
+    getMessagePayload: () => ({
+      type: 'platform/fillCommitMessageWithAI',
+      id: randomId(),
+      source: 'smartAction',
+    }),
+    shouldShow: context => !context.conflicts && !context.commit, // Only for uncommitted changes
+  },
+
+  // Review code
+  {
+    id: 'review-code',
+    label: 'Review code',
+    trackEventName: 'ReviewCommit',
+    featureFlag: 'AICodeReviewUpsell',
+    platformRestriction: ['vscode'],
+    getMessagePayload: context => ({
+      type: 'platform/runAICodeReviewChat',
+      source: 'smartAction',
+      reviewScope: context.commit ? 'current commit' : 'uncommitted changes',
+    }),
+    shouldShow: context => !context.conflicts,
+  },
+
+  // Validate changes
+  {
+    id: 'validate-changes',
+    label: 'Validate changes',
+    trackEventName: 'ValidateChanges',
+    featureFlag: 'AIValidateChanges',
+    platformRestriction: ['vscode'],
+    getMessagePayload: () => ({
+      type: 'platform/validateChangesWithAI',
+    }),
+    shouldShow: context => !context.conflicts && !context.commit, // Only for uncommitted changes
+  },
+
+  // Generate tests
+  {
+    id: 'generate-tests',
+    label: 'Generate tests for changes',
+    trackEventName: 'GenerateTests',
+    featureFlag: 'AIGenerateTestsForModifiedCode',
+    platformRestriction: ['vscode'],
+    getMessagePayload: () => ({
+      type: 'platform/createTestForModifiedCodeWithAI',
+    }),
+    shouldShow: context => !context.conflicts,
+  },
+
   // Resolve merge conflicts
   {
     id: 'resolve-merge-conflicts',
@@ -170,7 +170,6 @@ export const smartActionsConfig: SmartActionConfig[] = [
     trackEventName: 'ResolveAllConflicts',
     featureFlag: 'AIResolveConflicts',
     platformRestriction: ['vscode'],
-    shouldShow: context => context.conflicts != null, // Only for merge conflicts
     getMessagePayload: context => {
       const conflicts = context.conflicts;
       assert(conflicts != null, 'Must be in merge conflict state to resolve conflicts');
@@ -180,5 +179,6 @@ export const smartActionsConfig: SmartActionConfig[] = [
         conflicts,
       };
     },
+    shouldShow: context => context.conflicts != null, // Only for merge conflicts
   },
 ] satisfies SmartActionConfig[];
