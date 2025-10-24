@@ -51,6 +51,7 @@ import {
 } from './codeReview/CodeReviewInfo';
 import {DiffBadge, DiffFollower, DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
+import {useFeatureFlagSync} from './featureFlags';
 import {FoldButton, useRunFoldPreview} from './fold';
 import {findPublicBaseAncestor} from './getCommitTree';
 import {t, T} from './i18n';
@@ -422,10 +423,9 @@ export const Commit = memo(
       );
     }
 
+    const useV2SmartActions = useFeatureFlagSync(Internal.featureFlags?.SmartActionsRedesign);
     if (!isPublic && !actionsPrevented) {
-      // TODO: replace with GK check
-      // eslint-disable-next-line no-constant-condition
-      if (false) {
+      if (useV2SmartActions) {
         if (commit.isDot && !hasUncommittedChanges && !inConflicts) {
           commitActions.push(<SmartActionsDropdown key="smartActions" />);
         }

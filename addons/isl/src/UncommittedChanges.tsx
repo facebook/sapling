@@ -98,7 +98,9 @@ import {
 } from './serverAPIState';
 import {ChangedFileMode, GeneratedStatus} from './types';
 
+import {SmartActionsDropdown} from './SmartActionsDropdown';
 import './UncommittedChanges.css';
+import {useFeatureFlagSync} from './featureFlags';
 
 export type UIChangedFile = {
   path: RepoRelativePath;
@@ -519,6 +521,8 @@ export function UncommittedChanges({place}: {place: Place}) {
 
   const runOperation = useRunOperation();
 
+  const useV2SmartActions = useFeatureFlagSync(Internal.featureFlags?.SmartActionsRedesign);
+
   const openCommitForm = useCallback(
     (which: 'commit' | 'amend') => {
       // make sure view is expanded
@@ -825,7 +829,11 @@ export function UncommittedChanges({place}: {place: Place}) {
               </Button>
             </Tooltip>
             <span className="show-on-hover">
-              <SmartActionsMenu key="smartActions" />
+              {useV2SmartActions ? (
+                <SmartActionsDropdown key="smartActions" />
+              ) : (
+                <SmartActionsMenu key="smartActions" />
+              )}
             </span>
           </div>
           {canAmend && (
