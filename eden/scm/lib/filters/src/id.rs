@@ -177,9 +177,11 @@ impl FilterId {
                 }
             }
             FilterVersion::V1 => {
+                let mut sorted_filter_paths: Vec<_> = filter_paths.to_vec();
+                sorted_filter_paths.sort();
                 let v1_components = V1FilterComponents {
                     version,
-                    filter_paths,
+                    filter_paths: &sorted_filter_paths,
                     commit_id,
                 };
 
