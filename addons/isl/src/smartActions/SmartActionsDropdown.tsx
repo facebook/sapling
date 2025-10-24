@@ -10,36 +10,85 @@ import {Button, buttonStyles} from 'isl-components/Button';
 import {ButtonDropdown, styles} from 'isl-components/ButtonDropdown';
 import {Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
-import {useRef} from 'react';
+import {useAtomValue} from 'jotai';
+import {useRef, useState} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
-import {useFeatureFlagSync} from '../featureFlags';
+import {tracker} from '../analytics';
+import serverAPI from '../ClientToServerAPI';
+import {useFeatureFlagAsync, useFeatureFlagSync} from '../featureFlags';
 import {Internal} from '../Internal';
+import platform from '../platform';
+import {repositoryInfo} from '../serverAPIState';
+import type {CommitInfo, PlatformSpecificClientToServerMessages} from '../types';
+import {smartActionsConfig} from './actionConfigs';
+import type {ActionContext, SmartActionConfig} from './types';
 
-export function SmartActionsDropdown() {
+type ActionMenuItem = {
+  id: string;
+  label: string;
+  config: SmartActionConfig;
+};
+
+export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
   const smartActionsMenuEnabled = useFeatureFlagSync(Internal.featureFlags?.SmartActionsMenu);
-  const contextMenu = useContextMenu(() => {
-    return [
-      {
-        label: (
-          <Row>
-            <Icon icon="check" />
-            Primary action
-          </Row>
-        ),
+  const repo = useAtomValue(repositoryInfo);
+
+  const context: ActionContext = {
+    commit,
+    repoPath: repo?.repoRoot,
+  };
+
+  // Load all feature flags
+  const featureFlagResults: Record<string, boolean> = {};
+  for (const config of smartActionsConfig) {
+    if (config.featureFlag) {
+      // Smart actions are constant and have a fixed order,
+      // so it's safe to use the hook in a loop here
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      featureFlagResults[config.featureFlag as string] = useFeatureFlagAsync(
+        Internal.featureFlags?.[config.featureFlag],
+      );
+    }
+  }
+
+  const availableActionItems: ActionMenuItem[] = [];
+  for (const config of smartActionsConfig) {
+    if (
+      shouldShowSmartAction(
+        config,
+        context,
+        config.featureFlag ? featureFlagResults[config.featureFlag as string] : true,
+      )
+    ) {
+      availableActionItems.push({
+        id: config.id,
+        label: config.label,
+        config,
+      });
+    }
+  }
+
+  const [selectedAction, setSelectedAction] = useState<ActionMenuItem | undefined>(
+    availableActionItems[0],
+  );
+
+  const contextMenu = useContextMenu(() =>
+    availableActionItems.map(actionItem => ({
+      label: (
+        // Mark the current action as selected
+        <Row>
+          <Icon icon={actionItem.id === selectedAction?.id ? 'check' : 'blank'} />
+          {actionItem.label}
+        </Row>
+      ),
+      onClick: () => {
+        setSelectedAction(actionItem);
       },
-      {
-        label: (
-          <Row>
-            <Icon icon="blank" />
-            Other action
-          </Row>
-        ),
-      },
-    ];
-  });
+    })),
+  );
   const dropdownButtonRef = useRef<HTMLButtonElement>(null);
 
-  if (!smartActionsMenuEnabled) {
+  if (!smartActionsMenuEnabled || availableActionItems.length === 0 || !selectedAction) {
     return null;
   }
 
@@ -47,9 +96,9 @@ export function SmartActionsDropdown() {
     <ButtonDropdown
       kind="icon"
       options={[]}
-      selected={{id: 'primary-action', label: 'Primary action'}}
+      selected={selectedAction}
       icon={<Icon icon="lightbulb-sparkle" />}
-      onClick={() => {}}
+      onClick={action => runSmartAction(action.config, context)}
       onChangeSelected={() => {}}
       customSelectComponent={
         <Button
@@ -71,4 +120,30 @@ export function SmartActionsDropdown() {
       }
     />
   );
+}
+
+function shouldShowSmartAction(
+  config: SmartActionConfig,
+  context: ActionContext,
+  passesFeatureFlag: boolean,
+): boolean {
+  if (!passesFeatureFlag) {
+    return false;
+  }
+
+  if (config.platformRestriction && !config.platformRestriction?.includes(platform.platformName)) {
+    return false;
+  }
+
+  return config.shouldShow?.(context) ?? true;
+}
+
+function runSmartAction(config: SmartActionConfig, context: ActionContext): void {
+  tracker.track('SmartActionClicked', {extras: {action: config.trackEventName}});
+  if (config.getMessagePayload) {
+    const payload = config.getMessagePayload(context);
+    serverAPI.postMessage({
+      ...payload,
+    } as PlatformSpecificClientToServerMessages);
+  }
 }

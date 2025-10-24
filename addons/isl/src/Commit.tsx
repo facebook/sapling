@@ -427,7 +427,7 @@ export const Commit = memo(
     if (!isPublic && !actionsPrevented) {
       if (useV2SmartActions) {
         if (commit.isDot && !hasUncommittedChanges && !inConflicts) {
-          commitActions.push(<SmartActionsDropdown key="smartActions" />);
+          commitActions.push(<SmartActionsDropdown key="smartActions" commit={commit} />);
         }
       } else {
         commitActions.push(<SmartActionsMenu key="smartActions" commit={commit} />);
