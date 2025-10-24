@@ -12,7 +12,7 @@ import {Button, buttonStyles} from './Button';
 import {Icon} from './Icon';
 import {colors, spacing} from './theme/tokens.stylex';
 
-const styles = stylex.create({
+export const styles = stylex.create({
   container: {
     display: 'flex',
     alignItems: 'stretch',
@@ -95,6 +95,7 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   buttonDisabled,
   pickerDisabled,
   icon,
+  customSelectComponent,
   ...rest
 }: {
   options: ReadonlyArray<T>;
@@ -106,6 +107,7 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   pickerDisabled?: boolean;
   /** Icon to place in the button */
   icon?: React.ReactNode;
+  customSelectComponent?: React.ReactNode;
   'data-testId'?: string;
 }) {
   const selectedOption = options.find(opt => opt.id === selected.id) ?? options[0];
@@ -124,28 +126,30 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
         {...rest}>
         {icon ?? null} {selected.label}
       </Button>
-      <select
-        {...stylex.props(
-          styles.select,
-          kind === 'icon' && buttonStyles.icon,
-          kind === 'icon' && styles.iconSelect,
-          // useBuiltinBorder && styles.builtinButtonBorder,
-        )}
-        disabled={pickerDisabled}
-        value={selectedOption.id}
-        onClick={e => e.stopPropagation()}
-        onChange={event => {
-          const matching = options.find(opt => opt.id === (event.target.value as T['id']));
-          if (matching != null) {
-            onChangeSelected(matching);
-          }
-        }}>
-        {options.map(option => (
-          <option key={option.id} value={option.id}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      {customSelectComponent ?? (
+        <select
+          {...stylex.props(
+            styles.select,
+            kind === 'icon' && buttonStyles.icon,
+            kind === 'icon' && styles.iconSelect,
+            // useBuiltinBorder && styles.builtinButtonBorder,
+          )}
+          disabled={pickerDisabled}
+          value={selectedOption.id}
+          onClick={e => e.stopPropagation()}
+          onChange={event => {
+            const matching = options.find(opt => opt.id === (event.target.value as T['id']));
+            if (matching != null) {
+              onChangeSelected(matching);
+            }
+          }}>
+          {options.map(option => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      )}
       <Icon
         icon="chevron-down"
         {...stylex.props(
