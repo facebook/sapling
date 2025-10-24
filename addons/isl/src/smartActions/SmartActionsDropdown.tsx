@@ -10,6 +10,7 @@ import {Button, buttonStyles} from 'isl-components/Button';
 import {ButtonDropdown, styles} from 'isl-components/ButtonDropdown';
 import {Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
+import {getZoomLevel} from 'isl-components/zoom';
 import {useAtomValue} from 'jotai';
 import {useRef, useState} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
@@ -106,11 +107,16 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
           onClick={e => {
             if (dropdownButtonRef.current) {
               const rect = dropdownButtonRef.current.getBoundingClientRect();
-              // Create a synthetic event with clientX/clientY in the center of the button
-              const centerX = rect.left + rect.width / 2;
-              const centerY = rect.top + rect.height / 2;
+              const zoom = getZoomLevel();
+              const xOffset = 4 * zoom;
+              const centerX = rect.left + rect.width / 2 - xOffset;
+              // Position arrow at the top or bottom edge of button depending on which half of screen we're in
+              const isTopHalf =
+                (rect.top + rect.height / 2) / zoom <= window.innerHeight / zoom / 2;
+              const yOffset = 5 * zoom;
+              const edgeY = isTopHalf ? rect.bottom - yOffset : rect.top + yOffset;
               Object.defineProperty(e, 'clientX', {value: centerX, configurable: true});
-              Object.defineProperty(e, 'clientY', {value: centerY, configurable: true});
+              Object.defineProperty(e, 'clientY', {value: edgeY, configurable: true});
             }
             contextMenu(e);
             e.stopPropagation();

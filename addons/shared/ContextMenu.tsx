@@ -111,7 +111,7 @@ export function ContextMenus() {
     } else {
       position = {
         bottom: window.innerHeight / zoom - (state.y - yOffset),
-        right: window.innerWidth / zoom - (state.x + xOffset),
+        right: window.innerWidth / zoom - (state.x - xOffset),
       };
     }
   }
