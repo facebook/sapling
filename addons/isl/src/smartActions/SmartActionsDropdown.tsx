@@ -11,12 +11,13 @@ import {ButtonDropdown, styles} from 'isl-components/ButtonDropdown';
 import {Row} from 'isl-components/Flex';
 import {Icon} from 'isl-components/Icon';
 import {getZoomLevel} from 'isl-components/zoom';
-import {useAtomValue} from 'jotai';
-import {useRef, useState} from 'react';
+import {atom, useAtomValue} from 'jotai';
+import {loadable} from 'jotai/utils';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {useContextMenu} from 'shared/ContextMenu';
 import {tracker} from '../analytics';
 import serverAPI from '../ClientToServerAPI';
-import {useFeatureFlagAsync, useFeatureFlagSync} from '../featureFlags';
+import {bulkFetchFeatureFlags, useFeatureFlagSync} from '../featureFlags';
 import {Internal} from '../Internal';
 import platform from '../platform';
 import {optimisticMergeConflicts} from '../previews';
@@ -31,50 +32,83 @@ type ActionMenuItem = {
   config: SmartActionConfig;
 };
 
+const smartActionFeatureFlagsAtom = atom<Promise<Record<string, boolean>>>(async () => {
+  const flags: Record<string, boolean> = {};
+
+  const flagNames: string[] = [];
+  for (const config of smartActionsConfig) {
+    if (config.featureFlag && Internal.featureFlags?.[config.featureFlag]) {
+      flagNames.push(Internal.featureFlags[config.featureFlag]);
+    }
+  }
+
+  if (flagNames.length === 0) {
+    return flags;
+  }
+
+  const results = await bulkFetchFeatureFlags(flagNames);
+
+  // Map back from flag names to flag keys
+  for (const config of smartActionsConfig) {
+    if (config.featureFlag && Internal.featureFlags?.[config.featureFlag]) {
+      const flagName = Internal.featureFlags[config.featureFlag];
+      flags[config.featureFlag as string] = results[flagName] ?? false;
+    }
+  }
+
+  return flags;
+});
+
+const loadableFeatureFlagsAtom = loadable(smartActionFeatureFlagsAtom);
+
 export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
   const smartActionsMenuEnabled = useFeatureFlagSync(Internal.featureFlags?.SmartActionsMenu);
   const repo = useAtomValue(repositoryInfo);
   const conflicts = useAtomValue(optimisticMergeConflicts);
+  const featureFlagsLoadable = useAtomValue(loadableFeatureFlagsAtom);
+  const dropdownButtonRef = useRef<HTMLButtonElement>(null);
 
-  const context: ActionContext = {
-    commit,
-    repoPath: repo?.repoRoot,
-    conflicts,
-  };
-
-  // Load all feature flags
-  const featureFlagResults: Record<string, boolean> = {};
-  for (const config of smartActionsConfig) {
-    if (config.featureFlag) {
-      // Smart actions are constant and have a fixed order,
-      // so it's safe to use the hook in a loop here
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      featureFlagResults[config.featureFlag as string] = useFeatureFlagAsync(
-        Internal.featureFlags?.[config.featureFlag],
-      );
-    }
-  }
-
-  const availableActionItems: ActionMenuItem[] = [];
-  for (const config of smartActionsConfig) {
-    if (
-      shouldShowSmartAction(
-        config,
-        context,
-        config.featureFlag ? featureFlagResults[config.featureFlag as string] : true,
-      )
-    ) {
-      availableActionItems.push({
-        id: config.id,
-        label: config.label,
-        config,
-      });
-    }
-  }
-
-  const [selectedAction, setSelectedAction] = useState<ActionMenuItem | undefined>(
-    availableActionItems[0],
+  const context: ActionContext = useMemo(
+    () => ({
+      commit,
+      repoPath: repo?.repoRoot,
+      conflicts,
+    }),
+    [commit, repo?.repoRoot, conflicts],
   );
+
+  const availableActionItems = useMemo(() => {
+    const featureFlagResults =
+      featureFlagsLoadable.state === 'hasData' ? featureFlagsLoadable.data : {};
+    const items: ActionMenuItem[] = [];
+
+    if (featureFlagsLoadable.state === 'hasData') {
+      for (const config of smartActionsConfig) {
+        if (
+          shouldShowSmartAction(
+            config,
+            context,
+            config.featureFlag ? featureFlagResults[config.featureFlag as string] : true,
+          )
+        ) {
+          items.push({
+            id: config.id,
+            label: config.label,
+            config,
+          });
+        }
+      }
+    }
+
+    return items;
+  }, [featureFlagsLoadable, context]);
+
+  const [selectedAction, setSelectedAction] = useState<ActionMenuItem | undefined>(undefined);
+
+  // Update selected action when available actions change
+  useEffect(() => {
+    setSelectedAction(availableActionItems[0]);
+  }, [availableActionItems]);
 
   const contextMenu = useContextMenu(() =>
     availableActionItems.map(actionItem => ({
@@ -90,7 +124,10 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
       },
     })),
   );
-  const dropdownButtonRef = useRef<HTMLButtonElement>(null);
+
+  if (featureFlagsLoadable.state !== 'hasData') {
+    return null;
+  }
 
   if (
     !smartActionsMenuEnabled ||
