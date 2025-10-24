@@ -9,6 +9,7 @@
 
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/fs/model/TreeFwd.h"
+#include "eden/scm/lib/backingstore/include/SaplingBackingStoreError.h"
 #include "eden/scm/lib/backingstore/src/ffi.rs.h" // @manual
 
 #include <folly/Range.h>
@@ -20,7 +21,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <type_traits>
 
 namespace sapling {
@@ -80,29 +80,33 @@ folly::Try<facebook::eden::TreePtr> SaplingNativeBackingStore::getTree(
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing tree node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
-    TreeBuilder tb = TreeBuilder{oid, path, caseSensitive_, objectIdFormat_};
+    try {
+      TreeBuilder tb = TreeBuilder{oid, path, caseSensitive_, objectIdFormat_};
 
-    sapling_backingstore_get_tree(
-        *store_.get(),
-        rust::Slice<const uint8_t>{node.data(), node.size()},
-        tb,
-        fetch_mode);
-
-    facebook::eden::TreePtr tree = tb.build();
-
-    if (tree && context->getCause() != FetchCause::Prefetch) {
-      sapling_backingstore_witness_dir_read(
+      sapling_backingstore_get_tree(
           *store_.get(),
-          rust::Slice<const uint8_t>{
-              reinterpret_cast<const uint8_t*>(path.view().data()),
-              path.view().size()},
-          tb.num_files(),
-          tb.num_dirs(),
-          fetch_mode == FetchMode::LocalOnly,
-          context->getClientPid().valueOrZero().get());
-    }
+          rust::Slice<const uint8_t>{node.data(), node.size()},
+          tb,
+          fetch_mode);
 
-    return tree;
+      facebook::eden::TreePtr tree = tb.build();
+
+      if (tree && context->getCause() != FetchCause::Prefetch) {
+        sapling_backingstore_witness_dir_read(
+            *store_.get(),
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(path.view().data()),
+                path.view().size()},
+            tb.num_files(),
+            tb.num_dirs(),
+            fetch_mode == FetchMode::LocalOnly,
+            context->getClientPid().valueOrZero().get());
+      }
+
+      return tree;
+    } catch (const rust::Error& error) {
+      throw SaplingBackingStoreError{error.what()};
+    }
   });
 }
 
@@ -161,10 +165,14 @@ SaplingNativeBackingStore::getTreeAuxData(NodeId node, bool local) {
       "Importing tree aux data node={} from hgcache",
       folly::hexlify(node));
   return folly::makeTryWith([&] {
-    return sapling_backingstore_get_tree_aux(
-        *store_.get(),
-        rust::Slice<const uint8_t>{node.data(), node.size()},
-        fetch_mode);
+    try {
+      return sapling_backingstore_get_tree_aux(
+          *store_.get(),
+          rust::Slice<const uint8_t>{node.data(), node.size()},
+          fetch_mode);
+    } catch (const rust::Error& error) {
+      throw SaplingBackingStoreError{error.what()};
+    }
   });
 }
 
@@ -203,20 +211,24 @@ folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
     FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing blob node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
-    auto blob = sapling_backingstore_get_blob(
-        *store_.get(),
-        rust::Slice<const uint8_t>{node.data(), node.size()},
-        fetch_mode);
-
-    if (blob && context->getCause() != FetchCause::Prefetch) {
-      sapling_backingstore_witness_file_read(
+    try {
+      auto blob = sapling_backingstore_get_blob(
           *store_.get(),
-          rust::Str{path.view().data(), path.view().size()},
-          fetch_mode == FetchMode::LocalOnly,
-          context->getClientPid().valueOrZero().get());
-    }
+          rust::Slice<const uint8_t>{node.data(), node.size()},
+          fetch_mode);
 
-    return blob;
+      if (blob && context->getCause() != FetchCause::Prefetch) {
+        sapling_backingstore_witness_file_read(
+            *store_.get(),
+            rust::Str{path.view().data(), path.view().size()},
+            fetch_mode == FetchMode::LocalOnly,
+            context->getClientPid().valueOrZero().get());
+      }
+
+      return blob;
+    } catch (const rust::Error& error) {
+      throw SaplingBackingStoreError{error.what()};
+    }
   });
 }
 
@@ -276,10 +288,14 @@ SaplingNativeBackingStore::getBlobAuxData(NodeId node, bool local) {
       "Importing blob aux data node={} from hgcache",
       folly::hexlify(node));
   return folly::makeTryWith([&] {
-    return sapling_backingstore_get_file_aux(
-        *store_.get(),
-        rust::Slice<const uint8_t>{node.data(), node.size()},
-        fetch_mode);
+    try {
+      return sapling_backingstore_get_file_aux(
+          *store_.get(),
+          rust::Slice<const uint8_t>{node.data(), node.size()},
+          fetch_mode);
+    } catch (const rust::Error& error) {
+      throw SaplingBackingStoreError{error.what()};
+    }
   });
 }
 
@@ -332,16 +348,20 @@ SaplingNativeBackingStore::getGlobFiles(
 
   auto br = folly::ByteRange(commit_id);
   return folly::makeTryWith([&] {
-    auto globFiles = sapling_backingstore_get_glob_files(
-        *store_.get(),
-        rust::Slice<const uint8_t>{br.data(), br.size()},
-        rust_suffixes,
-        rust_prefixes);
+    try {
+      auto globFiles = sapling_backingstore_get_glob_files(
+          *store_.get(),
+          rust::Slice<const uint8_t>{br.data(), br.size()},
+          rust_suffixes,
+          rust_prefixes);
 
-    XCHECK(
-        globFiles.get(),
-        "sapling_backingstore_get_glob_files returned a nullptr, but did not throw an exception.");
-    return globFiles;
+      XCHECK(
+          globFiles.get(),
+          "sapling_backingstore_get_glob_files returned a nullptr, but did not throw an exception.");
+      return globFiles;
+    } catch (const rust::Error& error) {
+      throw SaplingBackingStoreError{error.what()};
+    }
   });
 }
 
