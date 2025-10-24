@@ -25,9 +25,15 @@ import platform from '../platform';
 import {optimisticMergeConflicts} from '../previews';
 import {repositoryInfo} from '../serverAPIState';
 import type {CommitInfo, PlatformSpecificClientToServerMessages} from '../types';
-import {smartActionsConfig} from './actionConfigs';
 import {bumpSmartAction, useSortedActions} from './smartActionsOrdering';
 import type {ActionContext, ActionMenuItem, SmartActionConfig} from './types';
+
+const smartActionsConfig = [
+  // Internal actions
+  ...(Internal.smartActions?.smartActionsConfig ?? []),
+  // Public actions
+  // TODO: Add public actions here
+] satisfies SmartActionConfig[];
 
 const smartActionFeatureFlagsAtom = atom<Promise<Record<string, boolean>>>(async () => {
   const flags: Record<string, boolean> = {};
@@ -131,7 +137,7 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
 
   if (
     !smartActionsMenuEnabled ||
-    !Internal.showSmartActions ||
+    !Internal.smartActions?.showSmartActions ||
     sortedActionItems.length === 0 ||
     !selectedAction
   ) {
