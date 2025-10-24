@@ -437,3 +437,16 @@ python_unittest(
         "//eden/integration/lib:lib",
     ],
 )
+
+python_unittest(
+    name = "filteredhg_migration",
+    srcs = ["filteredhg_migration_test.py"],
+    env = artifacts["env"],
+    labels = ["autodeps2_generated"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/integration/hg/lib:testutil",
+        "//eden/integration/lib:lib",
+    ],
+)

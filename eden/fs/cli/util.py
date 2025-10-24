@@ -53,6 +53,8 @@ if sys.platform != "win32":
 else:
     import winreg
 
+MIGRATION_MARKER = "edensparse_migration"
+
 
 class RepoError(Exception):
     pass
