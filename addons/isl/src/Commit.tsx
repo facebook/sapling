@@ -35,6 +35,7 @@ import {DragToRebase} from './DragToRebase';
 import {EducationInfoTip} from './Education';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {Internal} from './Internal';
+import {SmartActionsDropdown} from './SmartActionsDropdown';
 import {SmartActionsMenu} from './SmartActionsMenu';
 import {SubmitSelectionButton} from './SubmitSelectionButton';
 import {getSuggestedRebaseOperation, suggestedRebaseDestinations} from './SuggestedRebase';
@@ -142,6 +143,7 @@ export const Commit = memo(
   }) => {
     const isPublic = commit.phase === 'public';
     const isObsoleted = commit.successorInfo != null;
+    const hasUncommittedChanges = (readAtom(uncommittedChangesWithPreviews).length ?? 0) > 0;
 
     const isIrrelevantToCwd = useIsIrrelevantToCwd(commit);
 
@@ -175,7 +177,6 @@ export const Commit = memo(
     }
 
     const makeContextMenuOptions = () => {
-      const hasUncommittedChanges = (readAtom(uncommittedChangesWithPreviews).length ?? 0) > 0;
       const syncStatus = readAtom(syncStatusAtom)?.get(commit.hash);
 
       const items: Array<ContextMenuItem & {loggingLabel?: string}> = [
@@ -422,8 +423,19 @@ export const Commit = memo(
     }
 
     if (!isPublic && !actionsPrevented) {
+      // TODO: replace with GK check
+      // eslint-disable-next-line no-constant-condition
+      if (false) {
+        if (commit.isDot && !hasUncommittedChanges && !inConflicts) {
+          commitActions.push(<SmartActionsDropdown key="smartActions" />);
+        }
+      } else {
+        commitActions.push(<SmartActionsMenu key="smartActions" commit={commit} />);
+      }
+    }
+
+    if (!isPublic && !actionsPrevented) {
       commitActions.push(
-        <SmartActionsMenu key="smartActions" commit={commit} />,
         <OpenCommitInfoButton
           key="open-sidebar"
           revealCommit={onDoubleClickToShowDrawer}
