@@ -30,7 +30,7 @@ export function SmartActionsMenu({commit}: {commit?: CommitInfo}) {
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   const smartActionsMenuEnabled = useFeatureFlagSync(Internal.featureFlags?.SmartActionsMenu);
-  if (!smartActionsMenuEnabled) {
+  if (!smartActionsMenuEnabled || !Internal.showSmartActions) {
     return null;
   }
 

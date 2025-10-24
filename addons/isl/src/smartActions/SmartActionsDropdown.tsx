@@ -89,7 +89,12 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
   );
   const dropdownButtonRef = useRef<HTMLButtonElement>(null);
 
-  if (!smartActionsMenuEnabled || availableActionItems.length === 0 || !selectedAction) {
+  if (
+    !smartActionsMenuEnabled ||
+    !Internal.showSmartActions ||
+    availableActionItems.length === 0 ||
+    !selectedAction
+  ) {
     return null;
   }
 
