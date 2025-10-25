@@ -38,7 +38,7 @@ Large file
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_filesize for bb0f06edf23bed2fd049f1bd587dad41df09adc1: File size limit is 10 bytes. You tried to push file largefile that is over the limit (12 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for bb0f06edf23bed2fd049f1bd587dad41df09adc1: File size limit is 10 bytes. You tried to push file largefile that is over the limit (12 bytes, 1.20x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   abort: unexpected EOL, expected netstring digit
   [255]
 

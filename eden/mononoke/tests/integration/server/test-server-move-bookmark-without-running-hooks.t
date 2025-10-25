@@ -48,7 +48,7 @@ Try to pushrebase new commit that fails the hook - push should fail
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_filesize for cd415129827add17f8486647dad5f3f84f5df316: File size limit is 10 bytes. You tried to push file large_file that is over the limit (15 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for cd415129827add17f8486647dad5f3f84f5df316: File size limit is 10 bytes. You tried to push file large_file that is over the limit (15 bytes, 1.50x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -64,7 +64,7 @@ mononoke now
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_filesize for cd415129827add17f8486647dad5f3f84f5df316: File size limit is 10 bytes. You tried to push file large_file that is over the limit (15 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for cd415129827add17f8486647dad5f3f84f5df316: File size limit is 10 bytes. You tried to push file large_file that is over the limit (15 bytes, 1.50x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   abort: unexpected EOL, expected netstring digit
   [255]
 
@@ -77,7 +77,7 @@ First check that push fail for this bookmark as well
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_filesize for cd415129827add17f8486647dad5f3f84f5df316: File size limit is 10 bytes. You tried to push file large_file that is over the limit (15 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for cd415129827add17f8486647dad5f3f84f5df316: File size limit is 10 bytes. You tried to push file large_file that is over the limit (15 bytes, 1.50x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   abort: unexpected EOL, expected netstring digit
   [255]
   $ hg push -r . --to another_bookmark --create --pushvar ALLOW_LARGE_FILES=true

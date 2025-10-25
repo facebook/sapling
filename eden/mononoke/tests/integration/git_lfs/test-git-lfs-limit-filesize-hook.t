@@ -48,7 +48,7 @@ Try to push a change to non-LFS file
   $ quiet git_client push
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    ! [remote rejected] master_bookmark -> master_bookmark (hooks failed:
-    limit_filesize for 06fdd952d6868be8bbeb3de09c472ef197152968: File size limit is 10 bytes. You tried to push file some_new_large_file that is over the limit (37 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+    limit_filesize for 06fdd952d6868be8bbeb3de09c472ef197152968: File size limit is 10 bytes. You tried to push file some_new_large_file that is over the limit (37 bytes, 3.70x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   
   For more information about hooks and bypassing, refer https://fburl.com/wiki/mb4wtk1j)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'

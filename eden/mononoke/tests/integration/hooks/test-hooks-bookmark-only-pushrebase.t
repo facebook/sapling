@@ -71,7 +71,7 @@ fast-forward the bookmark over a commit that fails the hook
   pushing rev dc9cf68aa67d to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   pushrebasing stack (112478962961, dc9cf68aa67d] (2 commits) to remote bookmark master_bookmark
   abort: Server error: hooks failed:
-    limit_filesize for 31362727a553c6720a19c992d2ffb3de0a2e3e1902a4ce6364ec5a895a82a5ac: File size limit is 10 bytes. You tried to push file clarge that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+    limit_filesize for 31362727a553c6720a19c992d2ffb3de0a2e3e1902a4ce6364ec5a895a82a5ac: File size limit is 10 bytes. You tried to push file clarge that is over the limit (14 bytes, 1.40x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook, the push will now work
@@ -87,14 +87,14 @@ attempt a non-fast-forward move, it should fail
   pushing rev 24b5f35a12db to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   pushrebasing stack (112478962961, 24b5f35a12db] (2 commits) to remote bookmark master_bookmark
   abort: Server error: hooks failed:
-    limit_filesize for 7cfde619ea7f96e2679b5c8778e93af578be090618a61de57d5f42d6fc30cfec: File size limit is 10 bytes. You tried to push file elarge that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+    limit_filesize for 7cfde619ea7f96e2679b5c8778e93af578be090618a61de57d5f42d6fc30cfec: File size limit is 10 bytes. You tried to push file elarge that is over the limit (14 bytes, 1.40x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 specify the pushvar to allow the non-fast-forward move.
   $ hg push -r . --to master_bookmark --pushvar NON_FAST_FORWARD=true
   pushing rev 24b5f35a12db to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   pushrebasing stack (112478962961, 24b5f35a12db] (2 commits) to remote bookmark master_bookmark
   abort: Server error: hooks failed:
-    limit_filesize for 7cfde619ea7f96e2679b5c8778e93af578be090618a61de57d5f42d6fc30cfec: File size limit is 10 bytes. You tried to push file elarge that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+    limit_filesize for 7cfde619ea7f96e2679b5c8778e93af578be090618a61de57d5f42d6fc30cfec: File size limit is 10 bytes. You tried to push file elarge that is over the limit (14 bytes, 1.40x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook too, and it should work
@@ -121,7 +121,7 @@ fails the hook
   pushing rev aa22a7abaf7d to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   pushrebasing stack (ba2b7fa7166d, aa22a7abaf7d] (2 commits) to remote bookmark master_bookmark
   abort: Server error: hooks failed:
-    limit_filesize for 6644ac858cf67f9d194992b0862ea29f16d8b1fb3a255eba56d928371677dfb4: File size limit is 10 bytes. You tried to push file ylarge that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+    limit_filesize for 6644ac858cf67f9d194992b0862ea29f16d8b1fb3a255eba56d928371677dfb4: File size limit is 10 bytes. You tried to push file ylarge that is over the limit (14 bytes, 1.40x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook, and it should fail: can't push rebase to such a commit

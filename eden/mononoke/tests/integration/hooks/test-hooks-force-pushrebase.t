@@ -83,7 +83,7 @@ fast-forward the bookmark over a commit that fails the hook
   edenapi: uploaded 2 changesets
   moving remote bookmark master_bookmark from * to 7ff4b7c298ec (glob)
   abort: server error: hooks failed:
-    limit_filesize for 365e543af2aaf5cca34cf47377a8aee88b5597d45160996bf6434703fca8f8ff: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+    limit_filesize for 365e543af2aaf5cca34cf47377a8aee88b5597d45160996bf6434703fca8f8ff: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes, 1.40x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook, the push will now work
@@ -103,7 +103,7 @@ attempt a non-fast-forward push over a commit that fails the hook
   edenapi: uploaded 2 changesets
   moving remote bookmark master_bookmark from * to af09fbbc2f05 (glob)
   abort: server error: hooks failed:
-    limit_filesize for 9c3ef8778600f6cd1c20c8a098bbb93a4d1b30fee00ff001e37ffff1908c920d: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+    limit_filesize for 9c3ef8778600f6cd1c20c8a098bbb93a4d1b30fee00ff001e37ffff1908c920d: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes, 1.40x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook, and it should work
@@ -124,7 +124,7 @@ fails the hook
   edenapi: uploaded 2 changesets
   moving remote bookmark master_bookmark from * to e3295448b1ef (glob)
   abort: server error: hooks failed:
-    limit_filesize for e9bcd19d2580895e76b4e228c3df2ae8d3f2863894ba4d2e9dea3004bdd5abb8: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
+    limit_filesize for e9bcd19d2580895e76b4e228c3df2ae8d3f2863894ba4d2e9dea3004bdd5abb8: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes, 1.40x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   [255]
 
 bypass the hook, and it should work

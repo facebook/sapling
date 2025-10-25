@@ -127,11 +127,12 @@ impl FileHook for LimitFilesize {
                 None => return Ok(HookExecution::Accepted),
                 Some(limit) if len <= *limit => return Ok(HookExecution::Accepted),
                 Some(limit) => {
+                    let ratio = len as f64 / *limit as f64;
                     return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                         "File too large",
                         format!(
-                            "File size limit is {} bytes. You tried to push file {} that is over the limit ({} bytes). This limit is enforced for files matching the following regex: \"{}\". See https://fburl.com/landing_big_diffs for instructions.",
-                            limit, path, len, regex
+                            "File size limit is {} bytes. You tried to push file {} that is over the limit ({} bytes, {:.2}x the limit). This limit is enforced for files matching the following regex: \"{}\". See https://fburl.com/landing_big_diffs for instructions.",
+                            limit, path, len, ratio, regex
                         ),
                     )));
                 }

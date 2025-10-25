@@ -83,7 +83,7 @@ Test 1: Bookmark with specific name (master) - should only run limit_filesize ho
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_filesize for *: File size limit is 5 bytes. You tried to push file large_file that is over the limit (18 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions. (glob)
+  remote:     limit_filesize for 8e1abc616627abff95c42a990ee914e7cb6a2bcf: File size limit is 5 bytes. You tried to push file large_file that is over the limit (18 bytes, 3.60x the limit). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   abort: unexpected EOL, expected netstring digit
   [255]
 
