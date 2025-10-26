@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -655,7 +656,7 @@ async fn delete_source_of_truth_for_mutation_id(
 #[cfg(fbcode_build)]
 async fn create_repos_in_mononoke(
     ctx: CoreContext,
-    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    git_source_of_truth_config: Arc<dyn GitSourceOfTruthConfig>,
     params: &thrift::CreateReposParams,
 ) -> Result<Option<i64>, scs_errors::ServiceError> {
     // ## What:
@@ -675,7 +676,7 @@ async fn create_repos_in_mononoke(
     //   Of Truth to be in Mononoke already, ahead of creating them in Metagit and allowing pushes.
 
     let (repo_ids_and_requests, _attempts) = retry(
-        |_| reserve_repos_ids(ctx.clone(), git_source_of_truth_config, params),
+        |_| reserve_repos_ids(ctx.clone(), git_source_of_truth_config.as_ref(), params),
         Duration::from_millis(1_000),
     )
     .binary_exponential_backoff()
@@ -699,7 +700,7 @@ async fn create_repos_in_mononoke(
                 |_| {
                     update_mutation_id_by_repo_names_for_reserved_repos(
                         ctx.clone(),
-                        git_source_of_truth_config,
+                        git_source_of_truth_config.as_ref(),
                         params,
                         mutation_id,
                     )
@@ -718,7 +719,7 @@ async fn create_repos_in_mononoke(
                 |_| {
                     delete_source_of_truth_for_reserved_repos(
                         ctx.clone(),
-                        git_source_of_truth_config,
+                        git_source_of_truth_config.as_ref(),
                         params,
                     )
                 },
@@ -735,7 +736,7 @@ async fn create_repos_in_mononoke(
 #[cfg(not(fbcode_build))]
 async fn create_repos_in_mononoke(
     _ctx: CoreContext,
-    _git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    _git_source_of_truth_config: Arc<dyn GitSourceOfTruthConfig>,
     _params: &thrift::CreateReposParams,
 ) -> Result<(), scs_errors::ServiceError> {
     println!("No access to configo in oss build");
@@ -752,8 +753,7 @@ impl SourceControlServiceImpl {
             .await?;
         update_repos_acls(ctx.clone(), &params).await?;
         let mutation_id =
-            create_repos_in_mononoke(ctx, self.git_source_of_truth_config.as_ref(), &params)
-                .await?;
+            create_repos_in_mononoke(ctx, self.git_source_of_truth_config.clone(), &params).await?;
 
         Ok(thrift::CreateReposToken {
             mutation_id,
@@ -762,7 +762,6 @@ impl SourceControlServiceImpl {
     }
 
     #[cfg(fbcode_build)]
-    // This impl does nothing right now - but will do more in the near future.
     pub(crate) async fn create_repos_poll(
         &self,
         ctx: CoreContext,
@@ -773,182 +772,238 @@ impl SourceControlServiceImpl {
         }
 
         let mutation_id = token.mutation_id.unwrap();
-        let configo_client = make_ConfigoService_srclient!(ctx.fb)
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-
-        let resp = configo_client
-            .status(&mutation_id)
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-
-        if resp.error {
-            // We failed to land the mutation, so it is safe to "release the lock" on these repo
-            // ids and names, which will allow a future attempt to succeed.
-            self.cleanup_repos(ctx, mutation_id).await?;
-            return Err(scs_errors::internal_error(format!(
-                "Configo mutation error: {}",
-                resp.errorMessage
-            ))
-            .into());
-        }
-
-        let mutation = resp.mutation.ok_or_else(|| {
-            warn!(
-                ctx.logger(),
-                "mutation state is not present {}", mutation_id
-            );
-            scs_errors::internal_error(format!("Mutation state not available for {mutation_id}"))
-        })?;
-
-        if mutation.stateInfo.isError {
-            info!(
-                ctx.logger(),
-                "cleaning up, mutation state info has error {}", mutation_id
-            );
-            self.cleanup_repos(ctx, token.mutation_id.unwrap()).await?;
-            return Err(scs_errors::internal_error(format!(
-                "Configo mutation error: {}",
-                mutation.stateInfo.errorMessage
-            ))
-            .into());
-        }
-
-        let status = match mutation.stateInfo.state {
-            MutationState::LANDED => {
-                retry(
-                    |_| {
-                        update_source_of_truth_to_mononoke_for_mutation_id(
-                            ctx.clone(),
-                            self.git_source_of_truth_config.as_ref(),
-                            mutation_id,
-                        )
-                    },
-                    Duration::from_millis(1_000),
-                )
-                .binary_exponential_backoff()
-                .max_attempts(5)
-                .await?;
-                Some(thrift::CreateReposStatus::SUCCESS)
-            }
-            MutationState::FAILED => {
-                self.cleanup_repos(ctx, mutation_id).await?;
-                Some(thrift::CreateReposStatus::FAILED)
-            }
-            MutationState::ABORTED => {
-                self.cleanup_repos(ctx, mutation_id).await?;
-                Some(thrift::CreateReposStatus::ABORTED)
-            }
-            MutationState::PREPARED => {
-                if !mutation.stateInfo.isSigned {
-                    self.initiate_land(ctx.clone(), configo_client, mutation_id)
-                        .await?;
+        let mutation_state;
+        let status = match poll_mutation_id(
+            ctx,
+            self.git_source_of_truth_config.as_ref(),
+            mutation_id,
+        )
+        .await
+        {
+            Ok(state) => {
+                mutation_state = state;
+                match state {
+                    MutationState::LANDED => thrift::CreateReposStatus::SUCCESS,
+                    MutationState::FAILED => thrift::CreateReposStatus::FAILED,
+                    MutationState::ABORTED => thrift::CreateReposStatus::ABORTED,
+                    MutationState::PREPARED
+                    | MutationState::CANARYING
+                    | MutationState::PREPARING
+                    | MutationState::LANDING
+                    | MutationState::SERVICE_CANARYING
+                    | MutationState::VALIDATING => thrift::CreateReposStatus::IN_PROGRESS,
+                    _ => {
+                        return Err(scs_errors::internal_error(format!(
+                            "Unexpected Configo mutation state: {}",
+                            state
+                        ))
+                        .into());
+                    }
                 }
-                Some(thrift::CreateReposStatus::IN_PROGRESS)
             }
-            MutationState::CANARYING
-            | MutationState::PREPARING
-            | MutationState::LANDING
-            | MutationState::SERVICE_CANARYING
-            | MutationState::VALIDATING => Some(thrift::CreateReposStatus::IN_PROGRESS),
-            _ => None,
+            Err(err) => return Err(err),
         };
 
-        if status.is_none() {
-            return Err(scs_errors::internal_error(format!(
-                "Unexpected Configo mutation state: {}",
-                mutation.stateInfo.state
-            ))
-            .into());
-        }
-        let message = Some(format!("Mutation state: {}", mutation.stateInfo.state));
+        let message = Some(format!("Mutation state: {}", mutation_state));
         Ok(thrift::CreateReposPollResponse {
             result: Some(thrift::CreateReposResponse {
-                status: status.unwrap(),
+                status,
                 message,
                 ..Default::default()
             }),
             ..Default::default()
         })
     }
+}
 
-    async fn cleanup_repos(
-        &self,
-        ctx: CoreContext,
-        mutation_id: i64,
-    ) -> Result<(), scs_errors::ServiceError> {
-        let (_result, _attempts) = retry(
-            |_| {
-                delete_source_of_truth_for_mutation_id(
-                    ctx.clone(),
-                    self.git_source_of_truth_config.as_ref(),
-                    mutation_id,
-                )
-            },
-            Duration::from_millis(1_000),
-        )
-        .binary_exponential_backoff()
-        .max_attempts(5)
-        .await?;
-        Ok(())
+#[cfg(fbcode_build)]
+async fn poll_mutation_id(
+    ctx: CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    mutation_id: i64,
+) -> Result<MutationState, scs_errors::ServiceError> {
+    match poll_mutation_id_impl(ctx.clone(), git_source_of_truth_config, mutation_id, 0).await {
+        Ok(state) => Ok(state),
+        Err(e) => match e {
+            scs_errors::ServiceError::Poll(_) => {
+                poll_mutation_id_impl(ctx.clone(), git_source_of_truth_config, mutation_id, 1).await
+            }
+            _ => Err(e),
+        },
+    }
+}
+
+async fn poll_mutation_id_impl(
+    ctx: CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    mutation_id: i64,
+    retry_count: i64,
+) -> std::result::Result<MutationState, scs_errors::ServiceError> {
+    let configo_client = make_ConfigoService_srclient!(ctx.fb)
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+    let resp = configo_client
+        .status(&mutation_id)
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+    if resp.error {
+        // We failed to land the mutation, so it is safe to "release the lock" on these repo
+        // ids and names, which will allow a future attempt to succeed.
+        cleanup_repos(ctx.clone(), git_source_of_truth_config, mutation_id).await?;
+        return Err(scs_errors::internal_error(format!(
+            "Configo mutation error: {}",
+            resp.errorMessage
+        ))
+        .into());
     }
 
-    async fn initiate_land(
-        &self,
-        ctx: CoreContext,
-        configo_client: ConfigoServiceClient,
-        mutation_id: i64,
-    ) -> Result<(), scs_errors::ServiceError> {
-        let mutation = Mutation::new(ctx.fb, configo_client, mutation_id);
-        let content = mutation.content().await.map_err(|e| {
-            scs_errors::internal_error(format!("Failed to get mutation content: {e:#}"))
-        })?;
+    let mutation = resp.mutation.ok_or_else(|| {
+        warn!(
+            ctx.logger(),
+            "mutation state is not present {}", mutation_id
+        );
+        scs_errors::internal_error(format!("Mutation state not available for {mutation_id}"))
+    })?;
 
-        let mut signatures = BTreeMap::new();
-        let crypto_project = CryptoProject {
-            name: "SCM".to_owned(),
-            ..Default::default()
-        };
-
-        let crypto_service = crypto_service_srclients::make_CryptoService_srclient!(ctx.fb)
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-
-        for file in content.modifiedFiles {
-            if SIGNATURE_SKIP_FOLDERS
-                .iter()
-                .any(|skip| file.path.starts_with(skip))
-            {
-                // These files are not signed, so do not sign them or landing the mutation will
-                // fail with "Error attaching signatures for mutation"
-                continue;
-            }
-            if let Some((path, sig)) = configo_crypto_utils::sign_config(
-                ctx.fb,
-                &crypto_service,
-                &file,
-                crypto_project.clone(),
-            )
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
-            {
-                signatures.insert(path, sig);
-            }
-        }
-        mutation
-            .attach_signatures(signatures)
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-
-        let mutation_id = mutation
-            .land_nowait()
-            .await
-            .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
-
+    if mutation.stateInfo.isError {
         info!(
             ctx.logger(),
-            "inititated land for mutation id  {}", mutation_id.id
+            "cleaning up, mutation state info has error {}", mutation_id
         );
-        Ok(())
+        cleanup_repos(ctx.clone(), git_source_of_truth_config, mutation_id).await?;
+        return Err(scs_errors::internal_error(format!(
+            "Configo mutation error: {}",
+            mutation.stateInfo.errorMessage
+        ))
+        .into());
     }
+
+    let state = mutation.stateInfo.state;
+    match state {
+        MutationState::LANDED => {
+            retry(
+                |_| {
+                    update_source_of_truth_to_mononoke_for_mutation_id(
+                        ctx.clone(),
+                        git_source_of_truth_config,
+                        mutation_id,
+                    )
+                },
+                Duration::from_millis(1_000),
+            )
+            .binary_exponential_backoff()
+            .max_attempts(5)
+            .await?;
+        }
+        MutationState::FAILED => {
+            cleanup_repos(ctx.clone(), git_source_of_truth_config, mutation_id).await?;
+        }
+        MutationState::ABORTED => {
+            cleanup_repos(ctx.clone(), git_source_of_truth_config, mutation_id).await?;
+        }
+        MutationState::PREPARED => {
+            if !mutation.stateInfo.isSigned {
+                // Initiate land if not signed
+                match initiate_land_for_mutation(ctx.clone(), configo_client, mutation_id).await {
+                    Ok(_) => (),
+                    Err(e) => {
+                        if retry_count == 0 {
+                            return Err(scs_errors::poll_error(format!(
+                                "Configo mutation error: {}",
+                                mutation.stateInfo.errorMessage
+                            ))
+                            .into());
+                        } else {
+                            return Err(e);
+                        }
+                    }
+                }
+            }
+        }
+        _ => (),
+    };
+
+    Ok(state)
+}
+
+async fn cleanup_repos(
+    ctx: CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    mutation_id: i64,
+) -> Result<(), scs_errors::ServiceError> {
+    let (_result, _attempts) = retry(
+        |_| {
+            delete_source_of_truth_for_mutation_id(
+                ctx.clone(),
+                git_source_of_truth_config,
+                mutation_id,
+            )
+        },
+        Duration::from_millis(1_000),
+    )
+    .binary_exponential_backoff()
+    .max_attempts(5)
+    .await?;
+    Ok(())
+}
+
+#[cfg(fbcode_build)]
+async fn initiate_land_for_mutation(
+    ctx: CoreContext,
+    configo_client: ConfigoServiceClient,
+    mutation_id: i64,
+) -> Result<(), scs_errors::ServiceError> {
+    let mutation = Mutation::new(ctx.fb, configo_client, mutation_id);
+    let content = mutation.content().await.map_err(|e| {
+        scs_errors::internal_error(format!("Failed to get mutation content: {e:#}"))
+    })?;
+
+    let mut signatures = BTreeMap::new();
+    let crypto_project = CryptoProject {
+        name: "SCM".to_owned(),
+        ..Default::default()
+    };
+
+    let crypto_service = crypto_service_srclients::make_CryptoService_srclient!(ctx.fb)
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+    for file in content.modifiedFiles {
+        if SIGNATURE_SKIP_FOLDERS
+            .iter()
+            .any(|skip| file.path.starts_with(skip))
+        {
+            // These files are not signed, so do not sign them or landing the mutation will
+            // fail with "Error attaching signatures for mutation"
+            continue;
+        }
+        if let Some((path, sig)) = configo_crypto_utils::sign_config(
+            ctx.fb,
+            &crypto_service,
+            &file,
+            crypto_project.clone(),
+        )
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?
+        {
+            signatures.insert(path, sig);
+        }
+    }
+    mutation
+        .attach_signatures(signatures)
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+    let mutation_id = mutation
+        .land_nowait()
+        .await
+        .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
+
+    info!(
+        ctx.logger(),
+        "initiated land for mutation id  {}", mutation_id.id
+    );
+    Ok(())
 }
 
 #[cfg(test)]
