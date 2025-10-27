@@ -756,6 +756,7 @@ export function UncommittedChanges({place}: {place: Place}) {
               </Button>
             </Tooltip>
             <AbsorbButton />
+            {useV2SmartActions && <SmartActionsDropdown key="smartActions" />}
           </>
         )}
       </div>
@@ -829,11 +830,7 @@ export function UncommittedChanges({place}: {place: Place}) {
               </Button>
             </Tooltip>
             <span className="show-on-hover">
-              {useV2SmartActions ? (
-                <SmartActionsDropdown key="smartActions" />
-              ) : (
-                <SmartActionsMenu key="smartActions" />
-              )}
+              {!useV2SmartActions && <SmartActionsMenu key="smartActions" />}
             </span>
           </div>
           {canAmend && (
