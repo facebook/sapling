@@ -3774,6 +3774,7 @@ def grep(ui, repo, table, matcher, pattern, **opts):
     cmd.append("--")
 
     if biggrep:
+        ui.debug(f"big grep command: {biggrepcmd}\n")
         p = subprocess.Popen(
             biggrepcmd,
             bufsize=-1,

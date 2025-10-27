@@ -139,3 +139,11 @@ Test escaping of dashes in biggrep expression:
   $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
   > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
   > -- -g | sort
+
+Test biggrep command debug info -- duplicate "grepdir/subdir1"
+  $ cd subdir1
+  $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > foobar -n --debug
+  big grep command: ['*/fake-biggrep-client.py', '--stripdir', '-r', '--expression', 'foobar', 'biggrep.master', 'fake', 're2', '-f', '(grepdir/subdir1/grepdir/subdir1)'] (glob)
+  $ cd ..
