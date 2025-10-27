@@ -733,14 +733,14 @@ async function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<WarningCh
   const destBase = findPublicBaseAncestor(dag, dest.hash);
   if (!currentBase || !destBase) {
     // can't determine if we can show warning
-    return Promise.resolve(WarningCheckResult.PASS);
+    return WarningCheckResult.PASS;
   }
 
   const ageDiff = currentBase.date.valueOf() - destBase.date.valueOf();
   if (ageDiff < MAX_AGE_CUTOFF_MS) {
     // Either destination base is within time limit or destination base is newer than the current base.
     // No need to warn.
-    return Promise.resolve(WarningCheckResult.PASS);
+    return WarningCheckResult.PASS;
   }
 
   const confirmed = await platform.confirm(
@@ -765,7 +765,6 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<WarningChe
     return WarningCheckResult.PASS;
   }
 
-  // iterate through stable commit metadata and see if this commit is warmed up commit
   const dag = readAtom(dagWithPreviews);
   const src = findPublicBaseAncestor(dag);
   const destBase = findPublicBaseAncestor(dag, dest.hash);
@@ -820,6 +819,7 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<Warni
   const destBase = findPublicBaseAncestor(dag, commit.hash);
 
   if (!src || !destBase) {
+    // can't determine if we can show warning
     return WarningCheckResult.PASS;
   }
 
