@@ -29,4 +29,5 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tempfile = "3.22"
 
 [features]
-fb = ["sapling-identity/fb"]
+default = []
+fb = []

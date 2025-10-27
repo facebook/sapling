@@ -18,4 +18,3 @@ sapling-types = { version = "0.1.0", path = "../../../types" }
 
 [features]
 default = []
-fb = ["sapling-edenfs-client/fb"]

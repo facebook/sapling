@@ -7,7 +7,6 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
         "dependencies_override": {},
-        "features": {"fb": ["sapling-identity/fb"]},
         "lib": {"name": "filters"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
