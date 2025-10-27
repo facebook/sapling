@@ -17,7 +17,8 @@
   $ LFS_URI="$(lfs_server --log "$LFS_LOG" --tls --scuba-log-file "$SCUBA")/repo1"
 
 # Setup constants
-  $ ALLOWED_IDENT="x-fb-validated-client-encoded-identity: %7B%22ai%22%3A%20%22%22%2C%20%22ch%22%3A%20%22%22%2C%20%22it%22%3A%20%22user%22%2C%20%22id%22%3A%20%22test%22%7D"
+  $ ENCODED_IDENTS=$(urlencode encode '{"ai": "", "ch": "", "it": "user", "id": "test"}')
+  $ ALLOWED_IDENT="x-fb-validated-client-encoded-identity: $ENCODED_IDENTS"
   $ DOWNLOAD_URL="$LFS_URI/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d"
 
 # Upload a blob

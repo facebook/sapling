@@ -650,14 +650,22 @@ def setup_acls(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
     if not fs.exists(acl_file):
         client0_id_type = env.getenv("CLIENT0_ID_TYPE")
         client0_id_data = env.getenv("CLIENT0_ID_DATA")
+        client3_id_type = env.getenv("CLIENT3_ID_TYPE")
+        client3_id_data = env.getenv("CLIENT3_ID_DATA")
 
         # Create the ACL file with the necessary permissions
         acl_content = {
             "repos": {
                 "default": {
                     "actions": {
-                        "read": [f"{client0_id_type}:{client0_id_data}"],
-                        "write": [f"{client0_id_type}:{client0_id_data}"],
+                        "read": [
+                            f"{client0_id_type}:{client0_id_data}",
+                            f"{client3_id_type}:{client3_id_data}",
+                        ],
+                        "write": [
+                            f"{client0_id_type}:{client0_id_data}",
+                            f"{client3_id_type}:{client3_id_data}",
+                        ],
                     }
                 }
             }
@@ -1370,6 +1378,8 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         env.setenv("FB_CLIENT1_ID_DATA", "myusername1")
         env.setenv("FB_CLIENT2_ID_TYPE", "USER")
         env.setenv("FB_CLIENT2_ID_DATA", "myusername2")
+        env.setenv("FB_CLIENT3_ID_TYPE", "USER")
+        env.setenv("FB_CLIENT3_ID_DATA", "myusername3")
         env.setenv(
             "FB_JSON_CLIENT_ID",
             '["MACHINE:devvm000.lla0.facebook.com", "MACHINE_TIER:devvm", "USER:myusername0"]',
@@ -1405,6 +1415,11 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
     env.setenv(
         "CLIENT2_ID_DATA",
         env.getenv("FB_CLIENT2_ID_DATA", "CN=client2,O=Mononoke,C=US,ST=CA"),
+    )
+    env.setenv("CLIENT3_ID_TYPE", env.getenv("FB_CLIENT3_ID_TYPE", "X509_SUBJECT_NAME"))
+    env.setenv(
+        "CLIENT3_ID_DATA",
+        env.getenv("FB_CLIENT3_ID_DATA", "CN=client3,O=Mononoke,C=US,ST=CA"),
     )
     env.setenv(
         "JSON_CLIENT_ID",

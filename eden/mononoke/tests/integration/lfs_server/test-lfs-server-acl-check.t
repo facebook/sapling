@@ -46,8 +46,10 @@
 # Setup constants. These headers are normally provided by proxygen, they store
 # an encoded form of the original client identity. In this case, we have
 # USER:test and USER:invalid
-  $ ALLOWED_IDENT="x-fb-validated-client-encoded-identity: %7B%22ai%22%3A%20%22%22%2C%20%22ch%22%3A%20%22%22%2C%20%22it%22%3A%20%22user%22%2C%20%22id%22%3A%20%22test%22%7D"
-  $ DISALLOWED_IDENT="x-fb-validated-client-encoded-identity: %7B%22ai%22%3A%20%22%22%2C%20%22ch%22%3A%20%22%22%2C%20%22it%22%3A%20%22user%22%2C%20%22id%22%3A%20%22invalid%22%7D"
+  $ ENCODED_ALLOWED_IDENT=$(urlencode encode '{"ai": "", "ch": "", "it": "user", "id": "test"}')
+  $ ALLOWED_IDENT="x-fb-validated-client-encoded-identity: $ENCODED_ALLOWED_IDENT"
+  $ ENCODED_DISALLOWED_IDENT=$(urlencode encode '{"ai": "", "ch": "", "it": "user", "id": "invalid"}')
+  $ DISALLOWED_IDENT="x-fb-validated-client-encoded-identity: $ENCODED_DISALLOWED_IDENT"
   $ DOWNLOAD_URL="$LFS_URI/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d"
   $ DOWNLOAD_URL_REPO_ENFORCE_ACL="$LFS_URI_REPO_ENFORCE_ACL/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d"
 

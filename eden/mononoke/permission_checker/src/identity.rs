@@ -12,6 +12,8 @@ use std::str::FromStr;
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
+#[cfg(fbcode_build)]
+use authenticated_identity_thrift::AuthenticatedIdentity;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -19,36 +21,77 @@ use serde::Serializer;
 
 pub type MononokeIdentitySet = BTreeSet<MononokeIdentity>;
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Ord, PartialOrd)]
-pub struct MononokeIdentity {
-    id_type: String,
-    id_data: String,
+#[derive(Clone, Debug)]
+pub enum MononokeIdentity {
+    TypeData {
+        id_type: String,
+        id_data: String,
+    },
+    #[cfg(fbcode_build)]
+    Authenticated(AuthenticatedIdentity),
+}
+
+// Manual implementations for Eq, PartialEq, Hash, Ord, PartialOrd
+// that compare based on id_type and id_data, regardless of variant
+impl PartialEq for MononokeIdentity {
+    fn eq(&self, other: &Self) -> bool {
+        self.id_type() == other.id_type() && self.id_data() == other.id_data()
+    }
+}
+
+impl Eq for MononokeIdentity {}
+
+impl std::hash::Hash for MononokeIdentity {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id_type().hash(state);
+        self.id_data().hash(state);
+    }
+}
+
+impl Ord for MononokeIdentity {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (self.id_type(), self.id_data()).cmp(&(other.id_type(), other.id_data()))
+    }
+}
+
+impl PartialOrd for MononokeIdentity {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl MononokeIdentity {
     pub fn new(id_type: impl Into<String>, id_data: impl Into<String>) -> Self {
-        let id_type = id_type.into();
-        let id_data = id_data.into();
-
-        Self { id_type, id_data }
+        Self::TypeData {
+            id_type: id_type.into(),
+            id_data: id_data.into(),
+        }
     }
 
     pub fn id_type(&self) -> &str {
-        &self.id_type
+        match self {
+            Self::TypeData { id_type, .. } => id_type.as_str(),
+            #[cfg(fbcode_build)]
+            Self::Authenticated(auth_id) => auth_id.identity.id_type.as_str(),
+        }
     }
 
     pub fn id_data(&self) -> &str {
-        &self.id_data
+        match self {
+            Self::TypeData { id_data, .. } => id_data.as_str(),
+            #[cfg(fbcode_build)]
+            Self::Authenticated(auth_id) => auth_id.identity.id_data.as_str(),
+        }
     }
 
     pub fn is_of_type(&self, id_type: &str) -> bool {
-        self.id_type == id_type
+        self.id_type() == id_type
     }
 }
 
 impl fmt::Display for MononokeIdentity {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "{}:{}", self.id_type, self.id_data)
+        write!(fmt, "{}:{}", self.id_type(), self.id_data())
     }
 }
 
