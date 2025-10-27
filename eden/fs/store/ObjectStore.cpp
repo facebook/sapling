@@ -369,7 +369,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
       .thenValue(
           [self = shared_from_this(), id = id, context = context.copy(), watch](
               TreePtr tree) mutable
-          -> ImmediateFuture<BackingStore::GetTreeResult> {
+              -> ImmediateFuture<BackingStore::GetTreeResult> {
             if (tree) {
               self->stats_->increment(&ObjectStoreStats::getTreeFromLocalStore);
               self->stats_->addDuration(
@@ -503,7 +503,7 @@ ObjectStore::getTreeAuxDataImpl(
       .thenValue(
           [self = shared_from_this(), id = id, context = context.copy(), watch](
               TreeAuxDataPtr auxData) mutable
-          -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
+              -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
             if (auxData) {
               self->stats_->increment(
                   &ObjectStoreStats::getTreeAuxDataFromLocalStore);
@@ -644,7 +644,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
       .thenValue(
           [self = shared_from_this(), id = id, context = context.copy()](
               BlobPtr blob) mutable
-          -> ImmediateFuture<BackingStore::GetBlobResult> {
+              -> ImmediateFuture<BackingStore::GetBlobResult> {
             if (blob) {
               self->stats_->increment(&ObjectStoreStats::getBlobFromLocalStore);
               return BackingStore::GetBlobResult{
@@ -839,7 +839,7 @@ ObjectStore::getBlobAuxDataImpl(
       .thenValue(
           [self = shared_from_this(), id = id, context = context.copy(), watch](
               BlobAuxDataPtr auxData) mutable
-          -> ImmediateFuture<BackingStore::GetBlobAuxResult> {
+              -> ImmediateFuture<BackingStore::GetBlobAuxResult> {
             if (auxData) {
               self->stats_->increment(
                   &ObjectStoreStats::getBlobAuxDataFromLocalStore);

@@ -43,8 +43,9 @@ EmptyBackingStoreFactory gEmptyBackingStoreFactory;
 TestServer::TestServer() : tmpDir_(makeTempDir()) {
   auto startupSubscriberChannel = std::make_shared<StartupStatusChannel>();
   server_ = createServer(getTmpDir(), startupSubscriberChannel);
-  auto prepareResult = server_->prepare(make_shared<ForegroundStartupLogger>(
-      std::move(startupSubscriberChannel)));
+  auto prepareResult = server_->prepare(
+      make_shared<ForegroundStartupLogger>(
+          std::move(startupSubscriberChannel)));
   // We don't care about waiting for prepareResult: it just indicates when
   // preparation has fully completed, but the EdenServer can begin being used
   // immediately, before prepareResult completes.

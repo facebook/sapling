@@ -20,7 +20,9 @@ TEST(TaskTraceTest, subscription) {
     promise.setValue(std::string{event.name});
   });
 
-  { TaskTraceBlock block{"hello"}; }
+  {
+    TaskTraceBlock block{"hello"};
+  }
 
   EXPECT_EQ("hello", std::move(future).get(1000ms));
 }

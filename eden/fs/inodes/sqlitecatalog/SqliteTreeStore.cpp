@@ -159,8 +159,9 @@ std::unique_ptr<SqliteDatabase> openAndVerifyDb(
       logger->logEvent(SqliteIntegrityCheck{runtimeInSeconds, 0});
       return db;
     } else {
-      logger->logEvent(SqliteIntegrityCheck{
-          runtimeInSeconds, folly::to_signed(errors.size())});
+      logger->logEvent(
+          SqliteIntegrityCheck{
+              runtimeInSeconds, folly::to_signed(errors.size())});
       if (folly::kIsWindows) {
         XLOG(WARN, "SqliteDatabase is corrupted");
         for (auto& error : errors) {

@@ -817,13 +817,12 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::create(
             // the requested args.how.obj_attributes.
             CREATE3res res{
                 {{nfsstat3::NFS3_OK,
-                  CREATE3resok{
-                      /*obj*/ post_op_fh3{},
-                      /*obj_attributes*/ post_op_attr{},
-                      wcc_data{
-                          /*before*/ pre_op_attr{},
-                          /*after*/ post_op_attr{},
-                      }}}}};
+                  CREATE3resok{/*obj*/ post_op_fh3{},
+                               /*obj_attributes*/ post_op_attr{},
+                               wcc_data{
+                                   /*before*/ pre_op_attr{},
+                                   /*after*/ post_op_attr{},
+                               }}}}};
             XdrTrait<CREATE3res>::serialize(ser, res);
           } else {
             CREATE3res res{
@@ -1151,7 +1150,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::rename(
         return extractPathComponent(std::move(toName))
             .thenValue(
                 [fromName = std::move(fromName)](PathComponent&& toName) mutable
-                -> std::tuple<PathComponent, PathComponent> {
+                    -> std::tuple<PathComponent, PathComponent> {
                   return {std::move(fromName), std::move(toName)};
                 });
       })
@@ -1989,8 +1988,9 @@ struct LiveRequest {
       uint32_t procNumber)
       : traceBus_{std::move(traceBus)}, xid_{xid}, procNumber_{procNumber} {
     if (traceDetailedArguments.load(std::memory_order_acquire)) {
-      traceBus_->publish(NfsTraceEvent::start(
-          xid, procNumber, handlerEntry.formatArgs(deser)));
+      traceBus_->publish(
+          NfsTraceEvent::start(
+              xid, procNumber, handlerEntry.formatArgs(deser)));
     } else {
       traceBus_->publish(NfsTraceEvent::start(xid, procNumber));
     }
@@ -2135,23 +2135,24 @@ Nfsd3::Nfsd3(
     size_t traceBusCapacity)
     : privHelper_{privHelper},
       mountPath_{std::move(mountPath)},
-      server_(RpcServer::create(
-          std::make_shared<Nfsd3ServerProcessor>(
-              std::move(dispatcher),
-              straceLogger,
+      server_(
+          RpcServer::create(
+              std::make_shared<Nfsd3ServerProcessor>(
+                  std::move(dispatcher),
+                  straceLogger,
+                  structuredLogger,
+                  caseSensitive,
+                  iosize,
+                  stopPromise_,
+                  processAccessLog_,
+                  traceDetailedArguments_,
+                  traceBus_,
+                  longRunningFSRequestThreshold),
+              evb,
+              std::move(threadPool),
               structuredLogger,
-              caseSensitive,
-              iosize,
-              stopPromise_,
-              processAccessLog_,
-              traceDetailedArguments_,
-              traceBus_,
-              longRunningFSRequestThreshold),
-          evb,
-          std::move(threadPool),
-          structuredLogger,
-          maximumInFlightRequests,
-          highNfsRequestsLogInterval)),
+              maximumInFlightRequests,
+              highNfsRequestsLogInterval)),
       processAccessLog_(std::move(processInfoCache)),
       invalidationExecutor_{
           folly::SerialExecutor::create(folly::getGlobalCPUExecutor())},

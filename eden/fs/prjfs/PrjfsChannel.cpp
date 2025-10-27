@@ -132,8 +132,11 @@ struct PrjfsLiveRequest {
       LPCWSTR destinationFileName)
       : traceBus_{std::move(traceBus)}, type_{callType}, data_{data} {
     if (traceDetailedArguments.load(std::memory_order_acquire)) {
-      traceBus_->publish(PrjfsTraceEvent::start(
-          callType, data_, formatTraceEventString(data, destinationFileName)));
+      traceBus_->publish(
+          PrjfsTraceEvent::start(
+              callType,
+              data_,
+              formatTraceEventString(data, destinationFileName)));
     } else {
       traceBus_->publish(PrjfsTraceEvent::start(callType, data_));
     }
@@ -421,8 +424,8 @@ void detachAndCompleteCallback(
     std::shared_ptr<PrjfsRequestContext> context,
     std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
     EdenStatsPtr stats,
-    StatsGroupBase::Counter PrjfsStats::*countSuccessful,
-    StatsGroupBase::Counter PrjfsStats::*countFailure) {
+    StatsGroupBase::Counter PrjfsStats::* countSuccessful,
+    StatsGroupBase::Counter PrjfsStats::* countFailure) {
   auto completionFuture =
       context
           ->catchErrors(
@@ -461,9 +464,10 @@ PrjfsChannelInner::PrjfsChannelInner(
       config_(config),
       deletedPromise_(std::move(deletedPromise)),
       traceDetailedArguments_(std::atomic<size_t>(0)),
-      traceBus_(TraceBus<PrjfsTraceEvent>::create(
-          "PrjfsTrace",
-          prjfsTraceBusCapacity)),
+      traceBus_(
+          TraceBus<PrjfsTraceEvent>::create(
+              "PrjfsTrace",
+              prjfsTraceBusCapacity)),
       longRunningFSRequestThreshold_(
           config_->getEdenConfig()->longRunningFSRequestThreshold.getValue()) {
   traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
@@ -1634,17 +1638,18 @@ PrjfsChannel::PrjfsChannel(
   auto [innerDeletedPromise, innerDeletedFuture] =
       folly::makePromiseContract<folly::Unit>();
   innerDeleted_ = std::move(innerDeletedFuture);
-  inner_.store(std::make_shared<PrjfsChannelInner>(
-      std::move(dispatcher),
-      straceLogger,
-      structuredLogger,
-      faultInjector,
-      processAccessLog_,
-      config_,
-      std::move(innerDeletedPromise),
-      std::move(notifier),
-      config_->getEdenConfig()->PrjfsTraceBusCapacity.getValue(),
-      invalidationThreadPool));
+  inner_.store(
+      std::make_shared<PrjfsChannelInner>(
+          std::move(dispatcher),
+          straceLogger,
+          structuredLogger,
+          faultInjector,
+          processAccessLog_,
+          config_,
+          std::move(innerDeletedPromise),
+          std::move(notifier),
+          config_->getEdenConfig()->PrjfsTraceBusCapacity.getValue(),
+          invalidationThreadPool));
 }
 
 PrjfsChannel::~PrjfsChannel() {
@@ -1740,8 +1745,9 @@ folly::Future<FsChannel::StopFuture> PrjfsChannel::initialize() {
 ImmediateFuture<folly::Unit> PrjfsChannel::waitForPendingWrites() {
   auto inner = getInner();
   if (!inner) {
-    return makeImmediateFuture<folly::Unit>(std::runtime_error(fmt::format(
-        FMT_STRING("The mount at {} has been stopped"), mountPath_)));
+    return makeImmediateFuture<folly::Unit>(std::runtime_error(
+        fmt::format(
+            FMT_STRING("The mount at {} has been stopped"), mountPath_)));
   }
   return inner->waitForPendingNotifications().ensure(
       [inner = std::move(inner)] {});
@@ -1752,8 +1758,9 @@ ImmediateFuture<folly::Unit> PrjfsChannel::matchEdenViewOfFileToFS(
     const ObjectFetchContextPtr& context) {
   auto inner = getInner();
   if (!inner) {
-    return makeImmediateFuture<folly::Unit>(std::runtime_error(fmt::format(
-        FMT_STRING("The mount at {} has been stopped"), mountPath_)));
+    return makeImmediateFuture<folly::Unit>(std::runtime_error(
+        fmt::format(
+            FMT_STRING("The mount at {} has been stopped"), mountPath_)));
   }
   return inner->matchEdenViewOfFileToFS(std::move(relPath), context)
       .ensure([inner = std::move(inner)] {});

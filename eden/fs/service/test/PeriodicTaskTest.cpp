@@ -259,12 +259,16 @@ TEST_F(PeriodicTaskTest, slowTask) {
   EXPECT_THAT(
       logHandler->getMessageValues(),
       ElementsAre(
-          MatchesRegex("slow periodic task: test_task took .*ms; "
-                       "has run slowly 1 times"),
-          MatchesRegex("slow periodic task: test_task took .*ms; "
-                       "has run slowly 2 times"),
-          MatchesRegex("slow periodic task: test_task took .*ms; "
-                       "has run slowly 4 times"),
-          MatchesRegex("slow periodic task: test_task took .*ms; "
-                       "has run slowly 8 times")));
+          MatchesRegex(
+              "slow periodic task: test_task took .*ms; "
+              "has run slowly 1 times"),
+          MatchesRegex(
+              "slow periodic task: test_task took .*ms; "
+              "has run slowly 2 times"),
+          MatchesRegex(
+              "slow periodic task: test_task took .*ms; "
+              "has run slowly 4 times"),
+          MatchesRegex(
+              "slow periodic task: test_task took .*ms; "
+              "has run slowly 8 times")));
 }

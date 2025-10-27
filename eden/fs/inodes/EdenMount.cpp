@@ -1636,8 +1636,9 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         // Checkout completed, make sure to always reset
         // the checkoutInProgress flag!
         auto parentLock = parentState_.wlock();
-        XCHECK(std::holds_alternative<ParentCommitState::CheckoutInProgress>(
-            parentLock->checkoutState));
+        XCHECK(
+            std::holds_alternative<ParentCommitState::CheckoutInProgress>(
+                parentLock->checkoutState));
         if (ctx->isDryRun()) {
           // In the case where a past checkout was interrupted, we need to
           // make sure that future checkout operations will properly attempt
@@ -1803,21 +1804,22 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         // Don't log aux data fetches, because our backends don't yet support
         // fetching aux data directly. We expect tree fetches to eventually
         // return aux data for their entries.
-        this->serverState_->getStructuredLogger()->logEvent(FinishedCheckout{
-            getCheckoutModeString(checkoutMode).str(),
-            checkoutTimeInSeconds.count(),
-            result.hasValue(),
-            fetchStats.tree.fetchCount,
-            fetchStats.blob.fetchCount,
-            fetchStats.blobAuxData.fetchCount,
-            fetchStats.tree.accessCount,
-            fetchStats.blob.accessCount,
-            fetchStats.blobAuxData.accessCount,
-            numConflicts,
-            inodeCounts.treeCount + inodeCounts.fileCount,
-            inodeCounts.unloadedInodeCount,
-            inodeCounts.periodicLinkedUnloadInodeCount,
-            inodeCounts.periodicUnlinkedUnloadInodeCount});
+        this->serverState_->getStructuredLogger()->logEvent(
+            FinishedCheckout{
+                getCheckoutModeString(checkoutMode).str(),
+                checkoutTimeInSeconds.count(),
+                result.hasValue(),
+                fetchStats.tree.fetchCount,
+                fetchStats.blob.fetchCount,
+                fetchStats.blobAuxData.fetchCount,
+                fetchStats.tree.accessCount,
+                fetchStats.blob.accessCount,
+                fetchStats.blobAuxData.accessCount,
+                numConflicts,
+                inodeCounts.treeCount + inodeCounts.fileCount,
+                inodeCounts.unloadedInodeCount,
+                inodeCounts.periodicLinkedUnloadInodeCount,
+                inodeCounts.periodicUnlinkedUnloadInodeCount});
         return std::move(result);
       });
 }
@@ -1996,8 +1998,9 @@ ImmediateFuture<Unit> EdenMount::diff(
         auto renderedCommitId = objectStore_->renderRootId(commitId);
 
         // Log this occurrence to Scuba
-        getServerState()->getStructuredLogger()->logEvent(ParentMismatch{
-            commitId.value(), currentWorkingCopyParentRootId.value()});
+        getServerState()->getStructuredLogger()->logEvent(
+            ParentMismatch{
+                commitId.value(), currentWorkingCopyParentRootId.value()});
         return makeImmediateFuture<Unit>(newEdenError(
             EdenErrorType::OUT_OF_DATE_PARENT,
             "error computing status: requested parent commit is out-of-date: requested ",

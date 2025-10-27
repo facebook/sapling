@@ -237,8 +237,9 @@ class PrivHelperClientImpl : public PrivHelper,
       {
         auto state = state_.rlock();
         if (!state->conn_) {
-          promise.setException(std::runtime_error(
-              "cannot send new requests on closed privhelper connection"));
+          promise.setException(
+              std::runtime_error(
+                  "cannot send new requests on closed privhelper connection"));
           return;
         }
       }
@@ -291,8 +292,11 @@ class PrivHelperClientImpl : public PrivHelper,
 
   void receiveError(const folly::exception_wrapper& ew) noexcept override {
     // Fail all pending requests
-    handleSocketError(std::runtime_error(folly::to<string>(
-        "error reading from privhelper process: ", folly::exceptionStr(ew))));
+    handleSocketError(
+        std::runtime_error(
+            folly::to<string>(
+                "error reading from privhelper process: ",
+                folly::exceptionStr(ew))));
   }
 
   void sendSuccess() noexcept override {
@@ -302,8 +306,11 @@ class PrivHelperClientImpl : public PrivHelper,
   void sendError(const folly::exception_wrapper& ew) noexcept override {
     // Fail all pending requests
     --sendPending_;
-    handleSocketError(std::runtime_error(folly::to<string>(
-        "error sending to privhelper process: ", folly::exceptionStr(ew))));
+    handleSocketError(
+        std::runtime_error(
+            folly::to<string>(
+                "error sending to privhelper process: ",
+                folly::exceptionStr(ew))));
   }
 
   void onEventBaseDestruction() noexcept override {
@@ -712,8 +719,8 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   }
   XLOGF(DBG1, "Using '%s' as the privhelper daemon.\n", helperPath.c_str());
 
-  struct stat helperStat {};
-  struct stat selfStat {};
+  struct stat helperStat{};
+  struct stat selfStat{};
 
   checkUnixError(
       lstat(exePath.c_str(), &selfStat), fmt::format("lstat {}", exePath));

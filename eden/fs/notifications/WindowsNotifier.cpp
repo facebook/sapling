@@ -209,10 +209,11 @@ void appendMenuEntry(
     LPCWSTR lpNewItem) {
   BOOL retVal = AppendMenuW(hMenu, uFlags, uIDNewItem, lpNewItem);
   if (!retVal) {
-    throw std::runtime_error(fmt::format(
-        "Failed to append menu item {} with error code {}",
-        wideToMultibyteString<std::string>(std::wstring_view(lpNewItem)),
-        retVal));
+    throw std::runtime_error(
+        fmt::format(
+            "Failed to append menu item {} with error code {}",
+            wideToMultibyteString<std::string>(std::wstring_view(lpNewItem)),
+            retVal));
   }
 }
 

@@ -39,8 +39,9 @@ folly::Expected<InodeCatalogType, std::string> inodeCatalogTypeFromString(
     }
   }
 
-  return folly::makeUnexpected(fmt::format(
-      "Failed to convert value '{}' to a InodeCatalogType.", value));
+  return folly::makeUnexpected(
+      fmt::format(
+          "Failed to convert value '{}' to a InodeCatalogType.", value));
 }
 
 folly::Expected<InodeCatalogType, std::string>

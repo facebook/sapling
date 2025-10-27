@@ -54,8 +54,8 @@ class PrjfsRequestContext : public RequestContext {
   ImmediateFuture<folly::Unit> catchErrors(
       ImmediateFuture<folly::Unit>&& fut,
       EdenStatsPtr stats,
-      StatsGroupBase::Counter PrjfsStats::*countSuccessful,
-      StatsGroupBase::Counter PrjfsStats::*countFailure) {
+      StatsGroupBase::Counter PrjfsStats::* countSuccessful,
+      StatsGroupBase::Counter PrjfsStats::* countFailure) {
     return std::move(fut).thenTry(
         [this, stats = std::move(stats), countSuccessful, countFailure](
             folly::Try<folly::Unit>&& try_) {

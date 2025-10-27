@@ -25,12 +25,7 @@ using namespace std::literals::chrono_literals;
 // instead we set the file contents to be their own absolute paths, so we can
 // compare the hashes instead.
 namespace {
-#define FILES                          \
-  {                                    \
-    {"dir/a.txt", "dir/a.txt"}, {      \
-      "dir/sub/b.txt", "dir/sub/b.txt" \
-    }                                  \
-  }
+#define FILES {{"dir/a.txt", "dir/a.txt"}, {"dir/sub/b.txt", "dir/sub/b.txt"}}
 } // namespace
 
 TEST(InodeLoader, load) {

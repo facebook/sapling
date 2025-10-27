@@ -23,8 +23,8 @@ Blake3::Blake3(folly::ByteRange key) {
   }
 
   auto* const keyPtr = key.data();
-  const uint8_t(&keyArray)[BLAKE3_KEY_LEN] =
-      *reinterpret_cast<const uint8_t(*)[BLAKE3_KEY_LEN]>(keyPtr);
+  const uint8_t (&keyArray)[BLAKE3_KEY_LEN] =
+      *reinterpret_cast<const uint8_t (*)[BLAKE3_KEY_LEN]>(keyPtr);
   blake3_hasher_init_keyed(&hasher_, keyArray);
 }
 
@@ -33,9 +33,10 @@ Blake3::Blake3(folly::ByteRange key) {
 }
 
 /* static */ Blake3 Blake3::create(const std::optional<std::string>& key) {
-  return key ? Blake3::create(folly::ByteRange{
-                   folly::StringPiece{key->data(), key->size()}})
-             : Blake3::create(std::optional<folly::ByteRange>());
+  return key
+      ? Blake3::create(
+            folly::ByteRange{folly::StringPiece{key->data(), key->size()}})
+      : Blake3::create(std::optional<folly::ByteRange>());
 }
 
 /* static */ Blake3 Blake3::create(std::optional<folly::StringPiece> key) {

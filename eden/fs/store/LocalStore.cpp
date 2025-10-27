@@ -37,8 +37,8 @@ FOLLY_ALWAYS_INLINE std::shared_ptr<T> parse(
     const ObjectId& id,
     std::string_view context,
     const EdenStatsPtr& stats,
-    StatsGroupBase::Counter LocalStoreStats::*successCounter,
-    StatsGroupBase::Counter LocalStoreStats::*errorCounter,
+    StatsGroupBase::Counter LocalStoreStats::* successCounter,
+    StatsGroupBase::Counter LocalStoreStats::* errorCounter,
     F&& fn) {
   std::shared_ptr<T> def(nullptr);
   if (auto ew = folly::try_and_catch(

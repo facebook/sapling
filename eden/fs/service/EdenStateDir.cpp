@@ -40,11 +40,12 @@ EdenStateDir::acquireLock() {
       return std::make_pair(false, std::nullopt);
     }
   } catch (const std::system_error& ex) {
-    throw std::runtime_error(fmt::format(
-        "Error acquiring lock: {}. Another EdenFS process may have raced with "
-        "this one. Try `eden status --wait` to check if EdenFS is starting and "
-        "watch it's progress.",
-        ex.what()));
+    throw std::runtime_error(
+        fmt::format(
+            "Error acquiring lock: {}. Another EdenFS process may have raced with "
+            "this one. Try `eden status --wait` to check if EdenFS is starting and "
+            "watch it's progress.",
+            ex.what()));
   }
 
   return std::make_pair(true, takeoverLock(std::move(lockFile)));

@@ -161,13 +161,14 @@ void BufferedLMDBInodeCatalog::process(
 
 void BufferedLMDBInodeCatalog::pause(folly::Future<folly::Unit>&& fut) {
   auto state = state_.lock();
-  state->work.push_back(std::make_unique<Work>(
-      [fut = std::move(fut)]() mutable {
-        std::move(fut).wait();
-        return false;
-      },
-      std::nullopt,
-      0));
+  state->work.push_back(
+      std::make_unique<Work>(
+          [fut = std::move(fut)]() mutable {
+            std::move(fut).wait();
+            return false;
+          },
+          std::nullopt,
+          0));
   workCV_.notify_one();
 }
 
@@ -179,13 +180,14 @@ void BufferedLMDBInodeCatalog::flush() {
 
   {
     auto state = state_.lock();
-    state->work.push_back(std::make_unique<Work>(
-        [promise = std::move(promise)]() mutable {
-          promise.setValue(folly::unit);
-          return false;
-        },
-        std::nullopt,
-        0));
+    state->work.push_back(
+        std::make_unique<Work>(
+            [promise = std::move(promise)]() mutable {
+              promise.setValue(folly::unit);
+              return false;
+            },
+            std::nullopt,
+            0));
     workCV_.notify_one();
   }
 

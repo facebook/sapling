@@ -420,8 +420,11 @@ void Overlay::initOverlay(
       structuredLogger_->logEvent(
           Fsck{fsckRuntimeInSeconds, success, true /*attempted_repair*/});
     } else {
-      structuredLogger_->logEvent(Fsck{
-          fsckRuntimeInSeconds, true /*success*/, false /*attempted_repair*/});
+      structuredLogger_->logEvent(
+          Fsck{
+              fsckRuntimeInSeconds,
+              true /*success*/,
+              false /*attempted_repair*/});
     }
 
     optNextInodeNumber = checker.getNextInodeNumber();
@@ -446,8 +449,11 @@ void Overlay::initOverlay(
         std::move(config), *mountPath, windowsSymlinksEnabled_, lookupCallback);
     auto fsckRuntimeInSeconds =
         std::chrono::duration<double>{fsckRuntime.elapsed()}.count();
-    structuredLogger_->logEvent(Fsck{
-        fsckRuntimeInSeconds, true /*success*/, false /*attempted_repair*/});
+    structuredLogger_->logEvent(
+        Fsck{
+            fsckRuntimeInSeconds,
+            true /*success*/,
+            false /*attempted_repair*/});
   }
 
   nextInodeNumber_.store(optNextInodeNumber->get(), std::memory_order_relaxed);

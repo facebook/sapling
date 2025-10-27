@@ -19,8 +19,9 @@ class EdenTaskQueue
     : public folly::BlockingQueue<folly::CPUThreadPoolExecutor::CPUTask> {
  public:
   explicit EdenTaskQueue(uint64_t maxInflightRequests)
-      : queue_(folly::DMPMCQueue<folly::CPUThreadPoolExecutor::CPUTask, true>{
-            maxInflightRequests}) {}
+      : queue_(
+            folly::DMPMCQueue<folly::CPUThreadPoolExecutor::CPUTask, true>{
+                maxInflightRequests}) {}
 
   folly::BlockingQueueAddResult add(
       folly::CPUThreadPoolExecutor::CPUTask item) override;

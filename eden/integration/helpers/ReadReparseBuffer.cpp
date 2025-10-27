@@ -51,9 +51,10 @@ int main(int argc, char* argv[]) {
         reparse_data.value()->GenericReparseBuffer.DataBuffer;
     fmt::print(
         "{}",
-        folly::hexlify(std::string_view{
-            reinterpret_cast<char*>(reparse_buffer),
-            reparse_data.value()->ReparseDataLength}));
+        folly::hexlify(
+            std::string_view{
+                reinterpret_cast<char*>(reparse_buffer),
+                reparse_data.value()->ReparseDataLength}));
     return 0;
   } catch (std::exception& err) {
     fmt::print(

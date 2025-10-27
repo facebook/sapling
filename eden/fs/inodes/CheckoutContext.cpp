@@ -41,8 +41,9 @@ CheckoutContext::CheckoutContext(
       verifyFilesAfterCheckout_{verifyFilesAfterCheckout},
       verifyEveryNInvalidations_{verifyEveryNInvalidations},
       maxNumberOfInvlidationsToValidate_{maxNumberOfInvlidationsToValidate},
-      sampleInvalidations_(std::make_unique<RingBuffer<InodeNumber>>(
-          maxNumberOfInvlidationsToValidate_)),
+      sampleInvalidations_(
+          std::make_unique<RingBuffer<InodeNumber>>(
+              maxNumberOfInvlidationsToValidate_)),
       windowsSymlinksEnabled_{
           mount_->getCheckoutConfig()->getEnableWindowsSymlinks()} {}
 
@@ -59,8 +60,9 @@ void CheckoutContext::start(
   if (!isDryRun()) {
     std::optional<RootId> oldParent;
     if (parentLock) {
-      XCHECK(std::holds_alternative<ParentCommitState::CheckoutInProgress>(
-          parentLock->checkoutState));
+      XCHECK(
+          std::holds_alternative<ParentCommitState::CheckoutInProgress>(
+              parentLock->checkoutState));
       oldParent = parentLock->workingCopyParentRootId;
       // Update the in-memory snapshot ID
       parentLock->checkedOutRootId = newSnapshot;

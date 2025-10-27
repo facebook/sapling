@@ -1320,8 +1320,9 @@ class FileInode::LoadingOngoing {
       return;
     }
 
-    inode_->completeDataLoad(folly::Try<BlobCache::GetResult>(
-        folly::BrokenPromise{folly::tag<BlobCache::GetResult>}));
+    inode_->completeDataLoad(
+        folly::Try<BlobCache::GetResult>(
+            folly::BrokenPromise{folly::tag<BlobCache::GetResult>}));
   }
 
   /**

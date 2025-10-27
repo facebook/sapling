@@ -83,8 +83,8 @@ class FuseRequestContext : public RequestContext {
       folly::Future<folly::Unit>&& fut,
       Notifier* FOLLY_NULLABLE notifier,
       EdenStatsPtr stats,
-      StatsGroupBase::Counter FuseStats::*countSuccessful,
-      StatsGroupBase::Counter FuseStats::*countFailure) {
+      StatsGroupBase::Counter FuseStats::* countSuccessful,
+      StatsGroupBase::Counter FuseStats::* countFailure) {
     return std::move(fut).thenTryInline([this,
                                          notifier,
                                          stats = std::move(stats),

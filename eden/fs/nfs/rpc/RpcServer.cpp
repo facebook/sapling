@@ -401,8 +401,10 @@ void RpcConnectionHandler::recordParsingError(
 
   XLOG(ERR, message);
 
-  errorLogger_->logEvent(NfsParsingError{
-      folly::to<std::string>("FS", " - ", err.getProcedureContext()), message});
+  errorLogger_->logEvent(
+      NfsParsingError{
+          folly::to<std::string>("FS", " - ", err.getProcedureContext()),
+          message});
 }
 
 void RpcConnectionHandler::replyServerError(
@@ -526,14 +528,15 @@ void RpcServer::connectionAccepted(
   XLOGF(DBG7, "Accepted connection from: {}", clientAddr.describe());
   auto socket = AsyncSocket::newSocket(evb_, fd);
   auto& state = state_.get();
-  state.connectionHandlers.push_back(RpcConnectionHandler::create(
-      proc_,
-      std::move(socket),
-      threadPool_,
-      structuredLogger_,
-      weak_from_this(),
-      maximumInFlightRequests_,
-      highNfsRequestsLogInterval_));
+  state.connectionHandlers.push_back(
+      RpcConnectionHandler::create(
+          proc_,
+          std::move(socket),
+          threadPool_,
+          structuredLogger_,
+          weak_from_this(),
+          maximumInFlightRequests_,
+          highNfsRequestsLogInterval_));
 
   // At this point we could stop accepting connections with this callback for
   // nfsd3 because we only support one connected client, and we do not support
@@ -629,15 +632,16 @@ void RpcServer::initializeConnectedSocket(folly::File socket) {
   // we already have the one connected socket, we will not need the
   // accepting socket to make any more connections.
   auto& state = state_.get();
-  state.connectionHandlers.push_back(RpcConnectionHandler::create(
-      proc_,
-      AsyncSocket::newSocket(
-          evb_, folly::NetworkSocket::fromFd(socket.release())),
-      threadPool_,
-      structuredLogger_,
-      weak_from_this(),
-      maximumInFlightRequests_,
-      highNfsRequestsLogInterval_));
+  state.connectionHandlers.push_back(
+      RpcConnectionHandler::create(
+          proc_,
+          AsyncSocket::newSocket(
+              evb_, folly::NetworkSocket::fromFd(socket.release())),
+          threadPool_,
+          structuredLogger_,
+          weak_from_this(),
+          maximumInFlightRequests_,
+          highNfsRequestsLogInterval_));
 }
 
 void RpcServer::initializeServerSocket(folly::File socket) {

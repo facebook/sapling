@@ -51,18 +51,18 @@ class EdenStats : public RefCounted {
    */
   template <typename T, typename Rep, typename Period>
   void addDuration(
-      StatsGroupBase::Duration T::*duration,
+      StatsGroupBase::Duration T::* duration,
       std::chrono::duration<Rep, Period> elapsed) {
     (getStatsForCurrentThread<T>().*duration).addDuration(elapsed);
   }
 
   template <typename T>
-  void increment(StatsGroupBase::Counter T::*counter, double value = 1.0) {
+  void increment(StatsGroupBase::Counter T::* counter, double value = 1.0) {
     (getStatsForCurrentThread<T>().*counter).addValue(value);
   }
 
   template <typename T>
-  std::string_view getName(StatsGroupBase::Counter T::*counter) {
+  std::string_view getName(StatsGroupBase::Counter T::* counter) {
     return (getStatsForCurrentThread<T>().*counter).getName();
   }
 

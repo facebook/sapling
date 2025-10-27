@@ -35,7 +35,7 @@ folly::Expected<struct stat, int> OverlayFile::fstat() const {
   }
   IORequest req{overlay.get()};
 
-  struct stat st {};
+  struct stat st{};
   if (std::holds_alternative<folly::File>(data_)) {
     auto& file = std::get<folly::File>(data_);
     if (::fstat(file.fd(), &st)) {

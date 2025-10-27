@@ -32,8 +32,11 @@ EdenError newEdenError(
     EdenErrorType errorType,
     const Arg1& msg,
     const Args&... args) {
-  auto e = EdenError{ensureValidUtf8(fmt::to_string(fmt::join(
-      std::make_tuple<const Arg1&, const Args&...>(msg, args...), "")))};
+  auto e = EdenError{ensureValidUtf8(
+      fmt::to_string(
+          fmt::join(
+              std::make_tuple<const Arg1&, const Args&...>(msg, args...),
+              "")))};
   e.errorCode() = errorCode;
   e.errorType() = errorType;
   return e;
@@ -55,9 +58,12 @@ EdenError newEdenError(
     EdenErrorType errorType,
     std::string_view msg,
     const Args&... args) {
-  auto e = EdenError{ensureValidUtf8(fmt::to_string(fmt::join(
-      std::make_tuple<const std::string_view&, const Args&...>(msg, args...),
-      "")))};
+  auto e = EdenError{ensureValidUtf8(
+      fmt::to_string(
+          fmt::join(
+              std::make_tuple<const std::string_view&, const Args&...>(
+                  msg, args...),
+              "")))};
   e.errorType() = errorType;
   return e;
 }

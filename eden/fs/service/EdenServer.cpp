@@ -934,28 +934,30 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
               << folly::to_underlying(info.edenMount->getState());
         }
 
-        futures.emplace_back(std::move(future).thenValue(
-            [self = this,
-             edenMount = info.edenMount](TakeoverData::MountInfo takeover)
-                -> Future<optional<TakeoverData::MountInfo>> {
-              auto fuseChannelInfo =
-                  std::get_if<FuseChannelData>(&takeover.channelInfo);
-              auto nfsChannelInfo =
-                  std::get_if<NfsChannelData>(&takeover.channelInfo);
-              if (!fuseChannelInfo && !nfsChannelInfo) {
-                return std::nullopt;
-              }
-              auto& fd = fuseChannelInfo ? fuseChannelInfo->fd
-                                         : nfsChannelInfo->nfsdSocketFd;
-              if (!fd) {
-                return std::nullopt;
-              }
-              return self->serverState_->getPrivHelper()
-                  ->takeoverShutdown(edenMount->getPath().view())
-                  .thenValue([takeover = std::move(takeover)](auto&&) mutable {
-                    return std::move(takeover);
-                  });
-            }));
+        futures.emplace_back(
+            std::move(future).thenValue(
+                [self = this,
+                 edenMount = info.edenMount](TakeoverData::MountInfo takeover)
+                    -> Future<optional<TakeoverData::MountInfo>> {
+                  auto fuseChannelInfo =
+                      std::get_if<FuseChannelData>(&takeover.channelInfo);
+                  auto nfsChannelInfo =
+                      std::get_if<NfsChannelData>(&takeover.channelInfo);
+                  if (!fuseChannelInfo && !nfsChannelInfo) {
+                    return std::nullopt;
+                  }
+                  auto& fd = fuseChannelInfo ? fuseChannelInfo->fd
+                                             : nfsChannelInfo->nfsdSocketFd;
+                  if (!fd) {
+                    return std::nullopt;
+                  }
+                  return self->serverState_->getPrivHelper()
+                      ->takeoverShutdown(edenMount->getPath().view())
+                      .thenValue(
+                          [takeover = std::move(takeover)](auto&&) mutable {
+                            return std::move(takeover);
+                          });
+                }));
       } catch (...) {
         auto ew = folly::exception_wrapper{std::current_exception()};
         XLOGF(
@@ -1471,11 +1473,12 @@ bool EdenServer::createStorageEngine(cpptoml::table& config) {
 
   if (!FLAGS_local_storage_engine_unsafe.empty() &&
       FLAGS_local_storage_engine_unsafe != storageEngine) {
-    throw std::runtime_error(folly::to<string>(
-        "--local_storage_engine_unsafe flag ",
-        FLAGS_local_storage_engine_unsafe,
-        "does not match last recorded flag ",
-        storageEngine));
+    throw std::runtime_error(
+        folly::to<string>(
+            "--local_storage_engine_unsafe flag ",
+            FLAGS_local_storage_engine_unsafe,
+            "does not match last recorded flag ",
+            storageEngine));
   }
 
   if (storageEngine == "memory") {
@@ -1949,8 +1952,9 @@ Future<Unit> EdenServer::completeTakeoverStart(
       auto nfsMountInfo = std::get_if<NfsChannelData>(&info.channelInfo)) {
     return edenMount->takeoverNfs(std::move(*nfsMountInfo));
   } else {
-    return folly::makeFuture<Unit>(std::runtime_error(fmt::format(
-        "Unsupported ChannelInfo Type: {}", info.channelInfo.index())));
+    return folly::makeFuture<Unit>(std::runtime_error(
+        fmt::format(
+            "Unsupported ChannelInfo Type: {}", info.channelInfo.index())));
   }
 }
 
@@ -2067,22 +2071,23 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
               auto* fsChannel = edenMount->getFsChannel();
               auto inodeCatalogType =
                   edenMount->getCheckoutConfig()->getInodeCatalogType();
-              serverState_->getStructuredLogger()->logEvent(FinishedMount{
-                  std::string{
-                      toBackingStoreString(edenMount->getCheckoutConfig()
-                                               ->getRepoBackingStoreType())},
-                  edenMount->getCheckoutConfig()->getRepoType(),
-                  std::string{basename(
-                      edenMount->getCheckoutConfig()->getRepoSource())},
-                  fsChannel ? fsChannel->getName() : "unknown",
-                  doTakeover,
-                  std::chrono::duration<double>{mountStopWatch.elapsed()}
-                      .count(),
-                  !t.hasException(),
-                  edenMount->getOverlay()->hadCleanStartup(),
-                  inodeCatalogType.has_value()
-                      ? static_cast<int64_t>(inodeCatalogType.value())
-                      : 0});
+              serverState_->getStructuredLogger()->logEvent(
+                  FinishedMount{
+                      std::string{toBackingStoreString(
+                          edenMount->getCheckoutConfig()
+                              ->getRepoBackingStoreType())},
+                      edenMount->getCheckoutConfig()->getRepoType(),
+                      std::string{basename(
+                          edenMount->getCheckoutConfig()->getRepoSource())},
+                      fsChannel ? fsChannel->getName() : "unknown",
+                      doTakeover,
+                      std::chrono::duration<double>{mountStopWatch.elapsed()}
+                          .count(),
+                      !t.hasException(),
+                      edenMount->getOverlay()->hadCleanStartup(),
+                      inodeCatalogType.has_value()
+                          ? static_cast<int64_t>(inodeCatalogType.value())
+                          : 0});
               return makeFuture(std::move(t));
             });
       });
@@ -2388,21 +2393,24 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
                                   .thenValue(
                                       [path = inode->getPath(),
                                        inodeNum](auto&& sha1) mutable
-                                      -> std::tuple<
-                                          RelativePath,
-                                          InodeNumber,
-                                          std::optional<Hash20>> {
+                                          -> std::tuple<
+                                              RelativePath,
+                                              InodeNumber,
+                                              std::optional<Hash20>> {
                                         return {
                                             std::move(path).value(),
                                             inodeNum,
                                             std::move(sha1)};
                                       }));
                         } else {
-                          expectedContents.emplace_back(std::tuple<
-                                                        RelativePath,
-                                                        InodeNumber,
-                                                        std::optional<Hash20>>(
-                              std::move(path).value(), inodeNum, std::nullopt));
+                          expectedContents.emplace_back(
+                              std::tuple<
+                                  RelativePath,
+                                  InodeNumber,
+                                  std::optional<Hash20>>(
+                                  std::move(path).value(),
+                                  inodeNum,
+                                  std::nullopt));
                         }
                       }
                     }
@@ -2436,8 +2444,9 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
 
                             if (actualSha1 != sha1Result) {
                               // log to scuba.
-                              structuredLogger->logEvent(StaleContents{
-                                  path.value(), inodeNum.getRawValue()});
+                              structuredLogger->logEvent(
+                                  StaleContents{
+                                      path.value(), inodeNum.getRawValue()});
                               std::string sha1ResultStr =
                                   sha1Result ? sha1Result->toString() : "none";
                               XLOG(
@@ -2588,8 +2597,9 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
   }
   server_->setCPUWorkerThreadName("EdenThrift");
 
-  server_->setQueueTimeout(std::chrono::floor<std::chrono::milliseconds>(
-      edenConfig->thriftQueueTimeout.getValue()));
+  server_->setQueueTimeout(
+      std::chrono::floor<std::chrono::milliseconds>(
+          edenConfig->thriftQueueTimeout.getValue()));
   server_->setAllowCheckUnimplementedExtraInterfaces(false);
 
   // Setting this allows us to to only do stopListening() on the stop() call
@@ -2712,10 +2722,11 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
     if (state->state != RunState::RUNNING) {
       // We are either still in the process of starting,
       // or already shutting down.
-      return makeFuture<TakeoverData>(std::runtime_error(folly::to<string>(
-          "can only perform graceful restart when running normally; "
-          "current state is ",
-          enumValue(state->state))));
+      return makeFuture<TakeoverData>(std::runtime_error(
+          folly::to<string>(
+              "can only perform graceful restart when running normally; "
+              "current state is ",
+              enumValue(state->state))));
     }
 
     {
@@ -2958,12 +2969,14 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
             inodeCountsAfterGC.treeCount +
             inodeCountsAfterGC.unloadedInodeCount;
 
-        structuredLogger->logEvent(WorkingCopyGc{
-            runtime.count(),
-            numInvalidated,
-            success,
-            static_cast<int64_t>(
-                (totalNumberOfInodesBeforeGC - totalNumberOfInodesAfterGC))});
+        structuredLogger->logEvent(
+            WorkingCopyGc{
+                runtime.count(),
+                numInvalidated,
+                success,
+                static_cast<int64_t>(
+                    (totalNumberOfInodesBeforeGC -
+                     totalNumberOfInodesAfterGC))});
 #ifdef __APPLE__
         XLOGF(
             DBG1,
@@ -3137,8 +3150,9 @@ void EdenServer::accidentalUnmountRecovery() {
                   bool success = result.hasValue();
                   std::string exceptionMessage =
                       success ? "" : result.exception().what().toStdString();
-                  structuredLogger->logEvent(AccidentalUnmountRecovery{
-                      exceptionMessage, success, repoName});
+                  structuredLogger->logEvent(
+                      AccidentalUnmountRecovery{
+                          exceptionMessage, success, repoName});
                   if (success) {
                     XLOGF(
                         DBG3,
@@ -3277,12 +3291,13 @@ void EdenServer::detectNfsCrawl() {
                     "NFS crawl detection found process with open files in mount point: {}\n  {}",
                     mount.getPath(),
                     output);
-                serverState->getStructuredLogger()->logEvent(NfsCrawlDetected{
-                    readCount,
-                    readThreshold,
-                    readDirCount,
-                    readDirThreshold,
-                    output});
+                serverState->getStructuredLogger()->logEvent(
+                    NfsCrawlDetected{
+                        readCount,
+                        readThreshold,
+                        readDirCount,
+                        readDirThreshold,
+                        output});
               }
             });
       }

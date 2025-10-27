@@ -26,8 +26,9 @@ FieldConverter<HgObjectIdFormat>::fromString(
     }
   }
 
-  return folly::makeUnexpected(fmt::format(
-      "Failed to convert value '{}' to an HgObjectIdFormat", value));
+  return folly::makeUnexpected(
+      fmt::format(
+          "Failed to convert value '{}' to an HgObjectIdFormat", value));
 }
 
 std::string FieldConverter<HgObjectIdFormat>::toDebugString(

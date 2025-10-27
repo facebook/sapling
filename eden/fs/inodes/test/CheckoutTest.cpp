@@ -479,8 +479,9 @@ void runModifyFileTests(folly::StringPiece path) {
 
   // Modify the contents and the permissions
   for (auto loadType : kAllLoadTypes) {
-    SCOPED_TRACE(fmt::format(
-        "contents+mode change, path {} load type {}", path, loadType));
+    SCOPED_TRACE(
+        fmt::format(
+            "contents+mode change, path {} load type {}", path, loadType));
     testModifyFile(
         path, loadType, "contents v1", 0644, "executable contents", 0755);
   }
@@ -690,11 +691,12 @@ void runModifyConflictTests(CheckoutMode checkoutMode) {
   // exercise all code paths in TreeInode::computeCheckoutActions()
   for (StringPiece path : {"a/b/aaa.txt", "a/b/mmm.txt", "a/b/zzz.tzt"}) {
     for (auto loadType : kAllLoadTypes) {
-      SCOPED_TRACE(fmt::format(
-          "path {} load type {} force={}",
-          path,
-          loadType,
-          static_cast<int>(checkoutMode)));
+      SCOPED_TRACE(
+          fmt::format(
+              "path {} load type {} force={}",
+              path,
+              loadType,
+              static_cast<int>(checkoutMode)));
       testModifyConflict(
           path,
           loadType,

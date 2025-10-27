@@ -284,7 +284,7 @@ PrjfsDispatcherImpl::resolveSymlinkPathImpl(
            remainingRecursionDepth](
               std::variant<std::shared_ptr<const Tree>, TreeEntry>
                   treeOrTreeEntry) mutable
-          -> ImmediateFuture<std::variant<AbsolutePath, RelativePath>> {
+              -> ImmediateFuture<std::variant<AbsolutePath, RelativePath>> {
             if (std::holds_alternative<std::shared_ptr<const Tree>>(
                     treeOrTreeEntry)) {
               // Everything up to the current component is a directory and ok,
@@ -313,8 +313,8 @@ PrjfsDispatcherImpl::resolveSymlinkPathImpl(
                      solvedLen,
                      remainingRecursionDepth](
                         std::shared_ptr<const Blob> blob) mutable
-                    -> ImmediateFuture<
-                        std::variant<AbsolutePath, RelativePath>> {
+                        -> ImmediateFuture<
+                            std::variant<AbsolutePath, RelativePath>> {
                       // Resolve the symlink at this point and replace it in the
                       // path, then keep normalizing
                       auto content = blob->asString();
@@ -442,7 +442,7 @@ ImmediateFuture<bool> PrjfsDispatcherImpl::isFinalSymlinkPathDirectory(
                                  std::variant<
                                      std::shared_ptr<const Tree>,
                                      TreeEntry> treeOrTreeEntry) mutable
-                             -> ImmediateFuture<bool> {
+                                 -> ImmediateFuture<bool> {
                                if (std::holds_alternative<
                                        std::shared_ptr<const Tree>>(
                                        treeOrTreeEntry)) {
@@ -1017,7 +1017,7 @@ ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
                  symlinkTarget = std::move(symlinkTarget),
                  receivedAt,
                  context = context.copy()](folly::Try<InodePtr> try_) mutable
-                -> ImmediateFuture<folly::Unit> {
+                    -> ImmediateFuture<folly::Unit> {
                   auto basename = path.basename();
                   if (try_.hasException()) {
                     if (auto* exc =

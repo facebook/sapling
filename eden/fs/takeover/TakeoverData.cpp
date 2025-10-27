@@ -510,22 +510,24 @@ TakeoverData::getProtocolCapabilitiesWithoutTrim(IOBuf* buf) {
           TakeoverCapabilities::CAPABILITY_MATCHING;
       if ((versionBasedCapabilities & expected_capabilities) !=
           expected_capabilities) {
-        throw std::runtime_error(fmt::format(
-            "Expected version {:x} to support capability matching and "
-            "including header size, but it doesn't: {:x}",
-            version,
-            versionBasedCapabilities));
+        throw std::runtime_error(
+            fmt::format(
+                "Expected version {:x} to support capability matching and "
+                "including header size, but it doesn't: {:x}",
+                version,
+                versionBasedCapabilities));
       }
 
       // for now the size of the header should just be 8 because it only
       // includes the size of the capabilities.
       std::uint32_t header_size = cursor.readBE<uint32_t>();
       if (header_size != sizeof(uint64_t)) {
-        throw std::runtime_error(fmt::format(
-            "Invalid takeover header size {:x}, expected {:x}. version: {:x}",
-            header_size,
-            sizeof(uint64_t),
-            version));
+        throw std::runtime_error(
+            fmt::format(
+                "Invalid takeover header size {:x}, expected {:x}. version: {:x}",
+                header_size,
+                sizeof(uint64_t),
+                version));
       }
 
       uint64_t capabilities = cursor.readBE<uint64_t>();
@@ -539,8 +541,10 @@ TakeoverData::getProtocolCapabilitiesWithoutTrim(IOBuf* buf) {
       return {capabilities, trimSize};
     }
     default:
-      throw std::runtime_error(fmt::format(
-          "Unrecognized TakeoverData response starting with {:x}", version));
+      throw std::runtime_error(
+          fmt::format(
+              "Unrecognized TakeoverData response starting with {:x}",
+              version));
   }
 }
 

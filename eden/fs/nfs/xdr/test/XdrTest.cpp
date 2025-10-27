@@ -133,9 +133,7 @@ struct XdrTrait<IOBufStruct> {
 };
 
 TEST(XdrSerialize, iobuf) {
-  struct IOBufStruct buf {
-    42, folly::IOBuf::copyBuffer("This is a test"), 10
-  };
+  struct IOBufStruct buf{42, folly::IOBuf::copyBuffer("This is a test"), 10};
   roundtrip(std::move(buf));
 }
 

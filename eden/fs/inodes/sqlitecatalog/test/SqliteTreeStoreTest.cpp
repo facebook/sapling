@@ -81,10 +81,12 @@ void expect_entries(
 TEST_F(SqliteTreeStoreTest, testSaveLoadTree) {
   overlay::OverlayDir dir;
 
-  dir.entries()->emplace(std::make_pair(
-      "hello",
-      makeEntry(
-          Hash20{"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}, dtype_t::Dir)));
+  dir.entries()->emplace(
+      std::make_pair(
+          "hello",
+          makeEntry(
+              Hash20{"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+              dtype_t::Dir)));
   dir.entries()->emplace(std::make_pair("world", makeEntry()));
   dir.entries()->emplace(std::make_pair("foo", makeEntry()));
   dir.entries()->emplace(std::make_pair("bar", makeEntry()));

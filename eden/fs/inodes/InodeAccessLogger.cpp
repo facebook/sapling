@@ -215,12 +215,13 @@ void InodeAccessLogger::processInodeAccessEvents() {
       // task can flush this cache to Scuba. This would make it possible to
       // increase the InodeAccessesPercentage without overwhelming Scribe.
 
-      structuredLogger_->logEvent(FileAccessEvent{
-          repo.str(),
-          std::move(directory),
-          std::move(filename),
-          std::move(source),
-          std::move(sourceDetail)});
+      structuredLogger_->logEvent(
+          FileAccessEvent{
+              repo.str(),
+              std::move(directory),
+              std::move(filename),
+              std::move(source),
+              std::move(sourceDetail)});
     }
   }
 }

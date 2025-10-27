@@ -91,12 +91,13 @@ void BackingStoreLogger::logImport(
     std::replace(cmdline->begin(), cmdline->end(), '\0', ' ');
   }
 
-  logger_->logEvent(ServerDataFetch{
-      std::move(cause_string),
-      pid,
-      std::move(cmdline),
-      std::move(importPathString),
-      std::move(typeString)});
+  logger_->logEvent(
+      ServerDataFetch{
+          std::move(cause_string),
+          pid,
+          std::move(cmdline),
+          std::move(importPathString),
+          std::move(typeString)});
 }
 
 } // namespace facebook::eden

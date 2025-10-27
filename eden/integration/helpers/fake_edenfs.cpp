@@ -222,8 +222,9 @@ class FakeEdenServiceHandler : virtual public StreamingEdenServiceSvIf {
   void listMounts(std::vector<MountInfo>& /* results */) override {}
 
   void initiateShutdown(std::unique_ptr<string> reason) override {
-    server_->stop(folly::to<string>(
-        "received initiateShutdown() thrift requested: ", reason->c_str()));
+    server_->stop(
+        folly::to<string>(
+            "received initiateShutdown() thrift requested: ", reason->c_str()));
   }
 
  private:

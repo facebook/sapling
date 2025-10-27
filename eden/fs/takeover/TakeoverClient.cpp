@@ -114,8 +114,9 @@ TakeoverData takeoverMounts(
           } else {
             // This should only be hit during integration tests.
             return folly::makeFuture<UnixSocket::Message>(
-                folly::exception_wrapper(std::runtime_error(
-                    "ping received but should not respond")));
+                folly::exception_wrapper(
+                    std::runtime_error(
+                        "ping received but should not respond")));
           }
         } else {
           // Older versions of EdenFS will not send a "ready" ping and

@@ -549,9 +549,10 @@ RocksDbLocalStore::getBatch(
                 if (!status.ok()) {
                   if (status.IsNotFound()) {
                     // Return an empty StoreResult
-                    results.push_back(StoreResult::missing(
-                        keySpace,
-                        folly::ByteRange{folly::StringPiece{keys->at(i)}}));
+                    results.push_back(
+                        StoreResult::missing(
+                            keySpace,
+                            folly::ByteRange{folly::StringPiece{keys->at(i)}}));
                     continue;
                   }
 
@@ -802,11 +803,12 @@ void RocksDbLocalStore::autoGCFinished(
       std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
 
   // TODO: log the column names in the structured event
-  structuredLogger_->logEvent(RocksDbAutomaticGc{
-      duration_cast<std::chrono::duration<double>>(duration).count(),
-      successful,
-      static_cast<int64_t>(ephemeralSizeBefore),
-      static_cast<int64_t>(ephemeralSizeAfter)});
+  structuredLogger_->logEvent(
+      RocksDbAutomaticGc{
+          duration_cast<std::chrono::duration<double>>(duration).count(),
+          successful,
+          static_cast<int64_t>(ephemeralSizeBefore),
+          static_cast<int64_t>(ephemeralSizeAfter)});
 
   fb303::fbData->setCounter(
       folly::to<string>(statsPrefix_, "auto_gc.running"), 0);

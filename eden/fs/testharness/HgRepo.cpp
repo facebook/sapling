@@ -108,29 +108,32 @@ void HgRepo::hgInit(
   p.waitChecked();
 
   if (isEagerRepo) {
-    appendToHgrc(fmt::format(
-        "[paths]\n"
-        "default = eager:{}\n",
-        path_.value()));
+    appendToHgrc(
+        fmt::format(
+            "[paths]\n"
+            "default = eager:{}\n",
+            path_.value()));
   } else {
     appendToRequires("remotefilelog\n");
-    appendToHgrc(fmt::format(
-        "[remotefilelog]\n"
-        "server = false\n"
-        "reponame = test\n"
-        "cachepath = {}\n",
-        cacheDirectory));
+    appendToHgrc(
+        fmt::format(
+            "[remotefilelog]\n"
+            "server = false\n"
+            "reponame = test\n"
+            "cachepath = {}\n",
+            cacheDirectory));
   }
 
   appendToHgrc(
-      fmt::format("[extensions]\n"
-                  "remotefilelog =\n"
-                  "remotenames =\n"
-                  "treemanifest =\n"
-                  "[treemanifest]\n"
-                  "treeonly = true\n"
-                  "[scmstore]\n"
-                  "backingstore = true\n"));
+      fmt::format(
+          "[extensions]\n"
+          "remotefilelog =\n"
+          "remotenames =\n"
+          "treemanifest =\n"
+          "[treemanifest]\n"
+          "treeonly = true\n"
+          "[scmstore]\n"
+          "backingstore = true\n"));
 }
 
 void HgRepo::cloneFrom(

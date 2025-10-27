@@ -38,7 +38,7 @@ folly::Expected<FileStat, int> getFileStat(int fd) {
   // TODO: It would be faster on Windows to call `GetFileInformationByHandleW`
   // directly.
 
-  struct stat st {};
+  struct stat st{};
   int result = ::fstat(fd, &st);
   if (result) {
     return folly::Unexpected{errno};
@@ -51,7 +51,7 @@ folly::Expected<FileStat, int> getFileStat(const char* path) {
   // TODO: It would be faster on Windows to call `GetFileInformationByHandleW`
   // directly.
 
-  struct stat st {};
+  struct stat st{};
   int result = ::stat(path, &st);
   if (result) {
     return folly::Unexpected{errno};

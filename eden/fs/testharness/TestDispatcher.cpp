@@ -57,9 +57,10 @@ TestDispatcher::PendingLookup TestDispatcher::waitForLookup(
 
     if (requestReceived_.wait_until(state.as_lock(), end_time) ==
         std::cv_status::timeout) {
-      throw std::runtime_error(folly::to<string>(
-          "timed out waiting for test dispatcher to receive lookup request ",
-          requestId));
+      throw std::runtime_error(
+          folly::to<string>(
+              "timed out waiting for test dispatcher to receive lookup request ",
+              requestId));
     }
   }
 }

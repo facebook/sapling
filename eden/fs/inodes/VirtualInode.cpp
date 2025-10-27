@@ -682,7 +682,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
           // Windows returns zero for st_mode and mtime
           st.st_mode = static_cast<decltype(st.st_mode)>(0);
           {
-            struct timespec ts0 {};
+            struct timespec ts0{};
             stMtime(st, ts0);
           }
 #endif
@@ -705,7 +705,7 @@ ImmediateFuture<struct stat> VirtualInode::stat(
               // Windows returns zero for st_mode and mtime
               st.st_mode = static_cast<decltype(st.st_mode)>(0);
               {
-                struct timespec ts0 {};
+                struct timespec ts0{};
                 stMtime(st, ts0);
               }
 #endif

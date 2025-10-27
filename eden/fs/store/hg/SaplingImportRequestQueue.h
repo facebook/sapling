@@ -215,9 +215,9 @@ void SaplingImportRequestQueue::markImportAsFinished(
 
 template <typename T>
 SaplingImportRequestQueue::ImportQueue*
-SaplingImportRequestQueue::getImportQueue(folly::Synchronized<
-                                          SaplingImportRequestQueue::State,
-                                          std::mutex>::LockedPtr& state) {
+SaplingImportRequestQueue::getImportQueue(
+    folly::Synchronized<SaplingImportRequestQueue::State, std::mutex>::
+        LockedPtr& state) {
   if constexpr (std::is_same_v<T, const Tree>) {
     return &state->treeQueue;
   } else if constexpr (std::is_same_v<T, const TreeAuxData>) {

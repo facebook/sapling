@@ -741,12 +741,13 @@ void PrivHelperConn::serializeErrorResponse(
 
 void PrivHelperConn::checkAtEnd(const Cursor& cursor, StringPiece messageType) {
   if (!cursor.isAtEnd()) {
-    throw std::runtime_error(folly::to<string>(
-        "unexpected trailing data at end of ",
-        messageType,
-        ": ",
-        cursor.totalLength(),
-        " bytes"));
+    throw std::runtime_error(
+        folly::to<string>(
+            "unexpected trailing data at end of ",
+            messageType,
+            ": ",
+            cursor.totalLength(),
+            " bytes"));
   }
 }
 

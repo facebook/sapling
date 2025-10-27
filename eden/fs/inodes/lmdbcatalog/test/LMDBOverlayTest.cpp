@@ -88,8 +88,9 @@ TEST(PlainLMDBOverlayTest, new_overlay_is_clean) {
       true,
       *EdenConfig::createTestEdenConfig());
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -106,8 +107,9 @@ TEST(PlainLMDBOverlayTest, new_overlay_is_clean_buffered) {
       true,
       *EdenConfig::createTestEdenConfig());
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -125,8 +127,9 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean) {
         true,
         *EdenConfig::createTestEdenConfig());
     overlay
-        ->initialize(std::make_shared<ReloadableConfig>(
-            EdenConfig::createTestEdenConfig()))
+        ->initialize(
+            std::make_shared<ReloadableConfig>(
+                EdenConfig::createTestEdenConfig()))
         .get();
   }
   auto overlay = Overlay::create(
@@ -139,8 +142,9 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean) {
       true,
       *EdenConfig::createTestEdenConfig());
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -158,8 +162,9 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean_buffered) {
         true,
         *EdenConfig::createTestEdenConfig());
     overlay
-        ->initialize(std::make_shared<ReloadableConfig>(
-            EdenConfig::createTestEdenConfig()))
+        ->initialize(
+            std::make_shared<ReloadableConfig>(
+                EdenConfig::createTestEdenConfig()))
         .get();
   }
   auto overlay = Overlay::create(
@@ -172,8 +177,9 @@ TEST(PlainLMDBOverlayTest, reopened_overlay_is_clean_buffered) {
       true,
       *EdenConfig::createTestEdenConfig());
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -192,8 +198,9 @@ TEST(PlainLMDBOverlayTest, close_overlay_with_no_capacity_buffered) {
       true,
       *config);
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
   overlay->close();
   EXPECT_TRUE(overlay->isClosed());
@@ -213,8 +220,9 @@ TEST(PlainLMDBOverlayTest, small_capacity_write_multiple_directories_buffered) {
       true,
       *config);
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
 
   EXPECT_EQ(kRootNodeId, overlay->getMaxInodeNumber());
@@ -265,8 +273,9 @@ class RawLMDBOverlayTest
         true,
         *EdenConfig::createTestEdenConfig());
     overlay
-        ->initialize(std::make_shared<ReloadableConfig>(
-            EdenConfig::createTestEdenConfig()))
+        ->initialize(
+            std::make_shared<ReloadableConfig>(
+                EdenConfig::createTestEdenConfig()))
         .get();
   }
 
@@ -445,8 +454,9 @@ class DebugDumpLMDBOverlayInodesTest
         true,
         *EdenConfig::createTestEdenConfig());
     overlay
-        ->initialize(std::make_shared<ReloadableConfig>(
-            EdenConfig::createTestEdenConfig()))
+        ->initialize(
+            std::make_shared<ReloadableConfig>(
+                EdenConfig::createTestEdenConfig()))
         .get();
   }
 

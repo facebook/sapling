@@ -134,9 +134,10 @@ class DiffTest : public ::testing::Test {
           RootId{commit2.str()}, ObjectFetchContext::getNullContext());
 
       return collectAllSafe(std::move(tree1Future), std::move(tree2Future))
-          .thenValue([this](std::tuple<
-                            ObjectStore::GetRootTreeResult,
-                            ObjectStore::GetRootTreeResult>&& tup) {
+          .thenValue([this](
+                         std::tuple<
+                             ObjectStore::GetRootTreeResult,
+                             ObjectStore::GetRootTreeResult>&& tup) {
             const auto& [tree1, tree2] = tup;
             return diffCommitsFuture(tree1.treeId, tree2.treeId);
           });

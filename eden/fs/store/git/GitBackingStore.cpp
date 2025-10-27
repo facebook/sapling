@@ -156,8 +156,9 @@ SemiFuture<BackingStore::GetTreeResult> GitBackingStore::getTree(
     const ObjectId& id,
     const ObjectFetchContextPtr& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
-  return makeSemiFuture(BackingStore::GetTreeResult{
-      getTreeImpl(id), ObjectFetchContext::Origin::FromDiskCache});
+  return makeSemiFuture(
+      BackingStore::GetTreeResult{
+          getTreeImpl(id), ObjectFetchContext::Origin::FromDiskCache});
 }
 
 TreePtr GitBackingStore::getTreeImpl(const ObjectId& id) {
@@ -218,8 +219,9 @@ SemiFuture<BackingStore::GetBlobResult> GitBackingStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
-  return makeSemiFuture(BackingStore::GetBlobResult{
-      getBlobImpl(id), ObjectFetchContext::Origin::FromDiskCache});
+  return makeSemiFuture(
+      BackingStore::GetBlobResult{
+          getBlobImpl(id), ObjectFetchContext::Origin::FromDiskCache});
 }
 
 folly::coro::Task<BackingStore::GetBlobResult> GitBackingStore::co_getBlob(

@@ -60,10 +60,11 @@ void findEdenDir(EdenConfig& config) {
     // the eden directory.
     config.edenDir.setValue(resolvedDir, ConfigSourceType::CommandLine);
   } catch (const std::exception& ex) {
-    throw ArgumentError(fmt::format(
-        FMT_STRING("error creating {}: {}"),
-        boostPath.string(),
-        folly::exceptionStr(ex).c_str()));
+    throw ArgumentError(
+        fmt::format(
+            FMT_STRING("error creating {}: {}"),
+            boostPath.string(),
+            folly::exceptionStr(ex).c_str()));
   }
 }
 
@@ -104,10 +105,11 @@ std::unique_ptr<EdenConfig> getEdenConfig(UserInfo& identity) {
   try {
     systemConfigDir = normalizeBestEffort(FLAGS_etcEdenDir);
   } catch (const std::exception& ex) {
-    throw ArgumentError(fmt::format(
-        FMT_STRING("invalid flag value: {}: {}"),
-        FLAGS_etcEdenDir,
-        folly::exceptionStr(ex).c_str()));
+    throw ArgumentError(
+        fmt::format(
+            FMT_STRING("invalid flag value: {}: {}"),
+            FLAGS_etcEdenDir,
+            folly::exceptionStr(ex).c_str()));
   }
   const auto systemConfigPath =
       systemConfigDir + PathComponentPiece{kEdenfsSystemConfigFile};
@@ -124,10 +126,11 @@ std::unique_ptr<EdenConfig> getEdenConfig(UserInfo& identity) {
     try {
       userConfigPath = normalizeBestEffort(configPathStr);
     } catch (const std::exception& ex) {
-      throw ArgumentError(fmt::format(
-          FMT_STRING("invalid flag value: {}: {}"),
-          FLAGS_configPath,
-          folly::exceptionStr(ex).c_str()));
+      throw ArgumentError(
+          fmt::format(
+              FMT_STRING("invalid flag value: {}: {}"),
+              FLAGS_configPath,
+              folly::exceptionStr(ex).c_str()));
     }
   }
 

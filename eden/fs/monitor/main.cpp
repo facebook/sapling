@@ -91,7 +91,7 @@ void newProcessGroup() {
   }
 
   // Forward any SIGTERM and SIGINT signals we receive to our child.
-  struct sigaction act {};
+  struct sigaction act{};
   act.sa_handler = forwardSignal;
   auto rc = sigaction(SIGINT, &act, nullptr);
   folly::checkUnixError(rc, "failed to install SIGINT handler");

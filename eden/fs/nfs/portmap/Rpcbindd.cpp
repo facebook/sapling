@@ -145,8 +145,9 @@ ImmediateFuture<folly::Unit> RpcbinddServerProcessor::getport(
   XLOGF(DBG7, "protocol: {}", args.prot);
   if (args.prot == PortmapMapping2::kTcpProto) {
     auto lockedServers = registeredServers_.rlock();
-    auto maybePort = lockedServers->find(std::make_pair<uint32_t, uint32_t>(
-        std::move(args.prog), std::move(args.vers)));
+    auto maybePort = lockedServers->find(
+        std::make_pair<uint32_t, uint32_t>(
+            std::move(args.prog), std::move(args.vers)));
     if (maybePort != lockedServers->end()) {
       XLOGF(DBG7, "port: {}", maybePort->second);
       XdrTrait<uint32_t>::serialize(ser, maybePort->second);
@@ -215,13 +216,14 @@ Rpcbindd::Rpcbindd(
     size_t maximumInFlightRequests,
     std::chrono::nanoseconds highNfsRequestsLogInterval)
     : proc_(std::make_shared<RpcbinddServerProcessor>()),
-      server_(RpcServer::create(
-          proc_,
-          evb,
-          std::move(threadPool),
-          structuredLogger,
-          maximumInFlightRequests,
-          highNfsRequestsLogInterval)) {}
+      server_(
+          RpcServer::create(
+              proc_,
+              evb,
+              std::move(threadPool),
+              structuredLogger,
+              maximumInFlightRequests,
+              highNfsRequestsLogInterval)) {}
 
 void Rpcbindd::initialize() {
   server_->initialize(folly::SocketAddress("127.0.0.1", kPortmapPortNumber));

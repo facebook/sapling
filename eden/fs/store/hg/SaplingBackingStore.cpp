@@ -388,13 +388,14 @@ void SaplingBackingStore::processBlobImportRequests(
 
     // TODO: We could reduce the number of lock acquisitions by adding a batch
     // publish method.
-    traceBus_->publish(HgImportTraceEvent::start(
-        request->getUnique(),
-        HgImportTraceEvent::BLOB,
-        blobImport->proxyHash,
-        request->getPriority().getClass(),
-        request->getCause(),
-        request->getPid()));
+    traceBus_->publish(
+        HgImportTraceEvent::start(
+            request->getUnique(),
+            HgImportTraceEvent::BLOB,
+            blobImport->proxyHash,
+            request->getPriority().getClass(),
+            request->getCause(),
+            request->getPid()));
 
     XLOGF(DBG4, "Processing blob request for {}", blobImport->id);
   }
@@ -427,12 +428,13 @@ void SaplingBackingStore::getBlobBatch(
               content.exception().what().toStdString());
 
           if (structuredLogger_) {
-            structuredLogger_->logEvent(FetchMiss{
-                store_.getRepoName(),
-                FetchMiss::Blob,
-                content.exception().what().toStdString(),
-                false, // isRetry
-                store_.dogfoodingHost()});
+            structuredLogger_->logEvent(
+                FetchMiss{
+                    store_.getRepoName(),
+                    FetchMiss::Blob,
+                    content.exception().what().toStdString(),
+                    false, // isRetry
+                    store_.dogfoodingHost()});
           }
         } else {
           XLOGF(
@@ -500,13 +502,14 @@ void SaplingBackingStore::processTreeImportRequests(
 
     // TODO: We could reduce the number of lock acquisitions by adding a batch
     // publish method.
-    traceBus_->publish(HgImportTraceEvent::start(
-        request->getUnique(),
-        HgImportTraceEvent::TREE,
-        treeImport->proxyHash,
-        request->getPriority().getClass(),
-        request->getCause(),
-        request->getPid()));
+    traceBus_->publish(
+        HgImportTraceEvent::start(
+            request->getUnique(),
+            HgImportTraceEvent::TREE,
+            treeImport->proxyHash,
+            request->getPriority().getClass(),
+            request->getCause(),
+            request->getPid()));
 
     XLOGF(DBG4, "Processing tree request for {}", treeImport->id);
   }
@@ -710,13 +713,14 @@ void SaplingBackingStore::processBlobAuxImportRequests(
 
     // TODO: We could reduce the number of lock acquisitions by adding a batch
     // publish method.
-    traceBus_->publish(HgImportTraceEvent::start(
-        request->getUnique(),
-        HgImportTraceEvent::BLOB_AUX,
-        blobAuxImport->proxyHash,
-        request->getPriority().getClass(),
-        request->getCause(),
-        request->getPid()));
+    traceBus_->publish(
+        HgImportTraceEvent::start(
+            request->getUnique(),
+            HgImportTraceEvent::BLOB_AUX,
+            blobAuxImport->proxyHash,
+            request->getPriority().getClass(),
+            request->getCause(),
+            request->getPid()));
 
     XLOGF(DBG4, "Processing blob aux request for {}", blobAuxImport->id);
   }
@@ -753,13 +757,14 @@ void SaplingBackingStore::processTreeAuxImportRequests(
 
     // TODO: We could reduce the number of lock acquisitions by adding a batch
     // publish method.
-    traceBus_->publish(HgImportTraceEvent::start(
-        request->getUnique(),
-        HgImportTraceEvent::TREE_AUX,
-        treeAuxImport->proxyHash,
-        request->getPriority().getClass(),
-        request->getCause(),
-        request->getPid()));
+    traceBus_->publish(
+        HgImportTraceEvent::start(
+            request->getUnique(),
+            HgImportTraceEvent::TREE_AUX,
+            treeAuxImport->proxyHash,
+            request->getPriority().getClass(),
+            request->getCause(),
+            request->getPid()));
 
     XLOGF(DBG4, "Processing tree aux request for {}", treeAuxImport->id);
   }
@@ -816,12 +821,13 @@ void SaplingBackingStore::getTreeAuxDataBatch(
 
         if (auxTry.hasException()) {
           if (structuredLogger_) {
-            structuredLogger_->logEvent(FetchMiss{
-                store_.getRepoName(),
-                FetchMiss::TreeAuxData,
-                auxTry.exception().what().toStdString(),
-                false, // isRetry
-                store_.dogfoodingHost()});
+            structuredLogger_->logEvent(
+                FetchMiss{
+                    store_.getRepoName(),
+                    FetchMiss::TreeAuxData,
+                    auxTry.exception().what().toStdString(),
+                    false, // isRetry
+                    store_.dogfoodingHost()});
           }
 
           return;
@@ -883,12 +889,13 @@ void SaplingBackingStore::getBlobAuxDataBatch(
         if (auxTry.hasException()) {
           if (structuredLogger_ &&
               fetch_mode != sapling::FetchMode::RemoteOnly) {
-            structuredLogger_->logEvent(FetchMiss{
-                store_.getRepoName(),
-                FetchMiss::BlobAuxData,
-                auxTry.exception().what().toStdString(),
-                false, // isRetry
-                store_.dogfoodingHost()});
+            structuredLogger_->logEvent(
+                FetchMiss{
+                    store_.getRepoName(),
+                    FetchMiss::BlobAuxData,
+                    auxTry.exception().what().toStdString(),
+                    false, // isRetry
+                    store_.dogfoodingHost()});
           }
 
           return;
@@ -1059,8 +1066,10 @@ SaplingBackingStore::getTreeAuxData(
   if (auxData.hasValue() && auxData.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchTreeAuxDataSuccess);
     stats_->increment(&SaplingBackingStoreStats::fetchTreeAuxDataLocal);
-    return folly::makeSemiFuture(GetTreeAuxResult{
-        std::move(auxData.value()), ObjectFetchContext::Origin::FromDiskCache});
+    return folly::makeSemiFuture(
+        GetTreeAuxResult{
+            std::move(auxData.value()),
+            ObjectFetchContext::Origin::FromDiskCache});
   }
 
   return getTreeAuxDataEnqueue(id, proxyHash, context)
@@ -1086,13 +1095,14 @@ SaplingBackingStore::getTreeAuxDataEnqueue(
 
     auto importTracker =
         std::make_unique<RequestMetricsScope>(&pendingImportTreeAuxWatches_);
-    traceBus_->publish(HgImportTraceEvent::queue(
-        unique,
-        HgImportTraceEvent::TREE_AUX,
-        proxyHash,
-        context->getPriority().getClass(),
-        context->getCause(),
-        context->getClientPid()));
+    traceBus_->publish(
+        HgImportTraceEvent::queue(
+            unique,
+            HgImportTraceEvent::TREE_AUX,
+            proxyHash,
+            context->getPriority().getClass(),
+            context->getCause(),
+            context->getClientPid()));
 
     return queue_.enqueueTreeAux(std::move(request))
         .ensure([this,
@@ -1100,14 +1110,15 @@ SaplingBackingStore::getTreeAuxDataEnqueue(
                  proxyHash,
                  context = context.copy(),
                  importTracker = std::move(importTracker)]() {
-          traceBus_->publish(HgImportTraceEvent::finish(
-              unique,
-              HgImportTraceEvent::TREE_AUX,
-              proxyHash,
-              context->getPriority().getClass(),
-              context->getCause(),
-              context->getClientPid(),
-              context->getFetchedSource()));
+          traceBus_->publish(
+              HgImportTraceEvent::finish(
+                  unique,
+                  HgImportTraceEvent::TREE_AUX,
+                  proxyHash,
+                  context->getPriority().getClass(),
+                  context->getCause(),
+                  context->getClientPid(),
+                  context->getFetchedSource()));
         });
   });
 
@@ -1170,8 +1181,9 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
       stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
     }
     stats_->increment(&SaplingBackingStoreStats::fetchTreeLocal);
-    return folly::makeSemiFuture(GetTreeResult{
-        std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
+    return folly::makeSemiFuture(
+        GetTreeResult{
+            std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
   }
 
   return getTreeEnqueue(id, proxyHash, context)
@@ -1192,13 +1204,14 @@ SaplingBackingStore::getTreeEnqueue(
 
     auto importTracker =
         std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
-    traceBus_->publish(HgImportTraceEvent::queue(
-        unique,
-        HgImportTraceEvent::TREE,
-        proxyHash,
-        context->getPriority().getClass(),
-        context->getCause(),
-        context->getClientPid()));
+    traceBus_->publish(
+        HgImportTraceEvent::queue(
+            unique,
+            HgImportTraceEvent::TREE,
+            proxyHash,
+            context->getPriority().getClass(),
+            context->getCause(),
+            context->getClientPid()));
 
     return queue_.enqueueTree(std::move(request))
         .ensure([this,
@@ -1206,14 +1219,15 @@ SaplingBackingStore::getTreeEnqueue(
                  proxyHash,
                  context = context.copy(),
                  importTracker = std::move(importTracker)]() {
-          traceBus_->publish(HgImportTraceEvent::finish(
-              unique,
-              HgImportTraceEvent::TREE,
-              proxyHash,
-              context->getPriority().getClass(),
-              context->getCause(),
-              context->getClientPid(),
-              context->getFetchedSource()));
+          traceBus_->publish(
+              HgImportTraceEvent::finish(
+                  unique,
+                  HgImportTraceEvent::TREE,
+                  proxyHash,
+                  context->getPriority().getClass(),
+                  context->getCause(),
+                  context->getClientPid(),
+                  context->getFetchedSource()));
         });
   });
 
@@ -1282,8 +1296,10 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
       stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccessDogfooding);
     }
     stats_->increment(&SaplingBackingStoreStats::fetchBlobLocal);
-    return folly::makeSemiFuture(GetBlobResult{
-        std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache});
+    return folly::makeSemiFuture(
+        GetBlobResult{
+            std::move(blob.value()),
+            ObjectFetchContext::Origin::FromDiskCache});
   }
 
   return getBlobEnqueue(
@@ -1352,13 +1368,14 @@ SaplingBackingStore::getBlobEnqueue(
             &pendingImportPrefetchWatches_);
         break;
     }
-    traceBus_->publish(HgImportTraceEvent::queue(
-        unique,
-        HgImportTraceEvent::BLOB,
-        proxyHash,
-        context->getPriority().getClass(),
-        context->getCause(),
-        context->getClientPid()));
+    traceBus_->publish(
+        HgImportTraceEvent::queue(
+            unique,
+            HgImportTraceEvent::BLOB,
+            proxyHash,
+            context->getPriority().getClass(),
+            context->getCause(),
+            context->getClientPid()));
 
     return queue_.enqueueBlob(std::move(request))
         .ensure([this,
@@ -1366,14 +1383,15 @@ SaplingBackingStore::getBlobEnqueue(
                  proxyHash,
                  context = context.copy(),
                  importTracker = std::move(importTracker)]() {
-          traceBus_->publish(HgImportTraceEvent::finish(
-              unique,
-              HgImportTraceEvent::BLOB,
-              proxyHash,
-              context->getPriority().getClass(),
-              context->getCause(),
-              context->getClientPid(),
-              context->getFetchedSource()));
+          traceBus_->publish(
+              HgImportTraceEvent::finish(
+                  unique,
+                  HgImportTraceEvent::BLOB,
+                  proxyHash,
+                  context->getPriority().getClass(),
+                  context->getCause(),
+                  context->getClientPid(),
+                  context->getFetchedSource()));
         });
   });
 
@@ -1414,23 +1432,25 @@ SaplingBackingStore::co_getBlobEnqueue(
       break;
   }
 
-  traceBus_->publish(HgImportTraceEvent::queue(
-      unique,
-      HgImportTraceEvent::BLOB,
-      proxyHash,
-      context->getPriority().getClass(),
-      context->getCause(),
-      context->getClientPid()));
+  traceBus_->publish(
+      HgImportTraceEvent::queue(
+          unique,
+          HgImportTraceEvent::BLOB,
+          proxyHash,
+          context->getPriority().getClass(),
+          context->getCause(),
+          context->getClientPid()));
   // Setup guard to publish 'finish' event when current scope is destroyed
   auto guard = folly::makeGuard([&] {
-    traceBus_->publish(HgImportTraceEvent::finish(
-        unique,
-        HgImportTraceEvent::BLOB,
-        proxyHash,
-        context->getPriority().getClass(),
-        context->getCause(),
-        context->getClientPid(),
-        context->getFetchedSource()));
+    traceBus_->publish(
+        HgImportTraceEvent::finish(
+            unique,
+            HgImportTraceEvent::BLOB,
+            proxyHash,
+            context->getPriority().getClass(),
+            context->getCause(),
+            context->getClientPid(),
+            context->getFetchedSource()));
   });
 
   folly::Try<BlobPtr> result;
@@ -1474,8 +1494,10 @@ SaplingBackingStore::getBlobAuxData(
   if (auxData.hasValue() && auxData.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobAuxDataSuccess);
     stats_->increment(&SaplingBackingStoreStats::fetchBlobAuxDataLocal);
-    return folly::makeSemiFuture(GetBlobAuxResult{
-        std::move(auxData.value()), ObjectFetchContext::Origin::FromDiskCache});
+    return folly::makeSemiFuture(
+        GetBlobAuxResult{
+            std::move(auxData.value()),
+            ObjectFetchContext::Origin::FromDiskCache});
   }
 
   return getBlobAuxDataEnqueue(id, proxyHash, context)
@@ -1506,13 +1528,14 @@ SaplingBackingStore::getBlobAuxDataEnqueue(
 
     auto importTracker =
         std::make_unique<RequestMetricsScope>(&pendingImportBlobAuxWatches_);
-    traceBus_->publish(HgImportTraceEvent::queue(
-        unique,
-        HgImportTraceEvent::BLOB_AUX,
-        proxyHash,
-        context->getPriority().getClass(),
-        context->getCause(),
-        context->getClientPid()));
+    traceBus_->publish(
+        HgImportTraceEvent::queue(
+            unique,
+            HgImportTraceEvent::BLOB_AUX,
+            proxyHash,
+            context->getPriority().getClass(),
+            context->getCause(),
+            context->getClientPid()));
 
     return queue_.enqueueBlobAux(std::move(request))
         .ensure([this,
@@ -1520,14 +1543,15 @@ SaplingBackingStore::getBlobAuxDataEnqueue(
                  proxyHash,
                  context = context.copy(),
                  importTracker = std::move(importTracker)]() {
-          traceBus_->publish(HgImportTraceEvent::finish(
-              unique,
-              HgImportTraceEvent::BLOB_AUX,
-              proxyHash,
-              context->getPriority().getClass(),
-              context->getCause(),
-              context->getClientPid(),
-              context->getFetchedSource()));
+          traceBus_->publish(
+              HgImportTraceEvent::finish(
+                  unique,
+                  HgImportTraceEvent::BLOB_AUX,
+                  proxyHash,
+                  context->getPriority().getClass(),
+                  context->getCause(),
+                  context->getClientPid(),
+                  context->getFetchedSource()));
         });
   });
 
@@ -1836,13 +1860,14 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
                     RequestMetricsScope{&pendingImportPrefetchWatches_};
 
                 auto unique = generateUniqueID();
-                traceBus_->publish(HgImportTraceEvent::start(
-                    unique,
-                    HgImportTraceEvent::BLOB_BATCH,
-                    proxyHashes[0], // use the first item in batch
-                    context->getPriority().getClass(),
-                    context->getCause(),
-                    context->getClientPid()));
+                traceBus_->publish(
+                    HgImportTraceEvent::start(
+                        unique,
+                        HgImportTraceEvent::BLOB_BATCH,
+                        proxyHashes[0], // use the first item in batch
+                        context->getPriority().getClass(),
+                        context->getCause(),
+                        context->getClientPid()));
 
                 folly::stop_watch<std::chrono::milliseconds> watch;
                 XLOGF(
@@ -1871,14 +1896,15 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
                       }
                     });
 
-                traceBus_->publish(HgImportTraceEvent::finish(
-                    unique,
-                    HgImportTraceEvent::BLOB_BATCH,
-                    proxyHashes[0], // use the first item in batch
-                    context->getPriority().getClass(),
-                    context->getCause(),
-                    context->getClientPid(),
-                    context->getFetchedSource()));
+                traceBus_->publish(
+                    HgImportTraceEvent::finish(
+                        unique,
+                        HgImportTraceEvent::BLOB_BATCH,
+                        proxyHashes[0], // use the first item in batch
+                        context->getPriority().getClass(),
+                        context->getCause(),
+                        context->getClientPid(),
+                        context->getFetchedSource()));
 
                 stats_->increment(
                     &SaplingBackingStoreStats::prefetchBlobFailure,

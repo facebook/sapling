@@ -276,8 +276,9 @@ TEST(EdenMount, resetParents) {
   const auto& edenMount = testMount.getEdenMount();
   EXPECT_EQ(RootId("1"), edenMount->getCheckedOutRootId());
   EXPECT_EQ(
-      ParentCommit(ParentCommit::WorkingCopyParentAndCheckedOutRevision{
-          RootId("1"), RootId("1")}),
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{
+              RootId("1"), RootId("1")}),
       edenMount->getCheckoutConfig()->getParentCommit());
   auto latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);
@@ -291,8 +292,9 @@ TEST(EdenMount, resetParents) {
   // The snapshot ID should be updated, both in memory and on disk
   EXPECT_EQ(RootId("1"), edenMount->getCheckedOutRootId());
   EXPECT_EQ(
-      ParentCommit(ParentCommit::WorkingCopyParentAndCheckedOutRevision{
-          RootId("2"), RootId("1")}),
+      ParentCommit(
+          ParentCommit::WorkingCopyParentAndCheckedOutRevision{
+              RootId("2"), RootId("1")}),
       edenMount->getCheckoutConfig()->getParentCommit());
   latestJournalEntry = edenMount->getJournal().getLatest();
   ASSERT_TRUE(latestJournalEntry);

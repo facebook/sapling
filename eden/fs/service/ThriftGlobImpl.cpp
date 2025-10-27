@@ -335,7 +335,7 @@ ImmediateFuture<std::unique_ptr<Glob>> ThriftGlobImpl::glob(
                windowsSymlinksEnabled = windowsSymlinksEnabled,
                config = serverState->getEdenConfig()](
                   std::vector<GlobResult>&& results) mutable
-              -> ImmediateFuture<std::unique_ptr<Glob>> {
+                  -> ImmediateFuture<std::unique_ptr<Glob>> {
                 auto out = std::make_unique<Glob>();
 
                 if (!suppressFileList) {

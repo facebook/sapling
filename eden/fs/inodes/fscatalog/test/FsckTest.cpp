@@ -483,9 +483,10 @@ TEST_P(FsckTest, testBadNextInodeNumber) {
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
-      UnorderedElementsAre(fmt::format(
-          "bad stored next inode number: read 2 but should be at least {}",
-          actualNextInodeNumber)));
+      UnorderedElementsAre(
+          fmt::format(
+              "bad stored next inode number: read 2 but should be at least {}",
+              actualNextInodeNumber)));
   EXPECT_EQ(checker.getNextInodeNumber(), actualNextInodeNumber);
   catalog->close(checker.getNextInodeNumber());
 }
@@ -512,10 +513,11 @@ TEST_P(FsckTest, testBadFileData) {
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
-      UnorderedElementsAre(fmt::format(
-          "error reading data for inode {}: unknown overlay file format version {}",
-          layout.src_foo_testTxt.number(),
-          0x55555555)));
+      UnorderedElementsAre(
+          fmt::format(
+              "error reading data for inode {}: unknown overlay file format version {}",
+              layout.src_foo_testTxt.number(),
+              0x55555555)));
 
   // Repair the problems
   auto [result, fsckLog] = performRepair(checker, 1, 1);
@@ -761,9 +763,10 @@ TEST_P(FsckTest, testHardLink) {
   checker.scanForErrors();
   EXPECT_THAT(
       errorMessages(checker),
-      UnorderedElementsAre(fmt::format(
-          "found hard linked inode {}:\n- src/foo/also_z.txt\n- src/foo/x/y/z.txt",
-          layout.src_foo_x_y_zTxt.number())));
+      UnorderedElementsAre(
+          fmt::format(
+              "found hard linked inode {}:\n- src/foo/also_z.txt\n- src/foo/x/y/z.txt",
+              layout.src_foo_x_y_zTxt.number())));
   testOverlay->inodeCatalog()->close(checker.getNextInodeNumber());
 }
 

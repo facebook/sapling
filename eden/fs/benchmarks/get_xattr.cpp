@@ -388,8 +388,9 @@ int main(int argc, char** argv) {
               break;
             }
             default:
-              throw std::invalid_argument(fmt::format(
-                  "cannot fetch unknown attr via thrift: {}", xAttrType));
+              throw std::invalid_argument(
+                  fmt::format(
+                      "cannot fetch unknown attr via thrift: {}", xAttrType));
           }
         }
 

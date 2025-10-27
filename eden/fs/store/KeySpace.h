@@ -18,7 +18,7 @@ namespace facebook::eden {
  * usage should be kept under the size specified by `cacheLimit`.
  */
 struct Ephemeral {
-  ConfigSetting<uint64_t> EdenConfig::*cacheLimit;
+  ConfigSetting<uint64_t> EdenConfig::* cacheLimit;
 };
 
 /**

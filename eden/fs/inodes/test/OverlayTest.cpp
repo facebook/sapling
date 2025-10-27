@@ -76,8 +76,9 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       true,
       *EdenConfig::createTestEdenConfig());
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
 
   ObjectId id1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
@@ -264,8 +265,9 @@ TEST(PlainOverlayTest, new_overlay_is_clean) {
       true,
       *EdenConfig::createTestEdenConfig());
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -283,8 +285,9 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
         true,
         *EdenConfig::createTestEdenConfig());
     overlay
-        ->initialize(std::make_shared<ReloadableConfig>(
-            EdenConfig::createTestEdenConfig()))
+        ->initialize(
+            std::make_shared<ReloadableConfig>(
+                EdenConfig::createTestEdenConfig()))
         .get();
   }
 
@@ -298,8 +301,9 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
       true,
       *EdenConfig::createTestEdenConfig());
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -319,8 +323,9 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
         true,
         *EdenConfig::createTestEdenConfig());
     overlay
-        ->initialize(std::make_shared<ReloadableConfig>(
-            EdenConfig::createTestEdenConfig()))
+        ->initialize(
+            std::make_shared<ReloadableConfig>(
+                EdenConfig::createTestEdenConfig()))
         .get();
   }
 
@@ -338,8 +343,9 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
       true,
       *EdenConfig::createTestEdenConfig());
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
   EXPECT_FALSE(overlay->hadCleanStartup());
 }
@@ -386,8 +392,9 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
         true,
         *EdenConfig::createTestEdenConfig());
     overlay
-        ->initialize(std::make_shared<ReloadableConfig>(
-            EdenConfig::createTestEdenConfig()))
+        ->initialize(
+            std::make_shared<ReloadableConfig>(
+                EdenConfig::createTestEdenConfig()))
         .get();
   }
 
@@ -802,8 +809,9 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
             true,
             *EdenConfig::createTestEdenConfig())} {
     overlay
-        ->initialize(std::make_shared<ReloadableConfig>(
-            EdenConfig::createTestEdenConfig()))
+        ->initialize(
+            std::make_shared<ReloadableConfig>(
+                EdenConfig::createTestEdenConfig()))
         .get();
   }
 

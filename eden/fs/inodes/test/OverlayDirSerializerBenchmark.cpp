@@ -156,8 +156,9 @@ void benchmarkOverlayDirSerialization(
   printf("Initializing Overlay...\n");
 
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
 
   printf("Overlay initialized. Writing overlay data...\n");

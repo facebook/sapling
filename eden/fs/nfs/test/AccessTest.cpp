@@ -17,7 +17,7 @@
 namespace facebook::eden {
 
 TEST(AccessTest, read) {
-  struct stat st {};
+  struct stat st{};
   st.st_mode = S_IRUSR;
   EXPECT_EQ(getEffectiveAccessRights(st, ACCESS3_READ), ACCESS3_READ);
   EXPECT_EQ(getEffectiveAccessRights(st, ACCESS3_LOOKUP), ACCESS3_LOOKUP);
@@ -40,7 +40,7 @@ TEST(AccessTest, read) {
 }
 
 TEST(AccessTest, write) {
-  struct stat st {};
+  struct stat st{};
   st.st_mode = S_IWUSR;
   EXPECT_EQ(getEffectiveAccessRights(st, ACCESS3_MODIFY), ACCESS3_MODIFY);
   EXPECT_EQ(getEffectiveAccessRights(st, ACCESS3_EXTEND), ACCESS3_EXTEND);
@@ -78,7 +78,7 @@ TEST(AccessTest, write) {
 }
 
 TEST(AccessTest, execute) {
-  struct stat st {};
+  struct stat st{};
   st.st_mode = S_IXUSR;
   EXPECT_EQ(getEffectiveAccessRights(st, ACCESS3_EXECUTE), ACCESS3_EXECUTE);
 

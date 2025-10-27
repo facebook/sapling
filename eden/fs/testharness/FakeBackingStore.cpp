@@ -352,8 +352,9 @@ ObjectId FakeBackingStore::computeTreeId(const Tree::container& sortedEntries) {
   }
 
   Hash20::Storage computedHashBytes;
-  digest.hash_final(folly::MutableByteRange{
-      computedHashBytes.data(), computedHashBytes.size()});
+  digest.hash_final(
+      folly::MutableByteRange{
+          computedHashBytes.data(), computedHashBytes.size()});
   return ObjectId{computedHashBytes};
 }
 
@@ -417,8 +418,9 @@ StoredGlob* FakeBackingStore::putGlob(
   auto storedGlob = std::make_unique<StoredGlob>(std::move(contents));
   auto ret = data->globs.emplace(suffixQuery, std::move(storedGlob));
   if (!ret.second) {
-    throw std::domain_error(folly::to<std::string>(
-        "glob results for query ", suffixQuery.second, " already exists"));
+    throw std::domain_error(
+        folly::to<std::string>(
+            "glob results for query ", suffixQuery.second, " already exists"));
   }
   return ret.first->second.get();
 }

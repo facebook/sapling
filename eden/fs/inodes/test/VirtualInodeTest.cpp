@@ -758,18 +758,19 @@ TEST(VirtualInodeTest, getChildrenAttributes) {
           auto entryName = basename(child->path.view());
           EXPECT_THAT(
               result,
-              testing::Contains(testing::Pair(
-                  entryName,
-                  childVirtualInode
-                      .getEntryAttributes(
-                          attribute_request,
-                          child->path,
-                          mount.getEdenMount()->getObjectStore(),
-                          mount.getEdenMount()
-                              ->getLastCheckoutTime()
-                              .toTimespec(),
-                          ObjectFetchContext::getNullContext())
-                      .getTry())));
+              testing::Contains(
+                  testing::Pair(
+                      entryName,
+                      childVirtualInode
+                          .getEntryAttributes(
+                              attribute_request,
+                              child->path,
+                              mount.getEdenMount()->getObjectStore(),
+                              mount.getEdenMount()
+                                  ->getLastCheckoutTime()
+                                  .toTimespec(),
+                              ObjectFetchContext::getNullContext())
+                          .getTry())));
         }
       }
     }

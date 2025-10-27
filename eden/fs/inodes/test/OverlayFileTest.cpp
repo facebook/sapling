@@ -53,8 +53,9 @@ class OverlayFileTest : public ::testing::Test {
         true,
         *EdenConfig::createTestEdenConfig());
     fsOverlay
-        ->initialize(std::make_shared<ReloadableConfig>(
-            EdenConfig::createTestEdenConfig()))
+        ->initialize(
+            std::make_shared<ReloadableConfig>(
+                EdenConfig::createTestEdenConfig()))
         .get();
 
     lmdbOverlay = Overlay::create(
@@ -67,8 +68,9 @@ class OverlayFileTest : public ::testing::Test {
         true,
         *EdenConfig::createTestEdenConfig());
     lmdbOverlay
-        ->initialize(std::make_shared<ReloadableConfig>(
-            EdenConfig::createTestEdenConfig()))
+        ->initialize(
+            std::make_shared<ReloadableConfig>(
+                EdenConfig::createTestEdenConfig()))
         .get();
   }
 

@@ -78,10 +78,12 @@ class OverlayChecker::RepairState {
 
   template <typename Arg1, typename Arg2, typename... Args>
   void log(const Arg1& arg1, const Arg2& arg2, const Args&... args) {
-    logLine(fmt::to_string(fmt::join(
-        std::make_tuple<const Arg1&, const Arg2&, const Args&...>(
-            arg1, arg2, args...),
-        "")));
+    logLine(
+        fmt::to_string(
+            fmt::join(
+                std::make_tuple<const Arg1&, const Arg2&, const Args&...>(
+                    arg1, arg2, args...),
+                "")));
   }
 
   template <typename Arg1, typename... Args>
@@ -605,10 +607,11 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
           contents.size(),
           FsFileContentStore::kHeaderLength);
       if (bytesRead < 0) {
-        folly::throwSystemError(fmt::format(
-            "read error while copying symlink data from inode {} to {}",
-            number,
-            archivePath.view()));
+        folly::throwSystemError(
+            fmt::format(
+                "read error while copying symlink data from inode {} to {}",
+                number,
+                archivePath.view()));
       }
       if (0 < bytesRead && static_cast<size_t>(bytesRead) < maxLength) {
         auto rc = ::symlink(contents.data(), archivePath.value().c_str());
@@ -633,10 +636,11 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       auto bytesRead =
           folly::readFull(input.fd(), buffer.data(), buffer.size());
       if (bytesRead < 0) {
-        folly::throwSystemError(fmt::format(
-            "read error while copying data from inode {} to {}",
-            number,
-            archivePath.view()));
+        folly::throwSystemError(
+            fmt::format(
+                "read error while copying data from inode {} to {}",
+                number,
+                archivePath.view()));
       } else if (bytesRead == 0) {
         break;
       }

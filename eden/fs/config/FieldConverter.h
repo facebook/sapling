@@ -280,11 +280,12 @@ struct ConstrainedDuration : public std::chrono::nanoseconds {
       : std::chrono::nanoseconds{time} {
     std::chrono::nanoseconds ns = time;
     if (ns.count() < MinNsTicks || ns.count() > MaxNsTicks) {
-      throw std::invalid_argument(fmt::format(
-          "Default Duration '{}' should be between {} and {}",
-          durationToString(ns),
-          durationToString(std::chrono::nanoseconds{MinNsTicks}),
-          durationToString(std::chrono::nanoseconds{MaxNsTicks})));
+      throw std::invalid_argument(
+          fmt::format(
+              "Default Duration '{}' should be between {} and {}",
+              durationToString(ns),
+              durationToString(std::chrono::nanoseconds{MinNsTicks}),
+              durationToString(std::chrono::nanoseconds{MaxNsTicks})));
     }
   }
 };

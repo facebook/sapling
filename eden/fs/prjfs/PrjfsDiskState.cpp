@@ -60,9 +60,10 @@ bool directoryIsEmpty(const wchar_t* path) {
   HANDLE h = FindFirstFileExW(
       path, FindExInfoBasic, &findFileData, FindExSearchNameMatch, nullptr, 0);
   if (h == INVALID_HANDLE_VALUE) {
-    throw std::runtime_error(fmt::format(
-        "unable to check directory - {}",
-        wideToMultibyteString<std::string>(path)));
+    throw std::runtime_error(
+        fmt::format(
+            "unable to check directory - {}",
+            wideToMultibyteString<std::string>(path)));
   }
 
   do {
@@ -76,9 +77,10 @@ bool directoryIsEmpty(const wchar_t* path) {
 
   auto error = GetLastError();
   if (error != ERROR_NO_MORE_FILES) {
-    throw std::runtime_error(fmt::format(
-        "unable to check directory - {}",
-        wideToMultibyteString<std::string>(path)));
+    throw std::runtime_error(
+        fmt::format(
+            "unable to check directory - {}",
+            wideToMultibyteString<std::string>(path)));
   }
 
   FindClose(h);

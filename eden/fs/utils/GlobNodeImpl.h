@@ -295,16 +295,17 @@ class GlobNodeImpl {
     std::vector<ObjectId> localFileBlobsToPrefetch;
 
     if (!recursiveChildren_.empty()) {
-      futures.emplace_back(evaluateRecursiveComponentImpl<ROOT, ROOTPtr>(
-          store,
-          context,
-          rootPath,
-          RelativePathPiece{""},
-          ROOT(root),
-          fileBlobsToPrefetch,
-          globResult,
-          originRootId,
-          0));
+      futures.emplace_back(
+          evaluateRecursiveComponentImpl<ROOT, ROOTPtr>(
+              store,
+              context,
+              rootPath,
+              RelativePathPiece{""},
+              ROOT(root),
+              fileBlobsToPrefetch,
+              globResult,
+              originRootId,
+              0));
     }
 
     auto recurseIfNecessary = [&](PathComponentPiece name,

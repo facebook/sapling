@@ -367,8 +367,9 @@ class ThriftRequestScope {
         << "[" << requestId_ << "] " << sourceLocation.function_name() << "("
         << join() << ")";
 
-    traceBus_->publish(ThriftRequestTraceEvent::start(
-        requestId_, sourceLocation_.function_name(), pid));
+    traceBus_->publish(
+        ThriftRequestTraceEvent::start(
+            requestId_, sourceLocation_.function_name(), pid));
   }
 
   ~ThriftRequestScope() {
@@ -400,10 +401,11 @@ class ThriftRequestScope {
     if (edenStats_) {
       edenStats_->addDuration(statPtr_, elapsed);
     }
-    traceBus_->publish(ThriftRequestTraceEvent::finish(
-        requestId_,
-        sourceLocation_.function_name(),
-        thriftFetchContext_->getClientPid()));
+    traceBus_->publish(
+        ThriftRequestTraceEvent::finish(
+            requestId_,
+            sourceLocation_.function_name(),
+            thriftFetchContext_->getClientPid()));
   }
 
   const ObjectFetchContextPtr& getPrefetchFetchContext() {
@@ -486,8 +488,9 @@ class SuffixGlobRequestScope {
         client_cmdline,
         globberLogString_,
         duration);
-    serverState_->getStructuredLogger()->logEvent(SuffixGlob{
-        duration, globberLogString_, std::move(client_cmdline), isLocal_});
+    serverState_->getStructuredLogger()->logEvent(
+        SuffixGlob{
+            duration, globberLogString_, std::move(client_cmdline), isLocal_});
   }
 
  private:
@@ -532,8 +535,9 @@ class GlobFilesRequestScope {
     if (duration >= EXPENSIVE_GLOB_FILES_DURATION) {
       std::string client_cmdline = getClientCmdline(serverState_, context_);
 
-      serverState_->getStructuredLogger()->logEvent(ExpensiveGlob{
-          duration, logString_, std::move(client_cmdline), local});
+      serverState_->getStructuredLogger()->logEvent(
+          ExpensiveGlob{
+              duration, logString_, std::move(client_cmdline), local});
     }
     if (local) {
       if (isOffloadable_) {
@@ -772,11 +776,12 @@ EdenServiceHandler::EdenServiceHandler(
       server_{server},
       usageService_{std::move(usageService)},
       thriftRequestActivityBuffer_(initThriftRequestActivityBuffer()),
-      thriftRequestTraceBus_(TraceBus<ThriftRequestTraceEvent>::create(
-          "ThriftRequestTrace",
-          server_->getServerState()
-              ->getEdenConfig()
-              ->ThriftTraceBusCapacity.getValue())) {
+      thriftRequestTraceBus_(
+          TraceBus<ThriftRequestTraceEvent>::create(
+              "ThriftRequestTrace",
+              server_->getServerState()
+                  ->getEdenConfig()
+                  ->ThriftTraceBusCapacity.getValue())) {
   thriftRequestTraceHandle_ = thriftRequestTraceBus_->subscribeFunction(
       "Outstanding Thrift request tracing",
       [this](const ThriftRequestTraceEvent& event) {
@@ -2209,22 +2214,23 @@ EdenServiceHandler::streamChangesSince(
       // We want to make sure the diff is performed on a background thread so
       // the Thrift client can interrupt us whenever desired. To do this, let's
       // start from an not ready ImmediateFuture.
-      futures.push_back(makeNotReadyImmediateFuture().thenValue(
-          [from,
-           to,
-           mountHandle,
-           token = cancellationSource->getToken(),
-           fetchContext = fetchContext.copy(),
-           callback = callback.get()](auto&&) {
-            return diffBetweenRoots(
-                from,
-                to,
-                *mountHandle.getEdenMount().getCheckoutConfig(),
-                mountHandle.getObjectStorePtr(),
-                token,
-                fetchContext,
-                callback);
-          }));
+      futures.push_back(
+          makeNotReadyImmediateFuture().thenValue(
+              [from,
+               to,
+               mountHandle,
+               token = cancellationSource->getToken(),
+               fetchContext = fetchContext.copy(),
+               callback = callback.get()](auto&&) {
+                return diffBetweenRoots(
+                    from,
+                    to,
+                    *mountHandle.getEdenMount().getCheckoutConfig(),
+                    mountHandle.getObjectStorePtr(),
+                    token,
+                    fetchContext,
+                    callback);
+              }));
     }
 
     folly::futures::detachOn(
@@ -2992,23 +2998,24 @@ EdenServiceHandler::streamSelectedChangesSince(
       const auto to = backingStore->createFilteredRootId(
           toRootId.value(), toRootId.value());
 
-      futures.push_back(makeNotReadyImmediateFuture().thenValue(
-          [from,
-           to,
-           mountHandle,
-           objectStore,
-           token = cancellationSource->getToken(),
-           fetchContext = fetchContext.copy(),
-           callback = callback.get()](auto&&) {
-            return diffBetweenRoots(
-                RootId{from},
-                RootId{to},
-                *mountHandle.getEdenMount().getCheckoutConfig(),
-                objectStore,
-                token,
-                fetchContext,
-                callback);
-          }));
+      futures.push_back(
+          makeNotReadyImmediateFuture().thenValue(
+              [from,
+               to,
+               mountHandle,
+               objectStore,
+               token = cancellationSource->getToken(),
+               fetchContext = fetchContext.copy(),
+               callback = callback.get()](auto&&) {
+                return diffBetweenRoots(
+                    RootId{from},
+                    RootId{to},
+                    *mountHandle.getEdenMount().getCheckoutConfig(),
+                    objectStore,
+                    token,
+                    fetchContext,
+                    callback);
+              }));
     }
 
     folly::futures::detachOn(
@@ -3488,8 +3495,8 @@ EdenServiceHandler::semifuture_readdir(std::unique_ptr<ReaddirParams> params) {
                       requestedAttributes,
                       paths = std::move(paths),
                       fetchContext = fetchContext.copy()](auto&&) mutable
-                     -> ImmediateFuture<
-                         std::vector<DirListAttributeDataOrError>> {
+                         -> ImmediateFuture<
+                             std::vector<DirListAttributeDataOrError>> {
                        std::vector<ImmediateFuture<DirListAttributeDataOrError>>
                            futures;
                        futures.reserve(paths.size());
@@ -3974,8 +3981,9 @@ EdenServiceHandler::semifuture_predictiveGlobFiles(
   if (repo_optional == std::nullopt) {
     // typeid() does not evaluate expressions
     auto& r = *backingStore.get();
-    throw std::runtime_error(folly::to<std::string>(
-        "mount must use SaplingBackingStore, type is ", typeid(r).name()));
+    throw std::runtime_error(
+        folly::to<std::string>(
+            "mount must use SaplingBackingStore, type is ", typeid(r).name()));
   }
 
   auto repo = repo_optional.value();
@@ -4287,8 +4295,9 @@ EdenServiceHandler::semifuture_globFiles(std::unique_ptr<GlobParams> params) {
                                     std::move(originId)}};
                               }));
                     } else {
-                      globEntryFuts.emplace_back(folly::Try<GlobEntry>{
-                          GlobEntry{std::move(entry), DT_UNKNOWN, originId}});
+                      globEntryFuts.emplace_back(
+                          folly::Try<GlobEntry>{GlobEntry{
+                              std::move(entry), DT_UNKNOWN, originId}});
                     }
                   }
                 }
@@ -4823,27 +4832,31 @@ EdenServiceHandler::co_debugGetBlobImpl(
   // paths' due to overhead. From benchmarking, no performance
   // regressions were found.
   if (originFlags.contains(FROMWHERE_MEMORY_CACHE)) {
-    blobTasks.push_back(folly::coro::co_invoke(
-        [edenMount, id]() -> folly::coro::Task<ScmBlobWithOrigin> {
-          co_return transformToBlobFromOrigin(
-              edenMount,
-              id,
-              folly::Try<std::shared_ptr<const Blob>>{
-                  edenMount->getBlobCache()->get(id).object},
-              DataFetchOrigin::MEMORY_CACHE);
-        }));
+    blobTasks.push_back(
+        folly::coro::co_invoke(
+            [edenMount, id]() -> folly::coro::Task<ScmBlobWithOrigin> {
+              co_return transformToBlobFromOrigin(
+                  edenMount,
+                  id,
+                  folly::Try<std::shared_ptr<const Blob>>{
+                      edenMount->getBlobCache()->get(id).object},
+                  DataFetchOrigin::MEMORY_CACHE);
+            }));
   }
   if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
     auto localStore = server_->getLocalStore();
-    blobTasks.push_back(folly::coro::co_invoke(
-        [edenMount, id, localStore]() -> folly::coro::Task<ScmBlobWithOrigin> {
-          auto blob = co_await localStore->co_getBlob(id);
-          co_return transformToBlobFromOrigin(
-              edenMount,
-              id,
-              folly::Try<std::shared_ptr<const Blob>>{blob},
-              DataFetchOrigin::DISK_CACHE);
-        }));
+    blobTasks.push_back(
+        folly::coro::co_invoke(
+            [edenMount,
+             id,
+             localStore]() -> folly::coro::Task<ScmBlobWithOrigin> {
+              auto blob = co_await localStore->co_getBlob(id);
+              co_return transformToBlobFromOrigin(
+                  edenMount,
+                  id,
+                  folly::Try<std::shared_ptr<const Blob>>{blob},
+                  DataFetchOrigin::DISK_CACHE);
+            }));
   }
   auto& context = helper->getFetchContext();
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
@@ -4855,16 +4868,17 @@ EdenServiceHandler::co_debugGetBlobImpl(
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
-    blobTasks.push_back(folly::coro::co_invoke(
-        [edenMount, id, saplingBackingStore, proxyHash, &context]()
-            -> folly::coro::Task<ScmBlobWithOrigin> {
-          auto blob = saplingBackingStore->getBlobLocal(proxyHash, context);
-          co_return transformToBlobFromOrigin(
-              edenMount,
-              id,
-              std::move(blob),
-              DataFetchOrigin::LOCAL_BACKING_STORE);
-        }));
+    blobTasks.push_back(
+        folly::coro::co_invoke(
+            [edenMount, id, saplingBackingStore, proxyHash, &context]()
+                -> folly::coro::Task<ScmBlobWithOrigin> {
+              auto blob = saplingBackingStore->getBlobLocal(proxyHash, context);
+              co_return transformToBlobFromOrigin(
+                  edenMount,
+                  id,
+                  std::move(blob),
+                  DataFetchOrigin::LOCAL_BACKING_STORE);
+            }));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
     auto proxyHash = HgProxyHash::load(
@@ -4875,35 +4889,41 @@ EdenServiceHandler::co_debugGetBlobImpl(
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
-    blobTasks.push_back(folly::coro::co_invoke(
-        [edenMount, id, saplingBackingStore, proxyHash, &context]()
-            -> folly::coro::Task<ScmBlobWithOrigin> {
-          auto blob = saplingBackingStore->getBlobRemote(proxyHash, context);
-          co_return transformToBlobFromOrigin(
-              edenMount,
-              id,
-              std::move(blob),
-              DataFetchOrigin::REMOTE_BACKING_STORE);
-        }));
+    blobTasks.push_back(
+        folly::coro::co_invoke(
+            [edenMount, id, saplingBackingStore, proxyHash, &context]()
+                -> folly::coro::Task<ScmBlobWithOrigin> {
+              auto blob =
+                  saplingBackingStore->getBlobRemote(proxyHash, context);
+              co_return transformToBlobFromOrigin(
+                  edenMount,
+                  id,
+                  std::move(blob),
+                  DataFetchOrigin::REMOTE_BACKING_STORE);
+            }));
   }
   if (originFlags.contains(FROMWHERE_ANYWHERE)) {
-    blobTasks.push_back(folly::coro::co_invoke(
-        [edenMount, id, store, &context]()
-            -> folly::coro::Task<ScmBlobWithOrigin> {
-          try {
-            auto blob = co_await store->co_getBlob(id, context);
-            co_return transformToBlobFromOrigin(
-                edenMount,
-                id,
-                folly::Try<std::shared_ptr<const Blob>>{blob},
-                DataFetchOrigin::ANYWHERE);
-          } catch (const std::exception&) {
-            folly::Try<std::shared_ptr<const Blob>> blobTry;
-            blobTry.emplaceException(std::current_exception());
-            co_return transformToBlobFromOrigin(
-                edenMount, id, std::move(blobTry), DataFetchOrigin::ANYWHERE);
-          }
-        }));
+    blobTasks.push_back(
+        folly::coro::co_invoke(
+            [edenMount, id, store, &context]()
+                -> folly::coro::Task<ScmBlobWithOrigin> {
+              try {
+                auto blob = co_await store->co_getBlob(id, context);
+                co_return transformToBlobFromOrigin(
+                    edenMount,
+                    id,
+                    folly::Try<std::shared_ptr<const Blob>>{blob},
+                    DataFetchOrigin::ANYWHERE);
+              } catch (const std::exception&) {
+                folly::Try<std::shared_ptr<const Blob>> blobTry;
+                blobTry.emplaceException(std::current_exception());
+                co_return transformToBlobFromOrigin(
+                    edenMount,
+                    id,
+                    std::move(blobTry),
+                    DataFetchOrigin::ANYWHERE);
+              }
+            }));
   }
   auto blobs = co_await folly::coro::collectAllRange(std::move(blobTasks));
   auto response = std::make_unique<DebugGetScmBlobResponse>();
@@ -5320,8 +5340,9 @@ class InodeStatusCallbacks : public TraversalCallbacks {
           dtype_t::Dir != entry.dtype) {
         if (entry.id.has_value()) {
           // schedule fetching size from ObjectStore::getBlobSize
-          requestedSizes_.push_back(RequestedSize{
-              results_.size(), info.entries()->size(), entry.id.value()});
+          requestedSizes_.push_back(
+              RequestedSize{
+                  results_.size(), info.entries()->size(), entry.id.value()});
         } else {
 #ifndef _WIN32
           entryInfo.fileSize() = mount_->getOverlayFileAccess()->getFileSize(
@@ -6110,7 +6131,7 @@ EdenServiceHandler::semifuture_invalidateKernelInodeCache(
                         mountHandle,
                         fetchContext =
                             fetchContext.copy()](struct stat&& stat) mutable
-                       -> ImmediateFuture<folly::Unit> {
+                           -> ImmediateFuture<folly::Unit> {
                          nfsChannel->invalidate(
                              canonicalMountPoint + RelativePath{*path},
                              stat.st_mode);

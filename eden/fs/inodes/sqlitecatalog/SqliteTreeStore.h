@@ -29,9 +29,10 @@ class StructuredLogger;
 class SqliteTreeStoreNonEmptyError : public std::exception {
  public:
   explicit SqliteTreeStoreNonEmptyError(std::string&& str)
-      : message_(folly::to<std::string>(
-            "Attempting to operate on non-empty directory: ",
-            str)) {}
+      : message_(
+            folly::to<std::string>(
+                "Attempting to operate on non-empty directory: ",
+                str)) {}
 
   const char* what() const noexcept override {
     return message_.c_str();

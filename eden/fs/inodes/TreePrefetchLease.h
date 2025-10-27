@@ -54,9 +54,10 @@ class TreePrefetchLease {
       TreeInodePtr inode,
       const ObjectFetchContext& context)
       : inode_{std::move(inode)},
-        context_(makeRefPtr<TreePrefetchContext>(
-            context.getClientPid(),
-            context.getCause())) {}
+        context_(
+            makeRefPtr<TreePrefetchContext>(
+                context.getClientPid(),
+                context.getCause())) {}
 
   ~TreePrefetchLease() {
     release();

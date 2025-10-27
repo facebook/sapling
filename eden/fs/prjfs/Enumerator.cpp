@@ -31,9 +31,10 @@ PrjfsDirEntry::PrjfsDirEntry(
       isDir_{isDir},
       symlinkTarget_{
           symlinkTarget.has_value()
-              ? std::make_optional(std::move(symlinkTarget.value())
-                                       .semi()
-                                       .via(folly::getGlobalCPUExecutor()))
+              ? std::make_optional(
+                    std::move(symlinkTarget.value())
+                        .semi()
+                        .via(folly::getGlobalCPUExecutor()))
               : std::nullopt} {}
 
 bool PrjfsDirEntry::matchPattern(const std::wstring& pattern) const {

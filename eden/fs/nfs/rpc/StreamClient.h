@@ -66,8 +66,9 @@ class StreamClient {
     T result = XdrTrait<T>::deserialize(cursor);
 
     if (!cursor.isAtEnd()) {
-      throw std::runtime_error(folly::to<std::string>(
-          "unexpected trailing bytes (", cursor.totalLength(), ")"));
+      throw std::runtime_error(
+          folly::to<std::string>(
+              "unexpected trailing bytes (", cursor.totalLength(), ")"));
     }
 
     return result;

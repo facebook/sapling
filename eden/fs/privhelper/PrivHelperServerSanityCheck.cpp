@@ -286,7 +286,7 @@ void PrivHelperServer::sanityCheckMountPoint(
   }
 
   // At this point, any stat errors are not due to a stale mount.
-  struct stat st {};
+  struct stat st{};
   auto fd = open(mountPoint.c_str(), O_RDONLY);
   if (fd == -1 || fstat(fd, &st) < 0) {
     auto err = errno;

@@ -473,8 +473,9 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                           EdenServer::LocalStoreOpenError>()) {
             auto startTimeInSeconds =
                 std::chrono::duration<double>{daemonStart.elapsed()}.count();
-            structuredLogger->logEvent(DaemonStart{
-                startTimeInSeconds, FLAGS_takeover, false /*success*/});
+            structuredLogger->logEvent(
+                DaemonStart{
+                    startTimeInSeconds, FLAGS_takeover, false /*success*/});
             // Note: this will cause EdenFs to exit abruptly. We are not using
             // normal shutdown procedures. This is consistent with other
             // pre-mount startup errors. Admittedly this will leave hung mounts

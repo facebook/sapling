@@ -709,10 +709,11 @@ std::optional<fsck::InodeInfo> FsFileContentStore::loadInodeInfo(
     int errnum = errno;
     return inodeError("error reading from file: ", folly::errnoStr(errnum));
   } else if (readResult != FsFileContentStore::kHeaderLength) {
-    return inodeError(fmt::format(
-        "file was too short to contain overlay header: read {} bytes, expected {} bytes",
-        readResult,
-        FsFileContentStore::kHeaderLength));
+    return inodeError(
+        fmt::format(
+            "file was too short to contain overlay header: read {} bytes, expected {} bytes",
+            readResult,
+            FsFileContentStore::kHeaderLength));
   }
 
   // The first 4 bytes of the header are the file type identifier.

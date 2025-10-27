@@ -888,9 +888,10 @@ FuseChannel::FuseChannel(
       fuseDevice_(std::move(fuseDevice)),
       processAccessLog_(std::move(processInfoCache)),
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
-      traceBus_(TraceBus<FuseTraceEvent>::create(
-          "FuseTrace" + mountPath.asString(),
-          fuseTraceBusCapacity)) {
+      traceBus_(
+          TraceBus<FuseTraceEvent>::create(
+              "FuseTrace" + mountPath.asString(),
+              fuseTraceBusCapacity)) {
   XLOGF(
       INFO,
       "Creating FuseChannel: mountPath={}, numThreads={}, caseSensitive={}, requireUtf8={}, maximumBackgroundRequests={}, maximumInFlightRequests={}, useWriteBackCache={}",
@@ -1879,8 +1880,9 @@ void FuseChannel::processSession() {
           auto requestId = generateUniqueID();
           if (handlerEntry->argRenderer &&
               traceDetailedArguments_->load(std::memory_order_acquire)) {
-            traceBus_->publish(FuseTraceEvent::start(
-                requestId, *header, handlerEntry->argRenderer(arg)));
+            traceBus_->publish(
+                FuseTraceEvent::start(
+                    requestId, *header, handlerEntry->argRenderer(arg)));
           } else {
             traceBus_->publish(FuseTraceEvent::start(requestId, *header));
           }
@@ -1962,8 +1964,9 @@ void FuseChannel::processSession() {
                        requestId,
                        headerCopy,
                        requestPermit = std::move(requestPermit)] {
-                traceBus_->publish(FuseTraceEvent::finish(
-                    requestId, headerCopy, request->getResult()));
+                traceBus_->publish(
+                    FuseTraceEvent::finish(
+                        requestId, headerCopy, request->getResult()));
 
                 // We may be complete; check to see if all requests are
                 // done and whether there are any threads remaining.

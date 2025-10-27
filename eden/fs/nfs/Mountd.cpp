@@ -241,13 +241,14 @@ Mountd::Mountd(
     size_t maximumInFlightRequests,
     std::chrono::nanoseconds highNfsRequestsLogInterval)
     : proc_(std::make_shared<MountdServerProcessor>()),
-      server_(RpcServer::create(
-          proc_,
-          evb,
-          std::move(threadPool),
-          structuredLogger,
-          maximumInFlightRequests,
-          highNfsRequestsLogInterval)) {}
+      server_(
+          RpcServer::create(
+              proc_,
+              evb,
+              std::move(threadPool),
+              structuredLogger,
+              maximumInFlightRequests,
+              highNfsRequestsLogInterval)) {}
 
 void Mountd::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
   server_->initialize(addr);

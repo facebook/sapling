@@ -132,17 +132,18 @@ void SaplingNativeBackingStore::getTreeBatch(
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
   for (auto& request : requests) {
-    raw_requests.emplace_back(Request{
-        request.node.data(),
-        request.cause,
-        rust::Slice<const uint8_t>{
-            reinterpret_cast<const uint8_t*>(request.path.view().data()),
-            request.path.view().size()},
-        rust::Slice<const uint8_t>{
-            reinterpret_cast<const uint8_t*>(request.oid.getBytes().data()),
-            request.oid.size()},
-        request.context->getClientPid().valueOrZero().get(),
-    });
+    raw_requests.emplace_back(
+        Request{
+            request.node.data(),
+            request.cause,
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(request.path.view().data()),
+                request.path.view().size()},
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(request.oid.getBytes().data()),
+                request.oid.size()},
+            request.context->getClientPid().valueOrZero().get(),
+        });
   }
 
   sapling_backingstore_get_tree_batch(
@@ -189,10 +190,11 @@ void SaplingNativeBackingStore::getTreeAuxDataBatch(
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
   for (auto& request : requests) {
-    raw_requests.push_back(Request{
-        request.node.data(),
-        request.cause,
-    });
+    raw_requests.push_back(
+        Request{
+            request.node.data(),
+            request.cause,
+        });
   }
 
   sapling_backingstore_get_tree_aux_batch(
@@ -255,10 +257,11 @@ void SaplingNativeBackingStore::getBlobBatch(
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
   for (auto& request : requests) {
-    raw_requests.push_back(Request{
-        request.node.data(),
-        request.cause,
-    });
+    raw_requests.push_back(
+        Request{
+            request.node.data(),
+            request.cause,
+        });
 
     if (request.cause != FetchCause::Prefetch) {
       sapling_backingstore_witness_file_read(
@@ -312,10 +315,11 @@ void SaplingNativeBackingStore::getBlobAuxDataBatch(
   std::vector<Request> raw_requests;
   raw_requests.reserve(count);
   for (auto& request : requests) {
-    raw_requests.push_back(Request{
-        request.node.data(),
-        request.cause,
-    });
+    raw_requests.push_back(
+        Request{
+            request.node.data(),
+            request.cause,
+        });
   }
 
   sapling_backingstore_get_file_aux_batch(

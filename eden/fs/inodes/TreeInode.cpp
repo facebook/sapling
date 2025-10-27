@@ -784,7 +784,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
              entryMode = entry.getInitialMode(),
              number = entry.getInodeNumber()](
                 std::shared_ptr<const Tree> tree) mutable
-            -> unique_ptr<InodeBase> {
+                -> unique_ptr<InodeBase> {
               // Even if the inode is not materialized, it may have inode
               // numbers stored in the overlay.
               auto overlayDir = self->loadOverlayDir(number);
@@ -2806,8 +2806,9 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
 
             // Collect this future to complete with other
             // deferred entries.
-            deferredEntries.emplace_back(DeferredDiffEntry::createAddedScmEntry(
-                context, entryPath, inodeEntry->getObjectId()));
+            deferredEntries.emplace_back(
+                DeferredDiffEntry::createAddedScmEntry(
+                    context, entryPath, inodeEntry->getObjectId()));
           }
         }
       }
@@ -2820,10 +2821,11 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           filteredEntryDtype(
               scmEntry.second.getDtype(), windowsSymlinksEnabled));
       if (scmEntry.second.isTree()) {
-        deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
-            context,
-            currentPath + scmEntry.first,
-            scmEntry.second.getObjectId()));
+        deferredEntries.emplace_back(
+            DeferredDiffEntry::createRemovedScmEntry(
+                context,
+                currentPath + scmEntry.first,
+                scmEntry.second.getObjectId()));
       }
     };
 
@@ -2856,13 +2858,14 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
       if (inodeEntry->getInode()) {
         // This inode is already loaded.
         auto childInodePtr = inodeEntry->getInodePtr();
-        deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
-            context,
-            entryPath,
-            std::move(scmEntries),
-            std::move(childInodePtr),
-            ignore.get(),
-            entryIgnored));
+        deferredEntries.emplace_back(
+            DeferredDiffEntry::createModifiedEntry(
+                context,
+                entryPath,
+                std::move(scmEntries),
+                std::move(childInodePtr),
+                ignore.get(),
+                entryIgnored));
       } else if (inodeEntry->isMaterialized()) {
         // This inode is not loaded but is materialized.
         // We'll have to load it to confirm if it is the same or different.
@@ -2872,13 +2875,14 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
             *inodeEntry,
             pendingLoads,
             context->getFetchContext());
-        deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
-            context,
-            entryPath,
-            std::move(scmEntries),
-            std::move(inodeFuture),
-            ignore.get(),
-            entryIgnored));
+        deferredEntries.emplace_back(
+            DeferredDiffEntry::createModifiedEntry(
+                context,
+                entryPath,
+                std::move(scmEntries),
+                std::move(inodeFuture),
+                ignore.get(),
+                entryIgnored));
       } else {
         // If the inode is neither loaded nor materialized, then the inode
         // points at source control objects. At this point we check to see if
@@ -2941,8 +2945,9 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           context->callback->removedPath(
               entryPath,
               filteredEntryDtype(scmEntry.getDtype(), windowsSymlinksEnabled));
-          deferredEntries.emplace_back(DeferredDiffEntry::createRemovedScmEntry(
-              context, entryPath, scmEntry.getObjectId()));
+          deferredEntries.emplace_back(
+              DeferredDiffEntry::createRemovedScmEntry(
+                  context, entryPath, scmEntry.getObjectId()));
         } else {
           // This file corresponds to a different blob id, or has a
           // different mode.
@@ -2971,13 +2976,14 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
             // parent TreeInode::Entry and the TreeEntry.  Once we have file
             // sizes, we could check for differing file sizes first, and
             // avoid loading the blob if they are different.
-            deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
-                context,
-                entryPath,
-                scmEntry,
-                inodeEntry->getObjectId(),
-                filteredEntryDtype(
-                    inodeEntry->getDtype(), windowsSymlinksEnabled)));
+            deferredEntries.emplace_back(
+                DeferredDiffEntry::createModifiedEntry(
+                    context,
+                    entryPath,
+                    scmEntry,
+                    inodeEntry->getObjectId(),
+                    filteredEntryDtype(
+                        inodeEntry->getDtype(), windowsSymlinksEnabled)));
           }
         }
       }
@@ -3190,7 +3196,7 @@ ImmediateFuture<Unit> TreeInode::checkout(
            shouldInvalidateDirectory,
            propagateErrors](
               vector<folly::Try<InvalidationRequired>> actionResults) mutable
-          -> ImmediateFuture<folly::Unit> {
+              -> ImmediateFuture<folly::Unit> {
             // Record any errors that occurred
             size_t numErrors = 0;
             for (size_t n = 0; n < actionResults.size(); ++n) {

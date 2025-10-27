@@ -31,8 +31,10 @@ T de(std::unique_ptr<IOBuf> buf) {
   folly::io::Cursor cursor(buf.get());
   auto ret = XdrTrait<T>::deserialize(cursor);
   if (!cursor.isAtEnd()) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("unexpected trailing bytes ({})"), cursor.totalLength()));
+    throw std::runtime_error(
+        fmt::format(
+            FMT_STRING("unexpected trailing bytes ({})"),
+            cursor.totalLength()));
   }
   return ret;
 }

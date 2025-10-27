@@ -50,8 +50,9 @@ void benchmarkOverlayTreeWrites(
   printf("Initializing Overlay...\n");
 
   overlay
-      ->initialize(std::make_shared<ReloadableConfig>(
-          EdenConfig::createTestEdenConfig()))
+      ->initialize(
+          std::make_shared<ReloadableConfig>(
+              EdenConfig::createTestEdenConfig()))
       .get();
 
   printf("Overlay initialized. Starting benchmark...\n");

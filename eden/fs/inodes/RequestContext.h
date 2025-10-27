@@ -111,7 +111,7 @@ class RequestContext {
   template <typename T>
   void startRequest(
       EdenStatsPtr stats,
-      StatsGroupBase::Duration T::*duration,
+      StatsGroupBase::Duration T::* duration,
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
           requestWatches) {
     return startRequest(

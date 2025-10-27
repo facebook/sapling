@@ -465,7 +465,7 @@ folly::File mountMacFuse(
   iov.iov_base = buf;
   iov.iov_len = sizeof(buf);
 
-  struct msghdr msg {};
+  struct msghdr msg{};
   msg.msg_iov = &iov;
   msg.msg_iovlen = 1;
   msg.msg_control = ccmsg;
@@ -730,9 +730,8 @@ void PrivHelperServer::nfsMount(
       (options.retransmitTimeoutTenthSeconds % 10) * 100000000;
   XdrTrait<nfs_mattr_request_timeout>::serialize(
       attrSer,
-      nfstime32{
-          /*seconds=*/retransSeconds,
-          /*nseconds=*/retransRemainderNanoseconds});
+      nfstime32{/*seconds=*/retransSeconds,
+                /*nseconds=*/retransRemainderNanoseconds});
 
   // Indicates the max RPC retransmissions for soft mounts
   std::string retransAttemptsStr = "";

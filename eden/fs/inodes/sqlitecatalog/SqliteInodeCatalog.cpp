@@ -108,8 +108,9 @@ std::optional<fsck::InodeInfo> SqliteInodeCatalog::loadInodeInfo(
   auto overlayDir = loadOverlayDir(number);
 
   if (!overlayDir.has_value()) {
-    return inodeError(fmt::format(
-        "unable to load directory contents for inode {}", number.get()));
+    return inodeError(
+        fmt::format(
+            "unable to load directory contents for inode {}", number.get()));
   }
 
   return {fsck::InodeInfo(number, std::move(overlayDir.value()))};

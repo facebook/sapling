@@ -106,13 +106,14 @@ void GlobNodeImpl::parse(StringPiece pattern) {
 
     auto node = lookupToken(container, token);
     if (!node) {
-      container->emplace_back(std::make_unique<GlobNodeImpl>(
-          token,
-          includeDotfiles_,
-          hasSpecials,
-          caseSensitive_,
-          prefetchOptimizations_,
-          recursiveAsyncDepth_));
+      container->emplace_back(
+          std::make_unique<GlobNodeImpl>(
+              token,
+              includeDotfiles_,
+              hasSpecials,
+              caseSensitive_,
+              prefetchOptimizations_,
+              recursiveAsyncDepth_));
       node = container->back().get();
     }
 
