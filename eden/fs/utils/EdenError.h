@@ -13,6 +13,7 @@
 #include <system_error>
 
 #include "eden/common/utils/Utf8.h"
+#include "eden/fs/rocksdb/RocksException.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/scm/lib/backingstore/SaplingBackingStoreError.h"
 
@@ -96,4 +97,11 @@ EdenError newEdenError(const folly::exception_wrapper& ew);
  */
 EdenError newEdenError(const sapling::SaplingBackingStoreError& ex);
 
+/**
+ * Construct an EdenError from a RocksException
+ *
+ * This automatically extracts the status code and tries to convert the
+ * error to more specific EdenErrorTypes
+ */
+EdenError newEdenError(const RocksException& ex);
 } // namespace facebook::eden

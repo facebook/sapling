@@ -52,7 +52,9 @@ EdenError newEdenError(const folly::exception_wrapper& ew) {
           [&err](const std::system_error& ex) { err = newEdenError(ex); }) &&
       !ew.with_exception([&err](const sapling::SaplingBackingStoreError& ex) {
         err = newEdenError(ex);
-      })) {
+      }) &&
+      !ew.with_exception(
+          [&err](const RocksException& ex) { err = newEdenError(ex); })) {
     err = newEdenError(
         EdenErrorType::GENERIC_ERROR, folly::exceptionStr(ew).toStdString());
   }
@@ -83,6 +85,18 @@ EdenError newEdenError(const sapling::SaplingBackingStoreError& ex) {
         folly::exceptionStr(ex).toStdString());
   }
 
+  return newEdenError(static_cast<const std::exception&>(ex));
+}
+
+EdenError newEdenError(const RocksException& ex) {
+  const rocksdb::Status& status = ex.getStatus();
+  if (status.IsNoSpace()) {
+#ifdef _WIN32
+    return newEdenError(ERROR_DISK_FULL, EdenErrorType::WIN32_ERROR, ex.what());
+#else
+    return newEdenError(ENOSPC, EdenErrorType::POSIX_ERROR, ex.what());
+#endif
+  }
   return newEdenError(static_cast<const std::exception&>(ex));
 }
 

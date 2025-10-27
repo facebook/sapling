@@ -91,3 +91,41 @@ TEST(EdenError, saplingBackingStoreErrorInExceptionWrapper) {
   EXPECT_NE(
       std::string::npos, err.message()->find("Generic sapling fetch failure"));
 }
+
+TEST(EdenError, rocksException) {
+  const rocksdb::Status noSpaceStatus = rocksdb::Status::NoSpace();
+  RocksException ex =
+      RocksException::build(noSpaceStatus, "Some error message");
+  auto err = newEdenError(ex);
+  EXPECT_TRUE(err.errorCode().has_value());
+#ifdef _WIN32
+  EXPECT_EQ(ERROR_DISK_FULL, err.errorCode().value());
+  EXPECT_EQ(EdenErrorType::WIN32_ERROR, err.errorType().value());
+#else
+  EXPECT_EQ(ENOSPC, err.errorCode().value());
+  EXPECT_EQ(EdenErrorType::POSIX_ERROR, err.errorType().value());
+#endif
+  EXPECT_NE(std::string::npos, err.message()->find("Some error message"));
+
+  // Test RocksException wrapped in exception_wrapper
+  folly::exception_wrapper ew =
+      folly::make_exception_wrapper<RocksException>(ex);
+  err = newEdenError(ew);
+  EXPECT_TRUE(err.errorCode().has_value());
+#ifdef _WIN32
+  EXPECT_EQ(ERROR_DISK_FULL, err.errorCode().value());
+  EXPECT_EQ(EdenErrorType::WIN32_ERROR, err.errorType().value());
+#else
+  EXPECT_EQ(ENOSPC, err.errorCode().value());
+  EXPECT_EQ(EdenErrorType::POSIX_ERROR, err.errorType().value());
+#endif
+  EXPECT_NE(std::string::npos, err.message()->find("Some error message"));
+
+  // Test fallback to generic error for uninteresting RocksException
+  const rocksdb::Status status = rocksdb::Status::Incomplete();
+  ex = RocksException::build(status, "Some error message");
+  err = newEdenError(ex);
+  EXPECT_FALSE(err.errorCode().has_value());
+  EXPECT_EQ(EdenErrorType::GENERIC_ERROR, err.errorType().value());
+  EXPECT_NE(std::string::npos, err.message()->find("Some error message"));
+}
