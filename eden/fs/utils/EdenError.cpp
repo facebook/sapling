@@ -67,9 +67,11 @@ namespace {
 std::optional<int> extractNetworkError(std::string_view msg) {
   static const re2::RE2 kCurl{R"(Network Error: \[(\d+)\])"};
   static const re2::RE2 kHttp{R"(server responded (\d+))"};
+  static const re2::RE2 kTls{R"(TlsError: \[(\d+)\])"};
   int code;
   if (RE2::PartialMatch(msg, kCurl, &code) ||
-      RE2::PartialMatch(msg, kHttp, &code)) {
+      RE2::PartialMatch(msg, kHttp, &code) ||
+      RE2::PartialMatch(msg, kTls, &code)) {
     return code;
   }
   return std::nullopt;

@@ -32,6 +32,17 @@ TEST(EdenError, recognizeNetworkError) {
       std::string::npos,
       err.message()->find(
           "Network Error: server responded 503 Service Unavailable"));
+
+  sapling::SaplingBackingStoreError ex3(
+      "Network Error: Try renewing your certificates. Run `eden doctor`. TlsError: [56] Failure when receiving data from the peer");
+  err = newEdenError(ex3);
+  EXPECT_TRUE(err.errorCode().has_value());
+  EXPECT_EQ(56, err.errorCode().value());
+  EXPECT_EQ(EdenErrorType::NETWORK_ERROR, err.errorType().value());
+  EXPECT_NE(
+      std::string::npos,
+      err.message()->find(
+          "TlsError: [56] Failure when receiving data from the peer"));
 }
 
 TEST(EdenError, fallbackFromSaplingBackingStoreError) {
