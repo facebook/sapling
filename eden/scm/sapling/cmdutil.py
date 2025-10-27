@@ -3760,13 +3760,7 @@ def grep(ui, repo, table, matcher, pattern, **opts):
         # so we cross fingers and hope that the patterns are simple filenames.
         biggrepcmd += [
             "-f",
-            "(%s)"
-            % "|".join(
-                [
-                    os.path.normpath(os.path.join(repo.getcwd(), f))
-                    for f in matcher.files()
-                ]
-            ),
+            "(%s)" % "|".join(matcher.files()),
         ]
 
     # Add '--' to make sure grep recognizes all remaining arguments
