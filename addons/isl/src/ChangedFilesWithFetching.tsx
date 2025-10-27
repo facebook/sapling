@@ -10,6 +10,7 @@ import type {ChangedFile, CommitInfo, FilesSample, Hash, Result} from './types';
 import {Button} from 'isl-components/Button';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useEffect, useState} from 'react';
+import {CancellationToken} from 'shared/CancellationToken';
 import {ComparisonType} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
 import serverAPI from './ClientToServerAPI';
@@ -18,6 +19,7 @@ import {t, T} from './i18n';
 
 // Cache fetches in progress so we don't double fetch
 const commitFilesCache = new LRU<Hash, Promise<Result<FilesSample>>>(10);
+export const __TEST__ = {commitFilesCache};
 
 /**
  * The basic CommitInfo we fetch in bulk only contains the first 25 files,
@@ -43,11 +45,18 @@ export function ChangedFilesWithFetching({commit}: {commit: CommitInfo}) {
     }
 
     setFetchedAllFiles(undefined);
+    const cancel = new CancellationToken();
     getChangedFilesForHash(commit.hash, undefined).then(result => {
+      if (cancel.isCancelled) {
+        return;
+      }
       if (result.value != null) {
         setFetchedAllFiles(result.value);
       }
     });
+    return () => {
+      cancel.cancel();
+    };
   }, [commit.hash, showingPublicWarning]);
 
   if (showingPublicWarning) {

@@ -8,7 +8,9 @@
 import type {ChangedFile, ChangedFileStatus, RepoRelativePath} from '../types';
 
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {nextTick} from 'shared/testUtils';
 import App from '../App';
+import {__TEST__} from '../ChangedFilesWithFetching';
 import {CommitInfoTestUtils, ignoreRTL} from '../testQueries';
 import {
   COMMIT,
@@ -59,6 +61,11 @@ describe('ChangedFilesWithFetching', () => {
     });
   });
 
+  afterEach(() => {
+    // reset cache between tests
+    __TEST__.commitFilesCache.clear();
+  });
+
   async function waitForNextPageToLoad() {
     await waitFor(() => {
       expect(screen.getByTestId('changed-files-next-page')).toBeInTheDocument();
@@ -105,5 +112,63 @@ describe('ChangedFilesWithFetching', () => {
 
     CommitInfoTestUtils.clickToSelectCommit('c');
     expectMessageNOTSentToServer({type: 'fetchCommitChangedFiles', hash: expect.anything()});
+  });
+
+  it('Handles race condition when switching commits and responses come in wrong order', async () => {
+    // Select commit 'b' - this will start fetching files
+    CommitInfoTestUtils.clickToSelectCommit('b');
+    expectMessageSentToServer({type: 'fetchCommitChangedFiles', hash: 'b', limit: undefined});
+
+    // Before 'b' response comes back, switch to commit 'c'
+    CommitInfoTestUtils.clickToSelectCommit('c');
+    expectMessageSentToServer({type: 'fetchCommitChangedFiles', hash: 'c', limit: undefined});
+
+    // Simulate 'c' response coming back first (fast)
+    act(() => {
+      simulateMessageFromServer({
+        type: 'fetchedCommitChangedFiles',
+        hash: 'c',
+        result: {
+          value: {
+            filesSample: withStatus(['fileC1.txt', 'fileC2.txt', 'fileC3.txt'], 'M'),
+            totalFileCount: 3,
+          },
+        },
+      });
+    });
+
+    // Verify we're showing commit 'c' files
+    await waitFor(() => {
+      expect(screen.getByText(ignoreRTL('fileC1.txt'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('fileC2.txt'))).toBeInTheDocument();
+    });
+
+    // Now simulate 'b' response coming back late (slow)
+    act(() => {
+      simulateMessageFromServer({
+        type: 'fetchedCommitChangedFiles',
+        hash: 'b',
+        result: {
+          value: {
+            filesSample: withStatus(['fileB1.txt', 'fileB2.txt', 'fileB3.txt'], 'M'),
+            totalFileCount: 3,
+          },
+        },
+      });
+    });
+
+    // Wait a bit to ensure any state updates have completed
+    await nextTick();
+
+    await waitFor(() => {
+      // The files should STILL be from commit 'c', not 'b'
+      // With the fix enabled, the cancellation token prevents 'b' from overwriting 'c'
+      expect(screen.getByText(ignoreRTL('fileC1.txt'))).toBeInTheDocument();
+      expect(screen.getByText(ignoreRTL('fileC2.txt'))).toBeInTheDocument();
+    });
+
+    // Verify we're NOT showing commit 'b' files
+    expect(screen.queryByText(ignoreRTL('fileB1.txt'))).not.toBeInTheDocument();
+    expect(screen.queryByText(ignoreRTL('fileB2.txt'))).not.toBeInTheDocument();
   });
 });
