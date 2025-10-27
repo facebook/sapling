@@ -23,7 +23,6 @@ import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {MS_PER_DAY} from 'shared/constants';
 import {useAutofocusRef} from 'shared/hooks';
-import rejectAfterTimeout from 'shared/rejectAfterTimeout';
 import {notEmpty, nullthrows} from 'shared/utils';
 import {spacing} from '../../components/theme/tokens.stylex';
 import {AllBookmarksTruncated, Bookmark, Bookmarks, createBookmarkAtCommit} from './Bookmark';
@@ -760,24 +759,6 @@ async function maybeWarnAboutOldDestination(dest: CommitInfo): Promise<WarningCh
   return confirmed ? WarningCheckResult.BYPASS : WarningCheckResult.FAIL;
 }
 
-async function trackWarningTimeout(
-  promise: Promise<boolean> | boolean | undefined,
-  warningName: string,
-): Promise<boolean> {
-  try {
-    return await rejectAfterTimeout(
-      Promise.resolve(promise ?? false),
-      1000,
-      'Rebase warning timed out',
-    );
-  } catch (err) {
-    tracker.track('RebaseWarningTimeout', {
-      extras: {warning: warningName, error: err instanceof Error ? err.message : String(err)},
-    });
-    return false;
-  }
-}
-
 async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<WarningCheckResult> {
   const isRebaseOffWarmWarningEnabled = readAtom(rebaseOffWarmWarningEnabled);
   if (!isRebaseOffWarmWarningEnabled || dest.stableCommitMetadata == null) {
@@ -789,12 +770,11 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<WarningChe
   const src = findPublicBaseAncestor(dag);
   const destBase = findPublicBaseAncestor(dag, dest.hash);
 
-  const warning = await trackWarningTimeout(
-    src ? Internal.maybeWarnAboutRebaseOffWarm?.(src, destBase) : false,
-    'RebaseOffWarm',
-  );
+  if (!src || !destBase) {
+    return WarningCheckResult.PASS;
+  }
 
-  if (warning) {
+  if (Internal.maybeWarnAboutRebaseOffWarm?.(src, destBase)) {
     const buttons = [
       t('Opt Out of Future Warnings'),
       {label: t('Cancel'), primary: true},
@@ -839,17 +819,11 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<Warni
   const src = findPublicBaseAncestor(dag);
   const destBase = findPublicBaseAncestor(dag, commit.hash);
 
-  if (!destBase) {
-    // can't determine if we can show warning
+  if (!src || !destBase) {
     return WarningCheckResult.PASS;
   }
 
-  const warning = await trackWarningTimeout(
-    src ? Internal.maybeWarnAboutRebaseOntoMaster?.(src, destBase) : false,
-    'RebaseOntoMaster',
-  );
-
-  if (warning) {
+  if (Internal.maybeWarnAboutRebaseOntoMaster?.(src, destBase)) {
     const buttons = [
       t('Opt Out of Future Warnings'),
       {label: t('Cancel'), primary: true},
@@ -971,12 +945,7 @@ async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<WarningC
     return WarningCheckResult.PASS;
   }
 
-  const warning = await trackWarningTimeout(
-    Internal.maybeWarnAboutDistantRebase?.(currentBase, destBase) ?? false,
-    'DistantRebase',
-  );
-
-  if (warning) {
+  if (Internal.maybeWarnAboutDistantRebase?.(currentBase, destBase)) {
     const buttons = [
       t('Opt Out of Future Warnings'),
       {label: t('Cancel'), primary: true},
