@@ -313,7 +313,7 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
         case 'platform/resolveAllConflictsWithAI': {
           const {conflicts} = message;
           Internal.promptAIAgent?.(
-            {type: 'resolveAllConflicts', conflicts, repoPath: repo?.info.repoRoot},
+            {type: 'resolveAllConflicts', conflicts, repository: repo, context: ctx},
             ActionTriggerType.ISL2MergeConflictView,
           );
           break;
