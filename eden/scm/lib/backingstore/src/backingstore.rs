@@ -34,6 +34,7 @@ use metrics::ods;
 use parking_lot::RwLock;
 use repo::RepoMinimalInfo;
 use repo::repo::Repo;
+use smallvec::SmallVec;
 use storemodel::BoxIterator;
 use storemodel::FileAuxData;
 use storemodel::FileStore;
@@ -733,10 +734,10 @@ where
                             Ok(v) => v,
                         };
                         if let Some(indices) = key_to_index.remove(&key) {
-                            for idx in indices.as_slice().iter().skip(1) {
+                            for idx in indices.iter().skip(1) {
                                 resolve(*idx, Ok(Some(data.clone().into())));
                             }
-                            if let Some(first_idx) = indices.as_slice().first() {
+                            if let Some(first_idx) = indices.first() {
                                 resolve(*first_idx, Ok(Some(data.into())));
                             }
                         }
@@ -748,7 +749,7 @@ where
                 if ignore_result {
                     // In ignore_result mode, we (intentionally) don't get any results. Propagate as `None`.
                     for (_key, indices) in key_to_index.into_iter() {
-                        for &index in indices.as_slice() {
+                        for index in indices {
                             resolve(index, Ok(None));
                         }
                     }
@@ -766,7 +767,7 @@ where
                     // we bundle all errors we received.
                     let error = ErrorCollection(Arc::new(errors));
                     for (_key, indices) in key_to_index.into_iter() {
-                        for &index in indices.as_slice() {
+                        for index in indices {
                             resolve(index, Err(error.clone().into()));
                         }
                     }
@@ -884,41 +885,14 @@ impl std::error::Error for ErrorCollection {
     }
 }
 
-// Avoid Vec allocation for common case of a single index (i.e. no duplicates).
-enum IndexList {
-    Single(usize),
-    Multiple(Vec<usize>),
-}
-
-impl IndexList {
-    fn add(&mut self, index: usize) {
-        match self {
-            IndexList::Single(first) => {
-                *self = IndexList::Multiple(vec![*first, index]);
-            }
-            IndexList::Multiple(vec) => {
-                vec.push(index);
-            }
-        }
-    }
-
-    fn as_slice(&self) -> &[usize] {
-        match self {
-            IndexList::Single(idx) => std::slice::from_ref(idx),
-            IndexList::Multiple(vec) => vec.as_slice(),
-        }
-    }
-}
-
-/// Index &[Key] so they can be converted back to the index.
-fn indexed_keys(keys: &[Key]) -> HashMap<Key, IndexList> {
-    let mut map = HashMap::with_capacity(keys.len());
-    for (i, key) in keys.iter().enumerate() {
-        map.entry(key.clone())
-            .and_modify(|list: &mut IndexList| list.add(i))
-            .or_insert(IndexList::Single(i));
-    }
-    map
+/// Index &[Key] so they can be converted back to the index(es).
+fn indexed_keys(keys: &[Key]) -> HashMap<Key, SmallVec<[usize; 1]>> {
+    keys.iter()
+        .enumerate()
+        .fold(HashMap::with_capacity(keys.len()), |mut map, (i, k)| {
+            map.entry(k.clone()).or_default().push(i);
+            map
+        })
 }
 
 impl Drop for BackingStore {
