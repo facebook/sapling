@@ -150,7 +150,7 @@ Test escaping of dashes in biggrep expression:
   > -- -g | sort
   grepfile3:-g_bg
 
-Test biggrep command debug info -- duplicate "grepdir/subdir1"
+Test biggrep command debug info
   $ cd subdir1
   $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
   > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
