@@ -41,8 +41,6 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::CommitLocationToHashRequest;
 use edenapi_types::CommitLocationToHashResponse;
 use edenapi_types::CommitRevlogData;
-use edenapi_types::FetchSnapshotRequest;
-use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::FileResponse;
 use edenapi_types::GetReferencesParams;
 use edenapi_types::GetSmartlogByVersionParams;
@@ -669,24 +667,6 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         let responses_py = responses.map_ok(|r| Serde(r.token)).map_err(Into::into);
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
         Ok((responses_py.into(), stats_py))
-    }
-
-    fn fetchsnapshot_py(
-        &self,
-        py: Python,
-        data: Serde<FetchSnapshotRequest>,
-    ) -> PyResult<Serde<FetchSnapshotResponse>> {
-        py.allow_threads(|| {
-            block_unless_interrupted(async move {
-                let cs_id = data.0.cs_id;
-                self.fetch_snapshot(data.0)
-                    .await
-                    .with_context(|| format_err!("Failed to find snapshot {}", cs_id))
-            })
-        })
-        .map_pyerr(py)?
-        .map_pyerr(py)
-        .map(Serde)
     }
 
     fn altersnapshot_py(

@@ -400,6 +400,7 @@ impl Element {
         }
     }
 
+    #[cfg(test)]
     fn from_byte_slice_hg(byte_slice: &[u8]) -> Result<Element> {
         Ok(ElementRef::from_byte_slice_hg(byte_slice)?.into())
     }
