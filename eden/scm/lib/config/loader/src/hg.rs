@@ -389,6 +389,7 @@ impl ConfigSetHgExt for ConfigSet {
         let mut layers =
             crate::builtin_static::builtin_system(opts.clone(), &ident, info.as_disk());
 
+        #[cfg(feature = "fb")]
         let dynamic_layer_idx = layers.len();
 
         let mut system = ConfigSet::new().named("system");

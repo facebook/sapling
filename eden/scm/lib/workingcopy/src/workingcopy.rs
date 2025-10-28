@@ -324,7 +324,10 @@ impl WorkingCopy {
             )?),
             FileSystemType::Eden => {
                 #[cfg(not(feature = "eden"))]
-                panic!("cannot use EdenFS in a non-EdenFS build");
+                {
+                    let _ = shared_dot_dir;
+                    panic!("cannot use EdenFS in a non-EdenFS build");
+                }
                 #[cfg(feature = "eden")]
                 {
                     let client = Arc::new(EdenFsClient::from_wdir(
