@@ -5,17 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::VecDeque;
 use std::sync::Arc;
-use std::task::Poll;
 
 use anyhow::Context;
-use anyhow::Ok;
 use anyhow::Result;
 use blobstore::Loadable;
-use buffered_weighted::FutureWithWeight;
-use buffered_weighted::GlobalWeight;
-use buffered_weighted::MemoryBound;
+use buffered_weighted::StreamExt;
 use cloned::cloned;
 use commit_graph_types::frontier::AncestorsWithinDistance;
 use context::CoreContext;
@@ -23,7 +18,6 @@ use futures::StreamExt as _;
 use futures::TryStreamExt;
 use futures::stream;
 use futures::stream::BoxStream;
-use futures::stream::FuturesOrdered;
 use futures_stats::TimedTryFutureExt;
 use git_types::CGDMDividedChangesets;
 use git_types::CGDMGroup;
@@ -37,6 +31,7 @@ use git_types::tree::GitEntry;
 use gix_hash::ObjectId;
 use manifest::ManifestOps;
 use metaconfig_types::GitDeltaManifestVersion;
+use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::hash::GitSha1;
 use repo_blobstore::ArcRepoBlobstore;
@@ -44,6 +39,7 @@ use repo_derived_data::ArcRepoDerivedData;
 use rustc_hash::FxHashSet;
 use scuba_ext::FutureStatsScubaExt;
 use scuba_ext::MononokeScubaSampleBuilder;
+use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 
 use crate::Repo;
@@ -126,7 +122,7 @@ async fn boundary_trees_and_blobs(
                 // If the entry corresponds to a submodules (and shows up as a commit), then we ignore it
                 // If the object is ignored by the filter, then we ignore it
                 if !filter_object(filter.clone(), &path, kind, size) || entry.is_submodule() {
-                    Ok(None)
+                    anyhow::Ok(None)
                 } else {
                     Ok(Some(FullObjectEntry::new(changeset_id, path, oid, size, kind)))
                 }
@@ -192,7 +188,7 @@ async fn trees_and_blobs_count(
                     )
                     .await?,
             )
-            .map(Ok)
+            .map(anyhow::Ok)
             .try_filter_map(async |entry| {
                 let (kind, size) = (entry.full_object_kind(), entry.full_object_size());
                 // If the entry does not pass the filter, then it should not be included in the count
@@ -295,14 +291,22 @@ async fn trees_and_blobs_count(
 
 async fn boundary_stream(
     fetch_container: FetchContainer,
-) -> Result<BoxStream<'static, Result<(ChangesetId, Box<dyn GitDeltaManifestEntryOps + Send>)>>> {
+) -> Result<
+    BoxStream<
+        'static,
+        Result<(
+            ChangesetId,
+            Box<dyn GitDeltaManifestEntryOps + Send + 'static>,
+        )>,
+    >,
+> {
     let objects = boundary_trees_and_blobs(fetch_container)
         .await?
         .into_iter()
         .map(|full_entry| {
             let cs_id = full_entry.cs_id;
             let path = full_entry.path.clone();
-            let delta_manifest_entry: Box<dyn GitDeltaManifestEntryOps + Send> =
+            let delta_manifest_entry: Box<dyn GitDeltaManifestEntryOps + Send + 'static> =
                 Box::new((path, full_entry.into_delta_manifest_entry()));
             Ok((cs_id, delta_manifest_entry))
         });
@@ -317,7 +321,7 @@ trait GDMEntryProvider {
         blobstore: ArcRepoBlobstore,
         derived_data: ArcRepoDerivedData,
         git_delta_manifest_version: GitDeltaManifestVersion,
-    ) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send>>>;
+    ) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send + 'static>>>;
 }
 
 #[async_trait::async_trait]
@@ -328,7 +332,7 @@ impl GDMEntryProvider for ChangesetId {
         blobstore: ArcRepoBlobstore,
         derived_data: ArcRepoDerivedData,
         git_delta_manifest_version: GitDeltaManifestVersion,
-    ) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send>>> {
+    ) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send + 'static>>> {
         changeset_delta_manifest_entries(
             ctx,
             blobstore,
@@ -348,7 +352,7 @@ impl GDMEntryProvider for CGDMGroup {
         blobstore: ArcRepoBlobstore,
         derived_data: ArcRepoDerivedData,
         git_delta_manifest_version: GitDeltaManifestVersion,
-    ) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send>>> {
+    ) -> Result<Vec<Box<dyn GitDeltaManifestEntryOps + Send + 'static>>> {
         self.into_gdm_entries(
             &ctx,
             &derived_data,
@@ -360,7 +364,7 @@ impl GDMEntryProvider for CGDMGroup {
 }
 
 /// Creates a stream of packfile items for the given changesets
-fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'a>(
+fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'static>(
     fetch_container: FetchContainer,
     base_set: Arc<FxHashSet<ObjectId>>,
     changesets: Vec<T>,
@@ -388,110 +392,99 @@ fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'a>(
     // we always poll the first layer (delta_manifest_entries_futures). Storing any completed future output in a `VecDeque`
     // buffer (delta_manifest_entries_buffer).
 
-    let mut changesets = changesets.into_iter().collect::<VecDeque<_>>();
-    let mut delta_manifest_entries_buffer = VecDeque::new();
-    let mut delta_manifest_entries_futures = FuturesOrdered::new();
-    let mut packfile_items_futures = FuturesOrdered::new();
-    let max_buffer = justknobs::get_as::<usize>("scm/mononoke:git_generator_buffer_bytes", None)
-        .unwrap_or(DEFAULT_GIT_GENERATOR_BUFFER_BYTES);
-    let mut buffer_weight = GlobalWeight::new(max_buffer); // ~100 MB
+    let (gdm_sender, gdm_receiver) = mpsc::channel::<
+        Result<Box<dyn GitDeltaManifestEntryOps + Send>>,
+    >(2 * concurrency.trees_and_blobs);
 
-    stream::poll_fn(move |cx| {
-        if changesets.is_empty()
-            && delta_manifest_entries_futures.is_empty()
-            && delta_manifest_entries_buffer.is_empty()
-            && packfile_items_futures.is_empty()
-        {
-            return Poll::Ready(None);
-        }
+    let (packfile_item_sender, packfile_item_receiver) =
+        mpsc::channel::<Result<PackfileItem>>(2 * concurrency.trees_and_blobs);
 
-        while delta_manifest_entries_futures.len() + delta_manifest_entries_buffer.len()
-            < concurrency.trees_and_blobs
-        {
-            if let Some(changeset) = changesets.pop_front() {
-                delta_manifest_entries_futures.push_back(changeset.gdm_entries(
-                    ctx.clone(),
-                    blobstore.clone(),
-                    derived_data.clone(),
-                    fetch_container.git_delta_manifest_version,
-                ));
-            } else {
-                break;
-            }
-        }
+    mononoke::spawn_task(async move {
+        let mut stream = stream::iter(changesets)
+            .map(Ok)
+            .map_ok({
+                async |changeset| {
+                    changeset
+                        .gdm_entries(
+                            ctx.clone(),
+                            blobstore.clone(),
+                            derived_data.clone(),
+                            fetch_container.git_delta_manifest_version,
+                        )
+                        .await
+                }
+            })
+            .try_buffered(concurrency.trees_and_blobs);
 
-        // Ensure that we don't poll `delta_manifest_entries_futures` if it's empty. Technically this
-        // might not be necessary, but streams are not supposed to be polled again if they ever return
-        // Poll::Ready(None) so let's be safe.
-        if !delta_manifest_entries_futures.is_empty() {
-            while let Poll::Ready(Some(entries)) =
-                delta_manifest_entries_futures.poll_next_unpin(cx)
-            {
-                let entries = entries?;
-                for entry in entries {
-                    delta_manifest_entries_buffer.push_back(entry);
+        while let Some(item) = stream.next().await {
+            match item {
+                Err(entry_err) => {
+                    if let Err(send_err) = gdm_sender.send(Err(entry_err)).await {
+                        tracing::warn!("Error sending GDM entry error: {send_err:?}");
+                    }
+                }
+                Ok(entries) => {
+                    for entry in entries {
+                        if let Err(send_err) = gdm_sender.send(Ok(entry)).await {
+                            tracing::warn!("Error sending GDM entry: {send_err:?}");
+                        }
+                    }
                 }
             }
         }
 
-        loop {
-            if let Some(entry) = delta_manifest_entries_buffer.front() {
-                // If `packfile_items_futures` is empty, then we have to poll the next item regardless of the current memory usage to
-                // ensure that the stream makes progress
-                if !packfile_items_futures.is_empty() {
+        anyhow::Ok(())
+    });
+
+    mononoke::spawn_task(async move {
+        let max_buffer =
+            justknobs::get_as::<usize>("scm/mononoke:git_generator_buffer_bytes", None)
+                .unwrap_or(DEFAULT_GIT_GENERATOR_BUFFER_BYTES);
+
+        let mut stream = tokio_stream::wrappers::ReceiverStream::new(gdm_receiver)
+            .filter_map({
+                async |entry_result| {
+                    let entry = match entry_result {
+                        Ok(entry) => entry,
+                        Err(entry_err) => {
+                            if let Err(send_err) = packfile_item_sender.send(Err(entry_err)).await {
+                                tracing::warn!("Error sending packfile item: {send_err:?}");
+                            }
+                            return None;
+                        }
+                    };
+
                     let weight = entry_weight(
                         entry.as_ref(),
                         delta_inclusion,
                         filter.clone(),
                         chain_breaking_mode,
                     );
-                    // If the next future will tip memory usage over the memory bound OR if we don't have enough buffer budget for it,
-                    // then don't start polling it
-                    if !buffer_weight.has_space_for(weight)
-                        || !MemoryBound::new(Some(concurrency.memory_bound)).within_bound(weight)
-                    {
-                        break;
-                    }
-                }
-            }
 
-            if let Some(entry) = delta_manifest_entries_buffer.pop_front() {
-                let weight = entry_weight(
-                    entry.as_ref(),
-                    delta_inclusion,
-                    filter.clone(),
-                    chain_breaking_mode,
-                );
-                buffer_weight.add_weight(weight);
-                let fut = packfile_item_for_delta_manifest_entry(
-                    fetch_container.clone(),
-                    base_set.clone(),
-                    entry,
-                );
-                packfile_items_futures.push_back(FutureWithWeight::new(weight, fut));
-            } else {
-                break;
-            }
-        }
-        // If none of the delta_manifest_entries_futures have completed, then its possible that packfile_item_futures is empty. If we return
-        // packfile_items_futures.poll_next_unpin() in that case then we will end up returning Poll::Ready(None) and the stream will never get
-        // polled again even though there are still items to be processed.
-        if packfile_items_futures.is_empty() {
-            cx.waker().wake_by_ref();
-            Poll::Pending
-        } else {
-            match packfile_items_futures.poll_next_unpin(cx) {
-                Poll::Ready(Some((weight, output))) => {
-                    buffer_weight.sub_weight(weight);
-                    Poll::Ready(Some(output))
+                    Some((
+                        weight,
+                        packfile_item_for_delta_manifest_entry(
+                            fetch_container.clone(),
+                            base_set.clone(),
+                            entry,
+                        ),
+                    ))
                 }
-                Poll::Ready(None) => Poll::Ready(None),
-                Poll::Pending => Poll::Pending,
+            })
+            .buffered_weighted(max_buffer)
+            .try_filter_map(futures::future::ok)
+            .boxed();
+
+        while let Some(item) = stream.next().await {
+            if let Err(err) = packfile_item_sender.send(item).await {
+                tracing::warn!("Error sending packfile item: {err:?}");
             }
         }
-    })
-    .try_filter_map(futures::future::ok)
-    .boxed()
+
+        anyhow::Ok(())
+    });
+
+    tokio_stream::wrappers::ReceiverStream::new(packfile_item_receiver).boxed()
 }
 
 /// Create a stream of packfile items containing blob and tree objects that need to be included in the packfile/bundle.
@@ -594,7 +587,7 @@ async fn commit_packfile_stream<'a>(
     } = fetch_container;
 
     let groups_commit_stream = stream::iter(cgdm_commits_ids)
-        .map(Ok)
+        .map(anyhow::Ok)
         .map_ok({
             cloned!(ctx, blobstore);
             move |cgdm_commits_id| {
