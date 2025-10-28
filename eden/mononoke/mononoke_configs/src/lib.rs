@@ -228,8 +228,6 @@ async fn watch_and_update(
                             STATS::refresh_failure_count.add_value(1);
                         } else {
                             info!(logger, "Successfully applied config update");
-                            // Need to publish a value of 0 to keep the counter alive
-                            STATS::refresh_failure_count.add_value(0);
                         }
                     }
                     Err(e) => {
