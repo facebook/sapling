@@ -897,7 +897,7 @@ Test list of internal help commands
   $ hg help debug | grep -E 'Debug|debugshell|debugapi'
   Debug commands (internal and unsupported):
    debugapi      send an SaplingRemoteAPI request and print its output
-   debugshell    (no help text available)
+   debugshell    launch an interactive Python shell or execute Python code
 
 Test list of commands with command with no help text
 

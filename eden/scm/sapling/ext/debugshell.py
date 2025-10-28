@@ -85,6 +85,41 @@ def _assignobjects(objects, repo) -> None:
     optionalrepo=True,
 )
 def debugshell(ui, repo, *args, **opts):
+    """launch an interactive Python shell or execute Python code
+
+    This command provides a Python environment with pre-loaded Sapling objects
+    and utilities for debugging, scripting, and interactive exploration.
+
+    Modes of operation:
+
+    1. Interactive shell (default): Launches IPython if available, otherwise
+       falls back to the standard Python REPL with tab completion.
+
+    2. Execute inline Python code: Executes the provided Python code string and
+       exits.
+
+    3. Execute a Python script file: Executes the specified Python file. Additional
+       arguments are available in sys.argv.
+
+    4. Read from stdin: Executes Python code from standard input (non-interactive
+       mode).
+
+    Examples:
+
+    - Interactive exploration::
+
+        $ @prog@ debugshell
+        >>> repo.root
+        '/path/to/repo'
+
+    - Quick inline command::
+
+        @prog@ debugshell -c "print(len(repo.changelog))"
+
+    - Run a script with arguments::
+
+        @prog@ debugshell analyze.py --verbose
+    """
     command = opts.get("command")
 
     env = globals()
