@@ -846,8 +846,8 @@ def is_remote_execution() -> bool:
     return os.environ.get("REMOTE_EXECUTION_SCM_REPO") == "1"
 
 
-def is_devcompute() -> bool:
-    return "DEVCOMPUTE" in os.environ
+def is_atlas() -> bool:
+    return "ATLAS" in os.environ
 
 
 def is_apple_silicon() -> bool:
