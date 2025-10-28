@@ -9,10 +9,9 @@ import abc
 import json
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from eden.fs.cli.config import get_snapshot, SNAPSHOT
-
 from eden.fs.cli.util import MIGRATION_MARKER
 
 from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase
@@ -96,11 +95,6 @@ adir
         if (scm_type := self.get_scm_type()) != "filteredhg":
             return f"scm_type = {scm_type}"
 
-        # check the marker file existence
-        marker_file_path = os.path.join(self.mount, ".hg", MIGRATION_MARKER)
-        if not os.path.exists(marker_file_path):
-            return f"Migration marker file '{marker_file_path}' does not exist"
-
         # All checks passed, we think the repo is FilteredFS ready
         return None
 
@@ -121,6 +115,52 @@ adir
     def assert_filter_not_applied(self) -> None:
         assert os.path.exists(self.repo.get_path("adir/hidden"))
 
-    def test_filteredfs_disabled(self) -> None:
+    async def edensparse_migration_common(
+        self, pre_migration: Callable[[], None], post_migration: Callable[[], None]
+    ) -> None:
         self.assert_filteredfs_disabled()
         self.assert_filter_not_applied()
+
+        pre_migration()
+
+        # make sure edenfs picks up our updated config
+        async with self.get_thrift_client() as client:
+            # toggle config
+            edenrc = os.path.join(self.home_dir, ".edenrc")
+            self.write_configs(
+                {"experimental": ["enable-edensparse-migration = true"]}, edenrc
+            )
+            await client.reloadConfig()
+
+        # restart edenfs
+        self.eden.run_cmd("restart", "--yes", cwd=self.mount)
+
+        # check the marker file existence
+        # this should be checked before sapling checkout/rebase commands since
+        # these commands would clean up the marker file when invoking EdenFS'
+        # checkoutRevision Thrift API.
+        marker_file_path = os.path.join(self.mount, ".hg", MIGRATION_MARKER)
+        assert os.path.exists(
+            marker_file_path
+        ), f"Migration marker file '{marker_file_path}' does not exist"
+
+        self.hg(
+            "config",
+            "--local",
+            "clone.eden-sparse-filter.test",
+            "filter/test_filter",
+            cwd=self.mount,
+        )
+
+        self.hg("go", ".")
+
+        self.assert_filteredfs_enabled()
+        self.assert_filter_applied()
+        post_migration()
+
+    def test_filteredfs_disabled_init(self) -> None:
+        self.assert_filteredfs_disabled()
+        self.assert_filter_not_applied()
+
+    async def test_filteredfs_migration(self) -> None:
+        await self.edensparse_migration_common(lambda: None, lambda: None)

@@ -1094,8 +1094,6 @@ def maybe_edensparse_migration(
     }:
         raise RuntimeError(f"Invalid edensparse migration step {step}")
 
-    MIGRATION_MARKER = "edensparse_migration"
-
     for checkout in instance.get_checkouts():
 
         def configure_sapling(checkout: "EdenCheckout") -> None:
@@ -1113,6 +1111,7 @@ def maybe_edensparse_migration(
             # This should be done before updating the config file to switch scm_type to "filteredhg"
             # because the config is needed to correctly parse the snapshot file
             snapshot_path = checkout.state_dir / SNAPSHOT
+            new_snapshot_bytes = None
             if not snapshot_path.exists():
                 # TODO: What to do if there is no snapshot file?
                 raise RuntimeError(f"Missing SNAPSHOT file {snapshot_path}")
@@ -1128,8 +1127,13 @@ def maybe_edensparse_migration(
                     )
                     if decoded_filter is None:
                         # Apply the 'null' filter
-                        checkout.save_snapshot(
-                            create_filtered_rootid(decoded_parent, b"null")
+                        filtered_rootid = create_filtered_rootid(
+                            decoded_parent, b"null"
+                        )
+                        new_snapshot_bytes = (
+                            SNAPSHOT_MAGIC_2
+                            + struct.pack(">L", len(filtered_rootid))
+                            + filtered_rootid
                         )
                 elif header == SNAPSHOT_MAGIC_4:
                     (working_copy_parent_length,) = struct.unpack(">L", f.read(4))
@@ -1169,15 +1173,17 @@ def maybe_edensparse_migration(
 
                         # Write everything back to the snapshot file so "null" filter is applied
                         # for both working copy parent and checked out revision
-                        write_file_atomically(
-                            snapshot_path,
+                        new_snapshot_bytes = (
                             SNAPSHOT_MAGIC_4
                             + encoded_working_copy_parent_filtered_rootid
-                            + encoded_checkout_out_filtered_rootid,
+                            + encoded_checkout_out_filtered_rootid
                         )
                 else:
                     # TODO: No migration needed for case 1 and 3.
                     pass
+
+            if new_snapshot_bytes is not None:
+                write_file_atomically(snapshot_path, new_snapshot_bytes)
 
         def create_empty_sparse_file(checkout: "EdenCheckout") -> None:
             hg_dir = checkout.hg_dot_path

@@ -13,7 +13,11 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from eden.fs.cli.util import HEARTBEAT_FILE_PREFIX
+from eden.fs.cli.util import (
+    EdensparseMigrationStep,
+    HEARTBEAT_FILE_PREFIX,
+    maybe_edensparse_migration,
+)
 
 from . import daemon_util, proc_utils as proc_utils_mod
 from .config import EdenInstance
@@ -199,9 +203,12 @@ def _start_edenfs_service(
 
     creation_flags = 0
 
-    return subprocess.call(
+    maybe_edensparse_migration(instance, EdensparseMigrationStep.PRE_EDEN_START)
+    exit_code = subprocess.call(
         cmd, stdin=subprocess.DEVNULL, env=eden_env, creationflags=creation_flags
     )
+    maybe_edensparse_migration(instance, EdensparseMigrationStep.POST_EDEN_START)
+    return exit_code
 
 
 def get_edenfsctl_cmd() -> str:
