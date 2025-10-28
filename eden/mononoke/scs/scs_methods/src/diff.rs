@@ -10,6 +10,7 @@ use std::time::Duration;
 use context::CoreContext;
 use diff_service_client::DiffInput;
 use diff_service_client::DiffServiceClient;
+use diff_service_client::RepoDiffServiceClient;
 use diff_service_if_clients::errors::DiffBlocksError;
 use diff_service_if_clients::errors::DiffHunksError;
 use diff_service_if_clients::errors::DiffUnifiedError;
@@ -109,7 +110,7 @@ fn is_transient_diff_error<E: DiffServiceError>(e: &E) -> bool {
 /// Router for diff operations that can use either local mononoke_api
 /// or remote diff_service based on command line args and JustKnobs configuration.
 pub struct DiffRouter<'a> {
-    pub(crate) diff_service_client: &'a Option<DiffServiceClient>,
+    pub(crate) fb: fbinit::FacebookInit,
     pub(crate) diff_options: &'a RemoteDiffOptions,
 }
 
@@ -180,16 +181,11 @@ impl<'a> DiffRouter<'a> {
         base_file: &FileContext<Repo>,
         context_lines: usize,
     ) -> Result<HeaderlessUnifiedDiff, ServiceError> {
-        let diff_service_client = self
-            .diff_service_client
-            .as_ref()
-            .ok_or_else(|| scs_errors::internal_error("diff_service_client not configured"))?;
-
         let other_content_id = other_file.id().await?;
         let base_content_id = base_file.id().await?;
 
-        let base_input = Some(diff_service_client::DiffInput::content(base_content_id));
-        let other_input = Some(diff_service_client::DiffInput::content(other_content_id));
+        let base_input = Some(DiffInput::content(base_content_id));
+        let other_input = Some(DiffInput::content(other_content_id));
 
         let options = Some(diff_service_if::DiffUnifiedHeaderlessOptions {
             context_lines: context_lines as i32,
@@ -197,10 +193,15 @@ impl<'a> DiffRouter<'a> {
             ..Default::default()
         });
 
-        let repo_client = diff_service_client::RepoDiffServiceClient::new(
-            repo_name.to_string(),
-            diff_service_client.clone(),
-        );
+        let client =
+            DiffServiceClient::new_with_sm(self.fb, repo_name.to_string()).map_err(|e| {
+                scs_errors::internal_error(format!(
+                    "Failed to create diff service client for repo '{}': {}",
+                    repo_name, e
+                ))
+            })?;
+
+        let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
 
         // Retry the diff service call with exponential backoff for transient errors
         let (result, _attempts) = retry(
@@ -271,11 +272,6 @@ impl<'a> DiffRouter<'a> {
         mode: UnifiedDiffMode,
         context_lines: usize,
     ) -> Result<UnifiedDiff, ServiceError> {
-        let diff_service_client = self
-            .diff_service_client
-            .as_ref()
-            .ok_or_else(|| scs_errors::internal_error("diff_service_client not configured"))?;
-
         let replacement_path = path_context.subtree_copy_dest_path().map(|p| p.to_string());
 
         // The Base file is the "new" file, with Other is the "old" one
@@ -326,10 +322,15 @@ impl<'a> DiffRouter<'a> {
             ..Default::default()
         };
 
-        let repo_client = diff_service_client::RepoDiffServiceClient::new(
-            repo_name.to_string(),
-            diff_service_client.clone(),
-        );
+        let client =
+            DiffServiceClient::new_with_sm(self.fb, repo_name.to_string()).map_err(|e| {
+                scs_errors::internal_error(format!(
+                    "Failed to create diff service client for repo '{}': {}",
+                    repo_name, e
+                ))
+            })?;
+
+        let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
 
         let (result, _attempts) = retry(
             |attempt| {
@@ -382,11 +383,6 @@ impl<'a> DiffRouter<'a> {
         repo_name: &str,
         path_context: &ChangesetPathDiffContext<Repo>,
     ) -> Result<mononoke_api::MetadataDiff, ServiceError> {
-        let diff_service_client = self
-            .diff_service_client
-            .as_ref()
-            .ok_or_else(|| scs_errors::internal_error("diff_service_client not configured"))?;
-
         let replacement_path = path_context.subtree_copy_dest_path().map(|p| p.to_string());
 
         // The Base file is the "new" file, with Other is the "old" one
@@ -402,10 +398,15 @@ impl<'a> DiffRouter<'a> {
             .map(|c| Self::input_from_changeset(c, None))
             .transpose()?;
 
-        let repo_client = diff_service_client::RepoDiffServiceClient::new(
-            repo_name.to_string(),
-            diff_service_client.clone(),
-        );
+        let client =
+            DiffServiceClient::new_with_sm(self.fb, repo_name.to_string()).map_err(|e| {
+                scs_errors::internal_error(format!(
+                    "Failed to create diff service client for repo '{}': {}",
+                    repo_name, e
+                ))
+            })?;
+
+        let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
 
         let (response, _attempts) = retry(
             |attempt| {
