@@ -4038,3 +4038,20 @@ def debugpathhistory(ui, repo, *args, **opts) -> None:
     for node in nodes:
         ctx = repo[node]
         ui.write("%s %s\n" % (repo[node], ctx.description().split("\n")[0]))
+
+
+@command("debugmakeexecutable", [], _("[PATTERN]..."))
+def debugmakeexecutable(ui, repo, *pats) -> None:
+    """amend current commit to make files executable in manifest"""
+
+    ctx = repo["."]
+    mctx = context.memctx.mirrorformutation(ctx, "debugmakeexecutable")
+    st = repo[ctx.p1()].status(other=ctx, match=scmutil.match(ctx, pats))
+    for f in st.added + st.modified:
+        ui.status_err(_("marking %s as executable\n") % f)
+        mctx[f] = context.overlayfilectx(mctx[f], flags="x")
+
+    with repo.wlock(), repo.lock(), repo.transaction("debugmakeexectuable"):
+        new_node = repo.commitctx(mctx)
+        scmutil.cleanupnodes(repo, {ctx.node(): [new_node]}, "debugmakeexectuable")
+        mctx.markcommitted(new_node)
