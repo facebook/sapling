@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Optional
 
 from sapling import error, perftrace, util
-from sapling.edenapi_upload import filetypefromfile, uploadhgchangesets
+from sapling.edenapi_upload import filetypefromfile
+from sapling.ext.commitcloud import backupstate, upload as ccupload
 from sapling.i18n import _
 from sapling.node import nullid
 from sapling.revset import parseage
@@ -41,11 +42,30 @@ def getdefaultmaxuntrackedsize(ui):
 def _backupparents(repo, wctx) -> None:
     """make sure this commit's ancestors are backed up in commitcloud"""
     parents = (wctx.p1().node(), wctx.p2().node())
+
+    # Check local backup state first to avoid unnecessary work
+    localbackupstate = backupstate.BackupState(repo)
+    backedup = localbackupstate.backedup
+
+    # Early return if parents are already backed up locally
+    if parents[0] in backedup and (parents[1] == nullid or parents[1] in backedup):
+        return
+
     # pyre-fixme[10]: Name `ancestors` is used but not defined.
     # pyre-fixme[10]: Name `draft` is used but not defined.
     draftnodes = repo.dageval(lambda: draft() & ancestors(parents))
 
-    (success, failed) = uploadhgchangesets(repo, draftnodes)
+    if not draftnodes:
+        return
+
+    # Use commit cloud's upload function which checks local backup state first
+    # before issuing "lookup" to the server to avoid unnecessary network calls
+    heads = repo.nodes("heads(%ln)", draftnodes)
+
+    (_uploaded, failed) = ccupload.upload(
+        repo, repo.revs("%ln", heads), localbackupstate=localbackupstate
+    )
+
     if failed:
         raise error.Abort(
             _("failed to upload ancestors to commit cloud: {}").format(
