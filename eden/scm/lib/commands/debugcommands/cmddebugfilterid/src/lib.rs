@@ -10,6 +10,7 @@ use std::str::FromStr;
 
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
+#[cfg(feature = "fb")]
 use filters::filter::FilterGenerator;
 use repo::repo::Repo;
 #[cfg(feature = "fb")]

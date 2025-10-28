@@ -6,10 +6,12 @@
  */
 
 use std::collections::HashMap;
+#[cfg(feature = "eden")]
 use std::fs::read_to_string;
 use std::io::Write;
-#[cfg(unix)]
+#[cfg(all(feature = "eden", unix))]
 use std::os::unix::prelude::MetadataExt;
+#[cfg(feature = "eden")]
 use std::process::Command;
 use std::sync::Arc;
 use std::thread;
@@ -26,12 +28,15 @@ use pathmatcher::AlwaysMatcher;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use repo::repo::Repo;
+#[cfg(feature = "eden")]
 use spawn_ext::CommandExt;
 use status::Status;
 use status::StatusBuilder;
+#[cfg(feature = "eden")]
 use termlogger::TermLogger;
 use treestate::filestate::StateFlags;
 use types::HgId;
+#[cfg(feature = "eden")]
 use types::RepoPath;
 use types::workingcopy_client::CheckoutConflict;
 use types::workingcopy_client::CheckoutMode;
