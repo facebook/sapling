@@ -256,9 +256,7 @@ class workingcopy:
 
 
 @util.timefunction("snapshot_upload", 0, "ui")
-def uploadsnapshot(
-    repo, wctx, wc, time, tz, hgparents, lifetime, previousbubble, reusestorage, labels
-):
+def uploadsnapshot(repo, wctx, wc, time, tz, hgparents, bubble_properties):
     return repo.edenapi.uploadsnapshot(
         {
             "files": {
@@ -274,10 +272,7 @@ def uploadsnapshot(
             "tz": tz,
             "hg_parents": hgparents,
         },
-        lifetime,
-        previousbubble,
-        previousbubble if reusestorage else None,
-        labels,
+        bubble_properties,
     )
 
 
@@ -292,7 +287,6 @@ def createremote(ui, repo, *pats, **opts) -> None:
     maxuntrackedsize = parsemaxuntracked(opts)
     maxuntrackedsizebytes = parsemaxuntrackedbytes(opts)
     maxfilecount = parsemaxfilecount(opts)
-    reusestorage = opts.get("reuse_storage") is True
     labels = parselabels(opts)
     continuationof = parsecontinuationof(opts, repo)
     allowempty = ui.configbool("snapshot", "allowempty", True)
@@ -301,14 +295,6 @@ def createremote(ui, repo, *pats, **opts) -> None:
     effective_max_untracked_size = (
         maxuntrackedsizebytes or maxuntrackedsize or getdefaultmaxuntrackedsize(ui)
     )
-
-    # Validate that --continuation-of and --reuse-storage are not used together
-    if continuationof and reusestorage:
-        raise error.Abort(
-            _(
-                "--continuation-of cannot be used with --reuse-storage (legacy option that does not include TTL extension)"
-            )
-        )
 
     overrides = {}
     if ui.plain() or opts.get("template"):
@@ -360,11 +346,16 @@ def createremote(ui, repo, *pats, **opts) -> None:
                 ).format(filecount, maxfilecount)
             )
 
+        # Look up bubble ID from the provided snapshot ID or latest snapshot
+        previousbubble = (
+            getcsidbubblemapping(repo.metalog(), continuationof)
+            if continuationof
+            else fetchlatestbubble(repo.metalog())
+        )
+
         # Handle continuation-of option
-        previousbubble = None
+        bubble_strategy = "create_new"  # Default strategy, keep it explicit
         if continuationof:
-            # Look up bubble ID from the previous snapshot
-            previousbubble = getcsidbubblemapping(repo.metalog(), continuationof)
             if previousbubble is None:
                 # Try remote lookup for bubble ID if not found locally
                 ui.status(
@@ -397,18 +388,27 @@ def createremote(ui, repo, *pats, **opts) -> None:
                         component="snapshot",
                     )
 
-            # The storage must be reused
-            reusestorage = True
+            # Reuse the bubble: extends TTL and reuses storage
+            bubble_strategy = {"reuse": {"bubble_id": previousbubble}}
             ui.status(
                 _("continuing from snapshot {} using bubble {}\n").format(
                     continuationof, previousbubble
                 ),
                 component="snapshot",
             )
-        else:
-            previousbubble = fetchlatestbubble(repo.metalog())
+        elif previousbubble is not None:
+            # We have a previous bubble known locally but not doing full continuation
+            # Use it as a copy hint for performance optimization
+            bubble_strategy = {"create_with_copy_hint": {"bubble_id": previousbubble}}
 
         (time, tz) = wctx.date()
+
+        bubble_properties = {
+            "lifetime_secs": lifetime,
+            "strategy": bubble_strategy,
+            "labels": labels,
+        }
+
         response = uploadsnapshot(
             repo,
             wctx,
@@ -416,26 +416,15 @@ def createremote(ui, repo, *pats, **opts) -> None:
             time,
             tz,
             hgparents,
-            lifetime,
-            previousbubble,
-            reusestorage,
-            labels,
+            bubble_properties,
         )
 
         csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"])
         bubble = response["bubble_id"]
         bubble_expiration_timestamp = response.get("bubble_expiration_timestamp")
 
-        # Store latest snapshot and bubble mapping in the local cache
-        storelatest(repo, csid, bubble)
-
-        # Store metadata for this snapshot in the local cache
-        metadata = SnapshotMetadata(bubble=bubble, created_at=mtime.time())
-        # Store expiration timestamp of this bubble if it is known
-        if bubble_expiration_timestamp is not None:
-            metadata["bubble_expiration_timestamp"] = bubble_expiration_timestamp
-
-        storesnapshotmetadata(repo, csid, metadata)
+        # Store latest snapshot and bubble metadata in the local cache
+        storelatest(repo, csid, bubble, bubble_expiration_timestamp)
 
     csid = csid.hex()
 

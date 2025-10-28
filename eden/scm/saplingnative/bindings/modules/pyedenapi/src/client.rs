@@ -34,6 +34,7 @@ use edenapi_types::AlterSnapshotRequest;
 use edenapi_types::AlterSnapshotResponse;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::BlameResult;
+use edenapi_types::BubbleUploadProperties;
 use edenapi_types::CacheableSnapshot;
 use edenapi_types::CloudShareWorkspaceRequest;
 use edenapi_types::CloudShareWorkspaceResponse;
@@ -427,24 +428,16 @@ py_class!(pub class client |py| {
     def uploadsnapshot(
         &self,
         data: Serde<SnapshotRawData>,
-        custom_duration_secs: Option<u64>,
-        copy_from_bubble_id: Option<u64>,
-        use_bubble: Option<u64>,
-        labels: Option<Vec<String>>,
+        bubble_properties: Serde<BubbleUploadProperties>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
         let api = self.inner(py).as_ref();
-        let copy_from_bubble_id = copy_from_bubble_id.and_then(NonZeroU64::new);
-        let use_bubble = use_bubble.and_then(NonZeroU64::new);
         let cache = SharedSnapshotFileCache::from_config(self.config(py).as_ref()).ok();
 
         py.allow_threads(|| {
             block_unless_interrupted(upload_snapshot_with_cache(
                 api,
                 data.0,
-                custom_duration_secs,
-                copy_from_bubble_id,
-                use_bubble,
-                labels,
+                bubble_properties.0,
                 cache,
             ))
         })

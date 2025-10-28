@@ -369,6 +369,51 @@ pub struct UploadBonsaiChangesetRequest {
     pub changeset: BonsaiChangesetContent,
 }
 
+/// Strategy for bubble management during snapshot creation.
+///
+/// This enum defines three distinct strategies for how snapshots interact with ephemeral bubbles:
+/// 1. Creating a completely new bubble with no relationship to previous ones
+/// 2. Creating a new bubble but hinting to the backend to copy data from a previous bubble for performance
+/// 3. Reusing an existing bubble by extending its TTL and reusing its storage
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum BubbleStrategy {
+    /// Create a new bubble with no relationship to previous bubbles.
+    /// All file data will be uploaded fresh.
+    CreateNew,
+    /// Create a new bubble, but hint to the backend to copy data from a previous bubble.
+    /// This allows the server to avoid re-uploading identical files by copying from
+    /// the previous bubble's storage transparently (via `copy_file_to_bubble` on the server),
+    /// improving performance while still creating a new bubble.
+    /// see: fbcode/eden/mononoke/edenapi_service/src/handlers/lookup.rs
+    CreateWithCopyHint { bubble_id: NonZeroU64 },
+    /// Reuse an existing bubble: extends its TTL and reuses its storage.
+    /// This is for continuation scenarios where snapshots build on each other.
+    Reuse { bubble_id: NonZeroU64 },
+}
+
+impl Default for BubbleStrategy {
+    fn default() -> Self {
+        Self::CreateNew
+    }
+}
+
+/// Properties for ephemeral bubble management during snapshot creation.
+///
+/// These properties control how the snapshot is associated with an ephemeral
+/// bubble and how the bubble's lifetime and storage are managed.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+pub struct BubbleUploadProperties {
+    /// Custom TTL duration in seconds for the bubble.
+    /// If None, server default is used.
+    pub lifetime_secs: Option<u64>,
+    /// Strategy for bubble management: create new, copy from previous, or reuse existing.
+    #[serde(default)]
+    pub strategy: BubbleStrategy,
+    /// Labels to associate with the bubble for categorization, querying and preservation.
+    pub labels: Option<Vec<String>>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct SnapshotRawFiles {
     /// Absolute root of the repository, where all files are

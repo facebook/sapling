@@ -75,16 +75,6 @@ subcmd = snapshot.subcommand(
         ),
         (
             "",
-            "reuse-storage",
-            None,
-            _(
-                "reuse same storage as latest snapshot, if possible; "
-                "extending its TTL if necessary; "
-                "the option is equivalent '--continuation-of latest'"
-            ),
-        ),
-        (
-            "",
             "continuation-of",
             "",
             _(
@@ -234,7 +224,10 @@ def isworkingcopycmd(*args, **kwargs) -> None:
     ],
 )
 def latestcmd(*args, **kwargs) -> None:
-    """information regarding the latest created/restored snapshot"""
+    """information regarding the latest created snapshot
+
+    Restored snapshot is not marked at "latest" until the next snapshot is created.
+    """
     latest.latest(*args, **kwargs)
 
 

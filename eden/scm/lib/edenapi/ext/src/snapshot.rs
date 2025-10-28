@@ -8,7 +8,6 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fmt;
-use std::num::NonZeroU64;
 use std::ops::AddAssign;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -24,6 +23,8 @@ use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BonsaiFileChange;
+use edenapi_types::BubbleStrategy;
+use edenapi_types::BubbleUploadProperties;
 use edenapi_types::CacheableSnapshot;
 use edenapi_types::ContentId;
 use edenapi_types::ExtendBubbleTtlOutcome;
@@ -197,34 +198,95 @@ fn load_files(
     ))
 }
 
+/// Context for a prepared ephemeral bubble that's ready for use
+struct PreparedEphemeralBubbleContext {
+    /// The bubble ID to use for storing data
+    bubble_id: std::num::NonZero<u64>,
+    /// The timestamp when this bubble will expire, if available
+    bubble_expiration_timestamp: Option<i64>,
+    /// Optional hint to the backend about which bubble to copy data from for performance optimization
+    /// if we can grab a knowledge of the previous bubble ID from the local metadata where we would most likely found the blobs uploaded
+    copy_from_bubble_id_hint: Option<std::num::NonZero<u64>>,
+}
+
+async fn prepare_ephemeral_bubble(
+    api: &(impl SaplingRemoteApi + ?Sized),
+    bubble_properties: &BubbleUploadProperties,
+) -> Result<PreparedEphemeralBubbleContext> {
+    let (bubble_id, bubble_expiration_timestamp, copy_from_bubble_id) =
+        match &bubble_properties.strategy {
+            BubbleStrategy::Reuse {
+                bubble_id: reuse_bubble_id,
+            } => {
+                // Extend the existing bubble's TTL and reuse its storage
+                // Please, see the documentation of ephemeral_extend for more details.
+                // If the requested duration is shorter than the existing bubble's lifetime,
+                // the lifetime will not be changed.
+                // If the requested duration is not provided, the lifetime will be extended to the default lifetime from this moment or
+                // remaining lifetime of the existing bubble, whichever is longer.
+                // Note: Bubbles with labels remain active even past their expiry time and can be extended successfully.
+                // Only bubbles without labels that have expired will cause the request to fail.
+                let extend_response = api
+                    .ephemeral_extend(*reuse_bubble_id, bubble_properties.lifetime_secs)
+                    .await
+                    .context("Failed to extend ephemeral bubble lifetime")?;
+                let expiration = match extend_response.result {
+                    ExtendBubbleTtlOutcome::Extended(timestamp) => Some(timestamp),
+                    ExtendBubbleTtlOutcome::NotChanged(timestamp) => Some(timestamp),
+                };
+                // When reusing, also use as copy_from hint (they're the same bubble)
+                (*reuse_bubble_id, expiration, Some(*reuse_bubble_id))
+            }
+            BubbleStrategy::CreateWithCopyHint {
+                bubble_id: copy_from,
+            } => {
+                // Create a new bubble but hint to backend to copy data from previous bubble for performance
+                let prepare_response = api
+                    .ephemeral_prepare(
+                        bubble_properties.lifetime_secs.map(Duration::from_secs),
+                        bubble_properties.labels.clone(),
+                    )
+                    .await
+                    .context("Failed to create ephemeral bubble")?;
+                // TODO: for consistency implement returning the expiration timestamp in ephemeral prepare
+                // So that we could store it in the local metadata in the same way as for the extended bubbles
+                (prepare_response.bubble_id, None, Some(*copy_from))
+            }
+            BubbleStrategy::CreateNew => {
+                // Create a completely new bubble with no relationship to previous bubbles
+                let prepare_response = api
+                    .ephemeral_prepare(
+                        bubble_properties.lifetime_secs.map(Duration::from_secs),
+                        bubble_properties.labels.clone(),
+                    )
+                    .await
+                    .context("Failed to create ephemeral bubble")?;
+                // TODO: for consistency implement returning the expiration timestamp in ephemeral prepare
+                // So that we could store it in the local metadata in the same way as for the extended bubbles
+                (prepare_response.bubble_id, None, None)
+            }
+        };
+
+    Ok(PreparedEphemeralBubbleContext {
+        bubble_id,
+        bubble_expiration_timestamp,
+        copy_from_bubble_id_hint: copy_from_bubble_id,
+    })
+}
+
 pub async fn upload_snapshot(
     api: &(impl SaplingRemoteApi + ?Sized),
     data: SnapshotRawData,
-    custom_duration_secs: Option<u64>,
-    copy_from_bubble_id: Option<NonZeroU64>,
-    use_bubble: Option<NonZeroU64>,
-    labels: Option<Vec<String>>,
+    bubble_properties: BubbleUploadProperties,
 ) -> Result<UploadSnapshotResponse> {
-    upload_snapshot_with_cache(
-        api,
-        data,
-        custom_duration_secs,
-        copy_from_bubble_id,
-        use_bubble,
-        labels,
-        None,
-    )
-    .await
+    upload_snapshot_with_cache(api, data, bubble_properties, None).await
 }
 
 /// Upload snapshot with optional local cache support
 pub async fn upload_snapshot_with_cache(
     api: &(impl SaplingRemoteApi + ?Sized),
     data: SnapshotRawData,
-    custom_duration_secs: Option<u64>,
-    copy_from_bubble_id: Option<NonZeroU64>,
-    use_bubble: Option<NonZeroU64>,
-    labels: Option<Vec<String>>,
+    bubble_properties: BubbleUploadProperties,
     cache: Option<SharedSnapshotFileCache>,
 ) -> Result<UploadSnapshotResponse> {
     let SnapshotRawData {
@@ -290,41 +352,19 @@ pub async fn upload_snapshot_with_cache(
         .map(|FileData(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
         .collect();
 
-    let (bubble_id, bubble_expiration_timestamp) = if let Some(id) = use_bubble {
-        // Extend the lifetime of the existing bubble while reusing it
-        // Please, see the documentation of ephemeral_extend for more details.
-        // If the requested duration is shorter than the existing bubble's lifetime,
-        // the lifetime will not be changed.
-        // If the requested duration is not provided, the lifetime will be extended to the default lifetime from this moment or
-        // remaining lifetime of the existing bubble, whichever is longer.
-        // Note: Bubbles with labels remain active even past their expiry time and can be extended successfully.
-        // Only bubbles without labels that have expired will cause the request to fail.
-        let extend_response = api
-            .ephemeral_extend(id, custom_duration_secs)
-            .await
-            .context("Failed to extend ephemeral bubble lifetime")?;
-        let expiration = match extend_response.result {
-            ExtendBubbleTtlOutcome::Extended(timestamp) => Some(timestamp),
-            ExtendBubbleTtlOutcome::NotChanged(timestamp) => Some(timestamp),
-        };
-        (id, expiration)
-    } else {
-        let prepare_response = api
-            .ephemeral_prepare(
-                custom_duration_secs.map(Duration::from_secs),
-                labels.clone(),
-            )
-            .await
-            .context("Failed to create ephemeral bubble")?;
-        (prepare_response.bubble_id, None)
-    };
+    let PreparedEphemeralBubbleContext {
+        bubble_id,
+        bubble_expiration_timestamp,
+        copy_from_bubble_id_hint,
+    } = prepare_ephemeral_bubble(api, &bubble_properties).await?;
+
     let file_content_tokens = {
         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
         // upload file contents first, receiving upload tokens
         api.process_files_upload(
             upload_data,
             Some(bubble_id),
-            copy_from_bubble_id,
+            copy_from_bubble_id_hint,
             UploadLookupPolicy::PerformLookup,
         )
         .await?
@@ -413,7 +453,7 @@ pub async fn upload_snapshot_with_cache(
                 time,
                 tz,
                 bubble_id: Some(bubble_id),
-                labels: labels.unwrap_or_default(),
+                labels: bubble_properties.labels.unwrap_or_default(),
                 cached: None, // Don't store the cached flag
             };
 

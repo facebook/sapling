@@ -14,6 +14,7 @@ from sapling import perftrace
 class SnapshotMetadata(TypedDict, total=False):
     """
     Metadata for a single snapshot/changeset.
+    Metadata is cached on snapshot creation.
 
     Fields:
         bubble: Bubble number for this changeset
@@ -45,7 +46,6 @@ class SnapshotMetadatas(TypedDict, total=False):
     snapshots: Dict[bytes, SnapshotMetadata]
 
 
-LATESTBUBBLE = "latestbubble"
 LATESTSNAPSHOT = "latestsnapshot"
 SNAPSHOT_METADATA = "snapshot_metadata"
 
@@ -56,30 +56,34 @@ EVICTION_THRESHOLD = 1000  # Start eviction when we have this many entries
 EVICTION_TARGET = 100  # Keep this many entries after eviction
 
 
-@perftrace.tracefunc("Fetch latest bubble")
-def fetchlatestbubble(ml) -> Optional[int]:
-    data = ml.get(LATESTBUBBLE)
-    if data is not None:
-        try:
-            return int(data.decode("ascii"))
-        except Exception:
-            return None
-
-
 @perftrace.tracefunc("Fetch latest snapshot")
 def fetchlatestsnapshot(ml):
     return ml.get(LATESTSNAPSHOT)
 
 
 @perftrace.tracefunc("Snapshot metalog store")
-def storelatest(repo, snapshot, bubble) -> None:
-    """call this inside repo.transaction() to write changes to disk"""
+def storelatest(repo, snapshot, bubble, bubble_expiration_timestamp=None) -> None:
+    """Store latest snapshot and its bubble metadata in metalog.
+
+    Call this inside repo.transaction() to write changes to disk.
+
+    Args:
+        repo: Repository instance
+        snapshot: Changeset ID (binary)
+        bubble: Bubble ID to store in metadata
+        bubble_expiration_timestamp: Optional expiration timestamp for the bubble
+    """
     assert repo.currenttransaction()
     ml = repo.metalog()
     if snapshot is not None:
         ml.set(LATESTSNAPSHOT, snapshot)
-    if bubble is not None:
-        ml.set(LATESTBUBBLE, str(bubble).encode("ascii"))
+
+        # Store bubble metadata for this snapshot
+        if bubble is not None:
+            metadata = SnapshotMetadata(bubble=bubble, created_at=time.time())
+            if bubble_expiration_timestamp is not None:
+                metadata["bubble_expiration_timestamp"] = bubble_expiration_timestamp
+            storesnapshotmetadata(repo, snapshot, metadata)
 
 
 # CRUD operations for snapshot metadata
@@ -210,6 +214,28 @@ def getcsidbubblemapping(ml, cs_id: str) -> Optional[int]:
     if metadata:
         return metadata.get("bubble")
     return None
+
+
+@perftrace.tracefunc("Get latest bubble")
+def fetchlatestbubble(ml) -> Optional[int]:
+    """
+    Get bubble number from the latest snapshot.
+
+    The latest bubble is stored in the metalog as the bubble number for the latest snapshot.
+
+    Args:
+        ml: Metalog instance
+
+    Returns:
+        Optional[int]: Bubble number if found, None otherwise
+    """
+    latest_snapshot = fetchlatestsnapshot(ml)
+    if latest_snapshot is None:
+        return None
+
+    # Convert binary changeset ID to hex string
+    cs_id_hex = latest_snapshot.hex()
+    return getcsidbubblemapping(ml, cs_id_hex)
 
 
 @perftrace.tracefunc("Delete snapshot metadata")

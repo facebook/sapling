@@ -8,8 +8,6 @@ import time
 from sapling import bookmarks, cmdutil, error, hg, perftrace, scmutil, util
 from sapling.i18n import _
 
-from .metalog import storelatest, storesnapshotmetadata
-
 
 @perftrace.tracefunc("Has any changes")
 def _hasanychanges(repo) -> bool:
@@ -214,14 +212,10 @@ def update(ui, repo, csid: str, clean: bool = False) -> None:
                     ui, repo, [f"path:{path}" for (path, _) in snapshot["file_changes"]]
                 )
         _download_files_and_fix_status(ui, repo, snapshot)
-        storelatest(repo, csid_bytes, snapshot["bubble_id"])
 
-        # Store metadata for this snapshot in the local cache if it is valid
-        # If the snapshot time comes as 0 (like in tests), then we won't cache these entries
-        metadata = {"bubble": snapshot["bubble_id"]}
-        if snapshot.get("time"):
-            metadata["created_at"] = float(snapshot["time"])
-            storesnapshotmetadata(repo, csid_bytes, metadata)
+        # On update, do not mark the snapshot as latest or cache its metadata.
+        # Since updates are infrequent, we avoid adding extra complexity.
+        # To keep things simple, we only store snapshot metadata at creation and mark it as latest then
 
         duration = time.perf_counter() - start_snapshot
         ui.status(
