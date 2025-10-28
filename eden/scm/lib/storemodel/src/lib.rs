@@ -308,7 +308,7 @@ pub trait TreeEntry: Send + Sync + 'static {
     /// Practically, Git appends `/` to directories when sorting them.
     fn iter<'a>(
         &'a self,
-    ) -> anyhow::Result<BoxRefIterator<anyhow::Result<(&'a PathComponent, HgId, TreeItemFlag)>>>;
+    ) -> anyhow::Result<BoxRefIterator<'a, anyhow::Result<(&'a PathComponent, HgId, TreeItemFlag)>>>;
 
     /// Like `iter()`, but yields owned `PathComponentBuf`.
     fn iter_owned(

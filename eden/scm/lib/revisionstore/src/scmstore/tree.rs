@@ -1037,7 +1037,7 @@ impl TreeEntry for ScmStoreTreeEntry {
     // TODO (liubovd): We should support iter directly for CAS.
     fn iter<'a>(
         &'a self,
-    ) -> Result<BoxRefIterator<Result<(&'a PathComponent, HgId, TreeItemFlag)>>> {
+    ) -> Result<BoxRefIterator<'a, Result<(&'a PathComponent, HgId, TreeItemFlag)>>> {
         self.basic_tree_entry()?.iter()
     }
 

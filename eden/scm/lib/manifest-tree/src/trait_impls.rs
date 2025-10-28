@@ -17,7 +17,7 @@ use types::SerializationFormat;
 impl TreeEntry for crate::store::Entry {
     fn iter<'a>(
         &'a self,
-    ) -> anyhow::Result<BoxRefIterator<anyhow::Result<(&'a PathComponent, HgId, TreeItemFlag)>>>
+    ) -> anyhow::Result<BoxRefIterator<'a, anyhow::Result<(&'a PathComponent, HgId, TreeItemFlag)>>>
     {
         let elements = self.elements_ref();
         let iter = elements
