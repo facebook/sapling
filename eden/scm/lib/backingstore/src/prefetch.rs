@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::mem;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU8;
 use std::sync::atomic::Ordering;
@@ -62,6 +63,8 @@ impl Default for Config {
     }
 }
 
+type SparseMatcherResult = anyhow::Result<Option<DynMatcher>>;
+
 /// Launch an asynchronous prefetch manager to kick of file/dir prefetches when kicked via the
 /// returned channel. The prefetches are based on active fs walks, according to the walk detector
 /// (prefetching content makes the serial walks go faster). The manager and any active prefetches
@@ -72,7 +75,8 @@ pub(crate) fn prefetch_manager(
     file_store: Arc<dyn FileStore>,
     current_commit_id: Arc<RwLock<Option<String>>>,
     detector: walkdetector::Detector,
-    sparse_matcher: Option<Arc<dyn Matcher + Send + Sync>>,
+    repo_root: PathBuf,
+    make_matcher: impl Fn(PathBuf) -> SparseMatcherResult + Send + 'static,
 ) -> flume::Sender<()> {
     // We don't need to queue up lots of kicks. A single one will suffice.
     let (send, recv) = flume::bounded(1);
@@ -102,6 +106,8 @@ pub(crate) fn prefetch_manager(
         let mut current_manifest: Option<TreeManifest> = None;
 
         let mut last_iteration_time = None;
+
+        let mut sparse_matcher: Option<DynMatcher> = None;
 
         // Wait for kicks, or otherwise check every second. The intermittent check is important
         // to notice that walks have stopped (because the kicks only happen on file/dir access,
@@ -147,9 +153,21 @@ pub(crate) fn prefetch_manager(
                 handled_prefetches.clear();
                 batch_dir_prefetches.clear();
                 current_manifest.take();
+                sparse_matcher.take();
             }
 
             prev_commit_id = Some(current_commit_id);
+
+            // Reevaluate the sparse matcher since it can change across commits
+            if sparse_matcher.is_none() {
+                sparse_matcher = match (make_matcher)(repo_root.clone()) {
+                    Ok(m) => m,
+                    Err(e) => {
+                        tracing::error!("fetching sparse matcher for workingcopy: {:?}", e);
+                        continue;
+                    }
+                };
+            }
 
             // Currently active walks according to the walk detector. Note that it will only report
             // a single walk for any given root (e.g. as depth deepens, [(root="foo", depth=1)] will
@@ -906,6 +924,12 @@ mod test {
         Ok(())
     }
 
+    fn make_test_sparse_matcher(_: PathBuf) -> SparseMatcherResult {
+        let rules = ["**", "!excludeme/**"];
+        let sparse_matcher = TreeMatcher::from_rules(rules.iter(), true)?;
+        Ok(Some(Arc::new(sparse_matcher)))
+    }
+
     struct StubTreeResolver(HashMap<HgId, TreeManifest>);
 
     impl ReadTreeManifest for StubTreeResolver {
@@ -936,7 +960,6 @@ mod test {
         let dir2_bar_path: RepoPathBuf = "dir2/bar".to_string().try_into()?;
         let dir3_foo_path: RepoPathBuf = "dir3/foo".to_string().try_into()?;
         let exclude_path: RepoPathBuf = "excludeme/please".to_string().try_into()?;
-        let exclude_dir: RepoPathBuf = "excludeme".to_string().try_into()?;
 
         // Insert a few files into the file store.
         let dir1_foo_hgid =
@@ -989,14 +1012,6 @@ mod test {
         let stub_commit_id = HgId::random(&mut rng);
 
         let tree_resolver = StubTreeResolver([(stub_commit_id.clone(), mf.clone())].into());
-        let rules = ["**", "!excludeme/**"];
-        let sparse_matcher = Arc::new(TreeMatcher::from_rules(rules.iter(), true)?);
-
-        // matcher must report "Nothing" for excludeme to be properly excluded from the fetch
-        assert_eq!(
-            sparse_matcher.matches_directory(&exclude_dir).unwrap(),
-            DirectoryMatch::Nothing
-        );
 
         let kick_manager = prefetch_manager(
             Config::default(),
@@ -1004,7 +1019,8 @@ mod test {
             file_store.clone(),
             Arc::new(RwLock::new(Some(stub_commit_id.to_hex()))),
             detector.clone(),
-            Some(sparse_matcher.clone()),
+            "".into(),
+            make_test_sparse_matcher,
         );
 
         // Trigger a walk of dir1.
@@ -1040,7 +1056,8 @@ mod test {
             file_store,
             Arc::new(RwLock::new(Some(stub_commit_id.to_hex()))),
             detector.clone(),
-            Some(sparse_matcher),
+            "".into(),
+            make_test_sparse_matcher,
         );
 
         // Trigger a walk of the root
@@ -1120,7 +1137,8 @@ mod test {
             file_store,
             Arc::new(RwLock::new(Some(stub_commit_id.to_hex()))),
             detector.clone(),
-            None,
+            "".into(),
+            |_| Ok(None),
         );
 
         // Trigger a directory walk for each of "dir1" and "dir2".
