@@ -393,6 +393,16 @@ impl WorkingCopy {
         })
     }
 
+    pub fn sparse_matcher(&self) -> Result<Option<DynMatcher>> {
+        let manifests =
+            WorkingCopy::current_manifests(&self.treestate.lock(), &self.tree_resolver)?;
+        let sparse_matcher = self
+            .filesystem
+            .lock()
+            .sparse_matcher(&manifests, self.ident.dot_dir())?;
+        Ok(sparse_matcher)
+    }
+
     pub fn status_internal(
         &self,
         ctx: &CoreContext,
