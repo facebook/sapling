@@ -28,7 +28,7 @@ sha2 = "0.10.6"
 thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 twox-hash = "1.6.1"
-uuid = { version = "1.17", features = ["serde", "v4", "v5", "v6", "v7", "v8"] }
+uuid = { version = "1.17", features = ["rng-getrandom", "serde", "v4", "v5", "v6", "v7", "v8"] }
 
 [dev-dependencies]
 itertools = "0.14.0"
