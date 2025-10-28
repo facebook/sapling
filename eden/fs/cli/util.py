@@ -1118,8 +1118,8 @@ def maybe_edensparse_migration(
             snapshot_path = checkout.state_dir / SNAPSHOT
             new_snapshot_bytes = None
             if not snapshot_path.exists():
-                # TODO: What to do if there is no snapshot file?
-                raise RuntimeError(f"Missing SNAPSHOT file {snapshot_path}")
+                # We cannot attempt migration on a corrupted mount.
+                return False
             with snapshot_path.open("rb") as f:
                 header = f.read(8)
                 if header == SNAPSHOT_MAGIC_2:
