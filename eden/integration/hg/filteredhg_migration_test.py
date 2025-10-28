@@ -115,6 +115,26 @@ adir
     def assert_filter_not_applied(self) -> None:
         assert os.path.exists(self.repo.get_path("adir/hidden"))
 
+    def add_file(self, path: str) -> None:
+        assert not os.path.exists(self.repo.get_path(path)), f"{path} already exists"
+        self.repo.write_file(path, "this is a new file\n")
+
+    def add_dir(self, path: str) -> None:
+        assert not os.path.exists(self.repo.get_path(path)), f"{path} already exists"
+        os.mkdir(self.repo.get_path(path))
+
+    def modify_file(self, path: str) -> None:
+        assert os.path.exists(self.repo.get_path(path)), f"{path} does not exist"
+        self.repo.write_file(path, "this is a modified file\n")
+
+    def remove_file(self, path: str) -> None:
+        assert os.path.exists(self.repo.get_path(path)), f"{path} does not exist"
+        os.remove(self.repo.get_path(path))
+
+    def remove_dir(self, path: str) -> None:
+        assert os.path.exists(self.repo.get_path(path)), f"{path} does not exist"
+        os.rmdir(self.repo.get_path(path))
+
     async def edensparse_migration_common(
         self, pre_migration: Callable[[], None], post_migration: Callable[[], None]
     ) -> None:
@@ -164,3 +184,112 @@ adir
 
     async def test_filteredfs_migration(self) -> None:
         await self.edensparse_migration_common(lambda: None, lambda: None)
+
+    async def test_empty_status(self) -> None:
+        await self.edensparse_migration_common(
+            self.assert_status_empty, self.assert_status_empty
+        )
+
+    async def test_add_file(self) -> None:
+        # regular file
+        self.add_file("newfile")
+
+        # tracked file
+        self.add_file("newfile-tracked")
+        self.hg("add", "newfile-tracked")
+
+        # file under hidden dir
+        self.add_file("adir/newfile")
+
+        # tracked file under hidden dir
+        self.add_file("adir/newfile-tracked")
+        self.hg("add", "adir/newfile-tracked")
+
+        def check_status_pre_migration() -> None:
+            status_output = self.hg("status")
+            assert (
+                status_output
+                == "A adir/newfile-tracked\nA newfile-tracked\n? adir/newfile\n? newfile\n"
+            ), f"unexpected status output: {status_output}"
+
+        def check_status_post_migration() -> None:
+            status_output = self.hg("status")
+            assert (
+                status_output == "A newfile-tracked\n? newfile\n"
+            ), f"unexpected status output: {status_output}"
+
+        await self.edensparse_migration_common(
+            check_status_pre_migration,
+            check_status_post_migration,
+        )
+
+    async def test_modify_file(self) -> None:
+        # unhidden file
+        self.modify_file("hello")
+
+        def check_status_pre_migration() -> None:
+            status_output = self.hg("status")
+            assert (
+                status_output == "M hello\n"
+            ), f"unexpected status output: {status_output}"
+
+        def check_status_post_migration() -> None:
+            status_output = self.hg("status")
+            assert (
+                status_output == "M hello\n"
+            ), f"unexpected status output: {status_output}"
+
+        await self.edensparse_migration_common(
+            check_status_pre_migration,
+            check_status_post_migration,
+        )
+
+    async def test_modify_hidden_file(self) -> None:
+        self.modify_file("adir/file")
+
+        def check_status_pre_migration() -> None:
+            status_output = self.hg("status")
+            assert (
+                status_output == "M adir/file\n"
+            ), f"unexpected status output: {status_output}"
+
+        await self.edensparse_migration_common(
+            check_status_pre_migration,
+            lambda: None,
+        )
+
+    async def test_delete_file(self) -> None:
+        # unhidden file
+        self.remove_file("hello")
+
+        def check_status_pre_migration() -> None:
+            status_output = self.hg("status")
+            assert (
+                status_output == "! hello\n"
+            ), f"unexpected status output: {status_output}"
+
+        def check_status_post_migration() -> None:
+            status_output = self.hg("status")
+            assert (
+                status_output == "! hello\n"
+            ), f"unexpected status output: {status_output}"
+
+        await self.edensparse_migration_common(
+            check_status_pre_migration,
+            check_status_post_migration,
+        )
+
+    async def test_delete_hidden_file(self) -> None:
+        # hidden file
+        self.remove_file("adir/file")
+
+        def check_status_pre_migration() -> None:
+            status_output = self.hg("status")
+            assert (
+                status_output == "! adir/file\n"
+            ), f"unexpected status output: {status_output}"
+
+        await self.edensparse_migration_common(
+            check_status_pre_migration,
+            lambda: None,
+        )
