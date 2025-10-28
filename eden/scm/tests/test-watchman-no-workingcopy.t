@@ -23,41 +23,13 @@ Code under test (this doesn't need to send hg.transaction event):
 Wait for debugwatchmansubscribe to exit.
   $ wait
 
-FIXME: no need to send hg.transaction event
+No need to send hg.transaction event without a working copy.
   $ cat ../watchman_out
   {
     "clock": *, (glob)
     "files": [],
     "is_fresh_instance": true,
     "root": "$TESTTMP/repo1",
-    "subscription": "test-subscription",
-    "unilateral": true,
-    "version": * (glob)
-  }
-  {
-    "clock": *, (glob)
-    "metadata": {
-      "distance": 0,
-      "partial": false,
-      "rev": "0000000000000000000000000000000000000000",
-      "status": "ok"
-    },
-    "root": "$TESTTMP/repo1",
-    "state-enter": "hg.transaction",
-    "subscription": "test-subscription",
-    "unilateral": true,
-    "version": * (glob)
-  }
-  {
-    "clock": *, (glob)
-    "metadata": {
-      "distance": 0,
-      "partial": false,
-      "rev": "0000000000000000000000000000000000000000",
-      "status": "ok"
-    },
-    "root": "$TESTTMP/repo1",
-    "state-leave": "hg.transaction",
     "subscription": "test-subscription",
     "unilateral": true,
     "version": * (glob)

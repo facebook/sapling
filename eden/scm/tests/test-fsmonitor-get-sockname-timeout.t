@@ -5,6 +5,8 @@
   $ setconfig experimental.fsmonitor.transaction_notify=true
 
   $ newclientrepo
+  $ echo "A" | drawdag
+  $ hg go -q tip
   $ cat > $TESTTMP/wait_forever.py <<EOS
   > #!/usr/bin/env python
   > import time

@@ -23,11 +23,11 @@ https://facebook.github.io/watchman/docs/scm-query.html.
 import contextlib
 
 from bindings import edenfsassertedstates
-from sapling import extensions, filemerge, merge, perftrace, util
+
+from sapling import extensions, filemerge, merge, node as nodemod, perftrace, util
 from sapling.i18n import _
 
 from ..extlib import watchmanclient
-
 
 # This extension is incompatible with the following extensions
 # and will disable itself when encountering one of these:
@@ -79,6 +79,18 @@ def reposetup(ui, repo):
                 return l
             if l.held != 1:
                 return l
+
+            try:
+                # We don't need to send hg.transaction event if we have no working copy.
+                # hg.transaction is useful as an umbrella state to debounce a busy "rebase", but if
+                # we have no working copy, the only interesting action is "goto" (which will still
+                # produce an "hg.update" state).
+                if self.dirstate.p1() == nodemod.nullid:
+                    return l
+            except Exception:
+                # Ignore errors loading dirstate.
+                pass
+
             origrelease = l.releasefn
 
             def staterelease():
