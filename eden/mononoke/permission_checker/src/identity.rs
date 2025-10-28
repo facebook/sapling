@@ -76,6 +76,14 @@ impl MononokeIdentity {
         }
     }
 
+    pub fn variant(&self) -> &str {
+        match self {
+            Self::TypeData { .. } => "TypeData",
+            #[cfg(fbcode_build)]
+            Self::Authenticated(_) => "Authenticated",
+        }
+    }
+
     pub fn id_data(&self) -> &str {
         match self {
             Self::TypeData { id_data, .. } => id_data.as_str(),

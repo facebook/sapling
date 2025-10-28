@@ -254,6 +254,11 @@ impl MononokeScubaSampleBuilder {
                 .collect::<Vec<_>>(),
         );
 
+        self.inner.add_opt(
+            "client_identity_variant",
+            metadata.identities().first().map(|i| i.variant()),
+        );
+
         if let Some(client_hostname) = metadata.client_hostname() {
             // "source_hostname" to remain compatible with historical logging
             self.inner
