@@ -327,7 +327,8 @@ pub fn doc() -> &'static str {
 
     See :prog:`help config` for more information about config files.
 
-    Returns 0 on success, 1 if NAME does not exist.
+    Returns 0 on success. When using a plain formatter, 1 is returned if NAME
+    does not exist. Otherwise, 0 is returned even if NAME does not exist.
 
     "#
 }
