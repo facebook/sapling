@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![allow(unexpected_cfgs)]
+
 #[cfg(feature = "fb")]
 use std::str::FromStr;
 

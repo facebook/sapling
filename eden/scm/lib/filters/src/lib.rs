@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#![allow(unexpected_cfgs)]
+
 pub mod filter;
 pub mod id;
 pub mod migration;

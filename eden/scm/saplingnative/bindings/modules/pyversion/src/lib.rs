@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![allow(unexpected_cfgs)]
+
 use cpython::*;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

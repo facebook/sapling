@@ -96,6 +96,8 @@
 //!
 //! The produced stores must implement the `HgIdDataStore` trait.
 
+#![allow(unexpected_cfgs)]
+
 mod indexedloghistorystore;
 mod lfs;
 mod metadatastore;

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![allow(unexpected_cfgs)]
+
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::sync::LazyLock;

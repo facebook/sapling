@@ -6,6 +6,7 @@
  */
 
 #![allow(dead_code)]
+#![allow(unexpected_cfgs)]
 
 pub mod command;
 pub mod context;
