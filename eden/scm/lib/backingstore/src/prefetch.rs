@@ -21,6 +21,7 @@ use parking_lot::RwLock;
 use pathmatcher::DepthMatcher;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::DynMatcher;
+use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::UnionMatcher;
 use repo::ReadTreeManifest;
@@ -71,6 +72,7 @@ pub(crate) fn prefetch_manager(
     file_store: Arc<dyn FileStore>,
     current_commit_id: Arc<RwLock<Option<String>>>,
     detector: walkdetector::Detector,
+    sparse_matcher: Option<Arc<dyn Matcher + Send + Sync>>,
 ) -> flume::Sender<()> {
     // We don't need to queue up lots of kicks. A single one will suffice.
     let (send, recv) = flume::bounded(1);
@@ -246,6 +248,7 @@ pub(crate) fn prefetch_manager(
                             file_store.clone(),
                             detector.clone(),
                             PrefetchWork::DirectoriesOnly(std::mem::take(batch)),
+                            sparse_matcher.clone(),
                         ));
                     }
                 };
@@ -321,6 +324,7 @@ pub(crate) fn prefetch_manager(
                         file_store.clone(),
                         detector.clone(),
                         work,
+                        sparse_matcher.clone(),
                     ),
                 ));
 
@@ -353,6 +357,7 @@ fn prefetch(
     file_store: Arc<dyn FileStore>,
     walk_detector: walkdetector::Detector,
     work: PrefetchWork,
+    sparse_matcher: Option<Arc<dyn Matcher + Send + Sync>>,
 ) -> PrefetchHandle {
     // The cancellation works by making our thread below return early when the handle has been
     // dropped. When it returns, it drops its manifest/file iterators, which will cause those
@@ -362,7 +367,7 @@ fn prefetch(
     let my_handle = handle.clone();
     // Sapling APIs are not async, so to achieve asynchronicity we create a new thread.
     std::thread::spawn(move || {
-        let (file_content_root, matcher, span) = match work {
+        let (file_content_root, mut matcher, span) = match work {
             PrefetchWork::DirectoriesOnly(walks) => {
                 let Some((first_root, first_depth)) = walks.first() else {
                     return;
@@ -417,6 +422,9 @@ fn prefetch(
         let start_time = Instant::now();
 
         // This iterator is populated async by the manifest iterator.
+        if let Some(sparse_matcher) = sparse_matcher {
+            matcher = Arc::new(IntersectMatcher::new(vec![matcher, sparse_matcher]))
+        };
         let files = manifest.files(matcher);
 
         const BATCH_SIZE: usize = 10_000;
@@ -651,6 +659,7 @@ mod test {
     use manifest::FileMetadata;
     use manifest_tree::TreeManifest;
     use manifest_tree::testutil::TestStore;
+    use pathmatcher::TreeMatcher;
     use rand_chacha::ChaChaRng;
     use rand_chacha::rand_core::SeedableRng;
     use storemodel::KeyStore;
@@ -665,10 +674,14 @@ mod test {
 
         let foo_path: RepoPathBuf = "dir/foo".to_string().try_into()?;
         let bar_path: RepoPathBuf = "dir/dir2/bar".to_string().try_into()?;
+        let exclude_path: RepoPathBuf = "excludeme/please".to_string().try_into()?;
+        let exclude_dir: RepoPathBuf = "excludeme".to_string().try_into()?;
 
-        // Insert a couple files into the file store.
+        // Insert a few files into the file store.
         let foo_hgid = file_store.insert_data(Default::default(), &foo_path, b"foo content")?;
         let bar_hgid = file_store.insert_data(Default::default(), &bar_path, b"bar content")?;
+        let exclude_hgid =
+            file_store.insert_data(Default::default(), &exclude_path, b"excluded content")?;
 
         let mut mf = TreeManifest::ephemeral(store.clone());
 
@@ -683,7 +696,32 @@ mod test {
             FileMetadata::new(bar_hgid, types::FileType::Regular),
         )?;
 
+        mf.insert(
+            exclude_path.clone(),
+            FileMetadata::new(exclude_hgid, types::FileType::Regular),
+        )?;
+
         let detector = walkdetector::Detector::new();
+        let rules = ["**", "!excludeme/please"];
+        let sparse_matcher = Arc::new(TreeMatcher::from_rules(rules.iter(), true)?);
+
+        // Prefetch for "excludeme/" at depth=0 (i.e. "excludeme/*").
+        let handle = prefetch(
+            Config::default(),
+            mf.clone(),
+            file_store.clone(),
+            detector.clone(),
+            PrefetchWork::FileContent(exclude_dir.clone(), 0, None),
+            Some(sparse_matcher.clone()),
+        );
+
+        // Wait for prefetch to complete.
+        while !handle.is_done() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+
+        // Nothing was fetched since excludeme is in the sparse profile
+        assert_eq!(store.fetches(), vec![]);
 
         // Prefetch for "dir/" at depth=0 (i.e. "dir/*").
         let handle = prefetch(
@@ -692,6 +730,7 @@ mod test {
             file_store.clone(),
             detector.clone(),
             PrefetchWork::FileContent("dir".to_string().try_into()?, 0, None),
+            Some(sparse_matcher.clone()),
         );
 
         // Wait for prefetch to complete.
@@ -705,13 +744,14 @@ mod test {
             vec![Key::new(RepoPathBuf::new(), foo_hgid)]
         );
 
-        // Prefetch for "dir/" at min_depth=1, max_depth=1 (i.e. "dir/dir2/*").
+        // Retry excludeme prefetch without sparse profile
         let handle = prefetch(
             Config::default(),
-            mf,
-            file_store,
-            detector,
-            PrefetchWork::FileContent("dir".to_string().try_into()?, 1, Some(1)),
+            mf.clone(),
+            file_store.clone(),
+            detector.clone(),
+            PrefetchWork::FileContent(exclude_dir, 0, None),
+            None,
         );
 
         // Wait for prefetch to complete.
@@ -719,12 +759,37 @@ mod test {
             std::thread::sleep(Duration::from_millis(1));
         }
 
-        // We only additionally fetched "dir/dir2/bar" (i.e. did not redundantly fetch "dir/foo".
+        // We fetched "excludeme/please" (i.e. did not redundantly fetch dir/foo).
         assert_eq!(
             store.fetches(),
             vec![
                 Key::new(RepoPathBuf::new(), foo_hgid),
-                Key::new(RepoPathBuf::new(), bar_hgid)
+                Key::new(RepoPathBuf::new(), exclude_hgid),
+            ]
+        );
+
+        // Prefetch for "dir/" at min_depth=1, max_depth=1 (i.e. "dir/dir2/*").
+        let handle = prefetch(
+            Config::default(),
+            mf,
+            file_store,
+            detector,
+            PrefetchWork::FileContent("dir".to_string().try_into()?, 1, Some(1)),
+            None,
+        );
+
+        // Wait for prefetch to complete.
+        while !handle.is_done() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+
+        // We only additionally fetched "dir/dir2/bar" (i.e. did not redundantly fetch "dir/foo").
+        assert_eq!(
+            store.fetches(),
+            vec![
+                Key::new(RepoPathBuf::new(), foo_hgid),
+                Key::new(RepoPathBuf::new(), exclude_hgid),
+                Key::new(RepoPathBuf::new(), bar_hgid),
             ]
         );
 
@@ -739,10 +804,14 @@ mod test {
 
         let foo_path: RepoPathBuf = "dir/foo".to_string().try_into()?;
         let bar_path: RepoPathBuf = "dir/dir2/bar".to_string().try_into()?;
+        let exclude_path: RepoPathBuf = "excludeme/please".to_string().try_into()?;
+        let exclude_dir: RepoPathBuf = "excludeme".to_string().try_into()?;
 
-        // Insert a couple files into the file store.
+        // Insert a few files into the file store.
         let foo_hgid = file_store.insert_data(Default::default(), &foo_path, b"foo content")?;
         let bar_hgid = file_store.insert_data(Default::default(), &bar_path, b"bar content")?;
+        let exclude_hgid =
+            file_store.insert_data(Default::default(), &exclude_path, b"excluded content")?;
 
         let mut mf = TreeManifest::ephemeral(store.clone());
 
@@ -757,11 +826,24 @@ mod test {
             FileMetadata::new(bar_hgid, types::FileType::Regular),
         )?;
 
+        mf.insert(
+            exclude_path.clone(),
+            FileMetadata::new(exclude_hgid, types::FileType::Regular),
+        )?;
+
         for (path, _id, text, _p1, _p2) in mf.finalize(Vec::new())? {
             store.insert_data(Default::default(), &path, text.as_ref())?;
         }
 
         let detector = walkdetector::Detector::new();
+        let rules = ["**", "!excludeme/**"];
+        let sparse_matcher = Arc::new(TreeMatcher::from_rules(rules.iter(), true)?);
+
+        // matcher must report "Nothing" for excludeme to be properly excluded from the fetch
+        assert_eq!(
+            sparse_matcher.matches_directory(&exclude_dir).unwrap(),
+            DirectoryMatch::Nothing
+        );
 
         // Prefetch directories for "" at depth=0 (i.e. "*"). This should fetch directory "dir".
         let handle = prefetch(
@@ -770,6 +852,7 @@ mod test {
             file_store.clone(),
             detector.clone(),
             PrefetchWork::DirectoriesOnly(vec![("".to_string().try_into()?, 0)]),
+            Some(sparse_matcher),
         );
 
         // Wait for prefetch to complete.
@@ -777,7 +860,7 @@ mod test {
             std::thread::sleep(Duration::from_millis(1));
         }
 
-        // We fetched the root dir and "dir/" (but not "dir/dir2").
+        // We fetched the root dir and "dir/" (but not "dir/dir2" or "excludeme").
         assert_eq!(
             store
                 .prefetches()
@@ -786,6 +869,38 @@ mod test {
                 .map(|k| k.path)
                 .collect::<Vec<RepoPathBuf>>(),
             vec!["".to_string().try_into()?, "dir".to_string().try_into()?]
+        );
+
+        // Retry prefetch without sparse profile
+        let handle = prefetch(
+            Config::default(),
+            mf.clone(),
+            file_store.clone(),
+            detector.clone(),
+            PrefetchWork::DirectoriesOnly(vec![("".to_string().try_into()?, 0)]),
+            None,
+        );
+
+        // Wait for prefetch to complete.
+        while !handle.is_done() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+
+        // We fetched excludeme this time
+        assert_eq!(
+            store
+                .prefetches()
+                .into_iter()
+                .flatten()
+                .map(|k| k.path)
+                .collect::<Vec<RepoPathBuf>>(),
+            vec![
+                "".to_string().try_into()?,
+                "dir".to_string().try_into()?,
+                "".to_string().try_into()?,
+                "dir".to_string().try_into()?,
+                "excludeme".to_string().try_into()?
+            ]
         );
 
         Ok(())
@@ -815,42 +930,86 @@ mod test {
 
         let file_store = store.clone() as Arc<dyn FileStore>;
 
-        let foo_path: RepoPathBuf = "dir/foo".to_string().try_into()?;
-        let bar_path: RepoPathBuf = "dir/bar".to_string().try_into()?;
+        let dir1_foo_path: RepoPathBuf = "dir1/foo".to_string().try_into()?;
+        let dir1_bar_path: RepoPathBuf = "dir1/bar".to_string().try_into()?;
+        let dir2_foo_path: RepoPathBuf = "dir2/foo".to_string().try_into()?;
+        let dir2_bar_path: RepoPathBuf = "dir2/bar".to_string().try_into()?;
+        let dir3_foo_path: RepoPathBuf = "dir3/foo".to_string().try_into()?;
+        let exclude_path: RepoPathBuf = "excludeme/please".to_string().try_into()?;
+        let exclude_dir: RepoPathBuf = "excludeme".to_string().try_into()?;
 
-        // Insert a couple files into the file store.
-        let foo_hgid = file_store.insert_data(Default::default(), &foo_path, b"foo content")?;
-        let bar_hgid = file_store.insert_data(Default::default(), &bar_path, b"bar content")?;
+        // Insert a few files into the file store.
+        let dir1_foo_hgid =
+            file_store.insert_data(Default::default(), &dir1_foo_path, b"foo content")?;
+        let dir1_bar_hgid =
+            file_store.insert_data(Default::default(), &dir1_bar_path, b"bar content")?;
+        let dir2_foo_hgid =
+            file_store.insert_data(Default::default(), &dir2_foo_path, b"foo content!")?;
+        let dir2_bar_hgid =
+            file_store.insert_data(Default::default(), &dir2_bar_path, b"bar content!")?;
+        let dir3_foo_hgid =
+            file_store.insert_data(Default::default(), &dir3_foo_path, b"foo content!!")?;
+        let exclude_hgid =
+            file_store.insert_data(Default::default(), &exclude_path, b"excluded content")?;
 
         let mut mf = TreeManifest::ephemeral(store.clone());
 
         // Create corresponding manifest entries.
         mf.insert(
-            foo_path.clone(),
-            FileMetadata::new(foo_hgid, types::FileType::Regular),
+            dir1_foo_path.clone(),
+            FileMetadata::new(dir1_foo_hgid, types::FileType::Regular),
         )?;
 
         mf.insert(
-            bar_path.clone(),
-            FileMetadata::new(bar_hgid, types::FileType::Regular),
+            dir1_bar_path.clone(),
+            FileMetadata::new(dir1_bar_hgid, types::FileType::Regular),
+        )?;
+
+        mf.insert(
+            dir2_foo_path.clone(),
+            FileMetadata::new(dir2_foo_hgid, types::FileType::Regular),
+        )?;
+
+        mf.insert(
+            dir2_bar_path.clone(),
+            FileMetadata::new(dir2_bar_hgid, types::FileType::Regular),
+        )?;
+
+        mf.insert(
+            dir3_foo_path.clone(),
+            FileMetadata::new(dir3_foo_hgid, types::FileType::Regular),
+        )?;
+
+        mf.insert(
+            exclude_path.clone(),
+            FileMetadata::new(exclude_hgid, types::FileType::Regular),
         )?;
 
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let stub_commit_id = HgId::random(&mut rng);
 
-        let tree_resolver = StubTreeResolver([(stub_commit_id, mf)].into());
+        let tree_resolver = StubTreeResolver([(stub_commit_id.clone(), mf.clone())].into());
+        let rules = ["**", "!excludeme/**"];
+        let sparse_matcher = Arc::new(TreeMatcher::from_rules(rules.iter(), true)?);
+
+        // matcher must report "Nothing" for excludeme to be properly excluded from the fetch
+        assert_eq!(
+            sparse_matcher.matches_directory(&exclude_dir).unwrap(),
+            DirectoryMatch::Nothing
+        );
 
         let kick_manager = prefetch_manager(
             Config::default(),
             Arc::new(tree_resolver),
-            file_store,
+            file_store.clone(),
             Arc::new(RwLock::new(Some(stub_commit_id.to_hex()))),
             detector.clone(),
+            Some(sparse_matcher.clone()),
         );
 
-        // Trigger a walk.
-        detector.file_loaded(&foo_path, 0);
-        detector.file_loaded(&bar_path, 0);
+        // Trigger a walk of dir1.
+        detector.file_loaded(&dir1_foo_path, 0);
+        detector.file_loaded(&dir1_bar_path, 0);
 
         kick_manager.send(())?;
 
@@ -866,10 +1025,54 @@ mod test {
         assert_eq!(
             fetches,
             vec![
-                Key::new(RepoPathBuf::new(), foo_hgid),
-                Key::new(RepoPathBuf::new(), bar_hgid)
+                Key::new(RepoPathBuf::new(), dir1_foo_hgid),
+                Key::new(RepoPathBuf::new(), dir1_bar_hgid)
             ]
         );
+
+        // Build a new detector so we can trigger a root prefetch
+        let mut detector = walkdetector::Detector::new();
+        let tree_resolver = StubTreeResolver([(stub_commit_id, mf)].into());
+        detector.set_walk_threshold(2);
+        let kick_manager = prefetch_manager(
+            Config::default(),
+            Arc::new(tree_resolver),
+            file_store,
+            Arc::new(RwLock::new(Some(stub_commit_id.to_hex()))),
+            detector.clone(),
+            Some(sparse_matcher),
+        );
+
+        // Trigger a walk of the root
+        detector.file_loaded(RepoPath::from_static_str("dir1/foo"), 0);
+        detector.file_loaded(RepoPath::from_static_str("dir1/bar"), 0);
+        detector.file_loaded(RepoPath::from_static_str("dir2/foo"), 0);
+        detector.file_loaded(RepoPath::from_static_str("dir2/bar"), 0);
+
+        kick_manager.send(())?;
+
+        // Wait for prefetch to finish.
+        for _ in 0..10 {
+            if store.key_fetch_count() < 4 {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+        }
+
+        let mut fetches = store.fetches();
+        let mut expected_fetches = vec![
+            // Fetched once for each detector
+            Key::new(RepoPathBuf::new(), dir1_foo_hgid),
+            Key::new(RepoPathBuf::new(), dir1_foo_hgid),
+            Key::new(RepoPathBuf::new(), dir1_bar_hgid),
+            Key::new(RepoPathBuf::new(), dir1_bar_hgid),
+            // Fetched only by the second detector
+            Key::new(RepoPathBuf::new(), dir2_foo_hgid),
+            Key::new(RepoPathBuf::new(), dir2_bar_hgid),
+            Key::new(RepoPathBuf::new(), dir3_foo_hgid),
+        ];
+        fetches.sort();
+        expected_fetches.sort();
+        assert_eq!(fetches, expected_fetches);
 
         Ok(())
     }
@@ -917,6 +1120,7 @@ mod test {
             file_store,
             Arc::new(RwLock::new(Some(stub_commit_id.to_hex()))),
             detector.clone(),
+            None,
         );
 
         // Trigger a directory walk for each of "dir1" and "dir2".
@@ -945,7 +1149,7 @@ mod test {
                 vec!["".to_string().try_into()?],
                 vec![
                     "dir1".to_string().try_into()?,
-                    "dir2".to_string().try_into()?
+                    "dir2".to_string().try_into()?,
                 ],
             ],
         );

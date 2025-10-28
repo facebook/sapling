@@ -190,6 +190,8 @@ impl BackingStore {
         let repo = Repo::load_with_config(root, config)?;
         let filestore = repo.file_store()?;
         let treestore = repo.tree_store()?;
+        let workingcopy = repo.working_copy()?;
+        let matcher = workingcopy.read().sparse_matcher()?;
 
         let config = repo.config().clone();
 
@@ -262,6 +264,7 @@ impl BackingStore {
                 filestore.clone(),
                 parent_hint,
                 walk_detector.clone(),
+                matcher,
             )
         } else {
             // Stick a dummy channel in so we don't need to fuss with Option.

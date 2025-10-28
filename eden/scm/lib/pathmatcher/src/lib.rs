@@ -36,6 +36,7 @@ pub use crate::hinted_matcher::HintedMatcher;
 pub use crate::matcher::build_matcher;
 pub use crate::matcher::cli_matcher;
 pub use crate::matcher::cli_matcher_with_filesets;
+pub use crate::pattern::Pattern;
 pub use crate::pattern::PatternKind;
 pub use crate::pattern::build_patterns;
 pub use crate::pattern::split_pattern;
