@@ -58,7 +58,7 @@
       "command": "merge",
       "command_details": {
         "cmd": "merge",
-        "to_abort": "goto --clean",
+        "to_abort": "goto . --clean",
         "to_continue": "merge --continue"
       },
       "conflicts": [
@@ -136,7 +136,7 @@
       "command": "merge",
       "command_details": {
         "cmd": "merge",
-        "to_abort": "goto --clean",
+        "to_abort": "goto . --clean",
         "to_continue": "merge --continue"
       },
       "conflicts": [
@@ -253,7 +253,7 @@ tldr: Since we can premerge, the working copy is backed up to an origfile.
       "command": "merge",
       "command_details": {
         "cmd": "merge",
-        "to_abort": "goto --clean",
+        "to_abort": "goto . --clean",
         "to_continue": "merge --continue"
       },
       "conflicts": [
@@ -334,7 +334,7 @@ tldr: Since we couldn't premerge, the working copy is left alone.
       "command": "merge",
       "command_details": {
         "cmd": "merge",
-        "to_abort": "goto --clean",
+        "to_abort": "goto . --clean",
         "to_continue": "merge --continue"
       },
       "conflicts": [
@@ -484,7 +484,7 @@ Test case 1b: Like #1 but with a merge, with local changes
       "command": "merge",
       "command_details": {
         "cmd": "merge",
-        "to_abort": "goto --clean",
+        "to_abort": "goto . --clean",
         "to_continue": "merge --continue"
       },
       "conflicts": [

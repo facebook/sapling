@@ -97,7 +97,7 @@ CONFLICTSTATES = [
         {
             "cmd": "merge",
             "to_continue": "merge --continue",
-            "to_abort": "goto --clean",
+            "to_abort": "goto . --clean",
         },
     ],
 ]
