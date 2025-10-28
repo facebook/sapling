@@ -501,6 +501,8 @@ pub struct AlterSnapshotResponse {
 pub struct UploadSnapshotResponse {
     pub changeset_token: UploadToken,
     pub bubble_id: NonZeroU64,
+    // bubble expiration timestamp if known
+    pub bubble_expiration_timestamp: Option<i64>,
 }
 
 #[auto_wire]

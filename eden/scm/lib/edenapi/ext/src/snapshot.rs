@@ -26,6 +26,7 @@ use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BonsaiFileChange;
 use edenapi_types::CacheableSnapshot;
 use edenapi_types::ContentId;
+use edenapi_types::ExtendBubbleTtlOutcome;
 use edenapi_types::FileType;
 use edenapi_types::RepoPathBuf;
 use edenapi_types::SnapshotRawData;
@@ -289,7 +290,7 @@ pub async fn upload_snapshot_with_cache(
         .map(|FileData(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
         .collect();
 
-    let bubble_id = if let Some(id) = use_bubble {
+    let (bubble_id, bubble_expiration_timestamp) = if let Some(id) = use_bubble {
         // Extend the lifetime of the existing bubble while reusing it
         // Please, see the documentation of ephemeral_extend for more details.
         // If the requested duration is shorter than the existing bubble's lifetime,
@@ -298,18 +299,24 @@ pub async fn upload_snapshot_with_cache(
         // remaining lifetime of the existing bubble, whichever is longer.
         // Note: Bubbles with labels remain active even past their expiry time and can be extended successfully.
         // Only bubbles without labels that have expired will cause the request to fail.
-        api.ephemeral_extend(id, custom_duration_secs)
+        let extend_response = api
+            .ephemeral_extend(id, custom_duration_secs)
             .await
             .context("Failed to extend ephemeral bubble lifetime")?;
-        id
+        let expiration = match extend_response.result {
+            ExtendBubbleTtlOutcome::Extended(timestamp) => Some(timestamp),
+            ExtendBubbleTtlOutcome::NotChanged(timestamp) => Some(timestamp),
+        };
+        (id, expiration)
     } else {
-        api.ephemeral_prepare(
-            custom_duration_secs.map(Duration::from_secs),
-            labels.clone(),
-        )
-        .await
-        .context("Failed to create ephemeral bubble")?
-        .bubble_id
+        let prepare_response = api
+            .ephemeral_prepare(
+                custom_duration_secs.map(Duration::from_secs),
+                labels.clone(),
+            )
+            .await
+            .context("Failed to create ephemeral bubble")?;
+        (prepare_response.bubble_id, None)
     };
     let file_content_tokens = {
         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
@@ -426,6 +433,7 @@ pub async fn upload_snapshot_with_cache(
     Ok(UploadSnapshotResponse {
         changeset_token: changeset_response.token,
         bubble_id,
+        bubble_expiration_timestamp,
     })
 }
 

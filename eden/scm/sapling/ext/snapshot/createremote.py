@@ -424,12 +424,17 @@ def createremote(ui, repo, *pats, **opts) -> None:
 
         csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"])
         bubble = response["bubble_id"]
+        bubble_expiration_timestamp = response.get("bubble_expiration_timestamp")
 
         # Store latest snapshot and bubble mapping in the local cache
         storelatest(repo, csid, bubble)
 
         # Store metadata for this snapshot in the local cache
         metadata = SnapshotMetadata(bubble=bubble, created_at=mtime.time())
+        # Store expiration timestamp of this bubble if it is known
+        if bubble_expiration_timestamp is not None:
+            metadata["bubble_expiration_timestamp"] = bubble_expiration_timestamp
+
         storesnapshotmetadata(repo, csid, metadata)
 
     csid = csid.hex()

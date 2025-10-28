@@ -18,11 +18,13 @@ class SnapshotMetadata(TypedDict, total=False):
     Fields:
         bubble: Bubble number for this changeset
         created_at: Unix timestamp when this metadata was created
+        bubble_expiration_timestamp: Unix timestamp when the bubble expires (optional)
         # Future fields can be added here
     """
 
     bubble: int
     created_at: float
+    bubble_expiration_timestamp: float
 
 
 class SnapshotMetadatas(TypedDict, total=False):
