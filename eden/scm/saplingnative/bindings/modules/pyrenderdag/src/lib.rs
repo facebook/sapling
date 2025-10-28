@@ -51,7 +51,7 @@ impl<'a> FromPyObject<'a> for PyNode {
         if let Ok(node) = obj.extract::<PyBytes>(py) {
             Ok(PyNode(Bytes::copy_from_slice(node.data(py))))
         } else if let Ok(rev) = obj.extract::<i64>(py) {
-            let slice: [u8; 8] = unsafe { std::mem::transmute(rev.to_be()) };
+            let slice: [u8; 8] = rev.to_be_bytes();
             Ok(PyNode(Bytes::copy_from_slice(&slice)))
         } else {
             Err(PyErr::new::<exc::TypeError, _>(py, "expect bytes or int"))
