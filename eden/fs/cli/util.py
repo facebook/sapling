@@ -1106,10 +1106,15 @@ def maybe_edensparse_migration(
                 cwd=str(checkout.path),
             )
 
-        def update_snapshot_file(checkout: "EdenCheckout") -> None:
-            # Update snapshot file to apply the 'null' filter
-            # This should be done before updating the config file to switch scm_type to "filteredhg"
-            # because the config is needed to correctly parse the snapshot file
+        def update_snapshot_file(checkout: "EdenCheckout") -> bool:
+            """
+            Update snapshot file to apply the 'null' filter
+            This should be done before updating the config file to switch scm_type to "filteredhg"
+            because the config is needed to correctly parse the snapshot file
+
+            Returns True when the SNAPSHOT file updated with filtered id
+            Returns False when no update to SNAPSHOT file
+            """
             snapshot_path = checkout.state_dir / SNAPSHOT
             new_snapshot_bytes = None
             if not snapshot_path.exists():
@@ -1178,12 +1183,19 @@ def maybe_edensparse_migration(
                             + encoded_working_copy_parent_filtered_rootid
                             + encoded_checkout_out_filtered_rootid
                         )
+                elif header == SNAPSHOT_MAGIC_3:
+                    # For case 3: This version means the checkout is in progress
+                    # We shouldn't attempt migration if the repo is in an interrupted checkout state.
+                    return False
                 else:
-                    # TODO: No migration needed for case 1 and 3.
+                    # For case 1: This snapshot version is not used any more
+                    # No migration needed
                     pass
 
             if new_snapshot_bytes is not None:
                 write_file_atomically(snapshot_path, new_snapshot_bytes)
+                return True
+            return False
 
         def create_empty_sparse_file(checkout: "EdenCheckout") -> None:
             hg_dir = checkout.hg_dot_path
@@ -1220,9 +1232,21 @@ def maybe_edensparse_migration(
             checkout.save_config(config)
 
         if step == EdensparseMigrationStep.PRE_EDEN_START:
-            update_snapshot_file(checkout)
+            if not update_snapshot_file(checkout):
+                # the migration should return early here if we are in the progress of
+                # a checkout.
+                # the migration will be retried next time when edenfs is started
+                return
             update_config_toml_file(checkout)
         else:
+            config = checkout.get_config()
+            if config.scm_type != "filteredhg":
+                return
+            snapshot_state = checkout.get_snapshot()
+            if snapshot_state.last_filter_id is None:
+                # SNAPSHOT file not updated
+                # skip this part of migration and retry next time
+                return
             create_empty_sparse_file(checkout)
             update_hg_requires(checkout)
             configure_sapling(checkout)
