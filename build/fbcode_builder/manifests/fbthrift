@@ -34,6 +34,7 @@ xxhash
 [shipit.pathmap]
 xplat/thrift/public_tld = .
 xplat/thrift = thrift
+fbcode/common/rust/thrift/bareclient = thrift/lib/rust/bareclient
 
 [shipit.strip]
 ^xplat/thrift/thrift-config\.h$
