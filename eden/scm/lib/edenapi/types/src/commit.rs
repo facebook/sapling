@@ -564,6 +564,7 @@ pub struct EphemeralPrepareRequest {
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub struct EphemeralPrepareResponse {
     pub bubble_id: NonZeroU64,
+    pub expiration_timestamp: Option<i64>,
 }
 
 #[auto_wire]

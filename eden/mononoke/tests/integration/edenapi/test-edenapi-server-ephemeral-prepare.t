@@ -25,4 +25,5 @@ Start up SaplingRemoteAPI server.
   $ start_and_wait_for_mononoke_server
 Check response.
   $ hg debugapi mono:repo -e ephemeralprepare -i None -i "['some', 'label']"
-  {"bubble_id": 1}
+  {"bubble_id": 1,
+   "expiration_timestamp": *} (glob)

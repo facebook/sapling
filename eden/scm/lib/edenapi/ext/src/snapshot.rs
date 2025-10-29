@@ -248,9 +248,11 @@ async fn prepare_ephemeral_bubble(
                     )
                     .await
                     .context("Failed to create ephemeral bubble")?;
-                // TODO: for consistency implement returning the expiration timestamp in ephemeral prepare
-                // So that we could store it in the local metadata in the same way as for the extended bubbles
-                (prepare_response.bubble_id, None, Some(*copy_from))
+                (
+                    prepare_response.bubble_id,
+                    prepare_response.expiration_timestamp,
+                    Some(*copy_from),
+                )
             }
             BubbleStrategy::CreateNew => {
                 // Create a completely new bubble with no relationship to previous bubbles
@@ -261,9 +263,11 @@ async fn prepare_ephemeral_bubble(
                     )
                     .await
                     .context("Failed to create ephemeral bubble")?;
-                // TODO: for consistency implement returning the expiration timestamp in ephemeral prepare
-                // So that we could store it in the local metadata in the same way as for the extended bubbles
-                (prepare_response.bubble_id, None, None)
+                (
+                    prepare_response.bubble_id,
+                    prepare_response.expiration_timestamp,
+                    None,
+                )
             }
         };
 

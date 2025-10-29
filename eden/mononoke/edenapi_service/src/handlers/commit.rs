@@ -869,15 +869,15 @@ impl SaplingRemoteApiHandler for EphemeralPrepareHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = ectx.repo();
         Ok(stream::once(async move {
+            let bubble = repo
+                .create_bubble(
+                    request.custom_duration_secs.map(Duration::from_secs),
+                    request.labels.unwrap_or_else(Vec::new),
+                )
+                .await?;
             Ok(EphemeralPrepareResponse {
-                bubble_id: repo
-                    .create_bubble(
-                        request.custom_duration_secs.map(Duration::from_secs),
-                        request.labels.unwrap_or_else(Vec::new),
-                    )
-                    .await?
-                    .bubble_id()
-                    .into(),
+                bubble_id: bubble.bubble_id().into(),
+                expiration_timestamp: Some(bubble.expires_at().timestamp_secs()),
             })
         })
         .boxed())

@@ -444,6 +444,8 @@ impl ToApi for WireBonsaiChangesetContent {
 pub struct WireEphemeralPrepareResponse {
     #[serde(rename = "1")]
     pub bubble_id: Option<NonZeroU64>,
+    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
+    pub expiration_timestamp: Option<i64>,
 }
 
 impl ToWire for EphemeralPrepareResponse {
@@ -452,6 +454,7 @@ impl ToWire for EphemeralPrepareResponse {
     fn to_wire(self) -> Self::Wire {
         Self::Wire {
             bubble_id: Some(self.bubble_id),
+            expiration_timestamp: self.expiration_timestamp,
         }
     }
 }
@@ -465,6 +468,7 @@ impl ToApi for WireEphemeralPrepareResponse {
             bubble_id: self.bubble_id.ok_or(
                 WireToApiConversionError::CannotPopulateRequiredField("bubble_id"),
             )?,
+            expiration_timestamp: self.expiration_timestamp,
         })
     }
 }
