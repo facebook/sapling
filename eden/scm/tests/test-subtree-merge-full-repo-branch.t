@@ -17,15 +17,14 @@ test warning about changes outside the specified from path
 
   $ hg subtree merge --from-path foo --to-path foo -r $C
   warning: changes outside the specified from_path are ignored!
-  (use 'hg diff -r a1383e79789b -r 531d8f7a5755 --stat' to see all changed files)
+  (use 'hg status --rev a1383e79789b --rev 531d8f7a5755' to see all changed files)
   merge base: a1383e79789b
   merging foo/x
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (subtree merge, don't forget to commit)
-  $ hg diff -r a1383e79789b -r 531d8f7a5755 --stat
-   bar/y |  2 +-
-   foo/x |  2 +-
-   2 files changed, 2 insertions(+), 2 deletions(-)
+  $ hg status --rev a1383e79789b --rev 531d8f7a5755
+  M bar/y
+  M foo/x
   $ hg diff
   diff --git a/foo/x b/foo/x
   --- a/foo/x

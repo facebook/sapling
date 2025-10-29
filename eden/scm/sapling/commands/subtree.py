@@ -533,7 +533,7 @@ def _subtree_merge_base(repo, to_ctx, to_paths, from_ctx, from_paths, opts):
             repo.ui.warn(
                 _(
                     "changes outside the specified from_path are ignored!\n"
-                    "(use '@prog@ diff -r %s -r %s --stat' to see all changed files)\n"
+                    "(use '@prog@ status --rev %s --rev %s' to see all changed files)\n"
                 )
                 % (gca_ctx, from_ctx),
                 notice="warning",
