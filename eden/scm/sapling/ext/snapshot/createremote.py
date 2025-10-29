@@ -469,6 +469,13 @@ def createremote(ui, repo, *pats, **opts) -> None:
             if wc.skipped_large_untracked:
                 fm.data(skipped_large_untracked=wc.skipped_large_untracked)
 
+            # Add bubble expiration timestamp to JSON output
+            # The ephemeral storage unit is not specific to this only snapshot,
+            # its lifetime could be extended but never shortened
+            # The expiration timestamp is only used for the purpose of hinting the remaining lifetime to the customer
+            if bubble_expiration_timestamp is not None:
+                fm.data(storage_expiration_timestamp=bubble_expiration_timestamp)
+
             # For non-JSON output, provide the traditional format
             if not ui.quiet:
                 if ui.plain():
