@@ -196,8 +196,6 @@ cpp_library(
         "//folly:string",
         "//folly:unit",
         "//folly/chrono:conv",
-        "//folly/executors:cpu_thread_pool_executor",
-        "//folly/executors/task_queue:lifo_sem_mpmc_queue",
         "//folly/io:iobuf",
         "//folly/io/async:async_base",
         "//folly/portability:openssl",
