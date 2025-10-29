@@ -84,12 +84,12 @@ def list_snapshots(ui, repo, **opts) -> None:
         if fm.isplain() and snapshot_items:
             fm.plain(
                 _(
-                    "| Snapshot ID                                                      | Creation Time                  | Bubble ID  |\n"
+                    "| Snapshot ID                                                      | Creation Time                  | Expiration Time                | Bubble ID  |\n"
                 ),
             )
             fm.plain(
                 _(
-                    "|------------------------------------------------------------------|--------------------------------|------------|\n"
+                    "|------------------------------------------------------------------|--------------------------------|--------------------------------|------------|\n"
                 ),
             )
 
@@ -99,11 +99,15 @@ def list_snapshots(ui, repo, **opts) -> None:
             fm.data(id=cs_id)
             fm.data(created_at=metadata.get("created_at"))
             fm.data(bubble=metadata.get("bubble"))
+            fm.data(
+                storage_expiration_timestamp=metadata.get("bubble_expiration_timestamp")
+            )
 
             if fm.isplain():
                 # Human-readable output
                 created_at = metadata.get("created_at")
                 bubble = metadata.get("bubble")
+                expiration_timestamp = metadata.get("bubble_expiration_timestamp")
 
                 # Validate required metadata
                 if created_at is None:
@@ -118,9 +122,18 @@ def list_snapshots(ui, repo, **opts) -> None:
                 # Format timestamp using Sapling's datestr
                 created_str = util.datestr((created_at, 0))
 
+                # Format expiration timestamp if available
+                # Expiration time is per ephemeral bubble, so it could be extended but not shortened
+                if expiration_timestamp is not None:
+                    expiration_str = util.datestr((expiration_timestamp, 0))
+                else:
+                    # If not available, use "Unknown Locally" for now, later we could fetch from remote
+                    expiration_str = "Unknown Locally"
+
                 # Display full snapshot ID (no truncation) with proper table formatting
                 fm.write("id", "| %-64s", cs_id)
-                fm.write("created_at", " | %-28s", created_str)
+                fm.write("created_at", " | %-30s", created_str)
+                fm.write("bubble_expiration_timestamp", " | %-30s", expiration_str)
                 fm.write("bubble", " | %-10s", str(bubble))
                 fm.plain(" |\n")
             else:
