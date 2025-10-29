@@ -14,12 +14,15 @@ from typing import Callable, Optional
 from eden.fs.cli.config import get_snapshot, SNAPSHOT
 from eden.fs.cli.util import MIGRATION_MARKER
 
-from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase
+from eden.integration.hg.lib.hg_extension_test_base import (
+    EdenHgTestCase,
+    FilteredHgTestCase,
+)
 from eden.integration.lib import hgrepo
 from eden.integration.lib.hgrepo import HgError
 
 
-class FilteredFSMigrationTest(EdenHgTestCase, metaclass=abc.ABCMeta):
+class FilteredFSMigrationTestBase(EdenHgTestCase, metaclass=abc.ABCMeta):
     SAMPLE_FILTER_FILE: str = """
 [metadata]
 version: 2
@@ -135,14 +138,7 @@ adir
         assert os.path.exists(self.repo.get_path(path)), f"{path} does not exist"
         os.rmdir(self.repo.get_path(path))
 
-    async def edensparse_migration_common(
-        self, pre_migration: Callable[[], None], post_migration: Callable[[], None]
-    ) -> None:
-        self.assert_filteredfs_disabled()
-        self.assert_filter_not_applied()
-
-        pre_migration()
-
+    async def enable_config_for_edensparse_migration(self) -> None:
         # make sure edenfs picks up our updated config
         async with self.get_thrift_client() as client:
             # toggle config
@@ -152,8 +148,21 @@ adir
             )
             await client.reloadConfig()
 
-        # restart edenfs
+    def restart_edenfs_manually(self) -> None:
         self.eden.run_cmd("restart", "--yes", cwd=self.mount)
+
+    async def edensparse_migration_common(
+        self, pre_migration: Callable[[], None], post_migration: Callable[[], None]
+    ) -> None:
+        self.assert_filteredfs_disabled()
+        self.assert_filter_not_applied()
+
+        pre_migration()
+
+        await self.enable_config_for_edensparse_migration()
+
+        # restart edenfs
+        self.restart_edenfs_manually()
 
         # check the marker file existence
         # this should be checked before sapling checkout/rebase commands since
@@ -178,6 +187,10 @@ adir
         self.assert_filter_applied()
         post_migration()
 
+
+class FilteredFSMigrationFromUnfilteredTest(
+    FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
+):
     def test_filteredfs_disabled_init(self) -> None:
         self.assert_filteredfs_disabled()
         self.assert_filter_not_applied()
@@ -293,3 +306,22 @@ adir
             check_status_pre_migration,
             lambda: None,
         )
+
+
+# This test suite is intended for test cases which try to run edensparse
+# migration on a repo which is already FilteredFS.
+class FilteredFsMigrationFromFilteredTest(
+    FilteredHgTestCase, FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
+):
+    async def test_edensparse_migration_for_filtered_repo(self) -> None:
+        # At the beginning, the repo is already FilteredFS
+        self.hg("filteredfs", "enable", "filter/test_filter")
+        self.assert_filteredfs_enabled()
+        self.assert_filter_applied()
+
+        await self.enable_config_for_edensparse_migration()
+        self.restart_edenfs_manually()
+
+        # everything should be the same
+        self.assert_filteredfs_enabled()
+        self.assert_filter_applied()
