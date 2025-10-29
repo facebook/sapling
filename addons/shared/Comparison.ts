@@ -6,10 +6,10 @@
  */
 
 export enum ComparisonType {
-  UncommittedChanges = 'UNCOMMITTED',
-  HeadChanges = 'HEAD',
-  StackChanges = 'STACK',
-  Committed = 'InCommit',
+  UncommittedChanges = 'Uncommitted',
+  HeadChanges = 'Head',
+  StackChanges = 'Stack',
+  Committed = 'Commit',
   SinceLastCodeReviewSubmit = 'SinceLastCodeReviewSubmit',
 }
 

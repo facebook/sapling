@@ -128,7 +128,7 @@ describe('ComparisonView', () => {
 
   async function clickComparisonViewButton() {
     await act(async () => {
-      const button = screen.getByTestId('open-comparison-view-button-UNCOMMITTED');
+      const button = screen.getByTestId('open-comparison-view-button-Uncommitted');
       fireEvent.click(button);
       await nextTick();
     });
