@@ -6,6 +6,7 @@
  */
 
 import {diffBlocks} from '../diff';
+import {stringifyPatch} from './stringify';
 
 export type Hunk = {
   oldStart: number;
@@ -348,4 +349,30 @@ export function parseParsedDiff(
     newFileName,
     hunks,
   } as ParsedDiff;
+}
+
+/** Given a diff patch, filter out changes to files that are in the list. */
+export function filterFilesFromPatch(patch: string, files: string[]): string {
+  const parsedDiffs = parsePatch(patch);
+
+  // Normalize the files array - remove 'a/' and 'b/' prefixes if present
+  const normalizedFiles = files.map(f => {
+    const withoutA = f.replace(/^a\//, '');
+    const withoutB = f.replace(/^b\//, '');
+    return withoutA.length < withoutB.length ? withoutA : withoutB;
+  });
+
+  // Filter out diffs where the filename matches any in the files array
+  const filteredDiffs = parsedDiffs.filter(diff => {
+    // Extract filenames without a/ and b/ prefixes
+    const oldFile = diff.oldFileName?.replace(/^a\//, '');
+    const newFile = diff.newFileName?.replace(/^b\//, '');
+
+    // Check if either filename matches any file in the filter list
+    const shouldFilter = normalizedFiles.some(file => file === oldFile || file === newFile);
+
+    return !shouldFilter;
+  });
+
+  return stringifyPatch(filteredDiffs);
 }
