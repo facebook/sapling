@@ -125,26 +125,64 @@ impl SourceControlServiceImpl {
         params: thrift::RepoResolveBookmarkParams,
     ) -> Result<thrift::RepoResolveBookmarkResponse, scs_errors::ServiceError> {
         let repo = self.repo(ctx, &repo).await?;
-        match repo
-            .resolve_bookmark(
-                &BookmarkKey::new(&params.bookmark_name).map_err(Into::<MononokeError>::into)?,
-                BookmarkFreshness::MaybeStale,
-            )
-            .await?
-        {
-            Some(cs) => {
-                let ids = map_commit_identity(&cs, &params.identity_schemes).await?;
-                Ok(thrift::RepoResolveBookmarkResponse {
-                    exists: true,
-                    ids: Some(ids),
-                    ..Default::default()
-                })
+
+        // If namespaces parameter is provided, check all namespaces
+        // and return the first match found (in order of namespaces provided)
+        if let Some(namespaces) = &params.namespaces {
+            for namespace in namespaces {
+                let bookmark_name = if namespace.is_empty() {
+                    params.bookmark_name.clone()
+                } else {
+                    format!("{}{}", namespace, params.bookmark_name)
+                };
+
+                if let Some(cs) = repo
+                    .resolve_bookmark(
+                        &BookmarkKey::new(&bookmark_name).map_err(Into::<MononokeError>::into)?,
+                        BookmarkFreshness::MaybeStale,
+                    )
+                    .await?
+                {
+                    // Return the first match found
+                    let ids = map_commit_identity(&cs, &params.identity_schemes).await?;
+                    return Ok(thrift::RepoResolveBookmarkResponse {
+                        exists: true,
+                        ids: Some(ids),
+                        ..Default::default()
+                    });
+                }
             }
-            None => Ok(thrift::RepoResolveBookmarkResponse {
+
+            // No matches found in any namespace
+            Ok(thrift::RepoResolveBookmarkResponse {
                 exists: false,
                 ids: None,
                 ..Default::default()
-            }),
+            })
+        } else {
+            // Original behavior: single bookmark lookup
+            match repo
+                .resolve_bookmark(
+                    &BookmarkKey::new(&params.bookmark_name)
+                        .map_err(Into::<MononokeError>::into)?,
+                    BookmarkFreshness::MaybeStale,
+                )
+                .await?
+            {
+                Some(cs) => {
+                    let ids = map_commit_identity(&cs, &params.identity_schemes).await?;
+                    Ok(thrift::RepoResolveBookmarkResponse {
+                        exists: true,
+                        ids: Some(ids),
+                        ..Default::default()
+                    })
+                }
+                None => Ok(thrift::RepoResolveBookmarkResponse {
+                    exists: false,
+                    ids: None,
+                    ..Default::default()
+                }),
+            }
         }
     }
 

@@ -832,6 +832,9 @@ struct RepoResolveBookmarkParams {
 
   /// Commit identity schemes to return.
   2: set<CommitIdentityScheme> identity_schemes;
+
+  /// Optional list of namespaces to check for the bookmark.
+  3: optional list<string> namespaces;
 }
 
 struct RepoResolveCommitPrefixParams {
