@@ -149,7 +149,7 @@ adir
             await client.reloadConfig()
 
     def restart_edenfs_manually(self) -> None:
-        self.eden.run_cmd("restart", "--yes", cwd=self.mount)
+        self.eden.run_cmd("restart", "--yes", "--allow-root", cwd=self.mount)
 
     async def edensparse_migration_common(
         self, pre_migration: Callable[[], None], post_migration: Callable[[], None]

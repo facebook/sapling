@@ -2277,6 +2277,13 @@ class RestartCmd(Subcmd):
             action="store_false",
             help="Do not prompt for confirmation before restarting eden.",
         )
+        parser.add_argument(
+            "--allow-root",
+            dest="allow_root",
+            action="store_true",
+            default=False,
+            help=argparse.SUPPRESS,
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         self.args = args
@@ -2310,7 +2317,7 @@ class RestartCmd(Subcmd):
                 return self._graceful_restart(instance)
             else:
                 status = self._full_restart(
-                    instance, edenfs_pid, args.migrate_to, args.prompt
+                    instance, edenfs_pid, args.migrate_to, args.prompt, args.allow_root
                 )
                 success = status == 0
                 instance.log_sample("full_restart", success=success)
@@ -2461,6 +2468,7 @@ class RestartCmd(Subcmd):
         old_pid: int,
         migrate_to: Optional[str],
         prompt: bool,
+        allow_root: bool,
     ) -> int:
         print(
             """\
@@ -2482,7 +2490,7 @@ re-open these files after EdenFS is restarted.
             )
         elif config_mod.should_migrate_mount_protocol_to_nfs(instance):
             config_mod._do_nfs_migration(instance, get_migration_success_message)
-        return self._finish_restart(instance)
+        return self._finish_restart(instance, allow_root=allow_root)
 
     def _force_restart(
         self, instance: EdenInstance, old_pid: int, stop_timeout: int
@@ -2520,11 +2528,12 @@ re-open these files after EdenFS is restarted.
                 os.kill(pid, signal.SIGTERM)
         self._wait_for_stop(instance, pid, timeout)
 
-    def _finish_restart(self, instance: EdenInstance) -> int:
+    def _finish_restart(self, instance: EdenInstance, allow_root: bool = False) -> int:
         exit_code = daemon.start_edenfs_service(
             instance,
             daemon_binary=self.args.daemon_binary,
             preserved_env=self.args.preserved_vars,
+            edenfs_args=["--allowRoot"] if allow_root else None,
         )
         if exit_code != 0:
             print("Failed to start edenfs daemon!", file=sys.stderr)
