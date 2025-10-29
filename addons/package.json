@@ -26,6 +26,8 @@
   },
   "scripts": {
     "dev": "tsx ./scripts/dev.ts",
+    "sync-api": "tsx ./scripts/sync-api.ts",
+    "verify-internal": "tsx ./scripts/verifyInternal.ts",
     "prettier-check": "prettier --check .",
     "prettier-fix": "prettier --write ."
   },

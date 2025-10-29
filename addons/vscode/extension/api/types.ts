@@ -5,11 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type * as vscode from 'vscode';
-
 /*
- * Note: this file is intended to be self contained so it may be copied/referenced from other extensions.
+ * This file is synced between fbcode/eden/addons/vscode/extension/api/types.ts and xplat/vscode.
+ * The authoratative copy is the one in addons/.
+ * Use `yarn sync-api` from addons/ to perform the sync.
+ *
+ * This file is intended to be self contained so it may be copied/referenced from other extensions,
+ * which is why it should not import anything except vscode and why it reimplements many types.
  */
+
+import type * as vscode from 'vscode';
 
 /**
  * This API is exported from the meta.sapling-scm vscode extension.

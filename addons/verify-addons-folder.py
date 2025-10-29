@@ -48,6 +48,7 @@ async def verify(args):
         verify_components(),
         verify_textmate(),
         verify_isl(args),
+        verify_internal(),
     )
 
 
@@ -79,6 +80,12 @@ async def verify_textmate():
         run(["yarn", "run", "eslint"], cwd=textmate),
     )
     timer.report(ok("textmate/"))
+
+
+async def verify_internal():
+    timer = Timer("verifying internal")
+    await run(["yarn", "run", "verify-internal"], cwd=addons)
+    timer.report(ok("internal"))
 
 
 async def verify_isl(args):
