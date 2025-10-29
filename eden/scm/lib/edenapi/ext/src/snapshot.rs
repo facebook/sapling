@@ -217,22 +217,29 @@ async fn prepare_ephemeral_bubble(
         match &bubble_properties.strategy {
             BubbleStrategy::Reuse {
                 bubble_id: reuse_bubble_id,
+                keep_ttl,
             } => {
-                // Extend the existing bubble's TTL and reuse its storage
-                // Please, see the documentation of ephemeral_extend for more details.
-                // If the requested duration is shorter than the existing bubble's lifetime,
-                // the lifetime will not be changed.
-                // If the requested duration is not provided, the lifetime will be extended to the default lifetime from this moment or
-                // remaining lifetime of the existing bubble, whichever is longer.
-                // Note: Bubbles with labels remain active even past their expiry time and can be extended successfully.
-                // Only bubbles without labels that have expired will cause the request to fail.
-                let extend_response = api
-                    .ephemeral_extend(*reuse_bubble_id, bubble_properties.lifetime_secs)
-                    .await
-                    .context("Failed to extend ephemeral bubble lifetime")?;
-                let expiration = match extend_response.result {
-                    ExtendBubbleTtlOutcome::Extended(timestamp) => Some(timestamp),
-                    ExtendBubbleTtlOutcome::NotChanged(timestamp) => Some(timestamp),
+                // When keep_ttl is true, skip TTL extension for performance
+                let expiration = if *keep_ttl {
+                    // Skip ephemeral_extend call when keep_ttl is set
+                    None
+                } else {
+                    // Extend the existing bubble's TTL and reuse its storage
+                    // Please, see the documentation of ephemeral_extend for more details.
+                    // If the requested duration is shorter than the existing bubble's lifetime,
+                    // the lifetime will not be changed.
+                    // If the requested duration is not provided, the lifetime will be extended to the default lifetime from this moment or
+                    // remaining lifetime of the existing bubble, whichever is longer.
+                    // Note: Bubbles with labels remain active even past their expiry time and can be extended successfully.
+                    // Only bubbles without labels that have expired will cause the request to fail.
+                    let extend_response = api
+                        .ephemeral_extend(*reuse_bubble_id, bubble_properties.lifetime_secs)
+                        .await
+                        .context("Failed to extend ephemeral bubble lifetime")?;
+                    match extend_response.result {
+                        ExtendBubbleTtlOutcome::Extended(timestamp) => Some(timestamp),
+                        ExtendBubbleTtlOutcome::NotChanged(timestamp) => Some(timestamp),
+                    }
                 };
                 // When reusing, also use as copy_from hint (they're the same bubble)
                 (*reuse_bubble_id, expiration, Some(*reuse_bubble_id))

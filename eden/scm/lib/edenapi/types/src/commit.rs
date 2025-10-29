@@ -389,7 +389,12 @@ pub enum BubbleStrategy {
     CreateWithCopyHint { bubble_id: NonZeroU64 },
     /// Reuse an existing bubble: extends its TTL and reuses its storage.
     /// This is for continuation scenarios where snapshots build on each other.
-    Reuse { bubble_id: NonZeroU64 },
+    /// When keep_ttl is true, skip the TTL extension for performance.
+    Reuse {
+        bubble_id: NonZeroU64,
+        #[serde(default)]
+        keep_ttl: bool,
+    },
 }
 
 impl Default for BubbleStrategy {

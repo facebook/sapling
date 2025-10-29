@@ -86,6 +86,15 @@ subcmd = snapshot.subcommand(
         ),
         (
             "",
+            "keep-ttl",
+            False,
+            _(
+                "skip TTL extension when using --continuation-of for performance; "
+                "only valid with --continuation-of flag"
+            ),
+        ),
+        (
+            "",
             "reason",
             "",
             _("specify the reason for creating this snapshot for logging purposes"),

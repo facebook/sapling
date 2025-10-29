@@ -289,7 +289,26 @@ def createremote(ui, repo, *pats, **opts) -> None:
     maxfilecount = parsemaxfilecount(opts)
     labels = parselabels(opts)
     continuationof = parsecontinuationof(opts, repo)
+    keepttl = opts.get("keep_ttl", False)
     allowempty = ui.configbool("snapshot", "allowempty", True)
+
+    # Validate keep-ttl is a boolean
+    if not isinstance(keepttl, bool):
+        raise error.Abort(
+            _(
+                "internal error: keep_ttl must be a boolean value, got {} of type {}"
+            ).format(keepttl, type(keepttl).__name__)
+        )
+
+    # Validate keep-ttl flag: only allowed with continuation-of
+    if keepttl and not continuationof:
+        raise error.Abort(_("--keep-ttl flag can only be used with --continuation-of"))
+
+    # Validate that lifetime is not specified with keep-ttl
+    if keepttl and (lifetime is not None):
+        raise error.Abort(
+            _("--keep-ttl cannot be used with --lifetime (TTL extension is skipped)")
+        )
 
     # Use bytes-based limit if specified, otherwise fall back to MiB-based limit, then config default
     effective_max_untracked_size = (
@@ -389,7 +408,17 @@ def createremote(ui, repo, *pats, **opts) -> None:
                     )
 
             # Reuse the bubble: extends TTL and reuses storage
-            bubble_strategy = {"reuse": {"bubble_id": previousbubble}}
+            # When keep-ttl is set, skip TTL extension for performance and keep the existing TTL of the bubble
+            # Client is responsible to ensure that the bubble is not expired:
+            #
+            # Use case example - chain of snapshots:
+            #   1. Initial snapshot: Create first snapshot with --lifetime to set desired TTL
+            #   2. Subsequent snapshots: Use --continuation-of <id> --keep-ttl for fast creation
+            #      in quick succession without unnecessary TTL extension overhead
+
+            bubble_strategy = {
+                "reuse": {"bubble_id": previousbubble, "keep_ttl": keepttl}
+            }
             ui.status(
                 _("continuing from snapshot {} using bubble {}\n").format(
                     continuationof, previousbubble
@@ -403,8 +432,9 @@ def createremote(ui, repo, *pats, **opts) -> None:
 
         (time, tz) = wctx.date()
 
+        # When keep-ttl is set, don't pass lifetime_secs (for performance: skip TTL extension)
         bubble_properties = {
-            "lifetime_secs": lifetime,
+            "lifetime_secs": None if keepttl else lifetime,
             "strategy": bubble_strategy,
             "labels": labels,
         }
