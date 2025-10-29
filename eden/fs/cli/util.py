@@ -1115,87 +1115,71 @@ def maybe_edensparse_migration(
             Returns True when the SNAPSHOT file updated with filtered id
             Returns False when no update to SNAPSHOT file
             """
-            snapshot_path = checkout.state_dir / SNAPSHOT
-            new_snapshot_bytes = None
-            if not snapshot_path.exists():
-                # We cannot attempt migration on a corrupted mount.
+            try:
+                snapshot_state = checkout.get_snapshot()
+            except Exception:
+                # Skip the migration for any error since we cannot attempt migration on a corrupted mount.
+                # case 3 will raise so it's captured here
                 return False
-            with snapshot_path.open("rb") as f:
-                header = f.read(8)
-                if header == SNAPSHOT_MAGIC_2:
-                    (bodyLength,) = struct.unpack(">L", f.read(4))
-                    parent = f.read(bodyLength)
-                    if len(parent) != bodyLength:
-                        raise RuntimeError("SNAPSHOT file too short")
-                    decoded_parent, decoded_filter = checkout.parse_snapshot_component(
-                        parent
-                    )
-                    if decoded_filter is None:
-                        # Apply the 'null' filter
-                        filtered_rootid = create_filtered_rootid(
-                            decoded_parent, b"null"
-                        )
-                        new_snapshot_bytes = (
-                            SNAPSHOT_MAGIC_2
-                            + struct.pack(">L", len(filtered_rootid))
-                            + filtered_rootid
-                        )
-                elif header == SNAPSHOT_MAGIC_4:
-                    (working_copy_parent_length,) = struct.unpack(">L", f.read(4))
-                    working_copy_parent = f.read(working_copy_parent_length)
-                    if len(working_copy_parent) != working_copy_parent_length:
-                        raise RuntimeError("SNAPSHOT file too short")
-                    (checked_out_length,) = struct.unpack(">L", f.read(4))
-                    checked_out_revision = f.read(checked_out_length)
-                    if len(checked_out_revision) != checked_out_length:
-                        raise RuntimeError("SNAPSHOT file too short")
 
-                    working_copy_parent, parent_filter = (
-                        checkout.parse_snapshot_component(working_copy_parent)
-                    )
-                    (
-                        checked_out_revision,
-                        checked_out_filter,
-                    ) = checkout.parse_snapshot_component(checked_out_revision)
-
-                    # TODO: Could there be a case where only one of the filters is None?
-                    if parent_filter is None and checked_out_filter is None:
-                        # Apply the 'null' filter
-                        working_copy_parent_filtered_rootid = create_filtered_rootid(
-                            working_copy_parent, NULL_FILTER
-                        )
-                        checkout_out_filtered_rootid = create_filtered_rootid(
-                            checked_out_revision, NULL_FILTER
-                        )
-                        encoded_working_copy_parent_filtered_rootid = (
-                            struct.pack(">L", len(working_copy_parent_filtered_rootid))
-                            + working_copy_parent_filtered_rootid
-                        )
-                        encoded_checkout_out_filtered_rootid = (
-                            struct.pack(">L", len(checkout_out_filtered_rootid))
-                            + checkout_out_filtered_rootid
-                        )
-
-                        # Write everything back to the snapshot file so "null" filter is applied
-                        # for both working copy parent and checked out revision
-                        new_snapshot_bytes = (
-                            SNAPSHOT_MAGIC_4
-                            + encoded_working_copy_parent_filtered_rootid
-                            + encoded_checkout_out_filtered_rootid
-                        )
-                elif header == SNAPSHOT_MAGIC_3:
-                    # For case 3: This version means the checkout is in progress
-                    # We shouldn't attempt migration if the repo is in an interrupted checkout state.
+            snapshot_file = checkout.state_dir / SNAPSHOT
+            if snapshot_state.working_copy_parent is None:
+                # case 1
+                # Skip the migration for this checkout
+                return False
+            elif (
+                snapshot_state.working_copy_parent == snapshot_state.last_checkout_hash
+            ):
+                # case 2
+                if snapshot_state.last_filter_id is not None:
+                    # Skip the migration for this checkout
                     return False
-                else:
-                    # For case 1: This snapshot version is not used any more
-                    # No migration needed
-                    pass
-
-            if new_snapshot_bytes is not None:
-                write_file_atomically(snapshot_path, new_snapshot_bytes)
+                # Apply the 'null' filter
+                filtered_rootid = create_filtered_rootid(
+                    snapshot_state.working_copy_parent, b"null"
+                )
+                new_snapshot_bytes = (
+                    SNAPSHOT_MAGIC_2
+                    + struct.pack(">L", len(filtered_rootid))
+                    + filtered_rootid
+                )
+                write_file_atomically(snapshot_file, new_snapshot_bytes)
                 return True
-            return False
+            else:
+                # case 4
+                working_copy_parent = snapshot_state.working_copy_parent
+                checked_out_revision = snapshot_state.last_checkout_hash
+                parent_filter = snapshot_state.parent_filter_id
+                checked_out_filter = snapshot_state.last_filter_id
+                if parent_filter is None and checked_out_filter is None:
+                    # Apply the 'null' filter
+                    working_copy_parent_filtered_rootid = create_filtered_rootid(
+                        working_copy_parent, NULL_FILTER
+                    )
+                    checkout_out_filtered_rootid = create_filtered_rootid(
+                        checked_out_revision, NULL_FILTER
+                    )
+                    encoded_working_copy_parent_filtered_rootid = (
+                        struct.pack(">L", len(working_copy_parent_filtered_rootid))
+                        + working_copy_parent_filtered_rootid
+                    )
+                    encoded_checkout_out_filtered_rootid = (
+                        struct.pack(">L", len(checkout_out_filtered_rootid))
+                        + checkout_out_filtered_rootid
+                    )
+
+                    # Write everything back to the snapshot file so "null" filter is applied
+                    # for both working copy parent and checked out revision
+                    new_snapshot_bytes = (
+                        SNAPSHOT_MAGIC_4
+                        + encoded_working_copy_parent_filtered_rootid
+                        + encoded_checkout_out_filtered_rootid
+                    )
+
+                    write_file_atomically(snapshot_file, new_snapshot_bytes)
+                    return True
+                # Skip the migration for this checkout since it's already migrated
+                return False
 
         def create_empty_sparse_file(checkout: "EdenCheckout") -> None:
             hg_dir = checkout.hg_dot_path
