@@ -52,22 +52,6 @@ subcmd = snapshot.subcommand(
         ),
         (
             "",
-            "max-untracked-size",
-            "",
-            _(
-                "filter out any untracked files larger than this size, in megabytes (DEPRECATED)"
-            ),
-            _("MAX_SIZE"),
-        ),
-        (
-            "",
-            "max-untracked-size-bytes",
-            "",
-            _("filter out any untracked files larger than this size, in bytes"),
-            _("MAX_SIZE_BYTES"),
-        ),
-        (
-            "",
             "max-file-count",
             1000,
             _("maximum allowed total number of files in a snapshot"),
@@ -101,6 +85,7 @@ subcmd = snapshot.subcommand(
             _("REASON"),
         ),
     ]
+    + cmdutil.untrackedfileopts
     + cmdutil.walkopts
     + cmdutil.templateopts,
 )
@@ -158,26 +143,7 @@ def showcmd(*args, **kwargs) -> None:
 
 @subcmd(
     "isworkingcopy",
-    [
-        (
-            "",
-            "max-untracked-size",
-            "",
-            _(
-                "filter out any untracked files larger than this size, in megabytes (DEPRECATED)"
-            ),
-            _("MAX_SIZE"),
-        ),
-        (
-            "",
-            "max-untracked-size-bytes",
-            "",
-            _("filter out any untracked files larger than this size, in bytes"),
-            _("MAX_SIZE_BYTES"),
-        ),
-    ]
-    + cmdutil.walkopts
-    + cmdutil.templateopts,
+    cmdutil.untrackedfileopts + cmdutil.walkopts + cmdutil.templateopts,
     _("ID"),
 )
 def isworkingcopycmd(*args, **kwargs) -> None:
@@ -214,23 +180,8 @@ def isworkingcopycmd(*args, **kwargs) -> None:
             None,
             _("fails if there have been local changes since the latest snapshot"),
         ),
-        (
-            "",
-            "max-untracked-size",
-            "",
-            _(
-                "filter out any untracked files larger than this size, in megabytes (DEPRECATED)"
-            ),
-            _("MAX_SIZE"),
-        ),
-        (
-            "",
-            "max-untracked-size-bytes",
-            "",
-            _("filter out any untracked files larger than this size, in bytes"),
-            _("MAX_SIZE_BYTES"),
-        ),
-    ],
+    ]
+    + cmdutil.untrackedfileopts,
 )
 def latestcmd(*args, **kwargs) -> None:
     """information regarding the latest created snapshot

@@ -163,6 +163,27 @@ diffopts = [
     ("", "nodates", None, _("omit dates from diff headers")),
 ]
 
+untrackedfileopts = _typedflags(
+    [
+        (
+            "",
+            "max-untracked-size",
+            "",
+            _(
+                "filter out any untracked files larger than this size, in megabytes (DEPRECATED)"
+            ),
+            _("MAX_SIZE"),
+        ),
+        (
+            "",
+            "max-untracked-size-bytes",
+            "",
+            _("filter out any untracked files larger than this size, in bytes"),
+            _("MAX_SIZE_BYTES"),
+        ),
+    ]
+)
+
 diffwsopts = _typedflags(
     [
         ("w", "ignore-all-space", None, _("ignore white space when comparing lines")),

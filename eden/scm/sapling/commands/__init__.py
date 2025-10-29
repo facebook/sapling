@@ -184,6 +184,7 @@ globalopts = cmdutil._typedflags(
 
 dryrunopts = cmdutil.dryrunopts
 walkopts = cmdutil.walkopts
+untrackedfileopts = cmdutil.untrackedfileopts
 commitopts = cmdutil.commitopts
 commitopts2 = cmdutil.commitopts2
 formatteropts = cmdutil.formatteropts
