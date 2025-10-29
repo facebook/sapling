@@ -4,7 +4,7 @@ audio_streams = { git = "https://github.com/google/crosvm", rev = "7d2e877a2a0a7
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
 bindgen = { git = "https://github.com/jsgf/rust-bindgen", rev = "c185e3fb83839fb0909e261db783fe81943b000c" }
 bindgen-cli = { git = "https://github.com/jsgf/rust-bindgen", rev = "c185e3fb83839fb0909e261db783fe81943b000c" }
-c2pa = { git = "https://github.com/dhruvmongia/c2pa-rs", rev = "32fd8548e6780f229eee173e378d540a9b579d16" }
+c2pa = { git = "https://github.com/dhruvmongia/c2pa-rs", rev = "4c3b21769381841dc3d8a420ca609e04b8394520" }
 cargo = { git = "https://github.com/rust-lang/cargo", rev = "f5b3a6ba899c2eb9285dd3769aa6d84179ee7f8b" }
 cargo-platform = { git = "https://github.com/rust-lang/cargo", rev = "f5b3a6ba899c2eb9285dd3769aa6d84179ee7f8b" }
 cbindgen = { git = "https://github.com/mozilla/cbindgen.git", rev = "cf94b56ef35d91f8420e8f89fee70074d39d068d" }
