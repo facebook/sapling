@@ -1222,7 +1222,7 @@ FileInodePtr TreeInode::createImpl(
   }
 
   if (InvalidationRequired::Yes == invalidate) {
-    invalidateChannelEntryCache(*contents, name, std::nullopt, nullptr)
+    invalidateChannelEntryCache(*contents, name, std::nullopt)
         .throwUnlessValue();
     // Make sure that the directory cache is invalidated so a subsequent
     // readdir will see the added file.
@@ -1393,7 +1393,7 @@ TreeInodePtr TreeInode::mkdir(
     }
 
     if (InvalidationRequired::Yes == invalidate) {
-      invalidateChannelEntryCache(*contents, name, std::nullopt, nullptr)
+      invalidateChannelEntryCache(*contents, name, std::nullopt)
           .throwUnlessValue();
       invalidateChannelDirCache(*contents).get();
     }
@@ -1592,7 +1592,7 @@ InodePtr TreeInode::tryRemoveUnloadedChild(
 
   contents->entries.erase(it);
   if (InvalidationRequired::Yes == invalidate) {
-    invalidateChannelEntryCache(*contents, inodeName, inodeNumber, nullptr)
+    invalidateChannelEntryCache(*contents, inodeName, inodeNumber)
         .throwUnlessValue();
     invalidateChannelDirCache(*contents).get();
   }
@@ -1797,8 +1797,8 @@ int TreeInode::tryRemoveChild(
     // Since invalidation can fail on ProjectedFS, do it while holding the
     // TreeInode write lock and before updating the contents.
     if (InvalidationRequired::Yes == invalidate) {
-      auto success = invalidateChannelEntryCache(
-          *contents, name, ent.getInodeNumber(), nullptr);
+      auto success =
+          invalidateChannelEntryCache(*contents, name, ent.getInodeNumber());
       if (success.hasException()) {
         return EIO;
       }
@@ -2159,14 +2159,11 @@ ImmediateFuture<Unit> TreeInode::doRename(
   // invalidate the kernel caches.
   if (InvalidationRequired::Yes == invalidate) {
     invalidateChannelEntryCache(
-        locks.srcInodeState(),
-        srcName,
-        srcIter->second.getInodeNumber(),
-        nullptr)
+        locks.srcInodeState(), srcName, srcIter->second.getInodeNumber())
         .throwUnlessValue();
     destParent
         ->invalidateChannelEntryCache(
-            locks.dstInodeState(), destName, std::nullopt, nullptr)
+            locks.dstInodeState(), destName, std::nullopt)
         .throwUnlessValue();
 
     invalidateChannelDirCache(locks.srcInodeState()).get();
@@ -3601,8 +3598,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
 
   // We are removing or replacing an entry - attempt to invalidate it while the
   // write lock is held and before the contents are updated.
-  auto success =
-      invalidateChannelEntryCache(state, name, oldEntryInodeNumber, ctx);
+  auto success = invalidateChannelEntryCache(state, name, oldEntryInodeNumber);
   if (success.hasException()) {
     if (folly::kIsWindows) {
       // On Windows, reads aren't being done on the inodes, but on the Trees
@@ -3718,7 +3714,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
     // do want to invalidate the kernel's dcache and inode caches.
     wasDirectoryListModified = true;
 
-    auto success = invalidateChannelEntryCache(state, name, std::nullopt, ctx);
+    auto success = invalidateChannelEntryCache(state, name, std::nullopt);
     if (success.hasValue()) {
       auto [it, inserted] = contents.emplace(
           newScmEntry->first,
@@ -3804,7 +3800,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       // insensitive mounts, we need to invalidate the current name, hence
       // using it->first instead of name.
       auto success = invalidateChannelEntryCache(
-          *contents, it->first, it->second.getInodeNumber(), ctx);
+          *contents, it->first, it->second.getInodeNumber());
       if (success.hasException()) {
         getMount()->getServerState()->getStructuredLogger()->logEvent(
             CheckoutUpdateError{
@@ -3926,8 +3922,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                     ->invalidateChannelEntryCache(
                         *parentInode->contents_.wlock(),
                         name,
-                        treeInode->getNodeId(),
-                        ctx)
+                        treeInode->getNodeId())
                     .hasException()) {
               if (newTree) {
                 XCHECK_EQ(
@@ -4072,8 +4067,7 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
 folly::Try<folly::Unit> TreeInode::invalidateChannelEntryCache(
     TreeInodeState&,
     PathComponentPiece name,
-    [[maybe_unused]] std::optional<InodeNumber> ino,
-    [[maybe_unused]] CheckoutContext* ctx) {
+    [[maybe_unused]] std::optional<InodeNumber> ino) {
   auto faultTry = getMount()->getServerState()->getFaultInjector().checkTry(
       "invalidateChannelEntryCache", name);
   if (faultTry.hasException()) {
@@ -4083,15 +4077,9 @@ folly::Try<folly::Unit> TreeInode::invalidateChannelEntryCache(
 #ifndef _WIN32
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     fuseChannel->invalidateEntry(getNodeId(), name);
-  } else if (getMount()->getNfsdChannel()) {
-    // For NFS, the entry cache is flushed when the directory mtime is changed.
-    // Directly invalidating an entry is not possible. We do want to record
-    // which files have changed during checkout. We use this to monitor that our
-    // invalidation is working correctly.
-    if (ino.has_value() && ctx) {
-      ctx->maybeRecordInvalidation(ino.value());
-    }
   }
+  // For NFS, the entry cache is flushed when the directory mtime is changed.
+  // Directly invalidating an entry is not possible.
 
 #else
   if (auto* fsChannel = getMount()->getPrjfsChannel()) {
@@ -4677,7 +4665,7 @@ TreeInode::invalidateChildrenNotMaterialized(
             // invalidated children due to being read too recently, we also
             // rely on invalidateChannelEntryCache failing.
             auto invalidateResult = self->invalidateChannelEntryCache(
-                *contents, entry.first, inodeNumber, nullptr);
+                *contents, entry.first, inodeNumber);
             if (invalidateResult.hasException()) {
               XLOGF(
                   DBG5,
