@@ -14,7 +14,6 @@
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/utils/RingBuffer.h"
 
 using std::vector;
 
@@ -25,9 +24,6 @@ CheckoutContext::CheckoutContext(
     CheckoutMode checkoutMode,
     OptionalProcessId clientPid,
     folly::StringPiece thriftMethodName,
-    bool verifyFilesAfterCheckout,
-    size_t verifyEveryNInvalidations,
-    size_t maxNumberOfInvlidationsToValidate,
     std::shared_ptr<std::atomic<uint64_t>> checkoutProgress,
     const std::unordered_map<std::string, std::string>* requestInfo)
     : checkoutMode_{checkoutMode},
@@ -38,12 +34,6 @@ CheckoutContext::CheckoutContext(
           thriftMethodName,
           requestInfo)},
       checkoutProgress_{std::move(checkoutProgress)},
-      verifyFilesAfterCheckout_{verifyFilesAfterCheckout},
-      verifyEveryNInvalidations_{verifyEveryNInvalidations},
-      maxNumberOfInvlidationsToValidate_{maxNumberOfInvlidationsToValidate},
-      sampleInvalidations_(
-          std::make_unique<RingBuffer<InodeNumber>>(
-              maxNumberOfInvlidationsToValidate_)),
       windowsSymlinksEnabled_{
           mount_->getCheckoutConfig()->getEnableWindowsSymlinks()} {}
 
@@ -186,20 +176,5 @@ void CheckoutContext::increaseCheckoutCounter(int64_t inc) const {
   if (checkoutProgress_) {
     checkoutProgress_->fetch_add(inc, std::memory_order_relaxed);
   }
-}
-
-void CheckoutContext::maybeRecordInvalidation(InodeNumber inode) {
-  if (verifyFilesAfterCheckout_) {
-    size_t invalidationCount = invalidationCount_++;
-    if (invalidationCount < maxNumberOfInvlidationsToValidate_ ||
-        invalidationCount % verifyEveryNInvalidations_ == 0) {
-      auto sampleInvalidations = sampleInvalidations_.wlock();
-      (*sampleInvalidations)->push(inode);
-    };
-  }
-}
-
-std::vector<InodeNumber> CheckoutContext::extractFilesToVerify() {
-  return std::move(**sampleInvalidations_.wlock()).extractVector();
 }
 } // namespace facebook::eden

@@ -834,18 +834,6 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
         checkoutMode,
         context->getClientPid(),
         "setPathObjectId",
-        getServerState()
-            ->getReloadableConfig()
-            ->getEdenConfig()
-            ->verifyFilesAfterCheckout.getValue(),
-        getServerState()
-            ->getReloadableConfig()
-            ->getEdenConfig()
-            ->verifyEveryNInvalidations.getValue(),
-        getServerState()
-            ->getReloadableConfig()
-            ->getEdenConfig()
-            ->maxNumberOfInvlidationsToVerify.getValue(),
         nullptr,
         context->getRequestInfo());
 
@@ -1477,18 +1465,6 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         checkoutMode,
         fetchContext->getClientPid(),
         thriftMethodCaller,
-        getServerState()
-            ->getReloadableConfig()
-            ->getEdenConfig()
-            ->verifyFilesAfterCheckout.getValue(),
-        getServerState()
-            ->getReloadableConfig()
-            ->getEdenConfig()
-            ->verifyEveryNInvalidations.getValue(),
-        getServerState()
-            ->getReloadableConfig()
-            ->getEdenConfig()
-            ->maxNumberOfInvlidationsToVerify.getValue(),
         progressTracker,
         fetchContext->getRequestInfo());
   }

@@ -37,18 +37,6 @@ cpp_unittest(
 )
 
 cpp_unittest(
-    name = "checkout_context",
-    srcs = ["CheckoutContextTest.cpp"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/inodes:inodes",
-        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
-        "//eden/fs/testharness:test_mount",
-        "//folly/portability:gtest",
-    ],
-)
-
-cpp_unittest(
     name = "dematerialize",
     srcs = ["DematerializeTest.cpp"],
     supports_static_listing = False,
