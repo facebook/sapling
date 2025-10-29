@@ -102,8 +102,14 @@ export interface SaplingRepository {
   /**
    *
    * Get the diff for the specified commit. If not provided, get the diff for the current commit.
+   * @deprecated prefer `diff({type: 'Commit', hash: '...'})`
    */
   getDiff(commit?: string): Promise<string>;
+
+  diff(comparison: SaplingComparison, options?: {excludeGenerated?: boolean}): Promise<string>;
+
+  /** Filter a list of repo-relative paths to only include generated (fully or partially) files. */
+  getGeneratedPaths(paths: Array<string>): Promise<Array<string>>;
 
   /**
    * Commit uncommitted changes with the provided title and commit message.
@@ -163,3 +169,12 @@ export type SaplingCommandOutput = {
   exitCode: number;
   killed?: boolean;
 };
+
+export type SaplingComparison =
+  | {
+      type: 'Commit';
+      hash: string;
+    }
+  | {
+      type: 'Uncommitted' | 'Head' | 'Stack';
+    };

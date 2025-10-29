@@ -8,23 +8,28 @@
 import type {RepositoryReference} from 'isl-server/src/RepositoryCache';
 import type {ServerSideTracker} from 'isl-server/src/analytics/serverSideTracker';
 import type {Logger} from 'isl-server/src/logger';
-import type {ChangedFile} from 'isl/src/types';
+import type {RepoRelativePath} from 'isl/src/types';
+import {GeneratedStatus, type ChangedFile} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 import type {Writable} from 'shared/typeUtils';
 import type {
   SaplingChangedFile,
   SaplingCommandOutput,
   SaplingCommitInfo,
+  SaplingComparison,
   SaplingRepository,
 } from './api/types';
 import type {EnabledSCMApiFeature} from './types';
 
+import {generatedFilesDetector} from 'isl-server/src/GeneratedFiles';
 import {Repository} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {getMainFetchTemplate, parseCommitInfoOutput} from 'isl-server/src/templates';
 import {ResolveOperation, ResolveTool} from 'isl/src/operations/ResolveOperation';
 import * as path from 'path';
 import {beforeRevsetForComparison, ComparisonType} from 'shared/Comparison';
+import {filterFilesFromPatch, parsePatch} from 'shared/patch/parse';
+import {notEmpty} from 'shared/utils';
 import * as vscode from 'vscode';
 import {encodeSaplingDiffUri} from './DiffContentProvider';
 import SaplingFileDecorationProvider from './SaplingFileDecorationProvider';
@@ -432,6 +437,7 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
     }
   }
 
+  /** @deprecated - prefer `diff({type: 'Commit', hash: commit || '.'})` */
   async getDiff(commit?: string): Promise<string> {
     const result = await this.runSlCommand(['diff', '-c', commit || '.']);
 
@@ -440,6 +446,42 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
     } else {
       throw new Error(result.stderr);
     }
+  }
+
+  async diff(
+    comparison: Comparison | SaplingComparison,
+    options?: {excludeGenerated?: boolean},
+  ): Promise<string> {
+    const output = await this.repo.runDiff(
+      this.repo.initialConnectionContext,
+      comparison as Comparison,
+      undefined,
+    );
+
+    if (options?.excludeGenerated === true) {
+      const filenames = parsePatch(output)
+        .map(diff => diff.newFileName ?? diff.oldFileName)
+        .filter(notEmpty);
+      const generatedFiles = await this.getGeneratedPaths(filenames);
+      if (generatedFiles) {
+        return filterFilesFromPatch(output, generatedFiles);
+      }
+    }
+    return output;
+  }
+
+  async getGeneratedPaths(paths: Array<RepoRelativePath>): Promise<Array<RepoRelativePath>> {
+    const generatedMap = await generatedFilesDetector.queryFilesGenerated(
+      this.repo,
+      this.repo.initialConnectionContext,
+      this.repo.info.repoRoot,
+      paths,
+    );
+    return paths.filter(
+      path =>
+        generatedMap[path] === GeneratedStatus.Generated ||
+        generatedMap[path] === GeneratedStatus.PartiallyGenerated,
+    );
   }
 
   async commit(title: string, commitMessage: string): Promise<void> {
