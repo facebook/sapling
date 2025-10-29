@@ -89,8 +89,8 @@ void CheckoutContext::start(
   }
 }
 
-ImmediateFuture<CheckoutContext::CheckoutConflictsAndInvalidations>
-CheckoutContext::finish(const RootId& newSnapshot) {
+ImmediateFuture<vector<CheckoutConflict>> CheckoutContext::finish(
+    const RootId& newSnapshot) {
   auto config = mount_->getCheckoutConfig();
 
   auto parentCommit = config->getParentCommit();
@@ -107,13 +107,7 @@ CheckoutContext::finish(const RootId& newSnapshot) {
   // This allows any filesystem unlink() or rename() operations to proceed.
   renameLock_.unlock();
 
-  return flush().thenValue(
-      [invalidations = extractFilesToVerify()](auto&& conflicts) mutable {
-        CheckoutConflictsAndInvalidations result;
-        result.conflicts = std::move(conflicts);
-        result.invalidations = std::move(invalidations);
-        return result;
-      });
+  return flush();
 }
 
 ImmediateFuture<vector<CheckoutConflict>> CheckoutContext::flush() {

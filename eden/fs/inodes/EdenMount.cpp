@@ -1625,9 +1625,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         return ctx->finish(snapshotId);
       })
       .thenTry([this, ctx, oldState, oldParent, snapshotId](
-                   folly::Try<
-                       CheckoutContext::CheckoutConflictsAndInvalidations>&&
-                       res) {
+                   folly::Try<std::vector<CheckoutConflict>>&& res) {
         bool propagateErrors = this->getServerState()
                                    ->getReloadableConfig()
                                    ->getEdenConfig()
@@ -1653,7 +1651,7 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
               oldParent,
               snapshotId,
           };
-          return folly::Try<CheckoutContext::CheckoutConflictsAndInvalidations>{
+          return folly::Try<std::vector<CheckoutConflict>>{
               newEdenError(res.exception())};
         } else {
           // If the checkout was successful, clear out the checkoutState.
@@ -1669,14 +1667,12 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
            stopWatch,
            oldParent,
            snapshotId,
-           journalDiffCallback](
-              CheckoutContext::CheckoutConflictsAndInvalidations&& conflicts) {
+           journalDiffCallback](std::vector<CheckoutConflict>&& conflicts) {
             checkoutTimes->didFinish = stopWatch.elapsed();
 
             CheckoutResult result;
             result.times = *checkoutTimes;
-            result.conflicts = std::move(conflicts.conflicts);
-            result.sampleInodesToValidate = std::move(conflicts.invalidations);
+            result.conflicts = std::move(conflicts);
             if (ctx->isDryRun()) {
               // This is a dry run, so all we need to do is tell the caller
               // about the conflicts: we should not modify any files or add
