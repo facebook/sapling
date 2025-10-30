@@ -763,6 +763,9 @@ class SaplingBackingStore final : public BackingStore {
   TraceSubscriptionHandle<HgImportTraceEvent> hgTraceHandle_;
 
   sapling::SaplingNativeBackingStore store_;
+  std::string repoName_;
+  HgObjectIdFormat objectIdFormat_;
+  CaseSensitivity caseSensitive_;
 };
 
 } // namespace facebook::eden

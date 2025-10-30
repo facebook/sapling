@@ -140,7 +140,16 @@ SaplingBackingStore::SaplingBackingStore(
           repository.view(),
           mount.view(),
           config_->getEdenConfig()->hgObjectIdFormat.getValue(),
-          caseSensitive} {
+          caseSensitive},
+      objectIdFormat_{config_->getEdenConfig()->hgObjectIdFormat.getValue()},
+      caseSensitive_{caseSensitive} {
+  try {
+    repoName_ =
+        std::string(sapling::sapling_backingstore_get_name(store_.rustStore()));
+  } catch (const rust::Error& error) {
+    XLOGF(DBG2, "Error while repo name from backingstore: {}", error.what());
+  }
+
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {
@@ -199,7 +208,17 @@ SaplingBackingStore::SaplingBackingStore(
           repository.view(),
           mount.view(),
           config_->getEdenConfig()->hgObjectIdFormat.getValue(),
-          caseSensitive} {
+          caseSensitive},
+
+      objectIdFormat_{config_->getEdenConfig()->hgObjectIdFormat.getValue()},
+      caseSensitive_{caseSensitive} {
+  try {
+    repoName_ =
+        std::string(sapling::sapling_backingstore_get_name(store_.rustStore()));
+  } catch (const rust::Error& error) {
+    XLOGF(DBG2, "Error while repo name from backingstore: {}", error.what());
+  }
+
   uint8_t numberThreads =
       config_->getEdenConfig()->numBackingstoreThreads.getValue();
   if (!numberThreads) {

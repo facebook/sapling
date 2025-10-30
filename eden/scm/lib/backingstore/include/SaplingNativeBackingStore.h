@@ -165,6 +165,10 @@ class SaplingNativeBackingStore {
     sapling_flush_counters();
   }
 
+  const sapling::BackingStore& rustStore() {
+    return *store_.get();
+  }
+
  private:
   std::unique_ptr<sapling::BackingStore, void (*)(sapling::BackingStore*)>
       store_;
