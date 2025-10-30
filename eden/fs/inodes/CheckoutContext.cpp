@@ -35,7 +35,9 @@ CheckoutContext::CheckoutContext(
           requestInfo)},
       checkoutProgress_{std::move(checkoutProgress)},
       windowsSymlinksEnabled_{
-          mount_->getCheckoutConfig()->getEnableWindowsSymlinks()} {}
+          mount_->getCheckoutConfig()->getEnableWindowsSymlinks()},
+      windowsRememberExecutableBit_{mount_->getWindowsRememberExecutableBit()} {
+}
 
 CheckoutContext::~CheckoutContext() = default;
 

@@ -214,7 +214,8 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
 ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
     RelativePathPiece path,
     const ObjectFetchContextPtr& fetchContext,
-    bool windowsSymlinksEnabled) const {
+    bool windowsSymlinksEnabled,
+    bool windowsRememberExecutableBit) const {
   using R = ImmediateFuture<std::optional<TreeEntryType>>;
   return match(
       variant_,
@@ -249,7 +250,9 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
       },
       [&](const TreePtr&) -> R { return TreeEntryType::TREE; },
       [&](const TreeEntry& entry) -> R {
-        return filteredEntryType(entry.getType(), windowsSymlinksEnabled);
+        return filteredEntryType(
+            entry.getType(windowsRememberExecutableBit),
+            windowsSymlinksEnabled);
       });
 }
 
@@ -519,6 +522,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     timespec lastCheckoutTime,
     const ObjectFetchContextPtr& fetchContext) const {
   bool windowsSymlinksEnabled = objectStore->getWindowsSymlinksEnabled();
+  bool windowsRememberExecutableBit =
+      objectStore->getWindowsRememberExecutableBit();
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
   auto dtype = filteredEntryDtype(getDtype(), windowsSymlinksEnabled);
@@ -566,8 +571,11 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   auto entryTypeFuture =
       ImmediateFuture<std::optional<TreeEntryType>>::makeEmpty();
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-    entryTypeFuture =
-        getTreeEntryType(path, fetchContext, windowsSymlinksEnabled);
+    entryTypeFuture = getTreeEntryType(
+        path,
+        fetchContext,
+        windowsSymlinksEnabled,
+        windowsRememberExecutableBit);
   }
 
   auto blobAuxdataFuture = ImmediateFuture<BlobAuxData>::makeEmpty();
@@ -691,7 +699,8 @@ ImmediateFuture<struct stat> VirtualInode::stat(
         } else if constexpr (std::is_same_v<T, TreeEntry>) {
           objectId = arg.getObjectId();
           mode = modeFromTreeEntryType(filteredEntryType(
-              arg.getType(), objectStore->getWindowsSymlinksEnabled()));
+              arg.getType(objectStore->getWindowsRememberExecutableBit()),
+              objectStore->getWindowsSymlinksEnabled()));
           // fallthrough
         } else {
           static_assert(always_false_v<T>, "non-exhaustive visitor!");
@@ -725,6 +734,8 @@ getChildrenHelper(
     const TreePtr& tree,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) {
+  bool windowsRememberExecutableBit =
+      objectStore->getWindowsRememberExecutableBit();
   std::vector<std::pair<PathComponent, ImmediateFuture<VirtualInode>>> result{};
   result.reserve(tree->size());
 
@@ -734,8 +745,8 @@ getChildrenHelper(
       result.emplace_back(
           child.first,
           objectStore->getTree(treeEntry->getObjectId(), fetchContext)
-              .thenValue([mode = modeFromTreeEntryType(treeEntry->getType())](
-                             TreePtr tree) {
+              .thenValue([mode = modeFromTreeEntryType(treeEntry->getType(
+                              windowsRememberExecutableBit))](TreePtr tree) {
                 return VirtualInode{std::move(tree), mode};
               }));
     } else {
@@ -850,6 +861,8 @@ ImmediateFuture<VirtualInode> getOrFindChildHelper(
     RelativePathPiece path,
     const std::shared_ptr<ObjectStore>& objectStore,
     const ObjectFetchContextPtr& fetchContext) {
+  bool windowsRememberExecutableBit =
+      objectStore->getWindowsRememberExecutableBit();
   // Lookup the next child
   const auto it = tree->find(childName);
   if (it == tree->cend()) {
@@ -868,10 +881,10 @@ ImmediateFuture<VirtualInode> getOrFindChildHelper(
   const auto* treeEntry = &it->second;
   if (treeEntry->isTree()) {
     return objectStore->getTree(treeEntry->getObjectId(), fetchContext)
-        .thenValue(
-            [mode = modeFromTreeEntryType(treeEntry->getType())](TreePtr tree) {
-              return VirtualInode{std::move(tree), mode};
-            });
+        .thenValue([mode = modeFromTreeEntryType(treeEntry->getType(
+                        windowsRememberExecutableBit))](TreePtr tree) {
+          return VirtualInode{std::move(tree), mode};
+        });
   } else {
     // This is a file, return the TreeEntry for it
     return VirtualInode{*treeEntry};

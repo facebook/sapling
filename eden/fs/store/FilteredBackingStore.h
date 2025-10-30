@@ -209,6 +209,9 @@ class FilteredBackingStore
    * "register" their type bytes.
    */
   bool isSlOid(const ObjectId& oid);
+
+  // Whether executable bit is remember on Windows or not
+  bool windowsRememberExecutableBit_{false};
 };
 
 } // namespace facebook::eden

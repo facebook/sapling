@@ -37,6 +37,10 @@ FakeBackingStore::FakeBackingStore(
     std::optional<std::string> blake3Key)
     : localStoreCachingPolicy_{localStoreCachingPolicy},
       serverState_{std::move(serverState)},
+      windowsRememberExecutableBit_{
+          serverState_ ? serverState_->getEdenConfig()
+                             ->windowsRememberExecutableBit.getValue()
+                       : true},
       blake3Key_(std::move(blake3Key)) {}
 
 FakeBackingStore::~FakeBackingStore() = default;
@@ -294,7 +298,7 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
 StoredTree* FakeBackingStore::putTree(
     const std::initializer_list<TreeEntryData>& entryArgs) {
   auto entries = buildTreeEntries(entryArgs);
-  auto id = computeTreeId(entries);
+  auto id = computeTreeId(entries, windowsRememberExecutableBit_);
   return putTree(id, entries);
 }
 
@@ -306,7 +310,7 @@ StoredTree* FakeBackingStore::putTree(
 }
 
 StoredTree* FakeBackingStore::putTree(Tree::container entries) {
-  auto id = computeTreeId(entries);
+  auto id = computeTreeId(entries, windowsRememberExecutableBit_);
   return putTreeImpl(id, std::move(entries));
 }
 
@@ -321,7 +325,7 @@ std::pair<StoredTree*, bool> FakeBackingStore::maybePutTree(
 
 std::pair<StoredTree*, bool> FakeBackingStore::maybePutTree(
     Tree::container entries) {
-  auto id = computeTreeId(entries);
+  auto id = computeTreeId(entries, windowsRememberExecutableBit_);
   return maybePutTreeImpl(id, std::move(entries));
 }
 
@@ -335,7 +339,9 @@ Tree::container FakeBackingStore::buildTreeEntries(
   return entries;
 }
 
-ObjectId FakeBackingStore::computeTreeId(const Tree::container& sortedEntries) {
+ObjectId FakeBackingStore::computeTreeId(
+    const Tree::container& sortedEntries,
+    bool windowsRememberExecutableBit) {
   // Compute a SHA-1 hash over the entry contents.
   // This doesn't match how we generate ids for either git or mercurial
   // backed stores, but that doesn't really matter.  We only need to be
@@ -346,7 +352,8 @@ ObjectId FakeBackingStore::computeTreeId(const Tree::container& sortedEntries) {
   for (const auto& entry : sortedEntries) {
     digest.hash_update(ByteRange{entry.first.view()});
     digest.hash_update(entry.second.getObjectId().getBytes());
-    mode_t mode = modeFromTreeEntryType(entry.second.getType());
+    mode_t mode = modeFromTreeEntryType(
+        entry.second.getType(windowsRememberExecutableBit));
     digest.hash_update(
         ByteRange(reinterpret_cast<const uint8_t*>(&mode), sizeof(mode)));
   }

@@ -192,7 +192,8 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     auto isSameAsFut = fileInode->isSameAs(
         scmEntries_[0].getObjectId(),
         filteredEntryType(
-            scmEntries_[0].getType(), context_->getWindowsSymlinksEnabled()),
+            scmEntries_[0].getType(context_->getWindowsRememberExecutableBit()),
+            context_->getWindowsSymlinksEnabled()),
         context_->getFetchContext());
     return std::move(isSameAsFut)
         .thenValue([this, fileInode = std::move(fileInode)](bool isSame) {

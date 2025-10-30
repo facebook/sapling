@@ -32,7 +32,9 @@ FilteredBackingStore::FilteredBackingStore(
     : backingStore_{std::move(backingStore)},
       config_{std::move(config)},
       optimizeUnfilteredTrees_{optimizeUnfilteredTrees},
-      filter_{std::move(filter)} {
+      filter_{std::move(filter)},
+      windowsRememberExecutableBit_{
+          config_->getEdenConfig()->windowsRememberExecutableBit.getValue()} {
   isSaplingBackingStore_ =
       dynamic_cast<SaplingBackingStore*>(backingStore_.get()) != nullptr;
 }
@@ -250,7 +252,9 @@ FilteredBackingStore::filterImpl(
   // the entire getTree() request and the caller can decide to retry.
   return collectAllSafe(std::move(isFilteredFutures))
       .thenValue(
-          [unfilteredTree, filterId = std::move(filter)](
+          [unfilteredTree,
+           filterId = std::move(filter),
+           windowsRememberExecutableBit = windowsRememberExecutableBit_](
               std::vector<std::pair<RelativePath, FilterCoverage>>&&
                   filterCoverageVec) -> std::unique_ptr<PathMap<TreeEntry>> {
             // This PathMap will only contain tree entries that aren't
@@ -265,7 +269,8 @@ FilteredBackingStore::filterImpl(
               if (filterCoverage != FilterCoverage::RECURSIVELY_FILTERED) {
                 auto relPath = std::move(filterCoveragePair.first);
                 auto entry = unfilteredTree->find(relPath.basename().piece());
-                auto entryType = entry->second.getType();
+                auto entryType =
+                    entry->second.getType(windowsRememberExecutableBit);
                 ObjectId oid;
 
                 // The entry type is a tree. Trees can either be unfiltered or

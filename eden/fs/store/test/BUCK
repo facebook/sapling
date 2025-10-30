@@ -72,7 +72,6 @@ cpp_unittest(
     deps = [
         "fbsource//third-party/googletest:gmock",
         "fbsource//third-party/googletest:gtest",
-        ":local_store_test",
         "//eden/common/telemetry:structured_logger",
         "//eden/common/testharness:temp_file",
         "//eden/common/utils:fault_injector",

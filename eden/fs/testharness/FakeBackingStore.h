@@ -197,7 +197,9 @@ class FakeBackingStore final : public BackingStore {
 
   static Tree::container buildTreeEntries(
       const std::initializer_list<TreeEntryData>& entryArgs);
-  static ObjectId computeTreeId(const Tree::container& sortedEntries);
+  static ObjectId computeTreeId(
+      const Tree::container& sortedEntries,
+      bool windowsRememberExecutableBit);
   StoredTree* putTreeImpl(ObjectId id, Tree::container&& sortedEntries);
   std::pair<StoredTree*, bool> maybePutTreeImpl(
       ObjectId id,
@@ -239,6 +241,8 @@ class FakeBackingStore final : public BackingStore {
 
   LocalStoreCachingPolicy localStoreCachingPolicy_;
   std::shared_ptr<ServerState> serverState_;
+  // Whether executable bit is enabled on Windows or not
+  bool windowsRememberExecutableBit_{true};
   folly::Synchronized<Data> data_;
   std::optional<std::string> blake3Key_;
 };

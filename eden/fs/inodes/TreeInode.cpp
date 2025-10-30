@@ -1079,7 +1079,8 @@ DirContents TreeInode::saveDirFromTree(
       tree,
       overlay,
       mount->getCheckoutConfig()->getCaseSensitive(),
-      mount->getCheckoutConfig()->getEnableWindowsSymlinks());
+      mount->getCheckoutConfig()->getEnableWindowsSymlinks(),
+      mount->getWindowsRememberExecutableBit());
 
   if (mount->getInodeMap()->lazyInodePersistence()) {
     // lazyInodePersistence means we persist inode numbers in memory rather
@@ -1097,7 +1098,8 @@ DirContents TreeInode::buildDirFromTree(
     const Tree* tree,
     Overlay* overlay,
     CaseSensitivity caseSensitive,
-    bool windowsSymlinksEnabled) {
+    bool windowsSymlinksEnabled,
+    bool windowsRememberExecutableBit) {
   XCHECK(tree);
 
   // A future optimization is for this code to allocate all of the inode numbers
@@ -1111,7 +1113,8 @@ DirContents TreeInode::buildDirFromTree(
     dir.emplace(
         treeEntry.first,
         modeFromTreeEntryType(filteredEntryType(
-            treeEntry.second.getType(), windowsSymlinksEnabled)),
+            treeEntry.second.getType(windowsRememberExecutableBit),
+            windowsSymlinksEnabled)),
         overlay->allocateInodeNumber(),
         treeEntry.second.getObjectId());
   }
@@ -2719,6 +2722,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
   std::vector<std::unique_ptr<DeferredDiffEntry>> deferredEntries;
   auto self = inodePtrFromThis();
   bool windowsSymlinksEnabled = context->getWindowsSymlinksEnabled();
+  bool windowsRememberExecutableBit =
+      context->getWindowsRememberExecutableBit();
 
   // Grab the contents_ lock, and loop to find children that might be
   // different.  In this first pass we primarily build the list of children to
@@ -2894,7 +2899,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
               // be materialized, and the previous path will be taken.
               treeEntryTypeFromMode(inodeEntry->getInitialMode()) ==
                   filteredEntryType(
-                      scmEntry.getType(), windowsSymlinksEnabled) &&
+                      scmEntry.getType(windowsRememberExecutableBit),
+                      windowsSymlinksEnabled) &&
               getObjectStore().areObjectsKnownIdentical(
                   inodeEntry->getObjectId(), scmEntry.getObjectId())) {
             exactMatch = true;
@@ -2960,7 +2966,9 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           // janky hashing scheme for mercurial data, we should be able just
           // immediately assume the file is different here, without checking.
           if (treeEntryTypeFromMode(inodeEntry->getInitialMode()) !=
-              filteredEntryType(scmEntry.getType(), windowsSymlinksEnabled)) {
+              filteredEntryType(
+                  scmEntry.getType(windowsRememberExecutableBit),
+                  windowsSymlinksEnabled)) {
             // The mode is definitely modified
             XLOGF(
                 DBG5, "diff: file modified due to mode change: {}", entryPath);
@@ -3466,6 +3474,7 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
   XDCHECK(oldScmEntry || newScmEntry);
 
   bool windowsSymlinksEnabled = ctx->getWindowsSymlinksEnabled();
+  bool windowsRememberExecutableBit = ctx->getWindowsRememberExecutableBit();
 
   // If we aren't doing a force checkout, we don't need to do anything
   // for entries that are identical between the old and new source control
@@ -3478,9 +3487,11 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
       // TODO: This is technically incorrect for files that go from SYMLINK to
       // REGULAR (or vice versa).
       filteredEntryType(
-          oldScmEntry->second.getType(), windowsSymlinksEnabled) ==
+          oldScmEntry->second.getType(windowsRememberExecutableBit),
+          windowsSymlinksEnabled) ==
           filteredEntryType(
-              newScmEntry->second.getType(), windowsSymlinksEnabled) &&
+              newScmEntry->second.getType(windowsRememberExecutableBit),
+              windowsSymlinksEnabled) &&
       getObjectStore().areObjectsKnownIdentical(
           oldScmEntry->second.getObjectId(),
           newScmEntry->second.getObjectId())) {
@@ -3542,9 +3553,11 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
       getObjectStore().areObjectsKnownIdentical(
           entry.getObjectId(), newScmEntry->second.getObjectId())) {
     if (filteredEntryType(
-            oldScmEntry->second.getType(), windowsSymlinksEnabled) ==
+            oldScmEntry->second.getType(windowsRememberExecutableBit),
+            windowsSymlinksEnabled) ==
         filteredEntryType(
-            newScmEntry->second.getType(), windowsSymlinksEnabled)) {
+            newScmEntry->second.getType(windowsRememberExecutableBit),
+            windowsSymlinksEnabled)) {
       // The inode already matches the checkout destination. So do nothing.
       return nullptr;
     }
@@ -3639,7 +3652,8 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
     contents.emplace(
         newScmEntry->first,
         modeFromTreeEntryType(filteredEntryType(
-            newScmEntry->second.getType(), windowsSymlinksEnabled)),
+            newScmEntry->second.getType(windowsRememberExecutableBit),
+            windowsSymlinksEnabled)),
         getOverlay()->allocateInodeNumber(),
         newScmEntry->second.getObjectId());
   }
@@ -3719,7 +3733,9 @@ std::shared_ptr<CheckoutAction> TreeInode::processAbsentCheckoutEntry(
       auto [it, inserted] = contents.emplace(
           newScmEntry->first,
           modeFromTreeEntryType(filteredEntryType(
-              newScmEntry->second.getType(), ctx->getWindowsSymlinksEnabled())),
+              newScmEntry->second.getType(
+                  ctx->getWindowsRememberExecutableBit()),
+              ctx->getWindowsSymlinksEnabled())),
           getOverlay()->allocateInodeNumber(),
           newScmEntry->second.getObjectId());
       XDCHECK(inserted);
@@ -3767,6 +3783,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
     const std::optional<Tree::value_type>& newScmEntry) {
   auto treeInode = inode.asTreePtrOrNull();
   bool windowsSymlinksEnabled = ctx->getWindowsSymlinksEnabled();
+  bool windowsRememberExecutableBit = ctx->getWindowsRememberExecutableBit();
   if (!treeInode) {
     // Regardless of what we'll do with the inode, we can consider it as "done"
     // since it isn't a treeInode, so we add that to our counters.
@@ -3841,7 +3858,8 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
         auto [_it, inserted] = contents->entries.emplace(
             newScmEntry->first,
             modeFromTreeEntryType(filteredEntryType(
-                newScmEntry->second.getType(), windowsSymlinksEnabled)),
+                newScmEntry->second.getType(windowsRememberExecutableBit),
+                windowsSymlinksEnabled)),
             getOverlay()->allocateInodeNumber(),
             newScmEntry->second.getObjectId());
         XDCHECK(inserted);
@@ -3892,6 +3910,7 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
            parentInode = inodePtrFromThis(),
            treeInode,
            windowsSymlinksEnabled,
+           windowsRememberExecutableBit,
            newScmEntry](
               auto&&) mutable -> ImmediateFuture<InvalidationRequired> {
             if (ctx->isDryRun()) {
@@ -3984,7 +4003,8 @@ ImmediateFuture<InvalidationRequired> TreeInode::checkoutUpdateEntry(
               auto ret = contents->entries.emplace(
                   newScmEntry->first,
                   modeFromTreeEntryType(filteredEntryType(
-                      newScmEntry->second.getType(), windowsSymlinksEnabled)),
+                      newScmEntry->second.getType(windowsRememberExecutableBit),
+                      windowsSymlinksEnabled)),
                   parentInode->getOverlay()->allocateInodeNumber(),
                   newScmEntry->second.getObjectId());
               inserted = ret.second;

@@ -120,11 +120,15 @@ void processBothPresent(
   bool isTreeSCM = scmEntry.second.isTree();
   bool isTreeWD = wdEntry.second.isTree();
   bool windowsSymlinksEnabled = context->getWindowsSymlinksEnabled();
+  bool windowsRememberExecutableBit =
+      context->getWindowsRememberExecutableBit();
 
   if (isTreeSCM) {
     if (isTreeWD) {
       // tree-to-tree diff
-      XDCHECK_EQ(scmEntry.second.getType(), wdEntry.second.getType());
+      XDCHECK_EQ(
+          scmEntry.second.getType(windowsRememberExecutableBit),
+          wdEntry.second.getType(windowsRememberExecutableBit));
       if (context->store->areObjectsKnownIdentical(
               scmEntry.second.getObjectId(), wdEntry.second.getObjectId())) {
         return;
@@ -172,8 +176,11 @@ void processBothPresent(
       // the same but the blobs would have different ids
       // If the types are different, then this entry is definitely modified
       if (filteredEntryType(
-              scmEntry.second.getType(), windowsSymlinksEnabled) !=
-          filteredEntryType(wdEntry.second.getType(), windowsSymlinksEnabled)) {
+              scmEntry.second.getType(windowsRememberExecutableBit),
+              windowsSymlinksEnabled) !=
+          filteredEntryType(
+              wdEntry.second.getType(windowsRememberExecutableBit),
+              windowsSymlinksEnabled)) {
         context->callback->modifiedPath(
             entryPath,
             filteredEntryDtype(

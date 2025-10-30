@@ -177,7 +177,9 @@ TEST_P(LocalStoreTest, testReadsAndWriteTree) {
       readmeEntry->second.getObjectId().asHexString());
   EXPECT_EQ("README.md", readmeEntry->first);
   EXPECT_EQ(false, readmeEntry->second.isTree());
-  EXPECT_EQ(TreeEntryType::REGULAR_FILE, readmeEntry->second.getType());
+  EXPECT_EQ(
+      TreeEntryType::REGULAR_FILE,
+      readmeEntry->second.getType(/*windowsRememberExecutableBit=*/true));
 }
 
 TEST_P(LocalStoreTest, testGetResult) {

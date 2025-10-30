@@ -38,7 +38,9 @@ TEST(Tree, testFind) {
   EXPECT_NE(tree.cend(), entry);
   EXPECT_EQ("a_file", entry->first);
   EXPECT_EQ(false, entry->second.isTree());
-  EXPECT_EQ(TreeEntryType::REGULAR_FILE, entry->second.getType());
+  EXPECT_EQ(
+      TreeEntryType::REGULAR_FILE,
+      entry->second.getType(/*windowsRememberExecutableBit=*/true));
 
   // Case insensitive testing
   PathComponentPiece existentPath1("A_file");

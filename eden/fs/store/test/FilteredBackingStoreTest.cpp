@@ -370,9 +370,13 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
       FilteredObjectId(runme_id, FilteredObjectIdType::OBJECT_TYPE_BLOB);
   if (folly::kIsWindows) {
     // Windows executables show up as regular files
-    EXPECT_EQ(TreeEntryType::REGULAR_FILE, runmeTreeEntry.getType());
+    EXPECT_EQ(
+        TreeEntryType::REGULAR_FILE,
+        runmeTreeEntry.getType(/*windowsRememberExecutableBit=*/true));
   } else {
-    EXPECT_EQ(TreeEntryType::EXECUTABLE_FILE, runmeTreeEntry.getType());
+    EXPECT_EQ(
+        TreeEntryType::EXECUTABLE_FILE,
+        runmeTreeEntry.getType(/*windowsRememberExecutableBit=*/true));
   }
   EXPECT_EQ(runmeFOID.getValue(), runmeTreeEntry.getObjectId().asString());
 
@@ -384,11 +388,15 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
   auto barFOID =
       FilteredObjectId(bar_id, FilteredObjectIdType::OBJECT_TYPE_BLOB);
   EXPECT_EQ(barFOID.getValue(), barTreeEntry.getObjectId().asString());
-  EXPECT_EQ(TreeEntryType::REGULAR_FILE, barTreeEntry.getType());
+  EXPECT_EQ(
+      TreeEntryType::REGULAR_FILE,
+      barTreeEntry.getType(/*windowsRememberExecutableBit=*/true));
 
   EXPECT_EQ("dir1"_pc, dir1Name);
   EXPECT_EQ(dir1FOID.getValue(), dir1TreeEntry.getObjectId().asString());
-  EXPECT_EQ(TreeEntryType::TREE, dir1TreeEntry.getType());
+  EXPECT_EQ(
+      TreeEntryType::TREE,
+      dir1TreeEntry.getType(/*windowsRememberExecutableBit=*/true));
 
   EXPECT_EQ("readonly"_pc, readonlyName);
   auto dir2FOID = FilteredObjectId{
@@ -396,13 +404,17 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getTree) {
   EXPECT_EQ(dir2FOID.getValue(), readonlyTreeEntry.getObjectId().asString());
   // TreeEntry objects only tracking the owner executable bit, so even though
   // we input the permissions as 0500 above this really ends up returning 0755
-  EXPECT_EQ(TreeEntryType::TREE, readonlyTreeEntry.getType());
+  EXPECT_EQ(
+      TreeEntryType::TREE,
+      readonlyTreeEntry.getType(/*windowsRememberExecutableBit=*/true));
 
   EXPECT_EQ("zzz"_pc, zzzName);
   auto zzzFOID =
       FilteredObjectId{foo_id, FilteredObjectIdType::OBJECT_TYPE_BLOB};
   EXPECT_EQ(zzzFOID.getValue(), zzzTreeEntry.getObjectId().asString());
-  EXPECT_EQ(TreeEntryType::REGULAR_FILE, zzzTreeEntry.getType());
+  EXPECT_EQ(
+      TreeEntryType::REGULAR_FILE,
+      zzzTreeEntry.getType(/*windowsRememberExecutableBit=*/true));
 
   // We expect future3 to also contain the root tree object
   EXPECT_EQ(treeOID, std::move(future3).get(0ms).tree->getObjectId());

@@ -11,7 +11,8 @@ namespace facebook::eden {
 
 bool operator==(const TreeEntry& entry1, const TreeEntry& entry2) {
   return (entry1.getObjectId() == entry2.getObjectId()) &&
-      (entry1.getType() == entry2.getType());
+      (entry1.getType(/*windowsRememberExecutableBit=*/true) ==
+       entry2.getType(/*windowsRememberExecutableBit=*/true));
 }
 
 bool operator!=(const TreeEntry& entry1, const TreeEntry& entry2) {

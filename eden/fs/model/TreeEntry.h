@@ -102,7 +102,14 @@ class TreeEntry {
     return type_ == TreeEntryType::TREE;
   }
 
-  TreeEntryType getType() const {
+  /**
+   * When windowsRememberExecutableBit is true, executable permissions are
+   * obtained from source control and preserved in the file's initial mode. As a
+   * result, on Windows, getType may return EXECUTABLE_FILE if the file is
+   * marked as executable in source control.
+   */
+  TreeEntryType getType(
+      [[maybe_unused]] bool windowsRememberExecutableBit) const {
 #ifdef _WIN32
     // XXX(T66590035): instead of doing this here, this should be done in the
     // Windows specific code that interpret these.

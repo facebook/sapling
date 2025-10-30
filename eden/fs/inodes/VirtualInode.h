@@ -97,7 +97,8 @@ class VirtualInode {
   ImmediateFuture<std::optional<TreeEntryType>> getTreeEntryType(
       RelativePathPiece path,
       const ObjectFetchContextPtr& fetchContext,
-      bool windowsSymlinksEnabled) const;
+      bool windowsSymlinksEnabled,
+      bool windowsRememberExecutableBit) const;
 
   /**
    * Get the VirtualInode object for a child of this directory.

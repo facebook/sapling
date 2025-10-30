@@ -4771,12 +4771,14 @@ void EdenServiceHandler::debugGetScmTree(
         store.renderObjectId(id));
   }
 
+  bool windowsRememberExecutableBit = store.getWindowsRememberExecutableBit();
   for (const auto& entry : *tree) {
     const auto& [name, treeEntry] = entry;
     entries.emplace_back();
     auto& out = entries.back();
     out.name() = name.asString();
-    out.mode() = modeFromTreeEntryType(treeEntry.getType());
+    out.mode() =
+        modeFromTreeEntryType(treeEntry.getType(windowsRememberExecutableBit));
     out.id() = store.renderObjectId(treeEntry.getObjectId());
   }
 }

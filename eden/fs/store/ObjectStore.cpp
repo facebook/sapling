@@ -324,7 +324,9 @@ void ObjectStore::maybeCacheTreeAndAuxInLocalStore(
       const auto& size = treeEntry.getSize();
       const auto& sha1 = treeEntry.getContentSha1();
       const auto& blake3 = treeEntry.getContentBlake3();
-      if (treeEntry.getType() == TreeEntryType::REGULAR_FILE && size && sha1) {
+      if (treeEntry.getType(windowsRememberExecutableBit_) ==
+              TreeEntryType::REGULAR_FILE &&
+          size && sha1) {
         batch->putBlobAuxData(
             treeEntry.getObjectId(), BlobAuxData{*sha1, blake3, *size});
       }
