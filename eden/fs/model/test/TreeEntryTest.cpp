@@ -26,26 +26,22 @@ TEST(TreeEntry, modeAndLogString) {
       rwFile.toLogString("file.txt"_pc));
 
   TreeEntry rwxFile(makeTestId("789"), TreeEntryType::EXECUTABLE_FILE);
-#ifndef _WIN32
   EXPECT_EQ(
       S_IFREG | 0755,
       modeFromTreeEntryType(
           rwxFile.getType(/*windowsRememberExecutableBit=*/true)));
   EXPECT_EQ(
       TreeEntryType::EXECUTABLE_FILE, treeEntryTypeFromMode(S_IFREG | 0755));
-#endif
   EXPECT_EQ(
       "(file.exe, 0000000000000000000000000000000000000789, x)",
       rwxFile.toLogString("file.exe"_pc));
 
   TreeEntry rwxLink(makeTestId("b"), TreeEntryType::SYMLINK);
-#ifndef _WIN32
   EXPECT_EQ(
       S_IFLNK | 0755,
       modeFromTreeEntryType(
           rwxLink.getType(/*windowsRememberExecutableBit=*/true)));
   EXPECT_EQ(TreeEntryType::SYMLINK, treeEntryTypeFromMode(S_IFLNK | 0755));
-#endif
   EXPECT_EQ(
       "(to-file.exe, 000000000000000000000000000000000000000b, l)",
       rwxLink.toLogString("to-file.exe"_pc));

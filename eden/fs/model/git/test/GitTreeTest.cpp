@@ -91,12 +91,9 @@ TEST(GitTree, testDeserialize) {
       nuclideStartServer.second.getObjectId());
   EXPECT_EQ("nuclide-start-server", nuclideStartServer.first);
   EXPECT_EQ(false, nuclideStartServer.second.isTree());
-  // TODO: T66590035
-#ifndef _WIN32
   EXPECT_EQ(
       facebook::eden::TreeEntryType::EXECUTABLE_FILE,
       nuclideStartServer.second.getType(/*windowsRememberExecutableBit=*/true));
-#endif
 
   // Directory.
   auto lib = *tree->find("lib"_pc);
@@ -152,12 +149,9 @@ TEST(GitTree, testDeserializeWithSymlink) {
   EXPECT_EQ("contributing.md", contributing.first);
   EXPECT_EQ(false, contributing.second.isTree());
 
-  // TODO: T66590035
-#ifndef _WIN32
   EXPECT_EQ(
       facebook::eden::TreeEntryType::SYMLINK,
       contributing.second.getType(/*windowsRememberExecutableBit=*/true));
-#endif
 }
 
 TEST(GitTree, deserializeEmpty) {
