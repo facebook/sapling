@@ -73,7 +73,30 @@ mode_t modeFromTreeEntryType(TreeEntryType ft);
  */
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
 
+/**
+ * Returns a filtered TreeEntryType based on platform and options.
+ *
+ * On Windows:
+ *   - If windowsSymlinksEnabled is true and ft is SYMLINK, returns SYMLINK
+ *   - Otherwise, returns the input type (ft)
+ * On non-Windows platforms:
+ *   - Returns the input type (ft) unchanged
+ */
 TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled);
+
+/**
+ * Compares two optional TreeEntryType values for equality, with special
+ * handling for Windows:
+ * - On Windows, EXECUTABLE_FILE and REGULAR_FILE are considered equivalent for
+ * comparison purposes, since Windows does not reliably distinguish executable
+ * bits.
+ * - On non-Windows platforms, the types are compared directly with no special
+ * handling. This function ensures consistent type comparison semantics across
+ * platforms.
+ */
+bool compareTreeEntryType(
+    std::optional<TreeEntryType> lhs,
+    std::optional<TreeEntryType> rhs);
 
 dtype_t filteredEntryDtype(dtype_t mode, bool windowsSymlinksEnabled);
 

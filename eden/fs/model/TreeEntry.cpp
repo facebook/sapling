@@ -94,6 +94,25 @@ TreeEntryType filteredEntryType(TreeEntryType ft, bool windowsSymlinksEnabled) {
   return ft;
 }
 
+bool compareTreeEntryType(
+    std::optional<TreeEntryType> lhs,
+    std::optional<TreeEntryType> rhs) {
+  auto ignoreWindowsExecutableTypeForComparison =
+      [](TreeEntryType ft) -> TreeEntryType {
+    if (folly::kIsWindows) {
+      return ft == TreeEntryType::EXECUTABLE_FILE ? TreeEntryType::REGULAR_FILE
+                                                  : ft;
+    }
+    return ft;
+  };
+
+  if (!lhs.has_value() || !rhs.has_value()) {
+    return lhs.has_value() == rhs.has_value();
+  }
+  return ignoreWindowsExecutableTypeForComparison(lhs.value()) ==
+      ignoreWindowsExecutableTypeForComparison(rhs.value());
+}
+
 dtype_t filteredEntryDtype(dtype_t mode, bool windowsSymlinksEnabled) {
   if (folly::kIsWindows) {
     if (mode != dtype_t::Symlink) {

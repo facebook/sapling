@@ -693,11 +693,11 @@ std::optional<bool> FileInode::isSameAsFast(
   }
 #else
   // On Windows, files can be symlinks or regular files.
-  if (entryType == TreeEntryType::SYMLINK) {
+  if (compareTreeEntryType(entryType, TreeEntryType::SYMLINK)) {
     if (!isSymlink()) {
       return false;
     }
-  } else if (entryType != TreeEntryType::REGULAR_FILE) {
+  } else if (!compareTreeEntryType(entryType, TreeEntryType::REGULAR_FILE)) {
     return false;
   }
 #endif // !_WIN32

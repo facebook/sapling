@@ -175,12 +175,15 @@ void processBothPresent(
       // changed and then later reverted. In that case, the contents would be
       // the same but the blobs would have different ids
       // If the types are different, then this entry is definitely modified
-      if (filteredEntryType(
-              scmEntry.second.getType(windowsRememberExecutableBit),
-              windowsSymlinksEnabled) !=
-          filteredEntryType(
-              wdEntry.second.getType(windowsRememberExecutableBit),
-              windowsSymlinksEnabled)) {
+      //
+      // On Windows: Filter executable type for comparison.
+      if (!compareTreeEntryType(
+              filteredEntryType(
+                  scmEntry.second.getType(windowsRememberExecutableBit),
+                  windowsSymlinksEnabled),
+              filteredEntryType(
+                  wdEntry.second.getType(windowsRememberExecutableBit),
+                  windowsSymlinksEnabled))) {
         context->callback->modifiedPath(
             entryPath,
             filteredEntryDtype(

@@ -2897,10 +2897,13 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
               // not from the directory entry.  However, any
               // source-control-visible metadata changes will cause the inode to
               // be materialized, and the previous path will be taken.
-              treeEntryTypeFromMode(inodeEntry->getInitialMode()) ==
+              //
+              // On Windows, ignore executable type for comparison
+              compareTreeEntryType(
+                  treeEntryTypeFromMode(inodeEntry->getInitialMode()),
                   filteredEntryType(
                       scmEntry.getType(windowsRememberExecutableBit),
-                      windowsSymlinksEnabled) &&
+                      windowsSymlinksEnabled)) &&
               getObjectStore().areObjectsKnownIdentical(
                   inodeEntry->getObjectId(), scmEntry.getObjectId())) {
             exactMatch = true;
@@ -2965,10 +2968,13 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
           // TODO: Once we build a new backing store and can replace our
           // janky hashing scheme for mercurial data, we should be able just
           // immediately assume the file is different here, without checking.
-          if (treeEntryTypeFromMode(inodeEntry->getInitialMode()) !=
-              filteredEntryType(
-                  scmEntry.getType(windowsRememberExecutableBit),
-                  windowsSymlinksEnabled)) {
+          //
+          // On Windows: ignore executable type for comparison.
+          if (!compareTreeEntryType(
+                  treeEntryTypeFromMode(inodeEntry->getInitialMode()),
+                  filteredEntryType(
+                      scmEntry.getType(windowsRememberExecutableBit),
+                      windowsSymlinksEnabled))) {
             // The mode is definitely modified
             XLOGF(
                 DBG5, "diff: file modified due to mode change: {}", entryPath);
@@ -3486,12 +3492,15 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
   if (!ctx->forceUpdate() && oldScmEntry && newScmEntry &&
       // TODO: This is technically incorrect for files that go from SYMLINK to
       // REGULAR (or vice versa).
-      filteredEntryType(
-          oldScmEntry->second.getType(windowsRememberExecutableBit),
-          windowsSymlinksEnabled) ==
+      //
+      // On Windows: Filter executable type for comparison.
+      compareTreeEntryType(
+          filteredEntryType(
+              oldScmEntry->second.getType(windowsRememberExecutableBit),
+              windowsSymlinksEnabled),
           filteredEntryType(
               newScmEntry->second.getType(windowsRememberExecutableBit),
-              windowsSymlinksEnabled) &&
+              windowsSymlinksEnabled)) &&
       getObjectStore().areObjectsKnownIdentical(
           oldScmEntry->second.getObjectId(),
           newScmEntry->second.getObjectId())) {
@@ -3552,12 +3561,14 @@ std::shared_ptr<CheckoutAction> TreeInode::processCheckoutEntryImpl(
       newScmEntry &&
       getObjectStore().areObjectsKnownIdentical(
           entry.getObjectId(), newScmEntry->second.getObjectId())) {
-    if (filteredEntryType(
-            oldScmEntry->second.getType(windowsRememberExecutableBit),
-            windowsSymlinksEnabled) ==
-        filteredEntryType(
-            newScmEntry->second.getType(windowsRememberExecutableBit),
-            windowsSymlinksEnabled)) {
+    // On Windows: Filter executable type for comparison.
+    if (compareTreeEntryType(
+            filteredEntryType(
+                oldScmEntry->second.getType(windowsRememberExecutableBit),
+                windowsSymlinksEnabled),
+            filteredEntryType(
+                newScmEntry->second.getType(windowsRememberExecutableBit),
+                windowsSymlinksEnabled))) {
       // The inode already matches the checkout destination. So do nothing.
       return nullptr;
     }
