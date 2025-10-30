@@ -333,6 +333,12 @@ export const Commit = memo(
           loggingLabel: 'Goto',
         });
       }
+      if (commit.fullRepoBranch != null) {
+        const item = Internal.getFullRepoBranchMergeContextMenuItem?.(commit.fullRepoBranch);
+        if (item != null) {
+          items.push(item);
+        }
+      }
       return items;
     };
 
