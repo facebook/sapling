@@ -673,6 +673,13 @@ class rebaseruntime:
                             % (kindstr, pathstr)
                         )
                         cmdutil.bailifchanged(repo)
+                        if (
+                            ui.configbool("rebase", "close-tx-on-disk", True)
+                            and tr
+                            and tr.running()
+                        ):
+                            tr.close()
+                            tr = None
                     ui.log(
                         "rebase",
                         rebase_imm_new_restart=str(True).lower(),

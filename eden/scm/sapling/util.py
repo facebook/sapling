@@ -834,9 +834,11 @@ def acceptintervention(tr=None):
         return
     try:
         yield
-        tr.close()
+        if tr.running():
+            tr.close()
     except error.InterventionRequired:
-        tr.close()
+        if tr.running():
+            tr.close()
         raise
     finally:
         tr.release()

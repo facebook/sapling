@@ -88,19 +88,17 @@ Test merge driver is invoked only once
   $ ( hg dbsh $TESTTMP/myrebase.py; echo $?; ) >out 2>err &
 
   $ hg debugpython -- $TESTTMP/interrupt.py
-Tofix: the repo should not be in merge state
   $ hg st
-  M bar
   M baz
-  M foo
   ? err
   ? out
   ? pid
   
-  # The repository is in an unfinished *merge* state.
+  # The repository is in an unfinished *rebase* state.
   # No unresolved merge conflicts.
-  # To continue:                hg continue, then hg commit
-  # To abort:                   hg goto . --clean    (warning: this will discard uncommitted changes)
+  # To continue:                hg rebase --continue
+  # To abort:                   hg rebase --abort
+  # To quit:                    hg rebase --quit
   $ cat out
   rebasing fbc6d9483227 "C"
   merging foo
@@ -109,13 +107,15 @@ Tofix: the repo should not be in merge state
     conclude sleeping ...
   130
   $ hg log -G -T "{node|short} {desc}"
-  @  9acff5452ac4 E
+  @  cd9c7a0f594d C
   │
-  o  5936dc4cac62 D
-  │
-  o  fbc6d9483227 C
-  │
-  │ o  92cc5e5f07f6 B
+  │ o  9acff5452ac4 E
+  │ │
+  │ o  5936dc4cac62 D
+  │ │
+  │ x  fbc6d9483227 C
+  │ │
+  o │  92cc5e5f07f6 B
   ├─╯
   o  2cacf0e4c790 A
 
@@ -155,19 +155,17 @@ Test merge driver is invoked multiple times
   $ ( hg dbsh $TESTTMP/myrebase.py; echo $?; ) >out 2>err &
 
   $ hg debugpython -- $TESTTMP/interrupt.py
-Tofix: the repo should not be in merge state
   $ hg st
-  M bar
   M baz
-  M foo
   ? err
   ? out
   ? pid
   
-  # The repository is in an unfinished *merge* state.
+  # The repository is in an unfinished *rebase* state.
   # No unresolved merge conflicts.
-  # To continue:                hg continue, then hg commit
-  # To abort:                   hg goto . --clean    (warning: this will discard uncommitted changes)
+  # To continue:                hg rebase --continue
+  # To abort:                   hg rebase --abort
+  # To quit:                    hg rebase --quit
   $ cat out
   rebasing fbc6d9483227 "C"
   merging foo
@@ -180,14 +178,20 @@ Tofix: the repo should not be in merge state
     conclude sleeping ...
   130
   $ hg log -G -T "{node|short} {desc}"
-  @  e29b137ee2c0 F
+  @  15fd84eef4a1 E
   │
-  o  8ec7c4b0f139 E
+  o  7da75ead7207 D
   │
-  o  3221ce790155 D
+  o  cd9c7a0f594d C
   │
-  o  fbc6d9483227 C
-  │
-  │ o  92cc5e5f07f6 B
+  │ o  e29b137ee2c0 F
+  │ │
+  │ x  8ec7c4b0f139 E
+  │ │
+  │ x  3221ce790155 D
+  │ │
+  │ x  fbc6d9483227 C
+  │ │
+  o │  92cc5e5f07f6 B
   ├─╯
   o  2cacf0e4c790 A
