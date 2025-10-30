@@ -6,6 +6,7 @@
 /isl-server/dist/
 /isl-server/coverage/
 /isl-server/src/facebook/phabricator/generated/
+/isl-server/src/facebook/fullRepoBranch/generated/
 /isl-server/src/github/generated/
 /vscode/coverage/
 /vscode/dist/
