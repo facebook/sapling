@@ -27,6 +27,7 @@ sapling-indexedlog = { version = "0.1.0", path = "../../indexedlog" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
 sapling-revisionstore = { version = "0.1.0", path = "../../revisionstore" }
 sapling-types = { version = "0.1.0", path = "../../types" }
+sapling-util = { version = "0.1.0", path = "../../util" }
 sapling-vfs = { version = "0.1.0", path = "../../vfs" }
 serde_cbor = "0.11"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

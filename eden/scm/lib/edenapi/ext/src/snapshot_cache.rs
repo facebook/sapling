@@ -29,6 +29,7 @@ use revisionstore::indexedlogutil::Store;
 use revisionstore::indexedlogutil::StoreOpenOptions;
 use tracing::debug;
 use tracing::warn;
+use util::path::expand_path;
 
 /// Default maximum size of cache items to cache (10MB)
 const DEFAULT_MAX_CACHE_FILE_SIZE: usize = 10 * 1024 * 1024;
@@ -96,7 +97,7 @@ impl SnapshotCacheConfig {
                         // and append repo name and "snapshots"
                         match config.get_opt::<String>("remotefilelog", "cachepath") {
                             Ok(Some(cache_path)) => {
-                                let mut hg_cache_path = std::path::PathBuf::from(cache_path);
+                                let mut hg_cache_path = expand_path(&cache_path);
                                 hg_cache_path.push(&repo_name);
                                 hg_cache_path.push("snapshots");
                                 hg_cache_path
@@ -107,7 +108,7 @@ impl SnapshotCacheConfig {
                             }
                         }
                     } else {
-                        let mut path = std::path::PathBuf::from(path_str);
+                        let mut path = expand_path(&path_str);
                         path.push(&repo_name);
                         path
                     };
