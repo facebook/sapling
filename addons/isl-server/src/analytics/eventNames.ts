@@ -191,7 +191,8 @@ export type TrackEventName =
   | 'RecommendedBookmarksStatus'
   | 'RecommendedBookmarksToggle'
   | 'RecommendedBookmarksReminderResponse'
-  | 'PullFullRepoBranchOperation';
+  | 'PullFullRepoBranchOperation'
+  | 'SubtreeMergeOperation';
 
 export type TrackErrorName =
   | 'BlameError'

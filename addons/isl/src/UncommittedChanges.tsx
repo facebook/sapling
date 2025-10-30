@@ -956,6 +956,7 @@ function MergeConflictButtons({
   const externalMergeTool = useAtomValue(externalMergeToolAtom);
 
   const useV2SmartActions = useFeatureFlagSync(Internal.featureFlags?.SmartActionsRedesign);
+  const branchMerge = Internal.getSubtreeContinueOperation?.(dagWithPreviews, conflicts);
 
   return (
     <Row style={{flexWrap: 'wrap', marginBottom: 'var(--pad)'}}>
@@ -968,7 +969,11 @@ function MergeConflictButtons({
           if (readAtom(shouldAutoResolveAllBeforeContinue)) {
             runOperation(new RunMergeDriversOperation());
           }
-          runOperation(new ContinueOperation());
+          if (branchMerge) {
+            runOperation(branchMerge);
+          } else {
+            runOperation(new ContinueOperation());
+          }
         }}>
         <Icon slot="start" icon={isRunningContinue ? 'loading' : 'debug-continue'} />
         <T>Continue</T>
