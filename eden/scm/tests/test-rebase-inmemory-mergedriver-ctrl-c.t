@@ -1,7 +1,7 @@
 #require no-windows no-eden
 #inprocess-hg-incompatible
 
-  $ enable morestatus
+  $ enable morestatus rebase
   $ setconfig morestatus.show=true
   $ setconfig rebase.experimental.inmemory=true
 
@@ -195,3 +195,50 @@ Test merge driver is invoked multiple times
   o │  92cc5e5f07f6 B
   ├─╯
   o  2cacf0e4c790 A
+
+Ensure rebase works without ctrl-c
+
+  $ newclientrepo
+  $ drawdag <<'EOS'
+  >   E  # E/foo = 1\n2\n3b\n4\n
+  >   |
+  >   D  # D/bar = 1b\n2\n3\n
+  >   |
+  > B C  # C/foo = 1\n2\n3b\n
+  > |/   # B/foo = 1a\n2\n3\n
+  > A    # B/bar = 1a\n2\n3\n
+  >      # A/foo = 1\n2\n3\n
+  >      # A/bar = 1\n2\n3\n
+  >      # drawdag.defaultfiles=false
+  > EOS
+  $ hg log -G -T "{node|short} {desc}"
+  o  ec1ca26947ef E
+  │
+  o  743d72ed2f5d D
+  │
+  o  01bc38cfe078 C
+  │
+  │ o  b077e5e06e6e B
+  ├─╯
+  o  7b72b8212522 A
+
+  $ hg up -q $E
+  $ hg rebase -s $C -d $B
+  rebasing 01bc38cfe078 "C"
+  merging foo
+  rebasing 743d72ed2f5d "D"
+  artifact rebuild required (in bar); switching to on-disk merge
+  rebasing 743d72ed2f5d "D"
+    conclude done
+  rebasing ec1ca26947ef "E"
+  merging foo
+  $ hg log -G -T "{node|short} {desc}"
+  @  22a6865caf56 E
+  │
+  o  a4ebb592066f D
+  │
+  o  247cd0adf860 C
+  │
+  o  b077e5e06e6e B
+  │
+  o  7b72b8212522 A
