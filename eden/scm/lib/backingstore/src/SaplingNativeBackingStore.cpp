@@ -45,18 +45,4 @@ SaplingNativeBackingStore::SaplingNativeBackingStore(
   }
 }
 
-bool SaplingNativeBackingStore::dogfoodingHost() const {
-  return sapling_dogfooding_host(*store_.get());
-}
-
-void SaplingNativeBackingStore::workingCopyParentHint(const RootId& parent) {
-  sapling_backingstore_set_parent_hint(*store_.get(), parent.value());
-}
-
-void SaplingNativeBackingStore::flush() {
-  XLOG(DBG7, "Flushing backing store");
-
-  sapling_backingstore_flush(*store_.get());
-}
-
 } // namespace sapling

@@ -249,16 +249,15 @@ SaplingBackingStore::~SaplingBackingStore() {
 }
 
 void SaplingBackingStore::initializeOBCCounters() {
-  std::string repoName = store_.getRepoName().data();
   // Get the hostname without the ".facebook.com" suffix
   auto hostname = facebook::network::getLocalHost(/*stripFbDomain=*/true);
   getBlobPerRepoLatencies_ = monitoring::OBCP99P95P50(
       monitoring::OdsCategoryId::ODS_EDEN,
-      fmt::format("eden.store.sapling.fetch_blob_{}_us", repoName),
+      fmt::format("eden.store.sapling.fetch_blob_{}_us", repoName_),
       {hostname});
   getTreePerRepoLatencies_ = monitoring::OBCP99P95P50(
       monitoring::OdsCategoryId::ODS_EDEN,
-      fmt::format("eden.store.sapling.fetch_tree_{}_us", repoName),
+      fmt::format("eden.store.sapling.fetch_tree_{}_us", repoName_),
       {hostname});
   isOBCEnabled_ = true;
 }
@@ -355,7 +354,7 @@ void SaplingBackingStore::setFetchBlobCounters(
     folly::stop_watch<std::chrono::milliseconds> watch) {
   if (fetchResult == ObjectFetchContext::FetchResult::Failure) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobFailure);
-    if (store_.dogfoodingHost()) {
+    if (dogfoodingHost()) {
       stats_->increment(&SaplingBackingStoreStats::fetchBlobFailureDogfooding);
     }
     return;
@@ -375,7 +374,7 @@ void SaplingBackingStore::setFetchBlobCounters(
   context->setFetchedSource(
       fetchedSource, ObjectFetchContext::ObjectType::Blob, stats_.copy());
 
-  if (store_.dogfoodingHost()) {
+  if (dogfoodingHost()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccessDogfooding);
   }
 }
@@ -449,11 +448,11 @@ void SaplingBackingStore::getBlobBatch(
           if (structuredLogger_) {
             structuredLogger_->logEvent(
                 FetchMiss{
-                    store_.getRepoName(),
+                    repoName_,
                     FetchMiss::Blob,
                     content.exception().what().toStdString(),
                     false, // isRetry
-                    store_.dogfoodingHost()});
+                    dogfoodingHost()});
           }
         } else {
           XLOGF(
@@ -597,7 +596,7 @@ void SaplingBackingStore::getTreeBatch(
           requests.size(),
           content.exception().what().toStdString());
       stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
-      if (store_.dogfoodingHost()) {
+      if (dogfoodingHost()) {
         stats_->increment(
             &SaplingBackingStoreStats::fetchTreeFailureDogfooding);
       }
@@ -609,7 +608,7 @@ void SaplingBackingStore::getTreeBatch(
           index,
           requests.size());
       stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
-      if (store_.dogfoodingHost()) {
+      if (dogfoodingHost()) {
         stats_->increment(
             &SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
       }
@@ -905,11 +904,11 @@ void SaplingBackingStore::getTreeAuxDataBatch(
       if (structuredLogger_) {
         structuredLogger_->logEvent(
             FetchMiss{
-                store_.getRepoName(),
+                repoName_,
                 FetchMiss::TreeAuxData,
                 auxTry.exception().what().toStdString(),
                 false, // isRetry
-                store_.dogfoodingHost()});
+                dogfoodingHost()});
       }
 
       return;
@@ -997,11 +996,11 @@ void SaplingBackingStore::getBlobAuxDataBatch(
       if (structuredLogger_ && fetch_mode != sapling::FetchMode::RemoteOnly) {
         structuredLogger_->logEvent(
             FetchMiss{
-                store_.getRepoName(),
+                repoName_,
                 FetchMiss::BlobAuxData,
                 auxTry.exception().what().toStdString(),
                 false, // isRetry
-                store_.dogfoodingHost()});
+                dogfoodingHost()});
       }
 
       return;
@@ -1300,7 +1299,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
         proxyHash.path(),
         proxyHash.revHash().toString());
     stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
-    if (store_.dogfoodingHost()) {
+    if (dogfoodingHost()) {
       stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
     }
     stats_->increment(&SaplingBackingStoreStats::fetchTreeLocal);
@@ -1454,7 +1453,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
   auto blob = getBlobLocal(proxyHash, context);
   if (blob.hasValue() && blob.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
-    if (store_.dogfoodingHost()) {
+    if (dogfoodingHost()) {
       stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccessDogfooding);
     }
     stats_->increment(&SaplingBackingStoreStats::fetchBlobLocal);
@@ -1491,7 +1490,7 @@ folly::coro::Task<BackingStore::GetBlobResult> SaplingBackingStore::co_getBlob(
   auto blob = getBlobLocal(proxyHash, context);
   if (blob.hasValue() && blob.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
-    if (store_.dogfoodingHost()) {
+    if (dogfoodingHost()) {
       stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccessDogfooding);
     }
     stats_->increment(&SaplingBackingStoreStats::fetchBlobLocal);
@@ -1909,7 +1908,7 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
     case ObjectFetchContext::kObjectTypeEnumMax:
       break;
   }
-  if (store_.dogfoodingHost()) {
+  if (dogfoodingHost()) {
     stats_->increment(
         success ? &SaplingBackingStoreStats::fetchTreeSuccessDogfooding
                 : &SaplingBackingStoreStats::fetchTreeFailureDogfooding);
@@ -1951,7 +1950,7 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
       fetch_mode == sapling::FetchMode::LocalOnly) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
-    store_.flush();
+    flush();
     fetch_mode = sapling::FetchMode::AllowRemote;
     tree = getNativeTree(
         manifestId.getBytes(), path, edenTreeId, context, fetch_mode);
@@ -2466,6 +2465,15 @@ int64_t SaplingBackingStore::dropAllPendingRequestsFromQueue() {
     }
   }
   return requestVec.size();
+}
+
+void SaplingBackingStore::flush() {
+  XLOG(DBG7, "Flushing backing store");
+  sapling_backingstore_flush(store_.rustStore());
+}
+
+bool SaplingBackingStore::dogfoodingHost() {
+  return sapling_dogfooding_host(store_.rustStore());
 }
 
 } // namespace facebook::eden

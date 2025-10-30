@@ -235,12 +235,10 @@ class SaplingBackingStore final : public BackingStore {
    * As a side effect, this also reloads the current state of Mercurial's
    * cache, picking up any writes done by Mercurial.
    */
-  void flush() {
-    store_.flush();
-  }
+  void flush();
 
   static void flushCounters() {
-    sapling::SaplingNativeBackingStore::flushCounters();
+    sapling::sapling_flush_counters();
   }
 
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
@@ -285,7 +283,7 @@ class SaplingBackingStore final : public BackingStore {
   void periodicManagementTask() override;
 
   std::optional<folly::StringPiece> getRepoName() override {
-    return store_.getRepoName();
+    return repoName_;
   }
 
   LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
@@ -581,7 +579,7 @@ class SaplingBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context) override;
 
   void workingCopyParentHint(const RootId& parent) override {
-    store_.workingCopyParentHint(parent);
+    sapling_backingstore_set_parent_hint(store_.rustStore(), parent.value());
   }
 
   void processBlobImportRequests(
@@ -704,6 +702,8 @@ class SaplingBackingStore final : public BackingStore {
   monitoring::OBCP99P95P50 getBlobPerRepoLatencies_; // calculates p50, p95, p99
   monitoring::OBCP99P95P50 getTreePerRepoLatencies_; // calculates p50, p95, p99
   void initializeOBCCounters();
+
+  bool dogfoodingHost();
 
   /**
    * Reference to the eden config, may be a null pointer in unit tests.

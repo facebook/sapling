@@ -93,20 +93,6 @@ class SaplingNativeBackingStore {
       facebook::eden::HgObjectIdFormat objectIdFormat,
       facebook::eden::CaseSensitivity caseSensitive);
 
-  std::string_view getRepoName() const {
-    return repoName_;
-  }
-
-  bool dogfoodingHost() const;
-
-  void workingCopyParentHint(const RootId& parent);
-
-  void flush();
-
-  static void flushCounters() {
-    sapling_flush_counters();
-  }
-
   const sapling::BackingStore& rustStore() {
     return *store_.get();
   }
