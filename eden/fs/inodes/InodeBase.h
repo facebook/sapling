@@ -68,6 +68,10 @@ class InodeBase {
     return mode_to_dtype(initialMode_);
   }
 
+  mode_t getInitialMode() const {
+    return initialMode_;
+  }
+
   bool isDir() const {
     return getType() == dtype_t::Dir;
   }

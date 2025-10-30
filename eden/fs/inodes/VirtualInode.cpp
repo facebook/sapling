@@ -222,6 +222,13 @@ ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
       [&](const InodePtr& inode) -> R {
 #ifdef _WIN32
         (void)fetchContext;
+        if (windowsRememberExecutableBit) {
+          // On Windows, users cannot modify Unix-style file permissions.
+          // As a result, the file's initial mode remains unchanged.
+          // Therefore, we can reliably use the initial mode to determine the
+          // tree entry type, and use it as the SOURCE_CONTROL_TYPE.
+          return treeEntryTypeFromMode(inode->getInitialMode());
+        }
         // stat does not have real data for an inode on Windows, so we can not
         // directly use the mode bits. Further inodes are only tree, regular
         // files or symlink on windows see treeEntryTypeFromMode.
