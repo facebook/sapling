@@ -219,7 +219,7 @@ mod tests {
 
     use crate::*;
 
-    const PROJECT_NAME: &str = "meerkat";
+    const PROJECT_NAME: &str = "analyze_resources";
     const FBSOURCE_COMMIT_ID: &str = "5496dd87e5fe7430a1a399530cc339a479097524";
     const MANIFOLD_BUCKET: &str = "devinfra_saved_state";
 
