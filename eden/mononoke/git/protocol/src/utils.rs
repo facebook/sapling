@@ -151,13 +151,6 @@ pub(crate) fn entry_weight(
     weight as usize
 }
 
-/// Utility function for converting a vec of commits into a stream of commits
-pub(crate) fn to_commit_stream(
-    commits: Vec<ChangesetId>,
-) -> BoxStream<'static, Result<ChangesetId>> {
-    stream::iter(commits.into_iter().map(Ok)).boxed()
-}
-
 pub(crate) fn to_git_object_stream(
     git_objects: Vec<ObjectId>,
 ) -> BoxStream<'static, Result<ObjectId>> {
