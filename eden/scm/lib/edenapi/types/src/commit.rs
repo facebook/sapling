@@ -553,6 +553,8 @@ pub struct UploadSnapshotResponse {
     pub bubble_id: NonZeroU64,
     // bubble expiration timestamp if known
     pub bubble_expiration_timestamp: Option<i64>,
+    // total bytes of snapshot content
+    pub snapshot_content_bytes: u64,
 }
 
 #[auto_wire]

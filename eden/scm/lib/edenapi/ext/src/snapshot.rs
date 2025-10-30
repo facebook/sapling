@@ -481,10 +481,21 @@ pub async fn upload_snapshot_with_cache(
         }
     }
 
+    // Calculate snapshot content bytes from token metadata
+    let snapshot_content_bytes: u64 = file_content_tokens
+        .values()
+        .filter_map(|token| {
+            token.data.metadata.as_ref().map(|metadata| match metadata {
+                edenapi_types::UploadTokenMetadata::FileContentTokenMetadata(m) => m.content_size,
+            })
+        })
+        .sum();
+
     Ok(UploadSnapshotResponse {
         changeset_token: changeset_response.token,
         bubble_id,
         bubble_expiration_timestamp,
+        snapshot_content_bytes,
     })
 }
 

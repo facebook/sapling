@@ -452,6 +452,7 @@ def createremote(ui, repo, *pats, **opts) -> None:
         csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"])
         bubble = response["bubble_id"]
         bubble_expiration_timestamp = response.get("bubble_expiration_timestamp")
+        snapshot_content_bytes = response.get("snapshot_content_bytes", 0)
 
         # Store latest snapshot and bubble metadata in the local cache
         storelatest(repo, csid, bubble, bubble_expiration_timestamp)
@@ -495,6 +496,7 @@ def createremote(ui, repo, *pats, **opts) -> None:
             fm.data(snapshot_missing=len(wc.missing))
             fm.data(snapshot_untracked=len(wc.untracked))
             fm.data(snapshot_total_files=wc.filecount())
+            fm.data(snapshot_content_bytes=snapshot_content_bytes)
 
             # Add skipped large untracked files to JSON output
             if wc.skipped_large_untracked:
