@@ -45,33 +45,6 @@ SaplingNativeBackingStore::SaplingNativeBackingStore(
   }
 }
 
-void SaplingNativeBackingStore::getBlobAuxDataBatch(
-    SaplingRequestRange requests,
-    sapling::FetchMode fetch_mode,
-    folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<FileAuxData>>)>
-        resolve) {
-  auto resolver = std::make_shared<GetFileAuxBatchResolver>(std::move(resolve));
-  auto count = requests.size();
-
-  XLOGF(DBG7, "Import blob aux data with size: {}", count);
-
-  std::vector<Request> raw_requests;
-  raw_requests.reserve(count);
-  for (auto& request : requests) {
-    raw_requests.push_back(
-        Request{
-            request.node.data(),
-            request.cause,
-        });
-  }
-
-  sapling_backingstore_get_file_aux_batch(
-      *store_.get(),
-      rust::Slice<const Request>{raw_requests.data(), raw_requests.size()},
-      fetch_mode,
-      std::move(resolver));
-}
-
 bool SaplingNativeBackingStore::dogfoodingHost() const {
   return sapling_dogfooding_host(*store_.get());
 }

@@ -951,66 +951,90 @@ void SaplingBackingStore::getBlobAuxDataBatch(
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
 
-  store_.getBlobAuxDataBatch(
-      folly::range(requests),
+  auto count = requests.size();
+
+  XLOGF(DBG7, "Import blob aux data with size: {}", requests.size());
+
+  std::vector<sapling::Request> raw_requests;
+  raw_requests.reserve(count);
+  for (auto& request : requests) {
+    raw_requests.push_back(
+        sapling::Request{
+            request.node.data(),
+            request.cause,
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(request.path.view().data()),
+                request.path.view().size()},
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(request.oid.getBytes().data()),
+                request.oid.size()},
+            request.context->getClientPid().valueOrZero().get(),
+        });
+  }
+  // store_.getBlobAuxDataBatch is blocking, hence we can take these by
+  // reference.
+  auto callback = [&](size_t index,
+                      folly::Try<std::shared_ptr<sapling::FileAuxData>>
+                          auxTry) {
+    if (auxTry.hasException()) {
+      XLOGF(
+          DBG4,
+          "Failed to import aux data node={} from EdenAPI (batch {}/{}): {}",
+          folly::hexlify(requests[index].node),
+          index,
+          requests.size(),
+          auxTry.exception().what().toStdString());
+    } else {
+      XLOGF(
+          DBG4,
+          "Imported aux data node={} from EdenAPI (batch: {}/{})",
+          folly::hexlify(requests[index].node),
+          index,
+          requests.size());
+    }
+
+    if (auxTry.hasException()) {
+      if (structuredLogger_ && fetch_mode != sapling::FetchMode::RemoteOnly) {
+        structuredLogger_->logEvent(
+            FetchMiss{
+                store_.getRepoName(),
+                FetchMiss::BlobAuxData,
+                auxTry.exception().what().toStdString(),
+                false, // isRetry
+                store_.dogfoodingHost()});
+      }
+
+      return;
+    }
+
+    const auto& nodeId = requests[index].node;
+    XLOGF(DBG9, "Imported BlobAuxData={}", folly::hexlify(nodeId));
+    auto& [importRequestList, watch] = importRequestsMap[nodeId];
+    folly::Try<BlobAuxDataPtr> result;
+    if (auxTry.hasException()) {
+      result = folly::Try<BlobAuxDataPtr>{auxTry.exception()};
+    } else {
+      auto& aux = auxTry.value();
+      result = folly::Try{std::make_shared<BlobAuxDataPtr::element_type>(
+          Hash20{std::move(aux->content_sha1)},
+          Hash32{std::move(aux->content_blake3)},
+          aux->total_size)};
+    }
+    for (auto& importRequest : importRequestList) {
+      importRequest->getPromise<BlobAuxDataPtr>()->setWith(
+          [&]() -> folly::Try<BlobAuxDataPtr> { return result; });
+    }
+
+    // Make sure that we're stopping this watch.
+    watch.reset();
+  };
+
+  sapling_backingstore_get_file_aux_batch(
+      store_.rustStore(),
+      rust::Slice<const sapling::Request>{
+          raw_requests.data(), raw_requests.size()},
       fetch_mode,
-      // store_.getBlobAuxDataBatch is blocking, hence we can take these by
-      // reference.
-      [&](size_t index,
-          folly::Try<std::shared_ptr<sapling::FileAuxData>> auxTry) {
-        if (auxTry.hasException()) {
-          XLOGF(
-              DBG4,
-              "Failed to import aux data node={} from EdenAPI (batch {}/{}): {}",
-              folly::hexlify(requests[index].node),
-              index,
-              requests.size(),
-              auxTry.exception().what().toStdString());
-        } else {
-          XLOGF(
-              DBG4,
-              "Imported aux data node={} from EdenAPI (batch: {}/{})",
-              folly::hexlify(requests[index].node),
-              index,
-              requests.size());
-        }
-
-        if (auxTry.hasException()) {
-          if (structuredLogger_ &&
-              fetch_mode != sapling::FetchMode::RemoteOnly) {
-            structuredLogger_->logEvent(
-                FetchMiss{
-                    store_.getRepoName(),
-                    FetchMiss::BlobAuxData,
-                    auxTry.exception().what().toStdString(),
-                    false, // isRetry
-                    store_.dogfoodingHost()});
-          }
-
-          return;
-        }
-
-        const auto& nodeId = requests[index].node;
-        XLOGF(DBG9, "Imported BlobAuxData={}", folly::hexlify(nodeId));
-        auto& [importRequestList, watch] = importRequestsMap[nodeId];
-        folly::Try<BlobAuxDataPtr> result;
-        if (auxTry.hasException()) {
-          result = folly::Try<BlobAuxDataPtr>{auxTry.exception()};
-        } else {
-          auto& aux = auxTry.value();
-          result = folly::Try{std::make_shared<BlobAuxDataPtr::element_type>(
-              Hash20{std::move(aux->content_sha1)},
-              Hash32{std::move(aux->content_blake3)},
-              aux->total_size)};
-        }
-        for (auto& importRequest : importRequestList) {
-          importRequest->getPromise<BlobAuxDataPtr>()->setWith(
-              [&]() -> folly::Try<BlobAuxDataPtr> { return result; });
-        }
-
-        // Make sure that we're stopping this watch.
-        watch.reset();
-      });
+      std::make_shared<sapling::GetFileAuxBatchResolver>(callback));
 }
 
 void SaplingBackingStore::processRequest() {
