@@ -798,7 +798,11 @@ class StatusEdgeCaseTest(EdenHgTestCase):
     def populate_backing_repo(self, repo: HgRepository) -> None:
         repo.write_file("subdir/file.txt", "contents")
         self.commit1 = repo.commit("commit 1")
-        repo.write_file("subdir/file.txt", "contents", mode=0o775)
+        # On Windows, must change content since mode-only changes aren't detected
+        if sys.platform == "win32":
+            repo.write_file("subdir/file.txt", "contents\n", mode=0o775)
+        else:
+            repo.write_file("subdir/file.txt", "contents", mode=0o775)
         self.commit2 = repo.commit("commit 2")
         self.assertNotEqual(self.commit1, self.commit2)
 
@@ -849,6 +853,42 @@ class StatusEdgeCaseTest(EdenHgTestCase):
         self.eden.restart()
         os.chmod(os.path.join(self.mount, "subdir"), 0o664)
         self.assert_status_empty()
+
+    def test_executable_file_deleted_and_replaced_with_regular_mode(self) -> None:
+        """Test status when an executable file is deleted and replaced with regular mode.
+
+        If a file exists in the source control commit as executable, and then we delete
+        it and create a new file with the same name and content but regular mode,
+        hg status should show the file as modified (mode changed) on non-windows
+        platforms, and not modified on Windows.
+        """
+        # Setup: Create a commit with an executable file
+        self.repo.write_file("script.sh", "#!/bin/bash echo hello", mode=0o755)
+        self.repo.commit("Add executable script")
+        # On Windows, the file mode is ignored during creation, so we need to
+        # explicitly tell Sapling that this file should be marked as executable
+        # in the manifest by using debugmakeexecutable
+        if sys.platform == "win32":
+            self.hg("debugmakeexecutable", "script.sh")
+
+        self.assert_status_empty()
+
+        # Delete the executable file
+        path = os.path.join(self.mount, "script.sh")
+        os.unlink(path)
+
+        # Recreate the file with same content but regular mode
+        with open(path, "w") as f:
+            f.write("#!/bin/bash echo hello")
+        # Ensure it has regular mode (non-executable)
+        os.chmod(path, 0o644)
+
+        # Assert: File should show as modified (mode changed) on non-windows platforms,
+        # and not modified on Windows because Windows igonre executable bit changes in mode.
+        if sys.platform == "win32":
+            self.assert_status_empty()
+        else:
+            self.assert_status({"script.sh": "M"})
 
 
 # Define a separate TestCase class purely to test with different initial
