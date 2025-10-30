@@ -77,9 +77,14 @@ class DiffContext {
     return caseSensitive_;
   }
 
-  // Whether symlinks are enabled or not
+  // Whether symlinks are enabled on Windows or not
   bool getWindowsSymlinksEnabled() const {
     return windowsSymlinksEnabled_;
+  }
+
+  // Whether executable are remember on Windows or not
+  bool getWindowsRememberExecutableBit() const {
+    return windowsRememberExecutableBit_;
   }
 
  private:
@@ -96,6 +101,8 @@ class DiffContext {
   CaseSensitivity caseSensitive_;
 
   bool windowsSymlinksEnabled_;
+
+  bool windowsRememberExecutableBit_;
 };
 
 } // namespace facebook::eden

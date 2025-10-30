@@ -90,7 +90,8 @@ ObjectStore::ObjectStore(
       structuredLogger_(structuredLogger),
       edenConfig_(edenConfig),
       caseSensitive_{caseSensitive},
-      windowsSymlinksEnabled_{windowsSymlinksEnabled} {
+      windowsSymlinksEnabled_{windowsSymlinksEnabled},
+      windowsRememberExecutableBit_{edenConfig_->getEdenConfig()->windowsRememberExecutableBit.getValue()} {
   XCHECK(backingStore_);
   XCHECK(stats_);
 }

@@ -301,7 +301,10 @@ EdenMount::EdenMount(
       scmStatusCache_{ScmStatusCache::create(
           serverState_->getReloadableConfig()->getEdenConfig().get(),
           serverState_->getStats().copy(),
-          journal_)} {
+          journal_)},
+      windowsRememberExecutableBit_{
+          serverState_->getEdenConfig()
+              ->windowsRememberExecutableBit.getValue()} {
   subscribeInodeActivityBuffer();
 }
 

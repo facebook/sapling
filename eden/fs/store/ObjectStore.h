@@ -391,6 +391,10 @@ class ObjectStore : public IObjectStore,
     return windowsSymlinksEnabled_;
   }
 
+  bool getWindowsRememberExecutableBit() const {
+    return windowsRememberExecutableBit_;
+  }
+
  private:
   FRIEND_TEST(ObjectStoreTest, caching_policies_anything);
   FRIEND_TEST(ObjectStoreTest, caching_policies_no_caching);
@@ -540,6 +544,9 @@ class ObjectStore : public IObjectStore,
 
   // Whether symlinks are enabled on Windows or not
   bool windowsSymlinksEnabled_;
+
+  // Whether executable bit is remember on Windows or not
+  bool windowsRememberExecutableBit_;
 };
 
 } // namespace facebook::eden

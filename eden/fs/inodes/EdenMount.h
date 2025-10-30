@@ -645,6 +645,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
     return checkoutConfig_.get();
   }
 
+  bool getWindowsRememberExecutableBit() const {
+    return windowsRememberExecutableBit_;
+  }
+
   /**
    * Returns the server's thread pool.
    */
@@ -1481,6 +1485,9 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   std::shared_ptr<Clock> clock_;
 
   mutable folly::Synchronized<std::shared_ptr<ScmStatusCache>> scmStatusCache_;
+
+  // Whether executable bit is remember on Windows or not
+  bool windowsRememberExecutableBit_{false};
 };
 
 /**

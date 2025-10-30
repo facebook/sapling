@@ -34,7 +34,8 @@ DiffContext::DiffContext(
           fetchContext->getRequestInfo())},
       fetchContext_{statsContext_.copy()},
       caseSensitive_{caseSensitive},
-      windowsSymlinksEnabled_{windowsSymlinksEnabled} {}
+      windowsSymlinksEnabled_{windowsSymlinksEnabled},
+      windowsRememberExecutableBit_{store->getWindowsRememberExecutableBit()} {}
 
 DiffContext::~DiffContext() = default;
 
