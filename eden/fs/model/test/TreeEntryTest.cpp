@@ -131,3 +131,66 @@ TEST(TreeEntry, testEntryAttributesEqual) {
   EXPECT_NE(real1Attributes, real2Attributes);
   EXPECT_EQ(real1Attributes, real1Attributes);
 }
+
+TEST(TreeEntry, filteredEntryType) {
+  if (folly::kIsWindows) {
+    // On windows, symlinks should be preserved if windowsSymlinksEnabled is
+    // true, and converted to regular files if windowsSymlinksEnabled is false
+    EXPECT_EQ(
+        TreeEntryType::SYMLINK,
+        filteredEntryType(TreeEntryType::SYMLINK, true));
+    EXPECT_EQ(
+        TreeEntryType::REGULAR_FILE,
+        filteredEntryType(TreeEntryType::SYMLINK, false));
+  } else {
+    // On non-windows, symlinks should be preserved regardless of
+    // windowsSymlinksEnabled
+    EXPECT_EQ(
+        TreeEntryType::SYMLINK,
+        filteredEntryType(TreeEntryType::SYMLINK, true));
+    EXPECT_EQ(
+        TreeEntryType::SYMLINK,
+        filteredEntryType(TreeEntryType::SYMLINK, false));
+  }
+
+  // Other than symlinks, the type should be preserved regardless of
+  // windowsSymlinksEnabled
+  for (auto type :
+       {TreeEntryType::TREE,
+        TreeEntryType::REGULAR_FILE,
+        TreeEntryType::EXECUTABLE_FILE}) {
+    EXPECT_EQ(type, filteredEntryType(type, true));
+    EXPECT_EQ(type, filteredEntryType(type, false));
+  }
+}
+TEST(TreeEntry, compareTreeEntryType) {
+  // Test that identical types compare as equal
+  EXPECT_TRUE(compareTreeEntryType(
+      TreeEntryType::REGULAR_FILE, TreeEntryType::REGULAR_FILE));
+  EXPECT_TRUE(compareTreeEntryType(
+      TreeEntryType::EXECUTABLE_FILE, TreeEntryType::EXECUTABLE_FILE));
+  EXPECT_TRUE(
+      compareTreeEntryType(TreeEntryType::SYMLINK, TreeEntryType::SYMLINK));
+  EXPECT_TRUE(compareTreeEntryType(TreeEntryType::TREE, TreeEntryType::TREE));
+
+  // Test that different types compare as not equal
+  EXPECT_FALSE(compareTreeEntryType(
+      TreeEntryType::REGULAR_FILE, TreeEntryType::SYMLINK));
+  EXPECT_FALSE(
+      compareTreeEntryType(TreeEntryType::REGULAR_FILE, TreeEntryType::TREE));
+  EXPECT_FALSE(compareTreeEntryType(
+      TreeEntryType::EXECUTABLE_FILE, TreeEntryType::SYMLINK));
+  EXPECT_FALSE(compareTreeEntryType(
+      TreeEntryType::EXECUTABLE_FILE, TreeEntryType::TREE));
+  EXPECT_FALSE(
+      compareTreeEntryType(TreeEntryType::SYMLINK, TreeEntryType::TREE));
+
+  if (folly::kIsWindows) {
+    // On Windows REGULAR_FILE and EXECUTABLE_FILE types should consider equal
+    EXPECT_TRUE(compareTreeEntryType(
+        TreeEntryType::REGULAR_FILE, TreeEntryType::EXECUTABLE_FILE));
+  } else {
+    EXPECT_FALSE(compareTreeEntryType(
+        TreeEntryType::REGULAR_FILE, TreeEntryType::EXECUTABLE_FILE));
+  }
+}
