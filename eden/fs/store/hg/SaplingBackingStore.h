@@ -403,11 +403,23 @@ class SaplingBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context);
 
   /**
-   * Create a tree fetch request and enqueue it to the SaplingImportRequestQueue
+   * Fetch a single tree from Sapling Rust store. "Not found" is propagated as
+   * nullptr to avoid exception overhead.
+   */
+  folly::Try<facebook::eden::TreePtr> getNativeTree(
+      folly::ByteRange node,
+      RelativePathPiece path,
+      const ObjectId& oid,
+      const ObjectFetchContextPtr& context,
+      sapling::FetchMode fetch_mode);
+
+  /**
+   * Create a tree fetch request and enqueue it to the
+   * SaplingImportRequestQueue
    *
-   * For latency sensitive context, the caller is responsible for checking if
-   * the tree is present locally, as this function will always push the request
-   * at the end of the queue.
+   * For latency sensitive context, the caller is responsible for checking
+   * if the tree is present locally, as this function will always push the
+   * request at the end of the queue.
    */
   ImmediateFuture<GetTreeResult> getTreeEnqueue(
       const ObjectId& id,

@@ -1263,7 +1263,7 @@ TreePtr SaplingBackingStore::getTreeLocal(
     const ObjectId& edenTreeId,
     const ObjectFetchContextPtr& context,
     const HgProxyHash& proxyHash) {
-  auto tree = store_.getTree(
+  auto tree = getNativeTree(
       proxyHash.byteHash(),
       proxyHash.path(),
       edenTreeId,
@@ -1282,12 +1282,51 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
     const Hash20& manifestId,
     const ObjectId& edenTreeId,
     const ObjectFetchContextPtr& context) {
-  return store_.getTree(
+  return getNativeTree(
       manifestId.getBytes(),
       path,
       edenTreeId,
       context,
       sapling::FetchMode::RemoteOnly /*, sapling::ClientRequestInfo(context)*/);
+}
+
+folly::Try<facebook::eden::TreePtr> SaplingBackingStore::getNativeTree(
+    folly::ByteRange node,
+    RelativePathPiece path,
+    const ObjectId& oid,
+    const ObjectFetchContextPtr& context,
+    sapling::FetchMode fetch_mode) {
+  XLOGF(DBG7, "Importing tree node={} from hgcache", folly::hexlify(node));
+  return folly::makeTryWith([&] {
+    try {
+      sapling::TreeBuilder tb =
+          sapling::TreeBuilder{oid, path, caseSensitive_, objectIdFormat_};
+
+      sapling_backingstore_get_tree(
+          store_.rustStore(),
+          rust::Slice<const uint8_t>{node.data(), node.size()},
+          tb,
+          fetch_mode);
+
+      facebook::eden::TreePtr tree = tb.build();
+
+      if (tree && context->getCause() != FetchCause::Prefetch) {
+        sapling_backingstore_witness_dir_read(
+            store_.rustStore(),
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(path.view().data()),
+                path.view().size()},
+            tb.num_files(),
+            tb.num_dirs(),
+            fetch_mode == sapling::FetchMode::LocalOnly,
+            context->getClientPid().valueOrZero().get());
+      }
+
+      return tree;
+    } catch (const rust::Error& error) {
+      throw sapling::SaplingBackingStoreError{error.what()};
+    }
+  });
 }
 
 folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
@@ -1792,7 +1831,7 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
   if (path.empty()) {
     fetch_mode = sapling::FetchMode::LocalOnly;
   }
-  GetTreeResult tree = store_.getTree(
+  GetTreeResult tree = getNativeTree(
       manifestId.getBytes(), path, edenTreeId, context, fetch_mode);
   if (tree.hasValue() && !tree.value() &&
       fetch_mode == sapling::FetchMode::LocalOnly) {
@@ -1800,7 +1839,7 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
     // store and try again, this time allowing remote fetches.
     store_.flush();
     fetch_mode = sapling::FetchMode::AllowRemote;
-    tree = store_.getTree(
+    tree = getNativeTree(
         manifestId.getBytes(), path, edenTreeId, context, fetch_mode);
   }
 

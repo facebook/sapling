@@ -99,13 +99,6 @@ class SaplingNativeBackingStore {
 
   bool dogfoodingHost() const;
 
-  folly::Try<facebook::eden::TreePtr> getTree(
-      NodeId node,
-      RepoPath path,
-      const ObjectId& oid,
-      const ObjectFetchContextPtr& context,
-      sapling::FetchMode fetch_mode);
-
   void getTreeBatch(
       SaplingRequestRange requests,
       sapling::FetchMode fetch_mode,
