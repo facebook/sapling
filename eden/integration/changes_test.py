@@ -770,6 +770,68 @@ class ChangesTestNix(JournalTestBase):
             ]
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
+    async def test_rename_folder_with_suffixes(self):
+        # Suffixes should not apply to directory renames
+        self.mkdir("test_folder")
+        async with self.get_thrift_client() as client:
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.rename_async("test_folder", "best_folder")
+            changes = await self.getChangesSinceV2(
+                position=position,
+                included_suffixes=["qq"],
+                excluded_suffixes=["folder"],
+            )
+            expected_changes = [
+                buildLargeChange(
+                    DirectoryRenamed,
+                    from_bytes=b"test_folder",
+                    to_bytes=b"best_folder",
+                ),
+            ]
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    async def test_rename_folder_with_included_roots(self):
+        # Included roots should apply to directory renames
+        self.mkdir("a/test_folder")
+        self.mkdir("b/test_folder")
+        async with self.get_thrift_client() as client:
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.rename_async("a/test_folder", "a/best_folder")
+            await self.rename_async("b/test_folder", "b/best_folder")
+            changes = await self.getChangesSinceV2(
+                position=position,
+                included_roots=["a"],
+            )
+            expected_changes = [
+                buildLargeChange(
+                    DirectoryRenamed,
+                    from_bytes=b"a/test_folder",
+                    to_bytes=b"a/best_folder",
+                ),
+            ]
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
+    async def test_rename_folder_with_excluded_roots(self):
+        # Excluded roots should apply to directory renames
+        self.mkdir("a/test_folder")
+        self.mkdir("b/test_folder")
+        async with self.get_thrift_client() as client:
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            await self.rename_async("a/test_folder", "a/best_folder")
+            await self.rename_async("b/test_folder", "b/best_folder")
+            changes = await self.getChangesSinceV2(
+                position=position,
+                excluded_roots=["b"],
+            )
+            expected_changes = [
+                buildLargeChange(
+                    DirectoryRenamed,
+                    from_bytes=b"a/test_folder",
+                    to_bytes=b"a/best_folder",
+                ),
+            ]
+            self.assertTrue(self.check_changes(changes.changes, expected_changes))
+
     async def test_replace_folder(self):
         self.eden_repo.mkdir("test_folder")
         self.eden_repo.mkdir("gone_folder")

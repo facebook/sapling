@@ -2326,7 +2326,8 @@ bool isPathIncluded(
     const std::vector<RelativePath>& excludedRoots,
     const std::vector<std::string>& includedSuffixes,
     const std::vector<std::string>& excludedSuffixes,
-    RelativePath path) {
+    RelativePath path,
+    dtype_t type) {
   if (!includedRoots.empty()) {
     bool included = false;
     // test to see if path matches includedRoots - include the path
@@ -2343,7 +2344,8 @@ bool isPathIncluded(
     }
   }
 
-  if (!includedSuffixes.empty()) {
+  // Ignore suffixes for directory changes
+  if (!includedSuffixes.empty() && type != dtype_t::Dir) {
     bool included = false;
     // test to see if path matches includedSuffixes - include the path
     for (const auto& includedSuffix : includedSuffixes) {
@@ -2369,7 +2371,7 @@ bool isPathIncluded(
     }
   }
 
-  if (!excludedSuffixes.empty()) {
+  if (!excludedSuffixes.empty() && type != dtype_t::Dir) {
     for (const auto& excludedSuffix : excludedSuffixes) {
       if (ends_with(path.asString(), excludedSuffix)) {
         return false;
@@ -2574,7 +2576,8 @@ void EdenServiceHandler::sync_changesSinceV2(
               includedAndExcludedRoots.second,
               includedAndExcludedSuffixes.first,
               includedAndExcludedSuffixes.second,
-              current.path1);
+              current.path1,
+              current.type);
           bool includePath2 = false;
 
           ChangeNotification change;
@@ -2591,7 +2594,9 @@ void EdenServiceHandler::sync_changesSinceV2(
                       includedAndExcludedRoots.second,
                       includedAndExcludedSuffixes.first,
                       includedAndExcludedSuffixes.second,
-                      current.path2);
+                      current.path2,
+                      current.type);
+
             if (includePath1 || includePath2) {
               const auto& info = current.info2;
               // NOTE: we could do a bunch of runtime checks here to
@@ -2741,7 +2746,8 @@ void EdenServiceHandler::sync_changesSinceV2(
             }
           }
 
-          // Include a change if either path passes the filters
+          // Include a change if either path passes the filters or is a dir, and
+          // the dir rename is in the roots
           if (includePath1 || includePath2) {
             result.changes()->push_back(std::move(change));
           } else {
