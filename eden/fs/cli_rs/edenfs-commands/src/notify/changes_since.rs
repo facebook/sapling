@@ -87,6 +87,9 @@ pub struct ChangesSinceCmd {
     #[clap(long, help = "Print the output in JSON format")]
     json: bool,
 
+    #[clap(long, help = "Print format the position when printing out in json")]
+    formatted_position: bool,
+
     #[clap(short, long, default_value = "0")]
     /// [Unit: ms] number of milliseconds to wait between events
     throttle: u64,
@@ -97,7 +100,17 @@ impl ChangesSinceCmd {
         println!(
             "{}",
             if self.json {
-                serde_json::to_string(&result).expect("Failed to serialize result to JSON.") + "\n"
+                if self.formatted_position {
+                    let mut value =
+                        serde_json::to_value(result).expect("Failed to serialize result to JSON.");
+                    value["to_position"] =
+                        serde_json::Value::String(result.to_position.to_string());
+                    serde_json::to_string(&value).expect("Failed to serialize result to JSON.")
+                        + "\n"
+                } else {
+                    serde_json::to_string(&result).expect("Failed to serialize result to JSON.")
+                        + "\n"
+                }
             } else {
                 result.to_string()
             }
@@ -109,7 +122,16 @@ impl ChangesSinceCmd {
         println!(
             "{}",
             if self.json {
-                serde_json::to_string(&result).expect("Failed to serialize result to JSON.") + "\n"
+                if self.formatted_position {
+                    let mut value =
+                        serde_json::to_value(result).expect("Failed to serialize result to JSON.");
+                    value["position"] = serde_json::Value::String(result.position.to_string());
+                    serde_json::to_string(&value).expect("Failed to serialize result to JSON.")
+                        + "\n"
+                } else {
+                    serde_json::to_string(&result).expect("Failed to serialize result to JSON.")
+                        + "\n"
+                }
             } else {
                 result.to_string()
             }
