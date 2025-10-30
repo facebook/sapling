@@ -28,8 +28,42 @@
 #include "eden/fs/store/hg/SaplingBackingStoreOptions.h"
 #include "eden/fs/store/hg/SaplingImportRequestQueue.h"
 #include "eden/fs/telemetry/ActivityBuffer.h"
-#include "eden/scm/lib/backingstore/include/SaplingNativeBackingStore.h"
+#include "eden/scm/lib/backingstore/src/ffi.rs.h"
 #include "monitoring/obc/OBCPxx.h"
+
+namespace sapling {
+using NodeId = folly::ByteRange;
+using FetchCause = facebook::eden::ObjectFetchContext::Cause;
+using RepoPath = facebook::eden::RelativePathPiece;
+using RootId = facebook::eden::RootId;
+using ObjectId = facebook::eden::ObjectId;
+using ObjectFetchContextPtr = facebook::eden::ObjectFetchContextPtr;
+
+struct SaplingRequest {
+  // These two fields are typically borrowed from a
+  // SaplingImportRequest - be cognizant of lifetimes.
+  NodeId node;
+  RepoPath path;
+  const ObjectId& oid;
+
+  FetchCause cause;
+  ObjectFetchContextPtr context;
+  // TODO: sapling::FetchMode mode;
+  // TODO: sapling::ClientRequestInfo cri;
+
+  SaplingRequest(
+      NodeId node_,
+      RepoPath path_,
+      const ObjectId& oid_,
+      FetchCause cause_,
+      ObjectFetchContextPtr context_)
+      : node(node_),
+        path(path_),
+        oid(oid_),
+        cause(cause_),
+        context(std::move(context_)) {}
+};
+} // namespace sapling
 
 namespace facebook::eden {
 
@@ -579,7 +613,7 @@ class SaplingBackingStore final : public BackingStore {
       const ObjectFetchContextPtr& context) override;
 
   void workingCopyParentHint(const RootId& parent) override {
-    sapling_backingstore_set_parent_hint(store_.rustStore(), parent.value());
+    sapling_backingstore_set_parent_hint(*store_.get(), parent.value());
   }
 
   void processBlobImportRequests(
@@ -785,7 +819,8 @@ class SaplingBackingStore final : public BackingStore {
   // Handle for TraceBus subscription.
   TraceSubscriptionHandle<HgImportTraceEvent> hgTraceHandle_;
 
-  sapling::SaplingNativeBackingStore store_;
+  std::unique_ptr<sapling::BackingStore, void (*)(sapling::BackingStore*)>
+      store_;
   std::string repoName_;
   HgObjectIdFormat objectIdFormat_;
   CaseSensitivity caseSensitive_;

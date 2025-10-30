@@ -137,15 +137,20 @@ SaplingBackingStore::SaplingBackingStore(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
       store_{
-          repository.view(),
-          mount.view(),
-          config_->getEdenConfig()->hgObjectIdFormat.getValue(),
-          caseSensitive},
+          sapling::sapling_backingstore_new(
+              rust::Slice<const char>{
+                  repository.view().data(),
+                  repository.view().size()},
+              rust::Slice<const char>{mount.view().data(), mount.view().size()})
+              .into_raw(),
+          [](sapling::BackingStore* backingStore) {
+            auto box = rust::Box<sapling::BackingStore>::from_raw(backingStore);
+          }},
       objectIdFormat_{config_->getEdenConfig()->hgObjectIdFormat.getValue()},
       caseSensitive_{caseSensitive} {
   try {
     repoName_ =
-        std::string(sapling::sapling_backingstore_get_name(store_.rustStore()));
+        std::string(sapling::sapling_backingstore_get_name(*store_.get()));
   } catch (const rust::Error& error) {
     XLOGF(DBG2, "Error while repo name from backingstore: {}", error.what());
   }
@@ -205,16 +210,20 @@ SaplingBackingStore::SaplingBackingStore(
           "hg",
           config_->getEdenConfig()->HgTraceBusCapacity.getValue())},
       store_{
-          repository.view(),
-          mount.view(),
-          config_->getEdenConfig()->hgObjectIdFormat.getValue(),
-          caseSensitive},
-
+          sapling::sapling_backingstore_new(
+              rust::Slice<const char>{
+                  repository.view().data(),
+                  repository.view().size()},
+              rust::Slice<const char>{mount.view().data(), mount.view().size()})
+              .into_raw(),
+          [](sapling::BackingStore* backingStore) {
+            auto box = rust::Box<sapling::BackingStore>::from_raw(backingStore);
+          }},
       objectIdFormat_{config_->getEdenConfig()->hgObjectIdFormat.getValue()},
       caseSensitive_{caseSensitive} {
   try {
     repoName_ =
-        std::string(sapling::sapling_backingstore_get_name(store_.rustStore()));
+        std::string(sapling::sapling_backingstore_get_name(*store_.get()));
   } catch (const rust::Error& error) {
     XLOGF(DBG2, "Error while repo name from backingstore: {}", error.what());
   }
@@ -504,14 +513,14 @@ folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
   XLOGF(DBG7, "Importing blob node={} from hgcache", folly::hexlify(node));
   try {
     auto blob = sapling_backingstore_get_blob(
-        store_.rustStore(),
+        *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         fetchMode);
 
     if (blob) {
       if (context->getCause() != FetchCause::Prefetch) {
         sapling_backingstore_witness_file_read(
-            store_.rustStore(),
+            *store_.get(),
             rust::Str{path.view().data(), path.view().size()},
             fetchMode == sapling::FetchMode::LocalOnly,
             context->getClientPid().valueOrZero().get());
@@ -634,7 +643,7 @@ void SaplingBackingStore::getTreeBatch(
   faultInjector_.check("SaplingBackingStore::getTreeBatch", "");
 
   sapling_backingstore_get_tree_batch(
-      store_.rustStore(),
+      *store_.get(),
       rust::Slice<const sapling::Request>{
           raw_requests.data(), raw_requests.size()},
       fetch_mode,
@@ -654,8 +663,7 @@ SaplingBackingStore::prepareRequests(
   // sapling::ClientRequestInfo and pass them with the corresponding
   // sapling::NodeId
 
-  // Group requests by proxyHash to ensure no duplicates in fetch request to
-  // SaplingNativeBackingStore.
+  // Group requests by proxyHash to ensure no duplicates in fetch requests.
   ImportRequestsMap importRequestsMap;
   for (const auto& importRequest : importRequests) {
     auto nodeId = importRequest->getRequest<T>()->proxyHash.byteHash();
@@ -728,7 +736,7 @@ SaplingBackingStore::prepareRequests(
     }
   }
 
-  // Indexable vector of nodeIds - required by SaplingNativeBackingStore API.
+  // Indexable vector of nodeIds - required by sapling::BackingStore API.
   // In addition, we pass the fetchCause for each request. If we have multiple
   // fetchCauses for the same nodeID, we will take the highest priority one.
   //
@@ -935,7 +943,7 @@ void SaplingBackingStore::getTreeAuxDataBatch(
   };
 
   sapling_backingstore_get_tree_aux_batch(
-      store_.rustStore(),
+      *store_.get(),
       rust::Slice<const sapling::Request>{
           raw_requests.data(), raw_requests.size()},
       fetch_mode,
@@ -1029,7 +1037,7 @@ void SaplingBackingStore::getBlobAuxDataBatch(
   };
 
   sapling_backingstore_get_file_aux_batch(
-      store_.rustStore(),
+      *store_.get(),
       rust::Slice<const sapling::Request>{
           raw_requests.data(), raw_requests.size()},
       fetch_mode,
@@ -1257,7 +1265,7 @@ folly::Try<TreeAuxDataPtr> SaplingBackingStore::getLocalTreeAuxData(
 
   try {
     auto auxData = sapling_backingstore_get_tree_aux(
-        store_.rustStore(),
+        *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         sapling::FetchMode::LocalOnly);
 
@@ -1406,7 +1414,7 @@ folly::Try<facebook::eden::TreePtr> SaplingBackingStore::getNativeTree(
           sapling::TreeBuilder{oid, path, caseSensitive_, objectIdFormat_};
 
       sapling_backingstore_get_tree(
-          store_.rustStore(),
+          *store_.get(),
           rust::Slice<const uint8_t>{node.data(), node.size()},
           tb,
           fetch_mode);
@@ -1415,7 +1423,7 @@ folly::Try<facebook::eden::TreePtr> SaplingBackingStore::getNativeTree(
 
       if (tree && context->getCause() != FetchCause::Prefetch) {
         sapling_backingstore_witness_dir_read(
-            store_.rustStore(),
+            *store_.get(),
             rust::Slice<const uint8_t>{
                 reinterpret_cast<const uint8_t*>(path.view().data()),
                 path.view().size()},
@@ -1738,7 +1746,7 @@ folly::Try<BlobAuxDataPtr> SaplingBackingStore::getLocalBlobAuxData(
       folly::hexlify(node));
   try {
     auto auxData = sapling_backingstore_get_file_aux(
-        store_.rustStore(),
+        *store_.get(),
         rust::Slice<const uint8_t>{node.data(), node.size()},
         sapling::FetchMode::LocalOnly);
 
@@ -1844,8 +1852,7 @@ std::optional<Hash20> SaplingBackingStore::getManifestNode(
       folly::hexlify(node));
   try {
     std::array<uint8_t, 20> manifestId = sapling_backingstore_get_manifest(
-        store_.rustStore(),
-        rust::Slice<const uint8_t>{node.data(), node.size()});
+        *store_.get(), rust::Slice<const uint8_t>{node.data(), node.size()});
     return Hash20(std::move(manifestId));
   } catch (const rust::Error& error) {
     XLOGF(
@@ -1877,7 +1884,6 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
       break;
   }
 
-  // try SaplingNativeBackingStore
   auto tree = getTreeFromBackingStore(
       path.copy(), manifestNode, objectId, context.copy(), type);
   bool success = tree.hasValue();
@@ -1916,10 +1922,7 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
 
   if (tree.hasValue()) {
     XLOGF(
-        DBG4,
-        "imported tree node={} path={} from SaplingNativeBackingStore",
-        manifestNode,
-        path);
+        DBG4, "imported tree node={} path={} from sapling", manifestNode, path);
     return folly::makeFuture(std::move(tree.value()));
   } else {
     return folly::makeFuture<TreePtr>(tree.exception());
@@ -2164,7 +2167,7 @@ void SaplingBackingStore::nativeGetBlobBatch(
 
     if (request.cause != FetchCause::Prefetch) {
       sapling_backingstore_witness_file_read(
-          store_.rustStore(),
+          *store_.get(),
           rust::Str{request.path.view().data(), request.path.view().size()},
           fetch_mode == sapling::FetchMode::LocalOnly,
           request.context->getClientPid().valueOrZero().get());
@@ -2172,7 +2175,7 @@ void SaplingBackingStore::nativeGetBlobBatch(
   }
 
   sapling_backingstore_get_blob_batch(
-      store_.rustStore(),
+      *store_.get(),
       rust::Slice<const sapling::Request>{
           raw_requests.data(), raw_requests.size()},
       fetch_mode,
@@ -2198,7 +2201,7 @@ SaplingBackingStore::getGlobFiles(
   auto br = folly::ByteRange(id.value());
   try {
     auto globFiles = sapling_backingstore_get_glob_files(
-        store_.rustStore(),
+        *store_.get(),
         rust::Slice<const uint8_t>{br.data(), br.size()},
         rust_suffixes,
         rust_prefixes);
@@ -2469,11 +2472,11 @@ int64_t SaplingBackingStore::dropAllPendingRequestsFromQueue() {
 
 void SaplingBackingStore::flush() {
   XLOG(DBG7, "Flushing backing store");
-  sapling_backingstore_flush(store_.rustStore());
+  sapling_backingstore_flush(*store_.get());
 }
 
 bool SaplingBackingStore::dogfoodingHost() {
-  return sapling_dogfooding_host(store_.rustStore());
+  return sapling_dogfooding_host(*store_.get());
 }
 
 } // namespace facebook::eden

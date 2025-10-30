@@ -117,21 +117,21 @@ SaplingBackingStore per underlying Sapling repository.
 The `SaplingBackingStore::threads_` pool contains 32 (as of Nov 2024,
 configurable via EdenConfig's `backingstore:num-servicing-threads`) threads on
 which the SaplingBackingStore farms work out to the (blocking)
-SaplingNativeBackingStore. Sapling has its own thread pools and SaplingAPI
-batching logic, most of which is opaque to EdenFS. However, we can control the
-maximum size of batches for requests that EdenFS sends to Sapling. NOTE: these
-do not affect how Sapling batches requests it sends to the server via
-SaplingAPI, but it may influence the batch sizes because it controls the volume
-of requests that are sent to Sapling at once.
+sapling::BackingStore. Sapling has its own thread pools and SaplingAPI batching
+logic, most of which is opaque to EdenFS. However, we can control the maximum
+size of batches for requests that EdenFS sends to Sapling. NOTE: these do not
+affect how Sapling batches requests it sends to the server via SaplingAPI, but
+it may influence the batch sizes because it controls the volume of requests that
+are sent to Sapling at once.
 
 - `hg:import-batch-size`: controls how many blob requests we send to
-  SaplingNativeBackingStore at once
+  sapling::BackingStore at once
 - `hg:import-batch-size-tree`: controls how many tree requests we send to
-  SaplingNativeBackingStore at once
+  sapling::BackingStore at once
 - `hg:import-batch-size-blobmeta`: controls how many blob aux data requests we
-  send to SaplingNativeBackingStore at once
+  send to sapling::BackingStore at once
 - `hg:import-batch-size-blobmeta`: controls how many tree aux data requests we
-  send to SaplingNativeBackingStore at once
+  send to sapling::BackingStore at once
 
 ### Post Processing
 
