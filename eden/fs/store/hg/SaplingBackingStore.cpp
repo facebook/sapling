@@ -497,20 +497,34 @@ folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
     const HgProxyHash& hgInfo,
     const ObjectFetchContextPtr& context,
     sapling::FetchMode fetchMode) {
-  auto blob =
-      store_.getBlob(hgInfo.byteHash(), hgInfo.path(), context, fetchMode);
+  auto node = hgInfo.byteHash();
+  auto path = hgInfo.path();
 
   using GetBlobResult = folly::Try<BlobPtr>;
 
-  if (blob.hasValue()) {
-    if (blob.value()) {
+  XLOGF(DBG7, "Importing blob node={} from hgcache", folly::hexlify(node));
+  try {
+    auto blob = sapling_backingstore_get_blob(
+        store_.rustStore(),
+        rust::Slice<const uint8_t>{node.data(), node.size()},
+        fetchMode);
+
+    if (blob) {
+      if (context->getCause() != FetchCause::Prefetch) {
+        sapling_backingstore_witness_file_read(
+            store_.rustStore(),
+            rust::Str{path.view().data(), path.view().size()},
+            fetchMode == sapling::FetchMode::LocalOnly,
+            context->getClientPid().valueOrZero().get());
+      }
+
       return GetBlobResult{
-          std::make_shared<BlobPtr::element_type>(std::move(*blob.value()))};
+          std::make_shared<BlobPtr::element_type>(std::move(*blob))};
     } else {
       return GetBlobResult{nullptr};
     }
-  } else {
-    return GetBlobResult{blob.exception()};
+  } catch (const rust::Error& error) {
+    return GetBlobResult{sapling::SaplingBackingStoreError{error.what()}};
   }
 }
 

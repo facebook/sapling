@@ -45,36 +45,6 @@ SaplingNativeBackingStore::SaplingNativeBackingStore(
   }
 }
 
-// Fetch a single blob. "Not found" is propagated as nullptr to avoid exception
-// overhead.
-folly::Try<std::unique_ptr<folly::IOBuf>> SaplingNativeBackingStore::getBlob(
-    NodeId node,
-    RepoPath path,
-    const ObjectFetchContextPtr& context,
-    FetchMode fetch_mode) {
-  XLOGF(DBG7, "Importing blob node={} from hgcache", folly::hexlify(node));
-  return folly::makeTryWith([&] {
-    try {
-      auto blob = sapling_backingstore_get_blob(
-          *store_.get(),
-          rust::Slice<const uint8_t>{node.data(), node.size()},
-          fetch_mode);
-
-      if (blob && context->getCause() != FetchCause::Prefetch) {
-        sapling_backingstore_witness_file_read(
-            *store_.get(),
-            rust::Str{path.view().data(), path.view().size()},
-            fetch_mode == FetchMode::LocalOnly,
-            context->getClientPid().valueOrZero().get());
-      }
-
-      return blob;
-    } catch (const rust::Error& error) {
-      throw SaplingBackingStoreError{error.what()};
-    }
-  });
-}
-
 // Batch fetch blobs. "Not found" is propagated as an exception.
 void SaplingNativeBackingStore::getBlobBatch(
     SaplingRequestRange requests,
