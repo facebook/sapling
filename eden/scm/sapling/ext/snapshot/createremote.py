@@ -494,6 +494,7 @@ def createremote(ui, repo, *pats, **opts) -> None:
             fm.data(snapshot_removed=len(wc.removed))
             fm.data(snapshot_missing=len(wc.missing))
             fm.data(snapshot_untracked=len(wc.untracked))
+            fm.data(snapshot_total_files=wc.filecount())
 
             # Add skipped large untracked files to JSON output
             if wc.skipped_large_untracked:
