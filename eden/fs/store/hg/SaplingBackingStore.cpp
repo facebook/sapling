@@ -539,6 +539,10 @@ void SaplingBackingStore::processTreeImportRequests(
 void SaplingBackingStore::getTreeBatch(
     const ImportRequestsList& importRequests,
     sapling::FetchMode fetch_mode) {
+  if (importRequests.empty()) {
+    return;
+  }
+
   folly::stop_watch<std::chrono::milliseconds> batchWatch;
 
   auto preparedRequests = prepareRequests<SaplingImportRequest::TreeImport>(
@@ -546,56 +550,84 @@ void SaplingBackingStore::getTreeBatch(
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
 
+  XLOGF(
+      DBG7,
+      "Import batch of trees with size: {}, first path: {}",
+      requests.size(),
+      requests[0].path);
+
+  std::vector<sapling::Request> raw_requests;
+  raw_requests.reserve(requests.size());
+  for (auto& request : requests) {
+    raw_requests.emplace_back(
+        sapling::Request{
+            request.node.data(),
+            request.cause,
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(request.path.view().data()),
+                request.path.view().size()},
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(request.oid.getBytes().data()),
+                request.oid.size()},
+            request.context->getClientPid().valueOrZero().get(),
+        });
+  }
+
+  auto callback = [&](size_t index, folly::Try<TreePtr> content) mutable {
+    if (content.hasException()) {
+      XLOGF(
+          DBG4,
+          "Failed to import node={} from EdenAPI (batch tree {}/{}): {}",
+          folly::hexlify(requests[index].node),
+          index,
+          requests.size(),
+          content.exception().what().toStdString());
+      stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
+      if (store_.dogfoodingHost()) {
+        stats_->increment(
+            &SaplingBackingStoreStats::fetchTreeFailureDogfooding);
+      }
+    } else {
+      XLOGF(
+          DBG4,
+          "Imported node={} from EdenAPI (batch tree: {}/{})",
+          folly::hexlify(requests[index].node),
+          index,
+          requests.size());
+      stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
+      if (store_.dogfoodingHost()) {
+        stats_->increment(
+            &SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
+      }
+    }
+
+    if (isOBCEnabled_) {
+      getTreePerRepoLatencies_ += batchWatch.elapsed().count();
+    }
+    stats_->addDuration(
+        &SaplingBackingStoreStats::fetchTree, batchWatch.elapsed());
+
+    const auto& nodeId = requests[index].node;
+    XLOGF(DBG9, "Imported Tree node={}", folly::hexlify(nodeId));
+    auto& [importRequestList, watch] = importRequestsMap[nodeId];
+    for (auto& importRequest : importRequestList) {
+      importRequest->getPromise<TreePtr>()->setValue(content);
+    }
+
+    // Make sure that we're stopping this watch.
+    watch.reset();
+  };
+
   faultInjector_.check("SaplingBackingStore::getTreeBatch", "");
-  store_.getTreeBatch(
-      folly::range(requests),
+
+  sapling_backingstore_get_tree_batch(
+      store_.rustStore(),
+      rust::Slice<const sapling::Request>{
+          raw_requests.data(), raw_requests.size()},
       fetch_mode,
-      // getTreeBatch is blocking, hence we can take these by
-      // reference.
-      [&](size_t index, folly::Try<TreePtr> content) mutable {
-        if (content.hasException()) {
-          XLOGF(
-              DBG4,
-              "Failed to import node={} from EdenAPI (batch tree {}/{}): {}",
-              folly::hexlify(requests[index].node),
-              index,
-              requests.size(),
-              content.exception().what().toStdString());
-          stats_->increment(&SaplingBackingStoreStats::fetchTreeFailure);
-          if (store_.dogfoodingHost()) {
-            stats_->increment(
-                &SaplingBackingStoreStats::fetchTreeFailureDogfooding);
-          }
-        } else {
-          XLOGF(
-              DBG4,
-              "Imported node={} from EdenAPI (batch tree: {}/{})",
-              folly::hexlify(requests[index].node),
-              index,
-              requests.size());
-          stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
-          if (store_.dogfoodingHost()) {
-            stats_->increment(
-                &SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
-          }
-        }
-
-        if (isOBCEnabled_) {
-          getTreePerRepoLatencies_ += batchWatch.elapsed().count();
-        }
-        stats_->addDuration(
-            &SaplingBackingStoreStats::fetchTree, batchWatch.elapsed());
-
-        const auto& nodeId = requests[index].node;
-        XLOGF(DBG9, "Imported Tree node={}", folly::hexlify(nodeId));
-        auto& [importRequestList, watch] = importRequestsMap[nodeId];
-        for (auto& importRequest : importRequestList) {
-          importRequest->getPromise<TreePtr>()->setValue(content);
-        }
-
-        // Make sure that we're stopping this watch.
-        watch.reset();
-      });
+      objectIdFormat_,
+      caseSensitive_ == facebook::eden::CaseSensitivity::Sensitive,
+      std::make_shared<sapling::GetTreeBatchResolver>(callback));
 }
 
 template <typename T>

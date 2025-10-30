@@ -45,51 +45,6 @@ SaplingNativeBackingStore::SaplingNativeBackingStore(
   }
 }
 
-// Batch fetch trees. "Not found" is propagated as an exception.
-void SaplingNativeBackingStore::getTreeBatch(
-    SaplingRequestRange requests,
-    sapling::FetchMode fetch_mode,
-    folly::FunctionRef<void(size_t, folly::Try<facebook::eden::TreePtr>)>
-        resolve) {
-  auto count = requests.size();
-  if (count == 0) {
-    return;
-  }
-
-  auto resolver = std::make_shared<GetTreeBatchResolver>(std::move(resolve));
-
-  XLOGF(
-      DBG7,
-      "Import batch of trees with size: {}, first path: {}",
-      count,
-      requests[0].path);
-
-  std::vector<Request> raw_requests;
-  raw_requests.reserve(count);
-  for (auto& request : requests) {
-    raw_requests.emplace_back(
-        Request{
-            request.node.data(),
-            request.cause,
-            rust::Slice<const uint8_t>{
-                reinterpret_cast<const uint8_t*>(request.path.view().data()),
-                request.path.view().size()},
-            rust::Slice<const uint8_t>{
-                reinterpret_cast<const uint8_t*>(request.oid.getBytes().data()),
-                request.oid.size()},
-            request.context->getClientPid().valueOrZero().get(),
-        });
-  }
-
-  sapling_backingstore_get_tree_batch(
-      *store_.get(),
-      rust::Slice<const Request>{raw_requests.data(), raw_requests.size()},
-      fetch_mode,
-      objectIdFormat_,
-      caseSensitive_ == facebook::eden::CaseSensitivity::Sensitive,
-      std::move(resolver));
-}
-
 folly::Try<std::shared_ptr<TreeAuxData>>
 SaplingNativeBackingStore::getTreeAuxData(NodeId node, bool local) {
   FetchMode fetch_mode = FetchMode::AllowRemote;
