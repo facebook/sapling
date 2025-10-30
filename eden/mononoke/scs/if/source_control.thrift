@@ -1073,6 +1073,8 @@ struct RepoCreateStackParams {
 struct CreateCommitChecks {
   /// Check for no-op file changes
   1: CreateCommitCheckMode noop_file_changes_check = CreateCommitCheckMode.CHECK;
+  /// Check that all deleted file changes existed in a parent
+  2: CreateCommitCheckMode deleted_files_existed_in_a_parent_check = CreateCommitCheckMode.CHECK;
 }
 
 enum CreateCommitCheckMode {

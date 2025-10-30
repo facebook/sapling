@@ -431,7 +431,12 @@ async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
     parent_ctxs: &[ChangesetContext<R>],
     stack_changes: Option<&PathTree<CreateChangeType>>,
     mut deleted_files: BTreeSet<MPath>,
-) -> Result<(), MononokeError> {
+    check_mode: CreateChangesetCheckMode,
+) -> Result<BTreeSet<MPath>, MononokeError> {
+    if check_mode == CreateChangesetCheckMode::Skip {
+        return Ok(Default::default());
+    }
+
     async fn get_matching_files<'a, R: MononokeRepo>(
         parent_ctx: &'a ChangesetContext<R>,
         files: &'a BTreeSet<MPath>,
@@ -449,6 +454,8 @@ async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
             .boxed())
     }
 
+    let mut deletions_to_remove: BTreeSet<MPath> = Default::default();
+
     if let Some(stack_changes) = stack_changes {
         // Ignore files that were created or modified earlier in the stack.
         deleted_files.retain(|deleted_file| {
@@ -460,17 +467,25 @@ async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
             // its path prefixes were created (this implicitly deletes the
             // directory).
             if stack_changes.get(deleted_file) == Some(&CreateChangeType::Deletion) {
-                return Err(MononokeError::InvalidRequest(format!(
-                    "Deleted file '{}' was deleted earlier in the stack",
-                    deleted_file
-                )));
+                if check_mode == CreateChangesetCheckMode::Fix {
+                    deletions_to_remove.insert(deleted_file.clone());
+                } else {
+                    return Err(MononokeError::InvalidRequest(format!(
+                        "Deleted file '{}' was deleted earlier in the stack",
+                        deleted_file
+                    )));
+                }
             }
             for prefix in MononokePathPrefixes::new(deleted_file) {
                 if let Some(CreateChangeType::Change) = stack_changes.get(&prefix) {
-                    return Err(MononokeError::InvalidRequest(format!(
-                        "Deleted file '{}' was deleted earlier in the stack through replacement of '{}'",
-                        deleted_file, prefix
-                    )));
+                    if check_mode == CreateChangesetCheckMode::Fix {
+                        deletions_to_remove.insert(deleted_file.clone());
+                    } else {
+                        return Err(MononokeError::InvalidRequest(format!(
+                            "Deleted file '{}' was deleted earlier in the stack through replacement of '{}'",
+                            deleted_file, prefix
+                        )));
+                    }
                 }
             }
         }
@@ -491,7 +506,10 @@ async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
 
     // Quickly check if all deleted files existed by comparing set lengths.
     if deleted_files.len() == parent_files.len() {
-        Ok(())
+        Ok(deletions_to_remove)
+    } else if check_mode == CreateChangesetCheckMode::Fix {
+        deletions_to_remove.extend(deleted_files.difference(&parent_files).cloned());
+        Ok(deletions_to_remove)
     } else {
         // At least one deleted file didn't exist. Find out which ones to
         // give a good error message.
@@ -773,7 +791,7 @@ pub struct CreatedChangeset<R> {
     pub changeset_ctx: ChangesetContext<R>,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum CreateChangesetCheckMode {
     /// Skip the check completely
     Skip,
@@ -783,8 +801,10 @@ pub enum CreateChangesetCheckMode {
     Fix,
 }
 
+#[derive(Copy, Clone, Debug)]
 pub struct CreateChangesetChecks {
-    pub noop_file_changes_check: CreateChangesetCheckMode,
+    pub noop_file_changes: CreateChangesetCheckMode,
+    pub deleted_files_existed_in_a_parent: CreateChangesetCheckMode,
 }
 
 impl<R: MononokeRepo> RepoContext<R> {
@@ -1006,7 +1026,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     .zip(stack_changes_stack.iter())
                     .map(Ok),
             )
-            .try_for_each_concurrent(10, async |(tracked_deletion_files, stack_changes)| {
+            .map_ok(async |(tracked_deletion_files, stack_changes)| {
                 // This does NOT consider "missing" (untracked deletion) files as it is NOT
                 // necessary for them to exist in a parent. If they don't exist on a parent,
                 // this means the file was "hg added" and then manually deleted.
@@ -1014,6 +1034,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     &stack_parent_ctxs,
                     stack_changes.as_ref(),
                     tracked_deletion_files,
+                    checks.deleted_files_existed_in_a_parent,
                 )
                 .timed()
                 .await
@@ -1023,6 +1044,9 @@ impl<R: MononokeRepo> RepoContext<R> {
                     None,
                 )
             })
+            .boxed()
+            .try_buffered(10)
+            .try_collect::<Vec<_>>()
             .await
         };
 
@@ -1120,14 +1144,21 @@ impl<R: MononokeRepo> RepoContext<R> {
             .await
         };
 
-        let ((), (), (), mut file_changes_stack) = try_join!(
+        let (deletions_to_remove_stack, (), (), mut file_changes_stack) = try_join!(
             verify_deleted_files_existed_fut,
             verify_prefix_files_deleted_fut,
             verify_no_merge_conflicts_fut,
             resolve_file_changes_fut,
         )?;
 
-        if checks.noop_file_changes_check != CreateChangesetCheckMode::Skip
+        file_changes_stack
+            .iter_mut()
+            .zip(deletions_to_remove_stack)
+            .for_each(|(file_changes, deletions_to_remove)| {
+                file_changes.retain(|path, _| !deletions_to_remove.contains(path.as_mpath()));
+            });
+
+        if checks.noop_file_changes != CreateChangesetCheckMode::Skip
             && justknobs::eval(
                 "scm/mononoke:create_changeset_stack_noop_file_changes_check",
                 None,
@@ -1154,7 +1185,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 }
             }
 
-            if checks.noop_file_changes_check == CreateChangesetCheckMode::Fix {
+            if checks.noop_file_changes == CreateChangesetCheckMode::Fix {
                 file_changes_stack = stream::iter(
                     file_changes_stack
                         .into_iter()

@@ -43,7 +43,8 @@ async fn create_changeset_stack<R: MononokeRepo>(
         changes_stack,
         stack_parents,
         CreateChangesetChecks {
-            noop_file_changes_check: CreateChangesetCheckMode::Check,
+            noop_file_changes: CreateChangesetCheckMode::Check,
+            deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
         },
     )
     .await
@@ -59,7 +60,8 @@ async fn create_changeset_stack_fix_request<R: MononokeRepo>(
         changes_stack,
         stack_parents,
         CreateChangesetChecks {
-            noop_file_changes_check: CreateChangesetCheckMode::Fix,
+            noop_file_changes: CreateChangesetCheckMode::Fix,
+            deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Fix,
         },
     )
     .await
@@ -135,7 +137,8 @@ async fn create_changesets_sequentially<R: MononokeRepo>(
                 changes,
                 bubble,
                 CreateChangesetChecks {
-                    noop_file_changes_check: CreateChangesetCheckMode::Check,
+                    noop_file_changes: CreateChangesetCheckMode::Check,
+                    deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
                 },
             )
             .await?
@@ -298,9 +301,26 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
         },
     ];
     assert!(
-        compare_create_stack(&stack_repo, &seq_repo, changes, initial_parents.clone())
+        compare_create_stack(
+            &stack_repo,
+            &seq_repo,
+            changes.clone(),
+            initial_parents.clone()
+        )
+        .await?
+        .is_none()
+    );
+
+    // If we specify CreateChangesetCheckMode::Fix for the "deleted_files_existed_in_parents"
+    // check, then the creation request succeeds and the noop deletion is removed
+    assert!(
+        create_changeset_stack_fix_request(&stack_repo, changes, initial_parents.clone())
             .await?
-            .is_none()
+            .get(1)
+            .unwrap()
+            .file_changes()
+            .await?
+            .is_empty()
     );
 
     // But succeed if the file was created in the stack.

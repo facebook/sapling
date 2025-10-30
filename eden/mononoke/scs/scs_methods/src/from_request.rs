@@ -373,8 +373,11 @@ impl FromRequest<thrift::RepoCreateCommitParamsCommitInfo> for CreateInfo {
 impl FromRequest<thrift::CreateCommitChecks> for CreateChangesetChecks {
     fn from_request(checks: &thrift::CreateCommitChecks) -> Result<Self, thrift::RequestError> {
         Ok(CreateChangesetChecks {
-            noop_file_changes_check: CreateChangesetCheckMode::from_request(
+            noop_file_changes: CreateChangesetCheckMode::from_request(
                 &checks.noop_file_changes_check,
+            )?,
+            deleted_files_existed_in_a_parent: CreateChangesetCheckMode::from_request(
+                &checks.deleted_files_existed_in_a_parent_check,
             )?,
         })
     }
