@@ -70,3 +70,6 @@ class dirstateguard(util.transactional):
                 )
                 raise error.Abort(msg)
             self._abort()
+
+    def running(self):
+        return self._active

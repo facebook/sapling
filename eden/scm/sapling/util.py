@@ -775,6 +775,10 @@ class transactional(abc.ABC):
         If the transaction has not been closed, it will be aborted.
         """
 
+    @abc.abstractmethod
+    def running(self):
+        """Check if the transaction is running."""
+
     def __enter__(self):
         return self
 

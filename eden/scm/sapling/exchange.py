@@ -1317,6 +1317,9 @@ class transactionmanager(util.transactional):
         if self._tr is not None:
             self._tr.release()
 
+    def running(self):
+        return self._tr.running()
+
 
 @util.timefunction("pull", 0, "ui")
 @perftrace.tracefunc("Pull")
