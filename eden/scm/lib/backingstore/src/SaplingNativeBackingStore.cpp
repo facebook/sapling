@@ -45,31 +45,6 @@ SaplingNativeBackingStore::SaplingNativeBackingStore(
   }
 }
 
-std::optional<ManifestId> SaplingNativeBackingStore::getManifestNode(
-    NodeId node) {
-  XLOGF(
-      DBG7,
-      "Importing manifest node={} from backingstore",
-      folly::hexlify(node));
-  try {
-    static_assert(std::is_same_v<
-                  ManifestId,
-                  decltype(sapling_backingstore_get_manifest(
-                      *store_.get(),
-                      rust::Slice<const uint8_t>{node.data(), node.size()}))>);
-
-    return sapling_backingstore_get_manifest(
-        *store_.get(), rust::Slice<const uint8_t>{node.data(), node.size()});
-  } catch (const rust::Error& error) {
-    XLOGF(
-        DBG2,
-        "Error while getting manifest node={} from backingstore: {}",
-        folly::hexlify(node),
-        error.what());
-    return std::nullopt;
-  }
-}
-
 // Fetch a single tree. "Not found" is propagated as nullptr to avoid exception
 // overhead.
 folly::Try<facebook::eden::TreePtr> SaplingNativeBackingStore::getTree(

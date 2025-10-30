@@ -1684,12 +1684,25 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifest(
 
 std::optional<Hash20> SaplingBackingStore::getManifestNode(
     const ObjectId& commitId) {
-  auto manifestNode = store_.getManifestNode(commitId.getBytes());
-  if (!manifestNode.has_value()) {
-    XLOGF(DBG2, "Error while getting manifest node from datapackstore");
+  auto node = commitId.getBytes();
+
+  XLOGF(
+      DBG7,
+      "Importing manifest node={} from backingstore",
+      folly::hexlify(node));
+  try {
+    std::array<uint8_t, 20> manifestId = sapling_backingstore_get_manifest(
+        store_.rustStore(),
+        rust::Slice<const uint8_t>{node.data(), node.size()});
+    return Hash20(std::move(manifestId));
+  } catch (const rust::Error& error) {
+    XLOGF(
+        DBG2,
+        "Error while getting manifest node={} from backingstore: {}",
+        folly::hexlify(node),
+        error.what());
     return std::nullopt;
   }
-  return Hash20(*std::move(manifestNode));
 }
 
 folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(

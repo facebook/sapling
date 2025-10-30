@@ -73,11 +73,6 @@ struct SaplingRequest {
 using SaplingRequestRange = folly::Range<const SaplingRequest*>;
 
 /**
- * Storage for a 20-byte hg manifest id.
- */
-using ManifestId = std::array<uint8_t, 20>;
-
-/**
  * Provides a type-safe layer and a more convenient API around the ffi C/C++
  * functions.
  *
@@ -103,8 +98,6 @@ class SaplingNativeBackingStore {
   }
 
   bool dogfoodingHost() const;
-
-  std::optional<ManifestId> getManifestNode(NodeId node);
 
   folly::Try<facebook::eden::TreePtr> getTree(
       NodeId node,
