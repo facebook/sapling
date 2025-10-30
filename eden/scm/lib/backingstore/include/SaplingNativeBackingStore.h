@@ -99,12 +99,6 @@ class SaplingNativeBackingStore {
 
   bool dogfoodingHost() const;
 
-  void getTreeAuxDataBatch(
-      SaplingRequestRange requests,
-      sapling::FetchMode fetch_mode,
-      folly::FunctionRef<void(size_t, folly::Try<std::shared_ptr<TreeAuxData>>)>
-          resolve);
-
   folly::Try<std::unique_ptr<folly::IOBuf>> getBlob(
       NodeId node,
       RepoPath path,

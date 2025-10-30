@@ -846,63 +846,87 @@ void SaplingBackingStore::getTreeAuxDataBatch(
   auto importRequestsMap = std::move(preparedRequests.first);
   auto requests = std::move(preparedRequests.second);
 
-  store_.getTreeAuxDataBatch(
-      folly::range(requests),
+  XLOGF(DBG7, "Import tree aux data with size: {}", requests.size());
+
+  std::vector<sapling::Request> raw_requests;
+  raw_requests.reserve(requests.size());
+  for (auto& request : requests) {
+    raw_requests.push_back(
+        sapling::Request{
+            request.node.data(),
+            request.cause,
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(request.path.view().data()),
+                request.path.view().size()},
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(request.oid.getBytes().data()),
+                request.oid.size()},
+            request.context->getClientPid().valueOrZero().get(),
+        });
+  }
+
+  // store_.getTreeAuxDataBatch is blocking, hence we can take these by
+  // reference.
+  auto callback = [&](size_t index,
+                      folly::Try<std::shared_ptr<sapling::TreeAuxData>>
+                          auxTry) {
+    if (auxTry.hasException()) {
+      XLOGF(
+          DBG6,
+          "Failed to import aux data node={} from EdenAPI (batch {}/{}): {}",
+          folly::hexlify(requests[index].node),
+          index,
+          requests.size(),
+          auxTry.exception().what().toStdString());
+    } else {
+      XLOGF(
+          DBG6,
+          "Imported aux data node={} from EdenAPI (batch: {}/{})",
+          folly::hexlify(requests[index].node),
+          index,
+          requests.size());
+    }
+
+    if (auxTry.hasException()) {
+      if (structuredLogger_) {
+        structuredLogger_->logEvent(
+            FetchMiss{
+                store_.getRepoName(),
+                FetchMiss::TreeAuxData,
+                auxTry.exception().what().toStdString(),
+                false, // isRetry
+                store_.dogfoodingHost()});
+      }
+
+      return;
+    }
+
+    const auto& nodeId = requests[index].node;
+    XLOGF(DBG9, "Imported TreeAuxData={}", folly::hexlify(nodeId));
+    auto& [importRequestList, watch] = importRequestsMap[nodeId];
+    folly::Try<TreeAuxDataPtr> result;
+    if (auxTry.hasException()) {
+      result = folly::Try<TreeAuxDataPtr>{auxTry.exception()};
+    } else {
+      auto& aux = auxTry.value();
+      result = folly::Try{std::make_shared<TreeAuxDataPtr::element_type>(
+          Hash32{std::move(aux->digest_hash)}, aux->digest_size)};
+    }
+    for (auto& importRequest : importRequestList) {
+      importRequest->getPromise<TreeAuxDataPtr>()->setWith(
+          [&]() -> folly::Try<TreeAuxDataPtr> { return result; });
+    }
+
+    // Make sure that we're stopping this watch.
+    watch.reset();
+  };
+
+  sapling_backingstore_get_tree_aux_batch(
+      store_.rustStore(),
+      rust::Slice<const sapling::Request>{
+          raw_requests.data(), raw_requests.size()},
       fetch_mode,
-      // store_.getTreeAuxDataBatch is blocking, hence we can take these by
-      // reference.
-      [&](size_t index,
-          folly::Try<std::shared_ptr<sapling::TreeAuxData>> auxTry) {
-        if (auxTry.hasException()) {
-          XLOGF(
-              DBG6,
-              "Failed to import aux data node={} from EdenAPI (batch {}/{}): {}",
-              folly::hexlify(requests[index].node),
-              index,
-              requests.size(),
-              auxTry.exception().what().toStdString());
-        } else {
-          XLOGF(
-              DBG6,
-              "Imported aux data node={} from EdenAPI (batch: {}/{})",
-              folly::hexlify(requests[index].node),
-              index,
-              requests.size());
-        }
-
-        if (auxTry.hasException()) {
-          if (structuredLogger_) {
-            structuredLogger_->logEvent(
-                FetchMiss{
-                    store_.getRepoName(),
-                    FetchMiss::TreeAuxData,
-                    auxTry.exception().what().toStdString(),
-                    false, // isRetry
-                    store_.dogfoodingHost()});
-          }
-
-          return;
-        }
-
-        const auto& nodeId = requests[index].node;
-        XLOGF(DBG9, "Imported TreeAuxData={}", folly::hexlify(nodeId));
-        auto& [importRequestList, watch] = importRequestsMap[nodeId];
-        folly::Try<TreeAuxDataPtr> result;
-        if (auxTry.hasException()) {
-          result = folly::Try<TreeAuxDataPtr>{auxTry.exception()};
-        } else {
-          auto& aux = auxTry.value();
-          result = folly::Try{std::make_shared<TreeAuxDataPtr::element_type>(
-              Hash32{std::move(aux->digest_hash)}, aux->digest_size)};
-        }
-        for (auto& importRequest : importRequestList) {
-          importRequest->getPromise<TreeAuxDataPtr>()->setWith(
-              [&]() -> folly::Try<TreeAuxDataPtr> { return result; });
-        }
-
-        // Make sure that we're stopping this watch.
-        watch.reset();
-      });
+      std::make_shared<sapling::GetTreeAuxBatchResolver>(callback));
 }
 
 void SaplingBackingStore::getBlobAuxDataBatch(
