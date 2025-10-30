@@ -363,11 +363,11 @@ impl GDMEntryProvider for CGDMGroup {
     }
 }
 
-/// Creates a stream of packfile items for the given changesets
+/// Creates a stream of packfile items for the given changesets (or groups if using CGDM)
 fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'static>(
     fetch_container: FetchContainer,
     base_set: Arc<FxHashSet<ObjectId>>,
-    changesets: Vec<T>,
+    changesets_or_groups: Vec<T>,
 ) -> BoxStream<'a, Result<PackfileItem>> {
     let FetchContainer {
         ctx,
@@ -380,17 +380,16 @@ fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'static>(
         ..
     } = fetch_container.clone();
 
-    // Finding the packfiles items for each commit requires calling two functions:
-    // 1) changeset_delta_manifest_entries: ChangesetId -> Vec<(ChangesetId, MPath, dyn GitDeltaManifestEntry)>
-    // 2) packfile_item_for_delta_manifest_entry: (ChangesetId, MPath, dyn GitDeltaManifestEntry) -> Option<PackfileItem>
+    // Finding the packfiles items for each commit (or group) requires calling two functions:
+    // 1) GDMEntryProvider::gdm_entries: T -> Vec<Box<dyn GitDeltaManifestEntry>>
+    // 2) packfile_item_for_delta_manifest_entry: Box<dyn GitDeltaManifestEntry> -> Option<PackfileItem>
     //
-    // Because changeset_delta_manifest_entries returns multiple entries, creating a stream that chains these two functions using stream
+    // Because GDMEntryProvider::gdm_entries returns multiple entries, creating a stream that chains these two functions using stream
     // combinators is not trivial, at least not without chaining multiple calls to `buffered` which is problematic because when the second
     // layer of buffering is full the first layer of buffering doesn't get polled until a future in the second layer completes.
     //
-    // The implementation below is almost equivalent to using two layers of `buffered`, except that each time we poll the stream
-    // we always poll the first layer (delta_manifest_entries_futures). Storing any completed future output in a `VecDeque`
-    // buffer (delta_manifest_entries_buffer).
+    // Instead, we spawn two tasks, one for processing changesets (or groups) and producing GDM entries, and another for processing
+    // the GDM entries and producing packfile items.
 
     let (gdm_sender, gdm_receiver) = mpsc::channel::<
         Result<Box<dyn GitDeltaManifestEntryOps + Send>>,
@@ -400,11 +399,11 @@ fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'static>(
         mpsc::channel::<Result<PackfileItem>>(2 * concurrency.trees_and_blobs);
 
     mononoke::spawn_task(async move {
-        let mut stream = stream::iter(changesets)
+        let mut stream = stream::iter(changesets_or_groups)
             .map(Ok)
             .map_ok({
-                async |changeset| {
-                    changeset
+                async |changeset_or_group| {
+                    changeset_or_group
                         .gdm_entries(
                             ctx.clone(),
                             blobstore.clone(),
