@@ -173,15 +173,7 @@ def isworkingcopycmd(*args, **kwargs) -> None:
 
 @subcmd(
     "latest",
-    [
-        (
-            "",
-            "is-working-copy",
-            None,
-            _("fails if there have been local changes since the latest snapshot"),
-        ),
-    ]
-    + cmdutil.untrackedfileopts,
+    cmdutil.templateopts,
 )
 def latestcmd(*args, **kwargs) -> None:
     """information regarding the latest created snapshot

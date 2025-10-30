@@ -107,45 +107,29 @@ def _isworkingcopy(ui, repo, snapshot, maxuntrackedsize, pats=None, opts=None):
 
 def latest(ui, repo, **opts):
     csid = fetchlatestsnapshot(repo.metalog())
-    isworkingcopy = opts.get("is_working_copy") is True
-    maxuntrackedsize = parsemaxuntracked(opts)
-    maxuntrackedsizebytes = parsemaxuntrackedbytes(opts)
-
-    if (
-        maxuntrackedsizebytes or maxuntrackedsize
-    ) is not None and isworkingcopy is False:
-        raise error.Abort(
-            _(
-                "--max-untracked-size/--max-untracked-size-bytes can only be used together with --is-working-copy"
-            )
-        )
-
-    # Use bytes-based limit if specified, otherwise fall back to MiB-based limit, then config default
-    effective_max_untracked_size = (
-        maxuntrackedsizebytes or maxuntrackedsize or getdefaultmaxuntrackedsize(ui)
-    )
 
     if csid is None:
-        if isworkingcopy:
-            raise error.Abort(_("latest snapshot not found"))
-        if not ui.plain():
-            ui.status(_("no snapshot found\n"))
-    else:
-        if isworkingcopy:
-            snapshot = fetchsnapshot(repo, csid)
-            iswc, reason, _wc = _isworkingcopy(
-                ui, repo, snapshot, effective_max_untracked_size, [], {}
-            )
-            if iswc:
-                if not ui.plain():
-                    ui.status(_("latest snapshot is the working copy\n"))
-            else:
-                raise error.Abort(
-                    _("latest snapshot is not the working copy: {}").format(reason)
-                )
+        # Use formatter for template support
+        if opts.get("template"):
+            with ui.formatter("snapshot", opts) as fm:
+                fm.startitem()
+                fm.data(id=None)
+                if not ui.quiet and not ui.plain():
+                    fm.plain(_("no snapshot found\n"))
         else:
-            csid = csid.hex()
+            if not ui.plain():
+                ui.status(_("no snapshot found\n"))
+    else:
+        csid_hex = csid.hex()
+        # Use formatter for template support
+        if opts.get("template"):
+            with ui.formatter("snapshot", opts) as fm:
+                fm.startitem()
+                fm.data(id=csid_hex)
+                if not ui.quiet and not ui.plain():
+                    fm.plain(_("latest snapshot is {}\n").format(csid_hex))
+        else:
             if ui.plain():
-                ui.status(f"{csid}\n")
+                ui.status(f"{csid_hex}\n")
             else:
-                ui.status(_("latest snapshot is {}\n").format(csid))
+                ui.status(_("latest snapshot is {}\n").format(csid_hex))
