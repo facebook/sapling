@@ -2112,111 +2112,140 @@ class GetAttributesFromFilesV2Cmd(Subcmd):
 
     def _print_object_id(self, object_id: Optional[ObjectIdOrError]) -> None:
         """Print object ID attribute."""
-        if object_id is not None:
-            if object_id.getType() == object_id.OBJECTID:
-                print(
-                    f"  Object ID:             {object_id_str(object_id.get_objectId())}"
-                )
-            else:
-                print(f"  Object ID:             {object_id.get_error().message}")
-        else:
+        if object_id is None:
             print("  Object ID:             None")
+            return
+        obj_enum = object_id.getType()
+        if obj_enum == object_id.OBJECTID:
+            print(f"  Object ID:             {object_id_str(object_id.get_objectId())}")
+        elif obj_enum == object_id.ERROR:
+            print(f"  Object ID:             {object_id.get_error().message}")
+        else:
+            print("  Object ID:             Empty")
 
     def _print_file_size(self, size: Optional[SizeOrError]) -> None:
         """Print file size attribute."""
-        if size is not None:
-            if size.getType() == size.SIZE:
-                print(
-                    f"  File Size:             {stats_print.format_size(size.get_size())}"
-                )
-            else:
-                print(f"  File Size:             {size.get_error().message}")
-        else:
+        if size is None:
             print("  File Size:             None")
+            return
+        size_enum = size.getType()
+        if size_enum == size.SIZE:
+            print(
+                f"  File Size:             {stats_print.format_size(size.get_size())}"
+            )
+        elif size_enum == size.ERROR:
+            print(f"  File Size:             {size.get_error().message}")
+        else:
+            print("  File Size:             Empty")
 
     def _print_file_mode(self, mode: Optional[ModeOrError]) -> None:
         """Print file mode attribute."""
-        if mode is not None:
-            if mode.getType() == mode.MODE:
-                print(f"  File Mode:             {mode.get_mode():04o}")
-            else:
-                print(f"  File Mode:             {mode.get_error().message}")
-        else:
+        if mode is None:
             print("  File Mode:             None")
+            return
+        mode_enum = mode.getType()
+        if mode_enum == mode.MODE:
+            print(f"  File Mode:             {mode.get_mode():04o}")
+        elif mode_enum == mode.ERROR:
+            print(f"  File Mode:             {mode.get_error().message}")
+        else:
+            print("  File Mode:             Empty")
 
     def _print_source_control_type(
         self, scm_type: Optional[SourceControlTypeOrError]
     ) -> None:
         """Print source control type attribute."""
-        if scm_type is not None:
-            if scm_type.getType() == scm_type.SOURCECONTROLTYPE:
-                scm_type_str = self._source_control_type_to_string(
-                    scm_type.get_sourceControlType()
-                )
-                print(f"  Source Control Type:   {scm_type_str}")
-            else:
-                print(f"  Source Control Type:   {scm_type.get_error().message}")
-        else:
+        if scm_type is None:
             print("  Source Control Type:   None")
+            return
+        scm_type_enum = scm_type.getType()
+
+        if scm_type_enum == scm_type.SOURCECONTROLTYPE:
+            scm_type_str = self._source_control_type_to_string(
+                scm_type.get_sourceControlType()
+            )
+            print(f"  Source Control Type:   {scm_type_str}")
+        elif scm_type_enum == scm_type.ERROR:
+            print(f"  Source Control Type:   {scm_type.get_error().message}")
+        else:
+            print("  Source Control Type:   Empty")
 
     def _print_sha1_hash(self, sha1: Optional[Sha1OrError]) -> None:
         """Print SHA1 hash attribute."""
-        if sha1 is not None:
-            if sha1.getType() == sha1.SHA1:
-                print(f"  SHA1 Hash:            {hash_str(sha1.get_sha1())}")
-            else:
-                print(f"  SHA1 Hash:            {sha1.get_error().message}")
-        else:
+        if sha1 is None:
             print("  SHA1 Hash:            None")
+            return
+
+        sha1_enum = sha1.getType()
+        if sha1_enum == sha1.SHA1:
+            print(f"  SHA1 Hash:            {hash_str(sha1.get_sha1())}")
+        elif sha1_enum == sha1.ERROR:
+            print(f"  SHA1 Hash:            {sha1.get_error().message}")
+        else:
+            print("  SHA1 Hash:            Empty")
 
     def _print_blake3_hash(self, blake3: Optional[Blake3OrError]) -> None:
         """Print BLAKE3 hash attribute."""
-        if blake3 is not None:
-            if blake3.getType() == blake3.BLAKE3:
-                print(f"  BLAKE3 Hash:          {hash_str(blake3.get_blake3())}")
-            else:
-                print(f"  BLAKE3 Hash:          {blake3.get_error().message}")
-        else:
+        if blake3 is None:
             print("  BLAKE3 Hash:          None")
+            return
+
+        blake3_enum = blake3.getType()
+        if blake3_enum == blake3.BLAKE3:
+            print(f"  BLAKE3 Hash:          {hash_str(blake3.get_blake3())}")
+        elif blake3_enum == blake3.ERROR:
+            print(f"  BLAKE3 Hash:          {blake3.get_error().message}")
+        else:
+            print("  BLAKE3 Hash:          Empty")
 
     def _print_digest_size(self, digest_size: Optional[DigestSizeOrError]) -> None:
         """Print digest size attribute."""
-        if digest_size is not None:
-            if digest_size.getType() == digest_size.DIGESTSIZE:
-                print(
-                    f"  Digest Size:          {stats_print.format_size(digest_size.get_digestSize())}"
-                )
-            else:
-                print(f"  Digest Size:          {digest_size.get_error().message}")
-        else:
+        if digest_size is None:
             print("  Digest Size:          None")
+            return
+
+        digest_size_enum = digest_size.getType()
+        if digest_size_enum == digest_size.DIGESTSIZE:
+            print(
+                f"  Digest Size:          {stats_print.format_size(digest_size.get_digestSize())}"
+            )
+        elif digest_size_enum == digest_size.ERROR:
+            print(f"  Digest Size:          {digest_size.get_error().message}")
+        else:
+            print("  Digest Size:          Empty")
 
     def _print_digest_hash(self, digest_hash: Optional[DigestHashOrError]) -> None:
         """Print digest hash attribute."""
-        if digest_hash is not None:
-            if digest_hash.getType() == digest_hash.DIGESTHASH:
-                print(
-                    f"  Digest Hash:          {hash_str(digest_hash.get_digestHash())}"
-                )
-            else:
-                print(f"  Digest Hash:          {digest_hash.get_error().message}")
-        else:
+        if digest_hash is None:
             print("  Digest Hash:          None")
+            return
+
+        digest_hash_enum = digest_hash.getType()
+        if digest_hash_enum == digest_hash.DIGESTHASH:
+            print(f"  Digest Hash:          {hash_str(digest_hash.get_digestHash())}")
+        elif digest_hash_enum == digest_hash.ERROR:
+            print(f"  Digest Hash:          {digest_hash.get_error().message}")
+        else:
+            print("  Digest Hash:          Empty")
 
     def _print_mtime(self, mtime: Optional[MtimeOrError]) -> None:
         """Print modification time attribute."""
-        if mtime is not None:
-            if mtime.getType() == mtime.MTIME:
-                mtime_val = mtime.get_mtime()
-                timestamp = mtime_val.seconds + mtime_val.nanoSeconds / 1e9
-                datetime_str = datetime.datetime.fromtimestamp(timestamp).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-                print(f"  Modification Time:    {datetime_str}")
-            else:
-                print(f"  Modification Time:    {mtime.get_error().message}")
-        else:
+        if mtime is None:
             print("  Modification Time:    None")
+            return
+
+        mtime_enum = mtime.getType()
+        if mtime_enum == mtime.MTIME:
+            mtime_val = mtime.get_mtime()
+            timestamp = mtime_val.seconds + mtime_val.nanoSeconds / 1e9
+            datetime_str = datetime.datetime.fromtimestamp(timestamp).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            print(f"  Modification Time:    {datetime_str}")
+        elif mtime_enum == mtime.ERROR:
+            print(f"  Modification Time:    {mtime.get_error().message}")
+        else:
+            print("  Modification Time:    Empty")
 
     def _print_file_attributes(
         self, attr_data: FileAttributeDataV2, requested_attributes: int
@@ -2251,12 +2280,15 @@ class GetAttributesFromFilesV2Cmd(Subcmd):
         print(f"\nPath: {path}")
         print("=" * (len(path) + 6))
 
-        if attr_result.getType() == attr_result.FILEATTRIBUTEDATA:
+        attr_result_enum = attr_result.getType()
+        if attr_result_enum == attr_result.FILEATTRIBUTEDATA:
             attr_data = attr_result.get_fileAttributeData()
             self._print_file_attributes(attr_data, requested_attributes)
-        else:
+        elif attr_result_enum == attr_result.ERROR:
             error = attr_result.get_error()
             print(f"  ERROR: {error.message}")
+        else:
+            print("  Empty attribute result")
 
     def _get_requested_attributes(self, args: argparse.Namespace) -> int:
         """Build the requested attributes bitmask based on command line arguments."""
