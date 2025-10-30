@@ -19,6 +19,7 @@
 namespace facebook::eden {
 
 class BackingStore;
+class ReloadableConfig;
 
 /**
  * Implementation of a BackingStore that allows filtering sets of paths from
@@ -35,6 +36,7 @@ class FilteredBackingStore
   FilteredBackingStore(
       std::shared_ptr<BackingStore> backingStore,
       std::unique_ptr<Filter> filter,
+      std::shared_ptr<ReloadableConfig> config,
       bool optimizeUnfilteredTrees);
 
   ~FilteredBackingStore() override;
@@ -109,6 +111,11 @@ class FilteredBackingStore
   // Whether backingStore_ is a SaplingBackingStore. Used to optimized
   // unfiltered trees.
   bool isSaplingBackingStore_ = false;
+
+  /**
+   * Reference to the eden config, may be a null pointer in unit tests.
+   */
+  std::shared_ptr<ReloadableConfig> config_;
 
   // Whether we should optimize unfiltered trees to directly use underlying
   // SaplingBackingStore's ObjectIds.

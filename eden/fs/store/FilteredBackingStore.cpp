@@ -12,6 +12,7 @@
 #include <tuple>
 
 #include "eden/common/utils/ImmediateFuture.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/ObjectId.h"
 #include "eden/fs/model/Tree.h"
@@ -26,8 +27,10 @@ namespace facebook::eden {
 FilteredBackingStore::FilteredBackingStore(
     std::shared_ptr<BackingStore> backingStore,
     std::unique_ptr<Filter> filter,
+    std::shared_ptr<ReloadableConfig> config,
     bool optimizeUnfilteredTrees)
     : backingStore_{std::move(backingStore)},
+      config_{std::move(config)},
       optimizeUnfilteredTrees_{optimizeUnfilteredTrees},
       filter_{std::move(filter)} {
   isSaplingBackingStore_ =

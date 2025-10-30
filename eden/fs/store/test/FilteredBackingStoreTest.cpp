@@ -81,14 +81,22 @@ struct TestRepo {
   }
 };
 
-class FakeSubstringFilteredBackingStoreTest : public ::testing::Test {
+struct FilteredBackingStoreTestBase : TestRepo, ::testing::Test {
+  std::shared_ptr<EdenConfig> testEdenConfig =
+      EdenConfig::createTestEdenConfig();
+  std::shared_ptr<ReloadableConfig> edenConfig{
+      std::make_shared<ReloadableConfig>(testEdenConfig)};
+};
+
+class FakeSubstringFilteredBackingStoreTest
+    : public FilteredBackingStoreTestBase {
  protected:
   void SetUp() override {
     wrappedStore_ = std::make_shared<FakeBackingStore>(
         BackingStore::LocalStoreCachingPolicy::Anything);
     auto fakeFilter = std::make_unique<FakeSubstringFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
-        wrappedStore_, std::move(fakeFilter), true);
+        wrappedStore_, std::move(fakeFilter), edenConfig, true);
   }
 
   void TearDown() override {
@@ -99,14 +107,14 @@ class FakeSubstringFilteredBackingStoreTest : public ::testing::Test {
   std::shared_ptr<FilteredBackingStore> filteredStore_;
 };
 
-class FakePrefixFilteredBackingStoreTest : public ::testing::Test {
+class FakePrefixFilteredBackingStoreTest : public FilteredBackingStoreTestBase {
  protected:
   void SetUp() override {
     wrappedStore_ = std::make_shared<FakeBackingStore>(
         BackingStore::LocalStoreCachingPolicy::Anything);
     auto fakeFilter = std::make_unique<FakePrefixFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
-        wrappedStore_, std::move(fakeFilter), true);
+        wrappedStore_, std::move(fakeFilter), edenConfig, true);
   }
 
   void TearDown() override {
@@ -117,21 +125,19 @@ class FakePrefixFilteredBackingStoreTest : public ::testing::Test {
   std::shared_ptr<FilteredBackingStore> filteredStore_;
 };
 
-struct SaplingFilteredBackingStoreTest : TestRepo, ::testing::Test {
+struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
   SaplingFilteredBackingStoreTest() = default;
 
   void SetUp() override {
     auto hgFilter = std::make_unique<HgSparseFilter>(repo.path().copy());
     filteredStoreFFI_ = std::make_shared<FilteredBackingStore>(
-        wrappedStore_, std::move(hgFilter), true);
+        wrappedStore_, std::move(hgFilter), edenConfig, true);
   }
 
   void TearDown() override {
     filteredStoreFFI_.reset();
   }
 
-  std::shared_ptr<ReloadableConfig> edenConfig{
-      std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig())};
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
   std::shared_ptr<MemoryLocalStore> localStore{
       std::make_shared<MemoryLocalStore>(stats.copy())};
