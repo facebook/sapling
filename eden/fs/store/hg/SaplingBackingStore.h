@@ -475,6 +475,17 @@ class SaplingBackingStore final : public BackingStore {
       sapling::FetchMode fetchMode);
 
   /**
+   * Batch fetch blobs directly from lower level store. "Not found" is
+   * propagated as an exception.
+   */
+  void nativeGetBlobBatch(
+      folly::Range<const sapling::SaplingRequest*> requests,
+      sapling::FetchMode fetch_mode,
+      bool allow_ignore_result,
+      folly::FunctionRef<
+          void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)> resolve);
+
+  /**
    * Create a blob fetch request and enqueue it to the SaplingImportRequestQueue
    *
    * For latency sensitive context, the caller is responsible for checking if

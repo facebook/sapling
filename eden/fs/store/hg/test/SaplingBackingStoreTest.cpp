@@ -641,8 +641,8 @@ TEST_F(
   std::vector<bool> callbackInvoked(3, false);
   std::atomic<size_t> callbackCount{0};
 
-  // Call SaplingNativeBackingStore::getBlobBatch() directly.
-  queuedBackingStore->store_.getBlobBatch(
+  // Call SaplingBackingStore::nativeGetBlobBatch() directly.
+  queuedBackingStore->nativeGetBlobBatch(
       folly::range(requests),
       sapling::FetchMode::AllowRemote,
       true,

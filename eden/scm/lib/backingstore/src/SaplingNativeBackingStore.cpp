@@ -45,52 +45,6 @@ SaplingNativeBackingStore::SaplingNativeBackingStore(
   }
 }
 
-// Batch fetch blobs. "Not found" is propagated as an exception.
-void SaplingNativeBackingStore::getBlobBatch(
-    SaplingRequestRange requests,
-    sapling::FetchMode fetch_mode,
-    bool allow_ignore_result,
-    folly::FunctionRef<void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)>
-        resolve) {
-  auto count = requests.size();
-  if (count == 0) {
-    return;
-  }
-
-  auto resolver = std::make_shared<GetBlobBatchResolver>(std::move(resolve));
-
-  XLOGF(
-      DBG7,
-      "Import blobs with size: {}, first path: {}",
-      count,
-      requests[0].path);
-
-  std::vector<Request> raw_requests;
-  raw_requests.reserve(count);
-  for (auto& request : requests) {
-    raw_requests.push_back(
-        Request{
-            request.node.data(),
-            request.cause,
-        });
-
-    if (request.cause != FetchCause::Prefetch) {
-      sapling_backingstore_witness_file_read(
-          *store_.get(),
-          rust::Str{request.path.view().data(), request.path.view().size()},
-          fetch_mode == FetchMode::LocalOnly,
-          request.context->getClientPid().valueOrZero().get());
-    }
-  }
-
-  sapling_backingstore_get_blob_batch(
-      *store_.get(),
-      rust::Slice<const Request>{raw_requests.data(), raw_requests.size()},
-      fetch_mode,
-      allow_ignore_result,
-      std::move(resolver));
-}
-
 folly::Try<std::shared_ptr<FileAuxData>>
 SaplingNativeBackingStore::getBlobAuxData(NodeId node, bool local) {
   FetchMode fetch_mode = FetchMode::AllowRemote;

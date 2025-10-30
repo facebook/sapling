@@ -431,7 +431,7 @@ void SaplingBackingStore::getBlobBatch(
   auto requests = std::move(preparedRequests.second);
   folly::stop_watch<std::chrono::milliseconds> batchWatch;
 
-  store_.getBlobBatch(
+  nativeGetBlobBatch(
       folly::range(requests),
       fetchMode,
       false,
@@ -2027,7 +2027,7 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
                     requests.size());
 
                 size_t failureCount = 0;
-                store_.getBlobBatch(
+                nativeGetBlobBatch(
                     folly::range(requests),
                     sapling::FetchMode::AllowRemote,
                     // We aren't going through the queue, so we are certain
@@ -2091,6 +2091,60 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
         }
       })
       .semi();
+}
+
+void SaplingBackingStore::nativeGetBlobBatch(
+    folly::Range<const sapling::SaplingRequest*> requests,
+    sapling::FetchMode fetch_mode,
+    bool allow_ignore_result,
+    folly::FunctionRef<void(size_t, folly::Try<std::unique_ptr<folly::IOBuf>>)>
+        resolve) {
+  auto count = requests.size();
+  if (count == 0) {
+    return;
+  }
+
+  auto resolver =
+      std::make_shared<sapling::GetBlobBatchResolver>(std::move(resolve));
+
+  XLOGF(
+      DBG7,
+      "Import blobs with size: {}, first path: {}",
+      count,
+      requests[0].path);
+
+  std::vector<sapling::Request> raw_requests;
+  raw_requests.reserve(count);
+  for (auto& request : requests) {
+    raw_requests.push_back(
+        sapling::Request{
+            request.node.data(),
+            request.cause,
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(request.path.view().data()),
+                request.path.view().size()},
+            rust::Slice<const uint8_t>{
+                reinterpret_cast<const uint8_t*>(request.oid.getBytes().data()),
+                request.oid.size()},
+            request.context->getClientPid().valueOrZero().get(),
+        });
+
+    if (request.cause != FetchCause::Prefetch) {
+      sapling_backingstore_witness_file_read(
+          store_.rustStore(),
+          rust::Str{request.path.view().data(), request.path.view().size()},
+          fetch_mode == sapling::FetchMode::LocalOnly,
+          request.context->getClientPid().valueOrZero().get());
+    }
+  }
+
+  sapling_backingstore_get_blob_batch(
+      store_.rustStore(),
+      rust::Slice<const sapling::Request>{
+          raw_requests.data(), raw_requests.size()},
+      fetch_mode,
+      allow_ignore_result,
+      std::move(resolver));
 }
 
 ImmediateFuture<BackingStore::GetGlobFilesResult>
