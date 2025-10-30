@@ -110,10 +110,14 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
 
   const [selectedAction, setSelectedAction] = useState<ActionMenuItem | undefined>(undefined);
 
-  // Update selected action when available actions change
   useEffect(() => {
-    setSelectedAction(sortedActionItems[0]);
-  }, [sortedActionItems]);
+    if (
+      !selectedAction || // No action selected
+      !sortedActionItems.find(item => item.id === selectedAction.id) // Selected action is no longer available
+    ) {
+      setSelectedAction(sortedActionItems[0]);
+    }
+  }, [selectedAction, sortedActionItems]);
 
   const contextMenu = useContextMenu(() =>
     sortedActionItems.map(actionItem => ({

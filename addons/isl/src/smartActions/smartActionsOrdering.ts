@@ -22,8 +22,8 @@ const smartActionsOrder = localStorageBackedAtom<Array<string>>('isl.smart-actio
 export function useSortedActions(actions: Array<ActionMenuItem>) {
   const cache = useAtomValue(smartActionsOrder);
   return [...actions].sort((a, b) => {
-    const aIndex = cache.indexOf(a.id);
-    const bIndex = cache.indexOf(b.id);
+    const aIndex = cache.indexOf(a.id) >= 0 ? cache.indexOf(a.id) : Infinity;
+    const bIndex = cache.indexOf(b.id) >= 0 ? cache.indexOf(b.id) : Infinity;
     return aIndex - bIndex;
   });
 }
