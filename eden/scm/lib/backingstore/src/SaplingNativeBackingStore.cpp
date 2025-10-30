@@ -45,28 +45,6 @@ SaplingNativeBackingStore::SaplingNativeBackingStore(
   }
 }
 
-folly::Try<std::shared_ptr<TreeAuxData>>
-SaplingNativeBackingStore::getTreeAuxData(NodeId node, bool local) {
-  FetchMode fetch_mode = FetchMode::AllowRemote;
-  if (local) {
-    fetch_mode = FetchMode::LocalOnly;
-  }
-  XLOGF(
-      DBG7,
-      "Importing tree aux data node={} from hgcache",
-      folly::hexlify(node));
-  return folly::makeTryWith([&] {
-    try {
-      return sapling_backingstore_get_tree_aux(
-          *store_.get(),
-          rust::Slice<const uint8_t>{node.data(), node.size()},
-          fetch_mode);
-    } catch (const rust::Error& error) {
-      throw SaplingBackingStoreError{error.what()};
-    }
-  });
-}
-
 void SaplingNativeBackingStore::getTreeAuxDataBatch(
     SaplingRequestRange requests,
     sapling::FetchMode fetch_mode,

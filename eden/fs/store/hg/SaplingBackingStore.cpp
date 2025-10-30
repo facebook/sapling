@@ -1185,21 +1185,31 @@ SaplingBackingStore::getTreeAuxDataEnqueue(
 
 folly::Try<TreeAuxDataPtr> SaplingBackingStore::getLocalTreeAuxData(
     const HgProxyHash& hgInfo) {
-  auto auxData = store_.getTreeAuxData(hgInfo.byteHash(), true /*local_only*/);
+  auto node = hgInfo.byteHash();
+
+  XLOGF(
+      DBG7,
+      "Importing tree aux data node={} from hgcache",
+      folly::hexlify(node));
 
   using GetTreeAuxDataResult = folly::Try<TreeAuxDataPtr>;
 
-  if (auxData.hasValue()) {
-    if (auxData.value()) {
+  try {
+    auto auxData = sapling_backingstore_get_tree_aux(
+        store_.rustStore(),
+        rust::Slice<const uint8_t>{node.data(), node.size()},
+        sapling::FetchMode::LocalOnly);
+
+    if (auxData) {
       return GetTreeAuxDataResult{
           std::make_shared<TreeAuxDataPtr::element_type>(TreeAuxData{
-              Hash32{std::move(auxData.value()->digest_hash)},
-              auxData.value()->digest_size})};
+              Hash32{std::move(auxData->digest_hash)}, auxData->digest_size})};
     } else {
       return GetTreeAuxDataResult{nullptr};
     }
-  } else {
-    return GetTreeAuxDataResult{auxData.exception()};
+  } catch (const rust::Error& error) {
+    return GetTreeAuxDataResult{
+        sapling::SaplingBackingStoreError{error.what()}};
   }
 }
 
