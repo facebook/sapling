@@ -23,6 +23,13 @@ namespace facebook::eden {
 using namespace folly;
 using namespace folly::io;
 
+namespace {
+// Platform-independent execute bit mask for tree entry type detection.
+// On POSIX platforms, this matches S_IXUSR. On Windows, we use the same
+// value to enable consistent executable file detection across platforms.
+constexpr mode_t EXECUTE_BIT_MASK = 0000100;
+} // namespace
+
 template <typename T>
 bool checkValueEqual(
     const std::optional<folly::Try<T>>& lhs,
@@ -99,14 +106,8 @@ dtype_t filteredEntryDtype(dtype_t mode, bool windowsSymlinksEnabled) {
 
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode) {
   if (S_ISREG(mode)) {
-#ifdef _WIN32
-    // On Windows, S_ISREG only means regular file and doesn't support
-    // TreeEntryType::EXECUTABLE_FILE
-    return TreeEntryType::REGULAR_FILE;
-#else
-    return mode & S_IXUSR ? TreeEntryType::EXECUTABLE_FILE
-                          : TreeEntryType::REGULAR_FILE;
-#endif
+    return mode & EXECUTE_BIT_MASK ? TreeEntryType::EXECUTABLE_FILE
+                                   : TreeEntryType::REGULAR_FILE;
   } else if (S_ISLNK(mode)) {
     return TreeEntryType::SYMLINK;
   } else if (S_ISDIR(mode)) {

@@ -108,8 +108,10 @@ class TreeEntry {
    * result, on Windows, getType may return EXECUTABLE_FILE if the file is
    * marked as executable in source control.
    */
-  TreeEntryType getType(
-      [[maybe_unused]] bool windowsRememberExecutableBit) const {
+  TreeEntryType getType(bool windowsRememberExecutableBit) const {
+    if (windowsRememberExecutableBit) {
+      return type_;
+    }
 #ifdef _WIN32
     // XXX(T66590035): instead of doing this here, this should be done in the
     // Windows specific code that interpret these.
