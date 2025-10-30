@@ -1267,6 +1267,18 @@ class EdenConfig : private ConfigSettingManager {
       32,
       this};
 
+  /**
+   * Control walk detection behavior:
+   * - "" means defer to sapling config (backingstore.walk-mode)
+   * - "off" means do nothing
+   * - "monitor" means track walk behavior but take no action
+   * - "prefetch" means track walk behavior and prefetch automatically
+   */
+  ConfigSetting<std::string> backingstoreWalkMode{
+      "backingstore:walk-mode",
+      "",
+      this};
+
   // [telemetry]
 
   /**

@@ -141,7 +141,8 @@ SaplingBackingStore::SaplingBackingStore(
               rust::Slice<const char>{
                   repository.view().data(),
                   repository.view().size()},
-              rust::Slice<const char>{mount.view().data(), mount.view().size()})
+              rust::Slice<const char>{mount.view().data(), mount.view().size()},
+              config_->getEdenConfig()->backingstoreWalkMode.getValue())
               .into_raw(),
           [](sapling::BackingStore* backingStore) {
             auto box = rust::Box<sapling::BackingStore>::from_raw(backingStore);
@@ -214,7 +215,8 @@ SaplingBackingStore::SaplingBackingStore(
               rust::Slice<const char>{
                   repository.view().data(),
                   repository.view().size()},
-              rust::Slice<const char>{mount.view().data(), mount.view().size()})
+              rust::Slice<const char>{mount.view().data(), mount.view().size()},
+              config_->getEdenConfig()->backingstoreWalkMode.getValue())
               .into_raw(),
           [](sapling::BackingStore* backingStore) {
             auto box = rust::Box<sapling::BackingStore>::from_raw(backingStore);

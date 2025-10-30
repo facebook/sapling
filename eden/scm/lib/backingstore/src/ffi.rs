@@ -16,6 +16,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
+use cxx::CxxString;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
 use iobuf::IOBuf;
@@ -208,6 +209,7 @@ pub(crate) mod ffi {
         pub unsafe fn sapling_backingstore_new(
             repository: &[c_char],
             mount: &[c_char],
+            walk_mode: &CxxString,
         ) -> Result<Box<BackingStore>>;
 
         pub unsafe fn sapling_backingstore_get_name(store: &BackingStore) -> Result<String>;
@@ -368,13 +370,24 @@ fn select_cause(fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> (Fe
 pub unsafe fn sapling_backingstore_new(
     repository: &[c_char],
     mount: &[c_char],
+    walk_mode: &CxxString,
 ) -> Result<Box<BackingStore>> {
     unsafe {
         super::init::backingstore_global_init();
 
         let repo = CStr::from_ptr(repository.as_ptr()).to_str()?;
         let mount = CStr::from_ptr(mount.as_ptr()).to_str()?;
-        let store = BackingStore::new(repo, mount).map_err(|err| anyhow!("{:?}", err))?;
+
+        let mut extra_sapling_configs = Vec::new();
+
+        // Allow configuring walk mode optionally via eden config.
+        if let v @ ("off" | "monitor" | "prefetch") = walk_mode.to_str()? {
+            tracing::debug!("setting backingstore.walk-mode={v} via eden config");
+            extra_sapling_configs.push(format!("backingstore.walk-mode={v}"));
+        }
+
+        let store = BackingStore::new_with_config(repo, mount, &extra_sapling_configs)
+            .map_err(|err| anyhow!("{:?}", err))?;
         Ok(Box::new(store))
     }
 }
