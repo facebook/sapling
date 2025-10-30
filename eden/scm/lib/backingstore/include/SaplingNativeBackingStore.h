@@ -99,11 +99,6 @@ class SaplingNativeBackingStore {
 
   bool dogfoodingHost() const;
 
-  folly::Try<std::shared_ptr<GlobFilesResponse>> getGlobFiles(
-      std::string_view commit_id,
-      const std::vector<std::string>& suffixes,
-      const std::vector<std::string>& prefixes);
-
   void workingCopyParentHint(const RootId& parent);
 
   void flush();

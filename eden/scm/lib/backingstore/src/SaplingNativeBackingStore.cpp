@@ -53,38 +53,6 @@ void SaplingNativeBackingStore::workingCopyParentHint(const RootId& parent) {
   sapling_backingstore_set_parent_hint(*store_.get(), parent.value());
 }
 
-folly::Try<std::shared_ptr<GlobFilesResponse>>
-SaplingNativeBackingStore::getGlobFiles(
-    // Human Readable 40b commit id
-    std::string_view commit_id,
-    const std::vector<std::string>& suffixes,
-    const std::vector<std::string>& prefixes) {
-  rust::Vec<rust::String> rust_suffixes;
-  rust::Vec<rust::String> rust_prefixes;
-  std::copy(
-      suffixes.begin(), suffixes.end(), std::back_inserter(rust_suffixes));
-  std::copy(
-      prefixes.begin(), prefixes.end(), std::back_inserter(rust_prefixes));
-
-  auto br = folly::ByteRange(commit_id);
-  return folly::makeTryWith([&] {
-    try {
-      auto globFiles = sapling_backingstore_get_glob_files(
-          *store_.get(),
-          rust::Slice<const uint8_t>{br.data(), br.size()},
-          rust_suffixes,
-          rust_prefixes);
-
-      XCHECK(
-          globFiles.get(),
-          "sapling_backingstore_get_glob_files returned a nullptr, but did not throw an exception.");
-      return globFiles;
-    } catch (const rust::Error& error) {
-      throw SaplingBackingStoreError{error.what()};
-    }
-  });
-}
-
 void SaplingNativeBackingStore::flush() {
   XLOG(DBG7, "Flushing backing store");
 
