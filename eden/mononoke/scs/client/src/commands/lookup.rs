@@ -37,6 +37,12 @@ pub(super) struct CommandArgs {
     scheme_args: SchemeArgs,
     #[clap(flatten)]
     commit_ids_args: CommitIdsArgs,
+    #[clap(long)]
+    /// Bookmark name to look up with namespaces
+    bookmark_name: Option<String>,
+    #[clap(long, num_args = 1..)]
+    /// Namespaces to search for the bookmark (in order of preference)
+    namespaces: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -144,12 +150,43 @@ async fn single_lookup(
 
 pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
     let repo = args.repo_args.clone().into_repo_specifier();
+    let conn = app.get_connection(Some(&repo.name)).await?;
+
+    // Handle bookmark lookup with namespaces
+    if let Some(bookmark_name) = &args.bookmark_name {
+        let namespaces = if args.namespaces.is_empty() {
+            None
+        } else {
+            Some(args.namespaces.clone())
+        };
+
+        let params = thrift::RepoResolveBookmarkParams {
+            bookmark_name: bookmark_name.clone(),
+            identity_schemes: args.scheme_args.clone().into_request_schemes(),
+            namespaces,
+            ..Default::default()
+        };
+        let response = conn
+            .repo_resolve_bookmark(&repo, &params)
+            .await
+            .map_err(|e| e.handle_selection_error(&repo))?;
+
+        let ids = match &response.ids {
+            Some(ids) => map_commit_ids(ids.values()),
+            None => BTreeMap::new(),
+        };
+        let output = LookupOutput {
+            requested: bookmark_name.clone(),
+            exists: response.exists,
+            ids,
+        };
+        return app.target.render_one(&args.scheme_args, output).await;
+    }
+
     let commit_ids = args.commit_ids_args.clone().into_commit_ids();
     if commit_ids.is_empty() {
         bail!("expected at least one commit ID");
     }
-
-    let conn = app.get_connection(Some(&repo.name)).await?;
 
     let resolved_commit_ids = resolve_commit_ids(&conn, &repo, &commit_ids).await?;
     let ids_index: HashMap<String, String> = resolved_commit_ids
