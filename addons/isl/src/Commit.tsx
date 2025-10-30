@@ -55,7 +55,7 @@ import {t, T} from './i18n';
 import {IconStack} from './icons/IconStack';
 import {IrrelevantCwdIcon} from './icons/IrrelevantCwdIcon';
 import {atomFamilyWeak, localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
-import {CONFLICT_SIDE_LABELS} from './mergeConflicts/state';
+import {CONFLICT_SIDE_LABELS} from './mergeConflicts/consts';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';

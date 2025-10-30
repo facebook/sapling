@@ -32,7 +32,7 @@ import {holdingAltAtom, holdingCtrlAtom} from './atoms/keyboardAtoms';
 import {externalMergeToolAtom} from './externalMergeTool';
 import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
-import {CONFLICT_SIDE_LABELS} from './mergeConflicts/state';
+import {CONFLICT_SIDE_LABELS} from './mergeConflicts/consts';
 import {AddOperation} from './operations/AddOperation';
 import {ForgetOperation} from './operations/ForgetOperation';
 import {PurgeOperation} from './operations/PurgeOperation';
