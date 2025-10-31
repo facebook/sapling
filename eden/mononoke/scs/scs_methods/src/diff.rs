@@ -274,15 +274,15 @@ impl<'a> DiffRouter<'a> {
     ) -> Result<UnifiedDiff, ServiceError> {
         let replacement_path = path_context.subtree_copy_dest_path().map(|p| p.to_string());
 
-        // The Base file is the "new" file, with Other is the "old" one
+        // The Base file is the "old" file, with Other is the "new" one
         // the replacement path goes in the "old" file, so that it can show
         // the new path after a move.
-        let other_input = path_context
+        let base_input = path_context
             .get_old_content()
             .map(|c| Self::input_from_changeset(c, replacement_path))
             .transpose()?;
 
-        let base_input = path_context
+        let other_input = path_context
             .get_new_content()
             .map(|c| Self::input_from_changeset(c, None))
             .transpose()?;
@@ -385,15 +385,15 @@ impl<'a> DiffRouter<'a> {
     ) -> Result<mononoke_api::MetadataDiff, ServiceError> {
         let replacement_path = path_context.subtree_copy_dest_path().map(|p| p.to_string());
 
-        // The Base file is the "new" file, with Other is the "old" one
+        // The Base file is the "old" file, with Other is the "new" one
         // the replacement path goes in the "old" file, so that it can show
         // the new path after a move.
-        let other_input = path_context
+        let base_input = path_context
             .get_old_content()
             .map(|c| Self::input_from_changeset(c, replacement_path))
             .transpose()?;
 
-        let base_input = path_context
+        let other_input = path_context
             .get_new_content()
             .map(|c| Self::input_from_changeset(c, None))
             .transpose()?;
