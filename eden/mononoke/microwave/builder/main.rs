@@ -114,21 +114,31 @@ async fn cache_warmup_target(
     repo: &Repo,
     bookmark: &BookmarkKey,
 ) -> Result<CacheWarmupTarget, Error> {
+    use warm_bookmarks_cache::WarmerTag;
+
     let warmers = vec![
-        create_derived_data_warmer::<MappedHgChangesetId>(ctx, repo.repo_derived_data_arc()),
-        create_derived_data_warmer::<FilenodesOnlyPublic>(ctx, repo.repo_derived_data_arc()),
+        create_derived_data_warmer::<MappedHgChangesetId>(
+            ctx,
+            repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg],
+        ),
+        create_derived_data_warmer::<FilenodesOnlyPublic>(
+            ctx,
+            repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg],
+        ),
     ];
 
-    match find_latest_derived_and_underived(
+    let (latest_derived, _latest_underived) = find_latest_derived_and_underived(
         ctx,
         repo.bookmarks(),
         repo.bookmark_update_log(),
         bookmark,
         &warmers,
     )
-    .await?
-    .0
-    {
+    .await?;
+
+    match latest_derived {
         LatestDerivedBookmarkEntry::Found(Some((cs_id, _))) => {
             Ok(CacheWarmupTarget::Changeset(cs_id))
         }

@@ -20,10 +20,12 @@ use tracing::Instrument;
 use super::IsWarmFn;
 use super::Warmer;
 use super::WarmerFn;
+use crate::WarmerTag;
 
 pub fn create_derived_data_warmer<Derivable>(
     ctx: &CoreContext,
     repo_derived_data: ArcRepoDerivedData,
+    tags: Vec<WarmerTag>,
 ) -> Warmer
 where
     Derivable: BonsaiDerivable,
@@ -61,6 +63,7 @@ where
     Warmer {
         warmer,
         is_warm,
+        tags,
         name: Derivable::NAME.to_string(),
     }
 }
@@ -94,5 +97,6 @@ pub fn create_public_phase_warmer(ctx: &CoreContext, phases: ArcPhases) -> Warme
         warmer,
         is_warm,
         name: "public phases".to_string(),
+        tags: vec![WarmerTag::Hg, WarmerTag::Git],
     }
 }

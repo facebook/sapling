@@ -132,10 +132,15 @@ pub type IsWarmFn = dyn for<'a> Fn(&'a CoreContext, ChangesetId) -> BoxFuture<'a
     + Send
     + Sync;
 
+pub enum WarmerTag {
+    Hg,
+    Git,
+}
 pub struct Warmer {
     warmer: Box<WarmerFn>,
     is_warm: Box<IsWarmFn>,
     name: String,
+    tags: Vec<WarmerTag>,
 }
 
 /// Initialization mode for the warm bookmarks cache.
@@ -266,10 +271,12 @@ impl WarmBookmarksCacheBuilder {
             DerivableType::Unodes => Some(create_derived_data_warmer::<RootUnodeManifestId>(
                 &self.ctx,
                 repo_derived_data.clone(),
+                vec![WarmerTag::Hg, WarmerTag::Git],
             )),
             DerivableType::BlameV2 => Some(create_derived_data_warmer::<RootBlameV2>(
                 &self.ctx,
                 repo_derived_data.clone(),
+                vec![WarmerTag::Hg, WarmerTag::Git],
             )),
             DerivableType::FileNodes => {
                 // TODO: add warmer for filenodes
@@ -278,66 +285,90 @@ impl WarmBookmarksCacheBuilder {
             DerivableType::HgChangesets => Some(create_derived_data_warmer::<MappedHgChangesetId>(
                 &self.ctx,
                 repo_derived_data.clone(),
+                vec![WarmerTag::Hg],
             )),
-            DerivableType::HgAugmentedManifests => Some(create_derived_data_warmer::<
-                RootHgAugmentedManifestId,
-            >(
-                &self.ctx, repo_derived_data.clone()
-            )),
+            DerivableType::HgAugmentedManifests => {
+                Some(create_derived_data_warmer::<RootHgAugmentedManifestId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                    vec![WarmerTag::Hg],
+                ))
+            }
             DerivableType::Fsnodes => Some(create_derived_data_warmer::<RootFsnodeId>(
                 &self.ctx,
                 repo_derived_data.clone(),
+                vec![WarmerTag::Hg, WarmerTag::Git],
             )),
             DerivableType::Fastlog => Some(create_derived_data_warmer::<RootFastlog>(
                 &self.ctx,
                 repo_derived_data.clone(),
+                vec![WarmerTag::Hg, WarmerTag::Git],
             )),
-            DerivableType::DeletedManifests => Some(create_derived_data_warmer::<
-                RootDeletedManifestV2Id,
-            >(
-                &self.ctx, repo_derived_data.clone()
-            )),
-            DerivableType::SkeletonManifests => Some(create_derived_data_warmer::<
-                RootSkeletonManifestId,
-            >(
-                &self.ctx, repo_derived_data.clone()
-            )),
-            DerivableType::SkeletonManifestsV2 => Some(create_derived_data_warmer::<
-                RootSkeletonManifestV2Id,
-            >(
-                &self.ctx, repo_derived_data.clone()
-            )),
+            DerivableType::DeletedManifests => {
+                Some(create_derived_data_warmer::<RootDeletedManifestV2Id>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                    vec![WarmerTag::Hg, WarmerTag::Git],
+                ))
+            }
+            DerivableType::SkeletonManifests => {
+                Some(create_derived_data_warmer::<RootSkeletonManifestId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                    vec![WarmerTag::Hg, WarmerTag::Git],
+                ))
+            }
+            DerivableType::SkeletonManifestsV2 => {
+                Some(create_derived_data_warmer::<RootSkeletonManifestV2Id>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                    vec![WarmerTag::Hg, WarmerTag::Git],
+                ))
+            }
             DerivableType::Ccsm => Some(create_derived_data_warmer::<
                 RootCaseConflictSkeletonManifestId,
-            >(&self.ctx, repo_derived_data.clone())),
-            DerivableType::ContentManifests => Some(create_derived_data_warmer::<
-                RootContentManifestId,
             >(
-                &self.ctx, repo_derived_data.clone()
+                &self.ctx,
+                repo_derived_data.clone(),
+                vec![WarmerTag::Hg, WarmerTag::Git],
             )),
+            DerivableType::ContentManifests => {
+                Some(create_derived_data_warmer::<RootContentManifestId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                    vec![WarmerTag::Hg, WarmerTag::Git],
+                ))
+            }
             DerivableType::ChangesetInfo => Some(create_derived_data_warmer::<ChangesetInfo>(
                 &self.ctx,
                 repo_derived_data.clone(),
+                vec![WarmerTag::Hg, WarmerTag::Git],
             )),
-            DerivableType::GitDeltaManifestsV2 => Some(create_derived_data_warmer::<
-                RootGitDeltaManifestV2Id,
-            >(
-                &self.ctx, repo_derived_data.clone()
-            )),
+            DerivableType::GitDeltaManifestsV2 => {
+                Some(create_derived_data_warmer::<RootGitDeltaManifestV2Id>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                    vec![WarmerTag::Git],
+                ))
+            }
             DerivableType::GitDeltaManifestsV3 => None,
             DerivableType::BssmV3 => Some(create_derived_data_warmer::<RootBssmV3DirectoryId>(
                 &self.ctx,
                 repo_derived_data.clone(),
+                vec![WarmerTag::Hg, WarmerTag::Git],
             )),
             DerivableType::GitCommits => Some(create_derived_data_warmer::<MappedGitCommitId>(
                 &self.ctx,
                 repo_derived_data.clone(),
+                vec![WarmerTag::Git],
             )),
-            DerivableType::InferredCopyFrom => Some(create_derived_data_warmer::<
-                RootInferredCopyFromId,
-            >(
-                &self.ctx, repo_derived_data.clone()
-            )),
+            DerivableType::InferredCopyFrom => {
+                Some(create_derived_data_warmer::<RootInferredCopyFromId>(
+                    &self.ctx,
+                    repo_derived_data.clone(),
+                    vec![WarmerTag::Hg, WarmerTag::Git],
+                ))
+            }
             DerivableType::TestManifests => None,
             DerivableType::TestShardedManifests => None,
         }
@@ -1363,6 +1394,7 @@ mod tests {
         warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
             &ctx,
             repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg, WarmerTag::Git],
         ));
         let warmers = Arc::new(warmers);
 
@@ -1423,6 +1455,7 @@ mod tests {
         warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
             &ctx,
             repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg, WarmerTag::Git],
         ));
         let warmers = Arc::new(warmers);
 
@@ -1506,6 +1539,7 @@ mod tests {
         warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
             &ctx,
             repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg, WarmerTag::Git],
         ));
         let warmers = Arc::new(warmers);
 
@@ -1558,6 +1592,7 @@ mod tests {
         warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
             &ctx,
             repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg, WarmerTag::Git],
         ));
         let warmers = Arc::new(warmers);
 
@@ -1635,6 +1670,7 @@ mod tests {
         warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
             &ctx,
             repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg, WarmerTag::Git],
         ));
         let warmers = Arc::new(warmers);
 
@@ -1713,6 +1749,7 @@ mod tests {
         warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
             &ctx,
             repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg, WarmerTag::Git],
         ));
         let warmers = Arc::new(warmers);
 
@@ -1861,6 +1898,7 @@ mod tests {
                 }
             }),
             name: "test".to_string(),
+            tags: vec![WarmerTag::Hg, WarmerTag::Git],
         };
         let mut warmers: Vec<Warmer> = Vec::new();
         warmers.push(warmer);
@@ -1903,6 +1941,7 @@ mod tests {
         warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
             &ctx,
             repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg, WarmerTag::Git],
         ));
         let warmers = Arc::new(warmers);
 
@@ -1990,6 +2029,7 @@ mod tests {
                 }
             }),
             name: "test".to_string(),
+            tags: vec![WarmerTag::Hg, WarmerTag::Git],
         };
         let mut warmers: Vec<Warmer> = Vec::new();
         warmers.push(warmer);
@@ -2081,6 +2121,7 @@ mod tests {
         warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
             &ctx,
             repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg, WarmerTag::Git],
         ));
         let warmers = Arc::new(warmers);
 
@@ -2158,6 +2199,7 @@ mod tests {
         warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(
             &ctx,
             repo.repo_derived_data_arc(),
+            vec![WarmerTag::Hg, WarmerTag::Git],
         ));
         let warmers = Arc::new(warmers);
 
