@@ -890,6 +890,125 @@ class StatusEdgeCaseTest(EdenHgTestCase):
         else:
             self.assert_status({"script.sh": "M"})
 
+    def test_executable_file_overwritten_with_regular_mode(self) -> None:
+        """Test status when an executable file is overwritten (not deleted) with regular mode."""
+        self.repo.write_file("script.sh", "#!/bin/bash echo hello", mode=0o755)
+        self.repo.commit("Add executable script")
+        # On Windows, the file mode is ignored during creation, so we need to
+        # explicitly tell Sapling that this file should be marked as executable
+        # in the manifest by using debugmakeexecutable
+        if sys.platform == "win32":
+            self.hg("debugmakeexecutable", "script.sh")
+
+        self.assert_status_empty()
+
+        # Overwrite the file with same content but regular mode (without deleting)
+        path = os.path.join(self.mount, "script.sh")
+        with open(path, "w") as f:
+            f.write("#!/bin/bash echo hello")
+        os.chmod(path, 0o644)
+
+        if sys.platform == "win32":
+            self.assert_status_empty()
+        else:
+            self.assert_status({"script.sh": "M"})
+
+    def test_executable_file_moved_to_new_location(self) -> None:
+        """Test status when an executable file is moved using sl mv."""
+        self.repo.write_file("script.sh", "#!/bin/bash echo hello", mode=0o755)
+        self.repo.commit("Add executable script")
+        # On Windows, the file mode is ignored during creation, so we need to
+        # explicitly tell Sapling that this file should be marked as executable
+        # in the manifest by using debugmakeexecutable
+        if sys.platform == "win32":
+            self.hg("debugmakeexecutable", "script.sh")
+
+        self.assert_status_empty()
+
+        # Move the file using sl mv
+        self.hg("mv", "script.sh", "new_script.sh")
+
+        self.assert_status({"script.sh": "R", "new_script.sh": "A"})
+
+    def test_executable_file_moved_with_regular_mv(self) -> None:
+        """Test status when an executable file is moved using regular mv."""
+        self.repo.write_file("script.sh", "#!/bin/bash echo hello", mode=0o755)
+        self.repo.commit("Add executable script")
+        # On Windows, the file mode is ignored during creation, so we need to
+        # explicitly tell Sapling that this file should be marked as executable
+        # in the manifest by using debugmakeexecutable
+        if sys.platform == "win32":
+            self.hg("debugmakeexecutable", "script.sh")
+
+        self.assert_status_empty()
+
+        # Move the file using regular filesystem mv
+        old_path = os.path.join(self.mount, "script.sh")
+        new_path = os.path.join(self.mount, "new_script.sh")
+        os.rename(old_path, new_path)
+
+        self.assert_status({"script.sh": "!", "new_script.sh": "?"})
+
+    def test_checkout_over_untracked_executable_with_same_content(self) -> None:
+        """Test checkout when untracked file with same content exists.
+
+        This exercises the checkout code path to ensure executable bit
+        comparison works correctly when checking out a commit that adds
+        an executable file over an existing untracked file with the same content.
+        """
+        # Create initial commit without script.sh
+        self.repo.write_file("dummy.txt", "dummy")
+        commit1 = self.repo.commit("Initial commit")
+
+        # Create a commit with an executable file
+        self.repo.write_file("script.sh", "#!/bin/bash echo hello", mode=0o755)
+        commit2 = self.repo.commit("Add executable script")
+        # On Windows, the file mode is ignored during creation, so we need to
+        # explicitly tell Sapling that this file should be marked as executable
+        # in the manifest by using debugmakeexecutable
+        if sys.platform == "win32":
+            self.hg("debugmakeexecutable", "script.sh")
+
+        # Go back to commit1
+        self.repo.update(commit1)
+        self.assert_status_empty()
+
+        # Create untracked script.sh with same content but regular mode
+        path = os.path.join(self.mount, "script.sh")
+        with open(path, "w") as f:
+            f.write("#!/bin/bash echo hello")
+        os.chmod(path, 0o644)
+
+        self.assert_status({"script.sh": "?"})
+
+        # Checkout commit2 - should handle the mode difference appropriately
+        self.repo.update(commit2)
+
+        # After checkout, status should be clean
+        self.assert_status_empty()
+
+    def test_regular_file_changed_to_executable(self) -> None:
+        """Test status when a regular file's mode is changed to executable."""
+        self.repo.write_file("script.sh", "#!/bin/bash echo hello", mode=0o644)
+        self.repo.commit("Add regular script")
+
+        self.assert_status_empty()
+
+        # Change to executable mode
+        path = os.path.join(self.mount, "script.sh")
+        os.chmod(path, 0o755)
+
+        # On Windows, the file mode is ignored during creation, so we need to
+        # explicitly tell Sapling that this file should be marked as executable
+        # in the manifest by using debugmakeexecutable
+        if sys.platform == "win32":
+            self.hg("debugmakeexecutable", "script.sh")
+
+        if sys.platform == "win32":
+            self.assert_status_empty()
+        else:
+            self.assert_status({"script.sh": "M"})
+
 
 # Define a separate TestCase class purely to test with different initial
 # repository contents.
