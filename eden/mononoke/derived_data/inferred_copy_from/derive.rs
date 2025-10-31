@@ -234,17 +234,27 @@ async fn get_matched_paths_by_basenames_from_changeset(
     basenames: Vec<String>,
     path_prefixes: Vec<MPath>,
 ) -> Result<impl Stream<Item = Result<MPath, Error>>> {
-    derivation_ctx
-        .fetch_dependency::<RootBssmV3DirectoryId>(ctx, cs_id)
-        .await?
-        .find_files_filter_basenames(
-            ctx,
-            derivation_ctx.blobstore().clone(),
-            path_prefixes,
-            EitherOrBoth::Left(Vec1::try_from_vec(basenames)?),
-            None,
-        )
-        .await
+    Ok(
+        match derivation_ctx
+            .fetch_dependency::<RootBssmV3DirectoryId>(ctx, cs_id)
+            .await
+        {
+            Ok(bssm_v3) => bssm_v3
+                .find_files_filter_basenames(
+                    ctx,
+                    derivation_ctx.blobstore().clone(),
+                    path_prefixes,
+                    EitherOrBoth::Left(Vec1::try_from_vec(basenames)?),
+                    None,
+                )
+                .await?
+                .boxed(),
+            Err(_) => {
+                // bssm_v3 is not available, skip basename matching
+                stream::empty().boxed()
+            }
+        },
+    )
 }
 
 // Find exact renames by comparing the content of deleted vs new/changed files
