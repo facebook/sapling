@@ -4041,12 +4041,12 @@ def debugpathhistory(ui, repo, *args, **opts) -> None:
 
 
 @command("debugmakeexecutable", [], _("[PATTERN]..."))
-def debugmakeexecutable(ui, repo, *pats) -> None:
+def debugmakeexecutable(ui, repo, *paths) -> None:
     """amend current commit to make files executable in manifest"""
 
     ctx = repo["."]
     mctx = context.memctx.mirrorformutation(ctx, "debugmakeexecutable")
-    st = repo[ctx.p1()].status(other=ctx, match=scmutil.match(ctx, pats))
+    st = repo[ctx.p1()].status(other=ctx, match=scmutil.match(ctx, paths))
     for f in st.added + st.modified:
         ui.status_err(_("marking %s as executable\n") % f)
         mctx[f] = context.overlayfilectx(mctx[f], flags="x")
