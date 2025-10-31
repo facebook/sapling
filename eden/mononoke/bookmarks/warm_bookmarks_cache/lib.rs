@@ -36,6 +36,7 @@ use bookmarks::BookmarksRef;
 use bookmarks::BookmarksSubscription;
 use bookmarks::Freshness;
 use bookmarks_cache::BookmarksCache;
+use bookmarks_cache::WarmerRequirement;
 use bookmarks_types::Bookmark;
 use bookmarks_types::BookmarkKind;
 use bookmarks_types::BookmarkPagination;
@@ -106,8 +107,19 @@ define_stats! {
     global_max_staleness_secs: histogram(10, 0, 5000, Average; P 50; P 75; P 95; P 99),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BookmarkState {
+    // The cs tracking the full set of Warmers
+    pub cs_id: ChangesetId,
+
+    pub kind: BookmarkKind,
+
+    // The remaining trackers, for subsets of warmers
+    pub last_derived_cs: HashMap<WarmerRequirement, ChangesetId>,
+}
+
 pub struct WarmBookmarksCache {
-    bookmarks: Arc<RwLock<HashMap<BookmarkKey, (ChangesetId, BookmarkKind)>>>,
+    bookmarks: Arc<RwLock<HashMap<BookmarkKey, BookmarkState>>>,
     terminate: Option<oneshot::Sender<()>>,
     notify_sync_start: Arc<Notify>,
     notify_sync_complete: Arc<Notify>,
@@ -481,8 +493,7 @@ impl BookmarksCache for WarmBookmarksCache {
             .read()
             .unwrap()
             .get(bookmark)
-            .map(|(cs_id, _)| cs_id)
-            .cloned())
+            .map(|state| state.cs_id))
     }
 
     async fn list(
@@ -498,7 +509,7 @@ impl BookmarksCache for WarmBookmarksCache {
             // Simple case: return all bookmarks
             Ok(bookmarks
                 .iter()
-                .map(|(key, (cs_id, kind))| (key.clone(), (*cs_id, *kind)))
+                .map(|(key, state)| (key.clone(), (state.cs_id, state.kind)))
                 .collect())
         } else {
             // Filter based on prefix and pagination
@@ -506,7 +517,7 @@ impl BookmarksCache for WarmBookmarksCache {
             let mut matches = bookmarks
                 .iter()
                 .filter(|(key, _)| range.contains(key))
-                .map(|(key, (cs_id, kind))| (key.clone(), (*cs_id, *kind)))
+                .map(|(key, state)| (key.clone(), (state.cs_id, state.kind)))
                 .collect::<Vec<_>>();
             // Release the read lock.
             drop(bookmarks);
@@ -545,7 +556,7 @@ async fn init_bookmarks(
     bookmark_update_log: &dyn BookmarkUpdateLog,
     warmers: &Arc<Vec<Warmer>>,
     mode: InitMode,
-) -> Result<HashMap<BookmarkKey, (ChangesetId, BookmarkKind)>, Error> {
+) -> Result<HashMap<BookmarkKey, BookmarkState>, Error> {
     let all_bookmarks = sub.bookmarks();
     let total = all_bookmarks.len();
 
@@ -575,16 +586,48 @@ async fn init_bookmarks(
                         .await?;
 
                         tracing::info!("moved {} back in history to {:?}", book, maybe_cs_id);
-                        Ok((remaining, maybe_cs_id.map(|cs_id| (book, (cs_id, kind)))))
+                        Ok((
+                            remaining,
+                            maybe_cs_id.map(|cs_id| {
+                                (
+                                    book,
+                                    BookmarkState {
+                                        cs_id,
+                                        kind,
+                                        last_derived_cs: HashMap::new(),
+                                    },
+                                )
+                            }),
+                        ))
                     }
                     InitMode::Warm => {
                         tracing::info!("warmed bookmark {} at {}", book, cs_id);
                         warm_all(ctx, cs_id, warmers).watched(ctx.logger()).await?;
-                        Ok((remaining, Some((book, (cs_id, kind)))))
+                        Ok((
+                            remaining,
+                            Some((
+                                book,
+                                BookmarkState {
+                                    cs_id,
+                                    kind,
+                                    last_derived_cs: HashMap::new(),
+                                },
+                            )),
+                        ))
                     }
                 }
             } else {
-                Ok((remaining, Some((book, (cs_id, kind)))))
+                Ok((
+                    remaining,
+                    Some((
+                        book,
+                        BookmarkState {
+                            cs_id,
+                            kind,
+                            last_derived_cs: HashMap::new(),
+                        },
+                    )),
+                ))
             }
         })
         .collect::<Vec<_>>(); // This should be unnecessary but it de-confuses the compiler: P415515287.
@@ -795,7 +838,7 @@ struct BookmarksCoordinatorRepo {
 }
 
 struct BookmarksCoordinator {
-    bookmarks: Arc<RwLock<HashMap<BookmarkKey, (ChangesetId, BookmarkKind)>>>,
+    bookmarks: Arc<RwLock<HashMap<BookmarkKey, BookmarkState>>>,
     sub: Box<dyn BookmarksSubscription>,
     repo: BookmarksCoordinatorRepo,
     warmers: Arc<Vec<Warmer>>,
@@ -805,7 +848,7 @@ struct BookmarksCoordinator {
 
 impl BookmarksCoordinator {
     fn new(
-        bookmarks: Arc<RwLock<HashMap<BookmarkKey, (ChangesetId, BookmarkKind)>>>,
+        bookmarks: Arc<RwLock<HashMap<BookmarkKey, BookmarkState>>>,
         sub: Box<dyn BookmarksSubscription>,
         bookmarks_fetcher: ArcBookmarks,
         bookmark_update_log: ArcBookmarkUpdateLog,
@@ -851,7 +894,11 @@ impl BookmarksCoordinator {
         // for them
         for (key, new_value) in new_bookmarks.iter() {
             let cur_value = cur_bookmarks.get(key);
-            if Some(new_value) != cur_value {
+            let changed = match cur_value {
+                Some(state) => state.cs_id != new_value.0 || state.kind != new_value.1,
+                None => true,
+            };
+            if changed {
                 let book = Bookmark::new(key.clone(), new_value.1);
                 changed_bookmarks.push(book);
             }
@@ -867,7 +914,7 @@ impl BookmarksCoordinator {
             // of the loop, and because fixing it properly is hard if not impossible -
             // change of bookmark kind is not reflected in update log.
             if !new_bookmarks.contains_key(key) {
-                let book = Bookmark::new(key.clone(), cur_value.1);
+                let book = Bookmark::new(key.clone(), cur_value.kind);
                 changed_bookmarks.push(book);
             }
         }
@@ -1155,7 +1202,7 @@ async fn single_bookmark_updater(
     ctx: &CoreContext,
     repo: &(impl BookmarksRef + BookmarkUpdateLogRef),
     bookmark: &Bookmark,
-    bookmarks: &Arc<RwLock<HashMap<BookmarkKey, (ChangesetId, BookmarkKind)>>>,
+    bookmarks: &Arc<RwLock<HashMap<BookmarkKey, BookmarkState>>>,
     warmers: &Arc<Vec<Warmer>>,
     mut staleness_reporter: impl FnMut(Timestamp),
 ) -> Result<(), Error> {
@@ -1171,7 +1218,14 @@ async fn single_bookmark_updater(
     let update_bookmark = |cs_id: ChangesetId| async move {
         bookmarks.with_write(|bookmarks| {
             let key = bookmark.key().clone();
-            bookmarks.insert(key, (cs_id, *bookmark.kind()))
+            bookmarks.insert(
+                key,
+                BookmarkState {
+                    cs_id,
+                    kind: *bookmark.kind(),
+                    last_derived_cs: HashMap::new(),
+                },
+            )
         });
     };
 
@@ -1340,7 +1394,11 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => (master_cs_id, BookmarkKind::PullDefaultPublishing)}
+            hashmap! {BookmarkKey::new("master")? => BookmarkState {
+                cs_id: master_cs_id,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            }}
         );
         Ok(())
     }
@@ -1408,7 +1466,11 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
+            hashmap! {BookmarkKey::new("master")? => BookmarkState {
+                cs_id: derived_master,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            }}
         );
 
         repo.repo_derived_data()
@@ -1425,7 +1487,11 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => (master, BookmarkKind::PullDefaultPublishing)}
+            hashmap! {BookmarkKey::new("master")? => BookmarkState {
+                cs_id: master,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            }}
         );
 
         Ok(())
@@ -1473,7 +1539,11 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
+            hashmap! {BookmarkKey::new("master")? => BookmarkState {
+                cs_id: derived_master,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            }}
         );
 
         Ok(())
@@ -1528,7 +1598,11 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
+            hashmap! {BookmarkKey::new("master")? => BookmarkState {
+                cs_id: derived_master,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            }}
         );
 
         Ok(())
@@ -1544,7 +1618,14 @@ mod tests {
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
-                (book.into_key(), (cs_id, kind))
+                (
+                    book.into_key(),
+                    BookmarkState {
+                        cs_id,
+                        kind,
+                        last_derived_cs: HashMap::new(),
+                    },
+                )
             })
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -1580,7 +1661,11 @@ mod tests {
             &ctx,
             &mut coordinator,
             &master_book,
-            Some((master, BookmarkKind::PullDefaultPublishing)),
+            Some(BookmarkState {
+                cs_id: master,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            }),
         )
         .await?;
 
@@ -1590,7 +1675,11 @@ mod tests {
             &ctx,
             &mut coordinator,
             &master_book,
-            Some((master, BookmarkKind::PullDefaultPublishing)),
+            Some(BookmarkState {
+                cs_id: master,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            }),
         )
         .await?;
 
@@ -1607,7 +1696,14 @@ mod tests {
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
-                (book.into_key(), (cs_id, kind))
+                (
+                    book.into_key(),
+                    BookmarkState {
+                        cs_id,
+                        kind,
+                        last_derived_cs: HashMap::new(),
+                    },
+                )
             })
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -1641,7 +1737,11 @@ mod tests {
 
         assert_eq!(
             bookmarks.with_read(|bookmarks| bookmarks.get(&master_book_name).cloned()),
-            Some((master_cs_id, BookmarkKind::PullDefaultPublishing))
+            Some(BookmarkState {
+                cs_id: master_cs_id,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            })
         );
 
         Ok(())
@@ -1651,17 +1751,20 @@ mod tests {
         ctx: &CoreContext,
         coordinator: &mut BookmarksCoordinator,
         book: &BookmarkKey,
-        expected_value: Option<(ChangesetId, BookmarkKind)>,
+        expected_value: Option<BookmarkState>,
     ) -> Result<(), Error> {
         coordinator.update(ctx).await?;
 
         let coordinator = &coordinator;
 
-        wait(|| async move {
-            let val = coordinator
-                .bookmarks
-                .with_read(|bookmarks| bookmarks.get(book).cloned());
-            Ok(val == expected_value)
+        wait(move || {
+            let expected = expected_value.clone();
+            async move {
+                let val = coordinator
+                    .bookmarks
+                    .with_read(|bookmarks| bookmarks.get(book).cloned());
+                Ok(val == expected)
+            }
         })
         .await
     }
@@ -1698,7 +1801,14 @@ mod tests {
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
-                (book.into_key(), (cs_id, kind))
+                (
+                    book.into_key(),
+                    BookmarkState {
+                        cs_id,
+                        kind,
+                        last_derived_cs: HashMap::new(),
+                    },
+                )
             })
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -1773,7 +1883,11 @@ mod tests {
             &ctx,
             &mut coordinator,
             &master_book,
-            Some((master, BookmarkKind::PullDefaultPublishing)),
+            Some(BookmarkState {
+                cs_id: master,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            }),
         )
         .await?;
 
@@ -1808,7 +1922,11 @@ mod tests {
             &ctx,
             &mut coordinator,
             &failing_book,
-            Some((failing_cs_id, BookmarkKind::PullDefaultPublishing)),
+            Some(BookmarkState {
+                cs_id: failing_cs_id,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            }),
         )
         .await?;
 
@@ -1882,7 +2000,14 @@ mod tests {
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
-                (book.into_key(), (cs_id, kind))
+                (
+                    book.into_key(),
+                    BookmarkState {
+                        cs_id,
+                        kind,
+                        last_derived_cs: HashMap::new(),
+                    },
+                )
             })
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -1938,7 +2063,14 @@ mod tests {
             .get_publishing_bookmarks_maybe_stale(ctx.clone())
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
-                (book.into_key(), (cs_id, kind))
+                (
+                    book.into_key(),
+                    BookmarkState {
+                        cs_id,
+                        kind,
+                        last_derived_cs: HashMap::new(),
+                    },
+                )
             })
             .try_collect::<HashMap<_, _>>()
             .await?;
@@ -1977,7 +2109,11 @@ mod tests {
             &ctx,
             &mut coordinator,
             &publishing_book,
-            Some((new_cs_id, BookmarkKind::Publishing)),
+            Some(BookmarkState {
+                cs_id: new_cs_id,
+                kind: BookmarkKind::Publishing,
+                last_derived_cs: HashMap::new(),
+            }),
         )
         .await?;
 
@@ -1991,7 +2127,11 @@ mod tests {
             &ctx,
             &mut coordinator,
             &publishing_book,
-            Some((new_cs_id, BookmarkKind::PullDefaultPublishing)),
+            Some(BookmarkState {
+                cs_id: new_cs_id,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            }),
         )
         .await?;
 
@@ -2041,7 +2181,11 @@ mod tests {
 
         assert_eq!(
             bookmarks.with_read(|bookmarks| bookmarks.get(&master_book_name).cloned()),
-            Some((master_cs_id, BookmarkKind::PullDefaultPublishing))
+            Some(BookmarkState {
+                cs_id: master_cs_id,
+                kind: BookmarkKind::PullDefaultPublishing,
+                last_derived_cs: HashMap::new(),
+            })
         );
 
         Ok(())
