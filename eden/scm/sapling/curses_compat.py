@@ -337,7 +337,7 @@ def wrapper(func, *args, **kwargs):
     surface = _get_main_surface()
     try:
         raw()
-        func(surface, *args, **kwargs)
+        return func(surface, *args, **kwargs)
     finally:
         endwin()
 
