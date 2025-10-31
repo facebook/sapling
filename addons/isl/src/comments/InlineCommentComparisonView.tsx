@@ -6,7 +6,7 @@
  */
 
 import type {Context} from 'isl/src/ComparisonView/SplitDiffView/types';
-import type {ParsedDiff} from 'shared/patch/parse';
+import type {ParsedDiff} from 'shared/patch/types';
 
 import {SplitDiffTable} from 'isl/src/ComparisonView/SplitDiffView/SplitDiffHunk';
 

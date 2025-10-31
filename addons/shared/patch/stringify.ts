@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {Hunk, ParsedDiff} from './parse';
-import {DiffType} from './parse';
+import type {Hunk, ParsedDiff} from './types';
+import {DiffType} from './types';
 
 /**
  * Convert a parsed diff back to git diff format string.

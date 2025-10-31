@@ -6,7 +6,7 @@
  */
 
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
-import type {DiffType} from 'shared/patch/parse';
+import type {DiffType} from 'shared/patch/types';
 import type {RepoPath} from 'shared/types/common';
 
 import {Button} from 'isl-components/Button';

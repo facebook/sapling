@@ -5,9 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DiffType, ParsedDiff} from 'shared/patch/parse';
-
 import {parsePatch} from 'shared/patch/parse';
+import type {DiffType, ParsedDiff} from 'shared/patch/types';
 
 export function parsePatchAndFilter(patch: string): ReturnType<typeof parsePatch> {
   const result = parsePatch(patch);

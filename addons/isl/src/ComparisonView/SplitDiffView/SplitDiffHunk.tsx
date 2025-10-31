@@ -6,7 +6,7 @@
  */
 
 import type {ReactNode} from 'react';
-import type {Hunk, ParsedDiff} from 'shared/patch/parse';
+import type {Hunk, ParsedDiff} from 'shared/patch/types';
 import type {Result} from '../../types';
 import type {TokenizedDiffHunk, TokenizedHunk} from './syntaxHighlightingTypes';
 import type {Context, OneIndexedLineNumber} from './types';

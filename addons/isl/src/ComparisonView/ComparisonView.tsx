@@ -6,7 +6,7 @@
  */
 
 import type {Comparison} from 'shared/Comparison';
-import type {ParsedDiff} from 'shared/patch/parse';
+import type {ParsedDiff} from 'shared/patch/types';
 import type {Result} from '../types';
 import type {Context} from './SplitDiffView/types';
 

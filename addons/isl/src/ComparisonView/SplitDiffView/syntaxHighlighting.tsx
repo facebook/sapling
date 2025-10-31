@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ParsedDiff} from 'shared/patch/parse';
+import type {ParsedDiff} from 'shared/patch/types';
 import type {
   SyntaxWorkerRequest,
   SyntaxWorkerResponse,

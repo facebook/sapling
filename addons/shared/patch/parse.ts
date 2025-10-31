@@ -7,32 +7,8 @@
 
 import {diffBlocks} from '../diff';
 import {stringifyPatch} from './stringify';
-
-export type Hunk = {
-  oldStart: number;
-  oldLines: number;
-  newStart: number;
-  newLines: number;
-  lines: string[];
-  linedelimiters: string[];
-};
-
-export enum DiffType {
-  Modified = 'Modified',
-  Added = 'Added',
-  Removed = 'Removed',
-  Renamed = 'Renamed',
-  Copied = 'Copied',
-}
-
-export type ParsedDiff = {
-  type?: DiffType;
-  oldFileName?: string;
-  newFileName?: string;
-  oldMode?: string;
-  newMode?: string;
-  hunks: Hunk[];
-};
+import type {Hunk, ParsedDiff} from './types';
+import {DiffType} from './types';
 
 const DIFF = /^diff --git (.*) (.*)$/;
 const RENAME_FROM = /^rename from (.*)$/;

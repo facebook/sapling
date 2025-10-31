@@ -7,7 +7,8 @@
 
 import './SplitDiffHunk.css';
 
-import {guessIsSubmodule, type ParsedDiff} from 'shared/patch/parse';
+import {guessIsSubmodule} from 'shared/patch/parse';
+import {type ParsedDiff} from 'shared/patch/types';
 import type {Context} from './types';
 
 import {Button} from 'isl-components/Button';

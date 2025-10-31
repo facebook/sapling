@@ -9,7 +9,7 @@ import type {Map as ImMap} from 'immutable';
 import type {ReactNode} from 'react';
 import type {Comparison} from 'shared/Comparison';
 import type {ContextMenuItem} from 'shared/ContextMenu';
-import type {ParsedDiff} from 'shared/patch/parse';
+import type {ParsedDiff} from 'shared/patch/types';
 import type {Context} from '../../ComparisonView/SplitDiffView/types';
 import type {DragHandler} from '../../DragHandle';
 import type {RenderGlyphResult} from '../../RenderDag';
