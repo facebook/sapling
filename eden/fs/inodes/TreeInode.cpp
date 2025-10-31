@@ -4288,17 +4288,25 @@ void TreeInode::saveOverlayPostCheckout(
       stateChanged = true;
     }
 
+    // Optionally skip overlay write for unmaterialized directories.
+    bool writeToOverlay =
+        isMaterialized || !getInodeMap()->lazyInodePersistence();
+
     XLOGF(
         DBG4,
-        "saveOverlayPostCheckout({}, {}): oldId={} newId={} isMaterialized={}",
+        "saveOverlayPostCheckout({}, {}): oldId={} newId={} isMaterialized={} writeToOverlay={}",
         getLogPath(),
         fmt::ptr(tree),
         (oldId ? oldId.value().toLogString() : "none"),
         (contents->treeId ? contents->treeId.value().toLogString() : "none"),
-        isMaterialized);
+        isMaterialized,
+        writeToOverlay);
 
-    // Update the overlay to include the new entries, even if dematerialized.
-    saveOverlayDir(contents->entries);
+    if (writeToOverlay) {
+      // Update the overlay to include the new entries.
+      // With lazyInodePersistence=true, we only write if we are materialized.
+      saveOverlayDir(contents->entries);
+    }
   }
 
   if (stateChanged) {
