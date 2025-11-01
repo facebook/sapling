@@ -1264,6 +1264,24 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchFullRepoBranchMergeSubtreePaths': {
+        Internal.getFullRepoBranchMergeSubtreePaths?.(ctx, data.fullRepoBranch, data.paths)
+          .then((paths: Array<string>) => {
+            this.postMessage({
+              type: 'fetchedFullRepoBranchMergeSubtreePaths',
+              id: data.id,
+              result: {value: paths},
+            });
+          })
+          .catch((error: EjecaError) => {
+            this.postMessage({
+              type: 'fetchedFullRepoBranchMergeSubtreePaths',
+              id: data.id,
+              result: {error},
+            });
+          });
+        break;
+      }
       default: {
         if (
           repo.codeReviewProvider?.handleClientToServerMessage?.(data, message =>

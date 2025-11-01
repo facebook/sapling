@@ -1053,6 +1053,12 @@ export type ClientToServerMessage =
       type: 'fetchFullRepoBranchAllChangedFiles';
       id: string;
       fullRepoBranch: InternalTypes['FullRepoBranch'];
+    }
+  | {
+      type: 'fetchFullRepoBranchMergeSubtreePaths';
+      id: string;
+      fullRepoBranch: InternalTypes['FullRepoBranch'];
+      paths: Array<RepoRelativePath>;
     };
 
 export type SubscriptionResultsData = {
@@ -1222,6 +1228,11 @@ export type ServerToClientMessage =
       type: 'fetchedFullRepoBranchAllChangedFiles';
       id: string;
       result: Result<Array<ChangedFile>>;
+    }
+  | {
+      type: 'fetchedFullRepoBranchMergeSubtreePaths';
+      id: string;
+      result: Result<Array<string>>;
     };
 
 export type Disposable = {
