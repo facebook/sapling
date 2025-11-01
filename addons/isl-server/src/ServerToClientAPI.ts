@@ -8,6 +8,7 @@
 import type {TypeaheadResult} from 'isl-components/Types';
 import type {Serializable} from 'isl/src/serialize';
 import type {
+  ChangedFile,
   ClientToServerMessage,
   CodeReviewProviderSpecificClientToServerMessages,
   Disposable,
@@ -1240,6 +1241,24 @@ export default class ServerToClientAPI {
           .catch((error: EjecaError) => {
             this.postMessage({
               type: 'fetchedSubscribedFullRepoBranches',
+              result: {error},
+            });
+          });
+        break;
+      }
+      case 'fetchFullRepoBranchAllChangedFiles': {
+        Internal.getFullRepoBranchAllChangedFiles?.(ctx, data.fullRepoBranch)
+          .then((paths: Array<ChangedFile>) => {
+            this.postMessage({
+              type: 'fetchedFullRepoBranchAllChangedFiles',
+              id: data.id,
+              result: {value: paths},
+            });
+          })
+          .catch((error: EjecaError) => {
+            this.postMessage({
+              type: 'fetchedFullRepoBranchAllChangedFiles',
+              id: data.id,
               result: {error},
             });
           });
