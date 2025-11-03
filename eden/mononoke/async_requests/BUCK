@@ -54,7 +54,6 @@ rust_library(
         "//eden/mononoke/blobstore:blobstore_factory",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/common/sql_construct:sql_construct",
-        "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
     ],
 )

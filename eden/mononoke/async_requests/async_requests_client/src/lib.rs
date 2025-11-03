@@ -11,10 +11,8 @@ use anyhow::Error;
 use anyhow::bail;
 use async_requests::AsyncMethodRequestQueue;
 use blobstore::Blobstore;
-use blobstore_factory::make_files_blobstore;
-use blobstore_factory::make_manifold_blobstore;
+use blobstore_factory::make_blobstore;
 use fbinit::FacebookInit;
-use metaconfig_types::BlobConfig;
 use mononoke_api::MononokeRepo;
 use mononoke_api::RepositoryId;
 use mononoke_app::MononokeApp;
@@ -61,16 +59,18 @@ pub async fn open_blobstore(
 ) -> Result<Arc<dyn Blobstore>, Error> {
     let config = app.repo_configs().common.async_requests_config.clone();
     if let Some(config) = config.blobstore {
-        let options = app.blobstore_options();
-        match config {
-            BlobConfig::Manifold { .. } => make_manifold_blobstore(fb, config, options).await,
-            BlobConfig::Files { .. } => make_files_blobstore(config, options)
-                .await
-                .map(|store| Arc::new(store) as Arc<dyn Blobstore>),
-            _ => {
-                bail!("Unsupported blobstore type for async requests")
-            }
-        }
+        make_blobstore(
+            fb,
+            config,
+            app.mysql_options(),
+            blobstore_factory::ReadOnlyStorage(false),
+            app.blobstore_options(),
+            app.logger(),
+            app.config_store(),
+            &blobstore_factory::default_scrub_handler(),
+            None,
+        )
+        .await
     } else {
         bail!("async_requests config is missing");
     }
