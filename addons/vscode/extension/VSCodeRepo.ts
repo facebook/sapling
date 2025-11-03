@@ -37,7 +37,7 @@ import {executeVSCodeCommand} from './commands';
 import {getCLICommand} from './config';
 import {t} from './i18n';
 
-const mergeConflictStartRegex = new RegExp('<{7}|>{7}|={7}|[|]{7}');
+const mergeConflictStartRegex = new RegExp('<{7}|>{7}|[|]{7}');
 
 export class VSCodeReposList {
   private knownRepos = new Map</* attached folder root */ string, RepositoryReference>();
