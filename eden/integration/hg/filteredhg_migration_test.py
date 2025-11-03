@@ -9,7 +9,7 @@ import abc
 import json
 import os
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, TypeVar
 
 from eden.fs.cli.config import get_snapshot, SNAPSHOT
 from eden.fs.cli.util import MIGRATION_MARKER
@@ -20,6 +20,52 @@ from eden.integration.hg.lib.hg_extension_test_base import (
 )
 from eden.integration.lib import hgrepo
 from eden.integration.lib.hgrepo import HgError
+
+
+T = TypeVar("T")
+
+
+def duplicate_with_prior_commit(method: T) -> T:
+    """
+    Decorator to mark a test method for duplication with a prior dummy commit.
+    The duplicate will be named with a '_duplicate' suffix.
+    """
+    method._duplicate_with_prior_commit = True  # type: ignore
+    return method
+
+
+def apply_test_duplicates(cls: type) -> type:
+    """
+    Class decorator that generates duplicate test cases for cases marked
+    with @duplicate_with_prior_commit.
+    The duplicate will create a dummy commit before running the original test.
+    This is to enforce we have case 4 in SNAPSHOT file.
+    """
+    testcases_to_duplicate = []
+
+    for name in dir(cls):
+        if name.startswith("test_"):
+            method = getattr(cls, name)
+            if callable(method) and getattr(
+                method, "_duplicate_with_prior_commit", False
+            ):
+                testcases_to_duplicate.append((name, method))
+
+    for testcase_name, original_testcase in testcases_to_duplicate:
+
+        def make_duplicate(orig):
+            async def duplicate_wrapper(self):
+                self.repo.write_file("dummy", "dummy\n")
+                self.repo.commit("dummy commit.")
+                await orig(self)
+
+            return duplicate_wrapper
+
+        duplicated_testcase = make_duplicate(original_testcase)
+        duplicated_testcase.__name__ = f"{testcase_name}_duplicate"
+        setattr(cls, f"{testcase_name}_duplicate", duplicated_testcase)
+
+    return cls
 
 
 class FilteredFSMigrationTestBase(EdenHgTestCase, metaclass=abc.ABCMeta):
@@ -203,6 +249,7 @@ adir
         post_migration()
 
 
+@apply_test_duplicates
 class FilteredFSMigrationFromUnfilteredTest(
     FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
 ):
@@ -210,14 +257,17 @@ class FilteredFSMigrationFromUnfilteredTest(
         self.assert_filteredfs_disabled(self.mount_path)
         self.assert_filter_not_applied(self.mount_path)
 
+    @duplicate_with_prior_commit
     async def test_filteredfs_migration(self) -> None:
         await self.edensparse_migration_common(lambda: None, lambda: None)
 
+    @duplicate_with_prior_commit
     async def test_empty_status(self) -> None:
         await self.edensparse_migration_common(
             self.assert_status_empty, self.assert_status_empty
         )
 
+    @duplicate_with_prior_commit
     async def test_add_file(self) -> None:
         # regular file
         self.add_file("newfile")
@@ -251,6 +301,7 @@ class FilteredFSMigrationFromUnfilteredTest(
             check_status_post_migration,
         )
 
+    @duplicate_with_prior_commit
     async def test_modify_file(self) -> None:
         # unhidden file
         self.modify_file("hello")
@@ -272,6 +323,7 @@ class FilteredFSMigrationFromUnfilteredTest(
             check_status_post_migration,
         )
 
+    @duplicate_with_prior_commit
     async def test_modify_hidden_file(self) -> None:
         self.modify_file("adir/file")
 
@@ -286,6 +338,7 @@ class FilteredFSMigrationFromUnfilteredTest(
             lambda: None,
         )
 
+    @duplicate_with_prior_commit
     async def test_delete_file(self) -> None:
         # unhidden file
         self.remove_file("hello")
@@ -307,6 +360,7 @@ class FilteredFSMigrationFromUnfilteredTest(
             check_status_post_migration,
         )
 
+    @duplicate_with_prior_commit
     async def test_delete_hidden_file(self) -> None:
         # hidden file
         self.remove_file("adir/file")
@@ -322,6 +376,7 @@ class FilteredFSMigrationFromUnfilteredTest(
             lambda: None,
         )
 
+    @duplicate_with_prior_commit
     async def test_migrate_freshly_cloned_nonfiltered_repo(self) -> None:
         cloned_repo = self.make_temporary_directory()
         self.eden.clone(self.repo.path, cloned_repo)
