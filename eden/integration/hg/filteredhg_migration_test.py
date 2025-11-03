@@ -51,7 +51,7 @@ adir
         info_dict = json.loads(stdout)
         return info_dict.get("scm_type")
 
-    def filteredfs_readiness_check(self) -> Optional[str]:
+    def filteredfs_readiness_check(self, mount_path: Path) -> Optional[str]:
         """
         Checks if the repository is ready for FilteredFS by verifying:
         - The existence of the filter config file.
@@ -67,7 +67,7 @@ adir
         """
 
         # check existence of filter config file
-        filter_config_file_path = os.path.join(self.mount, ".hg", "sparse")
+        filter_config_file_path = os.path.join(str(mount_path), ".hg", "sparse")
         if not os.path.exists(filter_config_file_path):
             return f"filter config file '{filter_config_file_path}' does not exist"
 
@@ -77,7 +77,7 @@ adir
         is_null_filter = len(lines) == 0  # empty config file means "null" filter
 
         # examine SNAPSHOT file to see if it has filter id
-        client_dir = Path(self.eden.client_dir_for_mount(self.mount_path))
+        client_dir = Path(self.eden.client_dir_for_mount(mount_path))
         scm_type = self.get_scm_type()
         snapshot_state = get_snapshot(client_dir / SNAPSHOT, scm_type)
         if snapshot_state.last_filter_id is None:
@@ -101,22 +101,22 @@ adir
         # All checks passed, we think the repo is FilteredFS ready
         return None
 
-    def assert_filteredfs_enabled(self) -> None:
-        res = self.filteredfs_readiness_check()
+    def assert_filteredfs_enabled(self, mount_path: Path) -> None:
+        res = self.filteredfs_readiness_check(mount_path)
         assert res is None, f"filteredfs not enabled: {res}"
 
-    def assert_filteredfs_disabled(self) -> None:
-        res = self.filteredfs_readiness_check()
+    def assert_filteredfs_disabled(self, mount_path: Path) -> None:
+        res = self.filteredfs_readiness_check(mount_path)
         assert res is not None, "filteredfs should not be enabled"
 
     def assert_file_exists(self, path: str) -> None:
         assert os.path.exists(self.repo.get_path(path))
 
-    def assert_filter_applied(self) -> None:
-        assert not os.path.exists(self.repo.get_path("adir/hidden"))
+    def assert_filter_applied(self, mount_path: Path) -> None:
+        assert not os.path.exists(os.path.join(str(mount_path), "adir/hidden"))
 
-    def assert_filter_not_applied(self) -> None:
-        assert os.path.exists(self.repo.get_path("adir/hidden"))
+    def assert_filter_not_applied(self, mount_path: Path) -> None:
+        assert os.path.exists(os.path.join(str(mount_path), "adir/hidden"))
 
     def add_file(self, path: str) -> None:
         assert not os.path.exists(self.repo.get_path(path)), f"{path} already exists"
@@ -152,10 +152,20 @@ adir
         self.eden.run_cmd("restart", "--yes", "--allow-root", cwd=self.mount)
 
     async def edensparse_migration_common(
-        self, pre_migration: Callable[[], None], post_migration: Callable[[], None]
+        self,
+        pre_migration: Callable[[], None],
+        post_migration: Callable[[], None],
+        mount_path: Optional[Path] = None,
+        migration_did_happen: bool = True,
     ) -> None:
-        self.assert_filteredfs_disabled()
-        self.assert_filter_not_applied()
+        mount_path = mount_path or self.mount_path
+        if migration_did_happen:
+            self.assert_filteredfs_disabled(mount_path)
+            self.assert_filter_not_applied(mount_path)
+        else:
+            self.hg("filteredfs", "enable", "filter/test_filter", cwd=str(mount_path))
+            self.assert_filteredfs_enabled(mount_path)
+            self.assert_filter_applied(mount_path)
 
         pre_migration()
 
@@ -168,23 +178,28 @@ adir
         # this should be checked before sapling checkout/rebase commands since
         # these commands would clean up the marker file when invoking EdenFS'
         # checkoutRevision Thrift API.
-        marker_file_path = os.path.join(self.mount, ".hg", MIGRATION_MARKER)
-        assert os.path.exists(
-            marker_file_path
-        ), f"Migration marker file '{marker_file_path}' does not exist"
+        marker_file_path = os.path.join(str(mount_path), ".hg", MIGRATION_MARKER)
+        if migration_did_happen:
+            assert os.path.exists(
+                marker_file_path
+            ), f"Migration marker file '{marker_file_path}' does not exist"
+        else:
+            assert not os.path.exists(
+                marker_file_path
+            ), f"Migration marker file '{marker_file_path}' should not exist"
 
         self.hg(
             "config",
             "--local",
             "clone.eden-sparse-filter.test",
             "filter/test_filter",
-            cwd=self.mount,
+            cwd=str(mount_path),
         )
 
-        self.hg("go", ".")
+        self.hg("go", ".", cwd=str(mount_path))
 
-        self.assert_filteredfs_enabled()
-        self.assert_filter_applied()
+        self.assert_filteredfs_enabled(mount_path)
+        self.assert_filter_applied(mount_path)
         post_migration()
 
 
@@ -192,8 +207,8 @@ class FilteredFSMigrationFromUnfilteredTest(
     FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
 ):
     def test_filteredfs_disabled_init(self) -> None:
-        self.assert_filteredfs_disabled()
-        self.assert_filter_not_applied()
+        self.assert_filteredfs_disabled(self.mount_path)
+        self.assert_filter_not_applied(self.mount_path)
 
     async def test_filteredfs_migration(self) -> None:
         await self.edensparse_migration_common(lambda: None, lambda: None)
@@ -307,27 +322,38 @@ class FilteredFSMigrationFromUnfilteredTest(
             lambda: None,
         )
 
+    async def test_migrate_freshly_cloned_nonfiltered_repo(self) -> None:
+        cloned_repo = self.make_temporary_directory()
+        self.eden.clone(self.repo.path, cloned_repo)
+
+        await self.edensparse_migration_common(
+            lambda: None, lambda: None, mount_path=Path(cloned_repo)
+        )
+
 
 # This test suite is intended for test cases which try to run edensparse
 # migration on a repo which is already FilteredFS.
 class FilteredFsMigrationFromFilteredTest(
     FilteredHgTestCase, FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
 ):
+    async def test_migrate_freshly_cloned_filtered_repo(self) -> None:
+        cloned_repo = self.make_temporary_directory()
+        self.eden.clone(
+            self.repo.path,
+            cloned_repo,
+            backing_store="filteredhg",
+            filter_paths=["filter/test_filter"],
+        )
+        self.hg("filteredfs", "enable", "filter/test_filter", cwd=cloned_repo)
+
+        await self.edensparse_migration_common(
+            lambda: None,
+            lambda: None,
+            mount_path=Path(cloned_repo),
+            migration_did_happen=False,
+        )
+
     async def test_edensparse_migration_for_filtered_repo(self) -> None:
-        # At the beginning, the repo is already FilteredFS
-        self.hg("filteredfs", "enable", "filter/test_filter")
-        self.assert_filteredfs_enabled()
-        self.assert_filter_applied()
-
-        await self.enable_config_for_edensparse_migration()
-        self.restart_edenfs_manually()
-
-        # everything should be the same
-        self.assert_filteredfs_enabled()
-        self.assert_filter_applied()
-
-        # check the marker file existence - it should not exist
-        marker_file_path = os.path.join(self.mount, ".hg", MIGRATION_MARKER)
-        assert not os.path.exists(
-            marker_file_path
-        ), f"Migration marker file '{marker_file_path}' should not exist"
+        await self.edensparse_migration_common(
+            lambda: None, lambda: None, migration_did_happen=False
+        )
