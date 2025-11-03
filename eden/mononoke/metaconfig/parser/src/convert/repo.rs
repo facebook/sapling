@@ -80,7 +80,6 @@ use mononoke_types::PrefixTrie;
 use mononoke_types::RepositoryId;
 use mononoke_types::path::MPath;
 use permission_checker::MononokeIdentity;
-use regex::Regex;
 use repos::ModernSyncChannelConfig as RawModernSyncChannelConfig;
 use repos::RawBookmarkConfig;
 use repos::RawCacheWarmupConfig;
@@ -217,8 +216,8 @@ impl Convert for RawBookmarkConfig {
     fn convert(self) -> Result<Self::Output> {
         let bookmark_or_regex = match (self.regex, self.name, self.inverse_regex) {
             (None, Some(name), None) => BookmarkOrRegex::Bookmark(BookmarkKey::new(name).unwrap()),
-            (Some(regex), None, None) => match Regex::new(&regex) {
-                Ok(regex) => BookmarkOrRegex::Regex(ComparableRegex::new(regex)),
+            (Some(regex), None, None) => match ComparableRegex::new(regex) {
+                Ok(comparable_regex) => BookmarkOrRegex::Regex(comparable_regex),
                 Err(err) => {
                     return Err(ConfigurationError::InvalidConfig(format!(
                         "invalid bookmark regex: {}",
@@ -227,8 +226,8 @@ impl Convert for RawBookmarkConfig {
                     .into());
                 }
             },
-            (None, None, Some(inverse_regex)) => match Regex::new(&inverse_regex) {
-                Ok(regex) => BookmarkOrRegex::InverseRegex(ComparableRegex::new(regex)),
+            (None, None, Some(inverse_regex)) => match ComparableRegex::new(inverse_regex) {
+                Ok(comparable_regex) => BookmarkOrRegex::InverseRegex(comparable_regex),
                 Err(err) => {
                     return Err(ConfigurationError::InvalidConfig(format!(
                         "invalid bookmark inverse regex: {}",
@@ -247,11 +246,7 @@ impl Convert for RawBookmarkConfig {
 
         let hooks = self.hooks.into_iter().map(|rbmh| rbmh.hook_name).collect();
         let only_fast_forward = self.only_fast_forward;
-        let allowed_users = self
-            .allowed_users
-            .map(|re| Regex::new(&re))
-            .transpose()?
-            .map(ComparableRegex::new);
+        let allowed_users = self.allowed_users.map(ComparableRegex::new).transpose()?;
         let allowed_hipster_group = self.allowed_hipster_group;
         let rewrite_dates = self.rewrite_dates;
         let hooks_skip_ancestors_of = self
@@ -413,9 +408,11 @@ impl Convert for RawInfinitepushParams {
     fn convert(self) -> Result<Self::Output> {
         Ok(InfinitepushParams {
             allow_writes: self.allow_writes,
-            namespace: self
-                .namespace_pattern
-                .and_then(|ns| Regex::new(&ns).ok().map(InfinitepushNamespace::new)),
+            namespace: self.namespace_pattern.and_then(|ns| {
+                ComparableRegex::new(ns)
+                    .ok()
+                    .map(InfinitepushNamespace::new)
+            }),
             hydrate_getbundle_response: self.hydrate_getbundle_response.unwrap_or(false),
         })
     }
@@ -475,10 +472,9 @@ impl Convert for RawServiceWriteRestrictions {
 
         let permitted_bookmark_regex = permitted_bookmark_regex
             .as_deref()
-            .map(Regex::new)
+            .map(ComparableRegex::new)
             .transpose()
-            .context("invalid service write permitted bookmark regex")?
-            .map(ComparableRegex::new);
+            .context("invalid service write permitted bookmark regex")?;
 
         Ok(ServiceWriteRestrictions {
             permitted_methods,

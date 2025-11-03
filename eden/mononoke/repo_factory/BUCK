@@ -112,7 +112,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:maplit",
-        "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:strum",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",

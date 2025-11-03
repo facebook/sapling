@@ -20,6 +20,7 @@ use fbinit::FacebookInit;
 use futures::TryFutureExt;
 use hook_manager_testlib::HookTestRepo;
 use maplit::hashmap;
+use metaconfig_types::ComparableRegex;
 use metaconfig_types::HookManagerParams;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
@@ -34,7 +35,6 @@ use mononoke_types_mocks::contentid::ONES_CTID;
 use mononoke_types_mocks::contentid::THREES_CTID;
 use mononoke_types_mocks::contentid::TWOS_CTID;
 use permission_checker::InternalAclProvider;
-use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_permission_checker::AlwaysAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -400,7 +400,8 @@ async fn setup_hook_manager(
             .set_hooks_for_bookmark(BookmarkKey::new(bookmark_name).unwrap().into(), hook_names);
     }
     for (regx, hook_names) in regexes {
-        hook_manager.set_hooks_for_bookmark(Regex::new(&regx).unwrap().into(), hook_names);
+        hook_manager
+            .set_hooks_for_bookmark(ComparableRegex::new(&regx).unwrap().into(), hook_names);
     }
     hook_manager
 }

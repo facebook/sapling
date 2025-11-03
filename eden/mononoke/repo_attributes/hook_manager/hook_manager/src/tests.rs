@@ -17,6 +17,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::hashmap;
 use maplit::hashset;
+use metaconfig_types::ComparableRegex;
 use metaconfig_types::HookManagerParams;
 use mononoke_macros::mononoke;
 use mononoke_types::BasicFileChange;
@@ -35,7 +36,6 @@ use mononoke_types_mocks::contentid::SIXES_CTID;
 use mononoke_types_mocks::contentid::THREES_CTID;
 use mononoke_types_mocks::contentid::TWOS_CTID;
 use permission_checker::InternalAclProvider;
-use regex::Regex;
 use repo_permission_checker::NeverAllowRepoPermissionChecker;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sorted_vector_map::sorted_vector_map;
@@ -281,7 +281,8 @@ async fn setup_hook_manager(
             .set_hooks_for_bookmark(BookmarkKey::new(bookmark_name).unwrap().into(), hook_names);
     }
     for (regx, hook_names) in regexes {
-        hook_manager.set_hooks_for_bookmark(Regex::new(&regx).unwrap().into(), hook_names);
+        hook_manager
+            .set_hooks_for_bookmark(ComparableRegex::new(&regx).unwrap().into(), hook_names);
     }
     hook_manager
 }

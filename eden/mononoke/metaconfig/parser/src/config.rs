@@ -555,6 +555,7 @@ mod test {
     use metaconfig_types::CommitIdentityScheme;
     use metaconfig_types::CommitSyncConfig;
     use metaconfig_types::CommitSyncConfigVersion;
+    use metaconfig_types::ComparableRegex;
     use metaconfig_types::CrossRepoCommitValidation;
     use metaconfig_types::DatabaseConfig;
     use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
@@ -609,7 +610,6 @@ mod test {
     use mononoke_types_mocks::changesetid::THREES_CSID;
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
-    use regex::Regex;
     use repos::RawCommitSyncConfig;
     use tempfile::TempDir;
 
@@ -1193,7 +1193,7 @@ mod test {
                         bookmark: BookmarkKey::new("master").unwrap().into(),
                         hooks: vec!["hook1".to_string(), "hook2a".to_string()],
                         only_fast_forward: false,
-                        allowed_users: Some(Regex::new("^(svcscm|twsvcscm)$").unwrap().into()),
+                        allowed_users: Some(ComparableRegex::new("^(svcscm|twsvcscm)$").unwrap()),
                         allowed_hipster_group: None,
                         rewrite_dates: None,
                         hooks_skip_ancestors_of: vec![],
@@ -1201,7 +1201,7 @@ mod test {
                         allow_move_to_public_commits_without_hooks: false,
                     },
                     BookmarkParams {
-                        bookmark: Regex::new("[^/]*/stable").unwrap().into(),
+                        bookmark: ComparableRegex::new("[^/]*/stable").unwrap().into(),
                         hooks: vec![],
                         only_fast_forward: false,
                         allowed_users: None,
@@ -1283,7 +1283,9 @@ mod test {
                 redaction: Redaction::Enabled,
                 infinitepush: InfinitepushParams {
                     allow_writes: true,
-                    namespace: Some(InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap())),
+                    namespace: Some(InfinitepushNamespace::new(
+                        ComparableRegex::new("foobar/.+").unwrap(),
+                    )),
                     hydrate_getbundle_response: false,
                 },
                 list_keys_patterns_max: 123,

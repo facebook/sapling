@@ -20,6 +20,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::str;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
@@ -41,6 +42,7 @@ use mononoke_types::path::MPath;
 use mysql_common::value::convert::ConvIr;
 use mysql_common::value::convert::FromValue;
 use mysql_common::value::convert::ParseIr;
+use parking_lot::RwLock;
 use permission_checker::MononokeIdentity;
 use regex::Regex;
 use rusoto_core::Region;
@@ -50,28 +52,40 @@ use sql::mysql;
 use sql::mysql_async::FromValueError;
 use sql::mysql_async::Value;
 
+lazy_static::lazy_static! {
+    static ref KNOWN_REGEXES: RwLock<HashMap<String, Arc<Regex>>> = RwLock::new(HashMap::new());
+}
+
 /// A Regex that can be compared against other Regexes.
 ///
 /// Regexes are compared using the string they were constructed from.  This is not
 /// a semantic comparison, so Regexes that are functionally equivalent may compare
 /// as different if they were constructed from different specifications.
 #[derive(Debug, Clone)]
-pub struct ComparableRegex(Regex);
+pub struct ComparableRegex(Arc<Regex>);
 
 impl ComparableRegex {
-    /// Wrap a Regex so that it is comparable.
-    pub fn new(regex: Regex) -> ComparableRegex {
-        ComparableRegex(regex)
+    /// Create a regex based on the input string and wrap it in a `ComparableRegex`
+    /// wrapper for comparison.
+    pub fn new<S: AsRef<str> + std::string::ToString>(regex_str: S) -> Result<ComparableRegex> {
+        let mut known_regexes = KNOWN_REGEXES.write();
+        if let Some(regex) = known_regexes.get(regex_str.as_ref()) {
+            Ok(ComparableRegex(regex.clone()))
+        } else {
+            let regex = Arc::new(Regex::new(regex_str.as_ref())?);
+            known_regexes.insert(regex_str.to_string(), regex.clone());
+            Ok(ComparableRegex(regex))
+        }
     }
 
     /// Extract the inner Regex from the wrapper.
-    pub fn into_inner(self) -> Regex {
+    pub fn into_inner(self) -> Arc<Regex> {
         self.0
     }
 }
 
-impl From<Regex> for ComparableRegex {
-    fn from(regex: Regex) -> ComparableRegex {
+impl From<Arc<Regex>> for ComparableRegex {
+    fn from(regex: Arc<Regex>) -> ComparableRegex {
         ComparableRegex(regex)
     }
 }
@@ -636,9 +650,9 @@ impl From<BookmarkKey> for BookmarkOrRegex {
     }
 }
 
-impl From<Regex> for BookmarkOrRegex {
-    fn from(r: Regex) -> Self {
-        BookmarkOrRegex::Regex(ComparableRegex(r))
+impl From<ComparableRegex> for BookmarkOrRegex {
+    fn from(r: ComparableRegex) -> Self {
+        BookmarkOrRegex::Regex(r)
     }
 }
 
@@ -1337,8 +1351,8 @@ pub struct InfinitepushNamespace(ComparableRegex);
 
 impl InfinitepushNamespace {
     /// Instantiate a new InfinitepushNamespace
-    pub fn new(regex: Regex) -> Self {
-        Self(ComparableRegex(regex))
+    pub fn new(regex: ComparableRegex) -> Self {
+        Self(regex)
     }
 
     /// Returns whether a given Bookmark matches this namespace.

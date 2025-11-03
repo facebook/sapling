@@ -71,6 +71,7 @@ use mercurial_mutation::ArcHgMutationStore;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
 use metaconfig_types::ArcRepoConfig;
 use metaconfig_types::BlameVersion;
+use metaconfig_types::ComparableRegex;
 use metaconfig_types::DerivedDataConfig;
 use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::GitDeltaManifestV2Config;
@@ -99,7 +100,6 @@ use pushrebase_mutation_mapping::SqlPushrebaseMutationMappingConnection;
 use pushredirect::ArcPushRedirectionConfig;
 use pushredirect::NoopPushRedirectionConfig;
 use redactedblobstore::RedactedBlobs;
-use regex::Regex;
 use rendezvous::RendezVousOptions;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_blobstore::RepoBlobstore;
@@ -229,7 +229,7 @@ pub fn default_test_repo_config() -> RepoConfig {
         },
         infinitepush: InfinitepushParams {
             namespace: Some(InfinitepushNamespace::new(
-                Regex::new("scratch/.+").unwrap(),
+                ComparableRegex::new("scratch/.+").unwrap(),
             )),
             ..Default::default()
         },
