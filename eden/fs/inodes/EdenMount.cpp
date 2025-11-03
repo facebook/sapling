@@ -1779,22 +1779,41 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         // Don't log aux data fetches, because our backends don't yet support
         // fetching aux data directly. We expect tree fetches to eventually
         // return aux data for their entries.
-        this->serverState_->getStructuredLogger()->logEvent(
-            FinishedCheckout{
-                getCheckoutModeString(checkoutMode).str(),
-                checkoutTimeInSeconds.count(),
-                result.hasValue(),
-                fetchStats.tree.fetchCount,
-                fetchStats.blob.fetchCount,
-                fetchStats.blobAuxData.fetchCount,
-                fetchStats.tree.accessCount,
-                fetchStats.blob.accessCount,
-                fetchStats.blobAuxData.accessCount,
-                numConflicts,
-                inodeCounts.treeCount + inodeCounts.fileCount,
-                inodeCounts.unloadedInodeCount,
-                inodeCounts.periodicLinkedUnloadInodeCount,
-                inodeCounts.periodicUnlinkedUnloadInodeCount});
+        auto finishedCheckout = FinishedCheckout{
+            getCheckoutModeString(checkoutMode).str(),
+            checkoutTimeInSeconds.count(),
+            result.hasValue(),
+            fetchStats.tree.fetchCount,
+            fetchStats.blob.fetchCount,
+            fetchStats.blobAuxData.fetchCount,
+            fetchStats.tree.accessCount,
+            fetchStats.blob.accessCount,
+            fetchStats.blobAuxData.accessCount,
+            numConflicts,
+            inodeCounts.treeCount + inodeCounts.fileCount,
+            inodeCounts.unloadedInodeCount,
+            inodeCounts.periodicLinkedUnloadInodeCount,
+            inodeCounts.periodicUnlinkedUnloadInodeCount};
+        if (result.hasValue()) {
+          finishedCheckout.populateCheckoutDurations(
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  result.value().times.didLookupTrees)
+                  .count(),
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  result.value().times.didDiff)
+                  .count(),
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  result.value().times.didAcquireRenameLock)
+                  .count(),
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  result.value().times.didCheckout)
+                  .count(),
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  result.value().times.didFinish)
+                  .count());
+        }
+        this->serverState_->getStructuredLogger()->logEvent(finishedCheckout);
+
         return std::move(result);
       });
 }

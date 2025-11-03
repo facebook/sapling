@@ -234,6 +234,12 @@ struct FinishedCheckout : public EdenFSEvent {
   uint64_t numUnloadedInodes = 0;
   uint64_t numPeriodicLinkedUnloadedInodes = 0;
   uint64_t numPeriodicUnlinkedUnloadedInodes = 0;
+  // durations of checkout phases
+  std::optional<uint64_t> durationLookupTrees = std::nullopt;
+  std::optional<uint64_t> durationDiff = std::nullopt;
+  std::optional<uint64_t> durationAcquireRenameLock = std::nullopt;
+  std::optional<uint64_t> durationCheckout = std::nullopt;
+  std::optional<uint64_t> durationFinish = std::nullopt;
 
   FinishedCheckout(
       std::string mode,
@@ -265,6 +271,19 @@ struct FinishedCheckout : public EdenFSEvent {
         numPeriodicLinkedUnloadedInodes(numPeriodicLinkedUnloadedInodes),
         numPeriodicUnlinkedUnloadedInodes(numPeriodicUnlinkedUnloadedInodes) {}
 
+  void populateCheckoutDurations(
+      uint64_t durationLookupTrees_,
+      uint64_t durationDiff_,
+      uint64_t durationAcquireRenameLock_,
+      uint64_t durationCheckout_,
+      uint64_t durationFinish_) {
+    durationLookupTrees = durationLookupTrees_;
+    durationDiff = durationDiff_;
+    durationAcquireRenameLock = durationAcquireRenameLock_;
+    durationCheckout = durationCheckout_;
+    durationFinish = durationFinish_;
+  }
+
   void populate(DynamicEvent& event) const override {
     event.addString("mode", mode);
     event.addDouble("duration", duration);
@@ -280,6 +299,22 @@ struct FinishedCheckout : public EdenFSEvent {
     event.addInt("unloaded_inodes", numUnloadedInodes);
     event.addInt("linked_unloaded_inodes", numPeriodicLinkedUnloadedInodes);
     event.addInt("unlinked_unloaded_inodes", numPeriodicUnlinkedUnloadedInodes);
+    if (durationLookupTrees) {
+      event.addInt("duration_lookup_trees", durationLookupTrees.value());
+    }
+    if (durationDiff) {
+      event.addInt("duration_diff", durationDiff.value());
+    }
+    if (durationAcquireRenameLock) {
+      event.addInt(
+          "duration_acquire_rename_lock", durationAcquireRenameLock.value());
+    }
+    if (durationCheckout) {
+      event.addInt("duration_checkout", durationCheckout.value());
+    }
+    if (durationFinish) {
+      event.addInt("duration_finish", durationFinish.value());
+    }
   }
 
   const char* getType() const override {
