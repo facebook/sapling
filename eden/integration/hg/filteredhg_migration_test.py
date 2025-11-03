@@ -325,3 +325,9 @@ class FilteredFsMigrationFromFilteredTest(
         # everything should be the same
         self.assert_filteredfs_enabled()
         self.assert_filter_applied()
+
+        # check the marker file existence - it should not exist
+        marker_file_path = os.path.join(self.mount, ".hg", MIGRATION_MARKER)
+        assert not os.path.exists(
+            marker_file_path
+        ), f"Migration marker file '{marker_file_path}' should not exist"

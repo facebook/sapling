@@ -14,6 +14,7 @@ import enum
 import errno
 import functools
 import getpass
+import json
 import os
 import random
 import re
@@ -1096,15 +1097,42 @@ def maybe_edensparse_migration(
 
     for checkout in instance.get_checkouts():
 
-        def configure_sapling(checkout: "EdenCheckout") -> None:
-            hg_repo = checkout.get_backing_repo()
-            hg_repo._run_hg(
-                ["config", "--local", "extensions.sparse", "!"], cwd=str(checkout.path)
-            )
-            hg_repo._run_hg(
+        def configure_sapling(checkout: "EdenCheckout") -> bool:
+            """
+            Configure Sapling to disable "extensions.sparse" and enable "extensions.edensparse"
+
+            Return True if the config is updated
+            Return False if no config changes made
+            """
+
+            def hg(args: List[str], checkout: "EdenCheckout" = checkout) -> bytes:
+                return checkout.get_backing_repo()._run_hg(args, cwd=str(checkout.path))
+
+            def check_sl_config_value(key: str, value: Optional[str]) -> bool:
+                """
+                Check if the config value is set to the given value
+
+                Return True if the config value is set to the given value
+                Return False if the config value is not set to the given value
+                """
+                output = json.loads(hg(["config", "-Tjson", key]))
+                if len(output) == 0:
+                    # config value is not set
+                    return value is None
+                return output[0]["value"] == value
+
+            is_sparse_disabled = check_sl_config_value("extensions.sparse", "!")
+            is_edensparse_enabled = check_sl_config_value("extensions.edensparse", "")
+
+            if is_sparse_disabled and is_edensparse_enabled:
+                # no config changes needed
+                return False
+
+            hg(["config", "--local", "extensions.sparse", "!"])
+            hg(
                 ["config", "--local", "extensions.edensparse", ""],
-                cwd=str(checkout.path),
             )
+            return True
 
         def update_snapshot_file(checkout: "EdenCheckout") -> bool:
             """
@@ -1181,14 +1209,28 @@ def maybe_edensparse_migration(
                 # Skip the migration for this checkout since it's already migrated
                 return False
 
-        def create_empty_sparse_file(checkout: "EdenCheckout") -> None:
+        def create_empty_sparse_file(checkout: "EdenCheckout") -> bool:
+            """
+            Create an empty .hg/sparse file
+
+            Return True if the sparse file is created
+            Return False if the sparse file already exists
+            """
             hg_dir = checkout.hg_dot_path
             sparse_file = os.path.join(hg_dir, "sparse")
             if not os.path.exists(sparse_file):
                 with open(sparse_file, "w") as f:
                     f.write("")
+                    return True
+            return False
 
-        def update_hg_requires(checkout: "EdenCheckout") -> None:
+        def update_hg_requires(checkout: "EdenCheckout") -> bool:
+            """
+            Add "edensparse" to .hg/requires
+
+            Return True if "edensparse" is added to .hg/requires
+            Return False if "edensparse" is already in .hg/requires
+            """
             hg_dir = checkout.hg_dot_path
             # add "edensparse" to .hg/requires
             requires_file = os.path.join(hg_dir, "requires")
@@ -1209,6 +1251,8 @@ def maybe_edensparse_migration(
                 with open(requires_file, "w") as f:
                     for line in lines_clean:
                         f.write(f"{line}\n")
+                    return True
+            return False
 
         def update_config_toml_file(checkout: "EdenCheckout") -> None:
             config = checkout.get_config()  # config.toml
@@ -1231,9 +1275,13 @@ def maybe_edensparse_migration(
                 # SNAPSHOT file not updated
                 # skip this part of migration and retry next time
                 return
-            create_empty_sparse_file(checkout)
-            update_hg_requires(checkout)
-            configure_sapling(checkout)
 
-            marker_file = os.path.join(checkout.hg_dot_path, MIGRATION_MARKER)
-            open(marker_file, "a").close()
+            if any(
+                [
+                    create_empty_sparse_file(checkout),
+                    update_hg_requires(checkout),
+                    configure_sapling(checkout),
+                ]
+            ):
+                marker_file = os.path.join(checkout.hg_dot_path, MIGRATION_MARKER)
+                open(marker_file, "a").close()
