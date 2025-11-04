@@ -42,7 +42,7 @@ use crate::methods::EdenThriftMethod;
 use crate::use_case::UseCase;
 
 lazy_static! {
-    static ref SCUBA_CLIENT: QueueingScubaLogger =
+    pub(crate) static ref SCUBA_CLIENT: QueueingScubaLogger =
         QueueingScubaLogger::new(create_logger("edenfs_client".to_string()), 1000);
 }
 
@@ -67,7 +67,7 @@ pub struct ThriftClient {
     connector: StreamingEdenFsConnector,
     connection: Mutex<EdenFsConnection<StreamingEdenFsThriftClientFuture>>,
     stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
-    session_id: String,
+    pub(crate) session_id: String,
     /// Eden has limits on concurrency and will return server overloaded (or timeout) errors if we
     /// send too many. Experimentally, even for large builds (see details in D36136516), we don't
     /// get much performance improvement beyond 2K concurrent requests, regardless of whether Eden
@@ -152,6 +152,7 @@ impl Client for ThriftClient {
             sample.add_string("request_id", generate_id().as_str());
             sample.add_string("user", whoami::username());
             sample.add_string("host", whoami::fallible::hostname().unwrap_or_default());
+            sample.add_string("type", "thrift");
             let (error, method) = match result {
                 Ok((stats, (result, method))) => {
                     self.stats_handler.on_success(attempts, retries);

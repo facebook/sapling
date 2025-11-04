@@ -15,6 +15,7 @@ use clap::Parser;
 use edenfs_asserted_states::ChangeEvent;
 use edenfs_asserted_states::Changes;
 use edenfs_asserted_states::StreamingChangesClient;
+use edenfs_asserted_states::get_streaming_changes_client;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::types::JournalPosition;
 use edenfs_client::utils::get_mount_point;
@@ -188,7 +189,7 @@ impl crate::Subcommand for ChangesSinceCmd {
                 .await?;
             if !self.states.is_empty() {
                 let stream_client =
-                    StreamingChangesClient::new(&get_mount_point(&self.mount_point)?)?;
+                    get_streaming_changes_client(&get_mount_point(&self.mount_point)?, &client)?;
                 let wrapped_stream = stream_client
                     .stream_changes_since_with_deferral(stream, &self.states, None)
                     .await?;

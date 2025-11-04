@@ -151,7 +151,7 @@ pub trait Client: Send + Sync {
 /// `EdenFsClient` provides methods for communicating with the EdenFS daemon, allowing you to
 /// perform operations such as querying mount points, checking daemon status, and managing
 /// checkouts.
-pub struct EdenFsClient(ThriftClient);
+pub struct EdenFsClient(pub(crate) ThriftClient);
 
 impl EdenFsClient {
     /// Creates a new EdenFS client.

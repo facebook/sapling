@@ -14,14 +14,20 @@ use std::time::Duration;
 use edenfs_client::changes_since::ChangeNotification;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::changes_since::StateChangeNotification;
+use edenfs_client::client::EdenFsClient;
 use edenfs_client::types::JournalPosition;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
+use edenfs_telemetry::EdenSample;
+use edenfs_telemetry::QueueingScubaLogger;
+use edenfs_telemetry::SampleLogger;
+use edenfs_telemetry::create_logger;
 use fs_err as fs;
 use futures::StreamExt;
 use futures::stream;
 use futures::stream::BoxStream;
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use serde::Serialize;
 use util::file::get_umask;
 use util::lock::ContentLock;
@@ -31,6 +37,11 @@ use util::lock::unsanitize_lock_name;
 use util::path::create_dir_all_with_mode;
 use util::path::dir_mode;
 use util::path::remove_file;
+
+lazy_static! {
+    pub(crate) static ref SCUBA_CLIENT: QueueingScubaLogger =
+        QueueingScubaLogger::new(create_logger("edenfs_client".to_string()), 1000);
+}
 
 const ASSERTED_STATE_DIR: &str = ".edenfs-notifications-state";
 
@@ -49,6 +60,7 @@ fn ensure_directory(path: &Path) -> Result<()> {
 #[derive(Clone, Debug)]
 pub struct StreamingChangesClient {
     states_root: PathBuf,
+    pub session_id: String,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -61,12 +73,32 @@ pub enum StateError {
     OtherError(#[from] anyhow::Error),
 }
 
+pub fn get_streaming_changes_client(
+    mount_point: &Path,
+    eden_client: &EdenFsClient,
+) -> Result<StreamingChangesClient> {
+    StreamingChangesClient::new(mount_point, eden_client.get_session_id())
+}
+
 impl StreamingChangesClient {
-    pub fn new(mount_point: &Path) -> Result<Self> {
+    pub fn new(mount_point: &Path, session_id: String) -> Result<Self> {
         let states_root = mount_point.join(ASSERTED_STATE_DIR);
         ensure_directory(&states_root)?;
 
-        Ok(StreamingChangesClient { states_root })
+        Ok(StreamingChangesClient {
+            states_root,
+            session_id,
+        })
+    }
+
+    pub fn instrument(&self, method: &str) {
+        let mut sample = EdenSample::new();
+        sample.add_string("method", method);
+        sample.add_string("session_id", &self.session_id);
+        sample.add_string("type", "notifications");
+        sample.add_string("user", whoami::username());
+        sample.add_string("host", whoami::fallible::hostname().unwrap_or_default());
+        let _ = SCUBA_CLIENT.log(sample);
     }
 
     #[allow(dead_code)]
@@ -82,7 +114,6 @@ impl StreamingChangesClient {
         // Returns other errors if an error occurred while asserting the state.
         // To exit the state, drop the ContentLockGuard returned by this function either explicitly
         // or implicitly by letting it go out of scope.
-        // TODO: Add logging
         let state_path: PathBuf = self
             .get_state_path(state)
             .map_err(StateError::EdenFsError)?;
@@ -131,9 +162,23 @@ impl StreamingChangesClient {
         }
         output
     }
+
     // Takes a stream of ChangesSinceV2Result, and returns a stream of Changes.
     // The Changes will be the file changes from the input stream as ChangesSinceV2Results split by ChangeEvents
     pub async fn stream_changes_since_with_states_wrapper<'a>(
+        &'a self,
+        inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
+        states: &'a [String],
+        known_asserted_states: Option<&HashSet<String>>,
+    ) -> Result<BoxStream<'a, Result<Changes>>> {
+        self.instrument("stream_changes_since_with_states_wrapper");
+        self._stream_changes_since_with_states_wrapper(inner_stream, states, known_asserted_states)
+            .await
+    }
+
+    // Takes a stream of ChangesSinceV2Result, and returns a stream of Changes.
+    // The Changes will be the file changes from the input stream as ChangesSinceV2Results split by ChangeEvents
+    async fn _stream_changes_since_with_states_wrapper<'a>(
         &'a self,
         inner_stream: BoxStream<'a, Result<ChangesSinceV2Result>>,
         states: &'a [String],
@@ -291,11 +336,13 @@ impl StreamingChangesClient {
         states: &'a [String],
         known_asserted_states: Option<&HashSet<String>>,
     ) -> Result<BoxStream<'a, Result<Changes>>> {
+        self.instrument("stream_changes_since_with_deferral");
+
         let mut deferred_changes: Vec<ChangeNotification> = Vec::new();
         let mut asserted_states = HashSet::new();
 
         let stream = self
-            .stream_changes_since_with_states_wrapper(inner_stream, states, known_asserted_states)
+            ._stream_changes_since_with_states_wrapper(inner_stream, states, known_asserted_states)
             .await?;
         let stream = stream.flat_map(move |from_stream| match from_stream {
             Ok(changes) => match changes {
@@ -573,7 +620,7 @@ mod tests {
     #[test]
     fn test_enter_state() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = StreamingChangesClient::new(&mount_point, "test".to_string())?;
         let state = "test_state1";
         let _result = client.enter_state(state)?;
         let check_state = client.is_state_asserted(state)?;
@@ -584,7 +631,7 @@ mod tests {
     #[test]
     fn test_state_leave() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount1");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = StreamingChangesClient::new(&mount_point, "test".to_string())?;
         let state = "test_state2";
         let guard = client.enter_state(state)?;
         let check_state = client.is_state_asserted(state)?;
@@ -598,7 +645,7 @@ mod tests {
     #[test]
     fn test_state_leave_implicit() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = StreamingChangesClient::new(&mount_point, "test".to_string())?;
         let state = "test_state2";
         {
             let _guard = client.enter_state(state)?;
@@ -613,7 +660,7 @@ mod tests {
     #[test]
     fn test_get_asserted_states_empty() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount2");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = StreamingChangesClient::new(&mount_point, "test".to_string())?;
         let asserted_states = client.get_asserted_states()?;
         assert!(asserted_states.is_empty());
         Ok(())
@@ -622,7 +669,7 @@ mod tests {
     #[test]
     fn test_get_asserted_states() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount3");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = StreamingChangesClient::new(&mount_point, "test".to_string())?;
         let state1 = "test_state1";
         let state2 = "test_state2";
 
@@ -667,8 +714,8 @@ mod tests {
     fn test_multiple_mount() -> anyhow::Result<()> {
         let mount_point1 = std::env::temp_dir().join("test_mount4");
         let mount_point2 = std::env::temp_dir().join("test_mount4a");
-        let client1 = StreamingChangesClient::new(&mount_point1)?;
-        let client2 = StreamingChangesClient::new(&mount_point2)?;
+        let client1 = StreamingChangesClient::new(&mount_point1, "test".to_string())?;
+        let client2 = StreamingChangesClient::new(&mount_point2, "test".to_string())?;
         let state1 = "test_state1";
         let state2 = "test_state2";
         let guard_result = client1.enter_state(state1)?;
@@ -689,7 +736,7 @@ mod tests {
     #[test]
     fn test_repeat_enter() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount6");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = StreamingChangesClient::new(&mount_point, "test".to_string())?;
         let state = "test_state";
         let result = client.enter_state(state);
         let result2 = client.enter_state(state);
@@ -726,7 +773,7 @@ mod tests {
     #[test]
     fn test_states_asserted() -> anyhow::Result<()> {
         let mount_point = std::env::temp_dir().join("test_mount7");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = StreamingChangesClient::new(&mount_point, "test".to_string())?;
         let state = "test_state";
         let state2 = "test_state2";
         let guard_result = client.enter_state(state)?;
@@ -745,7 +792,7 @@ mod tests {
         let bytify = |str: &str| str.as_bytes().to_vec();
 
         let mount_point = std::env::temp_dir().join("test_mount10");
-        let client = StreamingChangesClient::new(&mount_point)?;
+        let client = StreamingChangesClient::new(&mount_point, "test".to_string())?;
 
         let journal_pos = JournalPosition {
             mount_generation: 0,

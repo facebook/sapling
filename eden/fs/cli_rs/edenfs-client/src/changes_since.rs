@@ -12,6 +12,8 @@ use std::time::Instant;
 
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
+use edenfs_telemetry::EdenSample;
+use edenfs_telemetry::SampleLogger;
 use edenfs_utils::bytes_from_path;
 use edenfs_utils::path_from_bytes;
 use edenfs_utils::prefix_paths;
@@ -24,6 +26,7 @@ use tokio::time;
 
 use crate::client::Client;
 use crate::client::EdenFsClient;
+use crate::client::thrift_client::SCUBA_CLIENT;
 use crate::methods::EdenThriftMethod;
 use crate::types::Dtype;
 use crate::types::JournalPosition;
@@ -686,6 +689,21 @@ impl From<ChangesSinceV2Result> for thrift_types::edenfs::ChangesSinceV2Result {
 }
 
 impl EdenFsClient {
+    /// Returns the session id from the inner ThriftClient, if available.
+    pub fn get_session_id(&self) -> String {
+        self.0.session_id.clone()
+    }
+
+    fn instrument(&self, method: &str) {
+        let mut sample = EdenSample::new();
+        sample.add_string("method", method);
+        sample.add_string("session_id", &self.session_id);
+        sample.add_string("type", "notifications");
+        sample.add_string("user", whoami::username());
+        sample.add_string("host", whoami::fallible::hostname().unwrap_or_default());
+        let _ = SCUBA_CLIENT.log(sample);
+    }
+
     #[cfg(fbcode_build)]
     pub async fn get_changes_since_with_includes(
         &self,
@@ -695,7 +713,8 @@ impl EdenFsClient {
         included_roots: &Option<Vec<PathBuf>>,
         included_suffixes: &Option<Vec<String>>,
     ) -> Result<ChangesSinceV2Result> {
-        self.get_changes_since(
+        self.instrument("get_changes_since_with_includes");
+        self._get_changes_since(
             mount_point,
             from_position,
             root,
@@ -711,6 +730,34 @@ impl EdenFsClient {
 
     #[cfg(fbcode_build)]
     pub async fn get_changes_since(
+        &self,
+        mount_point: &Option<PathBuf>,
+        from_position: &JournalPosition,
+        root: &Option<PathBuf>,
+        included_roots: &Option<Vec<PathBuf>>,
+        included_suffixes: &Option<Vec<String>>,
+        excluded_roots: &Option<Vec<PathBuf>>,
+        excluded_suffixes: &Option<Vec<String>>,
+        include_vcs_roots: bool,
+        include_state_changes: bool,
+    ) -> Result<ChangesSinceV2Result> {
+        self.instrument("get_changes_since");
+        self._get_changes_since(
+            mount_point,
+            from_position,
+            root,
+            included_roots,
+            included_suffixes,
+            excluded_roots,
+            excluded_suffixes,
+            include_vcs_roots,
+            include_state_changes,
+        )
+        .await
+    }
+
+    #[cfg(fbcode_build)]
+    pub async fn _get_changes_since(
         &self,
         mount_point: &Option<PathBuf>,
         from_position: &JournalPosition,
@@ -889,6 +936,7 @@ impl EdenFsClient {
         include_vcs_roots: bool,
         include_state_changes: bool,
     ) -> Result<BoxStream<'a, Result<ChangesSinceV2Result>>> {
+        self.instrument("stream_changes_since");
         struct State<'a> {
             mount_point: Option<PathBuf>,
             position: JournalPosition,
@@ -978,7 +1026,7 @@ impl EdenFsClient {
                 state.last = Instant::now();
 
                 let result = self
-                    .get_changes_since(
+                    ._get_changes_since(
                         &state.mount_point,
                         &state.position,
                         &state.root,

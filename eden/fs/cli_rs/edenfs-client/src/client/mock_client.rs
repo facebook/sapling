@@ -38,6 +38,7 @@ use crate::use_case::UseCase;
 pub struct MockThriftClient {
     thrift_service: Option<StreamingEdenFsThriftClient>,
     stats_handler: Box<dyn EdenFsClientStatsHandler + Send + Sync>,
+    pub(crate) session_id: String,
 }
 
 impl MockThriftClient {
@@ -52,6 +53,7 @@ impl Client for MockThriftClient {
         Self {
             thrift_service: None,
             stats_handler: Box::new(NoopEdenFsClientStatsHandler {}),
+            session_id: "mock".to_string(),
         }
     }
 
