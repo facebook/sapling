@@ -274,3 +274,112 @@ async fn assert_entries(
 
     Ok(())
 }
+
+#[mononoke::fbinit_test]
+async fn test_skip_inference_with_explicit_copy_from(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo.clone())).await?;
+
+    // Create a base commit with a file
+    let base_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("original_file.txt", "content\n")
+        .set_author_date(DateTime::from_timestamp(1000, 0)?)
+        .commit()
+        .await?;
+
+    // Create a commit with explicit copy_from info
+    let copy_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
+        .add_file_with_copy_info(
+            "copied_file.txt",
+            "content\n",
+            (base_cs, "original_file.txt"),
+        )
+        .set_author_date(DateTime::from_timestamp(2000, 0)?)
+        .commit()
+        .await?;
+
+    // When a changeset has explicit copy_from info, inference should return empty
+    assert_entries(
+        &ctx,
+        &repo,
+        repo_ctx.changeset(copy_cs).await?.unwrap().id(),
+        &[],
+    )
+    .await?;
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_skip_inference_with_multiple_explicit_copy_from(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo.clone())).await?;
+
+    // Create a base commit with multiple files
+    let base_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file1.txt", "content1\n")
+        .add_file("file2.txt", "content2\n")
+        .set_author_date(DateTime::from_timestamp(1000, 0)?)
+        .commit()
+        .await?;
+
+    // Create a commit with multiple files, some with explicit copy_from info
+    let copy_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
+        .add_file_with_copy_info("copied1.txt", "content1\n", (base_cs, "file1.txt"))
+        .add_file("new_file.txt", "new content\n")
+        .set_author_date(DateTime::from_timestamp(2000, 0)?)
+        .commit()
+        .await?;
+
+    // Even with mixed files, if any has explicit copy_from, inference should return empty
+    assert_entries(
+        &ctx,
+        &repo,
+        repo_ctx.changeset(copy_cs).await?.unwrap().id(),
+        &[],
+    )
+    .await?;
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_inference_proceeds_without_explicit_copy_from(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo.clone())).await?;
+
+    // Create a base commit with a file
+    let base_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("original_file.txt", "content\n")
+        .set_author_date(DateTime::from_timestamp(1000, 0)?)
+        .commit()
+        .await?;
+
+    // Create a commit that renames the file (without explicit copy_from)
+    let rename_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
+        .add_file("renamed_file.txt", "content\n")
+        .delete_file("original_file.txt")
+        .set_author_date(DateTime::from_timestamp(2000, 0)?)
+        .commit()
+        .await?;
+
+    // Without explicit copy_from, inference should detect the rename
+    assert_entries(
+        &ctx,
+        &repo,
+        repo_ctx.changeset(rename_cs).await?.unwrap().id(),
+        &[(
+            MPath::new("renamed_file.txt")?,
+            InferredCopyFromEntry {
+                from_csid: base_cs,
+                from_path: MPath::new("original_file.txt")?,
+            },
+        )],
+    )
+    .await?;
+
+    Ok(())
+}

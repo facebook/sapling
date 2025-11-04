@@ -575,6 +575,21 @@ pub(crate) async fn derive_impl(
 ) -> Result<RootInferredCopyFromId> {
     let mut resolved_paths = HashSet::new();
 
+    // Skip inference if any file change already has explicit copy_from info
+    let has_copy_from = bonsai
+        .file_changes()
+        .any(|(_, file_change)| file_change.copy_from().is_some());
+
+    if has_copy_from {
+        let empty = InferredCopyFrom::empty();
+        return Ok(RootInferredCopyFromId(
+            empty
+                .into_blob()
+                .store(ctx, derivation_ctx.blobstore())
+                .await?,
+        ));
+    }
+
     let (exact_renames, leftover0) = find_exact_renames(ctx, derivation_ctx, bonsai).await?;
     resolved_paths.extend(exact_renames.iter().map(|(path, _)| path.clone()));
 
