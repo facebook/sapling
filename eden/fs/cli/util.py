@@ -1096,8 +1096,11 @@ def maybe_edensparse_migration(
         raise RuntimeError(f"Invalid edensparse migration step {step}")
 
     for checkout in instance.get_checkouts():
+        rollbacks = []  # rollback callables
 
-        def configure_sapling(checkout: "EdenCheckout") -> bool:
+        def configure_sapling(
+            checkout: "EdenCheckout", rollbacks: List[Any] = rollbacks
+        ) -> bool:
             """
             Configure Sapling to disable "extensions.sparse" and enable "extensions.edensparse"
 
@@ -1121,20 +1124,46 @@ def maybe_edensparse_migration(
                     return value is None
                 return output[0]["value"] == value
 
-            is_sparse_disabled = check_sl_config_value("extensions.sparse", "!")
-            is_edensparse_enabled = check_sl_config_value("extensions.edensparse", "")
+            is_sparse_disabled: bool = check_sl_config_value("extensions.sparse", "!")
+            is_edensparse_enabled: bool = check_sl_config_value(
+                "extensions.edensparse", ""
+            )
+
+            def restore_hgrc() -> None:
+                hg(
+                    [
+                        "config",
+                        "--local",
+                        "extensions.sparse",
+                        "!" if is_sparse_disabled else "",
+                    ]
+                )
+
+                hg(
+                    [
+                        "config",
+                        "--local",
+                        "extensions.edensparse",
+                        "" if is_edensparse_enabled else "!",
+                    ],
+                )
+
+            rollbacks.append(restore_hgrc)
 
             if is_sparse_disabled and is_edensparse_enabled:
                 # no config changes needed
                 return False
 
             hg(["config", "--local", "extensions.sparse", "!"])
+
             hg(
                 ["config", "--local", "extensions.edensparse", ""],
             )
             return True
 
-        def update_snapshot_file(checkout: "EdenCheckout") -> bool:
+        def update_snapshot_file(
+            checkout: "EdenCheckout", rollbacks: List[Any] = rollbacks
+        ) -> bool:
             """
             Update snapshot file to apply the 'null' filter
             This should be done before updating the config file to switch scm_type to "filteredhg"
@@ -1151,6 +1180,15 @@ def maybe_edensparse_migration(
                 return False
 
             snapshot_file = checkout.state_dir / SNAPSHOT
+
+            with open(snapshot_file, "rb") as f:
+                original_snapshot_bytes = f.read()
+                rollbacks.append(
+                    lambda: write_file_atomically(
+                        snapshot_file, original_snapshot_bytes
+                    )
+                )
+
             if snapshot_state.working_copy_parent is None:
                 # case 1
                 # Skip the migration for this checkout
@@ -1209,7 +1247,9 @@ def maybe_edensparse_migration(
                 # Skip the migration for this checkout since it's already migrated
                 return False
 
-        def create_empty_sparse_file(checkout: "EdenCheckout") -> bool:
+        def create_empty_sparse_file(
+            checkout: "EdenCheckout", rollbacks: List[Any] = rollbacks
+        ) -> bool:
             """
             Create an empty .hg/sparse file
 
@@ -1219,12 +1259,15 @@ def maybe_edensparse_migration(
             hg_dir = checkout.hg_dot_path
             sparse_file = os.path.join(hg_dir, "sparse")
             if not os.path.exists(sparse_file):
+                rollbacks.append(lambda: Path(sparse_file).unlink(missing_ok=True))
                 with open(sparse_file, "w") as f:
                     f.write("")
                     return True
             return False
 
-        def update_hg_requires(checkout: "EdenCheckout") -> bool:
+        def update_hg_requires(
+            checkout: "EdenCheckout", rollbacks: List[Any] = rollbacks
+        ) -> bool:
             """
             Add "edensparse" to .hg/requires
 
@@ -1233,16 +1276,21 @@ def maybe_edensparse_migration(
             """
             hg_dir = checkout.hg_dot_path
             # add "edensparse" to .hg/requires
-            requires_file = os.path.join(hg_dir, "requires")
+            requires_file: str = os.path.join(hg_dir, "requires")
 
             # read all lines from requires file and check if "edensparse" is already present
             # if not, add "edensparse" to the end of the line list
             # sort the list and write it back to the requires file
             # Read all lines from requires file and check if "edensparse" is already present.
             # If not, add "edensparse" to the end of the line list, sort, and write back.
-            with open(requires_file, "r") as f:
-                lines = f.readlines()
+            with open(requires_file, "rb") as f:
+                file_bytes: bytes = f.read()
+            lines = file_bytes.decode("utf-8").splitlines(keepends=True)
 
+            def write_original_lines() -> None:
+                write_file_atomically(Path(requires_file), file_bytes)
+
+            rollbacks.append(write_original_lines)
             lines_clean = [line.strip() for line in lines]
             if "edensparse" not in lines_clean:
                 lines_clean.append("edensparse")
@@ -1254,34 +1302,56 @@ def maybe_edensparse_migration(
                     return True
             return False
 
-        def update_config_toml_file(checkout: "EdenCheckout") -> None:
+        def update_config_toml_file(
+            checkout: "EdenCheckout", rollbacks: List[Any] = rollbacks
+        ) -> None:
             config = checkout.get_config()  # config.toml
+
+            def restore_config_toml(
+                checkout: "EdenCheckout" = checkout,
+                original_config: Any = config,
+            ) -> None:
+                checkout.save_config(original_config)
+
+            rollbacks.append(restore_config_toml)
+
             config = config._replace(scm_type="filteredhg")
             checkout.save_config(config)
 
-        if step == EdensparseMigrationStep.PRE_EDEN_START:
-            if not update_snapshot_file(checkout):
-                # the migration should return early here if we are in the progress of
-                # a checkout.
-                # the migration will be retried next time when edenfs is started
-                return
-            update_config_toml_file(checkout)
-        else:
-            config = checkout.get_config()
-            if config.scm_type != "filteredhg":
-                return
-            snapshot_state = checkout.get_snapshot()
-            if snapshot_state.last_filter_id is None:
-                # SNAPSHOT file not updated
-                # skip this part of migration and retry next time
-                return
+        try:
+            if step == EdensparseMigrationStep.PRE_EDEN_START:
+                if not update_snapshot_file(checkout):
+                    # the migration should return early here if we are in the progress of
+                    # a checkout.
+                    # the migration will be retried next time when edenfs is started
+                    return
+                update_config_toml_file(checkout)
+            else:
+                config = checkout.get_config()
+                if config.scm_type != "filteredhg":
+                    return
+                snapshot_state = checkout.get_snapshot()
+                if snapshot_state.last_filter_id is None:
+                    # SNAPSHOT file not updated
+                    # skip this part of migration and retry next time
+                    return
 
-            if any(
-                [
-                    create_empty_sparse_file(checkout),
-                    update_hg_requires(checkout),
-                    configure_sapling(checkout),
-                ]
-            ):
-                marker_file = os.path.join(checkout.hg_dot_path, MIGRATION_MARKER)
-                open(marker_file, "a").close()
+                if any(
+                    [
+                        create_empty_sparse_file(checkout),
+                        update_hg_requires(checkout),
+                        configure_sapling(checkout),
+                    ]
+                ):
+                    marker_file = os.path.join(checkout.hg_dot_path, MIGRATION_MARKER)
+                    open(marker_file, "a").close()
+        except Exception as e:
+            print("edensparse migration failed: ", e, file=sys.stderr)
+            print("rollbacking changes...", file=sys.stderr)
+            for rollback in rollbacks[::-1]:
+                try:
+                    rollback()
+                except Exception as e:
+                    print(
+                        "rollback for edensparse migration failed: ", e, file=sys.stderr
+                    )
