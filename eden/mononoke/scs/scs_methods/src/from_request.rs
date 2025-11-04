@@ -22,6 +22,7 @@ use derived_data_manager::DerivableType;
 use ephemeral_blobstore::BubbleId;
 use faster_hex::hex_string;
 use hooks::CrossRepoPushSource;
+use metaconfig_types::CommitIdentityScheme;
 use mononoke_api::BookmarkKey;
 use mononoke_api::CandidateSelectionHintArgs;
 use mononoke_api::ChangesetId;
@@ -267,6 +268,19 @@ impl FromRequest<thrift::RepoResolveCommitPrefixParams> for ChangesetPrefixSpeci
             _ => Err(scs_errors::invalid_request(format!(
                 "unsupported prefix identity scheme ({})",
                 params.prefix_scheme
+            ))),
+        }
+    }
+}
+
+impl FromRequest<thrift::CommitIdentityScheme> for CommitIdentityScheme {
+    fn from_request(scheme: &thrift::CommitIdentityScheme) -> Result<Self, thrift::RequestError> {
+        match *scheme {
+            thrift::CommitIdentityScheme::HG => Ok(CommitIdentityScheme::HG),
+            thrift::CommitIdentityScheme::GIT => Ok(CommitIdentityScheme::GIT),
+            _ => Err(scs_errors::invalid_request(format!(
+                "unsupported identity scheme: {}",
+                scheme
             ))),
         }
     }

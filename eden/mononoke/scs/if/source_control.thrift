@@ -824,7 +824,11 @@ struct SparseProfileDeltaSizes {
 
 struct RepoInfoParams {}
 
-struct ListReposParams {}
+struct ListReposParams {
+  /// If provided, list repos with the matching identity schemes only.
+  /// Otherwise, list all repos.
+  1: optional set<CommitIdentityScheme> identity_schemes;
+}
 
 struct RepoResolveBookmarkParams {
   /// The bookmark name to look up.
