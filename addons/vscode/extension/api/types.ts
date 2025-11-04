@@ -116,6 +116,11 @@ export interface SaplingRepository {
    */
   commit(title: string, commitMessage: string): Promise<void>;
 
+  /**
+   * Get additional context around the source of a merge conflict.
+   */
+  getMergeConflictContext(): Promise<SaplingConflictContext>;
+
   // TODO: refresh
   // TODO: moveFile / copyFile
   // TODO: run operations (commit, amend, discard, purge, rebase, pull, ...)
@@ -178,3 +183,15 @@ export type SaplingComparison =
   | {
       type: 'Uncommitted' | 'Head' | 'Stack';
     };
+
+/**
+ * Useful context about conflicting file(s)
+ **/
+export type SaplingConflictContext = {
+  // If we can guess the commit that introduced the conflicting content on the "local" side (or "dest" when rebasing):
+  conflicting_local?: {description: string; diff: string; hash: string};
+  // Info about the "other" (or "source" when rebasing) commit:
+  conflicting_other: {description: string; diff: string; hssh: string};
+  // Conflicting file path
+  file: string;
+};

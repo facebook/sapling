@@ -17,6 +17,7 @@ import type {
   SaplingCommandOutput,
   SaplingCommitInfo,
   SaplingComparison,
+  SaplingConflictContext,
   SaplingRepository,
 } from './api/types';
 import type {EnabledSCMApiFeature} from './types';
@@ -491,6 +492,15 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
     if (result.exitCode !== 0) {
       throw new Error(result.stderr);
     }
+  }
+
+  async getMergeConflictContext(): Promise<SaplingConflictContext> {
+    const result = await this.runSlCommand(['debugconflictcontext']);
+    if (result.exitCode !== 0) {
+      throw new Error(result.stderr);
+    }
+
+    return JSON.parse(result.stdout) as SaplingConflictContext;
   }
 }
 
