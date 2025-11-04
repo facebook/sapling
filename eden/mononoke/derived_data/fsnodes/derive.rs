@@ -56,6 +56,7 @@ use mononoke_types::fsnode::FsnodeSummary;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use mononoke_types::path::MPath;
+use restricted_paths::ManifestId;
 use restricted_paths::ManifestType;
 use restricted_paths::RestrictedPathManifestIdEntry;
 use restricted_paths::RestrictedPaths;
@@ -369,7 +370,7 @@ async fn create_fsnode(
     {
         let entry = RestrictedPathManifestIdEntry::new(
             ManifestType::Fsnode,
-            fsnode_id.to_string().into(),
+            ManifestId::from(&fsnode_id.blake2().into_inner()),
             RepoPath::DirectoryPath(non_root_path),
         )?;
 

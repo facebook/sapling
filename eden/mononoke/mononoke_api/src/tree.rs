@@ -91,7 +91,7 @@ impl<R: MononokeRepo> TreeContext<R> {
 
                 if restricted_paths_enabled {
                     let ctx_clone = repo_ctx.ctx().clone();
-                    let manifest_id = ManifestId::from(id.to_string());
+                    let manifest_id = ManifestId::from(&id.blake2().into_inner());
                     let restricted_paths = repo_ctx.repo().restricted_paths_arc();
 
                     // Spawn asynchronous task for logging restricted path access

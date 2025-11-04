@@ -415,6 +415,14 @@ impl From<ManifestId> for SmallVec<[u8; 32]> {
     }
 }
 
+impl From<&[u8; 32]> for ManifestId {
+    fn from(bytes: &[u8; 32]) -> Self {
+        let mut small_vec = SmallVec::new();
+        small_vec.extend_from_slice(bytes);
+        ManifestId(small_vec)
+    }
+}
+
 // SQL conversion implementations for ManifestId
 impl From<ManifestId> for Value {
     fn from(manifest_id: ManifestId) -> Self {
