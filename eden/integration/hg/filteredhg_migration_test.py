@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Callable, Optional, TypeVar
 
 from eden.fs.cli.config import get_snapshot, SNAPSHOT
-from eden.fs.cli.util import MIGRATION_MARKER
+from eden.fs.cli.util import MIGRATION_MARKER, NaiveFaultInjector
 
 from eden.integration.hg.lib.hg_extension_test_base import (
     EdenHgTestCase,
@@ -383,6 +383,96 @@ class FilteredFSMigrationFromUnfilteredTest(
 
         await self.edensparse_migration_common(
             lambda: None, lambda: None, mount_path=Path(cloned_repo)
+        )
+
+    async def rollback_common(self, tester: Callable, fault_key: str) -> None:
+        state_dir = Path(self.eden.client_dir_for_mount(self.mount_path))
+        await self.enable_config_for_edensparse_migration()
+
+        with NaiveFaultInjector(state_dir) as fault_injector:
+            fault_injector.register_test_only_fault(fault_key)
+            try:
+                self.restart_edenfs_manually()
+                self.fail("Expected EdenFS to fail to restart")
+            except Exception:
+                tester()
+
+        await self.edensparse_migration_common(lambda: None, lambda: None)
+
+    async def test_rollback_snapshot_update(self) -> None:
+        def tester():
+            client_dir = Path(self.eden.client_dir_for_mount(self.mount_path))
+            assert get_snapshot(client_dir / SNAPSHOT, "hg").last_filter_id is None
+
+        await self.rollback_common(
+            tester=tester,
+            fault_key="unexpected_exception_after_snapshot_update",
+        )
+
+    async def test_rollback_sparse_file(self) -> None:
+        def tester():
+            filter_config_file_path = os.path.join(
+                str(self.mount_path), ".hg", "sparse"
+            )
+            assert not os.path.exists(
+                filter_config_file_path
+            ), "sparse file should not exist"
+
+        await self.rollback_common(
+            tester=tester,
+            fault_key="unexpected_exception_after_sparse_file",
+        )
+
+    async def test_rollback_requires_file(self) -> None:
+        requires_file_path = self.mount_path / ".hg" / "requires"
+        original_content = requires_file_path.read_bytes()
+
+        def tester():
+            content = requires_file_path.read_bytes()
+            assert (
+                original_content == content
+            ), f"requires file should not change:\n{original_content}\nvs\n{content}"
+
+        await self.rollback_common(
+            tester=tester,
+            fault_key="unexpected_exception_after_requires_file",
+        )
+
+    async def test_rollback_config_toml(self) -> None:
+        def tester():
+            assert self.get_scm_type() == "hg", "scm_type should not change"
+
+        await self.rollback_common(
+            tester=tester,
+            fault_key="unexpected_exception_after_config_toml",
+        )
+
+    async def test_rollback_sapling_config(self) -> None:
+        original_config_json = json.loads(
+            self.hg("config", "-Tjson", "extensions.sparse", "extensions.edensparse")
+        )
+
+        def tester():
+            config_json = json.loads(
+                self.hg(
+                    "config", "-Tjson", "extensions.sparse", "extensions.edensparse"
+                )
+            )
+
+            def check():
+                if original_config_json == config_json:
+                    return True
+                return (
+                    len(config_json) == 2
+                    and config_json[1]["name"] == "extensions.edensparse"
+                    and config_json[1]["value"] == "!"
+                )
+
+            assert check(), f"sapling config should not change: {original_config_json} vs {config_json}"
+
+        await self.rollback_common(
+            tester=tester,
+            fault_key="unexpected_exception_after_sapling_config",
         )
 
 

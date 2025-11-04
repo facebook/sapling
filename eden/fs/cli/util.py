@@ -1098,8 +1098,12 @@ def maybe_edensparse_migration(
     for checkout in instance.get_checkouts():
         rollbacks = []  # rollback callables
 
+        fault_injector = NaiveFaultInjector(checkout.state_dir)
+
         def configure_sapling(
-            checkout: "EdenCheckout", rollbacks: List[Any] = rollbacks
+            checkout: "EdenCheckout",
+            rollbacks: List[Any] = rollbacks,
+            fault_injector: NaiveFaultInjector = fault_injector,
         ) -> bool:
             """
             Configure Sapling to disable "extensions.sparse" and enable "extensions.edensparse"
@@ -1159,10 +1163,13 @@ def maybe_edensparse_migration(
             hg(
                 ["config", "--local", "extensions.edensparse", ""],
             )
+            fault_injector.try_inject("unexpected_exception_after_sapling_config")
             return True
 
         def update_snapshot_file(
-            checkout: "EdenCheckout", rollbacks: List[Any] = rollbacks
+            checkout: "EdenCheckout",
+            rollbacks: List[Any] = rollbacks,
+            fault_injector: NaiveFaultInjector = fault_injector,
         ) -> bool:
             """
             Update snapshot file to apply the 'null' filter
@@ -1210,6 +1217,7 @@ def maybe_edensparse_migration(
                     + filtered_rootid
                 )
                 write_file_atomically(snapshot_file, new_snapshot_bytes)
+                fault_injector.try_inject("unexpected_exception_after_snapshot_update")
                 return True
             else:
                 # case 4
@@ -1248,7 +1256,9 @@ def maybe_edensparse_migration(
                 return False
 
         def create_empty_sparse_file(
-            checkout: "EdenCheckout", rollbacks: List[Any] = rollbacks
+            checkout: "EdenCheckout",
+            rollbacks: List[Any] = rollbacks,
+            fault_injector: NaiveFaultInjector = fault_injector,
         ) -> bool:
             """
             Create an empty .hg/sparse file
@@ -1262,11 +1272,14 @@ def maybe_edensparse_migration(
                 rollbacks.append(lambda: Path(sparse_file).unlink(missing_ok=True))
                 with open(sparse_file, "w") as f:
                     f.write("")
+                    fault_injector.try_inject("unexpected_exception_after_sparse_file")
                     return True
             return False
 
         def update_hg_requires(
-            checkout: "EdenCheckout", rollbacks: List[Any] = rollbacks
+            checkout: "EdenCheckout",
+            rollbacks: List[Any] = rollbacks,
+            fault_injector: NaiveFaultInjector = fault_injector,
         ) -> bool:
             """
             Add "edensparse" to .hg/requires
@@ -1299,11 +1312,16 @@ def maybe_edensparse_migration(
                 with open(requires_file, "w") as f:
                     for line in lines_clean:
                         f.write(f"{line}\n")
+                    fault_injector.try_inject(
+                        "unexpected_exception_after_requires_file"
+                    )
                     return True
             return False
 
         def update_config_toml_file(
-            checkout: "EdenCheckout", rollbacks: List[Any] = rollbacks
+            checkout: "EdenCheckout",
+            rollbacks: List[Any] = rollbacks,
+            fault_injector: NaiveFaultInjector = fault_injector,
         ) -> None:
             config = checkout.get_config()  # config.toml
 
@@ -1317,6 +1335,7 @@ def maybe_edensparse_migration(
 
             config = config._replace(scm_type="filteredhg")
             checkout.save_config(config)
+            fault_injector.try_inject("unexpected_exception_after_config_toml")
 
         try:
             if step == EdensparseMigrationStep.PRE_EDEN_START:
@@ -1355,3 +1374,65 @@ def maybe_edensparse_migration(
                     print(
                         "rollback for edensparse migration failed: ", e, file=sys.stderr
                     )
+
+
+class NaiveFaultInjector:
+    """
+    A naive fault injector that injects faults by raising exceptions when needed.
+
+    Injector knows when to faise an exception by checking if a file with
+    the specified key exists in the eden client state directory.
+
+    Ideally this should only be used in tests:
+    ```
+    fault_key = "my_fault_key"
+    with NaiveFaultInjector(eden_client_state_dir) as fault_injector:
+        fault_injector.register_test_only_fault(fault_key)
+    ```
+    """
+
+    def __init__(self, path: Path) -> None:
+        self.eden_client_dir = path
+        self.prefix = "TEST_ONLY_FILE_FROM_FAULT_INJECTOR"
+
+    def try_inject(self, key: str) -> None:
+        """
+        Checks if the file at self.path / key exists.
+        If it does, raises a RuntimeError.
+        """
+        fault_file = self.eden_client_dir / self._file_name(key)
+        if fault_file.exists():
+            raise RuntimeError(f"Test-Only Fault Injected: key={key}")
+
+    def register_test_only_fault(self, key: str) -> None:
+        """
+        Creates a file at self.path / key to register a fault injection point.
+        """
+        fault_file = self.eden_client_dir / self._file_name(key)
+        fault_file.touch(exist_ok=True)
+
+    def _file_name(self, key: str) -> str:
+        return self.prefix + key.upper()
+
+    def clean(self) -> None:
+        """
+        Removes testing files in self.eden_client_dir that were registered as fault keys.
+        """
+        if not self.eden_client_dir.exists():
+            return
+
+        for file in self.eden_client_dir.iterdir():
+            if file.is_file() and file.name.startswith(self.prefix):
+                try:
+                    file.unlink()
+                except Exception:
+                    pass
+
+    def __enter__(self) -> "NaiveFaultInjector":
+        return self
+
+    # pyre-fixme[2]: Parameter must be annotated.
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+        self.clean()
+        # Do not suppress exceptions
+        return False
