@@ -117,14 +117,19 @@ impl<R: MononokeRepo> RepoContext<R> {
         reponame: &str,
         flags: &[SmartlogFlag],
     ) -> Result<SmartlogData, MononokeError> {
-        let cc_ctx = self.commit_cloud_context_with_scheme(workspace, reponame)?;
+        let mut cc_ctx = self.commit_cloud_context_with_scheme(workspace, reponame)?;
+        let authz = self.authorization_context();
+        authz
+            .require_commitcloud_operation(self.ctx(), self.repo(), &mut cc_ctx, "read")
+            .await?;
+
         let raw_data = self
             .repo()
             .commit_cloud()
             .get_smartlog_raw_info(self.ctx(), &cc_ctx)
             .await?;
         let cloud_ids = raw_data.collapse_into_vec(flags);
-        eprintln!("cloud_ids: {:?}", cloud_ids);
+
         let nodes = self
             .form_smartlog_with_info(
                 cc_ctx,
