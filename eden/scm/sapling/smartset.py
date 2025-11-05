@@ -81,7 +81,7 @@ class abstractsmartset:
         raise NotImplementedError()
 
     def iterctx(self):
-        """iterate the set using contexes, with prefetch considered"""
+        """iterate the set using contexts, with prefetch considered"""
         repo = self.repo()
         ctxstream = self._iterctxnoprefetch()
         for field in sorted(self.prefetchfields()):
