@@ -98,6 +98,13 @@ EdenError newEdenError(const RocksException& ex) {
 #else
     return newEdenError(ENOSPC, EdenErrorType::POSIX_ERROR, ex.what());
 #endif
+  } else if (status.IsCorruption()) {
+#ifdef _WIN32
+    return newEdenError(
+        ERROR_FILE_CORRUPT, EdenErrorType::WIN32_ERROR, ex.what());
+#else
+    return newEdenError(EBADMSG, EdenErrorType::POSIX_ERROR, ex.what());
+#endif
   }
   return newEdenError(static_cast<const std::exception&>(ex));
 }
