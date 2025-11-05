@@ -4043,7 +4043,48 @@ def log(ui, repo, *pats, **opts):
         if linerange:
             raise error.Abort(_("graph not supported with line range patterns"))
         return cmdutil.graphlog(ui, repo, pats, opts)
-    _dolog(ui, repo, pats, opts)
+
+    curr_repo, curr_pats, curr_opts = repo, pats, opts
+    while True:
+        lastctx = _dolog(ui, curr_repo, curr_pats, curr_opts)
+        xrepoinfo = _getxrepoinfo(curr_repo, curr_pats, curr_opts, lastctx)
+        if not xrepoinfo:
+            break
+
+        from_repo, from_commit, from_path = xrepoinfo
+        curr_repo = from_repo
+        curr_pats = [os.path.join(from_repo.root, from_path)]
+        curr_opts = curr_opts.copy()
+
+        curr_opts["rev"] = [f"reverse(::{from_commit})"]
+
+
+def _getxrepoinfo(curr_repo, curr_pats, curr_opts, lastctx):
+    # XXX: currently supports only one path
+    if lastctx is None or len(curr_pats) != 1:
+        return None
+    match, pats = scmutil.matchandpats(curr_repo[None], curr_pats, curr_opts)
+    if len(match.files()) != 1:
+        return None
+
+    curr_path = match.files()[0]
+    subtree_import = subtreeutil.find_subtree_import(
+        curr_repo, lastctx.node(), curr_path
+    )
+    if not subtree_import:
+        return None
+
+    from_url, from_commit, from_path = subtree_import
+    # XXX: currently only support import from git repo
+    git_url = git.maybegiturl(from_url)
+    if not git_url:
+        return None
+
+    with curr_repo.ui.configoverride({("ui", "quiet"): True}):
+        from_repo = subtreeutil.get_or_clone_git_repo(
+            curr_repo.ui, git_url, from_commit
+        )
+    return from_repo, from_commit, from_path
 
 
 def _dolog(ui, repo, pats, opts):
@@ -4085,9 +4126,12 @@ def _dolog(ui, repo, pats, opts):
         subdag = cl.dag.subdag(cl.tonodes(revs))
         ui.debug("commands.log(): finished computing subdag\n")
     ctxstream = revs.prefetchbysymbols(symbols).iterctx()
+
+    lastctx = None
     for ctx in ctxstream:
         if count == limit:
             break
+        lastctx = ctx
         rev = ctx.rev()
         copies = None
         if getrenamed is not None:
@@ -4115,6 +4159,7 @@ def _dolog(ui, repo, pats, opts):
             count += 1
 
     displayer.close()
+    return lastctx
 
 
 @command(
