@@ -83,7 +83,7 @@ pub struct ChangesSinceCmd {
         long,
         help = "If any of the listed states are asserted, wait for them to be deasserted before getting changes"
     )]
-    states: Vec<String>,
+    deferred_states: Vec<String>,
 
     #[clap(long, help = "Print the output in JSON format")]
     json: bool,
@@ -166,7 +166,7 @@ impl crate::Subcommand for ChangesSinceCmd {
                 &self.excluded_roots,
                 &self.excluded_suffixes,
                 self.include_vcs_roots,
-                !self.states.is_empty(),
+                !self.deferred_states.is_empty(),
             )
             .await?;
 
@@ -184,14 +184,14 @@ impl crate::Subcommand for ChangesSinceCmd {
                     &self.excluded_roots,
                     &self.excluded_suffixes,
                     self.include_vcs_roots,
-                    !self.states.is_empty(),
+                    !self.deferred_states.is_empty(),
                 )
                 .await?;
-            if !self.states.is_empty() {
+            if !self.deferred_states.is_empty() {
                 let stream_client =
                     get_streaming_changes_client(&get_mount_point(&self.mount_point)?, &client)?;
                 let wrapped_stream = stream_client
-                    .stream_changes_since_with_deferral(stream, &self.states, None)
+                    .stream_changes_since_with_deferral(stream, &self.deferred_states, None)
                     .await?;
                 wrapped_stream
                     .for_each(|result| async {

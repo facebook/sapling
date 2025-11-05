@@ -73,7 +73,7 @@ class NotifyTest(testcase.EdenRepoTest):
             self.mount,
         ]
         for state in states:
-            args.append("--states")
+            args.append("--deferred-states")
             args.append(state)
         cmd, env = self.eden.get_edenfsctl_cmd_env(*args)
         env["EDENFS_LOG"] = "edenfs=trace"
