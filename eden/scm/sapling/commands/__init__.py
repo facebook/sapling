@@ -4044,9 +4044,13 @@ def log(ui, repo, *pats, **opts):
             raise error.Abort(_("graph not supported with line range patterns"))
         return cmdutil.graphlog(ui, repo, pats, opts)
 
+    count = 0
     curr_repo, curr_pats, curr_opts = repo, pats, opts
     while True:
-        lastctx = _dolog(ui, curr_repo, curr_pats, curr_opts)
+        lastctx, count = _dolog(ui, curr_repo, curr_pats, curr_opts, count)
+        if not lastctx:
+            break
+
         xrepoinfo = _getxrepoinfo(curr_repo, curr_pats, curr_opts, lastctx)
         if not xrepoinfo:
             break
@@ -4087,7 +4091,7 @@ def _getxrepoinfo(curr_repo, curr_pats, curr_opts, lastctx):
     return from_repo, from_commit, from_path
 
 
-def _dolog(ui, repo, pats, opts):
+def _dolog(ui, repo, pats, opts, count):
     revs, expr, filematcher = cmdutil.getlogrevs(repo, pats, opts)
     hunksfilter = None
 
@@ -4106,7 +4110,6 @@ def _dolog(ui, repo, pats, opts):
             filematcher = lrfilematcher
 
     limit = cmdutil.loglimit(opts)
-    count = 0
 
     getrenamed = None
     if opts.get("copies"):
@@ -4129,8 +4132,6 @@ def _dolog(ui, repo, pats, opts):
 
     lastctx = None
     for ctx in ctxstream:
-        if count == limit:
-            break
         lastctx = ctx
         rev = ctx.rev()
         copies = None
@@ -4157,9 +4158,12 @@ def _dolog(ui, repo, pats, opts):
         )
         if displayer.flush(ctx):
             count += 1
+            if count == limit:
+                lastctx = None
+                break
 
     displayer.close()
-    return lastctx
+    return lastctx, count
 
 
 @command(
