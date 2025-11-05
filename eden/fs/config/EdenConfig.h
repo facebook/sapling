@@ -1707,8 +1707,8 @@ class EdenConfig : private ConfigSettingManager {
    * written to a special file under .hg folder and will be applied next time
    * when we checkout the repo.
    */
-  ConfigSetting<bool> enableEdensparseMigration{
-      "experimental:enable-edensparse-migration",
+  ConfigSetting<bool> attemptEdensparseMigration{
+      "experimental:attempt-edensparse-migration",
       false,
       this};
 

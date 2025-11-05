@@ -1083,7 +1083,7 @@ def maybe_edensparse_migration(
     """
 
     should_migrate = instance.get_config_bool(
-        "experimental.enable-edensparse-migration", False
+        "experimental.attempt-edensparse-migration", False
     )
 
     if not should_migrate:

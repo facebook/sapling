@@ -190,7 +190,7 @@ adir
             # toggle config
             edenrc = os.path.join(self.home_dir, ".edenrc")
             self.write_configs(
-                {"experimental": ["enable-edensparse-migration = true"]}, edenrc
+                {"experimental": ["attempt-edensparse-migration = true"]}, edenrc
             )
             await client.reloadConfig()
 
