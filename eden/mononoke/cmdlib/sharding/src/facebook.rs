@@ -1218,28 +1218,38 @@ impl ShardedProcessExecutor {
         // Keep running until the terminate signal is received. Once the signal is received,
         // exit.
         terminate_signal_receiver.await?;
-        if let Some(timeout) = quiesce_timeout {
-            let sleep = tokio::time::sleep(timeout);
-            tokio::pin!(sleep);
-            loop {
-                tokio::select! {
-                    _ = &mut sleep => {
-                        info!(logger, "Wait timeout expired evicting...");
-                        STATS::manual_shard_eviction_by_timeout.add_value(1);
-                        break;
-                    }
-                    repo_count = self.handler.repo_map_len() => {
-                        if repo_count == 0 {
-                            info!(logger, "All repos moved, evicting...");
-                            STATS::manual_shard_eviction_by_repomap.add_value(1);
-                            break;
-                        } else {
-                            info!(logger, "repos present count={}, not evicting...", repo_count);
-                            // Sleep a bit before next check to avoid busy loop
-                            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        match self.client.request_failover_and_remove_handler() {
+            Ok(_) => {
+                if let Some(timeout) = quiesce_timeout {
+                    let sleep = tokio::time::sleep(timeout);
+                    tokio::pin!(sleep);
+                    loop {
+                        tokio::select! {
+                            _ = &mut sleep => {
+                                info!(logger, "Wait timeout expired evicting...");
+                                STATS::manual_shard_eviction_by_timeout.add_value(1);
+                                break;
+                            }
+                            repo_count = self.handler.repo_map_len() => {
+                                if repo_count == 0 {
+                                    info!(logger, "All repos moved, evicting...");
+                                    STATS::manual_shard_eviction_by_repomap.add_value(1);
+                                    break;
+                                } else {
+                                    info!(logger, "repos present count={}, not evicting...", repo_count);
+                                    // Sleep a bit before next check to avoid busy loop
+                                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                                }
+                            }
                         }
                     }
                 }
+            }
+            Err(err) => {
+                error!(
+                    logger,
+                    "error while requesting failover from shard manager: {}", err
+                );
             }
         }
 
