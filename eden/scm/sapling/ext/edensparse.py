@@ -67,7 +67,7 @@ Example
 
 """
 
-from sapling import cmdutil, error, extensions, merge as mergemod, registrar
+from sapling import cmdutil, error, extensions, merge as mergemod, registrar, util
 from sapling.i18n import _
 
 from .sparse import (
@@ -129,6 +129,31 @@ def unimpl():
     raise NotImplementedError("eden sparse support is not implemented yet")
 
 
+def promptorwarn(ui) -> None:
+    """Prompt the user to continue or abort a mutative FilteredFS command.
+    Aborts if the user chooses not to continue or if the command is not
+    interactive (unless ui.plain() or test environment is detected).
+    Logs any bypasses that occur."""
+    filter_prompt = (
+        ui.config("sparse", "filter-prompt")
+        or "Manually modifying filters is not recommended."
+    )
+    filter_prompt += " Do you still wish to continue? (yn)?$$ &Yes $$ &No"
+    default = 0 if ui.plain() or util.istest() else 1
+    if ui.promptchoice(_(filter_prompt), default=default) == 0:
+        defaulted = default and ui.interactive()
+        ui.log(
+            "edensparse_prompt",
+            prompt_response="defaulted" if defaulted else "bypassed",
+        )
+        return
+    else:
+        ui.log("edensparse_prompt", prompt_response="aborted")
+        raise error.Abort(
+            _("cancelling as requested"),
+        )
+
+
 @command(
     "filteredfs",
     [],
@@ -179,6 +204,7 @@ def resetsubcmd(ui, repo, **opts) -> None:
     Note: This command does not switch you from a FilteredFS repo to a vanilla
     EdenFS repo. It simply disables all filters and activates the null filter.
     """
+    promptorwarn(ui)
     commonopts = getcommonopts(opts)
     _config(ui, repo, [], opts, reset=True, **commonopts)
 
@@ -191,6 +217,7 @@ def disablefiltersubcmd(ui, repo, *pats, **opts) -> None:
     EdenFS repo. It simply disables the specified filter. If all filters are
     disabled, the null filter is activated.
     """
+    promptorwarn(ui)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, disableprofile=True, **commonopts)
 
@@ -202,6 +229,8 @@ def disablefiltersubcmd(ui, repo, *pats, **opts) -> None:
 )
 def enablefiltersubcmd(ui, repo, *pats, **opts) -> None:
     """enable a filter"""
+    promptorwarn(ui)
+
     # Filters must not contain colons in their path
     # TODO(cuev): Once V1 profiles are used, we can remove this constraint
     if any(":" in pat for pat in pats):
@@ -218,6 +247,7 @@ def switchprofilesubcmd(ui, repo, *pats, **opts) -> None:
 
     Disables all other filters and enables the specified filter(s).
     """
+    promptorwarn(ui)
     _checknonexistingprofiles(ui, repo, pats)
     commonopts = getcommonopts(opts)
     _config(ui, repo, pats, opts, reset=True, enableprofile=True, **commonopts)
