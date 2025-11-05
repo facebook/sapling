@@ -98,6 +98,7 @@ _defaultstyles = {
     "changeset.public": "yellow",
     "changeset.draft": "brightyellow:yellow bold",
     "changeset.secret": "brightyellow:yellow",
+    "changeset.xrepo": "cyan",
     "diffstat.deleted": "red",
     "diffstat.inserted": "green",
     "formatvariant.name.mismatchconfig": "red",

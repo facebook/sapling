@@ -100,3 +100,29 @@ Test log with --limit
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:10 2007 +0000
   summary:     update alpha\nhttps://phabricator.test.com/D1234567
+
+
+Test commit color
+
+  $ hg log bar/alpha --color=debug
+  [log.changeset changeset.draft|commit:      *] (glob)
+  [log.user|user:        test]
+  [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
+  [log.summary|summary:     update bar/alpha]
+  
+  [log.changeset changeset.draft|commit:      *] (glob)
+  [log.user|user:        test]
+  [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
+  [log.summary|summary:     import gitrepo to bar]
+  
+  [log.changeset changeset.public changeset.xrepo|commit:      6a5b13188f04]
+  [log.remotebookmark|bookmark:    remote/main]
+  [log.hoistedname|hoistedname: main]
+  [log.user|user:        test <test@example.org>]
+  [log.date|date:        Mon Jan 01 00:00:10 2007 +0000]
+  [log.summary|summary:     update alpha\nhttps://phabricator.test.com/D1234567]
+  
+  [log.changeset changeset.public changeset.xrepo|commit:      b6c31add3e60]
+  [log.user|user:        test <test@example.org>]
+  [log.date|date:        Mon Jan 01 00:00:10 2007 +0000]
+  [log.summary|summary:     alpha]

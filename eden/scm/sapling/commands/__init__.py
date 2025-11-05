@@ -4045,9 +4045,10 @@ def log(ui, repo, *pats, **opts):
         return cmdutil.graphlog(ui, repo, pats, opts)
 
     count = 0
+    xreponame = None
     curr_repo, curr_pats, curr_opts = repo, pats, opts
     while True:
-        lastctx, count = _dolog(ui, curr_repo, curr_pats, curr_opts, count)
+        lastctx, count = _dolog(ui, curr_repo, curr_pats, curr_opts, count, xreponame)
         if not lastctx:
             break
 
@@ -4056,6 +4057,8 @@ def log(ui, repo, *pats, **opts):
             break
 
         from_repo, from_commit, from_path = xrepoinfo
+        xreponame = from_repo.ui.config("remotefilelog", "reponame", "unknown")
+
         curr_repo = from_repo
         curr_pats = [os.path.join(from_repo.root, from_path)]
         curr_opts = curr_opts.copy()
@@ -4091,7 +4094,7 @@ def _getxrepoinfo(curr_repo, curr_pats, curr_opts, lastctx):
     return from_repo, from_commit, from_path
 
 
-def _dolog(ui, repo, pats, opts, count):
+def _dolog(ui, repo, pats, opts, count, xreponame):
     revs, expr, filematcher = cmdutil.getlogrevs(repo, pats, opts)
     hunksfilter = None
 
@@ -4149,7 +4152,7 @@ def _dolog(ui, repo, pats, opts, count):
             revhunksfilter = hunksfilter(rev)
         else:
             revhunksfilter = None
-        revcache = {"copies": copies, "subdag": subdag}
+        revcache = {"copies": copies, "subdag": subdag, "xreponame": xreponame}
         displayer.show(
             ctx,
             revcache=revcache,

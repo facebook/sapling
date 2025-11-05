@@ -1993,10 +1993,12 @@ def diffordiffstat(
             write(chunk, label=label)
 
 
-def _changesetlabels(ctx):
+def _changesetlabels(ctx, isxrepo=False):
     labels = ["log.changeset", "changeset.%s" % ctx.phasestr()]
     if ctx.obsolete():
         labels.append("changeset.obsolete")
+    if isxrepo:
+        labels.append("changeset.xrepo")
     return " ".join(labels)
 
 
@@ -2059,10 +2061,11 @@ class changeset_printer:
             return
 
         columns = self._columns
+        isxrepo = bool(revcache.get("xreponame"))
         if changenode:
             self.ui.write(
                 columns["changeset"] % scmutil.formatchangeid(ctx),
-                label=_changesetlabels(ctx),
+                label=_changesetlabels(ctx, isxrepo),
             )
 
         for nsname, ns in self.repo.names.items():
