@@ -41,6 +41,7 @@ pub enum UseCaseId {
     IslServerNode,
     MeerkatCli,
     NodeClient,
+    ReloadCoordinator,
     ScmEdenContainer,
     RedirectFfi,
     #[strum(serialize = "testifyd")]
