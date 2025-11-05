@@ -1502,74 +1502,23 @@ impl RepoFactory {
 
     pub async fn repo_derivation_queues(
         &self,
-        repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-        commit_graph: &ArcCommitGraph,
-        bonsai_hg_mapping: &ArcBonsaiHgMapping,
-        bonsai_git_mapping: &ArcBonsaiGitMapping,
-        filenodes: &ArcFilenodes,
-        repo_blobstore: &ArcRepoBlobstore,
-        filestore_config: &FilestoreConfig,
-        restricted_paths: &ArcRestrictedPaths,
+        repo_derived_data: &ArcRepoDerivedData,
     ) -> Result<ArcRepoDerivationQueues> {
         #[cfg(not(fbcode_build))]
         {
-            let _ = (
-                repo_identity,
-                repo_config,
-                commit_graph,
-                bonsai_hg_mapping,
-                bonsai_git_mapping,
-                repo_blobstore,
-                filestore_config,
-                filenodes,
-                restricted_paths,
-            );
+            let _ = repo_derived_data;
             anyhow::bail!("RepoDerivationQueues is not supported in non-fbcode builds")
         }
         #[cfg(fbcode_build)]
         {
-            let config = repo_config.derived_data_config.clone();
-            let lease = self.lease(DERIVED_DATA_LEASE)?;
-            let derived_data_scuba = build_scuba(
-                self.env.fb,
-                config.scuba_table.clone(),
-                repo_identity.name(),
-            )?;
             let zelos_config = repo_config.zelos_config.as_ref().ok_or_else(|| {
                 anyhow!("Missing zelos config while trying to construct repo_derivation_queues")
             })?;
             let zelos_client = self.zelos_client(zelos_config).await?;
 
-            let scuba_table = repo_config
-                .derived_data_config
-                .derivation_queue_scuba_table
-                .as_deref();
-            let scuba = match scuba_table {
-                Some(scuba_table) => MononokeScubaSampleBuilder::new(self.env.fb, scuba_table)
-                    .with_context(|| "Couldn't create derivation queue scuba sample builder")?,
-                None => MononokeScubaSampleBuilder::with_discard(),
-            };
-
             anyhow::Ok(Arc::new(
-                zelos_derivation_queues(
-                    repo_identity.id(),
-                    repo_identity.name().to_string(),
-                    scuba,
-                    commit_graph.clone(),
-                    bonsai_hg_mapping.clone(),
-                    bonsai_git_mapping.clone(),
-                    filenodes.clone(),
-                    repo_blobstore.as_ref().clone(),
-                    repo_config.clone(),
-                    *filestore_config,
-                    lease,
-                    derived_data_scuba,
-                    config,
-                    zelos_client,
-                    restricted_paths.clone(),
-                )
-                .await?,
+                zelos_derivation_queues(repo_derived_data.clone(), zelos_client).await?,
             ))
         }
     }
