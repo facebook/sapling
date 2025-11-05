@@ -510,7 +510,7 @@ def intrev(ctx):
     return rev
 
 
-def formatchangeid(ctx):
+def formatchangeid(ctx, isxrepo=False):
     """Format changectx as '{node|formatnode}', which is the default
     template provided by cmdutil.changeset_templater
     """
@@ -520,7 +520,8 @@ def formatchangeid(ctx):
         hexfunc = hex
     else:
         hexfunc = short
-    return hexfunc(binnode(ctx))
+    suffix = "~" if isxrepo else ""
+    return hexfunc(binnode(ctx)) + suffix
 
 
 def revsingle(repo, revspec, default=".", localalias=None):

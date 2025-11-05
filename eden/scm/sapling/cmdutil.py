@@ -2056,15 +2056,17 @@ class changeset_printer:
         changenode = ctx.node()
         rev = ctx.rev()
 
+        isxrepo = bool(revcache.get("xreponame"))
         if self.ui.quiet:
-            self.ui.write("%s\n" % scmutil.formatchangeid(ctx), label="log.node")
+            self.ui.write(
+                "%s\n" % scmutil.formatchangeid(ctx, isxrepo), label="log.node"
+            )
             return
 
         columns = self._columns
-        isxrepo = bool(revcache.get("xreponame"))
         if changenode:
             self.ui.write(
-                columns["changeset"] % scmutil.formatchangeid(ctx),
+                columns["changeset"] % scmutil.formatchangeid(ctx, isxrepo),
                 label=_changesetlabels(ctx, isxrepo),
             )
 
