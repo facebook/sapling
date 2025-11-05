@@ -4043,10 +4043,14 @@ def log(ui, repo, *pats, **opts):
         if linerange:
             raise error.Abort(_("graph not supported with line range patterns"))
         return cmdutil.graphlog(ui, repo, pats, opts)
+    _dolog(ui, repo, pats, opts)
 
+
+def _dolog(ui, repo, pats, opts):
     revs, expr, filematcher = cmdutil.getlogrevs(repo, pats, opts)
     hunksfilter = None
 
+    linerange = opts.get("line_range")
     if linerange:
         revs, lrfilematcher, hunksfilter = cmdutil.getloglinerangerevs(repo, revs, opts)
 
