@@ -83,6 +83,7 @@ use crate::wireproto_sink::WireprotoSink;
 define_stats! {
     prefix = "mononoke.connection_acceptor";
     http_accepted: timeseries(Sum),
+    open_connections: singleton_counter(),
 }
 
 pub trait MononokeStream: AsyncRead + AsyncWrite + Unpin + Send + Sync + 'static {}
@@ -252,7 +253,8 @@ impl PendingConnection {
     ) {
         let this = self.clone();
 
-        OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
+        let count = OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed) + 1;
+        STATS::open_connections.set_value(this.acceptor.fb, count as i64);
 
         mononoke::spawn_task(async move {
             let logger = &this.acceptor.logger;
@@ -266,7 +268,8 @@ impl PendingConnection {
                 error!(logger, "connection_acceptor error: {:#}", e);
             }
 
-            OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
+            let count = OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed) - 1;
+            STATS::open_connections.set_value(this.acceptor.fb, count as i64);
         });
     }
 }
