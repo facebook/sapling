@@ -115,6 +115,11 @@ export class WatchForChanges {
   };
 
   private async setupDirstateSubscriptions() {
+    // TODO(cqd) add configs for eden watcher
+    await this.setupWatchmanDirstateSubscriptions();
+  }
+
+  private async setupWatchmanDirstateSubscriptions() {
     if (this.repoInfo.type !== 'success') {
       return;
     }
@@ -180,6 +185,11 @@ export class WatchForChanges {
     } catch (err) {
       this.logger.error('failed to setup dirstate subscriptions', err);
     }
+  }
+
+  public async setupSubscriptions() {
+    // TODO(cqd) add configs for eden watcher
+    await this.setupWatchmanSubscriptions();
   }
 
   /**

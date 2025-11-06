@@ -831,7 +831,7 @@ export class Repository {
   ref() {
     this.refcount++;
     if (this.refcount === 1) {
-      this.watchForChanges.setupWatchmanSubscriptions();
+      this.watchForChanges.setupSubscriptions();
     }
   }
   unref() {
