@@ -883,6 +883,39 @@ impl MononokeApp {
         self.open_named_managed_repos(Some(repo_name), None).await
     }
 
+    /// Open a raw blobstore based only on storage name without repo prefix.
+    pub async fn open_raw_blobstore(
+        &self,
+        storage_name: &str,
+        inner_blobstore_id: Option<u64>,
+    ) -> Result<Arc<dyn Blobstore>> {
+        let storage_configs = self.storage_configs();
+        let mut storage_config = storage_configs
+            .storage
+            .get(storage_name)
+            .ok_or_else(|| anyhow!("unknown storage name: {:?}", storage_name))?
+            .clone();
+
+        if let Some(id) = inner_blobstore_id {
+            self.override_blobconfig(&mut storage_config.blobstore, id)?;
+        };
+
+        let blobstore = blobstore_factory::make_blobstore(
+            self.env.fb,
+            storage_config.blobstore,
+            &self.env.mysql_options,
+            self.env.readonly_storage,
+            &self.env.blobstore_options,
+            &self.env.logger,
+            &self.env.config_store,
+            &blobstore_factory::default_scrub_handler(),
+            None,
+        )
+        .await?;
+
+        Ok(blobstore)
+    }
+
     /// Open just the blobstore based on user-provided arguments.
     pub async fn open_blobstore(
         &self,

@@ -56,6 +56,7 @@ mononoke_app::subcommands! {
     mod mutable_counters;
     mod mutable_renames;
     mod phases;
+    mod raw_blobstore;
     mod redaction;
     mod repo_info;
     mod slow_bookmark_mover;
