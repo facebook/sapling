@@ -1162,7 +1162,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             && justknobs::eval(
                 "scm/mononoke:create_changeset_stack_noop_file_changes_check",
                 None,
-                None,
+                Some(self.name()),
             )?
         {
             // When to build another stack of PathTrees that contains the content_id for each file change
