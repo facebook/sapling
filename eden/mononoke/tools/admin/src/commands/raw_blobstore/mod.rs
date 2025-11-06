@@ -6,6 +6,7 @@
  */
 
 mod fetch;
+mod upload;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -14,6 +15,7 @@ use clap::Subcommand;
 use mononoke_app::MononokeApp;
 
 use self::fetch::RawBlobstoreFetchArgs;
+use self::upload::RawBlobstoreUploadArgs;
 
 /// Directly access raw blobstore keys without repo prefix
 #[derive(Parser)]
@@ -34,6 +36,8 @@ pub struct CommandArgs {
 pub enum RawBlobstoreSubcommand {
     /// Fetch a blob from the blobstore (raw version without HgAugmentedManifest rendering)
     Fetch(RawBlobstoreFetchArgs),
+    /// Upload a blob to the blobstore
+    Upload(RawBlobstoreUploadArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -47,6 +51,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     match args.subcommand {
         RawBlobstoreSubcommand::Fetch(fetch_args) => {
             fetch::fetch(&ctx, blobstore.as_ref(), fetch_args).await
+        }
+        RawBlobstoreSubcommand::Upload(upload_args) => {
+            upload::upload(&ctx, blobstore.as_ref(), upload_args).await
         }
     }
 }
