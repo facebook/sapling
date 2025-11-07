@@ -244,6 +244,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok((commits_py.into(), stats_py))
     }
 
+    #[tracing::instrument(skip_all)]
     fn bookmarks_py(
         &self,
         py: Python,
@@ -264,6 +265,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(bookmarks)
     }
 
+    #[tracing::instrument(skip_all)]
     fn set_bookmark_py(
         &self,
         py: Python,
@@ -285,6 +287,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(response))
     }
 
+    #[tracing::instrument(skip_all)]
     fn land_stack_py(
         &self,
         py: Python,
@@ -306,6 +309,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(response))
     }
 
+    #[tracing::instrument(skip_all)]
     fn hash_lookup_py(
         &self,
         py: Python,
@@ -318,6 +322,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(items))
     }
 
+    #[tracing::instrument(skip_all)]
     fn commit_location_to_hash_py(
         &self,
         py: Python,
@@ -338,6 +343,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn commit_hash_to_location_py(
         &self,
         py: Python,
@@ -354,6 +360,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn commit_known_py(
         &self,
         py: Python,
@@ -366,6 +373,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn commit_graph_py(
         &self,
         py: Python,
@@ -380,6 +388,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn commit_graph_segments_py(
         &self,
         py: Python,
@@ -394,6 +403,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn lookup_file_contents(
         &self,
         py: Python,
@@ -409,6 +419,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         )
     }
 
+    #[tracing::instrument(skip_all)]
     fn lookup_commits(
         &self,
         py: Python,
@@ -417,6 +428,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         self.lookup_py(py, nodes.into_iter().map(AnyId::HgChangesetId).collect())
     }
 
+    #[tracing::instrument(skip_all)]
     fn lookup_filenodes(
         &self,
         py: Python,
@@ -425,6 +437,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         self.lookup_py(py, ids.into_iter().map(AnyId::HgFilenodeId).collect())
     }
 
+    #[tracing::instrument(skip_all)]
     fn lookup_trees(
         &self,
         py: Python,
@@ -433,6 +446,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         self.lookup_py(py, ids.into_iter().map(AnyId::HgTreeId).collect())
     }
 
+    #[tracing::instrument(skip_all)]
     fn lookup_filenodes_and_trees(
         &self,
         py: Python,
@@ -669,6 +683,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok((responses_py.into(), stats_py))
     }
 
+    #[tracing::instrument(skip_all)]
     fn altersnapshot_py(
         &self,
         py: Python,
@@ -694,6 +709,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
             .map(|data| PyBytes::new(py, &data))
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_workspace_py(
         &self,
         workspace: String,
@@ -707,6 +723,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_workspaces_py(
         &self,
         prefix: String,
@@ -720,6 +737,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_references_py(
         &self,
         data: Serde<GetReferencesParams>,
@@ -731,6 +749,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
             .map(Serde)
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_update_references_py(
         &self,
         data: Serde<UpdateReferencesParams>,
@@ -743,6 +762,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_smartlog_py(
         &self,
         data: Serde<GetSmartlogParams>,
@@ -755,6 +775,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_share_workspace_py(
         &self,
         data: Serde<CloudShareWorkspaceRequest>,
@@ -767,6 +788,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_update_archive_py(
         &self,
         data: Serde<UpdateArchiveParams>,
@@ -779,6 +801,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_rename_workspace_py(
         &self,
         data: Serde<RenameWorkspaceRequest>,
@@ -791,6 +814,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_smartlog_by_version_py(
         &self,
         data: Serde<GetSmartlogByVersionParams>,
@@ -803,6 +827,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_historical_versions_py(
         &self,
         data: Serde<HistoricalVersionsParams>,
@@ -815,6 +840,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_rollback_workspace_py(
         &self,
         data: Serde<RollbackWorkspaceRequest>,
@@ -827,6 +853,7 @@ pub trait SaplingRemoteApiPyExt: SaplingRemoteApi {
         Ok(Serde(responses))
     }
 
+    #[tracing::instrument(skip_all)]
     fn cloud_other_repo_workspaces_py(
         &self,
         workspace: String,
