@@ -102,6 +102,7 @@ Examine some of the data
       ),
   }
 
+
 Test --blobstore-scrub-action works
   $ ls $TESTTMP/blobstore/1/blobs | wc -l
   34
@@ -115,13 +116,14 @@ Test --blobstore-scrub-action works
 
   $ ls $TESTTMP/blobstore/1/blobs | wc -l
   34
-  $ mononoke_admin blobstore --storage-name blobstore fetch repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
-  Key: repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
+  $ mononoke_admin blobstore -R repo fetch content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
+  Key: content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
   Ctime: * (glob)
   Size: 21
   
   00000000: 7465737420636f6e74656e7420aa2065  test content . e
   00000010: 6e64                              nd
+
 
   $ mononoke_admin blobstore-unlink -R repo repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8
   Unlinking key repo0000.content.blake2.6e07d9ecc025ae219c0ed4dead08757d8962ca7532daf5d89484cadc5aae99d8 successfully in one underlying blobstore

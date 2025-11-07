@@ -922,15 +922,14 @@ impl MononokeApp {
         repo_blobstore_args: &RepoBlobstoreArgs,
     ) -> Result<Arc<dyn KeyedBlobstore>> {
         let repo_configs = self.repo_configs();
-        let storage_configs = self.storage_configs();
-        let (mut repo_id, mut redaction, mut storage_config) =
+        let (repo_id, mut redaction, mut storage_config) =
             if let Some(repo_id) = repo_blobstore_args.repo_id {
                 let repo_id = RepositoryId::new(repo_id);
                 let (_repo_name, repo_config) = repo_configs
                     .get_repo_config(repo_id)
                     .ok_or_else(|| anyhow!("unknown repoid: {:?}", repo_id))?;
                 (
-                    Some(repo_id),
+                    repo_id,
                     repo_config.redaction,
                     repo_config.storage_config.clone(),
                 )
@@ -940,27 +939,17 @@ impl MononokeApp {
                     .get(repo_name)
                     .ok_or_else(|| anyhow!("unknown reponame: {:?}", repo_name))?;
                 (
-                    Some(repo_config.repoid),
+                    repo_config.repoid,
                     repo_config.redaction,
                     repo_config.storage_config.clone(),
                 )
-            } else if let Some(storage_name) = &repo_blobstore_args.storage_name {
-                let storage_config = storage_configs
-                    .storage
-                    .get(storage_name)
-                    .ok_or_else(|| anyhow!("unknown storage name: {:?}", storage_name))?;
-                (None, Redaction::Enabled, storage_config.clone())
             } else {
-                return Err(anyhow!("Expected a storage argument"));
+                return Err(anyhow!("Expected either repo_id or repo_name"));
             };
 
         if let Some(id) = repo_blobstore_args.inner_blobstore_id {
             self.override_blobconfig(&mut storage_config.blobstore, id)?;
         };
-
-        if repo_blobstore_args.no_prefix {
-            repo_id = None;
-        }
 
         let blobstore = blobstore_factory::make_blobstore(
             self.env.fb,
@@ -996,15 +985,9 @@ impl MononokeApp {
         let redacted_blobstore_config =
             RedactedBlobstoreConfig::new(redacted_blobs, self.redaction_scuba_builder()?);
 
-        let prefix = if let Some(repo_id) = repo_id {
-            repo_id.prefix()
-        } else {
-            String::new()
-        };
-
         Ok(Arc::new(RepoBlobstore::build(
             blobstore,
-            prefix,
+            repo_id.prefix(),
             redacted_blobstore_config,
         )))
     }

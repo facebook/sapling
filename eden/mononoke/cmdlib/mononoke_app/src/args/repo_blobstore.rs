@@ -9,12 +9,11 @@ use clap::ArgGroup;
 use clap::Args;
 use clap::ValueEnum;
 
-/// Command line arguments for specifying a blobstore, either by
-/// repo, or by storage name.
+/// Command line arguments for specifying a repo, the blobstore used will match the one in the repo config
 #[derive(Args, Debug)]
 #[clap(group(
     ArgGroup::new("repo_blobstore")
-        .args(&["repo_id", "repo_name", "storage_name"]),
+        .args(&["repo_id", "repo_name"]),
 ))]
 pub struct RepoBlobstoreArgs {
     /// Numeric repository ID
@@ -25,10 +24,6 @@ pub struct RepoBlobstoreArgs {
     #[clap(short = 'R', long)]
     pub repo_name: Option<String>,
 
-    /// Storage name
-    #[clap(long)]
-    pub storage_name: Option<String>,
-
     /// If the blobstore is multiplexed, use this inner blobstore
     #[clap(long)]
     pub inner_blobstore_id: Option<u64>,
@@ -36,10 +31,6 @@ pub struct RepoBlobstoreArgs {
     /// Use memcache to cache access to the blobstore
     #[clap(long, value_enum)]
     pub use_memcache: Option<UseMemcache>,
-
-    /// Don't prepend the repo prefix to the key
-    #[clap(long)]
-    pub no_prefix: bool,
 
     /// Bypass redaction when opening this blobstore
     #[clap(long)]
