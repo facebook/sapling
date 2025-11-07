@@ -9,7 +9,9 @@ rust_library(
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
-    ],
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:percent-encoding",
+    ]),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
