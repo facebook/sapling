@@ -15,6 +15,7 @@
 #include <string_view>
 #include <utility>
 
+#include "SaplingBackingStoreError.h"
 #include "eden/common/utils/CaseSensitivity.h"
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/HgObjectIdFormat.h"
@@ -88,25 +89,25 @@ struct GetFileAuxBatchResolver {
 void sapling_backingstore_get_tree_batch_handler(
     std::shared_ptr<GetTreeBatchResolver> resolver,
     size_t index,
-    rust::String error,
+    std::unique_ptr<SaplingBackingStoreError> error,
     std::unique_ptr<TreeBuilder> builder);
 
 void sapling_backingstore_get_tree_aux_batch_handler(
     std::shared_ptr<GetTreeAuxBatchResolver> resolver,
     size_t index,
-    rust::String error,
+    std::unique_ptr<SaplingBackingStoreError> error,
     std::shared_ptr<TreeAuxData> aux);
 
 void sapling_backingstore_get_blob_batch_handler(
     std::shared_ptr<GetBlobBatchResolver> resolver,
     size_t index,
-    rust::String error,
+    std::unique_ptr<SaplingBackingStoreError> error,
     std::unique_ptr<folly::IOBuf> blob);
 
 void sapling_backingstore_get_file_aux_batch_handler(
     std::shared_ptr<GetFileAuxBatchResolver> resolver,
     size_t index,
-    rust::String error,
+    std::unique_ptr<SaplingBackingStoreError> error,
     std::shared_ptr<FileAuxData> aux);
 
 // Helper so that Rust can construct an eden Tree "natively" with no

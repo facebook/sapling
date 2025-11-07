@@ -10,7 +10,6 @@
 #include <memory>
 
 #include "eden/fs/model/Tree.h"
-#include "eden/scm/lib/backingstore/include/SaplingBackingStoreError.h"
 #include "eden/scm/lib/backingstore/include/ffi.h"
 #include "eden/scm/lib/backingstore/src/ffi.rs.h" // @manual
 
@@ -19,13 +18,13 @@ namespace sapling {
 void sapling_backingstore_get_tree_batch_handler(
     std::shared_ptr<GetTreeBatchResolver> resolver,
     size_t index,
-    rust::String error,
+    std::unique_ptr<SaplingBackingStoreError> error,
     std::unique_ptr<TreeBuilder> builder) {
   using ResolveResult = folly::Try<facebook::eden::TreePtr>;
 
   resolver->resolve(
       index, folly::makeTryWith([&] {
-        if (error.empty()) {
+        if (error == nullptr) {
           facebook::eden::TreePtr tree = builder->build();
           if (tree) {
             return ResolveResult{tree};
@@ -33,7 +32,7 @@ void sapling_backingstore_get_tree_batch_handler(
             return ResolveResult{SaplingBackingStoreError{"no tree found"}};
           }
         } else {
-          return ResolveResult{SaplingBackingStoreError{std::string(error)}};
+          return ResolveResult{std::move(*error)};
         }
       }));
 }
@@ -41,24 +40,23 @@ void sapling_backingstore_get_tree_batch_handler(
 void sapling_backingstore_get_tree_aux_batch_handler(
     std::shared_ptr<GetTreeAuxBatchResolver> resolver,
     size_t index,
-    rust::String error,
+    std::unique_ptr<SaplingBackingStoreError> error,
     std::shared_ptr<TreeAuxData> aux) {
   using ResolveResult = folly::Try<std::shared_ptr<TreeAuxData>>;
 
-  resolver->resolve(
-      index, folly::makeTryWith([&] {
-        if (error.empty()) {
-          return ResolveResult{aux};
-        } else {
-          return ResolveResult{SaplingBackingStoreError{std::string(error)}};
-        }
-      }));
+  resolver->resolve(index, folly::makeTryWith([&] {
+                      if (error == nullptr) {
+                        return ResolveResult{aux};
+                      } else {
+                        return ResolveResult{std::move(*error)};
+                      }
+                    }));
 }
 
 void sapling_backingstore_get_blob_batch_handler(
     std::shared_ptr<GetBlobBatchResolver> resolver,
     size_t index,
-    rust::String error,
+    std::unique_ptr<SaplingBackingStoreError> error,
     std::unique_ptr<folly::IOBuf> blob) {
   using ResolveResult = folly::Try<std::unique_ptr<folly::IOBuf>>;
 
@@ -66,11 +64,10 @@ void sapling_backingstore_get_blob_batch_handler(
       index,
       folly::makeTryWith(
           [blob = std::move(blob), error = std::move(error)]() mutable {
-            if (error.empty()) {
+            if (error == nullptr) {
               return ResolveResult{std::move(blob)};
             } else {
-              return ResolveResult{
-                  SaplingBackingStoreError{std::string(std::move(error))}};
+              return ResolveResult{std::move(*error)};
             }
           }));
 }
@@ -78,18 +75,17 @@ void sapling_backingstore_get_blob_batch_handler(
 void sapling_backingstore_get_file_aux_batch_handler(
     std::shared_ptr<GetFileAuxBatchResolver> resolver,
     size_t index,
-    rust::String error,
+    std::unique_ptr<SaplingBackingStoreError> error,
     std::shared_ptr<FileAuxData> aux) {
   using ResolveResult = folly::Try<std::shared_ptr<FileAuxData>>;
 
-  resolver->resolve(
-      index, folly::makeTryWith([&] {
-        if (error.empty()) {
-          return ResolveResult{aux};
-        } else {
-          return ResolveResult{SaplingBackingStoreError{std::string(error)}};
-        }
-      }));
+  resolver->resolve(index, folly::makeTryWith([&] {
+                      if (error == nullptr) {
+                        return ResolveResult{aux};
+                      } else {
+                        return ResolveResult{std::move(*error)};
+                      }
+                    }));
 }
 
 void TreeBuilder::add_entry(

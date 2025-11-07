@@ -32,6 +32,7 @@ use types::fetch_cause::FetchCause;
 use types::fetch_mode::FetchMode;
 
 use crate::backingstore::BackingStore;
+use crate::ffi_errors::into_backingstore_err;
 
 #[cxx::bridge(namespace = sapling)]
 pub(crate) mod ffi {
@@ -169,28 +170,28 @@ pub(crate) mod ffi {
         unsafe fn sapling_backingstore_get_tree_batch_handler(
             resolve_state: SharedPtr<GetTreeBatchResolver>,
             index: usize,
-            error: String,
+            error: UniquePtr<SaplingBackingStoreError>,
             builder: UniquePtr<TreeBuilder>,
         );
 
         unsafe fn sapling_backingstore_get_tree_aux_batch_handler(
             resolve_state: SharedPtr<GetTreeAuxBatchResolver>,
             index: usize,
-            error: String,
+            error: UniquePtr<SaplingBackingStoreError>,
             tree: SharedPtr<TreeAuxData>,
         );
 
         unsafe fn sapling_backingstore_get_blob_batch_handler(
             resolve_state: SharedPtr<GetBlobBatchResolver>,
             index: usize,
-            error: String,
+            error: UniquePtr<SaplingBackingStoreError>,
             blob: UniquePtr<IOBuf>,
         );
 
         unsafe fn sapling_backingstore_get_file_aux_batch_handler(
             resolve_state: SharedPtr<GetFileAuxBatchResolver>,
             index: usize,
-            error: String,
+            error: UniquePtr<SaplingBackingStoreError>,
             blob: SharedPtr<FileAuxData>,
         );
     }
@@ -528,21 +529,21 @@ pub fn sapling_backingstore_get_tree_batch(
             let error = match result {
                 Ok(Some(sl_tree)) => {
                     if let Err(err) = add_tree_to_builder(builder.pin_mut(), sl_tree) {
-                        format!("{err:?}")
+                        into_backingstore_err(err)
                     } else {
-                        String::default()
+                        UniquePtr::null()
                     }
                 }
                 Ok(None) => {
                     builder.pin_mut().mark_missing();
-                    String::default()
+                    UniquePtr::null()
                 }
-                Err(err) => format!("{err:?}"),
+                Err(err) => into_backingstore_err(err),
             };
 
             let resolver = resolver.clone();
 
-            if req.cause != ffi::FetchCause::Prefetch && !req.path.is_empty() && error.is_empty() {
+            if req.cause != ffi::FetchCause::Prefetch && !req.path.is_empty() && error.is_null() {
                 sapling_backingstore_witness_dir_read(
                     store,
                     req.path,
@@ -591,8 +592,8 @@ pub fn sapling_backingstore_get_tree_aux_batch(
             let result = result.and_then(|opt| opt.ok_or_else(|| Error::msg("no aux data found")));
             let resolver = resolver.clone();
             let (error, aux) = match result {
-                Ok(aux) => (String::default(), SharedPtr::new(aux.into())),
-                Err(error) => (format!("{:?}", error), SharedPtr::null()),
+                Ok(aux) => (UniquePtr::null(), SharedPtr::new(aux.into())),
+                Err(error) => (into_backingstore_err(error), SharedPtr::null()),
             };
             unsafe {
                 ffi::sapling_backingstore_get_tree_aux_batch_handler(resolver, idx, error, aux)
@@ -645,15 +646,18 @@ pub fn sapling_backingstore_get_blob_batch(
                         None => {
                             if fetch_mode.ignore_result() {
                                 // ignore_result means data is not propagated - allow nullptr in this case.
-                                (String::default(), UniquePtr::null())
+                                (UniquePtr::null(), UniquePtr::null())
                             } else {
-                                ("no blob found".to_string(), UniquePtr::null())
+                                (
+                                    into_backingstore_err(anyhow!("no blob found")),
+                                    UniquePtr::null(),
+                                )
                             }
                         }
-                        Some(blob) => (String::default(), blob.into_iobuf().into()),
+                        Some(blob) => (UniquePtr::null(), blob.into_iobuf().into()),
                     }
                 }
-                Err(error) => (format!("{:?}", error), UniquePtr::null()),
+                Err(error) => (into_backingstore_err(error), UniquePtr::null()),
             };
             unsafe { ffi::sapling_backingstore_get_blob_batch_handler(resolver, idx, error, blob) };
         },
@@ -692,8 +696,8 @@ pub fn sapling_backingstore_get_file_aux_batch(
                 result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));
             let resolver = resolver.clone();
             let (error, aux) = match result {
-                Ok(aux) => (String::default(), SharedPtr::new(aux.into())),
-                Err(error) => (format!("{:?}", error), SharedPtr::null()),
+                Ok(aux) => (UniquePtr::null(), SharedPtr::new(aux.into())),
+                Err(error) => (into_backingstore_err(error), SharedPtr::null()),
             };
             unsafe {
                 ffi::sapling_backingstore_get_file_aux_batch_handler(resolver, idx, error, aux)
