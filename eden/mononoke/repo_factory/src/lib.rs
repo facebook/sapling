@@ -1458,7 +1458,9 @@ impl RepoFactory {
         let ctx = self.ctx(Some(repo_identity)).clone();
         let restricted_paths_config = repo_config.restricted_paths_config.clone();
 
-        let manifest_id_cache = if restricted_paths_config.use_manifest_id_cache {
+        let manifest_id_cache = if !restricted_paths_config.is_empty()
+            && restricted_paths_config.use_manifest_id_cache
+        {
             // Build the manifest id cache with the specified refresh interval
             let cache = RestrictedPathsManifestIdCacheBuilder::new(
                 ctx.clone(),

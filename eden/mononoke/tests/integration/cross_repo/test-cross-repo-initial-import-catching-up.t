@@ -38,8 +38,6 @@ Create small repo commits
   > initial-import --no-progress-bar --derivation-batch-size 2 -i "$B" --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | \
   > rg -v "nitializ" | rg -v "derive" | rg -v "Upload" | tee $TESTTMP/initial_import.out
   [INFO] Starting session with id * (glob)
-  [DEBUG] Starting restricted paths cache updater
-  [DEBUG] Starting restricted paths cache updater
   [INFO] Starting up X Repo Sync from small repo small_repo to large repo large_repo
   [INFO] Checking if 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 is already synced 11->10
   [INFO] Syncing 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 for initial import
@@ -57,8 +55,6 @@ Create small repo commits
   [INFO] changeset 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3 synced as 85776cdc88303208a1cde5c614996a89441d3a9175a6311dda34d178428ba652 * (glob)
   [INFO] successful sync of head 2999dcf517994fe94506b62e5a9c54f851abd4c4964f98fdd701c013abd9c0c3
   [INFO] X Repo Sync execution finished from small repo small_repo to large repo large_repo
-  [DEBUG] [Restricted paths manifest id cache updater] Stopped restricted paths cache updater
-  [DEBUG] [Restricted paths manifest id cache updater] Stopped restricted paths cache updater
 
 
   $ SYNCED_HEAD=$(rg ".+synced as (\w+) .+" -or '$1' "$TESTTMP/initial_import.out")
@@ -109,8 +105,6 @@ Add more commits to small repo
   > initial-import --no-progress-bar --derivation-batch-size 2 -i "$D" --version-name "$LATEST_CONFIG_VERSION_NAME" 2>&1 | \
   > rg -v "nitializ" | rg -v "derive" | rg -v "Upload"
   [INFO] Starting session with id * (glob)
-  [DEBUG] Starting restricted paths cache updater
-  [DEBUG] Starting restricted paths cache updater
   [INFO] Starting up X Repo Sync from small repo small_repo to large repo large_repo
   [INFO] Checking if d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a is already synced 11->10
   [INFO] Syncing d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a for initial import
@@ -129,8 +123,6 @@ Add more commits to small repo
   [INFO] changeset d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a synced as ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b in * (glob)
   [INFO] successful sync of head d2ba11302a912b679610fd60d7e56dd8f01372c130faa3ae72816d5568b25f3a
   [INFO] X Repo Sync execution finished from small repo small_repo to large repo large_repo
-  [DEBUG] [Restricted paths manifest id cache updater] Stopped restricted paths cache updater
-  [DEBUG] [Restricted paths manifest id cache updater] Stopped restricted paths cache updater
 
 
   $ clone_and_log_large_repo "ccfdf094e4710a77de7b36c4324fa7ee64dafba4067726e383db62273553466b"
