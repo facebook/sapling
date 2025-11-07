@@ -2539,7 +2539,7 @@ void EdenServiceHandler::sync_changesSinceV2(
                     "Entered notifications state {}",
                     current.path1.stem().asString());
                 stateEntered.name() = current.path1.stem().asString();
-                stateChange.stateEntered_ref() = std::move(stateEntered);
+                stateChange.stateEntered() = std::move(stateEntered);
               } else if (!info.existedAfter) {
                 StateLeft stateLeft;
                 XLOGF(
@@ -2547,7 +2547,7 @@ void EdenServiceHandler::sync_changesSinceV2(
                     "Left notifications state {}",
                     current.path1.stem().asString());
                 stateLeft.name() = current.path1.stem().asString();
-                stateChange.stateLeft_ref() = std::move(stateLeft);
+                stateChange.stateLeft() = std::move(stateLeft);
               } else {
                 // Modified state file happens on linux platforms immediately
                 // after creation. Ignore it, since it doesn't change the state
@@ -2561,8 +2561,8 @@ void EdenServiceHandler::sync_changesSinceV2(
             if (includeStateChanges) {
               StateChangeNotification stateChangeCopy =
                   StateChangeNotification(stateChange);
-              change.stateChange_ref() = std::move(stateChange);
-              result.changes_ref()->push_back(std::move(change));
+              change.stateChange() = std::move(stateChange);
+              result.changes()->push_back(std::move(change));
               numStateChanges += 1;
             }
             // Return value = Should continue
@@ -4966,7 +4966,7 @@ EdenServiceHandler::co_cancelRequests(
     if (requestCancellation(requestId)) {
       CancellationStatus success;
       success.requestId() = requestId;
-      result.success_ref() = std::move(success);
+      result.success() = std::move(success);
       XLOGF(DBG3, "Successfully cancelled request {}", requestId);
     } else {
       EdenError error;
@@ -5000,7 +5000,7 @@ EdenServiceHandler::co_cancelRequests(
         XLOGF(DBG3, "Request {} not found", requestId);
       }
 
-      result.error_ref() = std::move(error);
+      result.error() = std::move(error);
     }
 
     response->results()->push_back(std::move(result));
