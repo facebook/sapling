@@ -28,7 +28,6 @@ cpp_library(
     headers = glob(["include/**/*.h"]),
     undefined_symbols = True,
     deps = [
-        ":sapling_backingstore_error",
         "//folly:try",
         "//folly/io:iobuf",
     ],
