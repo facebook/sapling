@@ -260,19 +260,19 @@ class lock:
     def _getlockname(self):
         return "%s:%s" % (lockinfo.getcurrentnamespace(), self.pid)
 
-    @perftrace.tracefunc("lock")
     def lock(self):
-        # wrapper around locking to show spinner
-        if self.showspinner and self.ui:
-            if self.spinnermsg:
-                msg = self.spinnermsg
+        with perftrace.trace(f"Acquiring Lock: {self.f}"):
+            # wrapper around locking to show spinner
+            if self.showspinner and self.ui:
+                if self.spinnermsg:
+                    msg = self.spinnermsg
+                else:
+                    msg = _("waiting for the lock to be released")
+                spinner = progress.spinner(self.ui, msg)
             else:
-                msg = _("waiting for the lock to be released")
-            spinner = progress.spinner(self.ui, msg)
-        else:
-            spinner = util.nullcontextmanager()
-        with spinner:
-            return self._dolock()
+                spinner = util.nullcontextmanager()
+            with spinner:
+                return self._dolock()
 
     def _dolock(self):
         delay = 0
