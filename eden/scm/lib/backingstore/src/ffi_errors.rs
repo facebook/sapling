@@ -91,8 +91,17 @@ fn extract_lfs_error(err: &LfsFetchError) -> (BackingStoreErrorKind, Option<i32>
     }
 }
 
-fn extract_indexedlog_error(_err: &indexedlog::Error) -> BackingStoreErrorKind {
-    BackingStoreErrorKind::Generic
+fn extract_indexedlog_error(err: &indexedlog::Error) -> BackingStoreErrorKind {
+    /*
+     * err.io_error_kind() is available to get specific IO error kinds, which can enable
+     * more granular categorizations. However, there's no fool-proof conversion from io::ErrorKind
+     * to POSIX errno or Win32 error codes. As this function is written, we don't see
+     * many pure IO errors from inexedlog. We can revisit this when it becomes necessary.
+     */
+    match err.is_corruption() {
+        true => BackingStoreErrorKind::DataCorruption,
+        false => BackingStoreErrorKind::IO,
+    }
 }
 
 /// Translate anyhow errors from the backinstore
