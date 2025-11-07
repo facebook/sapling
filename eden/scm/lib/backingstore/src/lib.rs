@@ -19,6 +19,7 @@
 mod auxdata;
 mod backingstore;
 mod ffi;
+mod ffi_errors;
 mod init;
 mod prefetch;
 mod request;

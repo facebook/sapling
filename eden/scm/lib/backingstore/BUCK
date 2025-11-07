@@ -20,6 +20,7 @@ cpp_library(
     headers = {
         "SaplingBackingStoreError.h": "include/SaplingBackingStoreError.h",
     },
+    exported_deps = ["fbsource//third-party/rust:cxx-core"],
 )
 
 cpp_library(

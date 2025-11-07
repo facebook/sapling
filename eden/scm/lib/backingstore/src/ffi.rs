@@ -125,6 +125,36 @@ pub(crate) mod ffi {
         type HgObjectIdFormat;
     }
 
+    #[derive(Debug)]
+    #[repr(u8)]
+    pub enum BackingStoreErrorKind {
+        Generic,
+        Network,
+        IO,
+        DataCorruption,
+    }
+
+    unsafe extern "C++" {
+        include!("eden/scm/lib/backingstore/include/SaplingBackingStoreError.h");
+
+        type BackingStoreErrorKind;
+    }
+
+    unsafe extern "C++" {
+        type SaplingBackingStoreError;
+
+        fn backingstore_error(
+            msg: &str,
+            kind: BackingStoreErrorKind,
+        ) -> UniquePtr<SaplingBackingStoreError>;
+
+        fn backingstore_error_with_code(
+            msg: &str,
+            kind: BackingStoreErrorKind,
+            code: i32,
+        ) -> UniquePtr<SaplingBackingStoreError>;
+    }
+
     unsafe extern "C++" {
         include!("eden/scm/lib/backingstore/include/ffi.h");
 

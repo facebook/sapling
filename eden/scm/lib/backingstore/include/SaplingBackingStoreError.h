@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <rust/cxx.h>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 
@@ -44,5 +46,14 @@ class SaplingBackingStoreError : public std::runtime_error {
   const BackingStoreErrorKind kind_;
   const std::optional<int32_t> code_;
 };
+
+std::unique_ptr<SaplingBackingStoreError> backingstore_error(
+    rust::Str msg,
+    BackingStoreErrorKind kind);
+
+std::unique_ptr<SaplingBackingStoreError> backingstore_error_with_code(
+    rust::Str msg,
+    BackingStoreErrorKind kind,
+    int32_t code);
 
 } // namespace sapling
