@@ -260,7 +260,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> shouldChunkTakeoverData{
       "core:should-chunk-takeover-data",
-      false,
+      true,
       this};
 
   /**
