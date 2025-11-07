@@ -25,21 +25,21 @@ Setup pushrebase required repo
 Non-pushrebase pushes should be rejected
 
   $ hg push --allow-anon
-  pushing to $TESTTMP/server (glob)
+  pushing to $TESTTMP/server
   searching for changes
   error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   abort: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   [255]
 
   $ hg push -f --allow-anon
-  pushing to $TESTTMP/server (glob)
+  pushing to $TESTTMP/server
   searching for changes
   error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   abort: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   [255]
 
   $ hg push -B master
-  pushing to $TESTTMP/server (glob)
+  pushing to $TESTTMP/server
   searching for changes
   error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   abort: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
@@ -58,7 +58,7 @@ Bookmark pushes should not be affected by the block
 
   $ hg book -r ".^" master -f
   $ hg push -B master
-  pushing to $TESTTMP/server (glob)
+  pushing to $TESTTMP/server
   searching for changes
   no changes found
   updating bookmark master

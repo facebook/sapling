@@ -33,7 +33,7 @@ Clone - check that no bytes were transferred from streaming clone because no tag
   $ hg clone mono:repo repo-streamclone
   Cloning repo into $TESTTMP/repo-streamclone
   fetching changelog
-  2 files to transfer, 0 bytes of data (glob)
+  2 files to transfer, 0 bytes of data
   transferred 0 bytes in * seconds (*) (glob)
   fetching selected remote bookmarks
   Checking out 'master_bookmark'

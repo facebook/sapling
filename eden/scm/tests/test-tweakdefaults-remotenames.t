@@ -48,10 +48,10 @@ Test that hg pull --rebase aborts without --dest
 Implicit rebase destination using tracking bookmark
   $ hg book bm -t remote/two
   $ hg pull --rebase
-  pulling from test:repo_server (glob)
+  pulling from test:repo_server
   rebasing 3de6bbccf693 "foo" (bm)
   $ hg pull --rebase --dest three
-  pulling from test:repo_server (glob)
+  pulling from test:repo_server
   rebasing 54ac787ff1c5 "foo" (bm)
 
 Implicit rebase destination using main bookmark
@@ -66,13 +66,13 @@ Test that hg pull --update aborts without --dest
   (use `hg pull --update --dest <destination>`)
   [255]
   $ hg pull --update --dest one
-  pulling from test:repo_server (glob)
+  pulling from test:repo_server
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   (leaving bookmark bm)
 
 Test that setting a defaultdest allows --update and --rebase to work
   $ hg pull --update --config tweakdefaults.defaultdest=two
-  pulling from test:repo_server (glob)
+  pulling from test:repo_server
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
   o  5413b62180b7 bm
@@ -86,7 +86,7 @@ Test that setting a defaultdest allows --update and --rebase to work
   $ echo d > d
   $ hg commit -qAm d
   $ hg pull --rebase --config tweakdefaults.defaultdest=three
-  pulling from test:repo_server (glob)
+  pulling from test:repo_server
   rebasing 50f3f60b4841 "d"
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
   @  ba0f83735c95
@@ -105,7 +105,7 @@ Test that hg pull --rebase also works with a --tool argument
   $ hg -R ../repo commit -qAm 'remote d'
   $ hg -R ../repo push -r . -q --to three --create
   $ hg pull --rebase --dest three --tool internal:union
-  pulling from test:repo_server (glob)
+  pulling from test:repo_server
   searching for changes
   rebasing ba0f83735c95 "d"
   merging d

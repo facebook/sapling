@@ -35,17 +35,17 @@
   2ed2a3912a0b24502043eae84ee4b279c18b90dd 644   foo
 
   $ hg pull
-  pulling from ssh://user@dummy/test (glob)
+  pulling from ssh://user@dummy/test
 
 Test pull of non-existing 20 character revision specification, making sure plain ascii identifiers
 not are encoded like a node:
 
   $ hg pull -r 'xxxxxxxxxxxxxxxxxxxy'
-  pulling from ssh://user@dummy/test (glob)
+  pulling from ssh://user@dummy/test
   abort: unknown revision 'xxxxxxxxxxxxxxxxxxxy'!
   [255]
   $ hg pull -r 'xxxxxxxxxxxxxxxxxx y'
-  pulling from ssh://user@dummy/test (glob)
+  pulling from ssh://user@dummy/test
   abort: unknown revision 'xxxxxxxxxxxxxxxxxx y'!
   [255]
 

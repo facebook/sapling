@@ -113,7 +113,7 @@ After the change
   $ log -r master_bookmark^::master_bookmark
   @  after config change from small [public;rev=3;6bfa38885cea] remote/master_bookmark
   │
-  o  before config change [public;rev=2;bc6a206054d0] (glob)
+  o  before config change [public;rev=2;bc6a206054d0]
   │
   ~
 

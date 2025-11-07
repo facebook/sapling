@@ -168,7 +168,7 @@ Test non-conflicting deletes
 Test syncing a edit + rename
   $ echo b > dir1/a
   $ hg mv dir1/a dir1/b
-  moving dir1/a to dir1/b (glob)
+  moving dir1/a to dir1/b
   $ hg commit -m "edit and move a to b in dir1"
   mirrored copy 'dir1/a -> dir1/b' to 'dir2/subdir/a -> dir2/subdir/b'
   mirrored remove of 'dir1/a' to 'dir2/subdir/a'

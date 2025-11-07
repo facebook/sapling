@@ -100,7 +100,7 @@
 
   $ echo a >> a/a
   $ hg mv b b.rename
-  moving b/b to b.rename/b (glob)
+  moving b/b to b.rename/b
   $ hg cp c c.copy
   $ hg status -C
   M a/a
@@ -771,7 +771,7 @@
 # is a no-op), works (issue4398)
 
   $ hg revert -a -r .
-  reverting a/a (glob)
+  reverting a/a
   $ hg resolve -m a/a
   (no more unresolved files)
   continue: hg unshelve --continue

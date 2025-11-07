@@ -587,7 +587,7 @@ to avoid race conditions between free port detection and actual usage.
 #  $ HGPORT=`cat $TESTTMP/.port`
 #  $ cat blocks.pid >> $DAEMON_PIDS
 #  $ cat > test-serve-inuse.t <<EOF
-#  >   $ hg serve -R `pwd`/inuse -p \$HGPORT -d --pid-file=hg.pid (glob)
+#  >   $ hg serve -R `pwd`/inuse -p \$HGPORT -d --pid-file=hg.pid
 #  >   $ cat hg.pid >> \$DAEMON_PIDS
 #  > EOF
 #  $ rt test-serve-inuse.t
