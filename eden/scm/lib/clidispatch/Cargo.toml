@@ -14,7 +14,7 @@ name = "clidispatch"
 
 [dependencies]
 anyhow = "1.0.98"
-erased-serde = "0.3.31"
+erased-serde = "0.4.9"
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sapling-blackbox = { version = "0.1.0", path = "../blackbox" }
 sapling-cliparser = { version = "0.1.0", path = "../cliparser" }
