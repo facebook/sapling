@@ -18,7 +18,7 @@ import bindings
 
 from sapling import hgdemandimport as demandimport
 
-from . import error, extensions, util
+from . import error, extensions, perftrace, util
 from .i18n import _
 
 
@@ -237,7 +237,8 @@ def hook(ui, repo, htype, throw: bool = False, skipshell: bool = False, **args) 
     if not hooks:
         return False
 
-    res = runhooks(ui, repo, htype, hooks, throw=throw, **args)
+    with perftrace.trace(f"Hooks: {htype}"):
+        res = runhooks(ui, repo, htype, hooks, throw=throw, **args)
     r = False
     for hname, cmd in hooks:
         r = res[hname][0] or r

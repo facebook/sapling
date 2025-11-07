@@ -140,14 +140,18 @@ def _setuprepo(ui, repo, presetupfuncs=None) -> None:
         f(ui, repo)
     if repo.local():
         perftrace.traceflag("local")
-        for name, module in extensions.extensions(ui):
-            hook = getattr(module, "reposetup", None)
-            if hook:
-                try:
-                    hook(ui, repo)
-                except Exception as e:
-                    ui.write_err("reposetup failed in extension %s: %s\n" % (name, e))
-                    ui.traceback()
+
+        with perftrace.trace("Extension reposetup()"):
+            for name, module in extensions.extensions(ui):
+                hook = getattr(module, "reposetup", None)
+                if hook:
+                    try:
+                        hook(ui, repo)
+                    except Exception as e:
+                        ui.write_err(
+                            "reposetup failed in extension %s: %s\n" % (name, e)
+                        )
+                        ui.traceback()
     else:
         perftrace.traceflag("remote")
         for f in wirepeersetupfuncs:

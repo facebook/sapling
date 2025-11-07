@@ -154,6 +154,7 @@ impl Repo {
         Self::build_with_info(info, pinned_config, config)
     }
 
+    #[tracing::instrument(skip_all)]
     fn build_with_info(
         info: RepoMinimalInfo,
         pinned_config: &[PinnedConfig],

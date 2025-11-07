@@ -57,6 +57,7 @@ from . import (
     mutation,
     namespaces,
     peer,
+    perftrace,
     phases,
     pushkey,
     repository,
@@ -444,6 +445,7 @@ class localrepository:
     # pyre-fixme[20]: Argument `expr` expected.
     _lockfreeprefix = set()
 
+    @perftrace.tracefunc("localrepo.__init__")
     def __init__(
         self,
         baseui,
