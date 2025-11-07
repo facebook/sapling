@@ -246,7 +246,7 @@ def _sync(
                 )
             attempt += 1
 
-            with repo.transaction("cloudsync") as tr:
+            with repo.transaction("cloudsync download") as tr:
                 if besteffort and _hashrepostate(repo, besteffort) != origrepostate:
                     # Another transaction changed the repository while we were backing
                     # up commits. This may have introduced new commits that also need
@@ -283,7 +283,7 @@ def _sync(
 
             # We committed the transaction so that data downloaded from the cloud is
             # committed.  Start a new transaction for uploading the local changes.
-            with repo.transaction("cloudsync") as tr:
+            with repo.transaction("cloudsync upload") as tr:
                 # Send updates to the cloud.  If this fails then we have lost the race
                 # to update the server and must start again.
                 synced, cloudrefs = _submitlocalchanges(

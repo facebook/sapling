@@ -24,7 +24,7 @@ class SyncState:
     @classmethod
     def erasestate(cls, repo, workspacename):
         # update v2 states
-        with repo.lock(), repo.transaction("cloudstate"):
+        with repo.lock(), repo.transaction("cloudstate erase"):
             states = cls.loadv2states(repo.svfs)
             if workspacename in states:
                 del states[workspacename]
@@ -33,7 +33,7 @@ class SyncState:
     @classmethod
     def movestate(cls, repo, workspacename, new_workspacename):
         # update v2 states
-        with repo.lock(), repo.transaction("cloudstate"):
+        with repo.lock(), repo.transaction("cloudstate move"):
             states = cls.loadv2states(repo.svfs)
             if workspacename in states:
                 states[new_workspacename] = states[workspacename]
