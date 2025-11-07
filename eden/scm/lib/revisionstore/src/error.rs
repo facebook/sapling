@@ -21,12 +21,12 @@ use url::Url;
 pub struct EmptyMutablePack;
 
 #[derive(Error, Debug)]
-#[error("Fetch failed: {} {}", .url, .method)]
-pub struct FetchError {
+#[error("LFS fetch failed: {} {}", .url, .method)]
+pub struct LfsFetchError {
     pub url: Url,
     pub method: Method,
     #[source]
-    pub error: TransferError,
+    pub error: LfsTransferError,
 }
 
 #[derive(Clone, Debug, Error)]
@@ -63,7 +63,7 @@ impl From<Option<String>> for Advice {
 }
 
 #[derive(Error, Debug)]
-pub enum TransferError {
+pub enum LfsTransferError {
     #[error("HTTP status {}. Returned headers: {:#?}", .0, .1)]
     HttpStatus(StatusCode, HeaderMap),
 

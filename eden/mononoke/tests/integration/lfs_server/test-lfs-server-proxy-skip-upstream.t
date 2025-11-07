@@ -64,7 +64,7 @@
 # Downloading a missing blob should however wait (we check that we took ~4 seconds for this)
 
   $ hg debuglfsreceive 0000000000000000000000000000000000000000000000000000000000000000 2048 "$lfs_proxy" --config lfs.backofftimes=
-  abort: Fetch failed: http://$LOCALIP:$LOCAL_PORT/lfs_repo/objects/batch POST: HTTP status 500 Internal Server Error. Returned headers: {
+  abort: LFS fetch failed: http://$LOCALIP:$LOCAL_PORT/lfs_repo/objects/batch POST: HTTP status 500 Internal Server Error. Returned headers: {
       "x-request-id": * (glob)
       "content-type": "application/vnd.git-lfs+json",
       "server": "mononoke-lfs",

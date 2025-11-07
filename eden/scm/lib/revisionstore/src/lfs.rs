@@ -99,8 +99,8 @@ use util::path::remove_file;
 
 use crate::datastore::ContentMetadata;
 use crate::datastore::StoreResult;
-use crate::error::FetchError;
-use crate::error::TransferError;
+use crate::error::LfsFetchError;
+use crate::error::LfsTransferError;
 use crate::indexedlogutil::Store;
 use crate::indexedlogutil::StoreOpenOptions;
 use crate::types::ContentHash;
@@ -1314,10 +1314,10 @@ impl LfsRemote {
         method: Method,
         url: Url,
         add_extra: impl Fn(Request) -> Request,
-        check_status: impl Fn(StatusCode) -> Result<(), TransferError>,
+        check_status: impl Fn(StatusCode) -> Result<(), LfsTransferError>,
         http_options: Arc<HttpOptions>,
         mut chunk_buf: Option<Vec<u8>>,
-    ) -> Result<Bytes, FetchError> {
+    ) -> Result<Bytes, LfsFetchError> {
         let span = trace_span!("LfsRemote::send_with_retry", url = %url);
 
         let host_str = url.host_str().expect("No host in url").to_string();
@@ -1368,12 +1368,12 @@ impl LfsRemote {
 
                     let reply = timeout(request_timeout, stream.next())
                         .await
-                        .map_err(|_| TransferError::Timeout(request_timeout))?;
+                        .map_err(|_| LfsTransferError::Timeout(request_timeout))?;
 
                     let reply = match reply {
                         Some(r) => r?,
                         None => {
-                            return Err(TransferError::EndOfStream);
+                            return Err(LfsTransferError::EndOfStream);
                         }
                     };
 
@@ -1381,7 +1381,7 @@ impl LfsRemote {
 
                     let status = head.status();
                     if !status.is_success() {
-                        return Err(TransferError::HttpStatus(status, head.headers().clone()));
+                        return Err(LfsTransferError::HttpStatus(status, head.headers().clone()));
                     }
 
                     check_status(status)?;
@@ -1399,7 +1399,7 @@ impl LfsRemote {
                                 .into();
                             let bytes = chunks.iter().fold(0, |acc, c| acc + c.len());
                             let elapsed = start.elapsed().as_millis();
-                            TransferError::ChunkTimeout {
+                            LfsTransferError::ChunkTimeout {
                                 timeout: request_timeout,
                                 bytes,
                                 elapsed,
@@ -1415,9 +1415,9 @@ impl LfsRemote {
                     }
 
                     if let Some(buf) = chunk_buf {
-                        Result::<_, TransferError>::Ok(buf.into())
+                        Result::<_, LfsTransferError>::Ok(buf.into())
                     } else {
-                        Result::<_, TransferError>::Ok(join_chunks(&chunks))
+                        Result::<_, LfsTransferError>::Ok(join_chunks(&chunks))
                     }
                 }
                 .await;
@@ -1438,18 +1438,18 @@ impl LfsRemote {
                 };
 
                 let retry_strategy = match &error {
-                    TransferError::HttpStatus(status, _) => {
+                    LfsTransferError::HttpStatus(status, _) => {
                         seen_error_codes.insert(*status);
                         RetryStrategy::from_http_status(*status)
                     }
-                    TransferError::HttpClientError(http_error) => {
+                    LfsTransferError::HttpClientError(http_error) => {
                         RetryStrategy::from_http_error(http_error)
                     }
-                    TransferError::EndOfStream => RetryStrategy::NoRetry,
-                    TransferError::Timeout(..) => RetryStrategy::NoRetry,
-                    TransferError::ChunkTimeout { .. } => RetryStrategy::NoRetry,
-                    TransferError::UnexpectedHttpStatus { .. } => RetryStrategy::NoRetry,
-                    TransferError::InvalidResponse(..) => RetryStrategy::NoRetry,
+                    LfsTransferError::EndOfStream => RetryStrategy::NoRetry,
+                    LfsTransferError::Timeout(..) => RetryStrategy::NoRetry,
+                    LfsTransferError::ChunkTimeout { .. } => RetryStrategy::NoRetry,
+                    LfsTransferError::UnexpectedHttpStatus { .. } => RetryStrategy::NoRetry,
+                    LfsTransferError::InvalidResponse(..) => RetryStrategy::NoRetry,
                 };
 
                 let backoff_time = match retry_strategy {
@@ -1484,7 +1484,7 @@ impl LfsRemote {
                     );
                 }
 
-                return Err(FetchError { url, method, error });
+                return Err(LfsFetchError { url, method, error });
             }
         }
         .instrument(span)
@@ -1611,7 +1611,7 @@ impl LfsRemote {
                         return Ok(());
                     }
 
-                    Err(TransferError::UnexpectedHttpStatus {
+                    Err(LfsTransferError::UnexpectedHttpStatus {
                         expected: http::StatusCode::PARTIAL_CONTENT,
                         received: status,
                     })
@@ -1632,7 +1632,7 @@ impl LfsRemote {
                     .await??;
                 }
                 Err(err) => match err.error {
-                    TransferError::HttpStatus(http::StatusCode::GONE, _) => {
+                    LfsTransferError::HttpStatus(http::StatusCode::GONE, _) => {
                         inserter.redact()?;
                         return inserter.finish();
                     }
