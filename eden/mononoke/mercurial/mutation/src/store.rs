@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::hash_map;
+use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -17,6 +18,7 @@ use context::PerfCounterType;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use futures_retry::retry;
 use itertools::Itertools;
 use mercurial_types::HgChangesetId;
 use mononoke_types::RepositoryId;
@@ -78,12 +80,6 @@ impl SqlHgMutationStore {
         new_changeset_ids: HashSet<HgChangesetId>,
         entries: Vec<HgMutationEntry>,
     ) -> Result<()> {
-        let txn = self
-            .connections
-            .write_connection
-            .start_transaction(ctx.sql_query_telemetry())
-            .await?;
-
         let mut db_csets = Vec::new();
         let mut db_entries = Vec::new();
         let mut db_preds = Vec::new();
@@ -170,15 +166,37 @@ impl SqlHgMutationStore {
 
         ctx.perf_counters()
             .add_to_counter(PerfCounterType::SqlWrites, 4);
-        let (txn, _) = AddChangesets::query_with_transaction(txn, db_csets.as_slice()).await?;
-        let (txn, _) = AddEntries::query_with_transaction(txn, ref_db_entries.as_slice()).await?;
-        let (txn, _) = AddPreds::query_with_transaction(txn, ref_db_preds.as_slice()).await?;
-        let (txn, _) = AddSplits::query_with_transaction(txn, ref_db_splits.as_slice()).await?;
-        txn.commit().await?;
+
+        let ((), count) = retry(
+            |_| async {
+                let txn = self
+                    .connections
+                    .write_connection
+                    .start_transaction(ctx.sql_query_telemetry())
+                    .await?;
+
+                let (txn, _) =
+                    AddChangesets::query_with_transaction(txn, db_csets.as_slice()).await?;
+                let (txn, _) =
+                    AddEntries::query_with_transaction(txn, ref_db_entries.as_slice()).await?;
+                let (txn, _) =
+                    AddPreds::query_with_transaction(txn, ref_db_preds.as_slice()).await?;
+                let (txn, _) =
+                    AddSplits::query_with_transaction(txn, ref_db_splits.as_slice()).await?;
+                txn.commit().await?;
+
+                anyhow::Ok(())
+            },
+            Duration::from_secs(3),
+        )
+        .exponential_backoff(1.2)
+        .jitter(Duration::from_secs(1))
+        .max_attempts(3)
+        .await?;
 
         debug!(
             ctx.logger(),
-            "Mutation store added {} entries for {} changesets",
+            "Mutation store added {} entries for {} changesets after {count} attempts",
             db_entries.len(),
             db_csets.len()
         );
