@@ -270,6 +270,9 @@ class transaction(util.transactional):
                 "metalog should not be changed before transaction"
             )
 
+        self._spans = []
+        self._pushspan(desc)
+
     def __del__(self):
         try:
             if self.journal:
@@ -277,6 +280,16 @@ class transaction(util.transactional):
         except AttributeError:
             # AttributeError: 'transaction' object has noattribute 'journal'
             pass
+
+    def _pushspan(self, desc):
+        self._spans.append(
+            util.tracer.span([("name", f"Transaction: {desc}"), ("cat", "transaction")])
+        )
+        util.tracer.enter(self._spans[-1])
+
+    def _popspan(self):
+        if self._spans:
+            util.tracer.exit(self._spans.pop())
 
     @active
     def startgroup(self):
@@ -473,12 +486,14 @@ class transaction(util.transactional):
         self.file.flush()
 
     @active
-    def nest(self):
+    def nest(self, desc):
+        self._pushspan(desc)
         self.count += 1
         self.usages += 1
         return self
 
     def release(self):
+        self._popspan()
         if self.count > 0:
             self.usages -= 1
         # if the transaction scopes are left without being closed, fail

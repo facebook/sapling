@@ -1822,7 +1822,7 @@ class localrepository:
             if self._currentlock(self._lockref) is None:
                 raise errormod.ProgrammingError("transaction requires locking")
         if tr is not None:
-            return tr.nest()
+            return tr.nest(desc)
 
         if not lockfree:
             try:
