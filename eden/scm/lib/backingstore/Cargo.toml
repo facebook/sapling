@@ -47,6 +47,7 @@ tracing-subscriber = { version = "0.3.20", features = ["chrono", "env-filter", "
 [dev-dependencies]
 http = "0.2"
 rand_chacha = "0.3"
+url = "2.5.4"
 
 [features]
 fb = ["sapling-configloader/fb"]

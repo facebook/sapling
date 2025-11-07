@@ -10,6 +10,7 @@ use cxx::UniquePtr;
 use edenapi::SaplingRemoteApiError;
 use http_client::HttpClientError;
 use revisionstore::error::LfsFetchError;
+use revisionstore::error::LfsTransferError;
 
 use crate::ffi::ffi::BackingStoreErrorKind;
 use crate::ffi::ffi::SaplingBackingStoreError;
@@ -67,8 +68,27 @@ fn extract_remote_api_error(err: &SaplingRemoteApiError) -> (BackingStoreErrorKi
     }
 }
 
-fn extract_lfs_error(_err: &LfsFetchError) -> (BackingStoreErrorKind, Option<i32>) {
-    (BackingStoreErrorKind::Generic, None)
+fn extract_lfs_error(err: &LfsFetchError) -> (BackingStoreErrorKind, Option<i32>) {
+    /*
+     * The match statement is meant to be exhausitive without a default case to fall back into.
+     * If a new error type is introduced, it's supposed to be explicitly handled here.
+     * Consider updating SaplingBackingStoreError and EdenError if the existing definitions become insufficient.
+     */
+    match &err.error {
+        LfsTransferError::HttpStatus(status_code, _) => (
+            BackingStoreErrorKind::Network,
+            Some(status_code.as_u16().into()),
+        ),
+        LfsTransferError::HttpClientError(client_err) => extract_http_client_error(client_err),
+        LfsTransferError::UnexpectedHttpStatus { received, .. } => (
+            BackingStoreErrorKind::Network,
+            Some(received.as_u16().into()),
+        ),
+        LfsTransferError::EndOfStream
+        | LfsTransferError::Timeout(_)
+        | LfsTransferError::ChunkTimeout { .. }
+        | LfsTransferError::InvalidResponse(_) => (BackingStoreErrorKind::Network, None),
+    }
 }
 
 fn extract_indexedlog_error(_err: &indexedlog::Error) -> BackingStoreErrorKind {
@@ -143,6 +163,80 @@ mod tests {
 
         for (name, err, expected_kind, expected_code) in test_cases {
             let (kind, code) = extract_remote_api_error(&err);
+            assert_eq!(
+                kind, expected_kind,
+                "{} should map to the expected kind {:?}",
+                name, expected_kind
+            );
+            assert_eq!(
+                code, expected_code,
+                "{} should have code {:?}",
+                name, expected_code
+            );
+        }
+    }
+
+    #[test]
+    fn test_extract_lfs_error() {
+        use http_client::Method;
+        use revisionstore::error::LfsTransferError;
+        use url::Url;
+
+        let url = Url::parse("https://lfs.example.com").unwrap();
+
+        let test_cases = vec![
+            (
+                "HttpStatus",
+                LfsFetchError {
+                    url: url.clone(),
+                    method: Method::Get,
+                    error: LfsTransferError::HttpStatus(
+                        http::StatusCode::INTERNAL_SERVER_ERROR,
+                        http::HeaderMap::new(),
+                    ),
+                },
+                BackingStoreErrorKind::Network,
+                Some(500),
+            ),
+            (
+                "HttpClientError",
+                LfsFetchError {
+                    url: url.clone(),
+                    method: Method::Post,
+                    error: LfsTransferError::HttpClientError(HttpClientError::Curl(
+                        http_client::curl::Error::new(7),
+                    )),
+                },
+                BackingStoreErrorKind::Network,
+                Some(7),
+            ),
+            (
+                "UnexpectedHttpStatus",
+                LfsFetchError {
+                    url: url.clone(),
+                    method: Method::Get,
+                    error: LfsTransferError::UnexpectedHttpStatus {
+                        expected: http::StatusCode::OK,
+                        received: http::StatusCode::NOT_FOUND,
+                    },
+                },
+                BackingStoreErrorKind::Network,
+                Some(404),
+            ),
+            (
+                "EndOfStream",
+                LfsFetchError {
+                    url: url.clone(),
+                    method: Method::Get,
+                    error: LfsTransferError::EndOfStream,
+                },
+                BackingStoreErrorKind::Network,
+                None,
+            ),
+        ];
+
+        for (name, err, expected_kind, expected_code) in test_cases {
+            let (kind, code) = extract_lfs_error(&err);
             assert_eq!(
                 kind, expected_kind,
                 "{} should map to the expected kind {:?}",
