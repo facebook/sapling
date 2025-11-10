@@ -1,0 +1,19 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "virtual-tree",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Generate source control trees on demand for testing purpose.",
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-virtual-tree",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+)
