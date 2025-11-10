@@ -12,3 +12,7 @@ license = "MIT"
 
 [lib]
 name = "virtual_tree"
+
+[dependencies]
+sapling-vlqencoding = { version = "0.1.0", path = "../../vlqencoding" }
+sapling-zstdelta = { version = "0.1.0", path = "../../zstdelta" }
