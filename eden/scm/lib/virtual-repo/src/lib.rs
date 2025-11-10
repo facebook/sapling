@@ -20,3 +20,5 @@
 //!   abstraction (so the local storage can be `revisionstore`, closer to
 //!   production environment). `virtual-repo` does not re-implement those
 //!   features.
+
+mod id_fields;

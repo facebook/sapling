@@ -12,3 +12,6 @@ license = "MIT"
 
 [lib]
 name = "virtual_repo"
+
+[dependencies]
+sapling-types = { version = "0.1.0", path = "../types" }
