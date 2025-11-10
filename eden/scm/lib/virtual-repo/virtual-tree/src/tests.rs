@@ -6,5 +6,7 @@
  */
 
 pub(crate) mod show_tree;
+pub(crate) mod test_tree;
 
 pub(crate) use show_tree::ShowTree;
+pub(crate) use test_tree::TestTree;
