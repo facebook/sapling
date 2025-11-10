@@ -10,6 +10,8 @@
 //! - Tree depth.
 //! - Commit history length (root tree length).
 
+pub(crate) mod deepen_trees;
 pub(crate) mod repeat_files;
 
+pub use deepen_trees::DeepenTrees;
 pub use repeat_files::RepeatFiles;
