@@ -23,4 +23,4 @@ path = "examples/example.rs"
 proc-macro2 = { version = "1.0.70", features = ["span-locations"] }
 quickcheck = "1.0"
 quote = "1.0.29"
-syn = { version = "2.0.101", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
+syn = { version = "2.0.110", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
