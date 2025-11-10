@@ -21,6 +21,7 @@
 //!   production environment). `virtual-repo` does not re-implement those
 //!   features.
 
+mod dag_protocol;
 mod id_fields;
 mod provider;
 mod text_gen;

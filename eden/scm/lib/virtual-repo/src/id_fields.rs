@@ -68,6 +68,13 @@ impl IdFields {
             id8,
         }
     }
+
+    /// Check if two (usually commits) are compatbile. This means they share
+    /// a same `factor_bits`. If we add more info in `RESERVED` in the future,
+    /// check the `RESERVED` too.
+    pub fn is_compatible_with(&self, other: &Self) -> bool {
+        self.factor_bits == other.factor_bits
+    }
 }
 
 impl From<IdFields> for Id20 {
