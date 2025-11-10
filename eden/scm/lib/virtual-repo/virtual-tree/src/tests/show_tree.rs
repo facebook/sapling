@@ -99,7 +99,6 @@ pub trait ShowTree {
         out
     }
 
-    #[allow(unused)]
     /// Show all root trees as a string.
     fn show_root_trees(&self) -> String {
         let provider = self.as_provider();

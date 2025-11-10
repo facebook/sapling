@@ -4,7 +4,10 @@ oncall("sapling")
 
 rust_library(
     name = "virtual-tree",
-    srcs = glob(["src/**/*.rs"]),
+    srcs = glob([
+        "src/**/*.rs",
+        "src/**/*.zst",
+    ]),
     autocargo = {"cargo_toml_config": {
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],

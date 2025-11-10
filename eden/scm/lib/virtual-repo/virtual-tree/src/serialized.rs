@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+mod examples;
 mod serialized_tree;
 
+pub use examples::EXAMPLE1;
 pub use serialized_tree::SerializedTree;
