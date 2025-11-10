@@ -23,3 +23,6 @@
 //! to larger ones to satisfy needs.
 
 pub mod types;
+
+#[cfg(test)]
+pub(crate) mod tests;
