@@ -9,6 +9,12 @@ rust_library(
         "src/**/*.zst",
     ]),
     autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"dependencies": {
+            "smallvec": {
+                "default-features": False,
+                "features": [],
+            },
+        }},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
             "description": "Generate source control trees on demand for testing purpose.",
@@ -20,6 +26,7 @@ rust_library(
     }},
     crate_root = "src/lib.rs",
     deps = [
+        "fbsource//third-party/rust:smallvec",
         "//eden/scm/lib/vlqencoding:vlqencoding",
         "//eden/scm/lib/zstdelta:zstdelta",
     ],

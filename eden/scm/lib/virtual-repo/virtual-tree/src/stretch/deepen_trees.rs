@@ -8,6 +8,8 @@
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
+use smallvec::SmallVec;
+
 use crate::types::*;
 
 /// Deepen trees. Increase tree depth by ~1.
@@ -47,7 +49,7 @@ impl VirtualTreeProvider for DeepenTrees {
             let items = self
                 .original
                 .read_tree(original_tree_id)
-                .collect::<Vec<_>>();
+                .collect::<SmallVec<[_; 16]>>();
             let should_create_subtree = {
                 items.iter().any(|(name_id, content_id)| {
                     matches!(TypedContentId::from(*content_id), TypedContentId::File(..))
