@@ -100,6 +100,7 @@ use crate::scuba_response::AddScubaResponse;
 use crate::specifiers::SpecifierExt;
 
 const FORWARDED_IDENTITIES_HEADER: &str = "scm_forwarded_identities";
+const FORWARDED_AUTHENTICATED_IDENTITIES_HEADER: &str = "scm_forwarded_authenticated_identities";
 const FORWARDED_CLIENT_IP_HEADER: &str = "scm_forwarded_client_ip";
 const FORWARDED_CLIENT_PORT_HEADER: &str = "scm_forwarded_client_port";
 const FORWARDED_CLIENT_DEBUG_HEADER: &str = "scm_forwarded_client_debug";
@@ -343,9 +344,23 @@ impl SourceControlServiceImpl {
                 header(FORWARDED_CLIENT_IP_HEADER)?,
                 header(FORWARDED_CLIENT_PORT_HEADER)?,
             ) {
+                // Check for authenticated identities header first - it takes precedence
                 let mut header_identities: MononokeIdentitySet =
-                    serde_json::from_str(forwarded_identities.as_str())
+                    if let Some(forwarded_authenticated_identities) =
+                        header(FORWARDED_AUTHENTICATED_IDENTITIES_HEADER)?
+                    {
+                        // Parse authenticated identities using try_from_json_encoded_with_authn_identities
+                        let idents = MononokeIdentity::try_from_json_encoded_with_authn_identities(
+                            forwarded_authenticated_identities.as_str(),
+                        )
                         .map_err(scs_errors::invalid_request)?;
+                        debug!(self.logger, "Parsed authenticated identities");
+                        idents
+                    } else {
+                        // Fall back to regular forwarded identities
+                        serde_json::from_str(forwarded_identities.as_str())
+                            .map_err(scs_errors::invalid_request)?
+                    };
                 let client_ip = Some(
                     forwarded_ip
                         .parse::<IpAddr>()
