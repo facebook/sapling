@@ -14,5 +14,8 @@ license = "MIT"
 name = "virtual_repo"
 
 [dependencies]
+sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
+sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-types = { version = "0.1.0", path = "../types" }
+sapling-virtual-tree = { version = "0.1.0", path = "virtual-tree" }

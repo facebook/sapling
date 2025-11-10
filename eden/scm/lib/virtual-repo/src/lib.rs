@@ -22,4 +22,7 @@
 //!   features.
 
 mod id_fields;
+mod provider;
 mod text_gen;
+
+pub use provider::VirtualRepoProvider;
