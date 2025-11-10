@@ -156,6 +156,10 @@ fn initialize_hgtime(config: &dyn Config) -> Result<()> {
 fn initialize_libraries(config: &dyn Config) -> Result<()> {
     indexedlog::config::configure(config)?;
     gitcompat::GlobalGit::set_default_config(config);
+
+    #[cfg(feature = "cas")]
+    cas_client::init();
+
     Ok(())
 }
 
@@ -449,9 +453,6 @@ impl Dispatcher {
             if matches!(handler.func(), CommandFunc::NoRepo(_)) {
                 self.convert_to_repoless_config()?;
             }
-
-            #[cfg(feature = "cas")]
-            cas_client::init();
 
             hooks.run_pre(self.repo(), &self.args[1..])?;
 
