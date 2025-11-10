@@ -24,9 +24,14 @@
 mod dag_populate;
 mod dag_protocol;
 mod eager_ext;
+mod factory_impls;
 mod id_fields;
 mod provider;
 mod text_gen;
 
 pub use dag_populate::populate_dag;
 pub use provider::VirtualRepoProvider;
+
+pub fn init() {
+    factory_impls::init();
+}
