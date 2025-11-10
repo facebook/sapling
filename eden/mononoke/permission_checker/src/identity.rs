@@ -19,15 +19,14 @@ use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 
+#[cfg(not(fbcode_build))]
+use crate::oss::AuthenticatedIdentity;
+
 pub type MononokeIdentitySet = BTreeSet<MononokeIdentity>;
 
 #[derive(Clone, Debug)]
 pub enum MononokeIdentity {
-    TypeData {
-        id_type: String,
-        id_data: String,
-    },
-    #[cfg(fbcode_build)]
+    TypeData { id_type: String, id_data: String },
     Authenticated(AuthenticatedIdentity),
 }
 
@@ -71,7 +70,6 @@ impl MononokeIdentity {
     pub fn id_type(&self) -> &str {
         match self {
             Self::TypeData { id_type, .. } => id_type.as_str(),
-            #[cfg(fbcode_build)]
             Self::Authenticated(auth_id) => auth_id.identity.id_type.as_str(),
         }
     }
@@ -79,7 +77,6 @@ impl MononokeIdentity {
     pub fn variant(&self) -> &str {
         match self {
             Self::TypeData { .. } => "TypeData",
-            #[cfg(fbcode_build)]
             Self::Authenticated(_) => "Authenticated",
         }
     }
@@ -87,7 +84,6 @@ impl MononokeIdentity {
     pub fn id_data(&self) -> &str {
         match self {
             Self::TypeData { id_data, .. } => id_data.as_str(),
-            #[cfg(fbcode_build)]
             Self::Authenticated(auth_id) => auth_id.identity.id_data.as_str(),
         }
     }

@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+//! Stub implementation of AuthenticatedIdentity for OSS builds.
+//! This provides the minimal structure needed for the MononokeIdentity enum
+//! to compile in OSS mode, but the functionality is not available.
+
 use anyhow::Result;
 use anyhow::bail;
 #[cfg(fbcode_build)]
@@ -15,6 +19,36 @@ use openssl::x509::X509;
 use crate::identity::MononokeIdentity;
 use crate::identity::MononokeIdentitySet;
 use crate::identity::MononokeIdentitySetExt;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AuthenticatedIdentity {
+    pub identity: Identity,
+    pub attributes: Vec<Attribute>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Identity {
+    pub id_type: String,
+    pub id_data: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Attribute {
+    pub identifier: AttributeKey,
+    pub value: IdentityAttribute,
+    pub val: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AttributeKey {
+    pub attributeName: String,
+    pub attributeNamespace: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IdentityAttribute {
+    pub attributeValue: String,
+}
 
 impl MononokeIdentity {
     pub fn reviewer_identities(_username: &str) -> MononokeIdentitySet {
@@ -46,6 +80,24 @@ impl MononokeIdentity {
         let mut idents = MononokeIdentitySet::new();
         idents.insert(MononokeIdentity::new("X509_SUBJECT_NAME", subject_name));
         Ok(idents)
+    }
+
+    pub fn with_auth_idents(
+        id_type: impl Into<String>,
+        id_data: impl Into<String>,
+        _auth_ident: Option<AuthenticatedIdentity>,
+    ) -> Self {
+        Self::TypeData {
+            id_type: id_type.into(),
+            id_data: id_data.into(),
+        }
+    }
+
+    pub fn auth_ident(&self) -> Option<&AuthenticatedIdentity> {
+        match self {
+            Self::Authenticated(auth_id) => Some(auth_id),
+            Self::TypeData { .. } => None,
+        }
     }
 }
 
