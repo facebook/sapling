@@ -715,6 +715,13 @@ def shownamespaces(**args) -> _hybrid:
     return _hybrid(f, namespaces, makemap, util.identity)
 
 
+@templatekeyword("xreponame")
+def xreponame(repo, ctx, templ, **args):
+    """Return the external repository name, or None if unavailable."""
+    revcache = args.get("revcache", {})
+    return revcache.get("xreponame")
+
+
 @templatekeyword("node")
 def shownode(repo, ctx, templ, **args):
     """String. The changeset identification hash, as a 40 hexadecimal

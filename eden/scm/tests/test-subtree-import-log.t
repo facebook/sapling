@@ -101,7 +101,6 @@ Test log with --limit
   date:        Mon Jan 01 00:00:10 2007 +0000
   summary:     update alpha\nhttps://phabricator.test.com/D1234567
 
-
 Test commit color
 
   $ hg log bar/alpha --color=debug
@@ -126,3 +125,10 @@ Test commit color
   [log.user|user:        test <test@example.org>]
   [log.date|date:        Mon Jan 01 00:00:10 2007 +0000]
   [log.summary|summary:     alpha]
+
+Test xreponame keyword
+  $ hg log bar/alpha -T '{xreponame}\n'
+  
+  
+  gitrepo
+  gitrepo
