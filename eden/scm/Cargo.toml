@@ -96,6 +96,7 @@ members = [
   "lib/doctor/network",
   "lib/drawdag",
   "lib/eagerepo",
+  "lib/eagerepo/trait",
   "lib/edenapi",
   "lib/edenapi/ext",
   "lib/edenapi/trait",
