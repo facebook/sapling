@@ -133,6 +133,20 @@ pub fn log_query_error(
     attempt: usize,
     will_retry: bool,
 ) {
+    // Also log error to the new MononokeXdbTelemetry logger
+    #[cfg(fbcode_build)]
+    if let Err(log_err) = facebook::log_error_to_mononoke_xdb_telemetry_logger(
+        sql_query_tel.fb().clone(),
+        granularity,
+        repo_ids,
+        query_name,
+        shard_name,
+        err,
+        attempt,
+        will_retry,
+    ) {
+        tracing::error!("Failed to log error to MononokeXDBTelemetry logger: {log_err:?}");
+    }
     let mut scuba = match setup_error_logging(
         sql_query_tel,
         granularity,
@@ -258,6 +272,7 @@ fn log_query_telemetry_impl(
 
             // Log to scuba
             facebook::log_mysql_query_telemetry(
+                sql_query_tel.fb().clone(),
                 telemetry,
                 sql_query_tel,
                 granularity,
@@ -347,9 +362,11 @@ impl TransactionTelemetry {
 #[cfg(fbcode_build)]
 mod facebook {
     use anyhow::Result;
+    use fbinit::FacebookInit;
     use futures_stats::FutureStats;
     use itertools::Itertools;
     use mononoke_types::RepositoryId;
+    use mononoke_xdb_telemetry_logger::MononokeXdbTelemetryLogger;
     use mysql_client::MysqlError;
     use sql::mysql::MysqlQueryTelemetry;
     use sql_query_telemetry::SqlQueryTelemetry;
@@ -361,6 +378,7 @@ mod facebook {
     use super::setup_scuba_sample;
 
     pub(super) fn log_mysql_query_telemetry(
+        fb: FacebookInit,
         query_tel: MysqlQueryTelemetry,
         sql_query_tel: &SqlQueryTelemetry,
         granularity: TelemetryGranularity,
@@ -369,6 +387,19 @@ mod facebook {
         shard_name: &str,
         fut_stats: FutureStats,
     ) -> Result<()> {
+        // Also log to the new MononokeXDBTelemetry logger
+        if let Err(e) = log_to_mononoke_xdb_telemetry_logger(
+            fb,
+            query_tel.clone(),
+            granularity,
+            repo_ids,
+            query_name,
+            shard_name,
+            fut_stats.clone(),
+        ) {
+            tracing::error!("Failed to log to MononokeXDBTelemetry logger: {e:?}");
+        }
+
         let jk_sample_rate =
             justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
                 .unwrap_or(10);
@@ -543,14 +574,226 @@ mod facebook {
         Ok(())
     }
 
+    pub(super) fn setup_logger_entry(
+        fb: FacebookInit,
+        granularity: TelemetryGranularity,
+        repo_ids: &[RepositoryId],
+        query_name: &str,
+        shard_name: &str,
+    ) -> MononokeXdbTelemetryLogger {
+        // Create logger instance
+        let mut log_entry = MononokeXdbTelemetryLogger::new(fb);
+
+        // Set required fields
+        log_entry.set_granularity(format!("{:?}", granularity));
+        log_entry.set_shard_name(shard_name.to_string());
+
+        // Set optional fields if available
+        if !query_name.is_empty() {
+            log_entry.set_query_name(query_name.to_string());
+        }
+
+        // Set repo IDs
+        let repo_id_strings: Vec<String> = repo_ids.iter().map(|id| id.to_string()).collect();
+        log_entry.set_repo_ids(repo_id_strings);
+
+        log_entry
+    }
+
+    pub(super) fn log_to_mononoke_xdb_telemetry_logger(
+        fb: FacebookInit,
+        query_tel: MysqlQueryTelemetry,
+        granularity: TelemetryGranularity,
+        repo_ids: &[RepositoryId],
+        query_name: &str,
+        shard_name: &str,
+        fut_stats: FutureStats,
+    ) -> Result<()> {
+        let mut log_entry = setup_logger_entry(fb, granularity, repo_ids, query_name, shard_name);
+
+        log_entry.set_success(1); // This function is only called for successful queries
+
+        if let Some(instance_type) = query_tel.instance_type() {
+            log_entry.set_instance_type(instance_type.clone());
+        }
+        // Set table access information
+        let read_tables: Vec<String> = query_tel.read_tables().iter().cloned().collect();
+        let write_tables: Vec<String> = query_tel.write_tables().iter().cloned().collect();
+        let read_or_write = if write_tables.is_empty() {
+            "READ"
+        } else {
+            "WRITE"
+        };
+        log_entry.set_read_or_write(read_or_write.to_string());
+
+        log_entry.set_read_tables(read_tables);
+        log_entry.set_write_tables(write_tables);
+
+        // Set resource usage fields if available
+        if let Some(client_stats) = query_tel.client_stats() {
+            log_entry.set_avg_rru(client_stats.avg_rru);
+            log_entry.set_cpu_rru(client_stats.cpu_rru);
+            log_entry.set_delay_rru(client_stats.delay_rru);
+            log_entry.set_full_delay_rru(client_stats.full_delay_rru);
+            log_entry.set_max_rru(client_stats.max_rru);
+            log_entry.set_min_rru(client_stats.min_rru);
+            log_entry.set_overlimit_delay_rru(client_stats.overlimit_delay_rru);
+            log_entry.set_some_delay_rru(client_stats.some_delay_rru);
+            log_entry.set_task_full_delay_rru(client_stats.task_full_delay_rru);
+            log_entry.set_task_some_delay_rru(client_stats.task_some_delay_rru);
+        }
+
+        // Set wait statistics
+        for wait_stats in query_tel.wait_stats() {
+            match wait_stats.wait_type.as_str() {
+                "row_lock" => {
+                    log_entry.set_wait_count_row_lock(wait_stats.wait_count as i64);
+                    if let Some(wait_time) = wait_stats.wait_time {
+                        log_entry.set_wait_time_row_lock(wait_time as f64);
+                    }
+                    if let Some(signal_time) = wait_stats.signal_time {
+                        log_entry.set_signal_time_row_lock(signal_time as f64);
+                    }
+                }
+                "table_lock" => {
+                    log_entry.set_wait_count_table_lock(wait_stats.wait_count as i64);
+                    if let Some(wait_time) = wait_stats.wait_time {
+                        log_entry.set_wait_time_table_lock(wait_time as f64);
+                    }
+                    if let Some(signal_time) = wait_stats.signal_time {
+                        log_entry.set_signal_time_table_lock(signal_time as f64);
+                    }
+                }
+                "metadata_lock" => {
+                    log_entry.set_wait_count_metadata_lock(wait_stats.wait_count as i64);
+                    if let Some(wait_time) = wait_stats.wait_time {
+                        log_entry.set_wait_time_metadata_lock(wait_time as f64);
+                    }
+                    if let Some(signal_time) = wait_stats.signal_time {
+                        log_entry.set_signal_time_metadata_lock(signal_time as f64);
+                    }
+                }
+                "global_read_lock" => {
+                    log_entry.set_wait_count_global_read_lock(wait_stats.wait_count as i64);
+                    if let Some(wait_time) = wait_stats.wait_time {
+                        log_entry.set_wait_time_global_read_lock(wait_time as f64);
+                    }
+                    if let Some(signal_time) = wait_stats.signal_time {
+                        log_entry.set_signal_time_global_read_lock(signal_time as f64);
+                    }
+                }
+                "backup_lock" => {
+                    log_entry.set_wait_count_backup_lock(wait_stats.wait_count as i64);
+                    if let Some(wait_time) = wait_stats.wait_time {
+                        log_entry.set_wait_time_backup_lock(wait_time as f64);
+                    }
+                    if let Some(signal_time) = wait_stats.signal_time {
+                        log_entry.set_signal_time_backup_lock(signal_time as f64);
+                    }
+                }
+                _ => {
+                    // Unknown wait type, skip
+                }
+            }
+        }
+
+        // Set future stats fields
+        log_entry.set_poll_count(fut_stats.poll_count as i64);
+        log_entry.set_poll_time_us(fut_stats.poll_time.as_micros() as i64);
+        log_entry.set_max_poll_time_us(fut_stats.max_poll_time.as_micros() as i64);
+        log_entry.set_completion_time_us(fut_stats.completion_time.as_micros() as i64);
+
+        // Log the entry
+        log_entry.log()?;
+
+        Ok(())
+    }
+
+    pub(super) fn log_error_to_mononoke_xdb_telemetry_logger(
+        fb: FacebookInit,
+        granularity: TelemetryGranularity,
+        repo_ids: &[RepositoryId],
+        query_name: &str,
+        shard_name: &str,
+        err: &anyhow::Error,
+        attempt: usize,
+        will_retry: bool,
+    ) -> Result<()> {
+        let mut log_entry = setup_logger_entry(fb, granularity, repo_ids, query_name, shard_name);
+
+        log_entry.set_success(0); // 0 indicates failed query
+        // Set error message
+        log_entry.set_error(format!("{:?}", err));
+        // Set retry fields
+        log_entry.set_attempt(attempt as i64);
+        log_entry.set_will_retry(will_retry);
+
+        // Log the entry
+        log_entry.log()?;
+
+        Ok(())
+    }
+
+    pub(super) fn log_transaction_telemetry_to_mononoke_xdb_telemetry_logger(
+        fb: FacebookInit,
+        txn_tel: &TransactionTelemetry,
+        shard_name: &str,
+    ) -> Result<()> {
+        // Convert repo_ids from HashSet to Vec for setup_logger_entry
+        let repo_ids: Vec<RepositoryId> = txn_tel.repo_ids.iter().cloned().collect();
+
+        let mut log_entry = setup_logger_entry(
+            fb,
+            TelemetryGranularity::Transaction,
+            &repo_ids,
+            "", // No single query name for transactions
+            shard_name,
+        );
+
+        // Set transaction-specific fields
+        log_entry.set_success(1); // Transactions that reach this function are successful
+
+        // Set table access information
+        let read_tables: Vec<String> = txn_tel.read_tables.iter().cloned().collect();
+        let write_tables: Vec<String> = txn_tel.write_tables.iter().cloned().collect();
+        log_entry.set_read_tables(read_tables);
+        log_entry.set_write_tables(write_tables);
+
+        // Set read_or_write field based on table access pattern
+        let read_or_write = if txn_tel.write_tables.is_empty() {
+            "READ"
+        } else {
+            "WRITE"
+        };
+        log_entry.set_read_or_write(read_or_write.to_string());
+
+        // Set transaction query names
+        let query_names: Vec<String> = txn_tel.query_names.iter().cloned().collect();
+        log_entry.set_transaction_query_names(query_names);
+
+        // Log the entry
+        log_entry.log()?;
+
+        Ok(())
+    }
+
     pub(super) fn log_transaction_telemetry_impl(
         txn_tel: TransactionTelemetry,
         sql_query_tel: &SqlQueryTelemetry,
         shard_name: &str,
     ) -> Result<()> {
+        if let Err(e) = log_transaction_telemetry_to_mononoke_xdb_telemetry_logger(
+            sql_query_tel.fb().clone(),
+            &txn_tel,
+            shard_name,
+        ) {
+            tracing::error!("Failed to log transaction to MononokeXDBTelemetry logger: {e:?}");
+        }
+
         let jk_sample_rate =
             justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
                 .unwrap_or(10);
+
         let mut scuba = setup_scuba_sample(
             sql_query_tel,
             TelemetryGranularity::Transaction,
@@ -592,12 +835,12 @@ mod facebook {
     }
 
     pub(super) fn handle_mysql_error(
-        err: &anyhow::Error,
+        e: &anyhow::Error,
         shard_name: &str,
         query_name: &str,
         attempt: usize,
     ) {
-        if let Some(e) = err.downcast_ref::<MysqlError>() {
+        if let Some(e) = e.downcast_ref::<MysqlError>() {
             // Get just the enum variant name using std::any::type_name
             let error_type = std::any::type_name_of_val(e)
                 .split("::")

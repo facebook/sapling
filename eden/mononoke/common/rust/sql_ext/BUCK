@@ -11,7 +11,9 @@ rust_library(
     named_deps = {
         "bincode": "fbsource//third-party/rust:bincode-2",
         "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
-    },
+    } | ({} if rust_oss.is_oss_build() else {
+        "mononoke_xdb_telemetry_logger": "//dsi/logger/configs/MononokeXdbTelemetryLoggerConfig:mononoke_xdb_telemetry_rust_logger",
+    }),
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
         "//common/rust/shed/fbinit:fbinit-tokio",
