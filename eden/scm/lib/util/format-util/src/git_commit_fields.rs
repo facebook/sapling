@@ -37,17 +37,17 @@ pub struct GitCommitLazyFields {
 /// Fields of a git commit. Enough information to serialize to text.
 #[derive(Default, Deserialize)]
 pub struct GitCommitFields {
-    tree: Id20,
-    parents: Vec<Id20>,
-    author: Text,
-    date: HgTime,
-    committer: Text,
-    committer_date: HgTime,
-    message: Text,
+    pub tree: Id20,
+    pub parents: Vec<Id20>,
+    pub author: Text,
+    pub date: HgTime,
+    pub committer: Text,
+    pub committer_date: HgTime,
+    pub message: Text,
     // e.g. "gpgsig", "gpgsig-sha256", "mergetag".
     // See https://git-scm.com/docs/signature-format
     #[serde(default)]
-    extras: BTreeMap<Text, Text>,
+    pub extras: BTreeMap<Text, Text>,
 }
 
 impl GitCommitFields {

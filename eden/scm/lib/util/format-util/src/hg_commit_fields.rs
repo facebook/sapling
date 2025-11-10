@@ -35,12 +35,12 @@ pub struct HgCommitLazyFields {
 #[derive(Default, Deserialize)]
 #[cfg_attr(test, derive(Clone))]
 pub struct HgCommitFields {
-    tree: Id20,
-    author: Text,
-    date: HgTime,
-    extras: BTreeMap<Text, Text>,
-    files: Vec<Text>,
-    message: Text,
+    pub tree: Id20,
+    pub author: Text,
+    pub date: HgTime,
+    pub extras: BTreeMap<Text, Text>,
+    pub files: Vec<Text>,
+    pub message: Text,
 }
 
 impl HgCommitFields {
