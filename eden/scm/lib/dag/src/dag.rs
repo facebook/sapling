@@ -834,7 +834,7 @@ where
     P: Open<OpenTarget = Self> + TryClone + Send + Sync + 'static,
     S: TryClone + Persist + Send + Sync + 'static,
 {
-    // See docstring in ops.py for details.
+    // See docstring in ops.rs for details.
     async fn import_pull_data(
         &mut self,
         clone_data: CloneData<Vertex>,
