@@ -131,6 +131,8 @@ pub struct EagerRepoStore {
     pub(crate) inner: Arc<RwLock<Zstore>>,
     pub(crate) format: SerializationFormat,
     pub(crate) ext: OnceLock<Arc<dyn EagerRepoExtension>>,
+    pub(crate) extensions_path: PathBuf,
+    pub(crate) extension_names: Arc<RwLock<BTreeSet<String>>>,
 }
 
 impl EagerRepoStore {
@@ -138,11 +140,61 @@ impl EagerRepoStore {
     /// Create an empty store on demand.
     pub fn open(dir: &Path, format: SerializationFormat) -> Result<Self> {
         let inner = Zstore::open(dir)?;
-        Ok(Self {
+
+        let extensions_path = dir.join("enabled-exts");
+        let extension_names: BTreeSet<String> = {
+            let content = match fs::read_to_string(&extensions_path) {
+                Ok(v) => v,
+                Err(e) if e.kind() == io::ErrorKind::NotFound => String::new(),
+                Err(e) => return Err(e.into()),
+            };
+            content.lines().map(ToOwned::to_owned).collect()
+        };
+
+        let store = Self {
             inner: Arc::new(RwLock::new(inner)),
             format,
             ext: Default::default(),
-        })
+            extensions_path,
+            extension_names: Arc::new(RwLock::new(extension_names.clone())),
+        };
+
+        // Load extensions.
+        for name in extension_names {
+            let ext = factory::call_constructor::<_, Arc<dyn EagerRepoExtension>>(&(name, format))?;
+            store.enable_extension(ext)?;
+        }
+
+        Ok(store)
+    }
+
+    /// Like `enable_extension`, but writes an on-disk file so the extension
+    /// will also be enabled on the next `open`.
+    ///
+    /// Unlike `enable_extension`, the extension is identified by a string name.
+    /// The extension provider should use [`factory::register_constructor`] to
+    /// tell EagerRepoStore how to convert the name to extension.
+    pub fn enable_extension_permanently(&self, name: String) -> Result<()> {
+        // The ext name should be registered. Check it.
+        let ext = factory::call_constructor::<_, Arc<dyn EagerRepoExtension>>(&(
+            name.clone(),
+            self.format,
+        ))?;
+        let mut names = self.extension_names.write();
+        if !names.insert(name) {
+            // Already enabled.
+            return Ok(());
+        }
+        atomicfile::atomic_write(&self.extensions_path, 0o660, false, |f| {
+            let mut content = String::with_capacity(names.iter().map(|s| s.len() + 1).sum());
+            for req in names.iter() {
+                content.push_str(req);
+                content.push('\n');
+            }
+            f.write_all(content.as_bytes())
+        })?;
+        self.enable_extension(ext)?;
+        Ok(())
     }
 
     /// Extends the current `EagerRepoStore` with an extension.
@@ -367,6 +419,11 @@ impl EagerRepo {
             ext: Default::default(),
         };
 
+        // If EagerRepoStore picks up an extension, also enable it for the EagerRepo.
+        if let Some(ext) = repo.store.ext.get() {
+            repo.enable_extension(Arc::clone(ext))?;
+        }
+
         // "eagercompat" is a revlog repo secretly using an eager store under the hood.
         // It's requirements don't match our expectations, so return early. This is mainly
         // so we can access the EagerRepo SaplingRemoteApi trait implementation.
@@ -388,6 +445,18 @@ impl EagerRepo {
         }
         write_requires(&store_dir, &store_requires)?;
         Ok(repo)
+    }
+
+    /// See [`EagerRepoStore::enable_extension_permanently`].
+    /// The extension names are stored in the EagerRepoStore directory, so
+    /// loading EagerRepoStore independently from EagerRepo would also load
+    /// them.
+    pub fn enable_extension_permanently(&self, name: String) -> Result<()> {
+        self.store.enable_extension_permanently(name)?;
+        if let Some(ext) = self.store.ext.get() {
+            self.enable_extension(Arc::clone(ext))?;
+        }
+        Ok(())
     }
 
     /// Extends the current `EagerRepo` with an extension.
