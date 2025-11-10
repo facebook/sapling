@@ -38,6 +38,60 @@ culpa qui officia deserunt mollit anim id est laborum.
     }
 }
 
+/// Generate a file name. For a same `seed`, different `id`s should generate
+/// different names.
+/// The generated file name has O(id) length. Practically, keep `id` relatively
+/// small to avoid excessively long name.
+pub fn generate_file_name(id: u64, seed: u64) -> String {
+    // For each 4-bit of id, generate a word based on related 2-bit seed.
+    let len = visit_names(id, seed, 0, |sum, word| sum + word.len() + 1);
+    let name = String::with_capacity(len - 1);
+    let name = visit_names(id, seed, name, |mut name, word| {
+        if !name.is_empty() {
+            name.push('-');
+        }
+        name.push_str(word);
+        name
+    });
+    name
+}
+
+static NAMES: [[&str; 16]; 4] = [
+    // Alphabet
+    [
+        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p",
+    ],
+    // Roman
+    [
+        "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV",
+        "XV", "XVI",
+    ],
+    // Color
+    [
+        "red", "blue", "green", "yellow", "orange", "purple", "pink", "brown", "black", "white",
+        "gray", "cyan", "magenta", "teal", "indigo", "violet",
+    ],
+    // Fruit
+    [
+        "apple", "orange", "lemon", "berry", "kiwi", "grape", "mango", "peach", "cherry", "melon",
+        "pear", "plum", "lime", "banana", "coconut", "peach",
+    ],
+];
+
+/// Used by `generate_file_name`.
+fn visit_names<T>(mut n: u64, mut choice: u64, init: T, f: impl Fn(T, &'static str) -> T) -> T {
+    let mut value = init;
+    let mut first = true;
+    while first || n > 0 {
+        let names = &NAMES[(choice & 0b11) as usize];
+        value = f(value, names[(n & 15) as usize]);
+        n >>= 4;
+        choice >>= 2;
+        first = false;
+    }
+    value
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -51,5 +105,50 @@ mod tests {
             let blob = generate_file_content_of_length(len);
             assert_eq!(blob.len(), len);
         }
+    }
+
+    #[test]
+    fn test_file_name_examples() {
+        assert_eq!(
+            generate_file_name(0xabcd, 0b00_01_10_11),
+            "banana-magenta-XII-k"
+        );
+
+        let g = |start: u64, end: u64, seed| -> Vec<String> {
+            (start..=end).map(|i| generate_file_name(i, seed)).collect()
+        };
+        assert_eq!(
+            g(0, 20, 0),
+            [
+                "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p",
+                "a-b", "b-b", "c-b", "d-b", "e-b"
+            ]
+        );
+        assert_eq!(
+            g(0, 20, 0b1110),
+            [
+                "red",
+                "blue",
+                "green",
+                "yellow",
+                "orange",
+                "purple",
+                "pink",
+                "brown",
+                "black",
+                "white",
+                "gray",
+                "cyan",
+                "magenta",
+                "teal",
+                "indigo",
+                "violet",
+                "red-orange",
+                "blue-orange",
+                "green-orange",
+                "yellow-orange",
+                "orange-orange"
+            ]
+        );
     }
 }
