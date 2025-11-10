@@ -22,6 +22,7 @@
 //! pre-generated from a real-world repo, then "stretch" the trees
 //! to larger ones to satisfy needs.
 
+pub mod stretch;
 pub mod types;
 
 #[cfg(test)]
