@@ -861,7 +861,3 @@ pub fn doc() -> &'static str {
 pub fn synopsis() -> Option<&'static str> {
     Some("[OPTION]... SOURCE [DEST]")
 }
-
-pub fn enable_cas() -> bool {
-    true
-}

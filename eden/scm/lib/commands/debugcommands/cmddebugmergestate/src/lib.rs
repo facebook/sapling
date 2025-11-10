@@ -73,7 +73,3 @@ pub fn doc() -> &'static str {
 pub fn synopsis() -> Option<&'static str> {
     None
 }
-
-pub fn enable_cas() -> bool {
-    false
-}

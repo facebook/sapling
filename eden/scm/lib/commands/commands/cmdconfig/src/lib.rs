@@ -340,7 +340,3 @@ pub fn synopsis() -> Option<&'static str> {
 fn short_name() -> &'static str {
     "config"
 }
-
-pub fn enable_cas() -> bool {
-    false
-}

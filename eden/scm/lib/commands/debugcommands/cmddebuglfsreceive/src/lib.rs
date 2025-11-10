@@ -73,7 +73,3 @@ pub fn doc() -> &'static str {
 pub fn synopsis() -> Option<&'static str> {
     Some("OID SIZE [URL]")
 }
-
-pub fn enable_cas() -> bool {
-    false
-}

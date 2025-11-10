@@ -106,7 +106,3 @@ An argument should be in the format ``section.name``.
 pub fn synopsis() -> Option<&'static str> {
     None
 }
-
-pub fn enable_cas() -> bool {
-    false
-}
