@@ -191,7 +191,7 @@ export type SaplingConflictContext = {
   // If we can guess the commit that introduced the conflicting content on the "local" side (or "dest" when rebasing):
   conflicting_local?: {description: string; diff: string; hash: string};
   // Info about the "other" (or "source" when rebasing) commit:
-  conflicting_other: {description: string; diff: string; hssh: string};
+  conflicting_other: {description: string; diff: string; hash: string};
   // Conflicting file path
   file: string;
 };
