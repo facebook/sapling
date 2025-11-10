@@ -163,7 +163,7 @@ impl Transaction {
             opt_tel,
             &sql_query_tel,
             granularity,
-            query_repo_ids,
+            &query_repo_ids,
             query_name,
             shard_name.as_ref(),
             fut_stats,
