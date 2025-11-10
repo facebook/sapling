@@ -16,6 +16,7 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use anyhow::anyhow;
 use blob::Blob;
@@ -25,6 +26,7 @@ use dag::Vertex;
 use dag::VertexListWithOptions;
 use dag::ops::DagAddHeads;
 use dag::ops::DagPersistent;
+use eagerepo_trait::EagerRepoExtension;
 use format_util::commit_text_to_root_tree_id;
 use format_util::git_sha1_deserialize;
 use format_util::git_sha1_serialize;
@@ -47,6 +49,7 @@ use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use mutationstore::MutationStore;
+use nonblocking::non_blocking;
 use parking_lot::RawRwLock;
 use parking_lot::RwLock;
 use parking_lot::lock_api::RwLockReadGuard;
@@ -102,6 +105,7 @@ pub struct EagerRepo {
     metalog: RwLock<MetaLog>,
     pub(crate) dir: PathBuf,
     pub(crate) mut_store: Mutex<MutationStore>,
+    pub(crate) ext: OnceLock<Arc<dyn EagerRepoExtension>>,
 }
 
 /// Storage used by `EagerRepo`. Wrapped by `Arc<RwLock>` for easier sharing.
@@ -126,6 +130,7 @@ pub struct EagerRepo {
 pub struct EagerRepoStore {
     pub(crate) inner: Arc<RwLock<Zstore>>,
     pub(crate) format: SerializationFormat,
+    pub(crate) ext: OnceLock<Arc<dyn EagerRepoExtension>>,
 }
 
 impl EagerRepoStore {
@@ -136,7 +141,20 @@ impl EagerRepoStore {
         Ok(Self {
             inner: Arc::new(RwLock::new(inner)),
             format,
+            ext: Default::default(),
         })
+    }
+
+    /// Extends the current `EagerRepoStore` with an extension.
+    fn enable_extension(&self, ext: Arc<dyn EagerRepoExtension>) -> io::Result<()> {
+        let got_ext = self.ext.get_or_init(|| ext.clone());
+        if !Arc::ptr_eq(got_ext, &ext) {
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "bug: enable_extension called twice",
+            ));
+        }
+        Ok(())
     }
 
     /// Flush changes to disk.
@@ -164,6 +182,11 @@ impl EagerRepoStore {
 
     /// Read SHA1 blob from zstore, including the prefixes.
     pub fn get_sha1_blob(&self, id: Id20) -> Result<Option<Bytes>> {
+        if let Some(ext) = self.ext.get() {
+            if let Some(blob) = ext.get_sha1_blob(id) {
+                return Ok(Some(blob));
+            }
+        }
         let inner = self.inner.read();
         Ok(inner.get(id)?)
     }
@@ -174,6 +197,11 @@ impl EagerRepoStore {
 
     /// Read the blob with its p1, p2 prefix removed.
     pub fn get_content(&self, id: Id20) -> Result<Option<Bytes>> {
+        if let Some(ext) = self.ext.get() {
+            if let Some(content) = ext.get_content(id) {
+                return Ok(Some(content));
+            }
+        }
         // Special null case.
         if id.is_null() {
             return Ok(Some(Bytes::default()));
@@ -336,6 +364,7 @@ impl EagerRepo {
             metalog: RwLock::new(metalog),
             dir: dir.to_path_buf(),
             mut_store: Mutex::new(mut_store),
+            ext: Default::default(),
         };
 
         // "eagercompat" is a revlog repo secretly using an eager store under the hood.
@@ -359,6 +388,29 @@ impl EagerRepo {
         }
         write_requires(&store_dir, &store_requires)?;
         Ok(repo)
+    }
+
+    /// Extends the current `EagerRepo` with an extension.
+    fn enable_extension(&self, ext: Arc<dyn EagerRepoExtension>) -> io::Result<()> {
+        if ext.format() != self.format() {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "bug: ext format mismatch",
+            ));
+        }
+        let got_ext = self.ext.get_or_init(|| ext.clone());
+        if !Arc::ptr_eq(got_ext, &ext) {
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                "bug: enable_extension called twice",
+            ));
+        }
+        if let Some(remote_protocol) = ext.get_dag_remote_protocol() {
+            let mut dag = non_blocking(self.dag.lock())?;
+            dag.set_remote_protocol(remote_protocol);
+        }
+        self.store.enable_extension(ext.clone())?;
+        Ok(())
     }
 
     /// Convert an URL to a directory path that can be passed to `open`.
