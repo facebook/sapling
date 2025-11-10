@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
@@ -250,10 +251,13 @@ impl<Repo> MononokeReposManager<Repo> {
 impl<R: MononokeRepo> MononokeReposManager<R> {
     pub fn make_mononoke_api(&self) -> Result<Mononoke<R>> {
         let repo_names_in_tier =
-            Vec::from_iter(self.configs.repo_configs().repos.iter().filter_map(
+            HashMap::from_iter(self.configs.repo_configs().repos.iter().filter_map(
                 |(name, config)| {
                     if config.enabled {
-                        Some(name.to_string())
+                        Some((
+                            name.to_string(),
+                            config.default_commit_identity_scheme.clone(),
+                        ))
                     } else {
                         None
                     }

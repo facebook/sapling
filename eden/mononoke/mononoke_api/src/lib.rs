@@ -8,11 +8,13 @@
 #![feature(error_generic_member_access)]
 #![feature(trait_alias)]
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Error;
 pub use bookmarks::BookmarkCategory;
 pub use bookmarks::BookmarkKey;
+use maplit::hashmap;
 use mononoke_repos::MononokeRepos;
 pub use mononoke_types::RepositoryId;
 use repo_identity::RepoIdentityRef;
@@ -39,6 +41,7 @@ mod test;
 pub use context::CoreContext;
 pub use context::LoggingContainer;
 pub use context::SessionContainer;
+use metaconfig_types::CommitIdentityScheme;
 
 pub use crate::changeset::ChangesetContext;
 pub use crate::changeset::ChangesetDiffItem;
@@ -104,7 +107,7 @@ pub struct Mononoke<R> {
     pub repos: Arc<MononokeRepos<R>>,
     // The collective list of all enabled repos that exist
     // in the current tier (e.g. prod, backup, etc.)
-    pub repo_names_in_tier: Vec<String>,
+    pub repo_names_in_tier: HashMap<String, CommitIdentityScheme>,
 }
 
 impl<R: MononokeRepo> Mononoke<R> {
@@ -114,7 +117,7 @@ impl<R: MononokeRepo> Mononoke<R> {
     /// (used to power APIs listing repos; TODO: change that arg to MononokeConfigs)
     pub fn new(
         repos: Arc<MononokeRepos<R>>,
-        repo_names_in_tier: Vec<String>,
+        repo_names_in_tier: HashMap<String, CommitIdentityScheme>,
     ) -> Result<Self, Error> {
         Ok(Self {
             repos,
@@ -228,8 +231,13 @@ pub mod test_impl {
                 .collect::<Vec<_>>();
             let repo_names_in_tier = repos
                 .iter()
-                .map(|(_, name, _)| name.to_string())
-                .collect::<Vec<_>>();
+                .map(|(_, name, repo)| {
+                    (
+                        name.to_string(),
+                        repo.repo_config.default_commit_identity_scheme.clone(),
+                    )
+                })
+                .collect::<HashMap<_, _>>();
             let mononoke_repos = MononokeRepos::new();
             mononoke_repos.populate(repos);
             Ok(Self {
@@ -239,10 +247,10 @@ pub mod test_impl {
         }
 
         pub async fn new_test_xrepo(small_repo: Repo, large_repo: Repo) -> Result<Self, Error> {
-            let repo_names_in_tier = vec![
-                small_repo.repo_identity().name().to_string(),
-                large_repo.repo_identity().name().to_string(),
-            ];
+            let repo_names_in_tier = hashmap! {
+                small_repo.repo_identity().name().to_string() => CommitIdentityScheme::GIT,
+                large_repo.repo_identity().name().to_string() => CommitIdentityScheme::HG,
+            };
             let mononoke_repos = MononokeRepos::new();
             mononoke_repos.populate(vec![
                 (

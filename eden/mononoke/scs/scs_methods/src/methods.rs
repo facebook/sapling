@@ -34,34 +34,26 @@ impl SourceControlServiceImpl {
         _ctx: CoreContext,
         params: thrift::ListReposParams,
     ) -> Result<Vec<thrift::Repo>, scs_errors::ServiceError> {
-        if let Some(identity_schemes) = params.identity_schemes {
-            let schemes = identity_schemes
-                .iter()
-                .map(CommitIdentityScheme::from_request)
-                .collect::<Result<Vec<_>, _>>()?;
-            let filtered_repos = self
-                .mononoke
-                .repos()
-                .filter(|repo| schemes.contains(&repo.repo_config.default_commit_identity_scheme))
-                .sorted_by(|a, b| a.repo_identity.name().cmp(b.repo_identity.name()))
-                .map(|repo| thrift::Repo {
-                    name: repo.repo_identity.name().to_string(),
-                    ..Default::default()
-                })
-                .collect();
-            Ok(filtered_repos)
-        } else {
-            let mut repo_names: Vec<_> = self.mononoke.repo_names_in_tier.clone();
-            repo_names.sort();
-            let rsp = repo_names
-                .into_iter()
-                .map(|repo_name| thrift::Repo {
-                    name: repo_name,
-                    ..Default::default()
-                })
-                .collect();
-            Ok(rsp)
-        }
+        let names = self.mononoke.repo_names_in_tier.iter();
+        let names: Box<dyn Iterator<Item = _>> =
+            if let Some(identity_schemes) = params.identity_schemes {
+                let schemes = identity_schemes
+                    .iter()
+                    .map(CommitIdentityScheme::from_request)
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                Box::new(names.filter(move |(_, default_scheme)| schemes.contains(default_scheme)))
+            } else {
+                Box::new(names)
+            };
+
+        Ok(names
+            .sorted_by(|(a, _), (b, _)| a.cmp(b))
+            .map(|(repo_name, _)| thrift::Repo {
+                name: repo_name.clone(),
+                ..Default::default()
+            })
+            .collect())
     }
 
     pub(crate) async fn async_ping(
