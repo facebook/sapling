@@ -302,7 +302,7 @@ pub struct GraphRow<N> {
 
 impl<N> GraphRowRenderer<N>
 where
-    N: Clone + Eq,
+    N: Clone + Eq + std::fmt::Debug,
 {
     /// Create a new renderer.
     pub fn new() -> Self {
@@ -319,7 +319,7 @@ where
 
 impl<N> Renderer<N> for GraphRowRenderer<N>
 where
-    N: Clone + Eq,
+    N: Clone + Eq + std::fmt::Debug,
 {
     type Output = GraphRow<N>;
 
