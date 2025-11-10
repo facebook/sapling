@@ -21,10 +21,12 @@
 //!   production environment). `virtual-repo` does not re-implement those
 //!   features.
 
+mod dag_populate;
 mod dag_protocol;
 mod eager_ext;
 mod id_fields;
 mod provider;
 mod text_gen;
 
+pub use dag_populate::populate_dag;
 pub use provider::VirtualRepoProvider;
