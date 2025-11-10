@@ -22,6 +22,7 @@
 //!   features.
 
 mod dag_protocol;
+mod eager_ext;
 mod id_fields;
 mod provider;
 mod text_gen;

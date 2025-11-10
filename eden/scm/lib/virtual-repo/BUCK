@@ -19,6 +19,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:async-trait",
         "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/eagerepo/trait:eagerepo-trait",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/storemodel:storemodel",
         "//eden/scm/lib/types:types",
