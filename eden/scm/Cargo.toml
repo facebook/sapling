@@ -204,6 +204,7 @@ members = [
   "lib/util/udsipc",
   "lib/version",
   "lib/vfs",
+  "lib/virtual-repo",
   "lib/virtual-repo/virtual-tree",
   "lib/vlqencoding",
   "lib/walkdetector",
