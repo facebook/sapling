@@ -14,6 +14,25 @@ pub(crate) mod deepen_trees;
 pub(crate) mod repeat_files;
 pub(crate) mod split_changes;
 
+use std::sync::Arc;
+
 pub use deepen_trees::DeepenTrees;
 pub use repeat_files::RepeatFiles;
 pub use split_changes::SplitChanges;
+
+use crate::types::VirtualTreeProvider;
+
+/// Stretch trees using default settings.
+///
+/// Commit (root trees), files, and trees can increase by up to (1 <<
+/// factor_bits) times.
+pub fn stretch_trees(
+    mut provider: Arc<dyn VirtualTreeProvider>,
+    factor_bits: u8,
+) -> Arc<dyn VirtualTreeProvider> {
+    for _i in 0..factor_bits {
+        provider = Arc::new(RepeatFiles::new(provider, 1));
+        provider = Arc::new(DeepenTrees::new(provider));
+    }
+    Arc::new(SplitChanges::new(provider, factor_bits))
+}
