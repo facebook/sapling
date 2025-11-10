@@ -351,7 +351,7 @@ where
                 .filter(|parent| {
                     parent
                         .id()
-                        .map_or(true, |parent| self.columns.find(parent).is_none())
+                        .is_none_or(|parent| self.columns.find(parent).is_none())
                 })
                 .count()
                 .saturating_sub(empty_columns);
