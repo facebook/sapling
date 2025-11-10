@@ -21,3 +21,5 @@
 //! Currently, virtual-tree starts from a serialized list of trees
 //! pre-generated from a real-world repo, then "stretch" the trees
 //! to larger ones to satisfy needs.
+
+pub mod types;
