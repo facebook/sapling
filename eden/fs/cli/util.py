@@ -1343,17 +1343,17 @@ def maybe_edensparse_migration(
                     # the migration should return early here if we are in the progress of
                     # a checkout.
                     # the migration will be retried next time when edenfs is started
-                    return
+                    continue
                 update_config_toml_file(checkout)
             else:
                 config = checkout.get_config()
                 if config.scm_type != "filteredhg":
-                    return
+                    continue
                 snapshot_state = checkout.get_snapshot()
                 if snapshot_state.last_filter_id is None:
                     # SNAPSHOT file not updated
                     # skip this part of migration and retry next time
-                    return
+                    continue
 
                 if any(
                     [
