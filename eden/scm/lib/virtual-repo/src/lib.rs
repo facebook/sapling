@@ -22,3 +22,4 @@
 //!   features.
 
 mod id_fields;
+mod text_gen;
