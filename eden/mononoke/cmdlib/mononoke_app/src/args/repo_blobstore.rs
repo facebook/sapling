@@ -35,6 +35,10 @@ pub struct RepoBlobstoreArgs {
     /// Bypass redaction when opening this blobstore
     #[clap(long)]
     pub bypass_redaction: bool,
+
+    /// Use the mutable storage
+    #[clap(long)]
+    pub use_mutable: bool,
 }
 
 #[derive(Copy, Clone, Debug, ValueEnum, Eq, PartialEq)]

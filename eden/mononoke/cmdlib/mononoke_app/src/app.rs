@@ -888,21 +888,28 @@ impl MononokeApp {
         &self,
         storage_name: &str,
         inner_blobstore_id: Option<u64>,
+        use_mutable: bool,
     ) -> Result<Arc<dyn Blobstore>> {
         let storage_configs = self.storage_configs();
-        let mut storage_config = storage_configs
+        let storage_config = storage_configs
             .storage
             .get(storage_name)
             .ok_or_else(|| anyhow!("unknown storage name: {:?}", storage_name))?
             .clone();
 
+        let mut blob_config = if use_mutable {
+            storage_config.mutable_blobstore
+        } else {
+            storage_config.blobstore
+        };
+
         if let Some(id) = inner_blobstore_id {
-            self.override_blobconfig(&mut storage_config.blobstore, id)?;
+            self.override_blobconfig(&mut blob_config, id)?;
         };
 
         let blobstore = blobstore_factory::make_blobstore(
             self.env.fb,
-            storage_config.blobstore,
+            blob_config,
             &self.env.mysql_options,
             self.env.readonly_storage,
             &self.env.blobstore_options,
@@ -922,7 +929,7 @@ impl MononokeApp {
         repo_blobstore_args: &RepoBlobstoreArgs,
     ) -> Result<Arc<dyn KeyedBlobstore>> {
         let repo_configs = self.repo_configs();
-        let (repo_id, mut redaction, mut storage_config) =
+        let (repo_id, mut redaction, storage_config) =
             if let Some(repo_id) = repo_blobstore_args.repo_id {
                 let repo_id = RepositoryId::new(repo_id);
                 let (_repo_name, repo_config) = repo_configs
@@ -947,13 +954,19 @@ impl MononokeApp {
                 return Err(anyhow!("Expected either repo_id or repo_name"));
             };
 
+        let mut blob_config = if repo_blobstore_args.use_mutable {
+            storage_config.mutable_blobstore
+        } else {
+            storage_config.blobstore
+        };
+
         if let Some(id) = repo_blobstore_args.inner_blobstore_id {
-            self.override_blobconfig(&mut storage_config.blobstore, id)?;
+            self.override_blobconfig(&mut blob_config, id)?;
         };
 
         let blobstore = blobstore_factory::make_blobstore(
             self.env.fb,
-            storage_config.blobstore,
+            blob_config,
             &self.env.mysql_options,
             self.env.readonly_storage,
             &self.env.blobstore_options,

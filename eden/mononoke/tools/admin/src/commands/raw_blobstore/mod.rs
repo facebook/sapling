@@ -26,6 +26,10 @@ pub struct CommandArgs {
     #[clap(long, required = true)]
     storage_name: String,
 
+    /// Use mutable blobstore
+    #[clap(long)]
+    use_mutable: bool,
+
     /// If the blobstore is multiplexed, use this inner blobstore
     #[clap(long)]
     inner_blobstore_id: Option<u64>,
@@ -48,7 +52,11 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_basic_context();
 
     let blobstore = app
-        .open_raw_blobstore(&args.storage_name, args.inner_blobstore_id)
+        .open_raw_blobstore(
+            &args.storage_name,
+            args.inner_blobstore_id,
+            args.use_mutable,
+        )
         .await
         .context("Failed to open raw blobstore")?;
 
