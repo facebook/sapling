@@ -14,12 +14,8 @@ use anyhow::anyhow;
 use futures_stats::FutureStats;
 use itertools::Itertools;
 use mononoke_types::RepositoryId;
-#[cfg(fbcode_build)]
-use mysql_client::MysqlError;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql::QueryTelemetry;
-#[cfg(fbcode_build)]
-use sql::mysql::MysqlQueryTelemetry;
 use sql_query_telemetry::SqlQueryTelemetry;
 use stats::prelude::*;
 
@@ -89,7 +85,12 @@ pub fn log_transaction_telemetry(
     sql_query_tel: SqlQueryTelemetry,
     shard_name: &str,
 ) -> Result<()> {
-    log_transaction_telemetry_impl(txn_tel, &sql_query_tel, shard_name)
+    #[cfg(fbcode_build)]
+    facebook::log_transaction_telemetry_impl(txn_tel, &sql_query_tel, shard_name)?;
+    #[cfg(not(fbcode_build))]
+    let _ = (txn_tel, sql_query_tel, shard_name);
+
+    Ok(())
 }
 
 fn setup_error_logging(
@@ -154,23 +155,7 @@ pub fn log_query_error(
     scuba.add("success", 0);
 
     #[cfg(fbcode_build)]
-    if let Some(e) = err.downcast_ref::<MysqlError>() {
-        // Get just the enum variant name using std::any::type_name
-        let error_type = std::any::type_name_of_val(e)
-            .split("::")
-            .last()
-            .unwrap_or("Unknown");
-
-        let error_key = if let Some(mysql_errno) = e.mysql_errno() {
-            format!("{error_type}.{mysql_errno}")
-        } else {
-            error_type.to_string()
-        };
-        STATS::query_retry_attempts.add_value(
-            attempt as i64,
-            (shard_name.to_string(), query_name.to_string(), error_key),
-        );
-    };
+    facebook::handle_mysql_error(err, shard_name, query_name, attempt);
 
     // Log the Scuba sample for debugging when log-level is set to trace.
     tracing::trace!(
@@ -257,7 +242,14 @@ fn log_query_telemetry_impl(
     #[cfg(not(fbcode_build))]
     {
         // To remove typechecker unused variable warning in OSS
-        let _ = (sql_query_tel, granularity, repo_ids, query_name, shard_name);
+        let _ = (
+            sql_query_tel,
+            granularity,
+            repo_ids,
+            query_name,
+            shard_name,
+            fut_stats,
+        );
     }
     match query_tel {
         #[cfg(fbcode_build)]
@@ -265,7 +257,7 @@ fn log_query_telemetry_impl(
             // TODO(T223577767): ensure MySQL always has shard_name
 
             // Log to scuba
-            log_mysql_query_telemetry(
+            facebook::log_mysql_query_telemetry(
                 telemetry,
                 sql_query_tel,
                 granularity,
@@ -278,238 +270,6 @@ fn log_query_telemetry_impl(
         QueryTelemetry::Sqlite(_) => Ok(()),
         _ => Err(anyhow!("Unsupported query telemetry type")),
     }
-}
-
-#[cfg(fbcode_build)]
-fn log_mysql_query_telemetry(
-    query_tel: MysqlQueryTelemetry,
-    sql_query_tel: &SqlQueryTelemetry,
-    granularity: TelemetryGranularity,
-    repo_ids: Vec<RepositoryId>,
-    query_name: &str,
-    shard_name: &str,
-    fut_stats: FutureStats,
-) -> Result<()> {
-    let jk_sample_rate =
-        justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
-            .unwrap_or(10);
-
-    let mut scuba = setup_scuba_sample(
-        sql_query_tel,
-        granularity,
-        repo_ids,
-        Some(query_name),
-        shard_name,
-        jk_sample_rate,
-    )?;
-
-    scuba.add("success", 1);
-    STATS::success.add_value(1, (shard_name.to_string(),));
-    STATS::success_query.add_value(1, (shard_name.to_string(), query_name.to_string()));
-
-    scuba.add_future_stats(&fut_stats);
-
-    STATS::query_completion_time.add_value(
-        fut_stats.completion_time.as_micros() as i64,
-        (
-            shard_name.to_string(),
-            query_name.to_string(),
-            format!("{:?}", granularity),
-        ),
-    );
-
-    let opt_instance_type = query_tel.instance_type().cloned();
-
-    let read_tables = query_tel.read_tables().iter().collect::<Vec<_>>();
-    let write_tables = query_tel.write_tables().iter().collect::<Vec<_>>();
-
-    let read_or_write = if write_tables.is_empty() {
-        "READ"
-    } else {
-        "WRITE"
-    };
-
-    scuba.add("instance_type", opt_instance_type.clone());
-
-    scuba.add("read_or_write", read_or_write.to_string());
-
-    if let Some(instance_type) = opt_instance_type {
-        // Success
-        STATS::success_instance.add_value(1, (shard_name.to_string(), instance_type.clone()));
-
-        STATS::query_instance_completion_time.add_value(
-            fut_stats.completion_time.as_micros() as i64,
-            (
-                shard_name.to_string(),
-                query_name.to_string(),
-                format!("{:?}", granularity),
-                instance_type.clone(),
-                read_or_write.to_string(),
-            ),
-        );
-
-        // CPU and Delay RRU by instance type
-        if let Some(client_stats) = query_tel.client_stats() {
-            STATS::cpu_rru_instance.add_value(
-                (1000.0 * client_stats.cpu_rru) as i64,
-                (shard_name.to_string(), instance_type.clone()),
-            );
-            STATS::delay_rru_instance.add_value(
-                (1000.0 * client_stats.delay_rru) as i64,
-                (shard_name.to_string(), instance_type.clone()),
-            );
-            STATS::task_full_delay_rru_instance.add_value(
-                (1000.0 * client_stats.task_full_delay_rru) as i64,
-                (shard_name.to_string(), instance_type.clone()),
-            );
-            STATS::task_some_delay_rru.add_value(
-                (1000.0 * client_stats.task_some_delay_rru) as i64,
-                (shard_name.to_string(), instance_type.clone()),
-            );
-        };
-
-        // Table stats
-        read_tables.iter().sorted().for_each(|&table| {
-            STATS::read_tables.add_value(
-                1,
-                (shard_name.to_string(), table.clone(), instance_type.clone()),
-            )
-        });
-
-        write_tables.iter().sorted().for_each(|&table| {
-            STATS::write_tables.add_value(
-                1,
-                (shard_name.to_string(), table.clone(), instance_type.clone()),
-            )
-        });
-    }
-
-    // CPU and Delay RRU by instance type
-    if let Some(client_stats) = query_tel.client_stats() {
-        STATS::cpu_rru.add_value(
-            (1000.0 * client_stats.cpu_rru) as i64,
-            (shard_name.to_string(),),
-        );
-        STATS::delay_rru.add_value(
-            (1000.0 * client_stats.delay_rru) as i64,
-            (shard_name.to_string(),),
-        );
-        STATS::full_delay_rru.add_value(
-            (1000.0 * client_stats.full_delay_rru) as i64,
-            (shard_name.to_string(),),
-        );
-        STATS::max_cpu_rru.add_value(
-            (1000.0 * client_stats.max_rru) as i64,
-            (shard_name.to_string(),),
-        );
-    };
-
-    scuba.add("read_tables", read_tables);
-    scuba.add("write_tables", write_tables);
-
-    for wait_stats in query_tel.wait_stats() {
-        STATS::wait_count.add_value(
-            wait_stats.wait_count as i64,
-            (shard_name.to_string(), wait_stats.wait_type.clone()),
-        );
-        wait_stats.wait_time.inspect(|wt| {
-            STATS::wait_time.add_value(
-                *wt as i64,
-                (shard_name.to_string(), wait_stats.wait_type.clone()),
-            );
-        });
-
-        wait_stats.signal_time.inspect(|st| {
-            STATS::signal_time.add_value(
-                *st as i64,
-                (shard_name.to_string(), wait_stats.wait_type.clone()),
-            );
-        });
-
-        scuba.add(
-            format!("wait_count_{}", wait_stats.wait_type),
-            wait_stats.wait_count,
-        );
-        scuba.add(
-            format!("wait_time_{}", wait_stats.wait_type),
-            wait_stats.wait_time,
-        );
-        scuba.add(
-            format!("signal_time_{}", wait_stats.wait_type),
-            wait_stats.signal_time,
-        );
-    }
-
-    if let Some(client_stats) = query_tel.client_stats() {
-        scuba.add("avg_rru", client_stats.avg_rru);
-        scuba.add("cpu_rru", client_stats.cpu_rru);
-        scuba.add("delay_rru", client_stats.delay_rru);
-        scuba.add("full_delay_rru", client_stats.full_delay_rru);
-        scuba.add("max_rru", client_stats.max_rru);
-        scuba.add("min_rru", client_stats.min_rru);
-        scuba.add("overlimit_delay_rru", client_stats.overlimit_delay_rru);
-        scuba.add("some_delay_rru", client_stats.some_delay_rru);
-        scuba.add("task_full_delay_rru", client_stats.task_full_delay_rru);
-        scuba.add("task_some_delay_rru", client_stats.task_some_delay_rru);
-    }
-
-    // Log the Scuba sample for debugging when log-level is set to trace.
-    tracing::trace!(
-        "Logging query telemetry to scuba: {0:#?}",
-        scuba.get_sample()
-    );
-
-    scuba.log();
-
-    Ok(())
-}
-
-fn log_transaction_telemetry_impl(
-    txn_tel: TransactionTelemetry,
-    sql_query_tel: &SqlQueryTelemetry,
-    shard_name: &str,
-) -> Result<()> {
-    let jk_sample_rate =
-        justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
-            .unwrap_or(10);
-    let mut scuba = setup_scuba_sample(
-        sql_query_tel,
-        TelemetryGranularity::Transaction,
-        txn_tel.repo_ids.into_iter().collect::<Vec<_>>(),
-        None,
-        shard_name,
-        jk_sample_rate,
-    )?;
-
-    scuba.add("success", 1);
-
-    scuba.add(
-        "read_tables",
-        txn_tel.read_tables.into_iter().sorted().collect::<Vec<_>>(),
-    );
-    scuba.add(
-        "write_tables",
-        txn_tel
-            .write_tables
-            .into_iter()
-            .sorted()
-            .collect::<Vec<_>>(),
-    );
-
-    scuba.add(
-        "transaction_query_names",
-        txn_tel.query_names.into_iter().sorted().collect::<Vec<_>>(),
-    );
-
-    // Log the Scuba sample for debugging when log-level is set to trace.
-    tracing::trace!(
-        "Logging transaction telemetry to scuba: {0:#?}",
-        scuba.get_sample()
-    );
-
-    scuba.log();
-
-    Ok(())
 }
 
 /// Sets fields that are present in both successful and failed queries.
@@ -566,7 +326,7 @@ impl TransactionTelemetry {
         match query_tel {
             #[cfg(fbcode_build)]
             QueryTelemetry::MySQL(mysql_tel) => {
-                self.add_mysql_query_telemetry(mysql_tel);
+                facebook::add_mysql_query_telemetry(self, mysql_tel);
             }
             _ => (),
         }
@@ -582,11 +342,286 @@ impl TransactionTelemetry {
     pub fn add_query_name(&mut self, query_name: &str) {
         self.query_names.insert(query_name.to_string());
     }
+}
 
-    #[cfg(fbcode_build)]
-    fn add_mysql_query_telemetry(&mut self, query_tel: MysqlQueryTelemetry) {
-        self.read_tables.extend(query_tel.read_tables);
-        self.write_tables.extend(query_tel.write_tables);
+#[cfg(fbcode_build)]
+mod facebook {
+    use anyhow::Result;
+    use futures_stats::FutureStats;
+    use itertools::Itertools;
+    use mononoke_types::RepositoryId;
+    use mysql_client::MysqlError;
+    use sql::mysql::MysqlQueryTelemetry;
+    use sql_query_telemetry::SqlQueryTelemetry;
+    use stats::prelude::*;
+
+    use super::STATS;
+    use super::TelemetryGranularity;
+    use super::TransactionTelemetry;
+    use super::setup_scuba_sample;
+
+    pub(super) fn log_mysql_query_telemetry(
+        query_tel: MysqlQueryTelemetry,
+        sql_query_tel: &SqlQueryTelemetry,
+        granularity: TelemetryGranularity,
+        repo_ids: Vec<RepositoryId>,
+        query_name: &str,
+        shard_name: &str,
+        fut_stats: FutureStats,
+    ) -> Result<()> {
+        let jk_sample_rate =
+            justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
+                .unwrap_or(10);
+
+        let mut scuba = setup_scuba_sample(
+            sql_query_tel,
+            granularity,
+            repo_ids,
+            Some(query_name),
+            shard_name,
+            jk_sample_rate,
+        )?;
+
+        scuba.add("success", 1);
+        STATS::success.add_value(1, (shard_name.to_string(),));
+        STATS::success_query.add_value(1, (shard_name.to_string(), query_name.to_string()));
+
+        scuba.add_future_stats(&fut_stats);
+
+        STATS::query_completion_time.add_value(
+            fut_stats.completion_time.as_micros() as i64,
+            (
+                shard_name.to_string(),
+                query_name.to_string(),
+                format!("{:?}", granularity),
+            ),
+        );
+
+        let opt_instance_type = query_tel.instance_type().cloned();
+
+        let read_tables = query_tel.read_tables().iter().collect::<Vec<_>>();
+        let write_tables = query_tel.write_tables().iter().collect::<Vec<_>>();
+
+        let read_or_write = if write_tables.is_empty() {
+            "READ"
+        } else {
+            "WRITE"
+        };
+
+        scuba.add("instance_type", opt_instance_type.clone());
+
+        scuba.add("read_or_write", read_or_write.to_string());
+
+        if let Some(instance_type) = opt_instance_type {
+            // Success
+            STATS::success_instance.add_value(1, (shard_name.to_string(), instance_type.clone()));
+
+            STATS::query_instance_completion_time.add_value(
+                fut_stats.completion_time.as_micros() as i64,
+                (
+                    shard_name.to_string(),
+                    query_name.to_string(),
+                    format!("{:?}", granularity),
+                    instance_type.clone(),
+                    read_or_write.to_string(),
+                ),
+            );
+
+            // CPU and Delay RRU by instance type
+            if let Some(client_stats) = query_tel.client_stats() {
+                STATS::cpu_rru_instance.add_value(
+                    (1000.0 * client_stats.cpu_rru) as i64,
+                    (shard_name.to_string(), instance_type.clone()),
+                );
+                STATS::delay_rru_instance.add_value(
+                    (1000.0 * client_stats.delay_rru) as i64,
+                    (shard_name.to_string(), instance_type.clone()),
+                );
+                STATS::task_full_delay_rru_instance.add_value(
+                    (1000.0 * client_stats.task_full_delay_rru) as i64,
+                    (shard_name.to_string(), instance_type.clone()),
+                );
+                STATS::task_some_delay_rru.add_value(
+                    (1000.0 * client_stats.task_some_delay_rru) as i64,
+                    (shard_name.to_string(), instance_type.clone()),
+                );
+            };
+
+            // Table stats
+            read_tables.iter().sorted().for_each(|&table| {
+                STATS::read_tables.add_value(
+                    1,
+                    (shard_name.to_string(), table.clone(), instance_type.clone()),
+                )
+            });
+
+            write_tables.iter().sorted().for_each(|&table| {
+                STATS::write_tables.add_value(
+                    1,
+                    (shard_name.to_string(), table.clone(), instance_type.clone()),
+                )
+            });
+        }
+
+        // CPU and Delay RRU by instance type
+        if let Some(client_stats) = query_tel.client_stats() {
+            STATS::cpu_rru.add_value(
+                (1000.0 * client_stats.cpu_rru) as i64,
+                (shard_name.to_string(),),
+            );
+            STATS::delay_rru.add_value(
+                (1000.0 * client_stats.delay_rru) as i64,
+                (shard_name.to_string(),),
+            );
+            STATS::full_delay_rru.add_value(
+                (1000.0 * client_stats.full_delay_rru) as i64,
+                (shard_name.to_string(),),
+            );
+            STATS::max_cpu_rru.add_value(
+                (1000.0 * client_stats.max_rru) as i64,
+                (shard_name.to_string(),),
+            );
+        };
+
+        scuba.add("read_tables", read_tables);
+        scuba.add("write_tables", write_tables);
+
+        for wait_stats in query_tel.wait_stats() {
+            STATS::wait_count.add_value(
+                wait_stats.wait_count as i64,
+                (shard_name.to_string(), wait_stats.wait_type.clone()),
+            );
+            wait_stats.wait_time.inspect(|wt| {
+                STATS::wait_time.add_value(
+                    *wt as i64,
+                    (shard_name.to_string(), wait_stats.wait_type.clone()),
+                );
+            });
+
+            wait_stats.signal_time.inspect(|st| {
+                STATS::signal_time.add_value(
+                    *st as i64,
+                    (shard_name.to_string(), wait_stats.wait_type.clone()),
+                );
+            });
+
+            scuba.add(
+                format!("wait_count_{}", wait_stats.wait_type),
+                wait_stats.wait_count,
+            );
+            scuba.add(
+                format!("wait_time_{}", wait_stats.wait_type),
+                wait_stats.wait_time,
+            );
+            scuba.add(
+                format!("signal_time_{}", wait_stats.wait_type),
+                wait_stats.signal_time,
+            );
+        }
+
+        if let Some(client_stats) = query_tel.client_stats() {
+            scuba.add("avg_rru", client_stats.avg_rru);
+            scuba.add("cpu_rru", client_stats.cpu_rru);
+            scuba.add("delay_rru", client_stats.delay_rru);
+            scuba.add("full_delay_rru", client_stats.full_delay_rru);
+            scuba.add("max_rru", client_stats.max_rru);
+            scuba.add("min_rru", client_stats.min_rru);
+            scuba.add("overlimit_delay_rru", client_stats.overlimit_delay_rru);
+            scuba.add("some_delay_rru", client_stats.some_delay_rru);
+            scuba.add("task_full_delay_rru", client_stats.task_full_delay_rru);
+            scuba.add("task_some_delay_rru", client_stats.task_some_delay_rru);
+        }
+
+        // Log the Scuba sample for debugging when log-level is set to trace.
+        tracing::trace!(
+            "Logging query telemetry to scuba: {0:#?}",
+            scuba.get_sample()
+        );
+
+        scuba.log();
+
+        Ok(())
+    }
+
+    pub(super) fn log_transaction_telemetry_impl(
+        txn_tel: TransactionTelemetry,
+        sql_query_tel: &SqlQueryTelemetry,
+        shard_name: &str,
+    ) -> Result<()> {
+        let jk_sample_rate =
+            justknobs::get_as::<u64>("scm/mononoke:sql_telemetry_sample_rate", Some(shard_name))
+                .unwrap_or(10);
+        let mut scuba = setup_scuba_sample(
+            sql_query_tel,
+            TelemetryGranularity::Transaction,
+            txn_tel.repo_ids.into_iter().collect::<Vec<_>>(),
+            None,
+            shard_name,
+            jk_sample_rate,
+        )?;
+
+        scuba.add("success", 1);
+
+        scuba.add(
+            "read_tables",
+            txn_tel.read_tables.into_iter().sorted().collect::<Vec<_>>(),
+        );
+        scuba.add(
+            "write_tables",
+            txn_tel
+                .write_tables
+                .into_iter()
+                .sorted()
+                .collect::<Vec<_>>(),
+        );
+
+        scuba.add(
+            "transaction_query_names",
+            txn_tel.query_names.into_iter().sorted().collect::<Vec<_>>(),
+        );
+
+        // Log the Scuba sample for debugging when log-level is set to trace.
+        tracing::trace!(
+            "Logging transaction telemetry to scuba: {0:#?}",
+            scuba.get_sample()
+        );
+
+        scuba.log();
+
+        Ok(())
+    }
+
+    pub(super) fn handle_mysql_error(
+        err: &anyhow::Error,
+        shard_name: &str,
+        query_name: &str,
+        attempt: usize,
+    ) {
+        if let Some(e) = err.downcast_ref::<MysqlError>() {
+            // Get just the enum variant name using std::any::type_name
+            let error_type = std::any::type_name_of_val(e)
+                .split("::")
+                .last()
+                .unwrap_or("Unknown");
+
+            let error_key = if let Some(mysql_errno) = e.mysql_errno() {
+                format!("{error_type}.{mysql_errno}")
+            } else {
+                error_type.to_string()
+            };
+            STATS::query_retry_attempts.add_value(
+                attempt as i64,
+                (shard_name.to_string(), query_name.to_string(), error_key),
+            );
+        }
+    }
+
+    pub(super) fn add_mysql_query_telemetry(
+        txn_tel: &mut TransactionTelemetry,
+        query_tel: MysqlQueryTelemetry,
+    ) {
+        txn_tel.read_tables.extend(query_tel.read_tables);
+        txn_tel.write_tables.extend(query_tel.write_tables);
     }
 }
 

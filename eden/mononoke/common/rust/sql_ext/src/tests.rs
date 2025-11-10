@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::time::Duration;
-
 use anyhow::Result;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
@@ -80,6 +78,7 @@ mod facebook {
     use std::collections::HashMap;
     use std::collections::HashSet;
     use std::sync::Arc;
+    use std::time::Duration;
 
     use anyhow::Context;
     use anyhow::anyhow;
