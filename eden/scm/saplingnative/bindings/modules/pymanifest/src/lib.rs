@@ -321,6 +321,8 @@ py_class!(pub class treemanifest |py| {
     ///
     /// Return a dict of {path: (left, right)}, where left and right are (file_hgid, file_type) tuple.
     def diff(&self, other: &treemanifest, matcher: Option<PyObject> = None, nodes_only: bool = false) -> PyResult<PyDict> {
+        let span = tracing::info_span!("pymanifest::diff", results_len = tracing::field::Empty);
+        let _enter = span.enter();
         fn convert_side_diff(
             py: Python,
             entry: Option<FileMetadata>
@@ -353,6 +355,7 @@ py_class!(pub class treemanifest |py| {
             let diff_right = convert_side_diff(py, entry.diff_type.right());
             result.set_item(py, path, (diff_left, diff_right))?;
         }
+        span.record("results_len", result.len(py));
         Ok(result)
     }
 

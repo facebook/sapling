@@ -9,6 +9,7 @@ rust_python_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:parking_lot",
+        "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/manifest:manifest",
         "//eden/scm/lib/manifest-tree:manifest-tree",
