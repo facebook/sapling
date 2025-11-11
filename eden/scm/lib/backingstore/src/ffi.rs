@@ -102,7 +102,7 @@ pub(crate) mod ffi {
         // TODO: cri: ClientRequestInfo
     }
 
-    pub struct GlobFilesResponse {
+    pub struct GlobFilesData {
         files: Vec<String>,
     }
 
@@ -253,6 +253,11 @@ pub(crate) mod ffi {
         error: UniquePtr<SaplingBackingStoreError>,
     }
 
+    pub struct GetGlobFilesResult {
+        data: SharedPtr<GlobFilesData>,
+        error: UniquePtr<SaplingBackingStoreError>,
+    }
+
     extern "Rust" {
         type BackingStore;
 
@@ -332,7 +337,7 @@ pub(crate) mod ffi {
             commit_id: &[u8],
             suffixes: Vec<String>,
             prefixes: Vec<String>,
-        ) -> Result<SharedPtr<GlobFilesResponse>>;
+        ) -> GetGlobFilesResult;
 
         pub fn sapling_backingstore_witness_file_read(
             store: &BackingStore,
@@ -770,15 +775,16 @@ pub fn sapling_backingstore_get_glob_files(
     commit_id: &[u8],
     suffixes: Vec<String>,
     prefixes: Vec<String>,
-) -> Result<SharedPtr<ffi::GlobFilesResponse>> {
+) -> ffi::GetGlobFilesResult {
     let prefix_opt = match prefixes.len() {
         0 => None,
         _ => Some(prefixes),
     };
-    let files = store
-        .get_glob_files(commit_id, suffixes, prefix_opt)
-        .and_then(|opt| opt.ok_or_else(|| Error::msg("failed to retrieve glob file")))?;
-    Ok(SharedPtr::new(ffi::GlobFilesResponse { files }))
+    let res = store.get_glob_files(commit_id, suffixes, prefix_opt);
+    let (data, error) = resolve_result!(res, transform_some: |files: Vec<String>| SharedPtr::new(ffi::GlobFilesData {
+        files
+    }), replace_none: SharedPtr::null());
+    ffi::GetGlobFilesResult { data, error }
 }
 
 pub fn sapling_backingstore_witness_file_read(

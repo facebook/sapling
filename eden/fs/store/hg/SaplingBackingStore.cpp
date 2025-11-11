@@ -2200,32 +2200,31 @@ SaplingBackingStore::getGlobFiles(
       prefixes.begin(), prefixes.end(), std::back_inserter(rust_prefixes));
 
   auto br = folly::ByteRange(id.value());
-  try {
-    auto globFiles = sapling_backingstore_get_glob_files(
-        *store_.get(),
-        rust::Slice<const uint8_t>{br.data(), br.size()},
-        rust_suffixes,
-        rust_prefixes);
+  auto result = sapling_backingstore_get_glob_files(
+      *store_.get(),
+      rust::Slice<const uint8_t>{br.data(), br.size()},
+      rust_suffixes,
+      rust_prefixes);
 
-    XCHECK(
-        globFiles.get(),
-        "sapling_backingstore_get_glob_files returned a nullptr, but did not throw an exception.");
-
-    std::vector<std::string> files;
-    files.reserve(globFiles->files.size());
-    for (auto& file : globFiles->files) {
-      files.emplace_back(file);
-    }
-    stats_->addDuration(
-        &SaplingBackingStoreStats::fetchGlobFiles, watch.elapsed());
-    stats_->increment(&SaplingBackingStoreStats::fetchGlobFilesSuccess);
-
-    return GetGlobFilesResult{BackingStore::GetGlobFilesResult{files, id}};
-  } catch (const rust::Error& error) {
+  if (result.error != nullptr) {
     stats_->increment(&SaplingBackingStoreStats::fetchGlobFilesFailure);
-
-    return GetGlobFilesResult{sapling::SaplingBackingStoreError{error.what()}};
+    return GetGlobFilesResult{std::move(*result.error)};
   }
+
+  XCHECK(
+      result.data.get(),
+      "sapling_backingstore_get_glob_files returned a nullptr as data result, but did not return an error.");
+
+  std::vector<std::string> files;
+  files.reserve(result.data->files.size());
+  for (auto& file : result.data->files) {
+    files.emplace_back(file);
+  }
+  stats_->addDuration(
+      &SaplingBackingStoreStats::fetchGlobFiles, watch.elapsed());
+  stats_->increment(&SaplingBackingStoreStats::fetchGlobFilesSuccess);
+
+  return GetGlobFilesResult{BackingStore::GetGlobFilesResult{files, id}};
 }
 
 void SaplingBackingStore::logMissingProxyHash() {
