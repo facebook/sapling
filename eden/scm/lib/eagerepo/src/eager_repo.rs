@@ -445,6 +445,13 @@ impl EagerRepo {
             store_requires.push("git");
         }
         write_requires(&store_dir, &store_requires)?;
+
+        // Update metalog to prevent migrating from vfs.
+        {
+            let mut metalog = repo.metalog.write();
+            metalog.init_tracked()?;
+        }
+
         Ok(repo)
     }
 

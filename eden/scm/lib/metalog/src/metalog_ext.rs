@@ -107,6 +107,9 @@ impl MetaLog {
 
     /// Initialize metalog tracked keys. This prevents logic from migrating from vfs.
     pub fn init_tracked(&mut self) -> Result<()> {
+        if self.get_hash("tracked").is_some() {
+            return Ok(());
+        }
         for key in METALOG_TRACKED {
             self.set(key, b"")?;
         }
