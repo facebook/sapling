@@ -25,6 +25,7 @@ use pyconfigloader::config;
 use pydag::dagalgo::dagalgo as PyDag;
 use pyedenapi::PyClient;
 use storemodel::SerializationFormat;
+use storemodel::types::Id20;
 
 mod impl_into;
 
@@ -61,6 +62,23 @@ py_class!(class EagerRepo |py| {
         };
         let inner = RustEagerRepo::open(&dir).map_pyerr(py)?;
         Self::create_instance(py, dir, RefCell::new(inner), Arc::new(config))
+    }
+
+    /// Populate commits of the given repo size.
+    /// Returns the commit hash.
+    /// Sets `name` (default: `virtual/main`) remotename to the commit.
+    def populate_virtual_commits(&self, factor_bits: u8, name: Option<&str> = Some("virtual/main")) -> PyResult<PyBytes> {
+        let inner = self.inner(py).borrow_mut();
+        inner.enable_extension_permanently("virtual-repo".to_string()).map_pyerr(py)?;
+        let head = block_on(async {
+            let mut dag = inner.dag().await;
+            virtual_repo::populate_dag(&mut dag, factor_bits).await.map_err(anyhow::Error::from)
+        }).map_pyerr(py)?;
+        if let Some(name) = name {
+            let head_id20 = Id20::from_slice(head.as_ref()).map_pyerr(py)?;
+            inner.set_remote_bookmark(name, Some(head_id20)).map_pyerr(py)?;
+        }
+        Ok(PyBytes::new(py, head.as_ref()))
     }
 
     /// Write pending changes to disk.
