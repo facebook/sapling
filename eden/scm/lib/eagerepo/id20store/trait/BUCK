@@ -3,21 +3,23 @@ load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 oncall("sapling")
 
 rust_library(
-    name = "eagerepo-trait",
+    name = "id20store-trait",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "lib": {"name": "eagerepo-trait"},
+        "lib": {"name": "id20store-trait"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
-            "description": "Abstraction used by EagerRepo.",
+            "description": "Abstraction used by Id20Store.",
             "homepage": "https://sapling-scm.com/",
             "license": "MIT",
-            "name": "sapling-eagerepo-trait",
+            "name": "sapling-id20store-trait",
             "repository": "https://github.com/facebook/sapling",
         },
     }},
     crate_root = "src/lib.rs",
     deps = [
-        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/format-util:format-util",
     ],
 )

@@ -20,6 +20,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:parking_lot",
         "//eden/scm/lib/atomicfile:atomicfile",
+        "//eden/scm/lib/eagerepo/id20store/trait:id20store-trait",
         "//eden/scm/lib/eagerepo/trait:eagerepo-trait",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/storemodel:storemodel",

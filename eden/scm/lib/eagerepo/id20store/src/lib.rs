@@ -19,6 +19,7 @@ use anyhow::ensure;
 use eagerepo_trait::EagerRepoExtension;
 use format_util::git_sha1_deserialize;
 use format_util::hg_sha1_deserialize;
+use id20store_trait::Id20StoreExtension;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 use storemodel::SerializationFormat;

@@ -19,6 +19,7 @@ sapling-atomicfile = { version = "0.1.0", path = "../../atomicfile" }
 sapling-eagerepo-trait = { version = "0.1.0", path = "../trait" }
 sapling-factory = { version = "0.1.0", path = "../../util/factory" }
 sapling-format-util = { version = "0.1.0", path = "../../util/format-util" }
+sapling-id20store-trait = { version = "0.1.0", path = "trait" }
 sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
 sapling-storemodel = { version = "0.1.0", path = "../../storemodel" }
 sapling-zstore = { version = "0.1.0", path = "../../zstore" }
