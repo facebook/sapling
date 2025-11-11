@@ -333,7 +333,7 @@ impl EagerRepo {
     /// The extension names are stored in the EagerRepoStore directory, so
     /// loading EagerRepoStore independently from EagerRepo would also load
     /// them.
-    pub fn enable_extension_permanently(&self, name: String) -> Result<()> {
+    pub fn enable_extension_permanently(&self, name: &'static str) -> Result<()> {
         self.store.enable_extension_permanently(name)?;
         if let Some(ext) = self.store.ext() {
             self.enable_extension(Arc::clone(ext))?;

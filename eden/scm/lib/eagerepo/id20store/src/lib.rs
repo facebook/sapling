@@ -84,18 +84,18 @@ impl Id20Store {
     /// Unlike `enable_extension`, the extension is identified by a string name.
     /// The extension provider should use [`factory::register_constructor`] to
     /// tell Id20Store how to convert the name to extension.
-    pub fn enable_extension_permanently(&self, name: String) -> Result<()> {
+    pub fn enable_extension_permanently(&self, name: &'static str) -> Result<()> {
         // The ext name should be registered. Check it.
         let ext = factory::call_constructor::<_, Arc<dyn EagerRepoExtension>>(&(
-            name.clone(),
+            name.to_string(),
             self.format(),
         ))?;
         ensure!(
-            ext.name() == &name,
+            ext.name() == name,
             "bug: extension name should match factory constructor name"
         );
         let mut names = self.extension_names.write();
-        if !names.insert(name) {
+        if !names.insert(name.to_string()) {
             // Already enabled.
             return Ok(());
         }

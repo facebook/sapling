@@ -69,7 +69,7 @@ py_class!(class EagerRepo |py| {
     /// Sets `name` (default: `virtual/main`) remotename to the commit.
     def populate_virtual_commits(&self, factor_bits: u8, name: Option<&str> = Some("virtual/main")) -> PyResult<PyBytes> {
         let inner = self.inner(py).borrow_mut();
-        inner.enable_extension_permanently("virtual-repo".to_string()).map_pyerr(py)?;
+        inner.enable_extension_permanently("virtual-repo").map_pyerr(py)?;
         let head = block_on(async {
             let mut dag = inner.dag().await;
             virtual_repo::populate_dag(&mut dag, factor_bits).await.map_err(anyhow::Error::from)
