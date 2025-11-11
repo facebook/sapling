@@ -10,23 +10,31 @@
 use std::sync::Arc;
 
 use eagerepo_trait::EagerRepoExtension;
+use eagerepo_trait::Id20StoreExtension;
 use types::SerializationFormat;
 
 use crate::VirtualRepoProvider;
 
 pub(crate) fn init() {
-    fn maybe_provide_virtual_repo_extension(
+    fn maybe_provide_virtual_repo_extension<T>(
         info: &(String, SerializationFormat),
-    ) -> anyhow::Result<Option<Arc<dyn EagerRepoExtension>>> {
+        convert_func: fn(VirtualRepoProvider) -> T,
+    ) -> anyhow::Result<Option<T>> {
         let (name, format) = info;
         // NOTE: Perhaps factory can provide a way to register by string keys.
         if name == "virtual-repo" {
             let provider = VirtualRepoProvider::new(*format);
-            let ext = Arc::new(provider);
+            let ext = convert_func(provider);
             Ok(Some(ext))
         } else {
             Ok(None)
         }
     }
-    factory::register_constructor("virtual-repo", maybe_provide_virtual_repo_extension);
+
+    factory::register_constructor("virtual-repo", |info| {
+        maybe_provide_virtual_repo_extension(info, |p| Arc::new(p) as Arc<dyn Id20StoreExtension>)
+    });
+    factory::register_constructor("virtual-repo", |info| {
+        maybe_provide_virtual_repo_extension(info, |p| Arc::new(p) as Arc<dyn EagerRepoExtension>)
+    });
 }

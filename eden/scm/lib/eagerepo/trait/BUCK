@@ -19,5 +19,6 @@ rust_library(
     crate_root = "src/lib.rs",
     deps = [
         "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/eagerepo/id20store/trait:id20store-trait",
     ],
 )

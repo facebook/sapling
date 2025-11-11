@@ -16,7 +16,6 @@ name = "id20store"
 anyhow = "1.0.98"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-atomicfile = { version = "0.1.0", path = "../../atomicfile" }
-sapling-eagerepo-trait = { version = "0.1.0", path = "../trait" }
 sapling-factory = { version = "0.1.0", path = "../../util/factory" }
 sapling-format-util = { version = "0.1.0", path = "../../util/format-util" }
 sapling-id20store-trait = { version = "0.1.0", path = "trait" }

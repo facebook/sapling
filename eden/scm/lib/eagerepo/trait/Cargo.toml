@@ -15,3 +15,4 @@ name = "eagerepo_trait"
 
 [dependencies]
 sapling-dag = { version = "0.1.0", path = "../../dag" }
+sapling-id20store-trait = { version = "0.1.0", path = "../id20store/trait" }

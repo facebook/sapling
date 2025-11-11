@@ -7,7 +7,7 @@
 
 //! # eagerepo-trait
 //!
-//! Toegher with `Id20StoreExtension`, make agerRepo provide more objects
+//! Toegher with [`Id20StoreExtension`], make agerRepo provide more objects
 //! (commits, trees, blobs) without actually storing the objects.
 //!
 //! Provide interfaces to:
@@ -20,6 +20,7 @@
 use std::sync::Arc;
 
 use dag::protocol::RemoteIdConvertProtocol;
+pub use id20store_trait::Id20StoreExtension;
 
 /// Extends the EagerRepo's commit graph.
 pub trait EagerRepoExtension: Send + Sync + 'static {

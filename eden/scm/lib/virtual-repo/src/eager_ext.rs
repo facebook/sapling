@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use dag::protocol::RemoteIdConvertProtocol;
 use eagerepo_trait::EagerRepoExtension;
+use eagerepo_trait::Id20StoreExtension;
 use minibytes::Bytes;
 use types::Id20;
 use types::SerializationFormat;
@@ -16,7 +17,7 @@ use types::SerializationFormat;
 use crate::dag_protocol::VirtualIdConvertProtocol;
 use crate::provider::VirtualRepoProvider;
 
-impl EagerRepoExtension for VirtualRepoProvider {
+impl Id20StoreExtension for VirtualRepoProvider {
     fn get_sha1_blob(&self, id: Id20) -> Option<Bytes> {
         VirtualRepoProvider::get_sha1_blob(self, id)
     }
@@ -29,6 +30,12 @@ impl EagerRepoExtension for VirtualRepoProvider {
         self.format
     }
 
+    fn name(&self) -> &'static str {
+        "virtual-repo"
+    }
+}
+
+impl EagerRepoExtension for VirtualRepoProvider {
     fn get_dag_remote_protocol(&self) -> Option<Arc<dyn RemoteIdConvertProtocol>> {
         Some(Arc::new(VirtualIdConvertProtocol))
     }

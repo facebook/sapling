@@ -16,7 +16,6 @@ use std::sync::OnceLock;
 
 use anyhow::Result;
 use anyhow::ensure;
-use eagerepo_trait::EagerRepoExtension;
 use format_util::git_sha1_deserialize;
 use format_util::hg_sha1_deserialize;
 use id20store_trait::Id20StoreExtension;
@@ -41,7 +40,7 @@ use zstore::Zstore;
 pub struct Id20Store {
     pub(crate) inner: Arc<RwLock<Zstore>>,
     format: SerializationFormat,
-    ext: OnceLock<Arc<dyn EagerRepoExtension>>,
+    ext: OnceLock<Arc<dyn Id20StoreExtension>>,
     pub(crate) extensions_path: PathBuf,
     pub(crate) extension_names: Arc<RwLock<BTreeSet<String>>>,
 }
@@ -72,7 +71,7 @@ impl Id20Store {
 
         // Load extensions.
         for name in extension_names {
-            let ext = factory::call_constructor::<_, Arc<dyn EagerRepoExtension>>(&(name, format))?;
+            let ext = factory::call_constructor::<_, Arc<dyn Id20StoreExtension>>(&(name, format))?;
             store.enable_extension(ext)?;
         }
 
@@ -87,7 +86,7 @@ impl Id20Store {
     /// tell Id20Store how to convert the name to extension.
     pub fn enable_extension_permanently(&self, name: &'static str) -> Result<()> {
         // The ext name should be registered. Check it.
-        let ext = factory::call_constructor::<_, Arc<dyn EagerRepoExtension>>(&(
+        let ext = factory::call_constructor::<_, Arc<dyn Id20StoreExtension>>(&(
             name.to_string(),
             self.format(),
         ))?;
@@ -113,7 +112,7 @@ impl Id20Store {
     }
 
     /// Extends the current `Id20Store` with an extension.
-    fn enable_extension(&self, ext: Arc<dyn EagerRepoExtension>) -> anyhow::Result<()> {
+    fn enable_extension(&self, ext: Arc<dyn Id20StoreExtension>) -> anyhow::Result<()> {
         let got_ext = self.ext.get_or_init(|| ext.clone());
         ensure!(
             Arc::ptr_eq(got_ext, &ext),
