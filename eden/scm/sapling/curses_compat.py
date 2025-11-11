@@ -211,18 +211,19 @@ class Surface:
             self.addstr(y, width - 1, "│")
 
 
-def doupdate():
+def doupdate(repaint=None):
     global _screen_resized
+
+    if repaint is None:
+        repaint = _screen_resized
+        _screen_resized = False
 
     main_surface = _get_main_surface()
     changes = []
 
     # Force clear & redraw after screen resize.
-    repaint = False
-    if _screen_resized:
-        repaint = True
+    if repaint:
         changes.append(CHANGE_CLEAR_SCREEN)
-        _screen_resized = False
 
     # Make the terminal match the main surface, with minimal changes (just diff).
     terminal = _get_main_terminal()
