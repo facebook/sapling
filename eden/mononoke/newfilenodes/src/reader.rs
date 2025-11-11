@@ -399,7 +399,7 @@ async fn select_filenode_from_sql(
 ) -> Result<FilenodeResult<Option<FilenodeInfo>>, ErrorKind> {
     let partial = select_partial_filenode(
         ctx,
-        &connections,
+        connections,
         repo_id,
         pwh,
         filenode,
