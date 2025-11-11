@@ -112,14 +112,12 @@ impl Id20Store {
     }
 
     /// Extends the current `Id20Store` with an extension.
-    pub fn enable_extension(&self, ext: Arc<dyn EagerRepoExtension>) -> io::Result<()> {
+    fn enable_extension(&self, ext: Arc<dyn EagerRepoExtension>) -> anyhow::Result<()> {
         let got_ext = self.ext.get_or_init(|| ext.clone());
-        if !Arc::ptr_eq(got_ext, &ext) {
-            return Err(io::Error::new(
-                io::ErrorKind::AlreadyExists,
-                "bug: enable_extension called twice",
-            ));
-        }
+        ensure!(
+            Arc::ptr_eq(got_ext, &ext),
+            "bug: enable_extension called twice"
+        );
         Ok(())
     }
 
@@ -157,9 +155,9 @@ impl Id20Store {
         Ok(inner.get(id)?)
     }
 
-    /// Get the current extension.
-    pub fn ext(&self) -> Option<&Arc<dyn EagerRepoExtension>> {
-        self.ext.get()
+    /// Get the current extension name.
+    pub fn ext_name(&self) -> Option<&str> {
+        self.ext.get().map(|e| e.name())
     }
 
     pub fn format(&self) -> SerializationFormat {

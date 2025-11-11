@@ -21,6 +21,7 @@ use std::sync::OnceLock;
 
 use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::ensure;
 use blob::Blob;
 use dag::Dag;
 use dag::Group;
@@ -295,8 +296,8 @@ impl EagerRepo {
         };
 
         // If EagerRepoStore picks up an extension, also enable it for the EagerRepo.
-        if let Some(ext) = repo.store.ext() {
-            repo.enable_extension(Arc::clone(ext))?;
+        if let Some(name) = repo.store.ext_name() {
+            repo.enable_extension_by_name(name)?;
         }
 
         // "eagercompat" is a revlog repo secretly using an eager store under the hood.
@@ -329,38 +330,38 @@ impl EagerRepo {
         Ok(repo)
     }
 
-    /// See [`EagerRepoStore::enable_extension_permanently`].
-    /// The extension names are stored in the EagerRepoStore directory, so
-    /// loading EagerRepoStore independently from EagerRepo would also load
-    /// them.
+    /// Enable extension for the EagerRepo. The extension name is also stored in
+    /// the underlying [`Id20Store`] so loading the store independently will
+    /// load related extension too.
+    /// See also [`Id20Store::enable_extension_permanently`].
     pub fn enable_extension_permanently(&self, name: &'static str) -> Result<()> {
         self.store.enable_extension_permanently(name)?;
-        if let Some(ext) = self.store.ext() {
-            self.enable_extension(Arc::clone(ext))?;
-        }
+        self.enable_extension_by_name(name)?;
         Ok(())
     }
 
-    /// Extends the current `EagerRepo` with an extension.
-    fn enable_extension(&self, ext: Arc<dyn EagerRepoExtension>) -> io::Result<()> {
-        if ext.format() != self.format() {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "bug: ext format mismatch",
-            ));
-        }
+    /// Extends the current `EagerRepo` with an extension by name.
+    /// Does not take care of the `EagerRepoStore` extension.
+    /// The callsite should consider setting `EagerRepoStore` extension.
+    fn enable_extension_by_name(&self, name: &str) -> anyhow::Result<()> {
+        // The ext name should be registered. Check it.
+        let ext = factory::call_constructor::<_, Arc<dyn EagerRepoExtension>>(&(
+            name.to_string(),
+            self.format(),
+        ))?;
+        ensure!(
+            ext.name() == name,
+            "bug: extension name should match factory constructor name"
+        );
         let got_ext = self.ext.get_or_init(|| ext.clone());
-        if !Arc::ptr_eq(got_ext, &ext) {
-            return Err(io::Error::new(
-                io::ErrorKind::AlreadyExists,
-                "bug: enable_extension called twice",
-            ));
-        }
+        ensure!(
+            Arc::ptr_eq(got_ext, &ext),
+            "bug: enable_extension called twice"
+        );
         if let Some(remote_protocol) = ext.get_dag_remote_protocol() {
             let mut dag = non_blocking(self.dag.lock())?;
             dag.set_remote_protocol(remote_protocol);
         }
-        self.store.enable_extension(ext.clone())?;
         Ok(())
     }
 
