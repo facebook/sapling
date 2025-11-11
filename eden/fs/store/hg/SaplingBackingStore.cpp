@@ -1265,22 +1265,22 @@ folly::Try<TreeAuxDataPtr> SaplingBackingStore::getLocalTreeAuxData(
 
   using GetTreeAuxDataResult = folly::Try<TreeAuxDataPtr>;
 
-  try {
-    auto auxData = sapling_backingstore_get_tree_aux(
-        *store_.get(),
-        rust::Slice<const uint8_t>{node.data(), node.size()},
-        sapling::FetchMode::LocalOnly);
+  auto result = sapling_backingstore_get_tree_aux(
+      *store_.get(),
+      rust::Slice<const uint8_t>{node.data(), node.size()},
+      sapling::FetchMode::LocalOnly);
 
-    if (auxData) {
-      return GetTreeAuxDataResult{
-          std::make_shared<TreeAuxDataPtr::element_type>(TreeAuxData{
-              Hash32{std::move(auxData->digest_hash)}, auxData->digest_size})};
-    } else {
-      return GetTreeAuxDataResult{nullptr};
-    }
-  } catch (const rust::Error& error) {
+  if (result.error != nullptr) {
+    return GetTreeAuxDataResult{std::move(*result.error)};
+  }
+
+  if (result.data != nullptr) {
     return GetTreeAuxDataResult{
-        sapling::SaplingBackingStoreError{error.what()}};
+        std::make_shared<TreeAuxDataPtr::element_type>(TreeAuxData{
+            Hash32{std::move(result.data->digest_hash)},
+            result.data->digest_size})};
+  } else {
+    return GetTreeAuxDataResult{nullptr};
   }
 }
 

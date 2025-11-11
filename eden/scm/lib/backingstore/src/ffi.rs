@@ -19,6 +19,7 @@ use anyhow::anyhow;
 use cxx::CxxString;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
+use edenapi::types::DirectoryMetadata;
 use iobuf::IOBuf;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
 use storemodel::FileType;
@@ -238,6 +239,11 @@ pub(crate) mod ffi {
         error: UniquePtr<SaplingBackingStoreError>,
     }
 
+    pub struct GetTreeAuxResult {
+        data: SharedPtr<TreeAuxData>,
+        error: UniquePtr<SaplingBackingStoreError>,
+    }
+
     extern "Rust" {
         type BackingStore;
 
@@ -274,7 +280,7 @@ pub(crate) mod ffi {
             store: &BackingStore,
             node: &[u8],
             fetch_mode: FetchMode,
-        ) -> Result<SharedPtr<TreeAuxData>>;
+        ) -> GetTreeAuxResult;
 
         pub fn sapling_backingstore_get_tree_aux_batch(
             store: &BackingStore,
@@ -598,15 +604,14 @@ pub fn sapling_backingstore_get_tree_aux(
     store: &BackingStore,
     node: &[u8],
     fetch_mode: ffi::FetchMode,
-) -> Result<SharedPtr<ffi::TreeAuxData>> {
+) -> ffi::GetTreeAuxResult {
     // the cause is not propagated for this API
-    match store.get_tree_aux(
+    let res = store.get_tree_aux(
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
         node,
-    )? {
-        Some(aux) => Ok(SharedPtr::new(aux.into())),
-        None => Ok(SharedPtr::null()),
-    }
+    );
+    let (data, error) = resolve_result!(res, transform_some: |aux: DirectoryMetadata| SharedPtr::new(aux.into()), replace_none: SharedPtr::null());
+    ffi::GetTreeAuxResult { data, error }
 }
 
 pub fn sapling_backingstore_get_tree_aux_batch(
