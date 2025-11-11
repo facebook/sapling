@@ -7,3 +7,10 @@
   ~  user:        test <test@example.com>
      date:        Sat Oct 25 09:35:59 2025 +0000
      summary:     synthetic commit 121869
+  $ sl go 'roots(all())' -q
+  $ sl files | wc -l
+  6084
+  >>> import glob, os
+  >>> size = sum(os.lstat(path).st_size for path in glob.glob('**/*', recursive=True))
+  >>> print(size)
+  79154496

@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::hash::Hasher as _;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::sync::LazyLock;
@@ -16,6 +17,7 @@ use format_util::HgTime;
 use format_util::git_sha1_serialize;
 use minibytes::Bytes;
 use minibytes::Text;
+use twox_hash::Xxh3Hash64;
 use types::Id20;
 use types::PathComponentBuf;
 use types::SerializationFormat;
@@ -26,6 +28,7 @@ use virtual_tree::types::TreeId;
 use virtual_tree::types::TypedContentId;
 use virtual_tree::types::VirtualTreeProvider;
 
+use crate::file_size_gen::generate_file_size;
 use crate::id_fields::IdFields;
 use crate::id_fields::ObjectKind;
 use crate::text_gen;
@@ -113,8 +116,8 @@ impl VirtualRepoProvider {
                             FileMode::Regular => (ObjectKind::Blob, FileType::Regular),
                             FileMode::Executable => (ObjectKind::Blob, FileType::Executable),
                         };
-                        let id8 =
-                            (seed.0 ^ name_id.0.get()).wrapping_mul(11) ^ (blob_id.0.get() << 5);
+                        // This id8 decides file length for regular blobs.
+                        let id8 = calculate_file_length(seed.0, name_id.0.get(), blob_id.0.get());
                         let new_id = fields.with_kind_id8(kind, id8);
                         (Id20::from(new_id), TreeItemFlag::File(file_type))
                     }
@@ -185,6 +188,19 @@ impl VirtualRepoProvider {
         let bytes = Bytes::from(text.into_bytes());
         Some(bytes)
     }
+}
+
+fn calculate_file_length(seed: u64, name_id: u64, blob_id: u64) -> u64 {
+    // Use xxhash to get a (roughly) uniform distribution.
+    let x = {
+        let mut hash = Xxh3Hash64::default();
+        hash.write(&seed.to_le_bytes());
+        hash.write(&name_id.to_le_bytes());
+        hash.finish()
+    };
+    let len = generate_file_size(x);
+    // blob_id is the "generation number" of the file. It can make the file a bit longer.
+    len + (blob_id << 5)
 }
 
 const MAX_FACTOR_BITS: usize = 1 << 6;
