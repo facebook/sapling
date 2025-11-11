@@ -15,8 +15,7 @@
 //!
 //! Currently mainly used by `virtual-repo` to construct synthetic repos.
 
-use format_util::git_sha1_deserialize;
-use format_util::hg_sha1_deserialize;
+use format_util::strip_sha1_header;
 use minibytes::Bytes;
 use types::Id20;
 use types::SerializationFormat;
@@ -36,11 +35,7 @@ pub trait Id20StoreExtension: Send + Sync + 'static {
         }
         // Use `get_sha1_blob` to answer `get_content`.
         let data = self.get_sha1_blob(id)?;
-        let content = match self.format() {
-            SerializationFormat::Hg => hg_sha1_deserialize(&data).ok()?.0,
-            SerializationFormat::Git => git_sha1_deserialize(&data).ok()?.0,
-        };
-        Some(data.slice_to_bytes(content))
+        strip_sha1_header(&data, self.format()).ok()
     }
 
     /// Used by `get_content` default implementation.

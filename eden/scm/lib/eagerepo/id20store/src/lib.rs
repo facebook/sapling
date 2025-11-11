@@ -16,8 +16,7 @@ use std::sync::OnceLock;
 
 use anyhow::Result;
 use anyhow::ensure;
-use format_util::git_sha1_deserialize;
-use format_util::hg_sha1_deserialize;
+use format_util::strip_sha1_header;
 use id20store_trait::Id20StoreExtension;
 use minibytes::Bytes;
 use parking_lot::RwLock;
@@ -178,11 +177,8 @@ impl Id20Store {
         match self.get_sha1_blob(id)? {
             None => Ok(None),
             Some(data) => {
-                let content = match self.format() {
-                    SerializationFormat::Hg => hg_sha1_deserialize(&data)?.0,
-                    SerializationFormat::Git => git_sha1_deserialize(&data)?.0,
-                };
-                Ok(Some(data.slice_to_bytes(content)))
+                let data = strip_sha1_header(&data, self.format())?;
+                Ok(Some(data))
             }
         }
     }
