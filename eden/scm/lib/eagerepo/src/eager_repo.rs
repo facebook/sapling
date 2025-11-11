@@ -47,6 +47,7 @@ use manifest_tree::TreeEntry;
 use manifest_tree::TreeManifest;
 use metalog::CommitOptions;
 use metalog::MetaLog;
+use metalog::RefName;
 use minibytes::Bytes;
 use mutationstore::MutationStore;
 use nonblocking::non_blocking;
@@ -783,6 +784,19 @@ impl EagerRepo {
             Some(id) => bookmarks.insert(name.to_string(), id),
         };
         self.set_bookmarks_map(bookmarks)?;
+        Ok(())
+    }
+
+    /// Update or remove a single remote bookmark.
+    pub fn set_remote_bookmark(&self, name: &str, id: Option<Id20>) -> Result<()> {
+        let mut metalog = self.metalog.write();
+        let mut map = metalog.get_remotenames()?;
+        let name = RefName::try_from(name.to_owned())?;
+        match id {
+            None => map.remove(&name),
+            Some(id) => map.insert(name, id),
+        };
+        metalog.set_remotenames(&map)?;
         Ok(())
     }
 
