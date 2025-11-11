@@ -47,6 +47,7 @@ use repo_blobstore::RepoBlobstore;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use restricted_paths::RestrictedPaths;
 use skeleton_manifest::RootSkeletonManifestId;
 use unodes::RootUnodeManifestId;
 
@@ -85,6 +86,9 @@ pub struct HookRepo {
 
     #[facet]
     pub commit_graph: CommitGraph,
+
+    #[facet]
+    pub restricted_paths: RestrictedPaths,
 }
 
 impl HookRepo {

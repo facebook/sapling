@@ -1603,6 +1603,7 @@ impl RepoFactory {
         permission_checker: &ArcRepoPermissionChecker,
         repo_cross_repo: &ArcRepoCrossRepo,
         commit_graph: &ArcCommitGraph,
+        restricted_paths: &ArcRestrictedPaths,
     ) -> Result<ArcHookManager> {
         let name = repo_identity.name();
 
@@ -1637,6 +1638,7 @@ impl RepoFactory {
                 bonsai_git_mapping: bonsai_git_mapping.clone(),
                 repo_cross_repo: repo_cross_repo.clone(),
                 commit_graph: commit_graph.clone(),
+                restricted_paths: restricted_paths.clone(),
             };
 
             let mut hook_manager = HookManager::new(

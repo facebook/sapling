@@ -17,6 +17,7 @@ use repo_blobstore::RepoBlobstore;
 use repo_cross_repo::RepoCrossRepo;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
+use restricted_paths::RestrictedPaths;
 
 #[facet::container]
 #[derive(Clone)]
@@ -56,4 +57,7 @@ pub struct HookTestRepo {
 
     #[facet]
     pub repo_cross_repo: RepoCrossRepo,
+
+    #[facet]
+    pub restricted_paths: RestrictedPaths,
 }
