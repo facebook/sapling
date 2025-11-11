@@ -29,6 +29,7 @@ rust_library(
         "//eden/scm/lib/commits/trait:commits-trait",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/eagerepo/id20store:id20store",
+        "//eden/scm/lib/eagerepo/trait:eagerepo-trait",
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/revlogindex:revlogindex",

@@ -22,6 +22,7 @@ use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::ops::DagStrip;
 use dag::ops::IdConvert;
+use eagerepo_trait::EagerRepoExtension;
 use format_util::git_sha1_serialize;
 use format_util::hg_sha1_serialize;
 use futures::stream::BoxStream;
@@ -56,10 +57,25 @@ pub struct OnDiskCommits {
 impl OnDiskCommits {
     pub fn new(dag_path: &Path, commits_path: &Path, format: SerializationFormat) -> Result<Self> {
         tracing::trace!(target: "commits::format", ?format);
+        let store = Id20Store::open(commits_path, format)?;
+        let mut dag = Dag::open(dag_path)?;
+
+        // Load EagerRepo-compatible extension that can provide hash<->location commit hash
+        // translation for virtual-repo.
+        if let Some(name) = store.ext_name() {
+            let ext = factory::call_constructor::<_, Arc<dyn EagerRepoExtension>>(&(
+                name.to_string(),
+                format,
+            ))?;
+            if let Some(remote_protocol) = ext.get_dag_remote_protocol() {
+                dag.set_remote_protocol(remote_protocol);
+            }
+        }
+
         let result = Self {
-            dag: Dag::open(dag_path)?,
+            dag,
             dag_path: dag_path.to_path_buf(),
-            commits: Arc::new(Id20Store::open(commits_path, format)?),
+            commits: Arc::new(store),
             commits_path: commits_path.to_path_buf(),
             format,
         };
