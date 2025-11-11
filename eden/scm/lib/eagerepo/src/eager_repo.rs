@@ -19,6 +19,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::OnceLock;
 
+use anyhow::Result;
 use anyhow::anyhow;
 use blob::Blob;
 use dag::Dag;
@@ -67,7 +68,6 @@ use tracing::instrument;
 use zstore::Id20;
 
 use crate::Id20Store;
-use crate::Result;
 
 const HG_PARENTS_LEN: usize = HgId::len() * 2;
 const HG_LEN: usize = HgId::len();
@@ -498,9 +498,7 @@ impl EagerRepo {
     /// Calculate augmented trees recursively
     pub fn derive_augmented_tree_recursively(&self, id: Id20) -> Result<Option<Bytes>> {
         if !matches!(self.format(), SerializationFormat::Hg) {
-            return Err(crate::Error::Other(anyhow!(
-                "Augmented tree is only supported for Hg format"
-            )));
+            return Err(anyhow!("Augmented tree is only supported for Hg format"));
         }
         match self.store.get_augmented_blob(id)? {
             Some(t) => Ok(Some(t)),
@@ -639,11 +637,12 @@ impl EagerRepo {
                 .find_missing_references(tree_id, Flag::Directory, path, &mut missing)?;
             if !missing.is_empty() {
                 let paths = missing.into_iter().map(|p| p.to_string()).collect();
-                return Err(crate::Error::CommitMissingPaths(
+                return Err(crate::errors::Error::CommitMissingPaths(
                     vertex,
                     Vertex::copy_from(tree_id.as_ref()),
                     paths,
-                ));
+                )
+                .into());
             }
         }
 
@@ -717,10 +716,11 @@ impl EagerRepo {
     pub fn set_bookmarks_map(&self, map: BTreeMap<String, Id20>) -> Result<()> {
         for (name, id) in map.iter() {
             if self.store.get_content(*id)?.is_none() {
-                return Err(crate::Error::BookmarkMissingCommit(
+                return Err(crate::errors::Error::BookmarkMissingCommit(
                     name.to_string(),
                     Vertex::copy_from(id.as_ref()),
-                ));
+                )
+                .into());
             }
         }
         let text = map
@@ -873,11 +873,12 @@ fn write_requires(dir: &Path, requires: &[&'static str]) -> Result<()> {
             if unsupported.is_empty() && missing.is_empty() {
                 Ok(())
             } else {
-                Err(crate::Error::RequirementsMismatch(
+                Err(crate::errors::Error::RequirementsMismatch(
                     path.display().to_string(),
                     unsupported,
                     missing,
-                ))
+                )
+                .into())
             }
         }
         Err(e) => Err(e.into()),
@@ -991,10 +992,11 @@ mod tests {
         .unwrap();
 
         let err = EagerRepo::open(dir).map(|_| ()).unwrap_err();
+        let err = err.downcast_ref::<crate::errors::Error>().unwrap();
         match err {
-            crate::Error::RequirementsMismatch(_, unsupported, missing) => {
-                assert_eq!(unsupported, ["remotefilelog"]);
-                assert_eq!(missing, ["treestate", "windowssymlinks"]);
+            crate::errors::Error::RequirementsMismatch(_, unsupported, missing) => {
+                assert_eq!(unsupported, &["remotefilelog"]);
+                assert_eq!(missing, &["treestate", "windowssymlinks"]);
             }
             _ => panic!("expect RequirementsMismatch, got {:?}", err),
         }

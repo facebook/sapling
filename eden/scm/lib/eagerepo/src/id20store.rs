@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::OnceLock;
 
+use anyhow::Result;
 use eagerepo_trait::EagerRepoExtension;
 use format_util::git_sha1_deserialize;
 use format_util::hg_sha1_deserialize;
@@ -22,8 +23,6 @@ use parking_lot::RwLock;
 use storemodel::SerializationFormat;
 use zstore::Id20;
 use zstore::Zstore;
-
-use crate::Result;
 
 /// Storage keyed by `Id20`. Intended to store file, tree, commit contents, and
 /// be used by `EagerRepo` and `OnDiskCommits`. Wrapped by `Arc<RwLock>` for

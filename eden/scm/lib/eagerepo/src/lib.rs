@@ -29,11 +29,11 @@ mod factory_impls;
 mod id20store;
 mod trait_impls;
 
+pub use anyhow::Error;
 pub use api::edenapi_from_config;
 pub use eager_repo::EagerRepo;
 pub use eager_repo::EagerRepoStore;
 pub use eager_repo::is_eager_repo;
-pub use errors::Error;
 pub use id20store::Id20Store;
 pub type Result<T> = std::result::Result<T, Error>;
 

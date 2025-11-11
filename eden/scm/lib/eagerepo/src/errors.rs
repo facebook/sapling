@@ -13,9 +13,6 @@ pub enum Error {
     #[error(transparent)]
     Dag(#[from] dag::Error),
 
-    #[error("hash mismatch ({0:?} != {1:?})")]
-    HashMismatch(Vertex, Vertex),
-
     #[error(
         "EagerRepo detected unsupported requires at {0}:\n  Unsupported: {1:?}\n  Missing: {2:?}\n(is there a non-EagerRepo created accidentally at the same location?)"
     )]
