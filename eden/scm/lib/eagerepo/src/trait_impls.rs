@@ -7,6 +7,8 @@
 
 //! Implement traits from other crates.
 
+use std::ops::Deref;
+
 use blob::Blob;
 use cas_client::CasClient;
 use cas_client::CasFetchedStats;
@@ -80,19 +82,17 @@ impl KeyStore for EagerRepoStore {
     }
 
     fn flush(&self) -> anyhow::Result<()> {
-        let mut inner = self.inner.write();
-        inner.flush()?;
+        self.deref().flush()?;
         Ok(())
     }
 
     fn refresh(&self) -> anyhow::Result<()> {
-        let mut inner = self.inner.write();
-        inner.flush()?;
+        self.deref().flush()?;
         Ok(())
     }
 
     fn format(&self) -> SerializationFormat {
-        self.format
+        self.deref().format()
     }
 
     fn maybe_as_any(&self) -> Option<&dyn std::any::Any> {

@@ -13,6 +13,7 @@ use std::fs;
 use std::fs::read_to_string;
 use std::io;
 use std::io::Write;
+use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -28,9 +29,7 @@ use dag::ops::DagAddHeads;
 use dag::ops::DagPersistent;
 use eagerepo_trait::EagerRepoExtension;
 use format_util::commit_text_to_root_tree_id;
-use format_util::git_sha1_deserialize;
 use format_util::git_sha1_serialize;
-use format_util::hg_sha1_deserialize;
 use format_util::hg_sha1_serialize;
 use format_util::split_hg_file_metadata;
 use futures::lock::Mutex;
@@ -66,8 +65,8 @@ use storemodel::types::Parents;
 use storemodel::types::hgid::NULL_ID;
 use tracing::instrument;
 use zstore::Id20;
-use zstore::Zstore;
 
+use crate::Id20Store;
 use crate::Result;
 
 const HG_PARENTS_LEN: usize = HgId::len() * 2;
@@ -109,13 +108,7 @@ pub struct EagerRepo {
     pub(crate) ext: OnceLock<Arc<dyn EagerRepoExtension>>,
 }
 
-/// Storage used by `EagerRepo`. Wrapped by `Arc<RwLock>` for easier sharing.
-///
-/// File, tree, commit contents.
-///
-/// SHA1 is verifiable. For HG this means `sorted([p1, p2])` and filelog rename
-/// metadata is included in values. For Git this means `type size` is part of
-/// the prefix of the stored blobs.
+/// Storage used by `EagerRepo`. See [`Id20Store`] for details.
 ///
 /// This is meant to be mainly a content store. We currently "abuse" it to
 /// answer filelog history when ght HG format is used. The filelog (filenode)
@@ -129,146 +122,28 @@ pub struct EagerRepo {
 /// Currently backed by [`zstore::Zstore`], a pure content key-value store.
 #[derive(Clone)]
 pub struct EagerRepoStore {
-    pub(crate) inner: Arc<RwLock<Zstore>>,
-    pub(crate) format: SerializationFormat,
-    pub(crate) ext: OnceLock<Arc<dyn EagerRepoExtension>>,
-    pub(crate) extensions_path: PathBuf,
-    pub(crate) extension_names: Arc<RwLock<BTreeSet<String>>>,
+    pub(crate) inner: Id20Store,
+}
+
+impl Deref for EagerRepoStore {
+    type Target = Id20Store;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl EagerRepoStore {
     /// Open an [`EagerRepoStore`] at the given directory.
     /// Create an empty store on demand.
     pub fn open(dir: &Path, format: SerializationFormat) -> Result<Self> {
-        let inner = Zstore::open(dir)?;
-
-        let extensions_path = dir.join("enabled-exts");
-        let extension_names: BTreeSet<String> = {
-            let content = match fs::read_to_string(&extensions_path) {
-                Ok(v) => v,
-                Err(e) if e.kind() == io::ErrorKind::NotFound => String::new(),
-                Err(e) => return Err(e.into()),
-            };
-            content.lines().map(ToOwned::to_owned).collect()
-        };
-
-        let store = Self {
-            inner: Arc::new(RwLock::new(inner)),
-            format,
-            ext: Default::default(),
-            extensions_path,
-            extension_names: Arc::new(RwLock::new(extension_names.clone())),
-        };
-
-        // Load extensions.
-        for name in extension_names {
-            let ext = factory::call_constructor::<_, Arc<dyn EagerRepoExtension>>(&(name, format))?;
-            store.enable_extension(ext)?;
-        }
-
-        Ok(store)
+        let inner = Id20Store::open(dir, format)?;
+        Ok(Self { inner })
     }
 
-    /// Like `enable_extension`, but writes an on-disk file so the extension
-    /// will also be enabled on the next `open`.
-    ///
-    /// Unlike `enable_extension`, the extension is identified by a string name.
-    /// The extension provider should use [`factory::register_constructor`] to
-    /// tell EagerRepoStore how to convert the name to extension.
-    pub fn enable_extension_permanently(&self, name: String) -> Result<()> {
-        // The ext name should be registered. Check it.
-        let ext = factory::call_constructor::<_, Arc<dyn EagerRepoExtension>>(&(
-            name.clone(),
-            self.format,
-        ))?;
-        let mut names = self.extension_names.write();
-        if !names.insert(name) {
-            // Already enabled.
-            return Ok(());
-        }
-        atomicfile::atomic_write(&self.extensions_path, 0o660, false, |f| {
-            let mut content = String::with_capacity(names.iter().map(|s| s.len() + 1).sum());
-            for req in names.iter() {
-                content.push_str(req);
-                content.push('\n');
-            }
-            f.write_all(content.as_bytes())
-        })?;
-        self.enable_extension(ext)?;
-        Ok(())
-    }
-
-    /// Extends the current `EagerRepoStore` with an extension.
-    fn enable_extension(&self, ext: Arc<dyn EagerRepoExtension>) -> io::Result<()> {
-        let got_ext = self.ext.get_or_init(|| ext.clone());
-        if !Arc::ptr_eq(got_ext, &ext) {
-            return Err(io::Error::new(
-                io::ErrorKind::AlreadyExists,
-                "bug: enable_extension called twice",
-            ));
-        }
-        Ok(())
-    }
-
-    /// Flush changes to disk.
-    pub fn flush(&self) -> Result<()> {
-        let mut inner = self.inner.write();
-        inner.flush()?;
-        Ok(())
-    }
-
-    /// Insert SHA1 blob to zstore.
-    /// In hg's case, the `data` is `min(p1, p2) + max(p1, p2) + text`.
-    /// In git's case, the `data` should include the type and size header.
-    pub fn add_sha1_blob(&self, data: &[u8], bases: &[Id20]) -> Result<Id20> {
-        let mut inner = self.inner.write();
-        Ok(inner.insert(data, bases)?)
-    }
-
-    /// Insert arbitrary blob with an `id`.
-    /// This is usually used for hg's LFS data.
-    pub fn add_arbitrary_blob(&self, id: Id20, data: &[u8]) -> Result<()> {
-        let mut inner = self.inner.write();
-        inner.insert_arbitrary(id, data, &[])?;
-        Ok(())
-    }
-
-    /// Read SHA1 blob from zstore, including the prefixes.
-    pub fn get_sha1_blob(&self, id: Id20) -> Result<Option<Bytes>> {
-        if let Some(ext) = self.ext.get() {
-            if let Some(blob) = ext.get_sha1_blob(id) {
-                return Ok(Some(blob));
-            }
-        }
-        let inner = self.inner.read();
-        Ok(inner.get(id)?)
-    }
-
-    pub(crate) fn format(&self) -> SerializationFormat {
-        self.format
-    }
-
-    /// Read the blob with its p1, p2 prefix removed.
+    // Explicitly defined to avoid conflicts with storemodel.
     pub fn get_content(&self, id: Id20) -> Result<Option<Bytes>> {
-        if let Some(ext) = self.ext.get() {
-            if let Some(content) = ext.get_content(id) {
-                return Ok(Some(content));
-            }
-        }
-        // Special null case.
-        if id.is_null() {
-            return Ok(Some(Bytes::default()));
-        }
-        match self.get_sha1_blob(id)? {
-            None => Ok(None),
-            Some(data) => {
-                let content = match self.format() {
-                    SerializationFormat::Hg => hg_sha1_deserialize(&data)?.0,
-                    SerializationFormat::Git => git_sha1_deserialize(&data)?.0,
-                };
-                Ok(Some(data.slice_to_bytes(content)))
-            }
-        }
+        self.inner.get_content(id)
     }
 
     /// Read CAS data for digest.
