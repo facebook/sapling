@@ -32,4 +32,8 @@ impl EagerRepoExtension for VirtualRepoProvider {
     fn get_dag_remote_protocol(&self) -> Option<Arc<dyn RemoteIdConvertProtocol>> {
         Some(Arc::new(VirtualIdConvertProtocol))
     }
+
+    fn name(&self) -> &'static str {
+        "virtual-repo"
+    }
 }

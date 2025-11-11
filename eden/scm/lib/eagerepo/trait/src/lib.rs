@@ -58,4 +58,7 @@ pub trait EagerRepoExtension: Send + Sync + 'static {
     /// by `dag.import_pull_data`. It does not want O(N) complexity specifying the
     /// commit hashes one by one.
     fn get_dag_remote_protocol(&self) -> Option<Arc<dyn RemoteIdConvertProtocol>>;
+
+    /// The name of the extension.
+    fn name(&self) -> &'static str;
 }

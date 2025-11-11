@@ -15,6 +15,7 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use anyhow::Result;
+use anyhow::ensure;
 use eagerepo_trait::EagerRepoExtension;
 use format_util::git_sha1_deserialize;
 use format_util::hg_sha1_deserialize;
@@ -89,6 +90,10 @@ impl Id20Store {
             name.clone(),
             self.format(),
         ))?;
+        ensure!(
+            ext.name() == &name,
+            "bug: extension name should match factory constructor name"
+        );
         let mut names = self.extension_names.write();
         if !names.insert(name) {
             // Already enabled.
