@@ -1525,6 +1525,7 @@ the following are valid keystrokes:
         curses.cbreak()
         self.stdscr.refresh()
         self.stdscr.keypad(1)  # allow arrow-keys to continue to function
+        curses.doupdate(repaint=True)
 
     def confirmationwindow(self, windowtext):
         "display an informational window, then wait for and return a keypress."
@@ -1623,6 +1624,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
             self.stdscr.refresh()
             self.statuswin.refresh()
             self.stdscr.keypad(1)
+            curses.doupdate(repaint=True)
 
         def editpatchwitheditor(self, chunk):
             if chunk is None:
