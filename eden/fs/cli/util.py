@@ -1082,11 +1082,18 @@ def maybe_edensparse_migration(
        - Finally create an empty marker file to indicate part 1 of migration is complete
     """
 
+    def log(msg: str) -> None:
+        if os.environ.get("EDENSPARSE_MIGRATION_VERBOSE_LOGGING"):
+            print(f"edensparse_migration: {msg}")
+        else:
+            pass
+
     should_migrate = instance.get_config_bool(
         "experimental.attempt-edensparse-migration", False
     )
 
     if not should_migrate:
+        log("experimental.attempt-edensparse-migration disabled, skipping migration")
         return
 
     if step not in {
@@ -1097,6 +1104,10 @@ def maybe_edensparse_migration(
 
     at_lease_one_successful_migration = False
     migration_exceptions = []
+
+    log(
+        f"starting {step} for checkouts: {','.join([r.name for r in instance.get_checkouts()])}"
+    )
 
     for checkout in instance.get_checkouts():
         rollbacks = []  # rollback callables
@@ -1159,8 +1170,10 @@ def maybe_edensparse_migration(
 
             if is_sparse_disabled and is_edensparse_enabled:
                 # no config changes needed
+                log(f"no need to configure sapling for {checkout.name}")
                 return False
 
+            log(f"configuring sapling for {checkout.name}")
             hg(["config", "--local", "extensions.sparse", "!"])
 
             hg(
@@ -1202,6 +1215,7 @@ def maybe_edensparse_migration(
             if snapshot_state.working_copy_parent is None:
                 # case 1
                 # Skip the migration for this checkout
+                log(f"no need to update snapshot(case 1) file for {checkout.name}")
                 return False
             elif (
                 snapshot_state.working_copy_parent == snapshot_state.last_checkout_hash
@@ -1209,8 +1223,10 @@ def maybe_edensparse_migration(
                 # case 2
                 if snapshot_state.last_filter_id is not None:
                     # Skip the migration for this checkout
+                    log(f"no need to update snapshot(case 2) file for {checkout.name}")
                     return False
                 # Apply the 'null' filter
+                log(f"updating snapshot file(case 2) for {checkout.name}")
                 filtered_rootid = create_filtered_rootid(
                     snapshot_state.working_copy_parent, b"null"
                 )
@@ -1229,6 +1245,7 @@ def maybe_edensparse_migration(
                 parent_filter = snapshot_state.parent_filter_id
                 checked_out_filter = snapshot_state.last_filter_id
                 if parent_filter is None and checked_out_filter is None:
+                    log(f"updating snapshot file(case 4) for {checkout.name}")
                     # Apply the 'null' filter
                     working_copy_parent_filtered_rootid = create_filtered_rootid(
                         working_copy_parent, NULL_FILTER
@@ -1256,6 +1273,7 @@ def maybe_edensparse_migration(
                     write_file_atomically(snapshot_file, new_snapshot_bytes)
                     return True
                 # Skip the migration for this checkout since it's already migrated
+                log(f"no need to update snapshot file(case 4) for {checkout.name}")
                 return False
 
         def create_empty_sparse_file(
@@ -1272,11 +1290,13 @@ def maybe_edensparse_migration(
             hg_dir = checkout.hg_dot_path
             sparse_file = os.path.join(hg_dir, "sparse")
             if not os.path.exists(sparse_file):
+                log(f"creating empty sparse file for {checkout.name}")
                 rollbacks.append(lambda: Path(sparse_file).unlink(missing_ok=True))
                 with open(sparse_file, "w") as f:
                     f.write("")
                     fault_injector.try_inject("unexpected_exception_after_sparse_file")
                     return True
+            log(f"no need to create empty sparse file for {checkout.name}")
             return False
 
         def update_hg_requires(
@@ -1309,6 +1329,7 @@ def maybe_edensparse_migration(
             rollbacks.append(write_original_lines)
             lines_clean = [line.strip() for line in lines]
             if "edensparse" not in lines_clean:
+                log(f"updating hg requires file for {checkout.name}")
                 lines_clean.append("edensparse")
                 lines_clean = sorted(set(lines_clean))
                 # Write back with newline after each entry
@@ -1319,6 +1340,7 @@ def maybe_edensparse_migration(
                         "unexpected_exception_after_requires_file"
                     )
                     return True
+            log(f"no need to update hg requires file for {checkout.name}")
             return False
 
         def update_config_toml_file(
@@ -1336,6 +1358,11 @@ def maybe_edensparse_migration(
 
             rollbacks.append(restore_config_toml)
 
+            if config.scm_type == "filteredhg":
+                log(f"no need to update config toml file for {checkout.name}")
+                return
+
+            log(f"updating config toml file for {checkout.name}")
             config = config._replace(scm_type="filteredhg")
             checkout.save_config(config)
             fault_injector.try_inject("unexpected_exception_after_config_toml")
@@ -1346,16 +1373,25 @@ def maybe_edensparse_migration(
                     # the migration should return early here if we are in the progress of
                     # a checkout.
                     # the migration will be retried next time when edenfs is started
+                    log(
+                        f"snapshot_file not updated: migration skipped for {checkout.path.name}"
+                    )
                     continue
                 update_config_toml_file(checkout)
             else:
                 config = checkout.get_config()
                 if config.scm_type != "filteredhg":
+                    log(
+                        f"scm_type not updated: migration skipped for {checkout.path.name}"
+                    )
                     continue
                 snapshot_state = checkout.get_snapshot()
                 if snapshot_state.last_filter_id is None:
                     # SNAPSHOT file not updated
                     # skip this part of migration and retry next time
+                    log(
+                        f"snapshot_file not updated: migration skipped for {checkout.path.name}"
+                    )
                     continue
 
                 if any(
@@ -1367,7 +1403,10 @@ def maybe_edensparse_migration(
                 ):
                     marker_file = os.path.join(checkout.hg_dot_path, MIGRATION_MARKER)
                     open(marker_file, "a").close()
+                    log(f"migration complete for {checkout.path.name}")
                     at_lease_one_successful_migration = True
+                else:
+                    log(f"no changes made, migration skipped for {checkout.path.name}")
         except Exception as e:
             print("edensparse migration failed: ", e, file=sys.stderr)
             # log checkout info and exception

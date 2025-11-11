@@ -1392,6 +1392,7 @@ class EdenCheckout:
 
         self.state_dir = state_dir
         self._config: Optional[CheckoutConfig] = None
+        self.name: str = path.name
 
     def __repr__(self) -> str:
         return f"EdenCheckout({self.instance!r}, {self.path!r}, {self.state_dir!r})"
