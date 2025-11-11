@@ -24,15 +24,13 @@ use dag::ops::DagStrip;
 use dag::ops::IdConvert;
 use format_util::git_sha1_serialize;
 use format_util::hg_sha1_serialize;
-use format_util::strip_sha1_header;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
+use id20store::Id20Store;
 use minibytes::Bytes;
-use parking_lot::RwLock;
 use storemodel::SerializationFormat;
 use types::HgId;
-use zstore::Id20;
-use zstore::Zstore;
+use types::Id20;
 
 use crate::AppendCommits;
 use crate::DescribeBackend;
@@ -47,7 +45,7 @@ use crate::utils;
 
 /// Commits stored on disk, identified by SHA1.
 pub struct OnDiskCommits {
-    commits: Arc<RwLock<Zstore>>,
+    commits: Arc<Id20Store>,
     pub(crate) commits_path: PathBuf,
     pub(crate) dag: Dag,
     pub(crate) dag_path: PathBuf,
@@ -61,7 +59,7 @@ impl OnDiskCommits {
         let result = Self {
             dag: Dag::open(dag_path)?,
             dag_path: dag_path.to_path_buf(),
-            commits: Arc::new(RwLock::new(Zstore::open(commits_path)?)),
+            commits: Arc::new(Id20Store::open(commits_path, format)?),
             commits_path: commits_path.to_path_buf(),
             format,
         };
@@ -75,12 +73,8 @@ impl OnDiskCommits {
         Ok(())
     }
 
-    pub(crate) fn commit_data_store(&self) -> Arc<RwLock<Zstore>> {
+    pub(crate) fn commit_data_store(&self) -> Arc<Id20Store> {
         self.commits.clone()
-    }
-
-    pub(crate) fn format(&self) -> SerializationFormat {
-        self.format
     }
 }
 
@@ -97,7 +91,7 @@ impl AppendCommits for OnDiskCommits {
         // Write commit data to zstore.
         for commit in commits {
             let text = get_sha1_raw_text(&commit.raw_text, &commit.parents)?;
-            let vertex = Vertex::copy_from(self.commits.write().insert(&text, &[])?.as_ref());
+            let vertex = Vertex::copy_from(self.commits.add_sha1_blob(&text, &[])?.as_ref());
             if vertex != commit.vertex {
                 return Err(crate::errors::hash_mismatch(&vertex, &commit.vertex));
             }
@@ -122,8 +116,7 @@ impl AppendCommits for OnDiskCommits {
     }
 
     async fn flush_commit_data(&mut self) -> Result<()> {
-        let mut zstore = self.commits.write();
-        zstore.flush()?;
+        self.commits.flush()?;
         Ok(())
     }
 
@@ -166,8 +159,8 @@ fn git_sha1_raw_text(raw_text: &[u8], _parents: &[Vertex]) -> Result<Vec<u8>> {
 #[async_trait::async_trait]
 impl ReadCommitText for OnDiskCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        let store = self.commits.read();
-        get_commit_raw_text(&store, vertex, self.format())
+        let store = &self.commits;
+        get_commit_raw_text(&store, vertex)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
@@ -180,13 +173,13 @@ impl ReadCommitText for OnDiskCommits {
 }
 
 #[derive(Clone)]
-struct ArcRwLockZstore(Arc<RwLock<Zstore>>, SerializationFormat);
+struct ArcRwLockZstore(Arc<Id20Store>, SerializationFormat);
 
 #[async_trait::async_trait]
 impl ReadCommitText for ArcRwLockZstore {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        let store = self.0.read();
-        get_commit_raw_text(&store, vertex, self.1)
+        let store = &self.0;
+        get_commit_raw_text(&store, vertex)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
@@ -198,19 +191,9 @@ impl ReadCommitText for ArcRwLockZstore {
     }
 }
 
-fn get_commit_raw_text(
-    store: &Zstore,
-    vertex: &Vertex,
-    format: SerializationFormat,
-) -> Result<Option<Bytes>> {
+fn get_commit_raw_text(store: &Id20Store, vertex: &Vertex) -> Result<Option<Bytes>> {
     let id = Id20::from_slice(vertex.as_ref())?;
-    match store.get(id)? {
-        Some(bytes) => {
-            let raw_text = strip_sha1_header(&bytes, format)?;
-            Ok(Some(raw_text))
-        }
-        None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
-    }
+    store.get_content(id)
 }
 
 impl StreamCommitText for OnDiskCommits {
@@ -218,8 +201,8 @@ impl StreamCommitText for OnDiskCommits {
         &self,
         stream: BoxStream<'static, anyhow::Result<Vertex>>,
     ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
-        let zstore = Zstore::open(&self.commits_path)?;
         let format = self.format;
+        let store = Id20Store::open(&self.commits_path, format)?;
         let stream = stream.map(move |item| {
             let vertex = item?;
             let id = Id20::from_slice(vertex.as_ref())?;
@@ -227,8 +210,8 @@ impl StreamCommitText for OnDiskCommits {
             let raw_text = if id.is_null() || id.is_wdir() {
                 Default::default()
             } else {
-                match zstore.get(id)? {
-                    Some(raw_data) => strip_sha1_header(&raw_data, format)?,
+                match store.get_content(id)? {
+                    Some(data) => data,
                     None => return vertex.not_found().map_err(Into::into),
                 }
             };

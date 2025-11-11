@@ -26,7 +26,7 @@ use futures::stream::StreamExt;
 use minibytes::Bytes;
 use revlogindex::RevlogIndex;
 use storemodel::SerializationFormat;
-use zstore::Id20;
+use types::Id20;
 
 use crate::AppendCommits;
 use crate::DescribeBackend;

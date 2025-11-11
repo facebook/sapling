@@ -29,19 +29,17 @@ use edenapi::SaplingRemoteApi;
 use edenapi::types::CommitLocationToHashRequest;
 use format_util::git_sha1_serialize;
 use format_util::hg_sha1_deserialize;
-use format_util::strip_sha1_header;
 use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use id20store::Id20Store;
 use minibytes::Bytes;
-use parking_lot::RwLock;
 use storemodel::SerializationFormat;
 use streams::HybridResolver;
 use streams::HybridStream;
 use tracing::instrument;
-use zstore::Id20;
-use zstore::Zstore;
+use types::Id20;
 
 use crate::AppendCommits;
 use crate::DescribeBackend;
@@ -270,7 +268,7 @@ impl HybridCommits {
 
     fn to_hybrid_commit_text(&self) -> HybridCommitTextReader {
         HybridCommitTextReader {
-            zstore: self.commits.commit_data_store(),
+            store: self.commits.commit_data_store(),
             client: self.client.clone(),
             format: self.commits.format(),
         }
@@ -373,7 +371,7 @@ impl AppendCommits for HybridCommits {
 /// Subset of HybridCommits useful to read commit text.
 #[derive(Clone)]
 struct HybridCommitTextReader {
-    zstore: Arc<RwLock<Zstore>>,
+    store: Arc<Id20Store>,
     client: Arc<dyn SaplingRemoteApi>,
     format: SerializationFormat,
 }
@@ -428,12 +426,12 @@ impl StreamCommitText for HybridCommitTextReader {
         &self,
         input: BoxStream<'static, anyhow::Result<Vertex>>,
     ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
-        let zstore = self.zstore.clone();
+        let store = self.store.clone();
         let client = self.client.clone();
         let format = self.format;
         let resolver = Resolver {
             client,
-            zstore,
+            store,
             format,
         };
         let buffer_size = 10000;
@@ -457,14 +455,14 @@ impl StripCommits for HybridCommits {
 
 struct Resolver {
     client: Arc<dyn SaplingRemoteApi>,
-    zstore: Arc<RwLock<Zstore>>,
+    store: Arc<Id20Store>,
     format: SerializationFormat,
 }
 
 impl Drop for Resolver {
     fn drop(&mut self) {
-        // Write commit data back to zstore, best effort.
-        let _ = self.zstore.write().flush();
+        // Write commit data back to store, best effort.
+        let _ = self.store.flush();
     }
 }
 
@@ -476,11 +474,8 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
             // Do not borther asking server about virtual nodes.
             return Ok(Some(Bytes::new()));
         }
-        match self.zstore.read().get(id)? {
-            Some(bytes) => {
-                let text = strip_sha1_header(&bytes, self.format)?;
-                Ok(Some(text))
-            }
+        match self.store.get_content(id)? {
+            Some(text) => Ok(Some(text)),
             None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
         }
     }
@@ -496,7 +491,7 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
             .collect::<std::result::Result<Vec<_>, _>>()?;
         let client = self.client.clone();
         let response = client.commit_revlog_data(ids).await?;
-        let zstore = self.zstore.clone();
+        let store = self.store.clone();
         let format = self.format;
         let commits = response.entries.map(move |e| {
             let e = e?;
@@ -509,7 +504,7 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
                     Bytes::from(git_sha1_serialize(&e.revlog_data, "commit"))
                 }
             };
-            let written_id = zstore.write().insert(&text, &[])?;
+            let written_id = store.add_sha1_blob(&text, &[])?;
             if !written_id.is_null() && written_id != e.hgid {
                 anyhow::bail!(
                     "server returned commit-text pair ({}, {:?}) has mismatched {:?} SHA1: {}",

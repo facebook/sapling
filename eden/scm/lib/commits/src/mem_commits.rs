@@ -54,7 +54,7 @@ impl MemCommits {
 #[async_trait::async_trait]
 impl AppendCommits for MemCommits {
     async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
-        // Write commit data to zstore.
+        // Write commit data to HashMap.
         for commit in commits {
             self.commits
                 .insert(commit.vertex.clone(), commit.raw_text.clone());

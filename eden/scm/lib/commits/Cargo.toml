@@ -17,16 +17,15 @@ anyhow = "1.0.98"
 async-trait = "0.1.86"
 fs-err = { version = "3", features = ["tokio"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-commits-trait = { version = "0.1.0", path = "trait" }
 sapling-dag = { version = "0.1.0", path = "../dag", features = ["indexedlog-backend"] }
 sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
 sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
+sapling-id20store = { version = "0.1.0", path = "../eagerepo/id20store" }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes", features = ["frombytes"] }
 sapling-revlogindex = { version = "0.1.0", path = "../revlogindex" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-streams = { version = "0.1.0", path = "../streams" }
 sapling-types = { version = "0.1.0", path = "../types" }
-sapling-zstore = { version = "0.1.0", path = "../zstore" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
