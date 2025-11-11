@@ -1411,34 +1411,34 @@ folly::Try<facebook::eden::TreePtr> SaplingBackingStore::getNativeTree(
     sapling::FetchMode fetch_mode) {
   XLOGF(DBG7, "Importing tree node={} from hgcache", folly::hexlify(node));
   return folly::makeTryWith([&] {
-    try {
-      sapling::TreeBuilder tb =
-          sapling::TreeBuilder{oid, path, caseSensitive_, objectIdFormat_};
+    sapling::TreeBuilder tb =
+        sapling::TreeBuilder{oid, path, caseSensitive_, objectIdFormat_};
 
-      sapling_backingstore_get_tree(
-          *store_.get(),
-          rust::Slice<const uint8_t>{node.data(), node.size()},
-          tb,
-          fetch_mode);
+    auto result = sapling_backingstore_get_tree(
+        *store_.get(),
+        rust::Slice<const uint8_t>{node.data(), node.size()},
+        tb,
+        fetch_mode);
 
-      facebook::eden::TreePtr tree = tb.build();
-
-      if (tree && context->getCause() != FetchCause::Prefetch) {
-        sapling_backingstore_witness_dir_read(
-            *store_.get(),
-            rust::Slice<const uint8_t>{
-                reinterpret_cast<const uint8_t*>(path.view().data()),
-                path.view().size()},
-            tb.num_files(),
-            tb.num_dirs(),
-            fetch_mode == sapling::FetchMode::LocalOnly,
-            context->getClientPid().valueOrZero().get());
-      }
-
-      return tree;
-    } catch (const rust::Error& error) {
-      throw sapling::SaplingBackingStoreError{error.what()};
+    if (result.error != nullptr) {
+      throw std::move(*result.error);
     }
+
+    facebook::eden::TreePtr tree = tb.build();
+
+    if (tree && context->getCause() != FetchCause::Prefetch) {
+      sapling_backingstore_witness_dir_read(
+          *store_.get(),
+          rust::Slice<const uint8_t>{
+              reinterpret_cast<const uint8_t*>(path.view().data()),
+              path.view().size()},
+          tb.num_files(),
+          tb.num_dirs(),
+          fetch_mode == sapling::FetchMode::LocalOnly,
+          context->getClientPid().valueOrZero().get());
+    }
+
+    return tree;
   });
 }
 

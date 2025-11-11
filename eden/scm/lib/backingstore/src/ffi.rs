@@ -234,6 +234,10 @@ pub(crate) mod ffi {
         fn num_dirs(&self) -> usize;
     }
 
+    pub struct GetTreeResult {
+        error: UniquePtr<SaplingBackingStoreError>,
+    }
+
     extern "Rust" {
         type BackingStore;
 
@@ -255,7 +259,7 @@ pub(crate) mod ffi {
             node: &[u8],
             tree_builder: Pin<&mut TreeBuilder>,
             fetch_mode: FetchMode,
-        ) -> Result<()>;
+        ) -> GetTreeResult;
 
         pub fn sapling_backingstore_get_tree_batch(
             store: &BackingStore,
@@ -465,18 +469,18 @@ pub fn sapling_backingstore_get_tree(
     node: &[u8],
     tree_builder: Pin<&mut ffi::TreeBuilder>,
     fetch_mode: ffi::FetchMode,
-) -> Result<()> {
+) -> ffi::GetTreeResult {
     // the cause is not propagated for this API
-    match store.get_tree(
+    let res = store.get_tree(
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
         node,
-    )? {
-        Some(entry) => add_tree_to_builder(tree_builder, entry),
-        None => {
-            tree_builder.mark_missing();
-            Ok(())
-        }
-    }
+    );
+    let error = resolve_result!(
+        res,
+        on_some: |entry| add_tree_to_builder(tree_builder, entry),
+        on_none: || tree_builder.mark_missing()
+    );
+    ffi::GetTreeResult { error }
 }
 
 // Convert the `TreeEntry` trait object into an EdenFS Tree by adding each entry to the TreeBuilder
