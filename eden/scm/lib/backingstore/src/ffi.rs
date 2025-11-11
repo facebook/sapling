@@ -20,7 +20,6 @@ use cxx::CxxString;
 use cxx::SharedPtr;
 use cxx::UniquePtr;
 use edenapi::types::DirectoryMetadata;
-use iobuf::IOBuf;
 use storemodel::FileAuxData as ScmStoreFileAuxData;
 use storemodel::FileType;
 use storemodel::TreeEntry;
@@ -244,6 +243,11 @@ pub(crate) mod ffi {
         error: UniquePtr<SaplingBackingStoreError>,
     }
 
+    pub struct GetBlobResult {
+        data: UniquePtr<IOBuf>,
+        error: UniquePtr<SaplingBackingStoreError>,
+    }
+
     extern "Rust" {
         type BackingStore;
 
@@ -293,7 +297,7 @@ pub(crate) mod ffi {
             store: &BackingStore,
             node: &[u8],
             fetch_mode: FetchMode,
-        ) -> Result<UniquePtr<IOBuf>>;
+        ) -> GetBlobResult;
 
         pub fn sapling_backingstore_get_blob_batch(
             store: &BackingStore,
@@ -644,15 +648,14 @@ pub fn sapling_backingstore_get_blob(
     store: &BackingStore,
     node: &[u8],
     fetch_mode: ffi::FetchMode,
-) -> Result<UniquePtr<IOBuf>> {
+) -> ffi::GetBlobResult {
     // the cause is not propagated for this API
-    match store.get_blob(
+    let res = store.get_blob(
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
         node,
-    )? {
-        Some(blob) => Ok(blob.into_iobuf().into()),
-        None => Ok(UniquePtr::null()),
-    }
+    );
+    let (data, error) = resolve_result!(res, transform_some: |blob: blob::Blob| blob.into_iobuf().into(), replace_none: UniquePtr::null());
+    ffi::GetBlobResult { data, error }
 }
 
 pub fn sapling_backingstore_get_blob_batch(
