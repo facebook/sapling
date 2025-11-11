@@ -75,6 +75,14 @@ EdenError newEdenNetworkError(
   }
 }
 
+EdenError newEdenNoSpaceError(std::string_view msg) {
+#ifdef _WIN32
+  return newEdenError(ERROR_DISK_FULL, EdenErrorType::WIN32_ERROR, msg);
+#else
+  return newEdenError(ENOSPC, EdenErrorType::POSIX_ERROR, msg);
+#endif
+}
+
 EdenError newEdenDataCorruptionError(std::string_view msg) {
 #ifdef _WIN32
   return newEdenError(ERROR_FILE_CORRUPT, EdenErrorType::WIN32_ERROR, msg);
@@ -101,11 +109,7 @@ EdenError newEdenError(const sapling::SaplingBackingStoreError& ex) {
 EdenError newEdenError(const RocksException& ex) {
   const rocksdb::Status& status = ex.getStatus();
   if (status.IsNoSpace()) {
-#ifdef _WIN32
-    return newEdenError(ERROR_DISK_FULL, EdenErrorType::WIN32_ERROR, ex.what());
-#else
-    return newEdenError(ENOSPC, EdenErrorType::POSIX_ERROR, ex.what());
-#endif
+    return newEdenNoSpaceError(folly::exceptionStr(ex).toStdString());
   } else if (status.IsCorruption()) {
     return newEdenDataCorruptionError(folly::exceptionStr(ex).toStdString());
   }
