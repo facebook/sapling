@@ -74,7 +74,7 @@ static NAMES: [[&str; 16]; 4] = [
     // Fruit
     [
         "apple", "orange", "lemon", "berry", "kiwi", "grape", "mango", "peach", "cherry", "melon",
-        "pear", "plum", "lime", "banana", "coconut", "peach",
+        "pear", "plum", "lime", "banana", "coconut", "papaya",
     ],
 ];
 
@@ -104,6 +104,15 @@ mod tests {
         ] {
             let blob = generate_file_content_of_length(len);
             assert_eq!(blob.len(), len);
+        }
+    }
+
+    #[test]
+    fn test_names_unique() {
+        use std::collections::HashSet;
+        for (i, names) in NAMES.iter().enumerate() {
+            let set: HashSet<_> = names.iter().collect();
+            assert_eq!(set.len(), names.len(), "NAMES[{i}] has duplicated items");
         }
     }
 
