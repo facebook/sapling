@@ -9,7 +9,9 @@
 #include <re2/re2.h>
 
 #include "eden/common/utils/SystemError.h"
+#ifdef WIN32_
 #include "eden/common/utils/windows/WinError.h"
+#endif
 
 namespace facebook::eden {
 
@@ -72,6 +74,16 @@ EdenError newEdenNetworkError(
     return newEdenError(EdenErrorType::NETWORK_ERROR, msg);
   }
 }
+
+EdenError newEdenDataCorruptionError(std::string_view msg) {
+#ifdef _WIN32
+  return newEdenError(ERROR_FILE_CORRUPT, EdenErrorType::WIN32_ERROR, msg);
+#else
+  // Use EBADMSG for portability, as EUCLEAN is not available on darwin.
+  return newEdenError(EBADMSG, EdenErrorType::POSIX_ERROR, msg);
+#endif
+}
+
 } // namespace
 
 EdenError newEdenError(const sapling::SaplingBackingStoreError& ex) {
@@ -79,6 +91,8 @@ EdenError newEdenError(const sapling::SaplingBackingStoreError& ex) {
   if (kind == sapling::BackingStoreErrorKind::Network) {
     return newEdenNetworkError(
         ex.code(), folly::exceptionStr(ex).toStdString());
+  } else if (kind == sapling::BackingStoreErrorKind::DataCorruption) {
+    return newEdenDataCorruptionError(folly::exceptionStr(ex).toStdString());
   }
 
   return newEdenError(static_cast<const std::exception&>(ex));
@@ -93,12 +107,7 @@ EdenError newEdenError(const RocksException& ex) {
     return newEdenError(ENOSPC, EdenErrorType::POSIX_ERROR, ex.what());
 #endif
   } else if (status.IsCorruption()) {
-#ifdef _WIN32
-    return newEdenError(
-        ERROR_FILE_CORRUPT, EdenErrorType::WIN32_ERROR, ex.what());
-#else
-    return newEdenError(EBADMSG, EdenErrorType::POSIX_ERROR, ex.what());
-#endif
+    return newEdenDataCorruptionError(folly::exceptionStr(ex).toStdString());
   }
   return newEdenError(static_cast<const std::exception&>(ex));
 }
