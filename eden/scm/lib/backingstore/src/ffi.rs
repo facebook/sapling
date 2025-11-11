@@ -248,6 +248,11 @@ pub(crate) mod ffi {
         error: UniquePtr<SaplingBackingStoreError>,
     }
 
+    pub struct GetFileAuxResult {
+        data: SharedPtr<FileAuxData>,
+        error: UniquePtr<SaplingBackingStoreError>,
+    }
+
     extern "Rust" {
         type BackingStore;
 
@@ -311,7 +316,7 @@ pub(crate) mod ffi {
             store: &BackingStore,
             node: &[u8],
             fetch_mode: FetchMode,
-        ) -> Result<SharedPtr<FileAuxData>>;
+        ) -> GetFileAuxResult;
 
         pub fn sapling_backingstore_get_file_aux_batch(
             store: &BackingStore,
@@ -709,15 +714,15 @@ pub fn sapling_backingstore_get_file_aux(
     store: &BackingStore,
     node: &[u8],
     fetch_mode: ffi::FetchMode,
-) -> Result<SharedPtr<ffi::FileAuxData>> {
+) -> ffi::GetFileAuxResult {
     // the cause is not propagated for this API
-    match store.get_file_aux(
+    let res = store.get_file_aux(
         FetchContext::new_with_cause(FetchMode::from(fetch_mode), FetchCause::EdenUnknown),
         node,
-    )? {
-        Some(aux) => Ok(SharedPtr::new(aux.into())),
-        None => Ok(SharedPtr::null()),
-    }
+    );
+
+    let (data, error) = resolve_result!(res, transform_some: |aux: ScmStoreFileAuxData| SharedPtr::new(aux.into()), replace_none: SharedPtr::null());
+    ffi::GetFileAuxResult { data, error }
 }
 
 pub fn sapling_backingstore_get_file_aux_batch(

@@ -1746,24 +1746,23 @@ folly::Try<BlobAuxDataPtr> SaplingBackingStore::getLocalBlobAuxData(
       DBG7,
       "Importing blob aux data node={} from hgcache",
       folly::hexlify(node));
-  try {
-    auto auxData = sapling_backingstore_get_file_aux(
-        *store_.get(),
-        rust::Slice<const uint8_t>{node.data(), node.size()},
-        sapling::FetchMode::LocalOnly);
+  auto result = sapling_backingstore_get_file_aux(
+      *store_.get(),
+      rust::Slice<const uint8_t>{node.data(), node.size()},
+      sapling::FetchMode::LocalOnly);
 
-    if (auxData) {
-      return GetBlobAuxDataResult{
-          std::make_shared<BlobAuxDataPtr::element_type>(BlobAuxData{
-              Hash20{std::move(auxData->content_sha1)},
-              Hash32{std::move(auxData->content_blake3)},
-              auxData->total_size})};
-    } else {
-      return GetBlobAuxDataResult{nullptr};
-    }
-  } catch (const rust::Error& error) {
+  if (result.error != nullptr) {
+    return GetBlobAuxDataResult{std::move(*result.error)};
+  }
+
+  if (result.data != nullptr) {
     return GetBlobAuxDataResult{
-        sapling::SaplingBackingStoreError{error.what()}};
+        std::make_shared<BlobAuxDataPtr::element_type>(BlobAuxData{
+            Hash20{std::move(result.data->content_sha1)},
+            Hash32{std::move(result.data->content_blake3)},
+            result.data->total_size})};
+  } else {
+    return GetBlobAuxDataResult{nullptr};
   }
 }
 
