@@ -34,6 +34,7 @@ use mononoke_api::Repo as TestRepo;
 use mononoke_api::RepoContext;
 use mononoke_api_hg::HgDataId;
 use mononoke_api_hg::RepoContextHgExt;
+use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
 use permission_checker::Acl;
@@ -368,6 +369,21 @@ impl RestrictedPathsTestData {
                 Ok(path)
             })
             .try_collect::<Vec<_>>()
+            .await?;
+
+        // Access path contents as we do in SCS for diffing
+        let bonsai = cs_ctx.bonsai_changeset().await?;
+        let paths = bonsai
+            .file_changes_map()
+            .keys()
+            .map(|path| MPath::from(path.clone()))
+            .collect::<BTreeSet<_>>();
+
+        let _path_contexts = cs_ctx
+            .paths_with_content(paths.into_iter())
+            .await?
+            .map_ok(|path_context| (path_context.path().clone(), path_context))
+            .try_collect::<HashMap<_, _>>()
             .await?;
 
         // Get all entries in the manifest id store
