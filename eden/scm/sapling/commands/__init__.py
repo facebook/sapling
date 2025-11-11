@@ -3765,10 +3765,16 @@ def init(ui, dest=".", **opts):
         )
         usegit = True
 
+    virtual_repo_size_factor = ui.configint(
+        "format", "use-virtual-repo-with-size-factor"
+    )
     if usegit:
         git.clone(ui, "", destpath)
-    elif ui.configbool("format", "use-eager-repo"):
-        bindings.eagerepo.EagerRepo.open(destpath)
+    elif ui.configbool("format", "use-eager-repo") or virtual_repo_size_factor:
+        eager_repo = bindings.eagerepo.EagerRepo.open(destpath)
+        if virtual_repo_size_factor:
+            eager_repo.populate_virtual_commits(virtual_repo_size_factor)
+            eager_repo.flush()
     else:
         if util.url(destpath).scheme == "bundle":
             hg.repository(ui, destpath, create=True)
