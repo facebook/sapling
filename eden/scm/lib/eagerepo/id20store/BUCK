@@ -1,0 +1,30 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "id20store",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "id20store"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-id20store",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:parking_lot",
+        "//eden/scm/lib/atomicfile:atomicfile",
+        "//eden/scm/lib/eagerepo/trait:eagerepo-trait",
+        "//eden/scm/lib/minibytes:minibytes",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/util/factory:factory",
+        "//eden/scm/lib/util/format-util:format-util",
+        "//eden/scm/lib/zstore:zstore",
+    ],
+)

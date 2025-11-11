@@ -35,6 +35,7 @@ use format_util::hg_sha1_serialize;
 use format_util::split_hg_file_metadata;
 use futures::lock::Mutex;
 use futures::lock::MutexGuard;
+use id20store::Id20Store;
 use manifest_augmented_tree::AugmentedDirectoryNode;
 use manifest_augmented_tree::AugmentedFileNode;
 use manifest_augmented_tree::AugmentedTree;
@@ -66,8 +67,6 @@ use storemodel::types::Parents;
 use storemodel::types::hgid::NULL_ID;
 use tracing::instrument;
 use zstore::Id20;
-
-use crate::Id20Store;
 
 const HG_PARENTS_LEN: usize = HgId::len() * 2;
 const HG_LEN: usize = HgId::len();
