@@ -481,7 +481,7 @@ class changelog:
         if verify and not self._isgit:
             # check HG SHA1 hash
             p1, p2 = self.parents(node)[:2]
-            if revlog.hash(text, p1, p2) != node:
+            if not self._should_skip_hash_check and revlog.hash(text, p1, p2) != node:
                 if (
                     "emergencychangelog" in self._reporef().storerequirements
                     and self.rev(node) == 0
@@ -494,6 +494,14 @@ class changelog:
                 )
 
         return text
+
+    @util.propertycache
+    def _should_skip_hash_check(self):
+        # eagerepo can have extensions like "virtual-repo" that should disable hash checks.
+        if "eagerepo" in self._reporef().storerequirements:
+            enabled_exts = self._reporef().svfs.tryread(f"{HGCOMMITS_DIR}/enabled-exts")
+            return b"virtual-repo" in enabled_exts
+        return False
 
     def nodesbetween(self, roots, heads):
         """Calculate (roots::heads, roots & (roots::heads), heads & (roots::heads))"""
