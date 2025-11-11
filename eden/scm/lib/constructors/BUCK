@@ -32,5 +32,6 @@ rust_library(
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/gitstore:gitstore",
         "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/virtual-repo:virtual-repo",
     ],
 )

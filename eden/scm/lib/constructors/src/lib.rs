@@ -27,6 +27,9 @@ pub fn init() {
 
         // Basic tree parser.
         manifest_tree::init();
+
+        // Virtual repo as EagerRepo extension.
+        virtual_repo::init();
     });
 
     *REGISTERED

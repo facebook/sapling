@@ -20,6 +20,7 @@ sapling-eagerepo = { version = "0.1.0", path = "../eagerepo" }
 sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-gitstore = { version = "0.1.0", path = "../gitstore", optional = true }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
+sapling-virtual-repo = { version = "0.1.0", path = "../virtual-repo" }
 
 [features]
 default = ["git"]
