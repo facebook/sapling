@@ -73,6 +73,7 @@
 # Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_create refs/tags/last_tag
   $ git_client pull
+  remote: Client correlator: * (glob)
   remote: Converting HAVE Git commits to Bonsais        
   remote: Converting WANT Git commits to Bonsais        
   remote: Collecting Bonsai commits to send to client        

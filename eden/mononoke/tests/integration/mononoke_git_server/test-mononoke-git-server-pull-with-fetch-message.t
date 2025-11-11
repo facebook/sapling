@@ -54,7 +54,8 @@
 # Clone the Git repo from Mononoke
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
-  remote: HELLO USERConverting HAVE Git commits to Bonsais        
+  remote: HELLO USERClient correlator: * (glob)
+  remote: Converting HAVE Git commits to Bonsais        
   remote: Converting WANT Git commits to Bonsais        
   remote: Collecting Bonsai commits to send to client        
   remote: Counting number of objects to be sent in packfile        
@@ -86,7 +87,8 @@
 
 # Pulling from git server returns the extra message  
   $ git_client pull
-  remote: HELLO USERConverting HAVE Git commits to Bonsais        
+  remote: HELLO USERClient correlator: * (glob)
+  remote: Converting HAVE Git commits to Bonsais        
   remote: Converting WANT Git commits to Bonsais        
   remote: Collecting Bonsai commits to send to client        
   remote: Counting number of objects to be sent in packfile        

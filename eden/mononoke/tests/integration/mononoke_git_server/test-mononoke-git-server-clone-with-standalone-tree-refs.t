@@ -85,6 +85,7 @@
 # Clone the repo from Mononoke. Because we do not support refs to trees and blobs in Mononoke Git, the clone fails
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git  
   Cloning into 'repo'...
+  remote: Client correlator: * (glob)
   remote: Converting HAVE Git commits to Bonsais        
   remote: Converting WANT Git commits to Bonsais        
   remote: Collecting Bonsai commits to send to client        

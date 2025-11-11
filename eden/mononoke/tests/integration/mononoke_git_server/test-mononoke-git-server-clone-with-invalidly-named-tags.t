@@ -44,6 +44,7 @@
 # Clone the Git repo from Mononoke
   $ git_client clone --mirror $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git repo
   Cloning into bare repository 'repo'...
+  remote: Client correlator: * (glob)
   remote: Converting HAVE Git commits to Bonsais        
   remote: Converting WANT Git commits to Bonsais        
   remote: Collecting Bonsai commits to send to client        

@@ -959,6 +959,12 @@ pub async fn fetch_response<'a>(
         request.chain_breaking_mode,
         repo.cgdm_changeset_divider_arc(),
     )?;
+    progress_writer
+        .send(format!(
+            "Client correlator: {:?}\n",
+            ctx.client_correlator()
+        ))
+        .await?;
     // Convert the base commits and head commits, which are represented as Git hashes, into Bonsai hashes
     // If the input contains tag object Ids, fetch the corresponding tag names
     progress_writer

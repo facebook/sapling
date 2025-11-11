@@ -41,6 +41,7 @@
   $ git_client -c http.extraHeader="x-git-only-offset-delta: 1" clone $MONONOKE_GIT_SERVICE_BASE_URL/$REPONAME.git
   Cloning into 'repo'...
   remote: Packfile will be created using only offset deltas        
+  remote: Client correlator: * (glob)
   remote: Converting HAVE Git commits to Bonsais        
   remote: Converting WANT Git commits to Bonsais        
   remote: Collecting Bonsai commits to send to client        
