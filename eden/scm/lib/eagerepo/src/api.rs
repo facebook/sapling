@@ -1310,7 +1310,7 @@ impl SaplingRemoteApi for EagerRepo {
                 }
             }
 
-            let new_tree_id = match repo.store.format {
+            let new_tree_id = match repo.store.format() {
                 SerializationFormat::Hg => {
                     let new_parents = vec![&dest_manifest];
                     let mut manifest_id: Option<HgId> = None;

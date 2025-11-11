@@ -44,7 +44,7 @@ impl KeyStore for EagerRepoStore {
     fn get_local_content(&self, _path: &RepoPath, id: HgId) -> anyhow::Result<Option<Blob>> {
         match self.get_content(id)? {
             Some(data) => {
-                let data = match self.format {
+                let data = match self.format() {
                     SerializationFormat::Hg => split_hg_file_metadata(&data).0,
                     SerializationFormat::Git => data,
                 };
@@ -55,7 +55,7 @@ impl KeyStore for EagerRepoStore {
     }
 
     fn insert_data(&self, opts: InsertOpts, _path: &RepoPath, data: &[u8]) -> anyhow::Result<HgId> {
-        let sha1_data = match self.format {
+        let sha1_data = match self.format() {
             SerializationFormat::Hg => {
                 let mut iter = opts.parents.iter();
                 let p1 = iter.next().copied().unwrap_or_else(|| *HgId::null_id());
@@ -109,14 +109,14 @@ impl FileStore for EagerRepoStore {
         &self,
         keys: Vec<Key>,
     ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Key)>>> {
-        match self.format {
+        match self.format() {
             SerializationFormat::Hg => {
                 let store = self.clone();
                 let iter = keys.into_iter().filter_map(move |k| {
                     let id = k.hgid;
                     match store.get_content(id) {
                         Err(e) => Some(Err(e.into())),
-                        Ok(Some(data)) => match strip_file_metadata(&data, store.format) {
+                        Ok(Some(data)) => match strip_file_metadata(&data, store.format()) {
                             Err(e) => Some(Err(e)),
                             Ok((_, Some(copy_from))) => Some(Ok((k, copy_from))),
                             Ok((_, None)) => None,
@@ -131,7 +131,7 @@ impl FileStore for EagerRepoStore {
     }
 
     fn get_hg_parents(&self, _path: &RepoPath, id: HgId) -> anyhow::Result<Vec<HgId>> {
-        match self.format {
+        match self.format() {
             SerializationFormat::Hg => {
                 let mut parents = Vec::new();
                 if let Some(blob) = self.get_sha1_blob(id)? {

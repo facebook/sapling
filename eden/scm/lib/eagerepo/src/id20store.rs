@@ -38,7 +38,7 @@ use zstore::Zstore;
 #[derive(Clone)]
 pub struct Id20Store {
     pub(crate) inner: Arc<RwLock<Zstore>>,
-    pub(crate) format: SerializationFormat,
+    format: SerializationFormat,
     pub(crate) ext: OnceLock<Arc<dyn EagerRepoExtension>>,
     pub(crate) extensions_path: PathBuf,
     pub(crate) extension_names: Arc<RwLock<BTreeSet<String>>>,
@@ -87,7 +87,7 @@ impl Id20Store {
         // The ext name should be registered. Check it.
         let ext = factory::call_constructor::<_, Arc<dyn EagerRepoExtension>>(&(
             name.clone(),
-            self.format,
+            self.format(),
         ))?;
         let mut names = self.extension_names.write();
         if !names.insert(name) {
@@ -152,7 +152,7 @@ impl Id20Store {
         Ok(inner.get(id)?)
     }
 
-    pub(crate) fn format(&self) -> SerializationFormat {
+    pub fn format(&self) -> SerializationFormat {
         self.format
     }
 
