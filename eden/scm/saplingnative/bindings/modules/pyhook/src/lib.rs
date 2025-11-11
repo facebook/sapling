@@ -214,7 +214,7 @@ fn load_source(py: Python, source: &str, module_name: &str) -> PyResult<PyObject
 
     tracing::debug!(target: "pyhook::load_source", module_name, "imported module");
 
-    let module = create_module_from_source_code(py, module_name, &source)?;
+    let module = create_module_from_source_code(py, module_name, source)?;
     module.add(py, "__source_hash__", PyBytes::new(py, new_hash.as_slice()))?;
 
     // sys.modules[module_name] = module
