@@ -45,6 +45,7 @@ async fn create_changeset_stack<R: MononokeRepo>(
         CreateChangesetChecks {
             noop_file_changes: CreateChangesetCheckMode::Check,
             deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
+            empty_changeset: CreateChangesetCheckMode::Check,
         },
     )
     .await
@@ -62,6 +63,7 @@ async fn create_changeset_stack_fix_request<R: MononokeRepo>(
         CreateChangesetChecks {
             noop_file_changes: CreateChangesetCheckMode::Fix,
             deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Fix,
+            empty_changeset: CreateChangesetCheckMode::Fix,
         },
     )
     .await
@@ -139,6 +141,7 @@ async fn create_changesets_sequentially<R: MononokeRepo>(
                 CreateChangesetChecks {
                     noop_file_changes: CreateChangesetCheckMode::Check,
                     deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
+                    empty_changeset: CreateChangesetCheckMode::Check,
                 },
             )
             .await?
@@ -298,6 +301,11 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
         btreemap! {
             MPath::try_from("TEST_OTHER_FILE")? =>
             CreateChange::Deletion,
+            MPath::try_from("EXTRA")? =>
+            CreateChange::Tracked(
+                CreateChangeFile::new_regular("extra\n"),
+                None,
+            ),
         },
     ];
     assert!(
@@ -320,7 +328,8 @@ async fn test_create_commit_stack_delete_files(fb: FacebookInit) -> Result<(), E
             .unwrap()
             .file_changes()
             .await?
-            .is_empty()
+            .len()
+            == 1
     );
 
     // But succeed if the file was created in the stack.
@@ -425,6 +434,11 @@ async fn test_create_commit_stack_noop_file_changes_check(fb: FacebookInit) -> R
             CreateChangeFile::new_regular("modified10\n"),
             None,
         ),
+        MPath::try_from("EXTRA")? =>
+        CreateChange::Tracked(
+            CreateChangeFile::new_regular("extra\n"),
+            None,
+        ),
     }];
     assert!(
         compare_create_stack(&stack_repo, &seq_repo, changes.clone(), vec![commits["K"]])
@@ -441,7 +455,30 @@ async fn test_create_commit_stack_noop_file_changes_check(fb: FacebookInit) -> R
             .unwrap()
             .file_changes()
             .await?
-            .is_empty()
+            .len()
+            == 1
+    );
+
+    // Noop file changes that don't change file content should fail
+    let changes = vec![btreemap! {
+        MPath::try_from("10")? =>
+        CreateChange::Tracked(
+            CreateChangeFile::new_regular("modified10\n"),
+            None,
+        ),
+    }];
+    assert!(
+        compare_create_stack(&stack_repo, &seq_repo, changes.clone(), vec![commits["K"]])
+            .await?
+            .is_none()
+    );
+
+    // The commit still fails the empty_changeset check as it becomes empty after removing
+    // the no-op file change
+    assert!(
+        create_changeset_stack_fix_request(&stack_repo, changes, vec![commits["K"]])
+            .await
+            .is_err()
     );
 
     // Noop file changes for files introduced in the stack should fail

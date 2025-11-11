@@ -232,6 +232,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 CreateChangesetChecks {
                     noop_file_changes: CreateChangesetCheckMode::Skip,
                     deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Skip,
+                    empty_changeset: CreateChangesetCheckMode::Skip,
                 },
             )
             .await?;

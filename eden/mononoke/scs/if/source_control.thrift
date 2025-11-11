@@ -1079,6 +1079,10 @@ struct CreateCommitChecks {
   1: CreateCommitCheckMode noop_file_changes_check = CreateCommitCheckMode.CHECK;
   /// Check that all deleted file changes existed in a parent
   2: CreateCommitCheckMode deleted_files_existed_in_a_parent_check = CreateCommitCheckMode.CHECK;
+  /// Check that the commit has at least one file change or deletion, after applying all
+  /// the fixes for the previous checks if they are in FIX mode. FIX mode will still
+  /// throw for this check as there's no reasonable way to fix it
+  3: CreateCommitCheckMode empty_changeset_check = CreateCommitCheckMode.CHECK;
 }
 
 enum CreateCommitCheckMode {

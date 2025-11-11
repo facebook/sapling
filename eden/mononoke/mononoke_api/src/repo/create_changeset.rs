@@ -805,6 +805,7 @@ pub enum CreateChangesetCheckMode {
 pub struct CreateChangesetChecks {
     pub noop_file_changes: CreateChangesetCheckMode,
     pub deleted_files_existed_in_a_parent: CreateChangesetCheckMode,
+    pub empty_changeset: CreateChangesetCheckMode,
 }
 
 impl<R: MononokeRepo> RepoContext<R> {
@@ -1232,6 +1233,21 @@ impl<R: MononokeRepo> RepoContext<R> {
         let mut new_changeset_ids = Vec::new();
         let mut parents = stack_parents;
         for (info, file_changes) in info_stack.into_iter().zip(file_changes_stack.into_iter()) {
+            if checks.empty_changeset != CreateChangesetCheckMode::Skip
+                && justknobs::eval(
+                    "scm/mononoke:create_changeset_stack_empty_changeset_check",
+                    None,
+                    Some(self.name()),
+                )?
+                && file_changes.is_empty()
+                // exclude merge commits
+                && parents.len() <= 1
+            {
+                return Err(MononokeError::InvalidRequest(String::from(
+                    "Commits that don't modify or delete any files are not allowed",
+                )));
+            }
+
             let author_date = MononokeDateTime::new(info.author_date);
             let committer_date = info.committer_date.map(MononokeDateTime::new);
             let hg_extra = SortedVectorMap::<_, _>::from(info.extra);

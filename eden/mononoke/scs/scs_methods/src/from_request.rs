@@ -393,6 +393,7 @@ impl FromRequest<thrift::CreateCommitChecks> for CreateChangesetChecks {
             deleted_files_existed_in_a_parent: CreateChangesetCheckMode::from_request(
                 &checks.deleted_files_existed_in_a_parent_check,
             )?,
+            empty_changeset: CreateChangesetCheckMode::from_request(&checks.empty_changeset_check)?,
         })
     }
 }

@@ -119,6 +119,7 @@ async fn create_commit(
             CreateChangesetChecks {
                 noop_file_changes: CreateChangesetCheckMode::Check,
                 deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
+                empty_changeset: CreateChangesetCheckMode::Check,
             },
         )
         .await?
@@ -155,6 +156,7 @@ async fn create_commit(
             CreateChangesetChecks {
                 noop_file_changes: CreateChangesetCheckMode::Check,
                 deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
+                empty_changeset: CreateChangesetCheckMode::Check,
             },
         )
         .await?
@@ -269,6 +271,7 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
             CreateChangesetChecks {
                 noop_file_changes: CreateChangesetCheckMode::Check,
                 deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
+                empty_changeset: CreateChangesetCheckMode::Check,
             },
         )
         .await
@@ -382,6 +385,7 @@ async fn test_create_merge_commit(fb: FacebookInit) -> Result<(), Error> {
             CreateChangesetChecks {
                 noop_file_changes: CreateChangesetCheckMode::Check,
                 deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
+                empty_changeset: CreateChangesetCheckMode::Check,
             },
         )
         .await
@@ -467,6 +471,7 @@ async fn test_merge_commit_parent_file_conflict(fb: FacebookInit) -> Result<(), 
             CreateChangesetChecks {
                 noop_file_changes: CreateChangesetCheckMode::Check,
                 deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
+                empty_changeset: CreateChangesetCheckMode::Check,
             },
         )
         .await
@@ -568,6 +573,7 @@ async fn test_merge_commit_parent_tree_file_conflict(fb: FacebookInit) -> Result
             CreateChangesetChecks {
                 noop_file_changes: CreateChangesetCheckMode::Check,
                 deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
+                empty_changeset: CreateChangesetCheckMode::Check,
             },
         )
         .await
