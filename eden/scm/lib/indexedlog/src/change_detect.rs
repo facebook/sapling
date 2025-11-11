@@ -79,7 +79,7 @@ impl Drop for SharedChangeDetector {
 impl WeakSlice for Weak<MmapMut> {
     type Upgraded = Arc<MmapMut>;
     fn upgrade(&self) -> Option<Self::Upgraded> {
-        Weak::upgrade(&self)
+        Weak::upgrade(self)
     }
     fn as_slice(v: &Self::Upgraded) -> &[u8] {
         AsRef::as_ref(v)

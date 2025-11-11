@@ -4972,7 +4972,7 @@ Disk[410]: Root { radix: Disk[402] }
             map.iter().all(|(key, value)| {
                 let link_offset = index.get(key).expect("lookup");
                 assert!(!link_offset.is_null());
-                link_offset.value_and_next(&index).unwrap().0 == *value
+                link_offset.value_and_next(index).unwrap().0 == *value
             })
         }
     }
