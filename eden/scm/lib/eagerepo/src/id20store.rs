@@ -39,7 +39,7 @@ use zstore::Zstore;
 pub struct Id20Store {
     pub(crate) inner: Arc<RwLock<Zstore>>,
     format: SerializationFormat,
-    pub(crate) ext: OnceLock<Arc<dyn EagerRepoExtension>>,
+    ext: OnceLock<Arc<dyn EagerRepoExtension>>,
     pub(crate) extensions_path: PathBuf,
     pub(crate) extension_names: Arc<RwLock<BTreeSet<String>>>,
 }
@@ -150,6 +150,11 @@ impl Id20Store {
         }
         let inner = self.inner.read();
         Ok(inner.get(id)?)
+    }
+
+    /// Get the current extension.
+    pub fn ext(&self) -> Option<&Arc<dyn EagerRepoExtension>> {
+        self.ext.get()
     }
 
     pub fn format(&self) -> SerializationFormat {

@@ -296,7 +296,7 @@ impl EagerRepo {
         };
 
         // If EagerRepoStore picks up an extension, also enable it for the EagerRepo.
-        if let Some(ext) = repo.store.ext.get() {
+        if let Some(ext) = repo.store.ext() {
             repo.enable_extension(Arc::clone(ext))?;
         }
 
@@ -336,7 +336,7 @@ impl EagerRepo {
     /// them.
     pub fn enable_extension_permanently(&self, name: String) -> Result<()> {
         self.store.enable_extension_permanently(name)?;
-        if let Some(ext) = self.store.ext.get() {
+        if let Some(ext) = self.store.ext() {
             self.enable_extension(Arc::clone(ext))?;
         }
         Ok(())
