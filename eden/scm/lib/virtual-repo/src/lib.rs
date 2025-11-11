@@ -25,6 +25,7 @@ mod dag_populate;
 mod dag_protocol;
 mod eager_ext;
 mod factory_impls;
+mod file_size_gen;
 mod id_fields;
 mod provider;
 mod text_gen;
