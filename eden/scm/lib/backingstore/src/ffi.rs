@@ -398,6 +398,35 @@ fn select_cause(fetch_causes_iter: impl Iterator<Item = ffi::FetchCause>) -> (Fe
     }
 }
 
+/// Helper macro to resolve Result<Option<T>>
+macro_rules! resolve_result {
+    // Resolve into (transformed<T> | replace, UniquePtr<SaplingBackingStoreError>)
+    ($res:expr, transform_some: $transform_some:expr, replace_none: $replace_none:expr) => {
+        match $res {
+            Ok(Some(data)) => ($transform_some(data), UniquePtr::null()),
+            Ok(None) => ($replace_none, UniquePtr::null()),
+            Err(e) => ($replace_none, into_backingstore_err(e)),
+        }
+    };
+
+    // Variant that only returns error by handling data on its own
+    ($res:expr, on_some: $some_handler:expr, on_none: $none_handler:expr) => {
+        match $res {
+            Ok(opt) => match opt {
+                Some(data) => match $some_handler(data) {
+                    Ok(()) => UniquePtr::null(),
+                    Err(e) => into_backingstore_err(e),
+                },
+                None => {
+                    $none_handler();
+                    UniquePtr::null()
+                }
+            },
+            Err(e) => into_backingstore_err(e),
+        }
+    };
+}
+
 pub unsafe fn sapling_backingstore_new(
     repository: &[c_char],
     mount: &[c_char],
