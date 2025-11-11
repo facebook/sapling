@@ -1394,7 +1394,7 @@ class curseschunkselector:
         numlines = len(patchdisplaystring) // self.xscreensize
         return numlines
 
-    def sigwinchhandler(self, n=None, frame=None):
+    def sigwinchhandler(self):
         "handle window resizing"
         try:
             curses.endwin()
@@ -1770,20 +1770,6 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 pass
 
     def main(self, stdscr):
-        """
-        method to be wrapped by curses.wrapper() for selecting chunks.
-        """
-
-        origsigwinch = sentinel = object()
-        if hasattr(signal, "SIGWINCH"):
-            origsigwinch = util.signal(signal.SIGWINCH, self.sigwinchhandler)
-        try:
-            return self._main(stdscr)
-        finally:
-            if origsigwinch is not sentinel:
-                util.signal(signal.SIGWINCH, origsigwinch)
-
-    def _main(self, stdscr):
         self.stdscr = stdscr
         # error during initialization, cannot be printed in the curses
         # interface, it should be printed by the calling code
