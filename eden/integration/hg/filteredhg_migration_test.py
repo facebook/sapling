@@ -8,6 +8,7 @@
 import abc
 import json
 import os
+from configparser import ConfigParser
 from pathlib import Path
 from typing import Callable, Optional, TypeVar
 
@@ -184,16 +185,6 @@ adir
         assert os.path.exists(self.repo.get_path(path)), f"{path} does not exist"
         os.rmdir(self.repo.get_path(path))
 
-    async def enable_config_for_edensparse_migration(self) -> None:
-        # make sure edenfs picks up our updated config
-        async with self.get_thrift_client() as client:
-            # toggle config
-            edenrc = os.path.join(self.home_dir, ".edenrc")
-            self.write_configs(
-                {"experimental": ["attempt-edensparse-migration = true"]}, edenrc
-            )
-            await client.reloadConfig()
-
     def restart_edenfs_manually(self) -> None:
         self.eden.run_cmd("restart", "--yes", "--allow-root", cwd=self.mount)
 
@@ -214,8 +205,6 @@ adir
             self.assert_filter_applied(mount_path)
 
         pre_migration()
-
-        await self.enable_config_for_edensparse_migration()
 
         # restart edenfs
         self.restart_edenfs_manually()
@@ -248,11 +237,23 @@ adir
         self.assert_filter_applied(mount_path)
         post_migration()
 
+    def migration_not_happen_common(self):
+        mount_path = self.mount_path
+        self.assert_filteredfs_disabled(mount_path)
+        self.assert_filter_not_applied(mount_path)
+        self.restart_edenfs_manually()
+        self.assert_filteredfs_disabled(mount_path)
+        self.assert_filter_not_applied(mount_path)
+
 
 @apply_test_duplicates
 class FilteredFSMigrationFromUnfilteredTest(
     FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
 ):
+    def apply_hg_config_variant(self, hgrc: ConfigParser) -> None:
+        super().apply_hg_config_variant(hgrc)
+        hgrc["experimental"]["allow-edensparse-migration"] = "true"
+
     def test_filteredfs_disabled_init(self) -> None:
         self.assert_filteredfs_disabled(self.mount_path)
         self.assert_filter_not_applied(self.mount_path)
@@ -387,7 +388,6 @@ class FilteredFSMigrationFromUnfilteredTest(
 
     async def rollback_common(self, tester: Callable, fault_key: str) -> None:
         state_dir = Path(self.eden.client_dir_for_mount(self.mount_path))
-        await self.enable_config_for_edensparse_migration()
 
         with NaiveFaultInjector(state_dir) as fault_injector:
             fault_injector.register_test_only_fault(fault_key)
@@ -481,6 +481,10 @@ class FilteredFSMigrationFromUnfilteredTest(
 class FilteredFsMigrationFromFilteredTest(
     FilteredHgTestCase, FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
 ):
+    def apply_hg_config_variant(self, hgrc: ConfigParser) -> None:
+        super().apply_hg_config_variant(hgrc)
+        hgrc["experimental"]["allow-edensparse-migration"] = "true"
+
     async def test_migrate_freshly_cloned_filtered_repo(self) -> None:
         cloned_repo = self.make_temporary_directory()
         self.eden.clone(
@@ -502,3 +506,21 @@ class FilteredFsMigrationFromFilteredTest(
         await self.edensparse_migration_common(
             lambda: None, lambda: None, migration_did_happen=False
         )
+
+
+class FilteredFsMigrationDisabledTest(
+    FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
+):
+    def apply_hg_config_variant(self, hgrc: ConfigParser) -> None:
+        super().apply_hg_config_variant(hgrc)
+        hgrc["experimental"]["allow-edensparse-migration"] = "false"
+
+    async def test_migration_not_happen(self) -> None:
+        self.migration_not_happen_common()
+
+
+class FilteredFsMigrationWithSaplingConfigUnsetTest(
+    FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
+):
+    async def test_migration_not_happen(self) -> None:
+        self.migration_not_happen_common()

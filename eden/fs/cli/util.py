@@ -1081,35 +1081,55 @@ def maybe_edensparse_migration(
        - Config Sapling to disable "extensions.sparse" and enable "extensions.edensparse"
        - Finally create an empty marker file to indicate part 1 of migration is complete
     """
-
-    def log(msg: str) -> None:
-        if os.environ.get("EDENSPARSE_MIGRATION_VERBOSE_LOGGING"):
-            print(f"edensparse_migration: {msg}")
-        else:
-            pass
-
-    should_migrate = instance.get_config_bool(
-        "experimental.attempt-edensparse-migration", False
-    )
-
-    if not should_migrate:
-        log("experimental.attempt-edensparse-migration disabled, skipping migration")
-        return
-
     if step not in {
         EdensparseMigrationStep.PRE_EDEN_START,
         EdensparseMigrationStep.POST_EDEN_START,
     }:
         raise RuntimeError(f"Invalid edensparse migration step {step}")
 
+    def log(msg: str) -> None:
+        """
+        Logs a migration message if verbose logging is enabled via the
+        EDENSPARSE_MIGRATION_VERBOSE_LOGGING environment variable.
+        """
+        if os.environ.get("EDENSPARSE_MIGRATION_VERBOSE_LOGGING"):
+            print(f"edensparse_migration: {msg}")
+        else:
+            pass
+
+    def should_migrate(
+        checkout: "EdenCheckout", step: EdensparseMigrationStep = step
+    ) -> bool:
+        """
+        We only run edensparse migration for checkout if a special sapling config
+        is set for the backing repo.
+        """
+        SL_CONFIG_TO_ALLOW_MIGRATION = "experimental.allow-edensparse-migration"
+        sl_args = ["config", "-Tjson", SL_CONFIG_TO_ALLOW_MIGRATION]
+        output = json.loads(checkout.get_backing_repo()._run_hg(sl_args))
+        if len(output) == 0:
+            log(
+                f"{SL_CONFIG_TO_ALLOW_MIGRATION} not set for {checkout.name}, skipping migration"
+            )
+            return False  # config not set for this repo, skip migration
+
+        if output[0]["value"] != "true":  # config is set but disabled
+            log(
+                f"{SL_CONFIG_TO_ALLOW_MIGRATION}: {output[0]['value']} != 'true', skipping migration"
+            )
+            return False
+
+        log(f"starting {step} for checkout: {checkout.name}")
+        return True
+
     at_lease_one_successful_migration = False
     migration_exceptions = []
 
-    log(
-        f"starting {step} for checkouts: {','.join([r.name for r in instance.get_checkouts()])}"
-    )
-
     for checkout in instance.get_checkouts():
+        if not should_migrate(checkout):
+            # verbose logging already in `should_migrate`
+            continue
+
         rollbacks = []  # rollback callables
 
         fault_injector = NaiveFaultInjector(checkout.state_dir)
