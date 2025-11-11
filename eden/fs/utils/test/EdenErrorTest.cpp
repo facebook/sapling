@@ -12,73 +12,51 @@
 using namespace facebook::eden;
 
 TEST(EdenError, recognizeNetworkError) {
-  sapling::SaplingBackingStoreError ex1(
-      "Network Error: [28] Timeout was reached (Operation too slow. Less than 1500 bytes/sec transferred the last 10 seconds)");
+  sapling::SaplingBackingStoreError ex1{
+      "Network Error: some error message",
+      sapling::BackingStoreErrorKind::Network,
+      28};
   auto err = newEdenError(ex1);
   EXPECT_TRUE(err.errorCode().has_value());
   EXPECT_EQ(28, err.errorCode().value());
   EXPECT_EQ(EdenErrorType::NETWORK_ERROR, err.errorType().value());
   EXPECT_NE(
       std::string::npos,
-      err.message()->find("Network Error: [28] Timeout was reached"));
+      err.message()->find("Network Error: some error message"));
 
-  sapling::SaplingBackingStoreError ex2(
-      "Network Error: server responded 503 Service Unavailable for some.url");
+  sapling::SaplingBackingStoreError ex2{
+      "Network Error: some other error message",
+      sapling::BackingStoreErrorKind::Network,
+      std::nullopt};
   err = newEdenError(ex2);
-  EXPECT_TRUE(err.errorCode().has_value());
-  EXPECT_EQ(503, err.errorCode().value());
+  EXPECT_FALSE(err.errorCode().has_value());
   EXPECT_EQ(EdenErrorType::NETWORK_ERROR, err.errorType().value());
   EXPECT_NE(
       std::string::npos,
-      err.message()->find(
-          "Network Error: server responded 503 Service Unavailable"));
-
-  sapling::SaplingBackingStoreError ex3(
-      "Network Error: Try renewing your certificates. Run `eden doctor`. TlsError: [56] Failure when receiving data from the peer");
-  err = newEdenError(ex3);
-  EXPECT_TRUE(err.errorCode().has_value());
-  EXPECT_EQ(56, err.errorCode().value());
-  EXPECT_EQ(EdenErrorType::NETWORK_ERROR, err.errorType().value());
-  EXPECT_NE(
-      std::string::npos,
-      err.message()->find(
-          "TlsError: [56] Failure when receiving data from the peer"));
+      err.message()->find("Network Error: some other error message"));
 }
 
 TEST(EdenError, fallbackFromSaplingBackingStoreError) {
-  // SaplingBackingStoreError does not contain a network error pattern
-  sapling::SaplingBackingStoreError ex1(
-      "Generic fetch error without network code");
+  // SaplingBackingStoreError does not contain a network error
+  sapling::SaplingBackingStoreError ex1{
+      "Error: some generic error message",
+      sapling::BackingStoreErrorKind::Generic,
+      std::nullopt};
   auto err = newEdenError(ex1);
   EXPECT_FALSE(err.errorCode().has_value());
   EXPECT_EQ(EdenErrorType::GENERIC_ERROR, err.errorType().value());
   EXPECT_NE(
       std::string::npos,
-      err.message()->find("Generic fetch error without network code"));
-
-  // Malformed network error pattern
-  sapling::SaplingBackingStoreError ex2("Network Error: [404 Not Found");
-  err = newEdenError(ex2);
-  EXPECT_FALSE(err.errorCode().has_value());
-  EXPECT_EQ(EdenErrorType::GENERIC_ERROR, err.errorType().value());
-  EXPECT_NE(
-      std::string::npos, err.message()->find("Network Error: [404 Not Found"));
-
-  sapling::SaplingBackingStoreError ex3(
-      "Network Error: server responded NON_DIGITS");
-  err = newEdenError(ex3);
-  EXPECT_FALSE(err.errorCode().has_value());
-  EXPECT_EQ(EdenErrorType::GENERIC_ERROR, err.errorType().value());
-  EXPECT_NE(
-      std::string::npos,
-      err.message()->find("Network Error: server responded NON_DIGITS"));
+      err.message()->find("Error: some generic error message"));
 }
 
 TEST(EdenError, saplingBackingStoreErrorInExceptionWrapper) {
   // Test SaplingBackingStoreError with network error wrapped in
   // exception_wrapper
-  sapling::SaplingBackingStoreError ex1(
-      "Network Error: [28] Timeout was reached");
+  sapling::SaplingBackingStoreError ex1{
+      "Network Error: some error message",
+      sapling::BackingStoreErrorKind::Network,
+      28};
   folly::exception_wrapper ew1 =
       folly::make_exception_wrapper<sapling::SaplingBackingStoreError>(ex1);
   auto err = newEdenError(ew1);
@@ -88,11 +66,14 @@ TEST(EdenError, saplingBackingStoreErrorInExceptionWrapper) {
   EXPECT_EQ(EdenErrorType::NETWORK_ERROR, err.errorType().value());
   EXPECT_NE(
       std::string::npos,
-      err.message()->find("Network Error: [28] Timeout was reached"));
+      err.message()->find("Network Error: some error message"));
 
   // Test SaplingBackingStoreError without network error wrapped in
   // exception_wrapper
-  sapling::SaplingBackingStoreError ex2("Generic sapling fetch failure");
+  sapling::SaplingBackingStoreError ex2{
+      "Error: some generic error message",
+      sapling::BackingStoreErrorKind::Generic,
+      std::nullopt};
   folly::exception_wrapper ew2 =
       folly::make_exception_wrapper<sapling::SaplingBackingStoreError>(ex2);
   err = newEdenError(ew2);
@@ -100,7 +81,8 @@ TEST(EdenError, saplingBackingStoreErrorInExceptionWrapper) {
   EXPECT_FALSE(err.errorCode().has_value());
   EXPECT_EQ(EdenErrorType::GENERIC_ERROR, err.errorType().value());
   EXPECT_NE(
-      std::string::npos, err.message()->find("Generic sapling fetch failure"));
+      std::string::npos,
+      err.message()->find("Error: some generic error message"));
 }
 
 TEST(EdenError, rocksException) {

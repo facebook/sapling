@@ -62,29 +62,23 @@ EdenError newEdenError(const folly::exception_wrapper& ew) {
 }
 
 namespace {
-// TODO: Stop relying on formats of Sapling error messages. Instead,
-// pass errors with formally defined structures across backingstore FFI.
-std::optional<int> extractNetworkError(std::string_view msg) {
-  static const re2::RE2 kCurl{R"(Network Error: \[(\d+)\])"};
-  static const re2::RE2 kHttp{R"(server responded (\d+))"};
-  static const re2::RE2 kTls{R"(TlsError: \[(\d+)\])"};
-  int code;
-  if (RE2::PartialMatch(msg, kCurl, &code) ||
-      RE2::PartialMatch(msg, kHttp, &code) ||
-      RE2::PartialMatch(msg, kTls, &code)) {
-    return code;
+
+EdenError newEdenNetworkError(
+    const std::optional<int32_t>& code_opt,
+    std::string_view msg) {
+  if (code_opt.has_value()) {
+    return newEdenError(code_opt.value(), EdenErrorType::NETWORK_ERROR, msg);
+  } else {
+    return newEdenError(EdenErrorType::NETWORK_ERROR, msg);
   }
-  return std::nullopt;
 }
 } // namespace
 
 EdenError newEdenError(const sapling::SaplingBackingStoreError& ex) {
-  std::optional<int> code = extractNetworkError(ex.what());
-  if (code.has_value()) {
-    return newEdenError(
-        code.value(),
-        EdenErrorType::NETWORK_ERROR,
-        folly::exceptionStr(ex).toStdString());
+  const auto kind = ex.kind();
+  if (kind == sapling::BackingStoreErrorKind::Network) {
+    return newEdenNetworkError(
+        ex.code(), folly::exceptionStr(ex).toStdString());
   }
 
   return newEdenError(static_cast<const std::exception&>(ex));
