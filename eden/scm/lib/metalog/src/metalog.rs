@@ -31,7 +31,6 @@ use zstore::Zstore;
 
 use crate::Error;
 use crate::Result;
-use crate::constants::METALOG_TRACKED;
 
 /// Key-value metadata storage that can be atomically read and written,
 /// and preserves a linear history.
@@ -263,21 +262,6 @@ impl MetaLog {
         let new_id = self.blobs.write().insert(value, &delta_base_candidates)?;
         self.root.map.insert(name.to_string(), SerId20(new_id));
         Ok(new_id)
-    }
-
-    /// initialize metalog tracked keys
-    pub fn init_tracked(&mut self) -> Result<()> {
-        for key in METALOG_TRACKED {
-            self.set(key, b"")?;
-        }
-        let tracked = METALOG_TRACKED.join("\n");
-        self.set("tracked", tracked.as_bytes())?;
-        let commit_opts = CommitOptions {
-            message: "init tracked",
-            ..Default::default()
-        };
-        self.commit(commit_opts)?;
-        Ok(())
     }
 
     /// Remove an entry.

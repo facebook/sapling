@@ -13,8 +13,10 @@ use refencode::RefName;
 use types::HgId;
 use types::Phase;
 
+use crate::CommitOptions;
 use crate::Id20;
 use crate::MetaLog;
+use crate::constants::METALOG_TRACKED;
 
 impl MetaLog {
     /// Decode bookmarks.
@@ -100,6 +102,21 @@ impl MetaLog {
     pub fn set_visibleheads(&mut self, value: &[HgId]) -> Result<()> {
         let encoded = refencode::encode_visibleheads(value);
         self.set("visibleheads", &encoded)?;
+        Ok(())
+    }
+
+    /// Initialize metalog tracked keys. This prevents logic from migrating from vfs.
+    pub fn init_tracked(&mut self) -> Result<()> {
+        for key in METALOG_TRACKED {
+            self.set(key, b"")?;
+        }
+        let tracked = METALOG_TRACKED.join("\n");
+        self.set("tracked", tracked.as_bytes())?;
+        let commit_opts = CommitOptions {
+            message: "init tracked",
+            ..Default::default()
+        };
+        self.commit(commit_opts)?;
         Ok(())
     }
 
