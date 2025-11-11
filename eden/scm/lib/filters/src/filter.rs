@@ -43,7 +43,7 @@ impl Filter {
     ) -> Result<Filter, anyhow::Error> {
         let filter_id = FilterId::new(
             FilterVersion::V1,
-            &filter_paths,
+            filter_paths,
             &commit_id,
             &filter_gen.hash_key,
         )?;
