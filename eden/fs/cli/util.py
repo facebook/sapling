@@ -1095,6 +1095,9 @@ def maybe_edensparse_migration(
     }:
         raise RuntimeError(f"Invalid edensparse migration step {step}")
 
+    at_lease_one_successful_migration = False
+    migration_exceptions = []
+
     for checkout in instance.get_checkouts():
         rollbacks = []  # rollback callables
 
@@ -1364,8 +1367,11 @@ def maybe_edensparse_migration(
                 ):
                     marker_file = os.path.join(checkout.hg_dot_path, MIGRATION_MARKER)
                     open(marker_file, "a").close()
+                    at_lease_one_successful_migration = True
         except Exception as e:
             print("edensparse migration failed: ", e, file=sys.stderr)
+            # log checkout info and exception
+            migration_exceptions.append(f"{str(checkout)}\n{str(e)}")
             print("rollbacking changes...", file=sys.stderr)
             for rollback in rollbacks[::-1]:
                 try:
@@ -1374,6 +1380,19 @@ def maybe_edensparse_migration(
                     print(
                         "rollback for edensparse migration failed: ", e, file=sys.stderr
                     )
+
+    # Only log when:
+    # 1. there are exceptions from any steps
+    # 2. at least one migration is successful
+    #
+    # Do not log when:
+    # 1. no checkouts are migrated (because they are already filteredfs)
+    if migration_exceptions or at_lease_one_successful_migration:
+        instance.log_sample(
+            "edensparse_migration",
+            success=len(migration_exceptions) == 0,
+            exception="\n".join([e_str for e_str in migration_exceptions]),
+        )
 
 
 class NaiveFaultInjector:
