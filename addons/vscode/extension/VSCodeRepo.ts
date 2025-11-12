@@ -438,6 +438,22 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
     }
   }
 
+  async getFullFocusedBranch(): Promise<ReadonlyArray<SaplingCommitInfo>> {
+    const revset = 'sort(focusedbranch(.), topo)';
+    const result = await this.runSlCommand([
+      'log',
+      '--rev',
+      revset,
+      '--template',
+      getMainFetchTemplate(this.info.codeReviewSystem),
+    ]);
+    if (result.exitCode === 0) {
+      return parseCommitInfoOutput(this.logger, result.stdout, this.repo.info.codeReviewSystem);
+    } else {
+      throw new Error(result.stderr);
+    }
+  }
+
   /** @deprecated - prefer `diff({type: 'Commit', hash: commit || '.'})` */
   async getDiff(commit?: string): Promise<string> {
     const result = await this.runSlCommand(['diff', '-c', commit || '.']);

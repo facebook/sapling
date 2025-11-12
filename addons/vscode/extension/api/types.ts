@@ -100,6 +100,14 @@ export interface SaplingRepository {
   getCurrentStack(): Promise<ReadonlyArray<SaplingCommitInfo>>;
 
   /**
+   * Get all commits in the focused branch using focusedbranch(.) revset.
+   * Returns all commits that are part of the current focused branch.
+   *
+   * Ordered from newest to oldest, with the current commit at the front.
+   */
+  getFullFocusedBranch?(): Promise<ReadonlyArray<SaplingCommitInfo>>;
+
+  /**
    *
    * Get the diff for the specified commit. If not provided, get the diff for the current commit.
    * @deprecated prefer `diff({type: 'Commit', hash: '...'})`
