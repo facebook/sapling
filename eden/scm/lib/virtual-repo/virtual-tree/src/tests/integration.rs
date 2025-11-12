@@ -132,3 +132,26 @@ fn test_integrated_tree() {
 "#
     );
 }
+
+#[test]
+fn test_max_factor_bits() {
+    let original = Arc::new(EXAMPLE1.clone());
+    // factor_bits = 35 will overflow.
+    let range: Vec<u8> = if cfg!(debug_assertions) {
+        // Debug mode needs 14s to check 0..=34. Only check a small range.
+        vec![19, 29, 34]
+    } else {
+        (0..=34).collect()
+    };
+    for factor_bits in range {
+        let stretched = stretch_trees(original.clone(), factor_bits);
+        for i in 1..=3 {
+            if let Some(tree_index) = stretched.root_tree_len().checked_sub(i) {
+                let tree_id = stretched.root_tree_id(tree_index);
+                let _ = stretched.get_tree_seed(tree_id);
+                assert!(stretched.read_tree(tree_id).count() > 0);
+                assert!(!stretched.show_tree(tree_id, true, 1).is_empty());
+            }
+        }
+    }
+}

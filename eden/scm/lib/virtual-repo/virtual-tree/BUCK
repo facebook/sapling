@@ -23,6 +23,12 @@ rust_library(
             "name": "sapling-virtual-tree",
             "repository": "https://github.com/facebook/sapling",
         },
+        "profile": {
+            "release": {
+                # used by 'cargo test --release'
+                "overflow-checks": True,
+            },
+        },
     }},
     crate_root = "src/lib.rs",
     deps = [
