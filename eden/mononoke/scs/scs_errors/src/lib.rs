@@ -366,6 +366,7 @@ impl_into_thrift_error!(service::CommitInfoExn);
 impl_into_thrift_error!(service::CommitGenerationExn);
 impl_into_thrift_error!(service::CommitCompareExn);
 impl_into_thrift_error!(service::CommitIsAncestorOfExn);
+impl_into_thrift_error!(service::CommitIsPublicExn);
 impl_into_thrift_error!(service::CommitFindFilesExn);
 impl_into_thrift_error!(service::CommitFindFilesStreamExn);
 impl_into_thrift_error!(service::CommitFindFilesStreamStreamExn);

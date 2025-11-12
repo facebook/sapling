@@ -51,6 +51,7 @@ use mononoke_api::XRepoLookupSyncBehaviour;
 use mononoke_api_hg::RepoContextHgExt;
 use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
+use phases::PhasesRef;
 use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
 
@@ -762,6 +763,28 @@ impl SourceControlServiceImpl {
             .await?;
         let is_ancestor_of = changeset.is_ancestor_of(other_changeset.id()).await?;
         Ok(is_ancestor_of)
+    }
+
+    /// Returns `true` if this commit is public
+    pub(crate) async fn commit_is_public(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        _params: thrift::CommitIsPublicParams,
+    ) -> Result<bool, scs_errors::ServiceError> {
+        let (repo_ctx, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
+        let public = repo_ctx
+            .repo()
+            .phases()
+            .get_public(
+                &ctx,
+                vec![changeset.id()],
+                false, /* ephemeral_derive */
+            )
+            .await
+            .map_err(|_| scs_errors::internal_error("failed to query commit phase"))?;
+
+        Ok(!public.is_empty())
     }
 
     /// Given a base changeset, find the "other" changeset from parent information

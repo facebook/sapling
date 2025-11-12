@@ -306,6 +306,8 @@ impl AddScubaParams for thrift::CommitIsAncestorOfParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitIsPublicParams {}
+
 impl AddScubaParams for thrift::CommitCommonBaseWithParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("other_commit", self.other_commit_id.to_string());

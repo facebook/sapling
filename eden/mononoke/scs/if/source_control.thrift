@@ -1288,6 +1288,8 @@ struct CommitIsAncestorOfParams {
   1: CommitId descendant_commit_id;
 }
 
+struct CommitIsPublicParams {}
+
 struct CommitCommonBaseWithParams {
   1: CommitId other_commit_id;
   2: set<CommitIdentityScheme> identity_schemes;
@@ -3009,6 +3011,16 @@ service SourceControlService extends fb303_core.BaseService {
   bool commit_is_ancestor_of(
     1: CommitSpecifier commit,
     2: CommitIsAncestorOfParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Check if this commit is public
+  bool commit_is_public(
+    1: CommitSpecifier commit,
+    2: CommitIsPublicParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
