@@ -189,8 +189,13 @@ pub fn edenfs_checkout(
         .config
         .get_or_default("checkout", "progress.eden-enabled")?
     {
+        let topic = if cfg!(feature = "eden") {
+            "EdenFS update"
+        } else {
+            "Git update"
+        };
         let pb = progress_model::ProgressBarBuilder::new()
-            .topic("EdenFS update".to_owned())
+            .topic(topic.to_owned())
             .total(if revert_conflicts { 1 } else { 3 })
             .adhoc(false)
             .thread_local_parent()
