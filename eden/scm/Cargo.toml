@@ -209,6 +209,7 @@ members = [
   "lib/vfs",
   "lib/virtual-repo",
   "lib/virtual-repo/virtual-tree",
+  "lib/virtual-repo/virtual-tree/benches",
   "lib/vlqencoding",
   "lib/walkdetector",
   "lib/webview-app",
