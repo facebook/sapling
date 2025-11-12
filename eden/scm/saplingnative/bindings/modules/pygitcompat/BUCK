@@ -10,6 +10,7 @@ rust_python_library(
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/cpython-ext:cpython-ext",
         "//eden/scm/lib/gitcompat:gitcompat",
+        "//eden/scm/lib/identity:identity",
         "//eden/scm/lib/types:types",
         "//eden/scm/saplingnative/bindings/modules/pyprocess:pyprocess",
     ],

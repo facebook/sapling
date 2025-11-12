@@ -104,6 +104,17 @@ def setup_repository(ui, path, create=False, initial_config=None, submodule=None
     presetupfuncs = []
 
     if submodule is not None:
+        if os.path.exists(path):
+            # If repo already exists, we need to ensure requirements are written before we
+            # initialize the localrepo.
+            bindings.gitcompat.maybeinitdotgit(path)
+        else:
+            # Otherwise, set up the requirements after the repo is created.
+            def setup_requirements(ui, repo):
+                bindings.gitcompat.maybeinitdotgit(path)
+
+            presetupfuncs.append(setup_requirements)
+
         weak_submodule = weakref.proxy(submodule)
 
         def setup_submodule(ui, repo):

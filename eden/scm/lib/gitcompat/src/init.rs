@@ -40,7 +40,9 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()>
     let dot_git_path = follow_dotgit_path(root_path.join(".git"));
     let dot_dir = dot_git_path.join("sl");
     let store_dir = dot_dir.join("store");
-    if !store_dir.is_dir() {
+
+    // Check for existence of "requires" file so we can fix repo dirs that already exist but are missing requires file.
+    if !store_dir.join("requires").exists() {
         fs::create_dir_all(&store_dir)?;
 
         fs::write(dot_dir.join("requires"), "store\ndotgit\n")?;

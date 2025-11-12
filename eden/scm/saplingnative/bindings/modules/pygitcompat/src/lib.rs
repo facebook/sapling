@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use configmodel::Config;
 use cpython::*;
+use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
@@ -25,7 +26,21 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "gitcompat"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<BareGit>(py)?;
+    m.add(
+        py,
+        "maybeinitdotgit",
+        py_fn!(py, maybe_init_inside_dotgit(path: &PyPath)),
+    )?;
     Ok(m)
+}
+
+fn maybe_init_inside_dotgit(py: Python, path: &PyPath) -> PyResult<PyNone> {
+    gitcompat::init::maybe_init_inside_dotgit(
+        path.as_path(),
+        identity::must_sniff_dir(path.as_path()).map_pyerr(py)?,
+    )
+    .map_pyerr(py)?;
+    Ok(PyNone)
 }
 
 py_class!(pub class BareGit |py| {

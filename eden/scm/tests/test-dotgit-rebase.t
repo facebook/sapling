@@ -222,5 +222,22 @@ Rebase the branch with submodule changes
 FIXME:
   $ sl rebase -s 'desc("Change submodule")' -d 'desc("Parent commit 1")'
   rebasing * "Change submodule to earlier version" (glob)
-  abort: legacy dirstate implementations are no longer supported (path=$TESTTMP/parent-repo/.git/modules/sub/sl, requirements=set())!
-  [255]
+  rebasing 0303196d7312 "Branch commit"
+
+Verify the commit graph after rebase
+
+  $ sl log -G -T "{desc} {node|short}" -r "all()"
+  @  Branch commit bce10c8b66c9
+  │
+  o  Change submodule to earlier version b5fa591278d7
+  │
+  o  Parent commit 1 223e47d53b0e
+  │
+  o  Add submodule df1126da9b2b
+
+Verify the submodule is at the correct version
+
+  $ git ls-tree HEAD sub
+  160000 commit 807d30b37126b53327b5b29f6501ffde0b9a1756	sub
+
+  $ sl status
