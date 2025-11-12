@@ -37,11 +37,12 @@ Client 1
   $ hg commit -Aqm "draft-commit
   > Differential Revision: https://phabricator.fb.com/D1234"
   $ setconfig 'commitcloud.ignored-bookmarks=bar,*z'
-FIXME: no need to sync ignored bookmark
+Don't kick off background sync for ignored bookmark:
   $ hg book bar --debug --config infinitepushbackup.autobackup=true
-  starting commit cloud autobackup in the background
   $ hg book baz
-  $ hg book foo
+Do kick off background for participating bookmark:
+  $ hg book foo --debug --config infinitepushbackup.autobackup=true
+  starting commit cloud autobackup in the background
   $ hg prev -q
   [df4f53] base
   $ hg cloud sync -q
@@ -63,7 +64,6 @@ FIXME: no need to sync ignored bookmark
   o  00422fad0026 draft 'draft-commit
   │  Differential Revision: https://phabricator.fb.com/D1234' foo
   @  df4f53cec30a public 'base'
-  
   $ cd ..
 
 Fake land the commit
@@ -131,7 +131,6 @@ Fake land the commit
   o  00422fad0026 draft 'draft-commit
   │  Differential Revision: https://phabricator.fb.com/D1234' foo
   @  df4f53cec30a public 'base'
-  
 
 Rebasing the bookmark will make the draft commit disappear.
 
@@ -186,7 +185,6 @@ The draft commit is also gone from here, and the workspace is stable.
   o  031d760782fb public 'public-commit-1'
   │
   @  df4f53cec30a public 'base'
-  
 
   $ cd ../client1
   $ hg cloud sync -q

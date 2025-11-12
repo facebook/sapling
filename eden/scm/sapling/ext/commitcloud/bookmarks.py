@@ -76,6 +76,16 @@ def _bookmarks(orig, ui, repo, *names, **opts):
             if len(other_bms) > 0 or len(scratch_bms) == 0:
                 return orig(ui, repo, *other_bms, **opts)
     else:
+        if matcher := repo.config.get.as_matcher("commitcloud", "ignored-bookmarks"):
+            # As an optimization, skip background sync if we are only changing ignored bookmarks.
+            for name in names + (opts.get("rename"),):
+                if name == ".":
+                    name = repo._activebookmark
+                if name and not matcher.matches(name):
+                    break
+            else:
+                repo.ignoreautobackup = True
+
         return orig(ui, repo, *names, **opts)
 
 
