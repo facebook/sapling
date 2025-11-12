@@ -5,14 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::num::NonZeroU64;
 use std::ops::Range;
 use std::sync::Arc;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::AcqRel;
+
+use parking_lot::RwLock;
 
 use crate::types::*;
 
@@ -23,8 +22,7 @@ pub struct SplitChanges {
     root_tree_bits: u32,
     split_bits: u8,
     original: Arc<dyn VirtualTreeProvider>,
-    // Identifies the `SplitChanges` instance.
-    split_changes_id: usize,
+    cache: Arc<RwLock<HashMap<CacheId, GeneratedTrees>>>,
 }
 
 // Under the hood, there are 2 kinds of tree_ids:
@@ -90,15 +88,12 @@ struct GeneratedTreeBody {
 }
 
 // The generated trees come from diff calculation, which can be expensive.
-// So we need to cache the calculation. To avoid contention, the cache
-// is thread local. It is keyed by root_tree_index and is scoped to a single
-// SplitChanges. thread_local is global and cannot be a struct field, so we
-// emulate a struct field by `split_changes_id`.
+// So we need to cache the calculation. The cache is keyed by before-split
+// root_tree_index.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CacheId {
+pub(crate) struct CacheId {
     // Before-split root-tree index.
     root_tree_index: usize,
-    split_changes_id: usize,
 }
 
 const DUMMY_ITEM: (NameId, ContentId) = (NameId(NonZeroU64::MAX), ContentId::ABSENT);
@@ -391,12 +386,6 @@ impl SplitChanges {
     }
 }
 
-thread_local! {
-    static CACHE: RefCell<HashMap<CacheId, GeneratedTrees>> = RefCell::new(HashMap::new());
-}
-
-const CACHE_SIZE_LIMIT: usize = 10;
-
 impl VirtualTreeProvider for SplitChanges {
     fn read_tree<'a>(&'a self, tree_id: TreeId) -> ReadTreeIter<'a> {
         match self.parse_tree_id(tree_id) {
@@ -473,21 +462,18 @@ impl<T: Copy> Iterator for ArcVecIter<T> {
 impl SplitChanges {
     /// Derived tree provider. Files are repeated by `1 << split_bits` times.
     pub fn new(tree: Arc<dyn VirtualTreeProvider>, split_bits: u8) -> Self {
-        static NEXT_SPLIT_CHANGES_ID: AtomicUsize = AtomicUsize::new(0);
         let root_tree_bits = usize::BITS - tree.root_tree_len().leading_zeros();
-        let split_changes_id = NEXT_SPLIT_CHANGES_ID.fetch_add(1, AcqRel);
         Self {
             original: tree,
             split_bits,
             root_tree_bits,
-            split_changes_id,
+            cache: Default::default(),
         }
     }
 
     fn cache_id_for_root_tree_index(&self, index: usize) -> CacheId {
         CacheId {
             root_tree_index: index,
-            split_changes_id: self.split_changes_id,
         }
     }
 
@@ -497,15 +483,19 @@ impl SplitChanges {
         f: impl Fn(&GeneratedTrees) -> T,
     ) -> T {
         let cache_id = self.cache_id_for_root_tree_index(root_tree_index);
-        CACHE.with_borrow_mut(|cache| {
-            if cache.len() > CACHE_SIZE_LIMIT {
-                cache.retain(|k, _v| *k == cache_id);
+        {
+            let cache = self.cache.read();
+            if let Some(got) = cache.get(&cache_id) {
+                return f(got);
             }
+        }
+        {
+            let mut cache = self.cache.write();
             let generated = cache
                 .entry(cache_id)
                 .or_insert_with(|| GeneratedTrees::new(self, root_tree_index));
             f(&*generated)
-        })
+        }
     }
 }
 
