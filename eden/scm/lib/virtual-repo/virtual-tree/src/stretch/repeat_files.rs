@@ -70,12 +70,12 @@ impl RepeatFiles {
     }
 
     fn mask(&self) -> u64 {
-        (1u64 << self.factor_bits) - 1
+        1u64.lossless_shl(self.factor_bits) - 1
     }
 
     fn scale_id_up(&self, id: NonZeroU64, offset: u64) -> NonZeroU64 {
         assert!(offset <= self.mask());
-        NonZeroU64::new((id.get() << self.factor_bits) | offset).unwrap()
+        NonZeroU64::new(id.get().lossless_shl(self.factor_bits) | offset).unwrap()
     }
 }
 

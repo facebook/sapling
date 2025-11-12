@@ -8,6 +8,8 @@
 use std::fmt;
 pub use std::num::NonZeroU64;
 
+pub use crate::std_ext::LosslessShl;
+
 /// Identifies a tree.
 /// TreeId > 0.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -84,14 +86,14 @@ impl From<ContentId> for TypedContentId {
 impl From<TypedContentId> for ContentId {
     fn from(value: TypedContentId) -> Self {
         let new_value = match value {
-            TypedContentId::Tree(tree_id) => tree_id.0.get() << 2,
+            TypedContentId::Tree(tree_id) => tree_id.0.get().lossless_shl(2),
             TypedContentId::File(blob_id, file_mode) => {
                 let flag = match file_mode {
                     FileMode::Regular => 1,
                     FileMode::Executable => 2,
                     FileMode::Symlink => 3,
                 };
-                (blob_id.0.get() << 2) | flag
+                blob_id.0.get().lossless_shl(2) | flag
             }
             TypedContentId::Absent => return ContentId::ABSENT,
         };

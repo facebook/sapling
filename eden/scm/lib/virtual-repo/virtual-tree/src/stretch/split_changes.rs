@@ -19,7 +19,7 @@ use crate::types::*;
 /// Might produce empty changes (empty commit).
 #[derive(Clone)]
 pub struct SplitChanges {
-    root_tree_bits: u32,
+    root_tree_bits: u8,
     split_bits: u8,
     original: Arc<dyn VirtualTreeProvider>,
     cache: Arc<RwLock<HashMap<CacheId, GeneratedTrees>>>,
@@ -308,7 +308,7 @@ impl GeneratedTrees {
         };
 
         // trees[0..split_len] are reserved for root trees.
-        let split_len = 1 << split_changes.split_bits;
+        let split_len = 1usize.lossless_shl(split_changes.split_bits);
         trees.resize(split_len, Default::default());
         for i in 0..split_len {
             // edit_id < cutoff should be included in this change.
@@ -337,9 +337,7 @@ impl ContentId {
     }
     fn from_before_split_to_after_split(self) -> Self {
         match self.tree_id() {
-            Some(tree_id) => {
-                TypedContentId::Tree(TreeId(NonZeroU64::new(tree_id.0.get() << 1).unwrap())).into()
-            }
+            Some(tree_id) => TypedContentId::Tree(TreeId(tree_id.0.lossless_shl(1))).into(),
             None => self,
         }
     }
@@ -353,7 +351,7 @@ impl SplitChanges {
             GeneratedTreeId::Original(TreeId(NonZeroU64::new(tree_id.0.get() >> 1).unwrap()))
         } else {
             let value = value >> 1;
-            let root_tree_index = (value & ((1 << self.root_tree_bits) - 1)) as usize;
+            let root_tree_index = (value & (1u64.lossless_shl(self.root_tree_bits) - 1)) as usize;
             assert!(root_tree_index > 0);
             assert!(root_tree_index < self.original.root_tree_len());
             let generated_tree_index = (value >> self.root_tree_bits) as usize;
@@ -367,16 +365,16 @@ impl SplitChanges {
     /// GeneratedTreeId -> TreeId
     fn unparse_tree_id(&self, generated_tree_id: GeneratedTreeId) -> TreeId {
         let value = match generated_tree_id {
-            GeneratedTreeId::Original(tree_id) => tree_id.0.get() << 1,
+            GeneratedTreeId::Original(tree_id) => tree_id.0.get().lossless_shl(1),
             GeneratedTreeId::Generated {
                 root_tree_index,
                 split_tree_index: generated_tree_index,
             } => {
                 assert!(root_tree_index > 0);
                 assert!(root_tree_index < self.original.root_tree_len());
-                ((((generated_tree_index as u64) << self.root_tree_bits)
+                (((generated_tree_index as u64).lossless_shl(self.root_tree_bits)
                     | (root_tree_index as u64))
-                    << 1)
+                    .lossless_shl(1))
                     | 1
             }
         };
@@ -419,7 +417,7 @@ impl VirtualTreeProvider for SplitChanges {
 
     fn root_tree_len(&self) -> usize {
         // The first root tree cannot be split.
-        ((self.original.root_tree_len() - 1) << self.split_bits) + 1
+        (self.original.root_tree_len() - 1).lossless_shl(self.split_bits) + 1
     }
 
     fn root_tree_id(&self, index: usize) -> TreeId {
@@ -427,7 +425,7 @@ impl VirtualTreeProvider for SplitChanges {
             let tree_id = self.original.root_tree_id(0);
             self.unparse_tree_id(GeneratedTreeId::Original(tree_id))
         } else {
-            let split_index = (index - 1) & ((1 << self.split_bits) - 1);
+            let split_index = (index - 1) & (1usize.lossless_shl(self.split_bits) - 1);
             let orig_root_tree_index = ((index - 1) >> self.split_bits) + 1;
             self.unparse_tree_id(GeneratedTreeId::Generated {
                 root_tree_index: orig_root_tree_index,
@@ -462,7 +460,9 @@ impl<T: Copy> Iterator for ArcVecIter<T> {
 impl SplitChanges {
     /// Derived tree provider. Files are repeated by `1 << split_bits` times.
     pub fn new(tree: Arc<dyn VirtualTreeProvider>, split_bits: u8) -> Self {
-        let root_tree_bits = usize::BITS - tree.root_tree_len().leading_zeros();
+        let root_tree_bits = (usize::BITS - tree.root_tree_len().leading_zeros())
+            .try_into()
+            .unwrap();
         Self {
             original: tree,
             split_bits,

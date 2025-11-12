@@ -23,6 +23,7 @@
 //! to larger ones to satisfy needs.
 
 pub mod serialized;
+pub(crate) mod std_ext;
 pub mod stretch;
 pub mod types;
 

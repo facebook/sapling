@@ -117,7 +117,7 @@ impl NameId {
 impl TreeId {
     fn tagged(self, bit: u64) -> TreeId {
         debug_assert_eq!(bit & 1, bit);
-        Self(NonZeroU64::new((self.0.get() << 1) | bit).unwrap())
+        Self(NonZeroU64::new(self.0.get().lossless_shl(1) | bit).unwrap())
     }
 
     fn untagged(self) -> Self {
