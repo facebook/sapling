@@ -1,0 +1,36 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+
+oncall("mononoke")
+
+cpp_library(
+    name = "adaptive_rate_limiter_cpp",
+    srcs = [
+        "AdaptiveRateLimiterWrapper.cpp",
+    ],
+    headers = [
+        "AdaptiveRateLimiterConfig.h",
+        "AdaptiveRateLimiterWrapper.h",
+    ],
+    deps = [
+        "//folly:memory",
+        "//proxygen/facebook/lib/services:adaptive_rate_limiter",
+        "//proxygen/facebook/lib/services:arl_linear_shed_algo",
+        "//proxygen/facebook/lib/services:multi_level_adaptive_rate_limiter",
+        "//proxygen/facebook/lib/services:simple_multi_level_shed_algo",
+        "//proxygen/facebook/lib/statistics:arl_resource_stats",
+        "//proxygen/facebook/lib/statistics:cgroup_resources",
+        "//proxygen/facebook/lib/statistics:host_resources",
+    ],
+    exported_deps = [],
+)
+
+cpp_unittest(
+    name = "adaptive_rate_limiter_test",
+    srcs = [
+        "test/AdaptiveRateLimiterTest.cpp",
+    ],
+    deps = [
+        ":adaptive_rate_limiter_cpp",
+    ],
+)
