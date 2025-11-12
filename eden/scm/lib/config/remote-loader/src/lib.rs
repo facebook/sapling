@@ -11,3 +11,7 @@ mod fb;
 pub use fb::remote_loader::get_remote_configs;
 #[cfg(feature = "fb")]
 pub use fb::remote_loader::maybe_set_http_cat_header;
+#[cfg(feature = "fb")]
+pub use fb::remote_loader::read_local_config;
+#[cfg(feature = "fb")]
+pub use fb::remote_loader::should_fetch_configs;

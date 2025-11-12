@@ -9,6 +9,8 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use remote_loader::get_remote_configs;
+use remote_loader::read_local_config;
+use remote_loader::should_fetch_configs;
 use strum::EnumString;
 use strum::IntoStaticStr;
 
@@ -105,7 +107,10 @@ impl UseCase {
         };
         let http_config = helpers::get_http_config(is_pub, proxy_sock_path).ok()?;
         let cache_path = self.config_dir.join("scm_use_cases");
-        let config: ScmUseCases = get_remote_configs(
+
+        let local_config: Option<ScmUseCases> = read_local_config(&cache_path);
+
+        let handle = self.maybe_update_config::<ScmUseCases>(
             is_pub,
             Some(config_url),
             300, // 5 minutes
@@ -116,8 +121,73 @@ impl UseCase {
             CONFIG_HASH_INDEX,
             CONFIG_UP_TO_DATE_INDEX,
             CONFIG_INDEX,
-        )
-        .ok()?;
-        config.use_cases.get(self.name()).cloned()
+        );
+
+        // If no local configs is available, wait on the remote results.
+        match local_config {
+            Some(local_config) => local_config.use_cases.get(self.name()).cloned(),
+            None => match handle {
+                Some(handle) => match handle.join() {
+                    Ok(remote_config) => remote_config.ok()?.use_cases.get(self.name()).cloned(),
+                    Err(panic_msg) => {
+                        tracing::error!("Thread panicked: {:?}", panic_msg);
+                        None
+                    }
+                },
+                None => {
+                    // This shouldn't happen usually, this means that there was no local config, but also
+                    // that the local config existed when trying to read the timestamp.
+                    // Might happen if somebody deleted the local config between the two checks.
+                    // Return None to read the default values
+                    tracing::error!(
+                        "Didn't find a local config, but also should_fetch_config returned False. Using default values."
+                    );
+                    None
+                }
+            },
+        }
+    }
+
+    // Creates and detaches a thread that will update the config if it is stale
+    fn maybe_update_config<C>(
+        &self,
+        is_pub: bool,
+        remote_url: Option<String>,
+        limit: u64,
+        http_config: http_client::Config,
+        allow_remote_snapshot: bool,
+        cache_path: &Path,
+        remote_config_snapshot: &str,
+        config_hash_index: &str,
+        config_up_to_date_index: &str,
+        config_index: &str,
+    ) -> Option<std::thread::JoinHandle<std::result::Result<C, anyhow::Error>>>
+    where
+        C: std::fmt::Debug + serde::de::DeserializeOwned + Send + 'static,
+    {
+        // Clone or convert all references to owned types so they can be moved into the thread
+        let cache_path = cache_path.to_path_buf();
+        let remote_config_snapshot = remote_config_snapshot.to_owned();
+        let config_hash_index = config_hash_index.to_owned();
+        let config_up_to_date_index = config_up_to_date_index.to_owned();
+        let config_index = config_index.to_owned();
+
+        if should_fetch_configs(limit, &cache_path) {
+            return Some(std::thread::spawn(move || {
+                get_remote_configs::<C>(
+                    is_pub,
+                    remote_url,
+                    limit,
+                    http_config,
+                    allow_remote_snapshot,
+                    &cache_path,
+                    &remote_config_snapshot,
+                    &config_hash_index,
+                    &config_up_to_date_index,
+                    &config_index,
+                )
+            }));
+        }
+        None
     }
 }
