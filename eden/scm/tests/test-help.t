@@ -341,6 +341,8 @@ Test extension help:
        pushrebase    rebases commits during push
        rage          upload useful diagnostics and give instructions for asking
                      for help
+       rage_categories
+                     Problem categories
        reset         reset the active bookmark and working copy to a desired
                      revision
        share         share a common history between several working directories

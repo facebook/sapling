@@ -42,6 +42,8 @@ from sapling import (
 )
 from sapling.i18n import _
 
+from .rage_categories import interactive_category_selection
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -304,6 +306,31 @@ def sksagentrage(ui) -> str:
     status = shcmd(f"{sksagentpath} rage --stdout --verbose=false")
 
     return "sks-agent status:\n\n{}".format(status)
+
+
+def _handle_experimental_interactive_features(ui):
+    """Handle experimental interactive rage features.
+
+    Returns:
+        bool: True if standard rage should continue, False if processing is complete
+    """
+    try:
+        category = interactive_category_selection(ui)
+        if category:
+            ui.write(f"Selected category: {category}\n")
+            ui.write("For now, falling back to standard rage...\n")
+            ui.write("(Category-specific collection will be added)\n\n")
+            # TODO: Implement category-specific collection
+            return True  # Continue with standard rage
+        else:
+            ui.write("No category selected, running standard rage...\n")
+            return True  # Continue with standard rage
+    except KeyboardInterrupt:
+        ui.write("\nSelection cancelled\n")
+        return False  # Don't continue
+    except Exception as e:
+        ui.write_err(f"Error in interactive selection: {e}\n")
+        return False  # Don't continue
 
 
 def _makerage(ui, repo, **opts) -> str:
@@ -582,8 +609,12 @@ def rage(ui, repo, *pats, **opts) -> None:
 
         [rage]
         advice = Please see our FAQ guide: https://...
-
     """
+    # Experimental interactive rage config
+    experimental_interactive = ui.configbool("experimental", "rage-interactive")
+    if experimental_interactive:
+        if not _handle_experimental_interactive_features(ui):
+            return
     with progress.spinner(ui, "collecting"):
         with ui.configoverride({("ui", "color"): "False"}):
             # Disable colors when generating a rage.
