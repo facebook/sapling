@@ -145,10 +145,13 @@ impl VirtualRepoProvider {
         // NOTE: Commit message is short for now. To exercise the commit message
         // storage, one might want to use a longer message with a larger entropy.
         let message = Text::from(format!("synthetic commit {}", id8 + 1));
+        // Python's datetime.MAXYEAR = 9999
+        // Practically, get_tree_provider(factor_bits=23) hits this.
+        const MAX_UNIXTIME: i64 = 253402070400;
         let date = {
             const START_UNIXTIME: u64 = 1761263091;
             HgTime {
-                unixtime: (START_UNIXTIME + id8) as i64,
+                unixtime: ((START_UNIXTIME + id8) as i64).min(MAX_UNIXTIME),
                 offset: 0,
             }
         };
