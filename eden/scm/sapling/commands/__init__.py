@@ -3770,9 +3770,22 @@ def init(ui, dest=".", **opts):
     )
     if usegit:
         git.clone(ui, "", destpath)
-    elif ui.configbool("format", "use-eager-repo") or virtual_repo_size_factor:
+    elif (
+        ui.configbool("format", "use-eager-repo")
+        or virtual_repo_size_factor is not None
+    ):
+        # Matches MAX_FACTOR_BITS in virtual-repo.
+        MAX_FACTOR_BITS = 34
+        if (
+            virtual_repo_size_factor is not None
+            and not 0 <= virtual_repo_size_factor <= MAX_FACTOR_BITS
+        ):
+            raise error.Abort(
+                _("format.use-virtual-repo-with-size-factor must be between 0 and %d")
+                % MAX_FACTOR_BITS
+            )
         eager_repo = bindings.eagerepo.EagerRepo.open(destpath)
-        if virtual_repo_size_factor:
+        if virtual_repo_size_factor is not None:
             eager_repo.populate_virtual_commits(virtual_repo_size_factor)
             eager_repo.flush()
     else:

@@ -203,13 +203,17 @@ fn calculate_file_length(seed: u64, name_id: u64, blob_id: u64) -> u64 {
     len + (blob_id << 5)
 }
 
-const MAX_FACTOR_BITS: usize = 1 << 6;
+/// The virtual tree uses u64 (64 bits) internally for various operations.
+/// To avoid overflow, limit the factor_bits to 34.
+/// The default virtual repo with factor_bits=34 has about 200+ trillion files,
+/// which should probably be good enough.
+const MAX_FACTOR_BITS: usize = 34;
 
 pub(crate) fn get_tree_provider(factor_bits: u8) -> &'static Arc<dyn VirtualTreeProvider> {
     let factor_bits = factor_bits as usize;
-    assert!(factor_bits < MAX_FACTOR_BITS);
+    assert!(factor_bits <= MAX_FACTOR_BITS);
     static TREE_PROVIDER_PER_FACTOR_BITS: LazyLock<
-        [OnceLock<Arc<dyn VirtualTreeProvider>>; MAX_FACTOR_BITS],
+        [OnceLock<Arc<dyn VirtualTreeProvider>>; MAX_FACTOR_BITS + 1],
     > = LazyLock::new(|| std::array::from_fn(|_| OnceLock::new()));
     TREE_PROVIDER_PER_FACTOR_BITS[factor_bits].get_or_init(|| {
         let tree_provider = Arc::new(virtual_tree::serialized::EXAMPLE1.clone());
