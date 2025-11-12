@@ -339,16 +339,16 @@ Test clone from the repository in (emulated) revlog format 0 (issue4203):
   $ touch src/.hg/requires
   $ echo foo > src/foo
   $ hg -R src add src/foo
-  abort: legacy dirstate implementations are no longer supported!
+  abort: legacy dirstate implementations are no longer supported (path=$TESTTMP/src/.hg, requirements=set())!
   [255]
   $ hg -R src commit -m '#0'
-  abort: legacy dirstate implementations are no longer supported!
+  abort: legacy dirstate implementations are no longer supported (path=$TESTTMP/src/.hg, requirements=set())!
   [255]
   $ hg -R src log -q
-  abort: legacy dirstate implementations are no longer supported!
+  abort: legacy dirstate implementations are no longer supported (path=$TESTTMP/src/.hg, requirements=set())!
   [255]
   $ hg clone -U -q src dst
-  abort: legacy dirstate implementations are no longer supported!
+  abort: legacy dirstate implementations are no longer supported (path=$TESTTMP/src/.hg, requirements=set())!
   [255]
   $ hg -R dst log -q
   abort: repository dst not found!

@@ -222,6 +222,5 @@ Rebase the branch with submodule changes
 FIXME:
   $ sl rebase -s 'desc("Change submodule")' -d 'desc("Parent commit 1")'
   rebasing * "Change submodule to earlier version" (glob)
-  abort: legacy dirstate implementations are no longer supported!
+  abort: legacy dirstate implementations are no longer supported (path=$TESTTMP/parent-repo/.git/modules/sub/sl, requirements=set())!
   [255]
-  

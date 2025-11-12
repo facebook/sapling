@@ -1419,7 +1419,7 @@ class localrepository:
             and git.DOTGIT_REQUIREMENT not in self.requirements
         ):
             raise errormod.RequirementError(
-                "legacy dirstate implementations are no longer supported"
+                f"legacy dirstate implementations are no longer supported (path={self.path}, requirements={self.requirements})"
             )
 
         ds = dirstatemod.dirstate(
