@@ -30,9 +30,29 @@ pub fn stretch_trees(
     mut provider: Arc<dyn VirtualTreeProvider>,
     factor_bits: u8,
 ) -> Arc<dyn VirtualTreeProvider> {
-    for _i in 0..factor_bits {
+    let mut remaining_split_factor_bits = factor_bits;
+    // Apply SplitChanges every SPLIT_PER_BITS bits.
+    // Setting this too high leads to poor performance since SplitChanges needs
+    // to deal with a large diff internally.
+    // Setting this too low leads to use more bits of the TreeId space.
+    // Run `cargo run --release -- 1st` in `virtual-tree/benches` to reason
+    // about the performance.
+    // NOTE: These values are not decided scientifically. Tweak if needed.
+    let split_per_bits = match factor_bits {
+        30.. => 4, // Use less bits, less performant.
+        20.. => 3,
+        _ => 2, // Use more bits, but more performant (avoid large diffs)
+    };
+    for i in 0..factor_bits {
         provider = Arc::new(RepeatFiles::new(provider, 1));
         provider = Arc::new(DeepenTrees::new(provider));
+        if ((i + 1) % split_per_bits) == 0 {
+            provider = Arc::new(SplitChanges::new(provider, split_per_bits));
+            remaining_split_factor_bits -= split_per_bits;
+        }
     }
-    Arc::new(SplitChanges::new(provider, factor_bits))
+    if remaining_split_factor_bits > 0 {
+        provider = Arc::new(SplitChanges::new(provider, remaining_split_factor_bits));
+    }
+    provider
 }
