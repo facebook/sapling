@@ -37,7 +37,9 @@ Client 1
   $ hg commit -Aqm "draft-commit
   > Differential Revision: https://phabricator.fb.com/D1234"
   $ setconfig 'commitcloud.ignored-bookmarks=bar,*z'
-  $ hg book bar
+FIXME: no need to sync ignored bookmark
+  $ hg book bar --debug --config infinitepushbackup.autobackup=true
+  starting commit cloud autobackup in the background
   $ hg book baz
   $ hg book foo
   $ hg prev -q
