@@ -181,6 +181,11 @@ impl MononokeScubaSampleBuilder {
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
             ExperimentJKData {
+                jk_name: "scm/mononoke:remote_diff",
+                switch_values: vec![],
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
+            ExperimentJKData {
                 jk_name: "scm/mononoke:retry_query_from_replica_with_consistency_check",
                 switch_values: vec!["newfilenodes::reader", "bonsai_hg_mapping"],
                 consistent_hashing: Some(client_info.correlator.as_str()),
