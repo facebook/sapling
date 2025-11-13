@@ -1,4 +1,3 @@
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("sapling")
@@ -58,20 +57,5 @@ rust_library(
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/minibytes:minibytes",
-    ],
-)
-
-rust_binary(
-    name = "http-cli",
-    srcs = ["src/bin/cli.rs"],
-    crate_root = "src/bin/cli.rs",
-    deps = [
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:env_logger",
-        "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:structopt",
-        "fbsource//third-party/rust:tokio",
-        "fbsource//third-party/rust:url",
-        "//eden/scm/lib/http-client:http-client",
     ],
 )
