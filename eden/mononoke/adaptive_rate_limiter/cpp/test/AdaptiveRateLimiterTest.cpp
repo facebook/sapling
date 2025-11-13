@@ -172,4 +172,106 @@ TEST_F(AdaptiveRateLimiterTest, UpdateConfigWithModeChange) {
   SUCCEED();
 }
 
+TEST_F(AdaptiveRateLimiterTest, OperationModeDisabled) {
+  // Test that DISABLED mode never sheds
+  AdaptiveRateLimiterConfig config(
+      OperationMode::DISABLED,
+      ResourceMonitoringMode::CGROUP_ONLY,
+      0.0, // Very strict thresholds - should shed if enabled
+      0.0,
+      0.0,
+      0.0);
+
+  auto limiter = AdaptiveRateLimiterWrapper::create(config);
+  ASSERT_NE(limiter, nullptr);
+
+  // Should never shed when operation mode is DISABLED
+  for (int i = 0; i < 10; ++i) {
+    EXPECT_FALSE(limiter->shouldShed());
+  }
+}
+
+TEST_F(AdaptiveRateLimiterTest, OperationModeDryRun) {
+  // Test that DRY_RUN mode never actually sheds
+  AdaptiveRateLimiterConfig config(
+      OperationMode::DRY_RUN,
+      ResourceMonitoringMode::CGROUP_ONLY,
+      0.0, // Very strict thresholds - would shed if enabled
+      0.0,
+      0.0,
+      0.0);
+
+  auto limiter = AdaptiveRateLimiterWrapper::create(config);
+  ASSERT_NE(limiter, nullptr);
+
+  // Should never shed in DRY_RUN mode (logs but doesn't shed)
+  for (int i = 0; i < 10; ++i) {
+    EXPECT_FALSE(limiter->shouldShed());
+  }
+}
+
+TEST_F(AdaptiveRateLimiterTest, OperationModeEnabled) {
+  // Test that ENABLED mode can shed
+  AdaptiveRateLimiterConfig config(
+      OperationMode::ENABLED,
+      ResourceMonitoringMode::CGROUP_ONLY,
+      0.7,
+      0.85,
+      0.8,
+      0.95);
+
+  auto limiter = AdaptiveRateLimiterWrapper::create(config);
+  ASSERT_NE(limiter, nullptr);
+
+  // Should be able to call shouldShed
+  // Actual shedding depends on system load
+  (void)limiter->shouldShed();
+  SUCCEED();
+}
+
+TEST_F(AdaptiveRateLimiterTest, UpdateOperationMode) {
+  // Test changing operation mode at runtime
+  AdaptiveRateLimiterConfig initialConfig(
+      OperationMode::DISABLED,
+      ResourceMonitoringMode::CGROUP_ONLY,
+      0.0,
+      0.0,
+      0.0,
+      0.0);
+
+  auto limiter = AdaptiveRateLimiterWrapper::create(initialConfig);
+
+  // Initially DISABLED - should never shed
+  EXPECT_FALSE(limiter->shouldShed());
+
+  // Change to DRY_RUN mode
+  AdaptiveRateLimiterConfig dryRunConfig(
+      OperationMode::DRY_RUN,
+      ResourceMonitoringMode::CGROUP_ONLY,
+      0.0,
+      0.0,
+      0.0,
+      0.0);
+
+  limiter->updateConfig(dryRunConfig);
+
+  // DRY_RUN should also not shed
+  EXPECT_FALSE(limiter->shouldShed());
+
+  // Change to ENABLED mode
+  AdaptiveRateLimiterConfig enabledConfig(
+      OperationMode::ENABLED,
+      ResourceMonitoringMode::CGROUP_ONLY,
+      0.7,
+      0.85,
+      0.8,
+      0.95);
+
+  limiter->updateConfig(enabledConfig);
+
+  // ENABLED mode - can shed based on system load
+  (void)limiter->shouldShed();
+  SUCCEED();
+}
+
 } // namespace facebook::mononoke

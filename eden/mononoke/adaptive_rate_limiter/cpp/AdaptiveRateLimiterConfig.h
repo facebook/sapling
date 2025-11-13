@@ -7,7 +7,24 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace facebook::mononoke {
+
+/**
+ * Operation mode for adaptive rate limiting.
+ * Controls whether the rate limiter is enabled, disabled, or in dry-run mode.
+ */
+enum class OperationMode {
+  // Rate limiter is disabled - no monitoring or shedding
+  DISABLED = 0,
+
+  // Rate limiter is enabled - actively shed requests when limits are exceeded
+  ENABLED = 1,
+
+  // Dry run mode - monitor and log what would be shed, but don't actually shed
+  DRY_RUN = 2,
+};
 
 /**
  * Resource monitoring mode for the rate limiter.
@@ -38,8 +55,12 @@ enum class ResourceMonitoringMode {
  * Defines CPU and memory thresholds for load shedding.
  */
 struct AdaptiveRateLimiterConfig {
+  // Operation mode - controls whether rate limiter is enabled/disabled/dry-run
+  OperationMode operationMode{OperationMode::DISABLED};
+
   // Resource monitoring mode
   ResourceMonitoringMode monitoringMode{ResourceMonitoringMode::CGROUP_ONLY};
+
   // CPU thresholds (0.0 to 1.0)
   // Soft limit: start shedding requests when CPU exceeds this
   // Hard limit: maximum shedding when CPU reaches this
@@ -59,27 +80,44 @@ struct AdaptiveRateLimiterConfig {
   AdaptiveRateLimiterConfig() = default;
 
   AdaptiveRateLimiterConfig(
+      OperationMode opMode,
       ResourceMonitoringMode mode,
       double cpuSoft,
       double cpuHard,
       double memSoft,
       double memHard,
       uint64_t updatePeriodMs = 100)
-      : monitoringMode(mode),
+      : operationMode(opMode),
+        monitoringMode(mode),
         cpuSoftLimitRatio(cpuSoft),
         cpuHardLimitRatio(cpuHard),
         memSoftLimitRatio(memSoft),
         memHardLimitRatio(memHard),
         loadUpdatePeriodMs(updatePeriodMs) {}
 
-  // Backward compatibility constructor (defaults to CGROUP_ONLY)
+  AdaptiveRateLimiterConfig(
+      ResourceMonitoringMode mode,
+      double cpuSoft,
+      double cpuHard,
+      double memSoft,
+      double memHard,
+      uint64_t updatePeriodMs = 100)
+      : operationMode(OperationMode::DISABLED),
+        monitoringMode(mode),
+        cpuSoftLimitRatio(cpuSoft),
+        cpuHardLimitRatio(cpuHard),
+        memSoftLimitRatio(memSoft),
+        memHardLimitRatio(memHard),
+        loadUpdatePeriodMs(updatePeriodMs) {}
+
   AdaptiveRateLimiterConfig(
       double cpuSoft,
       double cpuHard,
       double memSoft,
       double memHard,
       uint64_t updatePeriodMs = 100)
-      : monitoringMode(ResourceMonitoringMode::CGROUP_ONLY),
+      : operationMode(OperationMode::DISABLED),
+        monitoringMode(ResourceMonitoringMode::CGROUP_ONLY),
         cpuSoftLimitRatio(cpuSoft),
         cpuHardLimitRatio(cpuHard),
         memSoftLimitRatio(memSoft),

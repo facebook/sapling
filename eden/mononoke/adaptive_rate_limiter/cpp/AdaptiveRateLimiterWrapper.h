@@ -81,6 +81,9 @@ class AdaptiveRateLimiterWrapper {
   // Initialize the underlying ARL components
   void initialize(const AdaptiveRateLimiterConfig& config);
 
+  // Log the reason for shedding a request with current resource metrics
+  void logSheddingReason();
+
   // Proxygen ARL components (opaque pointers to avoid header dependencies)
   std::unique_ptr<proxygen::BaseAdaptiveRateLimiter> rateLimiter_;
   std::unique_ptr<proxygen::ARLResourceStats> resourceStats_;
@@ -88,9 +91,10 @@ class AdaptiveRateLimiterWrapper {
       hostResourceStats_; // For BOTH mode
   std::shared_ptr<proxygen::AdaptiveRateLimiterConfiguration> arlConfig_;
 
-  // Track current monitoring mode for updateConfig
+  // Track current modes for updateConfig
   ResourceMonitoringMode currentMonitoringMode_{
       ResourceMonitoringMode::CGROUP_ONLY};
+  OperationMode currentOperationMode_{OperationMode::DISABLED};
 };
 
 } // namespace facebook::mononoke

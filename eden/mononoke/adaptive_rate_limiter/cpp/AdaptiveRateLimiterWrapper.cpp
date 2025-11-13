@@ -9,8 +9,10 @@
 
 #include <chrono>
 #include <memory>
+#include <string>
 
 #include <folly/Memory.h>
+#include <folly/logging/xlog.h>
 
 #include "proxygen/facebook/lib/services/ARLLinearShedAlgo.h"
 #include "proxygen/facebook/lib/services/AdaptiveRateLimiter.h"
@@ -36,6 +38,9 @@ std::unique_ptr<AdaptiveRateLimiterWrapper> AdaptiveRateLimiterWrapper::create(
 
 void AdaptiveRateLimiterWrapper::initialize(
     const AdaptiveRateLimiterConfig& config) {
+  // Track operation mode
+  currentOperationMode_ = config.operationMode;
+
   // If monitoring is disabled, skip initialization
   if (config.monitoringMode == ResourceMonitoringMode::NONE) {
     return;
@@ -122,6 +127,11 @@ void AdaptiveRateLimiterWrapper::initialize(
 }
 
 bool AdaptiveRateLimiterWrapper::shouldShed() {
+  // If operation mode is DISABLED, never shed
+  if (currentOperationMode_ == OperationMode::DISABLED) {
+    return false;
+  }
+
   // If limiter is not initialized (NONE mode), never shed
   if (!rateLimiter_) {
     return false;
@@ -136,11 +146,91 @@ bool AdaptiveRateLimiterWrapper::shouldShed() {
       0); // Request sequence number
 
   // Ask ARL if we should shed this request
-  return rateLimiter_->shouldShedReq(*arlConfig_, requestContext);
+  bool shouldShedRequest =
+      rateLimiter_->shouldShedReq(*arlConfig_, requestContext);
+
+  // Handle DRY_RUN mode: log but never actually shed
+  if (currentOperationMode_ == OperationMode::DRY_RUN) {
+    if (shouldShedRequest) {
+      logSheddingReason();
+    }
+    return false;
+  }
+
+  // ENABLED mode: log and shed
+  if (shouldShedRequest) {
+    logSheddingReason();
+  }
+
+  return shouldShedRequest;
+}
+
+void AdaptiveRateLimiterWrapper::logSheddingReason() {
+  if (!resourceStats_) {
+    return;
+  }
+
+  auto& stats = resourceStats_->getCurrentData();
+  std::string resourceType;
+
+  // Determine resource type based on monitoring mode
+  switch (currentMonitoringMode_) {
+    case ResourceMonitoringMode::CGROUP_ONLY:
+      resourceType = "CGROUP";
+      break;
+    case ResourceMonitoringMode::HOST_ONLY:
+      resourceType = "HOST";
+      break;
+    case ResourceMonitoringMode::BOTH:
+      resourceType = "BOTH(CGROUP+HOST)";
+      break;
+    case ResourceMonitoringMode::NONE:
+      resourceType = "NONE";
+      break;
+  }
+
+  std::string message;
+  message += " ResourceType=";
+  message += resourceType;
+  message += " CPU=";
+  message += std::to_string(stats.getCpuPctUtil());
+  message += " CPUSoftLimit=";
+  message += std::to_string(arlConfig_->getCpuSoftLimitRatio());
+  message += " CPUHardLimit=";
+  message += std::to_string(arlConfig_->getCpuHardLimitRatio());
+  message += " MEM=";
+  message += std::to_string(stats.getUsedMemPct());
+  message += " MEMSoftLimit=";
+  message += std::to_string(arlConfig_->getMemSoftLimitRatio());
+  message += " MEMHardLimit=";
+  message += std::to_string(arlConfig_->getMemHardLimitRatio());
+
+  // Add operation mode to the message
+  std::string opMode;
+  switch (currentOperationMode_) {
+    case OperationMode::DISABLED:
+      opMode = "DISABLED";
+      break;
+    case OperationMode::ENABLED:
+      opMode = "ENABLED";
+      break;
+    case OperationMode::DRY_RUN:
+      opMode = "DRY_RUN";
+      break;
+  }
+  message += " OperationMode=";
+  message += opMode;
+
+  // Log at most once per second
+  XLOG_EVERY_MS(WARN, 1000)
+      << "AdaptiveRateLimiter shedding request:" << message;
 }
 
 void AdaptiveRateLimiterWrapper::updateConfig(
     const AdaptiveRateLimiterConfig& config) {
+  // Track operation mode
+  currentOperationMode_ = config.operationMode;
+
   // If monitoring mode changed, reinitialize
   // (This is a simple approach; more sophisticated would update in-place)
   if (!rateLimiter_ || config.monitoringMode != currentMonitoringMode_) {

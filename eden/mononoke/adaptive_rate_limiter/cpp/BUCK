@@ -14,6 +14,7 @@ cpp_library(
     ],
     deps = [
         "//folly:memory",
+        "//folly/logging:logging",
         "//proxygen/facebook/lib/services:adaptive_rate_limiter",
         "//proxygen/facebook/lib/services:arl_linear_shed_algo",
         "//proxygen/facebook/lib/services:multi_level_adaptive_rate_limiter",
