@@ -86,7 +86,7 @@ rust_library(
             "ovr_config//os:linux": ["cas"],
         }),
     }),
-    # rich-cas-client should be in deps but Autocargo does not support selects
+    # thin-cas-client should be in deps but Autocargo does not support selects
     # and will ignore fields with them. Since we don't have any OSS named_deps,
     # we can put the select here and let Autocargo ignore it safely, while
     # still getting the dep.
@@ -94,7 +94,7 @@ rust_library(
         "DEFAULT": {},
         "fbcode//eden/scm/lib/backingstore:edenfs-include-cas": select({
             "DEFAULT": {},
-            "ovr_config//os:linux": {"rich_cas_client": "//eden/scm/lib/cas-client/rich-client:rich-cas-client"},
+            "ovr_config//os:linux": {"thin_cas_client": "//eden/scm/lib/cas-client/thin-client:thin-cas-client"},
         }),
     }),
     test_deps = [

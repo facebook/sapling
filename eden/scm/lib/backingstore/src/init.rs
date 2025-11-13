@@ -65,7 +65,7 @@ pub fn backingstore_global_init() {
         edenapi::Builder::register_customize_build_func(eagerepo::edenapi_from_config);
 
         #[cfg(feature = "cas")]
-        rich_cas_client::init();
+        thin_cas_client::init();
 
         // Put progress into "no-op" mode to avoid overhead in eden.
         progress_model::Registry::main().disable(true);
