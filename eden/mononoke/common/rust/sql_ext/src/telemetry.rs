@@ -604,6 +604,9 @@ mod facebook {
         // Set client request info
         set_client_request_info(&mut log_entry, sql_query_tel);
 
+        // Set metadata fields
+        set_metadata(&mut log_entry, sql_query_tel);
+
         log_entry
     }
 
@@ -878,6 +881,77 @@ mod facebook {
                 log_entry.set_enabled_experiments_jk(experiments);
             }
         }
+    }
+
+    /// Set metadata fields on the logger from metadata.
+    fn set_metadata(log_entry: &mut MononokeXdbTelemetryLogger, sql_query_tel: &SqlQueryTelemetry) {
+        let metadata = sql_query_tel.metadata();
+
+        // Session UUID
+        log_entry.set_session_uuid(metadata.session_id().to_string());
+
+        // Client identities
+        let client_identities: Vec<String> = metadata
+            .identities()
+            .iter()
+            .map(|i| i.to_string())
+            .collect();
+        log_entry.set_client_identities(client_identities);
+
+        // Client identity variant
+        if let Some(first_identity) = metadata.identities().first() {
+            log_entry.set_client_identity_variant(first_identity.variant().to_string());
+        }
+
+        // Source hostname or client IP (mutually exclusive)
+        if let Some(client_hostname) = metadata.client_hostname() {
+            log_entry.set_source_hostname(client_hostname.to_owned());
+        } else if let Some(client_ip) = metadata.client_ip() {
+            log_entry.set_client_ip(client_ip.to_string());
+        }
+
+        // Unix username
+        if let Some(unix_name) = metadata.unix_name() {
+            log_entry.set_unix_username(unix_name.to_string());
+        }
+
+        // Sandcastle fields
+        if let Some(sandcastle_alias) = metadata.sandcastle_alias() {
+            log_entry.set_sandcastle_alias(sandcastle_alias.to_string());
+        }
+        if let Some(sandcastle_vcs) = metadata.sandcastle_vcs() {
+            log_entry.set_sandcastle_vcs(sandcastle_vcs.to_string());
+        }
+        if let Some(sandcastle_nonce) = metadata.sandcastle_nonce() {
+            log_entry.set_sandcastle_nonce(sandcastle_nonce.to_string());
+        }
+
+        // Reverse proxy region
+        if let Some(revproxy_region) = metadata.revproxy_region() {
+            log_entry.set_revproxy_region(revproxy_region.to_string());
+        }
+
+        // Tupperware client info
+        if let Some(client_tw_job) = metadata.clientinfo_tw_job() {
+            log_entry.set_client_tw_job(client_tw_job.to_string());
+        }
+        if let Some(client_tw_task) = metadata.clientinfo_tw_task() {
+            log_entry.set_client_tw_task(client_tw_task.to_string());
+        }
+
+        // Atlas client info
+        if let Some(client_atlas) = metadata.clientinfo_atlas() {
+            log_entry.set_client_atlas(client_atlas.to_string());
+        }
+        if let Some(client_atlas_env_id) = metadata.clientinfo_atlas_env_id() {
+            log_entry.set_client_atlas_env_id(client_atlas_env_id.to_string());
+        }
+
+        // Fetch fields
+        if let Some(fetch_cause) = metadata.fetch_cause() {
+            log_entry.set_fetch_cause(fetch_cause.to_string());
+        }
+        log_entry.set_fetch_from_cas_attempted(metadata.fetch_from_cas_attempted());
     }
 
     pub(super) fn handle_mysql_error(
