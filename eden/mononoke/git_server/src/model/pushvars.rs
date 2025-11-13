@@ -15,6 +15,7 @@ const METAGIT_BYPASS_ALL_HOOKS: &str = "x-metagit-bypass-hooks";
 const USE_ONLY_OFFSET_DELTA: &str = "x-git-only-offset-delta";
 const PUSH_CONCURRENCY: &str = "x-git-push-concurrency";
 const BYPASS_BOOKMARK_CACHE: &str = "x-git-bypass-bookmark-cache";
+const UNSAMPLED_PERF_LOGGING: &str = "x-git-unsampled-perf-logging";
 
 #[derive(Clone, StateData)]
 pub struct Pushvars(HashMap<String, Bytes>);
@@ -59,6 +60,12 @@ impl Pushvars {
             .and_then(|v| String::from_utf8_lossy(v).parse().ok())
             .unwrap_or(100)
             .clamp(10, 500)
+    }
+
+    pub fn unsampled_perf_logging(&self) -> bool {
+        self.0
+            .get(UNSAMPLED_PERF_LOGGING)
+            .is_some_and(|v| **v == *b"1")
     }
 }
 

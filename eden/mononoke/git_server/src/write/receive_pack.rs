@@ -99,7 +99,10 @@ async fn push(
             request_context.repo.repo_blobstore_arc().clone(),
         );
         PushData::inject_in_state(state, pack_file.get_ref().len());
-        let scuba = scuba_from_state(ctx, state);
+        let mut scuba = scuba_from_state(ctx, state);
+        if request_context.pushvars.unsampled_perf_logging() {
+            scuba.sampled(1.try_into()?);
+        }
         // If Mononoke is not the source of truth for this repo, then we need to prevent the push
         if !mononoke_source_of_truth(&request_context.ctx, request_context.repo.clone()).await? {
             return reject_non_sot_push(repo_name.as_str(), state, &ref_updates).await;
