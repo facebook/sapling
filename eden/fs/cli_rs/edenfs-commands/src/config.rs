@@ -137,8 +137,8 @@ impl crate::Subcommand for ReloadConfigCmd {
 
         #[cfg(target_os = "windows")]
         let mut cmd = {
-            let parexec = r"c:\ProgramData\chocolatey\bin\parexec.exe";
-            let mut cmd_builder = std::process::Command::new(parexec);
+            let py_exe = r"C:\Windows\py.exe";
+            let mut cmd_builder = std::process::Command::new(py_exe);
             let edenfs_config_manager_cmd = r"c:\tools\eden\libexec\edenfs_config_manager.par";
             cmd_builder.arg(edenfs_config_manager_cmd);
             cmd_builder
