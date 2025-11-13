@@ -137,6 +137,7 @@ pub fn log_query_error(
     #[cfg(fbcode_build)]
     if let Err(log_err) = facebook::log_error_to_mononoke_xdb_telemetry_logger(
         sql_query_tel.fb().clone(),
+        sql_query_tel,
         granularity,
         repo_ids,
         query_name,
@@ -368,6 +369,7 @@ mod facebook {
     use mononoke_types::RepositoryId;
     use mononoke_xdb_telemetry_logger::MononokeXdbTelemetryLogger;
     use mysql_client::MysqlError;
+    use scuba_ext::MononokeScubaSampleBuilder;
     use sql::mysql::MysqlQueryTelemetry;
     use sql_query_telemetry::SqlQueryTelemetry;
     use stats::prelude::*;
@@ -391,6 +393,7 @@ mod facebook {
         if let Err(e) = log_to_mononoke_xdb_telemetry_logger(
             fb,
             query_tel.clone(),
+            sql_query_tel,
             granularity,
             repo_ids,
             query_name,
@@ -580,6 +583,7 @@ mod facebook {
         repo_ids: &[RepositoryId],
         query_name: &str,
         shard_name: &str,
+        sql_query_tel: &SqlQueryTelemetry,
     ) -> MononokeXdbTelemetryLogger {
         // Create logger instance
         let mut log_entry = MononokeXdbTelemetryLogger::new(fb);
@@ -597,19 +601,30 @@ mod facebook {
         let repo_id_strings: Vec<String> = repo_ids.iter().map(|id| id.to_string()).collect();
         log_entry.set_repo_ids(repo_id_strings);
 
+        // Set client request info
+        set_client_request_info(&mut log_entry, sql_query_tel);
+
         log_entry
     }
 
     pub(super) fn log_to_mononoke_xdb_telemetry_logger(
         fb: FacebookInit,
         query_tel: MysqlQueryTelemetry,
+        sql_query_tel: &SqlQueryTelemetry,
         granularity: TelemetryGranularity,
         repo_ids: &[RepositoryId],
         query_name: &str,
         shard_name: &str,
         fut_stats: FutureStats,
     ) -> Result<()> {
-        let mut log_entry = setup_logger_entry(fb, granularity, repo_ids, query_name, shard_name);
+        let mut log_entry = setup_logger_entry(
+            fb,
+            granularity,
+            repo_ids,
+            query_name,
+            shard_name,
+            sql_query_tel,
+        );
 
         log_entry.set_success(1); // This function is only called for successful queries
 
@@ -711,6 +726,7 @@ mod facebook {
 
     pub(super) fn log_error_to_mononoke_xdb_telemetry_logger(
         fb: FacebookInit,
+        sql_query_tel: &SqlQueryTelemetry,
         granularity: TelemetryGranularity,
         repo_ids: &[RepositoryId],
         query_name: &str,
@@ -719,7 +735,14 @@ mod facebook {
         attempt: usize,
         will_retry: bool,
     ) -> Result<()> {
-        let mut log_entry = setup_logger_entry(fb, granularity, repo_ids, query_name, shard_name);
+        let mut log_entry = setup_logger_entry(
+            fb,
+            granularity,
+            repo_ids,
+            query_name,
+            shard_name,
+            sql_query_tel,
+        );
 
         log_entry.set_success(0); // 0 indicates failed query
         // Set error message
@@ -737,6 +760,7 @@ mod facebook {
     pub(super) fn log_transaction_telemetry_to_mononoke_xdb_telemetry_logger(
         fb: FacebookInit,
         txn_tel: &TransactionTelemetry,
+        sql_query_tel: &SqlQueryTelemetry,
         shard_name: &str,
     ) -> Result<()> {
         // Convert repo_ids from HashSet to Vec for setup_logger_entry
@@ -748,6 +772,7 @@ mod facebook {
             &repo_ids,
             "", // No single query name for transactions
             shard_name,
+            sql_query_tel,
         );
 
         // Set transaction-specific fields
@@ -785,6 +810,7 @@ mod facebook {
         if let Err(e) = log_transaction_telemetry_to_mononoke_xdb_telemetry_logger(
             sql_query_tel.fb().clone(),
             &txn_tel,
+            sql_query_tel,
             shard_name,
         ) {
             tracing::error!("Failed to log transaction to MononokeXDBTelemetry logger: {e:?}");
@@ -832,6 +858,26 @@ mod facebook {
         scuba.log();
 
         Ok(())
+    }
+
+    /// Set client request info fields on the logger from metadata.
+    fn set_client_request_info(
+        log_entry: &mut MononokeXdbTelemetryLogger,
+        sql_query_tel: &SqlQueryTelemetry,
+    ) {
+        let metadata = sql_query_tel.metadata();
+        if let Some(client_info) = metadata.client_request_info() {
+            if let Some(main_id) = &client_info.main_id {
+                log_entry.set_client_main_id(main_id.clone());
+            }
+            log_entry.set_client_entry_point(client_info.entry_point.to_string());
+            log_entry.set_client_correlator(client_info.correlator.clone());
+
+            let experiments = MononokeScubaSampleBuilder::get_enabled_experiments_jk(client_info);
+            if !experiments.is_empty() {
+                log_entry.set_enabled_experiments_jk(experiments);
+            }
+        }
     }
 
     pub(super) fn handle_mysql_error(
