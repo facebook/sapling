@@ -110,7 +110,9 @@ EdenError newEdenError(const RocksException& ex) {
   const rocksdb::Status& status = ex.getStatus();
   if (status.IsNoSpace()) {
     return newEdenNoSpaceError(folly::exceptionStr(ex).toStdString());
-  } else if (status.IsCorruption()) {
+  } else if (status.IsCorruption() || status.IsNotFound()) {
+    // From Eden's perspective, vanilla NotFound error from the RocksDB
+    // localstore is considered as data corruption error
     return newEdenDataCorruptionError(folly::exceptionStr(ex).toStdString());
   }
   return newEdenError(static_cast<const std::exception&>(ex));
