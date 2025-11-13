@@ -18,12 +18,23 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use sql::QueryTelemetry;
 use sql_query_telemetry::SqlQueryTelemetry;
 use stats::prelude::*;
+use strum::Display;
+use strum::EnumString;
 
 use crate::ConsistentReadError;
 
 const SQL_TELEMETRY_SCUBA_TABLE: &str = "mononoke_sql_telemetry";
 
-#[derive(Clone, Debug, Eq, PartialEq, Copy, serde::Deserialize)]
+#[derive(
+    Clone,
+    Debug,
+    Eq,
+    PartialEq,
+    Copy,
+    serde::Deserialize,
+    EnumString,
+    Display
+)]
 pub enum TelemetryGranularity {
     /// From a single query
     Query,

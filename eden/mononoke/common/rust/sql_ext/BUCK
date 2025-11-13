@@ -23,6 +23,8 @@ rust_library(
         "fbsource//third-party/rust:pretty_assertions",
         "fbsource//third-party/rust:tempfile",
         "//common/rust/shed/sql:sql_tests_lib",
+        "//dsi/logger/rust/mock_transport:mock_transport",
+        "//dsi/logger/configs/MononokeXdbTelemetryLoggerConfig:log_entry-rust",
     ]),
     deps = ([
         "fbsource//third-party/rust:anyhow",
@@ -33,6 +35,7 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:paste",
         "//common/rust/shed/futures_stats:futures_stats",
         "fbsource//third-party/rust:vec1",
