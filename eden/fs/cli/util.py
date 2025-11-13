@@ -1122,7 +1122,7 @@ def maybe_edensparse_migration(
         log(f"starting {step} for checkout: {checkout.name}")
         return True
 
-    at_lease_one_successful_migration = False
+    num_successful_migration = 0
     migration_exceptions = []
 
     for checkout in instance.get_checkouts():
@@ -1424,7 +1424,7 @@ def maybe_edensparse_migration(
                     marker_file = os.path.join(checkout.hg_dot_path, MIGRATION_MARKER)
                     open(marker_file, "a").close()
                     log(f"migration complete for {checkout.path.name}")
-                    at_lease_one_successful_migration = True
+                    num_successful_migration += 1
                 else:
                     log(f"no changes made, migration skipped for {checkout.path.name}")
         except Exception as e:
@@ -1446,10 +1446,11 @@ def maybe_edensparse_migration(
     #
     # Do not log when:
     # 1. no checkouts are migrated (because they are already filteredfs)
-    if migration_exceptions or at_lease_one_successful_migration:
+    if migration_exceptions or num_successful_migration:
         instance.log_sample(
             "edensparse_migration",
             success=len(migration_exceptions) == 0,
+            migration_count=num_successful_migration,
             exception="\n".join([e_str for e_str in migration_exceptions]),
         )
 
