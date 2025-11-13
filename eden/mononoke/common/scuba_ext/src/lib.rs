@@ -133,14 +133,7 @@ impl MononokeScubaSampleBuilder {
         self
     }
 
-    pub fn add_client_request_info<'a>(&mut self, client_info: &'a ClientRequestInfo) -> &mut Self {
-        self.inner
-            .add_opt("client_main_id", client_info.main_id.as_deref());
-        self.inner
-            .add("client_entry_point", client_info.entry_point.to_string());
-        self.inner
-            .add("client_correlator", client_info.correlator.as_str());
-
+    pub fn get_enabled_experiments_jk<'a>(client_info: &'a ClientRequestInfo) -> Vec<String> {
         struct ExperimentJKData<'a> {
             jk_name: &'static str,
             switch_values: Vec<&'static str>,
@@ -239,6 +232,23 @@ impl MononokeScubaSampleBuilder {
                 },
             )
             .collect();
+
+        enabled_experiments_jk
+    }
+
+    pub fn add_client_request_info<'a>(&mut self, client_info: &'a ClientRequestInfo) -> &mut Self {
+        self.inner
+            .add_opt("client_main_id", client_info.main_id.as_deref());
+        self.inner
+            .add("client_entry_point", client_info.entry_point.to_string());
+        self.inner
+            .add("client_correlator", client_info.correlator.as_str());
+
+        // Add all the JKs (with their switches) that are hashed consistently
+        // against client correlator, so all Scuba logs can be split by
+        // feature being enabled or disabled.
+        // This generalizes what was done in D76728908 and D81212709.
+        let enabled_experiments_jk = Self::get_enabled_experiments_jk(client_info);
 
         self.inner
             .add("enabled_experiments_jk", enabled_experiments_jk);
