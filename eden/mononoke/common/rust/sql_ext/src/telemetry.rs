@@ -952,6 +952,88 @@ mod facebook {
             log_entry.set_fetch_cause(fetch_cause.to_string());
         }
         log_entry.set_fetch_from_cas_attempted(metadata.fetch_from_cas_attempted());
+
+        // Common server data fields
+        set_common_server_data(log_entry);
+    }
+
+    /// Set common server data fields on the logger.
+    /// This replicates the logic from `add_mapped_common_server_data` in scuba/builder.rs
+    fn set_common_server_data(log_entry: &mut MononokeXdbTelemetryLogger) {
+        use std::env::var;
+
+        // Server hostname
+        if let Ok(hostname) = hostname::get_hostname() {
+            log_entry.set_server_hostname(hostname);
+        }
+
+        // Region, datacenter, and region_datacenter_prefix from fbwhoami
+        if let Ok(who) = fbwhoami::FbWhoAmI::get() {
+            if let Some(region) = &who.region {
+                log_entry.set_region(region.to_string());
+            }
+            if let Some(dc) = &who.datacenter {
+                log_entry.set_datacenter(dc.to_string());
+            }
+            if let Some(dc_prefix) = &who.region_datacenter_prefix {
+                log_entry.set_region_datacenter_prefix(dc_prefix.to_string());
+            }
+        }
+
+        // Server tier from SMC_TIERS environment variable
+        if let Ok(smc_tier) = var("SMC_TIERS") {
+            log_entry.set_server_tier(smc_tier);
+        }
+
+        // Tupperware task ID
+        if let Ok(tw_task_id) = var("TW_TASK_ID") {
+            log_entry.set_tw_task_id(tw_task_id);
+        }
+
+        // Tupperware canary ID
+        if let Ok(tw_canary_id) = var("TW_CANARY_ID") {
+            log_entry.set_tw_canary_id(tw_canary_id);
+        }
+
+        // Chronos fields
+        if let Ok(cluster) = var("CHRONOS_CLUSTER") {
+            log_entry.set_chronos_cluster(cluster);
+        }
+        if let Ok(id) = var("CHRONOS_JOB_INSTANCE_ID") {
+            log_entry.set_chronos_job_instance_id(id);
+        }
+        if let Ok(job_name) = var("CHRONOS_JOB_NAME") {
+            log_entry.set_chronos_job_name(job_name);
+        }
+
+        // Tupperware job handle (format: cluster/user/name)
+        if let (Ok(tw_cluster), Ok(tw_user), Ok(tw_name)) = (
+            var("TW_JOB_CLUSTER"),
+            var("TW_JOB_USER"),
+            var("TW_JOB_NAME"),
+        ) {
+            log_entry.set_tw_handle(format!("{}/{}/{}", tw_cluster, tw_user, tw_name));
+        }
+
+        // Tupperware task handle (format: cluster/user/name/taskid)
+        if let (Ok(tw_cluster), Ok(tw_user), Ok(tw_name), Ok(tw_task_id)) = (
+            var("TW_JOB_CLUSTER"),
+            var("TW_JOB_USER"),
+            var("TW_JOB_NAME"),
+            var("TW_TASK_ID"),
+        ) {
+            log_entry.set_tw_task_handle(format!(
+                "{}/{}/{}/{}",
+                tw_cluster, tw_user, tw_name, tw_task_id
+            ));
+        }
+
+        // Build info (Linux only)
+        #[cfg(target_os = "linux")]
+        {
+            log_entry.set_build_revision(build_info::BuildInfo::get_revision().to_string());
+            log_entry.set_build_rule(build_info::BuildInfo::get_rule().to_string());
+        }
     }
 
     pub(super) fn handle_mysql_error(
