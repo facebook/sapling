@@ -11,7 +11,7 @@ use anyhow::ensure;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use edenapi_service::utils::to_hg_path;
+use edenapi_service::utils::to_hg_path_nonroot;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::BonsaiFileChange;
@@ -165,7 +165,7 @@ pub fn to_identical_changeset(
         hg_file_changes: hg_cs
             .files()
             .iter()
-            .map(to_hg_path)
+            .map(to_hg_path_nonroot)
             .collect::<Result<Vec<RepoPathBuf>>>()?,
         message: message.to_string(),
         is_snapshot,
@@ -206,7 +206,7 @@ fn to_file_change(
                                 let index = parents.position(|parent| parent == *cs_id).ok_or(
                                     anyhow::anyhow!("Copy from info doesn't match parents"),
                                 )?;
-                                Some((to_hg_path(path)?, index))
+                                Some((to_hg_path_nonroot(path)?, index))
                             }
                             None => None,
                         },

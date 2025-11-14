@@ -55,10 +55,16 @@ pub fn to_mpath(path: impl AsRef<RepoPath>) -> Result<MPath> {
     MPath::new(path_bytes).with_context(|| ErrorKind::InvalidPath(path_bytes.to_vec()))
 }
 
-/// Convert an `NonRootMPath` into a Mercurial `RepoPathBuf`.
+/// Convert an `MPath` into a Mercurial `RepoPathBuf`.
 /// The input will be copied due to differences in data representation.
-pub fn to_hg_path(path: &NonRootMPath) -> Result<RepoPathBuf> {
+pub fn to_hg_path(path: &MPath) -> Result<RepoPathBuf> {
     RepoPathBuf::from_utf8(path.to_vec()).with_context(|| ErrorKind::InvalidPath(path.to_vec()))
+}
+
+/// Convert a `NonRootMPath` into a Mercurial `RepoPathBuf`.
+/// The input will be copied due to differences in data representation.
+pub fn to_hg_path_nonroot(path: &NonRootMPath) -> Result<RepoPathBuf> {
+    to_hg_path(path.into())
 }
 
 pub fn to_revlog_changeset(cs: HgChangesetContent) -> Result<RevlogChangeset> {

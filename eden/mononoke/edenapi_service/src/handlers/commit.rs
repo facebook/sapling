@@ -128,7 +128,7 @@ use crate::utils::counter_check_and_bump;
 use crate::utils::get_repo;
 use crate::utils::parse_cbor_request;
 use crate::utils::to_create_change;
-use crate::utils::to_hg_path;
+use crate::utils::to_hg_path_nonroot;
 use crate::utils::to_mpath;
 use crate::utils::to_revlog_changeset;
 /// XXX: This number was chosen arbitrarily.
@@ -751,7 +751,7 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
                 .into_iter()
                 .map(|(path, fc)| {
                     Ok((
-                        to_hg_path(&path)?,
+                        to_hg_path_nonroot(&path)?,
                         match fc {
                             FileChange::Deletion => BonsaiFileChange::Deletion,
                             FileChange::UntrackedDeletion => BonsaiFileChange::UntrackedDeletion,
@@ -769,7 +769,7 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
                                         .iter()
                                         .position(|&parent_cs_id| parent_cs_id == *copy_cs_id)
                                         .and_then(|parent_index| {
-                                            to_hg_path(copy_path)
+                                            to_hg_path_nonroot(copy_path)
                                                 .ok()
                                                 .map(|path| (path, parent_index))
                                         })

@@ -37,7 +37,7 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
 use crate::errors::ErrorKind;
-use crate::utils::to_hg_path;
+use crate::utils::to_hg_path_nonroot;
 use crate::utils::to_mpath;
 
 // I don't expect big blame requests, so let's keep this low.
@@ -176,7 +176,7 @@ async fn blame_file_data<R: MononokeRepo>(
     let paths = blame
         .paths()
         .iter()
-        .map(to_hg_path)
+        .map(to_hg_path_nonroot)
         .collect::<Result<Vec<_>>>()?;
 
     // Convert to source control csid, maintaining order in csids.

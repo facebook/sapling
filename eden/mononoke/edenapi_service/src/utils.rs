@@ -38,6 +38,7 @@ pub use cbor::parse_wire_request;
 pub use cbor::to_cbor_bytes;
 pub use convert::to_create_change;
 pub use convert::to_hg_path;
+pub use convert::to_hg_path_nonroot;
 pub use convert::to_mpath;
 pub use convert::to_revlog_changeset;
 pub use rate_limit::build_counter;
