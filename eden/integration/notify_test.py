@@ -40,6 +40,8 @@ class NotifyTest(testcase.EdenRepoTest):
 
     async def subscribe(self) -> asyncio.subprocess.Process:
         self.mkdir(".edenfs-notifications-state")
+        # Wait to prevent the file creation from showing up in the stream
+        time.sleep(1)
         cmd, env = self.eden.get_edenfsctl_cmd_env(
             "notify",
             "changes-since",
@@ -63,6 +65,8 @@ class NotifyTest(testcase.EdenRepoTest):
         self.mkdir(".edenfs-notifications-state")
         for state in states:
             self.mkdir(f".edenfs-notifications-state/{state}")
+        # Wait to prevent the file creation from showing up in the stream
+        time.sleep(1)
         args = [
             "notify",
             "changes-since",
