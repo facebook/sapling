@@ -276,7 +276,7 @@ async fn create_hg_manifest(
     for (name, (_context, subentry)) in subentries {
         if name.contains(b'\n') || name.contains(b'\x01') {
             bail!(
-                "Cannot derive Hg Manifest for a path containing '\n' or '\x01' as such paths cannot be represented by Hg"
+                "Cannot derive Hg Manifest for a path containing newline ('\\n') or the '\\x01' control code as such paths cannot be represented by Hg"
             );
         }
         contents.extend(name.as_ref());
