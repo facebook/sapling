@@ -1,0 +1,16 @@
+load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
+
+oncall("scm_server_infra")
+
+thrift_library(
+    name = "adaptive_rate_limiter",
+    languages = [
+        "python",
+        "py-deprecated",
+        "rust",
+    ],
+    rust_allow_oss_build = False,
+    rust_autocargo = {"ignore_rule": True},
+    thrift_rust_options = "serde",
+    thrift_srcs = {"adaptive_rate_limiter.thrift": None},
+)
