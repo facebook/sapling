@@ -61,7 +61,7 @@ impl CommitGraph {
                     all_edges
                         .get(&cs_id)
                         .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?
-                        .node
+                        .node()
                         .generation::<Parents>(),
                 ))
             })
@@ -98,7 +98,7 @@ impl CommitGraph {
                     all_edges
                         .get(&cs_id)
                         .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?
-                        .node
+                        .node()
                         .generation::<Parents>(),
                     distance,
                 ))
@@ -136,7 +136,7 @@ impl CommitGraph {
                 let property_map = stream::iter(frontier_edges.clone())
                     .map(|(cs_id, edges)| {
                         borrowed!(property);
-                        async move { anyhow::Ok((cs_id, property(&edges.node).await?)) }
+                        async move { anyhow::Ok((cs_id, property(edges.node()).await?)) }
                     })
                     .buffered(100)
                     .try_collect::<HashMap<_, _>>()
@@ -151,7 +151,7 @@ impl CommitGraph {
                             cs_id
                         )
                     })? {
-                        property_frontier.push(edges.node.cs_id);
+                        property_frontier.push(edges.node().cs_id);
                     } else {
                         let lowest_ancestor = edges
                             .lowest_skip_tree_edge_with::<Parents, _, _>(|node| {
@@ -167,7 +167,7 @@ impl CommitGraph {
                                     .insert(ancestor.cs_id);
                             }
                             None => {
-                                for parent in &edges.parents {
+                                for parent in edges.parents::<Parents>() {
                                     frontier
                                         .entry(parent.generation::<Parents>())
                                         .or_default()
@@ -233,7 +233,7 @@ impl CommitGraph {
                     .get(&cs_id)
                     .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?;
 
-                for parent in edges.parents.iter() {
+                for parent in edges.parents::<Parents>() {
                     frontier
                         .entry(parent.generation::<Parents>())
                         .or_default()

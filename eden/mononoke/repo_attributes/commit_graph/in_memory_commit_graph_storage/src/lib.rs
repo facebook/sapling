@@ -14,6 +14,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use commit_graph_types::edges::ChangesetEdges;
+use commit_graph_types::edges::Parents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
@@ -66,18 +67,18 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
     async fn add(&self, _ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {
         {
             let mut children = self.children.write();
-            for parent in edges.parents.iter() {
+            for parent in edges.parents::<Parents>() {
                 children
                     .entry(parent.cs_id)
                     .or_default()
-                    .insert(edges.node.cs_id);
+                    .insert(edges.node().cs_id);
             }
         }
 
         Ok(self
             .changesets
             .write()
-            .insert(edges.node.cs_id, edges)
+            .insert(edges.node().cs_id, edges)
             .is_none())
     }
 
@@ -92,14 +93,17 @@ impl CommitGraphStorage for InMemoryCommitGraphStorage {
             let mut changesets = self.changesets.write();
             let mut children = self.children.write();
             for edges in many_edges {
-                if changesets.insert(edges.node.cs_id, edges.clone()).is_none() {
+                if changesets
+                    .insert(edges.node().cs_id, edges.clone())
+                    .is_none()
+                {
                     added += 1;
 
-                    for parent in edges.parents.iter() {
+                    for parent in edges.parents::<Parents>() {
                         children
                             .entry(parent.cs_id)
                             .or_default()
-                            .insert(edges.node.cs_id);
+                            .insert(edges.node().cs_id);
                     }
                 }
             }

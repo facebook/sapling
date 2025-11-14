@@ -70,10 +70,10 @@ impl SkewAncestorsSet {
                 .await?;
 
             for (cs_id, fetched_edges) in edges {
-                let mut cs_edges = fetched_edges.edges();
+                let mut cs_edges = fetched_edges.into_edges();
                 if self
                     .changesets
-                    .entry(cs_edges.node.generation::<Parents>())
+                    .entry(cs_edges.node().generation::<Parents>())
                     .or_default()
                     .insert(cs_id)
                 {
@@ -83,13 +83,13 @@ impl SkewAncestorsSet {
                         self.skew_ancestors
                             .entry(cs_id)
                             .or_default()
-                            .insert(cs_edges.node.cs_id);
+                            .insert(cs_edges.node().cs_id);
                         *self
                             .skew_ancestors_counts
-                            .entry(cs_edges.node.cs_id)
+                            .entry(cs_edges.node().cs_id)
                             .or_default() += 1;
 
-                        match cs_edges.skip_tree_skew_ancestor {
+                        match cs_edges.skip_tree_skew_ancestor::<Parents>() {
                             Some(skip_tree_skew_ancestor)
                                 if skip_tree_skew_ancestor.generation::<Parents>()
                                     >= base_generation =>
@@ -163,7 +163,7 @@ impl CommitGraph {
             .await?;
 
         for (cs_id, edges) in all_edges {
-            let base = edges.merge_ancestor.unwrap_or(edges.node);
+            let base = edges.merge_ancestor::<Parents>().unwrap_or(edges.node());
             frontier
                 .segments
                 .entry(base.generation::<Parents>())
@@ -198,9 +198,10 @@ impl CommitGraph {
                     .await?;
 
                 let parents: Vec<_> = all_edges
-                    .into_iter()
-                    .flat_map(|(_cs_id, edges)| edges.edges().parents)
-                    .map(|node| node.cs_id)
+                    .iter()
+                    .flat_map(|(_cs_id, edges)| {
+                        edges.edges().parents::<Parents>().map(|node| node.cs_id)
+                    })
                     .collect();
 
                 let parent_edges = self
@@ -209,7 +210,7 @@ impl CommitGraph {
                     .await?;
 
                 for (cs_id, edges) in parent_edges {
-                    let base = edges.merge_ancestor.unwrap_or(edges.node);
+                    let base = edges.merge_ancestor::<Parents>().unwrap_or(edges.node());
                     segment_frontier
                         .segments
                         .entry(base.generation::<Parents>())
@@ -247,13 +248,13 @@ impl CommitGraph {
                 ctx,
                 &self.storage,
                 &heads,
-                base_edges.node.generation::<Parents>()
+                base_edges.node().generation::<Parents>()
             ),
             common_skew_ancestors_set.add(
                 ctx,
                 &self.storage,
                 &common,
-                base_edges.node.generation::<Parents>()
+                base_edges.node().generation::<Parents>()
             ),
         )?;
 
@@ -357,9 +358,9 @@ impl CommitGraph {
                             anyhow!("Missing changeset edges in commit graph for {}", cs_id)
                         })?;
 
-                        if let Some(skew_ancestor) = edges.skip_tree_skew_ancestor {
+                        if let Some(skew_ancestor) = edges.skip_tree_skew_ancestor::<Parents>() {
                             if skew_ancestor.generation::<Parents>()
-                                >= base_edges.node.generation::<Parents>()
+                                >= base_edges.node().generation::<Parents>()
                                 && !heads_skew_ancestors_set.contains_ancestor(skew_ancestor.cs_id)
                                 && !common_skew_ancestors_set.contains_ancestor(skew_ancestor.cs_id)
                             {
@@ -378,9 +379,9 @@ impl CommitGraph {
                             anyhow!("Missing changeset edges in commit graph for {}", cs_id)
                         })?;
 
-                        if let Some(skew_ancestor) = edges.skip_tree_skew_ancestor {
+                        if let Some(skew_ancestor) = edges.skip_tree_skew_ancestor::<Parents>() {
                             if skew_ancestor.generation::<Parents>()
-                                >= base_edges.node.generation::<Parents>()
+                                >= base_edges.node().generation::<Parents>()
                                 && !heads_skew_ancestors_set.contains_ancestor(skew_ancestor.cs_id)
                                 && !common_skew_ancestors_set.contains_ancestor(skew_ancestor.cs_id)
                                 && immediate_skew_ancestors_count.get(&skew_ancestor.cs_id)
@@ -412,9 +413,9 @@ impl CommitGraph {
                     // if they are not already at the generation of the base.
 
                     for (_cs_id, edges) in blocked_common {
-                        for parent in edges.parents.iter() {
+                        for parent in edges.parents::<Parents>() {
                             if parent.generation::<Parents>()
-                                >= base_edges.node.generation::<Parents>()
+                                >= base_edges.node().generation::<Parents>()
                             {
                                 frontier
                                     .entry(parent.generation::<Parents>())
@@ -429,18 +430,17 @@ impl CommitGraph {
                     // by another changeset in the frontier or a common changeset.
 
                     for (cs_id, origin_cs_id, origin_generation, edges) in blocked_heads {
-                        if edges.node.generation::<Parents>()
-                            == base_edges.node.generation::<Parents>()
+                        if edges.node().generation::<Parents>()
+                            == base_edges.node().generation::<Parents>()
                         {
                             segments.push(ChangesetSegment {
                                 head: origin_cs_id,
                                 base: cs_id,
                                 length: origin_generation.value()
-                                    - edges.node.generation::<Parents>().value()
+                                    - edges.node().generation::<Parents>().value()
                                     + 1,
                                 parents: edges
-                                    .parents
-                                    .iter()
+                                    .parents::<Parents>()
                                     .map(|parent| ChangesetSegmentParent {
                                         cs_id: parent.cs_id,
                                         location: None,
@@ -450,7 +450,7 @@ impl CommitGraph {
                             continue;
                         }
 
-                        for parent in edges.parents.iter() {
+                        for parent in edges.parents::<Parents>() {
                             match (
                                 frontier
                                     .get(&parent.generation::<Parents>())
@@ -469,7 +469,7 @@ impl CommitGraph {
                                     head: origin_cs_id,
                                     base: cs_id,
                                     length: origin_generation.value()
-                                        - edges.node.generation::<Parents>().value()
+                                        - edges.node().generation::<Parents>().value()
                                         + 1,
                                     parents: smallvec![ChangesetSegmentParent {
                                         cs_id: parent.cs_id,
@@ -487,7 +487,7 @@ impl CommitGraph {
                                         head: origin_cs_id,
                                         base: cs_id,
                                         length: origin_generation.value()
-                                            - edges.node.generation::<Parents>().value()
+                                            - edges.node().generation::<Parents>().value()
                                             + 1,
                                         parents: smallvec![ChangesetSegmentParent {
                                             cs_id: parent.cs_id,
@@ -619,9 +619,10 @@ impl CommitGraph {
                         .await?;
 
                     let parents: Vec<_> = all_edges
-                        .into_iter()
-                        .flat_map(|(_cs_id, edges)| edges.edges().parents)
-                        .map(|node| node.cs_id)
+                        .iter()
+                        .flat_map(|(_cs_id, edges)| {
+                            edges.edges().parents::<Parents>().map(|node| node.cs_id)
+                        })
                         .collect();
 
                     let parent_edges = graph
@@ -630,7 +631,7 @@ impl CommitGraph {
                         .await?;
 
                     for (cs_id, edges) in parent_edges {
-                        let base = edges.merge_ancestor.unwrap_or(edges.node);
+                        let base = edges.merge_ancestor::<Parents>().unwrap_or(edges.node());
                         heads_segment_frontier
                             .segments
                             .entry(base.generation::<Parents>())
@@ -845,7 +846,7 @@ impl CommitGraph {
                             .storage
                             .fetch_edges(ctx, location.head)
                             .await?
-                            .node
+                            .node()
                             .skip_tree_depth::<Parents>();
                         let location_level = match location_head_depth.cmp(&location.distance) {
                             Ordering::Less => {
@@ -950,13 +951,13 @@ impl CommitGraph {
         count: u64,
     ) -> Result<Vec<ChangesetId>> {
         let edges = self.storage.fetch_edges(ctx, cs_id).await?;
-        let merge_or_root_ancestor = edges.merge_ancestor.unwrap_or(edges.node);
+        let merge_or_root_ancestor = edges.merge_ancestor::<Parents>().unwrap_or(edges.node());
 
         // Check that the generation of the lowest requested ancestor is greater than or equal
         // to the generation of the nearest merge/root ancestor. Otherwise the request ancestor
         // doesn't belong to the same segment so we return an error.
         if edges
-            .node
+            .node()
             .generation::<Parents>()
             .value()
             .saturating_sub(distance)
@@ -967,7 +968,7 @@ impl CommitGraph {
                 "Requested {}th segment ancestor of {}, found only {} segment ancestors",
                 distance + count,
                 cs_id,
-                edges.node.generation::<Parents>().value()
+                edges.node().generation::<Parents>().value()
                     - merge_or_root_ancestor.generation::<Parents>().value()
                     + 1,
             ));
@@ -978,14 +979,14 @@ impl CommitGraph {
             .skip_tree_level_ancestor(
                 ctx,
                 cs_id,
-                edges.node.skip_tree_depth::<Parents>() - distance,
+                edges.node().skip_tree_depth::<Parents>() - distance,
             )
             .await?
             .ok_or_else(|| {
                 anyhow!(
                     "Failed to find skip tree level ancestor for {} at depth {}",
                     cs_id,
-                    edges.node.skip_tree_depth::<Parents>() - distance
+                    edges.node().skip_tree_depth::<Parents>() - distance
                 )
             })?
             .cs_id;
@@ -1006,11 +1007,10 @@ impl CommitGraph {
                 .await?
                 .remove(&ancestor)
                 .ok_or_else(|| anyhow!("Missing changeset from commit graph storage: {} (locations_to_changeset_ids)", cs_id))?
-                .edges();
+                .into_edges();
 
             ancestor = ancestor_edges
-                .parents
-                .into_iter()
+                .parents::<Parents>()
                 .exactly_one()
                 .map_err(|parents| {
                     anyhow!(
@@ -1043,7 +1043,7 @@ impl CommitGraph {
         let mut targets_frontier: BTreeMap<Generation, HashSet<ChangesetId>> = Default::default();
         for (target, edges) in targets_edges {
             targets_frontier
-                .entry(edges.node.generation::<Parents>())
+                .entry(edges.node().generation::<Parents>())
                 .or_default()
                 .insert(target);
         }
@@ -1057,9 +1057,9 @@ impl CommitGraph {
         > = Default::default();
         for (head, edges) in heads_edges {
             heads_frontier
-                .entry(edges.node.generation::<Parents>())
+                .entry(edges.node().generation::<Parents>())
                 .or_default()
-                .insert(head, (head, edges.node.generation::<Parents>()));
+                .insert(head, (head, edges.node().generation::<Parents>()));
         }
 
         let mut mapping: HashMap<ChangesetId, Location> = Default::default();

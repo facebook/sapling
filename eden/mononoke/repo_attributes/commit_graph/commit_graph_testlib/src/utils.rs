@@ -19,6 +19,8 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use commit_graph::LinearAncestorsStreamBuilder;
 use commit_graph_types::edges::ChangesetNode;
+use commit_graph_types::edges::FirstParentLinear;
+use commit_graph_types::edges::Parents;
 use commit_graph_types::segments::BoundaryChangesets;
 use commit_graph_types::segments::SegmentDescription;
 use commit_graph_types::segments::SegmentedSliceDescription;
@@ -129,7 +131,7 @@ pub async fn assert_skip_tree_parent(
             .maybe_fetch_edges(ctx, name_cs_id(u))
             .await?
             .unwrap()
-            .skip_tree_parent
+            .skip_tree_parent::<Parents>()
             .map(|node| node.cs_id),
         Some(name_cs_id(u_skip_tree_parent))
     );
@@ -147,7 +149,7 @@ pub async fn assert_skip_tree_skew_ancestor(
             .maybe_fetch_edges(ctx, name_cs_id(u))
             .await?
             .unwrap()
-            .skip_tree_skew_ancestor
+            .skip_tree_skew_ancestor::<Parents>()
             .map(|node| node.cs_id),
         Some(name_cs_id(u_skip_tree_skew_ancestor))
     );
@@ -357,7 +359,7 @@ pub async fn assert_p1_linear_skew_ancestor(
             .maybe_fetch_edges(ctx, name_cs_id(u))
             .await?
             .unwrap()
-            .p1_linear_skew_ancestor
+            .skip_tree_skew_ancestor::<FirstParentLinear>()
             .map(|node| node.cs_id),
         u_p1_linear_skew_ancestor.map(name_cs_id)
     );

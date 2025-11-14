@@ -126,7 +126,7 @@ pub type ChangesetNodeSubtreeSources = Vec<ChangesetNode>;
 /// Outgoing edges from a changeset node.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(bincode::Encode, bincode::Decode)]
-pub struct ChangesetEdges {
+pub struct ChangesetEdgesMut {
     /// The starting changeset for this set of edges.
     pub node: ChangesetNode,
 
@@ -179,42 +179,73 @@ pub struct ChangesetEdges {
     pub subtree_source_skew_ancestor: Option<ChangesetNode>,
 }
 
+impl ChangesetEdgesMut {
+    pub fn freeze(self) -> ChangesetEdges {
+        ChangesetEdges { inner: self }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(bincode::Encode, bincode::Decode)]
+pub struct ChangesetEdges {
+    inner: ChangesetEdgesMut,
+}
+
 impl ChangesetEdges {
     pub fn to_thrift(&self) -> thrift::ChangesetEdges {
         thrift::ChangesetEdges {
-            node: self.node.to_thrift(),
-            parents: self.parents.iter().map(ChangesetNode::to_thrift).collect(),
-            merge_ancestor: self.merge_ancestor.as_ref().map(ChangesetNode::to_thrift),
-            skip_tree_parent: self.skip_tree_parent.as_ref().map(ChangesetNode::to_thrift),
+            node: self.inner.node.to_thrift(),
+            parents: self
+                .inner
+                .parents
+                .iter()
+                .map(ChangesetNode::to_thrift)
+                .collect(),
+            merge_ancestor: self
+                .inner
+                .merge_ancestor
+                .as_ref()
+                .map(ChangesetNode::to_thrift),
+            skip_tree_parent: self
+                .inner
+                .skip_tree_parent
+                .as_ref()
+                .map(ChangesetNode::to_thrift),
             skip_tree_skew_ancestor: self
+                .inner
                 .skip_tree_skew_ancestor
                 .as_ref()
                 .map(ChangesetNode::to_thrift),
             p1_linear_skew_ancestor: self
+                .inner
                 .p1_linear_skew_ancestor
                 .as_ref()
                 .map(ChangesetNode::to_thrift),
             subtree_sources: Some(
-                self.subtree_sources
+                self.inner
+                    .subtree_sources
                     .iter()
                     .map(ChangesetNode::to_thrift)
                     .collect::<Vec<_>>(),
             )
             .filter(|sources| !sources.is_empty()),
             subtree_or_merge_ancestor: self
+                .inner
                 .subtree_or_merge_ancestor
                 .as_ref()
-                .filter(|node| self.merge_ancestor.as_ref() != Some(*node))
+                .filter(|node| self.inner.merge_ancestor.as_ref() != Some(*node))
                 .map(ChangesetNode::to_thrift),
             subtree_source_parent: self
+                .inner
                 .subtree_source_parent
                 .as_ref()
-                .filter(|node| self.skip_tree_parent.as_ref() != Some(*node))
+                .filter(|node| self.inner.skip_tree_parent.as_ref() != Some(*node))
                 .map(ChangesetNode::to_thrift),
             subtree_source_skew_ancestor: self
+                .inner
                 .subtree_source_skew_ancestor
                 .as_ref()
-                .filter(|node| self.skip_tree_skew_ancestor.as_ref() != Some(*node))
+                .filter(|node| self.inner.skip_tree_skew_ancestor.as_ref() != Some(*node))
                 .map(ChangesetNode::to_thrift),
         }
     }
@@ -268,21 +299,41 @@ impl ChangesetEdges {
             .transpose()?
             .or_else(|| skip_tree_skew_ancestor.clone());
         Ok(Self {
-            node: ChangesetNode::from_thrift(edges.node)?,
-            parents,
-            subtree_sources,
-            merge_ancestor,
-            skip_tree_parent,
-            skip_tree_skew_ancestor,
-            p1_linear_skew_ancestor,
-            subtree_or_merge_ancestor,
-            subtree_source_parent,
-            subtree_source_skew_ancestor,
+            inner: ChangesetEdgesMut {
+                node: ChangesetNode::from_thrift(edges.node)?,
+                parents,
+                subtree_sources,
+                merge_ancestor,
+                skip_tree_parent,
+                skip_tree_skew_ancestor,
+                p1_linear_skew_ancestor,
+                subtree_or_merge_ancestor,
+                subtree_source_parent,
+                subtree_source_skew_ancestor,
+            },
         })
     }
 
-    pub fn parents<E: EdgeType>(&self) -> Box<dyn Iterator<Item = &ChangesetNode> + '_> {
+    pub fn node(&self) -> &ChangesetNode {
+        &self.inner.node
+    }
+
+    pub fn parent_count(&self) -> usize {
+        self.inner.parents.len()
+    }
+
+    pub fn subtree_source_count(&self) -> usize {
+        self.inner.subtree_sources.len()
+    }
+
+    pub fn parents<E: EdgeType>(
+        &self,
+    ) -> Box<dyn ExactSizeIterator<Item = &ChangesetNode> + Send + Sync + '_> {
         E::parents(self)
+    }
+
+    pub fn subtree_sources(&self) -> impl Iterator<Item = &ChangesetNode> {
+        self.inner.subtree_sources.iter()
     }
 
     pub fn merge_ancestor<E: EdgeType>(&self) -> Option<&ChangesetNode> {
@@ -323,32 +374,32 @@ impl ChangesetEdges {
     }
 
     pub fn for_all_ids(&self, mut f: impl FnMut(ChangesetId)) {
-        f(self.node.cs_id);
-        if let Some(n) = self.merge_ancestor {
+        f(self.inner.node.cs_id);
+        if let Some(n) = self.inner.merge_ancestor {
             f(n.cs_id)
         }
-        if let Some(n) = self.skip_tree_parent {
+        if let Some(n) = self.inner.skip_tree_parent {
             f(n.cs_id)
         }
-        if let Some(n) = self.skip_tree_skew_ancestor {
+        if let Some(n) = self.inner.skip_tree_skew_ancestor {
             f(n.cs_id)
         }
-        if let Some(n) = self.p1_linear_skew_ancestor {
+        if let Some(n) = self.inner.p1_linear_skew_ancestor {
             f(n.cs_id)
         }
-        if let Some(n) = self.subtree_or_merge_ancestor {
+        if let Some(n) = self.inner.subtree_or_merge_ancestor {
             f(n.cs_id)
         }
-        if let Some(n) = self.subtree_source_parent {
+        if let Some(n) = self.inner.subtree_source_parent {
             f(n.cs_id)
         }
-        if let Some(n) = self.subtree_source_skew_ancestor {
+        if let Some(n) = self.inner.subtree_source_skew_ancestor {
             f(n.cs_id)
         }
-        for n in &self.parents {
+        for n in &self.inner.parents {
             f(n.cs_id);
         }
-        for n in &self.subtree_sources {
+        for n in &self.inner.subtree_sources {
             f(n.cs_id);
         }
     }
@@ -516,7 +567,9 @@ impl CompactChangesetEdges {
 pub trait EdgeType: Default + Copy + Clone + Send + Sync {
     fn generation(node: &ChangesetNode) -> Generation;
     fn skip_tree_depth(node: &ChangesetNode) -> u64;
-    fn parents(edges: &ChangesetEdges) -> Box<dyn Iterator<Item = &ChangesetNode> + '_>;
+    fn parents(
+        edges: &ChangesetEdges,
+    ) -> Box<dyn ExactSizeIterator<Item = &ChangesetNode> + Send + Sync + '_>;
     fn merge_ancestor(edges: &ChangesetEdges) -> Option<&ChangesetNode>;
     fn skip_tree_parent(edges: &ChangesetEdges) -> Option<&ChangesetNode>;
     fn skip_tree_skew_ancestor(edges: &ChangesetEdges) -> Option<&ChangesetNode>;
@@ -540,20 +593,22 @@ impl EdgeType for Parents {
         node.skip_tree_depth
     }
 
-    fn parents(edges: &ChangesetEdges) -> Box<dyn Iterator<Item = &ChangesetNode> + '_> {
-        Box::new(edges.parents.iter())
+    fn parents(
+        edges: &ChangesetEdges,
+    ) -> Box<dyn ExactSizeIterator<Item = &ChangesetNode> + Send + Sync + '_> {
+        Box::new(edges.inner.parents.iter())
     }
 
     fn merge_ancestor(edges: &ChangesetEdges) -> Option<&ChangesetNode> {
-        edges.merge_ancestor.as_ref()
+        edges.inner.merge_ancestor.as_ref()
     }
 
     fn skip_tree_parent(edges: &ChangesetEdges) -> Option<&ChangesetNode> {
-        edges.skip_tree_parent.as_ref()
+        edges.inner.skip_tree_parent.as_ref()
     }
 
     fn skip_tree_skew_ancestor(edges: &ChangesetEdges) -> Option<&ChangesetNode> {
-        edges.skip_tree_skew_ancestor.as_ref()
+        edges.inner.skip_tree_skew_ancestor.as_ref()
     }
 }
 
@@ -566,20 +621,32 @@ impl EdgeType for ParentsAndSubtreeSources {
         node.subtree_source_depth
     }
 
-    fn parents(edges: &ChangesetEdges) -> Box<dyn Iterator<Item = &ChangesetNode> + '_> {
-        Box::new(edges.parents.iter().chain(edges.subtree_sources.iter()))
+    fn parents(
+        edges: &ChangesetEdges,
+    ) -> Box<dyn ExactSizeIterator<Item = &ChangesetNode> + Send + Sync + '_> {
+        if edges.inner.subtree_sources.is_empty() {
+            Box::new(edges.inner.parents.iter())
+        } else {
+            let parents_and_subtree_sources = edges
+                .inner
+                .parents
+                .iter()
+                .chain(edges.inner.subtree_sources.iter())
+                .collect::<Vec<_>>();
+            Box::new(parents_and_subtree_sources.into_iter())
+        }
     }
 
     fn merge_ancestor(edges: &ChangesetEdges) -> Option<&ChangesetNode> {
-        edges.subtree_or_merge_ancestor.as_ref()
+        edges.inner.subtree_or_merge_ancestor.as_ref()
     }
 
     fn skip_tree_parent(edges: &ChangesetEdges) -> Option<&ChangesetNode> {
-        edges.subtree_source_parent.as_ref()
+        edges.inner.subtree_source_parent.as_ref()
     }
 
     fn skip_tree_skew_ancestor(edges: &ChangesetEdges) -> Option<&ChangesetNode> {
-        edges.subtree_source_skew_ancestor.as_ref()
+        edges.inner.subtree_source_skew_ancestor.as_ref()
     }
 }
 
@@ -592,21 +659,23 @@ impl EdgeType for FirstParentLinear {
         node.p1_linear_depth
     }
 
-    fn parents(edges: &ChangesetEdges) -> Box<dyn Iterator<Item = &ChangesetNode> + '_> {
-        Box::new(edges.parents.iter().take(1))
+    fn parents(
+        edges: &ChangesetEdges,
+    ) -> Box<dyn ExactSizeIterator<Item = &ChangesetNode> + Send + Sync + '_> {
+        Box::new(edges.inner.parents.iter().take(1))
     }
 
     fn merge_ancestor(edges: &ChangesetEdges) -> Option<&ChangesetNode> {
         // Really this should be the p1-linear root commit, but we don't have
         // that information, so we use the regular merge ancestor instead.
-        edges.merge_ancestor.as_ref()
+        edges.inner.merge_ancestor.as_ref()
     }
 
     fn skip_tree_parent(edges: &ChangesetEdges) -> Option<&ChangesetNode> {
-        edges.parents.first()
+        edges.inner.parents.first()
     }
 
     fn skip_tree_skew_ancestor(edges: &ChangesetEdges) -> Option<&ChangesetNode> {
-        edges.p1_linear_skew_ancestor.as_ref()
+        edges.inner.p1_linear_skew_ancestor.as_ref()
     }
 }

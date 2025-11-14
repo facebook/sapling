@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use anyhow::anyhow;
 use commit_graph_types::edges::ChangesetEdges;
+use commit_graph_types::edges::ChangesetEdgesMut;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::ChangesetNodeParents;
 use commit_graph_types::edges::ChangesetNodeSubtreeSources;
@@ -50,21 +51,25 @@ impl CommitGraph {
             let parent_edge = edges_map
                 .get(parent)
                 .ok_or_else(|| anyhow!("Missing parent: {}", parent))?;
-            max_parent_gen = max_parent_gen.max(parent_edge.node.generation::<Parents>().value());
+            max_parent_gen = max_parent_gen.max(parent_edge.node().generation::<Parents>().value());
             max_subtree_source_gen = max_subtree_source_gen.max(
                 parent_edge
-                    .node
+                    .node()
                     .generation::<ParentsAndSubtreeSources>()
                     .value(),
             );
-            edge_parents.push(parent_edge.node);
+            edge_parents.push(*parent_edge.node());
             if parents.len() == 1 {
-                merge_ancestor = Some(parent_edge.merge_ancestor.unwrap_or(parent_edge.node));
+                merge_ancestor = Some(
+                    *parent_edge
+                        .merge_ancestor::<Parents>()
+                        .unwrap_or(parent_edge.node()),
+                );
                 if subtree_sources.is_empty() {
                     subtree_or_merge_ancestor = Some(
-                        parent_edge
-                            .subtree_or_merge_ancestor
-                            .unwrap_or(parent_edge.node),
+                        *parent_edge
+                            .merge_ancestor::<ParentsAndSubtreeSources>()
+                            .unwrap_or(parent_edge.node()),
                     );
                 }
             }
@@ -72,15 +77,15 @@ impl CommitGraph {
             // skip_tree_parent is the skip tree lowest common ancestor of all parents
             if first_parent {
                 first_parent = false;
-                skip_tree_parent = Some(parent_edge.node);
+                skip_tree_parent = Some(*parent_edge.node());
 
-                p1_linear_depth = parent_edge.node.skip_tree_depth::<FirstParentLinear>() + 1;
+                p1_linear_depth = parent_edge.node().skip_tree_depth::<FirstParentLinear>() + 1;
             } else if let Some(previous_parent) = skip_tree_parent {
                 skip_tree_parent = self
                     .lowest_common_ancestor::<Parents>(
                         ctx,
                         previous_parent.cs_id,
-                        parent_edge.node.cs_id,
+                        parent_edge.node().cs_id,
                     )
                     .await?;
             }
@@ -95,11 +100,11 @@ impl CommitGraph {
 
             max_subtree_source_gen = max_subtree_source_gen.max(
                 source_edge
-                    .node
+                    .node()
                     .generation::<ParentsAndSubtreeSources>()
                     .value(),
             );
-            edge_subtree_sources.push(source_edge.node);
+            edge_subtree_sources.push(*source_edge.node());
         }
 
         let mut subtree_source_parent = None;
@@ -140,7 +145,7 @@ impl CommitGraph {
 
         let p1_parent = edge_parents.first().copied();
 
-        Ok(ChangesetEdges {
+        Ok(ChangesetEdgesMut {
             node,
             parents: edge_parents,
             subtree_sources: edge_subtree_sources,
@@ -157,7 +162,8 @@ impl CommitGraph {
             subtree_source_skew_ancestor: self
                 .calc_skew_ancestor::<ParentsAndSubtreeSources>(ctx, subtree_source_parent)
                 .await?,
-        })
+        }
+        .freeze())
     }
 
     /// Calculates the skew binary ancestor of a changeset
@@ -219,11 +225,11 @@ impl CommitGraph {
         loop {
             let node_edges = self.storage.fetch_edges(ctx, cs_id).await?;
 
-            if node_edges.node.skip_tree_depth::<E>() == target_depth {
-                return Ok(Some(node_edges.node));
+            if node_edges.node().skip_tree_depth::<E>() == target_depth {
+                return Ok(Some(*node_edges.node()));
             }
 
-            if node_edges.node.skip_tree_depth::<E>() < target_depth {
+            if node_edges.node().skip_tree_depth::<E>() < target_depth {
                 return Ok(None);
             }
 
@@ -283,7 +289,7 @@ impl CommitGraph {
             self.storage.fetch_edges(ctx, cs_id2),
         )?;
 
-        let (mut u, mut v) = (edges1.node, edges2.node);
+        let (mut u, mut v) = (*edges1.node(), *edges2.node());
 
         if u.skip_tree_depth::<E>() < v.skip_tree_depth::<E>() {
             std::mem::swap(&mut u, &mut v);
@@ -364,6 +370,6 @@ impl CommitGraph {
         cs_id: ChangesetId,
     ) -> Result<ChangesetNode> {
         let edges = self.storage.fetch_edges(ctx, cs_id).await?;
-        Ok(edges.node)
+        Ok(*edges.node())
     }
 }

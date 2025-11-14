@@ -37,7 +37,7 @@ impl CommitGraph {
     ) -> Result<BoxStream<'static, Result<ChangesetId>>> {
         let edges = self.storage.fetch_edges(&ctx, cs_id).await?;
 
-        if edges.node.skip_tree_depth::<FirstParentLinear>() < start_distance {
+        if edges.node().skip_tree_depth::<FirstParentLinear>() < start_distance {
             return Ok(stream::empty().boxed());
         }
 
@@ -52,14 +52,14 @@ impl CommitGraph {
             .p1_linear_level_ancestor(
                 &ctx,
                 cs_id,
-                edges.node.skip_tree_depth::<FirstParentLinear>() - start_distance,
+                edges.node().skip_tree_depth::<FirstParentLinear>() - start_distance,
             )
             .await?
             .ok_or_else(|| {
                 anyhow!(
                     "Failed to find p1 linear level ancestor for {} at depth {}",
                     cs_id,
-                    edges.node.skip_tree_depth::<FirstParentLinear>() - start_distance,
+                    edges.node().skip_tree_depth::<FirstParentLinear>() - start_distance,
                 )
             })?
             .cs_id;
@@ -75,7 +75,7 @@ impl CommitGraph {
             commit_graph: self.clone(),
             ctx,
             ancestor: Some(first_ancestor),
-            count: end_distance.map_or(edges.node.skip_tree_depth::<FirstParentLinear>() - start_distance + 1, |end_distance| end_distance - start_distance),
+            count: end_distance.map_or(edges.node().skip_tree_depth::<FirstParentLinear>() - start_distance + 1, |end_distance| end_distance - start_distance),
         }, move |state| async move {
             let LinearAncestorsStreamState {
                 commit_graph,
@@ -102,12 +102,12 @@ impl CommitGraph {
                 .await?
                 .remove(&ancestor)
                 .ok_or_else(|| anyhow!("Missing changeset from commit graph storage: {} (linear_ancestors_stream)", ancestor))?
-                .edges();
+                .into_edges();
 
             Ok(Some((ancestor, LinearAncestorsStreamState {
                 commit_graph,
                 ctx,
-                ancestor: ancestor_edges.parents.into_iter().next().map(|node| node.cs_id),
+                ancestor: ancestor_edges.parents::<FirstParentLinear>().next().map(|node| node.cs_id),
                 count: count - 1,
             })))
         }).boxed())

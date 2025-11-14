@@ -201,16 +201,19 @@ impl AncestorsStreamBuilder {
                         .await?;
 
                     for (_cs_id, edges) in all_edges.into_iter() {
-                        for parent in edges.parents.iter() {
+                        for parent in edges.parents::<Parents>() {
                             if let Some((descendants_of, descendants_of_gen)) = descendants_of {
                                 // There is no need to query ancestry if the skip tree parent's generation number
                                 // is greater than or equal to the generation number of descendants_of. This is
                                 // because the skip tree parent is the common ancestor of all parents, and since
                                 // the current changeset is a descendant of descendants_of, all of its parents
                                 // will also be descendants of it.
-                                if !edges.skip_tree_parent.is_some_and(|skip_tree_parent| {
-                                    skip_tree_parent.generation::<Parents>() >= *descendants_of_gen
-                                }) && !commit_graph
+                                if !edges.skip_tree_parent::<Parents>().is_some_and(
+                                    |skip_tree_parent| {
+                                        skip_tree_parent.generation::<Parents>()
+                                            >= *descendants_of_gen
+                                    },
+                                ) && !commit_graph
                                     .is_ancestor(ctx, *descendants_of, parent.changeset_id())
                                     .await?
                                 {

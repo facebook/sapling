@@ -217,8 +217,7 @@ impl CommitGraph {
     ) -> Result<ChangesetParents> {
         let edges = self.storage.fetch_edges(ctx, cs_id).await?;
         Ok(edges
-            .parents
-            .into_iter()
+            .parents::<Parents>()
             .map(|parent| parent.cs_id)
             .collect())
     }
@@ -240,8 +239,7 @@ impl CommitGraph {
                     cs_id,
                     fetched_edges
                         .edges()
-                        .parents
-                        .into_iter()
+                        .parents::<Parents>()
                         .map(|parents| parents.cs_id)
                         .collect(),
                 )
@@ -257,9 +255,8 @@ impl CommitGraph {
     ) -> Result<ChangesetSubtreeSources> {
         let edges = self.storage.fetch_edges(ctx, cs_id).await?;
         Ok(edges
-            .subtree_sources
-            .into_iter()
-            .map(|parent| parent.cs_id)
+            .subtree_sources()
+            .map(|subtree_source| subtree_source.cs_id)
             .collect())
     }
 
@@ -270,7 +267,7 @@ impl CommitGraph {
         cs_id: ChangesetId,
     ) -> Result<Generation> {
         let edges = self.storage.fetch_edges(ctx, cs_id).await?;
-        Ok(edges.node.generation::<Parents>())
+        Ok(edges.node().generation::<Parents>())
     }
 
     /// Returns the generation number of many changesets.
@@ -285,7 +282,7 @@ impl CommitGraph {
             .await?;
         Ok(fetched_edges
             .into_iter()
-            .map(|(cs_id, fetched_edges)| (cs_id, fetched_edges.node.generation::<Parents>()))
+            .map(|(cs_id, fetched_edges)| (cs_id, fetched_edges.node().generation::<Parents>()))
             .collect())
     }
 
@@ -298,7 +295,7 @@ impl CommitGraph {
         cs_id: ChangesetId,
     ) -> Result<u64> {
         let edges = self.storage.fetch_edges(ctx, cs_id).await?;
-        Ok(edges.node.skip_tree_depth::<FirstParentLinear>())
+        Ok(edges.node().skip_tree_depth::<FirstParentLinear>())
     }
 
     /// Returns the linear depth of many changesets. Linear depth is calculated as the
@@ -318,7 +315,7 @@ impl CommitGraph {
             .map(|(cs_id, fetched_edges)| {
                 (
                     cs_id,
-                    fetched_edges.node.skip_tree_depth::<FirstParentLinear>(),
+                    fetched_edges.node().skip_tree_depth::<FirstParentLinear>(),
                 )
             })
             .collect())
@@ -531,7 +528,7 @@ impl CommitGraph {
                         let distance = *cs_ids_and_remaining_distance
                             .get(&cs_id)
                             .ok_or_else(|| anyhow!("missing distance for changeset {} (in CommitGraph::ancestors_within_distance)", cs_id))?;
-                        for parent in edges.parents.iter() {
+                        for parent in edges.parents::<Parents>() {
                             let parent_distance = frontier
                                 .entry(parent.generation::<Parents>())
                                 .or_default()
@@ -618,7 +615,8 @@ impl CommitGraph {
             // highest generation changesets' skip tree skew ancestor.
             // This is optimized for the case where u_frontier has only
             // one changeset, but is correct in all cases.
-            if let Some(ancestor) = u_highest_generation_edges.skip_tree_skew_ancestor {
+            if let Some(ancestor) = u_highest_generation_edges.skip_tree_skew_ancestor::<Parents>()
+            {
                 let mut lowered_u_frontier = u_frontier.clone();
                 let mut lowered_v_frontier = v_frontier.clone();
 
@@ -899,7 +897,7 @@ impl CommitGraph {
         let cs_ids = cs_ids.into_iter().collect::<HashSet<_>>();
 
         for (cs_id, edges) in all_edges.iter() {
-            for parent in edges.parents.iter() {
+            for parent in edges.parents::<Parents>() {
                 if cs_ids.contains(&parent.cs_id) {
                     rdeps.entry(parent.cs_id).or_default().insert(*cs_id);
                     *deps_count.entry(*cs_id).or_default() += 1;
@@ -993,7 +991,16 @@ impl CommitGraph {
             .fetch_many_edges(ctx, cs_ids.as_slice(), Prefetch::None)
             .await?
             .into_iter()
-            .map(|(cs_id, edges)| (cs_id, edges.edges().parents.to_vec()))
+            .map(|(cs_id, edges)| {
+                (
+                    cs_id,
+                    edges
+                        .edges()
+                        .parents::<Parents>()
+                        .cloned()
+                        .collect::<Vec<_>>(),
+                )
+            })
             .collect::<HashMap<_, _>>();
         let boundary = cs_ids
             .into_iter()

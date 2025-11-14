@@ -16,6 +16,7 @@ use cloned::cloned;
 use commit_graph::BaseCommitGraphWriter;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
+use commit_graph_types::edges::Parents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
@@ -212,7 +213,7 @@ pub async fn test_storage_store_and_fetch(
             .maybe_fetch_edges(&ctx, name_cs_id("A"))
             .await?
             .unwrap()
-            .merge_ancestor,
+            .merge_ancestor::<Parents>(),
         None
     );
     assert_eq!(
@@ -220,16 +221,16 @@ pub async fn test_storage_store_and_fetch(
             .maybe_fetch_edges(&ctx, name_cs_id("C"))
             .await?
             .unwrap()
-            .merge_ancestor,
-        Some(name_cs_node("A", 1, 0, 0))
+            .merge_ancestor::<Parents>(),
+        Some(&name_cs_node("A", 1, 0, 0))
     );
     assert_eq!(
         storage
             .maybe_fetch_edges(&ctx, name_cs_id("I"))
             .await?
             .unwrap()
-            .merge_ancestor,
-        Some(name_cs_node("G", 5, 1, 4))
+            .merge_ancestor::<Parents>(),
+        Some(&name_cs_node("G", 5, 1, 4))
     );
 
     // fetch_many_edges and maybe_fetch_many_edges return the same result if none of the changesets
@@ -454,7 +455,7 @@ pub async fn test_skip_tree(
             .maybe_fetch_edges(&ctx, name_cs_id("K"))
             .await?
             .unwrap()
-            .node
+            .node()
             .cs_id,
         name_cs_id("K")
     );

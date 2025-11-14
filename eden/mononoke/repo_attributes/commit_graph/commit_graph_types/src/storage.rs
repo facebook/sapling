@@ -166,23 +166,30 @@ impl From<ChangesetEdges> for FetchedChangesetEdges {
 
 impl From<FetchedChangesetEdges> for ChangesetEdges {
     fn from(fetched: FetchedChangesetEdges) -> Self {
-        match fetched {
-            FetchedChangesetEdges::Fetched { edges }
-            | FetchedChangesetEdges::Prefetched { edges, .. } => edges,
-        }
+        fetched.into_edges()
     }
 }
 
 impl FetchedChangesetEdges {
     pub fn new(prefetch_target_cs_id: Option<ChangesetId>, edges: ChangesetEdges) -> Self {
         match prefetch_target_cs_id {
-            Some(cs_id) if cs_id != edges.node.cs_id => Self::Prefetched { cs_id, edges },
+            Some(cs_id) if cs_id != edges.node().cs_id => Self::Prefetched { cs_id, edges },
             _ => Self::Fetched { edges },
         }
     }
 
-    pub fn edges(self) -> ChangesetEdges {
-        ChangesetEdges::from(self)
+    pub fn edges(&self) -> &ChangesetEdges {
+        match self {
+            FetchedChangesetEdges::Fetched { edges }
+            | FetchedChangesetEdges::Prefetched { edges, .. } => edges,
+        }
+    }
+
+    pub fn into_edges(self) -> ChangesetEdges {
+        match self {
+            FetchedChangesetEdges::Fetched { edges }
+            | FetchedChangesetEdges::Prefetched { edges, .. } => edges,
+        }
     }
 
     pub fn prefetched_for(&self) -> Option<ChangesetId> {

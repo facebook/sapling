@@ -145,9 +145,9 @@ impl EphemeralOnlyChangesetStorage {
             ctx.sql_query_telemetry(),
             &[(
                 &self.repo_id,
-                &edges.node.cs_id,
+                &edges.node().cs_id,
                 &self.bubble_id,
-                &edges.node.generation::<Parents>().value(),
+                &edges.node().generation::<Parents>().value(),
             )],
         )
         .await?;
@@ -271,13 +271,9 @@ impl CommitGraphStorage for EphemeralCommitGraphStorage {
                 ctx,
                 self.ephemeral_only_storage.clone(),
                 vec1![(
-                    edges.node.cs_id,
-                    edges.parents.into_iter().map(|node| node.cs_id).collect(),
-                    edges
-                        .subtree_sources
-                        .into_iter()
-                        .map(|node| node.cs_id)
-                        .collect(),
+                    edges.node().cs_id,
+                    edges.parents::<Parents>().map(|node| node.cs_id).collect(),
+                    edges.subtree_sources().map(|node| node.cs_id).collect(),
                 )],
             )
             .await?;
