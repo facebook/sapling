@@ -176,7 +176,7 @@ fn git_sha1_raw_text(raw_text: &[u8], _parents: &[Vertex]) -> Result<Vec<u8>> {
 impl ReadCommitText for OnDiskCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let store = &self.commits;
-        get_commit_raw_text(&store, vertex)
+        get_commit_raw_text(store, vertex)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
@@ -195,7 +195,7 @@ struct ArcRwLockZstore(Arc<Id20Store>, SerializationFormat);
 impl ReadCommitText for ArcRwLockZstore {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let store = &self.0;
-        get_commit_raw_text(&store, vertex)
+        get_commit_raw_text(store, vertex)
     }
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
