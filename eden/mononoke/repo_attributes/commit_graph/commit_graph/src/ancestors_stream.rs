@@ -9,6 +9,7 @@ use std::pin::Pin;
 
 use anyhow::Result;
 use borrowed::borrowed;
+use commit_graph_types::edges::Parents;
 use commit_graph_types::frontier::ChangesetFrontier;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
@@ -208,16 +209,16 @@ impl AncestorsStreamBuilder {
                                 // the current changeset is a descendant of descendants_of, all of its parents
                                 // will also be descendants of it.
                                 if !edges.skip_tree_parent.is_some_and(|skip_tree_parent| {
-                                    skip_tree_parent.generation >= *descendants_of_gen
+                                    skip_tree_parent.generation::<Parents>() >= *descendants_of_gen
                                 }) && !commit_graph
-                                    .is_ancestor(ctx, *descendants_of, parent.cs_id)
+                                    .is_ancestor(ctx, *descendants_of, parent.changeset_id())
                                     .await?
                                 {
                                     continue;
                                 }
                             }
                             heads
-                                .entry(parent.generation)
+                                .entry(parent.generation::<Parents>())
                                 .or_default()
                                 .insert(parent.cs_id);
                         }

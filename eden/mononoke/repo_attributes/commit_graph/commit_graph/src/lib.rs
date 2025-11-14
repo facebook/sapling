@@ -24,6 +24,8 @@ use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetNode;
 pub use commit_graph_types::edges::ChangesetParents;
 pub use commit_graph_types::edges::ChangesetSubtreeSources;
+use commit_graph_types::edges::FirstParentLinear;
+use commit_graph_types::edges::Parents;
 use commit_graph_types::frontier::AncestorsWithinDistance;
 use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
 use commit_graph_types::segments::BoundaryChangesets;
@@ -268,7 +270,7 @@ impl CommitGraph {
         cs_id: ChangesetId,
     ) -> Result<Generation> {
         let edges = self.storage.fetch_edges(ctx, cs_id).await?;
-        Ok(edges.node.generation)
+        Ok(edges.node.generation::<Parents>())
     }
 
     /// Returns the generation number of many changesets.
@@ -283,7 +285,7 @@ impl CommitGraph {
             .await?;
         Ok(fetched_edges
             .into_iter()
-            .map(|(cs_id, fetched_edges)| (cs_id, fetched_edges.node.generation))
+            .map(|(cs_id, fetched_edges)| (cs_id, fetched_edges.node.generation::<Parents>()))
             .collect())
     }
 
@@ -296,7 +298,7 @@ impl CommitGraph {
         cs_id: ChangesetId,
     ) -> Result<u64> {
         let edges = self.storage.fetch_edges(ctx, cs_id).await?;
-        Ok(edges.node.p1_linear_depth)
+        Ok(edges.node.skip_tree_depth::<FirstParentLinear>())
     }
 
     /// Returns the linear depth of many changesets. Linear depth is calculated as the
@@ -313,7 +315,12 @@ impl CommitGraph {
             .await?;
         Ok(fetched_edges
             .into_iter()
-            .map(|(cs_id, fetched_edges)| (cs_id, fetched_edges.node.p1_linear_depth))
+            .map(|(cs_id, fetched_edges)| {
+                (
+                    cs_id,
+                    fetched_edges.node.skip_tree_depth::<FirstParentLinear>(),
+                )
+            })
             .collect())
     }
 
@@ -526,7 +533,7 @@ impl CommitGraph {
                             .ok_or_else(|| anyhow!("missing distance for changeset {} (in CommitGraph::ancestors_within_distance)", cs_id))?;
                         for parent in edges.parents.iter() {
                             let parent_distance = frontier
-                                .entry(parent.generation)
+                                .entry(parent.generation::<Parents>())
                                 .or_default()
                                 .entry(parent.cs_id)
                                 .or_default();
@@ -615,12 +622,20 @@ impl CommitGraph {
                 let mut lowered_u_frontier = u_frontier.clone();
                 let mut lowered_v_frontier = v_frontier.clone();
 
-                self.lower_frontier(ctx, &mut lowered_u_frontier, ancestor.generation)
-                    .watched(ctx.logger())
-                    .await?;
-                self.lower_frontier(ctx, &mut lowered_v_frontier, ancestor.generation)
-                    .watched(ctx.logger())
-                    .await?;
+                self.lower_frontier(
+                    ctx,
+                    &mut lowered_u_frontier,
+                    ancestor.generation::<Parents>(),
+                )
+                .watched(ctx.logger())
+                .await?;
+                self.lower_frontier(
+                    ctx,
+                    &mut lowered_v_frontier,
+                    ancestor.generation::<Parents>(),
+                )
+                .watched(ctx.logger())
+                .await?;
 
                 // If the two lowered frontier are disjoint then it's safe to lower,
                 // otherwise there might be a higher generation common ancestor.

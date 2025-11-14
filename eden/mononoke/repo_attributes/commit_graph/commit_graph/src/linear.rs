@@ -8,6 +8,7 @@
 use anyhow::Result;
 use anyhow::anyhow;
 use commit_graph_types::edges::ChangesetNode;
+use commit_graph_types::edges::FirstParentLinear;
 use commit_graph_types::storage::Prefetch;
 use commit_graph_types::storage::PrefetchTarget;
 use context::CoreContext;
@@ -36,7 +37,7 @@ impl CommitGraph {
     ) -> Result<BoxStream<'static, Result<ChangesetId>>> {
         let edges = self.storage.fetch_edges(&ctx, cs_id).await?;
 
-        if edges.node.p1_linear_depth < start_distance {
+        if edges.node.skip_tree_depth::<FirstParentLinear>() < start_distance {
             return Ok(stream::empty().boxed());
         }
 
@@ -48,13 +49,17 @@ impl CommitGraph {
 
         // Find the linear ancestor that's at `start_distance` from the given changeset.
         let first_ancestor = self
-            .p1_linear_level_ancestor(&ctx, cs_id, edges.node.p1_linear_depth - start_distance)
+            .p1_linear_level_ancestor(
+                &ctx,
+                cs_id,
+                edges.node.skip_tree_depth::<FirstParentLinear>() - start_distance,
+            )
             .await?
             .ok_or_else(|| {
                 anyhow!(
                     "Failed to find p1 linear level ancestor for {} at depth {}",
                     cs_id,
-                    edges.node.p1_linear_depth - start_distance,
+                    edges.node.skip_tree_depth::<FirstParentLinear>() - start_distance,
                 )
             })?
             .cs_id;
@@ -70,7 +75,7 @@ impl CommitGraph {
             commit_graph: self.clone(),
             ctx,
             ancestor: Some(first_ancestor),
-            count: end_distance.map_or(edges.node.p1_linear_depth - start_distance + 1, |end_distance| end_distance - start_distance),
+            count: end_distance.map_or(edges.node.skip_tree_depth::<FirstParentLinear>() - start_distance + 1, |end_distance| end_distance - start_distance),
         }, move |state| async move {
             let LinearAncestorsStreamState {
                 commit_graph,
@@ -152,7 +157,8 @@ impl LinearAncestorsStreamBuilder {
             // Minimize the stream's end distance with the distance to the lowest common ancestor.
             self.end_distance = Some(std::cmp::min(
                 self.end_distance.unwrap_or(u64::MAX),
-                self.head.p1_linear_depth - lowest_common_ancestor.p1_linear_depth,
+                self.head.skip_tree_depth::<FirstParentLinear>()
+                    - lowest_common_ancestor.skip_tree_depth::<FirstParentLinear>(),
             ));
         }
 
@@ -168,7 +174,11 @@ impl LinearAncestorsStreamBuilder {
             .await?;
         let level_ancestor = self
             .commit_graph
-            .p1_linear_level_ancestor(&self.ctx, self.head.cs_id, descendants_of.p1_linear_depth)
+            .p1_linear_level_ancestor(
+                &self.ctx,
+                self.head.cs_id,
+                descendants_of.skip_tree_depth::<FirstParentLinear>(),
+            )
             .await?;
 
         match level_ancestor {
@@ -177,7 +187,9 @@ impl LinearAncestorsStreamBuilder {
             Some(level_ancestor) if level_ancestor.cs_id == descendants_of.cs_id => {
                 self.end_distance = Some(std::cmp::min(
                     self.end_distance.unwrap_or(u64::MAX),
-                    self.head.p1_linear_depth - level_ancestor.p1_linear_depth + 1,
+                    self.head.skip_tree_depth::<FirstParentLinear>()
+                        - level_ancestor.skip_tree_depth::<FirstParentLinear>()
+                        + 1,
                 ));
             }
             // If the level ancestor isn't `descendants_of`, then `descendants_of` is

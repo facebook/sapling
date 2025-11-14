@@ -19,6 +19,9 @@ use commit_graph_thrift as thrift;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::CompactChangesetEdges;
+use commit_graph_types::edges::FirstParentLinear;
+use commit_graph_types::edges::Parents;
+use commit_graph_types::edges::ParentsAndSubtreeSources;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
@@ -115,14 +118,14 @@ impl PreloadedEdges {
             .get(&cs_id)
             .ok_or_else(|| anyhow!("Missing changeset edges for {}", cs_id))?;
 
-        Ok(ChangesetNode {
+        Ok(ChangesetNode::new(
             cs_id,
-            generation: Generation::new(edges.generation as u64),
-            subtree_source_generation: Generation::new(edges.subtree_source_generation as u64),
-            skip_tree_depth: edges.skip_tree_depth as u64,
-            p1_linear_depth: edges.p1_linear_depth as u64,
-            subtree_source_depth: edges.subtree_source_depth as u64,
-        })
+            Generation::new(edges.generation as u64),
+            Generation::new(edges.subtree_source_generation as u64),
+            edges.skip_tree_depth as u64,
+            edges.p1_linear_depth as u64,
+            edges.subtree_source_depth as u64,
+        ))
     }
 
     pub fn get(&self, cs_id: &ChangesetId) -> Result<Option<ChangesetEdges>> {
@@ -132,16 +135,14 @@ impl PreloadedEdges {
         };
 
         Ok(Some(ChangesetEdges {
-            node: ChangesetNode {
-                cs_id: *cs_id,
-                generation: Generation::new(compact_edges.generation as u64),
-                subtree_source_generation: Generation::new(
-                    compact_edges.subtree_source_generation as u64,
-                ),
-                skip_tree_depth: compact_edges.skip_tree_depth as u64,
-                p1_linear_depth: compact_edges.p1_linear_depth as u64,
-                subtree_source_depth: compact_edges.subtree_source_depth as u64,
-            },
+            node: ChangesetNode::new(
+                *cs_id,
+                Generation::new(compact_edges.generation as u64),
+                Generation::new(compact_edges.subtree_source_generation as u64),
+                compact_edges.skip_tree_depth as u64,
+                compact_edges.p1_linear_depth as u64,
+                compact_edges.subtree_source_depth as u64,
+            ),
             parents: compact_edges
                 .parents
                 .iter()
@@ -258,11 +259,15 @@ impl ExtendablePreloadedEdges {
         match self.preloaded_edges.cs_id_to_edges.insert(
             edges.node.cs_id,
             Box::new(CompactChangesetEdges {
-                generation: edges.node.generation.value() as u32,
-                subtree_source_generation: edges.node.subtree_source_generation.value() as u32,
-                skip_tree_depth: edges.node.skip_tree_depth as u32,
-                p1_linear_depth: edges.node.p1_linear_depth as u32,
-                subtree_source_depth: edges.node.subtree_source_depth as u32,
+                generation: edges.node.generation::<Parents>().value() as u32,
+                subtree_source_generation: edges
+                    .node
+                    .generation::<ParentsAndSubtreeSources>()
+                    .value() as u32,
+                skip_tree_depth: edges.node.skip_tree_depth::<Parents>() as u32,
+                p1_linear_depth: edges.node.skip_tree_depth::<FirstParentLinear>() as u32,
+                subtree_source_depth: edges.node.skip_tree_depth::<ParentsAndSubtreeSources>()
+                    as u32,
                 parents,
                 subtree_sources,
                 merge_ancestor,

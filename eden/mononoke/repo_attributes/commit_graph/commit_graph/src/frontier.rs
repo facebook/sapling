@@ -62,7 +62,7 @@ impl CommitGraph {
                         .get(&cs_id)
                         .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?
                         .node
-                        .generation,
+                        .generation::<Parents>(),
                 ))
             })
             .collect::<Result<_>>()
@@ -99,7 +99,7 @@ impl CommitGraph {
                         .get(&cs_id)
                         .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?
                         .node
-                        .generation,
+                        .generation::<Parents>(),
                     distance,
                 ))
             })
@@ -162,14 +162,14 @@ impl CommitGraph {
                         match lowest_ancestor {
                             Some(ancestor) => {
                                 frontier
-                                    .entry(ancestor.generation)
+                                    .entry(ancestor.generation::<Parents>())
                                     .or_default()
                                     .insert(ancestor.cs_id);
                             }
                             None => {
                                 for parent in &edges.parents {
                                     frontier
-                                        .entry(parent.generation)
+                                        .entry(parent.generation::<Parents>())
                                         .or_default()
                                         .insert(parent.cs_id);
                                 }
@@ -206,7 +206,7 @@ impl CommitGraph {
             self.lower_frontier_step(
                 ctx,
                 frontier,
-                move |node| future::ready(Ok(node.generation < target_generation)),
+                move |node| future::ready(Ok(node.generation::<Parents>() < target_generation)),
                 Prefetch::for_exact_skip_tree_traversal(target_generation),
             )
             .watched(ctx.logger())
@@ -235,7 +235,7 @@ impl CommitGraph {
 
                 for parent in edges.parents.iter() {
                     frontier
-                        .entry(parent.generation)
+                        .entry(parent.generation::<Parents>())
                         .or_default()
                         .insert(parent.cs_id);
                 }

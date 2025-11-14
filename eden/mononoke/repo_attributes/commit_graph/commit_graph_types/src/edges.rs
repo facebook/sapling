@@ -26,22 +26,40 @@ pub struct ChangesetNode {
     /// The changeset's generation: the inclusive number of commits between
     /// this commit and the farthest root commit.  Root commits have a
     /// generation of 1.
-    pub generation: Generation,
+    generation: Generation,
 
     /// The changeset's generation, including subtree sources.
-    pub subtree_source_generation: Generation,
+    subtree_source_generation: Generation,
 
     /// The changeset's depth in the skip tree.
-    pub skip_tree_depth: u64,
+    skip_tree_depth: u64,
 
     /// The changeset's depth in the p1 tree
-    pub p1_linear_depth: u64,
+    p1_linear_depth: u64,
 
     /// The changeset's depth in the skip trip, including subtree sources
-    pub subtree_source_depth: u64,
+    subtree_source_depth: u64,
 }
 
 impl ChangesetNode {
+    pub fn new(
+        cs_id: ChangesetId,
+        generation: Generation,
+        subtree_source_generation: Generation,
+        skip_tree_depth: u64,
+        p1_linear_depth: u64,
+        subtree_source_depth: u64,
+    ) -> Self {
+        Self {
+            cs_id,
+            generation,
+            subtree_source_generation,
+            skip_tree_depth,
+            p1_linear_depth,
+            subtree_source_depth,
+        }
+    }
+
     pub fn to_thrift(&self) -> thrift::ChangesetNode {
         thrift::ChangesetNode {
             cs_id: self.cs_id.into_thrift(),

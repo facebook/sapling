@@ -26,6 +26,9 @@ use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::ChangesetNodeParents;
 use commit_graph_types::edges::ChangesetNodeSubtreeSources;
 use commit_graph_types::edges::ChangesetParents;
+use commit_graph_types::edges::FirstParentLinear;
+use commit_graph_types::edges::Parents;
+use commit_graph_types::edges::ParentsAndSubtreeSources;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
@@ -1082,14 +1085,14 @@ impl SqlCommitGraphStorage {
                 (Some(cs_id), Some(r#gen), Some(skip_tree_depth), Some(p1_linear_depth)) => {
                     let subtree_source_depth = subtree_source_depth.unwrap_or(skip_tree_depth);
                     let subtree_source_gen = subtree_source_gen.unwrap_or(r#gen);
-                    Some(ChangesetNode {
+                    Some(ChangesetNode::new(
                         cs_id,
-                        generation: Generation::new(r#gen),
-                        subtree_source_generation: Generation::new(subtree_source_gen),
+                        Generation::new(r#gen),
+                        Generation::new(subtree_source_gen),
                         skip_tree_depth,
                         p1_linear_depth,
                         subtree_source_depth,
-                    })
+                    ))
                 }
                 _ => None,
             };
@@ -1222,16 +1225,14 @@ impl SqlCommitGraphStorage {
                         FetchedChangesetEdges::new(
                             origin_cs_id,
                             ChangesetEdges {
-                                node: ChangesetNode {
+                                node: ChangesetNode::new(
                                     cs_id,
-                                    generation: Generation::new(r#gen),
-                                    subtree_source_generation: Generation::new(
-                                        subtree_source_gen.unwrap_or(r#gen),
-                                    ),
+                                    Generation::new(r#gen),
+                                    Generation::new(subtree_source_gen.unwrap_or(r#gen)),
                                     skip_tree_depth,
                                     p1_linear_depth,
                                     subtree_source_depth,
-                                },
+                                ),
                                 parents: ChangesetNodeParents::new(),
                                 subtree_sources: ChangesetNodeSubtreeSources::new(),
                                 merge_ancestor,
@@ -1265,17 +1266,14 @@ impl SqlCommitGraphStorage {
                     parent_subtree_source_depth,
                 ) => {
                     if let Some(edges) = cs_id_and_origin_to_edges.get_mut(&(cs_id, origin_cs_id)) {
-                        edges.parents.push(ChangesetNode {
-                            cs_id: parent,
-                            generation: Generation::new(parent_gen),
-                            subtree_source_generation: Generation::new(
-                                parent_subtree_source_gen.unwrap_or(parent_gen),
-                            ),
-                            skip_tree_depth: parent_skip_tree_depth,
-                            p1_linear_depth: parent_p1_linear_depth,
-                            subtree_source_depth: parent_subtree_source_depth
-                                .unwrap_or(parent_skip_tree_depth),
-                        })
+                        edges.parents.push(ChangesetNode::new(
+                            parent,
+                            Generation::new(parent_gen),
+                            Generation::new(parent_subtree_source_gen.unwrap_or(parent_gen)),
+                            parent_skip_tree_depth,
+                            parent_p1_linear_depth,
+                            parent_subtree_source_depth.unwrap_or(parent_skip_tree_depth),
+                        ))
                     }
                 }
                 (
@@ -1292,17 +1290,17 @@ impl SqlCommitGraphStorage {
                     subtree_source_subtree_source_depth,
                 ) => {
                     if let Some(edges) = cs_id_and_origin_to_edges.get_mut(&(cs_id, origin_cs_id)) {
-                        edges.subtree_sources.push(ChangesetNode {
-                            cs_id: subtree_source,
-                            generation: Generation::new(subtree_source_gen),
-                            subtree_source_generation: Generation::new(
+                        edges.subtree_sources.push(ChangesetNode::new(
+                            subtree_source,
+                            Generation::new(subtree_source_gen),
+                            Generation::new(
                                 subtree_source_subtree_source_gen.unwrap_or(subtree_source_gen),
                             ),
-                            skip_tree_depth: subtree_source_skip_tree_depth,
-                            p1_linear_depth: subtree_source_p1_linear_depth,
-                            subtree_source_depth: subtree_source_subtree_source_depth
+                            subtree_source_skip_tree_depth,
+                            subtree_source_p1_linear_depth,
+                            subtree_source_subtree_source_depth
                                 .unwrap_or(subtree_source_skip_tree_depth),
-                        })
+                        ))
                     }
                 }
                 _ => continue,
@@ -1622,13 +1620,13 @@ impl SqlCommitGraphStorage {
                 (
                     self.repo_id,
                     e.node.cs_id,
-                    e.node.generation.value(),
-                    Some(e.node.subtree_source_generation.value())
-                        .filter(|r#gen| *r#gen != e.node.generation.value()),
-                    e.node.skip_tree_depth,
-                    e.node.p1_linear_depth,
-                    Some(e.node.subtree_source_depth)
-                        .filter(|depth| *depth != e.node.skip_tree_depth),
+                    e.node.generation::<Parents>().value(),
+                    Some(e.node.generation::<ParentsAndSubtreeSources>().value())
+                        .filter(|r#gen| *r#gen != e.node.generation::<Parents>().value()),
+                    e.node.skip_tree_depth::<Parents>(),
+                    e.node.skip_tree_depth::<FirstParentLinear>(),
+                    Some(e.node.skip_tree_depth::<ParentsAndSubtreeSources>())
+                        .filter(|depth| *depth != e.node.skip_tree_depth::<Parents>()),
                     e.parents.len(),
                     e.subtree_sources.len(),
                 )
@@ -1685,13 +1683,13 @@ impl SqlCommitGraphStorage {
                 Ok((
                     self.repo_id,
                     e.node.cs_id,
-                    e.node.generation.value(),
-                    Some(e.node.subtree_source_generation.value())
-                        .filter(|r#gen| *r#gen != e.node.generation.value()),
-                    e.node.skip_tree_depth,
-                    e.node.p1_linear_depth,
-                    Some(e.node.subtree_source_depth)
-                        .filter(|depth| depth != &e.node.skip_tree_depth),
+                    e.node.generation::<Parents>().value(),
+                    Some(e.node.generation::<ParentsAndSubtreeSources>().value())
+                        .filter(|r#gen| *r#gen != e.node.generation::<Parents>().value()),
+                    e.node.skip_tree_depth::<Parents>(),
+                    e.node.skip_tree_depth::<FirstParentLinear>(),
+                    Some(e.node.skip_tree_depth::<ParentsAndSubtreeSources>())
+                        .filter(|depth| depth != &e.node.skip_tree_depth::<Parents>()),
                     e.parents.len(),
                     e.subtree_sources.len(),
                     maybe_get_id(e.parents.first())?,
@@ -1883,13 +1881,13 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
             transaction,
             &self.repo_id,
             &edges.node.cs_id,
-            &edges.node.generation.value(),
-            &Some(edges.node.subtree_source_generation.value())
-                .filter(|r#gen| *r#gen != edges.node.generation.value()),
-            &edges.node.skip_tree_depth,
-            &edges.node.p1_linear_depth,
-            &Some(edges.node.subtree_source_depth)
-                .filter(|depth| *depth != edges.node.skip_tree_depth),
+            &edges.node.generation::<Parents>().value(),
+            &Some(edges.node.generation::<ParentsAndSubtreeSources>().value())
+                .filter(|r#gen| *r#gen != edges.node.generation::<Parents>().value()),
+            &edges.node.skip_tree_depth::<Parents>(),
+            &edges.node.skip_tree_depth::<FirstParentLinear>(),
+            &Some(edges.node.skip_tree_depth::<ParentsAndSubtreeSources>())
+                .filter(|depth| *depth != edges.node.skip_tree_depth::<Parents>()),
             &edges.parents.len(),
             &edges.subtree_sources.len(),
             &edges.parents.first().map(|node| node.cs_id),

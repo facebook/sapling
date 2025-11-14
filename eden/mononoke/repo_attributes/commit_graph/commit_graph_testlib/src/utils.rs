@@ -67,14 +67,14 @@ pub fn name_cs_node(
 ) -> ChangesetNode {
     let cs_id = name_cs_id(name);
     let generation = Generation::new(r#gen);
-    ChangesetNode {
+    ChangesetNode::new(
         cs_id,
         generation,
-        subtree_source_generation: generation,
+        generation,
         skip_tree_depth,
         p1_linear_depth,
-        subtree_source_depth: skip_tree_depth,
-    }
+        skip_tree_depth,
+    )
 }
 
 /// Build a commit graph from an ASCII-art dag.

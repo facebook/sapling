@@ -19,6 +19,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use commit_graph::ParentsFetcher;
 use commit_graph_types::edges::ChangesetEdges;
+use commit_graph_types::edges::Parents;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::FetchedChangesetEdges;
 use commit_graph_types::storage::Prefetch;
@@ -146,7 +147,7 @@ impl EphemeralOnlyChangesetStorage {
                 &self.repo_id,
                 &edges.node.cs_id,
                 &self.bubble_id,
-                &edges.node.generation.value(),
+                &edges.node.generation::<Parents>().value(),
             )],
         )
         .await?;
