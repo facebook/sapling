@@ -126,7 +126,7 @@ class FakeFuseMountDelegate : public FakePrivHelper::MountDelegate {
   folly::Future<folly::File> fuseMount() override;
   folly::Future<folly::Unit> fuseUnmount() override;
 
-  FOLLY_NODISCARD bool wasFuseUnmountEverCalled() const noexcept;
+  [[nodiscard]] bool wasFuseUnmountEverCalled() const noexcept;
 
  private:
   AbsolutePath mountPath_;

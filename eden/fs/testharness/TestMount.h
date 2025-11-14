@@ -318,13 +318,13 @@ class TestMount {
    * Walk the entire tree and load all inode objects.
    */
   void loadAllInodes();
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> loadAllInodesFuture();
+  [[nodiscard]] ImmediateFuture<folly::Unit> loadAllInodesFuture();
 
   /**
    * Load all inodes [recursively] under the specified subdirectory.
    */
   static void loadAllInodes(const TreeInodePtr& treeInode);
-  FOLLY_NODISCARD static ImmediateFuture<folly::Unit> loadAllInodesFuture(
+  [[nodiscard]] static ImmediateFuture<folly::Unit> loadAllInodesFuture(
       const TreeInodePtr& treeInode);
 
   /** Convenience method for getting the Tree for the root of the mount. */

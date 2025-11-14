@@ -608,7 +608,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   folly::Try<BlobAuxDataPtr> getLocalBlobAuxData(const HgProxyHash& id);
 
-  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
+  [[nodiscard]] virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
       const ObjectFetchContextPtr& context) override;
 

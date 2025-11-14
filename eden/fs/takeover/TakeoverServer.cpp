@@ -65,16 +65,16 @@ class TakeoverServer::ConnHandler {
    * Returns a Future that will complete successfully when this connection
    * finishes gracefully taking over the EdenServer's mount points.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> start() noexcept;
+  [[nodiscard]] folly::Future<folly::Unit> start() noexcept;
 
  private:
-  FOLLY_NODISCARD folly::Future<folly::Unit> sendError(
+  [[nodiscard]] folly::Future<folly::Unit> sendError(
       const folly::exception_wrapper& error);
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> pingThenSendTakeoverData(
+  [[nodiscard]] folly::Future<folly::Unit> pingThenSendTakeoverData(
       TakeoverData&& data);
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> sendTakeoverData(
+  [[nodiscard]] folly::Future<folly::Unit> sendTakeoverData(
       TakeoverData&& data);
 
   template <typename... Args>
@@ -103,10 +103,10 @@ class TakeoverServer::ConnHandler {
     uint64_t protocolCapabilities = 0;
   };
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> sendTakeoverDataMessage(
+  [[nodiscard]] folly::Future<folly::Unit> sendTakeoverDataMessage(
       State& state,
       UnixSocket::Message&& msg);
-  FOLLY_NODISCARD folly::Future<folly::Unit> sendTakeoverDataMessageInChunks(
+  [[nodiscard]] folly::Future<folly::Unit> sendTakeoverDataMessageInChunks(
       State& state,
       std::unique_ptr<folly::IOBuf> msgData);
 
