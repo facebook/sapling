@@ -36,6 +36,7 @@ use vec1::vec1;
 
 use crate::utils::*;
 
+pub mod shuffling_storage;
 #[cfg(test)]
 pub mod tests;
 pub mod utils;

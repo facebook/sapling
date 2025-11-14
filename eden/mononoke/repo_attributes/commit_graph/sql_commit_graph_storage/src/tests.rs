@@ -11,6 +11,7 @@ use std::future::Future;
 use std::sync::Arc;
 
 use anyhow::Result;
+use commit_graph_testlib::shuffling_storage::ShufflingCommitGraphStorage;
 use commit_graph_testlib::utils::from_dag;
 use commit_graph_testlib::utils::name_cs_id;
 use commit_graph_testlib::*;
