@@ -228,7 +228,7 @@ pub(crate) async fn ancestors_after_time(
     heads: Vec<ChangesetId>,
     time: usize,
 ) -> Result<AncestorsWithinDistance> {
-    let commit_graph = Arc::new(repo.commit_graph().clone());
+    let commit_graph = Arc::new(repo.commit_graph().parents_graph());
     let blobstore = repo.repo_blobstore().clone();
     let inner_ctx = ctx.clone();
     let ancestors = AncestorsStreamBuilder::new(commit_graph, ctx.clone(), heads.clone())

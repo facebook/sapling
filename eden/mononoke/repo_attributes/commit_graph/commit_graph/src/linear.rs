@@ -20,6 +20,7 @@ use mononoke_types::FIRST_GENERATION;
 
 use crate::ArcCommitGraph;
 use crate::CommitGraph;
+use crate::core;
 
 impl CommitGraph {
     /// Returns a stream of the linear ancestors of a changeset, starting
@@ -48,21 +49,21 @@ impl CommitGraph {
         }
 
         // Find the linear ancestor that's at `start_distance` from the given changeset.
-        let first_ancestor = self
-            .p1_linear_level_ancestor(
-                &ctx,
+        let first_ancestor = core::skip_tree_level_ancestor::<FirstParentLinear>(
+            &ctx,
+            self.storage.as_ref(),
+            cs_id,
+            edges.node().skip_tree_depth::<FirstParentLinear>() - start_distance,
+        )
+        .await?
+        .ok_or_else(|| {
+            anyhow!(
+                "Failed to find p1 linear level ancestor for {} at depth {}",
                 cs_id,
                 edges.node().skip_tree_depth::<FirstParentLinear>() - start_distance,
             )
-            .await?
-            .ok_or_else(|| {
-                anyhow!(
-                    "Failed to find p1 linear level ancestor for {} at depth {}",
-                    cs_id,
-                    edges.node().skip_tree_depth::<FirstParentLinear>() - start_distance,
-                )
-            })?
-            .cs_id;
+        })?
+        .cs_id;
 
         struct LinearAncestorsStreamState {
             commit_graph: CommitGraph,
@@ -148,10 +149,13 @@ impl LinearAncestorsStreamBuilder {
     pub async fn exclude_ancestors_of(mut self, common: ChangesetId) -> Result<Self> {
         // The common linear ancestors between the head of the stream and the given changeset
         // are all the ancestors of their lowest common ancestor.
-        let lowest_common_ancestor = self
-            .commit_graph
-            .p1_linear_lowest_common_ancestor(&self.ctx, self.head.cs_id, common)
-            .await?;
+        let lowest_common_ancestor = core::skip_tree_lowest_common_ancestor::<FirstParentLinear>(
+            &self.ctx,
+            self.commit_graph.storage.as_ref(),
+            self.head.cs_id,
+            common,
+        )
+        .await?;
 
         if let Some(lowest_common_ancestor) = lowest_common_ancestor {
             // Minimize the stream's end distance with the distance to the lowest common ancestor.
@@ -172,14 +176,13 @@ impl LinearAncestorsStreamBuilder {
             .commit_graph
             .changeset_node(&self.ctx, descendants_of)
             .await?;
-        let level_ancestor = self
-            .commit_graph
-            .p1_linear_level_ancestor(
-                &self.ctx,
-                self.head.cs_id,
-                descendants_of.skip_tree_depth::<FirstParentLinear>(),
-            )
-            .await?;
+        let level_ancestor = core::skip_tree_level_ancestor::<FirstParentLinear>(
+            &self.ctx,
+            self.commit_graph.storage.as_ref(),
+            self.head.cs_id,
+            descendants_of.skip_tree_depth::<FirstParentLinear>(),
+        )
+        .await?;
 
         match level_ancestor {
             // If the level ancestor is `descendants_of`, then minimize the stream's

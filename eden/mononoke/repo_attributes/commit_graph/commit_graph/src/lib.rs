@@ -24,8 +24,10 @@ use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::edges::ChangesetNode;
 pub use commit_graph_types::edges::ChangesetParents;
 pub use commit_graph_types::edges::ChangesetSubtreeSources;
+use commit_graph_types::edges::EdgeType;
 use commit_graph_types::edges::FirstParentLinear;
 use commit_graph_types::edges::Parents;
+use commit_graph_types::edges::ParentsAndSubtreeSources;
 use commit_graph_types::frontier::AncestorsWithinDistance;
 use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
 use commit_graph_types::segments::BoundaryChangesets;
@@ -82,13 +84,33 @@ mod writer;
 #[derive(Clone)]
 #[facet::facet]
 pub struct CommitGraph {
+    /// By default, the commit graph performs operations over the normal commit graph that uses the commits' parents.
+    parent_ops: CommitGraphOps<Parents>,
+}
+
+#[derive(Clone)]
+pub struct CommitGraphOps<E: EdgeType> {
     /// The storage back-end where the commits are actually stored.
     storage: Arc<dyn CommitGraphStorage>,
+    _phantom: std::marker::PhantomData<E>,
+}
+
+impl std::ops::Deref for CommitGraph {
+    type Target = CommitGraphOps<Parents>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.parent_ops
+    }
 }
 
 impl CommitGraph {
     pub fn new(storage: Arc<dyn CommitGraphStorage>) -> Self {
-        Self { storage }
+        Self {
+            parent_ops: CommitGraphOps {
+                storage,
+                _phantom: std::marker::PhantomData,
+            },
+        }
     }
 
     pub fn clone_with_replaced_storage(
@@ -96,13 +118,37 @@ impl CommitGraph {
         replace_fn: impl FnOnce(Arc<dyn CommitGraphStorage>) -> Arc<dyn CommitGraphStorage>,
     ) -> Self {
         Self {
-            storage: replace_fn(self.storage.clone()),
+            parent_ops: CommitGraphOps {
+                storage: replace_fn(self.parent_ops.storage.clone()),
+                _phantom: std::marker::PhantomData,
+            },
         }
     }
 
     pub fn with_memwrites_storage(self) -> Self {
         Self {
-            storage: Arc::new(MemWritesCommitGraphStorage::new(self.storage)),
+            parent_ops: CommitGraphOps {
+                storage: Arc::new(MemWritesCommitGraphStorage::new(self.parent_ops.storage)),
+                _phantom: std::marker::PhantomData,
+            },
+        }
+    }
+
+    pub fn parents_graph(&self) -> CommitGraphOps<Parents> {
+        self.parent_ops.clone()
+    }
+
+    pub fn p1_linear_graph(&self) -> CommitGraphOps<FirstParentLinear> {
+        CommitGraphOps {
+            storage: self.parent_ops.storage.clone(),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    pub fn parents_and_subtree_sources_graph(&self) -> CommitGraphOps<ParentsAndSubtreeSources> {
+        CommitGraphOps {
+            storage: self.parent_ops.storage.clone(),
+            _phantom: std::marker::PhantomData,
         }
     }
 
@@ -209,19 +255,6 @@ impl CommitGraph {
         Ok(edges.is_some())
     }
 
-    /// Returns the parents of a single changeset.
-    pub async fn changeset_parents(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<ChangesetParents> {
-        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
-        Ok(edges
-            .parents::<Parents>()
-            .map(|parent| parent.cs_id)
-            .collect())
-    }
-
     /// Returns the parents of many changesets.
     pub async fn many_changeset_parents(
         &self,
@@ -258,16 +291,6 @@ impl CommitGraph {
             .subtree_sources()
             .map(|subtree_source| subtree_source.cs_id)
             .collect())
-    }
-
-    /// Returns the generation number of a single changeset.
-    pub async fn changeset_generation(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<Generation> {
-        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
-        Ok(edges.node().generation::<Parents>())
     }
 
     /// Returns the generation number of many changesets.
@@ -332,6 +355,80 @@ impl CommitGraph {
             .maybe_fetch_many_edges(ctx, &cs_ids, Prefetch::None)
             .await?;
         Ok(edges.into_keys().collect())
+    }
+
+    /// Returns the children of a single changeset.
+    pub async fn changeset_children(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>> {
+        self.storage.fetch_children(ctx, cs_id).await
+    }
+
+    /// Returns the union of descendants of `cs_ids`.
+    pub async fn descendants(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<ChangesetId>> {
+        let mut visited: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
+        let mut descendants: Vec<ChangesetId> = cs_ids.clone();
+
+        // We will add a future for every traversed changeset to futs to
+        // fetch its children.
+        let mut futs: FuturesUnordered<_> = Default::default();
+
+        // Add children of initial changesets.
+        for cs_id in cs_ids {
+            futs.push(self.changeset_children(ctx, cs_id));
+        }
+
+        while let Some(result) = futs.next().await {
+            let children = result?;
+
+            for child in children {
+                // If we haven't traversed this changeset yet, add it to the output
+                // and add a future to fetch its children to futs.
+                if visited.insert(child) {
+                    descendants.push(child);
+                    futs.push(self.changeset_children(ctx, child));
+                }
+            }
+        }
+
+        Ok(descendants)
+    }
+}
+
+impl<E: EdgeType> CommitGraphOps<E> {
+    pub(crate) async fn changeset_node(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<ChangesetNode> {
+        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
+        Ok(*edges.node())
+    }
+
+    /// Returns the parents of a single changeset.
+    pub async fn changeset_parents(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<ChangesetParents> {
+        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
+        Ok(edges.parents::<E>().map(|parent| parent.cs_id).collect())
+    }
+
+    /// Returns the generation number of a single changeset.
+    pub async fn changeset_generation(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Generation> {
+        let edges = self.storage.fetch_edges(ctx, cs_id).await?;
+        Ok(edges.node().generation::<E>())
     }
 
     /// Returns a frontier for the ancestors of heads
@@ -477,8 +574,8 @@ impl CommitGraph {
             .frontier_within_distance(ctx, heads, max_distance)
             .await?;
 
-        struct AncestorsWithinDistanceState {
-            commit_graph: CommitGraph,
+        struct AncestorsWithinDistanceState<E: EdgeType> {
+            commit_graph: CommitGraphOps<E>,
             ctx: CoreContext,
             frontier: ChangesetFrontierWithinDistance,
         }
@@ -897,7 +994,7 @@ impl CommitGraph {
         let cs_ids = cs_ids.into_iter().collect::<HashSet<_>>();
 
         for (cs_id, edges) in all_edges.iter() {
-            for parent in edges.parents::<Parents>() {
+            for parent in edges.parents::<E>() {
                 if cs_ids.contains(&parent.cs_id) {
                     rdeps.entry(parent.cs_id).or_default().insert(*cs_id);
                     *deps_count.entry(*cs_id).or_default() += 1;
@@ -936,49 +1033,6 @@ impl CommitGraph {
         Ok(())
     }
 
-    /// Returns the children of a single changeset.
-    pub async fn changeset_children(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<Vec<ChangesetId>> {
-        self.storage.fetch_children(ctx, cs_id).await
-    }
-
-    /// Returns the union of descendants of `cs_ids`.
-    pub async fn descendants(
-        &self,
-        ctx: &CoreContext,
-        cs_ids: Vec<ChangesetId>,
-    ) -> Result<Vec<ChangesetId>> {
-        let mut visited: HashSet<ChangesetId> = cs_ids.iter().copied().collect();
-        let mut descendants: Vec<ChangesetId> = cs_ids.clone();
-
-        // We will add a future for every traversed changeset to futs to
-        // fetch its children.
-        let mut futs: FuturesUnordered<_> = Default::default();
-
-        // Add children of initial changesets.
-        for cs_id in cs_ids {
-            futs.push(self.changeset_children(ctx, cs_id));
-        }
-
-        while let Some(result) = futs.next().await {
-            let children = result?;
-
-            for child in children {
-                // If we haven't traversed this changeset yet, add it to the output
-                // and add a future to fetch its children to futs.
-                if visited.insert(child) {
-                    descendants.push(child);
-                    futs.push(self.changeset_children(ctx, child));
-                }
-            }
-        }
-
-        Ok(descendants)
-    }
-
     /// Returns the collection of changesets from the input changesets collection that do not have their parents in the input collection.
     pub async fn find_boundary(
         &self,
@@ -994,11 +1048,7 @@ impl CommitGraph {
             .map(|(cs_id, edges)| {
                 (
                     cs_id,
-                    edges
-                        .edges()
-                        .parents::<Parents>()
-                        .cloned()
-                        .collect::<Vec<_>>(),
+                    edges.edges().parents::<E>().cloned().collect::<Vec<_>>(),
                 )
             })
             .collect::<HashMap<_, _>>();

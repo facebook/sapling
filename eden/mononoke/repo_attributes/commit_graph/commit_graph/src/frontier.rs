@@ -11,7 +11,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use borrowed::borrowed;
 use commit_graph_types::edges::ChangesetNode;
-use commit_graph_types::edges::Parents;
+use commit_graph_types::edges::EdgeType;
 use commit_graph_types::frontier::ChangesetFrontier;
 use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
 use commit_graph_types::storage::Prefetch;
@@ -27,9 +27,9 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FIRST_GENERATION;
 use mononoke_types::Generation;
 
-use crate::CommitGraph;
+use crate::CommitGraphOps;
 
-impl CommitGraph {
+impl<E: EdgeType> CommitGraphOps<E> {
     /// Obtain a frontier of changesets from a single changeset id, which must
     /// exist.
     pub(crate) async fn single_frontier(
@@ -62,7 +62,7 @@ impl CommitGraph {
                         .get(&cs_id)
                         .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?
                         .node()
-                        .generation::<Parents>(),
+                        .generation::<E>(),
                 ))
             })
             .collect::<Result<_>>()
@@ -99,7 +99,7 @@ impl CommitGraph {
                         .get(&cs_id)
                         .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?
                         .node()
-                        .generation::<Parents>(),
+                        .generation::<E>(),
                     distance,
                 ))
             })
@@ -154,7 +154,7 @@ impl CommitGraph {
                         property_frontier.push(edges.node().cs_id);
                     } else {
                         let lowest_ancestor = edges
-                            .lowest_skip_tree_edge_with::<Parents, _, _>(|node| {
+                            .lowest_skip_tree_edge_with::<E, _, _>(|node| {
                                 borrowed!(property);
                                 async move { Ok(!property(node).await?) }
                             })
@@ -162,14 +162,14 @@ impl CommitGraph {
                         match lowest_ancestor {
                             Some(ancestor) => {
                                 frontier
-                                    .entry(ancestor.generation::<Parents>())
+                                    .entry(ancestor.generation::<E>())
                                     .or_default()
                                     .insert(ancestor.cs_id);
                             }
                             None => {
-                                for parent in edges.parents::<Parents>() {
+                                for parent in edges.parents::<E>() {
                                     frontier
-                                        .entry(parent.generation::<Parents>())
+                                        .entry(parent.generation::<E>())
                                         .or_default()
                                         .insert(parent.cs_id);
                                 }
@@ -206,7 +206,7 @@ impl CommitGraph {
             self.lower_frontier_step(
                 ctx,
                 frontier,
-                move |node| future::ready(Ok(node.generation::<Parents>() < target_generation)),
+                move |node| future::ready(Ok(node.generation::<E>() < target_generation)),
                 Prefetch::for_exact_skip_tree_traversal(target_generation),
             )
             .watched(ctx.logger())
@@ -233,9 +233,9 @@ impl CommitGraph {
                     .get(&cs_id)
                     .ok_or_else(|| anyhow!("Missing changeset in commit graph: {}", cs_id))?;
 
-                for parent in edges.parents::<Parents>() {
+                for parent in edges.parents::<E>() {
                     frontier
-                        .entry(parent.generation::<Parents>())
+                        .entry(parent.generation::<E>())
                         .or_default()
                         .insert(parent.cs_id);
                 }

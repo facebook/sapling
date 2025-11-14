@@ -564,7 +564,7 @@ impl CompactChangesetEdges {
     }
 }
 
-pub trait EdgeType: Default + Copy + Clone + Send + Sync {
+pub trait EdgeType: Default + Copy + Clone + Send + Sync + 'static {
     fn generation(node: &ChangesetNode) -> Generation;
     fn skip_tree_depth(node: &ChangesetNode) -> u64;
     fn parents(

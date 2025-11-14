@@ -206,7 +206,7 @@ where
     let common = common.into_iter().map(name_cs_id).collect();
 
     assert_eq!(
-        AncestorsStreamBuilder::new(Arc::new(graph.clone()), ctx.clone(), heads)
+        AncestorsStreamBuilder::new(Arc::new(graph.parents_graph()), ctx.clone(), heads)
             .exclude_ancestors_of(common)
             .without(property_fn)
             .build()
@@ -375,7 +375,8 @@ pub async fn assert_p1_linear_level_ancestor(
 ) -> Result<()> {
     assert_eq!(
         graph
-            .p1_linear_level_ancestor(ctx, name_cs_id(u), target_depth)
+            .p1_linear_graph()
+            .skip_tree_level_ancestor(ctx, name_cs_id(u), target_depth)
             .await?
             .map(|node| node.cs_id),
         u_level_ancestor.map(name_cs_id)
@@ -392,7 +393,8 @@ pub async fn assert_p1_linear_lowest_common_ancestor(
 ) -> Result<()> {
     assert_eq!(
         graph
-            .p1_linear_lowest_common_ancestor(ctx, name_cs_id(u), name_cs_id(v))
+            .p1_linear_graph()
+            .skip_tree_lowest_common_ancestor(ctx, name_cs_id(u), name_cs_id(v))
             .await?
             .map(|node| node.cs_id),
         lca.map(name_cs_id)

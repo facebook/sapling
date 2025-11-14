@@ -11,6 +11,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::fmt::Display;
 use std::future::Future;
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
@@ -1423,7 +1424,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         opts: ChangesetHistoryOptions,
     ) -> Result<BoxStream<'_, Result<ChangesetContext<R>, MononokeError>>, MononokeError> {
         let mut ancestors_stream_builder = AncestorsStreamBuilder::new(
-            self.repo_ctx().repo().commit_graph_arc(),
+            Arc::new(self.repo_ctx().repo().commit_graph().parents_graph()),
             self.ctx().clone(),
             vec![self.id()],
         );

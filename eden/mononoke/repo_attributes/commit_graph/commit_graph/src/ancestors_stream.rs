@@ -6,10 +6,11 @@
  */
 
 use std::pin::Pin;
+use std::sync::Arc;
 
 use anyhow::Result;
 use borrowed::borrowed;
-use commit_graph_types::edges::Parents;
+use commit_graph_types::edges::EdgeType;
 use commit_graph_types::frontier::ChangesetFrontier;
 use commit_graph_types::storage::Prefetch;
 use context::CoreContext;
@@ -23,8 +24,7 @@ use futures_ext::stream::FbStreamExt;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
 
-use crate::ArcCommitGraph;
-use crate::CommitGraph;
+use crate::CommitGraphOps;
 
 /// Builder for a reverse topologically ordered stream of changesets that
 /// are ancestors of any set of changesets (heads). This builder allows customizing
@@ -39,8 +39,8 @@ use crate::CommitGraph;
 ///   hold for one changeset then it mustn't hold for any of its parents).
 ///
 /// - including only changesets that are descendants of any one changeset.
-pub struct AncestorsStreamBuilder {
-    commit_graph: ArcCommitGraph,
+pub struct AncestorsStreamBuilder<E: EdgeType> {
+    commit_graph: Arc<CommitGraphOps<E>>,
     ctx: CoreContext,
     heads: Vec<ChangesetId>,
     common: Vec<ChangesetId>,
@@ -50,8 +50,12 @@ pub struct AncestorsStreamBuilder {
     >,
 }
 
-impl AncestorsStreamBuilder {
-    pub fn new(commit_graph: ArcCommitGraph, ctx: CoreContext, heads: Vec<ChangesetId>) -> Self {
+impl<E: EdgeType> AncestorsStreamBuilder<E> {
+    pub fn new(
+        commit_graph: Arc<CommitGraphOps<E>>,
+        ctx: CoreContext,
+        heads: Vec<ChangesetId>,
+    ) -> Self {
         Self {
             commit_graph,
             ctx,
@@ -113,8 +117,8 @@ impl AncestorsStreamBuilder {
     }
 
     pub async fn build(self) -> Result<BoxStream<'static, Result<ChangesetId>>> {
-        struct AncestorsStreamState {
-            commit_graph: ArcCommitGraph,
+        struct AncestorsStreamState<E: EdgeType> {
+            commit_graph: Arc<CommitGraphOps<E>>,
             ctx: CoreContext,
             heads: ChangesetFrontier,
             common: ChangesetFrontier,
@@ -131,7 +135,7 @@ impl AncestorsStreamBuilder {
                 stream::iter(self.heads)
                     .map(anyhow::Ok)
                     .try_filter_map(|head| {
-                        borrowed!(self.commit_graph: &CommitGraph, self.ctx);
+                        borrowed!(self.commit_graph: &CommitGraphOps<E>, self.ctx);
                         async move {
                             match commit_graph.is_ancestor(ctx, descendants_of, head).await? {
                                 true => Ok(Some(head)),
@@ -201,27 +205,27 @@ impl AncestorsStreamBuilder {
                         .await?;
 
                     for (_cs_id, edges) in all_edges.into_iter() {
-                        for parent in edges.parents::<Parents>() {
+                        for parent in edges.parents::<E>() {
                             if let Some((descendants_of, descendants_of_gen)) = descendants_of {
                                 // There is no need to query ancestry if the skip tree parent's generation number
                                 // is greater than or equal to the generation number of descendants_of. This is
                                 // because the skip tree parent is the common ancestor of all parents, and since
                                 // the current changeset is a descendant of descendants_of, all of its parents
                                 // will also be descendants of it.
-                                if !edges.skip_tree_parent::<Parents>().is_some_and(
-                                    |skip_tree_parent| {
-                                        skip_tree_parent.generation::<Parents>()
-                                            >= *descendants_of_gen
-                                    },
-                                ) && !commit_graph
-                                    .is_ancestor(ctx, *descendants_of, parent.changeset_id())
-                                    .await?
+                                if !edges
+                                    .skip_tree_parent::<E>()
+                                    .is_some_and(|skip_tree_parent| {
+                                        skip_tree_parent.generation::<E>() >= *descendants_of_gen
+                                    })
+                                    && !commit_graph
+                                        .is_ancestor(ctx, *descendants_of, parent.changeset_id())
+                                        .await?
                                 {
                                     continue;
                                 }
                             }
                             heads
-                                .entry(parent.generation::<Parents>())
+                                .entry(parent.generation::<E>())
                                 .or_default()
                                 .insert(parent.cs_id);
                         }
