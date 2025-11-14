@@ -136,7 +136,10 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
     assert_eq!(
         storage
             .fetch_many_edges_in_id_range(&ctx, 1, 10, 10, false)
-            .await?,
+            .await?
+            .into_iter()
+            .map(|(k, (_, v))| (k, v))
+            .collect::<HashMap<_, _>>(),
         ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
             .into_iter()
             .map(|id| {
@@ -148,7 +151,10 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
     assert_eq!(
         storage
             .fetch_many_edges_in_id_range(&ctx, 1, 10, 5, false)
-            .await?,
+            .await?
+            .into_iter()
+            .map(|(k, (_, v))| (k, v))
+            .collect::<HashMap<_, _>>(),
         ["A", "B", "C", "D", "E"]
             .into_iter()
             .map(|id| {
@@ -160,7 +166,10 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
     assert_eq!(
         storage
             .fetch_many_edges_in_id_range(&ctx, 4, 6, 100, false)
-            .await?,
+            .await?
+            .into_iter()
+            .map(|(k, (_, v))| (k, v))
+            .collect::<HashMap<_, _>>(),
         ["D", "E", "F"]
             .into_iter()
             .map(|id| {

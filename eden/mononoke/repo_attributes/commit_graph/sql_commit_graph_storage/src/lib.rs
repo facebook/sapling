@@ -193,6 +193,7 @@ macro_rules! fetch_commit_graph_edges {
         concat!(
             $query,
             "SELECT
+                cs0.id AS id,
                 cs0.cs_id AS cs_id,
                 csp.origin_cs_id AS origin_cs_id,
                 NULL AS gen,
@@ -261,6 +262,7 @@ macro_rules! fetch_commit_graph_edges {
             UNION
 
             SELECT
+                cs0.id AS id,
                 cs0.cs_id AS cs_id,
                 csp.origin_cs_id AS origin_cs_id,
                 NULL AS gen,
@@ -329,6 +331,7 @@ macro_rules! fetch_commit_graph_edges {
             UNION
 
             SELECT
+                cs0.id AS id,
                 cs0.cs_id AS cs_id,
                 csp.origin_cs_id AS origin_cs_id,
                 cs0.gen AS gen,
@@ -561,6 +564,7 @@ mononoke_queries! {
     }
 
     read SelectManyChangesets(repo_id: RepositoryId, >list cs_ids: ChangesetId) -> (
+        u64, // id
         ChangesetId, // cs_id
         Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
@@ -631,6 +635,7 @@ mononoke_queries! {
     }
 
     read SelectManyChangesetsWithFirstParentPrefetch(repo_id: RepositoryId, step_limit: u64, prefetch_gen: u64, >list cs_ids: ChangesetId) -> (
+        u64, // id
         ChangesetId, // cs_id
         Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
@@ -708,6 +713,7 @@ mononoke_queries! {
     }
 
     read SelectManyChangesetsWithExactSkipTreeAncestorPrefetch(repo_id: RepositoryId, prefetch_gen: u64, >list cs_ids: ChangesetId) -> (
+        u64, // id
         ChangesetId, // cs_id
         Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
@@ -797,6 +803,7 @@ mononoke_queries! {
 
     // The only difference between mysql and sqlite is the FORCE INDEX
     read SelectManyChangesetsInIdRange(repo_id: RepositoryId, start_id: u64, end_id: u64, limit: u64) -> (
+        u64, // id
         ChangesetId, // cs_id
         Option<ChangesetId>, // origin_cs_id
         Option<u64>, // gen
@@ -1006,6 +1013,7 @@ mononoke_queries! {
 }
 
 type FetchedEdgesRow = (
+    u64,                 // id
     ChangesetId,         // cs_id
     Option<ChangesetId>, // origin_cs_id
     Option<u64>,         // gen
@@ -1070,7 +1078,7 @@ type FetchedEdgesRow = (
 impl SqlCommitGraphStorage {
     fn collect_changeset_edges_impl(
         fetched_rows: &[FetchedEdgesRow],
-    ) -> HashMap<(ChangesetId, Option<ChangesetId>), FetchedChangesetEdges> {
+    ) -> HashMap<(ChangesetId, Option<ChangesetId>), (u64, FetchedChangesetEdges)> {
         let option_fields_to_option_node =
             |cs_id,
              r#gen,
@@ -1101,6 +1109,7 @@ impl SqlCommitGraphStorage {
         for row in fetched_rows.iter() {
             match *row {
                 (
+                    id,
                     cs_id,
                     origin_cs_id,
                     Some(r#gen),
@@ -1225,6 +1234,7 @@ impl SqlCommitGraphStorage {
                         (cs_id, origin_cs_id),
                         (
                             origin_cs_id,
+                            id,
                             ChangesetEdgesMut {
                                 node: ChangesetNode::new(
                                     cs_id,
@@ -1254,6 +1264,7 @@ impl SqlCommitGraphStorage {
         for row in fetched_rows {
             match *row {
                 (
+                    _id,
                     cs_id,
                     origin_cs_id,
                     ..,
@@ -1266,7 +1277,7 @@ impl SqlCommitGraphStorage {
                     Some(parent_p1_linear_depth),
                     parent_subtree_source_depth,
                 ) => {
-                    if let Some((_, edges)) =
+                    if let Some((_, _, edges)) =
                         cs_id_and_origin_to_edges.get_mut(&(cs_id, origin_cs_id))
                     {
                         edges.parents.push(ChangesetNode::new(
@@ -1280,6 +1291,7 @@ impl SqlCommitGraphStorage {
                     }
                 }
                 (
+                    _id,
                     cs_id,
                     origin_cs_id,
                     ..,
@@ -1292,7 +1304,7 @@ impl SqlCommitGraphStorage {
                     Some(subtree_source_p1_linear_depth),
                     subtree_source_subtree_source_depth,
                 ) => {
-                    if let Some((_, edges)) =
+                    if let Some((_, _, edges)) =
                         cs_id_and_origin_to_edges.get_mut(&(cs_id, origin_cs_id))
                     {
                         edges.subtree_sources.push(ChangesetNode::new(
@@ -1314,8 +1326,11 @@ impl SqlCommitGraphStorage {
 
         cs_id_and_origin_to_edges
             .into_iter()
-            .map(|(k, (origin_cs_id, edges))| {
-                (k, FetchedChangesetEdges::new(origin_cs_id, edges.freeze()))
+            .map(|(k, (origin_cs_id, id, edges))| {
+                (
+                    k,
+                    (id, FetchedChangesetEdges::new(origin_cs_id, edges.freeze())),
+                )
             })
             .collect()
     }
@@ -1327,7 +1342,7 @@ impl SqlCommitGraphStorage {
         let cs_id_and_origin_to_edges = Self::collect_changeset_edges_impl(fetched_rows);
         cs_id_and_origin_to_edges
             .into_iter()
-            .map(|((cs_id, _origin_cs_id), edges)| (cs_id, edges))
+            .map(|((cs_id, _origin_cs_id), (_id, edges))| (cs_id, edges))
             .collect()
     }
 
@@ -1338,7 +1353,9 @@ impl SqlCommitGraphStorage {
         let edges = Self::collect_changeset_edges_impl(fetched_rows);
         edges
             .into_iter()
-            .flat_map(|((_cs_id, origin_cs_id), edges)| origin_cs_id.map(|origin| (origin, edges)))
+            .flat_map(|((_cs_id, origin_cs_id), (_id, edges))| {
+                origin_cs_id.map(|origin| (origin, edges))
+            })
             .into_group_map()
     }
 
@@ -1463,21 +1480,21 @@ impl SqlCommitGraphStorage {
         end_id: u64,
         limit: u64,
         read_from_master: bool,
-    ) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
-        Ok(Self::collect_changeset_edges(
-            &SelectManyChangesetsInIdRange::query(
-                self.read_conn(read_from_master),
-                ctx.sql_query_telemetry(),
-                &self.repo_id,
-                &start_id,
-                &end_id,
-                &limit,
-            )
-            .await?,
+    ) -> Result<HashMap<ChangesetId, (u64, ChangesetEdges)>> {
+        let fetched_rows = SelectManyChangesetsInIdRange::query(
+            self.read_conn(read_from_master),
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            &start_id,
+            &end_id,
+            &limit,
         )
-        .into_iter()
-        .map(|(k, v)| (k, v.into()))
-        .collect())
+        .await?;
+        let cs_id_and_origin_to_edges = Self::collect_changeset_edges_impl(&fetched_rows);
+        Ok(cs_id_and_origin_to_edges
+            .into_iter()
+            .map(|((cs_id, _origin_cs_id), (id, edges))| (cs_id, (id, ChangesetEdges::from(edges))))
+            .collect())
     }
 
     /// Fetch a maximum of `limit` changeset ids for changesets having

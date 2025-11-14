@@ -79,7 +79,7 @@ async fn try_fetch_chunk(
     chunk_size: u64,
     mut sql_retries: u64,
     sleep_ms: u64,
-) -> Result<HashMap<ChangesetId, ChangesetEdges>> {
+) -> Result<HashMap<ChangesetId, (u64, ChangesetEdges)>> {
     loop {
         match sql_storage
             .fetch_many_edges_in_id_range(ctx, start_id, end_id, chunk_size, false)
@@ -179,7 +179,7 @@ pub(super) async fn update_preloaded(
             max_id_in_chunk
         );
 
-        for (_cs_id, edges) in edges_chunk {
+        for (_cs_id, (_id, edges)) in edges_chunk {
             extendable_preloaded_edges.add(edges)?;
         }
         extendable_preloaded_edges.update_max_sql_id(max_id_in_chunk);
