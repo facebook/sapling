@@ -525,17 +525,17 @@ impl<'a> DiffRouter<'a> {
         // Convert the response back to mononoke_api::MetadataDiff
         Ok(mononoke_api::MetadataDiff {
             old_file_info: mononoke_api::MetadataDiffFileInfo {
-                file_type: convert_file_type(response.other_file_info.file_type)?,
-                file_content_type: convert_content_type(response.other_file_info.content_type)?,
-                file_generated_status: convert_generated_status(
-                    response.other_file_info.generated_status,
-                )?,
-            },
-            new_file_info: mononoke_api::MetadataDiffFileInfo {
                 file_type: convert_file_type(response.base_file_info.file_type)?,
                 file_content_type: convert_content_type(response.base_file_info.content_type)?,
                 file_generated_status: convert_generated_status(
                     response.base_file_info.generated_status,
+                )?,
+            },
+            new_file_info: mononoke_api::MetadataDiffFileInfo {
+                file_type: convert_file_type(response.other_file_info.file_type)?,
+                file_content_type: convert_content_type(response.other_file_info.content_type)?,
+                file_generated_status: convert_generated_status(
+                    response.other_file_info.generated_status,
                 )?,
             },
             lines_count: response
