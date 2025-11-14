@@ -174,6 +174,7 @@ pub fn to_identical_changeset(
         committer_time: committer_date.map(|d| d.timestamp_secs()),
         committer_tz: committer_date.map(|d| d.tz_offset_secs()),
         git_extra_headers: git_extra,
+        subtree_changes: None,
     })
 }
 

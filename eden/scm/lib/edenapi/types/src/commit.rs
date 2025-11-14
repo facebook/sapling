@@ -730,6 +730,24 @@ impl FromIterator<BonsaiChangesetId> for BonsaiParents {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub enum SubtreeChange {
+    DeepCopy {
+        from_path: RepoPathBuf,
+        from_cs_id: BonsaiChangesetId,
+    },
+    Merge {
+        from_path: RepoPathBuf,
+        from_cs_id: BonsaiChangesetId,
+    },
+    Import {
+        from_path: RepoPathBuf,
+        from_commit: String,
+        from_repo_url: String,
+    },
+}
+
 #[auto_wire]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
@@ -766,6 +784,8 @@ pub struct IdenticalChangesetContent {
     pub committer_tz: Option<i32>,
     #[id(16)]
     pub git_extra_headers: Option<Vec<GitExtraHeader>>,
+    #[id(17)]
+    pub subtree_changes: Option<Vec<(RepoPathBuf, SubtreeChange)>>,
 }
 
 impl From<IdenticalChangesetContent> for HgChangesetContent {

@@ -62,6 +62,7 @@ use edenapi_types::UploadHgChangesetsRequest;
 use edenapi_types::UploadIdenticalChangesetsRequest;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
+use edenapi_types::commit::SubtreeChange as EdenapiSubtreeChange;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::EphemeralBlobstoreError;
 use futures::FutureExt;
@@ -100,6 +101,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::FileChange;
 use mononoke_types::Globalrev;
+use mononoke_types::SubtreeChange;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::sha1_hash::Sha1;
 use rate_limiting::Metric;
@@ -1374,6 +1376,42 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                         None
                     };
 
+                    let subtree_changes = ics
+                        .subtree_changes
+                        .clone()
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|(path, stc)| {
+                            let mpath = to_mpath(path)?;
+                            let subtree_change = match stc {
+                                EdenapiSubtreeChange::DeepCopy {
+                                    from_path,
+                                    from_cs_id,
+                                } => SubtreeChange::deep_copy(
+                                    to_mpath(from_path)?,
+                                    ChangesetId::from(from_cs_id),
+                                ),
+                                EdenapiSubtreeChange::Merge {
+                                    from_path,
+                                    from_cs_id,
+                                } => SubtreeChange::merge(
+                                    to_mpath(from_path)?,
+                                    ChangesetId::from(from_cs_id),
+                                ),
+                                EdenapiSubtreeChange::Import {
+                                    from_path,
+                                    from_commit,
+                                    from_repo_url,
+                                } => SubtreeChange::import(
+                                    to_mpath(from_path)?,
+                                    from_commit,
+                                    from_repo_url,
+                                ),
+                            };
+                            Ok((mpath, subtree_change))
+                        })
+                        .collect::<Result<_, MononokeError>>()?;
+
                     let bcs = BonsaiChangesetMut {
                         parents,
                         author: ics.author.clone(),
@@ -1387,7 +1425,7 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                         git_tree_hash: None,
                         is_snapshot: false,
                         git_annotated_tag: None,
-                        subtree_changes: Default::default(),
+                        subtree_changes,
                     }
                     .freeze()?;
 

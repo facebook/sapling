@@ -23,6 +23,7 @@ use crate::commit::CommitHashToLocationResponse;
 use crate::commit::EphemeralExtendResponse;
 use crate::commit::EphemeralPrepareResponse;
 use crate::commit::ExtendBubbleTtlOutcome;
+use crate::commit::SubtreeChange;
 pub use crate::commit::WireBonsaiExtra;
 pub use crate::commit::WireCommitGraphEntry;
 pub use crate::commit::WireCommitGraphRequest;
@@ -50,6 +51,7 @@ use crate::wire::WireRepoPathBuf;
 use crate::wire::WireResult;
 use crate::wire::WireToApiConversionError;
 use crate::wire::WireUploadToken;
+use crate::wire::anyid::WireBonsaiChangesetId;
 use crate::wire::is_default;
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
@@ -437,6 +439,68 @@ impl ToApi for WireBonsaiChangesetContent {
             message: self.message,
             is_snapshot: self.snapshot_state.is_some(),
         })
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub enum WireSubtreeChange {
+    #[serde(rename = "1")]
+    DeepCopy(WireRepoPathBuf, WireBonsaiChangesetId),
+
+    #[serde(rename = "2")]
+    Merge(WireRepoPathBuf, WireBonsaiChangesetId),
+
+    #[serde(rename = "3")]
+    Import(WireRepoPathBuf, String, String),
+
+    #[serde(other, rename = "0")]
+    Unknown,
+}
+
+impl ToWire for SubtreeChange {
+    type Wire = WireSubtreeChange;
+    fn to_wire(self) -> Self::Wire {
+        match self {
+            Self::DeepCopy {
+                from_path,
+                from_cs_id,
+            } => WireSubtreeChange::DeepCopy(from_path.to_wire(), from_cs_id.to_wire()),
+            Self::Merge {
+                from_path,
+                from_cs_id,
+            } => WireSubtreeChange::Merge(from_path.to_wire(), from_cs_id.to_wire()),
+            Self::Import {
+                from_path,
+                from_commit,
+                from_repo_url,
+            } => WireSubtreeChange::Import(from_path.to_wire(), from_commit, from_repo_url),
+        }
+    }
+}
+
+impl ToApi for WireSubtreeChange {
+    type Api = SubtreeChange;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        match self {
+            Self::DeepCopy(from_path, from_cs_id) => Ok(SubtreeChange::DeepCopy {
+                from_path: from_path.to_api()?,
+                from_cs_id: from_cs_id.to_api()?,
+            }),
+            Self::Merge(from_path, from_cs_id) => Ok(SubtreeChange::Merge {
+                from_path: from_path.to_api()?,
+                from_cs_id: from_cs_id.to_api()?,
+            }),
+            Self::Import(from_path, from_commit, from_repo_url) => Ok(SubtreeChange::Import {
+                from_path: from_path.to_api()?,
+                from_commit,
+                from_repo_url,
+            }),
+            Self::Unknown => Err(WireToApiConversionError::UnrecognizedEnumVariant(
+                "WireSubtreeChange",
+            )),
+        }
     }
 }
 
