@@ -11,6 +11,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use borrowed::borrowed;
 use commit_graph_types::edges::ChangesetNode;
+use commit_graph_types::edges::Parents;
 use commit_graph_types::frontier::ChangesetFrontier;
 use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
 use commit_graph_types::storage::Prefetch;
@@ -120,7 +121,7 @@ impl CommitGraph {
         prefetch: Prefetch,
     ) -> Result<Option<Vec<ChangesetId>>>
     where
-        Property: Fn(ChangesetNode) -> Out + Send + Sync,
+        Property: Fn(&ChangesetNode) -> Out + Send + Sync,
         Out: Future<Output = Result<bool>>,
     {
         match frontier.pop_last() {
@@ -135,7 +136,7 @@ impl CommitGraph {
                 let property_map = stream::iter(frontier_edges.clone())
                     .map(|(cs_id, edges)| {
                         borrowed!(property);
-                        async move { anyhow::Ok((cs_id, property(edges.node).await?)) }
+                        async move { anyhow::Ok((cs_id, property(&edges.node).await?)) }
                     })
                     .buffered(100)
                     .try_collect::<HashMap<_, _>>()
@@ -153,7 +154,7 @@ impl CommitGraph {
                         property_frontier.push(edges.node.cs_id);
                     } else {
                         let lowest_ancestor = edges
-                            .lowest_skip_tree_edge_with(|node| {
+                            .lowest_skip_tree_edge_with::<Parents, _, _>(|node| {
                                 borrowed!(property);
                                 async move { Ok(!property(node).await?) }
                             })

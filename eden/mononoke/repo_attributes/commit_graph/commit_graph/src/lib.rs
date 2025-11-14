@@ -349,7 +349,7 @@ impl CommitGraph {
         let mut ancestors_frontier = vec![];
         let mut frontier = self.frontier(ctx, heads).await?;
 
-        let monotonic_property = move |node: ChangesetNode| {
+        let monotonic_property = move |node: &ChangesetNode| {
             borrowed!(monotonic_property);
             monotonic_property(node.cs_id)
         };

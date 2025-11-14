@@ -14,6 +14,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use anyhow::anyhow;
 use cloned::cloned;
+use commit_graph_types::edges::Parents;
 use commit_graph_types::segments::ChangesetSegment;
 use commit_graph_types::segments::ChangesetSegmentFrontier;
 use commit_graph_types::segments::ChangesetSegmentLocation;
@@ -1064,7 +1065,7 @@ impl CommitGraph {
                         })?;
 
                         if let Some(ancestor) = edges
-                            .lowest_skip_tree_edge_with(|ancestor| {
+                            .lowest_skip_tree_edge_with::<Parents, _, _>(|ancestor| {
                                 futures::future::ok(ancestor.generation >= targets_generation)
                             })
                             .await?
