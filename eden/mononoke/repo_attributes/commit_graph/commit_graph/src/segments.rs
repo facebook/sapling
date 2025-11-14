@@ -14,6 +14,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use anyhow::anyhow;
 use cloned::cloned;
+use commit_graph_types::edges::EdgeType;
 use commit_graph_types::edges::Parents;
 use commit_graph_types::segments::ChangesetSegment;
 use commit_graph_types::segments::ChangesetSegmentFrontier;
@@ -44,13 +45,14 @@ use crate::CommitGraph;
 /// A set that stores changeset ids and keeps track of all changesets
 /// reachable from them by following skew binary ancestor edges.
 #[derive(Default, Debug)]
-struct SkewAncestorsSet {
+struct SkewAncestorsSet<E: EdgeType> {
     changesets: BTreeMap<Generation, HashSet<ChangesetId>>,
     skew_ancestors: HashMap<ChangesetId, HashSet<ChangesetId>>,
     skew_ancestors_counts: HashMap<ChangesetId, usize>,
+    _phantom: std::marker::PhantomData<E>,
 }
 
-impl SkewAncestorsSet {
+impl<E: EdgeType> SkewAncestorsSet<E> {
     /// Add changesets to the set.
     pub async fn add(
         &mut self,
@@ -73,7 +75,7 @@ impl SkewAncestorsSet {
                 let mut cs_edges = fetched_edges.into_edges();
                 if self
                     .changesets
-                    .entry(cs_edges.node().generation::<Parents>())
+                    .entry(cs_edges.node().generation::<E>())
                     .or_default()
                     .insert(cs_id)
                 {
@@ -89,10 +91,9 @@ impl SkewAncestorsSet {
                             .entry(cs_edges.node().cs_id)
                             .or_default() += 1;
 
-                        match cs_edges.skip_tree_skew_ancestor::<Parents>() {
+                        match cs_edges.skip_tree_skew_ancestor::<E>() {
                             Some(skip_tree_skew_ancestor)
-                                if skip_tree_skew_ancestor.generation::<Parents>()
-                                    >= base_generation =>
+                                if skip_tree_skew_ancestor.generation::<E>() >= base_generation =>
                             {
                                 cs_edges = storage
                                     .fetch_edges(ctx, skip_tree_skew_ancestor.cs_id)
@@ -240,8 +241,8 @@ impl CommitGraph {
     )> {
         let base_edges = self.storage.fetch_edges(ctx, base).await?;
 
-        let mut heads_skew_ancestors_set: SkewAncestorsSet = Default::default();
-        let mut common_skew_ancestors_set: SkewAncestorsSet = Default::default();
+        let mut heads_skew_ancestors_set: SkewAncestorsSet<Parents> = Default::default();
+        let mut common_skew_ancestors_set: SkewAncestorsSet<Parents> = Default::default();
 
         futures::try_join!(
             heads_skew_ancestors_set.add(
