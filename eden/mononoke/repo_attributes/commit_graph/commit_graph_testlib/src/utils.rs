@@ -79,17 +79,37 @@ pub fn name_cs_node(
     )
 }
 
-/// Build a commit graph from an ASCII-art dag.
+/// Build a commit graph from an ASCII-art dag, adding commits one by one.
 pub async fn from_dag(
     ctx: &CoreContext,
     dag: &str,
     storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<CommitGraph> {
+    from_dag_impl(ctx, dag, storage, false).await
+}
+
+/// Build a commit graph from an ASCII-art dag, adding commits in a single batch.
+pub async fn from_dag_batch(
+    ctx: &CoreContext,
+    dag: &str,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<CommitGraph> {
+    from_dag_impl(ctx, dag, storage, true).await
+}
+
+/// Implementation of from_dag that can either add commits one by one or in a batch.
+async fn from_dag_impl(
+    ctx: &CoreContext,
+    dag: &str,
+    storage: Arc<dyn CommitGraphStorageTest>,
+    batch: bool,
 ) -> Result<CommitGraph> {
     let mut added: BTreeMap<String, ChangesetId> = BTreeMap::new();
     let dag = drawdag::parse(dag);
 
     let graph = CommitGraph::new(storage);
     let graph_writer = BaseCommitGraphWriter::new(graph.clone());
+    let mut entries = Vec::new();
 
     while added.len() < dag.len() {
         let mut made_progress = false;
@@ -107,9 +127,15 @@ pub async fn from_dag(
             let parent_ids = parents.iter().map(|parent| added[parent].clone()).collect();
 
             let cs_id = name_cs_id(name);
-            graph_writer
-                .add(ctx, cs_id, parent_ids, Default::default())
-                .await?;
+
+            if batch {
+                entries.push((cs_id, parent_ids, Default::default()));
+            } else {
+                graph_writer
+                    .add(ctx, cs_id, parent_ids, Default::default())
+                    .await?;
+            }
+
             added.insert(name.clone(), cs_id);
             made_progress = true;
         }
@@ -117,6 +143,11 @@ pub async fn from_dag(
             anyhow::bail!("Graph contains cycles");
         }
     }
+
+    if batch && let Ok(entries) = entries.try_into() {
+        graph_writer.add_many(ctx, entries).await?;
+    }
+
     Ok(graph)
 }
 
