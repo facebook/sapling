@@ -210,7 +210,7 @@ void processBothPresent(
   }
 }
 
-FOLLY_NODISCARD ImmediateFuture<Unit> waitOnResults(
+[[nodiscard]] ImmediateFuture<Unit> waitOnResults(
     DiffContext* context,
     ChildFutures&& childFutures) {
   XDCHECK_EQ(childFutures.paths.size(), childFutures.futures.size());
@@ -237,7 +237,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> waitOnResults(
  *
  * The differences will be recorded using a callback provided by the caller.
  */
-FOLLY_NODISCARD ImmediateFuture<Unit> computeTreeDiff(
+[[nodiscard]] ImmediateFuture<Unit> computeTreeDiff(
     DiffContext* context,
     RelativePathPiece currentPath,
     TreePtr scmTree,
@@ -286,7 +286,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> computeTreeDiff(
   return waitOnResults(context, std::move(childFutures));
 }
 
-FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
+[[nodiscard]] ImmediateFuture<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
     TreePtr scmTree,
@@ -303,7 +303,7 @@ FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
       context, currentPath, std::move(scmTree), std::move(wdTree));
 }
 
-FOLLY_NODISCARD ImmediateFuture<Unit> diffTrees(
+[[nodiscard]] ImmediateFuture<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
     ImmediateFuture<TreeAndId> scmFuture,

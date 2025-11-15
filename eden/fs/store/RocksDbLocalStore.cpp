@@ -485,7 +485,7 @@ StoreResult RocksDbLocalStore::get(KeySpace keySpace, ByteRange key) const {
   return StoreResult(std::move(value));
 }
 
-FOLLY_NODISCARD ImmediateFuture<StoreResult>
+[[nodiscard]] ImmediateFuture<StoreResult>
 RocksDbLocalStore::getImmediateFuture(KeySpace keySpace, const ObjectId& key)
     const {
   // Reading from a ReloadableConfig is expensive, so we only read the async
@@ -504,7 +504,7 @@ RocksDbLocalStore::getImmediateFuture(KeySpace keySpace, const ObjectId& key)
   }
 }
 
-FOLLY_NODISCARD ImmediateFuture<std::vector<StoreResult>>
+[[nodiscard]] ImmediateFuture<std::vector<StoreResult>>
 RocksDbLocalStore::getBatch(
     KeySpace keySpace,
     const std::vector<folly::ByteRange>& keys) const {

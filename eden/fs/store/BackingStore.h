@@ -306,7 +306,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
    * The caller is responsible for making sure that the HashRange stays valid
    * for as long as the returned SemiFuture.
    */
-  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
+  [[nodiscard]] virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange /*ids*/,
       const ObjectFetchContextPtr& /*context*/) {
     return folly::unit;

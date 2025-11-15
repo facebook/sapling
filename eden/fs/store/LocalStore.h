@@ -117,11 +117,11 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * Note that changing the implementation of this function can drastically
    * affect EdenFS performance. Extreme care must be taken when modifying it.
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<StoreResult> getImmediateFuture(
+  [[nodiscard]] virtual ImmediateFuture<StoreResult> getImmediateFuture(
       KeySpace keySpace,
       const ObjectId& id) const;
 
-  FOLLY_NODISCARD virtual ImmediateFuture<std::vector<StoreResult>> getBatch(
+  [[nodiscard]] virtual ImmediateFuture<std::vector<StoreResult>> getBatch(
       KeySpace keySpace,
       const std::vector<folly::ByteRange>& keys) const;
 
