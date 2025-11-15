@@ -99,10 +99,10 @@ impl<S: Stream> Stream for YieldPeriodically<'_, S> {
         match this.current_budget.checked_sub(elapsed) {
             Some(new_budget) => *this.current_budget = new_budget,
             None => {
-                if let Some(on_large_overshoot) = &this.on_large_overshoot {
-                    if (elapsed - current_budget) > *this.budget * BUDGET_OVERSHOOT_MULTIPLIER {
-                        (on_large_overshoot)(current_budget, elapsed);
-                    }
+                if let Some(on_large_overshoot) = &this.on_large_overshoot
+                    && (elapsed - current_budget) > *this.budget * BUDGET_OVERSHOOT_MULTIPLIER
+                {
+                    (on_large_overshoot)(current_budget, elapsed);
                 }
                 *this.must_yield = true;
                 *this.current_budget = *this.budget;
