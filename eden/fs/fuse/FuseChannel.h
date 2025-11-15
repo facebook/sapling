@@ -363,7 +363,7 @@ class FuseChannel final : public FsChannel {
    * Callers should normally use via() to perform any additional work in
    * another executor thread.
    */
-  FOLLY_NODISCARD folly::Future<StopFuture> initialize() override;
+  [[nodiscard]] folly::Future<StopFuture> initialize() override;
 
   /**
    * Initialize the FuseChannel when taking over an existing FuseDevice.
@@ -392,7 +392,7 @@ class FuseChannel final : public FsChannel {
    * FuseChannel. The future returned by initialize() will be fulfilled with a
    * non-takeover StopData.
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount(
+  [[nodiscard]] folly::SemiFuture<folly::Unit> unmount(
       UnmountOptions options) override;
 
   /**
@@ -448,7 +448,7 @@ class FuseChannel final : public FsChannel {
    * The returned Future will complete once all invalidation operations
    * scheduled before this completeInvalidations() call have finished.
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> completeInvalidations() override;
+  [[nodiscard]] ImmediateFuture<folly::Unit> completeInvalidations() override;
 
   /**
    * Sends a reply to a kernel request that consists only of the error

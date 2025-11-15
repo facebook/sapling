@@ -69,7 +69,7 @@ class ConfigSettingBase {
    * Parse and set the value for the provided ConfigSourceType.
    * @return Optional will have error message if the value was invalid.
    */
-  FOLLY_NODISCARD virtual folly::Expected<folly::Unit, std::string>
+  [[nodiscard]] virtual folly::Expected<folly::Unit, std::string>
   setStringValue(
       std::string_view stringValue,
       const ConfigVariables& substitutions,
