@@ -151,7 +151,7 @@ class Nfsd3 final : public FsChannel {
     return "nfs3";
   }
 
-  FOLLY_NODISCARD folly::Future<StopFuture> initialize() override;
+  [[nodiscard]] folly::Future<StopFuture> initialize() override;
 
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
   void initialize(folly::File connectedSocket);
@@ -164,7 +164,7 @@ class Nfsd3 final : public FsChannel {
    * shuts down the Nfsd3. The future returned by initialize() will be fulfilled
    * with a non-takeover StopData.
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount(
+  [[nodiscard]] folly::SemiFuture<folly::Unit> unmount(
       UnmountOptions /* options */) override;
 
   /**

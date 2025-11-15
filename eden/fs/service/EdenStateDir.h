@@ -50,11 +50,10 @@ class EdenStateDir {
    * May throw an exception on other errors (e.g., insufficient permissions to
    * create the lock file, out of disk space, etc).
    */
-  FOLLY_NODISCARD
+  [[nodiscard]]
   std::pair<
       bool /* is_lock_aquired */,
-      std::optional<std::string> /* old_daemon_pid */>
-  acquireLock();
+      std::optional<std::string> /* old_daemon_pid */> acquireLock();
 
   /**
    * Take over the lock file from another process, and return the old EdenFS

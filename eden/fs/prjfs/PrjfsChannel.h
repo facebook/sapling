@@ -607,7 +607,7 @@ class PrjfsChannel : public FsChannel {
    * This can fail when the underlying file cannot be evicted from ProjectedFS,
    * one example is when the user has locked the file.
    */
-  FOLLY_NODISCARD virtual folly::Try<folly::Unit> removeCachedFile(
+  [[nodiscard]] virtual folly::Try<folly::Unit> removeCachedFile(
       RelativePathPiece path);
 
   /**
@@ -616,7 +616,7 @@ class PrjfsChannel : public FsChannel {
    * This particularly matters for directories that were created by the user to
    * later be committed.
    */
-  FOLLY_NODISCARD virtual folly::Try<folly::Unit> addDirectoryPlaceholder(
+  [[nodiscard]] virtual folly::Try<folly::Unit> addDirectoryPlaceholder(
       RelativePathPiece path);
 
   ImmediateFuture<folly::Unit> completeInvalidations() override;

@@ -106,23 +106,23 @@ class PrivHelper {
    * Returns a folly::File object with the file descriptor containing the fuse
    * connection.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::File> fuseMount(
+  [[nodiscard]] virtual folly::Future<folly::File> fuseMount(
       folly::StringPiece mountPath,
       bool readOnly,
       folly::StringPiece vfsType) = 0;
 
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> nfsMount(
+  [[nodiscard]] virtual folly::Future<folly::Unit> nfsMount(
       folly::StringPiece mountPath,
       const NFSMountOptions& options) = 0;
 
   /**
    * Ask the privileged helper process to perform a fuse unmount.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fuseUnmount(
+  [[nodiscard]] virtual folly::Future<folly::Unit> fuseUnmount(
       folly::StringPiece mountPath,
       const UnmountOptions& options) = 0;
 
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> nfsUnmount(
+  [[nodiscard]] virtual folly::Future<folly::Unit> nfsUnmount(
       folly::StringPiece mountPath) = 0;
 
   /**
@@ -131,11 +131,11 @@ class PrivHelper {
    * @param mountPath Absolute path to the mount point directory where the bind
    *     mount should be created.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> bindMount(
+  [[nodiscard]] virtual folly::Future<folly::Unit> bindMount(
       folly::StringPiece clientPath,
       folly::StringPiece mountPath) = 0;
 
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> bindUnMount(
+  [[nodiscard]] virtual folly::Future<folly::Unit> bindUnMount(
       folly::StringPiece mountPath) = 0;
 
   /**
@@ -143,14 +143,14 @@ class PrivHelper {
    * graceful restart, and a new edenfs daemon will take over our existing
    * mount points without unmounting them.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> takeoverShutdown(
+  [[nodiscard]] virtual folly::Future<folly::Unit> takeoverShutdown(
       folly::StringPiece mountPath) = 0;
 
   /**
    * Inform the privhelper process that we have taken over an existing mount
    * point from another edenfs process.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> takeoverStartup(
+  [[nodiscard]] virtual folly::Future<folly::Unit> takeoverStartup(
       folly::StringPiece mountPath,
       const std::vector<std::string>& bindMounts) = 0;
 
@@ -158,7 +158,7 @@ class PrivHelper {
    * Tell the privhelper server to write all future log messages to the
    * specified file descriptor.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> setLogFile(
+  [[nodiscard]] virtual folly::Future<folly::Unit> setLogFile(
       folly::File logFile) = 0;
 
   /**
@@ -168,20 +168,20 @@ class PrivHelper {
    * it is equivalent to our FuseChannel::fuseRequestTimeout_ value, except
    * that the consequence of exceeding the timeout is that the FUSE session
    * is torn down. */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> setDaemonTimeout(
+  [[nodiscard]] virtual folly::Future<folly::Unit> setDaemonTimeout(
       std::chrono::nanoseconds duration) = 0;
 
   /**
    * Tell the privhelper server whether it should try loading /dev/edenfs
    * rather than the system fuse implementation.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> setUseEdenFs(
+  [[nodiscard]] virtual folly::Future<folly::Unit> setUseEdenFs(
       bool useEdenFs) = 0;
 
   /**
    * Get the PID of the privhelper server
    */
-  FOLLY_NODISCARD virtual folly::Future<pid_t> getServerPid() = 0;
+  [[nodiscard]] virtual folly::Future<pid_t> getServerPid() = 0;
 
   /**
    * Start File Access Monitor(FAM).
@@ -190,7 +190,7 @@ class PrivHelper {
    * @param outputPath The path to the output file.
    * @return pid of the started FAM process
    */
-  FOLLY_NODISCARD virtual folly::Future<pid_t> startFam(
+  [[nodiscard]] virtual folly::Future<pid_t> startFam(
       const std::vector<std::string>& paths,
       const std::string& tmpOutputPath,
       const std::string& specifiedOutputPath,
@@ -199,14 +199,15 @@ class PrivHelper {
   /**
    * Stop File Access Monitor(FAM).
    */
-  FOLLY_NODISCARD virtual folly::Future<StopFileAccessMonitorResponse>
+  [[nodiscard]] virtual folly::Future<StopFileAccessMonitorResponse>
   stopFam() = 0;
 
   /**
    * Set the memory priority for a given process.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit>
-  setMemoryPriorityForProcess(pid_t pid, int targetPriority) = 0;
+  [[nodiscard]] virtual folly::Future<folly::Unit> setMemoryPriorityForProcess(
+      pid_t pid,
+      int targetPriority) = 0;
 
   /**
    * setLogFileBlocking() is a wrapper around setLogFile() that blocks until

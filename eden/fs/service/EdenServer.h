@@ -206,7 +206,7 @@ class EdenServer : private TakeoverHandler {
    * will be running normally except for the mount points that failed to be
    * remounted.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> prepare(
+  [[nodiscard]] folly::Future<folly::Unit> prepare(
       std::shared_ptr<StartupLogger> logger);
 
   /**
@@ -224,7 +224,7 @@ class EdenServer : private TakeoverHandler {
    * This function resets the TakeoverServer, resets the shutdownFuture, and
    * sets the state to RUNNING
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> recover(TakeoverData&& data);
+  [[nodiscard]] ImmediateFuture<folly::Unit> recover(TakeoverData&& data);
 
   /**
    * Shut down the EdenServer after it has stopped running.
@@ -277,7 +277,7 @@ class EdenServer : private TakeoverHandler {
   /**
    * Mount and return an EdenMount.
    */
-  FOLLY_NODISCARD ImmediateFuture<std::shared_ptr<EdenMount>> mount(
+  [[nodiscard]] ImmediateFuture<std::shared_ptr<EdenMount>> mount(
       std::unique_ptr<CheckoutConfig> initialConfig,
       bool readOnly,
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
@@ -286,7 +286,7 @@ class EdenServer : private TakeoverHandler {
   /**
    * Unmount an EdenMount.
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount(
+  [[nodiscard]] folly::SemiFuture<folly::Unit> unmount(
       AbsolutePathPiece mountPath,
       UnmountOptions options);
 
@@ -294,13 +294,13 @@ class EdenServer : private TakeoverHandler {
    * Unmount all mount points maintained by this server, and wait for them to
    * be completely unmounted.
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmountAll();
+  [[nodiscard]] folly::SemiFuture<folly::Unit> unmountAll();
 
   /**
    * Stop all mount points maintained by this server so that they can then be
    * transferred to a new edenfs process to perform a graceful restart.
    */
-  FOLLY_NODISCARD folly::Future<TakeoverData> stopMountsForTakeover(
+  [[nodiscard]] folly::Future<TakeoverData> stopMountsForTakeover(
       folly::Promise<std::optional<TakeoverData>>&& takeoverPromise);
 
   const std::shared_ptr<EdenServiceHandler>& getHandler() const {
@@ -625,27 +625,26 @@ class EdenServer : private TakeoverHandler {
   // all mounts.
   void unloadInodes();
 
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> createThriftServer();
+  [[nodiscard]] folly::SemiFuture<folly::Unit> createThriftServer();
 
   void prepareThriftAddress() const;
 
   /**
    * prepareImpl() contains the bulk of the implementation of prepare()
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> prepareImpl(
+  [[nodiscard]] folly::Future<folly::Unit> prepareImpl(
       std::shared_ptr<StartupLogger> logger);
-  FOLLY_NODISCARD std::vector<ImmediateFuture<folly::Unit>>
-  prepareMountsTakeover(
+  [[nodiscard]] std::vector<ImmediateFuture<folly::Unit>> prepareMountsTakeover(
       std::shared_ptr<StartupLogger> logger,
       std::vector<TakeoverData::MountInfo>&& takeoverMounts);
-  FOLLY_NODISCARD std::vector<ImmediateFuture<folly::Unit>> prepareMounts(
+  [[nodiscard]] std::vector<ImmediateFuture<folly::Unit>> prepareMounts(
       std::shared_ptr<StartupLogger> logger);
   static void incrementStartupMountFailures();
 
   /**
    * recoverImpl() contains the bulk of the implementation of recover()
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> recoverImpl(TakeoverData&& data);
+  [[nodiscard]] ImmediateFuture<folly::Unit> recoverImpl(TakeoverData&& data);
 
   /**
    * Load and parse existing eden config.
@@ -669,15 +668,15 @@ class EdenServer : private TakeoverHandler {
       EdenMount* mountPoint,
       std::optional<TakeoverData::MountInfo> takeover);
 
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> performNormalShutdown();
+  [[nodiscard]] folly::SemiFuture<folly::Unit> performNormalShutdown();
   void shutdownPrivhelper();
 
   // Performs a takeover initialization for the provided mount, loading the
   // state from the old incarnation and starting up the thread pool.
-  FOLLY_NODISCARD folly::Future<folly::Unit> performTakeoverStart(
+  [[nodiscard]] folly::Future<folly::Unit> performTakeoverStart(
       std::shared_ptr<EdenMount> edenMount,
       TakeoverData::MountInfo&& takeover);
-  FOLLY_NODISCARD folly::Future<folly::Unit> completeTakeoverStart(
+  [[nodiscard]] folly::Future<folly::Unit> completeTakeoverStart(
       std::shared_ptr<EdenMount> edenMount,
       TakeoverData::MountInfo&& takeover);
 
