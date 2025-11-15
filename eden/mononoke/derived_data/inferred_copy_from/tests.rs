@@ -251,6 +251,52 @@ async fn derive_single_test(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
+#[mononoke::fbinit_test]
+async fn test_skip_binary_files_in_partial_match(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo.clone())).await?;
+
+    // Create a base commit with a binary file (using null bytes as a simple binary indicator)
+    // and a text file
+    let base_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("binary_file.dat", "\0\0\0binary\0content\0here\0\0")
+        .add_file("text_file.txt", "hello\nworld\ntext\n")
+        .set_author_date(DateTime::from_timestamp(1000, 0)?)
+        .commit()
+        .await?;
+
+    // Create a commit with modified versions of both files
+    // For binary file: slightly modified binary content (would match if partial match was enabled)
+    // For text file: slightly modified text content (should match with partial match)
+    let modified_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
+        .add_file("modified_binary.dat", "\0\0\0binary\0content\0modified\0\0")
+        .add_file("modified_text.txt", "hello\nworld\nmodified\n")
+        .delete_file("binary_file.dat")
+        .delete_file("text_file.txt")
+        .set_author_date(DateTime::from_timestamp(2000, 0)?)
+        .commit()
+        .await?;
+
+    // Binary file should NOT be detected via partial match (excluded)
+    // Text file should be detected via partial match
+    assert_entries(
+        &ctx,
+        &repo,
+        repo_ctx.changeset(modified_cs).await?.unwrap().id(),
+        &[(
+            MPath::new("modified_text.txt")?,
+            InferredCopyFromEntry {
+                from_csid: base_cs,
+                from_path: MPath::new("text_file.txt")?,
+            },
+        )],
+    )
+    .await?;
+
+    Ok(())
+}
+
 async fn assert_entries(
     ctx: &CoreContext,
     repo: &Repo,

@@ -18,6 +18,8 @@ use blobstore::Storable;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data_manager::DerivationContext;
+use filestore::FetchKey;
+use filestore::get_metadata;
 use fsnodes::RootFsnodeId;
 use futures::Stream;
 use futures::StreamExt;
@@ -91,6 +93,23 @@ fn flatten_candidates(
         }
     }
     merged
+}
+
+async fn is_file_binary(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    content_id: ContentId,
+) -> bool {
+    let metadata = get_metadata(
+        derivation_ctx.blobstore(),
+        ctx,
+        &FetchKey::Canonical(content_id),
+    )
+    .await;
+    match metadata {
+        Ok(Some(metadata)) => metadata.is_binary,
+        _ => false,
+    }
 }
 
 fn should_skip_file_type(file_type: &FileType) -> bool {
@@ -468,27 +487,70 @@ async fn find_partial_matches(
     content_to_candidates: &HashMap<ContentId, Vec<CopyFromCandidate>>,
 ) -> Result<Vec<(MPath, InferredCopyFromEntry)>> {
     let max_num_changed_files = get_max_num_changed_files(derivation_ctx);
+
+    // Collect all content ids we'll need later and check whether the content is binary
+    let mut all_content_ids = content_to_candidates
+        .keys()
+        .cloned()
+        .collect::<HashSet<_>>();
+    for (path, file_change) in bonsai.simplified_file_changes().take(max_num_changed_files) {
+        if !paths_to_ignore.contains(path.into())
+            && let Some(fc) = file_change
+        {
+            all_content_ids.insert(fc.content_id());
+        }
+    }
+    let content_to_is_binary = stream::iter(all_content_ids)
+        .map(|content_id| async move {
+            let is_binary = is_file_binary(ctx, derivation_ctx, content_id).await;
+            (content_id, is_binary)
+        })
+        .buffered(100)
+        .collect::<HashMap<_, _>>()
+        .await;
+
     let mut content_to_paths = HashMap::new();
     let mut content_to_metadata = HashMap::new();
     for (path, file_change) in bonsai.simplified_file_changes().take(max_num_changed_files) {
-        if !paths_to_ignore.contains(path.into()) {
-            if let Some(fc) = file_change {
-                content_to_paths
-                    .entry(fc.content_id())
-                    .or_insert(vec![])
-                    .push(path.clone());
-                content_to_metadata.entry(fc.content_id()).or_insert(fc);
+        if !paths_to_ignore.contains(path.into())
+            && let Some(fc) = file_change
+        {
+            // Exclude binary file for partial content match
+            if content_to_is_binary
+                .get(&fc.content_id())
+                .copied()
+                .unwrap_or(false)
+            {
+                continue;
             }
+            content_to_paths
+                .entry(fc.content_id())
+                .or_insert(vec![])
+                .push(path.clone());
+            content_to_metadata.entry(fc.content_id()).or_insert(fc);
         }
     }
 
     let mut matched = vec![];
     for (dst_content_id, fc) in content_to_metadata {
         if let Some(dst_paths) = content_to_paths.get(&dst_content_id) {
+            let dst_basenames = dst_paths
+                .iter()
+                .map(|p| p.basename().to_string())
+                .collect::<HashSet<_>>();
+
             // Trim candidate list by comparing file metadata (e.g. type, size)
             let filtered_content_to_candidates = content_to_candidates
                 .iter()
                 .filter_map(|(src_content_id, candidates)| {
+                    // Exclude binary file for partial content match
+                    if content_to_is_binary
+                        .get(src_content_id)
+                        .copied()
+                        .unwrap_or(false)
+                    {
+                        return None;
+                    }
                     let filtered = candidates
                         .iter()
                         .filter(|candidate| {
@@ -504,16 +566,11 @@ async fn find_partial_matches(
                                 // If candidate is from basename match, recheck basename
                                 // This is because we used batch query when fetching candidates by all available basenames,
                                 // we lost the info which exact basename the current candidate was matched on
-                                if let CopyFromCandidateSource::BasenameMatched = candidate.source {
-                                    let dst_basenames = dst_paths
-                                        .iter()
-                                        .map(|p| p.basename().to_string())
-                                        .collect::<HashSet<_>>();
-                                    if !dst_basenames
+                                if let CopyFromCandidateSource::BasenameMatched = candidate.source
+                                    && !dst_basenames
                                         .contains(&candidate_path.basename().to_string())
-                                    {
-                                        return false;
-                                    }
+                                {
+                                    return false;
                                 }
                             } else {
                                 // Skip if the candidate path is root
@@ -527,7 +584,7 @@ async fn find_partial_matches(
                     if filtered.is_empty() {
                         None
                     } else {
-                        Some((src_content_id.clone(), filtered))
+                        Some((*src_content_id, filtered))
                     }
                 })
                 .collect::<HashMap<_, _>>();
