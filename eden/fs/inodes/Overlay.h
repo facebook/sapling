@@ -119,7 +119,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * - Upgrading the on-disk data from older formats if the Overlay was created
    *   by an older version of the software.
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> initialize(
+  [[nodiscard]] folly::SemiFuture<folly::Unit> initialize(
       const std::shared_ptr<ReloadableConfig>& config,
       std::optional<AbsolutePath> mountPath = std::nullopt,
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},

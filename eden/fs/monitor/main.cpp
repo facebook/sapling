@@ -28,7 +28,7 @@ using namespace facebook::eden;
 
 namespace {
 
-FOLLY_NODISCARD folly::File openLockFile(AbsolutePathPiece edenDir) {
+[[nodiscard]] folly::File openLockFile(AbsolutePathPiece edenDir) {
   ensureDirectoryExists(edenDir);
   auto lockPath = edenDir + "monitor.lock"_pc;
   auto lockFile =

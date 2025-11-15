@@ -44,7 +44,7 @@ class EdenInstance {
   explicit EdenInstance(EdenMonitor* monitor);
   virtual ~EdenInstance();
 
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> start() = 0;
+  [[nodiscard]] virtual folly::Future<folly::Unit> start() = 0;
   virtual pid_t getPid() const = 0;
   virtual void checkLiveness() = 0;
 
@@ -67,7 +67,7 @@ class ExistingEdenInstance : public EdenInstance, private folly::AsyncTimeout {
  public:
   ExistingEdenInstance(EdenMonitor* monitor, pid_t pid);
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> start() override;
+  [[nodiscard]] folly::Future<folly::Unit> start() override;
 
   pid_t getPid() const override {
     return pid_;
@@ -97,7 +97,7 @@ class SpawnedEdenInstance : public EdenInstance,
   SpawnedEdenInstance(EdenMonitor* monitor, std::shared_ptr<LogFile> log);
   ~SpawnedEdenInstance() override;
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> start() override;
+  [[nodiscard]] folly::Future<folly::Unit> start() override;
 
   void takeover(pid_t pid, int logFD);
 

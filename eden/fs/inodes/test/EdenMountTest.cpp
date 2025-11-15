@@ -73,8 +73,8 @@ class MockMountDelegate : public FakePrivHelper::MountDelegate {
   class MountFailed : public std::exception {};
   class UnmountFailed : public std::exception {};
 
-  FOLLY_NODISCARD folly::Future<folly::File> fuseMount() override;
-  FOLLY_NODISCARD folly::Future<folly::Unit> fuseUnmount() override;
+  [[nodiscard]] folly::Future<folly::File> fuseMount() override;
+  [[nodiscard]] folly::Future<folly::Unit> fuseUnmount() override;
 
   void setMountFuseDevice(folly::File);
 
@@ -84,7 +84,7 @@ class MockMountDelegate : public FakePrivHelper::MountDelegate {
    * Postconditions:
    * - RESULT.getFuture must not be called.
    */
-  FOLLY_NODISCARD folly::Promise<folly::File> makeMountPromise();
+  [[nodiscard]] folly::Promise<folly::File> makeMountPromise();
 
   /**
    * Postconditions:
@@ -94,12 +94,12 @@ class MockMountDelegate : public FakePrivHelper::MountDelegate {
 
   void makeUnmountFail();
 
-  FOLLY_NODISCARD folly::Promise<folly::Unit> makeUnmountPromise();
+  [[nodiscard]] folly::Promise<folly::Unit> makeUnmountPromise();
 
-  FOLLY_NODISCARD bool wasFuseMountEverCalled() const noexcept;
+  [[nodiscard]] bool wasFuseMountEverCalled() const noexcept;
 
-  FOLLY_NODISCARD int getFuseUnmountCallCount() const noexcept;
-  FOLLY_NODISCARD bool wasFuseUnmountEverCalled() const noexcept;
+  [[nodiscard]] int getFuseUnmountCallCount() const noexcept;
+  [[nodiscard]] bool wasFuseUnmountEverCalled() const noexcept;
 
  private:
   folly::Future<folly::File> mountFuture_{

@@ -187,7 +187,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   InodeNumber getChildInodeNumber(PathComponentPiece name);
 
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> rename(
+  [[nodiscard]] ImmediateFuture<folly::Unit> rename(
       PathComponentPiece name,
       TreeInodePtr newParent,
       PathComponentPiece newName,
@@ -251,11 +251,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   TreeInodePtr
   mkdir(PathComponentPiece name, mode_t mode, InvalidationRequired invalidate);
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> unlink(
+  [[nodiscard]] ImmediateFuture<folly::Unit> unlink(
       PathComponentPiece name,
       InvalidationRequired invalidate,
       const ObjectFetchContextPtr& context);
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> rmdir(
+  [[nodiscard]] ImmediateFuture<folly::Unit> rmdir(
       PathComponentPiece name,
       InvalidationRequired invalidate,
       const ObjectFetchContextPtr& context);
@@ -374,7 +374,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * @return Returns a future that will be fulfilled once this tree and all of
    *     its children have been updated.
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> checkout(
+  [[nodiscard]] ImmediateFuture<folly::Unit> checkout(
       CheckoutContext* ctx,
       std::shared_ptr<const Tree> fromTree,
       std::shared_ptr<const Tree> toTree);
@@ -523,7 +523,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *     This entry will refer to a tree if and only if the newTree parameter
    *     is non-null.
    */
-  FOLLY_NODISCARD ImmediateFuture<InvalidationRequired> checkoutUpdateEntry(
+  [[nodiscard]] ImmediateFuture<InvalidationRequired> checkoutUpdateEntry(
       CheckoutContext* ctx,
       PathComponentPiece name,
       InodePtr inode,
@@ -596,7 +596,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   void materialize(const RenameLock* renameLock = nullptr);
 
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> doRename(
+  [[nodiscard]] ImmediateFuture<folly::Unit> doRename(
       TreeRenameLocks&& locks,
       PathComponentPiece srcName,
       PathMap<DirEntry>::iterator srcIter,
@@ -697,7 +697,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * retry the remove again (hence the attemptNum parameter).
    */
   template <typename InodePtrType>
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> removeImpl(
+  [[nodiscard]] ImmediateFuture<folly::Unit> removeImpl(
       PathComponent name,
       InodePtr child,
       InvalidationRequired invalidate,
@@ -740,7 +740,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * on other unexpected error cases.
    */
   template <typename InodePtrType>
-  FOLLY_NODISCARD int tryRemoveChild(
+  [[nodiscard]] int tryRemoveChild(
       const RenameLock& renameLock,
       PathComponentPiece name,
       InodePtrType child,
@@ -750,8 +750,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * checkPreRemove() is called by tryRemoveChild() for file or directory
    * specific checks before unlinking an entry.  Returns an errno value or 0.
    */
-  FOLLY_NODISCARD static int checkPreRemove(const TreeInode& child);
-  FOLLY_NODISCARD static int checkPreRemove(const FileInode& child);
+  [[nodiscard]] static int checkPreRemove(const TreeInode& child);
+  [[nodiscard]] static int checkPreRemove(const FileInode& child);
 
   /**
    * This helper function starts loading a currently unloaded child inode.
@@ -770,7 +770,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Load the .gitignore file for this directory, then call computeDiff() once
    * it is loaded.
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> loadGitIgnoreThenDiff(
+  [[nodiscard]] ImmediateFuture<folly::Unit> loadGitIgnoreThenDiff(
       InodePtr gitignoreInode,
       DiffContext* context,
       RelativePathPiece currentPath,
@@ -786,7 +786,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * for the current directory and then invokes computeDiff() to perform the
    * diff once all .gitignore data is loaded.
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> computeDiff(
+  [[nodiscard]] ImmediateFuture<folly::Unit> computeDiff(
       folly::Synchronized<TreeInodeState>::LockedPtr contentsLock,
       DiffContext* context,
       RelativePathPiece currentPath,
@@ -868,7 +868,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * permission bits are updated, invalidateChannelDirCache must be called on
    * the parent inode afterwards.
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> invalidateChannelDirCache(
+  [[nodiscard]] ImmediateFuture<folly::Unit> invalidateChannelDirCache(
       TreeInodeState&);
 
   /**
@@ -885,7 +885,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * being held to avoid races between invalidation during checkout and use
    * lookups.
    */
-  FOLLY_NODISCARD folly::Try<folly::Unit> invalidateChannelEntryCache(
+  [[nodiscard]] folly::Try<folly::Unit> invalidateChannelEntryCache(
       TreeInodeState&,
       PathComponentPiece name,
       std::optional<InodeNumber> ino);
@@ -898,7 +898,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * collection because inodes need to be deleted after invalidation during NFS
    * garbage collection.
    */
-  FOLLY_NODISCARD folly::Try<folly::Unit> nfsInvalidateCacheEntryForGC(
+  [[nodiscard]] folly::Try<folly::Unit> nfsInvalidateCacheEntryForGC(
       TreeInodeState& state);
 #endif
 
