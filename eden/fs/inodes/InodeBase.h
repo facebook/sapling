@@ -168,17 +168,16 @@ class InodeBase {
       const ObjectFetchContextPtr& fetchContext) = 0;
 
 #ifndef _WIN32
-  FOLLY_NODISCARD folly::Future<folly::Unit>
+  [[nodiscard]] folly::Future<folly::Unit>
   setxattr(folly::StringPiece name, folly::StringPiece value, int flags);
-  FOLLY_NODISCARD folly::Future<folly::Unit> removexattr(
-      folly::StringPiece name);
+  [[nodiscard]] folly::Future<folly::Unit> removexattr(folly::StringPiece name);
 
   virtual ImmediateFuture<std::vector<std::string>> listxattr() = 0;
   virtual ImmediateFuture<std::string> getxattr(
       folly::StringPiece name,
       const ObjectFetchContextPtr& context) = 0;
 
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> access(int mask);
+  [[nodiscard]] virtual folly::Future<folly::Unit> access(int mask);
 #endif // !_WIN32
 
   /**
@@ -471,7 +470,7 @@ class InodeBase {
    * this node will be recursively materialized. This function should be careful
    * to be used and should be used by RECAS backing store only
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> ensureMaterialized(
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> ensureMaterialized(
       const ObjectFetchContextPtr& context,
       bool followSymlink) = 0;
 #endif

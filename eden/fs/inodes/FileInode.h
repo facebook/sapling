@@ -326,7 +326,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    *
    * Note that this API generally should only be used for fairly small files.
    */
-  FOLLY_NODISCARD ImmediateFuture<std::string> readAll(
+  [[nodiscard]] ImmediateFuture<std::string> readAll(
       const ObjectFetchContextPtr& fetchContext,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
@@ -365,7 +365,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   void fsync(bool datasync);
 
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> fallocate(
+  [[nodiscard]] ImmediateFuture<folly::Unit> fallocate(
       uint64_t offset,
       uint64_t length,
       const ObjectFetchContextPtr& fetchContext);
@@ -450,7 +450,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * runWhileMaterialized().  Most other callers should use
    * runWhileDataLoaded() or runWhileMaterialized() instead.
    */
-  FOLLY_NODISCARD ImmediateFuture<BlobPtr> startLoadingData(
+  [[nodiscard]] ImmediateFuture<BlobPtr> startLoadingData(
       LockedState state,
       BlobCache::Interest interest,
       const ObjectFetchContextPtr& fetchContext);

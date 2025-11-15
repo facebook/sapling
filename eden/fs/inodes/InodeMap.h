@@ -272,7 +272,7 @@ class InodeMap {
    * Other callers should use EdenMount::shutdown() instead of invoking this
    * function directly.
    */
-  FOLLY_NODISCARD folly::Future<SerializedInodeMap> shutdown(bool doTakeover);
+  [[nodiscard]] folly::Future<SerializedInodeMap> shutdown(bool doTakeover);
 
   /**
    * Returns true if we have stored information about this inode that may

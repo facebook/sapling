@@ -367,7 +367,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *
    * If takeover data is specified, it is used to initialize the inode map.
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> initialize(
+  [[nodiscard]] ImmediateFuture<folly::Unit> initialize(
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
       const std::optional<SerializedInodeMap>& takeover = std::nullopt,
       const std::optional<MountProtocol>& takeoverMountProtocol = std::nullopt);
@@ -430,8 +430,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * function immediately returns a Future which will complete at the same time
    * the original call to unmount() completes.
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> unmount(
-      UnmountOptions options);
+  [[nodiscard]] folly::SemiFuture<folly::Unit> unmount(UnmountOptions options);
 
   /**
    * Get the current state of this mount.
@@ -819,10 +818,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *     shut down.
    *
    * @return Returns a folly::Future that will be fulfilled when the diff
-   *     operation is complete.  This is marked FOLLY_NODISCARD to
+   *     operation is complete.  This is marked [[nodiscard]] to
    *     make sure callers do not forget to wait for the operation to complete.
    */
-  FOLLY_NODISCARD ImmediateFuture<std::unique_ptr<ScmStatus>> diff(
+  [[nodiscard]] ImmediateFuture<std::unique_ptr<ScmStatus>> diff(
       TreeInodePtr rootInode,
       const RootId& commitId,
       folly::CancellationToken cancellation,
@@ -836,7 +835,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * The caller must ensure that the DiffContext object ctsPtr points to
    * exists at least until the returned Future completes.
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> diff(
+  [[nodiscard]] ImmediateFuture<folly::Unit> diff(
       TreeInodePtr rootInode,
       DiffContext* ctxPtr,
       const RootId& commitId) const;
@@ -923,7 +922,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * * The returned Future is fulfilled with an
    *   FuseDeviceUnmountedDuringInitialization exception
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> startFsChannel(bool readOnly);
+  [[nodiscard]] folly::Future<folly::Unit> startFsChannel(bool readOnly);
 
   /**
    * Take over a FUSE channel for an existing mount point.
@@ -959,7 +958,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * fails or is never called, the future returned by
    * getFsChannelCompletionFuture() will never complete.
    */
-  FOLLY_NODISCARD folly::Future<TakeoverData::MountInfo>
+  [[nodiscard]] folly::Future<TakeoverData::MountInfo>
   getFsChannelCompletionFuture();
 
   Owner getOwner() const {
@@ -1027,14 +1026,14 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * This requires that the filesystem already be mounted, and must not
    * be called in the context of a fuseWorkerThread().
    */
-  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> performBindMounts();
+  [[nodiscard]] folly::SemiFuture<folly::Unit> performBindMounts();
 
   /**
    * Ensures the path `fromRoot` is a directory. If it is not, then it creates
    * subdirectories until it is. If creating a subdirectory fails, it throws an
    * exception. Returns the TreeInodePtr to the directory.
    */
-  FOLLY_NODISCARD ImmediateFuture<TreeInodePtr> ensureDirectoryExists(
+  [[nodiscard]] ImmediateFuture<TreeInodePtr> ensureDirectoryExists(
       RelativePathPiece fromRoot,
       const ObjectFetchContextPtr& context);
 
@@ -1048,7 +1047,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * TreePrefetchLease is destroyed this will inform the EdenMount that the
    * prefetch has finished.
    */
-  FOLLY_NODISCARD std::optional<TreePrefetchLease> tryStartTreePrefetch(
+  [[nodiscard]] std::optional<TreePrefetchLease> tryStartTreePrefetch(
       TreeInodePtr treeInode,
       const ObjectFetchContext& context);
 
@@ -1119,7 +1118,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * other contents will disappear
    * 3. In DRYRUN mode, no action action will be executed.
    */
-  FOLLY_NODISCARD ImmediateFuture<SetPathObjectIdResultAndTimes>
+  [[nodiscard]] ImmediateFuture<SetPathObjectIdResultAndTimes>
   setPathsToObjectIds(
       std::vector<SetPathObjectIdObjectAndPath> objects,
       CheckoutMode checkoutMode,
@@ -1155,7 +1154,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * kernel This will ensure that other processes will see up-to-date data once
    * we return.
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> flushInvalidations();
+  [[nodiscard]] ImmediateFuture<folly::Unit> flushInvalidations();
 
  private:
   friend class RenameLock;
@@ -1168,7 +1167,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * and returns boolean.
    * Otherwise the current state is left untouched and returns false.
    */
-  FOLLY_NODISCARD bool tryToTransitionState(State expected, State newState);
+  [[nodiscard]] bool tryToTransitionState(State expected, State newState);
 
   /**
    * Transition from expected -> newState.
@@ -1219,7 +1218,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   TreeInodePtr createRootInode(std::shared_ptr<const Tree> tree);
 
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> setupDotEden(TreeInodePtr root);
+  [[nodiscard]] ImmediateFuture<folly::Unit> setupDotEden(TreeInodePtr root);
 
   folly::SemiFuture<SerializedInodeMap> shutdownImpl(bool doTakeover);
 
@@ -1243,7 +1242,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * synchronization (if it is needed). It will be packaged into a DiffContext
    * and passed through the TreeInode diff() codepath
    */
-  FOLLY_NODISCARD ImmediateFuture<folly::Unit> diff(
+  [[nodiscard]] ImmediateFuture<folly::Unit> diff(
       TreeInodePtr rootInode,
       ScmStatusDiffCallback* callback,
       const RootId& commitId,
@@ -1266,7 +1265,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Preconditions:
    * - `beginMount()` has not been called before.
    */
-  FOLLY_NODISCARD folly::Promise<folly::Unit>& beginMount();
+  [[nodiscard]] folly::Promise<folly::Unit>& beginMount();
 
   using StopFuture = folly::SemiFuture<FsStopDataPtr>;
 

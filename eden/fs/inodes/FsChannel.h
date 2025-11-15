@@ -94,12 +94,12 @@ class FsChannel {
    * for an error or any other reason. For example, in FUSE and NFS, the unmount
    * process is initiated by the kernel and not by FuseChannel.
    */
-  FOLLY_NODISCARD virtual folly::Future<StopFuture> initialize() = 0;
+  [[nodiscard]] virtual folly::Future<StopFuture> initialize() = 0;
 
   /**
    * Ask this FsChannel to remove itself from the filesystem.
    */
-  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> unmount(
+  [[nodiscard]] virtual folly::SemiFuture<folly::Unit> unmount(
       UnmountOptions options) = 0;
 
   /**
@@ -123,8 +123,7 @@ class FsChannel {
    * writes have been observed, call waitForPendingWrites. The returned future
    * will complete when all pending write operations have been observed.
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit>
-  waitForPendingWrites() = 0;
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> waitForPendingWrites() = 0;
 
   /**
    * During checkout or other Thrift calls that modify the filesystem, those
@@ -137,7 +136,7 @@ class FsChannel {
    * completeInvalidations() completes, invalidations of inode attributes, inode
    * content, and name lookups are guaranteed to be observable.
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit>
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit>
   completeInvalidations() = 0;
 
   /**
