@@ -194,7 +194,7 @@ class DirEntry {
    * This method is only called when the inode is being unloaded and its pointer
    * is no longer valid.
    */
-  FOLLY_NODISCARD InodeBase* clearInode();
+  [[nodiscard]] InodeBase* clearInode();
 
  private:
   /**

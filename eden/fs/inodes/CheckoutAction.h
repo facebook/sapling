@@ -95,7 +95,7 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
    * entries. Returns whether the caller is responsible for invalidating the
    * directory's inode cache in the kernel.
    */
-  FOLLY_NODISCARD ImmediateFuture<InvalidationRequired> run(
+  [[nodiscard]] ImmediateFuture<InvalidationRequired> run(
       CheckoutContext* ctx,
       ObjectStore* store);
 
@@ -125,7 +125,7 @@ class CheckoutAction : public std::enable_shared_from_this<CheckoutAction> {
    * Return whether the directory's contents have changed and the
    * inode's readdir cache must be flushed.
    */
-  FOLLY_NODISCARD ImmediateFuture<InvalidationRequired> doAction();
+  [[nodiscard]] ImmediateFuture<InvalidationRequired> doAction();
 
   /**
    * The context for the in-progress checkout operation.

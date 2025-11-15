@@ -198,7 +198,7 @@ class FuseDispatcher {
    * @param parent inode number of the parent directory
    * @param name to remove
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> unlink(
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> unlink(
       InodeNumber parent,
       PathComponentPiece name,
       const ObjectFetchContextPtr& context);
@@ -209,7 +209,7 @@ class FuseDispatcher {
    * @param parent inode number of the parent directory
    * @param name to remove
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> rmdir(
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> rmdir(
       InodeNumber parent,
       PathComponentPiece name,
       const ObjectFetchContextPtr& context);
@@ -235,7 +235,7 @@ class FuseDispatcher {
    * @param newparent inode number of the new parent directory
    * @param newname new name
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> rename(
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> rename(
       InodeNumber parent,
       PathComponentPiece name,
       InodeNumber newparent,
@@ -323,7 +323,7 @@ class FuseDispatcher {
    * of the write system call will reflect the return value of this
    * operation.
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<size_t> write(
+  [[nodiscard]] virtual ImmediateFuture<size_t> write(
       InodeNumber ino,
       folly::StringPiece data,
       off_t off,
@@ -346,7 +346,7 @@ class FuseDispatcher {
    * If the filesystem supports file locking operations (setlk,
    * getlk) it should remove all locks belonging to 'lock_owner'.
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> flush(
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> flush(
       InodeNumber ino,
       uint64_t lock_owner);
 
@@ -357,7 +357,7 @@ class FuseDispatcher {
    *
    * Only used on Linux.
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> fallocate(
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> fallocate(
       InodeNumber ino,
       uint64_t offset,
       uint64_t length,
@@ -369,7 +369,7 @@ class FuseDispatcher {
    * If the datasync parameter is true, then only the user data should be
    * flushed, not the meta data.
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> fsync(
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> fsync(
       InodeNumber ino,
       bool datasync);
 
@@ -379,7 +379,7 @@ class FuseDispatcher {
    * If the datasync parameter is true, then only the directory contents should
    * be flushed, not the aux data.
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> fsyncdir(
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> fsyncdir(
       InodeNumber ino,
       bool datasync);
 
@@ -408,7 +408,7 @@ class FuseDispatcher {
   /**
    * Set an extended attribute
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> setxattr(
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> setxattr(
       InodeNumber ino,
       folly::StringPiece name,
       folly::StringPiece value,
@@ -433,7 +433,7 @@ class FuseDispatcher {
    * @param ino the inode number
    * @param name of the extended attribute
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> removexattr(
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> removexattr(
       InodeNumber ino,
       folly::StringPiece name);
 
@@ -451,7 +451,7 @@ class FuseDispatcher {
    * @param ino the inode number
    * @param mask requested access mode
    */
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> access(
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> access(
       InodeNumber ino,
       int mask);
 

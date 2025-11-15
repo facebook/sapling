@@ -170,7 +170,7 @@ class EdenMount::JournalDiffCallback : public DiffCallback {
         folly::exceptionStr(ew));
   }
 
-  FOLLY_NODISCARD ImmediateFuture<StatsFetchContext> performDiff(
+  [[nodiscard]] ImmediateFuture<StatsFetchContext> performDiff(
       EdenMount* mount,
       TreeInodePtr rootInode,
       std::vector<std::shared_ptr<const Tree>> rootTrees,
@@ -358,7 +358,7 @@ InodeCatalogOptions EdenMount::getInodeCatalogOptions(
   return options;
 }
 
-FOLLY_NODISCARD ImmediateFuture<folly::Unit> EdenMount::initialize(
+[[nodiscard]] ImmediateFuture<folly::Unit> EdenMount::initialize(
     OverlayChecker::ProgressCallback&& progressCallback,
     const std::optional<SerializedInodeMap>& takeover,
     const std::optional<MountProtocol>& takeoverMountProtocol) {

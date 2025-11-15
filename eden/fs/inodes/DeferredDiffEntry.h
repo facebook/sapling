@@ -50,7 +50,7 @@ class DeferredDiffEntry {
     return path_;
   }
 
-  FOLLY_NODISCARD virtual ImmediateFuture<folly::Unit> run() = 0;
+  [[nodiscard]] virtual ImmediateFuture<folly::Unit> run() = 0;
 
   static std::unique_ptr<DeferredDiffEntry> createUntrackedEntry(
       DiffContext* context,
