@@ -35,7 +35,7 @@ std::string_view chronoParseErrorToString(ChronoParseError error);
 /**
  * Parse a string to a std::chrono::nanoseconds duration.
  */
-FOLLY_NODISCARD folly::Expected<std::chrono::nanoseconds, ChronoParseError>
+[[nodiscard]] folly::Expected<std::chrono::nanoseconds, ChronoParseError>
 stringToDuration(folly::StringPiece src);
 
 /**
