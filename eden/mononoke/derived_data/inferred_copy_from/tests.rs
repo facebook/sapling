@@ -297,6 +297,51 @@ async fn test_skip_binary_files_in_partial_match(fb: FacebookInit) -> Result<()>
     Ok(())
 }
 
+#[mononoke::fbinit_test]
+async fn test_skip_certain_exts_in_partial_match(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+    let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo.clone())).await?;
+
+    // Create a base commit with an .obj file and a text file
+    let base_cs = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("build/output.obj", "binary\0object\0file\0content\0")
+        .add_file("src/code.cpp", "int main() {\n    return 0;\n}\n")
+        .set_author_date(DateTime::from_timestamp(1000, 0)?)
+        .commit()
+        .await?;
+
+    // Create a commit with modified versions of both files
+    // .obj file: slightly modified content (would match if partial match was enabled)
+    // .cpp file: slightly modified content (should match with partial match)
+    let modified_cs = CreateCommitContext::new(&ctx, &repo, vec![base_cs])
+        .add_file("build/modified.obj", "binary\0object\0file\0modified\0")
+        .add_file("src/modified.cpp", "int main() {\n    return 1;\n}\n")
+        .delete_file("build/output.obj")
+        .delete_file("src/code.cpp")
+        .set_author_date(DateTime::from_timestamp(2000, 0)?)
+        .commit()
+        .await?;
+
+    // .obj file should NOT be detected via partial match (excluded by extension)
+    // .cpp file should be detected via partial match
+    assert_entries(
+        &ctx,
+        &repo,
+        repo_ctx.changeset(modified_cs).await?.unwrap().id(),
+        &[(
+            MPath::new("src/modified.cpp")?,
+            InferredCopyFromEntry {
+                from_csid: base_cs,
+                from_path: MPath::new("src/code.cpp")?,
+            },
+        )],
+    )
+    .await?;
+
+    Ok(())
+}
+
 async fn assert_entries(
     ctx: &CoreContext,
     repo: &Repo,

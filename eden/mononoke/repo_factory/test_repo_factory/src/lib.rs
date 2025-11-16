@@ -8,6 +8,7 @@
 //! Repository factory for tests.
 #![deny(missing_docs)]
 
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use acl_regions::ArcAclRegions;
@@ -208,6 +209,7 @@ pub fn default_test_repo_derived_data_types_config() -> DerivedDataTypesConfig {
             basename_match_max_candidates: 10_000,
             partial_match_max_file_size: 4 * 1024 * 1024,
             max_num_changed_files: 6_000,
+            partial_match_skip_file_extensions: BTreeSet::from([".obj".to_string()]),
         }),
         ..Default::default()
     }

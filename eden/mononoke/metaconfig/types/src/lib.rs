@@ -11,6 +11,7 @@
 #![deny(missing_docs)]
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -535,7 +536,7 @@ pub struct GitDeltaManifestV3Config {
 }
 
 /// Config for inferred copy from
-#[derive(Eq, Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Eq, Clone, Debug, Default, PartialEq)]
 pub struct InferredCopyFromConfig {
     /// When trying to find file copies using basename, how many levels of
     /// directories from the repo root should we perform the search?
@@ -549,6 +550,9 @@ pub struct InferredCopyFromConfig {
     /// Maximum number of changed files to consider when inferring any forms
     /// of copy/rename
     pub max_num_changed_files: usize,
+    /// List of file extensions to skip when doing partial content matching
+    /// e.g. {".obj", ".bin"}
+    pub partial_match_skip_file_extensions: BTreeSet<String>,
 }
 
 /// Config for remote derivation

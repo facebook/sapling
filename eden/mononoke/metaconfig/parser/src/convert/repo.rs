@@ -586,6 +586,7 @@ impl Convert for RawInferredCopyFromConfig {
             basename_match_max_candidates: self.basename_match_max_candidates as usize,
             partial_match_max_file_size: self.partial_match_max_file_size as u64,
             max_num_changed_files: self.max_num_changed_files as usize,
+            partial_match_skip_file_extensions: self.partial_match_skip_file_extensions,
         })
     }
 }

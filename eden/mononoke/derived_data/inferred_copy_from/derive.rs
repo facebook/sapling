@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -144,6 +145,7 @@ fn filter_by_metadata(
     let partial_match_max_file_size = derivation_ctx
         .config()
         .inferred_copy_from_config
+        .as_ref()
         .map_or(PARTIAL_MATCH_MAX_FILE_SIZE, |c| {
             c.partial_match_max_file_size
         });
@@ -382,6 +384,7 @@ async fn find_basename_matched_copies(
     let dir_lookup_level = derivation_ctx
         .config()
         .inferred_copy_from_config
+        .as_ref()
         .map_or(DIR_LEVEL_FOR_BASENAME_LOOKUP, |c| {
             c.dir_level_for_basename_lookup
         });
@@ -416,6 +419,7 @@ async fn find_basename_matched_copies(
     let basename_match_max_candidates = derivation_ctx
         .config()
         .inferred_copy_from_config
+        .as_ref()
         .map_or(BASENAME_MATCH_MAX_CANDIDATES, |c| {
             c.basename_match_max_candidates
         });
@@ -509,6 +513,7 @@ async fn find_partial_matches(
         .collect::<HashMap<_, _>>()
         .await;
 
+    let file_exts_to_skip = get_file_extensions_to_skip(derivation_ctx);
     let mut content_to_paths = HashMap::new();
     let mut content_to_metadata = HashMap::new();
     for (path, file_change) in bonsai.simplified_file_changes().take(max_num_changed_files) {
@@ -523,6 +528,14 @@ async fn find_partial_matches(
             {
                 continue;
             }
+            // Exclude certain file extensions
+            if file_exts_to_skip
+                .iter()
+                .any(|ext| path.basename().has_suffix(ext.as_bytes()))
+            {
+                continue;
+            }
+
             content_to_paths
                 .entry(fc.content_id())
                 .or_insert(vec![])
@@ -560,6 +573,14 @@ async fn find_partial_matches(
                                 // Make sure we don't include the dest path itself as candidate
                                 if dst_paths.contains(&candidate_path) {
                                     // Skip if the candidate path is the same as the dest
+                                    return false;
+                                }
+
+                                // Skip certain extensions
+                                if file_exts_to_skip
+                                    .iter()
+                                    .any(|ext| candidate_path.basename().has_suffix(ext.as_bytes()))
+                                {
                                     return false;
                                 }
 
@@ -620,7 +641,18 @@ fn get_max_num_changed_files(derivation_ctx: &DerivationContext) -> usize {
     derivation_ctx
         .config()
         .inferred_copy_from_config
+        .as_ref()
         .map_or(MAX_NUM_CHANGED_FILES, |c| c.max_num_changed_files)
+}
+
+fn get_file_extensions_to_skip(derivation_ctx: &DerivationContext) -> BTreeSet<String> {
+    derivation_ctx
+        .config()
+        .inferred_copy_from_config
+        .as_ref()
+        .map_or_else(BTreeSet::new, |c| {
+            c.partial_match_skip_file_extensions.clone()
+        })
 }
 
 // TODO: add more cases
