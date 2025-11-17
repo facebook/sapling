@@ -20,8 +20,8 @@ pub use services::AliveService;
 use services::Fb303Service;
 use services::FbStatus;
 use slog::Logger;
-use slog::info;
 use tokio::runtime::Handle;
+use tracing::info;
 
 use crate::AppExtension;
 
@@ -52,13 +52,13 @@ impl MonitoringArgs {
         fb: FacebookInit,
         handle: &Handle,
         service_name: &str,
-        logger: &Logger,
+        _logger: &Logger,
         service: S,
     ) -> Result<Option<()>, Error> {
         let service_name = service_name.to_string();
         self.fb303_thrift_port
             .map(|port| {
-                info!(logger, "Initializing fb303 thrift server on port {}", port);
+                info!("Initializing fb303 thrift server on port {}", port);
 
                 thread::Builder::new()
                     .name("fb303_thrift_service".to_owned())
@@ -78,8 +78,8 @@ impl MonitoringArgs {
                 {
                     if let Some(prometheus_host_port) = &self.prometheus_host_port {
                         info!(
-                            logger,
-                            "Initializing prometheus exporter on {}", prometheus_host_port
+                            "Initializing prometheus exporter on {}",
+                            prometheus_host_port
                         );
                         fb303_prometheus_exporter::run_fb303_to_prometheus_exporter(
                             fb,

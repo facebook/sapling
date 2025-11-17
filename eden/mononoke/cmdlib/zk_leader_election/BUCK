@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("scm_server_infra")
@@ -10,5 +11,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "//common/rust/zkserverguard_helper:zkserverguard_helper",
-    ],
+    ] + ([] if rust_oss.is_oss_build() else [
+        "fbsource//third-party/rust:tracing",
+    ]),
 )

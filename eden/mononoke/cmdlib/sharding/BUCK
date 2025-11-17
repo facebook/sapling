@@ -20,6 +20,7 @@ rust_library(
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/stats:stats",
         "//common/rust/shed/justknobs_stub:justknobs",
     ]),

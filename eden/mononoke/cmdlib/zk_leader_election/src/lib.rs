@@ -11,7 +11,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use slog::Logger;
 #[cfg(fbcode_build)]
-use slog::info;
+use tracing::info;
 #[cfg(fbcode_build)]
 use zkserverguard_helper::ServerGuard;
 #[cfg(fbcode_build)]
@@ -59,15 +59,12 @@ pub trait LeaderElection {
     async fn maybe_become_leader(
         &self,
         mode: ZkMode,
-        logger: Logger,
+        _logger: Logger,
     ) -> Result<Option<ServerGuard>> {
         match mode {
             ZkMode::Enabled => {
                 let path = self.get_shared_lock_path();
-                info!(
-                    logger,
-                    "Waiting for lock on {} for ZkServerGuard prod tier", path
-                );
+                info!("Waiting for lock on {} for ZkServerGuard prod tier", path);
                 Ok(Some(
                     become_leader(
                         ZEUS_CLIENT_ID.to_string(),

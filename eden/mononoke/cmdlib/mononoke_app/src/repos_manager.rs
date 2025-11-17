@@ -37,9 +37,9 @@ use mononoke_repos::MononokeRepos;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
 use slog::Logger;
-use slog::info;
 use slog::o;
 use stats::prelude::*;
+use tracing::info;
 
 define_stats! {
     prefix = "mononoke.app";
@@ -199,16 +199,15 @@ impl<Repo> MononokeReposManager<Repo> {
                 let name = repo_name.clone();
                 async move {
                     let start = Instant::now();
-                    let logger = self.logger();
                     let repo_config = self.repo_config(&repo_name)?;
                     let common_config = self.configs.repo_configs().common.clone();
                     let repo_id = repo_config.repoid.id();
-                    info!(logger, "Initializing repo: {}", &repo_name);
+                    info!("Initializing repo: {}", &repo_name);
                     let repo = repo_factory
                         .build(name, repo_config, common_config)
                         .await
                         .with_context(|| format!("Failed to initialize repo '{}'", &repo_name))?;
-                    info!(logger, "Initialized repo: {}", &repo_name);
+                    info!("Initialized repo: {}", &repo_name);
                     STATS::initialization_time_millisecs.add_value(
                         start.elapsed().as_millis().try_into().unwrap_or(i64::MAX),
                         (repo_name.to_string(),),
@@ -272,7 +271,6 @@ impl<R: MononokeRepo> MononokeReposManager<R> {
 pub struct MononokeConfigUpdateReceiver<Repo> {
     repos: Arc<MononokeRepos<Repo>>,
     repo_factory: Arc<RepoFactory>,
-    logger: Logger,
     service_name: Option<ShardedService>,
 }
 
@@ -280,13 +278,12 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
     fn new(
         repos: Arc<MononokeRepos<Repo>>,
         repo_factory: Arc<RepoFactory>,
-        logger: Logger,
+        _logger: Logger,
         service_name: Option<ShardedService>,
     ) -> Self {
         Self {
             repos,
             repo_factory,
-            logger,
             service_name,
         }
     }
@@ -344,11 +341,10 @@ where
             .map(|(repo_name, repo_config)| {
                 let repo_factory = self.repo_factory.clone();
                 let name = repo_name.clone();
-                let logger = self.logger.clone();
                 let common_config = repo_configs.common.clone();
                 async move {
                     let repo_id = repo_config.repoid.id();
-                    info!(logger, "Reloading repo: {}", &repo_name);
+                    info!("Reloading repo: {}", &repo_name);
                     let repo = retry(
                         |_| {
                             repo_factory.build(
@@ -364,7 +360,7 @@ where
                     .await
                     .with_context(|| format!("Failed to reload repo '{}'", &repo_name))?
                     .0;
-                    info!(logger, "Reloaded repo: {}", &repo_name);
+                    info!("Reloaded repo: {}", &repo_name);
 
                     anyhow::Ok((repo_id, repo_name, repo))
                 }

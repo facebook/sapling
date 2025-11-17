@@ -61,8 +61,6 @@ use running::run_until_terminated;
 use scuba_ext::MononokeScubaSampleBuilder;
 use services::Fb303Service;
 use slog::Logger;
-use slog::error;
-use slog::info;
 use slog::o;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
@@ -71,6 +69,8 @@ use stats::schedule_stats_aggregation_preview;
 use tokio::runtime::Handle;
 use tokio::runtime::Runtime;
 use tokio::sync::oneshot;
+use tracing::error;
+use tracing::info;
 
 use crate::args::AsRepoArg;
 use crate::args::ConfigArgs;
@@ -224,12 +224,11 @@ impl MononokeApp {
         self.start_monitoring(runtime.handle(), app_name, service)?;
         self.start_stats_aggregation()?;
 
-        let logger = self.logger().clone();
         let result = runtime.block_on(main(self));
 
         if let Err(e) = result {
             // Log error in glog format
-            error!(&logger, "Execution error: {:?}", e);
+            error!("Execution error: {:?}", e);
 
             // Replace the error with a simple error so it isn't logged twice.
             return Err(anyhow!("Execution failed"));
@@ -621,8 +620,8 @@ impl MononokeApp {
             self.override_blobconfig(&mut repo_config.storage_config.blobstore, id)?;
         }
         info!(
-            self.logger().clone(),
-            "using repo \"{}\" repoid {:?}", repo_name, repo_config.repoid
+            "using repo \"{}\" repoid {:?}",
+            repo_name, repo_config.repoid
         );
 
         match &repo_config.storage_config.blobstore {
@@ -654,8 +653,8 @@ impl MononokeApp {
             self.override_blobconfig(&mut repo_config.storage_config.blobstore, id)?;
         }
         info!(
-            self.logger().clone(),
-            "using repo \"{}\" repoid {:?}", repo_name, repo_config.repoid
+            "using repo \"{}\" repoid {:?}",
+            repo_name, repo_config.repoid
         );
 
         match &repo_config.storage_config.blobstore {
@@ -838,7 +837,6 @@ impl MononokeApp {
             + Sync
             + 'static,
     {
-        let logger = self.logger().clone();
         let start = Instant::now();
         let repos_mgr = MononokeReposManager::new_with_redaction_disabled(
             self.configs.clone(),
@@ -850,7 +848,6 @@ impl MononokeApp {
         )
         .await?;
         info!(
-            &logger,
             "All repos initialized. It took: {} seconds",
             start.elapsed().as_secs()
         );

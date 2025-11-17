@@ -12,7 +12,7 @@ use anyhow::Context;
 use anyhow::Result;
 use clap::Args;
 use environment::MononokeEnvironment;
-use slog::warn;
+use tracing::warn;
 
 use crate::AppExtension;
 
@@ -46,7 +46,7 @@ impl AppExtension for HooksAppExtension {
         }
 
         if !res.is_empty() {
-            warn!(env.logger, "The following Hooks were disabled: {:?}", res);
+            warn!("The following Hooks were disabled: {:?}", res);
         }
 
         env.disabled_hooks = res;
