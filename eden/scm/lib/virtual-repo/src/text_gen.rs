@@ -40,6 +40,7 @@ culpa qui officia deserunt mollit anim id est laborum.
 }
 
 /// Generate `String` with given length. Useful for slightly more interesting file contents.
+/// Practically, it can generate 50KB text per millisecond.
 pub fn generate_paragraphs(len: usize, seed: u64) -> String {
     let mut output = String::with_capacity(len);
     TrigramTextGen::default()

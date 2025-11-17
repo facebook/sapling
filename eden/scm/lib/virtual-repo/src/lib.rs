@@ -28,7 +28,7 @@ mod factory_impls;
 mod file_size_gen;
 mod id_fields;
 mod provider;
-mod text_gen;
+pub mod text_gen;
 
 pub use dag_populate::populate_dag;
 pub use provider::VirtualRepoProvider;

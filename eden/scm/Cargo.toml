@@ -208,6 +208,7 @@ members = [
   "lib/version",
   "lib/vfs",
   "lib/virtual-repo",
+  "lib/virtual-repo/benches",
   "lib/virtual-repo/virtual-tree",
   "lib/virtual-repo/virtual-tree/benches",
   "lib/vlqencoding",
