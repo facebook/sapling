@@ -51,14 +51,17 @@ impl VirtualRepoProvider {
     /// type & size, or hg p1 p2).
     pub fn get_content(&self, id: Id20) -> Option<Bytes> {
         let fields = IdFields::maybe_from_id20(id)?;
+        let len = fields.id8 >> u16::BITS;
         match fields.kind {
             crate::id_fields::ObjectKind::Blob => {
-                Some(text_gen::generate_file_content_of_length(fields.id8 as _))
+                let paragraph_seed = fields.id8 as u16;
+                let text = text_gen::generate_paragraphs(len as _, paragraph_seed);
+                Some(text.into_bytes().into())
             }
             crate::id_fields::ObjectKind::SymlinkBlob => {
                 // Do not generate long content for symlink names.
                 // OS might have length limit.
-                Some(fields.id8.to_string().into_bytes().into())
+                Some(len.to_string().into_bytes().into())
             }
             crate::id_fields::ObjectKind::Tree => self.calculate_tree_bytes(fields),
             crate::id_fields::ObjectKind::Commit => self.calcualte_commit_bytes(fields),
@@ -116,9 +119,12 @@ impl VirtualRepoProvider {
                             FileMode::Regular => (ObjectKind::Blob, FileType::Regular),
                             FileMode::Executable => (ObjectKind::Blob, FileType::Executable),
                         };
-                        // This id8 decides file length for regular blobs.
-                        let id8 = calculate_file_length(seed.0, name_id.0.get(), blob_id.0.get());
-                        let new_id = fields.with_kind_id8(kind, id8);
+                        let file_len =
+                            calculate_file_length(seed.0, name_id.0.get(), blob_id.0.get());
+                        let paragraph_seed = fold_u64_to_u16(seed.0 ^ name_id.0.get());
+                        // This id8 decides file length and paragraph seed for regular blobs.
+                        let new_id8 = (file_len << u16::BITS) | (paragraph_seed as u64);
+                        let new_id = fields.with_kind_id8(kind, new_id8);
                         (Id20::from(new_id), TreeItemFlag::File(file_type))
                     }
                     TypedContentId::Absent => unreachable!(),
@@ -206,6 +212,15 @@ fn calculate_file_length(seed: u64, name_id: u64, blob_id: u64) -> u64 {
     len + (blob_id << 5)
 }
 
+fn fold_u64_to_u16(x: u64) -> u16 {
+    let b64 = x.to_le_bytes();
+    let b16: [u8; 2] = [
+        b64[0] ^ b64[2] ^ b64[4] ^ b64[6],
+        b64[1] ^ b64[3] ^ b64[5] ^ b64[7],
+    ];
+    u16::from_le_bytes(b16)
+}
+
 /// The virtual tree uses u64 (64 bits) internally for various operations.
 /// To avoid overflow, limit the factor_bits to 34.
 /// The default virtual repo with factor_bits=34 has about 200+ trillion files,
@@ -222,4 +237,15 @@ pub(crate) fn get_tree_provider(factor_bits: u8) -> &'static Arc<dyn VirtualTree
         let tree_provider = Arc::new(virtual_tree::serialized::EXAMPLE1.clone());
         virtual_tree::stretch::stretch_trees(tree_provider, factor_bits as _)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fold_u64_to_u16() {
+        assert_eq!(fold_u64_to_u16(0x1234), 0x1234);
+        assert_eq!(fold_u64_to_u16(0x10300204), 0x1234);
+    }
 }

@@ -46,3 +46,15 @@ Virtual repo with size-factor=0 works too:
   M V/red-b/e/VIII/lemon-IV/II
   M V/red-b/e/VIII/lemon-IV/VI
   M V/red-b/e/VIII/pear-II
+
+Sample check a file content:
+
+  $ sl cat -r virtual/main V/red-b/e/IV-IV/j/V
+  She is such a puzzled expression that she had read several nice little
+  histories about children who had been all the arches are gone from this side
+  of the party went back to yesterday, because I was a long tail, certainly,
+  said Alice, a little hot tea upon its forehead (the position in which the
+  words DRINK ME, beautifully printed on it except a little of the trees under
+  which she had known them all her coaxing.
+  
+  Puss, she began, rather timidly, saying to  (no-eol)
