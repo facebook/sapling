@@ -18,7 +18,7 @@ use hyper::Uri;
 use maplit::hashmap;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitStatus;
-use slog::debug;
+use tracing::debug;
 
 use crate::utils::build_counter;
 use crate::utils::counter_check_and_bump;
@@ -55,17 +55,17 @@ impl Middleware for ThrottleMiddleware {
             .metadata()
             .client_request_info()
             .or_else(|| {
-                debug!(ctx.logger(), "No client request info found");
+                debug!("No client request info found");
                 None
             })?;
         // Retrieve client main id
         let client_main_id = client_request_info.main_id.clone().or_else(|| {
-            debug!(ctx.logger(), "No main client id found");
+            debug!("No main client id found");
             None
         })?;
         // Retrieve rate limiter
         let rate_limiter = ctx.session().rate_limiter().or_else(|| {
-            debug!(ctx.logger(), "No rate_limiter info found");
+            debug!("No rate_limiter info found");
             None
         })?;
 

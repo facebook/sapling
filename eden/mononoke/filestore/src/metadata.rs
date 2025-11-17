@@ -22,9 +22,9 @@ use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::ContentMetadataV2Id;
 use mononoke_types::errors::MononokeTypeError;
-use slog::warn;
 use strum::IntoEnumIterator;
 use thiserror::Error;
+use tracing::warn;
 
 use crate::Alias;
 use crate::AliasBlob;
@@ -67,7 +67,7 @@ pub async fn get_metadata<B: KeyedBlobstore>(
                     "Invalid ContentMetadataV2 format exists in blobstore for key {}. Error: {}",
                     key, e
                 );
-                warn!(ctx.logger(), "{}", &msg);
+                warn!("{}", &msg);
                 let mut scuba = ctx.scuba().clone();
                 scuba.add("blobstore_key", key);
                 scuba.log_with_msg("ContentMetadataV2 backfill repair", msg);

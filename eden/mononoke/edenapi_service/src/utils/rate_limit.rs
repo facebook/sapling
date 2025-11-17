@@ -15,10 +15,10 @@ use context::CoreContext;
 use rate_limiting::RateLimit;
 use sha2::Digest;
 use sha2::Sha256;
-use slog::debug;
 use time_window_counter::BoxGlobalTimeWindowCounter;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
 use tokio::time::timeout;
+use tracing::debug;
 
 const TIME_WINDOW_MIN: u32 = 1;
 const TIME_WINDOW_MAX: u32 = 3600;
@@ -31,10 +31,7 @@ pub fn build_counter(
     identifier: &str,
 ) -> BoxGlobalTimeWindowCounter {
     let key = make_key(rate_limit_name, identifier);
-    debug!(
-        ctx.logger(),
-        "Associating key {:?} with client_id {:?}", key, identifier
-    );
+    debug!("Associating key {:?} with client_id {:?}", key, identifier);
     GlobalTimeWindowCounterBuilder::build(ctx.fb, category, key, TIME_WINDOW_MIN, TIME_WINDOW_MAX)
 }
 
@@ -71,11 +68,8 @@ pub async fn counter_check_and_bump<'a>(
                 Ok(())
             } else if !enforced {
                 debug!(
-                    ctx.logger(),
                     "Rate-limiting counter {:?} (current value:  {}) exceeds threshold {} if bumped, but enforcement is disabled",
-                    rate_limit,
-                    count,
-                    max_value,
+                    rate_limit, count, max_value,
                 );
                 let log_tag = "Request would have been rejected due to rate limiting, but enforcement is disabled";
                 let msg = format!("Rate limit exceeded: {:?} (log only)", rate_limit);
@@ -83,11 +77,8 @@ pub async fn counter_check_and_bump<'a>(
                 Ok(())
             } else {
                 debug!(
-                    ctx.logger(),
                     "Rate-limiting counter {:?} (current_value: {}) exceeds threshold {} if bumped. Blocking request",
-                    rate_limit,
-                    count,
-                    max_value,
+                    rate_limit, count, max_value,
                 );
                 let log_tag = "Request rejected due to rate limiting";
                 let msg = format!("Rate limit exceeded: {:?} (enforced)", rate_limit);
@@ -99,8 +90,8 @@ pub async fn counter_check_and_bump<'a>(
             // This can happen if the counter is not yet initialized
             // or it's not been long enough. Bump and continue.
             debug!(
-                ctx.logger(),
-                "Failed getting rate limiting counter {:?}: {}", rate_limit, e
+                "Failed getting rate limiting counter {:?}: {}",
+                rate_limit, e
             );
             counter.bump(bump_value);
             Ok(())

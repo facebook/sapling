@@ -25,8 +25,8 @@ use hyper::Body;
 use hyper::Response;
 use lazy_static::lazy_static;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::trace;
-use slog::warn;
+use tracing::trace;
+use tracing::warn;
 
 static MAX_BODY_LEN: usize = 16 * 1024; // 16 KB
 static MAX_BODY_LEN_DEBUG: usize = 4 * 1024; // 4 KB
@@ -194,15 +194,14 @@ impl RequestDumperMiddleware {
 impl Middleware for RequestDumperMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         let scuba_table = self.scuba_table.as_ref()?;
-        let logger = &RequestContext::borrow_from(state).logger;
         let headers = HeaderMap::try_borrow_from(state)
             .context("No headers in State")
-            .inspect_err(|e| warn!(logger, "Error when borrowing headers from State: {}", e))
+            .inspect_err(|e| warn!("Error when borrowing headers from State: {}", e))
             .ok()?;
         let mut log_deserialized = false;
         if let Some(len) = get_content_len(headers) {
             if len > MAX_BODY_LEN {
-                trace!(logger, "Body too big ({}), not recording", len);
+                trace!("Body too big ({}), not recording", len);
                 return None;
             }
             if len <= MAX_BODY_LEN_DEBUG {
@@ -210,10 +209,10 @@ impl Middleware for RequestDumperMiddleware {
             }
         }
         let mut rd = RequestDumper::new(self.fb, scuba_table)
-            .inspect_err(|e| warn!(logger, "Error creating request dumper: {}", e))
+            .inspect_err(|e| warn!("Error creating request dumper: {}", e))
             .ok()?;
         rd.add_http_req_prefix(state, headers)
-            .inspect_err(|e| warn!(logger, "Error recording http req prefix: {}", e))
+            .inspect_err(|e| warn!("Error recording http req prefix: {}", e))
             .ok()?;
         rd.set_log_deserialized(log_deserialized);
         state.put(rd);
@@ -223,7 +222,6 @@ impl Middleware for RequestDumperMiddleware {
     async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
         if let Some(mut request_dumper) = state.try_take::<RequestDumper>() {
             let rctx = RequestContext::borrow_from(state).clone();
-            let logger = rctx.logger;
             if let Some(callbacks) = state.try_borrow_mut::<PostResponseCallbacks>() {
                 callbacks.add(move |info| {
                     let dur_ms = if let Some(duration) = info.duration {
@@ -234,7 +232,7 @@ impl Middleware for RequestDumperMiddleware {
                     let slow_request: bool = dur_ms > SLOW_REQUEST_THRESHOLD_MS;
                     // Always log if slow, otherwise use sampling rate
                     if !slow_request && (rand::random::<u64>() % SAMPLE_RATIO) != 0 {
-                        trace!(logger, "Won't record this request");
+                        trace!("Won't record this request");
                         return;
                     }
                     request_dumper.add_duration(dur_ms);
@@ -244,7 +242,7 @@ impl Middleware for RequestDumperMiddleware {
                         request_dumper.add_client_entry_point(cri.entry_point.to_string().as_str());
                     }
                     if let Err(e) = request_dumper.log() {
-                        warn!(logger, "Couldn't dump request: {}", e);
+                        warn!("Couldn't dump request: {}", e);
                     }
                 });
             }

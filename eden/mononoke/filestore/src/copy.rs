@@ -20,8 +20,8 @@ use mononoke_types::BlobstoreKey;
 use mononoke_types::BlobstoreValue;
 use mononoke_types::ContentAlias;
 use mononoke_types::ContentMetadataV2;
-use slog::info;
 use strum::IntoEnumIterator;
+use tracing::info;
 
 use crate::Alias;
 use crate::AliasBlob;
@@ -53,12 +53,9 @@ pub async fn copy(
                     // The backfilling for ContentMetadataV2 has happened in different stages so the alias#
                     // might be missing. Regenerate it.
                     Err(_) => {
-                        info!(
-                            ctx.logger(),
-                            "Failure in copying seeded blake3 ({:?}) alias for content ID {:?}. Generating Alias.",
+                        info!("Failure in copying seeded blake3 ({:?}) alias for content ID {:?}. Generating Alias.",
                             data.seeded_blake3,
-                            data.content_id
-                        );
+                            data.content_id);
                         let content_alias = ContentAlias::from_content_id(data.content_id);
                         AliasBlob(blake3, content_alias).store(ctx, original_blobstore).await?;
                         // Now that the alias has been regenerated, try copying again.

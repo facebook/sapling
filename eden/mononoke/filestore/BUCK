@@ -7,7 +7,6 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     named_deps = {
         "blake3-constants": "//blake3:blake3-constants-rust-nothrift",
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
     },
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
@@ -35,6 +34,7 @@ rust_library(
         "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//eden/mononoke/blobstore:blobstore",

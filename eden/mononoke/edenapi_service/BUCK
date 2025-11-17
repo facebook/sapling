@@ -7,10 +7,11 @@ rust_library(
     name = "edenapi_service",
     srcs = glob(["src/**/*.rs"]),
     named_deps = {
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
-    } | ({} if rust_oss.is_oss_build() else {
-        "MononokeSaplingApiRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeSaplingApiRequest_ods3-rust",
-    }),
+                     "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
+                 } |
+                 ({} if rust_oss.is_oss_build() else {
+                     "MononokeSaplingApiRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeSaplingApiRequest_ods3-rust",
+                 }),
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust",
@@ -19,6 +20,7 @@ rust_library(
     deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-stream",
+        "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:async-trait",
         "//common/rust/shed/futures_ext:futures_ext",
         "fbsource//third-party/rust:base64",

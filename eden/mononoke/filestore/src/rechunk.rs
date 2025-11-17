@@ -17,8 +17,8 @@ use mononoke_types::ChunkedFileContents;
 use mononoke_types::ContentId;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileContents;
-use slog::debug;
 use thiserror::Error;
+use tracing::debug;
 
 use crate::FetchKey;
 use crate::FilestoreConfig;
@@ -93,7 +93,7 @@ pub async fn rechunk<B: KeyedBlobstore + Clone + 'static>(
 /// Return true if stored `chunked_file_contents` uses chunks larger
 /// than `expected_chunk_size`
 fn uses_larger_chunks(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     chunked_file_contents: &ChunkedFileContents,
     expected_chunk_size: u64,
     content_id: &ContentId,
@@ -123,11 +123,8 @@ fn uses_larger_chunks(
 
     if num_smaller_chunks > 0 {
         debug!(
-            ctx.logger(),
             "{} chunks of {} have size smaller than what we want: {}. No action will be taken",
-            num_smaller_chunks,
-            content_id,
-            expected_chunk_size
+            num_smaller_chunks, content_id, expected_chunk_size
         );
     }
 

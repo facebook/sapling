@@ -110,9 +110,9 @@ use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
-use slog::debug;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
+use tracing::debug;
 use types::HgId;
 use types::Parents;
 
@@ -204,7 +204,7 @@ async fn bump_counter_check_ratelimit(
     let rate_limiter = match ctx.session().rate_limiter() {
         Some(rate_limiter) => rate_limiter,
         None => {
-            debug!(ctx.logger(), "No rate_limiter info found");
+            debug!("No rate_limiter info found");
             return Ok(());
         }
     };
@@ -213,7 +213,7 @@ async fn bump_counter_check_ratelimit(
     let client_request_info = match ctx.client_request_info() {
         Some(client_request_info) => client_request_info,
         None => {
-            debug!(ctx.logger(), "No client request info found");
+            debug!("No client request info found");
             return Ok(());
         }
     };
@@ -225,7 +225,7 @@ async fn bump_counter_check_ratelimit(
     ) {
         Some(limit) => limit,
         None => {
-            debug!(ctx.logger(), "No {} rate limit found", rate_limit_name);
+            debug!("No {} rate limit found", rate_limit_name);
             return Ok(());
         }
     };
@@ -240,7 +240,7 @@ async fn bump_counter_check_ratelimit(
     let client_main_id = match &client_request_info.main_id {
         Some(client_main_id) => client_main_id,
         None => {
-            debug!(ctx.logger(), "No main client id found");
+            debug!("No main client id found");
             return Ok(());
         }
     };
