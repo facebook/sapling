@@ -72,7 +72,7 @@ use repo_client::find_new_draft_commits_and_derive_filenodes_for_public_roots;
 use repo_client::gettreepack_entries;
 use repo_update_logger::CommitInfo;
 use repo_update_logger::log_new_commits;
-use slog::debug;
+use tracing::debug;
 use unbundle::upload_changeset;
 
 use super::HgFileContext;
@@ -742,7 +742,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         let repo = self.repo().clone();
         let bonsai_common = self.convert_changeset_ids(common).await?;
         let bonsai_heads = self.convert_changeset_ids(heads).await?;
-        debug!(ctx.logger(), "Streaming Commit Graph...");
+        debug!("Streaming Commit Graph...");
         let commit_graph_stream = self
             .repo_ctx()
             .repo()
@@ -780,7 +780,7 @@ impl<R: MononokeRepo> HgRepoContext<R> {
         let common_set: HashSet<_> = common.iter().cloned().collect();
         let heads_vec: Vec<_> = heads.to_vec();
 
-        debug!(ctx.logger(), "Calculating Commit Graph...");
+        debug!("Calculating Commit Graph...");
         let (draft_commits, missing_commits) = try_join!(
             find_new_draft_commits_and_derive_filenodes_for_public_roots(
                 &ctx,

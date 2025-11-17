@@ -20,6 +20,7 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:sha2",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/stats:stats",

@@ -39,10 +39,10 @@ use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use slog::info;
 use tests_utils::CreateCommitContext;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
+use tracing::info;
 
 use crate::BookmarkFreshness;
 use crate::ChangesetId;
@@ -554,10 +554,7 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
 
     let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.repo(), "master").await?;
 
-    info!(
-        ctx.logger(),
-        "remapping {} from small to large", small_master_cs_id
-    );
+    info!("remapping {} from small to large", small_master_cs_id);
     // Confirm that a cross-repo lookup for an unsynced commit just fails
     let cs = smallrepo
         .xrepo_commit_lookup(
@@ -572,10 +569,7 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
     let large_master_cs_id = resolve_cs_id(&ctx, largerepo.repo(), "master").await?;
     assert_eq!(cs.id(), large_master_cs_id);
 
-    info!(
-        ctx.logger(),
-        "remapping {} from large to small", large_master_cs_id
-    );
+    info!("remapping {} from large to small", large_master_cs_id);
     let cs = largerepo
         .xrepo_commit_lookup(
             &smallrepo,

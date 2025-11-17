@@ -48,8 +48,8 @@ use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::error;
-use slog::info;
+use tracing::error;
+use tracing::info;
 
 mod commands;
 mod errors;
@@ -217,10 +217,7 @@ pub fn build_reporting_handler<'a>(
                         .count_further_bookmark_log_entries(ctx.clone(), next_id, None)
                         .await?;
                     let queue_size = QueueSize(n as usize);
-                    info!(
-                        ctx.logger(),
-                        "queue size after processing: {}", queue_size.0
-                    );
+                    info!("queue size after processing: {}", queue_size.0);
                     log_processed_entries_to_scuba(
                         &log_entries,
                         scuba_sample.clone(),
@@ -242,21 +239,20 @@ pub fn build_reporting_handler<'a>(
 }
 
 pub fn build_outcome_handler<'a>(
-    ctx: &'a CoreContext,
+    _ctx: &'a CoreContext,
 ) -> impl Fn(Outcome) -> BoxFuture<'a, Result<Vec<BookmarkUpdateLogEntry>, Error>> {
     move |res| {
         async move {
             match res {
                 Ok(PipelineState { entries, .. }) => {
                     info!(
-                        ctx.logger(),
                         "successful sync of entries {:?}",
                         entries.iter().map(|c| c.id).collect::<Vec<_>>()
                     );
                     Ok(entries)
                 }
                 Err(AnonymousError { cause: e }) => {
-                    error!(ctx.logger(), "Error without entry: {:?}", e);
+                    error!("Error without entry: {:?}", e);
                     Err(e)
                 }
                 Err(EntryError { cause: e, .. }) => Err(e),
@@ -373,7 +369,7 @@ pub fn loop_over_log_entries<'a>(
                         match entries.iter().last().cloned() {
                             None => {
                                 if loop_forever {
-                                    info!(ctx.logger(), "id: {}, no new entries found", current_id);
+                                    info!("id: {}, no new entries found", current_id);
                                     scuba_sample.clone().add("success", 1).add("delay", 0).log();
 
                                     // First None means that no new entries will be added to the stream,

@@ -10,9 +10,7 @@ rust_library(
         "dependencies_override": {"dependencies": {"sapling-sparse": {"features": ["async"]}}},
         "extra_buck_dependencies": {"dependencies": ["//eden/scm/lib/sparse:sparse"]},
     }},
-    named_deps = {
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
-    } | ({} if rust_oss.is_oss_build() else {
+    named_deps = ({} if rust_oss.is_oss_build() else {
         "MononokeApiStats_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeApiStats_ods3-rust",
     }),
     test_deps = [

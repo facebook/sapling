@@ -7,7 +7,6 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     named_deps = {
         "bincode": "fbsource//third-party/rust:bincode-2",
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
     },
     test_deps = [
         "fbsource//third-party/rust:crossbeam",
@@ -52,6 +51,7 @@ rust_library(
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:vec_map",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/bounded_traversal:bounded_traversal",

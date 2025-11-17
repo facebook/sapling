@@ -22,8 +22,8 @@ use edenapi_types::BonsaiChangesetId as EdenapiBonsaiChangesetId;
 use edenapi_types::CommitId as EdenapiCommitId;
 use edenapi_types::ContentId as EdenapiContentId;
 use edenapi_types::FsnodeId as EdenapiFsnodeId;
-pub use slog;
 use sql::mysql;
+pub use tracing;
 
 use crate::ThriftConvert;
 use crate::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
@@ -460,7 +460,7 @@ macro_rules! impl_typed_hash_loadable {
                 let ret = <Self::Value as BlobstoreValue>::from_blob(blob).map_err(LoadableError::Error);
                 let diff = now.elapsed().as_millis();
                 if diff > $crate::typed_hash::SLOW_DESERIAZLIZATION_THRESHOLD_MS {
-                    $crate::typed_hash::slog::warn!(ctx.logger(), "Slow load of {} ({} bytes) took {:?}", blobstore_key, len, now.elapsed());
+                    $crate::typed_hash::tracing::warn!("Slow load of {} ({} bytes) took {:?}", blobstore_key, len, now.elapsed());
                 }
                 ret
             }

@@ -32,8 +32,8 @@ use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_sparse_profiles::RepoSparseProfiles;
-use slog::debug;
-use slog::warn;
+use tracing::debug;
+use tracing::warn;
 use types::RepoPath;
 use xdiff::CopyInfo;
 
@@ -229,10 +229,7 @@ impl SparseProfileMonitoring {
                 .insert_profiles_sizes(ctx, cs_id, other_sizes.clone())
                 .await?;
             if let Some(false) = res {
-                debug!(
-                    ctx.logger(),
-                    "Failed to insert sizes into DB for cs_id {}", cs_id
-                );
+                debug!("Failed to insert sizes into DB for cs_id {}", cs_id);
             }
             sizes.extend(other_sizes);
         }
@@ -272,7 +269,7 @@ async fn create_matchers<R: MononokeRepo>(
     stream::iter(paths)
         .yield_periodically()
         .on_large_overshoot(|budget, elapsed| {
-            warn!(ctx.logger(), "yield_periodically(): budget overshot: current_budget={budget:?}, elapsed={elapsed:?}");
+            warn!("yield_periodically(): budget overshot: current_budget={budget:?}, elapsed={elapsed:?}");
         })
         .map(|path| async move {
             let content = format!("%include {path}");

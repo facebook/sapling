@@ -24,9 +24,9 @@ use itertools::Itertools;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use mononoke_types::ChangesetId;
 use repo_derived_data::RepoDerivedDataRef;
-use slog::debug;
-use slog::error;
-use slog::info;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
 
 use crate::CombinedBookmarkUpdateLogEntry;
 use crate::Repo;
@@ -72,11 +72,8 @@ pub async fn try_expand_bookmark_creation_entry<'a>(
 
     if estimate > DEFAULT_MAX_COMMITS_PER_BOOKMARK_CREATION {
         error!(
-            ctx.logger(),
             "Too many commits to upload for the bookmark creation entry {}: {}, limit is {}. Please, consider recursive uploading a revision with mononoke_admin instead",
-            bookmark,
-            estimate,
-            DEFAULT_MAX_COMMITS_PER_BOOKMARK_CREATION
+            bookmark, estimate, DEFAULT_MAX_COMMITS_PER_BOOKMARK_CREATION
         );
         // Upload only the bookmark creation commit. The working copy for this commit will have gaps in CAS.
         return Ok(vec![to_bcs_id]);
@@ -145,8 +142,8 @@ pub async fn try_expand_entry<'a>(
     };
     if entry.to_changeset_id.is_none() {
         info!(
-            ctx.logger(),
-            "log entry {:?} is a deletion of bookmark, skipping...", &entry
+            "log entry {:?} is a deletion of bookmark, skipping...",
+            &entry
         );
         return Ok(None);
     }
@@ -158,17 +155,14 @@ pub async fn try_expand_entry<'a>(
     {
         // Many bookmarks are moved to already uploaded commits, so we can skip them (like stable)
         debug!(
-            ctx.logger(),
-            "log entry {:?} is a move of bookmark to already uploaded commit, skipping...", &entry
+            "log entry {:?} is a move of bookmark to already uploaded commit, skipping...",
+            &entry
         );
         return Ok(None);
     }
 
     if entry.from_changeset_id.is_none() {
-        info!(
-            ctx.logger(),
-            "log entry {:?} is a creation of bookmark", &entry
-        );
+        info!("log entry {:?} is a creation of bookmark", &entry);
         return Ok(Some(
             try_expand_bookmark_creation_entry(
                 re_cas_client,
@@ -193,7 +187,6 @@ pub async fn try_expand_entry<'a>(
             .await?
     {
         info!(
-            ctx.logger(),
             "log entry {:?} is a not creation of bookmark, however we sync it first time or it was updated last time more than our TTL",
             &entry
         );
@@ -234,7 +227,7 @@ pub async fn try_sync_single_combined_entry<'a>(
         .iter()
         .map(|entry| entry.id)
         .collect();
-    info!(ctx.logger(), "syncing log entries {:?} ...", ids);
+    info!("syncing log entries {:?} ...", ids);
 
     let start_time = std::time::Instant::now();
     let queue: Vec<ChangesetId> = futures::stream::iter(combined_entry.components.clone())
@@ -277,7 +270,6 @@ pub async fn try_sync_single_combined_entry<'a>(
         );
 
     info!(
-        ctx.logger(),
         "log entries {:?} synced ({} commits uploaded, upload stats: {}), took overall {:.3} sec, derivation checks took {:.3} sec",
         ids,
         uploaded_len,

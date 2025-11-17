@@ -43,9 +43,9 @@ use repo_identity::RepoIdentityRef;
 use repourl::encode_repo_name;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
-use slog::error;
-use slog::info;
 use tracing::Instrument;
+use tracing::error;
+use tracing::info;
 use zk_leader_election::LeaderElection;
 use zk_leader_election::ZkMode;
 
@@ -112,11 +112,10 @@ impl MononokeCasSyncProcess {
 impl RepoShardedProcess for MononokeCasSyncProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.as_str();
-        let logger = self.app.logger().clone();
 
         info!(
-            logger,
-            "Setting up mononoke cas sync command for repo {}", repo_name
+            "Setting up mononoke cas sync command for repo {}",
+            repo_name
         );
         let executor = MononokeCasSyncProcessExecutor::new(
             self.app.clone(),
@@ -124,8 +123,8 @@ impl RepoShardedProcess for MononokeCasSyncProcess {
             self.args.clone(),
         )?;
         info!(
-            logger,
-            "Completed mononoke cas sync command setup for repo {}", repo_name
+            "Completed mononoke cas sync command setup for repo {}",
+            repo_name
         );
         Ok(Arc::new(executor))
     }
@@ -170,10 +169,7 @@ impl MononokeCasSyncProcessExecutor {
 
     async fn do_execute(&self) -> anyhow::Result<()> {
         async {
-            info!(
-                self.ctx.logger(),
-                "Initiating mononoke RE CAS sync command execution",
-            );
+            info!("Initiating mononoke RE CAS sync command execution",);
 
             let args = self.app.args::<CasSyncArgs>()?;
 
@@ -190,10 +186,7 @@ impl MononokeCasSyncProcessExecutor {
                     // Once cancellation is requested, do not retry even if its
                     // a retryable error.
                     if self.cancellation_requested.load(Ordering::Relaxed) {
-                        info!(
-                            self.ctx.logger(),
-                            "sync stopping due to cancellation request at attempt {}", attempt
-                        );
+                        info!("sync stopping due to cancellation request at attempt {}", attempt);
                     } else {
                         match self.maybe_become_leader(mode, self.ctx.logger().clone()).await {
                             Ok(_leader_token) => {
@@ -215,7 +208,7 @@ impl MononokeCasSyncProcessExecutor {
                                 })?;
                             },
                             Err(e) => {
-                                error!(self.ctx.logger(), "Failed to become leader {:#}", e);
+                                error!("Failed to become leader {:#}", e);
                             }
                         }
                     }
@@ -225,12 +218,9 @@ impl MononokeCasSyncProcessExecutor {
             ).binary_exponential_backoff()
             .max_attempts(
             retry_num)
-    .inspect_err(|attempt, _err| info!(self.ctx.logger(), "attempt {attempt} of {retry_num} failed"))
+    .inspect_err(|attempt, _err| info!("attempt {attempt} of {retry_num} failed"))
             .await?;
-            info!(
-                self.ctx.logger(),
-                "Finished mononoke RE CAS sync command execution for repo {}", &self.repo_name,
-            );
+            info!("Finished mononoke RE CAS sync command execution for repo {}", &self.repo_name,);
             Ok(())
     }.instrument(tracing::info_span!("execute", repo = %self.repo_name))
     .await
@@ -245,8 +235,8 @@ impl RepoShardedProcessExecutor for MononokeCasSyncProcessExecutor {
 
     async fn stop(&self) -> anyhow::Result<()> {
         info!(
-            self.ctx.logger(),
-            "Terminating mononoke RE CAS sync command execution for repo {}", &self.repo_name,
+            "Terminating mononoke RE CAS sync command execution for repo {}",
+            &self.repo_name,
         );
         self.cancellation_requested.store(true, Ordering::Relaxed);
         Ok(())
@@ -266,7 +256,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         true, // enable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
-        slog::info!(logger, "Running sharded sync loop");
+        info!("Running sharded sync loop");
         let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
         executor.block_and_execute(&logger, receiver).await?;
         drop(sender);
@@ -321,7 +311,6 @@ async fn run_sync(
     )?);
 
     info!(
-        ctx.logger(),
         "using repo \"{}\" repoid {:?}",
         repo.repo_identity().name(),
         repo.repo_identity().id()
@@ -350,7 +339,7 @@ async fn run_sync(
     // Before beginning any actual processing, check if cancellation has been requested.
     // If yes, then lets return early.
     if cancellation_requested.load(Ordering::Relaxed) {
-        info!(ctx.logger(), "sync stopping due to cancellation request");
+        info!("sync stopping due to cancellation request");
         return Ok(());
     }
 
@@ -364,13 +353,13 @@ async fn run_sync(
     let can_continue = move || {
         let exit_file_exists = match exit_path {
             Some(ref exit_path) if exit_path.exists() => {
-                info!(ctx.logger(), "path {:?} exists: exiting ...", exit_path);
+                info!("path {:?} exists: exiting ...", exit_path);
                 true
             }
             _ => false,
         };
         let cancelled = if cancellation_requested.load(Ordering::Relaxed) {
-            info!(ctx.logger(), "sync stopping due to cancellation request");
+            info!("sync stopping due to cancellation request");
             true
         } else {
             false

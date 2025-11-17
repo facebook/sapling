@@ -149,13 +149,13 @@ use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfilesArc;
 use repo_stats_logger::RepoStatsLogger;
 use restricted_paths::RestrictedPaths;
-use slog::debug;
-use slog::error;
 use sql_commit_graph_storage::CommitGraphBulkFetcher;
 use sql_query_config::SqlQueryConfig;
 use stats::prelude::*;
 use streaming_clone::StreamingClone;
 use synced_commit_mapping::ArcSyncedCommitMapping;
+use tracing::debug;
+use tracing::error;
 use unbundle::PushRedirector;
 use unbundle::PushRedirectorArgs;
 use wireproto_handler::PushRedirectorBase;
@@ -532,7 +532,6 @@ fn report_bookmark_missing_from_cache(
     bookmark: &BookmarkKey,
 ) {
     error!(
-        ctx.logger(),
         "Monitored bookmark does not exist in the cache: {}, repo: {}",
         bookmark,
         repo.repo_identity().name()
@@ -561,8 +560,8 @@ fn report_bookmark_missing_from_repo(
     bookmark: &BookmarkKey,
 ) {
     error!(
-        ctx.logger(),
-        "Monitored bookmark does not exist in the repo: {}", bookmark
+        "Monitored bookmark does not exist in the repo: {}",
+        bookmark
     );
 
     STATS::missing_from_repo.set_value(
@@ -593,7 +592,6 @@ fn report_bookmark_staleness(
     // Don't log if staleness is less than 10 to make output less spammy
     if staleness >= 10 {
         debug!(
-            ctx.logger(),
             "Reporting staleness of {bookmark} to be {staleness}s: latest value is {blobrepo_bcs_id}, cache points to {service_bcs_id}",
         );
     }

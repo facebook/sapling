@@ -27,13 +27,13 @@ use serde::Serialize;
 use sha2::Digest;
 use sha2::Sha256;
 use slog::Logger;
-use slog::error;
-use slog::info;
-use slog::trace;
-use slog::warn;
 use stats::prelude::*;
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
+use tracing::error;
+use tracing::info;
+use tracing::trace;
+use tracing::warn;
 
 const LIVENESS_INTERVAL: u64 = 300;
 type Swappable<T> = Arc<ArcSwap<T>>;
@@ -65,7 +65,7 @@ impl MononokeConfigs {
         config_path: impl AsRef<Path>,
         config_store: &ConfigStore,
         runtime_handle: Handle,
-        logger: Logger,
+        _logger: Logger,
     ) -> Result<Self> {
         let storage_configs = metaconfig_parser::load_storage_configs(&config_path, config_store)?;
         let storage_configs = Arc::new(ArcSwap::from_pointee(storage_configs));
@@ -77,7 +77,7 @@ impl MononokeConfigs {
             if let Ok(new_config_info) = build_config_info(config_handle.get()) {
                 Some(new_config_info)
             } else {
-                warn!(logger, "Could not compute new config_info");
+                warn!("Could not compute new config_info");
                 None
             }
         } else {
@@ -102,7 +102,7 @@ impl MononokeConfigs {
                 config_info,
                 update_receivers,
                 config_watcher,
-                logger,
+                _logger,
             ))
         });
         Ok(Self {
@@ -188,16 +188,13 @@ async fn watch_and_update(
     config_info: Swappable<Option<ConfigInfo>>,
     update_receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
     mut config_watcher: ConfigUpdateWatcher<RawRepoConfigs>,
-    logger: Logger,
+    _logger: Logger,
 ) {
     loop {
         match config_watcher.wait_for_next().await {
             Ok(raw_repo_configs) => {
-                info!(
-                    logger,
-                    "Raw Repo Configs changed in config store, applying update"
-                );
-                trace!(logger, "Applied configs: {:?}", raw_repo_configs);
+                info!("Raw Repo Configs changed in config store, applying update");
+                trace!("Applied configs: {:?}", raw_repo_configs);
                 let original_raw_repo_configs = raw_repo_configs.clone();
                 match load_configs_from_raw(Arc::unwrap_or_clone(raw_repo_configs)) {
                     Ok((new_repo_configs, new_storage_configs)) => {
@@ -205,7 +202,7 @@ async fn watch_and_update(
                             let new_config_info = Arc::new(Some(new_config_info));
                             config_info.store(new_config_info);
                         } else {
-                            warn!(logger, "Could not compute new config_info");
+                            warn!("Could not compute new config_info");
                         }
                         let new_repo_configs = Arc::new(new_repo_configs);
                         let new_storage_configs = Arc::new(new_storage_configs);
@@ -222,28 +219,22 @@ async fn watch_and_update(
                             .collect::<Result<Vec<_>>>()
                         {
                             error!(
-                                logger,
-                                "Failure in sending config update to receivers. Error: {:?}", e
+                                "Failure in sending config update to receivers. Error: {:?}",
+                                e
                             );
                             STATS::refresh_failure_count.add_value(1);
                         } else {
-                            info!(logger, "Successfully applied config update");
+                            info!("Successfully applied config update");
                         }
                     }
                     Err(e) => {
-                        error!(
-                            logger,
-                            "Failure in parsing config from raw config. Error: {:?}", e
-                        );
+                        error!("Failure in parsing config from raw config. Error: {:?}", e);
                         STATS::refresh_failure_count.add_value(1);
                     }
                 }
             }
             Err(e) => {
-                error!(
-                    logger,
-                    "Failure in fetching latest config change. Error: {:?}", e
-                );
+                error!("Failure in fetching latest config change. Error: {:?}", e);
                 STATS::refresh_failure_count.add_value(1);
             }
         }
