@@ -33,8 +33,8 @@ use maplit::hashset;
 use mononoke_types::BlobstoreBytes;
 use repo_identity::RepoIdentityRef;
 use samplingblob::SamplingHandler;
-use slog::info;
 use tracing::Instrument;
+use tracing::info;
 
 use crate::commands::COMPRESSION_BENEFIT;
 use crate::commands::JobParams;
@@ -232,7 +232,6 @@ impl ProgressStateCountByType<SizingStats, SizingStats> {
         };
 
         info!(
-            self.params.logger,
             "Raw/s,Compressed/s,Raw,Compressed,%Saving; Delta {:06}/s,{:06}/s,{},{}s; Run {:06}/s,{:06}/s,{},{}s; Type:Raw,Compressed,%Saving {}",
             delta_summary_per_s.raw,
             delta_summary_per_s.compressed,

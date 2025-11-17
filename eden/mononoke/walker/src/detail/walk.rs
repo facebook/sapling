@@ -81,9 +81,9 @@ use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::Logger;
-use slog::info;
-use slog::warn;
 use thiserror::Error;
+use tracing::info;
+use tracing::warn;
 use unodes::RootUnodeManifestId;
 use yield_stream::YieldStreamExt;
 
@@ -103,7 +103,6 @@ use crate::detail::graph::UnodeFlags;
 use crate::detail::graph::UnodeKey;
 use crate::detail::graph::UnodeManifestEntry;
 use crate::detail::graph::WrappedPath;
-use crate::detail::log;
 use crate::detail::repo::Repo;
 use crate::detail::state::InternedType;
 use crate::detail::validate::CHECK_FAIL;
@@ -2002,7 +2001,7 @@ where
                     if let Some(ctx) = visitor.start_step(ctx.clone(), via.as_ref(), &walk_item) {
                         ctx
                     } else {
-                        info!(ctx.logger(), #log::SUPPRESS, "Suppressing edge {:?}", walk_item);
+                        info!("Suppressing edge {:?}", walk_item);
                         return future::ready((walk_item.target, shard_key, Ok(None))).boxed();
                     };
 
@@ -2082,8 +2081,6 @@ where
     VOut: 'static + Send,
     Route: 'static + Send + Clone + StepRoute,
 {
-    let logger = ctx.logger().clone();
-
     if via.is_none() {
         // record stats for the walk_roots
         visitor.visit(&ctx, walk_item.clone(), None, None, vec![walk_item.clone()]);
@@ -2253,7 +2250,7 @@ where
                 if error_as_data_edge_types.is_empty()
                     || error_as_data_edge_types.contains(&walk_item.label)
                 {
-                    warn!(logger, "{}", msg);
+                    warn!("{}", msg);
                     match e {
                         StepError::Missing(_s) => Ok(StepOutput::Done(
                             NodeData::MissingAsData(walk_item.target.clone()),

@@ -24,12 +24,11 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use slog::info;
 use stats::prelude::*;
+use tracing::info;
 
 use crate::detail::graph::Node;
 use crate::detail::graph::NodeType;
-use crate::detail::log;
 use crate::detail::state::StepStats;
 
 define_stats! {
@@ -64,7 +63,6 @@ pub struct ProgressOptions {
 
 pub struct ProgressStateByTypeParams {
     pub fb: FacebookInit,
-    pub logger: Logger,
     pub subcommand_stats_key: &'static str,
     pub repo_stats_key: String,
     pub types_sorted_by_name: Vec<NodeType>,
@@ -144,7 +142,7 @@ where
 {
     pub fn new(
         fb: FacebookInit,
-        logger: Logger,
+        _logger: Logger,
         subcommand_stats_key: &'static str,
         repo_stats_key: String,
         included_types: HashSet<NodeType>,
@@ -156,7 +154,6 @@ where
         Self {
             params: ProgressStateByTypeParams {
                 fb,
-                logger,
                 subcommand_stats_key,
                 repo_stats_key,
                 types_sorted_by_name: types_by_name,
@@ -255,8 +252,6 @@ impl ProgressStateCountByType<StepStats, ProgressSummary> {
         };
 
         info!(
-            self.params.logger,
-            #log::GRAPH,
             "Walked/s,Children/s,Walked,Errors,Missing,Children,Time; Delta {:06}/s,{:06}/s,{},{},{},{},{}s; Run {:06}/s,{:06}/s,{},{},{},{},{}s; Type:Walked,Checks,Children {}",
             delta_summary_per_s.walked,
             delta_summary_per_s.queued,
@@ -432,7 +427,7 @@ where
 }
 
 // Final status summary, plus count of seen nodes
-pub async fn report_state<InStream, ND, SS>(ctx: CoreContext, s: InStream) -> Result<(), Error>
+pub async fn report_state<InStream, ND, SS>(_ctx: CoreContext, s: InStream) -> Result<(), Error>
 where
     InStream: Stream<Item = Result<(Node, Option<ND>, Option<SS>), Error>> + 'static + Send,
 {
@@ -448,6 +443,6 @@ where
         })
         .await?;
 
-    info!(ctx.logger(), #log::LOADED, "Seen,Loaded: {},{}", seen, loaded);
+    info!("Seen,Loaded: {},{}", seen, loaded);
     Ok(())
 }

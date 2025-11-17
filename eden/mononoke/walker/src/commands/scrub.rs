@@ -22,7 +22,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::MultiRepoArgs;
 use sharding_ext::RepoShard;
 use slog::Logger;
-use slog::info;
+use tracing::info;
 
 use crate::WalkerArgs;
 use crate::args::OutputFormat;
@@ -80,7 +80,7 @@ impl RepoShardedProcess for WalkerScrubProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.as_str();
         let logger = self.app.repo_logger(repo_name);
-        info!(&logger, "Setting up walker scrub for repo {}", repo_name);
+        info!("Setting up walker scrub for repo {}", repo_name);
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
             repo_id: vec![],
@@ -90,10 +90,7 @@ impl RepoShardedProcess for WalkerScrubProcess {
             .with_context(|| {
                 format!("Failure in setting up walker scrub for repo {}", &repo_name)
             })?;
-        info!(
-            &logger,
-            "Completed walker scrub setup for repo {}", repo_name
-        );
+        info!("Completed walker scrub setup for repo {}", repo_name);
         Ok(Arc::new(WalkerScrubProcessExecutor::new(
             self.app.fb,
             logger,
@@ -108,7 +105,6 @@ impl RepoShardedProcess for WalkerScrubProcess {
 /// BP over the context of a provided repo.
 pub struct WalkerScrubProcessExecutor {
     fb: FacebookInit,
-    logger: Logger,
     job_params: JobParams,
     command: ScrubCommand,
     cancellation_requested: Arc<AtomicBool>,
@@ -118,7 +114,7 @@ pub struct WalkerScrubProcessExecutor {
 impl WalkerScrubProcessExecutor {
     fn new(
         fb: FacebookInit,
-        logger: Logger,
+        _logger: Logger,
         job_params: JobParams,
         command: ScrubCommand,
         repo_name: String,
@@ -126,7 +122,6 @@ impl WalkerScrubProcessExecutor {
         Self {
             cancellation_requested: Arc::new(AtomicBool::new(false)),
             fb,
-            logger,
             job_params,
             command,
             repo_name,
@@ -138,8 +133,8 @@ impl WalkerScrubProcessExecutor {
 impl RepoShardedProcessExecutor for WalkerScrubProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
-            "Initiating walker scrub execution for repo {}", &self.repo_name,
+            "Initiating walker scrub execution for repo {}",
+            &self.repo_name,
         );
         scrub_objects(
             self.fb,
@@ -158,8 +153,8 @@ impl RepoShardedProcessExecutor for WalkerScrubProcessExecutor {
 
     async fn stop(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
-            "Terminating walker scrub execution for repo {}", &self.repo_name,
+            "Terminating walker scrub execution for repo {}",
+            &self.repo_name,
         );
         self.cancellation_requested.store(true, Ordering::Relaxed);
         Ok(())

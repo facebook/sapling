@@ -16,7 +16,6 @@ use anyhow::bail;
 use anyhow::format_err;
 use blobstore::Blobstore;
 use blobstore_factory::ScrubHandler;
-use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::CommonConfig;
@@ -35,10 +34,10 @@ use samplingblob::SamplingBlobstore;
 use samplingblob::SamplingHandler;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use slog::info;
 use slog::o;
-use slog::warn;
 use sql_ext::facebook::MysqlOptions;
+use tracing::info;
+use tracing::warn;
 
 use crate::WalkerArgs;
 use crate::args::NodeTypeArg;
@@ -54,7 +53,6 @@ use crate::detail::graph::EdgeType;
 use crate::detail::graph::Node;
 use crate::detail::graph::NodeType;
 use crate::detail::graph::SqlShardInfo;
-use crate::detail::log;
 use crate::detail::progress::ProgressOptions;
 use crate::detail::progress::ProgressStateCountByType;
 use crate::detail::progress::ProgressStateMutex;
@@ -95,7 +93,6 @@ pub async fn setup_common(
             ));
         }
         warn!(
-            logger,
             "Error as data enabled, walk results may not be complete. Errors as data enabled for node types {:?} edge types {:?}",
             sort_by_string(&error_as_data_node_types),
             sort_by_string(&error_as_data_edge_types)
@@ -108,7 +105,6 @@ pub async fn setup_common(
     let repo_count = repos.len();
     if repo_count > 1 {
         info!(
-            logger,
             "Walking repos {:?}",
             repos.iter().map(|repo| &repo.0).collect::<Vec<_>>()
         );
@@ -326,7 +322,7 @@ fn setup_repo_factory<'a>(
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     scuba_builder: MononokeScubaSampleBuilder,
-    logger: &'a Logger,
+    _logger: &'a Logger,
     quiet: bool,
 ) -> RepoFactory {
     // We want to customize the repo factory, so take a deep clone
@@ -334,10 +330,9 @@ fn setup_repo_factory<'a>(
     let mut repo_factory = RepoFactory::clone(app.repo_factory());
     if let Some(blobstore_sampler) = blobstore_sampler.clone() {
         repo_factory.with_blobstore_override({
-            cloned!(logger);
             move |blobstore| -> Arc<dyn Blobstore> {
                 if !quiet {
-                    info!(logger, "Sampling from blobstore: {}", blobstore);
+                    info!("Sampling from blobstore: {}", blobstore);
                 }
                 Arc::new(SamplingBlobstore::new(blobstore, blobstore_sampler.clone()))
             }
@@ -442,14 +437,10 @@ async fn setup_repo<'a>(
     let (include_edge_types, include_node_types) =
         reachable_graph_elements(include_edge_types, include_node_types, &root_node_types);
     info!(
-        logger,
-        #log::GRAPH,
         "Walking edge types {:?}",
         sort_by_string(&include_edge_types)
     );
     info!(
-        logger,
-        #log::GRAPH,
         "Walking node types {:?}",
         sort_by_string(&include_node_types)
     );

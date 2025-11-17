@@ -40,10 +40,10 @@ use phases::Phases;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use slog::info;
-use slog::warn;
 use stats::prelude::*;
 use tracing::Instrument;
+use tracing::info;
+use tracing::warn;
 
 use crate::commands::JobParams;
 use crate::commands::JobWalkParams;
@@ -54,7 +54,6 @@ use crate::detail::graph::Node;
 use crate::detail::graph::NodeData;
 use crate::detail::graph::NodeType;
 use crate::detail::graph::WrappedPath;
-use crate::detail::log;
 use crate::detail::progress::ProgressOptions;
 use crate::detail::progress::ProgressRecorder;
 use crate::detail::progress::ProgressRecorderUnprotected;
@@ -598,7 +597,6 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
 }
 
 struct ValidateProgressState {
-    logger: Logger,
     fb: FacebookInit,
     scuba_builder: MononokeScubaSampleBuilder,
     repo_stats_key: String,
@@ -614,7 +612,7 @@ struct ValidateProgressState {
 
 impl ValidateProgressState {
     fn new(
-        logger: Logger,
+        _logger: Logger,
         fb: FacebookInit,
         scuba_builder: MononokeScubaSampleBuilder,
         repo_stats_key: String,
@@ -624,7 +622,6 @@ impl ValidateProgressState {
         let types_sorted_by_name = sort_by_string(included_types);
         let now = Instant::now();
         Self {
-            logger,
             fb,
             scuba_builder,
             repo_stats_key,
@@ -651,8 +648,6 @@ impl ValidateProgressState {
             .collect::<Vec<_>>()
             .join(" ");
         info!(
-            self.logger,
-            #log::VALIDATE,
             "Nodes,Pass,Fail:{},{},{}; EdgesChecked:{}; CheckType:Pass,Fail Total:{},{} {}",
             self.checked_nodes,
             self.passed_nodes,
@@ -811,7 +806,7 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
                         .log();
                     if check_fail > 0 {
                         if let Ok(json) = scuba.get_sample().to_json() {
-                            warn!(self.logger, "Validation failed: {}", json)
+                            warn!("Validation failed: {}", json)
                         }
                     }
                 }
@@ -902,8 +897,6 @@ async fn run_one(
     cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
     info!(
-        repo_params.logger,
-        #log::VALIDATE,
         "Performing check types {:?}",
         sort_by_string(&command.include_check_types)
     );

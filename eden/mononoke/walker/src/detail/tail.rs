@@ -36,11 +36,11 @@ use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use repo_identity::RepoIdentityRef;
 use slog::Logger;
-use slog::info;
 use sql_commit_graph_storage::CommitGraphBulkFetcherArc;
 use strum::IntoEnumIterator;
 use tokio::time::Duration;
 use tokio::time::Instant;
+use tracing::info;
 
 use crate::commands::JobWalkParams;
 use crate::detail::checkpoint::Checkpoint;
@@ -50,7 +50,6 @@ use crate::detail::fetcher::Direction;
 use crate::detail::graph::ChangesetKey;
 use crate::detail::graph::Node;
 use crate::detail::graph::NodeType;
-use crate::detail::log;
 use crate::detail::state::InternedType;
 use crate::detail::walk::OutgoingEdge;
 use crate::detail::walk::RepoWalkParams;
@@ -239,10 +238,7 @@ where
         );
         let session_text = ctx.session().metadata().session_id().to_string();
         if !job_params.quiet {
-            info!(
-                repo_params.logger,
-                "Starting walk with session id {}", &session_text
-            )
+            info!("Starting walk with session id {}", &session_text)
         }
         repo_params.scuba_builder.add("session", session_text);
 
@@ -257,7 +253,10 @@ where
         };
 
         if let Some(cp) = checkpoint.as_ref() {
-            info!(repo_params.logger, #log::CHUNKING, "Found checkpoint with bounds: ({}, {})", cp.lower_bound, cp.upper_bound);
+            info!(
+                "Found checkpoint with bounds: ({}, {})",
+                cp.lower_bound, cp.upper_bound
+            );
         }
 
         let fetcher_params = tail_params
@@ -288,7 +287,7 @@ where
                 .repo_upper_bound_override
                 .unwrap_or(repo_bounds.end);
 
-            info!(repo_params.logger, #log::CHUNKING, "Repo bounds: ({}, {})", lower, upper);
+            info!("Repo bounds: ({}, {})", lower, upper);
 
             let (contiguous_bounds, best_bound, catchup_bounds, main_bounds) = if let Some(
                 ref mut checkpoint,
@@ -298,8 +297,10 @@ where
                 run_start = checkpoint.create_timestamp;
                 if age_secs >= 0 && Duration::from_secs(age_secs as u64) > tail_params.state_max_age
                 {
-                    info!(repo_params.logger, #log::CHUNKING, "Checkpoint run {} chunk {} is too old at {}s, running from repo bounds",
-                        checkpoint.update_run_number, checkpoint.update_chunk_number, age_secs);
+                    info!(
+                        "Checkpoint run {} chunk {} is too old at {}s, running from repo bounds",
+                        checkpoint.update_run_number, checkpoint.update_chunk_number, age_secs
+                    );
                     // Increment checkpoints run, reset chunk and create_timestamp as we're starting again
                     checkpoint.update_run_number += 1;
                     checkpoint.update_chunk_number = 0;
@@ -325,8 +326,13 @@ where
                         (_, Some(_), None) => false,
                         _ => true,
                     };
-                    info!(repo_params.logger, #log::CHUNKING, "Continuing from checkpoint run {} chunk {} with catchup {:?} and main {:?} bounds",
-                        checkpoint.update_run_number, checkpoint.update_chunk_number, catchup_bounds, main_bounds);
+                    info!(
+                        "Continuing from checkpoint run {} chunk {} with catchup {:?} and main {:?} bounds",
+                        checkpoint.update_run_number,
+                        checkpoint.update_chunk_number,
+                        catchup_bounds,
+                        main_bounds
+                    );
                     (
                         contiguous_bounds,
                         if chunking.direction == Direction::NewestFirst {
@@ -421,7 +427,10 @@ where
                         )
                     }
                     _ => {
-                        info!(logger, #log::CHUNKING, "Starting chunk {} with bounds ({}, {})", chunk_num, chunk_low, chunk_upper)
+                        info!(
+                            "Starting chunk {} with bounds ({}, {})",
+                            chunk_num, chunk_low, chunk_upper
+                        )
                     }
                 }
             }
@@ -464,10 +473,10 @@ where
             visitor = Arc::try_unwrap(arc_v).map_err(|_| anyhow!("could not unwrap visitor"))?;
 
             if let Some(chunking) = tail_params.chunking.as_ref() {
-                info!(logger, #log::LOADED, "Deferred: {}", visitor.num_deferred());
+                info!("Deferred: {}", visitor.num_deferred());
                 if let Some(clear_state) = chunking.clear_state.as_ref() {
                     if clear_state.sample_rate != 0 && chunk_num % clear_state.sample_rate == 0 {
-                        info!(logger, #log::CHUNKING, "Clearing state after chunk {}", chunk_num);
+                        info!("Clearing state after chunk {}", chunk_num);
                         visitor.clear_state(&clear_state.node_types, &clear_state.interned_types);
                     }
                 }
@@ -523,8 +532,8 @@ where
             }
 
             info!(
-                repo_params.logger, #log::CHUNKING,
-                "Completed in {} chunks of size {}", chunk_num, chunking.chunk_size
+                "Completed in {} chunks of size {}",
+                chunk_num, chunking.chunk_size
             );
         };
 
@@ -537,10 +546,7 @@ where
                 if age_secs >= 0 && Duration::from_secs(age_secs as u64) > tail_params.state_max_age
                 {
                     // Walk state is too old, clear it.
-                    info!(
-                        repo_params.logger,
-                        "Clearing walk state after {} seconds", age_secs
-                    );
+                    info!("Clearing walk state after {} seconds", age_secs);
                     visitor
                         .clear_state(&NodeType::iter().collect(), &InternedType::iter().collect());
                     state_start = Timestamp::now();

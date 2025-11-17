@@ -33,9 +33,9 @@ use metaconfig_types::BlobstoreId;
 use mononoke_types::datetime::DateTime;
 use repo_identity::RepoIdentityRef;
 use samplingblob::ComponentSamplingHandler;
-use slog::info;
 use stats::prelude::*;
 use tracing::Instrument;
+use tracing::info;
 
 use crate::args::OutputFormat;
 use crate::commands::JobParams;
@@ -48,7 +48,6 @@ use crate::detail::graph::NodeData;
 use crate::detail::graph::NodeType;
 use crate::detail::graph::WrappedPathHash;
 use crate::detail::graph::WrappedPathLike;
-use crate::detail::log;
 use crate::detail::pack::PackInfo;
 use crate::detail::pack::PackInfoLogOptions;
 use crate::detail::pack::PackInfoLogger;
@@ -352,8 +351,6 @@ impl ProgressStateCountByType<ScrubStats, ScrubStats> {
         };
 
         info!(
-            self.params.logger,
-            #log::SIZING,
             "Bytes/s,Keys/s,Bytes,Keys; Delta {:06}/s,{:06}/s,{},{}s; Run {:06}/s,{:06}/s,{},{}s; Type:Raw,Compressed {}",
             delta_summary_per_s.blobstore_bytes,
             delta_summary_per_s.blobstore_keys,

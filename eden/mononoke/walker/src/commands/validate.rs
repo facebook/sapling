@@ -22,7 +22,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::MultiRepoArgs;
 use sharding_ext::RepoShard;
 use slog::Logger;
-use slog::info;
+use tracing::info;
 
 use crate::WalkerArgs;
 use crate::args::ValidateCheckTypeArgs;
@@ -63,7 +63,7 @@ impl RepoShardedProcess for WalkerValidateProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.as_str();
         let logger = self.app.repo_logger(repo_name);
-        info!(&logger, "Setting up walker validate for repo {}", repo_name);
+        info!("Setting up walker validate for repo {}", repo_name);
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
             repo_id: vec![],
@@ -76,10 +76,7 @@ impl RepoShardedProcess for WalkerValidateProcess {
                     &repo_name
                 )
             })?;
-        info!(
-            &logger,
-            "Completed walker validate setup for repo {}", repo_name
-        );
+        info!("Completed walker validate setup for repo {}", repo_name);
         Ok(Arc::new(WalkerValidateProcessExecutor::new(
             self.app.fb,
             logger,
@@ -94,7 +91,6 @@ impl RepoShardedProcess for WalkerValidateProcess {
 /// BP over the context of a provided repo.
 pub struct WalkerValidateProcessExecutor {
     fb: FacebookInit,
-    logger: Logger,
     job_params: JobParams,
     command: ValidateCommand,
     cancellation_requested: Arc<AtomicBool>,
@@ -104,7 +100,7 @@ pub struct WalkerValidateProcessExecutor {
 impl WalkerValidateProcessExecutor {
     fn new(
         fb: FacebookInit,
-        logger: Logger,
+        _logger: Logger,
         job_params: JobParams,
         command: ValidateCommand,
         repo_name: String,
@@ -112,7 +108,6 @@ impl WalkerValidateProcessExecutor {
         Self {
             cancellation_requested: Arc::new(AtomicBool::new(false)),
             fb,
-            logger,
             job_params,
             command,
             repo_name,
@@ -124,8 +119,8 @@ impl WalkerValidateProcessExecutor {
 impl RepoShardedProcessExecutor for WalkerValidateProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
-            "Initiating walker validate execution for repo {}", &self.repo_name,
+            "Initiating walker validate execution for repo {}",
+            &self.repo_name,
         );
         validate(
             self.fb,
@@ -144,8 +139,8 @@ impl RepoShardedProcessExecutor for WalkerValidateProcessExecutor {
 
     async fn stop(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
-            "Terminating walker validate execution for repo {}", &self.repo_name,
+            "Terminating walker validate execution for repo {}",
+            &self.repo_name,
         );
         self.cancellation_requested.store(true, Ordering::Relaxed);
         Ok(())

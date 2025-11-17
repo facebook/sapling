@@ -42,11 +42,11 @@ use mononoke_types::SkeletonManifestId;
 use phases::Phase;
 use phases::Phases;
 use slog::Logger;
-use slog::info;
 use strum::EnumCount;
 use strum::EnumIter;
 use strum::EnumString;
 use strum::VariantNames;
+use tracing::info;
 
 use crate::detail::fetcher::Direction;
 use crate::detail::graph::EdgeType;
@@ -56,7 +56,6 @@ use crate::detail::graph::NodeType;
 use crate::detail::graph::UnodeFlags;
 use crate::detail::graph::WrappedPath;
 use crate::detail::graph::WrappedPathHash;
-use crate::detail::log;
 use crate::detail::progress::sort_by_string;
 use crate::detail::walk::EmptyRoute;
 use crate::detail::walk::OutgoingEdge;
@@ -857,7 +856,7 @@ impl TailingWalkVisitor for WalkState {
         interned_types.iter().for_each(|t| self.clear_interned(*t));
     }
 
-    fn end_chunks(&mut self, logger: &Logger, contiguous_bounds: bool) -> Result<(), Error> {
+    fn end_chunks(&mut self, _logger: &Logger, contiguous_bounds: bool) -> Result<(), Error> {
         if !self.deferred_bcs.is_empty() {
             let summary: HashMap<EdgeType, usize> = self
                 .deferred_bcs
@@ -896,7 +895,7 @@ impl TailingWalkVisitor for WalkState {
                         .collect::<Vec<_>>()
                 );
             } else {
-                info!(logger, #log::CHUNKING, "Deferred edge counts by type were: {}", summary_msg);
+                info!("Deferred edge counts by type were: {}", summary_msg);
                 // Deferrals are only between chunks, clear if all chunks done.
                 self.deferred_bcs.clear();
             }

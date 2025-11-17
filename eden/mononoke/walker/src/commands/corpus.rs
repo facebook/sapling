@@ -22,7 +22,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::MultiRepoArgs;
 use sharding_ext::RepoShard;
 use slog::Logger;
-use slog::info;
+use tracing::info;
 
 use crate::WalkerArgs;
 use crate::args::SamplingArgs;
@@ -69,7 +69,7 @@ impl RepoShardedProcess for WalkerCorpusProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.as_str();
         let logger = self.app.repo_logger(repo_name);
-        info!(&logger, "Setting up walker corpus for repo {}", repo_name);
+        info!("Setting up walker corpus for repo {}", repo_name);
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
             repo_id: vec![],
@@ -82,10 +82,7 @@ impl RepoShardedProcess for WalkerCorpusProcess {
                     &repo_name
                 )
             })?;
-        info!(
-            &logger,
-            "Completed walker corpus setup for repo {}", repo_name
-        );
+        info!("Completed walker corpus setup for repo {}", repo_name);
         Ok(Arc::new(WalkerCorpusProcessExecutor::new(
             self.app.fb,
             logger,
@@ -100,7 +97,6 @@ impl RepoShardedProcess for WalkerCorpusProcess {
 /// BP over the context of a provided repo.
 pub struct WalkerCorpusProcessExecutor {
     fb: FacebookInit,
-    logger: Logger,
     job_params: JobParams,
     command: CorpusCommand,
     cancellation_requested: Arc<AtomicBool>,
@@ -110,7 +106,7 @@ pub struct WalkerCorpusProcessExecutor {
 impl WalkerCorpusProcessExecutor {
     fn new(
         fb: FacebookInit,
-        logger: Logger,
+        _logger: Logger,
         job_params: JobParams,
         command: CorpusCommand,
         repo_name: String,
@@ -118,7 +114,6 @@ impl WalkerCorpusProcessExecutor {
         Self {
             cancellation_requested: Arc::new(AtomicBool::new(false)),
             fb,
-            logger,
             job_params,
             command,
             repo_name,
@@ -130,8 +125,8 @@ impl WalkerCorpusProcessExecutor {
 impl RepoShardedProcessExecutor for WalkerCorpusProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
-            "Initiating walker corpus execution for repo {}", &self.repo_name,
+            "Initiating walker corpus execution for repo {}",
+            &self.repo_name,
         );
         corpus(
             self.fb,
@@ -150,8 +145,8 @@ impl RepoShardedProcessExecutor for WalkerCorpusProcessExecutor {
 
     async fn stop(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
-            "Terminating walker corpus execution for repo {}", &self.repo_name,
+            "Terminating walker corpus execution for repo {}",
+            &self.repo_name,
         );
         self.cancellation_requested.store(true, Ordering::Relaxed);
         Ok(())

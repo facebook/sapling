@@ -14,15 +14,14 @@ use anyhow::bail;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use slog::Logger;
-use slog::info;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use sql_ext::SqlQueryTelemetry;
 use sql_ext::mononoke_queries;
+use tracing::info;
 
 use crate::detail::fetcher::Direction;
-use crate::detail::log;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Checkpoint {
@@ -134,7 +133,7 @@ impl CheckpointsByName {
 
     pub async fn persist(
         &self,
-        logger: &Logger,
+        _logger: &Logger,
         repo_id: RepositoryId,
         chunk_num: u64,
         checkpoint: Option<Checkpoint>,
@@ -147,7 +146,10 @@ impl CheckpointsByName {
             checkpoint.upper_bound = upper_bound;
             checkpoint.update_chunk_number = chunk_num;
             checkpoint.update_timestamp = now;
-            info!(logger, #log::CHUNKING, "Chunk {} updating checkpoint to ({}, {})", chunk_num, lower_bound, upper_bound);
+            info!(
+                "Chunk {} updating checkpoint to ({}, {})",
+                chunk_num, lower_bound, upper_bound
+            );
             self.update(repo_id, &checkpoint).await?;
             checkpoint
         } else {
@@ -160,7 +162,10 @@ impl CheckpointsByName {
                 update_chunk_number: chunk_num,
                 last_finish_timestamp: None,
             };
-            info!(logger, #log::CHUNKING, "Chunk {} inserting checkpoint ({}, {})", chunk_num, lower_bound, upper_bound);
+            info!(
+                "Chunk {} inserting checkpoint ({}, {})",
+                chunk_num, lower_bound, upper_bound
+            );
             self.insert(repo_id, &new_cp).await?;
             new_cp
         };
