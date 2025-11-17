@@ -16,7 +16,7 @@ use context::CoreContext;
 use either::Either;
 use futures::channel::oneshot;
 use futures::future::FutureExt;
-use slog::warn;
+use tracing::warn;
 
 const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 
@@ -56,8 +56,8 @@ impl DerivedDataLease {
                 total_elapsed += elapsed;
                 start = Instant::now();
                 warn!(
-                    ctx.logger(),
-                    "Can not acquire lease {} for more than {:?}", key, total_elapsed
+                    "Can not acquire lease {} for more than {:?}",
+                    key, total_elapsed
                 );
             }
             let sleep = rand::random::<u64>() % backoff_ms;

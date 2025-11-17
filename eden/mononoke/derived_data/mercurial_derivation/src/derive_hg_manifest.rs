@@ -51,6 +51,7 @@ use restricted_paths::ArcRestrictedPaths;
 use restricted_paths::ManifestType;
 use restricted_paths::RestrictedPathManifestIdEntry;
 use sorted_vector_map::SortedVectorMap;
+use tracing::warn;
 
 use crate::derive_hg_changeset::store_file_change;
 
@@ -350,7 +351,7 @@ async fn create_hg_manifest(
                     .await
                 {
                     // Log error but don't fail manifest derivation
-                    slog::warn!(ctx.logger(), "Failed to track restricted path: {}", e);
+                    warn!("Failed to track restricted path: {e}");
                 }
                 Ok(())
             }

@@ -43,8 +43,9 @@ use mononoke_types::RepoPath;
 use restricted_paths::ArcRestrictedPaths;
 use restricted_paths::ManifestType;
 use restricted_paths::RestrictedPathManifestIdEntry;
-use slog::debug;
 use stats::prelude::*;
+use tracing::debug;
+use tracing::warn;
 
 define_stats! {
     prefix = "mononoke.derived_data.hgchangesets";
@@ -140,7 +141,6 @@ impl BonsaiDerivable for MappedHgChangesetId {
             .await?;
             if let Some(item) = stack.stack_items.first() {
                 debug!(
-                    ctx.logger(),
                     "derive hgchangeset batch at {} (stack of {} from batch of {})",
                     item.cs_id.to_hex(),
                     stack.stack_items.len(),
@@ -378,10 +378,7 @@ async fn track_all_restricted_paths(
         .await
         .context("Failed to add entries to the manifest id store")
     {
-        slog::warn!(
-            ctx.logger(),
-            "Failed to track restricted paths for changeset {hg_cs_id}: {e}"
-        );
+        warn!("Failed to track restricted paths for changeset {hg_cs_id}: {e}");
     }
 
     Ok(())

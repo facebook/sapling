@@ -79,10 +79,7 @@ rust_library(
     name = "derived_data_manager",
     srcs = glob(["manager/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "manager"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
-    test_deps = [
-        "fbsource//third-party/rust:tokio",
-    ],
+    named_deps = {"tracing": "fbsource//third-party/rust:tracing"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-recursion",
@@ -221,7 +218,6 @@ rust_library(
     name = "unodes",
     srcs = glob(["unodes/*.rs"]),
     autocargo = {"cargo_toml_dir": "unodes"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:maplit",
@@ -252,6 +248,7 @@ rust_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
@@ -316,7 +313,7 @@ rust_library(
     name = "blame",
     srcs = glob(["blame/*.rs"]),
     autocargo = {"cargo_toml_dir": "blame"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
+    named_deps = {"tracing": "fbsource//third-party/rust:tracing"},
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/facet:facet",
@@ -397,7 +394,7 @@ rust_library(
     name = "deleted_manifest",
     srcs = glob(["deleted_manifest/*.rs"]),
     autocargo = {"cargo_toml_dir": "deleted_manifest"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
+    named_deps = {"tracing": "fbsource//third-party/rust:tracing"},
     test_deps = [
         "fbcode//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "fbsource//third-party/rust:maplit",

@@ -47,6 +47,7 @@ use mononoke_types::sharded_map_v2::ShardedMapV2Node;
 use restricted_paths::ManifestType;
 use restricted_paths::RestrictedPathManifestIdEntry;
 use restricted_paths::RestrictedPaths;
+use tracing::warn;
 
 /// Derive an HgAugmentedManifestId from an HgManifestId and parents.
 pub async fn derive_from_hg_manifest_and_parents(
@@ -362,7 +363,7 @@ pub async fn derive_from_hg_manifest_and_parents(
                         .await
                     {
                         // Log error but don't fail manifest derivation
-                        slog::warn!(ctx.logger(), "Failed to track restricted path at {path}: {e}");
+                        warn!("Failed to track restricted path at {path}: {e}");
                     }
                 }
                 Ok((

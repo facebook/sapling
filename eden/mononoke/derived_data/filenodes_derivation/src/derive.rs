@@ -312,10 +312,10 @@ mod tests {
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentity;
-    use slog::info;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::CreateCommitContext;
     use tests_utils::resolve_cs_id;
+    use tracing::info;
 
     use super::*;
 
@@ -476,7 +476,7 @@ mod tests {
             .commit()
             .await?;
 
-        info!(ctx.logger(), "checking filenodes for {}", p3);
+        info!("checking filenodes for {}", p3);
         verify_filenodes(
             &ctx,
             &repo,
@@ -485,7 +485,7 @@ mod tests {
         )
         .await?;
 
-        info!(ctx.logger(), "checking filenodes for {}", merge);
+        info!("checking filenodes for {}", merge);
         verify_filenodes(&ctx, &repo, merge, vec![RepoPath::RootPath]).await?;
 
         Ok(())

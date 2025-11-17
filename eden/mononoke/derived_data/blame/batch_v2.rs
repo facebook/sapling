@@ -26,7 +26,7 @@ use lock_ext::LockExt;
 use mononoke_macros::mononoke;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use slog::debug;
+use tracing::debug;
 use unodes::RootUnodeManifestId;
 
 use crate::RootBlameV2;
@@ -61,7 +61,6 @@ pub async fn derive_blame_v2_in_batch(
         let stack_len = linear_stack.stack_items.len();
         if let Some(item) = linear_stack.stack_items.first() {
             debug!(
-                ctx.logger(),
                 "derive blame batch at {} (stack of {} from batch of {})",
                 item.cs_id.to_hex(),
                 stack_len,

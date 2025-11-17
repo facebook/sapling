@@ -33,8 +33,8 @@ use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use mononoke_types::ManifestUnodeId;
 use mononoke_types::NonRootMPath;
-use slog::debug;
 use stats::prelude::*;
+use tracing::debug;
 
 use crate::derive::derive_unode_manifest_stack;
 use crate::derive::derive_unode_manifest_with_subtree_changes;
@@ -138,7 +138,6 @@ impl BonsaiDerivable for RootUnodeManifestId {
             .await?;
             if let Some(item) = stack.stack_items.first() {
                 debug!(
-                    ctx.logger(),
                     "derive unode batch at {} (stack of {} from batch of {})",
                     item.cs_id.to_hex(),
                     stack.stack_items.len(),

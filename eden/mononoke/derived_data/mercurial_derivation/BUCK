@@ -6,7 +6,6 @@ oncall("scm_server_infra")
 rust_library(
     name = "mercurial_derivation",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
@@ -27,6 +26,7 @@ rust_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:either",
         "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/bounded_traversal:bounded_traversal",
         "//common/rust/shed/cloned:cloned",

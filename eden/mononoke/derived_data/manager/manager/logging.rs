@@ -18,7 +18,7 @@ use metadata::Metadata;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::warn;
+use tracing::warn;
 
 use super::DerivedDataManager;
 use super::derive::DerivationOutcome;
@@ -260,7 +260,6 @@ impl DerivedDataManager {
             Ok(derivation_outcome) => {
                 scuba.add("derived", derivation_outcome.count);
                 warn!(
-                    ctx.logger(),
                     "slow derivation of {} for {}, took {:.2?}, derived {} changesets",
                     Derivable::NAME,
                     csid,
@@ -270,7 +269,6 @@ impl DerivedDataManager {
             }
             Err(derivation_error) => {
                 warn!(
-                    ctx.logger(),
                     "slow derivation of {} for {}, took {:.2?}, failed with Err({:?})",
                     Derivable::NAME,
                     csid,

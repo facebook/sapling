@@ -47,8 +47,8 @@ use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::unode::ManifestUnode;
 use mononoke_types::unode::UnodeEntry;
 use multimap::MultiMap;
-use slog::debug;
 use tokio::sync::Mutex;
+use tracing::debug;
 use unodes::RootUnodeManifestId;
 
 use crate::mapping::RootDeletedManifestIdCommon;
@@ -295,10 +295,7 @@ impl<Manifest: DeletedManifestCommon> DeletedManifestDeriver<Manifest> {
             )
             .await?;
 
-            debug!(
-                ctx.logger(),
-                "deleted manifest derivation perf counters {:?}", counters
-            );
+            debug!("deleted manifest derivation perf counters {:?}", counters);
             debug_assert!(manifest_opt.0.is_none());
             match manifest_opt {
                 (_, Some(mf_id)) => Ok(mf_id),
