@@ -23,8 +23,8 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use repo_identity::RepoIdentityRef;
 use sharding_ext::RepoShard;
-use slog::error;
-use slog::info;
+use tracing::error;
+use tracing::info;
 
 use crate::run::loop_forever;
 
@@ -45,8 +45,6 @@ impl BookmarkValidateProcess {
 #[async_trait]
 impl RepoShardedProcess for BookmarkValidateProcess {
     async fn setup(&self, repo: &RepoShard) -> Result<Arc<dyn RepoShardedProcessExecutor>> {
-        let logger = self.ctx.logger();
-
         let source_repo_name = repo.repo_name.clone();
         let target_repo_name = match repo.target_repo_name.clone() {
             Some(repo_name) => repo_name,
@@ -55,15 +53,13 @@ impl RepoShardedProcess for BookmarkValidateProcess {
                     "Only source repo name {} provided, target repo name missing in {}",
                     source_repo_name, repo
                 );
-                error!(logger, "{}", details);
+                error!("{}", details);
                 bail!("{}", details)
             }
         };
         info!(
-            logger,
             "Setting up bookmark validate command from repo {} to repo {}",
-            source_repo_name,
-            target_repo_name,
+            source_repo_name, target_repo_name,
         );
         let repo_args = SourceAndTargetRepoArgs::with_source_and_target_repo_name(
             source_repo_name.clone(),
@@ -78,7 +74,7 @@ impl RepoShardedProcess for BookmarkValidateProcess {
             "Completed bookmark validate command setup from repo {} to repo {}",
             &source_repo_name, &target_repo_name
         );
-        info!(logger, "{}", details,);
+        info!("{}", details,);
         Ok(Arc::new(executor))
     }
 }
@@ -101,7 +97,6 @@ impl BookmarkValidateProcessExecutor {
         repo_args: SourceAndTargetRepoArgs,
     ) -> Result<Self> {
         let env = app.environment().clone();
-        let logger = ctx.logger();
 
         let source_repo: Arc<Repo> = app.open_repo_unredacted(&repo_args.source_repo).await?;
         let target_repo: Arc<Repo> = app.open_repo_unredacted(&repo_args.target_repo).await?;
@@ -123,7 +118,7 @@ impl BookmarkValidateProcessExecutor {
                 "Source repo must be a large repo!. Source repo: {}, Target repo: {}",
                 &source_repo_name, &target_repo_name
             );
-            error!(logger, "{}", details);
+            error!("{}", details);
             bail!("{}", details);
         }
 
@@ -142,10 +137,8 @@ impl BookmarkValidateProcessExecutor {
 impl RepoShardedProcessExecutor for BookmarkValidateProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
         info!(
-            self.ctx.logger(),
             "Initiating bookmark validate command execution for repo pair {}-{}",
-            &self.source_repo_name,
-            &self.target_repo_name,
+            &self.source_repo_name, &self.target_repo_name,
         );
         loop_forever(
             self.ctx.as_ref(),
@@ -161,20 +154,16 @@ impl RepoShardedProcessExecutor for BookmarkValidateProcessExecutor {
             )
         })?;
         info!(
-            self.ctx.logger(),
             "Finished bookmark validate command execution for repo pair {}-{}",
-            &self.source_repo_name,
-            self.target_repo_name
+            &self.source_repo_name, self.target_repo_name
         );
         Ok(())
     }
 
     async fn stop(&self) -> anyhow::Result<()> {
         info!(
-            self.ctx.logger(),
             "Terminating bookmark validate command execution for repo pair {}-{}",
-            self.source_repo_name,
-            self.target_repo_name,
+            self.source_repo_name, self.target_repo_name,
         );
         self.cancellation_requested.store(true, Ordering::Relaxed);
         Ok(())

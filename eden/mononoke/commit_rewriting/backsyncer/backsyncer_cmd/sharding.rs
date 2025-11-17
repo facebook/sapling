@@ -21,8 +21,8 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use repo_identity::RepoIdentityRef;
 use sharding_ext::RepoShard;
-use slog::error;
-use slog::info;
+use tracing::error;
+use tracing::info;
 
 use crate::run::run_backsyncer;
 
@@ -45,8 +45,6 @@ impl BacksyncProcess {
 #[async_trait]
 impl RepoShardedProcess for BacksyncProcess {
     async fn setup(&self, repo: &RepoShard) -> Result<Arc<dyn RepoShardedProcessExecutor>> {
-        let logger = self.ctx.logger();
-
         // For backsyncer, two repos (i.e. source and target) are required as input
         let source_repo_name = repo.repo_name.clone();
         let target_repo_name = match repo.target_repo_name.clone() {
@@ -56,15 +54,13 @@ impl RepoShardedProcess for BacksyncProcess {
                     "Only source repo name {} provided, target repo name missing in {}",
                     source_repo_name, repo
                 );
-                error!(logger, "{}", details);
+                error!("{}", details);
                 bail!("{}", details)
             }
         };
         info!(
-            logger,
             "Setting up back syncer command from repo {} to repo {}",
-            source_repo_name,
-            target_repo_name,
+            source_repo_name, target_repo_name,
         );
 
         let repo_args = SourceAndTargetRepoArgs::with_source_and_target_repo_name(
@@ -79,7 +75,7 @@ impl RepoShardedProcess for BacksyncProcess {
             "Completed back syncer command setup from repo {} to repo {}",
             source_repo_name, target_repo_name
         );
-        info!(logger, "{}", details);
+        info!("{}", details);
         Ok(Arc::new(executor))
     }
 }
@@ -116,11 +112,9 @@ impl BacksyncProcessExecutor {
 #[async_trait]
 impl RepoShardedProcessExecutor for BacksyncProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
-        let logger = self.ctx.logger();
         let large_repo_name = self.large_repo.repo_identity().name();
         let small_repo_name = self.small_repo.repo_identity().name();
         info!(
-            self.ctx.logger(),
             "Initiating back syncer command execution for repo pair {large_repo_name}-{small_repo_name}",
         );
 
@@ -146,7 +140,6 @@ impl RepoShardedProcessExecutor for BacksyncProcessExecutor {
             )
         })?;
         info!(
-            logger,
             "Finished back syncer command execution for repo pair {large_repo_name}-{small_repo_name}",
         );
         Ok(())
@@ -156,7 +149,6 @@ impl RepoShardedProcessExecutor for BacksyncProcessExecutor {
         let large_repo_name = self.large_repo.repo_identity().name();
         let small_repo_name = self.small_repo.repo_identity().name();
         info!(
-            self.ctx.logger(),
             "Terminating back syncer command execution for repo pair {large_repo_name}-{small_repo_name}",
         );
         self.cancellation_requested.store(true, Ordering::Relaxed);

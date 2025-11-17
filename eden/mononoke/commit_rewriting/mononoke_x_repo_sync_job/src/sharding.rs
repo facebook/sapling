@@ -37,8 +37,8 @@ use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
 use sharding_ext::encode_repo_name;
-use slog::info;
 use sql_query_config::SqlQueryConfigArc;
+use tracing::info;
 use zk_leader_election::LeaderElection;
 use zk_leader_election::ZkMode;
 
@@ -77,14 +77,12 @@ impl XRepoSyncProcess {
 #[async_trait]
 impl RepoShardedProcess for XRepoSyncProcess {
     async fn setup(&self, repo: &RepoShard) -> Result<Arc<dyn RepoShardedProcessExecutor>> {
-        let logger = self.ctx.logger();
         let small_repo_name = repo.repo_name.to_string();
         let large_repo_name = repo
             .target_repo_name
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("No large repo name provided for forward syncer"))?;
         info!(
-            &logger,
             "Adding small repo {small_repo_name} and large repo {large_repo_name} to X Repo Sync"
         );
         let repo_args = SourceAndTargetRepoArgs::with_source_and_target_repo_name(
@@ -305,7 +303,6 @@ impl RepoShardedProcessExecutor for XRepoSyncProcessExecutor {
         let small_repo_name = self.small_repo.repo_identity().name();
         let large_repo_name = self.large_repo.repo_identity().name();
         info!(
-            self.ctx.logger(),
             "Starting up X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"
         );
         let mode: ZkMode = self.args.leader_only.into();
@@ -313,7 +310,6 @@ impl RepoShardedProcessExecutor for XRepoSyncProcessExecutor {
             .await.with_context(|| format!("Failed to become leader for X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"))?;
         if guard.is_some() {
             info!(
-                self.ctx.logger(),
                 "Became leader for X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"
             );
         }
@@ -331,7 +327,6 @@ impl RepoShardedProcessExecutor for XRepoSyncProcessExecutor {
         }
         result?;
         info!(
-            self.ctx.logger(),
             "X Repo Sync execution finished from small repo {small_repo_name} to large repo {large_repo_name}"
         );
         Ok(())
@@ -341,7 +336,6 @@ impl RepoShardedProcessExecutor for XRepoSyncProcessExecutor {
         let small_repo_name = self.small_repo.repo_identity().name();
         let large_repo_name = self.large_repo.repo_identity().name();
         info!(
-            self.ctx.logger(),
             "Shutting down X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"
         );
         Ok(())

@@ -15,9 +15,9 @@ use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use slog::error;
-use slog::info;
-use slog::warn;
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 use crate::sync::SyncResult;
 
@@ -85,7 +85,7 @@ fn log_error_to_scuba(
 }
 
 fn log_success_to_logger(
-    logger: &Logger,
+    _logger: &Logger,
     source_cs_id: &ChangesetId,
     maybe_synced_cs_id: &Option<ChangesetId>,
     stats: &FutureStats,
@@ -101,23 +101,21 @@ fn log_success_to_logger(
     match maybe_synced_cs_id {
         Some(synced_cs_id) => {
             info!(
-                logger,
-                "changeset {} synced as {} in {}ms{}", source_cs_id, synced_cs_id, duration, delay,
+                "changeset {} synced as {} in {}ms{}",
+                source_cs_id, synced_cs_id, duration, delay,
             );
         }
         None => {
             info!(
-                logger,
                 "Syncing {} succeeded in {}ms but did not produce a changeset in the target repo.",
-                source_cs_id,
-                duration,
+                source_cs_id, duration,
             );
         }
     };
 }
 
 fn log_error_to_logger(
-    logger: &Logger,
+    _logger: &Logger,
     action: &'static str,
     source_cs_id: &ChangesetId,
     stats: &FutureStats,
@@ -125,8 +123,8 @@ fn log_error_to_logger(
 ) {
     let duration = stats.completion_time.as_millis();
     error!(
-        logger,
-        "{} {} failed in {}ms: {}", action, source_cs_id, duration, error_string
+        "{} {} failed in {}ms: {}",
+        action, source_cs_id, duration, error_string
     );
 }
 
@@ -225,18 +223,18 @@ pub fn log_bookmark_deletion_result(
 }
 
 pub fn log_backpressure(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     entries: u64,
     mut scuba_sample: MononokeScubaSampleBuilder,
 ) {
     let msg = format!("{} entries in backsyncer queue, waiting...", entries);
 
-    info!(ctx.logger(), "{}", msg);
+    info!("{}", msg);
     scuba_sample.log_with_msg("Backpressure", Some(msg));
 }
 
 pub fn log_bookmark_update_result(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     entry_id: BookmarkUpdateLogId,
     mut scuba_sample: MononokeScubaSampleBuilder,
     res: &Result<SyncResult, Error>,
@@ -245,16 +243,12 @@ pub fn log_bookmark_update_result(
     scuba_sample.add(DURATION_MS, stats.completion_time.as_millis() as u64);
     match res {
         Ok(SyncResult::Synced(_)) => {
-            info!(
-                ctx.logger(),
-                "successful sync bookmark update log #{}", entry_id
-            );
+            info!("successful sync bookmark update log #{}", entry_id);
             scuba_sample.add(SUCCESS, 1);
             scuba_sample.log();
         }
         Ok(SyncResult::SkippedNoKnownVersion) => {
             warn!(
-                ctx.logger(),
                 "Skipped syncing log entry #{} because no mapping version found. Is it a new root commit in the repo?",
                 entry_id
             );
@@ -262,10 +256,7 @@ pub fn log_bookmark_update_result(
             scuba_sample.log();
         }
         Err(err) => {
-            error!(
-                ctx.logger(),
-                "failed to sync bookmark update log #{}, {}", entry_id, err
-            );
+            error!("failed to sync bookmark update log #{}, {}", entry_id, err);
             scuba_sample.add(SUCCESS, 0);
             scuba_sample.add(ERROR, format!("{}", err));
             scuba_sample.log();

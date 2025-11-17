@@ -60,12 +60,12 @@ use ref_cast::RefCast;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::debug;
-use slog::error;
-use slog::info;
 use stats::prelude::*;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
 
 use crate::repo::Repo;
 use crate::reporting::log_validation_result_to_scuba;
@@ -296,7 +296,6 @@ impl ValidationHelper {
         payload: &FilenodeDiffPayload,
     ) -> Result<bool, Error> {
         debug!(
-            ctx.logger(),
             "Checking if a change to {:?}'s filenode in {} ({:?}) relects a true change",
             mpath,
             repo.repo_identity().name(),
@@ -328,7 +327,6 @@ impl ValidationHelper {
                     Some(Entry::Tree(_)) => {
                         // p1 has this path as a directory, it's a true change
                         debug!(
-                            ctx.logger(),
                             "change at {:?} in {} was from a tree to a file, so a true change",
                             mpath,
                             repo.repo_identity().name()
@@ -342,7 +340,6 @@ impl ValidationHelper {
 
                 if p1_file_type != *new_file_type {
                     debug!(
-                        ctx.logger(),
                         "change at {:?} in {} was to a file type: {:?}->{:?}",
                         mpath,
                         repo.repo_identity().name(),
@@ -365,7 +362,6 @@ impl ValidationHelper {
 
                 if p1_content_id != new_content_id {
                     debug!(
-                        ctx.logger(),
                         "change at {:?} in {} resolved to different ContentIds: {:?}->{:?}",
                         mpath,
                         repo.repo_identity().name(),
@@ -376,7 +372,6 @@ impl ValidationHelper {
                     Ok(true)
                 } else {
                     debug!(
-                        ctx.logger(),
                         "change at {:?} in {} resolved to identical ContentIds",
                         mpath,
                         repo.repo_identity().name(),
@@ -428,8 +423,8 @@ impl ValidationHelper {
                 ret.push(mpath);
             } else {
                 info!(
-                    ctx.logger(),
-                    "Skipping a change to {:?} as the filenode change is deemed false", mpath
+                    "Skipping a change to {:?} as the filenode change is deemed false",
+                    mpath
                 );
             }
         }
@@ -567,8 +562,8 @@ impl ValidationHelpers {
         .collect();
 
         debug!(
-            ctx.logger(),
-            "Commit {} is rewritten as follows: {:?}", hash, commit_sync_outcomes
+            "Commit {} is rewritten as follows: {:?}",
+            hash, commit_sync_outcomes
         );
         Ok(commit_sync_outcomes)
     }
@@ -602,10 +597,7 @@ impl ValidationHelpers {
         let p1 = match maybe_p1 {
             Some(p1) => p1,
             None => {
-                info!(
-                    ctx.logger(),
-                    "{} is a root cs. Grabbing its entire manifest", cs_id
-                );
+                info!("{} is a root cs. Grabbing its entire manifest", cs_id);
                 return Self::get_root_full_manifest_diff(ctx, repo, cs_root_mf_id_fut.await?)
                     .await;
             }
@@ -732,8 +724,8 @@ pub async fn unfold_bookmarks_update_log_entry(
         .await?;
 
     info!(
-        ctx.logger(),
-        "BookmarkUpdateLogEntry {} will be expanded into commits", bookmarks_update_log_entry_id,
+        "BookmarkUpdateLogEntry {} will be expanded into commits",
+        bookmarks_update_log_entry_id,
     );
 
     // Normally a single entry would resolve to just a few commits.
@@ -768,10 +760,8 @@ pub async fn unfold_bookmarks_update_log_entry(
                 vec![Ok(to_cs_id)]
             } else {
                 info!(
-                    ctx.logger(),
                     "[{}] Creation of a new bookmark at {}, slow path.",
-                    bookmarks_update_log_entry_id,
-                    to_cs_id
+                    bookmarks_update_log_entry_id, to_cs_id
                 );
                 // This might be slow. If too many bookmarks are being created, it can be optimised
                 // or we could just check to_cs_id as a best effort.
@@ -792,11 +782,8 @@ pub async fn unfold_bookmarks_update_log_entry(
                 .await?
             {
                 info!(
-                    ctx.logger(),
                     "[{}] {} -> {} not a forward move, slow path.",
-                    bookmarks_update_log_entry_id,
-                    from_cs_id,
-                    to_cs_id
+                    bookmarks_update_log_entry_id, from_cs_id, to_cs_id
                 );
                 // This might be slow. If too many bookmarks are being non-FF moved, it can be optimised
                 // or we could just check to_cs_id as a best effort.
@@ -838,10 +825,8 @@ pub async fn unfold_bookmarks_update_log_entry(
 
     let total_commits_in_entry = collected.len();
     info!(
-        ctx.logger(),
         "BookmarkUpdateLogEntry {} has been expanded into {} commits",
-        bookmarks_update_log_entry_id,
-        total_commits_in_entry
+        bookmarks_update_log_entry_id, total_commits_in_entry
     );
 
     let bookmark_name = entry.bookmark_name;
@@ -885,12 +870,8 @@ pub async fn get_entry_with_small_repo_mappings(
     validation_helpers: &ValidationHelpers,
 ) -> Result<Option<CommitEntryWithSmallReposMapped>, Error> {
     info!(
-        ctx.logger(),
         "Mapping small cs_ids for entry {:?}; book: {}; to_cs_id: {:?}; remaining queue: {}",
-        entry.entry_id,
-        entry.bookmark_name,
-        entry.cs_id,
-        entry.queue_size.0,
+        entry.entry_id, entry.bookmark_name, entry.cs_id, entry.queue_size.0,
     );
     let cs_id = Large(entry.cs_id.clone());
 
@@ -943,12 +924,8 @@ pub async fn prepare_entry(
 
     let before_preparation = std::time::Instant::now();
     info!(
-        ctx.logger(),
         "Preparing entry {:?}; book: {}; cs_id: {:?}; remaining queue: {}",
-        entry_id,
-        bookmark_name,
-        cs_id,
-        queue_size.0,
+        entry_id, bookmark_name, cs_id, queue_size.0,
     );
 
     // Note: executing the following two async operations  concurrently
@@ -981,8 +958,8 @@ async fn validate_topological_order<'a, R: RepoIdentityRef + CommitGraphRef + Co
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     debug!(
-        ctx.logger(),
-        "validating topological order for {}<->{}", large_cs_id, small_cs_id
+        "validating topological order for {}<->{}",
+        large_cs_id, small_cs_id
     );
     let small_repo_id = small_repo.0.repo_identity().id();
     let large_repo_id = large_repo.0.repo_identity().id();
@@ -1061,8 +1038,8 @@ async fn validate_topological_order<'a, R: RepoIdentityRef + CommitGraphRef + Co
     .await?;
 
     debug!(
-        ctx.logger(),
-        "done validating topological order for {}<->{}", large_cs_id, small_cs_id
+        "done validating topological order for {}<->{}",
+        large_cs_id, small_cs_id
     );
     Ok(())
 }
@@ -1328,7 +1305,7 @@ fn small_large_to_source_target<T, P>(
 /// Report file changes, present in acommit in one repo,
 /// but missing in a commit in another repo
 fn report_missing(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     missing_things: Vec<Large<NonRootMPath>>,
     large_cs_id: &Large<ChangesetId>,
     where_present: &str,
@@ -1337,12 +1314,8 @@ fn report_missing(
     if !missing_things.is_empty() {
         for missing_thing in missing_things.iter().take(10) {
             debug!(
-                ctx.logger(),
                 "A change to {:?} is present in {}, but missing in {} (large repo cs {})",
-                missing_thing,
-                where_present,
-                where_missing,
-                large_cs_id,
+                missing_thing, where_present, where_missing, large_cs_id,
             );
         }
 
@@ -1457,10 +1430,7 @@ pub async fn validate_entry(
                 let maybe_error_str = match validation_result.as_ref() {
                     Ok(()) => None,
                     Err(e) => {
-                        error!(
-                            ctx.logger(),
-                            "Error while verifying against {}: {:?}", version_name, e
-                        );
+                        error!("Error while verifying against {}: {:?}", version_name, e);
                         Some(format!("{}", e))
                     }
                 };
@@ -1480,7 +1450,7 @@ pub async fn validate_entry(
         },
     );
     try_join_all(small_repo_validation_futs).await?;
-    info!(ctx.logger(), "Validated entry: {:?}", entry_id);
+    info!("Validated entry: {:?}", entry_id);
     Ok(())
 }
 
@@ -1500,10 +1470,7 @@ async fn list_all_filenode_ids(
     mf_id: HgManifestId,
 ) -> Result<PathToFileNodeIdMapping, Error> {
     let repoid = repo.repo_identity().id();
-    info!(
-        ctx.logger(),
-        "fetching filenode ids for {:?} in {}", mf_id, repoid,
-    );
+    info!("fetching filenode ids for {:?} in {}", mf_id, repoid,);
     let res = mf_id
         .list_all_entries(ctx.clone(), repo.repo_blobstore().clone())
         .try_filter_map(move |(path, entry)| {
@@ -1518,12 +1485,7 @@ async fn list_all_filenode_ids(
         .try_collect::<HashMap<_, _>>()
         .await?;
 
-    debug!(
-        ctx.logger(),
-        "fetched {} filenode ids for {}",
-        res.len(),
-        repoid,
-    );
+    debug!("fetched {} filenode ids for {}", res.len(), repoid,);
     Ok(res)
 }
 
@@ -1541,10 +1503,8 @@ async fn verify_filenodes_have_same_contents<
         .map({
             move |(path, source_filenode_id, target_filenode_id)| async move {
                 debug!(
-                    ctx.logger(),
                     "checking content for different filenodes: source {} vs target {}",
-                    source_filenode_id,
-                    target_filenode_id,
+                    source_filenode_id, target_filenode_id,
                 );
                 let f1 = async move {
                     source_filenode_id

@@ -37,7 +37,7 @@ use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::info;
+use tracing::info;
 
 pub mod chunking;
 pub mod commit_sync_config_utils;
@@ -202,7 +202,7 @@ where
             move |mut collected, file_move| {
                 collected.push(file_move);
                 if collected.len() % REPORTING_INTERVAL_FILES == 0 {
-                    info!(ctx.logger(), "Processed {} files", collected.len());
+                    info!("Processed {} files", collected.len());
                 }
                 future::ready(Ok(collected))
             }

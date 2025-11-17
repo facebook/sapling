@@ -44,7 +44,7 @@ use mononoke_app::monitoring::MonitoringAppExtension;
 use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::info;
+use tracing::info;
 
 mod cli;
 mod repo;
@@ -113,10 +113,7 @@ async fn run_in_tailing_mode(
     start_id: BookmarkUpdateLogId,
     scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<(), Error> {
-    info!(
-        ctx.logger(),
-        "Starting to tail commits from id {}", start_id
-    );
+    info!("Starting to tail commits from id {}", start_id);
     let counter_name = format_counter();
     let stream_of_entries = tail_entries(
         ctx.clone(),

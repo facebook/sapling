@@ -13,11 +13,11 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
-use slog::debug;
-use slog::error;
-use slog::info;
-use slog::trace;
-use slog::warn;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
+use tracing::trace;
+use tracing::warn;
 
 const SCUBA_TABLE: &str = "mononoke_x_repo_mapping";
 
@@ -144,27 +144,27 @@ fn log_with_level<S: Into<String>>(ctx: &CoreContext, level: slog::Level, msg: S
 
     let level_tag = match level {
         slog::Level::Critical => {
-            error!(ctx.logger(), "{}", msg);
+            error!("{}", msg);
             "CRITICAL"
         }
         slog::Level::Error => {
-            error!(ctx.logger(), "{}", msg);
+            error!("{}", msg);
             "ERROR"
         }
         slog::Level::Warning => {
-            warn!(ctx.logger(), "{}", msg);
+            warn!("{}", msg);
             "WARNING"
         }
         slog::Level::Info => {
-            info!(ctx.logger(), "{}", msg);
+            info!("{}", msg);
             "INFO"
         }
         slog::Level::Debug => {
-            debug!(ctx.logger(), "{}", msg);
+            debug!("{}", msg);
             "DEBUG"
         }
         slog::Level::Trace => {
-            trace!(ctx.logger(), "{}", msg);
+            trace!("{}", msg);
             "TRACE"
         }
     };

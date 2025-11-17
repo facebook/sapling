@@ -97,14 +97,14 @@ use repo_update_logger::find_draft_ancestors;
 use repo_update_logger::log_bookmark_operation;
 use repo_update_logger::log_new_commits;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::debug;
-use slog::error;
-use slog::info;
-use slog::warn;
 use sql_ext::Transaction;
 use sql_ext::TransactionResult;
 use sql_query_config::SqlQueryConfig;
 use thiserror::Error;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 use wireproto_handler::TargetRepoDbs;
 
 #[derive(Clone)]
@@ -232,7 +232,7 @@ where
         .unwrap_or(0)
         .try_into()?;
 
-    debug!(ctx.logger(), "fetched counter {}", &counter);
+    debug!("fetched counter {}", &counter);
 
     let log_entries_limit = match limit {
         BacksyncLimit::Limit(limit) => limit,
@@ -257,12 +257,12 @@ where
     // Before syncing entries, check if cancellation has been
     // requested. If yes, then exit early.
     if cancellation_requested.load(Ordering::Relaxed) {
-        info!(ctx.logger(), "sync stopping due to cancellation request");
+        info!("sync stopping due to cancellation request");
         return Ok(commit_only_backsync_future);
     }
 
     if next_entries.is_empty() {
-        debug!(ctx.logger(), "nothing to sync");
+        debug!("nothing to sync");
         Ok(commit_only_backsync_future)
     } else {
         sync_entries(
@@ -299,7 +299,7 @@ where
         // Before processing each entry, check if cancellation has
         // been requested and exit if that's the case.
         if cancellation_requested.load(Ordering::Relaxed) {
-            info!(ctx.logger(), "sync stopping due to cancellation request");
+            info!("sync stopping due to cancellation request");
             return Ok(commit_only_backsync_future);
         }
         let mut scuba_sample = ctx.scuba().clone();
@@ -350,7 +350,7 @@ where
     if *counter >= entry_id {
         return Ok(commit_only_backsync_future);
     }
-    debug!(ctx.logger(), "backsyncing {} ...", entry_id);
+    debug!("backsyncing {} ...", entry_id);
 
     if commit_sync_data
         .rename_bookmark(&entry.bookmark_name)
@@ -362,7 +362,7 @@ where
         // a commit backsync future that we don't wait for here. Each of such futures
         // waits for result of previous commit-only backsync so we don't duplicate
         // work unnecessarily.
-        debug!(ctx.logger(), "Renamed bookmark is None. No sync happening.");
+        debug!("Renamed bookmark is None. No sync happening.");
         target_repo_dbs
             .counters
             .set_counter(
@@ -392,11 +392,8 @@ where
                     .await;
                     if let Err(err) = res {
                         error!(
-                            ctx.logger(),
                             "Failed to backsync {} pointing to {}: {}",
-                            entry.bookmark_name,
-                            to_cs_id,
-                            err
+                            entry.bookmark_name, to_cs_id, err
                         );
                     }
                 })
@@ -422,10 +419,7 @@ where
             // This seems the safest option (i.e. we won't rewrite a commit with
             // an incorrect version) but it also has a downside that the bookmark that points
             // to this commit is not going to be synced.
-            warn!(
-                ctx.logger(),
-                "skipping {}, entry id {}", entry.bookmark_name, entry.id
-            );
+            warn!("skipping {}, entry id {}", entry.bookmark_name, entry.id);
             *scuba_log_tag = "Skipping entry because there are no synced ancestors".to_string();
             target_repo_dbs
                 .counters
@@ -482,8 +476,8 @@ where
         *counter = new_counter;
     } else {
         debug!(
-            ctx.logger(),
-            "failed to backsync {}, most likely another process already synced it ", entry_id
+            "failed to backsync {}, most likely another process already synced it ",
+            entry_id
         );
         // Transaction failed, it could be because another process already backsynced it
         // Verify that counter was moved and continue if that's the case
@@ -504,8 +498,8 @@ where
             ));
         } else {
             debug!(
-                ctx.logger(),
-                "verified that another process has already synced {}", entry_id
+                "verified that another process has already synced {}",
+                entry_id
             );
             *counter = new_counter;
         }
@@ -555,13 +549,13 @@ where
     let prev_counter: Option<i64> = prev_counter.map(|x| x.try_into()).transpose()?;
     let target_repo_id = commit_sync_data.get_target_repo().repo_identity().id();
     let source_repo_id = commit_sync_data.get_source_repo().repo_identity().id();
-    debug!(ctx.logger(), "preparing to backsync {:?}", log_entry);
+    debug!("preparing to backsync {:?}", log_entry);
 
     let new_counter = log_entry.id;
     let bookmark = commit_sync_data
         .rename_bookmark(&log_entry.bookmark_name)
         .await?;
-    debug!(ctx.logger(), "bookmark was renamed into {:?}", bookmark);
+    debug!("bookmark was renamed into {:?}", bookmark);
     let from_cs_id = log_entry.from_changeset_id;
     let to_cs_id = log_entry.to_changeset_id;
 
@@ -605,8 +599,8 @@ where
         let from_sync_outcome = get_commit_sync_outcome(from_cs_id).await?;
         let to_sync_outcome = get_commit_sync_outcome(to_cs_id).await?;
         debug!(
-            ctx.logger(),
-            "commit sync outcomes: from_cs: {:?}, to_cs: {:?}", from_sync_outcome, to_sync_outcome
+            "commit sync outcomes: from_cs: {:?}, to_cs: {:?}",
+            from_sync_outcome, to_sync_outcome
         );
 
         let from_cs_id = get_remapped_cs_id(from_sync_outcome)?;
@@ -677,31 +671,25 @@ where
             .await;
 
             let mut bookmark_txn = target_repo_dbs.bookmarks.create_transaction(ctx.clone());
-            debug!(
-                ctx.logger(),
-                "syncing bookmark {} to {:?}", bookmark, to_cs_id
-            );
+            debug!("syncing bookmark {} to {:?}", bookmark, to_cs_id);
 
             match (from_cs_id, to_cs_id) {
                 (Some(from), Some(to)) => {
                     debug!(
-                        ctx.logger(),
-                        "updating bookmark {:?} from {:?} to {:?}", bookmark, from, to
+                        "updating bookmark {:?} from {:?} to {:?}",
+                        bookmark, from, to
                     );
                     bookmark_txn.update(&bookmark, to, from, BookmarkUpdateReason::Backsyncer)?;
                 }
                 (Some(from), None) => {
                     debug!(
-                        ctx.logger(),
-                        "deleting bookmark {:?} with original position {:?}", bookmark, from
+                        "deleting bookmark {:?} with original position {:?}",
+                        bookmark, from
                     );
                     bookmark_txn.delete(&bookmark, from, BookmarkUpdateReason::Backsyncer)?;
                 }
                 (None, Some(to)) => {
-                    debug!(
-                        ctx.logger(),
-                        "creating bookmark {:?} to point to {:?}", bookmark, to
-                    );
+                    debug!("creating bookmark {:?} to point to {:?}", bookmark, to);
                     bookmark_txn.create(&bookmark, to, BookmarkUpdateReason::Backsyncer)?;
                 }
                 (None, None) => {
@@ -764,14 +752,12 @@ where
             return Ok(res);
         } else {
             debug!(
-                ctx.logger(),
                 "from_cs_id and to_cs_id are the same: {:?}. No sync happening for {:?}",
-                from_cs_id,
-                bookmark
+                from_cs_id, bookmark
             );
         }
     } else {
-        debug!(ctx.logger(), "Renamed bookmark is None. No sync happening.");
+        debug!("Renamed bookmark is None. No sync happening.");
     }
 
     let maybe_log_id = if target_repo_dbs

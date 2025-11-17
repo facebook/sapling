@@ -25,7 +25,6 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_types::RepositoryId;
 use pushredirect::PushRedirectionConfig;
-use slog::error;
 use thiserror::Error;
 
 pub const CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS: &str = "scm/mononoke/repos/commitsyncmaps/all";

@@ -25,8 +25,8 @@ use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::info;
 use sorted_vector_map::SortedVectorMap;
+use tracing::info;
 
 use crate::chunking::Chunker;
 
@@ -103,7 +103,7 @@ async fn save_and_maybe_mark_public(
         repo.phases()
             .add_reachable_as_public(ctx, vec![bcs_id])
             .await?;
-        info!(ctx.logger(), "Marked as public {:?}", bcs_id);
+        info!("Marked as public {:?}", bcs_id);
     }
     Ok(bcs_id)
 }
@@ -113,13 +113,10 @@ async fn generate_hg_changeset(
     repo: &impl Repo,
     bcs_id: ChangesetId,
 ) -> Result<HgChangesetId, Error> {
-    info!(ctx.logger(), "Generating an HG equivalent of {:?}", bcs_id);
+    info!("Generating an HG equivalent of {:?}", bcs_id);
     let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
 
-    info!(
-        ctx.logger(),
-        "Hg equivalent of {:?} is: {:?}", bcs_id, hg_cs_id
-    );
+    info!("Hg equivalent of {:?} is: {:?}", bcs_id, hg_cs_id);
     Ok(hg_cs_id)
 }
 
@@ -129,10 +126,7 @@ async fn create_bookmark(
     bookmark: BookmarkKey,
     bcs_id: ChangesetId,
 ) -> Result<(), Error> {
-    info!(
-        ctx.logger(),
-        "Setting bookmark {:?} to point to {:?}", bookmark, bcs_id
-    );
+    info!("Setting bookmark {:?} to point to {:?}", bookmark, bcs_id);
     let mut transaction = repo.bookmarks().create_transaction(ctx.clone());
     transaction.force_set(&bookmark, bcs_id, BookmarkUpdateReason::ManualMove)?;
 
@@ -141,7 +135,7 @@ async fn create_bookmark(
     if !commit_result {
         Err(format_err!("Logical failure while setting {:?}", bookmark))
     } else {
-        info!(ctx.logger(), "Setting bookmark {:?} finished", bookmark);
+        info!("Setting bookmark {:?} finished", bookmark);
         Ok(())
     }
 }
@@ -173,9 +167,9 @@ pub async fn delete_files_in_chunks<'a>(
     delete_commits_changeset_args_factory: &impl ChangesetArgsFactory,
     skip_last_chunk: bool,
 ) -> Result<Vec<ChangesetId>, Error> {
-    info!(ctx.logger(), "Chunking mpaths");
+    info!("Chunking mpaths");
     let mpath_chunks: Vec<Vec<NonRootMPath>> = chunker(mpaths);
-    info!(ctx.logger(), "Done chunking working copy contents");
+    info!("Done chunking working copy contents");
 
     let mut delete_commits: Vec<ChangesetId> = Vec::new();
     let mut parent = parent_bcs_id;
@@ -191,7 +185,6 @@ pub async fn delete_files_in_chunks<'a>(
             .map(|mp| (mp, FileChange::Deletion))
             .collect();
         info!(
-            ctx.logger(),
             "Creating delete commit #{} with {:?} (deleting {} files)",
             i,
             changeset_args,
@@ -199,7 +192,7 @@ pub async fn delete_files_in_chunks<'a>(
         );
         let delete_cs_id =
             create_and_save_bonsai(ctx, repo, vec![parent], file_changes, changeset_args).await?;
-        info!(ctx.logger(), "Done creating delete commit #{}", i);
+        info!("Done creating delete commit #{}", i);
         delete_commits.push(delete_cs_id);
 
         // move one step forward

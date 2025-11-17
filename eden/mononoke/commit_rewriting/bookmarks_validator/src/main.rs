@@ -27,7 +27,7 @@ use mononoke_app::MononokeAppBuilder;
 use mononoke_app::args::OptSourceAndTargetRepoArgs;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
-use slog::info;
+use tracing::info;
 
 use crate::sharding::BookmarkValidateProcess;
 use crate::sharding::BookmarkValidateProcessExecutor;
@@ -92,11 +92,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let ctx = session_container.new_context(app.logger().clone(), scuba);
 
-    info!(
-        ctx.logger(),
-        "Starting session with id {}",
-        ctx.metadata().session_id(),
-    );
+    info!("Starting session with id {}", ctx.metadata().session_id(),);
 
     app.run_with_monitoring_and_logging(
         |app| async_main(app, ctx.clone()),

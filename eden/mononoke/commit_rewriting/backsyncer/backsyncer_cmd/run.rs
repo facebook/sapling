@@ -44,9 +44,9 @@ use mercurial_types::HgChangesetId;
 use mononoke_app::MononokeApp;
 use mononoke_types::ChangesetId;
 use repo_identity::RepoIdentityRef;
-use slog::debug;
-use slog::info;
 use stats::prelude::*;
+use tracing::debug;
+use tracing::info;
 use wireproto_handler::TargetRepoDbs;
 
 use crate::cli::BacksyncerArgs;
@@ -74,13 +74,11 @@ pub(crate) async fn run_backsyncer(
     cancellation_requested: Arc<AtomicBool>,
 ) -> Result<(), Error> {
     let args: BacksyncerArgs = app.args()?;
-    let logger = ctx.logger();
     let commit_sync_data =
         create_single_direction_commit_syncer(&ctx, &app, large_repo.clone(), small_repo.clone())
             .await?;
 
     info!(
-        logger,
         "syncing from repoid {:?} into repoid {:?}",
         large_repo.repo_identity().id(),
         small_repo.repo_identity().id(),
@@ -145,14 +143,14 @@ pub(crate) async fn run_backsyncer(
                 hg_cs_ids.push(HgChangesetId::from_str(&line?)?);
             }
             let total_to_backsync = hg_cs_ids.len();
-            info!(ctx.logger(), "backsyncing {} commits", total_to_backsync);
+            info!("backsyncing {} commits", total_to_backsync);
 
             let commit_sync_data = &commit_sync_data;
 
             // Before processing each commit, check if cancellation has
             // been requested and exit if that's the case.
             if cancellation_requested.load(Ordering::Relaxed) {
-                info!(ctx.logger(), "sync stopping due to cancellation request");
+                info!("sync stopping due to cancellation request");
                 return Ok(());
             }
             let f = stream::iter(hg_cs_ids.clone())
@@ -195,10 +193,7 @@ pub(crate) async fn run_backsyncer(
                                         .get_commit_sync_outcome(&ctx, bonsai)
                                         .await?;
 
-                                    info!(
-                                        ctx.logger(),
-                                        "{} backsynced as {:?}", bonsai, maybe_sync_outcome
-                                    );
+                                    info!("{} backsynced as {:?}", bonsai, maybe_sync_outcome);
 
                                     let maybe_target_cs_id = extract_cs_id_from_sync_outcome(
                                         bonsai,
@@ -216,18 +211,13 @@ pub(crate) async fn run_backsyncer(
                         })
                         .collect::<stream::futures_unordered::FuturesUnordered<_>>()
                         .try_fold(backsynced_so_far, {
-                            cloned!(ctx);
-                            move |backsynced_so_far, _| {
-                                let logger = ctx.logger().clone();
-                                async move {
-                                    info!(
-                                        logger,
-                                        "backsynced so far {} out of {}",
-                                        backsynced_so_far + 1,
-                                        total_to_backsync
-                                    );
-                                    Ok::<_, Error>(backsynced_so_far + 1)
-                                }
+                            move |backsynced_so_far, _| async move {
+                                info!(
+                                    "backsynced so far {} out of {}",
+                                    backsynced_so_far + 1,
+                                    total_to_backsync
+                                );
+                                Ok::<_, Error>(backsynced_so_far + 1)
                             }
                         })
                 });
@@ -256,7 +246,7 @@ async fn backsync_forever(
         // Before initiating loop, check if cancellation has been
         // requested. If yes, then exit early.
         if cancellation_requested.load(Ordering::Relaxed) {
-            info!(ctx.logger(), "sync stopping due to cancellation request");
+            info!("sync stopping due to cancellation request");
             return Ok(());
         }
         // We only care about public pushes because draft pushes are not in the bookmark
@@ -269,10 +259,10 @@ async fn backsync_forever(
             let delay = calculate_delay(ctx, &commit_sync_data, &target_repo_dbs).await?;
             log_delay(ctx, &delay, &source_repo_name, &target_repo_name);
             if delay.remaining_entries == 0 {
-                debug!(ctx.logger(), "no entries remained");
+                debug!("no entries remained");
                 tokio::time::sleep(Duration::new(1, 0)).await;
             } else {
-                debug!(ctx.logger(), "backsyncing...");
+                debug!("backsyncing...");
 
                 commit_only_backsync_future = backsync_latest(
                     ctx.clone(),
@@ -287,7 +277,7 @@ async fn backsync_forever(
                 .await?
             }
         } else {
-            debug!(ctx.logger(), "push redirector is disabled");
+            debug!("push redirector is disabled");
             let delay = Delay::no_delay();
             log_delay(ctx, &delay, &source_repo_name, &target_repo_name);
             tokio::time::sleep(Duration::new(1, 0)).await;
@@ -323,10 +313,7 @@ async fn derive_target_hg_changesets(
                 .get_target_repo()
                 .derive_hg_changeset(ctx, target_cs_id)
                 .await?;
-            info!(
-                ctx.logger(),
-                "Hg cs id {} derived for {}", hg_cs_id, target_cs_id
-            );
+            info!("Hg cs id {} derived for {}", hg_cs_id, target_cs_id);
             Ok(())
         }
         None => Ok(()),

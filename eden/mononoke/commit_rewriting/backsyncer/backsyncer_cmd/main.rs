@@ -26,7 +26,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
-use slog::info;
+use tracing::info;
 
 use crate::cli::BacksyncerArgs;
 use crate::cli::SCUBA_TABLE;
@@ -94,11 +94,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let ctx = session_container.new_context_with_scribe(app.logger().clone(), scuba, scribe);
 
-    info!(
-        ctx.logger(),
-        "Starting session with id {}",
-        ctx.metadata().session_id(),
-    );
+    info!("Starting session with id {}", ctx.metadata().session_id(),);
 
     app.run_with_monitoring_and_logging(|app| async_main(ctx.clone(), app), APP_NAME, AliveService)
 }

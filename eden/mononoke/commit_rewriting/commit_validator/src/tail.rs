@@ -25,7 +25,7 @@ use futures::stream;
 use futures::stream::StreamExt;
 use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::debug;
+use tracing::debug;
 
 use crate::reporting::log_noop_iteration_to_scuba;
 
@@ -60,7 +60,7 @@ async fn query_queue_size(
         .count_further_bookmark_log_entries(ctx.clone(), current_id, None)
         .await
         .inspect(|&queue_size| {
-            debug!(ctx.logger(), "queue size query returned: {}", queue_size);
+            debug!("queue size query returned: {}", queue_size);
         })
 }
 
@@ -121,7 +121,6 @@ pub(crate) fn tail_entries(
                         .filter(|entry| !skip_bookmarks.contains(&entry.bookmark_name))
                         .collect();
                     debug!(
-                        ctx.logger(),
                         "tail_entries generating {} new entries, queue size {}, iteration {}",
                         entries.len(),
                         (queue_size as usize) - entries.len(),
@@ -138,8 +137,8 @@ pub(crate) fn tail_entries(
                 }
                 None => {
                     debug!(
-                        ctx.logger(),
-                        "tail_entries: no more entries during iteration {}. Sleeping.", iteration
+                        "tail_entries: no more entries during iteration {}. Sleeping.",
+                        iteration
                     );
                     log_noop_iteration_to_scuba(scuba_sample, repo_id);
                     tokio::time::sleep(Duration::new(SLEEP_SECS, 0)).await;

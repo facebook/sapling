@@ -28,9 +28,9 @@ use futures::future;
 use mononoke_types::ChangesetId;
 use pushredirect::PushRedirectionConfig;
 use pushredirect::SqlPushRedirectionConfigBuilder;
-use slog::error;
-use slog::info;
 use stats::prelude::*;
+use tracing::error;
+use tracing::info;
 
 define_stats! {
   prefix = "mononoke.bookmark_validator";
@@ -69,10 +69,7 @@ pub(crate) async fn loop_forever<R: CrossRepo>(
     loop {
         // Before initiating every iteration, check if cancellation has been requested.
         if cancellation_requested.load(Ordering::Relaxed) {
-            info!(
-                ctx.logger(),
-                "bookmark validation stopping due to cancellation request"
-            );
+            info!("bookmark validation stopping due to cancellation request");
             return Ok(());
         }
 
@@ -86,7 +83,7 @@ pub(crate) async fn loop_forever<R: CrossRepo>(
             if let Err(err) = res {
                 match err {
                     ValidationError::InfraError(error) => {
-                        error!(ctx.logger(), "infra error: {:?}", error);
+                        error!("infra error: {:?}", error);
                     }
                     ValidationError::ValidationError(err_msg) => {
                         STATS::result_counter.set_value(
@@ -94,7 +91,7 @@ pub(crate) async fn loop_forever<R: CrossRepo>(
                             0,
                             (large_repo_name.to_string(), small_repo_name.to_string()),
                         );
-                        error!(ctx.logger(), "validation failed: {:?}", err_msg);
+                        error!("validation failed: {:?}", err_msg);
                     }
                 }
             } else {
@@ -105,7 +102,7 @@ pub(crate) async fn loop_forever<R: CrossRepo>(
                 );
             }
         } else {
-            info!(ctx.logger(), "push redirector is disabled");
+            info!("push redirector is disabled");
             // Log success to prevent alarm from going off
             STATS::result_counter.set_value(
                 ctx.fb,
@@ -141,9 +138,9 @@ async fn validate<R: CrossRepo>(
     let commit_sync_data = &syncers.small_to_large;
     let diffs = find_bookmark_diff(ctx.clone(), commit_sync_data).await?;
 
-    info!(ctx.logger(), "got {} bookmark diffs", diffs.len());
+    info!("got {} bookmark diffs", diffs.len());
     for diff in diffs {
-        info!(ctx.logger(), "processing {:?}", diff);
+        info!("processing {:?}", diff);
         use BookmarkDiff::*;
 
         let (large_bookmark, large_cs_id, small_cs_id) = match diff {
@@ -181,7 +178,7 @@ async fn validate<R: CrossRepo>(
         )
         .await?;
         if in_history {
-            info!(ctx.logger(), "all is well");
+            info!("all is well");
         } else {
             let err_msg = format!(
                 "{} points to {:?} in {}, but points to {:?} in {}",
@@ -205,7 +202,7 @@ async fn check_large_bookmark_history<R: CrossRepo>(
 ) -> Result<bool, Error> {
     let small_to_large = &syncers.small_to_large;
     let large_to_small = &syncers.large_to_small;
-    info!(ctx.logger(), "checking history of {}", large_bookmark);
+    info!("checking history of {}", large_bookmark);
 
     let large_repo = small_to_large.get_large_repo();
     // Log entries are sorted newest to oldest

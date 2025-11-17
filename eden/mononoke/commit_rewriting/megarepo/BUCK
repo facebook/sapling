@@ -5,7 +5,6 @@ oncall("scm_server_infra")
 rust_library(
     name = "megarepolib",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
@@ -20,6 +19,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
