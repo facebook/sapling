@@ -41,7 +41,7 @@ culpa qui officia deserunt mollit anim id est laborum.
 
 /// Generate `String` with given length. Useful for slightly more interesting file contents.
 /// Practically, it can generate 50KB text per millisecond.
-pub fn generate_paragraphs(len: usize, seed: u64) -> String {
+pub fn generate_paragraphs(len: usize, seed: u16) -> String {
     let mut output = String::with_capacity(len);
     TrigramTextGen::default()
         .with_seed(seed)
@@ -95,14 +95,14 @@ const MAX_LINE_WIDTH: usize = 76;
 /// Handles line wrap, and word generation.
 #[derive(Default)]
 pub(crate) struct TrigramTextGen {
-    seed: u64,
+    seed: u16,
     // TextGen state.
     words: (&'static str, &'static str),
     line_width: usize,
 }
 
 impl TrigramTextGen {
-    pub fn with_seed(mut self, seed: u64) -> Self {
+    pub fn with_seed(mut self, seed: u16) -> Self {
         self.seed = seed;
         self
     }
@@ -193,9 +193,9 @@ fn sample<T>(items: &'static [T], index: u64) -> &'static T {
 }
 
 // https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64
-fn split_mix64(x: &mut u64) -> u64 {
-    *x = x.wrapping_add(0x9e3779b97f4a7c15);
-    let mut z = *x;
+fn split_mix64(x: &mut u16) -> u64 {
+    *x = x.wrapping_add(0x7c15); // 0x7c15 and (1<<16) are coprime.
+    let mut z = (*x as u64).wrapping_add(0x9e37_79b9_7f4a_0000);
     z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
     z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
     z ^ (z >> 31)
@@ -275,36 +275,38 @@ mod tests {
         // Same seed share the same prefix.
         assert_eq!(
             generate_paragraphs(40, 42),
-            "King: however, it only grinned when it g"
+            "King: however, it may kiss my hand if it"
         );
         assert_eq!(
             generate_paragraphs(100, 42),
-            r#"King: however, it only grinned when it grunted again, so she turned away.
-
-Beautiful, beautiful Soup"#
+            r#"King: however, it may kiss my hand if it please your Majesty, said Alice in
+a coaxing tone, and adde"#
         );
         assert_eq!(
             generate_paragraphs(200, 42),
-            r#"King: however, it only grinned when it grunted again, so she turned away.
+            r#"King: however, it may kiss my hand if it please your Majesty, said Alice in
+a coaxing tone, and added with a shiver.
 
-Beautiful, beautiful Soup!
+Don't go splashing paint over me like that!
 
-Five and Seven said nothing, but looked at Alice, and her eyes filled with
-tears running down his"#
+I ever was at in all my life!
+
+If I'd"#
         );
         // Different seed produces different text.
         assert_eq!(
             generate_paragraphs(550, 44),
-            r#"He says it kills all the time it all is! I'll try the whole party swam to
-the game.
+            r#"He says it kills all the things being alive; for instance, there's the arch
+I've got to? (Alice had been wandering, when a sharp hiss made her draw back
+in a tone of the evening, beautiful Soup! Beau-ootiful Soo-oop! Beau-ootiful
+Soo-oop! Soo-oop of the March Hare.
 
-Ada, she said, for her neck from being broken. She hastily put down the
-hall. Queen turned angrily away from him, and said anxiously to herself,
-Now, what am I to get her head to feel very sleepy and stupid), whether the
-pleasure of making a daisy-chain would be four thousand miles down, I think-
-(for, you see, so many lessons to learn! No, I've made up my mind about it;
-and while she was now the right way of settling all difficulties, great or
-small. Off with "#
+I've finished.
+
+Lory positively refused to tell me the truth: did you do either! And the
+moral of that is, but I know who I am! But I'd better take him his fan and
+gloves, and, as the game began. Alice thought to herself This is Bill, she
+gave one sharp kick, and waited till she fan"#
         );
     }
 
