@@ -5,7 +5,6 @@ oncall("scm_server_infra")
 rust_binary(
     name = "repo_import",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:ascii",
         "fbsource//third-party/rust:tokio",
@@ -28,6 +27,7 @@ rust_binary(
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",

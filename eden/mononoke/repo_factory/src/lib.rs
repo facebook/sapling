@@ -202,8 +202,6 @@ use restricted_paths::RestrictedPaths;
 use restricted_paths::RestrictedPathsManifestIdCacheBuilder;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::debug;
-use slog::error;
 use slog::o;
 use sql_commit_graph_storage::ArcCommitGraphBulkFetcher;
 use sql_commit_graph_storage::CommitGraphBulkFetcher;
@@ -221,6 +219,8 @@ use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::CachingSyncedCommitMapping;
 use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use thiserror::Error;
+use tracing::debug;
+use tracing::error;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 use warm_bookmarks_cache::NoopBookmarksCache;
 use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
@@ -425,8 +425,8 @@ impl RepoFactory {
                 .await
                 .inspect_err(|e| {
                     error!(
-                        self.env.logger,
-                        "initializing DB connection failed for config: {:?}: {}", config, e
+                        "initializing DB connection failed for config: {:?}: {}",
+                        config, e
                     )
                 })
                 .context("initializing DB connection")?;
@@ -434,8 +434,8 @@ impl RepoFactory {
                 if justknobs::eval("scm/mononoke:log_sql_factory_init", None, None).unwrap_or(false)
                 {
                     debug!(
-                        self.env.logger,
-                        "initializing DB connection succeeded for config: {:?}", config
+                        "initializing DB connection succeeded for config: {:?}",
+                        config
                     )
                 }
                 Ok(Arc::new(sql_factory))

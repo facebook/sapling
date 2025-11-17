@@ -29,8 +29,8 @@ use repo_authorization::AuthorizationContext;
 use repo_identity::RepoIdentityRef;
 use repo_update_logger::CommitInfo;
 use repo_update_logger::log_new_commits;
-use slog::debug;
 use stats::prelude::*;
+use tracing::debug;
 
 use crate::BundleResolverError;
 use crate::BundleResolverResultExt;
@@ -119,7 +119,7 @@ async fn run_push(
     action: PostResolvePush,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundlePushResponse, BundleResolverError> {
-    debug!(ctx.logger(), "unbundle processing: running push.");
+    debug!("unbundle processing: running push.");
     let PostResolvePush {
         changegroup_id,
         mut bookmark_pushes,
@@ -198,7 +198,7 @@ async fn run_infinitepush(
     action: PostResolveInfinitePush,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundleInfinitePushResponse, BundleResolverError> {
-    debug!(ctx.logger(), "unbundle processing: running infinitepush");
+    debug!("unbundle processing: running infinitepush");
     let PostResolveInfinitePush {
         changegroup_id,
         maybe_bookmark_push,
@@ -251,7 +251,7 @@ async fn run_pushrebase(
     action: PostResolvePushRebase,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundlePushRebaseResponse, BundleResolverError> {
-    debug!(ctx.logger(), "unbundle processing: running pushrebase.");
+    debug!("unbundle processing: running pushrebase.");
     let PostResolvePushRebase {
         bookmark_push_part_id,
         bookmark_spec,
@@ -375,10 +375,7 @@ async fn run_bookmark_only_pushrebase(
     action: PostResolveBookmarkOnlyPushRebase,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundleBookmarkOnlyPushRebaseResponse, BundleResolverError> {
-    debug!(
-        ctx.logger(),
-        "unbundle processing: running bookmark-only pushrebase."
-    );
+    debug!("unbundle processing: running bookmark-only pushrebase.");
     let PostResolveBookmarkOnlyPushRebase {
         bookmark_push,
         maybe_pushvars,
@@ -389,10 +386,7 @@ async fn run_bookmark_only_pushrebase(
     let part_id = bookmark_push.part_id;
 
     if bookmark_push.old == bookmark_push.new {
-        debug!(
-            ctx.logger(),
-            "pushrebase is a noop, returning success early."
-        );
+        debug!("pushrebase is a noop, returning success early.");
         return Ok(UnbundleBookmarkOnlyPushRebaseResponse {
             bookmark_push_part_id: part_id,
         });

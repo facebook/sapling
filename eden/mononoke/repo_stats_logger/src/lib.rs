@@ -26,9 +26,9 @@ use repo_blobstore::ArcRepoBlobstore;
 use repo_derived_data::ArcRepoDerivedData;
 use sharding_ext::encode_repo_name;
 use slog::Logger;
-use slog::warn;
 use stats::define_stats;
 use stats::prelude::DynamicSingletonCounter;
+use tracing::warn;
 
 define_stats! {
     prefix = "mononoke.app.repo.stats";
@@ -79,7 +79,7 @@ impl RepoStatsLogger {
                         STATS::repo_objects_count.set_value(fb, count, (repo_key,));
                     }
                     Err(e) => {
-                        warn!(ctx.logger(), "Finding bookmark for {}: {}", repo_name, e);
+                        warn!("Finding bookmark for {}: {}", repo_name, e);
                     }
                 }
             }

@@ -137,13 +137,13 @@ use revisionstore_types::Metadata;
 use scuba_ext::MononokeScubaSampleBuilder;
 use serde::Deserialize;
 use serde_json::json;
-use slog::debug;
-use slog::info;
 use slog::o;
 use stats::prelude::*;
 use streaming_clone::RevlogStreamingChunks;
 use streaming_clone::StreamingCloneArc;
 use time_ext::DurationExt;
+use tracing::debug;
+use tracing::info;
 use unbundle::BundleResolverError;
 use unbundle::CrossRepoPushSource;
 use unbundle::PushRedirector;
@@ -439,7 +439,7 @@ impl<R: Repo> RepoClient<R> {
         command: &str,
         sampling_rate: SamplingRate,
     ) -> (CoreContext, CommandLogger) {
-        info!(self.logging.logger(), "{}", command);
+        info!("{}", command);
 
         let logger = self
             .logging
@@ -889,10 +889,7 @@ impl<R: Repo> RepoClient<R> {
         let push_redirector_args = match self.maybe_push_redirector_args.clone() {
             Some(push_redirector_args) => push_redirector_args,
             None => {
-                debug!(
-                    ctx.logger(),
-                    "maybe_push_redirector_args are none, no push_redirector for unbundle"
-                );
+                debug!("maybe_push_redirector_args are none, no push_redirector for unbundle");
                 return Ok(None);
             }
         };
@@ -920,20 +917,14 @@ impl<R: Repo> RepoClient<R> {
         };
 
         if redirect {
-            debug!(
-                ctx.logger(),
-                "live_commit_sync_config says push redirection is on"
-            );
+            debug!("live_commit_sync_config says push redirection is on");
             Ok(Some(push_redirector_args.into_push_redirector(
                 ctx,
                 live_commit_sync_config,
                 SubmoduleDeps::NotNeeded,
             )?))
         } else {
-            debug!(
-                ctx.logger(),
-                "live_commit_sync_config says push redirection is off"
-            );
+            debug!("live_commit_sync_config says push redirection is off");
             Ok(None)
         }
     }
@@ -1467,10 +1458,7 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                     })
             })
         } else {
-            info!(
-                self.logging.logger(),
-                "unsupported listkeys namespace: {}", namespace
-            );
+            info!("unsupported listkeys namespace: {}", namespace);
             future::ok(HashMap::new()).boxed()
         }
     }
@@ -1482,10 +1470,7 @@ impl<R: Repo> HgCommands for RepoClient<R> {
         patterns: Vec<String>,
     ) -> HgCommandRes<BTreeMap<String, HgChangesetId>> {
         if namespace != "bookmarks" {
-            info!(
-                self.logging.logger(),
-                "unsupported listkeyspatterns namespace: {}", namespace,
-            );
+            info!("unsupported listkeyspatterns namespace: {}", namespace,);
             return future::err(format_err!(
                 "unsupported listkeyspatterns namespace: {}",
                 namespace
@@ -1855,10 +1840,8 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                     };
 
                     debug!(
-                        ctx.logger(),
                         "streaming changelog {} index bytes, {} data bytes",
-                        changelog.index_size,
-                        changelog.data_size
+                        changelog.index_size, changelog.data_size
                     );
 
                     let mut response_header = Vec::new();

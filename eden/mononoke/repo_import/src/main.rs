@@ -83,7 +83,6 @@ use pushrebase::do_pushrebase_bonsai;
 use pushredirect::PushRedirectionConfigArc;
 use serde::Deserialize;
 use serde::Serialize;
-use slog::info;
 use synced_commit_mapping::SyncedCommitMappingRef;
 use tokio::fs;
 use tokio::io::AsyncBufReadExt;
@@ -93,6 +92,7 @@ use tokio::io::BufReader;
 use tokio::process;
 use tokio::time;
 use topo_sort::sort_topological;
+use tracing::info;
 use wireproto_handler::TargetRepoDbs;
 
 mod cli;
@@ -244,7 +244,6 @@ async fn rewrite_file_paths(
             let rewritten_bcs_id = rewritten_bcs.get_changeset_id();
             remapped_parents.insert(bcs_id.clone(), rewritten_bcs_id);
             info!(
-                ctx.logger(),
                 "Commit {}/{}: Remapped {:?} => {:?}",
                 (index + 1),
                 len,
@@ -260,9 +259,9 @@ async fn rewrite_file_paths(
 
     bonsai_changesets = sort_bcs(&bonsai_changesets)?;
     let bcs_ids = get_cs_ids(&bonsai_changesets);
-    info!(ctx.logger(), "Saving shifted bonsai changesets");
+    info!("Saving shifted bonsai changesets");
     save_changesets(ctx, repo, bonsai_changesets).await?;
-    info!(ctx.logger(), "Saved shifted bonsai changesets");
+    info!("Saved shifted bonsai changesets");
     Ok((bcs_ids, git_merge_shifted_bcs_id))
 }
 
@@ -289,7 +288,6 @@ async fn back_sync_commits_to_small_repo(
     version: &CommitSyncConfigVersion,
 ) -> Result<Vec<ChangesetId>, Error> {
     info!(
-        ctx.logger(),
         "Back syncing from large repo {} to small repo {} using {:?} mapping version",
         large_to_small_syncer.get_large_repo().name(),
         small_repo.name(),
@@ -316,16 +314,13 @@ async fn back_sync_commits_to_small_repo(
             .await?;
 
             if let Some(synced_cs_id) = maybe_synced_cs_id {
-                info!(
-                    ctx.logger(),
-                    "Synced large repo cs: {} => {}", bcs_id, synced_cs_id
-                );
+                info!("Synced large repo cs: {} => {}", bcs_id, synced_cs_id);
                 synced_bcs_ids.push(synced_cs_id);
             }
         }
     }
 
-    info!(ctx.logger(), "Finished back syncing shifted bonsais");
+    info!("Finished back syncing shifted bonsais");
     Ok(synced_bcs_ids)
 }
 
@@ -337,7 +332,6 @@ async fn wait_until_backsynced_and_return_version(
     let sleep_time_secs = 10;
 
     info!(
-        ctx.logger(),
         "waiting until {} is backsynced from {} to {}...",
         cs_id,
         large_to_small_syncer.get_source_repo().name(),
@@ -364,7 +358,7 @@ async fn wait_until_backsynced_and_return_version(
                 return Ok(maybe_version);
             }
             None => {
-                info!(ctx.logger(), "sleeping for {} secs", sleep_time_secs);
+                info!("sleeping for {} secs", sleep_time_secs);
                 time::sleep(time::Duration::from_secs(sleep_time_secs)).await;
             }
         }
@@ -409,7 +403,7 @@ async fn move_bookmark(
 ) -> Result<(), Error> {
     let batch_size = recovery_fields.batch_size;
     let sleep_time = recovery_fields.sleep_time;
-    info!(ctx.logger(), "Start moving the bookmark");
+    info!("Start moving the bookmark");
     if shifted_bcs_ids.is_empty() {
         return Err(format_err!("There is no bonsai changeset present"));
     }
@@ -439,10 +433,7 @@ async fn move_bookmark(
         if transaction.commit().await?.is_none() {
             return Err(format_err!("Logical failure while creating {:?}", bookmark));
         }
-        info!(
-            ctx.logger(),
-            "Created bookmark {:?} pointing to {}", bookmark, old_csid
-        );
+        info!("Created bookmark {:?} pointing to {}", bookmark, old_csid);
     }
 
     let commits_done = recovery_fields.move_bookmark_commits_done;
@@ -471,10 +462,7 @@ async fn move_bookmark(
         if transaction.commit().await?.is_none() {
             return Err(format_err!("Logical failure while setting {:?}", bookmark));
         }
-        info!(
-            ctx.logger(),
-            "Set bookmark {:?} to point to {:?}", bookmark, curr_csid
-        );
+        info!("Set bookmark {:?} to point to {:?}", bookmark, curr_csid);
 
         recovery_fields.move_bookmark_commits_done = commits_done + shifted_index;
 
@@ -491,7 +479,7 @@ async fn move_bookmark(
                 None => return Ok(()),
             };
 
-            info!(ctx.logger(), "Back syncing bookmark movement to small repo");
+            info!("Back syncing bookmark movement to small repo");
             backsync_latest(
                 ctx.clone(),
                 small_repo_back_sync_vars.large_to_small_syncer.clone(),
@@ -545,7 +533,7 @@ async fn move_bookmark(
         .await?;
         old_csid = curr_csid;
     }
-    info!(ctx.logger(), "Finished moving the bookmark");
+    info!("Finished moving the bookmark");
     Ok(())
 }
 
@@ -557,8 +545,8 @@ async fn merge_imported_commit(
     changeset_args: ChangesetArgs,
 ) -> Result<ChangesetId, Error> {
     info!(
-        ctx.logger(),
-        "Merging the imported commits into given bookmark, {}", dest_bookmark
+        "Merging the imported commits into given bookmark, {}",
+        dest_bookmark
     );
     let master_cs_id = match repo
         .bookmarks()
@@ -589,11 +577,11 @@ async fn merge_imported_commit(
         ));
     }
 
-    info!(ctx.logger(), "Done checking path conflicts");
+    info!("Done checking path conflicts");
 
     info!(
-        ctx.logger(),
-        "Creating a merge bonsai changeset with parents: {}, {}", master_cs_id, imported_cs_id
+        "Creating a merge bonsai changeset with parents: {}, {}",
+        master_cs_id, imported_cs_id
     );
 
     let ChangesetArgs {
@@ -615,12 +603,12 @@ async fn merge_imported_commit(
 
     let merged_cs_id = merged_cs.get_changeset_id();
     info!(
-        ctx.logger(),
-        "Created merge bonsai: {} and changeset: {:?}", merged_cs_id, merged_cs
+        "Created merge bonsai: {} and changeset: {:?}",
+        merged_cs_id, merged_cs
     );
 
     save_changesets(ctx, repo, vec![merged_cs]).await?;
-    info!(ctx.logger(), "Finished merging");
+    info!("Finished merging");
     Ok(merged_cs_id)
 }
 
@@ -631,7 +619,7 @@ async fn push_merge_commit(
     bookmark_to_merge_into: &BookmarkKey,
     repo_config: &RepoConfig,
 ) -> Result<ChangesetId, Error> {
-    info!(ctx.logger(), "Running pushrebase");
+    info!("Running pushrebase");
 
     let merged_cs = merged_cs_id.load(ctx, repo.repo_blobstore()).await?;
     let pushrebase_flags = &repo_config.pushrebase.flags;
@@ -655,10 +643,7 @@ async fn push_merge_commit(
     .await?;
 
     let pushrebase_cs_id = pushrebase_res.head;
-    info!(
-        ctx.logger(),
-        "Finished pushrebasing to {}", pushrebase_cs_id
-    );
+    info!("Finished pushrebasing to {}", pushrebase_cs_id);
     Ok(pushrebase_cs_id)
 }
 
@@ -678,7 +663,7 @@ async fn get_leaf_entries(
 }
 
 async fn check_dependent_systems(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     checker_flags: &CheckerFlags,
     hg_csid: HgChangesetId,
     sleep_time: Duration,
@@ -692,10 +677,7 @@ async fn check_dependent_systems(
         let call_sign = maybe_call_sign.as_ref().unwrap();
         passed_phab_check = phabricator_commit_check(call_sign, &hg_csid).await?;
         if !passed_phab_check {
-            info!(
-                ctx.logger(),
-                "Phabricator hasn't parsed commit: {:?}", hg_csid
-            );
+            info!("Phabricator hasn't parsed commit: {:?}", hg_csid);
             time::sleep(sleep_time).await;
         }
     }
@@ -832,17 +814,14 @@ async fn get_large_repo_config_if_pushredirected(
 }
 
 async fn get_large_repo_setting<R>(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     small_repo_setting: &RepoImportSetting,
     commit_sync_data: &CommitSyncData<R>,
 ) -> Result<RepoImportSetting, Error>
 where
     R: CrossRepo,
 {
-    info!(
-        ctx.logger(),
-        "Generating variables to import into large repo"
-    );
+    info!("Generating variables to import into large repo");
 
     let RepoImportSetting {
         importing_bookmark,
@@ -858,8 +837,8 @@ where
         commit_sync_data
     ))?;
     info!(
-        ctx.logger(),
-        "Set large repo's importing bookmark to {}", large_importing_bookmark
+        "Set large repo's importing bookmark to {}",
+        large_importing_bookmark
     );
     let large_dest_bookmark = commit_sync_data
         .rename_bookmark(dest_bookmark).await?
@@ -871,15 +850,15 @@ where
     )
         })?;
     info!(
-        ctx.logger(),
-        "Set large repo's destination bookmark to {}", large_dest_bookmark
+        "Set large repo's destination bookmark to {}",
+        large_dest_bookmark
     );
 
     let large_repo_setting = RepoImportSetting {
         importing_bookmark: large_importing_bookmark,
         dest_bookmark: large_dest_bookmark,
     };
-    info!(ctx.logger(), "Finished generating the variables");
+    info!("Finished generating the variables");
     Ok(large_repo_setting)
 }
 
@@ -947,10 +926,10 @@ async fn save_importing_state(recovery_fields: &RecoveryFields) -> Result<(), Er
 }
 
 async fn fetch_recovery_state(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     saved_recovery_file_paths: &str,
 ) -> Result<RecoveryFields, Error> {
-    info!(ctx.logger(), "Fetching the recovery stage for importing");
+    info!("Fetching the recovery stage for importing");
     let mut saved_proc_recovery_file = fs::File::open(saved_recovery_file_paths).await?;
     let mut serialized = String::new();
     saved_proc_recovery_file
@@ -958,7 +937,6 @@ async fn fetch_recovery_state(
         .await?;
     let recovery_fields: RecoveryFields = serde_json::from_str(&serialized)?;
     info!(
-        ctx.logger(),
         "Fetched the recovery stage for importing.\nStarting from stage: {:?}",
         recovery_fields.import_stage
     );
@@ -1161,17 +1139,14 @@ async fn repo_import(
         }
 
         let target = GitimportTarget::full();
-        info!(ctx.logger(), "Started importing git commits to Mononoke");
+        info!("Started importing git commits to Mononoke");
         let uploader = import_direct::DirectUploader::new(repo.clone(), ReuploadCommits::Never);
         let import_map =
             import_tools::gitimport(&ctx, path, Arc::new(uploader), &target, &prefs).await?;
-        info!(ctx.logger(), "Added commits to Mononoke");
+        info!("Added commits to Mononoke");
 
         if recovery_fields.print_gitimport_map {
-            info!(
-                ctx.logger(),
-                "Gitimport Map (git commit id -> bonsai changeset id):\n{import_map:#?}"
-            );
+            info!("Gitimport Map (git commit id -> bonsai changeset id):\n{import_map:#?}");
         }
 
         let git_merge_oid = {
@@ -1258,7 +1233,7 @@ async fn repo_import(
             async move {
                 let vars = match maybe_small_repo_back_sync_vars {
                     Some(vars) => {
-                        info!(ctx.logger(), "Backsyncing changesets");
+                        info!("Backsyncing changesets");
                         vars
                     }
                     None => return Ok(()),
@@ -1299,14 +1274,14 @@ async fn repo_import(
             }
         };
 
-        info!(ctx.logger(), "Start deriving data types");
+        info!("Start deriving data types");
         future::try_join3(
             derive_changesets,
             backsync_and_derive_changesets,
             mark_not_synced_changesets,
         )
         .await?;
-        info!(ctx.logger(), "Finished deriving data types");
+        info!("Finished deriving data types");
 
         recovery_fields.import_stage = ImportStage::MoveBookmark;
         save_importing_state(recovery_fields).await?;
@@ -1394,10 +1369,8 @@ async fn repo_import(
     }
 
     info!(
-        ctx.logger(),
         "Set bookmark {:?} to the merge commit: {:?}",
-        &repo_import_setting.importing_bookmark,
-        pushrebased_cs_id
+        &repo_import_setting.importing_bookmark, pushrebased_cs_id
     );
 
     Ok(())
@@ -1420,7 +1393,6 @@ async fn check_additional_setup_steps(
     }
     let importing_bookmark = get_importing_bookmark(bookmark_suffix)?;
     info!(
-        ctx.logger(),
         "The importing bookmark name is: {}. \
         Make sure to notify Phabricator oncall to track this bookmark!",
         importing_bookmark
@@ -1428,7 +1400,6 @@ async fn check_additional_setup_steps(
     let dest_bookmark_name = check_additional_setup_steps_args.dest_bookmark.as_str();
     let dest_bookmark = BookmarkKey::new(dest_bookmark_name)?;
     info!(
-        ctx.logger(),
         "The destination bookmark name is: {}. \
         If the bookmark doesn't exist already, make sure to notify Phabricator oncall to track it!",
         dest_bookmark
@@ -1473,7 +1444,6 @@ async fn check_additional_setup_steps(
         )
         .await?;
         info!(
-            ctx.logger(),
             "The repo we import {} into pushredirects to another repo {}. \
             The importing bookmark of the pushredirected repo is {} and \
             the destination bookmark is {}. If they don't exist already,
@@ -1494,7 +1464,7 @@ async fn check_additional_setup_steps(
             ));
         }
     } else {
-        info!(ctx.logger(), "There is no additional setup step needed!");
+        info!("There is no additional setup step needed!");
     }
     Ok(())
 }
@@ -1618,17 +1588,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let args: MononokeRepoImportArgs = app.args()?;
     let env = app.environment();
-    let logger = app.logger();
     let configs = app.repo_configs();
     let ctx = app.new_basic_context();
 
     let repo: Repo = app.open_repo(&args.repo).await?;
-    info!(
-        logger,
-        "using repo \"{}\" repoid {:?}",
-        repo.name(),
-        repo.repo_id()
-    );
+    info!("using repo \"{}\" repoid {:?}", repo.name(), repo.repo_id());
     let mut recovery_fields = match args.command {
         Some(CheckAdditionalSetupSteps(check_additional_setup_steps_args)) => {
             check_additional_setup_steps(

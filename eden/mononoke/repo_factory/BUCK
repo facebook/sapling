@@ -16,6 +16,7 @@ rust_library(
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/async_once_cell:async_once_cell",
         "//common/rust/shed/cachelib_stub:cachelib",
         "//common/rust/shed/facet:facet",

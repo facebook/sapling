@@ -77,8 +77,8 @@ use repo_derived_data::RepoDerivedDataRef;
 use scuba_ext::FutureStatsScubaExt;
 use sha1::Digest;
 use sha1::Sha1;
-use slog::debug;
-use slog::info;
+use tracing::debug;
+use tracing::info;
 
 use crate::errors::ErrorKind;
 
@@ -119,7 +119,7 @@ pub async fn create_getbundle_response(
     lfs_params: &SessionLfsParams,
 ) -> Result<Vec<PartEncodeBuilder>, Error> {
     let return_phases = return_phases == PhasesPart::Yes;
-    debug!(ctx.logger(), "Return phases is: {:?}", return_phases);
+    debug!("Return phases is: {:?}", return_phases);
 
     let heads_len = heads.len();
     let common: HashSet<_> = common.into_iter().collect();
@@ -170,11 +170,7 @@ pub async fn create_getbundle_response(
 }
 
 fn report_draft_commits(ctx: &CoreContext, draft_commits: &HashSet<HgChangesetId>) {
-    debug!(
-        ctx.logger(),
-        "Getbundle returning {} draft commits",
-        draft_commits.len()
-    );
+    debug!("Getbundle returning {} draft commits", draft_commits.len());
     ctx.perf_counters().add_to_counter(
         PerfCounterType::GetbundleNumDrafts,
         draft_commits.len() as i64,
@@ -328,12 +324,11 @@ async fn call_difference_of_union_of_ancestors_revset(
     Ok(res)
 }
 
-fn warn_expensive_getbundle(ctx: &CoreContext) {
+fn warn_expensive_getbundle(_ctx: &CoreContext) {
     info!(
-        ctx.logger(),
+        remote = "true",
         "your repository is out of date and pulling new commits might take a long time. \
         Please consider recloning your repository since it might be much faster."
-        ; "remote" => "true"
     );
 }
 

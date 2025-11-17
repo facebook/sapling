@@ -46,8 +46,8 @@ use metaconfig_types::PushParams;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
-use slog::trace;
 use topo_sort::sort_topological;
+use tracing::trace;
 use wirepack::parse_treemanifest_bundle2;
 
 use crate::Repo;
@@ -1160,9 +1160,9 @@ impl<'r, R: Repo> Bundle2Resolver<'r, R> {
             ErrorKind::WhileUploadingData(changesets_hashes)
         };
 
-        trace!(self.ctx.logger(), "changesets: {:?}", changesets);
-        trace!(self.ctx.logger(), "filelogs: {:?}", filelogs.keys());
-        trace!(self.ctx.logger(), "manifests: {:?}", manifests.keys());
+        trace!("changesets: {:?}", changesets);
+        trace!("filelogs: {:?}", filelogs.keys());
+        trace!("manifests: {:?}", manifests.keys());
 
         // Each commit gets a future. This future polls futures of parent commits, which poll futures
         // of their parents and so on. However that might cause stackoverflow on very large pushes
