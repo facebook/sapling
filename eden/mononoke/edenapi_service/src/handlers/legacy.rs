@@ -23,9 +23,9 @@ use futures::stream::TryStreamExt;
 use futures_ext::FbStreamExt;
 use futures_stats::TimedFutureExt;
 use mononoke_api::Repo;
-use slog::debug;
 use streaming_clone::StreamingCloneArc;
 use time_ext::DurationExt;
+use tracing::debug;
 
 use super::HandlerResult;
 use super::SaplingRemoteApiHandler;
@@ -124,10 +124,8 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
             .collect();
 
         debug!(
-            ctx.logger(),
             "streaming changelog {} index bytes, {} data bytes",
-            changelog.index_size,
-            changelog.data_size
+            changelog.index_size, changelog.data_size
         );
 
         let metadata = StreamingChangelogData::Metadata(Metadata {

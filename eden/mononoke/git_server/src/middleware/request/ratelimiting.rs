@@ -17,7 +17,7 @@ use metadata::Metadata;
 use rate_limiting::LoadShedResult;
 use rate_limiting::RateLimitEnvironment;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::error;
+use tracing::error;
 
 use crate::scuba::MononokeGitScubaHandler;
 
@@ -27,19 +27,16 @@ const SERVER_PATH_PREFIX: &str = "/repos/git/";
 #[derive(Clone)]
 pub struct UploadPackRateLimitingMiddleware {
     scuba: MononokeScubaSampleBuilder,
-    logger: slog::Logger,
     rate_limiter: Option<RateLimitEnvironment>,
 }
 
 impl UploadPackRateLimitingMiddleware {
     pub fn new(
         scuba: MononokeScubaSampleBuilder,
-        logger: slog::Logger,
         rate_limiter: Option<RateLimitEnvironment>,
     ) -> Self {
         Self {
             scuba,
-            logger,
             rate_limiter,
         }
     }
@@ -87,8 +84,8 @@ impl Middleware for UploadPackRateLimitingMiddleware {
                     ),
                 );
                 error!(
-                    self.logger,
-                    "Upload pack request rejected due to load shedding / rate limiting: {:?}", err
+                    "Upload pack request rejected due to load shedding / rate limiting: {:?}",
+                    err
                 );
                 return Some(
                     Response::builder()

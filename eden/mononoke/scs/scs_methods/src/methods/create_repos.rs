@@ -54,10 +54,10 @@ use repos::QuickRepoDefinition;
 use repos::QuickRepoDefinitionShardingConfig;
 use repos::QuickRepoDefinitionTShirtSize;
 use repos::RawCommitIdentityScheme;
-use slog::info;
-use slog::warn;
 use source_control as thrift;
 use thrift::RepoSizeBucket;
+use tracing::info;
+use tracing::warn;
 
 use crate::source_control_impl::SourceControlServiceImpl;
 
@@ -740,8 +740,8 @@ async fn create_repos_in_mononoke(
                                     | MutationState::SERVICE_CANARYING
                                     | MutationState::VALIDATING => {
                                         info!(
-                                            poll_ctx.logger(),
-                                            "mutation in progress for mutation_id {}", mutation_id
+                                            "mutation in progress for mutation_id {}",
+                                            mutation_id
                                         );
                                         tokio::time::sleep(poll_interval).await;
                                     }
@@ -749,10 +749,8 @@ async fn create_repos_in_mononoke(
                                 },
                                 Err(e) => {
                                     warn!(
-                                        poll_ctx.logger(),
                                         "Error polling repo creation for mutation_id: {}, error: {:?}",
-                                        mutation_id,
-                                        e
+                                        mutation_id, e
                                     );
                                     break;
                                 }
@@ -910,18 +908,12 @@ async fn poll_mutation_id_impl(
     }
 
     let mutation = resp.mutation.ok_or_else(|| {
-        warn!(
-            ctx.logger(),
-            "mutation state is not present {}", mutation_id
-        );
+        warn!("mutation state is not present {}", mutation_id);
         scs_errors::internal_error(format!("Mutation state not available for {mutation_id}"))
     })?;
 
     if mutation.stateInfo.isError {
-        info!(
-            ctx.logger(),
-            "cleaning up, mutation state info has error {}", mutation_id
-        );
+        info!("cleaning up, mutation state info has error {}", mutation_id);
         cleanup_repos(ctx.clone(), git_source_of_truth_config, mutation_id).await?;
         return Err(scs_errors::internal_error(format!(
             "Configo mutation error: {}",
@@ -1050,10 +1042,7 @@ async fn initiate_land_for_mutation(
         .await
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
 
-    info!(
-        ctx.logger(),
-        "initiated land for mutation id  {}", mutation_id.id
-    );
+    info!("initiated land for mutation id  {}", mutation_id.id);
     Ok(())
 }
 

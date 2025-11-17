@@ -325,7 +325,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 ))
                 .add(UploadPackRateLimitingMiddleware::new(
                     scuba.clone(),
-                    logger.clone(),
                     rate_limiter,
                 ))
                 .add(PushvarsParsingMiddleware {})
