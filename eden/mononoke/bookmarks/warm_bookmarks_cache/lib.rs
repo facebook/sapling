@@ -136,10 +136,12 @@ pub enum WarmerTag {
     Hg,
     Git,
 }
+
 pub struct Warmer {
     warmer: Box<WarmerFn>,
     is_warm: Box<IsWarmFn>,
     name: String,
+    #[allow(unused)]
     tags: Vec<WarmerTag>,
 }
 
