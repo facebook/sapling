@@ -252,7 +252,7 @@ export class Repository {
         });
       }
     };
-    this.watchForChanges = new WatchForChanges(info, ctx.logger, this.pageFocusTracker, callback);
+    this.watchForChanges = new WatchForChanges(info, this.pageFocusTracker, callback, ctx);
 
     this.operationQueue = new OperationQueue(
       (
@@ -535,6 +535,8 @@ export class Repository {
       return {type: 'cwdNotARepository', cwd};
     }
 
+    const isEdenFs = await isEdenFsRepo(repoRoot as AbsolutePath);
+
     let codeReviewSystem: CodeReviewSystem;
     let pullRequestDomain;
     if (Internal.isMononokePath?.(pathsDefault)) {
@@ -571,6 +573,7 @@ export class Repository {
       codeReviewSystem,
       pullRequestDomain,
       preferredSubmitCommand: preferredSubmitCommand as PreferredSubmitCommand | undefined,
+      isEdenFs,
     };
     logger.info('repo info: ', result);
     return result;
@@ -831,7 +834,7 @@ export class Repository {
   ref() {
     this.refcount++;
     if (this.refcount === 1) {
-      this.watchForChanges.setupSubscriptions();
+      this.watchForChanges.setupSubscriptions(this.initialConnectionContext);
     }
   }
   unref() {
@@ -1700,4 +1703,12 @@ export function absolutePathForFileInRepo(
 
 function isUnhealthyEdenFs(cwd: string): Promise<boolean> {
   return exists(path.join(cwd, 'README_EDEN.txt'));
+}
+
+async function isEdenFsRepo(repoRoot: AbsolutePath): Promise<boolean> {
+  try {
+    await fs.promises.access(path.join(repoRoot, '.eden'));
+    return true;
+  } catch {}
+  return false;
 }

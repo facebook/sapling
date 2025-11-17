@@ -245,6 +245,7 @@ export type ValidatedRepoInfo = {
   codeReviewSystem: CodeReviewSystem;
   pullRequestDomain: string | undefined;
   preferredSubmitCommand?: PreferredSubmitCommand;
+  isEdenFs: boolean;
 };
 
 export type ApplicationInfo = {

@@ -131,6 +131,7 @@ describe('Repository', () => {
           hostname: 'github.com',
         },
         pullRequestDomain: 'github.com',
+        isEdenFs: false,
       });
     });
 
@@ -151,6 +152,7 @@ describe('Repository', () => {
           hostname: 'ghe.myCompany.com',
         },
         pullRequestDomain: 'github.com',
+        isEdenFs: false,
       });
     });
 
@@ -169,6 +171,7 @@ describe('Repository', () => {
           path: 'https://gitlab.myCompany.com/myUsername/myRepo.git',
         },
         pullRequestDomain: 'github.com',
+        isEdenFs: false,
       });
     });
   });
@@ -199,6 +202,7 @@ describe('Repository', () => {
       dotdir: '/path/to/myRepo/.sl',
       codeReviewSystem: expect.anything(),
       pullRequestDomain: undefined,
+      isEdenFs: false,
     });
   });
 
@@ -257,6 +261,7 @@ describe('Repository', () => {
       repoRoot: '/path/to/repo',
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
+      isEdenFs: false,
     };
 
     let ejecaSpy: ReturnType<typeof mockEjeca>;
@@ -386,6 +391,7 @@ describe('Repository', () => {
       repoRoot: '/path/to/repo',
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
+      isEdenFs: false,
     };
 
     const EXAMPLE_DIFFSTAT = `
@@ -459,6 +465,7 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
       repoRoot: '/path/to/repo',
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
+      isEdenFs: false,
     };
 
     const expectCalledWithRevset = (spy: jest.SpyInstance<unknown>, revset: string) => {
@@ -538,6 +545,7 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
       repoRoot: '/path/to/repo',
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
+      isEdenFs: false,
     };
     const NOT_IN_CONFLICT: ResolveCommandConflictOutput = [
       {
@@ -958,6 +966,7 @@ describe('absolutePathForFileInRepo', () => {
       repoRoot: '/path/to/repo',
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
+      isEdenFs: false,
     };
     const repo = new Repository(repoInfo, ctx);
 
@@ -984,6 +993,7 @@ describe('absolutePathForFileInRepo', () => {
       repoRoot: 'C:\\path\\to\\repo',
       codeReviewSystem: {type: 'unknown'},
       pullRequestDomain: undefined,
+      isEdenFs: false,
     };
     const repo = new Repository(repoInfo, ctx);
 

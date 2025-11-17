@@ -54,6 +54,7 @@ class SimpleMockRepositoryImpl {
       pullRequestDomain: undefined,
       preferredSubmitCommand: 'pr',
       codeReviewSystem: {type: 'unknown'},
+      isEdenFs: false,
       ...data,
     });
   }
@@ -257,6 +258,7 @@ describe('RepositoryCache', () => {
       codeReviewSystem: {type: 'unknown'},
       repoRoot: '/path/to/repo',
       dotdir: '/path/to/repo/.sl',
+      isEdenFs: false,
     } as RepoInfo;
 
     // two different fake async fetches for RepoInfo

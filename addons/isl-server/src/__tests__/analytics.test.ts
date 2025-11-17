@@ -144,6 +144,7 @@ describe('track', () => {
         repoRoot: '/path',
         dotdir: '/path/.sl',
         pullRequestDomain: undefined,
+        isEdenFs: false,
       },
       mockCtx,
     );

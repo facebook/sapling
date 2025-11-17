@@ -5,15 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {PageVisibility, RepoInfo} from 'isl/src/types';
+import type {PageVisibility, RepoInfo, ValidatedRepoInfo} from 'isl/src/types';
 import type {PageFocusTracker} from './PageFocusTracker';
 import type {Logger} from './logger';
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {debounce} from 'shared/debounce';
+import {Internal} from './Internal';
 import {stagedThrottler} from './StagedThrottler';
 import {ONE_MINUTE_MS} from './constants';
+import type {RepositoryContext} from './serverTypes';
 import {Watchman} from './watchman';
 
 const DEFAULT_POLL_INTERVAL = 15 * ONE_MINUTE_MS;
@@ -38,18 +40,20 @@ export class WatchForChanges {
 
   private dirstateDisposables: Array<() => unknown> = [];
   private watchmanDisposables: Array<() => unknown> = [];
+  private logger: Logger;
 
   constructor(
     private repoInfo: RepoInfo,
-    private logger: Logger,
     private pageFocusTracker: PageFocusTracker,
     private changeCallback: (kind: KindOfChange, pollKind?: PollKind) => unknown,
+    ctx: RepositoryContext,
     watchman?: Watchman | undefined,
   ) {
-    this.watchman = watchman ?? new Watchman(logger);
+    this.watchman = watchman ?? new Watchman(ctx.logger);
+    this.logger = ctx.logger;
 
     // Watch dirstate right away for commit changes
-    this.setupDirstateSubscriptions();
+    this.setupDirstateSubscriptions(ctx);
     this.setupPolling();
     this.pageFocusTracker.onChange(this.poll.bind(this));
     // poll right away so we get data immediately, without waiting for timeout on startup
@@ -114,8 +118,23 @@ export class WatchForChanges {
     }
   };
 
-  private async setupDirstateSubscriptions() {
-    // TODO(cqd) add configs for eden watcher
+  private async setupDirstateSubscriptions(ctx: RepositoryContext) {
+    const enabled = await Internal.fetchFeatureFlag?.(ctx, 'isl_use_edenfs_notifications');
+    this.logger.info('edenfs notifications flag state: ', enabled);
+    if (enabled) {
+      if (this.repoInfo.type === 'success') {
+        if ((this.repoInfo as ValidatedRepoInfo).isEdenFs === true) {
+          this.logger.info('Valid eden repo'); // For testing, remove when implemented
+          // TODO: implement Eden dirstate subscriptions
+          // await this.setupEdenDirstateSubscriptions();
+          // return;
+        } else {
+          this.logger.info('Non-eden repo'); // For testing, remove when implemented
+        }
+      }
+    } else {
+      // TODO: move watchman here after implementing eden
+    }
     await this.setupWatchmanDirstateSubscriptions();
   }
 
@@ -187,8 +206,21 @@ export class WatchForChanges {
     }
   }
 
-  public async setupSubscriptions() {
-    // TODO(cqd) add configs for eden watcher
+  public async setupSubscriptions(ctx: RepositoryContext) {
+    const enabled = await Internal.fetchFeatureFlag?.(ctx, 'isl_use_edenfs_notifications');
+    this.logger.info('edenfs notifications flag state: ', enabled);
+    if (enabled) {
+      if (
+        this.repoInfo.type === 'success' &&
+        (this.repoInfo as ValidatedRepoInfo).isEdenFs === true
+      ) {
+        // TODO: implement Eden dirstate subscriptions
+        // await this.setupEdenSubscriptions();
+        // return;
+      }
+    } else {
+      // TODO: move watchman here after implementing eden
+    }
     await this.setupWatchmanSubscriptions();
   }
 

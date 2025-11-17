@@ -60,6 +60,7 @@ describe('GitHubPRBadge', () => {
             },
             pullRequestDomain: undefined,
             preferredSubmitCommand: 'pr',
+            isEdenFs: false,
           },
         });
       });
@@ -198,6 +199,7 @@ describe('GitHubPRBadge', () => {
                 },
                 pullRequestDomain: 'https://myreviewsite.dev',
                 preferredSubmitCommand: 'pr',
+                isEdenFs: false,
               },
             });
           });
@@ -230,6 +232,7 @@ describe('GitHubPRBadge', () => {
                 // no leading https://, adds custom prefix
                 pullRequestDomain: 'myreviewsite.dev/codereview',
                 preferredSubmitCommand: 'pr',
+                isEdenFs: false,
               },
             });
           });

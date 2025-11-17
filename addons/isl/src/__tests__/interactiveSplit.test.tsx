@@ -68,6 +68,7 @@ describe('Interactive Split', () => {
           command: 'sl',
           pullRequestDomain: undefined,
           codeReviewSystem: {type: 'github'} as CodeReviewSystem,
+          isEdenFs: false,
         },
       });
       expectMessageSentToServer({

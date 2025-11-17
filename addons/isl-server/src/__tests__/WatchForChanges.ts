@@ -7,6 +7,7 @@
 
 import type {Client} from 'fb-watchman';
 import type {RepoInfo} from 'isl/src/types';
+import type {ServerPlatform} from '../serverPlatform';
 import type {Watchman} from '../watchman';
 
 import fs from 'node:fs';
@@ -14,7 +15,15 @@ import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {mockLogger} from 'shared/testUtils';
 import {PageFocusTracker} from '../PageFocusTracker';
 import {WatchForChanges} from '../WatchForChanges';
+import {makeServerSideTracker} from '../analytics/serverSideTracker';
 import {ONE_MINUTE_MS} from '../constants';
+
+const mockTracker = makeServerSideTracker(
+  mockLogger,
+  {platformName: 'test'} as ServerPlatform,
+  '0.1',
+  jest.fn(),
+);
 
 jest.mock('fb-watchman', () => {
   // make a fake watchman object which returns () => undefined for every property
@@ -39,6 +48,7 @@ describe('WatchForChanges', () => {
     dotdir: '/testRepo/.sl',
     codeReviewSystem: {type: 'unknown'},
     pullRequestDomain: undefined,
+    isEdenFs: false,
   };
 
   let focusTracker: PageFocusTracker;
@@ -46,6 +56,13 @@ describe('WatchForChanges', () => {
   let watch: WatchForChanges;
 
   beforeEach(() => {
+    const ctx = {
+      cmd: 'sl',
+      cwd: '/path/to/cwd',
+      logger: mockLogger,
+      tracker: mockTracker,
+    };
+
     jest.useFakeTimers();
     onChange.mockClear();
 
@@ -54,7 +71,7 @@ describe('WatchForChanges', () => {
     });
 
     focusTracker = new PageFocusTracker();
-    watch = new WatchForChanges(mockInfo, mockLogger, focusTracker, onChange);
+    watch = new WatchForChanges(mockInfo, focusTracker, onChange, ctx);
     // pretend watchman is not running for most tests
     (watch.watchman.status as string) = 'errored';
     // change is triggered on first subscription
@@ -198,6 +215,12 @@ describe('WatchForChanges', () => {
     //                  |                            ^       (poll)
     //            watchman result
 
+    const ctx = {
+      cmd: 'sl',
+      cwd: '/path/to/cwd',
+      logger: mockLogger,
+      tracker: mockTracker,
+    };
     watch.dispose(); // don't use pre-existing WatchForChanges
     const emitter1 = new TypedEventEmitter();
     const emitter2 = new TypedEventEmitter();
@@ -215,8 +238,8 @@ describe('WatchForChanges', () => {
       unwatch: jest.fn(),
     } as unknown as Watchman;
 
-    watch = new WatchForChanges(mockInfo, mockLogger, focusTracker, onChange, mockWatchman);
-    watch.setupWatchmanSubscriptions();
+    watch = new WatchForChanges(mockInfo, focusTracker, onChange, ctx, mockWatchman);
+    await watch.setupSubscriptions(ctx);
     expect(onChange).toHaveBeenCalledTimes(1);
     onChange.mockClear();
 
@@ -226,7 +249,7 @@ describe('WatchForChanges', () => {
 
     jest.advanceTimersByTime(1.5 * ONE_MINUTE_MS);
     expect(onChange).toHaveBeenCalledTimes(0);
-    emitter2.emit('change', undefined);
+    await emitter2.emit('change', undefined);
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith('uncommitted changes');
     jest.advanceTimersByTime(14.0 * ONE_MINUTE_MS); // original timer didn't cause a poll

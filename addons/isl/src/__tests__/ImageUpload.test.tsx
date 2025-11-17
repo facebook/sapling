@@ -385,6 +385,7 @@ describe('Image upload inside TextArea ', () => {
               type: 'success',
               pullRequestDomain: undefined,
               preferredSubmitCommand: undefined,
+              isEdenFs: false,
             },
           });
         });

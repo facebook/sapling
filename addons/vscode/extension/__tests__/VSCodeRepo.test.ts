@@ -53,6 +53,7 @@ jest.mock('isl-server/src/Repository', () => {
         preferredSubmitCommand: 'pr',
         codeReviewSystem: {type: 'unknown', path: ''},
         pullRequestDomain: undefined,
+        isEdenFs: false,
       });
     });
     constructor(

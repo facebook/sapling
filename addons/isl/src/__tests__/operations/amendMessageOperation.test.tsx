@@ -36,6 +36,7 @@ describe('AmendMessageOperation', () => {
           codeReviewSystem: {type: 'unknown'},
           pullRequestDomain: undefined,
           preferredSubmitCommand: undefined,
+          isEdenFs: false,
         },
       });
       expectMessageSentToServer({

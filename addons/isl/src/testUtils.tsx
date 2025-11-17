@@ -101,6 +101,7 @@ export function simulateRepoConnected(repoRoot?: string, cwd?: string) {
       command: 'sl',
       pullRequestDomain: undefined,
       codeReviewSystem: {type: 'github', owner: 'owner', repo: 'repo', hostname: 'github.com'},
+      isEdenFs: false,
     },
     cwd,
   });
