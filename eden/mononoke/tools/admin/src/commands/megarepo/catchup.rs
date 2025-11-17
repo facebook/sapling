@@ -32,10 +32,10 @@ use pushrebase::do_pushrebase_bonsai;
 use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
-use slog::error;
-use slog::info;
 use sorted_vector_map::SortedVectorMap;
 use tokio::time::sleep;
+use tracing::error;
+use tracing::info;
 use unodes::RootUnodeManifestId;
 
 use super::common::ResultingChangesetArgs;
@@ -55,7 +55,7 @@ pub async fn create_deletion_head_commits<'a>(
         find_files_that_need_to_be_deleted(ctx, repo, &head_bookmark, commit_to_merge, path_regex)
             .await?;
 
-    info!(ctx.logger(), "total files to delete is {}", files.len());
+    info!("total files to delete is {}", files.len());
     let res_cs_args: ChangesetArgs = cs_args.try_into()?;
     let file_chunks = files
         .into_iter()
@@ -91,12 +91,12 @@ pub async fn create_deletion_head_commits<'a>(
         )
         .await?;
         info!(
-            ctx.logger(),
-            "created bonsai #{}. Deriving hg changeset for it to verify its correctness", num
+            "created bonsai #{}. Deriving hg changeset for it to verify its correctness",
+            num
         );
         let hg_cs_id = repo.derive_hg_changeset(ctx, bcs_id).await?;
 
-        info!(ctx.logger(), "derived {}, pushrebasing...", hg_cs_id);
+        info!("derived {}, pushrebasing...", hg_cs_id);
 
         let bcs = bcs_id.load(ctx, repo.repo_blobstore()).await?;
         let pushrebase_res = do_pushrebase_bonsai(
@@ -108,9 +108,9 @@ pub async fn create_deletion_head_commits<'a>(
             &[],
         )
         .await?;
-        info!(ctx.logger(), "Pushrebased to {}", pushrebase_res.head);
+        info!("Pushrebased to {}", pushrebase_res.head);
         if wait_secs > 0 {
-            info!(ctx.logger(), "waiting for {} seconds", wait_secs);
+            info!("waiting for {} seconds", wait_secs);
             sleep(Duration::from_secs(wait_secs)).await;
         }
     }
@@ -147,13 +147,8 @@ pub async fn validate(
     let (head_leaves, mut to_merge_commit_leaves) =
         try_join(head_leaves, to_merge_commit_leaves).await?;
 
+    info!("total unodes in head commit: {}", head_leaves.len());
     info!(
-        ctx.logger(),
-        "total unodes in head commit: {}",
-        head_leaves.len()
-    );
-    info!(
-        ctx.logger(),
         "total unodes in to merge commit: {}",
         to_merge_commit_leaves.len()
     );
@@ -162,7 +157,6 @@ pub async fn validate(
         .filter(|(path, _)| path.matches_regex(&path_regex))
         .collect::<Vec<_>>();
     info!(
-        ctx.logger(),
         "unodes in to head commit after filtering: {}",
         head_leaves.len()
     );
@@ -171,9 +165,9 @@ pub async fn validate(
     to_merge_commit_leaves.sort();
 
     if head_leaves == to_merge_commit_leaves {
-        info!(ctx.logger(), "all is well");
+        info!("all is well");
     } else {
-        error!(ctx.logger(), "validation failed!");
+        error!("validation failed!");
         for (path, unode) in head_leaves {
             println!("{}\t{}\t{}", head_commit, path, unode);
         }

@@ -25,15 +25,15 @@ use mononoke_app::args::AsRepoArg;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
-use slog::debug;
-use slog::info;
-use slog::warn;
 use thiserror::Error;
 use tokio::fs::File;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::io::BufReader;
 use tokio_stream::wrappers::LinesStream;
+use tracing::debug;
+use tracing::info;
+use tracing::warn;
 
 #[facet::container]
 #[derive(Clone)]
@@ -174,7 +174,7 @@ pub async fn copy_keys(app: MononokeApp, args: BlobstoreCopyKeysArgs) -> Result<
         }
     }
 
-    info!(ctx.logger(), "{} keys to copy", keys.len());
+    info!("{} keys to copy", keys.len());
     let log_step = std::cmp::max(1, keys.len() / 10);
 
     let mut s = stream::iter(keys)
@@ -185,7 +185,7 @@ pub async fn copy_keys(app: MononokeApp, args: BlobstoreCopyKeysArgs) -> Result<
                 let target_blobstore = target_repo.repo_blobstore().clone();
                 let maybe_value = source_blobstore.get(&ctx, &key).await?;
                 let value = maybe_value.ok_or(CopyError::NotFound)?;
-                debug!(ctx.logger(), "copying {}", key);
+                debug!("copying {}", key);
                 target_blobstore.put(&ctx, key, value.into_bytes()).await?;
                 Result::<_, CopyError>::Ok(())
             }
@@ -206,7 +206,7 @@ pub async fn copy_keys(app: MononokeApp, args: BlobstoreCopyKeysArgs) -> Result<
             }
             Err(err) => {
                 if args.ignore_errors {
-                    warn!(ctx.logger(), "key: {} {:#}", key, err);
+                    warn!("key: {} {:#}", key, err);
                 } else {
                     return Err(err);
                 }
@@ -214,10 +214,10 @@ pub async fn copy_keys(app: MononokeApp, args: BlobstoreCopyKeysArgs) -> Result<
         };
         processed += 1;
         if processed % log_step == 0 {
-            info!(ctx.logger(), "{} keys processed", processed);
+            info!("{} keys processed", processed);
         }
     }
 
-    info!(ctx.logger(), "{} keys were copied", copied);
+    info!("{} keys were copied", copied);
     Ok(())
 }

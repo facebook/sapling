@@ -20,8 +20,8 @@ use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use mononoke_types::path::NonRootMPath;
-use slog::info;
 use tokio::fs::read_to_string;
+use tracing::info;
 
 use super::common::LightResultingChangesetArgs;
 use crate::commands::megarepo::common::get_delete_commits_cs_args_factory;
@@ -109,7 +109,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: HistoryFixupDeletesA
     } = hfd;
 
     info!(
-        ctx.logger(),
         "Listing deletion commits for fixup branch in top-to-bottom order (first commit is a descendant of the last)"
     );
     delete_commits_fixup_branch.reverse();
@@ -118,7 +117,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: HistoryFixupDeletesA
     }
 
     info!(
-        ctx.logger(),
         "Listing deletion commits for branch with correct history in top-to-bottom order (first commit is a descendant of the last)"
     );
     delete_commits_correct_branch.reverse();

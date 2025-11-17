@@ -70,9 +70,9 @@ use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use slog::info;
-use slog::warn;
 use sorted_vector_map::SortedVectorMap;
+use tracing::info;
+use tracing::warn;
 
 use crate::commands::megarepo::common::get_live_commit_sync_config;
 
@@ -103,14 +103,12 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: SyncDiamondMergeArgs
 
     let source_repo_id = source_repo.repo_identity().id();
     info!(
-        ctx.logger(),
         "using repo \"{}\" repoid {:?}",
         source_repo.repo_identity().name(),
         source_repo_id
     );
 
     info!(
-        ctx.logger(),
         "using repo \"{}\" repoid {:?}",
         target_repo.repo_identity().name(),
         target_repo.repo_identity().id()
@@ -123,10 +121,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: SyncDiamondMergeArgs
         .merge_commit_hash
         .resolve_changeset(ctx, &source_repo)
         .await?;
-    info!(
-        ctx.logger(),
-        "changeset resolved as: {:?}", source_merge_cs_id
-    );
+    info!("changeset resolved as: {:?}", source_merge_cs_id);
 
     let repo_provider = repo_provider_from_mononoke_app(&app);
 
@@ -211,10 +206,7 @@ pub async fn do_sync_diamond_merge(
     onto_bookmark: BookmarkKey,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
-    info!(
-        ctx.logger(),
-        "Preparing to sync a merge commit {}...", small_merge_cs_id
-    );
+    info!("Preparing to sync a merge commit {}...", small_merge_cs_id);
 
     let parents = small_repo
         .commit_graph()
@@ -235,11 +227,7 @@ pub async fn do_sync_diamond_merge(
 
     let small_root = find_root(&new_branch)?;
 
-    info!(
-        ctx.logger(),
-        "{} new commits are going to be merged in",
-        new_branch.len()
-    );
+    info!("{} new commits are going to be merged in", new_branch.len());
     for bcs in new_branch {
         let cs_id = bcs.get_changeset_id();
         let parents = bcs.parents().collect::<Vec<_>>();
@@ -249,7 +237,7 @@ pub async fn do_sync_diamond_merge(
                 cs_id
             ));
         }
-        info!(ctx.logger(), "syncing commit from new branch {}", cs_id);
+        info!("syncing commit from new branch {}", cs_id);
         // It is unclear if we can do something better than use an `Only`
         // hint here. Current thinking is: let the sync fail if one of
         // the `new_branch` commits rewrites into 2 commits in the target
@@ -291,7 +279,7 @@ pub async fn do_sync_diamond_merge(
     .await?;
 
     let new_merge_cs_id = rewritten.get_changeset_id();
-    info!(ctx.logger(), "uploading merge commit {}", new_merge_cs_id);
+    info!("uploading merge commit {}", new_merge_cs_id);
     let submodule_expansion_content_ids = Vec::<(Arc<Repo>, HashSet<_>)>::new();
     upload_commits(
         ctx,
@@ -319,7 +307,6 @@ pub async fn do_sync_diamond_merge(
     book_txn.commit().await?;
 
     warn!(
-        ctx.logger(),
         "It is recommended to run 'mononoke_admin cross-repo verify-working-copy' for {}!",
         new_merge_cs_id
     );

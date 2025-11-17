@@ -16,7 +16,7 @@ use futures::stream::FuturesUnordered;
 use futures_stats::TimedTryFutureExt;
 use mononoke_app::args::ChangesetArgs;
 use repo_blobstore::RepoBlobstoreRef;
-use slog::debug;
+use tracing::debug;
 
 use super::Repo;
 
@@ -64,10 +64,10 @@ pub(super) async fn find_new(ctx: &CoreContext, repo: &Repo, args: FindNewArgs) 
 
     if let Some(case_conflict) = maybe_case_conflict {
         println!("Found new case conflict: {:?}", case_conflict);
-        debug!(ctx.logger(), "Finished in {:?}", stats.completion_time);
+        debug!("Finished in {:?}", stats.completion_time);
     } else {
         println!("No new case conflicts found");
-        debug!(ctx.logger(), "Finished in {:?}", stats.completion_time);
+        debug!("Finished in {:?}", stats.completion_time);
     }
 
     Ok(())

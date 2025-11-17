@@ -133,6 +133,7 @@ tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.17", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 tokio-util = { version = "0.7.15", features = ["full"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 walkdir = "2.3"
 

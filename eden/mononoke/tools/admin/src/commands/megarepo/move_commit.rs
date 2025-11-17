@@ -23,7 +23,7 @@ use mononoke_app::args::RepoArgs;
 use mononoke_app::args::SourceRepoArgs;
 use movers::get_small_to_large_mover;
 use repo_identity::RepoIdentityRef;
-use slog::info;
+use tracing::info;
 
 use super::common::ResultingChangesetArgs;
 use super::common::get_live_commit_sync_config;
@@ -95,7 +95,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MoveArgs) -> Result<
         )
         .await?;
         info!(
-            ctx.logger(),
             "created {} commits, with the last commit {:?}",
             changesets.len(),
             changesets.last()

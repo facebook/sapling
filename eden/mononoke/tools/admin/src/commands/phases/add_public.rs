@@ -11,7 +11,7 @@ use context::CoreContext;
 use futures_stats::TimedTryFutureExt;
 use mononoke_app::args::ChangesetArgs;
 use phases::PhasesRef;
-use slog::info;
+use tracing::info;
 
 use super::Repo;
 
@@ -24,11 +24,7 @@ pub(super) struct AddPublicArgs {
 pub(super) async fn add_public(ctx: &CoreContext, repo: &Repo, args: AddPublicArgs) -> Result<()> {
     let cs_ids = args.changeset_args.resolve_changesets(ctx, repo).await?;
 
-    info!(
-        ctx.logger(),
-        "Marking ancestors of {} commits as public",
-        cs_ids.len()
-    );
+    info!("Marking ancestors of {} commits as public", cs_ids.len());
 
     let (stats, _) = repo
         .phases()
@@ -36,10 +32,7 @@ pub(super) async fn add_public(ctx: &CoreContext, repo: &Repo, args: AddPublicAr
         .try_timed()
         .await?;
 
-    info!(
-        ctx.logger(),
-        "Finished marking ancestors as public in {:?}", stats
-    );
+    info!("Finished marking ancestors as public in {:?}", stats);
 
     Ok(())
 }

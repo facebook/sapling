@@ -14,7 +14,7 @@ use mononoke_app::args::RepoArgs;
 use pushredirect::PushRedirectionConfig;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
-use slog::info;
+use tracing::info;
 
 #[derive(Args)]
 pub(super) struct ShowArgs {
@@ -41,14 +41,14 @@ pub(super) async fn show(ctx: &CoreContext, app: MononokeApp, args: ShowArgs) ->
     match repo.push_redirection_config.get(ctx, repo_id).await? {
         Some(res) => {
             info!(
-                ctx.logger(),
-                "{}: draft={} public={}", res.repo_id, res.draft_push, res.public_push,
+                "{}: draft={} public={}",
+                res.repo_id, res.draft_push, res.public_push,
             );
         }
         None => {
             info!(
-                ctx.logger(),
-                "{}: not in the db, default draft=false public=false", repo_id,
+                "{}: not in the db, default draft=false public=false",
+                repo_id,
             );
         }
     }

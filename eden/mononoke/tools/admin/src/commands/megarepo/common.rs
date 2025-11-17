@@ -25,7 +25,6 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::AsRepoArg;
 use mononoke_types::DateTime;
 use pushredirect::SqlPushRedirectionConfigBuilder;
-use slog::info;
 #[cfg(fbcode_build)]
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::NoReplicaLagMonitor;
@@ -34,6 +33,7 @@ use sql_ext::replication::WaitForReplicationConfig;
 use sql_query_config::SqlQueryConfigArc;
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
+use tracing::info;
 
 #[derive(Debug, clap::Args, Clone)]
 pub(crate) struct ResultingChangesetArgs {
@@ -200,7 +200,7 @@ pub(crate) async fn process_stream_and_wait_for_replication<R: cross_repo_sync::
         if batch < 100 {
             continue;
         }
-        info!(ctx.logger(), "processed {} changesets", total);
+        info!("processed {} changesets", total);
         batch %= 100;
         replica_lag_monitor
             .wait_for_replication(&|| wait_config.clone())

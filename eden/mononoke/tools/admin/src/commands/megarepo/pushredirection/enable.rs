@@ -15,8 +15,8 @@ use mononoke_app::args::RepoArgs;
 use pushredirect::PushRedirectionConfig;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
-use slog::error;
-use slog::info;
+use tracing::error;
+use tracing::info;
 
 #[derive(Args)]
 pub(super) struct EnableArgs {
@@ -52,25 +52,24 @@ pub(super) async fn enable(ctx: &CoreContext, app: MononokeApp, args: EnableArgs
     match repo.push_redirection_config.get(ctx, repo_id).await? {
         Some(res) => {
             info!(
-                ctx.logger(),
-                "{}: draft={} public={}", res.repo_id, res.draft_push, res.public_push,
+                "{}: draft={} public={}",
+                res.repo_id, res.draft_push, res.public_push,
             );
         }
         None => {
             info!(
-                ctx.logger(),
-                "{}: not in the db, default draft=false public=false", repo_id,
+                "{}: not in the db, default draft=false public=false",
+                repo_id,
             );
         }
     }
     info!(
-        ctx.logger(),
         "{} set draft=false public=false",
         if args.dry_run { "would" } else { "will" }
     );
 
     if args.dry_run {
-        info!(ctx.logger(), "dry run mode, exiting");
+        info!("dry run mode, exiting");
         Ok(())
     } else {
         match repo
@@ -79,11 +78,11 @@ pub(super) async fn enable(ctx: &CoreContext, app: MononokeApp, args: EnableArgs
             .await
         {
             Ok(_) => {
-                info!(ctx.logger(), "OK");
+                info!("OK");
                 Ok(())
             }
             Err(e) => {
-                error!(ctx.logger(), "Failed to enable push redirection: {}", e);
+                error!("Failed to enable push redirection: {}", e);
                 Err(e)
             }
         }

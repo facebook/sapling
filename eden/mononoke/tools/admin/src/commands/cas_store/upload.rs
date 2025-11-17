@@ -21,7 +21,7 @@ use mononoke_types::MPath;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::info;
+use tracing::info;
 
 const SCUBA_TABLE: &str = "mononoke_cas_ttl_walker";
 
@@ -144,7 +144,7 @@ pub async fn cas_store_upload(
             .await?
     };
 
-    info!(ctx.logger(), "Upload completed. Upload stats: {}", stats);
+    info!("Upload completed. Upload stats: {}", stats);
 
     Ok(())
 }

@@ -24,7 +24,7 @@ use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
 use mononoke_types::ChangesetId;
-use slog::info;
+use tracing::info;
 
 #[derive(Copy, Clone, Debug)]
 struct GradualMergeProgressCommitIdNames;
@@ -93,10 +93,7 @@ pub async fn run(
     )
     .await?;
 
-    info!(
-        ctx.logger(),
-        "Progress: {}/{} commits merged", merged_count, total_count
-    );
+    info!("Progress: {}/{} commits merged", merged_count, total_count);
 
     Ok(())
 }
@@ -113,11 +110,7 @@ async fn get_unmerged_commits_with_total_count(
     let commits_to_merge =
         find_all_commits_to_merge(ctx, repo, *pre_deletion_commit, *last_deletion_commit).await?;
 
-    info!(
-        ctx.logger(),
-        "{} total commits to merge",
-        commits_to_merge.len()
-    );
+    info!("{} total commits to merge", commits_to_merge.len());
 
     let commits_to_merge = commits_to_merge
         .into_iter()
@@ -160,7 +153,7 @@ async fn find_all_commits_to_merge(
     pre_deletion_commit: ChangesetId,
     last_deletion_commit: ChangesetId,
 ) -> Result<Vec<ChangesetId>> {
-    info!(ctx.logger(), "Finding all commits to merge...");
+    info!("Finding all commits to merge...");
     let commits_to_merge = repo
         .commit_graph()
         .range_stream(ctx, pre_deletion_commit, last_deletion_commit)
@@ -181,10 +174,7 @@ async fn find_unmerged_commits(
     mut commits_to_merge: Vec<(ChangesetId, StackPosition)>,
     bookmark_to_merge_into: &BookmarkKey,
 ) -> Result<Vec<(ChangesetId, StackPosition)>> {
-    info!(
-        ctx.logger(),
-        "Finding commits that haven't been merged yet..."
-    );
+    info!("Finding commits that haven't been merged yet...");
     let first = if let Some(first) = commits_to_merge.first() {
         first
     } else {

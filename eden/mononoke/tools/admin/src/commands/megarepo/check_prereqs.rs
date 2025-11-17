@@ -29,7 +29,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::SourceRepoArgs;
 use mononoke_app::args::TargetRepoArgs;
 use repo_identity::RepoIdentityRef;
-use slog::info;
+use tracing::info;
 
 use crate::commands::megarepo::common::get_live_commit_sync_config;
 
@@ -61,7 +61,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: CheckPrereqsArgs) ->
         try_join(source_repo_fut, target_repo_fut).await?;
 
     info!(
-        ctx.logger(),
         "Resolving source changeset in {}",
         source_repo.repo_identity().name(),
     );
@@ -82,7 +81,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: CheckPrereqsArgs) ->
     }?;
 
     info!(
-        ctx.logger(),
         "Resolving target changeset in {}",
         target_repo.repo_identity().name()
     );
@@ -105,7 +103,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: CheckPrereqsArgs) ->
     let version = CommitSyncConfigVersion(args.version);
 
     info!(
-        ctx.logger(),
         "Checking push-redirection prerequisites for {}({})->{}({}), {:?}",
         source_cs_id,
         source_repo.repo_identity().name(),

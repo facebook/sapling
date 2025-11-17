@@ -18,7 +18,7 @@ use cross_repo_sync::unsafe_sync_commit;
 use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::SourceAndTargetRepoArgs;
-use slog::info;
+use tracing::info;
 
 /// Command that syncs a commit and all of its unsynced ancestors from source repo
 /// to target repo. This is similar to SCS commit_lookup_xrepo() method except that it
@@ -41,7 +41,6 @@ pub async fn run(
 ) -> Result<()> {
     let source_repo: Repo = app.open_repo(&args.repo_args.source_repo).await?;
     info!(
-        ctx.logger(),
         "using repo \"{}\" repoid {:?}",
         source_repo.repo_identity().name(),
         source_repo.repo_identity().id()
@@ -49,7 +48,6 @@ pub async fn run(
 
     let target_repo: Repo = app.open_repo(&args.repo_args.target_repo).await?;
     info!(
-        ctx.logger(),
         "using repo \"{}\" repoid {:?}",
         target_repo.repo_identity().name(),
         target_repo.repo_identity().id()
@@ -59,7 +57,7 @@ pub async fn run(
         create_single_direction_commit_syncer(ctx, &app, source_repo.clone(), target_repo.clone())
             .await?;
     let source_cs = parse_commit_id(ctx, &source_repo, &args.commit_hash).await?;
-    info!(ctx.logger(), "changeset resolved as: {:?}", source_cs);
+    info!("changeset resolved as: {:?}", source_cs);
 
     let (unsynced_ancestors, _) =
         find_toposorted_unsynced_ancestors(ctx, &commit_sync_data, source_cs, None).await?;
@@ -81,7 +79,7 @@ pub async fn run(
         .get_commit_sync_outcome(ctx, source_cs)
         .await?
         .ok_or_else(|| format_err!("was not able to remap a commit {}", source_cs))?;
-    info!(ctx.logger(), "remapped to {:?}", commit_sync_outcome);
+    info!("remapped to {:?}", commit_sync_outcome);
 
     Ok(())
 }

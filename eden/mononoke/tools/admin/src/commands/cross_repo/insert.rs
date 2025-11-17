@@ -19,9 +19,9 @@ use futures::try_join;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_app::MononokeApp;
 use repo_identity::RepoIdentityRef;
-use slog::info;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SyncedCommitMappingEntry;
+use tracing::info;
 
 use super::Repo;
 
@@ -157,10 +157,7 @@ async fn insert_rewritten(
         .add(ctx, mapping_entry)
         .await?;
     if res {
-        info!(
-            ctx.logger(),
-            "successfully inserted rewritten mapping entry"
-        );
+        info!("successfully inserted rewritten mapping entry");
         Ok(())
     } else {
         Err(anyhow!("failed to insert entry"))
@@ -212,10 +209,7 @@ async fn insert_equivalent_working_copy(
         .insert_equivalent_working_copy(ctx, mapping_entry)
         .await?;
     if res {
-        info!(
-            ctx.logger(),
-            "successfully inserted equivalent working copy"
-        );
+        info!("successfully inserted equivalent working copy");
         Ok(())
     } else {
         Err(anyhow!("failed to insert entry"))
@@ -258,10 +252,7 @@ async fn insert_not_sync_candidate(
         .insert_equivalent_working_copy(ctx, mapping_entry)
         .await?;
     if res {
-        info!(
-            ctx.logger(),
-            "successfully inserted not sync candidate entry"
-        );
+        info!("successfully inserted not sync candidate entry");
         Ok(())
     } else {
         Err(anyhow!("failed to insert entry"))

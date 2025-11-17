@@ -53,10 +53,10 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
-use slog::info;
 use time_measuring::speed_sliding_window::AvgTimeSlidingWindows;
 use time_measuring::speed_sliding_window::BasicSpeedTracker;
 use topo_sort::sort_topological_starting_with_heads;
+use tracing::info;
 
 #[derive(Copy, Clone, Debug)]
 struct SlowBookmarkMoverCommitArgs;
@@ -193,7 +193,7 @@ async fn load_commits_from_single_target<'a>(
     cs_id: ChangesetId,
 ) -> Result<impl Stream<Item = Result<BonsaiChangeset>> + 'a> {
     let start_cs_id = start_cs_id.unwrap_or(cur_bookmark);
-    info!(ctx.logger(), "Destination cs_id resolved to {}", cs_id);
+    info!("Destination cs_id resolved to {}", cs_id);
     let heads = vec![start_cs_id, cs_id];
 
     let mut bcss = repo
@@ -209,7 +209,7 @@ async fn load_commits_from_single_target<'a>(
         .try_buffered(100)
         .try_collect::<BTreeMap<_, _>>()
         .await?;
-    info!(ctx.logger(), "Loaded {} commits", bcss.len());
+    info!("Loaded {} commits", bcss.len());
 
     // We use sort_topological which provides stable, DFS-based sorting algo for commits
     // This is good for ensuring we cover merges in reasonable order.
@@ -258,7 +258,6 @@ async fn load_commits<'a>(
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let ctx = app.new_basic_context();
-    let logger = ctx.logger();
     let repo: Repo = app
         .open_repo(&args.repo)
         .await
@@ -279,17 +278,17 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let bookmark_val =
         maybe_bookmark_val.ok_or_else(|| format_err!("{} bookmark is not set", bookmark))?;
     info!(
-        logger,
-        "Previous bookmark value {}. Waiting for it to catch up.", bookmark_val
+        "Previous bookmark value {}. Waiting for it to catch up.",
+        bookmark_val
     );
 
     wait_for_bookmark_to_catch_up(ctx, repo, bookmark_val, &wait_for, None).await?;
 
-    info!(logger, "Loading ALL commits that need syncing");
+    info!("Loading ALL commits that need syncing");
     // Find all commits that need syncing
     let mut ordered_changesets = load_commits(ctx, repo, &args, bookmark_val).await?;
 
-    info!(logger, "Starting to move bookmark");
+    info!("Starting to move bookmark");
     // Start syncing them
     let mut cur_num_files = 0;
     let mut cur_num_commits = 0;
@@ -329,18 +328,16 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             commit_tracker.add_entries(cur_num_commits);
             file_count_tracker.add_entries(cur_num_files);
             info!(
-                logger,
                 "Advanced {} commits. Speed sliding windows: {}",
                 cur_num_commits,
                 commit_tracker.human_readable()
             );
             info!(
-                logger,
                 "Also advanced {} files. Speed sliding windows: {}",
                 cur_num_files,
                 file_count_tracker.human_readable()
             );
-            info!(logger, "Other timings: {}", catch_up_tracker);
+            info!("Other timings: {}", catch_up_tracker);
             cur_num_files = 0;
             cur_num_commits = 0;
             old_bookmark_value = cs.get_changeset_id();
@@ -380,8 +377,8 @@ async fn wait_for_phases_to_catch_up(
             if time_since_log.as_secs() >= 60 {
                 time_since_log = Duration::ZERO;
                 info!(
-                    ctx.logger(),
-                    "Waiting for {} to become public, sleeping for {:?}", cs_id, sleep_duration,
+                    "Waiting for {} to become public, sleeping for {:?}",
+                    cs_id, sleep_duration,
                 );
             }
             time_since_log += sleep_duration;
@@ -420,10 +417,7 @@ async fn move_bookmark<'a>(
     old_value: ChangesetId,
     new_value: ChangesetId,
 ) -> Result<ChangesetId> {
-    info!(
-        ctx.logger(),
-        "moving {} to {} from {}", bookmark, new_value, old_value
-    );
+    info!("moving {} to {} from {}", bookmark, new_value, old_value);
     let mut txn = repo.bookmarks().create_transaction(ctx.clone());
     txn.update(
         bookmark,

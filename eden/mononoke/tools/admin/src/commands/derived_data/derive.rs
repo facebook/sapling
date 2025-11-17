@@ -22,7 +22,7 @@ use mononoke_api::ChangesetId;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::MultiDerivedDataArgs;
 use mononoke_types::DerivableType;
-use slog::trace;
+use tracing::trace;
 
 use super::Repo;
 
@@ -57,7 +57,7 @@ pub(super) async fn derive(
         .resolve_types(manager.config())?;
 
     let rederivation = if args.rederive {
-        trace!(ctx.logger(), "about to rederive {} commits", csids.len());
+        trace!("about to rederive {} commits", csids.len());
         // Force this binary to write to all blobstores
         ctx.session_mut()
             .override_session_class(SessionClass::Background);
@@ -69,7 +69,7 @@ pub(super) async fn derive(
                 .collect::<HashSet<_>>(),
         ))
     } else {
-        trace!(ctx.logger(), "about to derive {} commits", csids.len());
+        trace!("about to derive {} commits", csids.len());
         Default::default()
     };
 
@@ -98,7 +98,6 @@ pub(super) async fn derive(
             .try_timed()
             .await?;
         trace!(
-            ctx.logger(),
             "finished derivation in {}ms",
             stats.completion_time.as_millis(),
         );
@@ -114,7 +113,7 @@ async fn derive_from_predecessor(
     csid: ChangesetId,
     rederivation: Arc<dyn Rederivation>,
 ) -> Result<()> {
-    trace!(ctx.logger(), "deriving {} from predecessors", csid);
+    trace!("deriving {} from predecessors", csid);
     let (stats, res) = BulkDerivation::derive_from_predecessor(
         manager,
         ctx,
@@ -125,7 +124,6 @@ async fn derive_from_predecessor(
     .try_timed()
     .await?;
     trace!(
-        ctx.logger(),
         "derived {} for {} in {}ms, {:?}",
         derived_data_type.name(),
         csid,

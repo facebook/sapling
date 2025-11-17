@@ -17,7 +17,7 @@ use mononoke_app::args::DerivedDataArgs;
 use repo_derivation_queues::DagItemId;
 use repo_derivation_queues::RepoDerivationQueuesRef;
 use repo_identity::RepoIdentityRef;
-use slog::info;
+use tracing::info;
 
 use super::Repo;
 
@@ -47,7 +47,7 @@ pub async fn unsafe_evict(
     match input.trim().to_lowercase().as_str() {
         "y" | "yes" => {}
         _ => {
-            info!(ctx.logger(), "Eviction canceled");
+            info!("Eviction canceled");
             return Ok(());
         }
     }
@@ -73,8 +73,8 @@ pub async fn unsafe_evict(
         .await?;
 
     info!(
-        ctx.logger(),
-        "Evicted item cs_id={}, derived_data_type={}", cs_id, derived_data_type
+        "Evicted item cs_id={}, derived_data_type={}",
+        cs_id, derived_data_type
     );
 
     Ok(())

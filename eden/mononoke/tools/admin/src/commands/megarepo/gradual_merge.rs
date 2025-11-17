@@ -36,7 +36,7 @@ use mononoke_types::DateTime;
 use pushrebase::do_pushrebase_bonsai;
 use pushrebase_hooks::get_pushrebase_hooks;
 use repo_blobstore::RepoBlobstoreRef;
-use slog::info;
+use tracing::info;
 
 use crate::commands::megarepo::common::LightResultingChangesetArgs;
 
@@ -128,7 +128,7 @@ async fn find_all_commits_to_merge(
     pre_deletion_commit: ChangesetId,
     last_deletion_commit: ChangesetId,
 ) -> Result<Vec<ChangesetId>> {
-    info!(ctx.logger(), "Finding all commits to merge...");
+    info!("Finding all commits to merge...");
     let commits_to_merge = repo
         .commit_graph()
         .range_stream(ctx, pre_deletion_commit, last_deletion_commit)
@@ -148,10 +148,7 @@ async fn find_unmerged_commits(
     mut commits_to_merge: Vec<(ChangesetId, StackPosition)>,
     bookmark_to_merge_into: &BookmarkKey,
 ) -> Result<Vec<(ChangesetId, StackPosition)>> {
-    info!(
-        ctx.logger(),
-        "Finding commits that haven't been merged yet..."
-    );
+    info!("Finding commits that haven't been merged yet...");
     let first = if let Some(first) = commits_to_merge.first() {
         first
     } else {
@@ -238,7 +235,7 @@ async fn push_merge_commit(
     merge_changeset_args: ChangesetArgs,
     pushrebase_flags: &PushrebaseFlags,
 ) -> Result<ChangesetId> {
-    info!(ctx.logger(), "Preparing to merge {}", cs_id_to_merge);
+    info!("Preparing to merge {}", cs_id_to_merge);
     let bookmark_value = repo
         .bookmarks()
         .get(
@@ -258,11 +255,11 @@ async fn push_merge_commit(
     )
     .await?;
 
-    info!(ctx.logger(), "Created merge changeset {}", merge_cs_id);
+    info!("Created merge changeset {}", merge_cs_id);
 
     let merge_hg_cs_id = repo.derive_hg_changeset(ctx, merge_cs_id).await?;
-    info!(ctx.logger(), "Generated hg changeset {}", merge_hg_cs_id);
-    info!(ctx.logger(), "Now running pushrebase...");
+    info!("Generated hg changeset {}", merge_hg_cs_id);
+    info!("Now running pushrebase...");
 
     let merge_cs = merge_cs_id.load(ctx, repo.repo_blobstore()).await?;
     let pushrebase_hooks = get_pushrebase_hooks(
@@ -284,7 +281,7 @@ async fn push_merge_commit(
     )
     .await?;
 
-    info!(ctx.logger(), "Pushrebased to {}", pushrebase_res.head);
+    info!("Pushrebased to {}", pushrebase_res.head);
     Ok(pushrebase_res.head)
 }
 
@@ -327,11 +324,7 @@ pub(crate) async fn gradual_merge(
     let commits_to_merge =
         find_all_commits_to_merge(ctx, repo, *pre_deletion_commit, *last_deletion_commit).await?;
 
-    info!(
-        ctx.logger(),
-        "{} total commits to merge",
-        commits_to_merge.len()
-    );
+    info!("{} total commits to merge", commits_to_merge.len());
 
     let commits_to_merge = commits_to_merge
         .into_iter()
@@ -346,7 +339,7 @@ pub(crate) async fn gradual_merge(
     } else {
         unmerged_commits
     };
-    info!(ctx.logger(), "merging {} commits", unmerged_commits.len());
+    info!("merging {} commits", unmerged_commits.len());
 
     let mut res = HashMap::new();
     if !dry_run {
@@ -366,8 +359,8 @@ pub(crate) async fn gradual_merge(
     } else {
         for (cs_id, stack_pos) in unmerged_commits {
             info!(
-                ctx.logger(),
-                "merging commits {}, with stack position {:?}", cs_id, stack_pos
+                "merging commits {}, with stack position {:?}",
+                cs_id, stack_pos
             );
         }
     }

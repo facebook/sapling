@@ -15,7 +15,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_types::NonRootMPath;
-use slog::info;
+use tracing::info;
 
 use super::common::LightResultingChangesetArgs;
 use crate::commands::megarepo::common::get_delete_commits_cs_args_factory;
@@ -55,15 +55,12 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: GradualDeleteArgs) -
         .map(NonRootMPath::new)
         .collect::<Result<Vec<_>>>()?;
 
-    info!(
-        ctx.logger(),
-        "Gathering working copy files under {:?}", path_prefixes
-    );
+    info!("Gathering working copy files under {:?}", path_prefixes);
     let paths =
         get_working_copy_paths_by_prefixes(ctx, &repo, parent_bcs_id, path_prefixes).await?;
-    info!(ctx.logger(), "{} paths to be deleted", paths.len());
+    info!("{} paths to be deleted", paths.len());
 
-    info!(ctx.logger(), "Starting deletion");
+    info!("Starting deletion");
     let delete_commits = delete_files_in_chunks(
         ctx,
         &repo,
@@ -75,11 +72,8 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: GradualDeleteArgs) -
     )
     .await?;
 
-    info!(ctx.logger(), "Deletion finished");
-    info!(
-        ctx.logger(),
-        "Listing commits in an ancestor-descendant order"
-    );
+    info!("Deletion finished");
+    info!("Listing commits in an ancestor-descendant order");
     for delete_commit in delete_commits {
         println!("{}", delete_commit);
     }

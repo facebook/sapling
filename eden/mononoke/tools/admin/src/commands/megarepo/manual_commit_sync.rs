@@ -24,7 +24,7 @@ use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use mononoke_types::ChangesetId;
-use slog::info;
+use tracing::info;
 
 /// This operation is useful immediately after a small repo is merged into a large repo.
 /// See example below
@@ -120,7 +120,6 @@ pub struct ManualCommitSyncArgs {
 pub async fn run(ctx: &CoreContext, app: MononokeApp, args: ManualCommitSyncArgs) -> Result<()> {
     let source_repo: Repo = app.open_repo(&args.repo_args.source_repo).await?;
     info!(
-        ctx.logger(),
         "using repo \"{}\" repoid {:?}",
         source_repo.repo_identity().name(),
         source_repo.repo_identity().id()
@@ -128,7 +127,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: ManualCommitSyncArgs
 
     let target_repo: Repo = app.open_repo(&args.repo_args.target_repo).await?;
     info!(
-        ctx.logger(),
         "using repo \"{}\" repoid {:?}",
         target_repo.repo_identity().name(),
         target_repo.repo_identity().id()
@@ -143,14 +141,14 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: ManualCommitSyncArgs
         Some(
             try_join_all(args.parents.iter().map(async |p| {
                 let id: ChangesetId = parse_commit_id(ctx, &target_repo, p).await?;
-                info!(ctx.logger(), "changeset resolved as: {:?}", id);
+                info!("changeset resolved as: {:?}", id);
                 Result::<_>::Ok(id)
             }))
             .await?,
         )
     };
     let source_cs = parse_commit_id(ctx, &source_repo, &args.commit).await?;
-    info!(ctx.logger(), "changeset resolved as: {:?}", source_cs);
+    info!("changeset resolved as: {:?}", source_cs);
 
     let target_cs_id = manual_commit_sync(
         ctx,
@@ -160,7 +158,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: ManualCommitSyncArgs
         CommitSyncConfigVersion(args.mapping_version_name),
     )
     .await?;
-    info!(ctx.logger(), "target cs id is {:?}", target_cs_id);
+    info!("target cs id is {:?}", target_cs_id);
     Ok(())
 }
 

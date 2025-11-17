@@ -31,7 +31,7 @@ use mononoke_types::MPath;
 use movers::Mover;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
-use slog::info;
+use tracing::info;
 
 use super::common::LightResultingChangesetArgs;
 use super::common::get_commit_factory;
@@ -109,10 +109,10 @@ pub async fn run(
     }
 
     if to_delete.is_empty() {
-        info!(ctx.logger(), "nothing to delete, exiting");
+        info!("nothing to delete, exiting");
         return Ok(());
     }
-    info!(ctx.logger(), "need to delete {} paths", to_delete.len());
+    info!("need to delete {} paths", to_delete.len());
 
     let cs_args_factory = get_commit_factory(args.res_cs_args, |s, _num| s.to_string())?;
     let cs_args = cs_args_factory(StackPosition(0));
@@ -128,7 +128,7 @@ pub async fn run(
     )
     .await?;
 
-    info!(ctx.logger(), "created changeset {}", deletion_cs_id);
+    info!("created changeset {}", deletion_cs_id);
 
     Ok(())
 }

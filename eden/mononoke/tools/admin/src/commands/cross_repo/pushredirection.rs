@@ -48,8 +48,8 @@ use pushrebase::FAIL_PUSHREBASE_EXTRA;
 use pushrebase::do_pushrebase_bonsai;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use slog::info;
 use sorted_vector_map::sorted_vector_map;
+use tracing::info;
 
 use super::Repo;
 
@@ -159,7 +159,6 @@ async fn pushredirection_prepare_rollout(
 
     let counter = backsyncer::format_counter(&large_repo.repo_identity().id());
     info!(
-        ctx.logger(),
         "setting value {} to counter {} for repo {}",
         largest_id,
         counter,
@@ -178,7 +177,7 @@ async fn pushredirection_prepare_rollout(
     if !res {
         Err(anyhow!("failed to set backsyncer counter"))
     } else {
-        info!(ctx.logger(), "successfully updated the counter");
+        info!("successfully updated the counter");
         Ok(())
     }
 }
@@ -547,7 +546,6 @@ async fn move_bookmark(
     let mut book_txn = repo.bookmarks().create_transaction(ctx.clone());
 
     info!(
-        ctx.logger(),
         "moving {} to {} in {}",
         bookmark,
         new_value,

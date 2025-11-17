@@ -14,7 +14,7 @@ use context::CoreContext;
 use context::PerfCounterType;
 use futures::future::try_join_all;
 use futures_stats::TimedTryFutureExt;
-use slog::debug;
+use tracing::debug;
 
 use super::Repo;
 
@@ -48,9 +48,8 @@ pub async fn is_ancestor(ctx: &CoreContext, repo: &Repo, args: IsAncestorArgs) -
         .await?;
 
     println!("{}", is_ancestor);
-    debug!(ctx.logger(), "is-ancestor query finished in {:?}", stats);
+    debug!("is-ancestor query finished in {:?}", stats);
     debug!(
-        ctx.logger(),
         "sql reads from replicas: {:?}. sql reads from master: {:?}",
         ctx.perf_counters()
             .get_counter(PerfCounterType::SqlReadsReplica),

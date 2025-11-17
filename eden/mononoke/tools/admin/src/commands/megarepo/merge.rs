@@ -23,7 +23,7 @@ use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
 use mononoke_types::ChangesetId;
-use slog::info;
+use tracing::info;
 
 use super::common::ResultingChangesetArgs;
 
@@ -45,7 +45,7 @@ async fn fail_on_path_conflicts(
     hg_cs_id_1: HgChangesetId,
     hg_cs_id_2: HgChangesetId,
 ) -> Result<(), Error> {
-    info!(ctx.logger(), "Checking if there are any path conflicts");
+    info!("Checking if there are any path conflicts");
     let (bcs_1, bcs_2) = try_join!(
         repo.bonsai_hg_mapping().get_bonsai_from_hg(ctx, hg_cs_id_1),
         repo.bonsai_hg_mapping().get_bonsai_from_hg(ctx, hg_cs_id_2)
@@ -58,7 +58,7 @@ async fn fail_on_path_conflicts(
             collisions.iter().take(10).collect::<Vec<_>>(),
         ))
     } else {
-        info!(ctx.logger(), "Done checking path conflicts");
+        info!("Done checking path conflicts");
         Ok(())
     }
 }
@@ -77,8 +77,8 @@ pub async fn perform_merge(
     )?;
     fail_on_path_conflicts(&ctx, &repo, first_hg_cs_id, second_hg_cs_id).await?;
     info!(
-        ctx.logger(),
-        "Creating a merge bonsai changeset with parents: {:?}, {:?}", &first_bcs_id, &second_bcs_id
+        "Creating a merge bonsai changeset with parents: {:?}, {:?}",
+        &first_bcs_id, &second_bcs_id
     );
     create_save_and_generate_hg_changeset(
         &ctx,
@@ -91,7 +91,7 @@ pub async fn perform_merge(
 }
 
 pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MergeArgs) -> Result<()> {
-    info!(ctx.logger(), "Creating a merge commit");
+    info!("Creating a merge commit");
 
     let repo: Repo = app.open_repo(&args.repo_args).await?;
 

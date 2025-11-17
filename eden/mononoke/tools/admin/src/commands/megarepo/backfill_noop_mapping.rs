@@ -19,11 +19,11 @@ use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use repo_identity::RepoIdentityRef;
-use slog::info;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use tokio::fs::File;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
+use tracing::info;
 
 use super::common::process_stream_and_wait_for_replication;
 
@@ -56,7 +56,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: BackfillNoopMappingA
         create_single_direction_commit_syncer(ctx, &app, small_repo.clone(), large_repo.clone())
             .await?;
     info!(
-        ctx.logger(),
         "small repo: {}, large repo: {}",
         small_repo.repo_identity().name(),
         large_repo.repo_identity().name(),

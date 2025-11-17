@@ -36,7 +36,7 @@ use mononoke_types::hash::GitSha1;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
-use slog::trace;
+use tracing::trace;
 use unodes::RootUnodeManifestId;
 
 use super::Repo;
@@ -225,7 +225,7 @@ async fn list_hg_manifest(
         .try_buffer_unordered(100)
         .try_collect()
         .await?;
-    trace!(ctx.logger(), "Loaded hg manifests for {} paths", map.len());
+    trace!("Loaded hg manifests for {} paths", map.len());
     Ok((ManifestType::Hg, map))
 }
 
@@ -244,11 +244,7 @@ async fn list_skeleton_manifest(
         .map_ok(|(path, ())| (path, ManifestData::Skeleton))
         .try_collect()
         .await?;
-    trace!(
-        ctx.logger(),
-        "Loaded skeleton manifests for {} paths",
-        map.len()
-    );
+    trace!("Loaded skeleton manifests for {} paths", map.len());
     Ok((ManifestType::Skeleton, map))
 }
 
@@ -270,7 +266,7 @@ async fn list_fsnodes(
         })
         .try_collect()
         .await?;
-    trace!(ctx.logger(), "Loaded fsnodes for {} paths", map.len());
+    trace!("Loaded fsnodes for {} paths", map.len());
     Ok((ManifestType::Fsnodes, map))
 }
 
@@ -294,7 +290,7 @@ async fn list_unodes(
         .try_buffer_unordered(100)
         .try_collect()
         .await?;
-    trace!(ctx.logger(), "Loaded unodes for {} paths", map.len());
+    trace!("Loaded unodes for {} paths", map.len());
     Ok((ManifestType::Unodes, map))
 }
 
@@ -320,11 +316,7 @@ async fn list_content_manifest(
         })
         .try_collect()
         .await?;
-    trace!(
-        ctx.logger(),
-        "Loaded content manifest for {} paths",
-        map.len()
-    );
+    trace!("Loaded content manifest for {} paths", map.len());
     Ok((ManifestType::Content, map))
 }
 
@@ -360,7 +352,7 @@ async fn list_git_tree(
         .try_buffer_unordered(100)
         .try_collect()
         .await?;
-    trace!(ctx.logger(), "Loaded git trees for {} paths", map.len());
+    trace!("Loaded git trees for {} paths", map.len());
     Ok((ManifestType::Git, map))
 }
 
@@ -398,7 +390,7 @@ pub(super) async fn verify_manifests(
     }
     let mut combined: HashMap<NonRootMPath, FileContentValue> = HashMap::new();
     let contents = try_join_all(futs).await?;
-    trace!(ctx.logger(), "Combining {} manifests", contents.len());
+    trace!("Combining {} manifests", contents.len());
     for (mf_type, map) in contents {
         for (path, new_val) in map {
             combined
@@ -406,10 +398,10 @@ pub(super) async fn verify_manifests(
                 .or_insert_with(FileContentValue::new)
                 .update(new_val.clone());
         }
-        trace!(ctx.logger(), "Completed {} manifest", mf_type);
+        trace!("Completed {} manifest", mf_type);
     }
 
-    trace!(ctx.logger(), "Checking {} paths", combined.len());
+    trace!("Checking {} paths", combined.len());
     let mut invalid_count = 0u64;
     for (path, val) in combined {
         if !val.is_valid(&manifests) {
@@ -419,9 +411,9 @@ pub(super) async fn verify_manifests(
         }
     }
     if invalid_count == 0 {
-        trace!(ctx.logger(), "Check complete");
+        trace!("Check complete");
     } else {
-        trace!(ctx.logger(), "Found {} invalid paths", invalid_count);
+        trace!("Found {} invalid paths", invalid_count);
     }
 
     Ok(())

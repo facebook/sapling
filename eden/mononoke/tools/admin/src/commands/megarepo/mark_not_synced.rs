@@ -18,13 +18,13 @@ use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::SourceAndTargetRepoArgs;
 use repo_identity::RepoIdentityRef;
-use slog::info;
-use slog::warn;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::WorkingCopyEquivalence;
 use tokio::fs::File;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
+use tracing::info;
+use tracing::warn;
 
 use super::common::process_stream_and_wait_for_replication;
 
@@ -54,7 +54,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MarkNotSyncedArgs) -
         create_single_direction_commit_syncer(ctx, &app, small_repo.clone(), large_repo.clone())
             .await?;
     info!(
-        ctx.logger(),
         "small repo: {}, large repo: {}",
         small_repo.repo_identity().name(),
         large_repo.repo_identity().name(),
@@ -93,7 +92,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MarkNotSyncedArgs) -
                     return Err(format_err!("unexpected working copy found for {}", cs_id));
                 }
             } else if existing_value.is_some() {
-                info!(ctx.logger(), "{} already have mapping", cs_id);
+                info!("{} already have mapping", cs_id);
                 return Ok(1);
             }
 
@@ -114,10 +113,7 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: MarkNotSyncedArgs) -
                     .await?
             };
             if !res {
-                warn!(
-                    ctx.logger(),
-                    "failed to insert NotSyncedMapping entry for {}", cs_id
-                );
+                warn!("failed to insert NotSyncedMapping entry for {}", cs_id);
             }
 
             // Processed a single entry

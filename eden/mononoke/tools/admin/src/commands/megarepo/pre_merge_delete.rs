@@ -18,7 +18,7 @@ use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::ChangesetArgs;
 use mononoke_app::args::RepoArgs;
-use slog::info;
+use tracing::info;
 
 use super::common::LightResultingChangesetArgs;
 // use super::common::get_commit_factory;
@@ -88,7 +88,6 @@ pub async fn run(ctx: &CoreContext, app: MononokeApp, args: PreMergeDeleteArgs) 
     let PreMergeDelete { mut delete_commits } = pmd;
 
     info!(
-        ctx.logger(),
         "Listing deletion commits in top-to-bottom order (first commit is a descendant of the last)"
     );
     delete_commits.reverse();

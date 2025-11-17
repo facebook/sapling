@@ -33,9 +33,9 @@ use futures_stats::TimedTryFutureExt;
 use mononoke_app::args::DerivedDataArgs;
 use mononoke_macros::mononoke;
 use mononoke_types::DerivableType;
-use slog::debug;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
+use tracing::debug;
 
 use super::Repo;
 
@@ -122,8 +122,8 @@ async fn derive_boundaries(
 
     let boundaries_count = boundaries.len();
     debug!(
-        ctx.logger(),
-        "deriving {} boundaries (concurrency: {})", boundaries_count, boundaries_concurrency
+        "deriving {} boundaries (concurrency: {})",
+        boundaries_count, boundaries_concurrency
     );
     let completed = Arc::new(AtomicUsize::new(0));
     stream::iter(boundaries)
@@ -132,7 +132,7 @@ async fn derive_boundaries(
             cloned!(ctx, manager, completed, rederivation);
             async move {
                 mononoke::spawn_task(async move {
-                    debug!(ctx.logger(), "deriving csid {}", csid);
+                    debug!("deriving csid {}", csid);
                     let (derive_boundary_stats, ()) = BulkDerivation::derive_from_predecessor(
                         &manager,
                         &ctx,
@@ -145,7 +145,6 @@ async fn derive_boundaries(
 
                     let completed_count = completed.fetch_add(1, Ordering::SeqCst) + 1;
                     debug!(
-                        ctx.logger(),
                         "derived boundary {} in {}ms, ({}/{})",
                         csid,
                         derive_boundary_stats.completion_time.as_millis(),
@@ -184,7 +183,6 @@ async fn inner_derive_slice(
                     .await;
 
                 debug!(
-                    ctx.logger(),
                     "deriving segment from {} to {} ({} commits, {}/{})",
                     segment.base,
                     segment.head,
@@ -220,7 +218,6 @@ async fn inner_derive_slice(
                 }
 
                 debug!(
-                    ctx.logger(),
                     "derived segment from {} to {} in {}ms ({}/{})",
                     segment.base,
                     segment.head,
@@ -237,7 +234,6 @@ async fn inner_derive_slice(
 
     let completed_count = completed.fetch_add(1, Ordering::SeqCst) + 1;
     debug!(
-        ctx.logger(),
         "derived slice in {}ms ({}/{})",
         stats.completion_time.as_millis(),
         completed_count,
@@ -282,8 +278,8 @@ pub(super) async fn derive_slice(
             let slice_count = slice_descriptions.len();
             let completed = Arc::new(AtomicUsize::new(0));
             debug!(
-                ctx.logger(),
-                "deriving {} slices (concurrency: {})", slice_count, args.slice_concurrency
+                "deriving {} slices (concurrency: {})",
+                slice_count, args.slice_concurrency
             );
 
             stream::iter(slice_descriptions)
