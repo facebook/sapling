@@ -22,8 +22,8 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use sharding_ext::RepoShard;
 use slog::Logger;
-use slog::info;
 use tokio::time;
+use tracing::info;
 
 /// Test application for validating integration behavior with ShardManager.
 /// The below can be used with new/existing jobs before migrating them to
@@ -107,19 +107,16 @@ impl TestProcessExecutor {
 /// Function representing the work that need to be done on the repo
 /// as part of this BP.
 async fn do_busy_work(
-    logger: &Logger,
+    _logger: &Logger,
     repo: &RepoShard,
     terminate_execution: Arc<AtomicBool>,
 ) -> Result<()> {
-    info!(
-        logger,
-        "Beginning execution of test process for repo {}", repo,
-    );
+    info!("Beginning execution of test process for repo {}", repo,);
     let mut iteration = 1;
     loop {
         info!(
-            logger,
-            "Executing iteration {} of test process for repo {}", iteration, repo,
+            "Executing iteration {} of test process for repo {}",
+            iteration, repo,
         );
         // Equivalent to heavy work being done by the process for a repo.
         time::sleep(time::Duration::from_secs(SECS_IN_MINUTE)).await;
@@ -130,10 +127,8 @@ async fn do_busy_work(
             // before we give up the repo. E.g. pushing out write from memory
             // to actual storage, flushing logs, releasing locks, etc.
             info!(
-                logger,
                 "Finishing execution of test process for repo {} after {} iterations",
-                repo,
-                iteration,
+                repo, iteration,
             );
             // Finally return
             return Ok(());
