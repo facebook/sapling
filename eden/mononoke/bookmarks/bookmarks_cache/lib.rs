@@ -77,3 +77,29 @@ pub trait ScopedBookmarksCache: Send + Sync {
     /// Awaits the completion of any ongoing update.
     async fn sync(&self, ctx: &CoreContext);
 }
+
+#[async_trait]
+impl<T: ScopedBookmarksCache> BookmarksCache for T {
+    async fn get(
+        &self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkKey,
+    ) -> Result<Option<ChangesetId>, Error> {
+        self.get(ctx, bookmark, WarmerRequirement::AllKinds).await
+    }
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        prefix: &BookmarkPrefix,
+        pagination: &BookmarkPagination,
+        limit: Option<u64>,
+    ) -> Result<Vec<(BookmarkKey, (ChangesetId, BookmarkKind))>, Error> {
+        self.list(ctx, prefix, pagination, limit, WarmerRequirement::AllKinds)
+            .await
+    }
+
+    async fn sync(&self, ctx: &CoreContext) {
+        self.sync(ctx).await;
+    }
+}

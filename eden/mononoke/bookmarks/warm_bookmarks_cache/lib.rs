@@ -36,6 +36,7 @@ use bookmarks::BookmarksRef;
 use bookmarks::BookmarksSubscription;
 use bookmarks::Freshness;
 use bookmarks_cache::BookmarksCache;
+use bookmarks_cache::ScopedBookmarksCache;
 use bookmarks_cache::WarmerRequirement;
 use bookmarks_types::Bookmark;
 use bookmarks_types::BookmarkKind;
@@ -515,18 +516,27 @@ impl WarmBookmarksCache {
 }
 
 #[async_trait]
-impl BookmarksCache for WarmBookmarksCache {
+impl ScopedBookmarksCache for WarmBookmarksCache {
     async fn get(
         &self,
         _ctx: &CoreContext,
         bookmark: &BookmarkKey,
+        scope: WarmerRequirement,
     ) -> Result<Option<ChangesetId>, Error> {
         Ok(self
             .bookmarks
             .read()
             .unwrap()
             .get(bookmark)
-            .map(|state| state.cs_id))
+            // TODO: We need to default to cs_id (pointer for all warmers), because the tracking is
+            // not ready yet
+            .map(|state| {
+                state
+                    .last_derived_cs
+                    .get(&scope)
+                    .copied()
+                    .unwrap_or(state.cs_id)
+            }))
     }
 
     async fn list(
@@ -535,6 +545,7 @@ impl BookmarksCache for WarmBookmarksCache {
         prefix: &BookmarkPrefix,
         pagination: &BookmarkPagination,
         limit: Option<u64>,
+        scope: WarmerRequirement,
     ) -> Result<Vec<(BookmarkKey, (ChangesetId, BookmarkKind))>, Error> {
         let bookmarks = self.bookmarks.read().unwrap();
 
@@ -542,7 +553,16 @@ impl BookmarksCache for WarmBookmarksCache {
             // Simple case: return all bookmarks
             Ok(bookmarks
                 .iter()
-                .map(|(key, state)| (key.clone(), (state.cs_id, state.kind)))
+                .map(|(key, state)| {
+                    // TODO: We need to default to cs_id (pointer for all warmers), because the tracking is
+                    // not ready yet
+                    let cs_id = state
+                        .last_derived_cs
+                        .get(&scope)
+                        .copied()
+                        .unwrap_or(state.cs_id);
+                    (key.clone(), (cs_id, state.kind))
+                })
                 .collect())
         } else {
             // Filter based on prefix and pagination
@@ -550,14 +570,23 @@ impl BookmarksCache for WarmBookmarksCache {
             let mut matches = bookmarks
                 .iter()
                 .filter(|(key, _)| range.contains(key))
-                .map(|(key, state)| (key.clone(), (state.cs_id, state.kind)))
+                // TODO: We need to default to cs_id (pointer for all warmers), because the tracking is
+                // not ready yet
+                .map(|(key, state)| {
+                    let cs_id = state
+                        .last_derived_cs
+                        .get(&scope)
+                        .copied()
+                        .unwrap_or(state.cs_id);
+                    (key.clone(), (cs_id, state.kind))
+                })
                 .collect::<Vec<_>>();
             // Release the read lock.
             drop(bookmarks);
             if let Some(limit) = limit {
                 // We must sort and truncate if there is a limit so that the
                 // client can paginate in order.
-                matches.sort_by(|(name1, _), (name2, _)| name1.cmp(name2));
+                matches.sort_by(|(key1, _), (key2, _)| key1.cmp(key2));
                 matches.truncate(limit as usize);
             }
             Ok(matches)
