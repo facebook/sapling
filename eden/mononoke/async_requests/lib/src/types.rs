@@ -37,11 +37,6 @@ pub use source_control as thrift;
 
 use crate::error::AsyncRequestsError;
 
-const LEGACY_VALUE_TYPE_PARAMS: [&str; 1] = [
-    // Support the old format during the transition
-    "MegarepoAsynchronousRequestParams",
-];
-
 /// Grouping of types and behaviors for an asynchronous request
 pub trait Request: Sized + Send + Sync {
     /// Name of the request
@@ -171,15 +166,6 @@ macro_rules! impl_async_svc_stored_type {
                 if key.strip_prefix(prefix).is_some() {
                     return Ok(());
                 }
-
-                // if the standard prefix is not valid, this might be in one of an alternative prefixes we support
-                for vt in LEGACY_VALUE_TYPE_PARAMS {
-                    let prefix = format!("async.svc.{}.blake2.", vt);
-                    if key.strip_prefix(&prefix).is_some() {
-                        return Ok(());
-                    }
-                }
-
                 return Err(AsyncRequestsError::internal(anyhow!("{} is not a blobstore key for {}", key, stringify!($value_type))));
             }
 
