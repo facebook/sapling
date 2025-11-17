@@ -40,6 +40,7 @@ rust_binary(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/network/rust/network_util:network_util",
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/cloned:cloned",

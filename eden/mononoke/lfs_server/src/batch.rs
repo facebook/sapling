@@ -50,10 +50,10 @@ use rand::Rng;
 use redactedblobstore::has_redaction_root_cause;
 use repo_blobstore::RepoBlobstoreRef;
 use serde::Deserialize;
-use slog::debug;
 use stats::prelude::*;
 use time_ext::DurationExt;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
+use tracing::debug;
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
@@ -573,13 +573,13 @@ async fn batch_download(
     let objects = select! {
         upstream_objects = upstream => {
             update_batch_order("upstream");
-            debug!(ctx.logger(), "batch: upstream ready");
+            debug!("batch: upstream ready");
             let internal_objects = internal.await?;
-            debug!(ctx.logger(), "batch: internal ready");
+            debug!("batch: internal ready");
             batch_download_response_objects(&batch.objects, &upstream_objects.map_err(Error::from), &internal_objects, scuba)
         }
         internal_objects = internal => {
-            debug!(ctx.logger(), "batch: internal ready");
+            debug!("batch: internal ready");
             let internal_objects = internal_objects?;
 
             let objects = if ctx.always_wait_for_upstream() {
@@ -591,13 +591,13 @@ async fn batch_download(
             if let Some(objects) = objects {
                 // We were able to return with just internal, don't wait for upstream.
                 update_batch_order("internal");
-                debug!(ctx.logger(), "batch: skip upstream");
+                debug!("batch: skip upstream");
                 Ok(objects)
             } else {
                 // We don't have all the objects: wait for upstream.
                 update_batch_order("both");
                 let upstream_objects = upstream.await;
-                debug!(ctx.logger(), "batch: upstream ready");
+                debug!("batch: upstream ready");
                 batch_download_response_objects(&batch.objects, &upstream_objects.map_err(Error::from), &internal_objects, scuba)
             }
         }

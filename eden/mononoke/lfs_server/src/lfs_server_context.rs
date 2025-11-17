@@ -58,8 +58,8 @@ use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use repourl::encode_repo_name;
 use slog::Logger;
-use slog::info;
 use tokio::runtime::Handle;
+use tracing::info;
 
 use crate::LfsRepos;
 use crate::Repo;
@@ -217,11 +217,11 @@ impl LfsServerContext {
 }
 
 #[cfg(fbcode_build)]
-pub fn get_bandwidth(logger: &Logger) -> Option<i64> {
+pub fn get_bandwidth(_logger: &Logger) -> Option<i64> {
     // We want to return None on error because the ratelimit metric fails open
     get_device_network_speed_bits("eth0").map_or_else(
         |e| {
-            info!(logger, "Failed to get network speed {}", e);
+            info!("Failed to get network speed {}", e);
             None
         },
         Some,
@@ -230,7 +230,7 @@ pub fn get_bandwidth(logger: &Logger) -> Option<i64> {
 
 #[cfg(not(fbcode_build))]
 pub fn get_bandwidth(logger: &Logger) -> Option<i64> {
-    info!(logger, "Could not determine network speed");
+    info!("Could not determine network speed");
     None
 }
 
@@ -346,10 +346,6 @@ impl RepositoryRequestContext {
 
         let lfs_ctx = LfsServerContext::borrow_from(state);
         lfs_ctx.request(ctx, repository, host, method).await
-    }
-
-    pub fn logger(&self) -> &Logger {
-        self.ctx.logger()
     }
 
     pub fn always_wait_for_upstream(&self) -> bool {

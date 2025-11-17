@@ -59,8 +59,8 @@ use mononoke_repos::MononokeRepos;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
 use repo_permission_checker::RepoPermissionChecker;
-use slog::info;
 use tokio::net::TcpListener;
+use tracing::info;
 
 use crate::lfs_server_context::LfsServerContext;
 use crate::lfs_server_context::ServerUris;
@@ -348,7 +348,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(TimerMiddleware::new())
                 .build(router);
 
-            info!(&logger, "Listening on {}", bound_addr);
+            info!("Listening on {}", bound_addr);
 
             // Write out the bound address if requested, this is helpful in tests when using automatic binding with :0
             if let Some(bound_addr_path) = bound_addr_path {
@@ -402,6 +402,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         None,
     )?;
 
-    info!(&logger, "Exiting...");
+    info!("Exiting...");
     Ok(())
 }

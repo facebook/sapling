@@ -10,11 +10,11 @@ use std::time::Duration;
 
 use anyhow::Error;
 use fbinit::FacebookInit;
-use slog::error;
 use stats::prelude::*;
 use time_window_counter::BoxGlobalTimeWindowCounter;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
 use tokio::time;
+use tracing::error;
 
 use crate::batch::InternalObject;
 use crate::config::ConsistentRoutingRingMode;
@@ -118,7 +118,7 @@ pub async fn consistent_routing<B: PopularityBuilder>(
         }
         Ok(Err(e)) => {
             // Errored
-            error!(ctx.logger(), "popularity metric failed: {:?}", e);
+            error!("popularity metric failed: {:?}", e);
             STATS::error.add_value(1);
         }
         Err(..) => {

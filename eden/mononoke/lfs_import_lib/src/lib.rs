@@ -24,12 +24,12 @@ use futures::stream::TryStreamExt;
 use mercurial_types::blobs::LFSContent;
 use mononoke_types::ContentMetadataV2;
 use repo_blobstore::RepoBlobstoreRef;
-use slog::info;
 use tokio::io::BufReader;
 use tokio::process::Child;
 use tokio::process::Command;
 use tokio_util::codec::BytesCodec;
 use tokio_util::codec::FramedRead;
+use tracing::info;
 
 fn lfs_stream(
     lfs_helper: &str,
@@ -69,14 +69,11 @@ async fn do_lfs_upload(
     .await?;
 
     if let Some(metadata) = metadata {
-        info!(
-            ctx.logger(),
-            "lfs_upload: reusing blob {:?}", metadata.sha256
-        );
+        info!("lfs_upload: reusing blob {:?}", metadata.sha256);
         return Ok(metadata);
     }
 
-    info!(ctx.logger(), "lfs_upload: importing blob {:?}", lfs.oid());
+    info!("lfs_upload: importing blob {:?}", lfs.oid());
     let req = StoreRequest::with_sha256(lfs.size(), lfs.oid());
 
     let (mut child, stream) = lfs_stream(lfs_helper, lfs)?;
@@ -94,7 +91,7 @@ async fn do_lfs_upload(
     // if it gave us exactly the content we wanted).
     let (_, meta) = future::try_join(child.wait().map_err(Error::from), upload).await?;
 
-    info!(ctx.logger(), "lfs_upload: imported blob {:?}", meta.sha256);
+    info!("lfs_upload: imported blob {:?}", meta.sha256);
 
     Ok(meta)
 }

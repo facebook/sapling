@@ -25,8 +25,8 @@ use metadata::Metadata;
 use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use slog::error;
 use slog::o;
+use tracing::error;
 
 #[derive(Copy, Clone)]
 pub enum LfsMethod {
@@ -128,7 +128,7 @@ impl Middleware for RequestContextMiddleware {
 
         if metadata.identities().is_empty() && self.enforce_authentication {
             let msg = "Client not authenticated".to_string();
-            error!(self.logger, "{}", &msg);
+            error!("{}", &msg);
             let response = Response::builder()
                 .status(StatusCode::FORBIDDEN)
                 .body(
