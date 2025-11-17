@@ -48,12 +48,12 @@ use mononoke_types::RepositoryId;
 use phases::PhasesRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::debug;
-use slog::error;
-use slog::info;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
 
 use crate::changeset::UploadChangesets;
 pub use crate::repo::BlobimportRepo;
@@ -151,14 +151,9 @@ impl<'a, R: BlobimportRepoLike + Clone + 'static> Blobimport<'a, R> {
         .compat()
         .map_ok({
             move |(cs_count, (revidx, cs))| {
-                debug!(
-                    ctx.logger(),
-                    "{} inserted: {}",
-                    cs_count,
-                    cs.1.get_changeset_id()
-                );
+                debug!("{} inserted: {}", cs_count, cs.1.get_changeset_id());
                 if cs_count % log_step == 0 {
-                    info!(ctx.logger(), "inserted commits # {}", cs_count);
+                    info!("inserted commits # {}", cs_count);
                 }
                 (revidx, cs.0)
             }
@@ -168,14 +163,14 @@ impl<'a, R: BlobimportRepoLike + Clone + 'static> Blobimport<'a, R> {
         .map_err({
             move |err| {
                 let msg = format!("failed to blobimport: {}", err);
-                error!(ctx.logger(), "{}", msg);
+                error!("{}", msg);
 
                 let mut err = err.deref() as &dyn StdError;
                 while let Some(cause) = failure_ext::cause(err) {
-                    info!(ctx.logger(), "cause: {}", cause);
+                    info!("cause: {}", cause);
                     err = cause;
                 }
-                info!(ctx.logger(), "root cause: {:?}", err);
+                info!("root cause: {:?}", err);
 
                 Error::msg(msg)
             }
@@ -247,7 +242,6 @@ impl<'a, R: BlobimportRepoLike + Clone + 'static> Blobimport<'a, R> {
 
             if !derived_data_types.is_empty() {
                 info!(
-                    ctx.logger(),
                     "Deriving data for: {:?}",
                     derived_data_types
                         .iter()
@@ -279,17 +273,11 @@ impl<'a, R: BlobimportRepoLike + Clone + 'static> Blobimport<'a, R> {
             .await?;
         }
 
-        info!(
-            ctx.logger(),
-            "finished uploading changesets, globalrevs and deriving data"
-        );
+        info!("finished uploading changesets, globalrevs and deriving data");
 
         match bookmark_import_policy {
             BookmarkImportPolicy::Ignore => {
-                info!(
-                    ctx.logger(),
-                    "since --no-bookmark was provided, bookmarks won't be imported"
-                );
+                info!("since --no-bookmark was provided, bookmarks won't be imported");
             }
             BookmarkImportPolicy::Prefix(prefix) => {
                 bookmark::upload_bookmarks(

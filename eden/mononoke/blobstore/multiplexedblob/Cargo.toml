@@ -21,8 +21,8 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 once_cell = "1.21"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = { version = "0.27.1", features = ["derive"] }
 thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 twox-hash = "1.6.1"

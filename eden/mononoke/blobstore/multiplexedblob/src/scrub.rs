@@ -28,11 +28,11 @@ use metaconfig_types::BlobstoreId;
 use mononoke_types::Timestamp;
 use once_cell::sync::Lazy;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::info;
-use slog::warn;
 use strum::EnumString;
 use strum::IntoStaticStr;
 use strum::VariantNames;
+use tracing::info;
+use tracing::warn;
 
 use crate::base::inner_put;
 
@@ -139,7 +139,7 @@ impl LoggingScrubHandler {
 impl ScrubHandler for LoggingScrubHandler {
     fn on_repair(
         &self,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         blobstore_id: BlobstoreId,
         key: &str,
         is_repaired: bool,
@@ -148,13 +148,13 @@ impl ScrubHandler for LoggingScrubHandler {
         if !self.quiet {
             if is_repaired {
                 info!(
-                    ctx.logger(),
-                    "scrub: blobstore_id {:?} repaired for {}", &blobstore_id, &key
+                    "scrub: blobstore_id {:?} repaired for {}",
+                    &blobstore_id, &key
                 );
             } else {
                 warn!(
-                    ctx.logger(),
-                    "scrub: blobstore_id {:?} not repaired for {}", &blobstore_id, &key
+                    "scrub: blobstore_id {:?} not repaired for {}",
+                    &blobstore_id, &key
                 );
             }
         }

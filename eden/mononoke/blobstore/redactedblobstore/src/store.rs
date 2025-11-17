@@ -29,6 +29,7 @@ use mononoke_types::typed_hash::RedactionKeyListId;
 use redaction_set::RedactionSets;
 use reloader::Loader;
 use reloader::Reloader;
+use tracing::debug;
 
 use crate::RedactionConfigBlobstore;
 
@@ -140,7 +141,7 @@ impl InnerConfig {
         ctx: &CoreContext,
         blobstore: &dyn Blobstore,
     ) -> Result<Self> {
-        slog::debug!(ctx.logger(), "Reloading redacted config from configerator");
+        debug!("Reloading redacted config from configerator");
         let map: HashMap<String, RedactedMetadata> = stream::iter(
             config
                 .all_redactions

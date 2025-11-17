@@ -43,9 +43,9 @@ use mercurial_types::RepoPath;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use slog::debug;
 use stats::prelude::*;
 use thiserror::Error;
+use tracing::debug;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -157,10 +157,7 @@ pub async fn check_if_related(
         }
         // We don't have linknodes, so go down the slow path
         _ => {
-            debug!(
-                ctx.logger(),
-                "No filenodes for parents. Using slow path for ancestry check"
-            );
+            debug!("No filenodes for parents. Using slow path for ancestry check");
             match try_join(
                 get_file_history(ctx.clone(), repo.clone(), filenode_a, path.clone(), None),
                 get_file_history(ctx, repo, filenode_b, path, None),

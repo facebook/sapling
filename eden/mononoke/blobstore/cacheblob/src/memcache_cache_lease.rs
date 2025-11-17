@@ -25,8 +25,8 @@ use memcache::KeyGen;
 use memcache::MemcacheClient;
 use memcache_lock_thrift::LockState;
 use mononoke_macros::mononoke;
-use slog::warn;
 use stats::prelude::*;
+use tracing::warn;
 
 use crate::CacheBlobstore;
 use crate::CacheOps;
@@ -260,7 +260,7 @@ impl LeaseOps for MemcacheOps {
         res
     }
 
-    fn renew_lease_until(&self, ctx: CoreContext, key: &str, mut done: BoxFuture<'static, ()>) {
+    fn renew_lease_until(&self, _ctx: CoreContext, key: &str, mut done: BoxFuture<'static, ()>) {
         let lockstate = compact_protocol::serialize(LockState::locked_by(self.hostname.clone()));
         let lock_ttl = Duration::from_secs(10);
         let mc_key = self.presence_keygen.key(key);
@@ -274,7 +274,7 @@ impl LeaseOps for MemcacheOps {
                     .set_with_ttl(mc_key.clone(), lockstate.clone(), lock_ttl)
                     .await;
                 if res.is_err() {
-                    warn!(ctx.logger(), "failed to renew lease for {}", mc_key);
+                    warn!("failed to renew lease for {}", mc_key);
                 }
 
                 let sleep = tokio::time::sleep(Duration::from_secs(1));

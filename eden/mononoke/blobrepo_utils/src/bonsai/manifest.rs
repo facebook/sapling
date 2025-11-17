@@ -37,7 +37,7 @@ use mercurial_types::blobs::HgBlobManifest;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
 use slog::Logger;
-use slog::debug;
+use tracing::debug;
 
 use crate::Repo;
 use crate::changeset::ChangesetVisitMeta;
@@ -186,13 +186,13 @@ impl BonsaiMFVerifyVisitor {
     pub async fn visit<R: Repo>(
         self,
         ctx: CoreContext,
-        logger: Logger,
+        _logger: Logger,
         repo: R,
         changeset: HgBlobChangeset,
     ) -> Result<BonsaiMFVerifyResult<R>> {
         let changeset_id = changeset.get_changeset_id();
         if self.ignores.contains(&changeset_id) {
-            debug!(logger, "Changeset ignored");
+            debug!("Changeset ignored");
             return Ok(BonsaiMFVerifyResult::Ignored(changeset_id));
         }
 
@@ -205,12 +205,11 @@ impl BonsaiMFVerifyVisitor {
 
         if broken_merge {
             debug!(
-                logger,
                 "Potentially broken merge -- will check for file changes, not just manifest hash"
             );
         }
 
-        debug!(logger, "Starting bonsai diff computation");
+        debug!("Starting bonsai diff computation");
 
         let mut parents = vec![];
         parents.extend(changeset.p1());
@@ -259,13 +258,10 @@ impl BonsaiMFVerifyVisitor {
         };
 
         let diff_count = diff_result.len();
-        debug!(
-            logger,
-            "Computed diff ({} entries), now applying it", diff_count,
-        );
+        debug!("Computed diff ({} entries), now applying it", diff_count,);
         if self.debug_bonsai_diff {
             for diff in &diff_result {
-                debug!(logger, "diff result: {:?}", diff);
+                debug!("diff result: {:?}", diff);
             }
         }
 
@@ -275,12 +271,9 @@ impl BonsaiMFVerifyVisitor {
         let lookup_mf_id = root_mf.node_id();
         let computed_mf_id = root_mf.computed_node_id();
         debug!(
-            logger,
             "Saving complete: initial computed manifest ID: {} (original {}), \
                 roundtrip: {}",
-            computed_mf_id,
-            lookup_mf_id,
-            roundtrip_mf_id,
+            computed_mf_id, lookup_mf_id, roundtrip_mf_id,
         );
 
         // If there's no diff, memory_manifest will return the same ID as the

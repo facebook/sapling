@@ -29,7 +29,7 @@ use mercurial_revlog::RevlogRepo;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::Logger;
-use slog::info;
+use tracing::info;
 
 use crate::BlobimportRepoLike;
 
@@ -73,12 +73,12 @@ pub fn upload_bookmarks(
     mononoke_bookmarks: Vec<(BookmarkKey, ChangesetId)>,
     bookmark_name_transformer: BookmarkKeyTransformer,
 ) -> BoxFuture<(), Error> {
-    let logger = logger.clone();
+    let _logger = logger.clone();
     let stale_bookmarks = Arc::new(stale_bookmarks.into_iter().collect::<HashMap<_, _>>());
 
     read_bookmarks(&revlogrepo)
         .map({
-            cloned!(ctx, logger, repo, stale_bookmarks);
+            cloned!(ctx, repo, stale_bookmarks);
             move |bookmarks| {
                 stream::futures_unordered(bookmarks.into_iter().map(|(key, cs_id)| {
                     {
@@ -88,13 +88,11 @@ pub fn upload_bookmarks(
                     .boxed()
                     .compat()
                     .and_then({
-                            cloned!(ctx, logger, key, repo, stale_bookmarks);
+                            cloned!(ctx, key, repo, stale_bookmarks);
                             move |exists| {
                                 match (exists, stale_bookmarks.get(&key).cloned()) {
                                     (false, Some(stale_cs_id)) => {
-                                        info!(
-                                            logger,
-                                            "current version of bookmark {} couldn't be \
+                                        info!("current version of bookmark {} couldn't be \
                                             imported, because cs {:?} was not present in the repo \
                                             yet; using stale version instead {:?}",
                                             String::from_utf8_lossy(&key),
@@ -114,7 +112,7 @@ pub fn upload_bookmarks(
                                 }
                             }})
                         .and_then({
-                            cloned!(ctx, repo, logger);
+                            cloned!(ctx, repo);
                             move |(key, cs_id, exists)| async move {
                                 if exists {
                                     let bcs_id = repo.bonsai_hg_mapping().get_bonsai_from_hg(&ctx, cs_id)
@@ -122,9 +120,7 @@ pub fn upload_bookmarks(
                                         .ok_or_else(|| format_err!("failed to resolve hg to bonsai: {}", cs_id))?;
                                     Ok(Some((key, bcs_id)))
                                 } else {
-                                    info!(
-                                        logger,
-                                        "did not update bookmark {}, because cs {:?} was not imported yet",
+                                    info!("did not update bookmark {}, because cs {:?} was not imported yet",
                                         String::from_utf8_lossy(&key),
                                         cs_id,
                                     );
@@ -172,7 +168,7 @@ pub fn upload_bookmarks(
                 }
             }
         }).for_each(move |count| {
-            info!(logger, "uploaded chunk of {:?} bookmarks", count);
+            info!("uploaded chunk of {:?} bookmarks", count);
             Ok(())
         }).boxify()
 }

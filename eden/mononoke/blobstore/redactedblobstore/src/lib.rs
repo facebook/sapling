@@ -24,7 +24,7 @@ use blobstore::PutBehaviour;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::debug;
+use tracing::debug;
 
 pub use crate::errors::ErrorKind;
 pub use crate::redaction_config_blobstore::ArcRedactionConfigBlobstore;
@@ -150,8 +150,8 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
                     .get(key)
                     .map_or(Ok(&self.blobstore), |metadata| {
                         debug!(
-                            ctx.logger(),
-                            "{} operation with redacted blobstore with key {:?}", operation, key
+                            "{} operation with redacted blobstore with key {:?}",
+                            operation, key
                         );
                         self.log_redacted_blob_access_to_scuba(ctx, key, operation, metadata);
 

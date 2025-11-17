@@ -70,8 +70,8 @@ use mononoke_types::path::MPath;
 use phases::PhasesArc;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_identity::RepoIdentityRef;
-use slog::info;
 use tokio::runtime::Handle;
+use tracing::info;
 
 use crate::BlobimportRepoLike;
 use crate::concurrency::JobProcessor;
@@ -419,7 +419,7 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
                 }
             })
             .and_then({
-                cloned!(ctx);
+                cloned!();
                 move |(revidx, csid, cs, rootmf, entries)| {
                     let parents_from_revlog: Vec<_> =
                         cs.parents().into_iter().map(HgChangesetId::new).collect();
@@ -438,10 +438,7 @@ impl<R: BlobimportRepoLike + Clone + 'static> UploadChangesets<R> {
                             );
                         }
 
-                        info!(
-                            ctx.logger(),
-                            "fixing parent order for {}: {:?}", csid, parent_order
-                        );
+                        info!("fixing parent order for {}: {:?}", csid, parent_order);
                         Ok((revidx, csid, cs, rootmf, entries, parent_order.clone()))
                     } else {
                         Ok((revidx, csid, cs, rootmf, entries, parents_from_revlog))

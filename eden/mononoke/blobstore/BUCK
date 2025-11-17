@@ -80,7 +80,6 @@ rust_library(
     name = "cacheblob",
     srcs = glob(["cacheblob/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "cacheblob"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         ":memblob",
         "//common/rust/shed/borrowed:borrowed",
@@ -94,6 +93,7 @@ rust_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         ":blobstore",
         ":prefixblob",
         ":redactedblobstore",
@@ -187,7 +187,6 @@ rust_library(
         "redactedblobstore/src/**/*.rs",
     ]),
     autocargo = {"cargo_toml_dir": "redactedblobstore"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
         "fbsource//third-party/rust:maplit",
@@ -202,6 +201,7 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
         ":blobstore",
         ":prefixblob",
         "//common/rust/shed/cached_config:cached_config",
@@ -340,7 +340,6 @@ rust_library(
     name = "multiplexedblob",
     srcs = glob(["multiplexedblob/src/*.rs"]),
     autocargo = {"cargo_toml_dir": "multiplexedblob"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:chrono",
@@ -351,6 +350,7 @@ rust_library(
         "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:twox-hash",
         ":blobstore",
         ":blobstore_stats",

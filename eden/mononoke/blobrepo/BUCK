@@ -98,13 +98,13 @@ rust_library(
     autocargo = {
         "cargo_toml_dir": "common",
     },
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobstore:blobstore",
