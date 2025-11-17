@@ -38,9 +38,9 @@ use regex::Regex;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::debug;
-use slog::info;
 use sorted_vector_map::SortedVectorMap;
+use tracing::debug;
+use tracing::info;
 
 pub trait Repo = RepoBlobstoreRef
     + RepoDerivedDataRef
@@ -120,13 +120,7 @@ pub async fn copy(
                 }
             }
 
-            debug!(
-                ctx.logger(),
-                "from {}, to {}, size: {}",
-                from_path,
-                to_path,
-                file.size(),
-            );
+            debug!("from {}, to {}, size: {}", from_path, to_path, file.size(),);
             file_changes.insert(to_path, Some((from_path, file.clone())));
 
             if !same_repo {
@@ -137,10 +131,7 @@ pub async fn copy(
                 if file.size() < lfs_threshold.get() {
                     total_file_size += file.size();
                 } else {
-                    debug!(
-                        ctx.logger(),
-                        "size is not accounted because of lfs threshold"
-                    );
+                    debug!("size is not accounted because of lfs threshold");
                 }
             } else {
                 total_file_size += file.size();
@@ -161,7 +152,6 @@ pub async fn copy(
 
     if !same_repo {
         debug!(
-            ctx.logger(),
             "Copying {} files contents from {} to {}",
             contents_to_upload.len(),
             source_repo.repo_identity().name(),
@@ -221,7 +211,7 @@ async fn create_changesets(
             fc.insert(to_path, file_change);
         }
 
-        info!(ctx.logger(), "creating csid with {} file changes", fc.len());
+        info!("creating csid with {} file changes", fc.len());
         let bcs = create_bonsai_changeset(vec![parent], fc.into(), author.clone(), msg.clone())?;
 
         let cs_id = bcs.get_changeset_id();

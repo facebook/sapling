@@ -5,7 +5,6 @@ oncall("scm_server_infra")
 rust_library(
     name = "copy_utils",
     srcs = glob(["src/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/facet:facet",
@@ -23,6 +22,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
         "//eden/mononoke/changesets/changesets_creation:changesets_creation",

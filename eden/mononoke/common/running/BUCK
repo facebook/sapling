@@ -11,6 +11,7 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:libc",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
 )

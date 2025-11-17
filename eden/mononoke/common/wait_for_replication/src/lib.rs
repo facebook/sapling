@@ -27,13 +27,13 @@ use metaconfig_types::StorageConfig;
 use replication_lag_config::ReplicationLagBlobstoreConfig;
 use replication_lag_config::ReplicationLagTableConfig;
 use slog::Logger;
-use slog::info;
 #[cfg(fbcode_build)]
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::NoReplicaLagMonitor;
 use sql_ext::replication::ReplicaLagMonitor;
 use sql_ext::replication::WaitForReplicationConfig;
 use tokio::sync::Mutex;
+use tracing::info;
 
 #[derive(Default)]
 struct State {
@@ -169,10 +169,8 @@ impl WaitForReplication {
                 _ => {}
             }
             info!(
-                logger,
                 "Waiting for replication lag on {} to drop below {:?}",
-                name,
-                max_replication_lag_allowed
+                name, max_replication_lag_allowed
             );
             let new_last_lag = monitor
                 .wait_for_replication(&|| {

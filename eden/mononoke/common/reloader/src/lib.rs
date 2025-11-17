@@ -22,8 +22,8 @@ use futures::select;
 use futures_ext::future::ControlledHandle;
 use futures_ext::future::spawn_controlled;
 use rand::Rng;
-use slog::warn;
 use tokio::sync::Notify;
+use tracing::warn;
 
 #[derive(Debug, Clone)]
 pub struct Reloader<R> {
@@ -84,12 +84,12 @@ impl<R: 'static + Send + Sync> Reloader<R> {
         I: 'static + FnMut() -> Duration + Send,
         L: 'static + Loader<R> + Send + Sync,
     >(
-        ctx: CoreContext,
+        _ctx: CoreContext,
         interval_getter: I,
         loader: L,
     ) -> Result<Self> {
         Self::reload_periodically_with_force_reload(
-            ctx,
+            _ctx,
             interval_getter,
             loader,
             Arc::new(Notify::new()),
@@ -101,7 +101,7 @@ impl<R: 'static + Send + Sync> Reloader<R> {
         I: 'static + FnMut() -> Duration + Send,
         L: 'static + Loader<R> + Send + Sync,
     >(
-        ctx: CoreContext,
+        _ctx: CoreContext,
         mut interval_getter: I,
         mut loader: L,
         force_reload: Arc<Notify>,
@@ -129,10 +129,7 @@ impl<R: 'static + Send + Sync> Reloader<R> {
                         true
                     } else {
                         loader.needs_reload().await.unwrap_or_else(|err| {
-                            warn!(
-                                ctx.logger(),
-                                "Failed to check if reload needed, not reloading: {:?}", err
-                            );
+                            warn!("Failed to check if reload needed, not reloading: {:?}", err);
                             // I's better to keep a known-good SC than to reload an out-of-date version
                             // and catch up again.
                             //
@@ -146,7 +143,7 @@ impl<R: 'static + Send + Sync> Reloader<R> {
                             // Fetch was successful, but there's nothing to reload
                             Ok(None) => {}
                             Err(err) => {
-                                warn!(ctx.logger(), "Failed to reload: {:?}", err)
+                                warn!("Failed to reload: {:?}", err)
                             }
                         }
                         notify.notify_waiters();

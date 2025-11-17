@@ -11,8 +11,8 @@ use std::time::Duration;
 use anyhow::Result;
 use async_trait::async_trait;
 use slog::Logger;
-use slog::info;
 use tokio::time;
+use tracing::info;
 
 const MAX_ALLOWED_REPLICATION_LAG_SECS: u64 = 5;
 const REPLICATION_LAG_POLL_INTERVAL_SECS: u64 = 2;
@@ -51,8 +51,8 @@ pub trait ReplicaLagMonitor: Send + Sync {
         loop {
             let max_lag = self.get_max_replica_lag().await?;
             let config = config_getter();
-            if let Some(logger) = config.logger {
-                info!(logger, "{}", max_lag);
+            if let Some(_logger) = config.logger {
+                info!("{}", max_lag);
             }
             if max_lag.delay < config.max_replication_lag_allowed {
                 return Ok(max_lag);
