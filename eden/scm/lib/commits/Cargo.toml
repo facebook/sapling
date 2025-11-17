@@ -30,3 +30,7 @@ sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-streams = { version = "0.1.0", path = "../streams" }
 sapling-types = { version = "0.1.0", path = "../types" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
+
+[dev-dependencies]
+sapling-nonblocking = { version = "0.1.0", path = "../nonblocking" }
+tempfile = "3.22"

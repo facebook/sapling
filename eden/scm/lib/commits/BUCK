@@ -20,6 +20,10 @@ rust_library(
         },
     }},
     crate_root = "src/lib.rs",
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/nonblocking:nonblocking",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

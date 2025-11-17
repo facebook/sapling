@@ -209,7 +209,10 @@ impl ReadCommitText for ArcRwLockZstore {
 
 fn get_commit_raw_text(store: &Id20Store, vertex: &Vertex) -> Result<Option<Bytes>> {
     let id = Id20::from_slice(vertex.as_ref())?;
-    store.get_content(id)
+    match store.get_content(id)? {
+        Some(v) => Ok(Some(v)),
+        None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
+    }
 }
 
 impl StreamCommitText for OnDiskCommits {
@@ -272,5 +275,37 @@ Feature Providers:
 
     fn explain_internals(&self, w: &mut dyn io::Write) -> io::Result<()> {
         write!(w, "{:?}", &self.dag)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use nonblocking::non_blocking_result as r;
+
+    use super::*;
+
+    #[test]
+    fn test_hg_virtual_commits_exists() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path();
+        let commits = OnDiskCommits::new(
+            &path.join("dag"),
+            &path.join("commits"),
+            SerializationFormat::Hg,
+        )
+        .unwrap();
+
+        let wdir_node = Vertex::copy_from(Id20::wdir_id().as_ref());
+        assert!(
+            r(commits.get_commit_raw_text(&wdir_node))
+                .unwrap()
+                .is_some()
+        );
+        let null_node = Vertex::copy_from(Id20::null_id().as_ref());
+        assert!(
+            r(commits.get_commit_raw_text(&null_node))
+                .unwrap()
+                .is_some()
+        );
     }
 }
