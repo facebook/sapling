@@ -36,11 +36,11 @@ use rate_limiting::Scope;
 use repo_client::RepoClient;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use scribe_ext::Scribe;
-use slog::error;
 use sshrelay::Stdio;
 use stats::prelude::*;
 use textwrap::indent;
 use time_ext::DurationExt;
+use tracing::error;
 
 use crate::errors::ErrorKind;
 use crate::repo_handlers::RepoHandler;
@@ -117,7 +117,7 @@ pub async fn request_handler(
             )
         } {
             scuba.log_with_msg("Request rejected due to load shedding", format!("{}", err));
-            error!(logger, "Request rejected due to load shedding: {}", err);
+            error!("Request rejected due to load shedding: {}", err);
             log_error_to_client(
                 stderr,
                 "Request rejected due to load shedding:",
@@ -136,7 +136,7 @@ pub async fn request_handler(
     if !is_allowed_to_repo {
         let err: Error = ErrorKind::AuthorizationFailed.into();
         scuba.log_with_msg("Authorization failed", format!("{}", err));
-        error!(logger, "Authorization failed: {}", err);
+        error!("Authorization failed: {}", err);
         log_error_to_client(stderr, "Authorization failed:", &format!("{err}"));
 
         return Err(err);
@@ -231,9 +231,7 @@ pub async fn request_handler(
     }
 
     if let Err(err) = result {
-        error!(logger, "Command failed";
-            "error" => ?err,
-        );
+        error!(error = ?err, "Command failed");
         // log to client
         log_error_to_client(stderr, "Command failed", &format!("{err:?}"));
     }

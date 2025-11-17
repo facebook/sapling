@@ -49,8 +49,6 @@ use mysql_client::ConnectionPoolOptionsBuilder;
 use panichandler::Fate;
 use scs_methods::source_control_impl::SourceControlServiceImpl;
 use sharding_ext::RepoShard;
-use slog::info;
-use slog::warn;
 use source_control_services::make_SourceControlService_server;
 use sql_construct::SqlConstruct;
 use sql_storage::Destination;
@@ -67,6 +65,8 @@ use srserver::service_framework::ServiceFramework;
 use srserver::service_framework::ThriftStatsModule;
 use thrift_factory::ThriftFactoryBuilder;
 use tokio::task;
+use tracing::info;
+use tracing::warn;
 
 mod facebook;
 mod metadata;
@@ -156,8 +156,7 @@ impl ScsServerProcess {
 impl RepoShardedProcess for ScsServerProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.as_str();
-        let logger = self.repos_mgr.repo_logger(repo_name);
-        info!(&logger, "Setting up repo {} in SCS service", repo_name);
+        info!("Setting up repo {} in SCS service", repo_name);
         // Check if the input repo is already initialized. This can happen if the repo is a
         // shallow-sharded repo, in which case it would already be initialized during service startup.
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
@@ -165,12 +164,9 @@ impl RepoShardedProcess for ScsServerProcess {
             self.repos_mgr.add_repo(repo_name).await.with_context(|| {
                 format!("Failure in setting up repo {} in SCS service", repo_name)
             })?;
-            info!(&logger, "Completed repo {} setup in SCS service", repo_name);
+            info!("Completed repo {} setup in SCS service", repo_name);
         } else {
-            info!(
-                &logger,
-                "Repo {} is already setup in SCS service", repo_name
-            );
+            info!("Repo {} is already setup in SCS service", repo_name);
         }
         Ok(Arc::new(ScsServerProcessExecutor {
             repo_name: repo_name.to_string(),
@@ -189,10 +185,7 @@ pub struct ScsServerProcessExecutor {
 #[async_trait]
 impl RepoShardedProcessExecutor for ScsServerProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
-        info!(
-            self.repos_mgr.logger(),
-            "Serving repo {} in SCS service", &self.repo_name,
-        );
+        info!("Serving repo {} in SCS service", &self.repo_name,);
         Ok(())
     }
 
@@ -216,13 +209,9 @@ impl RepoShardedProcessExecutor for ScsServerProcessExecutor {
             .unwrap_or(false);
         if is_deep_sharded {
             self.repos_mgr.remove_repo(&self.repo_name);
-            info!(
-                self.repos_mgr.logger(),
-                "No longer serving repo {} in SCS service.", &self.repo_name,
-            );
+            info!("No longer serving repo {} in SCS service.", &self.repo_name,);
         } else {
             info!(
-                self.repos_mgr.logger(),
                 "Continuing serving repo {} in SCS service because it's shallow-sharded.",
                 &self.repo_name,
             );
@@ -386,7 +375,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         &args.host,
         service_framework.get_address()?.get_port()?
     );
-    info!(logger, "Listening on {}", bound_addr);
+    info!("Listening on {}", bound_addr);
 
     // Write out the bound address if requested, this is helpful in tests when using automatic binding with :0
     if let Some(bound_addr_path) = args.bound_address_file {
@@ -433,7 +422,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     // stats aggregation.
     app.start_stats_aggregation()?;
 
-    let cloned_logger = logger.clone();
     app.wait_until_terminated(
         move || {
             let _ = sm_shutdown_sender.send(true);
@@ -443,11 +431,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         async {
             // Note that async blocks are lazy, so this isn't called until first poll
             match quiesce_receiver.await {
-                Ok(_) => info!(
-                    &cloned_logger.clone(),
-                    "received signal from quiesce sender"
-                ),
-                Err(_) => warn!(&cloned_logger, "quiesce sender dropped"),
+                Ok(_) => info!("received signal from quiesce sender"),
+                Err(_) => warn!("quiesce sender dropped"),
             };
             let _ = task::spawn_blocking(move || {
                 // Calling `stop` blocks until the service has completed all requests.
@@ -459,7 +444,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         None,
     )?;
 
-    info!(logger, "Exiting...");
+    info!("Exiting...");
     Ok(())
 }
 

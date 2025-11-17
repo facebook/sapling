@@ -57,9 +57,6 @@ use rate_limiting::RateLimitEnvironment;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use slog::debug;
-use slog::error;
-use slog::warn;
 use sshrelay::IoStream;
 use sshrelay::SshDecoder;
 use sshrelay::SshEncoder;
@@ -74,6 +71,10 @@ use tokio::task::JoinHandle;
 use tokio_openssl::SslStream;
 use tokio_util::codec::FramedRead;
 use tokio_util::codec::FramedWrite;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 use crate::errors::ErrorKind;
 use crate::http_service::MononokeHttpService;
@@ -96,14 +97,14 @@ lazy_static! {
     static ref OPEN_CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
 }
 
-pub async fn wait_for_connections_closed(logger: &Logger) {
+pub async fn wait_for_connections_closed(_logger: &Logger) {
     loop {
         let conns = OPEN_CONNECTIONS.load(Ordering::Relaxed);
         if conns == 0 {
             break;
         }
 
-        slog::info!(logger, "Waiting for {} connections to close", conns);
+        info!("Waiting for {} connections to close", conns);
         tokio::time::sleep(Duration::new(1, 0)).await;
     }
 }
@@ -114,7 +115,7 @@ pub async fn connection_acceptor(
     common_config: CommonConfig,
     sockname: String,
     service: ReadyFlagService,
-    root_log: Logger,
+    _root_log: Logger,
     mononoke: Arc<Mononoke<Repo>>,
     tls_acceptor: SslAcceptor,
     terminate_process: oneshot::Receiver<()>,
@@ -153,7 +154,7 @@ pub async fn connection_acceptor(
     service.set_ready();
 
     let bound_addr = listener.local_addr()?.to_string();
-    debug!(root_log, "server is listening on {}", bound_addr);
+    debug!("server is listening on {}", bound_addr);
 
     // Write out the bound address if requested, this is helpful in tests when using automatic binding with :0
     if let Some(bound_addr_path) = bound_addr_path {
@@ -169,7 +170,6 @@ pub async fn connection_acceptor(
         security_checker,
         rate_limiter,
         scribe,
-        logger: root_log.clone(),
         edenapi,
         enable_http_control_api,
         server_hostname: get_hostname().unwrap_or_else(|_| "unknown_hostname".to_string()),
@@ -186,7 +186,7 @@ pub async fn connection_acceptor(
     loop {
         select_biased! {
             _ = terminate_process => {
-                debug!(root_log, "Received shutdown handler, stop accepting connections...");
+                debug!("Received shutdown handler, stop accepting connections...");
                 return Ok(());
             },
             sock_tuple = listener.accept().fuse() => match sock_tuple {
@@ -196,7 +196,7 @@ pub async fn connection_acceptor(
                     conn.spawn_task(task, "Failed to handle_connection");
                 }
                 Err(err) => {
-                    error!(root_log, "{}", err.to_string(); "error" => ?err);
+                    error!(error = ?err, "{err}");
                 }
             },
         };
@@ -211,7 +211,6 @@ pub struct Acceptor<R> {
     pub security_checker: ConnectionSecurityChecker,
     pub rate_limiter: Option<RateLimitEnvironment>,
     pub scribe: Scribe,
-    pub logger: Logger,
     pub edenapi: SaplingRemoteApi,
     pub enable_http_control_api: bool,
     pub server_hostname: String,
@@ -257,15 +256,14 @@ impl PendingConnection {
         STATS::open_connections.set_value(this.acceptor.fb, count as i64);
 
         mononoke::spawn_task(async move {
-            let logger = &this.acceptor.logger;
             let res = task
-                .on_cancel(|| warn!(logger, "connection to {} was cancelled", this.addr))
+                .on_cancel(|| warn!("connection to {} was cancelled", this.addr))
                 .await
                 .context(label)
                 .with_context(|| format!("Failed to handle connection to {}", this.addr));
 
             if let Err(e) = res {
-                error!(logger, "connection_acceptor error: {:#}", e);
+                error!("connection_acceptor error: {:#}", e);
             }
 
             let count = OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed) - 1;

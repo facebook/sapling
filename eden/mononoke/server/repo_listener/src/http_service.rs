@@ -45,12 +45,11 @@ use qps::Qps;
 use session_id::generate_session_id;
 use sha1::Digest;
 use sha1::Sha1;
-use slog::Logger;
-use slog::debug;
-use slog::error;
-use slog::trace;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
+use tracing::debug;
+use tracing::error;
+use tracing::trace;
 
 use crate::connection_acceptor;
 use crate::connection_acceptor::AcceptedConnection;
@@ -399,7 +398,7 @@ where
             .map_err(HttpError::internal)?;
 
         if let Err(e) = bump_qps(&req.headers, self.acceptor().qps.as_deref()) {
-            trace!(self.logger(), "Failed to bump QPS: {:?}", e);
+            trace!("Failed to bump QPS: {:?}", e);
         }
 
         let tls_socket_data = if self.conn.is_trusted {
@@ -424,10 +423,6 @@ where
     fn acceptor(&self) -> &Acceptor<Repo> {
         &self.conn.pending.acceptor
     }
-
-    fn logger(&self) -> &Logger {
-        &self.acceptor().logger
-    }
 }
 
 impl<S> Service<Request<Body>> for MononokeHttpService<S>
@@ -448,7 +443,7 @@ where
         async move {
             let method = req.method().clone();
             let uri = req.uri().clone();
-            debug!(this.logger(), "{} {}", method, uri);
+            debug!("{} {}", method, uri);
 
             this.handle(req)
                 .await
@@ -460,7 +455,6 @@ where
                         }
                         Err(e) => {
                             error!(
-                                this.logger(),
                                 "http service error: can't set {} header: {}",
                                 HEADER_MONONOKE_HOST,
                                 anyhow::Error::from(e),
@@ -473,7 +467,6 @@ where
                     let res = e.http_response();
 
                     error!(
-                        this.logger(),
                         "http service error: {} {}: {:#}",
                         method,
                         uri,

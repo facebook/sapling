@@ -85,7 +85,6 @@ use scs_errors::Status;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
 use slog::Logger;
-use slog::debug;
 use source_control as thrift;
 use source_control_services::SourceControlService;
 use source_control_services::errors::source_control_service as service;
@@ -93,6 +92,7 @@ use srserver::RequestContext;
 use stats::prelude::*;
 use time_ext::DurationExt;
 use tracing::Instrument;
+use tracing::debug;
 
 use crate::from_request::FromRequest;
 use crate::scuba_params::AddScubaParams;
@@ -354,7 +354,7 @@ impl SourceControlServiceImpl {
                             forwarded_authenticated_identities.as_str(),
                         )
                         .map_err(scs_errors::invalid_request)?;
-                        debug!(self.logger, "Parsed authenticated identities");
+                        debug!("Parsed authenticated identities");
                         idents
                     } else {
                         // Fall back to regular forwarded identities
@@ -1046,7 +1046,7 @@ fn log_cancelled(
 }
 
 fn check_memory_usage(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     method: &str,
     start_mem_stats: Option<&MemoryStats>,
 ) -> Result<(), scs_errors::ServiceError> {
@@ -1065,26 +1065,19 @@ fn check_memory_usage(
 
     if rss_min_free_bytes > 0 || rss_min_free_pct > 0 {
         debug!(
-            ctx.logger(),
-            "{}: min free mem: {} {}%", method, rss_min_free_bytes, rss_min_free_pct
+            "{}: min free mem: {} {}%",
+            method, rss_min_free_bytes, rss_min_free_pct
         );
 
         debug!(
-            ctx.logger(),
             "{}: memory stats: free {} / total {} {:.1}%",
-            method,
-            stats.rss_free_bytes,
-            stats.total_rss_bytes,
-            stats.rss_free_pct
+            method, stats.rss_free_bytes, stats.total_rss_bytes, stats.rss_free_pct
         );
 
         if stats.rss_free_bytes < rss_min_free_bytes {
             debug!(
-                ctx.logger(),
                 "{}: not enough memory free, need at least {} bytes free, only {} free right now",
-                method,
-                rss_min_free_bytes,
-                stats.rss_free_bytes,
+                method, rss_min_free_bytes, stats.rss_free_bytes,
             );
 
             return Err(scs_errors::overloaded(format!(
@@ -1095,11 +1088,8 @@ fn check_memory_usage(
         }
         if stats.rss_free_pct < rss_min_free_pct as f32 {
             debug!(
-                ctx.logger(),
                 "{}: not enough memory free, need at least {}% free, only {:.1}% free right now",
-                method,
-                rss_min_free_pct,
-                stats.rss_free_pct,
+                method, rss_min_free_pct, stats.rss_free_pct,
             );
 
             return Err(scs_errors::overloaded(format!(

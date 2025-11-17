@@ -12,7 +12,7 @@ use futures::StreamExt;
 use mononoke_api::CoreContext;
 use mononoke_api::Mononoke;
 use mononoke_api::Repo;
-use slog::warn;
+use tracing::warn;
 
 const SUBMIT_STATS_ONCE_PER_SECS: u64 = 10;
 
@@ -22,7 +22,7 @@ pub async fn monitoring_stats_submitter(ctx: CoreContext, mononoke: Arc<Mononoke
     )))
     .for_each(|_| async {
         if let Err(e) = mononoke.report_monitoring_stats(&ctx).await {
-            warn!(ctx.logger(), "Failed to report monitoring stats: {:#?}", e);
+            warn!("Failed to report monitoring stats: {:#?}", e);
         }
     })
     .await;

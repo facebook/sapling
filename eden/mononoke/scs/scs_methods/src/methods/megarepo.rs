@@ -26,8 +26,8 @@ use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
 use mononoke_types::RepositoryId;
 use repo_authorization::RepoWriteOperation;
-use slog::warn;
 use source_control as thrift;
+use tracing::warn;
 
 use crate::async_requests::enqueue;
 use crate::async_requests::poll;
@@ -134,7 +134,6 @@ impl SourceControlServiceImpl {
                 Err(err) => {
                     latest_error = Some(err);
                     warn!(
-                        ctx.logger(),
                         "failed to read just written config version {}, retrying...",
                         new_config.version
                     );

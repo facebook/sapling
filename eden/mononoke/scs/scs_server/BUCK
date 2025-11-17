@@ -15,7 +15,6 @@ rust_binary(
     labels = [
         ci.heavyweight(),
     ],
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
@@ -24,6 +23,7 @@ rust_binary(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tokio-stream",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/base_controller:factory_group",
         "//common/rust/base_controller:thrift_factory",
         "//common/rust/mysql:mysql_client",
