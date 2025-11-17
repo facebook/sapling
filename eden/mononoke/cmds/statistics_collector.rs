@@ -69,11 +69,11 @@ use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
 use slog::Logger;
-use slog::error;
-use slog::info;
 use stats::prelude::*;
 use tokio::io::AsyncReadExt;
 use tokio::time::sleep;
+use tracing::error;
+use tracing::info;
 
 const SM_SERVICE_SCOPE: &str = "global";
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
@@ -138,7 +138,6 @@ impl RepoShardedProcess for StatisticsCollectorProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let logger = self.app.repo_logger(&repo.to_string());
         info!(
-            &logger,
             "Setting up statistics collector for repo {}",
             repo.to_string()
         );
@@ -153,7 +152,6 @@ struct StatisticsCollector {
     repo: Arc<Repo>,
     args: Arc<RepoStatisticsArgs>,
     ctx: CoreContext,
-    logger: Logger,
     scuba_logger: MononokeScubaSampleBuilder,
     repo_name: String,
     bookmark: BookmarkKey,
@@ -189,7 +187,6 @@ impl StatisticsCollector {
             scuba_logger,
             repo_name,
             bookmark,
-            logger,
             cancellation_requested: Arc::new(AtomicBool::new(false)),
         })
     }
@@ -199,8 +196,8 @@ impl StatisticsCollector {
 impl RepoShardedProcessExecutor for StatisticsCollector {
     async fn execute(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
-            "Initiating statistics collector execution for repo {}", &self.repo_name,
+            "Initiating statistics collector execution for repo {}",
+            &self.repo_name,
         );
 
         let val = run_statistics(
@@ -215,10 +212,8 @@ impl RepoShardedProcessExecutor for StatisticsCollector {
         .await;
         if let Err(ref e) = val {
             error!(
-                self.logger,
                 "Statistics Collector failure in repo {}. Terminating execution. Cause: {:?}",
-                &self.repo_name,
-                e
+                &self.repo_name, e
             );
         };
         Ok(())
@@ -226,8 +221,8 @@ impl RepoShardedProcessExecutor for StatisticsCollector {
 
     async fn stop(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
-            "Terminating statistics collector execution for repo {}", &self.repo_name,
+            "Terminating statistics collector execution for repo {}",
+            &self.repo_name,
         );
         self.cancellation_requested.store(true, Ordering::Relaxed);
         Ok(())
@@ -368,10 +363,7 @@ pub async fn get_statistics_from_changeset(
     blobstore: &(impl KeyedBlobstore + Clone + 'static),
     hg_cs_id: &HgChangesetId,
 ) -> Result<RepoStatistics, Error> {
-    info!(
-        ctx.logger(),
-        "Started calculating statistics for changeset {}", hg_cs_id
-    );
+    info!("Started calculating statistics for changeset {}", hg_cs_id);
 
     let manifest_id = get_manifest_from_changeset(ctx, repo, hg_cs_id).await?;
     let statistics = manifest_id
@@ -387,10 +379,7 @@ pub async fn get_statistics_from_changeset(
         )
         .await?;
 
-    info!(
-        ctx.logger(),
-        "Finished calculating statistics for changeset {}", hg_cs_id
-    );
+    info!("Finished calculating statistics for changeset {}", hg_cs_id);
 
     Ok(statistics)
 }
@@ -437,7 +426,7 @@ pub async fn update_statistics<'a>(
 }
 
 pub fn log_statistics(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     mut scuba_logger: MononokeScubaSampleBuilder,
     cs_timestamp: i64,
     repo_name: &str,
@@ -445,7 +434,6 @@ pub fn log_statistics(
     statistics: &RepoStatistics,
 ) {
     info!(
-        ctx.logger(),
         "Statistics for changeset {}\nCs timestamp: {}\nNumber of files {}\nTotal file size {}\nNumber of lines {}",
         hg_cs_id,
         cs_timestamp,
@@ -490,7 +478,7 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
     // fields to RepoStatistics struct, like cs_timestamp, hg_cs_id, repo_id and refactor code.
     println!("repo_id,hg_cs_id,cs_timestamp,num_files,total_file_size,num_lines");
     let changesets = parse_json_serialized_changesets(in_path).await?;
-    info!(ctx.logger(), "Started calculating changesets timestamps");
+    info!("Started calculating changesets timestamps");
 
     let mut changeset_info_vec = stream::iter(changesets)
         .map({
@@ -511,10 +499,7 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
         .try_collect::<Vec<_>>()
         .await?;
 
-    info!(
-        ctx.logger(),
-        "Timestamps calculated, sorting them and starting calculating statistics"
-    );
+    info!("Timestamps calculated, sorting them and starting calculating statistics");
     changeset_info_vec.sort_by_key(|(_, cs_timestamp, _)| cs_timestamp.clone());
 
     // accumulate stats into a map
@@ -529,11 +514,8 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
                     continue;
                 }
                 info!(
-                    ctx.logger(),
                     "Changeset {} with timestamp {} was created more than {} seconds after previous, calculating statistics for it",
-                    hg_cs_id,
-                    cs_timestamp,
-                    REQUIRED_COMMITS_DISTANCE
+                    hg_cs_id, cs_timestamp, REQUIRED_COMMITS_DISTANCE
                 );
                 let (old_manifest, manifest) = try_join!(
                     get_manifest_from_changeset(ctx, repo, &old_hg_cs_id,),
@@ -550,10 +532,7 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
                 )
                 .await?;
 
-                info!(
-                    ctx.logger(),
-                    "Statistics for changeset {} calculated", hg_cs_id
-                );
+                info!("Statistics for changeset {} calculated", hg_cs_id);
                 println!(
                     "{},{},{},{},{},{}",
                     repo_id.id(),
@@ -566,19 +545,11 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
                 repo_stats_map.insert(repo_id, (cs_timestamp, hg_cs_id, statistics));
             }
             None => {
-                info!(
-                    ctx.logger(),
-                    "Found first changeset for repo_id {}",
-                    repo_id.id()
-                );
+                info!("Found first changeset for repo_id {}", repo_id.id());
                 let statistics =
                     get_statistics_from_changeset(ctx, repo, &blobstore, &hg_cs_id).await?;
 
-                info!(
-                    ctx.logger(),
-                    "First changeset for repo_id {} calculated",
-                    repo_id.id()
-                );
+                info!("First changeset for repo_id {} calculated", repo_id.id());
                 println!(
                     "{},{},{},{},{},{}",
                     repo_id.id(),
@@ -640,10 +611,7 @@ async fn run_statistics(
     // run the loop
     loop {
         if cancellation_requested.load(Ordering::Relaxed) {
-            info!(
-                ctx.logger(),
-                "Cancellation requested for statistics collector. Exiting"
-            );
+            info!("Cancellation requested for statistics collector. Exiting");
             return Ok(());
         }
         let prev_changeset = changeset;
@@ -654,17 +622,11 @@ async fn run_statistics(
 
         if prev_changeset == changeset {
             let duration = Duration::from_millis(1000);
-            info!(
-                ctx.logger(),
-                "Changeset hasn't changed, sleeping {:?}", duration
-            );
+            info!("Changeset hasn't changed, sleeping {:?}", duration);
 
             sleep(duration).await;
         } else {
-            info!(
-                ctx.logger(),
-                "Found new changeset: {}, updating statistics", changeset
-            );
+            info!("Found new changeset: {}, updating statistics", changeset);
 
             let (prev_manifest_id, cur_manifest_id) = try_join!(
                 get_manifest_from_changeset(&ctx, &repo, &prev_changeset),
@@ -682,7 +644,7 @@ async fn run_statistics(
             )
             .await?;
 
-            info!(ctx.logger(), "Statistics for new changeset updated.");
+            info!("Statistics for new changeset updated.");
 
             let cs_timestamp =
                 get_changeset_timestamp_from_changeset(&ctx, &repo, &changeset).await?;

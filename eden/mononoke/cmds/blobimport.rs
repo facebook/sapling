@@ -45,14 +45,14 @@ use mononoke_types::DerivableType;
 use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
 use slog::Logger;
-use slog::error;
-use slog::info;
-use slog::warn;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 fn parse_fixed_parent_order<P: AsRef<Path>>(
-    logger: &Logger,
+    _logger: &Logger,
     p: P,
 ) -> Result<HashMap<HgChangesetId, Vec<HgChangesetId>>> {
     let content = read(p)?;
@@ -75,7 +75,6 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
             (Some(p1), Some(p2)) => vec![p1?, p2?],
             (Some(p), None) => {
                 warn!(
-                    logger,
                     "{}: parent order is fixed for a single parent, most likely won't have any effect",
                     hg_cs_id,
                 );
@@ -83,7 +82,6 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
             }
             (None, None) => {
                 warn!(
-                    logger,
                     "{}: parent order is fixed for a commit with no parents, most likely won't have any effect",
                     hg_cs_id,
                 );
@@ -96,7 +94,7 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
         }
 
         if res.insert(hg_cs_id, parents).is_some() {
-            warn!(logger, "order is fixed twice for {}!", hg_cs_id);
+            warn!("order is fixed twice for {}!", hg_cs_id);
         }
     }
     Ok(res)
@@ -289,11 +287,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
 
         match maybe_latest_imported_rev {
             Some((latest_imported_rev, latest_imported_cs_id)) => {
-                info!(
-                    ctx.logger(),
-                    "latest imported revision {}",
-                    latest_imported_rev.as_u32()
-                );
+                info!("latest imported revision {}", latest_imported_rev.as_u32());
                 #[cfg(fbcode_build)]
                 {
                     if let Some((manifold_key, bucket)) = manifold_key_bucket {
@@ -317,7 +311,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
                 maybe_update_highest_imported_generation_number(ctx, &repo, latest_imported_cs_id)
                     .await?;
             }
-            None => info!(ctx.logger(), "didn't import any commits"),
+            None => info!("didn't import any commits"),
         };
         Ok(())
     }
@@ -325,7 +319,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         move |err: anyhow::Error| {
             // NOTE: We log the error immediately, then provide another one for main's
             // Result (which will set our exit code).
-            error!(ctx.logger(), "error while blobimporting"; "error" => ?err);
+            error!(error = ?err, "error while blobimporting");
             Error::msg("blobimport exited with a failure")
         }
     })

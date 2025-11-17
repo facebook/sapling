@@ -34,8 +34,8 @@ use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
 use rand::Rng;
 use rand::thread_rng;
-use slog::info;
-use slog::warn;
+use tracing::info;
+use tracing::warn;
 
 use crate::healer::DEFAULT_BLOB_SIZE_BYTES;
 use crate::healer::HealResult;
@@ -122,10 +122,8 @@ impl WalHealer {
                     // Error, so fall in size fast
                     let new_fetch_size = fetch_size / 2;
                     warn!(
-                        ctx.logger(),
                         "Failed to read full batch from th WAL, failing in batch size: old {}, new {}",
-                        fetch_size,
-                        new_fetch_size
+                        fetch_size, new_fetch_size
                     );
 
                     if new_fetch_size < 1 {
@@ -152,13 +150,10 @@ impl WalHealer {
 
         // all entries in the queue correspond to the different put operations
         let unique_puts = queue_entries.len();
-        info!(
-            ctx.logger(),
-            "Fetched {} distinct put operations", unique_puts
-        );
+        info!("Fetched {} distinct put operations", unique_puts);
 
         if unique_puts == 0 {
-            info!(ctx.logger(), "All caught up, nothing to do");
+            info!("All caught up, nothing to do");
             return Ok(HealResult {
                 processed_full_batch: false,
                 processed_rows: 0,
@@ -166,10 +161,7 @@ impl WalHealer {
         }
 
         if self.drain_only {
-            info!(
-                ctx.logger(),
-                "Draining all entries without healing. [drain-only mode]"
-            );
+            info!("Draining all entries without healing. [drain-only mode]");
             let deleted_entries =
                 cleanup_after_healing(ctx, self.wal.as_ref(), queue_entries).await?;
 
@@ -204,7 +196,6 @@ impl WalHealer {
             .collect();
 
         info!(
-            ctx.logger(),
             "Found {} blobs to be healed... Doing it with weight limit {}, max concurrency: {}",
             healing_futures.len(),
             self.buffered_params.weight_limit,
@@ -235,8 +226,8 @@ impl WalHealer {
                         // TODO: log missing blobs to scuba
                         let retries = entries.first().map_or(0, |e| e.retry_count);
                         warn!(
-                            ctx.logger(),
-                            "Missing blob detected: key {} ({} retries so far)", key, retries
+                            "Missing blob detected: key {} ({} retries so far)",
+                            key, retries
                         );
                         to_enqueue.push(
                             entries
@@ -250,8 +241,8 @@ impl WalHealer {
                     }
                     HealBlobOutcome::MissingBlobstores(key, blobstores) => {
                         info!(
-                            ctx.logger(),
-                            "Couldn't heal blob {} in these blobstores: {:?}", key, blobstores
+                            "Couldn't heal blob {} in these blobstores: {:?}",
+                            key, blobstores
                         );
                         to_enqueue.push(entries.clone());
                     }
@@ -264,7 +255,6 @@ impl WalHealer {
         let to_enqueue: Vec<_> = to_enqueue.into_iter().flatten().collect();
 
         info!(
-            ctx.logger(),
             "For {} processed entries and {} blobstore keys: healthy blobs {}, healed blobs {}, failed to heal {}, missing blobs {}",
             processed_entries.len(),
             unique_blobstore_keys,
@@ -427,7 +417,6 @@ async fn enqueue_entries(
         return Ok(());
     }
     info!(
-        ctx.logger(),
         "Requeuing {} queue entries for another healing attempt",
         entries.len()
     );
@@ -456,7 +445,7 @@ async fn cleanup_after_healing(
     entries: Vec<BlobstoreWalEntry>,
 ) -> Result<u64> {
     let n = entries.len() as u64;
-    info!(ctx.logger(), "Deleting {} actioned queue entries", n);
+    info!("Deleting {} actioned queue entries", n);
     wal.delete(ctx, &entries).await?;
     Ok(n)
 }

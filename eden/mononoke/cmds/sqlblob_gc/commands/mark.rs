@@ -22,8 +22,8 @@ use futures_retry::retry;
 use mononoke_app::MononokeApp;
 use mononoke_macros::mononoke;
 use slog::Logger;
-use slog::info;
 use sqlblob::Sqlblob;
+use tracing::info;
 
 use crate::MononokeSQLBlobGCArgs;
 use crate::utils;
@@ -50,7 +50,7 @@ async fn handle_one_key(
     key: String,
     store: Arc<Sqlblob>,
     inline_small_values: bool,
-    logger: Arc<Logger>,
+    _logger: Arc<Logger>,
     mark_generation: u64,
 ) -> Result<()> {
     retry(
@@ -59,7 +59,7 @@ async fn handle_one_key(
     )
     .binary_exponential_backoff()
     .max_attempts(RETRIES)
-    .inspect_err(|attempt, _err| info!(logger, "attempt {attempt} of {RETRIES} failed"))
+    .inspect_err(|attempt, _err| info!("attempt {attempt} of {RETRIES} failed"))
     .await
     .with_context(|| anyhow!("Failed to handle {key} after {RETRIES} attempts"))?;
     Ok(())
@@ -69,7 +69,7 @@ async fn handle_initial_generation(
     ctx: &CoreContext,
     store: &Sqlblob,
     shard: usize,
-    logger: &Logger,
+    _logger: &Logger,
 ) -> Result<()> {
     retry(
         |_| store.set_initial_generation(ctx, shard),
@@ -77,15 +77,12 @@ async fn handle_initial_generation(
     )
     .binary_exponential_backoff()
     .max_attempts(RETRIES)
-    .inspect_err(|attempt, _err| info!(logger, "attempt {attempt} of {RETRIES} failed"))
+    .inspect_err(|attempt, _err| info!("attempt {attempt} of {RETRIES} failed"))
     .await
     .with_context(|| {
         anyhow!("Failed to handle initial generation on shard {shard} after {RETRIES} retries",)
     })?;
-    info!(
-        logger,
-        "Completed initial generation handling on shard {}", shard
-    );
+    info!("Completed initial generation handling on shard {}", shard);
     Ok(())
 }
 
@@ -100,7 +97,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let (sqlblob, shard_range) = utils::get_sqlblob_and_shard_range(&app).await?;
 
     if !args.skip_initial_generation {
-        info!(logger, "Starting initial generation set");
+        info!("Starting initial generation set");
         let set_initial_generation_futures: Vec<_> = shard_range
             .clone()
             .map(|shard| Ok(handle_initial_generation(&ctx, &sqlblob, shard, &logger)))
@@ -108,7 +105,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         stream::iter(set_initial_generation_futures.into_iter())
             .try_for_each_concurrent(max_parallelism, |fut| fut)
             .await?;
-        info!(logger, "Completed initial generation set");
+        info!("Completed initial generation set");
     }
 
     if args.initial_generation_only {
@@ -123,7 +120,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     // Hold mark generation constant for run
     let mark_generation = sqlblob.get_mark_generation();
 
-    info!(logger, "Starting marking generation {}", mark_generation);
+    info!("Starting marking generation {}", mark_generation);
     // Set up a task to process each key in parallel in its own task.
     let (key_channel, processor) = {
         let sqlblob = Arc::clone(&sqlblob);
@@ -157,7 +154,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
 
     // Foreach shard in shard_range
     for shard in shard_range {
-        info!(logger, "Starting mark on data keys from shard {}", shard);
+        info!("Starting mark on data keys from shard {}", shard);
         let res = sqlblob
             .get_keys_from_shard(&ctx, shard)
             .forward(key_channel.clone().sink_err_into())
@@ -174,6 +171,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     std::mem::drop(key_channel);
 
     processor.await??;
-    info!(logger, "Completed marking generation {}", mark_generation);
+    info!("Completed marking generation {}", mark_generation);
     Ok(())
 }

@@ -63,12 +63,12 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentity;
 use sharding_ext::RepoShard;
 use slog::Logger;
-use slog::debug;
-use slog::error;
-use slog::info;
-use slog::warn;
 use sql_commit_graph_storage::CommitGraphBulkFetcher;
 use sql_commit_graph_storage::CommitGraphBulkFetcherRef;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 const LIMIT: usize = 1000;
 const SM_SERVICE_SCOPE: &str = "global";
@@ -154,7 +154,7 @@ impl RepoShardedProcess for AliasVerifyProcess {
         let repo_name = repo.repo_name.as_str();
         let start = repo.chunk_id.unwrap_or(0) as u64;
         let total = repo.total_chunks.unwrap_or(1) as u64;
-        info!(&logger, "Setting up alias verify for repo {}", repo_name);
+        info!("Setting up alias verify for repo {}", repo_name);
         let ctx = self.app.new_basic_context();
         self.repos_mgr
             .add_repo(repo_name.as_ref())
@@ -215,7 +215,7 @@ struct AliasVerifyArgs {
 
 /// Struct representing the Alias Verify process over the context of Repo.
 struct AliasVerification {
-    logger: Logger,
+    _logger: Logger,
     repos: Arc<MononokeRepos<Repo>>,
     repo_name: String,
     args: Arc<AliasVerifyArgs>,
@@ -232,18 +232,16 @@ struct AliasVerification {
 impl RepoShardedProcessExecutor for AliasVerification {
     async fn execute(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
-            "Initiating alias verify execution for repo {}", &self.repo_name,
+            "Initiating alias verify execution for repo {}",
+            &self.repo_name,
         );
 
         let val = self.verify_all().await;
         match val {
             Err(ref e) => {
                 error!(
-                    self.logger,
                     "Alias Verify Failure in repo {}. Terminating execution. Cause: {:?}",
-                    &self.repo_name,
-                    e
+                    &self.repo_name, e
                 );
                 val
             }
@@ -253,8 +251,8 @@ impl RepoShardedProcessExecutor for AliasVerification {
 
     async fn stop(&self) -> anyhow::Result<()> {
         info!(
-            self.logger,
-            "Terminating alias verify execution for repo {}", &self.repo_name,
+            "Terminating alias verify execution for repo {}",
+            &self.repo_name,
         );
         self.cancellation_requested.store(true, Ordering::Relaxed);
         Ok(())
@@ -274,7 +272,7 @@ impl AliasVerification {
         redacted_content_ids: HashSet<String>,
     ) -> Self {
         Self {
-            logger,
+            _logger: logger,
             repo_name,
             repos,
             args,
@@ -302,7 +300,7 @@ impl AliasVerification {
     async fn get_file_changes_vector(&self, bcs_id: ChangesetId) -> Result<Vec<FileChange>, Error> {
         let cs_cnt = self.cs_processed.fetch_add(1, Ordering::Relaxed);
         if cs_cnt % 1000 == 0 {
-            info!(self.logger, "Commit processed {:?}", cs_cnt);
+            info!("Commit processed {:?}", cs_cnt);
         }
         let bcs = bcs_id
             .load(&self.ctx, self.repo()?.repo_blobstore())
@@ -348,8 +346,8 @@ impl AliasVerification {
     ) -> Result<(), Error> {
         self.err_cnt.fetch_add(1, Ordering::Relaxed);
         debug!(
-            self.logger,
-            "Missing alias blob: alias {}, content_id {:?}", alias, content_id
+            "Missing alias blob: alias {}, content_id {:?}",
+            alias, content_id
         );
         match self.args.mode {
             Mode::Verify => Ok(()),
@@ -426,7 +424,6 @@ impl AliasVerification {
             RunStatus::Finished => "finished",
         };
         info!(
-            self.logger,
             "Alias Verification {}: {:?} errors found",
             resolution,
             self.err_cnt.load(Ordering::Relaxed)
@@ -444,12 +441,9 @@ impl AliasVerification {
 
     async fn update_overall_progress(&self, completed: usize, max_id: u64) -> Result<()> {
         let repo = self.repo()?;
-        info!(self.logger, "Processed {} changesets", completed);
+        info!("Processed {} changesets", completed);
         if let Mode::Backfill = self.args.mode {
-            info!(
-                self.logger,
-                "Completed processing till changeset ID {:?}", max_id
-            );
+            info!("Completed processing till changeset ID {:?}", max_id);
             let counter_name = self.counter_name();
             repo.mutable_counters()
                 .set_counter(&self.ctx, &counter_name, max_id as i64, None)
@@ -494,10 +488,8 @@ impl AliasVerification {
                             )
                         })?;
                     info!(
-                        self.logger,
                         "Updated total commits processed for {} to {}",
-                        self.repo_name,
-                        new_counter_val
+                        self.repo_name, new_counter_val
                     );
                 }
             }
@@ -510,8 +502,8 @@ impl AliasVerification {
             return Ok(());
         }
         info!(
-            self.logger,
-            "Process Changesets with ids: [{:?}, {:?})", bounds.start, bounds.end,
+            "Process Changesets with ids: [{:?}, {:?})",
+            bounds.start, bounds.end,
         );
         let repo = self.repo()?;
         let bcs_ids = repo.commit_graph_bulk_fetcher().oldest_first_stream(
@@ -540,7 +532,6 @@ impl AliasVerification {
                             .contains(&tc.content_id().blobstore_key())
                         {
                             warn!(
-                                self.logger,
                                 "Skipping content id {:?} since it is part of the redaction list",
                                 tc.content_id()
                             );
@@ -606,12 +597,8 @@ impl AliasVerification {
         let mut bounds = vec![];
         let mut cur_id = cmp::max(repo_bounds.start, cur_bounds.start);
         info!(
-            self.logger,
             "Initiating aliasverify in {:?} mode with bounds [{}, {}). Starting with changeset with id {}.",
-            self.args.mode,
-            cur_bounds.start,
-            cur_bounds.end,
-            cur_id,
+            self.args.mode, cur_bounds.start, cur_bounds.end, cur_id,
         );
         while cur_id < cur_bounds.end {
             let max = cmp::min(cur_bounds.end, cur_id + step);

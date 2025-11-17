@@ -27,8 +27,8 @@ use packblob::SingleCompressed;
 use packblob::get_entry_compressed_size;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use slog::info;
 use tokio::task::spawn_blocking;
+use tracing::info;
 
 type BlobsWithKeys = Vec<(String, BlobstoreBytes)>;
 
@@ -135,7 +135,7 @@ pub async fn repack_keys_with_retry<T: BlobstorePutOps>(
     dry_run: bool,
     scuba: &MononokeScubaSampleBuilder,
     tuning_info_scuba: &MononokeScubaSampleBuilder,
-    logger: &Logger,
+    _logger: &Logger,
 ) -> Result<()> {
     retry(
         |_| {
@@ -155,7 +155,7 @@ pub async fn repack_keys_with_retry<T: BlobstorePutOps>(
     )
     .binary_exponential_backoff()
     .max_attempts(RETRIES)
-    .inspect_err(|attempt, _err| info!(logger, "attempt {attempt} of {RETRIES} failed"))
+    .inspect_err(|attempt, _err| info!("attempt {attempt} of {RETRIES} failed"))
     .await?;
     Ok(())
 }

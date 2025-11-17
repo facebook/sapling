@@ -53,11 +53,11 @@ use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
 use slog::Logger;
-use slog::error;
-use slog::info;
 use slog::o;
-use slog::warn;
 use tracing::Instrument;
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 
@@ -141,15 +141,9 @@ impl MononokeServerProcess {
             )
             .await
             .with_context(|| format!("Error while warming up cache for repo {}", repo_name))?;
-            info!(
-                &logger,
-                "Completed repo {} setup in Mononoke service", repo_name
-            );
+            info!("Completed repo {} setup in Mononoke service", repo_name);
         } else {
-            info!(
-                &logger,
-                "Repo {} is already setup in Mononoke service", repo_name
-            );
+            info!("Repo {} is already setup in Mononoke service", repo_name);
         }
         Ok(())
     }
@@ -160,7 +154,7 @@ impl RepoShardedProcess for MononokeServerProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.clone();
         let logger = self.repos_mgr.repo_logger(&repo_name);
-        info!(&logger, "Setting up repo {} in Mononoke service", repo_name);
+        info!("Setting up repo {} in Mononoke service", repo_name);
         self.add_repo(&repo_name, &logger, &self.scuba.clone())
             .await
             .with_context(|| {
@@ -204,13 +198,9 @@ impl MononokeServerProcessExecutor {
 
         if is_deep_sharded {
             self.repos_mgr.remove_repo(repo_name);
-            info!(
-                self.repos_mgr.logger(),
-                "No longer serving repo {} in Mononoke service.", repo_name,
-            );
+            info!("No longer serving repo {} in Mononoke service.", repo_name,);
         } else {
             info!(
-                self.repos_mgr.logger(),
                 "Continuing serving repo {} in Mononoke service because it's shallow-sharded.",
                 repo_name,
             );
@@ -222,10 +212,7 @@ impl MononokeServerProcessExecutor {
 #[async_trait]
 impl RepoShardedProcessExecutor for MononokeServerProcessExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
-        info!(
-            self.repos_mgr.logger(),
-            "Serving repo {} in Mononoke service", &self.repo_name,
-        );
+        info!("Serving repo {} in Mononoke service", &self.repo_name,);
 
         Ok(())
     }
@@ -257,7 +244,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let runtime = app.runtime().clone();
 
     let cslb_config = args.cslb_config.clone();
-    info!(root_log, "Starting up");
+    info!("Starting up");
 
     #[cfg(fbcode_build)]
     if let (Some(land_service_cert_path), Some(land_service_key_path)) = (
@@ -290,14 +277,14 @@ fn main(fb: FacebookInit) -> Result<()> {
         });
 
         if args.tls_args.disable_mtls {
-            warn!(root_log, "MTLS has been disabled!");
+            warn!("MTLS has been disabled!");
             builder.set_verify(openssl::ssl::SslVerifyMode::NONE)
         }
 
         builder.build()
     };
 
-    info!(root_log, "Creating repo listeners");
+    info!("Creating repo listeners");
 
     let scribe = args.scribe_logging_args.get_scribe(fb)?;
     let host_port = args.listening_host_port;
@@ -326,9 +313,9 @@ fn main(fb: FacebookInit) -> Result<()> {
             let common = configs.common.clone();
             let repos_mgr = app.open_managed_repos::<Repo>(service_name).await?;
             let mononoke = Arc::new(repos_mgr.make_mononoke_api()?);
-            info!(&root_log, "Built Mononoke");
+            info!("Built Mononoke");
 
-            info!(&root_log, "Warming up cache");
+            info!("Warming up cache");
             stream::iter(mononoke.repos())
                 .map(|repo| {
                     let repo_name = repo.repo_identity().name().to_string();
@@ -356,7 +343,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .buffer_unordered(40)
                 .try_collect::<()>()
                 .await?;
-            info!(&root_log, "Cache warmup completed");
+            info!("Cache warmup completed");
             let repos_mgr = Arc::new(repos_mgr);
             if let Some(executor) = args.sharded_executor_args.build_executor(
                 app.fb,
@@ -418,7 +405,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         args.shutdown_timeout_args.shutdown_grace_period,
         async {
             if let Err(err) = terminate_sender.send(()) {
-                error!(root_log, "could not send termination signal: {:?}", err);
+                error!("could not send termination signal: {:?}", err);
             }
             repo_listener::wait_for_connections_closed(&root_log).await;
         },

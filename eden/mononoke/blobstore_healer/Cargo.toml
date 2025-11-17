@@ -35,6 +35,7 @@ slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://gith
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 wait_for_replication = { version = "0.1.0", path = "../common/wait_for_replication" }
 
 [dev-dependencies]

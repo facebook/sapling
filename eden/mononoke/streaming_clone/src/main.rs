@@ -41,13 +41,13 @@ use mutable_blobstore::MutableRepoBlobstoreRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use slog::Logger;
-use slog::info;
 use slog::o;
 use streaming_clone::StreamingClone;
 use streaming_clone::StreamingCloneRef;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncSeekExt;
 use tracing::Instrument;
+use tracing::info;
 
 /// Tool to manage streaming clone chunks
 #[derive(Parser)]
@@ -109,7 +109,6 @@ async fn streaming_clone(fb: FacebookInit, app: &MononokeApp) -> Result<(), Erro
     let logger = app.logger();
     let repo: Repo = app.open_repo(&args.repo).await?;
     info!(
-        logger,
         "using repo \"{}\" repoid {:?}",
         repo.repo_identity().name(),
         repo.repo_identity().id()
@@ -209,21 +208,17 @@ async fn update_streaming_changelog(
 
     if let Some(at_least_chunks) = no_upload_if_less_than_chunks {
         if chunks.len() < at_least_chunks {
-            info!(
-                ctx.logger(),
-                "has too few chunks to upload - {}. Exiting",
-                chunks.len()
-            );
+            info!("has too few chunks to upload - {}. Exiting", chunks.len());
             return Ok(0);
         }
     }
 
-    info!(ctx.logger(), "about to upload {} entries", chunks.len());
+    info!("about to upload {} entries", chunks.len());
     let chunks = upload_chunks_blobstore(ctx, repo, &chunks, &idx, &data).await?;
 
-    info!(ctx.logger(), "inserting into streaming clone database");
+    info!("inserting into streaming clone database");
     let start = repo.streaming_clone().select_max_chunk_num(ctx).await?;
-    info!(ctx.logger(), "current max chunk num is {:?}", start);
+    info!("current max chunk num is {:?}", start);
     let start = start.map_or(0, |start| start + 1);
     let chunks: Vec<_> = chunks
         .into_iter()
@@ -262,8 +257,8 @@ async fn find_latest_rev_id_in_streaming_changelog(
         .await?
         .unwrap_or((0, 0));
     info!(
-        ctx.logger(),
-        "current sizes in database: index: {}, data: {}", cur_idx_size, cur_data_size
+        "current sizes in database: index: {}, data: {}",
+        cur_idx_size, cur_data_size
     );
     let cur_idx_size: usize = cur_idx_size.try_into().unwrap();
     let rev_idx_to_skip = cur_idx_size / index_entry_size;
@@ -340,7 +335,7 @@ async fn upload_chunks_blobstore<'a>(
         move |_| {
             i += 1;
             if i % 100 == 0 {
-                info!(ctx.logger(), "uploaded {}", i);
+                info!("uploaded {}", i);
             }
         }
     })

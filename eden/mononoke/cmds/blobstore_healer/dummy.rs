@@ -20,12 +20,11 @@ use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
 use slog::Logger;
-use slog::info;
+use tracing::info;
 
 #[derive(Debug)]
 pub struct DummyBlobstore<B> {
     inner: B,
-    logger: Logger,
 }
 
 impl<B: std::fmt::Display> std::fmt::Display for DummyBlobstore<B> {
@@ -35,8 +34,8 @@ impl<B: std::fmt::Display> std::fmt::Display for DummyBlobstore<B> {
 }
 
 impl<B: Blobstore> DummyBlobstore<B> {
-    pub fn new(inner: B, logger: Logger) -> Self {
-        Self { inner, logger }
+    pub fn new(inner: B, _logger: Logger) -> Self {
+        Self { inner }
     }
 }
 
@@ -56,12 +55,7 @@ impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        info!(
-            self.logger,
-            "I would have written blob {} of size {}",
-            key,
-            value.len()
-        );
+        info!("I would have written blob {} of size {}", key, value.len());
         Ok(())
     }
 
@@ -74,7 +68,7 @@ impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
     }
 
     async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        info!(self.logger, "I would have unlinked blob {}", key);
+        info!("I would have unlinked blob {}", key);
         Ok(())
     }
 }
@@ -93,15 +87,11 @@ impl<Q: BlobstoreWal> DummyBlobstoreWal<Q> {
 impl<Q: BlobstoreWal> BlobstoreWal for DummyBlobstoreWal<Q> {
     async fn log_many<'a>(
         &'a self,
-        ctx: &'a CoreContext,
+        _ctx: &'a CoreContext,
         entries: Vec<BlobstoreWalEntry>,
     ) -> Result<Vec<BlobstoreWalEntry>> {
         let entries_str: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
-        info!(
-            ctx.logger(),
-            "I would have written {}",
-            entries_str.join(",\n")
-        );
+        info!("I would have written {}", entries_str.join(",\n"));
         Ok(entries)
     }
 
@@ -117,21 +107,17 @@ impl<Q: BlobstoreWal> BlobstoreWal for DummyBlobstoreWal<Q> {
 
     async fn delete<'a>(
         &'a self,
-        ctx: &'a CoreContext,
+        _ctx: &'a CoreContext,
         entries: &'a [BlobstoreWalEntry],
     ) -> Result<()> {
         let entries: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
-        info!(ctx.logger(), "I would have deleted {}", entries.join(",\n"));
+        info!("I would have deleted {}", entries.join(",\n"));
         Ok(())
     }
 
-    async fn delete_by_key(&self, ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()> {
+    async fn delete_by_key(&self, _ctx: &CoreContext, entries: &[BlobstoreWalEntry]) -> Result<()> {
         let entries: Vec<_> = entries.iter().map(|e| format!("{:?}", e)).collect();
-        info!(
-            ctx.logger(),
-            "I would have deleted by key {}",
-            entries.join(",\n")
-        );
+        info!("I would have deleted by key {}", entries.join(",\n"));
         Ok(())
     }
 }

@@ -51,10 +51,10 @@ use repo_derived_data::RepoDerivedData;
 use restricted_paths::RestrictedPaths;
 use restricted_paths::RestrictedPathsArc;
 use slog::Logger;
-use slog::debug;
-use slog::error;
-use slog::info;
-use slog::warn;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 #[facet::container]
 #[derive(Clone)]
@@ -204,21 +204,16 @@ fn subcommand_round_trip(
         bonsai_verify
             .verify(start_points)
             .and_then({
-                cloned!(ctx, logger, valid, invalid, ignored);
+                cloned!(ctx, valid, invalid, ignored);
                 move |(result, meta)| {
-                    cloned!(ctx, logger, valid, invalid, ignored, end_sender);
+                    cloned!(ctx, valid, invalid, ignored, end_sender);
                     async move {
-                        let logger = logger
-                            .new(slog::o!["changeset_id" => format!("{}", meta.changeset_id)]);
-
                         if !result.is_ignored() {
                             let followed = follow_limit - meta.follow_remaining;
                             if followed % 10000 == 0 {
                                 info!(
-                                    logger,
                                     "Followed {} changesets, {} remaining",
-                                    followed,
-                                    meta.follow_remaining,
+                                    followed, meta.follow_remaining,
                                 );
                             }
                             if meta.follow_remaining == 0 {
@@ -230,35 +225,31 @@ fn subcommand_round_trip(
 
                         match &result {
                             BonsaiMFVerifyResult::Valid { .. } => {
-                                debug!(logger, "VALID");
+                                debug!("VALID");
                                 valid.fetch_add(1, Ordering::Relaxed);
                                 Ok(())
                             }
                             BonsaiMFVerifyResult::ValidDifferentId(difference) => {
                                 debug!(
-                                    logger,
-                                    "VALID but with a different hash: \
-                                expected manifest ID: {}, roundtrip ID: {}",
-                                    difference.expected_mf_id,
-                                    difference.roundtrip_mf_id,
+                                    expected_mf_id = difference.expected_mf_id.to_string(),
+                                    roundtrip_mf_id = difference.roundtrip_mf_id.to_string(),
+                                    "VALID but with a different hash"
                                 );
                                 valid.fetch_add(1, Ordering::Relaxed);
                                 Ok(())
                             }
                             BonsaiMFVerifyResult::Invalid(difference) => {
-                                warn!(logger, "INVALID");
-                                info!(
-                                    logger, "manifest hash differs";
-                                    "expected manifest ID" => difference.expected_mf_id.to_string(),
-                                    "roundtrip ID" => difference.roundtrip_mf_id.to_string(),
+                                warn!(
+                                    expected_mf_id = difference.expected_mf_id.to_string(),
+                                    roundtrip_mf_id = difference.roundtrip_mf_id.to_string(),
+                                    "INVALID: manifest hash differs",
                                 );
                                 invalid.fetch_add(1, Ordering::Relaxed);
                                 if print_changes {
-                                    let logger = logger.clone();
                                     difference
                                         .changes(ctx.clone())
                                         .inspect_ok(move |changed_entry| {
-                                            info!(logger, "Change: {:?}", changed_entry);
+                                            info!("Change: {:?}", changed_entry);
                                         })
                                         .try_collect::<Vec<_>>()
                                         .await?;
@@ -279,7 +270,7 @@ fn subcommand_round_trip(
                 // collect() below will stop after the first error, but we care about all errors.
                 // So report them now and keep returning Ok.
                 if let Err(err) = &res {
-                    error!(logger, "ERROR: {err:?}");
+                    error!("ERROR: {err:?}");
                     errors.fetch_add(1, Ordering::Relaxed);
                 }
                 Ok::<_, ()>(())
@@ -298,7 +289,7 @@ fn subcommand_round_trip(
 }
 
 fn summarize(
-    logger: Logger,
+    _logger: Logger,
     end_points: Vec<HgChangesetId>,
     valid: Arc<AtomicUsize>,
     invalid: Arc<AtomicUsize>,
@@ -316,20 +307,10 @@ fn summarize(
     let total = valid + invalid + errors;
     let percent_valid = 100.0 * (valid as f64) / (total as f64);
 
-    let logger = logger.new(slog::o!["summary" => ""]);
-
-    info!(
-        logger,
-        "{:.2}% valid", percent_valid;
-        "ignored" => ignored,
-        "errors" => errors,
-        "valid" => valid,
-        "total" => total,
-    );
+    info!(ignored, errors, valid, total, "{:.2}% valid", percent_valid);
 
     if !end_points.is_empty() {
         info!(
-            logger,
             "To resume verification, run with arguments: {}",
             end_points.join(" "),
         );

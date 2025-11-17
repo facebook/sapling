@@ -33,7 +33,7 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use regex::Regex;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::info;
+use tracing::info;
 
 mod pack_utils;
 
@@ -201,12 +201,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .expect("Can get the file part")
                 .to_str()
                 .ok_or_else(|| anyhow::anyhow!("name of key file must be valid UTF-8"))?;
-            info!(
-                logger,
-                "File {}, which has {} lines",
-                filename,
-                keys_list.len()
-            );
+            info!("File {}, which has {} lines", filename, keys_list.len());
         }
         runtime.block_on(async {
             // construct blobstore instance
@@ -249,7 +244,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         let elapsed = now.elapsed();
         if print_progress {
             info!(
-                logger,
                 "Progress: {:.3}%\tprocessing took {:.2?}",
                 (cur + 1) as f32 * 100.0 / total_file_count as f32,
                 elapsed

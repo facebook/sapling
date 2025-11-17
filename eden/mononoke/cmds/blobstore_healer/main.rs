@@ -52,10 +52,10 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
-use slog::info;
 use slog::o;
 use sql_construct::SqlConstructFromShardedDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
+use tracing::info;
 use wait_for_replication::WaitForReplication;
 use wal_healer::WalHealer;
 
@@ -325,18 +325,14 @@ async fn schedule_healing(
         let total_elapsed = healing_start_time.elapsed().as_secs_f32();
         let iteration_elapsed = iteration_start_time.elapsed().as_secs_f32();
         info!(
-            ctx.logger(),
             "Iteration rows processed: {} rows, {}s; total: {} rows, {}s",
-            processed_rows,
-            iteration_elapsed,
-            total_deleted_rows,
-            total_elapsed,
+            processed_rows, iteration_elapsed, total_deleted_rows, total_elapsed,
         );
 
         // if last batch read was not full,  wait at least 1 second, to avoid busy looping as don't
         // want to hammer the database with thousands of reads a second.
         if !processed_full_batch {
-            info!(ctx.logger(), "The last batch was not full size, waiting...",);
+            info!("The last batch was not full size, waiting...",);
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
@@ -376,7 +372,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let healing_min_age = ChronoDuration::seconds(args.heal_min_age_secs);
     let quiet = args.quiet;
     if !quiet {
-        info!(logger, "Using storage_config {:?}", storage_config);
+        info!("Using storage_config {:?}", storage_config);
     }
 
     let scuba = env.scuba_sample_builder.clone();
