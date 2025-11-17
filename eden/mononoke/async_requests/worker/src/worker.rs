@@ -44,12 +44,12 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
 use mononoke_macros::mononoke;
 use mononoke_types::Timestamp;
-use slog::debug;
-use slog::error;
-use slog::info;
-use slog::warn;
 use stats::define_stats;
 use stats::prelude::*;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 use crate::AsyncRequestsWorkerArgs;
 use crate::methods::megarepo_async_request_compute;
@@ -150,10 +150,7 @@ impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
             request_stream.right_stream()
         };
 
-        info!(
-            self.ctx.logger(),
-            "Worker initialization complete, starting request processing loop.",
-        );
+        info!("Worker initialization complete, starting request processing loop.",);
 
         request_stream
             .for_each_concurrent(
@@ -165,13 +162,13 @@ impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
                         mononoke::spawn_task(worker.compute_and_mark_completed(ctx, req_id, params))
                             .await
                     {
-                        warn!(self.ctx.logger(), "Error spawning request: {:?}", e);
+                        warn!("Error spawning request: {:?}", e);
                     }
                 },
             )
             .await;
 
-        info!(self.ctx.logger(), "Worker exiting");
+        info!("Worker exiting");
 
         stats_abort_handle.abort();
 
@@ -179,7 +176,7 @@ impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
     }
 
     async fn stop(&self) -> Result<()> {
-        info!(self.ctx.logger(), "Worker stopping");
+        info!("Worker stopping");
 
         Ok(())
     }
@@ -220,10 +217,7 @@ impl AsyncMethodRequestWorker {
                     Self::cleanup_abandoned_requests(&ctx, &queue, abandoned_threshold_secs).await
                 {
                     STATS::cleanup_error.add_value(1);
-                    warn!(
-                        ctx.logger(),
-                        "error while cleaning up abandoned requests, skipping: {}", e
-                    );
+                    warn!("error while cleaning up abandoned requests, skipping: {}", e);
                 };
 
                 if will_exit.load(Ordering::Relaxed) {
@@ -233,7 +227,7 @@ impl AsyncMethodRequestWorker {
                 match queue.dequeue(&ctx, &claimed_by).await {
                     Err(e) => {
                         STATS::dequeue_error.add_value(1);
-                        warn!(ctx.logger(), "error while dequeueing, skipping: {:?}", e);
+                        warn!("error while dequeueing, skipping: {:?}", e);
                         tokio::time::sleep(sleep_time).await;
                     }
                     Ok(Some((request_id, params))) => {
@@ -241,7 +235,7 @@ impl AsyncMethodRequestWorker {
                     }
                     Ok(None) => {
                         // No requests in the queues, sleep before trying again.
-                        debug!(ctx.logger(), "nothing to do, sleeping",);
+                        debug!("nothing to do, sleeping",);
                         tokio::time::sleep(sleep_time).await;
                     }
                 }
@@ -294,7 +288,7 @@ impl AsyncMethodRequestWorker {
             Ok(target) => target,
             Err(err) => {
                 STATS::process_failed.add_value(1);
-                error!(ctx.logger(), "Error getting target: {:?}", err);
+                error!("Error getting target: {:?}", err);
                 return;
             }
         };
@@ -322,7 +316,6 @@ impl AsyncMethodRequestWorker {
                 // We completed the request - let's mark it as complete
                 keep_alive_abort_handle.abort();
                 info!(
-                    ctx.logger(),
                     "[{}] request complete, saving result (processed: {})",
                     &req_id.0,
                     result.is_ok()
@@ -338,16 +331,10 @@ impl AsyncMethodRequestWorker {
                         log_result(ctx.clone(), &stats, &work_result, &complete_result);
                         match complete_result {
                             Ok(updated) => {
-                                info!(
-                                    ctx.logger(),
-                                    "[{}] result saved (updated: {})", &req_id.0, updated
-                                );
+                                info!("[{}] result saved (updated: {})", &req_id.0, updated);
                             }
                             Err(err) => {
-                                error!(
-                                    ctx.logger(),
-                                    "[{}] failed to save success result: {:?}", &req_id.0, err
-                                );
+                                error!("[{}] failed to save success result: {:?}", &req_id.0, err);
                             }
                         };
                     }
@@ -357,24 +344,20 @@ impl AsyncMethodRequestWorker {
                             Ok(will_retry) => {
                                 if will_retry {
                                     info!(
-                                        ctx.logger(),
                                         "[{}] worker failed to process request, will retry: {:?}",
-                                        &req_id.0,
-                                        err
+                                        &req_id.0, err
                                     );
                                 } else {
                                     info!(
-                                        ctx.logger(),
                                         "[{}] worker failed to process request, maximum retry attempts reached, will fail the request: {:?}",
-                                        &req_id.0,
-                                        err
+                                        &req_id.0, err
                                     );
                                 }
                             }
                             Err(err) => {
                                 error!(
-                                    ctx.logger(),
-                                    "[{}] failed to process retry attempt: {:?}", &req_id.0, err
+                                    "[{}] failed to process retry attempt: {:?}",
+                                    &req_id.0, err
                                 );
                             }
                         }
@@ -389,10 +372,7 @@ impl AsyncMethodRequestWorker {
                 // worker has completed it
 
                 STATS::process_aborted.add_value(1);
-                info!(
-                    ctx.logger(),
-                    "[{}] was completed by other worker, stopping", &req_id.0
-                );
+                info!("[{}] was completed by other worker, stopping", &req_id.0);
             }
         }
     }
@@ -422,8 +402,8 @@ impl AsyncMethodRequestWorker {
                 }
                 Err(err) => {
                     error!(
-                        ctx.logger(),
-                        "[{}] failed to update inprogress timestamp: {:?}", req_id.0, err
+                        "[{}] failed to update inprogress timestamp: {:?}",
+                        req_id.0, err
                     );
                     scuba.log_with_msg(
                         "Failed to update inprogress timestamp",

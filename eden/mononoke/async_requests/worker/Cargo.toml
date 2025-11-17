@@ -39,10 +39,10 @@ requests_table = { version = "0.1.0", path = "../requests_table" }
 scs_errors = { version = "0.1.0", path = "../../scs/scs_errors" }
 scs_methods = { version = "0.1.0", path = "../../scs/scs_methods" }
 sharding_ext = { version = "0.1.0", path = "../../cmdlib/sharding_ext" }
-slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

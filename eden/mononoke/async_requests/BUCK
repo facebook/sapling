@@ -44,9 +44,9 @@ rust_library(
     name = "async_requests_client",
     srcs = glob(["async_requests_client/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "async_requests_client"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:tracing",
         ":async_requests",
         ":requests_table",
         "//common/rust/shed/fbinit:fbinit",

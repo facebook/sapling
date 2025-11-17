@@ -48,7 +48,7 @@ use mononoke_app::monitoring::MonitoringAppExtension;
 use requests_table::LongRunningRequestsQueue;
 use requests_table::SqlLongRunningRequestsQueue;
 use sharding_ext::RepoShard;
-use slog::info;
+use tracing::info;
 
 const SERVICE_NAME: &str = "async_requests_worker";
 
@@ -114,8 +114,7 @@ impl WorkerProcess {
 impl RepoShardedProcess for WorkerProcess {
     async fn setup(&self, repo: &RepoShard) -> Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.as_str();
-        let logger = self.repos_mgr.repo_logger(repo_name);
-        info!(&logger, "Setting up repo {}", repo_name);
+        info!("Setting up repo {}", repo_name);
 
         let repo = self
             .repos_mgr
@@ -123,7 +122,7 @@ impl RepoShardedProcess for WorkerProcess {
             .await
             .with_context(|| format!("Failure in setting up repo {}", repo_name))?;
         let repos = vec![repo.repo_identity.id()];
-        info!(&logger, "Completed setup for repos {:?}", repos);
+        info!("Completed setup for repos {:?}", repos);
 
         let queue = Arc::new(AsyncMethodRequestQueue::new(
             self.sql_connection.clone(),
@@ -202,7 +201,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         true, // enable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
-        info!(logger, "Starting sharded process");
+        info!("Starting sharded process");
         // The Sharded Process Executor needs to branch off and execute
         // on its own dedicated task spawned off the common tokio runtime.
         runtime.spawn({
@@ -217,7 +216,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         });
 
         if args.process_global_queue {
-            info!(logger, "Starting executor for global queue");
+            info!("Starting executor for global queue");
             run_worker_queue(
                 &runtime,
                 ctx.clone(),
@@ -238,14 +237,12 @@ fn main(fb: FacebookInit) -> Result<()> {
             },
             args.shutdown_timeout_args.shutdown_grace_period,
             async {
-                info!(logger, "Shutdown");
+                info!("Shutdown");
             },
             args.shutdown_timeout_args.shutdown_timeout,
             None,
         )?;
     } else {
-        let logger = logger.clone();
-
         // Sanity check to avoid a weird nonsensical state. This triggered S460221, so let's be paranoid.
         let repos = mononoke.known_repo_ids();
         if repos.is_empty() {
@@ -253,11 +250,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
 
         // all enabled repos
-        info!(
-            logger,
-            "Starting unsharded executor for repos {:?}",
-            repos.clone()
-        );
+        info!("Starting unsharded executor for repos {:?}", repos.clone());
         run_worker_queue(
             &runtime,
             ctx.clone(),
@@ -272,7 +265,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
         // global queue
         if args.process_global_queue {
-            info!(logger, "Starting unsharded executor for global queue");
+            info!("Starting unsharded executor for global queue");
             run_worker_queue(
                 &runtime,
                 ctx.clone(),
@@ -293,7 +286,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             },
             args.shutdown_timeout_args.shutdown_grace_period,
             async {
-                info!(logger, "Shutdown");
+                info!("Shutdown");
             },
             args.shutdown_timeout_args.shutdown_timeout,
             None,

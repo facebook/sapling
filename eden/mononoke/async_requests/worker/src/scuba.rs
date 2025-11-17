@@ -12,10 +12,10 @@ use async_requests::types::AsynchronousRequestResult;
 use async_requests_types_thrift::AsynchronousRequestResult as ThriftAsynchronousRequestResult;
 use context::CoreContext;
 use futures_stats::FutureStats;
-use slog::info;
 use source_control::AsyncRequestError;
 use stats::define_stats;
 use stats::prelude::*;
+use tracing::info;
 
 use crate::worker::AsyncMethodRequestWorker;
 
@@ -47,8 +47,8 @@ impl AsyncMethodRequestWorker {
         });
 
         info!(
-            ctx.logger(),
-            "[{}] new request:  id: {}, type: {}, {}", &req_id.0, &req_id.0, &req_id.1, target,
+            "[{}] new request:  id: {}, type: {}, {}",
+            &req_id.0, &req_id.0, &req_id.1, target,
         );
 
         ctx

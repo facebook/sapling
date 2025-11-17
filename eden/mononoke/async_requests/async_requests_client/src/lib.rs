@@ -17,8 +17,8 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::RepositoryId;
 use mononoke_app::MononokeApp;
 use requests_table::SqlLongRunningRequestsQueue;
-use slog::debug;
 use sql_construct::SqlConstructFromDatabaseConfig;
+use tracing::debug;
 
 /// Build a new async requests queue client. If the repos argument is specified,
 /// then the client will only be able to access the repos specified in the argument.
@@ -43,10 +43,7 @@ pub async fn open_sql_connection(
 ) -> Result<SqlLongRunningRequestsQueue, Error> {
     let config = app.repo_configs().common.async_requests_config.clone();
     if let Some(config) = config.db_config {
-        debug!(
-            app.logger(),
-            "Initializing async_requests with an explicit config"
-        );
+        debug!("Initializing async_requests with an explicit config");
         SqlLongRunningRequestsQueue::with_database_config(fb, &config, app.mysql_options(), false)
     } else {
         bail!("async_requests config is missing");

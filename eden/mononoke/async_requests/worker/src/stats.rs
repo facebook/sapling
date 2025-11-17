@@ -14,9 +14,9 @@ use context::CoreContext;
 use mononoke_api::RepositoryId;
 use mononoke_types::Timestamp;
 use requests_table::QueueStatsEntry;
-use slog::warn;
 use stats::define_stats;
 use stats::prelude::*;
+use tracing::warn;
 
 const STATS_LOOP_INTERNAL: Duration = Duration::from_secs(5 * 60);
 
@@ -54,10 +54,7 @@ pub(crate) async fn stats_loop(
             }
             Err(err) => {
                 STATS::stats_error.add_value(1);
-                warn!(
-                    ctx.logger(),
-                    "error while getting queue stats, skipping: {:?}", err
-                );
+                warn!("error while getting queue stats, skipping: {:?}", err);
             }
         }
 
