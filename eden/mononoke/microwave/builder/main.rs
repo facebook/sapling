@@ -51,9 +51,8 @@ use repo_blobstore::RepoBlobstore;
 use repo_derived_data::RepoDerivedData;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_identity::RepoIdentity;
-use slog::info;
-use slog::o;
 use tracing::Instrument;
+use tracing::info;
 use warm_bookmarks_cache::LatestDerivedBookmarkEntry;
 use warm_bookmarks_cache::create_derived_data_warmer;
 use warm_bookmarks_cache::find_latest_derived_and_underived;
@@ -165,7 +164,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let location = match &args.command {
         Commands::LocalPath(local_path_args) => {
             let path = &local_path_args.local_path;
-            info!(logger, "Writing to path {}", path.display());
+            info!("Writing to path {}", path.display());
             SnapshotLocation::SharedLocalPath(path.as_path())
         }
         Commands::Blobstore => SnapshotLocation::Blobstore,
@@ -177,7 +176,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             cloned!(repo_factory, mut scuba, common_config);
             let span = tracing::info_span!("microwave builder", repo = %name);
             async move {
-                let logger = logger.new(o!("repo" => name.clone()));
                 let ctx = {
                     scuba.add("reponame", name.clone());
                     let session = SessionContainer::new_with_defaults(app.fb);

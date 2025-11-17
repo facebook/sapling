@@ -20,8 +20,8 @@ use bytes::Buf;
 use bytes::BytesMut;
 use mercurial_types::RepoPath;
 use slog::Logger;
-use slog::trace;
 use tokio_util::codec::Decoder;
+use tracing::trace;
 
 use super::DataEntry;
 use super::DataEntryVersion;
@@ -88,13 +88,16 @@ impl Decoder for WirePackUnpacker {
 pub fn new(logger: Logger, kind: Kind) -> WirePackUnpacker {
     WirePackUnpacker {
         state: State::Filename,
-        inner: UnpackerInner { logger, kind },
+        inner: UnpackerInner {
+            _logger: logger,
+            kind,
+        },
     }
 }
 
 #[derive(Debug)]
 struct UnpackerInner {
-    logger: Logger,
+    _logger: Logger,
     kind: Kind,
 }
 
@@ -104,7 +107,7 @@ impl UnpackerInner {
         let mut state = state;
 
         loop {
-            trace!(&self.logger, "state: {:?}", state);
+            trace!("state: {:?}", state);
             match state {
                 Filename => match self.decode_filename(buf)? {
                     DecodeRes::None => return Ok((None, State::Filename)),
@@ -219,7 +222,7 @@ impl UnpackerInner {
             .with_context(|| ErrorKind::WirePackDecode("invalid filename".into()))?
         };
 
-        trace!(&self.logger, "decoding entries for filename: {}", filename);
+        trace!("decoding entries for filename: {}", filename);
 
         Ok(DecodeRes::Some(filename))
     }

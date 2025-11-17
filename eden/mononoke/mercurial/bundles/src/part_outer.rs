@@ -20,11 +20,11 @@ use bytes::Buf;
 use bytes::Bytes;
 use bytes::BytesMut;
 use slog::Logger;
-use slog::debug;
 use slog::o;
 use tokio::io::AsyncBufRead;
 use tokio_util::codec::Decoder;
 use tokio_util::codec::FramedRead;
+use tracing::debug;
 
 use crate::errors::ErrorKind;
 use crate::part_header;
@@ -206,9 +206,9 @@ impl OuterDecoder {
         }
     }
 
-    fn decode_header(logger: &Logger, header_bytes: Bytes) -> Result<Option<PartHeader>> {
+    fn decode_header(_logger: &Logger, header_bytes: Bytes) -> Result<Option<PartHeader>> {
         let header = part_header::decode(header_bytes)?;
-        debug!(logger, "Decoded header: {:?}", header);
+        debug!("Decoded header: {:?}", header);
         match validate_header(header)? {
             Some(header) => Ok(Some(header)),
             None => {

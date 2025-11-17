@@ -27,9 +27,9 @@ use lazy_static::lazy_static;
 use maplit::hashset;
 use slog::Logger;
 use slog::o;
-use slog::warn;
 use tokio::io::AsyncBufRead;
 use tokio_util::codec::Decoder;
+use tracing::warn;
 
 use crate::Bundle2Item;
 use crate::capabilities;
@@ -144,7 +144,7 @@ pub fn get_cg_unpacker(
         Ok(version) => changegroup::unpacker::CgUnpacker::new(logger, version),
         Err(e) => {
             // ChangeGroup2 by default
-            warn!(_logger.clone(), "{:?}", e);
+            warn!("{:?}", e);
             let default_version = changegroup::unpacker::CgVersion::Cg2Version;
             changegroup::unpacker::CgUnpacker::new(_logger, default_version)
         }

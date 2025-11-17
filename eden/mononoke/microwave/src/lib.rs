@@ -27,10 +27,10 @@ use mononoke_types::RepoPath;
 use mononoke_types::RepositoryId;
 use mutable_blobstore::MutableRepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use slog::info;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
+use tracing::info;
 
 mod thrift {
     pub use microwave_if::*;
@@ -154,11 +154,7 @@ pub async fn prime_cache(
     let filenodes = reheat_filenodes(filenodes)?;
 
     repo.filenodes().prime_cache(ctx, filenodes.as_ref());
-    info!(
-        ctx.logger(),
-        "primed filenodes cache with {} entries",
-        filenodes.len()
-    );
+    info!("primed filenodes cache with {} entries", filenodes.len());
 
     Ok(())
 }

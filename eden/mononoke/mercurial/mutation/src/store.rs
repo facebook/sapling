@@ -22,10 +22,10 @@ use futures_retry::retry;
 use itertools::Itertools;
 use mercurial_types::HgChangesetId;
 use mononoke_types::RepositoryId;
-use slog::debug;
 use sql_ext::Connection;
 use sql_ext::SqlConnections;
 use sql_ext::mononoke_queries;
+use tracing::debug;
 
 use crate::HgMutationStore;
 use crate::entry::HgMutationEntry;
@@ -195,7 +195,6 @@ impl SqlHgMutationStore {
         .await?;
 
         debug!(
-            ctx.logger(),
             "Mutation store added {} entries for {} changesets after {count} attempts",
             db_entries.len(),
             db_csets.len()
@@ -436,7 +435,6 @@ impl HgMutationStore for SqlHgMutationStore {
             .await?;
         let changeset_count = changeset_ids.len();
         debug!(
-            ctx.logger(),
             "Mutation store fetched {} entries for {} changesets",
             entries.len(),
             changeset_count,

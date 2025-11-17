@@ -7,7 +7,6 @@ rust_binary(
     name = "builder",
     srcs = glob(["builder/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "builder"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
@@ -44,11 +43,11 @@ rust_binary(
 rust_library(
     name = "microwave",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/filenodes:filenodes",
         "//eden/mononoke/mercurial:mercurial_types",
