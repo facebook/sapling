@@ -59,11 +59,11 @@ use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::typed_hash::FsnodeId;
 use movers::Mover;
 use regex::Regex;
-use slog::debug;
-use slog::error;
-use slog::info;
-use slog::warn;
 use sorted_vector_map::SortedVectorMap;
+use tracing::debug;
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 use crate::commit_sync_config_utils::get_git_submodule_action_by_version;
 use crate::commit_syncers_lib::Syncers;
@@ -113,8 +113,8 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     info!(
-        ctx.logger(),
-        "target repo cs id: {}, mapping version: {}", target_hash, version
+        "target repo cs id: {}, mapping version: {}",
+        target_hash, version
     );
 
     let source_repo = commit_sync_data.get_source_repo();
@@ -191,14 +191,13 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
         get_large_repo_prefixes_to_visit(&commit_sync_data, version, live_commit_sync_config)
             .await?;
 
-    info!(ctx.logger(), "###");
+    info!("###");
     info!(
-        ctx.logger(),
         "### Checking that all the paths from the repo {} are properly rewritten to {}",
         large_repo.repo_identity().name(),
         small_repo.repo_identity().name(),
     );
-    info!(ctx.logger(), "###");
+    info!("###");
 
     verify_working_copy_inner(
         ctx,
@@ -215,14 +214,13 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
     )
     .await?;
 
-    info!(ctx.logger(), "###");
+    info!("###");
     info!(
-        ctx.logger(),
         "### Checking that all the paths from the repo {} are properly rewritten to {}",
         small_repo.repo_identity().name(),
         large_repo.repo_identity().name(),
     );
-    info!(ctx.logger(), "###");
+    info!("###");
     let small_repo_prefixes_to_visit = large_repo_prefixes_to_visit
         .into_iter()
         .map(|prefix| wrap_mover_result(movers.reverse_mover.as_ref(), &prefix))
@@ -244,7 +242,7 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
         &exp_and_metadata_paths,
     )
     .await?;
-    info!(ctx.logger(), "all is well!");
+    info!("all is well!");
     Ok(())
 }
 
@@ -380,7 +378,6 @@ async fn verify_working_copy_inner<'a>(
     let len = out.len();
     if !out.is_empty() {
         error!(
-            ctx.logger(),
             "Verification failed!!!\n{}",
             PrintableValidationOutput(
                 Source(source_repo.0.repo_identity().name().to_string()),
@@ -1260,7 +1257,7 @@ pub fn report_different<
     E: ExactSizeIterator<Item = (NonRootMPath, Source<T>, Target<T>)>,
     I: IntoIterator<IntoIter = E, Item = <E as Iterator>::Item>,
 >(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     different_things: I,
     source_hash: &Source<ChangesetId>,
     name: &str,
@@ -1278,26 +1275,14 @@ pub fn report_different<
 
         // And we also want a debug print of it
         debug!(
-            ctx.logger(),
             "Different {} for path {:?}: {}: {:?} {}: {:?}",
-            name,
-            mpath,
-            source_repo_name,
-            source_thing,
-            target_repo_name,
-            target_thing
+            name, mpath, source_repo_name, source_thing, target_repo_name, target_thing
         );
 
         for (mpath, source_thing, target_thing) in different_things {
             debug!(
-                ctx.logger(),
                 "Different {} for path {:?}: {}: {:?} {}: {:?}",
-                name,
-                mpath,
-                source_repo_name,
-                source_thing,
-                target_repo_name,
-                target_thing
+                name, mpath, source_repo_name, source_thing, target_repo_name, target_thing
             );
         }
 
@@ -1465,7 +1450,7 @@ pub async fn verify_bookmarks<R: Repo>(
         .name();
 
     if diff.is_empty() {
-        info!(ctx.logger(), "all is well!");
+        info!("all is well!");
         return Ok(());
     }
 
@@ -1484,7 +1469,6 @@ pub async fn verify_bookmarks<R: Repo>(
                         source_cs_id,
                     } => {
                         warn!(
-                            ctx.logger(),
                             "inconsistent value of {}: '{}' has {}, but '{}' bookmark points to {:?}",
                             target_bookmark,
                             target_repo_name,
@@ -1498,23 +1482,16 @@ pub async fn verify_bookmarks<R: Repo>(
                         source_cs_id,
                     } => {
                         warn!(
-                            ctx.logger(),
                             "'{}' doesn't have bookmark {} but '{}' has it and it points to {}",
-                            target_repo_name,
-                            target_bookmark,
-                            source_repo_name,
-                            source_cs_id,
+                            target_repo_name, target_bookmark, source_repo_name, source_cs_id,
                         );
                     }
                     NoSyncOutcome { target_bookmark } => {
                         warn!(
-                            ctx.logger(),
                             "'{}' has a bookmark {} but it points to a commit that has no \
                             equivalent in '{}'. If it's a shared bookmark (e.g. master) \
                             that might mean that it points to a commit from another repository",
-                            target_repo_name,
-                            target_bookmark,
-                            source_repo_name,
+                            target_repo_name, target_bookmark, source_repo_name,
                         );
                     }
                 }
@@ -1551,7 +1528,6 @@ pub async fn update_large_repo_bookmarks<'a, R: Repo>(
     let diff: Box<dyn Iterator<Item = &BookmarkDiff> + Send> = match limit {
         Some(limit) => {
             warn!(
-                ctx.logger(),
                 "found {} inconsistencies, will update at most {} of them...",
                 diff.len(),
                 limit
@@ -1560,7 +1536,6 @@ pub async fn update_large_repo_bookmarks<'a, R: Repo>(
         }
         None => {
             warn!(
-                ctx.logger(),
                 "found {} inconsistencies, trying to update them...",
                 diff.len()
             );
@@ -1573,7 +1548,6 @@ pub async fn update_large_repo_bookmarks<'a, R: Repo>(
             .contains(d.target_bookmark())
         {
             info!(
-                ctx.logger(),
                 "skipping {} because it's a common bookmark",
                 d.target_bookmark()
             );
@@ -1599,8 +1573,8 @@ pub async fn update_large_repo_bookmarks<'a, R: Repo>(
                 let new_value = match outcomes {
                     NotSyncCandidate(..) => {
                         warn!(
-                            ctx.logger(),
-                            "{} from small repo doesn't remap to large repo", target_cs_id,
+                            "{} from small repo doesn't remap to large repo",
+                            target_cs_id,
                         );
                         None
                     }
@@ -1637,7 +1611,7 @@ pub async fn update_large_repo_bookmarks<'a, R: Repo>(
                             format_err!("small bookmark {} remaps to nothing", target_bookmark)
                         })?;
 
-                    info!(ctx.logger(), "setting {} {}", large_bookmark, large_cs_id);
+                    info!("setting {} {}", large_bookmark, large_cs_id);
                     if update_mode == UpdateLargeRepoBookmarksMode::Real {
                         book_txn.force_set(&large_bookmark, large_cs_id, reason)?;
                     }
@@ -1647,21 +1621,20 @@ pub async fn update_large_repo_bookmarks<'a, R: Repo>(
                 target_bookmark, ..
             } => {
                 warn!(
-                    ctx.logger(),
-                    "large repo bookmark (renames to {}) not found in small repo", target_bookmark,
+                    "large repo bookmark (renames to {}) not found in small repo",
+                    target_bookmark,
                 );
                 let large_bookmark = bookmark_renamer(target_bookmark).await?.ok_or_else(|| {
                     format_err!("small bookmark {} remaps to nothing", target_bookmark)
                 })?;
                 let reason = BookmarkUpdateReason::XRepoSync;
-                info!(ctx.logger(), "deleting {}", large_bookmark);
+                info!("deleting {}", large_bookmark);
                 if update_mode == UpdateLargeRepoBookmarksMode::Real {
                     book_txn.force_delete(&large_bookmark, reason)?;
                 }
             }
             NoSyncOutcome { target_bookmark } => {
                 warn!(
-                    ctx.logger(),
                     "Not updating {} because it points to a commit that has no \
                      equivalent in source repo.",
                     target_bookmark,

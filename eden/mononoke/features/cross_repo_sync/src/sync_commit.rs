@@ -56,12 +56,12 @@ use reporting::CommitSyncContext;
 use reporting::log_rewrite;
 use reporting::set_scuba_logger_fields;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::debug;
 use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::EquivalentWorkingCopyEntry;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitSourceRepo;
 use synced_commit_mapping_pushrebase_hook::ForwardSyncedCommitInfo;
+use tracing::debug;
 
 use crate::commit_sync_config_utils::get_bookmark_renamer;
 use crate::commit_sync_config_utils::get_common_pushrebase_bookmarks;
@@ -822,11 +822,8 @@ async fn unsafe_sync_commit_impl<'a, R: Repo>(
 ) -> Result<Option<ChangesetId>, Error> {
     let ctx = &set_scuba_logger_fields(ctx, [("sync_context", commit_sync_context.to_string())]);
     debug!(
-        ctx.logger(),
         "{:?}: unsafe_sync_commit called for {}, with hint: {:?}",
-        commit_sync_data,
-        source_cs_id,
-        parent_mapping_selection_hint
+        commit_sync_data, source_cs_id, parent_mapping_selection_hint
     );
     let source_repo = commit_sync_data.get_source_repo();
     let cs = source_cs_id.load(ctx, source_repo.repo_blobstore()).await?;
@@ -1083,7 +1080,7 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
             )
             .await?;
 
-            debug!(ctx.logger(), "Starting pushrebase...");
+            debug!("Starting pushrebase...");
             let pushrebase_res = do_pushrebase_bonsai(
                 ctx,
                 &target_repo,
@@ -1096,10 +1093,8 @@ async fn unsafe_sync_commit_pushrebase_impl<'a, R: Repo>(
             let pushrebase_res =
                 pushrebase_res.map_err(|e| Error::from(ErrorKind::PushrebaseFailure(e)))?;
             debug!(
-                ctx.logger(),
                 "Pushrebase complete: distance: {}, retry_num: {}",
-                pushrebase_res.pushrebase_distance.0,
-                pushrebase_res.retry_num.0
+                pushrebase_res.pushrebase_distance.0, pushrebase_res.retry_num.0
             );
             let pushrebased_changeset = pushrebase_res.head;
             Ok(Some(pushrebased_changeset))

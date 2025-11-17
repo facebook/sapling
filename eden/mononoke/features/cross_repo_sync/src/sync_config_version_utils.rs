@@ -16,7 +16,7 @@ use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use repo_derived_data::RepoDerivedDataRef;
-use slog::info;
+use tracing::info;
 
 use crate::commit_sync_outcome::CommitSyncOutcome;
 
@@ -40,13 +40,12 @@ pub async fn get_version_for_merge<'a>(
 }
 
 pub fn get_version_for_merge_with_info<'a>(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     cs_info: &ChangesetInfo,
     parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
 ) -> Result<CommitSyncConfigVersion, Error> {
     if let Some(version) = get_mapping_change_version(cs_info)? {
         info!(
-            ctx.logger(),
             "force using mapping {} to rewrite {}",
             version,
             cs_info.changeset_id()
@@ -96,13 +95,12 @@ pub async fn get_version<'a>(
 }
 
 pub fn get_version_with_info<'a>(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     cs_info: &ChangesetInfo,
     parent_versions: impl IntoIterator<Item = &'a CommitSyncConfigVersion>,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
     if let Some(version) = get_mapping_change_version(cs_info)? {
         info!(
-            ctx.logger(),
             "force using mapping {} to rewrite {}",
             version,
             cs_info.changeset_id()

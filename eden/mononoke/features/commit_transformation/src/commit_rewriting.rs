@@ -39,9 +39,9 @@ use pushrebase::find_bonsai_diff;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use slog::Logger;
-use slog::debug;
-use slog::error;
 use sorted_vector_map::SortedVectorMap;
+use tracing::debug;
+use tracing::error;
 
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::git_submodules::sync_commit_with_submodule_expansion;
@@ -454,7 +454,6 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
         justknobs::eval("scm/mononoke:strip_commit_extras_in_xrepo_sync", None, None)
             .unwrap_or_else(|err| {
                 error!(
-                    logger,
                     "Failed to read just knob scm/mononoke:strip_commit_extras_in_xrepo_sync: {err}"
                 );
                 false
@@ -482,7 +481,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
         None,
     )
     .unwrap_or_else(|err| {
-        error!(logger, "Failed to read just knob scm/mononoke:should_set_committer_info_to_author_info_if_empty: {err}");
+        error!("Failed to read just knob scm/mononoke:should_set_committer_info_to_author_info_if_empty: {err}");
         false
     });
 
@@ -545,7 +544,7 @@ pub fn create_directory_source_to_target_multi_mover(
 }
 
 fn mark_as_created_by_lossy_conversion(
-    logger: &Logger,
+    _logger: &Logger,
     cs: &mut BonsaiChangesetMut,
     reason: LossyConversionReason,
 ) {
@@ -561,8 +560,8 @@ fn mark_as_created_by_lossy_conversion(
         }
     };
     debug!(
-        logger,
-        "Marking changeset as created by lossy conversion because {}", reason
+        "Marking changeset as created by lossy conversion because {}",
+        reason
     );
     cs.hg_extra
         .insert("created_by_lossy_conversion".to_string(), Vec::new());

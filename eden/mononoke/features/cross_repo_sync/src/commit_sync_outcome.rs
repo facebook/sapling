@@ -21,9 +21,9 @@ use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::CommitSyncDirection;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
-use slog::debug;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::WorkingCopyEquivalence;
+use tracing::debug;
 
 use crate::commit_sync_config_utils::get_small_repos_for_version;
 use crate::types::Repo;
@@ -329,12 +329,8 @@ pub async fn get_commit_sync_outcome_with_hint<'a, M: SyncedCommitMapping, R: Re
     )
     .await?;
     debug!(
-        ctx.logger(),
         "get_commit_sync_outcome_with_hint called for {}->{}, cs {}, hint {:?}",
-        source_repo_id.0,
-        target_repo_id.0,
-        source_cs_id.0,
-        hint
+        source_repo_id.0, target_repo_id.0, source_cs_id.0, hint
     );
     let maybe_commit_sync_outcome = match maybe_plural_commit_sync_outcome {
         Some(plural_commit_sync_outcome) => match hint.try_into_desired_relationship(ctx).await? {
@@ -345,8 +341,8 @@ pub async fn get_commit_sync_outcome_with_hint<'a, M: SyncedCommitMapping, R: Re
             ),
             Some(desired_relationship) => {
                 debug!(
-                    ctx.logger(),
-                    "CandidateSelectionHint converted into: {:?}", desired_relationship
+                    "CandidateSelectionHint converted into: {:?}",
+                    desired_relationship
                 );
                 Some(
                     plural_commit_sync_outcome

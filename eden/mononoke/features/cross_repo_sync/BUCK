@@ -6,7 +6,6 @@ rust_library(
     name = "cross_repo_sync",
     # TODO(T182311609): move this to new folder
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fn-error-context",
@@ -40,6 +39,7 @@ rust_library(
         "fbsource//third-party/rust:static_assertions",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/bounded_traversal:bounded_traversal",
         "//common/rust/shed/cloned:cloned",

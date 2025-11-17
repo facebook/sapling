@@ -37,7 +37,6 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::error;
 use sorted_vector_map::SortedVectorMap;
 use thiserror::Error;
 

@@ -51,12 +51,12 @@ use movers::Movers;
 use reporting::log_debug;
 use reporting::log_info;
 use reporting::log_warning;
-use slog::info;
 use synced_commit_mapping::ArcSyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMapping;
 use synced_commit_mapping::SyncedCommitMappingEntry;
 use synced_commit_mapping::SyncedCommitSourceRepo;
 use topo_sort::sort_topological;
+use tracing::info;
 
 use crate::CommitSyncContext;
 use crate::commit_sync_config_utils::get_movers;
@@ -165,10 +165,8 @@ where
         traversed_num += 1;
         if traversed_num % 100 == 0 {
             info!(
-                ctx.logger(),
                 "traversed {} commits while listing unsynced ancestors, starting from {}",
-                traversed_num,
-                start_cs_id
+                traversed_num, start_cs_id
             );
         }
 

@@ -57,7 +57,6 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 reporting = { version = "0.1.0", path = "../../commit_rewriting/reporting" }
 scopeguard = "1.2.0"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 static_assertions = "1.1.0"
@@ -68,6 +67,7 @@ tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
