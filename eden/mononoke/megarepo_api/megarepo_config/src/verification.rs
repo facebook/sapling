@@ -11,14 +11,14 @@ use anyhow::Result;
 use anyhow::anyhow;
 use context::CoreContext;
 use megarepo_configs::SyncTargetConfig;
-use slog::warn;
+use tracing::warn;
 
 /// Verify the config
 pub fn verify_config(ctx: &CoreContext, config: &SyncTargetConfig) -> Result<()> {
     verify_unique_source_names(ctx, config)
 }
 
-fn verify_unique_source_names(ctx: &CoreContext, config: &SyncTargetConfig) -> Result<()> {
+fn verify_unique_source_names(_ctx: &CoreContext, config: &SyncTargetConfig) -> Result<()> {
     let mut seen = HashSet::new();
     let mut seen_more_than_once = HashSet::new();
     config.sources.iter().for_each(|src| {
@@ -29,8 +29,8 @@ fn verify_unique_source_names(ctx: &CoreContext, config: &SyncTargetConfig) -> R
 
     if !seen_more_than_once.is_empty() {
         warn!(
-            ctx.logger(),
-            "SyncTargetConfig validation error: non-unique source names: {:?}", seen_more_than_once
+            "SyncTargetConfig validation error: non-unique source names: {:?}",
+            seen_more_than_once
         );
 
         Err(anyhow!(

@@ -56,7 +56,7 @@ use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
 use slog::o;
-use slog::warn;
+use tracing::warn;
 
 mod add_branching_sync_target;
 #[cfg(test)]
@@ -198,17 +198,14 @@ impl<R: MononokeRepo> MegarepoApi<R> {
     /// Get Mononoke repo config and identity by a target
     async fn target_repo_config_and_id(
         &self,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         target: &Target,
     ) -> Result<(ArcRepoConfig, ArcRepoIdentity), Error> {
         let repo_id: i32 = TryFrom::<i64>::try_from(target.repo_id)?;
         let repo = match self.mononoke.raw_repo_by_id(repo_id) {
             Some(repo) => repo,
             None => {
-                warn!(
-                    ctx.logger(),
-                    "Unknown repo: {} in target {:?}", repo_id, target
-                );
+                warn!("Unknown repo: {} in target {:?}", repo_id, target);
                 bail!("unknown repo in the target: {}", repo_id)
             }
         };

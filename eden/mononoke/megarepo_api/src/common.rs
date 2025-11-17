@@ -73,9 +73,9 @@ use mononoke_types::content_manifest::compat::ContentManifestFile;
 use mononoke_types::content_manifest::compat::ContentManifestId;
 use mononoke_types::path::MPath;
 use repo_authorization::AuthorizationContext;
-use slog::info;
 use sorted_vector_map::SortedVectorMap;
 use tracing::Instrument;
+use tracing::info;
 
 use crate::Repo;
 
@@ -1317,7 +1317,7 @@ pub(crate) async fn derive_all_types_locally(
             description.contains("blobstore") || description.contains("timeout")
         })
         .max_attempts(5)
-        .inspect_err(|attempt, _err| info!(ctx.logger(), "attempt {attempt} failed"))
+        .inspect_err(|attempt, _err| info!("attempt {attempt} failed"))
         .await?;
     }
     Ok(())
@@ -1370,7 +1370,7 @@ pub(crate) async fn derive_all_types_remotely(
             description.contains("blobstore") || description.contains("timeout")
         })
         .max_attempts(5)
-        .inspect_err(|attempt, _err| info!(ctx.logger(), "attempt {attempt} failed"))
+        .inspect_err(|attempt, _err| info!("attempt {attempt} failed"))
         .await?;
     }
     Ok(())

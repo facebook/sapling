@@ -17,8 +17,8 @@ use megarepo_configs::Target;
 use megarepo_error::MegarepoError;
 use metaconfig_types::RepoConfig;
 use slog::Logger;
-use slog::warn;
 use sql_ext::facebook::MysqlOptions;
+use tracing::warn;
 
 use crate::MononokeMegarepoConfigs;
 
@@ -36,10 +36,7 @@ impl CfgrMononokeMegarepoConfigs {
         _mysql_options: MysqlOptions,
         _readonly_storage: ReadOnlyStorage,
     ) -> Result<Self, MegarepoError> {
-        warn!(
-            logger,
-            "CfgrMononokeMegarepoConfigs is not implemented for non-fbcode builds"
-        );
+        warn!("CfgrMononokeMegarepoConfigs is not implemented for non-fbcode builds");
         // While this struct should never be used in practice outside of fbcode, I think
         // it shouldn't be an error to simply instantiate it in non-fbcode
         // builds, so let's return `Ok` here.
