@@ -24,12 +24,12 @@ use rendezvous::ConfigurableRendezVousController;
 use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
-use slog::warn;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use sql_ext::SqlQueryTelemetry;
 use thiserror::Error;
+use tracing::warn;
 
 use super::BonsaiGlobalrevMapping;
 use super::BonsaiGlobalrevMappingCacheEntry;
@@ -499,10 +499,7 @@ pub async fn bulk_import_globalrevs<'a>(
                 entries.push(entry);
             }
             Err(e) => {
-                warn!(
-                    ctx.logger(),
-                    "Couldn't fetch globalrev from commit: {:?}", e
-                );
+                warn!("Couldn't fetch globalrev from commit: {:?}", e);
             }
         }
     }

@@ -27,11 +27,11 @@ justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 rendezvous = { version = "0.1.0", path = "../common/rendezvous" }
-slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2.0.12"
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 assert_matches = "1.5"

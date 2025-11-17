@@ -23,9 +23,9 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use rand::Rng;
-use slog::warn;
 use sql_ext::mononoke_queries;
 use stats::prelude::*;
+use tracing::warn;
 
 use crate::store::GetLargestLogId;
 use crate::store::SelectAllUnordered;
@@ -123,7 +123,6 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
     async fn refresh(&mut self, ctx: &CoreContext) -> Result<()> {
         if self.has_aged_out() {
             warn!(
-                ctx.logger(),
                 "BookmarksSubscription has aged out! Last refresh was {:?} ago.",
                 self.last_refresh.elapsed()
             );
@@ -175,10 +174,7 @@ impl BookmarksSubscription for SqlBookmarksSubscription {
                 }
                 None => {
                     if book.as_str() == "master" {
-                        warn!(
-                            ctx.logger(),
-                            "BookmarksSubscription: protect master kicked in!"
-                        );
+                        warn!("BookmarksSubscription: protect master kicked in!");
                         STATS::master_protected.add_value(1);
                         continue;
                     }

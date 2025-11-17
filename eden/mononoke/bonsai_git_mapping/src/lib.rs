@@ -18,7 +18,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
-use slog::warn;
+use tracing::warn;
 
 mod caching;
 mod errors;
@@ -186,13 +186,12 @@ pub trait BonsaiGitMapping: Send + Sync {
                 }
                 Ok(None) => {
                     warn!(
-                        ctx.logger(),
                         "The git mapping is missing in bonsai commit extras: {:?}",
                         bcs.get_changeset_id()
                     );
                 }
                 Err(e) => {
-                    warn!(ctx.logger(), "Couldn't fetch git mapping: {:?}", e);
+                    warn!("Couldn't fetch git mapping: {:?}", e);
                 }
             }
         }

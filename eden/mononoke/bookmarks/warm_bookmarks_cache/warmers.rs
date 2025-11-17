@@ -13,9 +13,9 @@ use futures_watchdog::WatchdogExt;
 use mononoke_types::ChangesetId;
 use phases::ArcPhases;
 use repo_derived_data::ArcRepoDerivedData;
-use slog::info;
 use slog::o;
 use tracing::Instrument;
+use tracing::info;
 
 use super::IsWarmFn;
 use super::Warmer;
@@ -23,14 +23,14 @@ use super::WarmerFn;
 use crate::WarmerTag;
 
 pub fn create_derived_data_warmer<Derivable>(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     repo_derived_data: ArcRepoDerivedData,
     tags: Vec<WarmerTag>,
 ) -> Warmer
 where
     Derivable: BonsaiDerivable,
 {
-    info!(ctx.logger(), "Warming {}", Derivable::NAME);
+    info!("Warming {}", Derivable::NAME);
     let warmer: Box<WarmerFn> = Box::new({
         cloned!(repo_derived_data);
         move |ctx: &CoreContext, cs_id: ChangesetId| {
@@ -68,8 +68,8 @@ where
     }
 }
 
-pub fn create_public_phase_warmer(ctx: &CoreContext, phases: ArcPhases) -> Warmer {
-    info!(ctx.logger(), "Warming public phases");
+pub fn create_public_phase_warmer(_ctx: &CoreContext, phases: ArcPhases) -> Warmer {
+    info!("Warming public phases");
     let warmer: Box<WarmerFn> = Box::new({
         cloned!(phases);
         move |ctx: &CoreContext, cs_id: ChangesetId| {

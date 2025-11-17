@@ -15,7 +15,7 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Svnrev;
-use slog::warn;
+use tracing::warn;
 
 pub use crate::caching::CachingBonsaiSvnrevMapping;
 pub use crate::sql::AddSvnrevsErrorKind;
@@ -125,7 +125,7 @@ pub trait BonsaiSvnrevMapping: Send + Sync {
                     entries.push(entry);
                 }
                 Err(e) => {
-                    warn!(ctx.logger(), "Couldn't fetch svnrev from commit: {:?}", e);
+                    warn!("Couldn't fetch svnrev from commit: {:?}", e);
                 }
             }
         }

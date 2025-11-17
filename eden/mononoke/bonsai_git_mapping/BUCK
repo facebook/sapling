@@ -11,7 +11,6 @@ rust_library(
     ]),
     named_deps = {
         "bincode": "fbsource//third-party/rust:bincode-2",
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
     },
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -20,6 +19,7 @@ rust_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:gix-hash",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/memcache_stub:memcache",

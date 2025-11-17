@@ -17,11 +17,11 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Svnrev;
-use slog::warn;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
 use thiserror::Error;
+use tracing::warn;
 
 use super::BonsaiSvnrevMapping;
 use super::BonsaiSvnrevMappingEntry;
@@ -246,7 +246,7 @@ pub async fn bulk_import_svnrevs<'a>(
                 entries.push(entry);
             }
             Err(e) => {
-                warn!(ctx.logger(), "Couldn't fetch svnrev from commit: {:?}", e);
+                warn!("Couldn't fetch svnrev from commit: {:?}", e);
             }
         }
     }

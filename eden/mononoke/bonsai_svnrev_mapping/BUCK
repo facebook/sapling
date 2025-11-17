@@ -11,13 +11,13 @@ rust_library(
     ]),
     named_deps = {
         "bincode": "fbsource//third-party/rust:bincode-2",
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
     },
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/memcache_stub:memcache",
         "//eden/mononoke/bonsai_svnrev_mapping/if:bonsai_svnrev_mapping_thrift-rust",
