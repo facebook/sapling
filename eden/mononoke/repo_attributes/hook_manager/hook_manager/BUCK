@@ -13,7 +13,6 @@ rust_library(
             "test": False,
         },
     },
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit-tokio",
@@ -31,6 +30,7 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",

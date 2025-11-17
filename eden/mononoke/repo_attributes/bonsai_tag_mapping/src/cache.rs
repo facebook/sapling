@@ -19,13 +19,13 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
 use repo_update_logger::PlainBookmarkInfo;
-use slog::error;
-use slog::info;
 use stats::define_stats;
 use stats::prelude::TimeseriesStatic;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::task::JoinHandle;
+use tracing::error;
+use tracing::info;
 
 use crate::BonsaiTagMapping;
 use crate::BonsaiTagMappingEntry;
@@ -75,28 +75,23 @@ async fn update_cache(
     entries: Swappable<Vec<BonsaiTagMappingEntry>>,
     bonsai_tag_mapping: Arc<dyn BonsaiTagMapping>,
     mut update_notification_receiver: Receiver<PlainBookmarkInfo>,
-    logger: slog::Logger,
+    _logger: slog::Logger,
 ) {
     loop {
         let fallible_notification = update_notification_receiver.recv().await;
         match fallible_notification {
             Ok(_) => {
-                info!(
-                    logger,
-                    "Received update notification from scribe for updating tags cache"
-                );
+                info!("Received update notification from scribe for updating tags cache");
                 match bonsai_tag_mapping.get_all_entries(&ctx).await {
                     Ok(new_entries) => {
                         let new_entries = Arc::new(new_entries);
                         entries.store(new_entries);
                         info!(
-                            logger,
                             "Successfully updated the cache with new entries from the inner bonsai tag mapping"
                         );
                     }
                     Err(e) => {
                         error!(
-                            logger,
                             "Failure in updating the cache with new entries from the inner bonsai tag mapping: {:?}",
                             e
                         );
@@ -107,15 +102,14 @@ async fn update_cache(
             }
             Err(RecvError::Closed) => {
                 info!(
-                    logger,
                     "Bonsai tag mapping update notification channel closed. Stop listening on notifications"
                 );
                 break;
             }
             Err(e) => {
                 error!(
-                    logger,
-                    "Failure in receiving notification from tags scribe category. Error: {:?}", e
+                    "Failure in receiving notification from tags scribe category. Error: {:?}",
+                    e
                 );
                 // TODO(rajshar): Add ODS based alerting for this if the number of errors is high
                 STATS::update_failure_count.add_value(1);

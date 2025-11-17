@@ -24,8 +24,8 @@ use futures::stream::StreamExt;
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use parking_lot::Mutex;
-use slog::debug;
-use slog::error;
+use tracing::debug;
+use tracing::error;
 
 use crate::DerivationDagItem;
 use crate::DerivationQueue;
@@ -194,7 +194,7 @@ pub async fn build_underived_batched_graph<'a>(
                                     // All changesets in the batch were derived
                                     None => {
                                         let err_msg_str = format!("Failed to enqueue with error: {}, but the data was derived", e);
-                                        debug!(ctx.logger(), "{}", err_msg_str);
+                                        debug!("{}", err_msg_str);
                                         err_msg = Some(err_msg_str);
                                         // derived, update ready watch and return no dependency
                                         *watch.lock() =
@@ -206,7 +206,7 @@ pub async fn build_underived_batched_graph<'a>(
                                         // return same item for enqueue and increment failures count
                                         failed_attempt += 1;
                                         let err_msg_str = format!("Failed to enqueue into DAG: {}", e);
-                                        error!(ctx.logger(), "{}", err_msg_str);
+                                        error!("{}", err_msg_str);
                                         err_msg = Some(err_msg_str);
                                         Some(item)
                                     }

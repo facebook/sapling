@@ -36,7 +36,7 @@ use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
 use reloader::Loader;
 use reloader::Reloader;
-use slog::info;
+use tracing::info;
 use vec1::Vec1;
 
 #[cfg(test)]
@@ -303,7 +303,7 @@ impl Loader<PreloadedEdges> for PreloadedEdgesLoader {
         mononoke::spawn_task({
             cloned!(self.ctx, self.blobstore_without_cache, self.blobstore_key);
             async move {
-                info!(ctx.logger(), "Started preloading commit graph");
+                info!("Started preloading commit graph");
                 let maybe_bytes = blobstore_without_cache.get(&ctx, &blobstore_key).await?;
                 match maybe_bytes {
                     Some(bytes) => {
@@ -312,7 +312,6 @@ impl Loader<PreloadedEdges> for PreloadedEdgesLoader {
                             tokio::task::spawn_blocking(move || deserialize_preloaded_edges(bytes))
                                 .await??;
                         info!(
-                            ctx.logger(),
                             "Finished preloading commit graph ({} changesets)",
                             preloaded_edges.cs_id_to_edges.len()
                         );

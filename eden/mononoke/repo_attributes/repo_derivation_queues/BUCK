@@ -5,7 +5,6 @@ oncall("scm_server_infra")
 rust_library(
     name = "repo_derivation_queues",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
@@ -16,6 +15,7 @@ rust_library(
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/bounded_traversal:bounded_traversal",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/facet:facet",

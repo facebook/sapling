@@ -35,9 +35,9 @@ use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::FIRST_GENERATION;
 use mononoke_types::Generation;
-use slog::debug;
 use smallvec::SmallVec;
 use smallvec::smallvec;
+use tracing::debug;
 
 use crate::CommitGraphOps;
 
@@ -787,10 +787,8 @@ impl<E: EdgeType> CommitGraphOps<E> {
         )?;
 
         debug!(
-            ctx.logger(),
             "ancestors_difference stats {:?}, ancestors_difference_segments stats {:?}",
-            ancestors_difference_stats,
-            ancestors_difference_segments_stats
+            ancestors_difference_stats, ancestors_difference_segments_stats
         );
 
         let difference_cs_ids: HashSet<_> = difference_cs_ids.into_iter().collect();
@@ -904,15 +902,11 @@ impl<E: EdgeType> CommitGraphOps<E> {
             }
 
             if (segment_num + 1) % 1000 == 0 {
-                debug!(
-                    ctx.logger(),
-                    "finished verifying {} segments",
-                    segment_num + 1
-                );
+                debug!("finished verifying {} segments", segment_num + 1);
             }
         }
 
-        debug!(ctx.logger(), "finished verifying all segments");
+        debug!("finished verifying all segments");
 
         if let Some(cs_id) = difference_cs_ids
             .difference(&union_segments_cs_ids.into_keys().collect::<HashSet<_>>())

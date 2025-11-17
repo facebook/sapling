@@ -38,7 +38,7 @@ use repo_permission_checker::ArcRepoPermissionChecker;
 use repo_permission_checker::NeverAllowRepoPermissionChecker;
 use scuba::builder::ServerData;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::debug;
+use tracing::debug;
 
 use crate::BookmarkHook;
 use crate::ChangesetHook;
@@ -272,10 +272,7 @@ impl HookManager {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<Vec<HookOutcome>, Error> {
-        debug!(
-            ctx.logger(),
-            "Running bookmark hooks for bookmark {:?}", bookmark
-        );
+        debug!("Running bookmark hooks for bookmark {:?}", bookmark);
 
         let hooks = self.hooks_for_bookmark(bookmark);
 
@@ -336,7 +333,7 @@ impl HookManager {
         cross_repo_push_source: CrossRepoPushSource,
         push_authored_by: PushAuthoredBy,
     ) -> Result<Vec<HookOutcome>, Error> {
-        debug!(ctx.logger(), "Running hooks for bookmark {:?}", bookmark);
+        debug!("Running hooks for bookmark {:?}", bookmark);
 
         let hooks = self.hooks_for_bookmark(bookmark);
 

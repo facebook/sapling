@@ -18,8 +18,8 @@ use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::PermissionCheckerBuilder;
 use slog::Logger;
-use slog::trace;
 use tokio::join;
+use tracing::trace;
 
 /// Repository permissions checks
 ///
@@ -145,7 +145,7 @@ pub struct ProdRepoPermissionChecker {
 
 impl ProdRepoPermissionChecker {
     pub async fn new(
-        logger: &Logger,
+        _logger: &Logger,
         acl_provider: &dyn AclProvider,
         repo_hipster_acl: Option<&str>,
         service_hipster_acl: Option<&str>,
@@ -169,7 +169,7 @@ impl ProdRepoPermissionChecker {
                 allowlisted_identities.insert(MononokeIdentity::new(id_type, id_data));
             }
 
-            trace!(logger, "Adding global allowlist for repo {}", reponame);
+            trace!("Adding global allowlist for repo {}", reponame);
             repo_permchecker_builder =
                 repo_permchecker_builder.allow_allowlist(allowlisted_identities);
         };
