@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
+use std::sync::OnceLock;
 
 use minibytes::Bytes;
 
@@ -40,7 +41,7 @@ culpa qui officia deserunt mollit anim id est laborum.
 }
 
 /// Generate `String` with given length. Useful for slightly more interesting file contents.
-/// Practically, it can generate 50KB text per millisecond.
+/// Practically, it can generate 6MB text per millisecond.
 pub fn generate_paragraphs(len: usize, seed: u16) -> String {
     let mut output = String::with_capacity(len);
     TrigramTextGen::default()
@@ -90,6 +91,14 @@ static STARTING_WORDS: LazyLock<Vec<(&'static str, &'static str)>> = LazyLock::n
     result
 });
 
+// TRIGRAM_TEXT_GEN_CACHE[seed] = (paragraph, next_seed)
+static TRIGRAM_TEXT_GEN_CACHE: LazyLock<Vec<OnceLock<(String, u16)>>> = LazyLock::new(|| {
+    let mut cache = Vec::new();
+    cache.resize_with(u16::MAX as usize, OnceLock::new);
+    cache
+});
+const PARAGRAPH_MAX_LEN: usize = 1926;
+
 const MAX_LINE_WIDTH: usize = 76;
 
 /// Handles line wrap, and word generation.
@@ -111,7 +120,19 @@ impl TrigramTextGen {
     /// `output` length should be `len`.
     pub fn generate_paragraphs(&mut self, len: usize, output: &mut String) {
         while output.len() < len {
-            self.generate_paragraph(len, output);
+            let (cached_paragraph, next_seed) = TRIGRAM_TEXT_GEN_CACHE[self.seed as usize]
+                .get_or_init(|| {
+                    let mut g = Self::default().with_seed(self.seed);
+                    let mut out = String::with_capacity(PARAGRAPH_MAX_LEN);
+                    g.generate_paragraph(PARAGRAPH_MAX_LEN, &mut out);
+                    (out, g.seed)
+                });
+            if !output.is_empty() {
+                output.push('\n');
+            }
+            let needed_paragraph_len = (len - output.len()).min(cached_paragraph.len());
+            output.push_str(&cached_paragraph[..needed_paragraph_len]);
+            self.seed = *next_seed;
         }
         assert_eq!(output.len(), len);
     }
@@ -308,6 +329,21 @@ moral of that is, but I know who I am! But I'd better take him his fan and
 gloves, and, as the game began. Alice thought to herself This is Bill, she
 gave one sharp kick, and waited till she fan"#
         );
+    }
+
+    #[test]
+    fn test_cached_paragraphs_are_finite() {
+        // 0.42s to run this test
+        let mut output = String::with_capacity(4096);
+        let mut max_len = 0;
+        for seed in 0..u16::MAX {
+            let mut g = TrigramTextGen::default().with_seed(seed);
+            // This does not enter an infinite loop.
+            g.generate_paragraph(usize::MAX, &mut output);
+            max_len = max_len.max(output.len());
+            output.clear();
+        }
+        assert_eq!(max_len, PARAGRAPH_MAX_LEN);
     }
 
     #[test]

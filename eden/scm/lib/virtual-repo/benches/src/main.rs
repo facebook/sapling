@@ -28,7 +28,7 @@ fn main() {
 
     // Warm-up (load and analyse corpus).
     let _ = generate_paragraphs(1, 0);
-    for (size, n) in [(3000, 10), (50_000, 1)] {
+    for (size, n) in [(3000, 1000), (10_000_000, 1)] {
         bench(format!("generate_paragraphs({size}) {n} times"), || {
             elapsed(|| {
                 for _ in 0..n {
