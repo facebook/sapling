@@ -6,7 +6,6 @@ oncall("scm_server_infra")
 rust_library(
     name = "pushrebase",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbcode//eden/mononoke/blobrepo:blobrepo_hg",
         "fbsource//third-party/rust:async-trait",
@@ -30,6 +29,7 @@ rust_library(
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
         ":pushrebase_hook",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobrepo_utils:blobrepo_utils",
@@ -92,7 +92,6 @@ rust_library(
     name = "pushrebase_client",
     srcs = glob(["client/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "client"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",

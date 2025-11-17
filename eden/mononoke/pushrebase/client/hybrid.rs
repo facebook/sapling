@@ -69,11 +69,8 @@ pub async fn normal_pushrebase<'a>(
                     return Err(err);
                 }
                 (Err(err), _) => {
-                    slog::warn!(
-                        ctx.logger(),
-                        "Failed to pushrebase remotely, falling back to local. Error: {}",
-                        err
-                    );
+                    // Warning: Failed to pushrebase remotely, falling back to local
+                    eprintln!("Failed to pushrebase remotely, falling back to local. Error: {err}",);
                     let mut scuba = ctx.scuba().clone();
                     scuba.add("bookmark_name", bookmark.as_str());
                     scuba.add(

@@ -107,9 +107,9 @@ use pushrebase_hook::RebasedChangesets;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::info;
 use stats::prelude::*;
 use thiserror::Error;
+use tracing::info;
 
 define_stats! {
     prefix = "mononoke.pushrebase";
@@ -631,7 +631,6 @@ async fn find_closest_ancestor_root(
     loop {
         if depth > 0 && depth % 1000 == 0 {
             info!(
-                ctx.logger(),
                 "pushrebase depth: {depth}, searching from bookmark {bookmark} at {onto_bookmark_cs_id} back to one of {} possible roots",
                 roots.len()
             );
