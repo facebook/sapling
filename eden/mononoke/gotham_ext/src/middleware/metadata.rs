@@ -28,7 +28,7 @@ use percent_encoding::percent_decode;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use slog::Logger;
-use slog::error;
+use tracing::error;
 
 use super::Middleware;
 use crate::socket_data::TlsCertificateIdentities;
@@ -54,7 +54,7 @@ impl MetadataState {
 
 pub struct MetadataMiddleware {
     fb: FacebookInit,
-    logger: Logger,
+    _logger: Logger,
     internal_identity: Identity,
     entry_point: ClientEntryPoint,
     mtls_disabled: bool,
@@ -64,7 +64,7 @@ pub struct MetadataMiddleware {
 impl MetadataMiddleware {
     pub fn new(
         fb: FacebookInit,
-        logger: Logger,
+        logger: Logger, // This will be stored as _logger
         internal_identity: Identity,
         entry_point: ClientEntryPoint,
         mtls_disabled: bool,
@@ -72,7 +72,7 @@ impl MetadataMiddleware {
     ) -> Self {
         Self {
             fb,
-            logger,
+            _logger: logger,
             internal_identity,
             entry_point,
             mtls_disabled,
@@ -173,7 +173,7 @@ impl Middleware for MetadataMiddleware {
                     match try_get_cats_idents(self.fb, headers, &self.internal_identity) {
                         Err(e) => {
                             let msg = format!("Error extracting CATs identities: {}.", &e,);
-                            error!(self.logger, "{}", &msg,);
+                            error!("{}", &msg,);
                             let response = Response::builder()
                                 .status(StatusCode::UNAUTHORIZED)
                                 .body(
@@ -216,7 +216,7 @@ impl Middleware for MetadataMiddleware {
                     "Error: {} header not provided or wrong format (expected json).",
                     CLIENT_INFO_HEADER
                 );
-                error!(self.logger, "{}", &msg,);
+                error!("{}", &msg,);
                 let response = Response::builder()
                     .status(StatusCode::UNAUTHORIZED)
                     .body(format!("{{\"message:\"{}\"}}", msg,).into())

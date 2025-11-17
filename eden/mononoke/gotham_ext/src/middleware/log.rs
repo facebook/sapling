@@ -20,9 +20,9 @@ use hyper::StatusCode;
 use hyper::Uri;
 use hyper::Version;
 use slog::Logger;
-use slog::info;
 use slog::o;
 use time_ext::DurationExt;
+use tracing::info;
 
 use super::MetadataState;
 use super::Middleware;
@@ -34,9 +34,9 @@ const DIRECTION_REQUEST_IN: &str = "IN  >";
 const DIRECTION_RESPONSE_OUT: &str = "OUT <";
 const TRACE_HEADER: &str = "x-log-middleware-trace";
 
-// We have to turn out formats into macros to avoid duplicating them:
+// We have to turn our formats into macros to avoid duplicating them:
 
-macro_rules! SLOG_FORMAT {
+macro_rules! LOG_FORMAT {
     () => {
         "{} {} {} {} \"{} {} {:?}\" {} {} {} {} {}"
     };
@@ -135,12 +135,11 @@ fn log_request_slog(
         .map(|x| x.get(..20).unwrap_or(x).to_string());
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
-    let logger = logger.new(o!("request_id" => request_id));
+    let _logger = logger.new(o!("request_id" => request_id));
     match entry {
         LogEntry::RequestIn => {
             info!(
-                &logger,
-                SLOG_FORMAT!(),
+                LOG_FORMAT!(),
                 DIRECTION_REQUEST_IN,
                 address.as_ref().map_or("-", String::as_ref),
                 client_port.unwrap_or("-".to_string()),
@@ -158,8 +157,7 @@ fn log_request_slog(
         LogEntry::ResponseOut(status) => {
             callbacks.add(move |info| {
                 info!(
-                    &logger,
-                    SLOG_FORMAT!(),
+                    LOG_FORMAT!(),
                     DIRECTION_RESPONSE_OUT,
                     address.as_ref().map_or("-", String::as_ref),
                     client_port.unwrap_or("-".to_string()),

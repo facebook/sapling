@@ -13,7 +13,6 @@ rust_library(
             "test": False,
         },
     },
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:pretty_assertions",
         "fbsource//third-party/rust:tokio",
@@ -48,6 +47,7 @@ rust_library(
         "fbsource//third-party/rust:serde_regex",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/identity:identity_ext",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/justknobs_stub:justknobs",
