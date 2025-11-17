@@ -39,8 +39,8 @@ use mononoke_types::MPath;
 use repo_blobstore::RepoBlobstoreArc;
 use scm_client::ScmCasClient;
 use scm_client::UploadOutcome;
-use slog::debug;
 use stats::prelude::*;
+use tracing::debug;
 
 const MAX_CONCURRENT_MANIFESTS: usize = 50;
 const MAX_CONCURRENT_MANIFESTS_TREES_ONLY: usize = 500;
@@ -164,8 +164,8 @@ impl UploadCounters {
             self.log(ctx);
         }
     }
-    pub fn log<'a>(&self, ctx: &'a CoreContext) {
-        debug!(ctx.logger(), "{}", *self);
+    pub fn log<'a>(&self, _ctx: &'a CoreContext) {
+        debug!("{}", *self);
     }
 
     pub fn uploaded_digests(&self) -> usize {
@@ -349,7 +349,6 @@ where
         let blobstore = repo.repo_blobstore_arc();
 
         debug!(
-            ctx.logger(),
             "Uploading data for changeset id: {}, hg changeset id: {}, number of manifests: {}, number of files: {}",
             changeset_id,
             hg_cs_id,
@@ -426,7 +425,6 @@ where
         }
 
         debug!(
-            ctx.logger(),
             "Upload of (bonsai) changeset {} to CAS took {} seconds, corresponding hg changeset is {}",
             changeset_id,
             start_time.elapsed().as_secs_f64(),
@@ -490,7 +488,6 @@ where
                         Entry::Leaf(leaf) => {
                             if !matches!(upload_policy, UploadPolicy::TreesOnly) {
                                 debug!(
-                                    ctx.logger(),
                                     "Upload single file '{}' for changeset id: {}, hg changeset id: {}",
                                     path.clone(),
                                     changeset_id,
@@ -515,7 +512,6 @@ where
                                     })?;
                                 upload_counter.tick_files(ctx, outcome);
                                 debug!(
-                                    ctx.logger(),
                                     "Upload completed for '{}' in {:.2} seconds",
                                     path,
                                     start_time.elapsed().as_secs_f64()
@@ -532,7 +528,6 @@ where
         }
 
         debug!(
-            ctx.logger(),
             "Uploading data recursively for [root augmented manifest: {}, changeset id: {}, hg changeset id: {}, repo path: '{}']",
             hg_augmented_manifest_id,
             changeset_id,
@@ -619,7 +614,6 @@ where
 
         final_upload_counter.log(ctx);
         debug!(
-            ctx.logger(),
             "Upload of (bonsai) changeset {} to CAS (recursively) for path: '{}' took {:.2} seconds, corresponding hg changeset is {}. Upload included {}.",
             changeset_id,
             path.clone().unwrap_or(MPath::ROOT),

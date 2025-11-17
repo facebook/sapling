@@ -39,9 +39,9 @@ use mutable_blobstore::MutableRepoBlobstoreRef;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::debug;
-use slog::info;
-use slog::warn;
+use tracing::debug;
+use tracing::info;
+use tracing::warn;
 
 pub trait Repo = RepoBlobstoreRef
     + MutableRepoBlobstoreRef
@@ -170,7 +170,7 @@ async fn blobstore_and_filenodes_warmup(
 
                 i += 1;
                 if i % 10000 == 0 {
-                    debug!(ctx.logger(), "manifests warmup: fetched {}th entry", i);
+                    debug!("manifests warmup: fetched {}th entry", i);
                 }
 
                 future::ready(Result::<_, Error>::Ok(null_linknodes))
@@ -179,9 +179,9 @@ async fn blobstore_and_filenodes_warmup(
         .await?;
 
     if null_linknodes > 0 {
-        warn!(ctx.logger(), "{} linknodes are missing!", null_linknodes);
+        warn!("{} linknodes are missing!", null_linknodes);
     }
-    debug!(ctx.logger(), "finished manifests warmup");
+    debug!("finished manifests warmup");
 
     Ok(())
 }
@@ -191,16 +191,13 @@ async fn commit_graph_segments_warmup(
     repo: &impl Repo,
     bcs_id: ChangesetId,
 ) -> Result<(), Error> {
-    info!(
-        ctx.logger(),
-        "about to start warming up commit graph segments cache"
-    );
+    info!("about to start warming up commit graph segments cache");
 
     repo.commit_graph()
         .ancestors_difference_segments(ctx, vec![bcs_id], vec![])
         .await?;
 
-    debug!(ctx.logger(), "finished commit graph segments warmup");
+    debug!("finished commit graph segments warmup");
 
     Ok(())
 }
@@ -278,7 +275,7 @@ async fn do_cache_warmup(
     blobstore_warmup?;
     commit_graph_segments_warmup?;
 
-    info!(ctx.logger(), "finished initial warmup");
+    info!("finished initial warmup");
 
     let mut scuba = ctx.scuba().clone();
     scuba.add_future_stats(&stats);
@@ -291,10 +288,10 @@ async fn microwave_preload(ctx: &CoreContext, repo: &impl Repo, req: &CacheWarmu
     if req.microwave_preload {
         match microwave::prime_cache(ctx, repo, SnapshotLocation::Blobstore).await {
             Ok(_) => {
-                warn!(ctx.logger(), "microwave: successfully primed cache");
+                warn!("microwave: successfully primed cache");
             }
             Err(e) => {
-                warn!(ctx.logger(), "microwave: cache warmup failed: {:#?}", e);
+                warn!("microwave: cache warmup failed: {:#?}", e);
             }
         }
     }

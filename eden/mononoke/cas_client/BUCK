@@ -7,9 +7,6 @@ rust_library(
     name = "cas_client",
     srcs = glob(["client/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "client"},
-    named_deps = {
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
-    } if not rust_oss.is_oss_build() else {},
     deps = ([
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:bytes",
@@ -24,6 +21,7 @@ rust_library(
     ] + ([] if rust_oss.is_oss_build() else [
         "//remote_execution/cas/client_lib/wrappers/rust:cas_client_lib",
         "//common/rust/shed/futures_ext:futures_ext",
+        "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tokio",
     ])),
 )
@@ -51,13 +49,13 @@ rust_library(
     name = "changesets_uploader",
     srcs = glob(["changesets_uploader/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "changesets_uploader"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:atomic-counter",
         "fbsource//third-party/rust:bytesize",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/bounded_traversal:bounded_traversal",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/stats:stats",

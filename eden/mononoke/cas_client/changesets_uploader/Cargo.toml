@@ -27,6 +27,6 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }
 scm_client = { version = "0.1.0", path = "../scm_client" }
-slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2.0.12"
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
