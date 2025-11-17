@@ -71,7 +71,8 @@ fn get_ctx_source_store_and_live_config(
 
     let store = ConfigStore::new(test_source.clone(), Duration::from_millis(2), None);
     let live_commit_sync_config =
-        CfgrLiveCommitSyncConfig::new(&store, test_push_redirection_config.clone()).unwrap();
+        CfgrLiveCommitSyncConfig::new_for_testing(&store, test_push_redirection_config.clone())
+            .unwrap();
     (
         ctx,
         test_source,

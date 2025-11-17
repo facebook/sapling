@@ -128,7 +128,7 @@ pub trait LiveCommitSyncConfig: Send + Sync {
 static REPO_CONFIG: OnceLock<Result<Arc<ConfigHandle<RawCommitSyncAllVersions>>, Error>> =
     OnceLock::new();
 
-fn get_config_hadle_for_all_versions(
+fn get_config_handle_for_all_versions(
     config_store: &ConfigStore,
 ) -> Result<Arc<ConfigHandle<RawCommitSyncAllVersions>>, Error> {
     let result = REPO_CONFIG.get_or_init(|| {
@@ -153,7 +153,22 @@ impl CfgrLiveCommitSyncConfig {
         config_store: &ConfigStore,
         push_redirect_config: Arc<dyn PushRedirectionConfig>,
     ) -> Result<Self, Error> {
-        let config_handle_for_all_versions = get_config_hadle_for_all_versions(config_store)?;
+        let config_handle_for_all_versions = get_config_handle_for_all_versions(config_store)?;
+        Ok(Self {
+            config_handle_for_all_versions,
+            push_redirect_config: Some(push_redirect_config),
+        })
+    }
+
+    /// Creates a new instance for testing that bypasses the global cache.
+    /// This ensures test isolation by creating a fresh config handle for each test.
+    pub fn new_for_testing(
+        config_store: &ConfigStore,
+        push_redirect_config: Arc<dyn PushRedirectionConfig>,
+    ) -> Result<Self, Error> {
+        let config_handle_for_all_versions = Arc::new(
+            config_store.get_config_handle(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string())?,
+        );
         Ok(Self {
             config_handle_for_all_versions,
             push_redirect_config: Some(push_redirect_config),
