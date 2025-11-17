@@ -39,12 +39,12 @@ use openssl::ssl::SslFiletype;
 use openssl::ssl::SslMethod;
 use rand::Rng;
 use rand::thread_rng;
-use slog::error;
-use slog::warn;
 use tls::TLSArgs;
 use tokio::sync::Semaphore;
 use tokio::time::Duration;
 use tokio::time::sleep;
+use tracing::error;
+use tracing::warn;
 
 /// Module to be passed into gitimport that defines how LFS files are imported.
 /// The default will disable any LFS support (and the metadata of files pointing to LFS files
@@ -181,8 +181,8 @@ impl GitImportLfs {
         }
         if resp.status() == StatusCode::NOT_FOUND && inner.allow_not_found {
             warn!(
-                ctx.logger(),
-                "{} not found. Using gitlfs metadata as file content instead.", uri,
+                "{} not found. Using gitlfs metadata as file content instead.",
+                uri,
             );
             let bytes = Bytes::copy_from_slice(&metadata.gitblob);
             let size = metadata.gitblob.len().try_into()?;
@@ -234,12 +234,8 @@ impl GitImportLfs {
                     let sleep_time_ms =
                         thread_rng().gen_range(0..inner.time_ms_between_attempts * 2);
                     error!(
-                        ctx.logger(),
                         "{}. Attempt {} of {} - Retrying in {} ms",
-                        err,
-                        attempt,
-                        inner.max_attempts,
-                        sleep_time_ms,
+                        err, attempt, inner.max_attempts, sleep_time_ms,
                     );
                     sleep(Duration::from_millis(sleep_time_ms.into())).await;
                 }

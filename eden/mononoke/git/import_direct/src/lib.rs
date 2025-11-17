@@ -19,7 +19,7 @@ use import_tools::GitRepoReader;
 use import_tools::GitimportTarget;
 use import_tools::oid_to_sha1;
 use mononoke_types::typed_hash::ChangesetId;
-use slog::debug;
+use tracing::debug;
 
 mod uploader;
 
@@ -79,11 +79,7 @@ pub async fn missing_for_commit(
     }
 
     let tb = Instant::now();
-    debug!(
-        ctx.logger(),
-        "Time to find missing commits {:?}",
-        tb.duration_since(ta)
-    );
+    debug!("Time to find missing commits {:?}", tb.duration_since(ta));
 
     GitimportTarget::new(commit, known)
 }
@@ -99,7 +95,6 @@ async fn commit_in_mononoke(
         .await?;
     if let Some(existing_changeset) = changeset {
         debug!(
-            ctx.logger(),
             "Commit found in Mononoke Oid:{} -> ChangesetId:{}",
             oid_to_sha1(commit_id)?.to_brief(),
             existing_changeset.to_brief()

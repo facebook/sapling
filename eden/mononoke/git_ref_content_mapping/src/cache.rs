@@ -16,13 +16,13 @@ use context::CoreContext;
 use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 use repo_update_logger::GitContentRefInfo;
-use slog::error;
-use slog::info;
 use stats::define_stats;
 use stats::prelude::TimeseriesStatic;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::task::JoinHandle;
+use tracing::error;
+use tracing::info;
 
 use crate::GitRefContentMapping;
 use crate::GitRefContentMappingEntry;
@@ -70,28 +70,23 @@ async fn update_cache(
     entries: Swappable<Vec<GitRefContentMappingEntry>>,
     bonsai_tag_mapping: Arc<dyn GitRefContentMapping>,
     mut update_notification_receiver: Receiver<GitContentRefInfo>,
-    logger: slog::Logger,
+    _logger: slog::Logger,
 ) {
     loop {
         let fallible_notification = update_notification_receiver.recv().await;
         match fallible_notification {
             Ok(_) => {
-                info!(
-                    logger,
-                    "Received update notification from scribe for updating content refs cache"
-                );
+                info!("Received update notification from scribe for updating content refs cache");
                 match bonsai_tag_mapping.get_all_entries(&ctx).await {
                     Ok(new_entries) => {
                         let new_entries = Arc::new(new_entries);
                         entries.store(new_entries);
                         info!(
-                            logger,
                             "Successfully updated the cache with new entries from the inner git ref content mapping"
                         );
                     }
                     Err(e) => {
                         error!(
-                            logger,
                             "Failure in updating the cache with new entries from the inner git ref content mapping: {:?}",
                             e
                         );
@@ -101,14 +96,12 @@ async fn update_cache(
             }
             Err(RecvError::Closed) => {
                 info!(
-                    logger,
                     "Git ref content mapping update notification channel closed. Stop listening on notifications"
                 );
                 break;
             }
             Err(e) => {
                 error!(
-                    logger,
                     "Failure in receiving notification from git content ref scribe category. Error: {:?}",
                     e
                 );

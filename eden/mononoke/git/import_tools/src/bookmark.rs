@@ -22,7 +22,7 @@ use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
 use mononoke_api::RepoContext;
 use mononoke_types::ChangesetId;
-use slog::info;
+use tracing::info;
 
 /// Enum determining the nature of error reporting for bookmark operations
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -116,7 +116,7 @@ impl BookmarkOperationType {
 
 /// Method responsible for either creating, moving or deleting a bookmark in gitimport and gitserver.
 pub async fn set_bookmark<R: MononokeRepo>(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     repo_context: &RepoContext<R>,
     bookmark_operation: &BookmarkOperation,
     pushvars: Option<&HashMap<String, Bytes>>,
@@ -135,10 +135,7 @@ pub async fn set_bookmark<R: MononokeRepo>(
             } else {
                 op_result?;
             }
-            info!(
-                ctx.logger(),
-                "Bookmark: \"{name}\": {new_changeset:?} (created)"
-            )
+            info!("Bookmark: \"{name}\": {new_changeset:?} (created)")
         }
         BookmarkOperationType::Move(old_changeset, new_changeset) => {
             if old_changeset != new_changeset {
@@ -160,15 +157,9 @@ pub async fn set_bookmark<R: MononokeRepo>(
                 } else {
                     op_result?;
                 }
-                info!(
-                    ctx.logger(),
-                    "Bookmark: \"{name}\": {new_changeset:?} (moved from {old_changeset:?})"
-                );
+                info!("Bookmark: \"{name}\": {new_changeset:?} (moved from {old_changeset:?})");
             } else {
-                info!(
-                    ctx.logger(),
-                    "Bookmark: \"{name}\": {new_changeset:?} (already up-to-date)"
-                );
+                info!("Bookmark: \"{name}\": {new_changeset:?} (already up-to-date)");
             }
         }
         BookmarkOperationType::Delete(old_changeset) => {
@@ -180,10 +171,7 @@ pub async fn set_bookmark<R: MononokeRepo>(
             } else {
                 op_result?;
             }
-            info!(
-                ctx.logger(),
-                "Bookmark: \"{name}\": {old_changeset:?} (deleted)"
-            );
+            info!("Bookmark: \"{name}\": {old_changeset:?} (deleted)");
         }
     }
     Result::Ok(())

@@ -56,13 +56,13 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use scuba_ext::FutureStatsScubaExt;
-use slog::debug;
-use slog::info;
 use sorted_vector_map::SortedVectorMap;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 use tokio::process::Command;
 use tokio::sync::mpsc;
+use tracing::debug;
+use tracing::info;
 
 pub use crate::bookmark::BookmarkOperation;
 pub use crate::bookmark::set_bookmark;
@@ -375,7 +375,7 @@ pub async fn gitimport<Uploader: GitUploader>(
         )?;
 
     if all_commits.is_empty() {
-        info!(ctx.logger(), "Nothing to import for repo {}.", repo_name);
+        info!("Nothing to import for repo {}.", repo_name);
         return Ok(acc.into_inner());
     }
 
@@ -426,11 +426,8 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     let n_existing_commits = acc.len();
     if n_existing_commits > 0 {
         info!(
-            ctx.logger(),
             "GitRepo:{} {} of {} commit(s) already exist",
-            repo_name,
-            n_existing_commits,
-            nb_commits_to_import,
+            repo_name, n_existing_commits, nb_commits_to_import,
         );
     }
     let count = Arc::new(AtomicUsize::new(n_existing_commits));
@@ -473,7 +470,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                     let finalized_chunk = match finalized_chunk_res {
                         Err(e) => {
                             // Log the error if any
-                            info!(ctx.logger(), "{:?}", e);
+                            info!("{:?}", e);
                             anyhow::bail!(e);
                         }
                         Ok((stats, chunk)) => {
@@ -487,7 +484,6 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                     if let Some((last_git_sha1, last_bcs_id)) = finalized_chunk.last() {
                         count.fetch_add(processed_count, Ordering::Relaxed);
                         info!(
-                            ctx.logger(),
                             "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
                             &repo_name,
                             count.load(Ordering::Relaxed),
@@ -529,7 +525,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
                 let int_cs = match int_cs_result {
                     Err(e) => {
                         // Log the error if any
-                        info!(ctx.logger(), "{:?}", e);
+                        info!("{:?}", e);
                         anyhow::bail!(e);
                     }
                     Ok((stats, int_cs)) => {
@@ -705,7 +701,7 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
         )
         .context("Panic while running finalize_batch for commits")?;
 
-    debug!(ctx.logger(), "Completed git import for repo {}.", repo_name);
+    debug!("Completed git import for repo {}.", repo_name);
     let acc = Arc::try_unwrap(acc).map_err(|_| {
         anyhow::anyhow!("Expected only one strong reference to GitimportAccumulator at this point")
     })?;

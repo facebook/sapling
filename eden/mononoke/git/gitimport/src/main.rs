@@ -72,8 +72,8 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use restricted_paths::RestrictedPathsArc;
-use slog::info;
-use slog::warn;
+use tracing::info;
+use tracing::warn;
 
 use crate::repo::Repo;
 
@@ -123,7 +123,7 @@ async fn derive_hg(
 
         hg_manifests.insert(*bcs_id, manifest);
 
-        info!(ctx.logger(), "Hg: {:?}: {:?}", id, manifest);
+        info!("Hg: {:?}: {:?}", id, manifest);
     }
 
     Ok(())
@@ -260,7 +260,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
 
     let repo: Repo = app.open_repo(&args.repo_args).await?;
     info!(
-        logger,
         "using repo \"{}\" repoid {:?}",
         repo.repo_identity().name(),
         repo.repo_identity().id(),
@@ -269,7 +268,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let backfill_derivation = if args.bypass_derived_data_backfilling {
         if args.generate_bookmarks {
             warn!(
-                logger,
                 "Warning: gitimport was called bypassing derived data backfilling while generating bookmarks.\nIt is your responsibility to ensure that all derived data types are backfilled before this repository is expose to prod to avoid the risk of overloading the derived data service."
             );
         }
@@ -342,7 +340,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 &prefs,
             )
             .await?;
-            info!(ctx.logger(), "imported as {}", bcs_id);
+            info!("imported as {}", bcs_id);
             if args.derive_hg {
                 derive_hg(&ctx, &repo, [(&commit, &bcs_id)].into_iter()).await?;
             }
@@ -361,7 +359,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                             .with_context(|| {
                                 format!("Error in uploading tag with ID {}", tag_sha1)
                             })?;
-                        info!(ctx.logger(), "Uploaded tag with ID {}", tag_sha1);
+                        info!("Uploaded tag with ID {}", tag_sha1);
                         anyhow::Ok(())
                     }
                 })
@@ -413,7 +411,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             .collect::<anyhow::Result<Vec<_>>>()?;
         if !args.suppress_ref_mapping {
             for (_, name, changeset) in &git_ref_mapping {
-                info!(ctx.logger(), "Ref: {:?}: {:?}", name, changeset);
+                info!("Ref: {:?}: {:?}", name, changeset);
             }
         }
         if args.generate_bookmarks {

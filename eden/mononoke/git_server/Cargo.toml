@@ -78,3 +78,4 @@ thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.17", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

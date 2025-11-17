@@ -21,8 +21,8 @@ use mononoke_api::changeset_path::ChangesetPathHistoryOptions;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
 use slog::Logger;
-use slog::debug;
-use slog::info;
+use tracing::debug;
+use tracing::info;
 
 pub type ChangesetParents = HashMap<ChangesetId, Vec<ChangesetId>>;
 
@@ -69,7 +69,7 @@ pub async fn build_partial_commit_graph_for_export<R: MononokeRepo>(
     // graph will have its creation time greater than or equal to it.
     oldest_commit_ts: Option<i64>,
 ) -> Result<GitExportGraphInfo<R>> {
-    info!(logger, "Building partial commit graph for export...");
+    info!("Building partial commit graph for export...");
 
     let cs_path_history_options = ChangesetPathHistoryOptions {
         follow_history_across_deletions: true,
@@ -88,12 +88,11 @@ pub async fn build_partial_commit_graph_for_export<R: MononokeRepo>(
         merge_cs_lists_and_build_parents_map(logger, history_changesets).await?;
 
     info!(
-        logger,
         "Number of changesets to export: {0:?}",
         sorted_changesets.len()
     );
 
-    info!(logger, "Partial commit graph built!");
+    info!("Partial commit graph built!");
     Ok(GitExportGraphInfo {
         parents_map,
         changesets: sorted_changesets,
@@ -129,13 +128,10 @@ async fn get_relevant_changesets_for_single_path<R: MononokeRepo>(
 /// have modified export paths, the parent map should be `{A: [D]}`, because
 /// the partial graph is `A -> D`.
 async fn merge_cs_lists_and_build_parents_map<R: MononokeRepo>(
-    logger: &Logger,
+    _logger: &Logger,
     changeset_lists: Vec<Vec<ChangesetContext<R>>>,
 ) -> Result<(Vec<ChangesetContext<R>>, ChangesetParents)> {
-    info!(
-        logger,
-        "Merging changeset lists and building parents map..."
-    );
+    info!("Merging changeset lists and building parents map...");
     let mut changesets_with_gen: Vec<(ChangesetContext<R>, u64)> =
         stream::iter(changeset_lists.into_iter().flatten())
             .then(|cs| async move {
@@ -146,7 +142,7 @@ async fn merge_cs_lists_and_build_parents_map<R: MononokeRepo>(
             .await?;
 
     // Sort by generation number
-    debug!(logger, "Sorting changesets by generation number...");
+    debug!("Sorting changesets by generation number...");
     changesets_with_gen
         .sort_by(|(cs_a, gen_a), (cs_b, gen_b)| (gen_a, cs_a.id()).cmp(&(gen_b, cs_b.id())));
 
@@ -158,13 +154,13 @@ async fn merge_cs_lists_and_build_parents_map<R: MononokeRepo>(
 
     // Remove any duplicates from the list.
     // NOTE: `dedup_by` can only be used here because the list is sorted!
-    debug!(logger, "Deduping changesets...");
+    debug!("Deduping changesets...");
     sorted_css.dedup_by(|cs_a, cs_b| cs_a.id().eq(&cs_b.id()));
 
     // Make sure that there are no merge commits by checking that consecutive
     // changesest are ancestors of each other.
     // In this process, also build the parents map.
-    debug!(logger, "Building parents map...");
+    debug!("Building parents map...");
     let mut parents_map = try_join_all(sorted_css.iter().tuple_windows().map(|(parent, child)| async {
          let is_ancestor = parent.is_ancestor_of(child.id()).await?;
          if !is_ancestor {

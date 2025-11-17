@@ -20,19 +20,17 @@ use protocol::types::DeltaInclusion;
 use protocol::types::PackItemStreamRequest;
 use protocol::types::PackfileItemInclusion;
 use protocol::types::TagInclusion;
-use slog::info;
+use tracing::info;
 
 pub async fn create_git_repo_on_disk(
     ctx: &CoreContext,
     repo: &impl Repo,
     git_repo_path: PathBuf,
 ) -> Result<()> {
-    let logger = ctx.logger();
     info!(
-        logger,
-        "Exporting temporary repo to git repo on path: {0:#?}", &git_repo_path
+        "Exporting temporary repo to git repo on path: {0:#?}",
+        &git_repo_path
     );
-    let logger = ctx.logger();
 
     let symref_name = "HEAD";
     let ref_name = "master";
@@ -97,7 +95,7 @@ pub async fn create_git_repo_on_disk(
         .await
         .context("Error in finishing write to bundle")?;
 
-    info!(logger, "Finished creating git repo!");
+    info!("Finished creating git repo!");
 
     Ok(())
 }

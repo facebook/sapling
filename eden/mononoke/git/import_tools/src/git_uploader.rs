@@ -43,9 +43,9 @@ use mononoke_types::hash;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
-use slog::debug;
-use slog::info;
 use sorted_vector_map::SortedVectorMap;
+use tracing::debug;
+use tracing::info;
 
 use crate::BackfillDerivation;
 use crate::CommitMetadata;
@@ -216,9 +216,7 @@ pub async fn preload_uploaded_commits(
     )
     .binary_exponential_backoff()
     .max_attempts(RETRY_ATTEMPTS)
-    .inspect_err(|attempt, _err| {
-        info!(ctx.logger(), "attempt {attempt} of {RETRY_ATTEMPTS} failed")
-    })
+    .inspect_err(|attempt, _err| info!("attempt {attempt} of {RETRY_ATTEMPTS} failed"))
     .await?;
     let map = result
         .into_iter()
@@ -284,7 +282,6 @@ pub async fn upload_file(
             .with(ctx.clone(), lfs_pointer_data.clone(), {
                 move |ctx, lfs_pointer_data, req, bstream, fetch_result| async move {
                     info!(
-                        ctx.logger(),
                         "Uploading LFS {} sha256:{} size:{}",
                         path,
                         lfs_pointer_data.sha256.to_brief(),
@@ -338,12 +335,7 @@ pub async fn upload_file(
         .context("filestore (upload regular)")?;
         (meta, GitLfs::FullContent)
     };
-    debug!(
-        ctx.logger(),
-        "Uploaded {} blob {}",
-        path,
-        oid.to_hex_with_len(8),
-    );
+    debug!("Uploaded {} blob {}", path, oid.to_hex_with_len(8),);
     Ok(FileChange::tracked(
         meta.content_id,
         ty,
@@ -415,13 +407,10 @@ pub async fn finalize_batch(
     )
     .binary_exponential_backoff()
     .max_attempts(RETRY_ATTEMPTS)
-    .inspect_err(|attempt, _err| {
-        info!(ctx.logger(), "attempt {attempt} of {RETRY_ATTEMPTS} failed")
-    })
+    .inspect_err(|attempt, _err| info!("attempt {attempt} of {RETRY_ATTEMPTS} failed"))
     .await?;
 
     debug!(
-        ctx.logger(),
         "save_changesets for {} commits in {:?} after {} attempts",
         oid_to_bcsid.len(),
         stats.completion_time,
@@ -465,9 +454,7 @@ pub async fn finalize_batch(
     )
     .binary_exponential_backoff()
     .max_attempts(RETRY_ATTEMPTS)
-    .inspect_err(|attempt, _err| {
-        info!(ctx.logger(), "attempt {attempt} of {RETRY_ATTEMPTS} failed")
-    })
+    .inspect_err(|attempt, _err| info!("attempt {attempt} of {RETRY_ATTEMPTS} failed"))
     .await?;
     // derive git delta manifests: note: GitCommit don't need to be explicitly
     // derived as they were already imported
@@ -532,7 +519,7 @@ fn generate_bonsai_changeset(
 }
 
 fn git_store_request(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     git_id: ObjectId,
     git_bytes: Bytes,
 ) -> Result<
@@ -547,7 +534,6 @@ fn git_store_request(
         hash::RichGitSha1::from_bytes(Bytes::copy_from_slice(git_id.as_bytes()), "blob", size)?;
     let req = StoreRequest::with_git_sha1(size, git_sha1);
     debug!(
-        ctx.logger(),
         "Uploading git-blob:{} size:{}",
         git_sha1.sha1().to_brief(),
         size

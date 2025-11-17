@@ -14,7 +14,7 @@ use executor_lib::RepoShardedProcessExecutor;
 use metaconfig_types::ShardedService;
 use mononoke_app::MononokeReposManager;
 use sharding_ext::RepoShard;
-use slog::info;
+use tracing::info;
 
 use crate::Repo;
 
@@ -34,11 +34,7 @@ impl MononokeGitServerProcess {
 impl RepoShardedProcess for MononokeGitServerProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.as_str();
-        let logger = self.repos_mgr.repo_logger(repo_name);
-        info!(
-            &logger,
-            "Setting up repo {} in Mononoke Git Server", repo_name
-        );
+        info!("Setting up repo {} in Mononoke Git Server", repo_name);
         // Check if the input repo is already initialized. This can happen if the repo is a
         // shallow-sharded repo, in which case it would already be initialized during service startup.
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
@@ -49,15 +45,9 @@ impl RepoShardedProcess for MononokeGitServerProcess {
                     repo_name
                 )
             })?;
-            info!(
-                &logger,
-                "Completed repo {} setup in Mononoke Git Server", repo_name
-            );
+            info!("Completed repo {} setup in Mononoke Git Server", repo_name);
         } else {
-            info!(
-                &logger,
-                "Repo {} is already setup in Mononoke Git Server", repo_name
-            );
+            info!("Repo {} is already setup in Mononoke Git Server", repo_name);
         }
         Ok(Arc::new(MononokeGitServerExecutor {
             repo_name: repo_name.to_string(),
@@ -76,10 +66,7 @@ pub struct MononokeGitServerExecutor {
 #[async_trait]
 impl RepoShardedProcessExecutor for MononokeGitServerExecutor {
     async fn execute(&self) -> anyhow::Result<()> {
-        info!(
-            self.repos_mgr.logger(),
-            "Serving repo {} in Mononoke Git Server", &self.repo_name,
-        );
+        info!("Serving repo {} in Mononoke Git Server", &self.repo_name,);
         Ok(())
     }
 
@@ -104,12 +91,11 @@ impl RepoShardedProcessExecutor for MononokeGitServerExecutor {
         if is_deep_sharded {
             self.repos_mgr.remove_repo(&self.repo_name);
             info!(
-                self.repos_mgr.logger(),
-                "No longer serving repo {} in Mononoke Git Server", &self.repo_name,
+                "No longer serving repo {} in Mononoke Git Server",
+                &self.repo_name,
             );
         } else {
             info!(
-                self.repos_mgr.logger(),
                 "Continuing serving repo {} in Mononoke Git Server because it's shallow-sharded.",
                 &self.repo_name,
             );

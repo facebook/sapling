@@ -58,12 +58,12 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use scuba_ext::FutureStatsScubaExt;
 use slog::Logger;
-use slog::debug;
-use slog::info;
-use slog::trace;
-use slog::warn;
 use sql::rusqlite::Connection as SqliteConnection;
 use test_repo_factory::TestRepoFactory;
+use tracing::debug;
+use tracing::info;
+use tracing::trace;
+use tracing::warn;
 use unodes::RootUnodeManifestId;
 use warm_bookmarks_cache::NoopBookmarksCache;
 
@@ -97,9 +97,9 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
     let changeset_parents = &graph_info.parents_map;
     let logger = ctx.logger();
 
-    info!(logger, "Copying changesets to temporary repo...");
+    info!("Copying changesets to temporary repo...");
 
-    debug!(logger, "export_paths: {:#?}", &export_paths);
+    debug!("export_paths: {:#?}", &export_paths);
 
     // Repo that will hold the partial changesets that will be exported to git
     let temp_repo_ctx = create_temp_repo(fb, &ctx).await?;
@@ -265,7 +265,7 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
 
     let head_cs_id = mb_head_cs_id.ok_or(Error::msg("No changesets were moved"))?;
 
-    info!(logger, "Setting master bookmark to the latest changeset");
+    info!("Setting master bookmark to the latest changeset");
 
     // Set master bookmark to point to the latest changeset
     temp_repo_ctx
@@ -273,7 +273,7 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
         .await
         .with_context(|| "Failed to create master bookmark")?;
 
-    info!(logger, "Finished copying all changesets!");
+    info!("Finished copying all changesets!");
     Ok(temp_repo_ctx)
 }
 
@@ -298,7 +298,6 @@ async fn create_bonsai_for_new_repo<'a, R: MononokeRepo>(
 > {
     let logger = changeset_ctx.ctx().logger();
     trace!(
-        logger,
         "Rewriting changeset: {:#?} | {:#?}",
         &changeset_ctx.id(),
         &changeset_ctx.message().await?
@@ -390,7 +389,6 @@ async fn create_bonsai_for_new_repo<'a, R: MononokeRepo>(
                         // name as an export path along with this commit as the
                         // head changeset.
                         warn!(
-                            logger,
                             concat!(
                                 "Changeset {} might have created the exported path {} by ",
                                 "moving/copying files from a commit that might not be",
@@ -400,7 +398,7 @@ async fn create_bonsai_for_new_repo<'a, R: MononokeRepo>(
                             exp_p,
                             copy_from_cs_id
                         );
-                        warn!(logger, "pre move/copy path: {}", old_path);
+                        warn!("pre move/copy path: {}", old_path);
                     }
 
                     *tracked_fc = tracked_fc.with_new_copy_from(None);
@@ -493,16 +491,12 @@ async fn get_export_paths_for_changeset<'a, R: MononokeRepo>(
 ///
 /// In this case, `export_path_infos` would be `[("new", "f", ("old", "D")]`.
 struct GitExportMultiMover<'a> {
-    logger: &'a Logger,
     export_paths: &'a [NonRootMPath],
 }
 
 impl<'a> GitExportMultiMover<'a> {
-    fn new(logger: &'a Logger, export_paths: &'a [NonRootMPath]) -> Self {
-        Self {
-            logger,
-            export_paths,
-        }
+    fn new(_logger: &'a Logger, export_paths: &'a [NonRootMPath]) -> Self {
+        Self { export_paths }
     }
 }
 
@@ -514,14 +508,11 @@ impl<'a> MultiMover for GitExportMultiMover<'a> {
             .any(|p| p.is_prefix_of(source_path));
 
         if !should_export {
-            trace!(
-                self.logger,
-                "Path {:#?} will NOT be exported.", &source_path
-            );
+            trace!("Path {:#?} will NOT be exported.", &source_path);
             return Ok(vec![]);
         }
 
-        trace!(self.logger, "Path {:#?} will be exported.", &source_path);
+        trace!("Path {:#?} will be exported.", &source_path);
         Ok(vec![source_path.clone()])
     }
 
@@ -535,7 +526,6 @@ impl<'a> MultiMover for GitExportMultiMover<'a> {
 /// The temporary repo uses file-backed storage and does not perform any writes
 /// to the Mononoke instance provided to the tool (e.g. production Mononoke).
 async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoContext<Repo>, Error> {
-    let logger = ctx.logger();
     let system_tmp = env::temp_dir();
     let temp_dir_suffix = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
 
@@ -545,12 +535,12 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
     let hg_mutation_db_path = mk_temp_path("hg_mut_temp");
     let blobstore_path = mk_temp_path("blobstore");
 
-    debug!(logger, "metadata_db_path: {0:#?}", metadata_db_path);
-    debug!(logger, "hg_mutation_db_path: {0:#?}", hg_mutation_db_path);
-    debug!(logger, "blobstore_path: {0:#?}", blobstore_path);
+    debug!("metadata_db_path: {0:#?}", metadata_db_path);
+    debug!("hg_mutation_db_path: {0:#?}", hg_mutation_db_path);
+    debug!("blobstore_path: {0:#?}", blobstore_path);
 
     let temp_repo_name = format!("temp_repo_{}", temp_dir_suffix);
-    debug!(logger, "Temporary repo name: {}", temp_repo_name);
+    debug!("Temporary repo name: {}", temp_repo_name);
 
     let metadata_conn = SqliteConnection::open(metadata_db_path)?;
     let hg_mutation_conn = SqliteConnection::open(hg_mutation_db_path)?;

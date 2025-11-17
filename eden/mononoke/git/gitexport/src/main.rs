@@ -47,9 +47,9 @@ use print_graph::print_graph;
 use repo_authorization::AuthorizationContext;
 use repo_factory::ReadOnlyStorage;
 use scuba_ext::FutureStatsScubaExt;
-use slog::info;
-use slog::trace;
-use slog::warn;
+use tracing::info;
+use tracing::trace;
+use tracing::warn;
 use types::ExportPathsInfoArg;
 use types::HeadChangesetArg;
 
@@ -189,7 +189,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let ctx = app.new_basic_context();
     let metadata = ctx.session().metadata();
     let session_id = metadata.session_id();
-    let logger = ctx.logger().clone();
 
     let ctx = ctx.with_mutated_scuba(|mut scuba| {
         scuba.add_metadata(metadata);
@@ -198,7 +197,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         }
         scuba
     });
-    info!(logger, "Starting session with id {}", session_id);
+    info!("Starting session with id {}", session_id);
 
     async_main_impl(app, args, ctx.clone())
         .try_timed()
@@ -206,7 +205,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
         .log_future_stats(ctx.scuba().clone(), "Gitexport execution", None);
 
     info!(
-        &logger,
         "Finished export in {} seconds",
         start_time.elapsed().as_secs()
     );
@@ -223,11 +221,11 @@ async fn async_main_impl(
     let repo: Arc<Repo> = app.open_repo(&args.hg_repo_args).await?;
 
     if !app.environment().readonly_storage.0 {
-        warn!(logger, "readonly_storage is DISABLED!");
+        warn!("readonly_storage is DISABLED!");
     };
 
     if !app.environment().remote_derivation_options.derive_remotely {
-        warn!(logger, "Remote derivation is DISABLED!");
+        warn!("Remote derivation is DISABLED!");
     };
 
     let auth_ctx = AuthorizationContext::new_bypass_access_control();
@@ -244,7 +242,6 @@ async fn async_main_impl(
     let cs_ctx = get_latest_changeset_context(&repo_ctx, &args).await?;
 
     info!(
-        logger,
         "Using changeset {0:?} as the starting changeset",
         cs_ctx.id()
     );
@@ -285,8 +282,8 @@ async fn async_main_impl(
     };
 
     info!(
-        logger,
-        "Export paths and their HEAD commits: {0:#?}", export_path_infos
+        "Export paths and their HEAD commits: {0:#?}",
+        export_path_infos
     );
 
     let graph_info = build_partial_commit_graph_for_export(
@@ -303,8 +300,8 @@ async fn async_main_impl(
         None,
     );
 
-    trace!(logger, "changesets: {:#?}", &graph_info.changesets);
-    trace!(logger, "changeset parents: {:#?}", &graph_info.parents_map);
+    trace!("changesets: {:#?}", &graph_info.changesets);
+    trace!("changeset parents: {:#?}", &graph_info.parents_map);
 
     let ctx = repo_ctx.ctx().clone();
     let temp_repo_ctx = rewrite_partial_changesets(

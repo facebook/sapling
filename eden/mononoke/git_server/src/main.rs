@@ -66,9 +66,9 @@ use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
 use ods_counters::OdsCounterManager;
 use rate_limiting::RateLimitEnvironment;
-use slog::info;
-use slog::warn;
 use tokio::net::TcpListener;
+use tracing::info;
+use tracing::warn;
 
 use crate::middleware::Ods3Middleware;
 use crate::middleware::RequestContentEncodingMiddleware;
@@ -339,7 +339,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(ConfigInfoMiddleware::new(configs))
                 .build(router);
 
-            info!(&logger, "Listening on {}", bound_addr);
+            info!("Listening on {}", bound_addr);
             // Write out the bound address if requested, this is helpful in tests when using automatic binding with :0
             if let Some(bound_addr_path) = bound_addr_path {
                 let mut writer = File::create(bound_addr_path)?;
@@ -402,7 +402,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             Ok(())
         }
     };
-    let cloned_logger = app.logger().clone();
     app.run_until_terminated(
         server,
         move || {
@@ -412,11 +411,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         args.shutdown_timeout_args.shutdown_grace_period,
         async move {
             match quiesce_receiver.await {
-                Ok(_) => info!(
-                    &cloned_logger.clone(),
-                    "received signal from quiesce sender"
-                ),
-                Err(_) => warn!(&cloned_logger, "quiesce sender dropped"),
+                Ok(_) => info!("received signal from quiesce sender"),
+                Err(_) => warn!("quiesce sender dropped"),
             };
             let _ = shutdown_tx.send(());
             // Currently we kill off in-flight requests as soon as we've closed the listener.
@@ -430,6 +426,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         Some(requests_counter),
     )?;
 
-    info!(&logger, "Exiting...");
+    info!("Exiting...");
     Ok(())
 }

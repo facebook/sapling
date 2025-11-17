@@ -31,7 +31,7 @@ use packetline::encode::write_text_packetline;
 use protocol::pack_processor::parse_pack;
 use repo_blobstore::RepoBlobstoreArc;
 use scuba_ext::FutureStatsScubaExt;
-use slog::info;
+use tracing::info;
 
 use crate::command::Command;
 use crate::command::PushArgs;
@@ -287,10 +287,8 @@ async fn non_atomic_refs_update(
         .map(|ref_update| {
             cloned!(request_context, git_bonsai_mapping_store, object_store);
             async move {
-                let ctx = request_context.ctx.clone();
                 let ref_info = ref_update.clone();
                 info!(
-                    ctx.logger(),
                     "Updating ref {} from {} to {}",
                     ref_info.ref_name.as_str(),
                     ref_info.from.to_hex(),
@@ -307,7 +305,6 @@ async fn non_atomic_refs_update(
                 })
                 .await?;
                 info!(
-                    ctx.logger(),
                     "Updated ref {} from {} to {}",
                     ref_info.ref_name.as_str(),
                     ref_info.from.to_hex(),

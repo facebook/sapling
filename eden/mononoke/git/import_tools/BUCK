@@ -25,6 +25,7 @@ rust_library(
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_retry:futures_retry",
         "//common/rust/shed/futures_stats:futures_stats",

@@ -31,12 +31,12 @@ use mononoke_api::RepoContext;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
-use slog::info;
 use slog_glog_fmt::logger_that_can_work_in_tests;
 use test_utils::GitExportTestRepoOptions;
 use test_utils::build_test_repo;
 use test_utils::repo_with_multiple_renamed_export_directories;
 use test_utils::repo_with_renamed_export_path;
+use tracing::info;
 
 #[mononoke::fbinit_test]
 async fn test_partial_commit_graph_for_single_export_path(fb: FacebookInit) -> Result<()> {
@@ -311,8 +311,8 @@ async fn test_renamed_export_paths_are_followed<R: MononokeRepo>(
     let logger = logger_that_can_work_in_tests().unwrap().into();
 
     info!(
-        logger,
-        "Testing renamed export paths with the following paths {0:#?}", export_paths
+        "Testing renamed export paths with the following paths {0:#?}",
+        export_paths
     );
 
     let expected_cs_ids: Vec<ChangesetId> = expected_relevant_changesets

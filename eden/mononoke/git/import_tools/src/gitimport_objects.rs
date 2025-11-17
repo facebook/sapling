@@ -43,7 +43,6 @@ use mononoke_types::MPathElement;
 use mononoke_types::SortedVectorTrieMap;
 use mononoke_types::hash;
 use slog::Logger;
-use slog::debug;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 use tokio::io::AsyncBufReadExt;
@@ -51,6 +50,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::io::BufReader;
 use tokio::process::Child;
 use tokio::process::Command;
+use tracing::debug;
 
 use crate::git_reader::GitReader;
 use crate::git_reader::GitRepoReader;
@@ -453,7 +453,7 @@ pub fn decode_with_bom<'a>(
 fn decode_message(
     message: &[u8],
     encoding: &Option<BString>,
-    logger: &Logger,
+    _logger: &Logger,
 ) -> Result<String, Error> {
     let explicit_encoding_provided = encoding.is_some();
     let mut encoding_or_utf8 = encoding.clone().unwrap_or_else(|| BString::from("utf-8"));
@@ -483,7 +483,6 @@ fn decode_message(
         // REPLACEMENT CHARACTER.
         // In this situation, don't fail but log the occurrence.
         debug!(
-            logger,
             "Failed to decode git message:\n{message:?}\nwith encoding: {encoding:?}.\nThe offending characters were replaced"
         );
     }

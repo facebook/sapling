@@ -53,3 +53,4 @@ smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specializat
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tls = { version = "0.1.0", path = "../../cmdlib/mononoke_app/tls" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

@@ -38,8 +38,8 @@ use mononoke_types::hash::GitSha1;
 use repo_identity::RepoIdentityRef;
 use repo_update_logger::GitContentRefInfo;
 use repo_update_logger::log_git_content_ref;
-use slog::info;
 use topo_sort::sort_topological;
+use tracing::info;
 
 use super::reader::GitObjectStore;
 use crate::Repo;
@@ -222,7 +222,7 @@ async fn process_tags<Uploader: GitUploader>(
             }
         }
     }
-    info!(ctx.logger(), "Uploading tags for repo {}", repo_name);
+    info!("Uploading tags for repo {}", repo_name);
     // Upload the tags to the blobstore and also create bonsai mapping for it
     for (tag_id, tag_metadata) in tags {
         let TagMetadata {
@@ -360,10 +360,7 @@ pub async fn upload_objects(
         ..Default::default()
     };
     let acc = GitimportAccumulator::from_roots(HashMap::new());
-    info!(
-        ctx.logger(),
-        "Importing commit contexts for repo {}", repo_name
-    );
+    info!("Importing commit contexts for repo {}", repo_name);
     // Import and store all the commits, trees and blobs that are pare of the push
     let git_bonsai_mappings = import_commit_contents(
         ctx,
