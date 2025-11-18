@@ -652,10 +652,14 @@ async fn init_bookmarks(
                         .watched(ctx.logger())
                         .await?;
 
-                        tracing::info!("moved {} back in history to {:?}", book, maybe_cs_id);
+                        tracing::info!(
+                            "moved {} back in history to {:?}",
+                            book,
+                            maybe_cs_id.changesets[WarmerRequirement::AllKinds]
+                        );
                         Ok((
                             remaining,
-                            maybe_cs_id.map(|cs_id| {
+                            maybe_cs_id.changesets[WarmerRequirement::AllKinds].map(|cs_id| {
                                 (
                                     book,
                                     BookmarkState {
@@ -791,13 +795,17 @@ async fn warm_all(ctx: &CoreContext, cs_id: ChangesetId, warmers: &[Warmer]) -> 
         .await
 }
 
+pub struct DerivedChangesetIds {
+    pub changesets: EnumMap<WarmerRequirement, Option<ChangesetId>>,
+}
+
 async fn move_bookmark_back_in_history_until_derived(
     ctx: &CoreContext,
     bookmarks: &dyn Bookmarks,
     bookmark_update_log: &dyn BookmarkUpdateLog,
     book: &BookmarkKey,
     warmers: &Arc<Vec<Warmer>>,
-) -> Result<Option<ChangesetId>, Error> {
+) -> Result<DerivedChangesetIds, Error> {
     tracing::info!("moving {} bookmark back in history...", book);
 
     let entries =
@@ -806,7 +814,14 @@ async fn move_bookmark_back_in_history_until_derived(
 
     match entries.derived_entries[WarmerRequirement::AllKinds] {
         LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => {
-            Ok(maybe_cs_id_and_ts.map(|(cs_id, _)| cs_id))
+            let maybe_cs = maybe_cs_id_and_ts.map(|(cs_id, _)| cs_id);
+            Ok(DerivedChangesetIds {
+                changesets: enum_map::enum_map! {
+                    WarmerRequirement::HgOnly => None,
+                    WarmerRequirement::GitOnly => None,
+                    WarmerRequirement::AllKinds => maybe_cs,
+                },
+            })
         }
         LatestDerivedBookmarkEntry::NotFound => {
             let cur_bookmark_value = bookmarks
@@ -817,7 +832,13 @@ async fn move_bookmark_back_in_history_until_derived(
                 book,
                 cur_bookmark_value
             );
-            Ok(cur_bookmark_value)
+            Ok(DerivedChangesetIds {
+                changesets: enum_map::enum_map! {
+                    WarmerRequirement::HgOnly => None,
+                    WarmerRequirement::GitOnly => None,
+                    WarmerRequirement::AllKinds => cur_bookmark_value,
+                },
+            })
         }
     }
 }
