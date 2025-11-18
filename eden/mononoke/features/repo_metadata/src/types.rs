@@ -10,6 +10,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use anyhow::anyhow;
+use bookmarks::BookmarkName;
 use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
@@ -61,6 +62,8 @@ pub struct ItemHistory {
 pub struct FileMetadata {
     /// The path of this file
     pub path: MPath,
+    /// The bookmark/branch this file belongs to
+    pub bookmark: BookmarkName,
     /// The history of this file
     pub history: ItemHistory,
     /// The size of this file in bytes
@@ -75,6 +78,8 @@ pub struct FileMetadata {
 pub struct DirectoryMetadata {
     /// The path of this directory
     pub path: MPath,
+    /// The bookmark/branch this directory belongs to
+    pub bookmark: BookmarkName,
     /// The history of this directory
     pub history: ItemHistory,
     /// The number of files in this directory
@@ -149,12 +154,14 @@ pub struct SymlinkMetadata {
 impl FileMetadata {
     pub(crate) fn new(
         path: MPath,
+        bookmark: BookmarkName,
         info: ChangesetInfo,
         fsnode_file: FsnodeFile,
         change_type: ChangeType,
     ) -> Self {
         Self {
             path,
+            bookmark,
             history: ItemHistory {
                 last_author: info.author().to_string(),
                 last_modified_timestamp: *info.author_date(),

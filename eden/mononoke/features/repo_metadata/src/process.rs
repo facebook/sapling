@@ -10,6 +10,7 @@ use anyhow::anyhow;
 use blame::RootBlameV2;
 use blobstore::Loadable;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use filestore::FetchKey;
@@ -51,12 +52,13 @@ use crate::types::TextFileMetadata;
 pub async fn repo_metadata_for_bookmark<'a, T: Repo>(
     ctx: &'a CoreContext,
     repo: &'a T,
-    bookmark: &BookmarkKey,
+    bookmark: &'a BookmarkKey,
     cs_id: ChangesetId,
     mode: RepoMetadataLoggerMode,
 ) -> Result<impl Stream<Item = Result<MetadataItem>> + use<'a, T>> {
+    let bookmark_name = bookmark.name();
     match mode {
-        RepoMetadataLoggerMode::Full => process_changeset(ctx, repo, cs_id).await,
+        RepoMetadataLoggerMode::Full => process_changeset(ctx, repo, bookmark_name, cs_id).await,
         RepoMetadataLoggerMode::Incremental => {
             let base_commit = repo
                 .repo_metadata_checkpoint()
@@ -65,9 +67,9 @@ pub async fn repo_metadata_for_bookmark<'a, T: Repo>(
                 .map(|entry| entry.changeset_id);
             match base_commit {
                 Some(base_commit) => {
-                    process_changeset_with_base(ctx, repo, cs_id, base_commit).await
+                    process_changeset_with_base(ctx, repo, bookmark_name, cs_id, base_commit).await
                 }
-                None => process_changeset(ctx, repo, cs_id).await,
+                None => process_changeset(ctx, repo, bookmark_name, cs_id).await,
             }
         }
     }
@@ -89,6 +91,7 @@ async fn fsnode_and_unode(
 async fn process_changeset<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
+    bookmark: &'a BookmarkName,
     cs_id: ChangesetId,
 ) -> Result<BoxStream<'a, Result<MetadataItem>>> {
     let (root_fsnode, root_unode) = fsnode_and_unode(ctx, repo, cs_id).await?;
@@ -99,7 +102,9 @@ async fn process_changeset<'a>(
     Ok(
         CombinedId(*root_fsnode.fsnode_id(), *root_unode.manifest_unode_id())
             .list_all_entries(ctx.clone(), repo.repo_blobstore_arc())
-            .map_ok(|(path, entry)| process_entry(ctx, repo, path, ChangeType::Unknown, entry))
+            .map_ok(|(path, entry)| {
+                process_entry(ctx, repo, bookmark, path, ChangeType::Unknown, entry)
+            })
             .try_buffered(200)
             .boxed(),
     )
@@ -108,6 +113,7 @@ async fn process_changeset<'a>(
 async fn process_changeset_with_base<'a>(
     ctx: &'a CoreContext,
     repo: &'a impl Repo,
+    bookmark: &'a BookmarkName,
     new_cs_id: ChangesetId,
     old_cs_id: ChangesetId,
 ) -> Result<BoxStream<'a, Result<MetadataItem>>> {
@@ -128,12 +134,14 @@ async fn process_changeset_with_base<'a>(
     Ok(old_manifest
         .diff(ctx.clone(), repo.repo_blobstore_arc(), new_manifest)
         .map_ok(|diff_entry| match diff_entry {
-            Diff::Added(path, entry) => process_entry(ctx, repo, path, ChangeType::Added, entry),
+            Diff::Added(path, entry) => {
+                process_entry(ctx, repo, bookmark, path, ChangeType::Added, entry)
+            }
             Diff::Changed(path, _old_entry, new_entry) => {
-                process_entry(ctx, repo, path, ChangeType::Modified, new_entry)
+                process_entry(ctx, repo, bookmark, path, ChangeType::Modified, new_entry)
             }
             Diff::Removed(path, entry) => {
-                process_entry(ctx, repo, path, ChangeType::Deleted, entry)
+                process_entry(ctx, repo, bookmark, path, ChangeType::Deleted, entry)
             }
         })
         .try_buffered(200)
@@ -143,16 +151,35 @@ async fn process_changeset_with_base<'a>(
 async fn process_entry(
     ctx: &CoreContext,
     repo: &impl Repo,
+    bookmark: &BookmarkName,
     path: MPath,
     change_type: ChangeType,
     entry: Entry<CombinedId<FsnodeId, ManifestUnodeId>, CombinedId<FsnodeFile, FileUnodeId>>,
 ) -> Result<MetadataItem> {
     match entry {
         Entry::Tree(CombinedId(fsnode_id, manifest_unode_id)) => {
-            process_tree(ctx, repo, path, change_type, fsnode_id, manifest_unode_id).await
+            process_tree(
+                ctx,
+                repo,
+                bookmark,
+                path,
+                change_type,
+                fsnode_id,
+                manifest_unode_id,
+            )
+            .await
         }
         Entry::Leaf(CombinedId(fsnode_file, file_unode_id)) => {
-            process_file(ctx, repo, path, change_type, fsnode_file, file_unode_id).await
+            process_file(
+                ctx,
+                repo,
+                bookmark,
+                path,
+                change_type,
+                fsnode_file,
+                file_unode_id,
+            )
+            .await
         }
     }
 }
@@ -160,6 +187,7 @@ async fn process_entry(
 async fn process_tree(
     ctx: &CoreContext,
     repo: &impl Repo,
+    bookmark: &BookmarkName,
     path: MPath,
     change_type: ChangeType,
     fsnode_id: FsnodeId,
@@ -177,6 +205,7 @@ async fn process_tree(
 
     Ok(MetadataItem::Directory(DirectoryMetadata {
         path,
+        bookmark: bookmark.clone(),
         history: ItemHistory {
             last_author: info.author().to_string(),
             last_modified_timestamp: *info.author_date(),
@@ -193,6 +222,7 @@ async fn process_tree(
 async fn process_file(
     ctx: &CoreContext,
     repo: &impl Repo,
+    bookmark: &BookmarkName,
     path: MPath,
     change_type: ChangeType,
     fsnode_file: FsnodeFile,
@@ -220,7 +250,7 @@ async fn process_file(
         .derive::<ChangesetInfo>(ctx, *file_unode.linknode())
         .await?;
 
-    let file_metadata = FileMetadata::new(path, info, fsnode_file, change_type);
+    let file_metadata = FileMetadata::new(path, bookmark.clone(), info, fsnode_file, change_type);
 
     if *fsnode_file.file_type() == FileType::Symlink {
         let content = filestore::fetch_concat(repo.repo_blobstore(), ctx, filestore_key).await?;

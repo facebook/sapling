@@ -54,6 +54,7 @@ macro_rules! delegate_result_method {
 impl RepoMetadataLogger {
     // Delegate all setter methods using the macro
     delegate_setter!(set_repo_name, repo_name: String);
+    delegate_setter!(set_bookmark, bookmark: String);
     delegate_setter!(set_last_author, author: String);
     delegate_setter!(set_last_modified_timestamp, timestamp: i64);
     delegate_setter!(set_is_file, is_file: bool);
@@ -122,6 +123,7 @@ impl FileMetadata {
         logger.set_is_directory(false);
 
         logger.set_path(self.path.to_string());
+        logger.set_bookmark(self.bookmark.to_string());
         self.history.set_fields(logger);
         logger.set_file_size(self.file_size as i64);
         logger.set_executable(self.is_executable);
@@ -136,6 +138,7 @@ impl DirectoryMetadata {
         logger.set_is_symlink(false);
 
         logger.set_path(self.path.to_string());
+        logger.set_bookmark(self.bookmark.to_string());
         self.history.set_fields(logger);
         logger.set_child_files_count(self.child_files_count as i64);
         logger.set_child_files_total_size(self.child_files_total_size as i64);
