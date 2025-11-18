@@ -253,36 +253,26 @@ class GitFetcher(Fetcher):
         self.origin_repo = repo_url
         self.manifest = manifest
         self.depth = depth if depth else GitFetcher.DEFAULT_DEPTH
-        self.branch = branch
+ 
+    def _current_hash(self) -> str:
+        p = subprocess.run(["git", "rev-parse", "HEAD"], cwd=self.repo_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+        if p.returncode != 0:
+            return ""
+        else:
+            return p.stdout.strip().decode("utf-8")
+ 
     def _update(self) -> ChangeStatus:
-        current_hash = (
-            subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=self.repo_dir)
-            .strip()
-            .decode("utf-8")
-        )
-        target_hash = (
-            subprocess.check_output(["git", "rev-parse", self.rev], cwd=self.repo_dir)
-            .strip()
-            .decode("utf-8")
-        )
-        if target_hash == current_hash:
-            # It's up to date, so there are no changes.  This doesn't detect eg:
-            # if origin/main moved and rev='main', but that's ok for our purposes;
-            # we should be using explicit hashes or eg: a stable branch for the cases
-            # that we care about, and it isn't unreasonable to require that the user
-            # explicitly perform a clean build if those have moved.  For the most
-            # part we prefer that folks build using a release tarball from github
-            # rather than use the git protocol, as it is generally a bit quicker
-            # to fetch and easier to hash and verify tarball downloads.
-            return ChangeStatus()
+        original_hash = self._current_hash()
 
         print("Updating %s -> %s" % (self.repo_dir, self.rev))
-        run_cmd(["git", "fetch", "origin", self.rev], cwd=self.repo_dir)
-        run_cmd(["git", "checkout", self.rev], cwd=self.repo_dir)
+        run_cmd(["git", "fetch", "--depth=1", "origin", self.rev], cwd=self.repo_dir)
+        run_cmd(["git", "checkout", "--detach", "FETCH_HEAD"], cwd=self.repo_dir)
         run_cmd(["git", "submodule", "update", "--init"], cwd=self.repo_dir)
 
-        return ChangeStatus(True)
+        new_hash = self._current_hash()
+
+        return ChangeStatus(original_hash != new_hash)
 
     def update(self) -> ChangeStatus:
         if os.path.exists(self.repo_dir):
@@ -296,19 +286,24 @@ class GitFetcher(Fetcher):
         # eg: this python process is native win32, but the git.exe is cygwin
         # or msys and doesn't like the absolute windows path that we'd otherwise
         # pass to it.  Careful use of cwd helps avoid headaches with cygpath.
-        cmd = [
-            "git",
-            "clone",
-            "--depth=" + str(self.depth),
-        ]
-        if self.branch:
-            cmd.append("--branch=" + self.branch)
-        cmd += [
-            "--",
-            self.origin_repo,
-            os.path.basename(self.repo_dir),
-        ]
-        run_cmd(cmd, cwd=os.path.dirname(self.repo_dir))
+        run_cmd(
+            [
+                "git",
+                "init",
+                os.path.basename(self.repo_dir),
+            ],
+            cwd=os.path.dirname(self.repo_dir),
+        )
+        run_cmd(
+            [
+                "git",
+                "remote",
+                "add",
+                "origin",
+                self.origin_repo,
+            ],
+            cwd=self.repo_dir,
+        )
         self._update()
 
     def clean(self) -> None:
