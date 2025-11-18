@@ -125,7 +125,11 @@ impl VirtualRepoProvider {
                         // This id8 decides file length and paragraph seed for regular blobs.
                         let new_id8 = (file_len << u16::BITS) | (paragraph_seed as u64);
                         let new_id = fields.with_kind_id8(kind, new_id8);
-                        (Id20::from(new_id), TreeItemFlag::File(file_type))
+                        // Add salt to make different paths use different Id20s, to make it more
+                        // interesting for the (potential) caching layer.
+                        let id20 =
+                            new_id.into_id20_with_salt(seed.0.wrapping_shl(32) ^ name_id.0.get());
+                        (id20, TreeItemFlag::File(file_type))
                     }
                     TypedContentId::Absent => unreachable!(),
                 };
