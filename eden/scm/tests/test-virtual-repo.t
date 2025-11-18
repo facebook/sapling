@@ -23,7 +23,7 @@ Smartlog works:
      date:        Sat Oct 25 09:35:59 2025 +0000
      summary:     synthetic commit 121869
 
-Total file count and size is reasonable:
+Total file count and size is reasonable (~80MB):
 
   $ sl go 'roots(all())' -q
   $ sl files | wc -l
@@ -32,6 +32,16 @@ Total file count and size is reasonable:
   >>> size = sum(os.lstat(path).st_size for path in glob.glob('**/*', recursive=True))
   >>> print(size)
   79154496
+
+Checkout virtual/main with more files (~800GB):
+
+  $ sl go 'virtual/main' -q
+  $ sl files | wc -l
+  57364
+  >>> import glob, os
+  >>> size = sum(os.lstat(path).st_size for path in glob.glob('**/*', recursive=True))
+  >>> print(size)
+  795122805
 
 Virtual repo with size-factor=0 works too:
 

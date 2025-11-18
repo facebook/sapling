@@ -94,7 +94,7 @@ static STARTING_WORDS: LazyLock<Vec<(&'static str, &'static str)>> = LazyLock::n
 // TRIGRAM_TEXT_GEN_CACHE[seed] = (paragraph, next_seed)
 static TRIGRAM_TEXT_GEN_CACHE: LazyLock<Vec<OnceLock<(String, u16)>>> = LazyLock::new(|| {
     let mut cache = Vec::new();
-    cache.resize_with(u16::MAX as usize, OnceLock::new);
+    cache.resize_with(1 + (u16::MAX as usize), OnceLock::new);
     cache
 });
 const PARAGRAPH_MAX_LEN: usize = 1926;
