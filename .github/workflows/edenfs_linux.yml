@@ -26,8 +26,10 @@ jobs:
     - id: paths
       name: Query paths
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages query-paths --no-tests --recursive --src-dir=. eden  >> "$GITHUB_OUTPUT"
-    - name: Install Rust Stable
-      uses: dtolnay/rust-toolchain@stable
+    - name: Install Rust Nightly
+      uses: dtolnay/rust-toolchain@nightly
+    - name: Install rustfmt
+      run: rustup component add rustfmt
     - name: Fetch lmdb
       if: ${{ steps.paths.outputs.lmdb_SOURCE }}
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fetch --no-tests lmdb
