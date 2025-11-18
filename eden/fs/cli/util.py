@@ -1430,7 +1430,11 @@ def maybe_edensparse_migration(
         except Exception as e:
             print("edensparse migration failed: ", e, file=sys.stderr)
             # log checkout info and exception
-            migration_exceptions.append(f"{str(checkout)}\n{str(e)}")
+            import traceback
+
+            migration_exceptions.append(
+                f"Migration exception: {checkout.path}\n{traceback.format_exc()}"
+            )
             print("rollbacking changes...", file=sys.stderr)
             for rollback in rollbacks[::-1]:
                 try:
