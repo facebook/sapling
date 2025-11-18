@@ -9,11 +9,22 @@ use types::Id20;
 
 /// Extracted fields embedded in an [`Id20`].
 ///
-/// | Field | TYPE   | FACTOR_BITS | ID      | RESERVED |
+/// | Field | TYPE   | FACTOR_BITS | ID      | EXTRA    |
 /// | Width | 2 bits | 6 bits      | 8 bytes | 11 bytes |
 ///
-/// The `RESERVED` field might be used to store configuration like how to
-/// generate blobs, etc. in the future. Right now, it's all 0s.
+/// The `EXTRA` field can be used to store extra configuration. For blobs,
+/// it contains 8-byte SALT:
+///
+/// | Field | SALT    | RESERVED |
+/// | Width | 8 bytes | 3 bytes  |
+///
+/// For commits and trees, `EXTRA` is currently `RESERVED`:
+///
+/// | Field | RESERVED  |
+/// | Width | 11 bytes  |
+///
+/// The `RESERVED` field might be used for other purposes in the future.
+/// Currently, it's all 0s.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct IdFields {
     pub kind: ObjectKind,
@@ -35,6 +46,16 @@ pub struct IdFields {
     pub id8: u64,
 }
 
+const OFFSET_ID8: usize = 1;
+const OFFSET_EXTRA: usize = OFFSET_ID8 + 8;
+
+// "BLOB" objects use EXTRA as SALT + RESERVED. See also into_id20_with_salt.
+const OFFSET_BLOB_SALT: usize = OFFSET_EXTRA;
+const OFFSET_BLOB_RESERVED: usize = OFFSET_BLOB_SALT + 8;
+
+// Non-blob objects use EXTRA as RESERVED
+const OFFSET_OTHER_RESERVED: usize = OFFSET_EXTRA;
+
 impl IdFields {
     /// Extract fields from a compatible `Id20`.
     pub fn maybe_from_id20(id20: Id20) -> Option<Self> {
@@ -47,11 +68,15 @@ impl IdFields {
             _ => return None,
         };
         let factor_bits = bytes[0] & 0x3f;
-        let reserved = &bytes[9..];
+        let reserved_start = match kind {
+            ObjectKind::Blob | ObjectKind::SymlinkBlob => OFFSET_BLOB_RESERVED,
+            _ => OFFSET_OTHER_RESERVED,
+        };
+        let reserved = &bytes[reserved_start..];
         if reserved.iter().any(|v| *v != 0) {
             return None;
         }
-        let id8 = u64::from_le_bytes(bytes[1..9].try_into().unwrap());
+        let id8 = u64::from_le_bytes(bytes[OFFSET_ID8..OFFSET_EXTRA].try_into().unwrap());
         Some(Self {
             kind,
             factor_bits,
@@ -69,6 +94,19 @@ impl IdFields {
         }
     }
 
+    /// Similar to `into()`, but also mix-in extra `salt`.
+    /// Intended to be only used by `Blob` and `SymlinkBlob` types.
+    pub fn into_id20_with_salt(self, salt: u64) -> Id20 {
+        assert!(matches!(
+            self.kind,
+            ObjectKind::Blob | ObjectKind::SymlinkBlob
+        ));
+        let id20 = Id20::from(self);
+        let mut id20_array = id20.into_byte_array();
+        id20_array[OFFSET_BLOB_SALT..OFFSET_BLOB_RESERVED].copy_from_slice(&salt.to_le_bytes());
+        Id20::from_byte_array(id20_array)
+    }
+
     /// Check if two (usually commits) are compatbile. This means they share
     /// a same `factor_bits`. If we add more info in `RESERVED` in the future,
     /// check the `RESERVED` too.
@@ -81,7 +119,7 @@ impl From<IdFields> for Id20 {
     fn from(id_fields: IdFields) -> Self {
         let mut bytes: [u8; _] = [0; Id20::len()];
         bytes[0] = ((id_fields.kind as u8) << 6) | id_fields.factor_bits;
-        (bytes[1..9]).copy_from_slice(&id_fields.id8.to_le_bytes());
+        (bytes[OFFSET_ID8..OFFSET_EXTRA]).copy_from_slice(&id_fields.id8.to_le_bytes());
         Id20::from_byte_array(bytes)
     }
 }
@@ -113,6 +151,20 @@ mod tests {
                 id8: 12345678,
             };
             let id20 = Id20::from(fields);
+            let fields2 = IdFields::maybe_from_id20(id20).unwrap();
+            assert_eq!(fields2, fields);
+        }
+    }
+
+    #[test]
+    fn test_with_salt_roundtrip() {
+        for kind in [ObjectKind::Blob, ObjectKind::SymlinkBlob] {
+            let fields = IdFields {
+                kind,
+                factor_bits: 34,
+                id8: 0xabcdeeff11223344,
+            };
+            let id20 = fields.into_id20_with_salt(0xfedcba0987654321);
             let fields2 = IdFields::maybe_from_id20(id20).unwrap();
             assert_eq!(fields2, fields);
         }
