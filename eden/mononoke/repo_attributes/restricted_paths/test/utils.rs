@@ -416,6 +416,7 @@ impl RestrictedPathsTestData {
             );
         }
 
+        #[cfg(fbcode_build)]
         if let Some(expected_scuba_logs) = &self.expected_scuba_logs {
             assert_eq!(*expected_scuba_logs, scuba_logs);
         }
