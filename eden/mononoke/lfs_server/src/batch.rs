@@ -54,6 +54,7 @@ use stats::prelude::*;
 use time_ext::DurationExt;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
 use tracing::debug;
+use tracing::trace;
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
@@ -83,6 +84,7 @@ pub struct BatchParams {
 }
 
 /// A collection of objects available in a specific server (internal, or upstream).
+#[derive(Debug)]
 struct ServerObjects {
     objects: HashMap<lfs_protocol::Sha256, (u64, ObjectAction)>,
 }
@@ -134,6 +136,7 @@ impl FromIterator<(InternalObject, ObjectAction)> for ServerObjects {
     }
 }
 
+#[derive(Debug)]
 enum UpstreamObjects {
     UpstreamPresence(ServerObjects),
     NoUpstream,
@@ -471,6 +474,9 @@ fn batch_download_response_objects(
     internal: &ServerObjects,
     scuba: &mut Option<&mut ScubaMiddlewareState>,
 ) -> Result<Vec<ResponseObject>, Error> {
+    trace!("upstream: {:#?}", upstream);
+    trace!("internal: {:#?}", internal);
+
     let mut upstream_blobs = vec![];
     let responses = objects
         .iter()
@@ -583,8 +589,10 @@ async fn batch_download(
             let internal_objects = internal_objects?;
 
             let objects = if ctx.always_wait_for_upstream() {
+                debug!("batch: wait for upstream");
                 None
             } else {
+                debug!("batch: do not wait for upstream");
                 batch_download_internal_only_response_objects(&batch.objects, &internal_objects)
             };
 

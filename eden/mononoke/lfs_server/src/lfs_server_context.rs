@@ -59,6 +59,7 @@ use repo_permission_checker::RepoPermissionCheckerRef;
 use repourl::encode_repo_name;
 use slog::Logger;
 use tokio::runtime::Handle;
+use tracing::debug;
 use tracing::info;
 
 use crate::LfsRepos;
@@ -423,10 +424,12 @@ impl RepositoryRequestContext {
     ) -> Result<Option<ResponseBatch>, ErrorKind> {
         // If upstream is disabled, we won't send an upstream request
         if !self.repo.repo_config().lfs.use_upstream_lfs_server {
+            debug!("No Upstream LFS server configured for repo");
             return Ok(None);
         }
         // If we don't have an upstream, we can't send an upstream request
         let Some(uri) = self.uri_builder.upstream_batch_uri()? else {
+            debug!("No Upstream LFS server url configured");
             return Ok(None);
         };
 
