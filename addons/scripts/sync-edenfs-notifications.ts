@@ -10,12 +10,11 @@ import {Internal} from './Internal';
 /* eslint-disable no-console */
 
 /**
- * This script is run during verify-addons-folder.py to validate any internal files.
- * This is a noop in OSS.
+ * This script is run with `yarn sync-edenfs-notifications` in addons/ to sync the EdenFS notifications client files.
+ * This is a no-op in OSS.
  */
 async function main() {
-  await Internal.validateApiTypeFile?.();
-  await Internal.validateEdenFSNotificationsClient?.();
+  await Internal.syncEdenFSNotificationsClient?.();
 }
 
 main().catch(error => {
