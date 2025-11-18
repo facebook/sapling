@@ -50,6 +50,7 @@ use context::CoreContext;
 use context::SessionClass;
 use deleted_manifest::RootDeletedManifestV2Id;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
+use enum_map::EnumMap;
 use fastlog::RootFastlog;
 use filenodes_derivation::FilenodesOnlyPublic;
 use fsnodes::RootFsnodeId;
@@ -133,6 +134,7 @@ pub type IsWarmFn = dyn for<'a> Fn(&'a CoreContext, ChangesetId) -> BoxFuture<'a
     + Send
     + Sync;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, enum_map::Enum)]
 pub enum WarmerTag {
     Hg,
     Git,
@@ -634,7 +636,10 @@ async fn init_bookmarks(
 
             let remaining = total - i - 1;
 
-            if !is_warm(ctx, cs_id, warmers).watched(ctx.logger()).await {
+            let warm_state = get_warm_state(ctx, cs_id, warmers)
+                .watched(ctx.logger())
+                .await;
+            if !(warm_state.are_all_warm()) {
                 match mode {
                     InitMode::Rewind => {
                         let maybe_cs_id = move_bookmark_back_in_history_until_derived(
@@ -712,14 +717,56 @@ async fn init_bookmarks(
     Ok(res)
 }
 
-async fn is_warm(ctx: &CoreContext, cs_id: ChangesetId, warmers: &[Warmer]) -> bool {
-    let is_warm = warmers
-        .iter()
-        .map(|warmer| (*warmer.is_warm)(ctx, cs_id).map(|res| res.unwrap_or(false)))
-        .collect::<FuturesUnordered<_>>();
+struct WarmState {
+    state: EnumMap<WarmerTag, Option<bool>>,
+}
 
-    is_warm
-        .fold(true, |acc, is_warm| future::ready(acc & is_warm))
+impl WarmState {
+    fn new() -> Self {
+        WarmState {
+            state: EnumMap::default(),
+        }
+    }
+
+    fn is_warm(&self, tag: WarmerTag) -> bool {
+        self.state[tag].unwrap_or(true)
+    }
+
+    fn are_all_warm(&self) -> bool {
+        // If we haven't seen any warmer we consider the full state as true
+        // since we don't know if we just didn't configure any warmers at all.
+        self.state
+            .iter()
+            .fold(true, |acc, (_tag, val)| acc && val.unwrap_or(true))
+    }
+
+    fn apply(&mut self, tag: WarmerTag, is_warm: bool) {
+        let current = self.is_warm(tag);
+        self.state[tag] = Some(is_warm && current);
+    }
+}
+
+async fn get_warm_state(ctx: &CoreContext, cs_id: ChangesetId, warmers: &[Warmer]) -> WarmState {
+    if warmers.is_empty() {
+        tracing::warn!(
+            "get_warm_state called with empty warmers list for changeset {:?}. This likely indicates a misconfiguration.",
+            cs_id
+        );
+    }
+
+    warmers
+        .iter()
+        .map(|warmer| async move {
+            let warm = (*warmer.is_warm)(ctx, cs_id).await.unwrap_or(false);
+            (warm, &warmer.tags)
+        })
+        .collect::<FuturesUnordered<_>>()
+        .fold(WarmState::new(), |mut state, (warm, tags)| async move {
+            for tag in tags {
+                state.apply(*tag, warm);
+            }
+            state
+        })
         .await
 }
 
@@ -849,18 +896,19 @@ pub async fn find_latest_derived_and_underived(
             |(maybe_cs_id, id_and_ts)| async move {
                 match maybe_cs_id {
                     Some(cs_id) => {
-                        let derived = is_warm(ctx, cs_id, warmers).await;
+                        let derived = get_warm_state(ctx, cs_id, warmers).await;
                         (Some((cs_id, id_and_ts)), derived)
                     }
-                    None => (None, true),
+                    None => (None, WarmState::new()),
                 }
             },
         ))
         .buffered(100);
 
-        while let Some((maybe_cs_id_ts, is_warm)) = maybe_derived.next().watched(ctx.logger()).await
+        while let Some((maybe_cs_id_ts, warm_state)) =
+            maybe_derived.next().watched(ctx.logger()).await
         {
-            if is_warm {
+            if warm_state.are_all_warm() {
                 // Remove bookmark update log id
                 let maybe_cs_ts =
                     maybe_cs_id_ts.map(|(cs_id, id_and_ts)| (cs_id, id_and_ts.map(|(_, ts)| ts)));
@@ -2108,7 +2156,8 @@ mod tests {
             move || {
                 cloned!(ctx, master, warmers);
                 async move {
-                    let res: Result<_, Error> = Ok(is_warm(&ctx, master, &warmers).await);
+                    let warm_state = get_warm_state(&ctx, master, &warmers).await;
+                    let res: Result<_, Error> = Ok(warm_state.are_all_warm());
                     res
                 }
             }

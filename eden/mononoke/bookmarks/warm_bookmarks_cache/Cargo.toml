@@ -25,6 +25,7 @@ content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/co
 context = { version = "0.1.0", path = "../../server/context" }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
+enum-map = "2.7.3"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
 filenodes_derivation = { version = "0.1.0", path = "../../derived_data/filenodes_derivation" }
