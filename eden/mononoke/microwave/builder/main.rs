@@ -21,6 +21,7 @@ use bookmarks::BookmarkUpdateLog;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::Bookmarks;
 use bookmarks::BookmarksRef;
+use bookmarks_cache::WarmerRequirement;
 use cache_warmup::CacheWarmupKind;
 use cache_warmup::CacheWarmupRequest;
 use cache_warmup::CacheWarmupTarget;
@@ -128,7 +129,7 @@ async fn cache_warmup_target(
         ),
     ];
 
-    let (latest_derived, _latest_underived) = find_latest_derived_and_underived(
+    let latest_bookmarks = find_latest_derived_and_underived(
         ctx,
         repo.bookmarks(),
         repo.bookmark_update_log(),
@@ -137,7 +138,7 @@ async fn cache_warmup_target(
     )
     .await?;
 
-    match latest_derived {
+    match latest_bookmarks.derived_entries[WarmerRequirement::AllKinds] {
         LatestDerivedBookmarkEntry::Found(Some((cs_id, _))) => {
             Ok(CacheWarmupTarget::Changeset(cs_id))
         }

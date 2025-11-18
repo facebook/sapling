@@ -106,6 +106,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:enum-map",
         ":bookmarks_types",
         "//common/rust/shed/facet:facet",
         "//eden/mononoke/mononoke_types:mononoke_types",

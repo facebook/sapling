@@ -38,7 +38,7 @@ pub trait BookmarksCache: Send + Sync {
 /// The warmers that are configured in the bookmarks_cache are tagged according
 /// to their use. Some of them are used for Hg, some for Git, and some for both.
 /// This enum allows selecting the warmup requirements for the requested bookmark.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, enum_map::Enum)]
 pub enum WarmerRequirement {
     /// All the Hg Warmers must be ready
     HgOnly,

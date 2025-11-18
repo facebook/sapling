@@ -21,6 +21,7 @@ rust_binary(
         "//eden/mononoke/blobstore:blobstore_factory",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/bookmarks:bookmarks_cache",
         "//eden/mononoke/bookmarks:warm_bookmarks_cache",
         "//eden/mononoke/cache_warmup:cache_warmup",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",

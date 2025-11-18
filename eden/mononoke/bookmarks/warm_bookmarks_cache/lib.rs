@@ -800,11 +800,11 @@ async fn move_bookmark_back_in_history_until_derived(
 ) -> Result<Option<ChangesetId>, Error> {
     tracing::info!("moving {} bookmark back in history...", book);
 
-    let (latest_derived_entry, _) =
+    let entries =
         find_latest_derived_and_underived(ctx, bookmarks, bookmark_update_log, book, warmers)
             .await?;
 
-    match latest_derived_entry {
+    match entries.derived_entries[WarmerRequirement::AllKinds] {
         LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => {
             Ok(maybe_cs_id_and_ts.map(|(cs_id, _)| cs_id))
         }
@@ -822,6 +822,7 @@ async fn move_bookmark_back_in_history_until_derived(
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum LatestDerivedBookmarkEntry {
     /// Timestamp can be None if no history entries are found
     Found(Option<(ChangesetId, Option<Timestamp>)>),
@@ -838,6 +839,11 @@ pub struct LatestUnderivedBookmarkEntry {
     maybe_id_ts: Option<(BookmarkUpdateLogId, Timestamp)>,
 }
 
+pub struct LatestBookmarkEntries {
+    pub latest_underived: LatestUnderivedBookmarkEntry,
+    pub derived_entries: EnumMap<WarmerRequirement, LatestDerivedBookmarkEntry>,
+}
+
 /// Searches bookmark log for latest entry for which everything is derived. Note that we consider log entry that
 /// deletes a bookmark to be derived.
 pub async fn find_latest_derived_and_underived(
@@ -846,7 +852,7 @@ pub async fn find_latest_derived_and_underived(
     bookmark_update_log: &dyn BookmarkUpdateLog,
     book: &BookmarkKey,
     warmers: &[Warmer],
-) -> Result<(LatestDerivedBookmarkEntry, LatestUnderivedBookmarkEntry), Error> {
+) -> Result<LatestBookmarkEntries, Error> {
     let mut latest_underived = LatestUnderivedBookmarkEntry::default();
     let mut found_latest_entry = false;
     let history_depth_limits = vec![0, 10, 50, 100, 1000, 10000];
@@ -912,10 +918,15 @@ pub async fn find_latest_derived_and_underived(
                 // Remove bookmark update log id
                 let maybe_cs_ts =
                     maybe_cs_id_ts.map(|(cs_id, id_and_ts)| (cs_id, id_and_ts.map(|(_, ts)| ts)));
-                return Ok((
-                    LatestDerivedBookmarkEntry::Found(maybe_cs_ts),
+
+                return Ok(LatestBookmarkEntries {
                     latest_underived,
-                ));
+                    derived_entries: enum_map::enum_map! {
+                        WarmerRequirement::HgOnly => LatestDerivedBookmarkEntry::Found(None),
+                        WarmerRequirement::GitOnly => LatestDerivedBookmarkEntry::Found(None),
+                        WarmerRequirement::AllKinds => LatestDerivedBookmarkEntry::Found(maybe_cs_ts),
+                    },
+                });
             } else {
                 // Store the oldest underived bookmarke entry ID and ts for logging purpose
                 latest_underived.maybe_id_ts = maybe_cs_id_ts.and_then(|(_, id_and_ts)| id_and_ts);
@@ -924,11 +935,25 @@ pub async fn find_latest_derived_and_underived(
 
         // Bookmark has been created recently and wasn't derived at all
         if (log_entries_fetched as u32) < limit {
-            return Ok((LatestDerivedBookmarkEntry::Found(None), latest_underived));
+            return Ok(LatestBookmarkEntries {
+                latest_underived,
+                derived_entries: enum_map::enum_map! {
+                    WarmerRequirement::HgOnly => LatestDerivedBookmarkEntry::Found(None),
+                    WarmerRequirement::GitOnly => LatestDerivedBookmarkEntry::Found(None),
+                    WarmerRequirement::AllKinds => LatestDerivedBookmarkEntry::Found(None),
+                },
+            });
         }
     }
 
-    Ok((LatestDerivedBookmarkEntry::NotFound, latest_underived))
+    Ok(LatestBookmarkEntries {
+        latest_underived,
+        derived_entries: enum_map::enum_map! {
+            WarmerRequirement::HgOnly => LatestDerivedBookmarkEntry::NotFound,
+            WarmerRequirement::GitOnly => LatestDerivedBookmarkEntry::NotFound,
+            WarmerRequirement::AllKinds => LatestDerivedBookmarkEntry::NotFound,
+        },
+    })
 }
 
 #[facet::container]
@@ -1316,7 +1341,7 @@ async fn single_bookmark_updater(
     warmers: &Arc<Vec<Warmer>>,
     mut staleness_reporter: impl FnMut(Timestamp),
 ) -> Result<(), Error> {
-    let (latest_derived, latest_underived) = find_latest_derived_and_underived(
+    let entries = find_latest_derived_and_underived(
         ctx,
         repo.bookmarks(),
         repo.bookmark_update_log(),
@@ -1324,6 +1349,8 @@ async fn single_bookmark_updater(
         warmers.as_ref(),
     )
     .await?;
+    let latest_derived = entries.derived_entries[WarmerRequirement::AllKinds];
+    let latest_underived = entries.latest_underived;
 
     let update_bookmark = |cs_id: ChangesetId| async move {
         bookmarks.with_write(|bookmarks| {
