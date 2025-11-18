@@ -16,9 +16,9 @@ use stats::prelude::*;
 
 define_stats! {
     prefix = "mononoke.arl";
-    total_requests: dynamic_timeseries("{}.total_requests", (service: String); Count),
-    accepted_requests: dynamic_timeseries("{}.accepted_requests", (service: String); Count),
-    rejected_requests: dynamic_timeseries("{}.rejected_requests", (service: String); Count),
+    total_requests: dynamic_timeseries("{}.total_requests", (service: String); Rate, Sum),
+    accepted_requests: dynamic_timeseries("{}.accepted_requests", (service: String); Rate, Sum),
+    rejected_requests: dynamic_timeseries("{}.rejected_requests", (service: String); Rate, Sum),
 }
 
 /// Resource monitoring mode for the rate limiter
