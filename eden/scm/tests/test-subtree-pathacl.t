@@ -59,3 +59,13 @@ Test subtree merge protected path
   Do you still wish to continue (y/n)?  n
   abort: copying protected path to an unprotected path is not allowed
   [255]
+
+Test subtree graft protected path
+
+  $ hg subtree graft --from-path foo --to-path bar -r 6d341104cfe6
+  WARNING: You are attempting to graft protected data to an unprotected location:
+   * from-path: foo (contains protected data)
+   * to-path: bar
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
