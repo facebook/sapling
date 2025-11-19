@@ -122,6 +122,13 @@ Test subtree copy with a non-exist tent-filter path (the commit does not have th
   protected
   y
 
+Test subtree copy to the protected directory
+  $ hg subtree copy --from-path foo/protected/x --to-path foo/protected/x2
+  copying foo/protected/x to foo/protected/x2
+  $ ls foo/protected
+  x
+  x2
+
 Setup client repo with enabling tent-filer profile
 
   $ cd
