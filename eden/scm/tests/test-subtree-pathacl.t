@@ -22,8 +22,10 @@
 
   $ mkdir foo
   $ echo "1\n2\n3\n"> foo/x
+  $ echo "y" > foo/y
   $ hg ci -Am "add foo"
   adding foo/x
+  adding foo/y
 
   $ mkdir bar
   $ echo "1\n2\n3\n"> bar/x
@@ -36,11 +38,11 @@
   $ hg book master
 
   $ hg log -G -T '{node|short} {desc}\n'
-  @  6ccc1aafdbcb update foo
+  @  bdcb96c08db3 update foo
   │
-  o  1e48bf7882cb add bar
+  o  828d81ffd0aa add bar
   │
-  o  efc0acd15b30 add foo
+  o  8d49f4ffde71 add foo
   │
   o  183a8fb76979 add tent-filter file
 
@@ -80,7 +82,7 @@ Test subtree merge protected path
 
 Test subtree graft protected path
 
-  $ hg subtree graft --from-path foo --to-path bar -r 6ccc1aafdbcb
+  $ hg subtree graft --from-path foo --to-path bar -r bdcb96c08db3
   WARNING: You are attempting to graft protected data to an unprotected location:
    * from-path: foo (contains protected data)
    * to-path: bar
