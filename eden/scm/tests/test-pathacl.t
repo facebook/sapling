@@ -15,36 +15,36 @@
   > [include]
   > *
   > [exclude]
-  > foo/x
+  > foo/protected
   > EOF
   $ hg ci -Am "add tent-filter file"
   adding tent-filter
 
-  $ mkdir foo
-  $ echo "1\n2\n3\n"> foo/x
-  $ echo "y" > foo/y
+  $ mkdir -p foo/protected
+  $ echo "1\n2\n3\n"> foo/protected/x
+  $ echo "a\nb\nc\n" > foo/y
   $ hg ci -Am "add foo"
-  adding foo/x
+  adding foo/protected/x
   adding foo/y
 
   $ mkdir bar
-  $ echo "1\n2\n3\n"> bar/x
+  $ echo "a2\nb\nc\n"> bar/y
   $ hg ci -Am "add bar"
-  adding bar/x
+  adding bar/y
 
-  $ echo "11\n2\n3\n"> foo/x
+  $ echo "11\n2\n3\n"> foo/protected/x
   $ hg ci -m "update foo"
 
   $ hg book master
 
   $ hg log -G -T '{node|short} {desc}\n'
-  @  bdcb96c08db3 update foo
+  @  bf60887fbaff update foo
   │
-  o  828d81ffd0aa add bar
+  o  6212305f81b9 add bar
   │
-  o  8d49f4ffde71 add foo
+  o  3aeb35855961 add foo
   │
-  o  183a8fb76979 add tent-filter file
+  o  5184ab37fc85 add tent-filter file
 
 Setup client repo without enabling tent-filer profile
 
@@ -56,7 +56,7 @@ Test subtree copy protected path
 
   $ hg cp foo baz
   WARNING: You are attempting to copy protected data to an unprotected location:
-   * from-path: foo/x (contains protected data)
+   * from-path: foo/protected/x (contains protected data)
    * to-path: baz
   Do you still wish to continue (y/n)?  n
   abort: copying protected path to an unprotected path is not allowed
@@ -64,7 +64,7 @@ Test subtree copy protected path
 
   $ hg mv foo baz
   WARNING: You are attempting to move protected data to an unprotected location:
-   * from-path: foo/x (contains protected data)
+   * from-path: foo/protected/x (contains protected data)
    * to-path: baz
   Do you still wish to continue (y/n)?  n
   abort: copying protected path to an unprotected path is not allowed
@@ -78,9 +78,9 @@ Test subtree copy protected path
   abort: copying protected path to an unprotected path is not allowed
   [255]
 
-  $ hg subtree copy --from-path foo/x --to-path baz/x
+  $ hg subtree copy --from-path foo/protected/x --to-path baz/x
   WARNING: You are attempting to copy protected data to an unprotected location:
-   * from-path: foo/x (contains protected data)
+   * from-path: foo/protected/x (contains protected data)
    * to-path: baz/x
   Do you still wish to continue (y/n)?  n
   abort: copying protected path to an unprotected path is not allowed
@@ -98,7 +98,7 @@ Test subtree merge protected path
 
 Test subtree graft protected path
 
-  $ hg subtree graft --from-path foo --to-path bar -r bdcb96c08db3
+  $ hg subtree graft --from-path foo --to-path bar -r bf60887fbaff
   WARNING: You are attempting to graft protected data to an unprotected location:
    * from-path: foo (contains protected data)
    * to-path: bar
@@ -108,7 +108,7 @@ Test subtree graft protected path
 
 Test subtree copy with addtional filter (sparse profile) path
   $ hg subtree copy --from-path foo --to-path baz --filter tent-filter-not-exist
-  abort: path 'tent-filter-not-exist' does not exist in commit bdcb96c08db3
+  abort: path 'tent-filter-not-exist' does not exist in commit bf60887fbaff
   [255]
   $ hg subtree copy --from-path foo --to-path baz --filter tent-filter
   copying foo to baz
@@ -119,7 +119,7 @@ Test subtree copy with a non-exist tent-filter path (the commit does not have th
   $ hg subtree copy --from-path foo --to-path baz2 --config pathacl.tent-filter-path=tent-filter-not-exist
   copying foo to baz2
   $ ls baz2
-  x
+  protected
   y
 
 Setup client repo with enabling tent-filer profile
