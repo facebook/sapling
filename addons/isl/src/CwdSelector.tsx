@@ -277,9 +277,13 @@ function SubmoduleSelectorGroup({
   if (repoRoots == null) {
     return null;
   }
-
   const numRoots = repoRoots.length;
   const directRepoRoot = repoRoots[numRoots - 1];
+  if (currentCwd !== directRepoRoot) {
+    // If the actual cwd is deeper than the supeproject root,
+    // submodule selectors don't make sense
+    return null;
+  }
   const submodulesToBeSelected = submoduleOptions.get(directRepoRoot)?.value;
 
   const out = [];
