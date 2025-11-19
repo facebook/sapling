@@ -36,10 +36,15 @@
   $ echo "11\n2\n3\n"> foo/protected/x
   $ hg ci -m "update foo"
 
+  $ echo "a\nb\nc2\n" > foo/y
+  $ hg ci -m "update foo/y"
+
   $ hg book master
 
   $ hg log -G -T '{node|short} {desc}\n'
-  @  bf60887fbaff update foo
+  @  3dbe1a097d57 update foo/y
+  │
+  o  bf60887fbaff update foo
   │
   o  6212305f81b9 add bar
   │
@@ -109,7 +114,7 @@ Test subtree graft protected path
 
 Test subtree copy with addtional filter (sparse profile) path
   $ hg subtree copy --from-path foo --to-path baz --filter tent-filter-not-exist
-  abort: path 'tent-filter-not-exist' does not exist in commit bf60887fbaff
+  abort: path 'tent-filter-not-exist' does not exist in commit 3dbe1a097d57
   [255]
   $ hg subtree copy --from-path foo --to-path baz --filter tent-filter
   copying foo to baz
@@ -145,14 +150,14 @@ file x should be filtered out
   $ ls baz
   y
   $ hg show
-  commit:      912871303c41
+  commit:      4060440d87ac
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       baz/y
   description:
   subtree copy foo to baz
   
-  Subtree copy from bf60887fbaffc951448ec96c0d99c22a4eb1d754
+  Subtree copy from 3dbe1a097d576c690e7ef7607cffe27e4681a9b1
   - Copied path foo to baz
   
   
@@ -163,7 +168,7 @@ file x should be filtered out
   @@ -0,0 +1,4 @@
   +a
   +b
-  +c
+  +c2
   +
 
 Test subtree merge protected path with tent-filter enabled (should fail)
