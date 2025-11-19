@@ -21,6 +21,7 @@ use MononokeWarmBookmarkCacheStats_ods3_types::MononokeWarmBookmarkCacheStats;
 use MononokeWarmBookmarkCacheStats_ods3_types::WarmBookmarkCacheEvent;
 use anyhow::Context as _;
 use anyhow::Error;
+use anyhow::anyhow;
 use async_trait::async_trait;
 use basename_suffix_skeleton_manifest_v3::RootBssmV3DirectoryId;
 use blame::RootBlameV2;
@@ -618,8 +619,8 @@ async fn init_bookmarks(
 
             let warm_state = get_warm_state(ctx, cs_id, warmers)
                 .watched(ctx.logger())
-                .await;
-            if !(warm_state.are_all_warm()) {
+                .await?;
+            if !warm_state.are_all_warm() {
                 match mode {
                     InitMode::Rewind => {
                         let maybe_cs_id = move_bookmark_back_in_history_until_derived(
@@ -701,36 +702,130 @@ async fn init_bookmarks(
     Ok(res)
 }
 
+/// Status of derived data for a specific tag (Hg or Git).
+#[derive(PartialEq, Eq, Default, Copy, Clone)]
+enum TagStatus {
+    /// Derivation status has not been checked yet.
+    Unknown,
+    /// All derived data for this tag is available.
+    Warm,
+    /// At least one piece of derived data for this tag is missing.
+    Cold,
+    /// This tag is not being tracked
+    #[default]
+    Untracked,
+}
+
+/// Tracks the warm/cold status of derived data across different warmer tags.
+///
+/// This struct maintains the derivation status for each one of the tags in the configured warmers.
+/// Tags not tracked by any warmer are represented as `None` and are ignored.
+///
+/// The status follows AND semantics: once a tag becomes Cold, it stays Cold until
+/// re-initialized, ensuring conservative tracking of derived data availability.
 struct WarmState {
-    state: EnumMap<WarmerTag, Option<bool>>,
+    state: EnumMap<WarmerTag, TagStatus>,
 }
 
 impl WarmState {
-    fn new() -> Self {
+    /// Creates a new WarmState initialized with tags from the provided warmers.
+    ///
+    /// Only tags present in at least one warmer will be tracked (set to `Unknown`).
+    /// Other tags remain `None` and are not tracked.
+    ///
+    /// # Arguments
+    /// * `warmers` - Slice of warmers whose tags should be tracked
+    ///
+    /// # Returns
+    /// A new WarmState with all tracked tags initialized to `Unknown`
+    fn new(warmers: &[Warmer]) -> Self {
+        let mut state = EnumMap::default(); // All Untracked by default
+        let tracked_tags: HashSet<WarmerTag> = warmers
+            .iter()
+            .flat_map(|w| w.tags.iter().copied())
+            .collect();
+        for tag in tracked_tags {
+            state[tag] = TagStatus::Unknown;
+        }
+        WarmState { state }
+    }
+
+    /// Creates an empty WarmState with no tracked tags.
+    ///
+    /// This is used for cases where there's no changeset (e.g., deleted bookmarks).
+    /// Since there's no derived data to compute, `are_all_warm()` will return `true`
+    /// immediately (vacuous truth over empty set).
+    ///
+    /// # Returns
+    /// A new WarmState with no tracked tags (all `None`)
+    fn empty() -> Self {
         WarmState {
             state: EnumMap::default(),
         }
     }
 
+    /// Checks if a specific tag is warm (all derived data available).
+    ///
+    /// # Arguments
+    /// * `tag` - The warmer tag to check
+    ///
+    /// # Returns
+    /// `true` if the tag is being tracked and is in the Warm state, `false` otherwise
     fn is_warm(&self, tag: WarmerTag) -> bool {
-        self.state[tag].unwrap_or(true)
+        self.state[tag] == TagStatus::Warm
     }
 
+    /// Checks if all tracked tags are warm.
+    ///
+    /// Only considers tags that are being tracked (not Untracked).
+    /// Returns `true` if all tracked tags are `Warm`, or if no tags are being tracked.
+    ///
+    /// # Returns
+    /// `true` if all tracked tags are Warm, `false` if any tracked tag is Unknown or Cold
     fn are_all_warm(&self) -> bool {
-        // If we haven't seen any warmer we consider the full state as true
-        // since we don't know if we just didn't configure any warmers at all.
         self.state
             .iter()
-            .fold(true, |acc, (_tag, val)| acc && val.unwrap_or(true))
+            .filter(|&(_, &val)| val != TagStatus::Untracked)
+            .all(|(_, val)| *val == TagStatus::Warm)
     }
 
-    fn apply(&mut self, tag: WarmerTag, is_warm: bool) {
-        let current = self.is_warm(tag);
-        self.state[tag] = Some(is_warm && current);
+    /// Updates the warm/cold status of a tag based on a check result.
+    ///
+    /// Implements AND semantics for combining multiple warmer results:
+    /// - `Unknown` or `Warm` → `Warm` if `is_warm` is true, `Cold` otherwise
+    /// - `Cold` → stays `Cold` (pessimistic AND logic)
+    ///
+    /// If called on a non-tracked tag, logs an error and returns without updating.
+    ///
+    /// # Arguments
+    /// * `tag` - The warmer tag to update
+    /// * `is_warm` - Whether this particular check found the data to be warm
+    fn apply(&mut self, tag: WarmerTag, is_warm: bool) -> Result<(), Error> {
+        self.state[tag] = match self.state[tag] {
+            TagStatus::Cold => TagStatus::Cold, // Once cold, stay cold (AND logic)
+            TagStatus::Unknown | TagStatus::Warm => {
+                if is_warm {
+                    TagStatus::Warm
+                } else {
+                    TagStatus::Cold
+                }
+            }
+            TagStatus::Untracked => {
+                return Err(anyhow!(
+                    "WarmState.apply() called on non-tracked tag {:?}",
+                    tag
+                ));
+            }
+        };
+        Ok(())
     }
 }
 
-async fn get_warm_state(ctx: &CoreContext, cs_id: ChangesetId, warmers: &[Warmer]) -> WarmState {
+async fn get_warm_state(
+    ctx: &CoreContext,
+    cs_id: ChangesetId,
+    warmers: &[Warmer],
+) -> Result<WarmState, Error> {
     if warmers.is_empty() {
         tracing::warn!(
             "get_warm_state called with empty warmers list for changeset {:?}. This likely indicates a misconfiguration.",
@@ -742,15 +837,18 @@ async fn get_warm_state(ctx: &CoreContext, cs_id: ChangesetId, warmers: &[Warmer
         .iter()
         .map(|warmer| async move {
             let warm = (*warmer.is_warm)(ctx, cs_id).await.unwrap_or(false);
-            (warm, &warmer.tags)
+            Ok((warm, &warmer.tags))
         })
         .collect::<FuturesUnordered<_>>()
-        .fold(WarmState::new(), |mut state, (warm, tags)| async move {
-            for tag in tags {
-                state.apply(*tag, warm);
-            }
-            state
-        })
+        .try_fold(
+            WarmState::new(warmers),
+            |mut state, (warm, tags)| async move {
+                for tag in tags {
+                    state.apply(*tag, warm)?;
+                }
+                Ok(state)
+            },
+        )
         .await
 }
 
@@ -906,7 +1004,7 @@ pub async fn find_latest_derived_and_underived(
                         let derived = get_warm_state(ctx, cs_id, warmers).await;
                         (Some((cs_id, id_and_ts)), derived)
                     }
-                    None => (None, WarmState::new()),
+                    None => (None, Ok(WarmState::empty())),
                 }
             },
         ))
@@ -915,7 +1013,7 @@ pub async fn find_latest_derived_and_underived(
         while let Some((maybe_cs_id_ts, warm_state)) =
             maybe_derived.next().watched(ctx.logger()).await
         {
-            if warm_state.are_all_warm() {
+            if warm_state?.are_all_warm() {
                 // Remove bookmark update log id
                 let maybe_cs_ts =
                     maybe_cs_id_ts.map(|(cs_id, id_and_ts)| (cs_id, id_and_ts.map(|(_, ts)| ts)));
@@ -2184,7 +2282,7 @@ mod tests {
             move || {
                 cloned!(ctx, master, warmers);
                 async move {
-                    let warm_state = get_warm_state(&ctx, master, &warmers).await;
+                    let warm_state = get_warm_state(&ctx, master, &warmers).await?;
                     let res: Result<_, Error> = Ok(warm_state.are_all_warm());
                     res
                 }
