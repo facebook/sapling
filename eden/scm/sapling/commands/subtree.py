@@ -110,6 +110,7 @@ subtree_subcmd = subtree.subcommand(
             _("REV"),
         ),
         ("f", "force", None, _("forcibly copy over an existing file")),
+        ("", "filter", "", _("filter profile path")),
     ]
     + subtree_path_opts
     + commitopts
@@ -129,6 +130,10 @@ def subtree_copy(ui, repo, *args, **opts):
       @prog@ subtree cp \\
         --from-path my-project --to-path my-branch1 \\
         --from-path my-project --to-path my-branch2
+
+    The "--filter" option allows specifying a sparse profile to filter which
+    files are copied. Only files matching the sparse profile will be included
+    in the copy operation.
     """
     with repo.wlock(), repo.lock():
         return _docopy(ui, repo, *args, **opts)
@@ -628,9 +633,18 @@ def _docopy(ui, repo, *args, **opts):
     from_ctx = scmutil.revsingle(repo, from_rev)
     to_ctx = repo["."]
 
+    filter_path = opts.get("filter")
+    if filter_path:
+        filter_path = scmutil.rootrelpath(to_ctx, filter_path)
+        subtreeutil.validate_path_exist(
+            ui, to_ctx, [filter_path], abort_on_missing=True
+        )
+
     from_paths = scmutil.rootrelpaths(from_ctx, opts.get("from_path"))
     to_paths = scmutil.rootrelpaths(from_ctx, opts.get("to_path"))
-    pathaclutil.validate_path_acl(repo, from_paths, to_paths, to_ctx)
+    pathaclutil.validate_path_acl(
+        repo, from_paths, to_paths, to_ctx, filter_path=filter_path
+    )
     subtreeutil.validate_path_size(from_paths, to_paths, abort_on_empty=True)
     subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
     subtreeutil.validate_path_overlap(from_paths, to_paths)
@@ -639,18 +653,29 @@ def _docopy(ui, repo, *args, **opts):
     if COPY_REUSE_TREE:
         _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts)
     else:
-        matcher = _compute_filter_matcher(repo, to_ctx)
+        matcher = _compute_filter_matcher(repo, to_ctx, filter_path)
         _do_normal_copy(
             repo, from_ctx, to_ctx, from_paths, to_paths, opts, filter_matcher=matcher
         )
 
 
-def _compute_filter_matcher(repo, ctx):
-    """Compute filter matcher for subtree copy"""
+def _compute_filter_matcher(repo, ctx, filter_path=None):
+    """Compute filter matcher for subtree copy
+
+    filter_path is the path of additional sparse profile
+    """
+    matcher = None
     if sparseutil.shouldsparsematch(repo):
-        sparse_matcher = repo.sparsematch(ctx.rev())
-        return sparse_matcher
-    return None
+        matcher = repo.sparsematch(ctx.rev())
+
+    if filter_path:
+        filter_matcher = sparseutil.load_sparse_profile_matcher(repo, ctx, filter_path)
+        if matcher:
+            matcher = matchmod.intersectmatchers(matcher, filter_matcher)
+        else:
+            matcher = filter_matcher
+
+    return matcher
 
 
 def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):

@@ -8,12 +8,18 @@ from ..i18n import _
 from . import sparseutil
 
 
-def validate_path_acl(repo, from_paths, to_paths, curr_ctx, op_name="copy"):
+def validate_path_acl(
+    repo, from_paths, to_paths, curr_ctx, filter_path=None, op_name="copy"
+):
     from sapling.ext import sparse
 
     ui = repo.ui
     acl_file = ui.config("pathacl", "tent-filter-path")
     if not acl_file:
+        return
+
+    if filter_path == acl_file:
+        # protected paths will be filtered out by the filter (sparse) profile
         return
 
     if sparseutil.is_profile_enabled(repo, acl_file) and op_name == "copy":

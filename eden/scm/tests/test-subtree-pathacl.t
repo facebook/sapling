@@ -90,6 +90,15 @@ Test subtree graft protected path
   abort: copying protected path to an unprotected path is not allowed
   [255]
 
+Test subtree copy with addtional filter (sparse profile) path
+  $ hg subtree copy --from-path foo --to-path baz --filter tent-filter-not-exist
+  abort: path 'tent-filter-not-exist' does not exist in commit bdcb96c08db3
+  [255]
+  $ hg subtree copy --from-path foo --to-path baz --filter tent-filter
+  copying foo to baz
+  $ ls baz
+  y
+
 Setup client repo with enabling tent-filer profile
 
   $ cd
