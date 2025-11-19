@@ -28,9 +28,9 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
 import {Suspense} from 'react';
 import {basename} from 'shared/utils';
-import {colors} from '../../components/theme/tokens.stylex';
+import {colors, spacing} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
-import {Row} from './ComponentUtils';
+import {Column, Row, ScrollY} from './ComponentUtils';
 import {DropdownField, DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
@@ -148,6 +148,27 @@ const styles = stylex.create({
     background: {
       default: colors.subtleHoverDarken,
     },
+  },
+  submoduleDropdownContainer: {
+    alignItems: 'flex-start',
+    gap: spacing.pad,
+  },
+  submoduleList: {
+    width: '100%',
+    overflow: 'hidden',
+  },
+  submoduleOption: {
+    padding: 'var(--halfpad)',
+    borderRadius: 'var(--halfpad)',
+    cursor: 'pointer',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    boxSizing: 'border-box',
+    backgroundColor: {
+      ':hover': 'var(--hover-darken)',
+      ':focus': 'var(--hover-darken)',
+    },
+    width: '100%',
   },
 });
 
@@ -422,11 +443,35 @@ function SubmoduleSelector({
 }) {
   const selectedValue = submodules.find(m => m.path === selected?.path)?.path;
 
+  const toDisplay = submodules
+    .filter(opt => opt.active)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   return (
     <Tooltip
-      trigger="hover"
+      trigger="click"
       placement="bottom"
-      component={() => <SubmoduleHint path={selectedValue} root={root} />}>
+      title={<SubmoduleHint path={selectedValue} root={root} />}
+      component={dismiss => (
+        <Column xstyle={styles.submoduleDropdownContainer}>
+          <div {...stylex.props(styles.submoduleList)}>
+            <ScrollY maxSize={360}>
+              {toDisplay.map(m => (
+                <div
+                  key={m.path}
+                  {...stylex.props(styles.submoduleOption)}
+                  onClick={() => {
+                    onChangeSelected(m);
+                    dismiss();
+                  }}
+                  title={m.path}>
+                  {m.name}
+                </div>
+              ))}
+            </ScrollY>
+          </div>
+        </Column>
+      )}>
       <Icon
         icon="chevron-right"
         {...stylex.props(
@@ -436,36 +481,22 @@ function SubmoduleSelector({
           styles.hideRightBorder,
         )}
       />
-      <select
+      <Button
         {...stylex.props(
           buttonStyles.button,
           buttonStyles.icon,
           styles.submoduleSelect,
           styles.hideLeftBorder,
           hideRightBorder && styles.hideRightBorder,
-        )}
-        value={selectedValue ?? ''}
-        onChange={event => {
-          const matching = submodules.find(
-            m => m.path === (event.target.value as Submodule['path']),
-          );
-          if (matching != null) {
-            onChangeSelected(matching);
-          }
-        }}>
-        <option value="" disabled hidden>
-          submodules ...
-        </option>
-        {submodules.map(m => (
-          <option key={m.path} value={m.path}>
-            {m.name}
-          </option>
-        ))}
-      </select>
+        )}>
+        {selected ? selected.name : `${t('submodules')}...`}
+      </Button>
     </Tooltip>
   );
 }
 
 function SubmoduleHint({path, root}: {path: RepoRelativePath | undefined; root: AbsolutePath}) {
-  return <T>{path ? `Submodule at: ${path}` : `Select a submodule under: ${root}`}</T>;
+  return (
+    <T>{path ? `${t('Submodule at')}: ${path}` : `${t('Select a submodule under')}: ${root}`}</T>
+  );
 }
