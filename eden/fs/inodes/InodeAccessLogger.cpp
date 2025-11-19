@@ -17,7 +17,6 @@
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
-#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/LogEvent.h"
 
