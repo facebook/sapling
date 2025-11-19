@@ -43,22 +43,50 @@ def validate_path_acl(
         if contains_protected_data(from_path, exclude, matcher) and matcher.matchfn(
             to_path
         ):
-            default_prompt_tmpl = _(
-                "WARNING: You are attempting to %s protected data to an unprotected location:\n"
-                " * from-path: %s (contains protected data)\n"
-                " * to-path: %s\n"
-                "Do you still wish to continue (y/n)? $$ &Yes $$ &No"
-            )
-            prompt_tmpl = ui.config(
-                "pathacl", "prompt-warning-template", default_prompt_tmpl
-            )
-            prompt_msg = prompt_tmpl % (op_name, from_path, to_path)
-            if ui.promptchoice(prompt_msg, default=1) != 0:
-                hint = ui.config("pathacl", "path-validation-hint")
-                raise error.Abort(
-                    f"copying protected path to an unprotected path is not allowed",
-                    hint=hint,
-                )
+            prompt_warning(ui, from_path, to_path, op_name)
+
+
+def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
+    """Validate the ACL of copy/move patterns."""
+    ui = repo.ui
+    acl_file = ui.config("pathacl", "tent-filter-path")
+    if not acl_file:
+        return
+
+    if sparseutil.is_profile_enabled(repo, acl_file):
+        # protected paths should not exist in the working copy
+        return
+
+    if acl_file not in curr_ctx:
+        # the acl file does not exist
+        return
+
+    unprotected_matcher = sparseutil.load_sparse_profile_matcher(
+        repo, curr_ctx, acl_file
+    )
+
+    if not unprotected_matcher.matchfn(dest):
+        return
+    for src in src_files:
+        if not unprotected_matcher.matchfn(src):
+            prompt_warning(ui, src, dest, op_name)
+
+
+def prompt_warning(ui, from_path, to_path, op_name):
+    default_prompt_tmpl = _(
+        "WARNING: You are attempting to %s protected data to an unprotected location:\n"
+        " * from-path: %s (contains protected data)\n"
+        " * to-path: %s\n"
+        "Do you still wish to continue (y/n)? $$ &Yes $$ &No"
+    )
+    prompt_tmpl = ui.config("pathacl", "prompt-warning-template", default_prompt_tmpl)
+    prompt_msg = prompt_tmpl % (op_name, from_path, to_path)
+    if ui.promptchoice(prompt_msg, default=1) != 0:
+        hint = ui.config("pathacl", "path-validation-hint")
+        raise error.Abort(
+            f"copying protected path to an unprotected path is not allowed",
+            hint=hint,
+        )
 
 
 def contains_protected_data(from_path, protected_paths, unprotected_matcher) -> bool:

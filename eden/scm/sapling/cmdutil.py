@@ -67,7 +67,7 @@ from . import (
 )
 from .i18n import _, _x
 from .node import bin, hex, nullid, nullrev, short
-from .utils import subtreeutil
+from .utils import pathaclutil, subtreeutil
 
 if typing.TYPE_CHECKING:
     from .ui import ui
@@ -1489,12 +1489,17 @@ def copy(ui, repo, pats, opts, rename=False):
         tfn = targetpathafterfn
 
     currctx = repo["."]
-    scmutil.rootrelpath(currctx, dest)
+    rootreldest = scmutil.rootrelpath(currctx, dest)
     copylist = []
+    opname = "move" if rename else "copy"
     for pat in pats:
         srcs = walkpat(pat)
         if not srcs:
             continue
+        rootrelsrcs = [s[0] for s in srcs]
+        pathaclutil.validate_files_acl(
+            repo, rootrelsrcs, rootreldest, currctx, op_name=opname
+        )
         copylist.append((tfn(pat, dest, srcs), srcs))
     if not copylist and not to_amend:
         hint = _("use '--amend --mark' if you want to amend the current commit")

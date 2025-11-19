@@ -54,6 +54,22 @@ Setup client repo without enabling tent-filer profile
 
 Test subtree copy protected path
 
+  $ hg cp foo baz
+  WARNING: You are attempting to copy protected data to an unprotected location:
+   * from-path: foo/x (contains protected data)
+   * to-path: baz
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
+
+  $ hg mv foo baz
+  WARNING: You are attempting to move protected data to an unprotected location:
+   * from-path: foo/x (contains protected data)
+   * to-path: baz
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
+
   $ hg subtree copy --from-path foo --to-path baz
   WARNING: You are attempting to copy protected data to an unprotected location:
    * from-path: foo (contains protected data)
