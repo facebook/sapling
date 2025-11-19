@@ -89,3 +89,19 @@ Test subtree graft protected path
   Do you still wish to continue (y/n)?  n
   abort: copying protected path to an unprotected path is not allowed
   [255]
+
+Setup client repo with enabling tent-filer profile
+
+  $ cd
+  $ hg clone -q --eden test:server client2 --config clone.eden-sparse-filter=tent-filter
+  $ cd client2
+  $ ls foo
+  y
+
+Test subtree copy filters out the protected paths
+  $ hg subtree copy --from-path foo --to-path baz -m "subtree copy foo to baz"
+  copying foo to baz
+tofix: x should be filtered out
+  $ ls baz
+  x
+  y
