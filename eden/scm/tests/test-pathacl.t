@@ -1,5 +1,6 @@
 #require eden
 
+  $ setconfig diff.git=True
   $ setconfig subtree.min-path-depth=1
   $ setconfig subtree.allow-any-source-commit=True
 
@@ -143,3 +144,24 @@ Test subtree copy filters out the protected paths
 file x should be filtered out
   $ ls baz
   y
+  $ hg show
+  commit:      912871303c41
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       baz/y
+  description:
+  subtree copy foo to baz
+  
+  Subtree copy from bf60887fbaffc951448ec96c0d99c22a4eb1d754
+  - Copied path foo to baz
+  
+  
+  diff --git a/baz/y b/baz/y
+  new file mode 100644
+  --- /dev/null
+  +++ b/baz/y
+  @@ -0,0 +1,4 @@
+  +a
+  +b
+  +c
+  +
