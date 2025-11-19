@@ -13,7 +13,7 @@
   > [include]
   > *
   > [exclude]
-  > foo
+  > foo/x
   > EOF
   $ hg ci -Am "add tent-filter file"
   adding tent-filter
@@ -32,13 +32,13 @@
   $ hg ci -m "update foo"
 
   $ hg log -G -T '{node|short} {desc}\n'
-  @  6d341104cfe6 update foo
+  @  6ccc1aafdbcb update foo
   │
-  o  581863034e2e add bar
+  o  1e48bf7882cb add bar
   │
-  o  e33a34058170 add foo
+  o  efc0acd15b30 add foo
   │
-  o  e470fb7efd32 add tent-filter file
+  o  183a8fb76979 add tent-filter file
 
 Test subtree copy protected path
 
@@ -46,6 +46,14 @@ Test subtree copy protected path
   WARNING: You are attempting to copy protected data to an unprotected location:
    * from-path: foo (contains protected data)
    * to-path: baz
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
+
+  $ hg subtree copy --from-path foo/x --to-path baz/x
+  WARNING: You are attempting to copy protected data to an unprotected location:
+   * from-path: foo/x (contains protected data)
+   * to-path: baz/x
   Do you still wish to continue (y/n)?  n
   abort: copying protected path to an unprotected path is not allowed
   [255]
@@ -62,7 +70,7 @@ Test subtree merge protected path
 
 Test subtree graft protected path
 
-  $ hg subtree graft --from-path foo --to-path bar -r 6d341104cfe6
+  $ hg subtree graft --from-path foo --to-path bar -r 6ccc1aafdbcb
   WARNING: You are attempting to graft protected data to an unprotected location:
    * from-path: foo (contains protected data)
    * to-path: bar
