@@ -127,7 +127,7 @@ export interface SaplingRepository {
   /**
    * Get additional context around the source of a merge conflict.
    */
-  getMergeConflictContext(): Promise<SaplingConflictContext>;
+  getMergeConflictContext(): Promise<SaplingConflictContext[]>;
 
   // TODO: refresh
   // TODO: moveFile / copyFile

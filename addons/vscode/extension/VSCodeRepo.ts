@@ -510,13 +510,13 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
     }
   }
 
-  async getMergeConflictContext(): Promise<SaplingConflictContext> {
+  async getMergeConflictContext(): Promise<SaplingConflictContext[]> {
     const result = await this.runSlCommand(['debugconflictcontext']);
     if (result.exitCode !== 0) {
       throw new Error(result.stderr);
     }
 
-    return JSON.parse(result.stdout) as SaplingConflictContext;
+    return JSON.parse(result.stdout) as SaplingConflictContext[];
   }
 }
 
