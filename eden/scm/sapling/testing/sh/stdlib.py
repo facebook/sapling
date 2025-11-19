@@ -8,6 +8,9 @@
 A subset of "standard" coreutils or shell builtin commands.
 For .t test specific commands such as "hg", look at t/runtime.py
 instead.
+
+To test a command, add doctests to "sh/init__.py" and use
+"sl .t sh/__init__.py" to run doctests.
 """
 
 import re
@@ -1004,9 +1007,18 @@ def grep(args: List[str], arg0: str, stdin: BinaryIO, fs: ShellFS, stdout: Binar
 
 @command
 def sort(args: List[str], stdin: BinaryIO, fs: ShellFS):
-    paths = args
+    uniq = False
+    paths = []
+    for arg in args:
+        if arg == "-u":
+            uniq = True
+        else:
+            paths.append(arg)
     lines = [l.decode() for l in _lines(fs, paths, stdin)]
-    lines = sorted(lines)
+    if uniq:
+        lines = sorted(set(lines))
+    else:
+        lines = sorted(lines)
     return "".join(lines)
 
 

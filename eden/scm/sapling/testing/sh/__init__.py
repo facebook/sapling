@@ -337,6 +337,8 @@ sort
 
     >>> t('for i in c a b; do echo $i; done | sort')
     'a\nb\nc\n'
+    >>> t('for i in c a b c; do echo $i; done | sort -u')
+    'a\nb\nc\n'
 
 printf
 
