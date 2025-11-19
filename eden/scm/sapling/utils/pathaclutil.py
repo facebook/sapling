@@ -43,7 +43,7 @@ def validate_path_acl(
         if contains_protected_data(from_path, exclude, matcher) and matcher.matchfn(
             to_path
         ):
-            prompt_warning(ui, from_path, to_path, op_name)
+            prompt_warning_or_abort(ui, from_path, to_path, op_name)
 
 
 def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
@@ -69,20 +69,29 @@ def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
         return
     for src in src_files:
         if not unprotected_matcher.matchfn(src):
-            prompt_warning(ui, src, dest, op_name)
+            prompt_warning_or_abort(ui, src, dest, op_name)
 
 
-def prompt_warning(ui, from_path, to_path, op_name):
+def prompt_warning_or_abort(ui, from_path, to_path, op_name, abort_by_default=False):
     default_prompt_tmpl = _(
         "WARNING: You are attempting to %s protected data to an unprotected location:\n"
         " * from-path: %s (contains protected data)\n"
-        " * to-path: %s\n"
-        "Do you still wish to continue (y/n)? $$ &Yes $$ &No"
+        " * to-path: %s"
     )
+    confirm_question = "Do you still wish to continue (y/n)? $$ &Yes $$ &No"
     prompt_tmpl = ui.config("pathacl", "prompt-warning-template", default_prompt_tmpl)
-    prompt_msg = prompt_tmpl % (op_name, from_path, to_path)
-    if ui.promptchoice(prompt_msg, default=1) != 0:
-        hint = ui.config("pathacl", "path-validation-hint")
+    prompt_warning = prompt_tmpl % (op_name, from_path, to_path)
+    prompt_msg = prompt_warning + "\n" + confirm_question
+    extra_hint = ui.config("pathacl", "path-validation-hint")
+
+    if abort_by_default:
+        hint = f"{prompt_warning}\n{extra_hint}" if extra_hint else prompt_warning
+        raise error.Abort(
+            f"copying protected path to an unprotected path is not allowed",
+            hint=hint,
+        )
+    elif ui.promptchoice(prompt_msg, default=1) != 0:
+        hint = extra_hint
         raise error.Abort(
             f"copying protected path to an unprotected path is not allowed",
             hint=hint,
