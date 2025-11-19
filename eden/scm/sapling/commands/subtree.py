@@ -35,7 +35,7 @@ from ..cmdutil import (
     walkopts,
 )
 from ..i18n import _
-from ..utils import subtreeutil
+from ..utils import pathaclutil, subtreeutil
 from ..utils.subtreeutil import (
     BranchType,
     gen_branch_info,
@@ -627,6 +627,7 @@ def _docopy(ui, repo, *args, **opts):
 
     from_paths = scmutil.rootrelpaths(from_ctx, opts.get("from_path"))
     to_paths = scmutil.rootrelpaths(from_ctx, opts.get("to_path"))
+    pathaclutil.validate_path_acl(repo, from_paths, to_paths, to_ctx)
     subtreeutil.validate_path_size(from_paths, to_paths, abort_on_empty=True)
     subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
     subtreeutil.validate_path_overlap(from_paths, to_paths)
