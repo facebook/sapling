@@ -21,6 +21,7 @@ import bindings
 from . import error
 from .i18n import _
 from .node import hex, short
+from .utils import sparseutil
 
 if TYPE_CHECKING:
     import sapling
@@ -138,9 +139,7 @@ def checksparsebisectskip(repo, candidatenode, badnode, goodnode) -> str:
     "bad" if the node can be skipped as it's the same as badnode, "check" otherwise.
     """
 
-    shouldsparsematch = hasattr(repo, "sparsematch") and (
-        "eden" not in repo.requirements or "edensparse" in repo.requirements
-    )
+    shouldsparsematch = sparseutil.shouldsparsematch(repo)
     if not shouldsparsematch:
         return "check"
 

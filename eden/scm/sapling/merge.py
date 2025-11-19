@@ -45,7 +45,7 @@ from . import (
 )
 from .i18n import _
 from .node import addednodeid, bin, hex, nullhex, nullid, wdirhex
-from .utils import subtreeutil
+from .utils import sparseutil, subtreeutil
 
 # merge action types
 ACTION_MERGE = "m"
@@ -1007,11 +1007,7 @@ def manifestmerge(
     boolbm = str(bool(branchmerge))
     boolf = str(bool(force))
     # XXX: handle sparsematch for cross-repo merges
-    shouldsparsematch = (
-        hasattr(to_repo, "sparsematch")
-        and ("eden" not in to_repo.requirements or "edensparse" in to_repo.requirements)
-        and not is_crossrepo
-    )
+    shouldsparsematch = sparseutil.shouldsparsematch(to_repo) and not is_crossrepo
     sparsematch = getattr(to_repo, "sparsematch", None) if shouldsparsematch else None
     ui.note(_("resolving manifests\n"))
     ui.debug(" branchmerge: %s, force: %s\n" % (boolbm, boolf))
@@ -2654,9 +2650,7 @@ def abort_on_conflicts(paths):
 
 
 def getsparsematchers(repo, fp1, fp2):
-    shouldsparsematch = hasattr(repo, "sparsematch") and (
-        "eden" not in repo.requirements or "edensparse" in repo.requirements
-    )
+    shouldsparsematch = sparseutil.shouldsparsematch(repo)
     sparsematch = getattr(repo, "sparsematch", None) if shouldsparsematch else None
     if sparsematch is not None:
         from sapling.ext import sparse
