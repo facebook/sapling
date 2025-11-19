@@ -22,7 +22,8 @@ def validate_path_acl(
         # protected paths will be filtered out by the filter (sparse) profile
         return
 
-    if sparseutil.is_profile_enabled(repo, acl_file) and op_name == "copy":
+    is_acl_enabled = sparseutil.is_profile_enabled(repo, acl_file)
+    if is_acl_enabled and op_name == "copy":
         # protected paths will be filtered out by the sparse profile
         return
 
@@ -43,11 +44,16 @@ def validate_path_acl(
         if contains_protected_data(from_path, exclude, matcher) and matcher.matchfn(
             to_path
         ):
-            prompt_warning_or_abort(ui, from_path, to_path, op_name)
+            # abort by default for users don't have access (the ACL file was enabled)
+            abort_by_default = is_acl_enabled
+            prompt_warning_or_abort(
+                ui, from_path, to_path, op_name, abort_by_default=abort_by_default
+            )
 
 
 def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
     """Validate the ACL of copy/move patterns."""
+    assert op_name in ("copy", "move")
     ui = repo.ui
     acl_file = ui.config("pathacl", "tent-filter-path")
     if not acl_file:

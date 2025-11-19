@@ -165,3 +165,21 @@ file x should be filtered out
   +b
   +c
   +
+
+Test subtree merge protected path with tent-filter enabled (should fail)
+
+  $ hg subtree merge --from-path foo --to-path bar
+  abort: copying protected path to an unprotected path is not allowed
+  (WARNING: You are attempting to merge protected data to an unprotected location:
+   * from-path: foo (contains protected data)
+   * to-path: bar)
+  [255]
+
+Test subtree graft protected path with tent-filter enabled (should fail)
+
+  $ hg subtree graft --from-path foo --to-path bar -r bf60887fbaff
+  abort: copying protected path to an unprotected path is not allowed
+  (WARNING: You are attempting to graft protected data to an unprotected location:
+   * from-path: foo (contains protected data)
+   * to-path: bar)
+  [255]
