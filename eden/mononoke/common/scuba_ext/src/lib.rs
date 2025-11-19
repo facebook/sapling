@@ -175,7 +175,7 @@ impl MononokeScubaSampleBuilder {
             },
             ExperimentJKData {
                 jk_name: "scm/mononoke:remote_diff",
-                switch_values: vec![],
+                switch_values: vec!["instagram-server"],
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
             ExperimentJKData {
