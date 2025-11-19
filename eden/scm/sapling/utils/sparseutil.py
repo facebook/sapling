@@ -12,3 +12,16 @@ def shouldsparsematch(repo):
     return hasattr(repo, "sparsematch") and (
         "eden" not in repo.requirements or "edensparse" in repo.requirements
     )
+
+
+def is_profile_enabled(repo, profile_name):
+    from sapling.ext import sparse
+
+    if not repo.localvfs.exists("sparse"):
+        return False
+
+    raw = repo.localvfs.readutf8("sparse")
+    rawconfig = sparse.readsparseconfig(repo, raw)
+
+    profiles = set(rawconfig.profiles)
+    return profile_name in profiles
