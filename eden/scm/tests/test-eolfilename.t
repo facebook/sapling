@@ -52,14 +52,10 @@ Do error out if the naughty file is explicitly referenced:
   skipping invalid path 'hell\no'
   $ A=`printf 'quick\rfox'`
   $ (hg cp quickfox "$A" 2>&1; echo "[$?]" 1>&2) | sort
-  abort: '\n' and '\r' disallowed in filenames: 'quick\rfox'
-  skipping invalid path 'he\rllo'
-  skipping invalid path 'hell\no'
+  abort: Failed to validate "quick\rfox". Invalid byte: 13.
   [255]
   $ (hg mv quickfox "$A" 2>&1; echo "[$?]" 1>&2) | sort
-  abort: '\n' and '\r' disallowed in filenames: 'quick\rfox'
-  skipping invalid path 'he\rllo'
-  skipping invalid path 'hell\no'
+  abort: Failed to validate "quick\rfox". Invalid byte: 13.
   [255]
 
 https://bz.mercurial-scm.org/2036

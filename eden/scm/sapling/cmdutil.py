@@ -1487,6 +1487,9 @@ def copy(ui, repo, pats, opts, rename=False):
     tfn = targetpathfn
     if mark:
         tfn = targetpathafterfn
+
+    currctx = repo["."]
+    scmutil.rootrelpath(currctx, dest)
     copylist = []
     for pat in pats:
         srcs = walkpat(pat)
