@@ -1008,7 +1008,7 @@ def manifestmerge(
     boolf = str(bool(force))
     # XXX: handle sparsematch for cross-repo merges
     shouldsparsematch = sparseutil.shouldsparsematch(to_repo) and not is_crossrepo
-    sparsematch = getattr(to_repo, "sparsematch", None) if shouldsparsematch else None
+    sparsematch = to_repo.sparsematch if shouldsparsematch else None
     ui.note(_("resolving manifests\n"))
     ui.debug(" branchmerge: %s, force: %s\n" % (boolbm, boolf))
     ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
@@ -2651,7 +2651,7 @@ def abort_on_conflicts(paths):
 
 def getsparsematchers(repo, fp1, fp2):
     shouldsparsematch = sparseutil.shouldsparsematch(repo)
-    sparsematch = getattr(repo, "sparsematch", None) if shouldsparsematch else None
+    sparsematch = repo.sparsematch if shouldsparsematch else None
     if sparsematch is not None:
         from sapling.ext import sparse
 
