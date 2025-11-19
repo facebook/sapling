@@ -115,6 +115,13 @@ Test subtree copy with addtional filter (sparse profile) path
   $ ls baz
   y
 
+Test subtree copy with a non-exist tent-filter path (the commit does not have the tent-filter)
+  $ hg subtree copy --from-path foo --to-path baz2 --config pathacl.tent-filter-path=tent-filter-not-exist
+  copying foo to baz2
+  $ ls baz2
+  x
+  y
+
 Setup client repo with enabling tent-filer profile
 
   $ cd
