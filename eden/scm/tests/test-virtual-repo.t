@@ -26,22 +26,32 @@ Smartlog works:
 Total file count and size is reasonable (~80MB):
 
   $ sl go 'roots(all())' -q
-  $ sl files | wc -l
-  6084
-  >>> import glob, os
-  >>> size = sum(os.lstat(path).st_size for path in glob.glob('**/*', recursive=True))
-  >>> print(size)
-  79154496
+  $ FILES=$TESTTMP/files
+  $ sl files > $FILES
 
-Checkout virtual/main with more files (~800GB):
+  >>> import os, stat
+  >>> def check_count_file_size():
+  ...     """Check $FILES is sane (no dups, no dirs). Return count and size."""
+  ...     with open(getenv('FILES')) as f:
+  ...         paths = [p.strip() for p in f]
+  ...     assert len(paths) == len(set(paths)), 'paths should be unique'
+  ...     total_size = 0
+  ...     for path in paths:
+  ...         st = os.lstat(path)
+  ...         assert not stat.S_ISDIR(st.st_mode), f'{path} should not be a dir'
+  ...         total_size += st.st_size
+  ...     return len(paths), total_size
+
+  >>> check_count_file_size()
+  (6084, 78988056)
+
+Checkout virtual/main with more files (~800MB):
 
   $ sl go 'virtual/main' -q
-  $ sl files | wc -l
-  57364
-  >>> import glob, os
-  >>> size = sum(os.lstat(path).st_size for path in glob.glob('**/*', recursive=True))
-  >>> print(size)
-  795122805
+  $ sl files > $FILES
+
+  >>> check_count_file_size()
+  (57364, 793475905)
 
 Virtual repo with size-factor=0 works too:
 
