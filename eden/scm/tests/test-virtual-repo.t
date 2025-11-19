@@ -43,7 +43,8 @@ Total file count and size is reasonable (~80MB):
   ...     return len(paths), total_size
 
   >>> check_count_file_size()
-  (6084, 78988056)
+  (6084, 78988056) (no-windows !)
+  (6084, 78988019) (windows !)
 
 Checkout virtual/main with more files (~800MB):
 
