@@ -25,3 +25,13 @@ def is_profile_enabled(repo, profile_name):
 
     profiles = set(rawconfig.profiles)
     return profile_name in profiles
+
+
+def load_sparse_profile_matcher(repo, ctx, profile_path):
+    from sapling.ext import sparse
+
+    raw_content = sparse.getrawprofile(repo, profile_path, ctx.hex())
+    raw_config = sparse.readsparseconfig(
+        repo, raw_content, filename=profile_path, depth=1
+    )
+    return sparse.computesparsematcher(repo, [ctx.rev()], raw_config)
