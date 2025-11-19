@@ -331,6 +331,7 @@ def subtree_merge(ui, repo, **opts):
     from_paths = scmutil.rootrelpaths(ctx, opts.get("from_path"))
     to_paths = scmutil.rootrelpaths(ctx, opts.get("to_path"))
 
+    pathaclutil.validate_path_acl(repo, from_paths, to_paths, ctx, op_name="merge")
     validate_subtree_merge_path_size(from_paths, to_paths)
     subtreeutil.validate_path_overlap(from_paths, to_paths)
     subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)

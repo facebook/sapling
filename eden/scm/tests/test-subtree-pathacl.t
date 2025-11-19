@@ -49,3 +49,13 @@ Test subtree copy protected path
   Do you still wish to continue (y/n)?  n
   abort: copying protected path to an unprotected path is not allowed
   [255]
+
+Test subtree merge protected path
+
+  $ hg subtree merge --from-path foo --to-path bar
+  WARNING: You are attempting to merge protected data to an unprotected location:
+   * from-path: foo (contains protected data)
+   * to-path: bar
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
