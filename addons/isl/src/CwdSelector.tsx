@@ -24,9 +24,10 @@ import {Kbd} from 'isl-components/Kbd';
 import {KeyCode, Modifier} from 'isl-components/KeyboardShortcuts';
 import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
+import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue} from 'jotai';
-import {Suspense} from 'react';
+import {Suspense, useState} from 'react';
 import {basename} from 'shared/utils';
 import {colors, spacing} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
@@ -442,9 +443,9 @@ function SubmoduleSelector({
   hideRightBorder?: boolean;
 }) {
   const selectedValue = submodules.find(m => m.path === selected?.path)?.path;
-
+  const [query, setQuery] = useState('');
   const toDisplay = submodules
-    .filter(opt => opt.active)
+    .filter(m => m.active && m.name.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
@@ -454,6 +455,13 @@ function SubmoduleSelector({
       title={<SubmoduleHint path={selectedValue} root={root} />}
       component={dismiss => (
         <Column xstyle={styles.submoduleDropdownContainer}>
+          <TextField
+            autoFocus
+            width="100%"
+            placeholder={t('search submodule name')}
+            value={query}
+            onInput={e => setQuery(e.currentTarget?.value ?? '')}
+          />
           <div {...stylex.props(styles.submoduleList)}>
             <ScrollY maxSize={360}>
               {toDisplay.map(m => (
@@ -462,6 +470,7 @@ function SubmoduleSelector({
                   {...stylex.props(styles.submoduleOption)}
                   onClick={() => {
                     onChangeSelected(m);
+                    setQuery('');
                     dismiss();
                   }}
                   title={m.path}>
