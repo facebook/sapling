@@ -1,9 +1,11 @@
+#require eden
+
   $ setconfig subtree.min-path-depth=1
   $ setconfig subtree.allow-any-source-commit=True
 
   $ setconfig pathacl.tent-filter-path=tent-filter
 
-  $ newclientrepo
+  $ newrepo server
   $ cat > tent-filter << EOF
   > [metadata]
   > title: filter for protected directories
@@ -31,6 +33,8 @@
   $ echo "11\n2\n3\n"> foo/x
   $ hg ci -m "update foo"
 
+  $ hg book master
+
   $ hg log -G -T '{node|short} {desc}\n'
   @  6ccc1aafdbcb update foo
   │
@@ -39,6 +43,12 @@
   o  efc0acd15b30 add foo
   │
   o  183a8fb76979 add tent-filter file
+
+Setup client repo without enabling tent-filer profile
+
+  $ cd
+  $ hg clone -q --eden test:server client1
+  $ cd client1
 
 Test subtree copy protected path
 
