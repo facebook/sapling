@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ReactNode} from 'react';
 import type {
   AbsolutePath,
   CwdInfo,
   CwdRelativePath,
   RepoRelativePath,
-  ValidatedRepoInfo,
+  Submodule,
+  SubmodulesByRoot,
 } from './types';
 
 import * as stylex from '@stylexjs/stylex';
@@ -154,7 +154,8 @@ const styles = stylex.create({
 export function CwdSelector() {
   const info = useAtomValue(repositoryInfo);
   const currentCwd = useAtomValue(serverCwd);
-  const allSubmoduleOptions = useSubmoduleOptions(info);
+  const submodulesMap = useAtomValue(submodulesByRoot);
+
   if (info == null) {
     return null;
   }
@@ -172,10 +173,10 @@ export function CwdSelector() {
         label={mainLabel}
         hideRightBorder={
           (repoRoots && repoRoots.length > 1) ||
-          (allSubmoduleOptions?.get(repoRoot)?.length ?? 0) > 0
+          (submodulesMap?.get(repoRoot)?.value?.length ?? 0) > 0
         }
       />
-      <SubmoduleSelectorGroup repoRoots={repoRoots} submoduleOptions={allSubmoduleOptions} />
+      <SubmoduleSelectorGroup repoRoots={repoRoots} submoduleOptions={submodulesMap} />
     </div>
   );
 }
@@ -248,10 +249,7 @@ function SubmoduleSelectorGroup({
   submoduleOptions,
 }: {
   repoRoots: AbsolutePath[] | undefined;
-  submoduleOptions: Map<
-    AbsolutePath,
-    {id: RepoRelativePath; label: string; valid: boolean}[] | undefined
-  >;
+  submoduleOptions: SubmodulesByRoot;
 }) {
   const currentCwd = useAtomValue(serverCwd);
   if (repoRoots == null) {
@@ -260,21 +258,22 @@ function SubmoduleSelectorGroup({
 
   const numRoots = repoRoots.length;
   const directRepoRoot = repoRoots[numRoots - 1];
-  const submodulesToBeSelected = submoduleOptions.get(directRepoRoot);
+  const submodulesToBeSelected = submoduleOptions.get(directRepoRoot)?.value;
 
   const out = [];
+
   for (let i = 1; i < numRoots; i++) {
     const currRoot = repoRoots[i];
     const prevRoot = repoRoots[i - 1];
-    const submodules = submoduleOptions.get(prevRoot);
+    const submodules = submoduleOptions.get(prevRoot)?.value;
     if (submodules != null && submodules.length > 0) {
       out.push(
         <SubmoduleSelector
-          options={submodules}
-          selected={submodules?.find(opt => opt.id === relativePath(prevRoot, currRoot))}
+          submodules={submodules}
+          selected={submodules?.find(opt => opt.path === relativePath(prevRoot, currRoot))}
           onChangeSelected={value => {
-            if (value.id !== relativePath(prevRoot, currRoot)) {
-              changeCwd(joinPaths(prevRoot, value.id));
+            if (value.path !== relativePath(prevRoot, currRoot)) {
+              changeCwd(joinPaths(prevRoot, value.path));
             }
           }}
           hideRightBorder={i < numRoots - 1 || submodulesToBeSelected != undefined}
@@ -288,10 +287,10 @@ function SubmoduleSelectorGroup({
   if (submodulesToBeSelected != undefined) {
     out.push(
       <SubmoduleSelector
-        options={submodulesToBeSelected}
+        submodules={submodulesToBeSelected}
         onChangeSelected={value => {
-          if (value.id !== relativePath(directRepoRoot, currentCwd)) {
-            changeCwd(joinPaths(directRepoRoot, value.id));
+          if (value.path !== relativePath(directRepoRoot, currentCwd)) {
+            changeCwd(joinPaths(directRepoRoot, value.path));
           }
         }}
         hideRightBorder={false}
@@ -353,27 +352,6 @@ function useCwdOptions() {
   }));
 }
 
-function useSubmoduleOptions(
-  info: ValidatedRepoInfo | undefined,
-): Map<AbsolutePath, {id: RepoRelativePath; label: string; valid: boolean}[] | undefined> {
-  const repoRoots = info?.repoRoots;
-  const submodulesMap = useAtomValue(submodulesByRoot);
-
-  return new Map(
-    repoRoots?.map(root => {
-      const fetchedSubmodules = submodulesMap.get(root);
-      return [
-        root,
-        fetchedSubmodules?.value?.map(m => ({
-          id: m.path,
-          label: m.name,
-          valid: m.active,
-        })),
-      ];
-    }),
-  );
-}
-
 function guessPathSep(path: string): '/' | '\\' {
   if (path.includes('\\')) {
     return '\\';
@@ -429,20 +407,20 @@ export function CwdSelections({dismiss, divider}: {dismiss: () => unknown; divid
 /**
  * Dropdown selector for submodules in a breadcrumb style.
  */
-function SubmoduleSelector<T extends {label: ReactNode; id: string}>({
-  options,
+function SubmoduleSelector({
+  submodules,
   selected,
   onChangeSelected,
   root,
   hideRightBorder = true,
 }: {
-  options: ReadonlyArray<T>;
-  selected?: T;
-  onChangeSelected: (newSelected: T) => unknown;
+  submodules: ReadonlyArray<Submodule>;
+  selected?: Submodule;
+  onChangeSelected: (newSelected: Submodule) => unknown;
   root: AbsolutePath;
   hideRightBorder?: boolean;
 }) {
-  const selectedValue = options.find(opt => opt.id === selected?.id)?.id;
+  const selectedValue = submodules.find(m => m.path === selected?.path)?.path;
 
   return (
     <Tooltip
@@ -468,7 +446,9 @@ function SubmoduleSelector<T extends {label: ReactNode; id: string}>({
         )}
         value={selectedValue ?? ''}
         onChange={event => {
-          const matching = options.find(opt => opt.id === (event.target.value as T['id']));
+          const matching = submodules.find(
+            m => m.path === (event.target.value as Submodule['path']),
+          );
           if (matching != null) {
             onChangeSelected(matching);
           }
@@ -476,9 +456,9 @@ function SubmoduleSelector<T extends {label: ReactNode; id: string}>({
         <option value="" disabled hidden>
           submodules ...
         </option>
-        {options.map(option => (
-          <option key={option.id} value={option.id}>
-            {option.label}
+        {submodules.map(m => (
+          <option key={m.path} value={m.path}>
+            {m.name}
           </option>
         ))}
       </select>
