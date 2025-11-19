@@ -9,7 +9,7 @@ Print potential Rust dependencies as buck rules for the current Rust project.
 
 Naive implementation. Might produce inaccurate results.
 
-Related: to remove unused deps, try: arc lint -e extra --take RUSTFIXDEPS
+Related: to remove unused deps, try: arc lint -e extra --take RUSTUNUSEDDEPS
 """
 
 import glob, itertools, os, pprint, re, sys
