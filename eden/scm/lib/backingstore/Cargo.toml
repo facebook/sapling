@@ -20,6 +20,7 @@ blob = { version = "0.1.0", path = "../blob" }
 cxx = "1.0.119"
 env_logger = { version = "0.11.8", features = ["color"] }
 flume = "0.11.1"
+iobuf = { version = "0.1.0", git = "https://github.com/facebook/folly.git", branch = "main" }
 log = { version = "0.4.27", features = ["kv_unstable", "kv_unstable_std"] }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 sapling-configloader = { version = "0.1.0", path = "../config/loader" }
