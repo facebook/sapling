@@ -35,7 +35,7 @@ from ..cmdutil import (
     walkopts,
 )
 from ..i18n import _
-from ..utils import pathaclutil, subtreeutil
+from ..utils import pathaclutil, sparseutil, subtreeutil
 from ..utils.subtreeutil import (
     BranchType,
     gen_branch_info,
@@ -639,7 +639,18 @@ def _docopy(ui, repo, *args, **opts):
     if COPY_REUSE_TREE:
         _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts)
     else:
-        _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts)
+        matcher = _compute_filter_matcher(repo, to_ctx)
+        _do_normal_copy(
+            repo, from_ctx, to_ctx, from_paths, to_paths, opts, filter_matcher=matcher
+        )
+
+
+def _compute_filter_matcher(repo, ctx):
+    """Compute filter matcher for subtree copy"""
+    if sparseutil.shouldsparsematch(repo):
+        sparse_matcher = repo.sparsematch(ctx.rev())
+        return sparse_matcher
+    return None
 
 
 def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
@@ -677,10 +688,21 @@ def _do_cheap_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
     hg.update(repo, newid)
 
 
-def _do_normal_copy(repo, from_ctx, to_ctx, from_paths, to_paths, opts):
+def _do_normal_copy(
+    repo, from_ctx, to_ctx, from_paths, to_paths, opts, filter_matcher=None
+):
     ui = repo.ui
     abort_or_remove_paths(ui, repo, to_paths, "copy", opts)
-    copy_files(ui, repo, repo, from_ctx, from_paths, to_paths, "copy")
+    copy_files(
+        ui,
+        repo,
+        repo,
+        from_ctx,
+        from_paths,
+        to_paths,
+        "copy",
+        filter_matcher=filter_matcher,
+    )
 
     extra = {}
     extra.update(
@@ -793,7 +815,9 @@ def gen_merge_commit_msg(subtree_merges):
     return "\n".join(msgs)
 
 
-def copy_files(ui, from_repo, to_repo, from_ctx, from_paths, to_paths, subcmd):
+def copy_files(
+    ui, from_repo, to_repo, from_ctx, from_paths, to_paths, subcmd, filter_matcher=None
+):
     """copy files from `from_repo` to `to_repo`.
 
     `from_repo` can be an external git repo in the `subtree import` case.
@@ -809,6 +833,8 @@ def copy_files(ui, from_repo, to_repo, from_ctx, from_paths, to_paths, subcmd):
     path_to_fileids = {}
     for path in from_paths:
         matcher = matchmod.match(from_repo.root, "", [f"path:{path}"])
+        if filter_matcher:
+            matcher = matchmod.intersectmatchers(matcher, filter_matcher)
         fileids = scmutil.walkfiles(from_repo, from_ctx, matcher)
         file_count = len(fileids)
         if limit and file_count > limit:

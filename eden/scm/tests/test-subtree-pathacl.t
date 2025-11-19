@@ -101,7 +101,6 @@ Setup client repo with enabling tent-filer profile
 Test subtree copy filters out the protected paths
   $ hg subtree copy --from-path foo --to-path baz -m "subtree copy foo to baz"
   copying foo to baz
-tofix: x should be filtered out
+file x should be filtered out
   $ ls baz
-  x
   y

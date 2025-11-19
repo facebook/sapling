@@ -17,7 +17,7 @@ def validate_path_acl(repo, from_paths, to_paths, curr_ctx, op_name="copy"):
         return
 
     if sparseutil.is_profile_enabled(repo, acl_file) and op_name == "copy":
-        # todo: protected paths will be filtered out by the sparse profile
+        # protected paths will be filtered out by the sparse profile
         return
 
     try:
