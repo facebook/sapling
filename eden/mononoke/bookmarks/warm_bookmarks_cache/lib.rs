@@ -117,7 +117,7 @@ pub struct BookmarkState {
     pub kind: BookmarkKind,
 
     // The remaining trackers, for subsets of warmers
-    pub last_derived_cs: HashMap<WarmerRequirement, ChangesetId>,
+    pub last_derived_cs: EnumMap<WarmerRequirement, Option<ChangesetId>>,
 }
 
 pub struct WarmBookmarksCache {
@@ -530,15 +530,7 @@ impl ScopedBookmarksCache for WarmBookmarksCache {
             .read()
             .unwrap()
             .get(bookmark)
-            // TODO: We need to default to cs_id (pointer for all warmers), because the tracking is
-            // not ready yet
-            .map(|state| {
-                state
-                    .last_derived_cs
-                    .get(&scope)
-                    .copied()
-                    .unwrap_or(state.cs_id)
-            }))
+            .map(|state| state.last_derived_cs[scope].unwrap_or(state.cs_id)))
     }
 
     async fn list(
@@ -556,13 +548,7 @@ impl ScopedBookmarksCache for WarmBookmarksCache {
             Ok(bookmarks
                 .iter()
                 .map(|(key, state)| {
-                    // TODO: We need to default to cs_id (pointer for all warmers), because the tracking is
-                    // not ready yet
-                    let cs_id = state
-                        .last_derived_cs
-                        .get(&scope)
-                        .copied()
-                        .unwrap_or(state.cs_id);
+                    let cs_id = state.last_derived_cs[scope].unwrap_or(state.cs_id);
                     (key.clone(), (cs_id, state.kind))
                 })
                 .collect())
@@ -572,14 +558,8 @@ impl ScopedBookmarksCache for WarmBookmarksCache {
             let mut matches = bookmarks
                 .iter()
                 .filter(|(key, _)| range.contains(key))
-                // TODO: We need to default to cs_id (pointer for all warmers), because the tracking is
-                // not ready yet
                 .map(|(key, state)| {
-                    let cs_id = state
-                        .last_derived_cs
-                        .get(&scope)
-                        .copied()
-                        .unwrap_or(state.cs_id);
+                    let cs_id = state.last_derived_cs[scope].unwrap_or(state.cs_id);
                     (key.clone(), (cs_id, state.kind))
                 })
                 .collect::<Vec<_>>();
@@ -665,7 +645,7 @@ async fn init_bookmarks(
                                     BookmarkState {
                                         cs_id,
                                         kind,
-                                        last_derived_cs: HashMap::new(),
+                                        last_derived_cs: EnumMap::default(),
                                     },
                                 )
                             }),
@@ -681,7 +661,7 @@ async fn init_bookmarks(
                                 BookmarkState {
                                     cs_id,
                                     kind,
-                                    last_derived_cs: HashMap::new(),
+                                    last_derived_cs: EnumMap::default(),
                                 },
                             )),
                         ))
@@ -695,7 +675,7 @@ async fn init_bookmarks(
                         BookmarkState {
                             cs_id,
                             kind,
-                            last_derived_cs: HashMap::new(),
+                            last_derived_cs: EnumMap::default(),
                         },
                     )),
                 ))
@@ -1381,7 +1361,7 @@ async fn single_bookmark_updater(
                 BookmarkState {
                     cs_id,
                     kind: *bookmark.kind(),
-                    last_derived_cs: HashMap::new(),
+                    last_derived_cs: EnumMap::default(),
                 },
             )
         });
@@ -1556,7 +1536,7 @@ mod tests {
             hashmap! {BookmarkKey::new("master")? => BookmarkState {
                 cs_id: master_cs_id,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             }}
         );
         Ok(())
@@ -1629,7 +1609,7 @@ mod tests {
             hashmap! {BookmarkKey::new("master")? => BookmarkState {
                 cs_id: derived_master,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             }}
         );
 
@@ -1650,7 +1630,7 @@ mod tests {
             hashmap! {BookmarkKey::new("master")? => BookmarkState {
                 cs_id: master,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             }}
         );
 
@@ -1703,7 +1683,7 @@ mod tests {
             hashmap! {BookmarkKey::new("master")? => BookmarkState {
                 cs_id: derived_master,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             }}
         );
 
@@ -1763,7 +1743,7 @@ mod tests {
             hashmap! {BookmarkKey::new("master")? => BookmarkState {
                 cs_id: derived_master,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             }}
         );
 
@@ -1785,7 +1765,7 @@ mod tests {
                     BookmarkState {
                         cs_id,
                         kind,
-                        last_derived_cs: HashMap::new(),
+                        last_derived_cs: EnumMap::default(),
                     },
                 )
             })
@@ -1827,7 +1807,7 @@ mod tests {
             Some(BookmarkState {
                 cs_id: master,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             }),
         )
         .await?;
@@ -1841,7 +1821,7 @@ mod tests {
             Some(BookmarkState {
                 cs_id: master,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             }),
         )
         .await?;
@@ -1864,7 +1844,7 @@ mod tests {
                     BookmarkState {
                         cs_id,
                         kind,
-                        last_derived_cs: HashMap::new(),
+                        last_derived_cs: EnumMap::default(),
                     },
                 )
             })
@@ -1904,7 +1884,7 @@ mod tests {
             Some(BookmarkState {
                 cs_id: master_cs_id,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             })
         );
 
@@ -1970,7 +1950,7 @@ mod tests {
                     BookmarkState {
                         cs_id,
                         kind,
-                        last_derived_cs: HashMap::new(),
+                        last_derived_cs: EnumMap::default(),
                     },
                 )
             })
@@ -2051,7 +2031,7 @@ mod tests {
             Some(BookmarkState {
                 cs_id: master,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             }),
         )
         .await?;
@@ -2091,7 +2071,7 @@ mod tests {
             Some(BookmarkState {
                 cs_id: failing_cs_id,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             }),
         )
         .await?;
@@ -2172,7 +2152,7 @@ mod tests {
                     BookmarkState {
                         cs_id,
                         kind,
-                        last_derived_cs: HashMap::new(),
+                        last_derived_cs: EnumMap::default(),
                     },
                 )
             })
@@ -2236,7 +2216,7 @@ mod tests {
                     BookmarkState {
                         cs_id,
                         kind,
-                        last_derived_cs: HashMap::new(),
+                        last_derived_cs: EnumMap::default(),
                     },
                 )
             })
@@ -2281,7 +2261,7 @@ mod tests {
             Some(BookmarkState {
                 cs_id: new_cs_id,
                 kind: BookmarkKind::Publishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             }),
         )
         .await?;
@@ -2299,7 +2279,7 @@ mod tests {
             Some(BookmarkState {
                 cs_id: new_cs_id,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             }),
         )
         .await?;
@@ -2354,7 +2334,7 @@ mod tests {
             Some(BookmarkState {
                 cs_id: master_cs_id,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: HashMap::new(),
+                last_derived_cs: EnumMap::default(),
             })
         );
 
