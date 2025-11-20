@@ -1448,39 +1448,47 @@ async fn single_bookmark_updater(
         warmers.as_ref(),
     )
     .await?;
-    let latest_derived = entries.derived_entries[WarmerRequirement::AllKinds];
+
     let latest_underived = entries.latest_underived;
 
-    let update_bookmark = |cs_id: ChangesetId| async move {
+    let update_bookmark = |state: BookmarkState| async move {
         bookmarks.with_write(|bookmarks| {
             let key = bookmark.key().clone();
-            bookmarks.insert(
-                key,
-                BookmarkState {
-                    cs_id,
-                    kind: *bookmark.kind(),
-                    last_derived_cs: EnumMap::default(),
-                },
-            )
+            bookmarks.insert(key, state)
         });
     };
 
-    match latest_derived {
-        // Move bookmark to the latest derived commit or delete the bookmark completely
-        LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => match maybe_cs_id_and_ts {
-            Some((cs_id, _ts)) => {
-                update_bookmark(cs_id).await;
+    let mut derived_cs_map = EnumMap::default();
+    for (requirement, entry) in entries.derived_entries {
+        match entry {
+            LatestDerivedBookmarkEntry::Found(maybe_val) => match maybe_val {
+                Some((cs_id, _)) => derived_cs_map[requirement] = Some(cs_id),
+                None => (), // Nothing to do then
+            },
+            LatestDerivedBookmarkEntry::NotFound => {
+                tracing::warn!(
+                    "Haven't found previous derived version of {} for {:?} tags! Will try to derive anyway",
+                    bookmark.key(),
+                    requirement
+                );
             }
-            None => {
-                bookmarks.with_write(|bookmarks| bookmarks.remove(bookmark.key()));
-            }
-        },
-        LatestDerivedBookmarkEntry::NotFound => {
-            tracing::warn!(
-                "Haven't found previous derived version of {}! Will try to derive anyway",
-                bookmark.key()
-            );
         }
+    }
+
+    let all_bookmark_pointers_none = derived_cs_map
+        .iter()
+        .fold(true, |acc, (_, val)| acc && val.is_none());
+    if all_bookmark_pointers_none {
+        bookmarks.with_write(|bookmarks| bookmarks.remove(bookmark.key()));
+    } else if let Some(cs_id) = derived_cs_map[WarmerRequirement::AllKinds] {
+        // TODO At this point we are only tracking AllKinds. When we add tracking for all pointers
+        // later we will update the bookmark as long as they are not all empty.
+        update_bookmark(BookmarkState {
+            cs_id,
+            kind: *bookmark.kind(),
+            last_derived_cs: derived_cs_map,
+        })
+        .await;
     }
 
     let LatestUnderivedBookmarkEntry {
@@ -1508,7 +1516,9 @@ async fn single_bookmark_updater(
             .clone()
             .add("delay_ms", maybe_ts.map(|ts| ts.since_millis()))
             .log_with_msg("Before warming bookmark", None);
+
         let (stats, res) = warm_all(&ctx, underived_cs_id, warmers).timed().await;
+
         ctx.scuba()
             .clone()
             .add_future_stats(&stats)
@@ -1516,7 +1526,17 @@ async fn single_bookmark_updater(
 
         match res {
             Ok(()) => {
-                update_bookmark(underived_cs_id).await;
+                // We just warmed all our warmers, so we can update all our pointers
+                // TODO: This is not completely right. We may not have any warmers for a given
+                // requirement, but this will update that pointer as well. We need a way to "not
+                // track" requirements.
+                let updated_map = derived_cs_map.map(|_, _| Some(underived_cs_id));
+                update_bookmark(BookmarkState {
+                    cs_id: underived_cs_id,
+                    kind: *bookmark.kind(),
+                    last_derived_cs: updated_map,
+                })
+                .await;
             }
             Err(err) => {
                 tracing::warn!(
@@ -1905,7 +1925,7 @@ mod tests {
             Some(BookmarkState {
                 cs_id: master,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
+                last_derived_cs: EnumMap::from_array([Some(master), Some(master), Some(master)]),
             }),
         )
         .await?;
@@ -1919,7 +1939,7 @@ mod tests {
             Some(BookmarkState {
                 cs_id: master,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
+                last_derived_cs: EnumMap::from_array([Some(master), Some(master), Some(master)]),
             }),
         )
         .await?;
@@ -1982,7 +2002,11 @@ mod tests {
             Some(BookmarkState {
                 cs_id: master_cs_id,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
+                last_derived_cs: EnumMap::from_array([
+                    Some(master_cs_id),
+                    Some(master_cs_id),
+                    Some(master_cs_id)
+                ]),
             })
         );
 
@@ -2129,7 +2153,7 @@ mod tests {
             Some(BookmarkState {
                 cs_id: master,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
+                last_derived_cs: EnumMap::from_array([Some(master), Some(master), Some(master)]),
             }),
         )
         .await?;
@@ -2169,7 +2193,11 @@ mod tests {
             Some(BookmarkState {
                 cs_id: failing_cs_id,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
+                last_derived_cs: EnumMap::from_array([
+                    Some(failing_cs_id),
+                    Some(failing_cs_id),
+                    Some(failing_cs_id),
+                ]),
             }),
         )
         .await?;
@@ -2359,7 +2387,11 @@ mod tests {
             Some(BookmarkState {
                 cs_id: new_cs_id,
                 kind: BookmarkKind::Publishing,
-                last_derived_cs: EnumMap::default(),
+                last_derived_cs: EnumMap::from_array([
+                    Some(new_cs_id),
+                    Some(new_cs_id),
+                    Some(new_cs_id),
+                ]),
             }),
         )
         .await?;
@@ -2377,7 +2409,11 @@ mod tests {
             Some(BookmarkState {
                 cs_id: new_cs_id,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
+                last_derived_cs: EnumMap::from_array([
+                    Some(new_cs_id),
+                    Some(new_cs_id),
+                    Some(new_cs_id),
+                ]),
             }),
         )
         .await?;
@@ -2432,7 +2468,11 @@ mod tests {
             Some(BookmarkState {
                 cs_id: master_cs_id,
                 kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
+                last_derived_cs: EnumMap::from_array([
+                    Some(master_cs_id),
+                    Some(master_cs_id),
+                    Some(master_cs_id)
+                ]),
             })
         );
 
