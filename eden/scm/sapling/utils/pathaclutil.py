@@ -53,13 +53,13 @@ def validate_path_acl(
 
 def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
     """Validate the ACL of copy/move patterns."""
-    assert op_name in ("copy", "move")
     ui = repo.ui
     acl_file = ui.config("pathacl", "tent-filter-path")
     if not acl_file:
         return
 
-    if sparseutil.is_profile_enabled(repo, acl_file):
+    is_acl_enabled = sparseutil.is_profile_enabled(repo, acl_file)
+    if is_acl_enabled and op_name in ("copy", "move"):
         # protected paths should not exist in the working copy
         return
 
@@ -75,7 +75,10 @@ def validate_files_acl(repo, src_files, dest, curr_ctx, op_name="copy"):
         return
     for src in src_files:
         if not unprotected_matcher.matchfn(src):
-            prompt_warning_or_abort(ui, src, dest, op_name)
+            abort_by_default = is_acl_enabled
+            prompt_warning_or_abort(
+                ui, src, dest, op_name, abort_by_default=abort_by_default
+            )
 
 
 def prompt_warning_or_abort(ui, from_path, to_path, op_name, abort_by_default=False):

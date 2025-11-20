@@ -106,7 +106,7 @@ Test subtree graft protected path
 
   $ hg subtree graft --from-path foo --to-path bar -r bf60887fbaff
   WARNING: You are attempting to graft protected data to an unprotected location:
-   * from-path: foo (contains protected data)
+   * from-path: foo/protected/x (contains protected data)
    * to-path: bar
   Do you still wish to continue (y/n)?  n
   abort: copying protected path to an unprotected path is not allowed
@@ -185,6 +185,12 @@ Test subtree graft protected path with tent-filter enabled (should fail)
   $ hg subtree graft --from-path foo --to-path bar -r bf60887fbaff
   abort: copying protected path to an unprotected path is not allowed
   (WARNING: You are attempting to graft protected data to an unprotected location:
-   * from-path: foo (contains protected data)
+   * from-path: foo/protected/x (contains protected data)
    * to-path: bar)
   [255]
+
+Test subtree graft commits that do not have protected data (should succeed)
+
+  $ hg subtree graft --from-path foo --to-path bar -r 3dbe1a097d57
+  grafting 3dbe1a097d57 "update foo/y"
+  merging bar/y and foo/y to bar/y

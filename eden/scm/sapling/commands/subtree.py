@@ -287,8 +287,6 @@ def subtree_graft(ui, repo, **opts):
         from_repo = get_or_clone_git_repo(ui, giturl)
     else:
         from_repo = repo
-        ctx = repo["."]
-        pathaclutil.validate_path_acl(repo, from_paths, to_paths, ctx, op_name="graft")
 
     with repo.wlock():
         return _dograft(ui, repo, from_repo=from_repo, **opts)

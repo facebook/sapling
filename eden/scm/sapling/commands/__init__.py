@@ -72,7 +72,7 @@ from .. import (
 )
 from ..i18n import _
 from ..node import hex, nullid, short
-from ..utils import sparseutil, subtreeutil
+from ..utils import pathaclutil, sparseutil, subtreeutil
 from . import cmdtable
 
 with hgdemandimport.deactivated():
@@ -2749,8 +2749,19 @@ def _dograft(ui, to_repo, *revs, from_repo=None, **opts):
 
         if not revs:
             return -1
-
+    to_ctx = to_repo["."]
     for pos, ctx in enumerate(from_repo.set("%ld", revs)):
+        # XXX: only check acl for non-crossrepo case
+        if not is_crossrepo:
+            files = ctx.files()
+            for from_path, to_path in zip(from_paths, to_paths):
+                from_files = [
+                    f for f in files if f.startswith(from_path + "/") or f == from_path
+                ]
+                pathaclutil.validate_files_acl(
+                    to_repo, from_files, to_path, to_ctx, op_name="graft"
+                )
+
         desc = '%s "%s"' % (ctx, ctx.description().split("\n", 1)[0])
         names = from_repo.nodebookmarks(ctx.node())
         if names:
