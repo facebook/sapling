@@ -110,15 +110,119 @@ define_stats! {
     global_max_staleness_secs: histogram(10, 0, 5000, Average; P 50; P 75; P 95; P 99),
 }
 
+/// Represents the state of derived data for a particular warmer requirement.
+///
+/// Each bookmark can track derived data for different requirements (HgOnly, GitOnly, AllKinds).
+/// This enum captures whether a requirement is being tracked, and if so, what changeset
+/// the derived data is currently at.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RequirementState {
+    /// This requirement is not being tracked for this bookmark.
+    ///
+    /// This state occurs when no warmers with the corresponding tag (Hg or Git) are configured.
+    /// Attempting to get or set a NotTracked requirement will return an error.
+    NotTracked,
+
+    /// The requirement is being tracked, but the derived data changeset is not yet known.
+    ///
+    /// This is the initial state for tracked requirements before they are warmed or initialized.
+    /// When in this state, `get()` will return `Ok(None)`, indicating the requirement is tracked
+    /// but not yet derived.
+    Unknown,
+
+    /// The requirement is tracked and the derived data is at the specified changeset.
+    ///
+    /// This means all warmers for this requirement have successfully derived data up to
+    /// (and including) the given changeset ID.
+    At(ChangesetId),
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BookmarkState {
-    // The cs tracking the full set of Warmers
-    pub cs_id: ChangesetId,
+    kind: BookmarkKind,
+    derived_cs_per_requirement: EnumMap<WarmerRequirement, RequirementState>,
+}
 
-    pub kind: BookmarkKind,
+impl BookmarkState {
+    pub fn from_warmers(kind: BookmarkKind, warmers: &[Warmer]) -> Self {
+        let mut derived_cs_per_requirement = enum_map::enum_map! {
+            WarmerRequirement::HgOnly => RequirementState::NotTracked,
+            WarmerRequirement::GitOnly => RequirementState::NotTracked,
+            WarmerRequirement::AllKinds => RequirementState::Unknown,
+        };
 
-    // The remaining trackers, for subsets of warmers
-    pub last_derived_cs: EnumMap<WarmerRequirement, Option<ChangesetId>>,
+        for warmer in warmers {
+            for tag in &warmer.tags {
+                match tag {
+                    WarmerTag::Hg => {
+                        derived_cs_per_requirement[WarmerRequirement::HgOnly] =
+                            RequirementState::Unknown
+                    }
+                    WarmerTag::Git => {
+                        derived_cs_per_requirement[WarmerRequirement::GitOnly] =
+                            RequirementState::Unknown
+                    }
+                }
+            }
+        }
+
+        Self {
+            kind,
+            derived_cs_per_requirement,
+        }
+    }
+
+    pub fn set_all_tracked(&mut self, cs_id: ChangesetId) {
+        for req in [
+            WarmerRequirement::HgOnly,
+            WarmerRequirement::GitOnly,
+            WarmerRequirement::AllKinds,
+        ] {
+            if self.derived_cs_per_requirement[req] != RequirementState::NotTracked {
+                self.set(req, cs_id)
+                    .expect("Tried to set an untracked requirement, even after checking!");
+            }
+        }
+    }
+
+    /// Sets multiple requirements to the given changeset ID, if they are tracked
+    /// in this state instance
+    pub fn set_many(
+        &mut self,
+        requirements: &[WarmerRequirement],
+        cs_id: ChangesetId,
+    ) -> Result<(), Error> {
+        for req in requirements {
+            self.set(*req, cs_id)?;
+        }
+        Ok(())
+    }
+
+    /// Sets a single requirement to the given changeset ID, if it's tracked in
+    /// this state instance
+    pub fn set(&mut self, requirement: WarmerRequirement, cs_id: ChangesetId) -> Result<(), Error> {
+        if self.derived_cs_per_requirement[requirement] != RequirementState::NotTracked {
+            self.derived_cs_per_requirement[requirement] = RequirementState::At(cs_id);
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "The specified requirement is not being tracked: {:?}",
+                requirement
+            ))
+        }
+    }
+
+    /// Gets the changeset ID for a requirement, returning None if NotTracked or Unknown.
+    pub fn get(&self, requirement: WarmerRequirement) -> Result<Option<ChangesetId>, Error> {
+        match self.derived_cs_per_requirement[requirement] {
+            RequirementState::At(cs_id) => Ok(Some(cs_id)),
+            RequirementState::Unknown => Ok(None),
+            RequirementState::NotTracked => Err(anyhow!(
+                "The requirement requested is not being tracked: {:?}",
+                requirement
+            )),
+        }
+    }
 }
 
 pub struct WarmBookmarksCache {
@@ -529,9 +633,11 @@ impl ScopedBookmarksCache for WarmBookmarksCache {
         Ok(self
             .bookmarks
             .read()
-            .unwrap()
+            .map_err(|e| anyhow!("Failed to take bookmarks lock: {:#?}", e))?
             .get(bookmark)
-            .map(|state| state.last_derived_cs[scope].unwrap_or(state.cs_id)))
+            .map(|state| state.get(scope))
+            .transpose()?
+            .flatten())
     }
 
     async fn list(
@@ -542,34 +648,39 @@ impl ScopedBookmarksCache for WarmBookmarksCache {
         limit: Option<u64>,
         scope: WarmerRequirement,
     ) -> Result<Vec<(BookmarkKey, (ChangesetId, BookmarkKind))>, Error> {
-        let bookmarks = self.bookmarks.read().unwrap();
+        let bookmarks = self
+            .bookmarks
+            .read()
+            .map_err(|e| anyhow!("Failed to take bookmarks lock: {:#?}", e))?;
 
         if prefix.is_empty() && *pagination == BookmarkPagination::FromStart && limit.is_none() {
             // Simple case: return all bookmarks
-            Ok(bookmarks
+            bookmarks
                 .iter()
-                .map(|(key, state)| {
-                    let cs_id = state.last_derived_cs[scope].unwrap_or(state.cs_id);
-                    (key.clone(), (cs_id, state.kind))
+                .filter_map(|(key, state)| match state.get(scope) {
+                    Ok(Some(cs_id)) => Some(Ok((key.clone(), (cs_id, state.kind)))),
+                    Ok(None) => None,
+                    Err(e) => Some(Err(e)),
                 })
-                .collect())
+                .collect()
         } else {
             // Filter based on prefix and pagination
             let range = prefix.to_range().with_pagination(pagination.clone());
             let mut matches = bookmarks
                 .iter()
                 .filter(|(key, _)| range.contains(key))
-                .map(|(key, state)| {
-                    let cs_id = state.last_derived_cs[scope].unwrap_or(state.cs_id);
-                    (key.clone(), (cs_id, state.kind))
+                .filter_map(|(key, state)| match state.get(scope) {
+                    Ok(Some(cs_id)) => Some(Ok((key.clone(), (cs_id, state.kind)))),
+                    Ok(None) => None,
+                    Err(e) => Some(Err(e)),
                 })
-                .collect::<Vec<_>>();
+                .collect::<Result<Vec<_>, _>>()?;
             // Release the read lock.
             drop(bookmarks);
             if let Some(limit) = limit {
                 // We must sort and truncate if there is a limit so that the
                 // client can paginate in order.
-                matches.sort_by(|(key1, _), (key2, _)| key1.cmp(key2));
+                matches.sort_by(|(key1, _): &(BookmarkKey, _), (key2, _)| key1.cmp(key2));
                 matches.truncate(limit as usize);
             }
             Ok(matches)
@@ -623,7 +734,7 @@ async fn init_bookmarks(
             if !warm_state.are_all_warm() {
                 match mode {
                     InitMode::Rewind => {
-                        let maybe_cs_id = move_bookmark_back_in_history_until_derived(
+                        let derived_cs_ids = move_bookmark_back_in_history_until_derived(
                             ctx,
                             bookmarks,
                             bookmark_update_log,
@@ -636,50 +747,34 @@ async fn init_bookmarks(
                         tracing::info!(
                             "moved {} back in history to {:?}",
                             book,
-                            maybe_cs_id.changesets[WarmerRequirement::AllKinds]
+                            derived_cs_ids.changesets[WarmerRequirement::AllKinds]
                         );
+
+                        let mut bookmarks_state = BookmarkState::from_warmers(kind, warmers);
+                        // Set each requirement to its derived changeset if it was found
+                        for (req, derived_cs_id_opt) in derived_cs_ids.changesets {
+                            if let Some(derived_cs_id) = derived_cs_id_opt {
+                                bookmarks_state.set(req, derived_cs_id)?;
+                            }
+                        }
                         Ok((
                             remaining,
-                            maybe_cs_id.changesets[WarmerRequirement::AllKinds].map(|cs_id| {
-                                (
-                                    book,
-                                    BookmarkState {
-                                        cs_id,
-                                        kind,
-                                        last_derived_cs: EnumMap::default(),
-                                    },
-                                )
-                            }),
+                            derived_cs_ids.changesets[WarmerRequirement::AllKinds]
+                                .map(|_cs_id| (book, bookmarks_state)),
                         ))
                     }
                     InitMode::Warm => {
                         tracing::info!("warmed bookmark {} at {}", book, cs_id);
                         warm_all(ctx, cs_id, warmers).watched(ctx.logger()).await?;
-                        Ok((
-                            remaining,
-                            Some((
-                                book,
-                                BookmarkState {
-                                    cs_id,
-                                    kind,
-                                    last_derived_cs: EnumMap::default(),
-                                },
-                            )),
-                        ))
+                        let mut bookmarks_state = BookmarkState::from_warmers(kind, warmers);
+                        bookmarks_state.set_all_tracked(cs_id);
+                        Ok((remaining, Some((book, bookmarks_state))))
                     }
                 }
             } else {
-                Ok((
-                    remaining,
-                    Some((
-                        book,
-                        BookmarkState {
-                            cs_id,
-                            kind,
-                            last_derived_cs: EnumMap::default(),
-                        },
-                    )),
-                ))
+                let mut bookmarks_state = BookmarkState::from_warmers(kind, warmers);
+                bookmarks_state.set_all_tracked(cs_id);
+                Ok((remaining, Some((book, bookmarks_state))))
             }
         })
         .collect::<Vec<_>>(); // This should be unnecessary but it de-confuses the compiler: P415515287.
@@ -893,10 +988,11 @@ async fn move_bookmark_back_in_history_until_derived(
     match entries.derived_entries[WarmerRequirement::AllKinds] {
         LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => {
             let maybe_cs = maybe_cs_id_and_ts.map(|(cs_id, _)| cs_id);
+            // TODO Right now we are just tracking AllKinds, and we move the other pointers at the same step
             Ok(DerivedChangesetIds {
                 changesets: enum_map::enum_map! {
-                    WarmerRequirement::HgOnly => None,
-                    WarmerRequirement::GitOnly => None,
+                    WarmerRequirement::HgOnly => maybe_cs,
+                    WarmerRequirement::GitOnly => maybe_cs,
                     WarmerRequirement::AllKinds => maybe_cs,
                 },
             })
@@ -911,9 +1007,10 @@ async fn move_bookmark_back_in_history_until_derived(
                 cur_bookmark_value
             );
             Ok(DerivedChangesetIds {
+                // TODO Right now we are just tracking AllKinds, and we move the other pointers at the same step
                 changesets: enum_map::enum_map! {
-                    WarmerRequirement::HgOnly => None,
-                    WarmerRequirement::GitOnly => None,
+                    WarmerRequirement::HgOnly => cur_bookmark_value,
+                    WarmerRequirement::GitOnly => cur_bookmark_value,
                     WarmerRequirement::AllKinds => cur_bookmark_value,
                 },
             })
@@ -1129,7 +1226,10 @@ impl BookmarksCoordinator {
         for (key, new_value) in new_bookmarks.iter() {
             let cur_value = cur_bookmarks.get(key);
             let changed = match cur_value {
-                Some(state) => state.cs_id != new_value.0 || state.kind != new_value.1,
+                Some(state) => {
+                    let current_cs_id = state.get(WarmerRequirement::AllKinds)?;
+                    current_cs_id != Some(new_value.0) || state.kind != new_value.1
+                }
                 None => true,
             };
             if changed {
@@ -1458,11 +1558,19 @@ async fn single_bookmark_updater(
         });
     };
 
-    let mut derived_cs_map = EnumMap::default();
+    let mut bookmark_state = BookmarkState::from_warmers(*bookmark.kind(), warmers);
+
+    // Update the state based on what we found in the bookmark log
+    let mut found_any_derived = false;
     for (requirement, entry) in entries.derived_entries {
         match entry {
             LatestDerivedBookmarkEntry::Found(maybe_val) => match maybe_val {
-                Some((cs_id, _)) => derived_cs_map[requirement] = Some(cs_id),
+                Some((cs_id, _)) => {
+                    bookmark_state.set(requirement, cs_id)?;
+                    if requirement == WarmerRequirement::AllKinds {
+                        found_any_derived = true;
+                    }
+                }
                 None => (), // Nothing to do then
             },
             LatestDerivedBookmarkEntry::NotFound => {
@@ -1475,20 +1583,10 @@ async fn single_bookmark_updater(
         }
     }
 
-    let all_bookmark_pointers_none = derived_cs_map
-        .iter()
-        .fold(true, |acc, (_, val)| acc && val.is_none());
-    if all_bookmark_pointers_none {
+    if found_any_derived {
+        update_bookmark(bookmark_state.clone()).await;
+    } else {
         bookmarks.with_write(|bookmarks| bookmarks.remove(bookmark.key()));
-    } else if let Some(cs_id) = derived_cs_map[WarmerRequirement::AllKinds] {
-        // TODO At this point we are only tracking AllKinds. When we add tracking for all pointers
-        // later we will update the bookmark as long as they are not all empty.
-        update_bookmark(BookmarkState {
-            cs_id,
-            kind: *bookmark.kind(),
-            last_derived_cs: derived_cs_map,
-        })
-        .await;
     }
 
     let LatestUnderivedBookmarkEntry {
@@ -1526,17 +1624,9 @@ async fn single_bookmark_updater(
 
         match res {
             Ok(()) => {
-                // We just warmed all our warmers, so we can update all our pointers
-                // TODO: This is not completely right. We may not have any warmers for a given
-                // requirement, but this will update that pointer as well. We need a way to "not
-                // track" requirements.
-                let updated_map = derived_cs_map.map(|_, _| Some(underived_cs_id));
-                update_bookmark(BookmarkState {
-                    cs_id: underived_cs_id,
-                    kind: *bookmark.kind(),
-                    last_derived_cs: updated_map,
-                })
-                .await;
+                // We just warmed all our warmers, so we can update all tracked requirements
+                bookmark_state.set_all_tracked(underived_cs_id);
+                update_bookmark(bookmark_state).await;
             }
             Err(err) => {
                 tracing::warn!(
@@ -1651,11 +1741,10 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => BookmarkState {
-                cs_id: master_cs_id,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
-            }}
+            hashmap! {BookmarkKey::new("master")? => test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                master_cs_id,
+            )}
         );
         Ok(())
     }
@@ -1724,11 +1813,10 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => BookmarkState {
-                cs_id: derived_master,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
-            }}
+            hashmap! {BookmarkKey::new("master")? => test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                derived_master,
+            )}
         );
 
         repo.repo_derived_data()
@@ -1745,11 +1833,10 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => BookmarkState {
-                cs_id: master,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
-            }}
+            hashmap! {BookmarkKey::new("master")? => test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                master,
+            )}
         );
 
         Ok(())
@@ -1798,11 +1885,10 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => BookmarkState {
-                cs_id: derived_master,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
-            }}
+            hashmap! {BookmarkKey::new("master")? => test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                derived_master,
+            )}
         );
 
         Ok(())
@@ -1858,11 +1944,10 @@ mod tests {
         .await?;
         assert_eq!(
             bookmarks,
-            hashmap! {BookmarkKey::new("master")? => BookmarkState {
-                cs_id: derived_master,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::default(),
-            }}
+            hashmap! {BookmarkKey::new("master")? => test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                derived_master,
+            )}
         );
 
         Ok(())
@@ -1880,11 +1965,7 @@ mod tests {
                 let kind = *book.kind();
                 (
                     book.into_key(),
-                    BookmarkState {
-                        cs_id,
-                        kind,
-                        last_derived_cs: EnumMap::default(),
-                    },
+                    test_bookmark_state_all_warmers(kind, cs_id),
                 )
             })
             .try_collect::<HashMap<_, _>>()
@@ -1922,11 +2003,10 @@ mod tests {
             &ctx,
             &mut coordinator,
             &master_book,
-            Some(BookmarkState {
-                cs_id: master,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::from_array([Some(master), Some(master), Some(master)]),
-            }),
+            Some(test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                master,
+            )),
         )
         .await?;
 
@@ -1936,11 +2016,10 @@ mod tests {
             &ctx,
             &mut coordinator,
             &master_book,
-            Some(BookmarkState {
-                cs_id: master,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::from_array([Some(master), Some(master), Some(master)]),
-            }),
+            Some(test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                master,
+            )),
         )
         .await?;
 
@@ -1959,11 +2038,7 @@ mod tests {
                 let kind = *book.kind();
                 (
                     book.into_key(),
-                    BookmarkState {
-                        cs_id,
-                        kind,
-                        last_derived_cs: EnumMap::default(),
-                    },
+                    test_bookmark_state_all_warmers(kind, cs_id),
                 )
             })
             .try_collect::<HashMap<_, _>>()
@@ -1999,15 +2074,10 @@ mod tests {
 
         assert_eq!(
             bookmarks.with_read(|bookmarks| bookmarks.get(&master_book_name).cloned()),
-            Some(BookmarkState {
-                cs_id: master_cs_id,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::from_array([
-                    Some(master_cs_id),
-                    Some(master_cs_id),
-                    Some(master_cs_id)
-                ]),
-            })
+            Some(test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                master_cs_id,
+            ))
         );
 
         Ok(())
@@ -2069,11 +2139,7 @@ mod tests {
                 let kind = *book.kind();
                 (
                     book.into_key(),
-                    BookmarkState {
-                        cs_id,
-                        kind,
-                        last_derived_cs: EnumMap::default(),
-                    },
+                    test_bookmark_state_all_warmers(kind, cs_id),
                 )
             })
             .try_collect::<HashMap<_, _>>()
@@ -2150,11 +2216,10 @@ mod tests {
             &ctx,
             &mut coordinator,
             &master_book,
-            Some(BookmarkState {
-                cs_id: master,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::from_array([Some(master), Some(master), Some(master)]),
-            }),
+            Some(test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                master,
+            )),
         )
         .await?;
 
@@ -2190,15 +2255,10 @@ mod tests {
             &ctx,
             &mut coordinator,
             &failing_book,
-            Some(BookmarkState {
-                cs_id: failing_cs_id,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::from_array([
-                    Some(failing_cs_id),
-                    Some(failing_cs_id),
-                    Some(failing_cs_id),
-                ]),
-            }),
+            Some(test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                failing_cs_id,
+            )),
         )
         .await?;
 
@@ -2275,11 +2335,7 @@ mod tests {
                 let kind = *book.kind();
                 (
                     book.into_key(),
-                    BookmarkState {
-                        cs_id,
-                        kind,
-                        last_derived_cs: EnumMap::default(),
-                    },
+                    test_bookmark_state_all_warmers(kind, cs_id),
                 )
             })
             .try_collect::<HashMap<_, _>>()
@@ -2339,11 +2395,7 @@ mod tests {
                 let kind = *book.kind();
                 (
                     book.into_key(),
-                    BookmarkState {
-                        cs_id,
-                        kind,
-                        last_derived_cs: EnumMap::default(),
-                    },
+                    test_bookmark_state_all_warmers(kind, cs_id),
                 )
             })
             .try_collect::<HashMap<_, _>>()
@@ -2384,15 +2436,10 @@ mod tests {
             &ctx,
             &mut coordinator,
             &publishing_book,
-            Some(BookmarkState {
-                cs_id: new_cs_id,
-                kind: BookmarkKind::Publishing,
-                last_derived_cs: EnumMap::from_array([
-                    Some(new_cs_id),
-                    Some(new_cs_id),
-                    Some(new_cs_id),
-                ]),
-            }),
+            Some(test_bookmark_state_all_warmers(
+                BookmarkKind::Publishing,
+                new_cs_id,
+            )),
         )
         .await?;
 
@@ -2406,15 +2453,10 @@ mod tests {
             &ctx,
             &mut coordinator,
             &publishing_book,
-            Some(BookmarkState {
-                cs_id: new_cs_id,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::from_array([
-                    Some(new_cs_id),
-                    Some(new_cs_id),
-                    Some(new_cs_id),
-                ]),
-            }),
+            Some(test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                new_cs_id,
+            )),
         )
         .await?;
 
@@ -2465,17 +2507,25 @@ mod tests {
 
         assert_eq!(
             bookmarks.with_read(|bookmarks| bookmarks.get(&master_book_name).cloned()),
-            Some(BookmarkState {
-                cs_id: master_cs_id,
-                kind: BookmarkKind::PullDefaultPublishing,
-                last_derived_cs: EnumMap::from_array([
-                    Some(master_cs_id),
-                    Some(master_cs_id),
-                    Some(master_cs_id)
-                ]),
-            })
+            Some(test_bookmark_state_all_warmers(
+                BookmarkKind::PullDefaultPublishing,
+                master_cs_id,
+            ))
         );
 
         Ok(())
+    }
+
+    // Test helper to create a BookmarkState with all warmers enabled
+    fn test_bookmark_state_all_warmers(kind: BookmarkKind, cs_id: ChangesetId) -> BookmarkState {
+        let warmers = vec![Warmer {
+            warmer: Box::new(|_ctx, _cs_id| Box::pin(async { Ok(()) })),
+            is_warm: Box::new(|_ctx, _cs_id| Box::pin(async { Ok(true) })),
+            name: "test".to_string(),
+            tags: vec![WarmerTag::Hg, WarmerTag::Git],
+        }];
+        let mut state = BookmarkState::from_warmers(kind, &warmers);
+        state.set_all_tracked(cs_id);
+        state
     }
 }
