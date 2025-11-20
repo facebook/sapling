@@ -239,6 +239,7 @@ describe('WatchForChanges', () => {
     } as unknown as Watchman;
 
     watch = new WatchForChanges(mockInfo, focusTracker, onChange, ctx, mockWatchman);
+    await watch.waitForDirstateSubscriptionReady();
     await watch.setupSubscriptions(ctx);
     expect(onChange).toHaveBeenCalledTimes(1);
     onChange.mockClear();
@@ -249,7 +250,7 @@ describe('WatchForChanges', () => {
 
     jest.advanceTimersByTime(1.5 * ONE_MINUTE_MS);
     expect(onChange).toHaveBeenCalledTimes(0);
-    await emitter2.emit('change', undefined);
+    emitter2.emit('change', undefined);
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith('uncommitted changes');
     jest.advanceTimersByTime(14.0 * ONE_MINUTE_MS); // original timer didn't cause a poll

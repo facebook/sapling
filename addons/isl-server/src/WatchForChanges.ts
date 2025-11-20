@@ -41,6 +41,7 @@ export class WatchForChanges {
   private dirstateDisposables: Array<() => unknown> = [];
   private watchmanDisposables: Array<() => unknown> = [];
   private logger: Logger;
+  private dirstateSubscriptionPromise: Promise<void>;
 
   constructor(
     private repoInfo: RepoInfo,
@@ -53,7 +54,7 @@ export class WatchForChanges {
     this.logger = ctx.logger;
 
     // Watch dirstate right away for commit changes
-    this.setupDirstateSubscriptions(ctx);
+    this.dirstateSubscriptionPromise = this.setupDirstateSubscriptions(ctx);
     this.setupPolling();
     this.pageFocusTracker.onChange(this.poll.bind(this));
     // poll right away so we get data immediately, without waiting for timeout on startup
@@ -62,6 +63,15 @@ export class WatchForChanges {
 
   private timeout: NodeJS.Timeout | undefined;
   private lastFetch = new Date().valueOf();
+
+  /**
+   * Waits for the dirstate subscription to be set up
+   * since we can't await in the constructor
+   * Resolves when dirstateSubscriptionPromise is fulfilled.
+   */
+  public async waitForDirstateSubscriptionReady(): Promise<void> {
+    await this.dirstateSubscriptionPromise;
+  }
 
   /**
    * Combine different signals to determine what interval to poll for information
@@ -207,6 +217,7 @@ export class WatchForChanges {
   }
 
   public async setupSubscriptions(ctx: RepositoryContext) {
+    await this.waitForDirstateSubscriptionReady();
     const enabled = await Internal.fetchFeatureFlag?.(ctx, 'isl_use_edenfs_notifications');
     this.logger.info('edenfs notifications flag state: ', enabled);
     if (enabled) {
