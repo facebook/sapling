@@ -58,7 +58,7 @@ Setup client repo without enabling tent-filer profile
   $ hg clone -q --eden test:server client1
   $ cd client1
 
-Test subtree copy protected path
+Test copy/move protected path to outside (should prompt warning and fail by default)
 
   $ hg cp foo baz
   WARNING: You are attempting to copy protected data to an unprotected location:
@@ -75,6 +75,23 @@ Test subtree copy protected path
   Do you still wish to continue (y/n)?  n
   abort: copying protected path to an unprotected path is not allowed
   [255]
+
+Test copy/move within protected path (should succeed)
+
+  $ hg cp foo/protected/x foo/protected/x2
+  $ hg st
+  A foo/protected/x2
+  $ hg go -C . && hg clean
+  update complete
+
+  $ hg mv foo/protected/x foo/protected/x2
+  $ hg st
+  A foo/protected/x2
+  R foo/protected/x
+  $ hg go -C . && hg clean
+  update complete
+
+Test subtree copy protected path
 
   $ hg subtree copy --from-path foo --to-path baz
   WARNING: You are attempting to copy protected data to an unprotected location:
