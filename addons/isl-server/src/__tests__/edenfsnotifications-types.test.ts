@@ -21,7 +21,7 @@ import {
 describe('EdenFS Notifications Client Types', () => {
   it('should have correct types for EdenFSNotificationsClient', () => {
     const options: EdenFSClientOptions = {
-      mountPath: '/test/path',
+      mountPoint: '/test/path',
       timeout: 5000,
       edenBinaryPath: 'eden',
     };

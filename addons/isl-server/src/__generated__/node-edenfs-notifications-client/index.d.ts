@@ -26,7 +26,7 @@ import {EventEmitter} from 'events';
  */
 export interface EdenFSClientOptions {
   /** Path to the mount point */
-  mountPath?: string;
+  mountPoint?: string;
   /** Timeout in milliseconds for commands (default: 30000) */
   timeout?: number;
   /** Path to the eden binary (default: 'eden') */
