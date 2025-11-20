@@ -159,6 +159,7 @@ pub struct ChangesetContext<R> {
 #[derive(Default)]
 pub struct ChangesetHistoryOptions {
     pub until_timestamp: Option<i64>,
+    pub until_committer_timestamp: Option<i64>,
     pub descendants_of: Option<ChangesetId>,
     pub exclude_changeset_and_ancestors: Option<ChangesetId>,
 }
@@ -1429,7 +1430,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             vec![self.id()],
         );
 
-        if let Some(until_timestamp) = opts.until_timestamp {
+        if opts.until_timestamp.is_some() || opts.until_committer_timestamp.is_some() {
             ancestors_stream_builder = ancestors_stream_builder.with({
                 let ctx = self.ctx().clone();
                 let repo_ctx = self.repo_ctx().clone();
@@ -1447,8 +1448,24 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                             let bonsai = cs_id.load(&ctx, repo_ctx.repo().repo_blobstore()).await?;
                             ChangesetInfo::new(cs_id, bonsai)
                         };
-                        let date = info.author_date().as_chrono().clone();
-                        Ok(date.timestamp() >= until_timestamp)
+
+                        if let Some(until_timestamp) = opts.until_timestamp {
+                            let date = info.author_date().as_chrono().clone();
+                            if date.timestamp() < until_timestamp {
+                                return Ok(false);
+                            }
+                        }
+                        if let Some(until_committer_timestamp) = opts.until_committer_timestamp {
+                            // Get committer_date if available, otherwise fall back to author_date
+                            let date = match info.committer_date() {
+                                Some(committer_date) => committer_date.as_chrono().clone(),
+                                None => info.author_date().as_chrono().clone(),
+                            };
+                            if date.timestamp() < until_committer_timestamp {
+                                return Ok(false);
+                            }
+                        }
+                        Ok(true)
                     }
                 }
             });

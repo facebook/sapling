@@ -1160,6 +1160,7 @@ impl SourceControlServiceImpl {
             files_stream,
         ))
     }
+
     /// Returns the history of a commit
     pub(crate) async fn commit_history(
         &self,
@@ -1199,6 +1200,14 @@ impl SourceControlServiceImpl {
         // We will consider negative timestamps as invalid and zeros as unset.
         let after_timestamp = validate_timestamp(params.after_timestamp, "after_timestamp")?;
         let before_timestamp = validate_timestamp(params.before_timestamp, "before_timestamp")?;
+        let after_committer_timestamp = validate_timestamp(
+            params.after_committer_timestamp,
+            "after_committer_timestamp",
+        )?;
+        let before_committer_timestamp = validate_timestamp(
+            params.before_committer_timestamp,
+            "before_committer_timestamp",
+        )?;
 
         if let (Some(ats), Some(bts)) = (after_timestamp, before_timestamp) {
             if bts < ats {
@@ -1209,8 +1218,22 @@ impl SourceControlServiceImpl {
                 .into());
             }
         }
+        if let (Some(ats), Some(bts)) = (after_committer_timestamp, before_committer_timestamp) {
+            if bts < ats {
+                return Err(scs_errors::invalid_request(format!(
+                    "after_committer_timestamp ({}) cannot be greater than before_committer_timestamp ({})",
+                    ats, bts,
+                ))
+                .into());
+            }
+        }
 
-        if skip > 0 && (after_timestamp.is_some() || before_timestamp.is_some()) {
+        if skip > 0
+            && (after_timestamp.is_some()
+                || before_timestamp.is_some()
+                || after_committer_timestamp.is_some()
+                || before_committer_timestamp.is_some())
+        {
             return Err(scs_errors::invalid_request(
                 "Time filters cannot be applied if skip is not 0".to_string(),
             )
@@ -1220,6 +1243,7 @@ impl SourceControlServiceImpl {
         let history_stream = changeset
             .history(ChangesetHistoryOptions {
                 until_timestamp: after_timestamp,
+                until_committer_timestamp: after_committer_timestamp,
                 descendants_of,
                 exclude_changeset_and_ancestors,
             })
@@ -1231,6 +1255,8 @@ impl SourceControlServiceImpl {
             limit,
             before_timestamp,
             after_timestamp,
+            before_committer_timestamp,
+            after_committer_timestamp,
             params.format,
             &params.identity_schemes,
         )
@@ -1289,6 +1315,8 @@ impl SourceControlServiceImpl {
             // We set the skip to 0 as skipping is already done as part of ChangesetContext::linear_history.
             0,
             limit,
+            None,
+            None,
             None,
             None,
             params.format,

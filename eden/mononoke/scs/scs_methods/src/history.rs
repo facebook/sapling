@@ -31,6 +31,8 @@ pub(crate) async fn collect_history(
     limit: usize,
     before_timestamp: Option<i64>,
     after_timestamp: Option<i64>,
+    before_committer_timestamp: Option<i64>,
+    after_committer_timestamp: Option<i64>,
     format: thrift::HistoryFormat,
     identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
 ) -> Result<thrift::History, scs_errors::ServiceError> {
@@ -38,7 +40,11 @@ pub(crate) async fn collect_history(
         .map_err(scs_errors::ServiceError::from)
         .skip(skip);
 
-    let history = if before_timestamp.is_some() || after_timestamp.is_some() {
+    let history = if before_timestamp.is_some()
+        || after_timestamp.is_some()
+        || before_committer_timestamp.is_some()
+        || after_committer_timestamp.is_some()
+    {
         history_stream
             .map(move |changeset| async move {
                 let changeset = changeset?;
@@ -51,6 +57,25 @@ pub(crate) async fn collect_history(
                         }
                     }
                     if let Some(before) = before_timestamp {
+                        if before < date.timestamp() {
+                            return Ok(None);
+                        }
+                    }
+                }
+
+                if after_committer_timestamp.is_some() || before_committer_timestamp.is_some() {
+                    // Get committer_date if available, otherwise fall back to author_date
+                    let date = match changeset.committer_date().watched(ctx.logger()).await? {
+                        Some(committer_date) => committer_date,
+                        None => changeset.author_date().watched(ctx.logger()).await?,
+                    };
+
+                    if let Some(after) = after_committer_timestamp {
+                        if after > date.timestamp() {
+                            return Ok(None);
+                        }
+                    }
+                    if let Some(before) = before_committer_timestamp {
                         if before < date.timestamp() {
                             return Ok(None);
                         }

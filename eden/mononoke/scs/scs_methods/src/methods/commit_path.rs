@@ -579,6 +579,8 @@ impl SourceControlServiceImpl {
             limit,
             before_timestamp,
             after_timestamp,
+            None,
+            None,
             params.format,
             &params.identity_schemes,
         )
