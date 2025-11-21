@@ -7,12 +7,14 @@
 
 import type {Client} from 'fb-watchman';
 import type {RepoInfo} from 'isl/src/types';
+import type {EdenFSNotifications} from '../edenFsNotifications';
 import type {ServerPlatform} from '../serverPlatform';
 import type {Watchman} from '../watchman';
 
 import fs from 'node:fs';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {mockLogger} from 'shared/testUtils';
+import {Internal} from '../Internal';
 import {PageFocusTracker} from '../PageFocusTracker';
 import {WatchForChanges} from '../WatchForChanges';
 import {makeServerSideTracker} from '../analytics/serverSideTracker';
@@ -40,7 +42,7 @@ jest.mock('fb-watchman', () => {
   };
 });
 
-describe('WatchForChanges', () => {
+describe('WatchForChanges - watchman', () => {
   const mockInfo: RepoInfo = {
     type: 'success',
     command: 'sl',
@@ -56,6 +58,10 @@ describe('WatchForChanges', () => {
   let watch: WatchForChanges;
 
   beforeEach(() => {
+    Internal.fetchFeatureFlag = jest.fn().mockImplementation((_ctx, _flag) => {
+      return Promise.resolve(false);
+    });
+
     const ctx = {
       cmd: 'sl',
       cwd: '/path/to/cwd',
@@ -258,7 +264,105 @@ describe('WatchForChanges', () => {
     jest.advanceTimersByTime(2.0 * ONE_MINUTE_MS); // 15 minutes after watchman change, a new poll occurred
     expect(onChange).toHaveBeenCalledTimes(2);
     expect(onChange).toHaveBeenCalledWith('everything', undefined);
+  });
+});
 
+describe('WatchForChanges - edenfs', () => {
+  const mockInfo: RepoInfo = {
+    type: 'success',
+    command: 'sl',
+    repoRoot: '/testRepo',
+    dotdir: '/testRepo/.sl',
+    codeReviewSystem: {type: 'unknown'},
+    pullRequestDomain: undefined,
+    isEdenFs: true,
+  };
+
+  let focusTracker: PageFocusTracker;
+  const onChange = jest.fn();
+  let watch: WatchForChanges;
+  let emitter1: TypedEventEmitter<string, unknown>;
+
+  beforeEach(async () => {
+    Internal.fetchFeatureFlag = jest.fn().mockImplementation((_ctx, _flag) => {
+      return Promise.resolve(true);
+    });
+    const ctx = {
+      cmd: 'sl',
+      cwd: '/path/to/cwd',
+      logger: mockLogger,
+      tracker: mockTracker,
+    };
+
+    jest.useFakeTimers();
+    onChange.mockClear();
+
+    jest.spyOn(fs.promises, 'realpath').mockImplementation((path, _opts) => {
+      return Promise.resolve(path as string);
+    });
+
+    emitter1 = new TypedEventEmitter();
+    const mockEdenFS: EdenFSNotifications = {
+      watchDirectoryRecursive: jest
+        .fn()
+        .mockImplementation(
+          (_localDirectoryPath, _rawSubscriptionName, _subscriptionOptions, callback) => {
+            emitter1.on('change', change => {
+              callback(null, change);
+            });
+            emitter1.on('error', error => {
+              callback(error, null);
+            });
+            emitter1.on('close', () => {
+              callback(null, null);
+            });
+            return Promise.resolve(emitter1);
+          },
+        ),
+      unwatch: jest.fn(),
+    } as unknown as EdenFSNotifications;
+
+    focusTracker = new PageFocusTracker();
+    watch = new WatchForChanges(mockInfo, focusTracker, onChange, ctx, undefined, mockEdenFS);
+    await watch.waitForDirstateSubscriptionReady();
+
+    // change is triggered on first subscription
+    expect(onChange).toHaveBeenCalledTimes(1);
+    onChange.mockClear();
+  });
+
+  afterEach(() => {
     watch.dispose();
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
+  it('Handles results from edenfs', async () => {
+    // |-----------1-----------2-----------3-----------4-----------5-----------6-----------7-----------8-----------9----------10----------11----------12----------13----------14----------15----------16 (minutes)
+    //                                                                                                                                                                                          ^ poll
+    const ctx = {
+      cmd: 'sl',
+      cwd: '/path/to/cwd',
+      logger: mockLogger,
+      tracker: mockTracker,
+    };
+
+    await watch.setupSubscriptions(ctx);
+
+    // wait an actual async tick so mock subscriptions are set up
+    const setImmediate = jest.requireActual('timers').setImmediate;
+    await new Promise(res => setImmediate(() => res(undefined)));
+
+    jest.advanceTimersByTime(1.5 * ONE_MINUTE_MS);
+    expect(onChange).toHaveBeenCalledTimes(0);
+    emitter1.emit('change', {changes: [1]});
+    expect(onChange).toHaveBeenCalledTimes(1);
+    jest.advanceTimersByTime(13.0 * ONE_MINUTE_MS); // original timer didn't cause a poll
+    expect(onChange).toHaveBeenCalledTimes(1);
+    jest.advanceTimersByTime(3.0 * ONE_MINUTE_MS); // 15 minutes after watchman change, a new poll occurred
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenCalledWith('everything', undefined);
   });
 });

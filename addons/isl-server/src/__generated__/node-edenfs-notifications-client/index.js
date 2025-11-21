@@ -394,7 +394,7 @@ class EdenFSSubscription extends EventEmitter {
             'error',
             new Error(`EdenFS process exited with code ${code}\nstderr: ${this.errData}`),
           );
-        } else if (signal !== null && signal !== 'SIGINT') {
+        } else if (signal !== null && signal !== 'SIGTERM') {
           this.emit('error', new Error(`EdenFS process killed with signal ${signal}`));
         } else {
           this.emit('close');

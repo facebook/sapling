@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {PageVisibility, RepoInfo, ValidatedRepoInfo} from 'isl/src/types';
+import type {PageVisibility, ValidatedRepoInfo} from 'isl/src/types';
 import type {PageFocusTracker} from './PageFocusTracker';
 import type {Logger} from './logger';
 
@@ -14,7 +14,10 @@ import path from 'node:path';
 import {debounce} from 'shared/debounce';
 import {Internal} from './Internal';
 import {stagedThrottler} from './StagedThrottler';
+import type {SubscriptionCallback} from './__generated__/node-edenfs-notifications-client';
+import {EdenFSUtils} from './__generated__/node-edenfs-notifications-client';
 import {ONE_MINUTE_MS} from './constants';
+import {EdenFSNotifications} from './edenFsNotifications';
 import type {RepositoryContext} from './serverTypes';
 import {Watchman} from './watchman';
 
@@ -36,22 +39,29 @@ export type PollKind = PageVisibility | 'force';
  */
 export class WatchForChanges {
   static WATCHMAN_DEFER = `hg.update`; // TODO: update to sl
+  static WATCHMAN_DEFER_TRANSACTION = `hg.transaction`; // TODO: update to sl
   public watchman: Watchman;
+  public edenfs: EdenFSNotifications;
 
   private dirstateDisposables: Array<() => unknown> = [];
   private watchmanDisposables: Array<() => unknown> = [];
+  private edenfsDisposables: Array<() => unknown> = [];
   private logger: Logger;
   private dirstateSubscriptionPromise: Promise<void>;
 
   constructor(
-    private repoInfo: RepoInfo,
+    private repoInfo: ValidatedRepoInfo,
     private pageFocusTracker: PageFocusTracker,
     private changeCallback: (kind: KindOfChange, pollKind?: PollKind) => unknown,
     ctx: RepositoryContext,
     watchman?: Watchman | undefined,
+    edenfs?: EdenFSNotifications | undefined,
   ) {
-    this.watchman = watchman ?? new Watchman(ctx.logger);
     this.logger = ctx.logger;
+    this.watchman = watchman ?? new Watchman(ctx.logger);
+
+    const {repoRoot} = this.repoInfo;
+    this.edenfs = edenfs ?? new EdenFSNotifications(ctx.logger, repoRoot);
 
     // Watch dirstate right away for commit changes
     this.dirstateSubscriptionPromise = this.setupDirstateSubscriptions(ctx);
@@ -91,6 +101,8 @@ export class WatchForChanges {
   public poll = (kind?: PollKind) => {
     // calculate how long we'd like to be waiting from what we know of the windows.
     let desiredNextTickTime = DEFAULT_POLL_INTERVAL;
+
+    // TODO: check eden here? might not be necessary
     if (this.watchman.status !== 'healthy') {
       if (this.pageFocusTracker.hasPageWithFocus()) {
         desiredNextTickTime = FOCUSED_POLL_INTERVAL;
@@ -130,28 +142,22 @@ export class WatchForChanges {
 
   private async setupDirstateSubscriptions(ctx: RepositoryContext) {
     const enabled = await Internal.fetchFeatureFlag?.(ctx, 'isl_use_edenfs_notifications');
-    this.logger.info('edenfs notifications flag state: ', enabled);
+    this.logger.info('dirstate edenfs notifications flag state: ', enabled);
     if (enabled) {
-      if (this.repoInfo.type === 'success') {
-        if ((this.repoInfo as ValidatedRepoInfo).isEdenFs === true) {
-          this.logger.info('Valid eden repo'); // For testing, remove when implemented
-          // TODO: implement Eden dirstate subscriptions
-          // await this.setupEdenDirstateSubscriptions();
-          // return;
-        } else {
-          this.logger.info('Non-eden repo'); // For testing, remove when implemented
-        }
+      if (this.repoInfo.isEdenFs === true) {
+        this.logger.info('Valid eden repo'); // For testing, remove when implemented
+        await this.setupEdenDirstateSubscriptions();
+        return;
+      } else {
+        this.logger.info('Non-eden repo');
+        await this.setupWatchmanDirstateSubscriptions();
       }
     } else {
-      // TODO: move watchman here after implementing eden
+      await this.setupWatchmanDirstateSubscriptions();
     }
-    await this.setupWatchmanDirstateSubscriptions();
   }
 
   private async setupWatchmanDirstateSubscriptions() {
-    if (this.repoInfo.type !== 'success') {
-      return;
-    }
     const {repoRoot, dotdir} = this.repoInfo;
 
     if (repoRoot == null || dotdir == null) {
@@ -216,18 +222,93 @@ export class WatchForChanges {
     }
   }
 
+  private async setupEdenDirstateSubscriptions() {
+    const {repoRoot, dotdir} = this.repoInfo;
+
+    if (repoRoot == null || dotdir == null) {
+      this.logger.error(`skipping dirstate subscription since ${repoRoot} is not a repository`);
+      return;
+    }
+
+    const relativeRoot = path.relative(repoRoot, dotdir);
+
+    const DIRSTATE_EDENFS_SUBSCRIPTION = 'sapling-smartlog-dirstate-change-edenfs';
+    try {
+      const handleRepositoryStateChange = debounce(() => {
+        // if the repo changes, also recheck files. E.g. if you commit, your uncommitted changes will also change.
+        this.changeCallback('everything');
+
+        // reset timer for polling
+        this.lastFetch = new Date().valueOf();
+      }, 100); // debounce so that multiple quick changes don't trigger multiple fetches for no reason
+
+      this.logger.info(
+        'setting up dirstate edenfs subscription in root',
+        repoRoot,
+        'at',
+        relativeRoot,
+      );
+
+      const subscriptionCallback: SubscriptionCallback = (error, resp) => {
+        if (error) {
+          this.logger.error('EdenFS dirstate subscription error:', error.message);
+          return;
+        } else if (resp === null) {
+          // EdenFS subscription closed
+          return;
+        } else {
+          if (resp.changes && resp.changes.length > 0) {
+            resp.changes.forEach(change => {
+              if (change.SmallChange) {
+                const paths = EdenFSUtils.extractPaths([change]);
+                if (paths.includes('merge')) {
+                  this.changeCallback('merge conflicts');
+                  return;
+                }
+                if (paths.includes('dirstate')) {
+                  handleRepositoryStateChange();
+                  return;
+                }
+              } else if (change.LargeChange) {
+                handleRepositoryStateChange();
+                return;
+              }
+            });
+          }
+          return;
+        }
+      };
+
+      await this.edenfs.watchDirectoryRecursive(
+        repoRoot,
+        DIRSTATE_EDENFS_SUBSCRIPTION,
+        {
+          useCase: 'isl-server-node',
+          mountPoint: repoRoot,
+          throttle: 100,
+          relativeRoot,
+          states: [WatchForChanges.WATCHMAN_DEFER, WatchForChanges.WATCHMAN_DEFER_TRANSACTION],
+          includeVcsRoots: true,
+        },
+        subscriptionCallback,
+      );
+      this.dirstateDisposables.push(() => {
+        this.logger.info('unsubscribe dirstate edenfs watcher');
+        this.edenfs.unwatch(repoRoot, DIRSTATE_EDENFS_SUBSCRIPTION);
+      });
+    } catch (err) {
+      this.logger.error('failed to setup dirstate edenfs subscriptions', err);
+    }
+  }
+
   public async setupSubscriptions(ctx: RepositoryContext) {
     await this.waitForDirstateSubscriptionReady();
     const enabled = await Internal.fetchFeatureFlag?.(ctx, 'isl_use_edenfs_notifications');
-    this.logger.info('edenfs notifications flag state: ', enabled);
+    this.logger.info('subscription edenfs notifications flag state: ', enabled);
     if (enabled) {
-      if (
-        this.repoInfo.type === 'success' &&
-        (this.repoInfo as ValidatedRepoInfo).isEdenFs === true
-      ) {
-        // TODO: implement Eden dirstate subscriptions
-        // await this.setupEdenSubscriptions();
-        // return;
+      if (this.repoInfo.isEdenFs === true) {
+        await this.setupEdenSubscriptions();
+        return;
       }
     } else {
       // TODO: move watchman here after implementing eden
@@ -242,9 +323,6 @@ export class WatchForChanges {
    * We care about the dirstate watcher, but not the watchman subscriptions in that case.
    */
   public async setupWatchmanSubscriptions() {
-    if (this.repoInfo.type !== 'success') {
-      return;
-    }
     const {repoRoot, dotdir} = this.repoInfo;
 
     if (repoRoot == null || dotdir == null) {
@@ -335,6 +413,103 @@ export class WatchForChanges {
     }
   }
 
+  public async setupEdenSubscriptions() {
+    const {repoRoot, dotdir} = this.repoInfo;
+
+    if (repoRoot == null || dotdir == null) {
+      this.logger.error(`skipping edenfs subscription since ${repoRoot} is not a repository`);
+      return;
+    }
+    const relativeDotdir = path.relative(repoRoot, dotdir);
+    // if working from a git clone, the dotdir lives in .git/sl,
+    // but we need to ignore changes in .git in our watchman subscriptions
+    const outerDotDir =
+      relativeDotdir.indexOf(path.sep) >= 0 ? path.dirname(relativeDotdir) : relativeDotdir;
+
+    this.logger.info(
+      'setting up edenfs subscription in',
+      repoRoot,
+      'at',
+      outerDotDir,
+      'relativeDotdir',
+      relativeDotdir,
+    );
+
+    const FILE_CHANGE_EDENFS_SUBSCRIPTION = 'sapling-smartlog-file-change-edenfs';
+    try {
+      // In some bad cases, a file that has alot of activity can constantly trigger the subscription.
+      // Incrementally increase the throttling of events to avoid spamming `status`.
+      // This does mean "legit" changes will start being missed.
+      // TODO: can we scan the list of changes and build a list of files that are overfiring, then send those to the UI as a warning?
+      // This would allow a user to know it's happening and possibly fix it for their repo.
+      const handleUncommittedChanges = stagedThrottler(
+        [
+          {
+            throttleMs: 0,
+            numToNextStage: 5,
+            resetAfterMs: 5_000,
+            onEnter: () => {
+              this.logger.info('no longer throttling uncommitted changes');
+            },
+          },
+          {
+            throttleMs: 5_000,
+            numToNextStage: 10,
+            resetAfterMs: 20_000,
+            onEnter: () => {
+              this.logger.info('slightly throttling uncommitted changes');
+            },
+          },
+          {
+            throttleMs: 30_000,
+            resetAfterMs: 30_000,
+            onEnter: () => {
+              this.logger.info('aggressively throttling uncommitted changes');
+            },
+          },
+        ],
+        () => {
+          this.changeCallback('uncommitted changes');
+
+          // reset timer for polling
+          this.lastFetch = new Date().valueOf();
+        },
+      );
+      const subscriptionCallback: SubscriptionCallback = (error, resp) => {
+        if (error) {
+          this.logger.error('EdenFS subscription error:', error.message);
+          return;
+        } else if (resp === null) {
+          // EdenFS subscription closed
+          return;
+        } else {
+          if (resp.changes && resp.changes.length > 0) {
+            handleUncommittedChanges();
+          }
+        }
+      };
+      await this.edenfs.watchDirectoryRecursive(
+        repoRoot,
+        FILE_CHANGE_EDENFS_SUBSCRIPTION,
+        {
+          useCase: 'isl-server-node',
+          mountPoint: repoRoot,
+          throttle: 100,
+          states: [WatchForChanges.WATCHMAN_DEFER, WatchForChanges.WATCHMAN_DEFER_TRANSACTION],
+          excludedRoots: [outerDotDir, relativeDotdir],
+        },
+        subscriptionCallback,
+      );
+
+      this.edenfsDisposables.push(() => {
+        this.logger.info('unsubscribe edenfs');
+        this.edenfs.unwatch(repoRoot, FILE_CHANGE_EDENFS_SUBSCRIPTION);
+      });
+    } catch (err) {
+      this.logger.error('failed to setup edenfs subscriptions', err);
+    }
+  }
+
   /**
    * Modify gitignore to ignore watchman cookie files. This is needed when using ISL
    * with git repos. `git status` does not exclude watchman cookie files by default.
@@ -361,9 +536,14 @@ export class WatchForChanges {
     this.watchmanDisposables.forEach(dispose => dispose());
   }
 
+  public disposeEdenFSSubscriptions() {
+    this.edenfsDisposables.forEach(dispose => dispose());
+  }
+
   public dispose() {
     this.dirstateDisposables.forEach(dispose => dispose());
     this.disposeWatchmanSubscriptions();
+    this.disposeEdenFSSubscriptions();
     if (this.timeout) {
       clearTimeout(this.timeout);
       this.timeout = undefined;

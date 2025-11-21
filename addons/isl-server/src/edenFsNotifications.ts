@@ -7,31 +7,20 @@
 
 import type {Logger} from './logger';
 
-import type {EventEmitter} from 'node:events';
-
+import path from 'node:path';
 // Import from the generated files
 import {
   EdenFSNotificationsClient,
   type EdenFSSubscription,
+  type SubscriptionCallback,
+  type SubscriptionOptions,
 } from './__generated__/node-edenfs-notifications-client/index.js';
 
-export type EdenFSSubscriptionOptions = {
-  throttle?: number;
-  includedRoots?: Array<string>;
-  excludedRoots?: Array<string>;
-  includedSuffixes?: Array<string>;
-  excludedSuffixes?: Array<string>;
-  states?: Array<string>;
-};
-
 export type EdenFSSubscriptionManager = {
-  root: string;
   path: string;
   name: string;
   subscriptionCount: number;
-  options: EdenFSSubscriptionOptions;
-  emitter: EventEmitter;
-  internalSubscription: typeof EdenFSSubscription | null;
+  internalSubscription: EdenFSSubscription;
 };
 
 /**
@@ -39,11 +28,11 @@ export type EdenFSSubscriptionManager = {
  */
 export class EdenFSNotifications {
   private client: EdenFSNotificationsClient;
-  private subscriptions: Map<string, EdenFSSubscription> = new Map();
+  private subscriptions: Map<string, EdenFSSubscriptionManager> = new Map();
 
   constructor(
     private logger: Logger,
-    private mountPoint?: string,
+    private mountPoint: string,
   ) {
     this.client = new EdenFSNotificationsClient({
       mountPoint: this.mountPoint,
@@ -56,15 +45,70 @@ export class EdenFSNotifications {
    * Watch a directory recursively for changes using EdenFS notifications.
    */
   public async watchDirectoryRecursive(
-    _localDirectoryPath: string,
-    _subscriptionName: string,
-    _subscriptionOptions?: EdenFSSubscriptionOptions,
-  ) {
-    // TODO return :Promise<EdenFSSubscription>
+    localDirectoryPath: string,
+    rawSubscriptionName: string,
+    subscriptionOptions: SubscriptionOptions,
+    callback: SubscriptionCallback,
+  ): Promise<EdenFSSubscription> {
+    // Subscriptions should be unique by name and by folder
+    const subscriptionName = this.fixupName(localDirectoryPath, rawSubscriptionName);
+    const existingSubscription = this.getSubscription(subscriptionName);
+
+    if (existingSubscription) {
+      existingSubscription.subscriptionCount++;
+      return existingSubscription.internalSubscription;
+    }
+
+    const internalSubscription = this.client.subscribe(subscriptionOptions, callback);
+
+    const subscription: EdenFSSubscriptionManager = {
+      path: localDirectoryPath,
+      name: subscriptionName,
+      subscriptionCount: 1,
+      internalSubscription,
+    };
+
+    this.setSubscription(subscriptionName, subscription);
+    await internalSubscription.start();
+    this.logger.log(`edenfs subscription started: ${subscriptionName}`);
+    return internalSubscription;
+  }
+
+  private getSubscription(entryPath: string): EdenFSSubscriptionManager | undefined {
+    return this.subscriptions.get(path.normalize(entryPath));
+  }
+
+  private setSubscription(entryPath: string, subscription: EdenFSSubscriptionManager): void {
+    const key = path.normalize(entryPath);
+    this.subscriptions.set(key, subscription);
+  }
+
+  private deleteSubscription(entryPath: string): void {
+    const key = path.normalize(entryPath);
+    this.subscriptions.delete(key);
+  }
+
+  private fixupName(path: string, name: string): string {
+    const refinedPath = path.replace(/\\/g, '-').replace(/\//g, '-');
+    return `${refinedPath}-${name}`;
   }
 
   /**
    * Remove a subscription (unwatch)
    */
-  public async unwatch(_watchPath: string, _name: string): Promise<void> {}
+  public unwatch(path: string, name: string) {
+    const subscriptionName = this.fixupName(path, name);
+    const subscription = this.getSubscription(subscriptionName);
+
+    if (subscription == null) {
+      this.logger.error(`No watcher entity found with path [${path}] name [${name}]`);
+      return;
+    }
+
+    if (--subscription.subscriptionCount === 0) {
+      subscription.internalSubscription.stop();
+      this.deleteSubscription(subscriptionName);
+      this.logger.log(`edenfs subscription destroyed: ${subscriptionName}`);
+    }
+  }
 }
