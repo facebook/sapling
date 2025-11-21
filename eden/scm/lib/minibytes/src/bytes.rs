@@ -167,6 +167,24 @@ where
             owner: Some(arc),
         })
     }
+
+    /// Convert into `BytesOwner` in a zero-copy way if possible, else self.
+    pub fn take_owner<O: AbstractOwner<T> + Default>(mut self) -> Result<O, Self> {
+        (|| -> Option<O> {
+            let len = self.len;
+            let arc_owner = self.owner.as_mut()?;
+            let owner = Arc::get_mut(arc_owner)?;
+            let any = owner.as_any_mut();
+            let owner = any.downcast_mut::<O>()?;
+
+            if owner.as_ref().len() == len {
+                Some(std::mem::take(owner))
+            } else {
+                None
+            }
+        })()
+        .ok_or(self)
+    }
 }
 
 impl Bytes {
@@ -190,21 +208,8 @@ impl Bytes {
     }
 
     /// Convert to `Vec<u8>` in a zero-copy way if possible, else self.
-    pub fn take_vec(mut self) -> Result<Vec<u8>, Self> {
-        (|| -> Option<Vec<u8>> {
-            let len = self.len();
-            let arc_owner = self.owner.as_mut()?;
-            let owner = Arc::get_mut(arc_owner)?;
-            let any = owner.as_any_mut();
-            let vec = any.downcast_mut::<Vec<u8>>()?;
-
-            if vec.len() == len {
-                Some(std::mem::take(vec))
-            } else {
-                None
-            }
-        })()
-        .ok_or(self)
+    pub fn take_vec(self) -> Result<Vec<u8>, Self> {
+        self.take_owner()
     }
 }
 
