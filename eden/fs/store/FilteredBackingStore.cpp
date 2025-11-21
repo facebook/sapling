@@ -471,6 +471,12 @@ folly::coro::Task<BackingStore::GetBlobResult> FilteredBackingStore::co_getBlob(
 folly::SemiFuture<folly::Unit> FilteredBackingStore::prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& context) {
+  // Fast path: avoid allocation if all ids are can be passed through.
+  if (std::all_of(
+          ids.begin(), ids.end(), [this](auto& id) { return isSlOid(id); })) {
+    return backingStore_->prefetchBlobs(ids, context);
+  }
+
   std::vector<ObjectId> unfilteredIds;
   unfilteredIds.reserve(ids.size());
   std::transform(
