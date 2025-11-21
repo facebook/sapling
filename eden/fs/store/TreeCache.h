@@ -77,6 +77,13 @@ class TreeCache {
    */
   void clear();
 
+  /**
+   * Get the max size of a shard in the ShardedLruCache. This is used for
+   * testing to verify that the max size is set correctly. Returns 0 if not
+   * using ShardedLruCache.
+   */
+  size_t maxTreesPerShard() const;
+
   struct Stats {
     size_t objectCount{0};
     size_t totalSizeInBytes{0};
@@ -113,6 +120,18 @@ class TreeCache {
 
   std::atomic<size_t> objectCount_{0};
   std::atomic<size_t> totalSizeInBytes_{0};
+
+  /**
+   * For ShardedLruCache, the maximum total byte size allowed. Zero means no
+   * limit.
+   */
+  size_t maxSizeBytes_{0};
+
+  /**
+   * For ShardedLruCache, tracks whether we've hit the byte size limit and
+   * configured the ShardedLruCache's max key size.
+   */
+  std::atomic<bool> maxSizeFrozen_{false};
 
   explicit TreeCache(
       std::shared_ptr<ReloadableConfig> config,

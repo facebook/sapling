@@ -40,8 +40,20 @@ void TreeCache::insert(ObjectId id, std::shared_ptr<const Tree> tree) {
     if (auto shardedCache = std::get_if<ShardedCacheType>(&cache_)) {
       auto size = tree->getSizeBytes();
       shardedCache->store(id, std::move(tree));
-      objectCount_.fetch_add(1, std::memory_order_relaxed);
-      totalSizeInBytes_.fetch_add(size, std::memory_order_relaxed);
+
+      auto prevObjectCount =
+          objectCount_.fetch_add(1, std::memory_order_relaxed);
+      auto prevTotalSize =
+          totalSizeInBytes_.fetch_add(size, std::memory_order_relaxed);
+
+      // Check (once) if we exceeded our cache size and set the sharded cache's
+      // max size to the previous object count. This basically sets the
+      // ShardedLruCache's key based limit using the average size of Trees we
+      // have seen so far..
+      if (maxSizeBytes_ > 0 && prevTotalSize + size > maxSizeBytes_ &&
+          !maxSizeFrozen_.exchange(true, std::memory_order_relaxed)) {
+        shardedCache->setMaxSize(prevObjectCount);
+      }
     } else {
       auto& objectCache = std::get<ObjectCacheType>(cache_);
       objectCache->insertSimple(std::move(id), std::move(tree));
@@ -74,6 +86,13 @@ void TreeCache::clear() {
   }
 }
 
+size_t TreeCache::maxTreesPerShard() const {
+  if (auto shardedCache = std::get_if<ShardedCacheType>(&cache_)) {
+    return shardedCache->maxKeysPerShard();
+  }
+  return 0;
+}
+
 TreeCache::TreeCache(
     std::shared_ptr<ReloadableConfig> config,
     EdenStatsPtr stats)
@@ -85,16 +104,18 @@ TreeCache::TreeCache(
   // Use ShardedLruCache if prefetch optimizations are enabled and
   // treeCacheShards is non-zero. Otherwise, use the legacy ObjectCache.
   if (prefetchOptimizations && treeCacheShards > 0) {
+    maxSizeBytes_ = edenConfig->inMemoryTreeCacheSize.getValue();
     auto pruneCallback =
         [this](const ObjectId&, std::shared_ptr<const Tree>&& tree) {
           auto size = tree->getSizeBytes();
           objectCount_.fetch_sub(1, std::memory_order_relaxed);
           totalSizeInBytes_.fetch_sub(size, std::memory_order_relaxed);
         };
-    cache_ = ShardedCacheType{
-        treeCacheShards,
-        edenConfig->inMemoryTreeCacheSize.getValue(),
-        pruneCallback};
+    // Initialize with max size 0 to start with eviction disabled. The
+    // ShardedLruCache only supports key-count based eviction, not size. Once
+    // TreeCache notices we have crossed our byte size limit, we set the
+    // ShardedLruCache's max key count basde on how many trees we have seen.
+    cache_ = ShardedCacheType{treeCacheShards, 0, pruneCallback};
   } else {
     cache_ =
         ObjectCache<Tree, ObjectCacheFlavor::Simple, TreeCacheStats>::create(

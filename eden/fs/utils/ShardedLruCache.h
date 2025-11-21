@@ -69,6 +69,32 @@ class ShardedLruCache {
     }
   }
 
+  /**
+   * Get the max size of the first shard. Used for testing to verify
+   * that max size is being set correctly.
+   */
+  size_t maxKeysPerShard() const {
+    if (shards_.empty()) {
+      return 0;
+    }
+    auto cache = shards_[0].cache.rlock();
+    return cache->getMaxSize();
+  }
+
+  /**
+   * Update the maximum size of the cache. The maxSize is divided
+   * evenly amongst the shards. If maxSize is 0, disable eviction.
+   */
+  void setMaxSize(size_t maxSize) {
+    // Ensure each shard gets at least one item.
+    size_t perShardSize =
+        maxSize == 0 ? 0 : std::max(maxSize / shards_.size(), size_t(1));
+    for (auto& shard : shards_) {
+      auto cache = shard.cache.wlock();
+      cache->setMaxSize(perShardSize);
+    }
+  }
+
  private:
   using Cache = folly::EvictingCacheMap<ObjectId, T>;
 
