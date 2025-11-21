@@ -479,35 +479,40 @@ impl TreeStore {
                         // tree aux data for any key we want CONTENT for.
                         wants_aux |= TreeAttributes::CONTENT;
                     }
-                    let pending: Vec<_> = state
-                        .common
-                        .pending(wants_aux, false)
-                        .map(|(key, _attrs)| key.clone())
-                        .collect();
 
-                    let (mut found, mut miss) = (0, 0);
-                    for key in pending.into_iter() {
-                        if let Some(entry) = tree_aux_store.get(&key.hgid)? {
+                    let (mut found, mut miss, mut errors) = (0, 0, 0);
+                    state.common.iter_pending(wants_aux, false, |key| {
+                        match tree_aux_store.get(&key.hgid) {
+                            Ok(Some(entry)) => {
+
                             found += 1;
 
                             tracing::trace!(?key, ?entry, "found tree aux entry in cache");
                             if cas_client.is_some() {
                                 tracing::trace!(target: "cas_client", ?key, ?entry, "found tree aux data");
                             }
-                            state.common.found(
-                                key.clone(),
+                            Some(
                                 StoreTree {
                                     content: None,
                                     parents: None,
                                     aux_data: Some(entry),
                                 },
-                            );
-                        } else {
+                            )
+                        },
+                        Ok(None) => {
                             miss += 1;
-                        }
+                            None
+                        },
+                        Err(err) => {
+                          errors += 1;
+                            state.errors.keyed_error(key.clone(), err);
+                            None
+                        },
                     }
+                    });
                     state.metrics.aux.cache.hit(found);
                     state.metrics.aux.cache.miss(miss);
+                    state.metrics.aux.cache.err(errors);
                 }
             }
 
@@ -518,38 +523,43 @@ impl TreeStore {
                 if let Some(log) = log {
                     let start_time = Instant::now();
 
-                    let pending: Vec<_> = state
-                        .common
-                        .pending(TreeAttributes::CONTENT, false)
-                        .map(|(key, _attrs)| key.clone())
-                        .collect();
-
-                    let bar = ProgressBar::new_adhoc("IndexedLog", pending.len() as u64, "trees");
+                    let bar = ProgressBar::new_adhoc("IndexedLog", 0, "trees");
 
                     let store_metrics = state.metrics.indexedlog.store(location);
-                    let fetch_count = pending.len();
+
+                    let mut fetch_count: usize = 0;
+                    let mut found_count: usize = 0;
+                    let mut errors_count: usize = 0;
+                    state
+                        .common
+                        .iter_pending(TreeAttributes::CONTENT, false, |key| {
+                            fetch_count += 1;
+                            bar.increase_position(1);
+                            match log.get_entry(&key.hgid) {
+                                Ok(Some(entry)) => {
+                                    tracing::trace!("{:?} found in {:?}", key, location);
+                                    found_count += 1;
+                                    Some(
+                                        LazyTree::IndexedLog(TreeEntryWithAux {
+                                            entry,
+                                            tree_aux: None,
+                                        })
+                                        .into(),
+                                    )
+                                }
+                                Ok(None) => None,
+                                Err(err) => {
+                                    errors_count += 1;
+                                    state.errors.keyed_error(key.clone(), err);
+                                    None
+                                }
+                            }
+                        });
 
                     store_metrics.fetch(fetch_count);
-
-                    let mut found_count: usize = 0;
-                    for key in pending.into_iter() {
-                        if let Some(entry) = log.get_entry(&key.hgid)? {
-                            tracing::trace!("{:?} found in {:?}", key, location);
-                            state.common.found(
-                                key,
-                                LazyTree::IndexedLog(TreeEntryWithAux {
-                                    entry,
-                                    tree_aux: None,
-                                })
-                                .into(),
-                            );
-                            found_count += 1;
-                        }
-                        bar.increase_position(1);
-                    }
-
                     store_metrics.hit(found_count);
                     store_metrics.miss(fetch_count - found_count);
+                    store_metrics.err(errors_count);
                     let _ = store_metrics.time_from_duration(start_time.elapsed());
                 }
 
@@ -586,27 +596,28 @@ impl TreeStore {
                     ("local", &historystore_local),
                 ] {
                     if let Some(log) = log {
-                        let pending: Vec<_> = state
+                        state
                             .common
-                            .pending(TreeAttributes::PARENTS, false)
-                            .map(|(key, _attrs)| key.clone())
-                            .collect();
-                        for key in pending.into_iter() {
-                            if let Some(entry) = log.get_node_info(&key)? {
-                                tracing::trace!("{:?} found parents in {name}", key);
-                                state.common.found(
-                                    key,
-                                    StoreTree {
-                                        content: None,
-                                        parents: Some(Parents::new(
-                                            entry.parents[0].hgid,
-                                            entry.parents[1].hgid,
-                                        )),
-                                        aux_data: None,
-                                    },
-                                );
-                            }
-                        }
+                            .iter_pending(TreeAttributes::PARENTS, false, |key| {
+                                match log.get_node_info(key) {
+                                    Ok(Some(entry)) => {
+                                        tracing::trace!("{:?} found parents in {name}", key);
+                                        Some(StoreTree {
+                                            content: None,
+                                            parents: Some(Parents::new(
+                                                entry.parents[0].hgid,
+                                                entry.parents[1].hgid,
+                                            )),
+                                            aux_data: None,
+                                        })
+                                    }
+                                    Ok(None) => None,
+                                    Err(err) => {
+                                        state.errors.keyed_error(key.clone(), err);
+                                        None
+                                    }
+                                }
+                            });
                     }
                 }
             }

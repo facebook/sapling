@@ -186,39 +186,23 @@ impl FetchState {
     }
 
     pub(crate) fn fetch_indexedlog(&mut self, store: &IndexedLogHgIdDataStore, loc: StoreLocation) {
-        let pending = self.pending_nonlfs(FileAttributes::CONTENT);
-        if pending.is_empty() {
-            return;
-        }
-
         let fetch_start = std::time::Instant::now();
 
-        debug!(
-            "Checking store Indexedlog ({cache}) for {key}{more}",
-            cache = match loc {
-                StoreLocation::Cache => "cache",
-                StoreLocation::Local => "local",
-            },
-            key = pending[0],
-            more = if pending.len() > 1 {
-                format!(" and {} more", pending.len() - 1)
-            } else {
-                "".into()
-            },
-        );
-
-        let mut found = 0;
-        let mut count = 0;
-        let mut errors = 0;
-        let mut error: Option<String> = None;
-
-        self.metrics.indexedlog.store(loc).fetch(pending.len());
         let format = self.format();
 
         let bar = ProgressBar::new_adhoc("IndexedLog", 0, "files");
 
+        let mut found = 0;
+        let mut count = 0;
+        let mut errors = 0;
+        let mut first_key: Option<Key> = None;
+        let mut error: Option<String> = None;
+
         self.common
             .iter_pending(FileAttributes::CONTENT, self.compute_aux_data, |key| {
+                if count == 0 {
+                    first_key = Some(key.clone());
+                }
                 count += 1;
                 bar.increase_position(1);
 
@@ -261,6 +245,24 @@ impl FetchState {
 
                 None
             });
+
+        if let Some(first_key) = first_key {
+            debug!(
+                "Checked store Indexedlog ({cache}) for {key}{more}",
+                cache = match loc {
+                    StoreLocation::Cache => "cache",
+                    StoreLocation::Local => "local",
+                },
+                key = first_key,
+                more = if count > 1 {
+                    format!(" and {} more", count - 1)
+                } else {
+                    "".into()
+                },
+            );
+        }
+
+        self.metrics.indexedlog.store(loc).fetch(count);
 
         self.metrics
             .indexedlog
