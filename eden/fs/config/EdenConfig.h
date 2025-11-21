@@ -1699,7 +1699,7 @@ class EdenConfig : private ConfigSettingManager {
    * are also controlled by separate config flags that are enabled by default.
    */
   ConfigSetting<bool> prefetchOptimizations{
-      "experimental:prefetch-optimizations",
+      "experimental:prefetch-optimizations-v2",
       false,
       this};
 

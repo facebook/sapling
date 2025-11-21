@@ -322,7 +322,7 @@ class EdenTestCase(EdenTestCaseBase):
                 "propagate-checkout-errors = true",
                 "filteredfs-optimize-unfiltered = true",
                 "lazy-inode-persistence = true",
-                "prefetch-optimizations = true",
+                "prefetch-optimizations-v2 = true",
             ],
             # Defaulting to 8 retry threads is excessive when the test
             # framework runs tests on each CPU core.
