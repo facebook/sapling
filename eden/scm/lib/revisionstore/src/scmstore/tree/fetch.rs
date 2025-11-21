@@ -49,6 +49,10 @@ use crate::scmstore::fetch::FetchErrors;
 use crate::scmstore::tree::types::AuxData;
 use crate::scmstore::tree::types::LazyTree;
 
+const FILE_AUX_BATCH_THRESHOLD: usize = 1000;
+const TREE_AUX_BATCH_THRESHOLD: usize = 1000;
+const TREE_BATCH_THRESHOLD: usize = 100;
+
 pub struct FetchState {
     pub(crate) common: CommonFetchState<StoreTree>,
 
@@ -71,26 +75,9 @@ pub struct FetchState {
 
 impl Drop for FetchState {
     fn drop(&mut self) {
-        if let Some(aux_cache) = &self.file_aux_cache {
-            if let Err(err) = aux_cache.put_batch(&mut self.file_aux_to_cache) {
-                self.errors.other_error(err);
-            }
-            self.file_aux_to_cache.clear();
-        }
-
-        if let Some(tree_aux_cache) = &self.tree_aux_cache {
-            if let Err(err) = tree_aux_cache.put_batch(&mut self.tree_aux_to_cache) {
-                self.errors.other_error(err);
-            }
-            self.tree_aux_to_cache.clear();
-        }
-
-        if let Some(tree_cache) = &self.tree_cache {
-            if let Err(err) = tree_cache.put_batch(&mut self.trees_to_cache) {
-                self.errors.other_error(err);
-            }
-            self.trees_to_cache.clear();
-        }
+        self.flush_file_aux();
+        self.flush_tree_aux();
+        self.flush_trees();
 
         self.common.results(std::mem::take(&mut self.errors), false);
     }
@@ -186,12 +173,18 @@ impl FetchState {
                         "writing self to tree aux store"
                     );
                     self.tree_aux_to_cache.push((key.hgid, aux_data));
+                    if self.tree_aux_to_cache.len() >= TREE_AUX_BATCH_THRESHOLD {
+                        self.flush_tree_aux();
+                    }
                 }
             }
 
             if indexedlog_cache.is_some() {
                 if let Some(entry) = entry.indexedlog_cache_entry(key.hgid)? {
-                    self.trees_to_cache.push((key.hgid, entry));
+                    self.trees_to_cache.push((entry.node(), entry));
+                    if self.trees_to_cache.len() >= TREE_BATCH_THRESHOLD {
+                        self.flush_trees();
+                    }
                 }
             }
 
@@ -412,9 +405,46 @@ impl FetchState {
 
         for (hgid, aux) in tree.children_aux_data() {
             match aux {
-                AuxData::File(file_aux) => self.file_aux_to_cache.push((hgid, file_aux)),
-                AuxData::Tree(tree_aux) => self.tree_aux_to_cache.push((hgid, tree_aux)),
+                AuxData::File(file_aux) => {
+                    self.file_aux_to_cache.push((hgid, file_aux));
+                    if self.file_aux_to_cache.len() >= FILE_AUX_BATCH_THRESHOLD {
+                        self.flush_file_aux();
+                    }
+                }
+                AuxData::Tree(tree_aux) => {
+                    self.tree_aux_to_cache.push((hgid, tree_aux));
+                    if self.tree_aux_to_cache.len() >= TREE_AUX_BATCH_THRESHOLD {
+                        self.flush_tree_aux();
+                    }
+                }
             }
+        }
+    }
+
+    fn flush_file_aux(&mut self) {
+        if let Some(aux_cache) = &self.file_aux_cache {
+            if let Err(err) = aux_cache.put_batch(&mut self.file_aux_to_cache) {
+                self.errors.other_error(err);
+            }
+            self.file_aux_to_cache.clear();
+        }
+    }
+
+    fn flush_tree_aux(&mut self) {
+        if let Some(tree_aux_cache) = &self.tree_aux_cache {
+            if let Err(err) = tree_aux_cache.put_batch(&mut self.tree_aux_to_cache) {
+                self.errors.other_error(err);
+            }
+            self.tree_aux_to_cache.clear();
+        }
+    }
+
+    fn flush_trees(&mut self) {
+        if let Some(tree_cache) = &self.tree_cache {
+            if let Err(err) = tree_cache.put_batch(&mut self.trees_to_cache) {
+                self.errors.other_error(err);
+            }
+            self.trees_to_cache.clear();
         }
     }
 }
