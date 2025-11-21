@@ -64,6 +64,9 @@ use crate::scmstore::metrics::StoreLocation;
 use crate::scmstore::value::StoreValue;
 use crate::util;
 
+// How many files we buffer in memory before writing to the file cache.
+const FILE_CACHE_THRESHOLD: usize = 100;
+
 pub struct FetchState {
     common: CommonFetchState<StoreFile>,
 
@@ -158,7 +161,7 @@ impl FetchState {
 
     fn cache_entry(&mut self, entry: Entry) {
         self.files_to_cache.push((entry.node(), entry));
-        if self.files_to_cache.len() >= 1_000 {
+        if self.files_to_cache.len() >= FILE_CACHE_THRESHOLD {
             self.flush_to_indexedlog();
         }
     }
