@@ -90,11 +90,11 @@ impl Store {
     }
 
     /// Append a batch of items to the store. This is optimized to reduce lock churn, which helps a
-    /// lot when there is multi-threaded contention.
+    /// lot when there is multi-threaded contention. `items` is not consumed so that the caller can re-use storage.
     pub fn append_batch<K: AsRef<[u8]> + Copy, V>(
         &self,
-        mut items: Vec<(K, V)>,
-        serialize: impl Fn(K, &V, &mut dyn Write) -> Result<()>,
+        items: &mut Vec<(K, V)>,
+        serialize: impl Fn(&K, &V, &mut dyn Write) -> Result<()>,
         // Filter out items already present in the store before inserting.
         read_before_write: bool,
     ) -> Result<()> {

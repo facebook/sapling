@@ -46,11 +46,11 @@ pub(crate) type Entry = FileAuxData;
 ///       also, size field was close to the end, just before the blake3
 pub(crate) fn serialize(hgid: HgId, aux: &FileAuxData) -> Result<Bytes> {
     let mut buf = Vec::new();
-    serialize_to(hgid, aux, &mut buf)?;
+    serialize_to(&hgid, aux, &mut buf)?;
     Ok(buf.into())
 }
 
-fn serialize_to(hgid: HgId, aux: &FileAuxData, buf: &mut dyn Write) -> Result<()> {
+fn serialize_to(hgid: &HgId, aux: &FileAuxData, buf: &mut dyn Write) -> Result<()> {
     buf.write_all(hgid.as_ref())?;
     buf.write_u8(2)?; // write version
     buf.write_vlq(aux.total_size)?;
@@ -217,7 +217,7 @@ impl AuxStore {
         self.0.append(&serialized)
     }
 
-    pub fn put_batch(&self, items: Vec<(HgId, Entry)>) -> Result<()> {
+    pub fn put_batch(&self, items: &mut Vec<(HgId, Entry)>) -> Result<()> {
         self.0.append_batch(
             items,
             serialize_to,

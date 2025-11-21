@@ -72,22 +72,24 @@ pub struct FetchState {
 impl Drop for FetchState {
     fn drop(&mut self) {
         if let Some(aux_cache) = &self.file_aux_cache {
-            if let Err(err) = aux_cache.put_batch(std::mem::take(&mut self.file_aux_to_cache)) {
+            if let Err(err) = aux_cache.put_batch(&mut self.file_aux_to_cache) {
                 self.errors.other_error(err);
             }
+            self.file_aux_to_cache.clear();
         }
 
         if let Some(tree_aux_cache) = &self.tree_aux_cache {
-            if let Err(err) = tree_aux_cache.put_batch(std::mem::take(&mut self.tree_aux_to_cache))
-            {
+            if let Err(err) = tree_aux_cache.put_batch(&mut self.tree_aux_to_cache) {
                 self.errors.other_error(err);
             }
+            self.tree_aux_to_cache.clear();
         }
 
         if let Some(tree_cache) = &self.tree_cache {
-            if let Err(err) = tree_cache.put_batch(std::mem::take(&mut self.trees_to_cache)) {
+            if let Err(err) = tree_cache.put_batch(&mut self.trees_to_cache) {
                 self.errors.other_error(err);
             }
+            self.trees_to_cache.clear();
         }
 
         self.common.results(std::mem::take(&mut self.errors), false);

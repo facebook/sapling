@@ -343,7 +343,7 @@ impl IndexedLogHgIdDataStore {
         self.format
     }
 
-    pub fn put_batch(&self, entries: Vec<(HgId, Entry)>) -> Result<()> {
+    pub fn put_batch(&self, entries: &mut Vec<(HgId, Entry)>) -> Result<()> {
         let compress = self.store.should_compress();
         self.store.append_batch(
             entries,

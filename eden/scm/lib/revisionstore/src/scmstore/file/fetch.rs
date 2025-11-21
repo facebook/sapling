@@ -1190,9 +1190,10 @@ impl FetchState {
     // buffer, but will not necessarily sync the logs to disk.
     fn flush_to_indexedlog(&mut self) {
         if let Some(file_cache) = &self.file_cache {
-            if let Err(err) = file_cache.put_batch(std::mem::take(&mut self.files_to_cache)) {
+            if let Err(err) = file_cache.put_batch(&mut self.files_to_cache) {
                 self.errors.other_error(err);
             }
+            self.files_to_cache.clear();
         }
     }
 
