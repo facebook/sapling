@@ -193,6 +193,11 @@ export class Watchman {
     this.client.on('error', (error: Error) => {
       const statusBeforeError = this.status;
       this.logger.error('Error while talking to watchman: ', error);
+      this.tracker.error(
+        'WatchmanEvent',
+        'WatchmanError',
+        `Error while talking to watchman ${error}`,
+      );
       this.setStatus('errored');
       // If Watchman encounters an error in the middle of a command, it may never finish!
       // The client must be immediately killed here so that the command fails and

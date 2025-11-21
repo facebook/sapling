@@ -47,6 +47,7 @@ export class WatchForChanges {
   private watchmanDisposables: Array<() => unknown> = [];
   private edenfsDisposables: Array<() => unknown> = [];
   private logger: Logger;
+  private tracker: ServerSideTracker;
   private dirstateSubscriptionPromise: Promise<void>;
 
   constructor(
@@ -58,6 +59,7 @@ export class WatchForChanges {
     edenfs?: EdenFSNotifications | undefined,
   ) {
     this.logger = ctx.logger;
+    this.tracker = ctx.tracker;
     this.watchman = watchman ?? new Watchman(ctx.logger);
 
     const {repoRoot} = this.repoInfo;
@@ -219,6 +221,11 @@ export class WatchForChanges {
       });
     } catch (err) {
       this.logger.error('failed to setup dirstate subscriptions', err);
+      this.tracker.error(
+        'WatchmanEvent',
+        'WatchmanError',
+        `failed to setup watchman dirstate subscriptions ${err}`,
+      );
     }
   }
 
@@ -252,6 +259,7 @@ export class WatchForChanges {
       const subscriptionCallback: SubscriptionCallback = (error, resp) => {
         if (error) {
           this.logger.error('EdenFS dirstate subscription error:', error.message);
+          this.tracker.error('EdenWatcherEvent', 'EdenWatcherError', error);
           return;
         } else if (resp === null) {
           // EdenFS subscription closed
@@ -298,6 +306,11 @@ export class WatchForChanges {
       });
     } catch (err) {
       this.logger.error('failed to setup dirstate edenfs subscriptions', err);
+      this.tracker.error(
+        'EdenWatcherEvent',
+        'EdenWatcherError',
+        `failed to setup dirstate edenfs subscriptions ${err}`,
+      );
     }
   }
 
@@ -410,6 +423,11 @@ export class WatchForChanges {
       });
     } catch (err) {
       this.logger.error('failed to setup watchman subscriptions', err);
+      this.tracker.error(
+        'WatchmanEvent',
+        'WatchmanError',
+        `failed to setup watchman subscriptions ${err}`,
+      );
     }
   }
 
@@ -478,6 +496,7 @@ export class WatchForChanges {
       const subscriptionCallback: SubscriptionCallback = (error, resp) => {
         if (error) {
           this.logger.error('EdenFS subscription error:', error.message);
+          this.tracker.error('EdenWatcherEvent', 'EdenWatcherError', error);
           return;
         } else if (resp === null) {
           // EdenFS subscription closed
@@ -507,6 +526,11 @@ export class WatchForChanges {
       });
     } catch (err) {
       this.logger.error('failed to setup edenfs subscriptions', err);
+      this.tracker.error(
+        'EdenWatcherEvent',
+        'EdenWatcherError',
+        `failed to setup edenfs subscriptions ${err}`,
+      );
     }
   }
 
