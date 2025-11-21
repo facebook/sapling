@@ -335,6 +335,8 @@ class SaplingBackingStore final : public BackingStore {
 
   int64_t dropAllPendingRequestsFromQueue() override;
 
+  ObjectId stripObjectId(const ObjectId& id) const override;
+
  private:
   FRIEND_TEST(
       SaplingBackingStoreNoFaultInjectorTest,

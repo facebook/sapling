@@ -598,6 +598,10 @@ ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
   return backingStore_->prefetchBlobs(ids, fetchContext);
 }
 
+ObjectId ObjectStore::stripObjectId(const ObjectId& id) const {
+  return backingStore_->stripObjectId(id);
+}
+
 ImmediateFuture<shared_ptr<const Blob>> ObjectStore::getBlob(
     const ObjectId& id,
     const ObjectFetchContextPtr& fetchContext) const {

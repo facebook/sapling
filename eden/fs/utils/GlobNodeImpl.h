@@ -170,7 +170,7 @@ class GlobNodeImpl {
                 root.entryShouldPrefetch(&entry.second)) {
               if (prefetchOptimizations_) {
                 localFileBlobsToPrefetch.emplace_back(
-                    entry.second.getObjectId());
+                    store->stripObjectId(entry.second.getObjectId()));
               } else {
                 fileBlobsToPrefetch->wlock()->emplace_back(
                     entry.second.getObjectId());
@@ -363,7 +363,7 @@ class GlobNodeImpl {
                   root.entryShouldPrefetch(&entry->second)) {
                 if (prefetchOptimizations_) {
                   localFileBlobsToPrefetch.emplace_back(
-                      entry->second.getObjectId());
+                      store->stripObjectId(entry->second.getObjectId()));
                 } else {
                   fileBlobsToPrefetch->wlock()->emplace_back(
                       entry->second.getObjectId());
@@ -388,7 +388,7 @@ class GlobNodeImpl {
                     root.entryShouldPrefetch(&entry.second)) {
                   if (prefetchOptimizations_) {
                     localFileBlobsToPrefetch.emplace_back(
-                        entry.second.getObjectId());
+                        store->stripObjectId(entry.second.getObjectId()));
                   } else {
                     fileBlobsToPrefetch->wlock()->emplace_back(
                         entry.second.getObjectId());

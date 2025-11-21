@@ -256,6 +256,13 @@ class ObjectStore : public IObjectStore,
       const ObjectFetchContextPtr& context) const override;
 
   /**
+   * Strip the ObjectId to a smaller representation for memory optimization.
+   * For example, in SaplingBackingStore, this strips the path portion of the
+   * ObjectId, keeping only the hash bytes.
+   */
+  ObjectId stripObjectId(const ObjectId& id) const;
+
+  /**
    * Get a Blob by ID.
    *
    * This returns a Future object that will produce the Blob when it is ready.

@@ -106,6 +106,13 @@ class FilteredBackingStore
     return 0;
   }
 
+  ObjectId stripObjectId(const ObjectId& id) const override {
+    if (isSlOid(id)) {
+      return backingStore_->stripObjectId(id);
+    }
+    return id;
+  }
+
  private:
   std::shared_ptr<BackingStore> backingStore_;
   // Whether backingStore_ is a SaplingBackingStore. Used to optimized
@@ -208,7 +215,7 @@ class FilteredBackingStore
    * ObjectId. Perhaps we should make that an official rule where BackingStores
    * "register" their type bytes.
    */
-  bool isSlOid(const ObjectId& oid);
+  bool isSlOid(const ObjectId& oid) const;
 
   // Whether executable bit is remember on Windows or not
   bool windowsRememberExecutableBit_{false};

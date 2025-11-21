@@ -2470,6 +2470,16 @@ int64_t SaplingBackingStore::dropAllPendingRequestsFromQueue() {
   return requestVec.size();
 }
 
+ObjectId SaplingBackingStore::stripObjectId(const ObjectId& id) const {
+  if (id.getBytes().size() < 21) {
+    // Empty or proxy hash - don't do anything.
+    return id;
+  }
+  // Strip the path from the object id.
+  // TODO(muirdm): replace with SlOid once I land D87098195.
+  return ObjectId{id.getBytes().subpiece(0, 21)};
+}
+
 void SaplingBackingStore::flush() {
   XLOG(DBG7, "Flushing backing store");
   sapling_backingstore_flush(*store_.get());

@@ -80,7 +80,7 @@ FilteredBackingStore::pathAffectedByFilterChange(
       });
 }
 
-bool FilteredBackingStore::isSlOid(const ObjectId& oid) {
+bool FilteredBackingStore::isSlOid(const ObjectId& oid) const {
   if (!isSaplingBackingStore_) {
     return false;
   }

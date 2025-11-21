@@ -313,6 +313,17 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   }
 
   virtual void workingCopyParentHint(const RootId&) {}
+
+  /**
+   * Strip the ObjectId to a smaller representation for memory optimization.
+   * For example, in SaplingBackingStore, this strips the path portion of the
+   * ObjectId, keeping only the hash bytes.
+   *
+   * The default implementation returns a copy of the given id.
+   */
+  virtual ObjectId stripObjectId(const ObjectId& id) const {
+    return id;
+  }
 };
 
 /**
