@@ -148,28 +148,6 @@ impl FetchState {
             .collect()
     }
 
-    /// Returns all incomplete requested Keys as Store, with content Sha256 from the LFS pointer if available, for which additional attributes may be gathered by querying a store which provides the specified attributes
-    fn pending_storekey(&self, fetchable: FileAttributes) -> Vec<StoreKey> {
-        if fetchable.none() {
-            return vec![];
-        }
-        self.common
-            .pending(fetchable, self.compute_aux_data)
-            .map(|(key, _attrs)| key.clone())
-            .map(|k| self.storekey(k))
-            .collect()
-    }
-
-    /// Returns the Key as a StoreKey, as a StoreKey::Content with Sha256 from the LFS Pointer, if available, otherwise as a StoreKey::HgId.
-    /// Every StoreKey returned from this function is guaranteed to have an associated Key, so unwrapping is fine.
-    fn storekey(&self, key: Key) -> StoreKey {
-        if let Some((ptr, _)) = self.lfs_pointers.get(&key) {
-            StoreKey::Content(ContentHash::Sha256(ptr.sha256()), Some(key))
-        } else {
-            StoreKey::HgId(key)
-        }
-    }
-
     fn found_pointer(&mut self, key: Key, ptr: LfsPointersEntry, write: bool) {
         self.lfs_pointers.insert(key, (ptr, write));
     }
@@ -394,71 +372,73 @@ impl FetchState {
         }
     }
 
-    fn found_lfs(&mut self, key: Key, entry: LfsStoreEntry) {
-        match entry {
-            LfsStoreEntry::PointerAndBlob(ptr, blob) => {
-                self.found_attributes(key, LazyFile::Lfs(blob, ptr, self.format).into())
-            }
-            LfsStoreEntry::PointerOnly(ptr) => self.found_pointer(key, ptr, false),
-        }
-    }
-
     pub(crate) fn fetch_lfs(&mut self, store: &LfsStore, loc: StoreLocation) {
-        let pending = self.pending_storekey(FileAttributes::CONTENT);
-        if pending.is_empty() {
-            return;
-        }
-
         let fetch_start = std::time::Instant::now();
 
+        let mut count = 0;
+        let mut found = 0;
+        let mut pointers = 0;
+        let mut error_count = 0;
+        let mut first_error: Option<String> = None;
+
+        let bar = ProgressBar::new_adhoc("LFS cache", 0, "files");
+
+        self.common
+            .iter_pending(FileAttributes::CONTENT, self.compute_aux_data, |key| {
+                count += 1;
+
+                let store_key = if let Some((ptr, _)) = self.lfs_pointers.get(key) {
+                    StoreKey::Content(ContentHash::Sha256(ptr.sha256()), Some(key.clone()))
+                } else {
+                    StoreKey::HgId(key.clone())
+                };
+
+                match store.fetch_available(&store_key, self.fctx.mode().ignore_result()) {
+                    Ok(Some(entry)) => {
+                        bar.increase_position(1);
+                        // TODO(meyer): Make found behavior w/r/t LFS pointers and content consistent
+                        self.metrics.lfs.store(loc).hit(1);
+
+                        match entry {
+                            LfsStoreEntry::PointerAndBlob(ptr, blob) => {
+                                found += 1;
+                                Some(LazyFile::Lfs(blob, ptr, self.format).into())
+                            }
+                            LfsStoreEntry::PointerOnly(ptr) => {
+                                pointers += 1;
+                                self.lfs_pointers.insert(key.clone(), (ptr.clone(), false));
+                                None
+                            }
+                        }
+                    }
+                    Ok(None) => {
+                        bar.increase_position(1);
+                        self.metrics.lfs.store(loc).miss(1);
+                        None
+                    }
+                    Err(err) => {
+                        bar.increase_position(1);
+                        self.metrics.lfs.store(loc).err(1);
+                        error_count += 1;
+                        if first_error.is_none() {
+                            first_error.replace(format!("{}: {}", key, err));
+                        }
+                        self.errors.keyed_error(key.clone(), err);
+                        None
+                    }
+                }
+            });
+
+        self.metrics.lfs.store(loc).fetch(count);
+
         debug!(
-            "Checking store LFS ({cache}) - Count = {count}",
+            "Checked store LFS ({cache}) - Count = {count}",
             cache = match loc {
                 StoreLocation::Cache => "cache",
                 StoreLocation::Local => "local",
             },
-            count = pending.len()
+            count = count,
         );
-
-        let mut found = 0;
-        let mut found_pointers = 0;
-        let mut errors = 0;
-        let mut error: Option<String> = None;
-
-        let bar = ProgressBar::new_adhoc("LFS cache", pending.len() as u64, "files");
-
-        self.metrics.lfs.store(loc).fetch(pending.len());
-        for store_key in pending.into_iter() {
-            let key = store_key.clone().maybe_into_key().expect(
-                "no Key present in StoreKey, even though this should be guaranteed by pending_all",
-            );
-            match store.fetch_available(&store_key, self.fctx.mode().ignore_result()) {
-                Ok(Some(entry)) => {
-                    bar.increase_position(1);
-                    // TODO(meyer): Make found behavior w/r/t LFS pointers and content consistent
-                    self.metrics.lfs.store(loc).hit(1);
-                    if let LfsStoreEntry::PointerOnly(_) = &entry {
-                        found_pointers += 1;
-                    } else {
-                        found += 1;
-                    }
-                    self.found_lfs(key, entry)
-                }
-                Ok(None) => {
-                    bar.increase_position(1);
-                    self.metrics.lfs.store(loc).miss(1);
-                }
-                Err(err) => {
-                    bar.increase_position(1);
-                    self.metrics.lfs.store(loc).err(1);
-                    errors += 1;
-                    if error.is_none() {
-                        error.replace(format!("{}: {}", key, err));
-                    }
-                    self.errors.keyed_error(key, err)
-                }
-            }
-        }
 
         self.metrics
             .lfs
@@ -469,18 +449,11 @@ impl FetchState {
         if found != 0 {
             debug!("    Found = {found}", found = found);
         }
-        if found_pointers != 0 {
-            debug!(
-                "    Found Pointers-Only = {found_pointers}",
-                found_pointers = found_pointers
-            );
+        if pointers > 0 {
+            debug!("    Found Pointers-Only = {pointers}");
         }
-        if errors != 0 {
-            debug!(
-                "    Errors = {errors}, Error = {error:?}",
-                errors = errors,
-                error = error
-            );
+        if error_count != 0 {
+            debug!("    Errors = {error_count}, Error = {first_error:?}");
         }
     }
 
