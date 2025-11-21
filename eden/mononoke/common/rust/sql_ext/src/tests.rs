@@ -267,6 +267,7 @@ mod facebook {
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {},
                     write_tables: hashset! {"mononoke_queries_test_v3".to_string()},
+                    instance_type: Some("PRIMARY".to_string()),
                     ..Default::default()
                 },
                 transaction_query_names: vec![],
@@ -280,6 +281,7 @@ mod facebook {
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {"mononoke_queries_test_v3".to_string()},
                     write_tables: hashset! {},
+                    instance_type: Some("PRIMARY".to_string()),
                     ..Default::default()
                 },
                 transaction_query_names: vec![],
@@ -293,6 +295,7 @@ mod facebook {
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {"mononoke_queries_test_v3".to_string()},
                     write_tables: hashset! {},
+                    instance_type: Some("PRIMARY".to_string()),
                     ..Default::default()
                 },
                 transaction_query_names: vec![],
@@ -320,8 +323,12 @@ mod facebook {
         ];
 
         // Assert both Scuba file and mock transport have the same expected logs
-        pretty_assertions::assert_eq!(expected_logs, scuba_file_logs);
-        pretty_assertions::assert_eq!(expected_logs, mock_transport_logs);
+        pretty_assertions::assert_eq!(expected_logs, scuba_file_logs, "Raw scuba logs don't match");
+        pretty_assertions::assert_eq!(
+            expected_logs,
+            scuba_file_logs,
+            "Schematized logger logs don't match"
+        );
 
         Ok(())
     }
@@ -406,6 +413,7 @@ mod facebook {
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {},
                     write_tables: hashset! {"mononoke_queries_test_v3".to_string()},
+                    instance_type: Some("PRIMARY".to_string()),
                     ..Default::default()
                 },
                 transaction_query_names: vec![],
@@ -419,6 +427,7 @@ mod facebook {
                 mysql_telemetry: MysqlQueryTelemetry {
                     read_tables: hashset! {},
                     write_tables: hashset! {"mononoke_queries_test_v3".to_string()},
+                    instance_type: Some("PRIMARY".to_string()),
                     ..Default::default()
                 },
                 transaction_query_names: vec![],
@@ -426,8 +435,12 @@ mod facebook {
         ];
 
         // Assert both Scuba file and mock transport have the same expected logs
-        pretty_assertions::assert_eq!(expected_logs, scuba_file_logs);
-        pretty_assertions::assert_eq!(expected_logs, mock_transport_logs);
+        pretty_assertions::assert_eq!(expected_logs, scuba_file_logs, "Raw scuba logs don't match");
+        pretty_assertions::assert_eq!(
+            expected_logs,
+            scuba_file_logs,
+            "Schematized logger logs don't match"
+        );
 
         Ok(())
     }
@@ -513,8 +526,12 @@ mod facebook {
         ];
 
         // Assert both Scuba file and mock transport have the same expected logs
-        pretty_assertions::assert_eq!(expected_logs, scuba_file_logs);
-        pretty_assertions::assert_eq!(expected_logs, mock_transport_logs);
+        pretty_assertions::assert_eq!(expected_logs, scuba_file_logs, "Raw scuba logs don't match");
+        pretty_assertions::assert_eq!(
+            expected_logs,
+            scuba_file_logs,
+            "Schematized logger logs don't match"
+        );
 
         Ok(())
     }
@@ -603,8 +620,12 @@ mod facebook {
         ];
 
         // Assert both Scuba file and mock transport have the same expected logs
-        pretty_assertions::assert_eq!(expected_logs, scuba_file_logs);
-        pretty_assertions::assert_eq!(expected_logs, mock_transport_logs);
+        pretty_assertions::assert_eq!(expected_logs, scuba_file_logs, "Raw scuba logs don't match");
+        pretty_assertions::assert_eq!(
+            expected_logs,
+            scuba_file_logs,
+            "Schematized logger logs don't match"
+        );
 
         Ok(())
     }
@@ -895,10 +916,13 @@ mod facebook {
                     .map(|tables| tables.into_iter().collect())
                     .unwrap_or_default();
 
+                let instance_type = sample.instance_type_thrift_safe;
+
                 // Build MysqlQueryTelemetry with the extracted fields
                 let mysql_telemetry = MysqlQueryTelemetry {
                     read_tables,
                     write_tables,
+                    instance_type,
                     ..Default::default()
                 };
 
