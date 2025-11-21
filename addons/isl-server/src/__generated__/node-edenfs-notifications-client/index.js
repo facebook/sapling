@@ -212,7 +212,7 @@ class EdenFSNotificationsClient extends EventEmitter {
       callback(null, change);
     });
     sub.on('error', error => {
-      callback(error);
+      callback(error, null);
     });
     sub.on('close', () => {
       // Recieved when the underlying gets killed, pass double null to indicate
@@ -302,6 +302,12 @@ class EdenFSSubscription extends EventEmitter {
     const mountPoint = this.options.mountPoint || this.client.mountPoint;
     const args = ['notify', 'changes-since', '--subscribe', '--json', '--formatted-position'];
 
+    if (this.options.useCase) {
+      args.push('--use-case', this.options.useCase);
+    } else {
+      args.push('--use-case', 'node-client');
+    }
+
     if (this.options.position) {
       args.push(
         '--position',
@@ -313,6 +319,10 @@ class EdenFSSubscription extends EventEmitter {
 
     if (this.options.throttle !== undefined) {
       args.push('--throttle', this.options.throttle.toString());
+    }
+
+    if (this.options.relativeRoot) {
+      args.push('--relative-root', this.options.relativeRoot);
     }
 
     if (this.options.includeVcsRoots) {
@@ -343,16 +353,10 @@ class EdenFSSubscription extends EventEmitter {
       });
     }
 
-    if (this.options.states) {
-      this.options.states.forEach(state => {
-        args.push('--states', state);
+    if (this.options.deferredStates) {
+      this.options.deferredStates.forEach(state => {
+        args.push('--deferred-states', state);
       });
-    }
-
-    if (this.options.useCase) {
-      args.push('--use-case', this.options.useCase);
-    } else {
-      args.push('--use-case', 'node-client');
     }
 
     if (mountPoint) {
@@ -370,7 +374,6 @@ class EdenFSSubscription extends EventEmitter {
       const rl = readline.createInterface({input: this.process.stdout});
 
       rl.on('line', line => {
-        console.log(line);
         if (line.trim()) {
           try {
             const event = JSON.parse(line);

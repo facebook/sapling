@@ -131,11 +131,6 @@ async function subscriptionExample() {
           } else {
             console.error(`Unknown response: ${JSON.stringify(resp)}`);
           }
-
-          // Handle state change resps
-          if (resp.resp_type) {
-            console.log(`State resp: ${resp.resp_type} - ${resp.state}`);
-          }
         }
       },
     );
@@ -240,11 +235,6 @@ async function advancedSubscriptionExample() {
           console.log(`State change: ${resp.event_type} ${resp.state}`);
         } else {
           console.error(`Unknown response: ${JSON.stringify(resp)}`);
-        }
-
-        // Handle state change resps
-        if (resp.resp_type) {
-          console.log(`State resp: ${resp.resp_type} - ${resp.state}`);
         }
       },
     );

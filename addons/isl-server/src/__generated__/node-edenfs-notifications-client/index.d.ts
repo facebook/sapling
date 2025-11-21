@@ -162,14 +162,14 @@ export interface CommitTransitionChange {
   to: number[];
 }
 
-export interface LostChange {
-  // Lost change details
+export interface LostChanges {
+  reason: string;
 }
 
 export interface LargeChange {
   DirectoryRenamed?: DirectoryRenamedChange;
   CommitTransition?: CommitTransitionChange;
-  LostChange?: LostChange;
+  LostChanges?: LostChanges;
 }
 
 /**
@@ -205,14 +205,14 @@ export interface ChangesSinceResponse {
   changes: Change[];
   /** New journal position after changes */
   to_position?: string | JournalPosition;
-  /** Position from which changes were retrieved */
-  from_position?: string | JournalPosition;
 }
 
 /**
  * Event emitted by subscription
  */
 export interface SubscriptionEvent extends ChangesSinceResponse {
+  /** Position a state change occured at */
+  position?: string | JournalPosition;
   /** Event type for state changes */
   event_type?: 'Entered' | 'Left';
   /** State name for state change events */
@@ -222,7 +222,7 @@ export interface SubscriptionEvent extends ChangesSinceResponse {
 /**
  * Callback for subscription events
  */
-export type SubscriptionCallback = (error: Error | null, result?: SubscriptionEvent | null) => void;
+export type SubscriptionCallback = (error: Error | null, result: SubscriptionEvent | null) => void;
 
 /**
  * Custom error class for EdenFS errors
@@ -273,6 +273,7 @@ export class EdenFSSubscription extends EventEmitter {
   process: any;
   edenBinaryPath: string;
   errData: string;
+  killTimeout: NodeJS.Timeout | null;
 
   constructor(client: EdenFSNotificationsClient, options?: SubscriptionOptions);
 
@@ -332,7 +333,7 @@ export class EdenFSUtils {
     | 'replaced'
     | 'directory renamed'
     | 'commit transition'
-    | 'lost change'
+    | 'lost changes'
     | 'state entered'
     | 'state left'
     | 'unknown';
@@ -347,7 +348,7 @@ declare const exports: {
 export default exports;
 
 export type Options = {
-  mountPath?: string;
+  mountPoint?: string;
   timeout?: number;
   edenBinaryPath?: string;
 };
