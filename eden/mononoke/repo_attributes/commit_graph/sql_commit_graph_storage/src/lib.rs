@@ -1471,6 +1471,23 @@ impl SqlCommitGraphStorage {
         }
     }
 
+    /// Fetch SQL ids for a set of changesets.
+    pub async fn fetch_many_ids(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: &[ChangesetId],
+        read_from_master: bool,
+    ) -> Result<HashMap<ChangesetId, u64>> {
+        let fetched_rows = SelectManyIds::query(
+            self.read_conn(read_from_master),
+            ctx.sql_query_telemetry(),
+            &self.repo_id,
+            cs_ids,
+        )
+        .await?;
+        Ok(fetched_rows.into_iter().collect())
+    }
+
     /// Fetch a maximum of `limit` changeset edges for changesets having
     /// auto-increment ids between `start_id` and `end_id`.
     pub async fn fetch_many_edges_in_id_range(
