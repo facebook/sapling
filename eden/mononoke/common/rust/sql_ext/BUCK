@@ -16,13 +16,13 @@ rust_library(
     }),
     test_deps = [
         "fbsource//third-party/rust:assert_matches",
-        "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/common/metadata:metadata",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:pretty_assertions",
         "fbsource//third-party/rust:tempfile",
         "//common/rust/shed/sql:sql_tests_lib",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/metadata:metadata",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//dsi/logger/rust/mock_transport:mock_transport",
         "//dsi/logger/configs/MononokeXdbTelemetryLoggerConfig:log_entry-rust",
     ]),

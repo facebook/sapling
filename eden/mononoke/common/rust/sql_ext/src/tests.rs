@@ -6,12 +6,6 @@
  */
 
 use anyhow::Result;
-use clientinfo::ClientEntryPoint;
-use clientinfo::ClientInfo;
-use clientinfo::ClientRequestInfo;
-use fbinit::FacebookInit;
-use metadata::Metadata;
-use mononoke_macros::mononoke;
 use mononoke_types::RepositoryId;
 use sql_query_config::SqlQueryConfig;
 use sql_query_telemetry::SqlQueryTelemetry;
@@ -83,10 +77,16 @@ mod facebook {
     use anyhow::Context;
     use anyhow::anyhow;
     use anyhow::bail;
+    use clientinfo::ClientEntryPoint;
+    use clientinfo::ClientInfo;
+    use clientinfo::ClientRequestInfo;
+    use fbinit::FacebookInit;
     use itertools::Itertools;
     use maplit::hashmap;
     use maplit::hashset;
+    use metadata::Metadata;
     use mock_transport::MockLoggerScubaTransport;
+    use mononoke_macros::mononoke;
     use mononoke_types::Timestamp;
     use mononoke_xdb_telemetry_logger::MononokeXdbTelemetryLogger;
     use mysql_client::InstanceRequirement;
@@ -1100,48 +1100,4 @@ mod facebook {
 
         Ok(mysql_tels)
     }
-}
-
-#[allow(
-    dead_code,
-    unreachable_code,
-    unused_variables,
-    clippy::diverging_sub_expression,
-    clippy::todo
-)]
-#[ignore]
-#[mononoke::fbinit_test]
-async fn should_compile(fb: FacebookInit) -> Result<()> {
-    let config: &SqlQueryConfig = todo!();
-    let connection: &crate::Connection = todo!();
-
-    let cri = ClientRequestInfo::new(ClientEntryPoint::Sapling);
-    let client_info = ClientInfo::new()?;
-    let mut metadata = Metadata::default();
-    metadata.add_client_info(client_info);
-
-    let sql_query_tel = SqlQueryTelemetry::new(fb, metadata);
-    TestQuery::query(connection, sql_query_tel, todo!(), todo!()).await?;
-    TestQuery::query_with_transaction(todo!(), todo!(), todo!()).await?;
-    TestQuery2::query(config, None, connection, sql_query_tel).await?;
-    TestQuery2::query(
-        config,
-        Some(std::time::Duration::from_secs(60)),
-        connection,
-        sql_query_tel,
-    )
-    .await?;
-    TestQuery2::query_with_transaction(todo!()).await?;
-    TestQuery3::query(connection, sql_query_tel, &[(&12,)]).await?;
-    TestQuery3::query_with_transaction(todo!(), &[(&12,)]).await?;
-    TestQuery4::query(connection, sql_query_tel, &"hello").await?;
-    TestQuery::query(connection, sql_query_tel, todo!(), todo!()).await?;
-    TestQuery2::query(config, None, connection, sql_query_tel).await?;
-    TestQuery3::query(connection, sql_query_tel, &[(&12,)]).await?;
-    TestQuery4::query(connection, sql_query_tel, &"hello").await?;
-    TestQuery::query(connection, sql_query_tel, todo!(), todo!()).await?;
-    TestQuery2::query(config, None, connection, sql_query_tel).await?;
-    TestQuery3::query(connection, sql_query_tel, &[(&12,)]).await?;
-    TestQuery4::query(connection, sql_query_tel, &"hello").await?;
-    Ok(())
 }
