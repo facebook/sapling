@@ -163,7 +163,8 @@ ObjectComparison FilteredBackingStore::compareObjectsById(
       typeTwo == FilteredObjectIdType::OBJECT_TYPE_TREE) {
     // If the filters are the same, then we can simply check whether the
     // underlying ObjectIds resolve to equal.
-    if (filteredOne.filter() == filteredTwo.filter()) {
+    if (filter_->areFiltersIdentical(
+            filteredOne.filter(), filteredTwo.filter())) {
       return backingStore_->compareObjectsById(
           filteredOne.object(), filteredTwo.object());
     }

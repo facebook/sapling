@@ -826,13 +826,15 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
       filteredStore_->compareObjectsById(grandchildOID, grandchildOID2) ==
       ObjectComparison::Unknown);
 
-  // FIXME: These two trees have the same underlying tree (grandchildTreeId) and
-  // semantically identical filters. They should be Identical, but this will
-  // fail because compareObjectsById does a bytewise comparison instead of
-  // calling areFiltersIdentical.
+  // These two trees have the same underlying tree (grandchildTreeId) and
+  // bytewise different (but semantically identical) filters. They should
+  // be Identical despite the bytewise filter difference.
+  auto grandchildFIDLegacy = FilteredObjectId::fromObjectId(grandchildOID);
+  auto grandchildFIDV1 = FilteredObjectId::fromObjectId(grandchildOID1V1);
+  EXPECT_NE(grandchildFIDLegacy.filter(), grandchildFIDV1.filter());
   EXPECT_EQ(
       filteredStore_->compareObjectsById(grandchildOID, grandchildOID1V1),
-      ObjectComparison::Unknown);
+      ObjectComparison::Identical);
 }
 
 TEST_F(FakeSubstringFilteredBackingStoreTest, getGlobFiles) {
