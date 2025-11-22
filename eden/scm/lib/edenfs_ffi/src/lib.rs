@@ -87,6 +87,57 @@ fn cleanup_expired_objects() {
     }
 }
 
+fn get_or_create_cached_objects(
+    abs_repo_path: &PathBuf,
+    object_map: &mut HashMap<PathBuf, CachedObjects>,
+) -> anyhow::Result<()> {
+    if object_map.contains_key(abs_repo_path) {
+        OBJECT_CACHE_HITS.increment();
+        return Ok(());
+    }
+
+    OBJECT_CACHE_MISSES.increment();
+
+    let repo = Repo::load(abs_repo_path, &[])
+        .with_context(|| anyhow!("failed to load Repo object for {}", abs_repo_path.display()))?;
+
+    let config = repo.config();
+    // NOTE: This is technically wrong. The repository at abs_repo_path *is* the shared repo,
+    // so we're passing in the same path for both arguments. This is only okay since the FFI
+    // code never tries to read/write the .hg/sparse file directly.
+    //
+    // We *cannot* use the checkout's mount path to load the repo, since that leads to
+    // deadlocks. Sapling acquires the lock for checkout, then the FFI layer tries to acquire
+    // the lock for filter evaluation, and a deadlock occurs. Using the shared repo for filter
+    // evaluation prevents this deadlock from occurring.
+    let filter_gen = FilterGenerator::from_dot_dirs(
+        repo.shared_dot_hg_path(),
+        repo.shared_dot_hg_path(),
+        config,
+    )?;
+
+    let ttl = repo
+        .config()
+        .must_get("edenfs", "ffs-repo-cache-ttl")
+        .unwrap_or(DEFAULT_CACHE_EXPIRY_DURATION);
+    let expiration = if ttl == Duration::ZERO {
+        None
+    } else {
+        Some(Instant::now() + ttl)
+    };
+
+    object_map.insert(
+        abs_repo_path.clone(),
+        CachedObjects {
+            expiration,
+            repo,
+            filter_gen,
+        },
+    );
+
+    Ok(())
+}
+
 // CXX only allows exposing structures that are defined in the bridge crate.
 // Therefore, MercurialMatcher simply serves as a wrapper around the actual Matcher object that's
 // passed to C++ and back to Rust
@@ -234,49 +285,7 @@ fn _profile_contents_from_repo(
     abs_repo_path: PathBuf,
 ) -> Result<Box<MercurialMatcher>, anyhow::Error> {
     let mut object_map = OBJECT_CACHE.lock();
-    if !object_map.contains_key(&abs_repo_path) {
-        OBJECT_CACHE_MISSES.increment();
-
-        let repo = Repo::load(&abs_repo_path, &[]).with_context(|| {
-            anyhow!("failed to load Repo object for {}", abs_repo_path.display())
-        })?;
-
-        let config = repo.config();
-        // NOTE: This is technically wrong. The repository at abs_repo_path *is* the shared repo,
-        // so we're passing in the same path for both arguments. This is only okay since the FFI
-        // code never tries to read/write the .hg/sparse file directly.
-        //
-        // We *cannot* use the checkout's mount path to load the repo, since that leads to
-        // deadlocks. Sapling acquires the lock for checkout, then the FFI layer tries to acquire
-        // the lock for filter evaluation, and a deadlock occurs. Using the shared repo for filter
-        // evaluation prevents this deadlock from occurring.
-        let filter_gen = FilterGenerator::from_dot_dirs(
-            repo.shared_dot_hg_path(),
-            repo.shared_dot_hg_path(),
-            config,
-        )?;
-
-        let ttl = repo
-            .config()
-            .must_get("edenfs", "ffs-repo-cache-ttl")
-            .unwrap_or(DEFAULT_CACHE_EXPIRY_DURATION);
-        let expiration = if ttl == Duration::ZERO {
-            None
-        } else {
-            Some(Instant::now() + ttl)
-        };
-
-        object_map.insert(
-            abs_repo_path.clone(),
-            CachedObjects {
-                expiration,
-                repo,
-                filter_gen,
-            },
-        );
-    } else {
-        OBJECT_CACHE_HITS.increment();
-    }
+    get_or_create_cached_objects(&abs_repo_path, &mut object_map)?;
 
     let cached_objects = object_map.get_mut(&abs_repo_path).context("loading repo")?;
     let repo = &mut cached_objects.repo;
