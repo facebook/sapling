@@ -88,10 +88,27 @@ ImmediateFuture<FilterCoverage> HgSparseFilter::getFilterCoverageForPath(
 bool HgSparseFilter::areFiltersIdentical(
     folly::StringPiece lhs,
     folly::StringPiece rhs) const {
-  // TODO: Implement proper comparison for HgSparseFilter.
-  // This requires adding additional methods to the edenfs-ffi crate to
-  // compare MercurialMatcher instances or their underlying sparse profiles.
-  return lhs == rhs;
+  // Fast path to avoid unnecessary calls to Rust
+  if (lhs == rhs) {
+    return true;
+  }
+
+  rust::Slice<const uint8_t> lhsId{
+      reinterpret_cast<const uint8_t*>(lhs.data()), lhs.size()};
+  rust::Slice<const uint8_t> rhsId{
+      reinterpret_cast<const uint8_t*>(rhs.data()), rhs.size()};
+  auto pathToMount =
+      rust::Str{checkoutPath_.view().data(), checkoutPath_.view().size()};
+
+  try {
+    return are_filter_ids_identical(lhsId, rhsId, pathToMount);
+  } catch (const std::exception& e) {
+    XLOGF(
+        WARN,
+        "Failed to compare filter IDs: {}. Falling back to bytewise comparison.",
+        e.what());
+    return lhs == rhs;
+  }
 }
 
 } // namespace facebook::eden
