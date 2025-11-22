@@ -19,7 +19,7 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bytes = { version = "1.10", features = ["serde"] }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../server/context" }
-fancy-regex = "0.14.0"
+fancy-regex = "0.15.0"
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
