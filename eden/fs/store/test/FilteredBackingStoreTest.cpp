@@ -39,7 +39,8 @@ using folly::io::Cursor;
 const char kTestFilter1[] = "V1:foo";
 const char kTestFilter2[] = "V1:football2";
 const char kTestFilter3[] = "V2:football3";
-const char kTestFilter4[] = "Legacy:shouldFilterZeroObjects";
+const char kTestFilter4Legacy[] = "Legacy:shouldFilterZeroObjects";
+const char kTestFilter4V1[] = "V1:shouldFilterZeroObjects";
 const char kTestFilter5[] = "V1:bazbar";
 const char kTestFilter6[] =
     "\
@@ -733,7 +734,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   auto rootFuture1 = filteredStore_
                          ->getRootTree(
                              RootId{FilteredBackingStore::createFilteredRootId(
-                                 "1", kTestFilter4)},
+                                 "1", kTestFilter4Legacy)},
                              ObjectFetchContext::getNullContext())
                          .semi()
                          .via(&executor);
@@ -744,6 +745,14 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
                              ObjectFetchContext::getNullContext())
                          .semi()
                          .via(&executor);
+  auto rootFuture1V1 =
+      filteredStore_
+          ->getRootTree(
+              RootId{FilteredBackingStore::createFilteredRootId(
+                  "1", kTestFilter4V1)},
+              ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&executor);
 
   // Trigger commit1, then rootDirTree to make rootFuture1 ready.
   commit1->trigger();
@@ -752,6 +761,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   rootDirTree->trigger();
   executor.drain();
   auto rootDirRes1 = std::move(rootFuture1).get(0ms);
+  auto rootDirRes1V1 = std::move(rootFuture1V1).get(0ms);
 
   // Get the object IDs of all the trees from commit 1.
   auto [childName, childEntry] = *rootDirRes1.tree->find("child"_pc);
@@ -763,6 +773,17 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   auto [grandchildName, grandchildEntry] = *childDirRes1->find("grandchild"_pc);
   auto grandchildOID = grandchildEntry.getObjectId();
 
+  // Get the object IDs of all the trees from commit 1 (V1 filters).
+  auto [childName1V1, childEntry1V1] = *rootDirRes1V1.tree->find("child"_pc);
+  auto childOID1V1 = childEntry1V1.getObjectId();
+  auto childFuture1V1 = filteredStore_->getTree(
+      childOID1V1, ObjectFetchContext::getNullContext());
+  childTree->trigger();
+  auto childDirRes1V1 = std::move(childFuture1V1).get(0ms).tree;
+  auto [grandchildName1V1, grandchildEntry1V1] =
+      *childDirRes1V1->find("grandchild"_pc);
+  auto grandchildOID1V1 = grandchildEntry1V1.getObjectId();
+
   // Trigger commit2, then rootDirTreeExtended to make rootFuture2 ready.
   commit2->trigger();
   executor.drain();
@@ -770,7 +791,7 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   executor.drain();
   auto rootDirCommit2Res = std::move(rootFuture2).get(0ms);
 
-  // Get the object IDs of all the blobs from commit 1.
+  // Get the object IDs of all the blobs from commit 2.
   auto [childName2, childEntry2] = *rootDirCommit2Res.tree->find("child"_pc);
   auto childOID2 = childEntry2.getObjectId();
   auto childFuture2 =
@@ -804,6 +825,14 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareTreeObjectsById) {
   EXPECT_TRUE(
       filteredStore_->compareObjectsById(grandchildOID, grandchildOID2) ==
       ObjectComparison::Unknown);
+
+  // FIXME: These two trees have the same underlying tree (grandchildTreeId) and
+  // semantically identical filters. They should be Identical, but this will
+  // fail because compareObjectsById does a bytewise comparison instead of
+  // calling areFiltersIdentical.
+  EXPECT_EQ(
+      filteredStore_->compareObjectsById(grandchildOID, grandchildOID1V1),
+      ObjectComparison::Unknown);
 }
 
 TEST_F(FakeSubstringFilteredBackingStoreTest, getGlobFiles) {
@@ -812,8 +841,8 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, getGlobFiles) {
       RootId{FilteredBackingStore::createFilteredRootId("1", kTestFilter1)};
   RootId rootId2 =
       RootId{FilteredBackingStore::createFilteredRootId("2", kTestFilter2)};
-  RootId rootId3 =
-      RootId{FilteredBackingStore::createFilteredRootId("3", kTestFilter4)};
+  RootId rootId3 = RootId{
+      FilteredBackingStore::createFilteredRootId("3", kTestFilter4Legacy)};
   RootId rootId4 =
       RootId{FilteredBackingStore::createFilteredRootId("4", kTestFilter7)};
   RootId rootId5 =
