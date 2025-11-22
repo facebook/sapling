@@ -89,6 +89,21 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
       const ObjectId& one,
       const ObjectId& two) = 0;
 
+  /**
+   * Determines whether two RootIds resolve to the same Root object.
+   *
+   * Similar to compareObjectsById, this allows the BackingStore to compare
+   * RootIds using its knowledge of the encoding scheme.
+   *
+   * Returns ObjectComparison::Identical if the RootIds are known to point to
+   * the same root, ObjectComparison::Different if they are known to point to
+   * different roots, or ObjectComparison::Unknown if they must be fetched and
+   * compared to know.
+   */
+  virtual ObjectComparison compareRootsById(
+      const RootId& one,
+      const RootId& two) = 0;
+
   struct GetRootTreeResult {
     /// The root tree object.
     TreePtr tree;
@@ -329,7 +344,8 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
 /**
  * For the common case that a BackingStore has a one-to-one relationship between
  * its IDs and objects -- such as when objects are identified by a cryptograph
- * hash -- this base class provides an implementation of compareObjectsById.
+ * hash -- this base class provides an implementation of compareObjectsById and
+ * compareRootsById.
  */
 class BijectiveBackingStore : public BackingStore {
  public:
@@ -337,6 +353,12 @@ class BijectiveBackingStore : public BackingStore {
       override {
     return one.bytesEqual(two) ? ObjectComparison::Identical
                                : ObjectComparison::Different;
+  }
+
+  ObjectComparison compareRootsById(const RootId& one, const RootId& two)
+      override {
+    return one == two ? ObjectComparison::Identical
+                      : ObjectComparison::Different;
   }
 };
 

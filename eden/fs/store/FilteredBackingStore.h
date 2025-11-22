@@ -44,6 +44,9 @@ class FilteredBackingStore
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
       override;
 
+  ObjectComparison compareRootsById(const RootId& one, const RootId& two)
+      override;
+
   void periodicManagementTask() override;
 
   void startRecordingFetch() override;

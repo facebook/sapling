@@ -278,6 +278,9 @@ class SaplingBackingStore final : public BackingStore {
   ObjectComparison compareObjectsById(const ObjectId& one, const ObjectId& two)
       override;
 
+  ObjectComparison compareRootsById(const RootId& one, const RootId& two)
+      override;
+
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;
   ObjectId parseObjectId(folly::StringPiece objectId) override {

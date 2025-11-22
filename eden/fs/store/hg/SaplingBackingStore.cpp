@@ -1104,6 +1104,14 @@ ObjectComparison SaplingBackingStore::compareObjectsById(
   return ObjectComparison::Unknown;
 }
 
+ObjectComparison SaplingBackingStore::compareRootsById(
+    const RootId& one,
+    const RootId& two) {
+  // In Mercurial/Sapling, RootIds are commit hashes, which are bijective.
+  // One commit hash always refers to exactly one commit.
+  return one == two ? ObjectComparison::Identical : ObjectComparison::Different;
+}
+
 RootId SaplingBackingStore::parseRootId(folly::StringPiece rootId) {
   // rootId can be 20-byte binary or 40-byte hex. Canonicalize, unconditionally
   // returning 40-byte hex.

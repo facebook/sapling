@@ -54,6 +54,12 @@ class FakeBackingStore final : public BackingStore {
     return ObjectComparison::Unknown;
   }
 
+  ObjectComparison compareRootsById(const RootId& one, const RootId& two)
+      override {
+    return one == two ? ObjectComparison::Identical
+                      : ObjectComparison::Different;
+  }
+
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;
   ObjectId parseObjectId(folly::StringPiece objectId) override;

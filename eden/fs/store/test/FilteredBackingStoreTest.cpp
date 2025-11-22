@@ -1090,4 +1090,44 @@ TEST_F(SaplingFilteredBackingStoreTest, testMercurialFFIInvalidFOID) {
   EXPECT_NE(fooTxtFindRes, rootDirRes.tree->cend());
   EXPECT_NE(barTxtFindRes, rootDirRes.tree->cend());
 }
+
+TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareRootsById) {
+  // Create RootIds with different filter IDs but same underlying root
+  auto underlyingRoot = std::string("1234567890abcdef1234567890abcdef12345678");
+  auto differentUnderlyingRoot =
+      std::string("fedcba0987654321fedcba0987654321fedcba09");
+  auto filterId1V1 = std::string("V1:filter1");
+  auto filterId1V2 = std::string("V2:filter1");
+  auto filterId2 = std::string("V1:filter2");
+
+  auto rootId1V1 = RootId{
+      FilteredBackingStore::createFilteredRootId(underlyingRoot, filterId1V1)};
+  auto rootId1V2 = RootId{
+      FilteredBackingStore::createFilteredRootId(underlyingRoot, filterId1V2)};
+  auto rootId2 = RootId{
+      FilteredBackingStore::createFilteredRootId(underlyingRoot, filterId2)};
+  auto rootId3 = RootId{FilteredBackingStore::createFilteredRootId(
+      differentUnderlyingRoot, filterId1V1)};
+
+  // FIXME: Same RootId should be identical
+  EXPECT_EQ(
+      filteredStore_->compareRootsById(rootId1V1, rootId1V1),
+      ObjectComparison::Unknown);
+
+  // FIXME: Same underlying root but different filter should be different
+  EXPECT_EQ(
+      filteredStore_->compareRootsById(rootId1V1, rootId2),
+      ObjectComparison::Unknown);
+
+  // FIXME: Same underlying root and bytewise different filter (but same are
+  // areFiltersIdentical result) should be identical
+  EXPECT_EQ(
+      filteredStore_->compareRootsById(rootId1V1, rootId1V2),
+      ObjectComparison::Unknown);
+
+  // FIXME: Different underlying root should be different
+  EXPECT_EQ(
+      filteredStore_->compareRootsById(rootId1V1, rootId3),
+      ObjectComparison::Unknown);
+}
 } // namespace facebook::eden

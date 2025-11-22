@@ -705,4 +705,30 @@ TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
             SaplingBackingStore::staticRenderObjectId(id_only)));
   }
 }
+
+TEST_F(SaplingBackingStoreNoFaultInjectorTest, testCompareRootsById) {
+  // In Sapling/Mercurial, RootIds are commit hashes which are bijective.
+  // Create two different commit hashes
+  auto rootId1 = RootId{"1234567890abcdef1234567890abcdef12345678"};
+  auto rootId2 = RootId{"fedcba0987654321fedcba0987654321fedcba09"};
+  auto rootId3 = RootId{"1234567890abcdef1234567890abcdef12345678"};
+
+  // Same RootId should be identical
+  EXPECT_EQ(
+      queuedBackingStore->compareRootsById(rootId1, rootId1),
+      ObjectComparison::Identical);
+
+  // Same commit hash should be identical
+  EXPECT_EQ(
+      queuedBackingStore->compareRootsById(rootId1, rootId3),
+      ObjectComparison::Identical);
+
+  // Different commit hashes should be different
+  EXPECT_EQ(
+      queuedBackingStore->compareRootsById(rootId1, rootId2),
+      ObjectComparison::Different);
+  EXPECT_EQ(
+      queuedBackingStore->compareRootsById(rootId2, rootId1),
+      ObjectComparison::Different);
+}
 } // namespace facebook::eden

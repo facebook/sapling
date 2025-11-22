@@ -205,6 +205,13 @@ ObjectComparison FilteredBackingStore::compareObjectsById(
   }
 }
 
+ObjectComparison FilteredBackingStore::compareRootsById(
+    const RootId& /*one*/,
+    const RootId& /*two*/) {
+  // TODO: implement accurate comparison logic
+  return ObjectComparison::Unknown;
+}
+
 ImmediateFuture<std::unique_ptr<PathMap<TreeEntry>>>
 FilteredBackingStore::filterImpl(
     const TreePtr unfilteredTree,
