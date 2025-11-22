@@ -206,10 +206,39 @@ ObjectComparison FilteredBackingStore::compareObjectsById(
 }
 
 ObjectComparison FilteredBackingStore::compareRootsById(
-    const RootId& /*one*/,
-    const RootId& /*two*/) {
-  // TODO: implement accurate comparison logic
-  return ObjectComparison::Unknown;
+    const RootId& one,
+    const RootId& two) {
+  // Fast path: bytewise equal must also be semantically equal
+  if (one == two) {
+    return ObjectComparison::Identical;
+  }
+
+  // FilteredRootIds are composed of two parts: the underlying RootId and the
+  // filter ID. Both must be semantically equal to be considered identical.
+  auto [underlyingRootIdOne, filterIdOne] = parseFilterIdFromRootId(one);
+  auto [underlyingRootIdTwo, filterIdTwo] = parseFilterIdFromRootId(two);
+
+  auto underlyingComparison =
+      backingStore_->compareRootsById(underlyingRootIdOne, underlyingRootIdTwo);
+  if (underlyingComparison == ObjectComparison::Different) {
+    return ObjectComparison::Different;
+  }
+
+  // FilterId -> Filter mappings are not bijective, so we need to check
+  // semantic equality instead of bytewise equality if bytewise comparison
+  // fails.
+  bool filtersIdentical = (filterIdOne == filterIdTwo) ||
+      filter_->areFiltersIdentical(filterIdOne, filterIdTwo);
+
+  if (filtersIdentical) {
+    // Both the underlying RootIds and filters are identical, so return the
+    // underlying comparison result (which could be Identical or Unknown).
+    return underlyingComparison;
+  }
+
+  // The filters are different. Even if the underlying RootIds are identical,
+  // different filters mean different effective roots.
+  return ObjectComparison::Different;
 }
 
 ImmediateFuture<std::unique_ptr<PathMap<TreeEntry>>>

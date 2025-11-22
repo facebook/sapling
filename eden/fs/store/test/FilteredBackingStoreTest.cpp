@@ -1109,25 +1109,25 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareRootsById) {
   auto rootId3 = RootId{FilteredBackingStore::createFilteredRootId(
       differentUnderlyingRoot, filterId1V1)};
 
-  // FIXME: Same RootId should be identical
+  // Same RootId should be identical
   EXPECT_EQ(
       filteredStore_->compareRootsById(rootId1V1, rootId1V1),
-      ObjectComparison::Unknown);
+      ObjectComparison::Identical);
 
-  // FIXME: Same underlying root but different filter should be different
+  // Same underlying root but different filter should be different
   EXPECT_EQ(
       filteredStore_->compareRootsById(rootId1V1, rootId2),
-      ObjectComparison::Unknown);
+      ObjectComparison::Different);
 
-  // FIXME: Same underlying root and bytewise different filter (but same are
+  // Same underlying root and bytewise different filter (but same are
   // areFiltersIdentical result) should be identical
   EXPECT_EQ(
       filteredStore_->compareRootsById(rootId1V1, rootId1V2),
-      ObjectComparison::Unknown);
+      ObjectComparison::Identical);
 
   // FIXME: Different underlying root should be different
   EXPECT_EQ(
       filteredStore_->compareRootsById(rootId1V1, rootId3),
-      ObjectComparison::Unknown);
+      ObjectComparison::Different);
 }
 } // namespace facebook::eden
