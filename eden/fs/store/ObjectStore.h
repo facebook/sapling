@@ -370,6 +370,12 @@ class ObjectStore : public IObjectStore,
       const;
 
   /**
+   * Convenience wrapper around BackingStore::compareRootsById.  See
+   * `BackingStore::compareRootsById`'s documentation for more details.
+   */
+  ObjectComparison compareRootsById(const RootId& one, const RootId& two) const;
+
+  /**
    * Convenience wrapper around compareObjectsById for the common case that the
    * caller wants to know if two IDs refer to the same object.
    *

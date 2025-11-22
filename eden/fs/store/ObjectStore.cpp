@@ -1019,6 +1019,12 @@ ObjectComparison ObjectStore::compareObjectsById(
   return backingStore_->compareObjectsById(one, two);
 }
 
+ObjectComparison ObjectStore::compareRootsById(
+    const RootId& one,
+    const RootId& two) const {
+  return backingStore_->compareRootsById(one, two);
+}
+
 bool ObjectStore::areObjectsKnownIdentical(
     const ObjectId& one,
     const ObjectId& two) const {
