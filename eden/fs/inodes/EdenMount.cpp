@@ -1983,7 +1983,9 @@ ImmediateFuture<Unit> EdenMount::diff(
                     objectStore_->renderRootId(interrupted->toCommit)))));
       }
 
-      if (currentWorkingCopyParentRootId != commitId) {
+      if (objectStore_->compareRootsById(
+              currentWorkingCopyParentRootId, commitId) !=
+          ObjectComparison::Identical) {
         // TODO: We should really add a method to FilteredBackingStore that
         // allows us to render a FOID as the underlying ObjectId. This would
         // avoid the round trip we're doing here.

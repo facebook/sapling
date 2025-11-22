@@ -693,17 +693,9 @@ class FilterVersionMismatchTest(FilteredFSBase):
         # Verify status works with V1 filters
         self.assert_status_empty()
 
-        # FIXME: hg status now fails with parent commit mismatch error
-        # because EdenMount::diff() does bytewise comparison of RootIDs
-        # without considering that FilterIds may have different versions
-        with self.assertRaises(hgrepo.HgError) as context:
-            self.hg("status", "--config", "experimental.filter-version=Legacy")
-
-        # Verify it's a parent mismatch error
-        self.assertIn(
-            b"requested parent commit is out-of-date",
-            context.exception.stderr,
-        )
+        # Status works despite filter version change
+        out = self.hg("status", "--config", "experimental.filter-version=Legacy")
+        self.assertEqual(out, "")
 
 
 @filteredhg_test
