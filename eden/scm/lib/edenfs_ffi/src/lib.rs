@@ -232,6 +232,11 @@ mod ffi {
             case_sensitive: bool,
             matcher_wrapper: SharedPtr<MatcherWrapper>,
         ) -> Result<()>;
+
+        // Checks if two FilterIds are identical by parsing and comparing their
+        // underlying Filter objects. Returns true if both FilterIds parse to
+        // the same commit_id and filter_paths
+        fn are_filter_ids_identical(lhs: &[u8], rhs: &[u8], checkout_path: &str) -> Result<bool>;
     }
 }
 
@@ -259,6 +264,35 @@ fn create_tree_matcher(
         Err(e) => set_matcher_error(matcher_wrapper, e),
     };
     Ok(())
+}
+
+// Checks if two filterIds are identical by parsing and comparing their underlying Filter objects.
+// This handles the case where a Legacy filterId might be semantically equivalent to a V1 filterId.
+pub fn are_filter_ids_identical(
+    lhs: &[u8],
+    rhs: &[u8],
+    checkout_path: &str,
+) -> Result<bool, anyhow::Error> {
+    // Quick check: if the bytes are identical, the filters are identical
+    if lhs == rhs {
+        return Ok(true);
+    }
+
+    let abs_repo_path = PathBuf::from(checkout_path);
+    if identity::sniff_dir(&abs_repo_path).is_err() {
+        return Err(anyhow!(
+            "{} is not a valid hg repo",
+            abs_repo_path.display()
+        ));
+    }
+
+    let mut object_map = OBJECT_CACHE.lock();
+    get_or_create_cached_objects(&abs_repo_path, &mut object_map)?;
+
+    let cached_objects = object_map.get_mut(&abs_repo_path).context("loading repo")?;
+    let filter_gen = &cached_objects.filter_gen;
+
+    filter_gen.are_filter_ids_identical(lhs, rhs)
 }
 
 // As mentioned below, we return the MercurialMatcher via a promise to circumvent some async
