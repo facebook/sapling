@@ -61,6 +61,13 @@ class GlobFilter : public Filter {
       RelativePathPiece path,
       folly::StringPiece filterId) const override;
 
+  /*
+   * Returns whether two filters are identical. GlobFilters are bijective,
+   * so a simple bytewise comparison is sufficient.
+   */
+  bool areFiltersIdentical(folly::StringPiece lhs, folly::StringPiece rhs)
+      const override;
+
  private:
   std::unique_ptr<rust::Box<facebook::eden::MercurialMatcher>> matcher_;
 };

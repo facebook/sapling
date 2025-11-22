@@ -33,4 +33,10 @@ ImmediateFuture<FilterCoverage> GlobFilter::getFilterCoverageForPath(
   });
 }
 
+bool GlobFilter::areFiltersIdentical(
+    folly::StringPiece lhs,
+    folly::StringPiece rhs) const {
+  return lhs == rhs;
+}
+
 } // namespace facebook::eden

@@ -48,5 +48,15 @@ class Filter {
   virtual ImmediateFuture<FilterCoverage> getFilterCoverageForPath(
       RelativePathPiece path,
       folly::StringPiece filterId) const = 0;
+
+  /*
+   * Returns a boolean that indicates whether two filters are identical.
+   * FilterIDs -> Filter mappings are not guaranteed to be bijective, and
+   * therefore this method is required to determine whether two FilterIDs
+   * evaluate to the same underlying Filter object.
+   */
+  virtual bool areFiltersIdentical(
+      folly::StringPiece lhs,
+      folly::StringPiece rhs) const = 0;
 };
 } // namespace facebook::eden

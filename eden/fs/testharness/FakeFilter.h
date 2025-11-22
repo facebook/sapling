@@ -53,6 +53,11 @@ class FakeSubstringFilter final : public Filter {
     // it's not possible for us to check if any child of the path *could* be
     // filtered because the filter can match any portion of the path
   }
+
+  bool areFiltersIdentical(folly::StringPiece lhs, folly::StringPiece rhs)
+      const override {
+    return stripVersionPrefix(lhs) == stripVersionPrefix(rhs);
+  }
 };
 
 /**
@@ -98,6 +103,11 @@ class FakePrefixFilter final : public Filter {
     // doesn't apply.
     return ImmediateFuture<FilterCoverage>{
         FilterCoverage::RECURSIVELY_UNFILTERED};
+  }
+
+  bool areFiltersIdentical(folly::StringPiece lhs, folly::StringPiece rhs)
+      const override {
+    return stripVersionPrefix(lhs) == stripVersionPrefix(rhs);
   }
 };
 } // namespace facebook::eden

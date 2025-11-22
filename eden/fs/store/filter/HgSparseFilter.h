@@ -38,6 +38,12 @@ class HgSparseFilter : public Filter {
       RelativePathPiece path,
       folly::StringPiece filterId) const override;
 
+  /*
+   * Returns whether two filters are identical.
+   */
+  bool areFiltersIdentical(folly::StringPiece lhs, folly::StringPiece rhs)
+      const override;
+
  private:
   using MercurialMatcherMap = folly::
       F14NodeMap<std::string, rust::Box<facebook::eden::MercurialMatcher>>;

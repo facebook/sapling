@@ -85,4 +85,13 @@ ImmediateFuture<FilterCoverage> HgSparseFilter::getFilterCoverageForPath(
               })};
 }
 
+bool HgSparseFilter::areFiltersIdentical(
+    folly::StringPiece lhs,
+    folly::StringPiece rhs) const {
+  // TODO: Implement proper comparison for HgSparseFilter.
+  // This requires adding additional methods to the edenfs-ffi crate to
+  // compare MercurialMatcher instances or their underlying sparse profiles.
+  return lhs == rhs;
+}
+
 } // namespace facebook::eden
