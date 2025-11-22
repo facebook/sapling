@@ -676,6 +676,38 @@ class FilteredFSRepoCacheNeverExpiresTest(FilteredFSBase):
 
 @filteredhg_test
 # pyre-ignore[13]: T62487924
+class FilterVersionMismatchTest(FilteredFSBase):
+    """
+    Test that RootID comparison fails for RootIDs that are semantically equal
+    but bytewise different
+    """
+
+    def test_status_after_filter_version_change(self) -> None:
+        """
+        Test that hg status succeeds when filter version changes after clone.
+        """
+        # Clone repo with V1 filters enabled
+        self.enable_filters("filters/v1_filter1")
+        self.assertEqual(self.get_active_filter_paths(), {"filters/v1_filter1"})
+
+        # Verify status works with V1 filters
+        self.assert_status_empty()
+
+        # FIXME: hg status now fails with parent commit mismatch error
+        # because EdenMount::diff() does bytewise comparison of RootIDs
+        # without considering that FilterIds may have different versions
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.hg("status", "--config", "experimental.filter-version=Legacy")
+
+        # Verify it's a parent mismatch error
+        self.assertIn(
+            b"requested parent commit is out-of-date",
+            context.exception.stderr,
+        )
+
+
+@filteredhg_test
+# pyre-ignore[13]: T62487924
 class FilteredFSInPlaceMigration(FilteredFSBase):
     configs_for_single_filter_migration: Optional[List[Tuple[Optional[str], str]]] = [
         ("v1f1", "filters/v1_filter1")
