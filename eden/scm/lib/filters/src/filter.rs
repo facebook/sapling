@@ -281,6 +281,40 @@ impl FilterGenerator {
             Ok(None)
         }
     }
+
+    /// Compares two filter IDs to determine if they represent identical filters.
+    /// Returns true if both FilterIds parse to the same commit_id and filter_paths (order-independent).
+    ///
+    /// This method handles cross-version comparison, allowing Legacy and V1 filter IDs
+    /// with the same content to be recognized as identical.
+    pub fn are_filter_ids_identical(&self, lhs: &[u8], rhs: &[u8]) -> Result<bool, anyhow::Error> {
+        // Quick check: if the bytes are identical, the filters are identical
+        if lhs == rhs {
+            return Ok(true);
+        }
+
+        // Parse both filter IDs
+        let lhs_filter = self
+            .get_filter_from_bytes(lhs)
+            .with_context(|| anyhow::anyhow!("failed to parse lhs filter: {:?}", lhs))?;
+        let rhs_filter = self
+            .get_filter_from_bytes(rhs)
+            .with_context(|| anyhow::anyhow!("failed to parse rhs filter: {:?}", rhs))?;
+
+        // Compare the underlying filter properties
+        // Two filters are identical if they have the same commit_id and filter_paths
+        if lhs_filter.commit_id != rhs_filter.commit_id {
+            return Ok(false);
+        }
+
+        // Sort filter paths for comparison (they may be in different orders)
+        let mut lhs_paths = lhs_filter.filter_paths.clone();
+        let mut rhs_paths = rhs_filter.filter_paths.clone();
+        lhs_paths.sort();
+        rhs_paths.sort();
+
+        Ok(lhs_paths == rhs_paths)
+    }
 }
 
 #[cfg(test)]
@@ -526,5 +560,117 @@ mod tests {
                 panic!("Expected V1 FilterId when using V1 version");
             }
         }
+    }
+
+    #[test]
+    fn test_are_filter_ids_identical_same_bytes() {
+        let (_tmp_dir, filter_gen) = create_test_filter_generator(FilterVersion::V1, Some(true));
+        let filter_id = b"test_filter_id_bytes";
+
+        // Test the fast path: identical byte arrays should return true despite not being valid FilterIDs
+        let result = filter_gen.are_filter_ids_identical(filter_id, filter_id);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
+    }
+
+    #[test]
+    fn test_are_filter_ids_identical_legacy_vs_v1_same_content() {
+        let (_tmp_dir, mut filter_gen) =
+            create_test_filter_generator(FilterVersion::V1, Some(true));
+
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+        let filter_path = RepoPathBuf::from_string(DEFAULT_FILTER_PATH.to_owned()).unwrap();
+
+        let legacy_filter_id = Filter::new_legacy(filter_path.clone(), commit_id).unwrap();
+        let legacy_id_bytes = legacy_filter_id.filter_id.id().unwrap();
+        let v1_filter_id = filter_gen
+            .generate_filter_id(commit_id, &[filter_path])
+            .unwrap();
+        let v1_id_bytes = v1_filter_id.id().unwrap();
+
+        // The Legacy and V1 filter IDs should have different byte representations
+        assert_ne!(legacy_id_bytes, v1_id_bytes);
+
+        // However, when compared using are_filter_ids_identical,
+        // they should be seen as identical because they have the same content
+        let result = filter_gen.are_filter_ids_identical(&legacy_id_bytes, &v1_id_bytes);
+        assert!(result.is_ok(), "Comparison should succeed");
+        assert!(
+            result.unwrap(),
+            "Legacy and V1 filters with same content should be identical"
+        );
+    }
+
+    #[test]
+    fn test_are_filter_ids_identical_same_commit_different_paths() {
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1, None);
+
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+        let filter_path1 = RepoPathBuf::from_string("path1.txt".to_string()).unwrap();
+        let filter_path2 = RepoPathBuf::from_string("path2.txt".to_string()).unwrap();
+
+        let filter_id1 = filter_gen
+            .generate_filter_id(commit_id, &[filter_path1])
+            .unwrap();
+        let filter_id2 = filter_gen
+            .generate_filter_id(commit_id, &[filter_path2])
+            .unwrap();
+
+        let id1_bytes = filter_id1.id().unwrap();
+        let id2_bytes = filter_id2.id().unwrap();
+
+        // Should not be identical - different paths
+        let result = filter_gen.are_filter_ids_identical(&id1_bytes, &id2_bytes);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_are_filter_ids_identical_different_commits_same_path() {
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1, None);
+
+        let commit_id1 = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+        let commit_id2 = HgId::from_hex(b"abcdef0123456789abcdef0123456789abcdef01").unwrap();
+        let filter_path = RepoPathBuf::from_string("path.txt".to_string()).unwrap();
+
+        let filter_id1 = filter_gen
+            .generate_filter_id(commit_id1, std::slice::from_ref(&filter_path))
+            .unwrap();
+        let filter_id2 = filter_gen
+            .generate_filter_id(commit_id2, &[filter_path])
+            .unwrap();
+
+        let id1_bytes = filter_id1.id().unwrap();
+        let id2_bytes = filter_id2.id().unwrap();
+
+        // Should not be identical - different commits
+        let result = filter_gen.are_filter_ids_identical(&id1_bytes, &id2_bytes);
+        assert!(result.is_ok());
+        assert!(!result.unwrap());
+    }
+
+    #[test]
+    fn test_are_filter_ids_identical_same_content_different_order() {
+        let (_tmp_dir, mut filter_gen) = create_test_filter_generator(FilterVersion::V1, None);
+
+        let commit_id = HgId::from_hex(TEST_COMMIT_ID).unwrap();
+        let path1 = RepoPathBuf::from_string("path1.txt".to_string()).unwrap();
+        let path2 = RepoPathBuf::from_string("path2.txt".to_string()).unwrap();
+        let path3 = RepoPathBuf::from_string("path3.txt".to_string()).unwrap();
+
+        let filter_id1 = filter_gen
+            .generate_filter_id(commit_id, &[path1.clone(), path2.clone(), path3.clone()])
+            .unwrap();
+        let filter_id2 = filter_gen
+            .generate_filter_id(commit_id, &[path3, path1, path2])
+            .unwrap();
+
+        let id1_bytes = filter_id1.id().unwrap();
+        let id2_bytes = filter_id2.id().unwrap();
+
+        // Should be identical - same paths and commit, just different order
+        let result = filter_gen.are_filter_ids_identical(&id1_bytes, &id2_bytes);
+        assert!(result.is_ok());
+        assert!(result.unwrap());
     }
 }
