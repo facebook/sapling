@@ -36,11 +36,11 @@ namespace facebook::eden {
 using namespace std::literals::chrono_literals;
 using folly::io::Cursor;
 
-const char kTestFilter1[] = "foo";
-const char kTestFilter2[] = "football2";
-const char kTestFilter3[] = "football3";
-const char kTestFilter4[] = "shouldFilterZeroObjects";
-const char kTestFilter5[] = "bazbar";
+const char kTestFilter1[] = "V1:foo";
+const char kTestFilter2[] = "V1:football2";
+const char kTestFilter3[] = "V2:football3";
+const char kTestFilter4[] = "Legacy:shouldFilterZeroObjects";
+const char kTestFilter5[] = "V1:bazbar";
 const char kTestFilter6[] =
     "\
 [include]\n\
@@ -49,8 +49,8 @@ const char kTestFilter6[] =
 foo\n\
 dir2/README\n\
 filtered_out";
-const char kTestFilter7[] = "dir2/README";
-const char kTestFilter8[] = "this/filter/is/very/nested";
+const char kTestFilter7[] = "V2:dir2/README";
+const char kTestFilter8[] = "V1:this/filter/is/very/nested";
 
 struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_filtered_backing_store_test"};
