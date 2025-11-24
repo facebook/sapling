@@ -98,31 +98,6 @@ struct TreeCacheTest : ::testing::Test {
   }
 };
 
-struct TreeCacheShardedTest : ::testing::Test {
- protected:
-  std::shared_ptr<ReloadableConfig> edenConfig;
-  std::shared_ptr<TreeCache> cache;
-
-  void SetUp() override {
-    std::shared_ptr<EdenConfig> rawEdenConfig{
-        EdenConfig::createTestEdenConfig()};
-
-    rawEdenConfig->inMemoryTreeCacheSize.setValue(
-        cacheMaxSize, ConfigSourceType::Default, true);
-    rawEdenConfig->inMemoryTreeCacheMinimumItems.setValue(
-        cacheMinEntries, ConfigSourceType::Default, true);
-    // Enable ShardedCacheType by setting prefetchOptimizations=true and
-    // treeCacheShards>0
-    rawEdenConfig->prefetchOptimizations.setValue(
-        true, ConfigSourceType::Default, true);
-    rawEdenConfig->treeCacheShards.setValue(4, ConfigSourceType::Default, true);
-
-    edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
-
-    cache = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
-  }
-};
-
 TEST_F(TreeCacheTest, testAssumptions) {
   // This test just exists to catch if the underlying assumptions of the rest of
   // the tests are violated rather than the caching code being incorrect. This
@@ -201,54 +176,4 @@ TEST_F(TreeCacheTest, testSizeOverflowLargeInsert) {
       std::shared_ptr<const Tree>{nullptr}, cache->get(tree2->getObjectId()));
   EXPECT_TRUE(cache->contains(tree4->getObjectId()));
   EXPECT_EQ(tree4, cache->get(tree4->getObjectId()));
-}
-
-TEST_F(TreeCacheShardedTest, testShardedCacheBasicOperations) {
-  cache->insert(tree0_id, tree0);
-  cache->insert(tree1_id, tree1);
-
-  EXPECT_TRUE(cache->contains(tree0->getObjectId()));
-  EXPECT_TRUE(cache->contains(tree1->getObjectId()));
-
-  EXPECT_EQ(tree0, cache->get(tree0->getObjectId()));
-  EXPECT_EQ(tree1, cache->get(tree1->getObjectId()));
-
-  auto nonExistentId =
-      ObjectId::fromHex("1111111111111111111111111111111111111111");
-  EXPECT_EQ(nullptr, cache->get(nonExistentId));
-
-  cache->clear();
-  EXPECT_FALSE(cache->contains(tree0->getObjectId()));
-  EXPECT_FALSE(cache->contains(tree1->getObjectId()));
-}
-
-TEST_F(TreeCacheShardedTest, testEvictionBasedOnTreeSize) {
-  // Initially, shards should have max size 0 (unlimited).
-  EXPECT_EQ(0, cache->maxTreesPerShard())
-      << "Shards should start with max size 0 (unlimited)";
-
-  // Insert trees until we exceed the byte size limit (cacheMaxSize)
-  // cacheMaxSize = smallTreeSize * 3 + 1, so 3 small trees should fit.
-  cache->insert(tree0_id, tree0);
-  cache->insert(tree1_id, tree1);
-  cache->insert(tree2_id, tree2);
-
-  // After 3 trees, we're still under the limit, so max size should still be 0
-  EXPECT_EQ(0, cache->maxTreesPerShard())
-      << "After 3 trees (under byte limit), shard max size should still be 0";
-
-  // Insert a 4th tree, which should push us over the byte size limit.
-  // This should cause us to set the ShardedLruCache's max size to 3.
-  cache->insert(tree3_id, tree3);
-
-  // After exceeding the byte limit, shards should have a non-zero max size.
-  // With 4 shards and setMaxSize(3), each shard gets max(3/4, 1) = 1.
-  EXPECT_EQ(1, cache->maxTreesPerShard())
-      << "After exceeding byte limit with prevObjectCount=3, each shard should "
-         "have max size = max(3/4, 1) = 1";
-
-  // At least one tree should have been evicted.
-  EXPECT_FALSE(
-      cache->contains(tree0_id) && cache->contains(tree1_id) &&
-      cache->contains(tree2_id) && cache->contains(tree3_id));
 }

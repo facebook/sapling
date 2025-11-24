@@ -7,13 +7,8 @@
 
 #pragma once
 
-#include <map>
-#include <memory>
-#include <variant>
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ObjectCache.h"
-#include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/utils/ShardedLruCache.h"
 
 namespace facebook::eden {
 
@@ -37,7 +32,8 @@ class ReloadableConfig;
  *
  * It is safe to use this object from arbitrary threads.
  */
-class TreeCache {
+class TreeCache
+    : public ObjectCache<Tree, ObjectCacheFlavor::Simple, TreeCacheStats> {
  public:
   static std::shared_ptr<TreeCache> create(
       std::shared_ptr<ReloadableConfig> config,
@@ -49,10 +45,11 @@ class TreeCache {
     return std::make_shared<TC>(config, std::move(stats));
   }
   ~TreeCache();
-  TreeCache(const TreeCache&) = delete;
-  TreeCache& operator=(const TreeCache&) = delete;
+
   TreeCache(TreeCache&&) = delete;
   TreeCache& operator=(TreeCache&&) = delete;
+  TreeCache(const TreeCache&) = delete;
+  TreeCache& operator=(const TreeCache&) = delete;
 
   /**
    * If a tree for the given id is in cache, return it. If the tree is not in
@@ -67,71 +64,11 @@ class TreeCache {
    */
   void insert(ObjectId id, std::shared_ptr<const Tree> tree);
 
-  /**
-   * Returns true if the cache contains a tree for the given id.
-   */
-  bool contains(const ObjectId& id) const;
-
-  /**
-   * Evicts everything from cache.
-   */
-  void clear();
-
-  /**
-   * Get the max size of a shard in the ShardedLruCache. This is used for
-   * testing to verify that the max size is set correctly. Returns 0 if not
-   * using ShardedLruCache.
-   */
-  size_t maxTreesPerShard() const;
-
-  struct Stats {
-    size_t objectCount{0};
-    size_t totalSizeInBytes{0};
-    uint64_t hitCount{0};
-    uint64_t missCount{0};
-    uint64_t evictionCount{0};
-    uint64_t dropCount{0};
-  };
-
-  /**
-   * Return information about the current size of the cache and the total number
-   * of hits and misses.
-   */
-  Stats getStats(const std::map<std::string, int64_t>& counters) const;
-
  private:
   /**
    * Reference to the eden config, may be a null pointer in unit tests.
    */
   std::shared_ptr<ReloadableConfig> config_;
-
-  using ObjectCacheType = std::shared_ptr<
-      ObjectCache<Tree, ObjectCacheFlavor::Simple, TreeCacheStats>>;
-  using ShardedCacheType = ShardedLruCache<std::shared_ptr<const Tree>>;
-
-  /**
-   * The underlying cache implementation. Either ShardedLruCache (when
-   * prefetch optimizations are enabled and treeCacheShards > 0) or
-   * ObjectCache (legacy implementation).
-   */
-  std::variant<ObjectCacheType, ShardedCacheType> cache_;
-
-  EdenStatsPtr stats_;
-
-  std::atomic<size_t> objectCount_{0};
-  std::atomic<size_t> totalSizeInBytes_{0};
-
-  /**
-   * For ShardedLruCache, the maximum total byte size allowed. Zero means no
-   * limit.
-   */
-  size_t maxSizeBytes_{0};
-
-  /**
-   * For ShardedLruCache, tracks whether we've hit the byte size limit and
-   * configured the ShardedLruCache's max key size.
-   */
-  std::atomic<bool> maxSizeFrozen_{false};
 
   explicit TreeCache(
       std::shared_ptr<ReloadableConfig> config,
