@@ -164,7 +164,7 @@ function(rust_static_library TARGET)
   if(DEFINED ARG_USE_CXX_INCLUDE)
     target_include_directories(
       ${TARGET}
-      INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/
+      INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/include
     )
   endif()
 
@@ -185,7 +185,7 @@ endfunction()
 # The CMake target will be registered to build by default as part of the
 # ALL target.
 function(rust_executable TARGET)
-  fb_cmake_parse_args(ARG "" "BINARY_NAME;FEATURES" "" "${ARGN}")
+  fb_cmake_parse_args(ARG "" "BINARY_NAME;FEATURES" "DEPENDS" "${ARGN}")
 
   set(crate_name "${TARGET}")
   set(cargo_target "${TARGET}.cargo")
@@ -224,6 +224,7 @@ function(rust_executable TARGET)
       ${CARGO_COMMAND}
       ${cargo_flags}
     COMMENT "Building Rust executable '${crate_name}'..."
+    DEPENDS ${ARG_DEPENDS}
     JOB_POOL rust_job_pool
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     BYPRODUCTS
