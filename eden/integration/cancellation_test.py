@@ -149,6 +149,62 @@ class CancellationTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             unblock_info = UnblockFaultArg(keyClass="debugGetBlob", keyValueRegex=".*")
             await client.unblockFault(unblock_info)
 
+    async def test_server_stop_cancels_requests(self) -> None:
+        """Test that stopping the Eden server cancels blocked requests.
+
+        Workflow:
+        1. Inject blockWithCancel fault on debugGetBlob
+        2. Make debugGetBlob thrift request (blocks with fault, polls for cancellation)
+        3. Stop the Eden server
+        4. See that original debugGetBlob returns with cancellation message (not timeout)
+        """
+        async with self.get_thrift_client() as client:
+            fault = FaultDefinition(
+                keyClass="debugGetBlob",
+                keyValueRegex=".*",
+                blockWithCancel=True,
+                count=0,  # No expiration
+            )
+            await client.injectFault(fault)
+
+            blob_request = DebugGetScmBlobRequest(
+                mountId=MountId(mountPoint=self.mount_path_bytes),
+                id=b"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                origins=1,
+            )
+            blob_task = asyncio.create_task(client.debugGetBlob(blob_request))
+
+            await asyncio.sleep(0.1)
+
+            debug_get_blob_request = None
+            active_requests_response = await client.getActiveRequests()
+
+            for req in active_requests_response.requests:
+                if "debugGetBlob" in req.method:
+                    debug_get_blob_request = req
+                    break
+
+            self.assertIsNotNone(
+                debug_get_blob_request, "debugGetBlob request should be active"
+            )
+            self.assertTrue(
+                debug_get_blob_request.cancelable,
+                "debugGetBlob request should be cancelable",
+            )
+
+            # Stop the Eden server - this should trigger cancellation
+            self.eden.shutdown()
+
+            with self.assertRaises(EdenError) as cm:
+                await asyncio.wait_for(blob_task, timeout=5.0)
+
+            error = cm.exception
+            self.assertIn(
+                "folly::OperationCancelled",
+                error.message,
+                "Expected folly::OperationCancelled in error message",
+            )
+
     async def test_bulk_cancel_nonexistent_requests(self) -> None:
         """Test cancelling multiple non-existent requests in a single bulk operation."""
         async with self.get_thrift_client() as client:
