@@ -89,11 +89,8 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectCache(
     size_t maximumCacheSizeBytes,
     size_t minimumEntryCount,
     EdenStatsPtr stats)
-    : state_{
-          std::in_place,
-          maximumCacheSizeBytes,
-          minimumEntryCount,
-          std::move(stats)} {}
+    : state_{std::in_place, maximumCacheSizeBytes, minimumEntryCount},
+      stats_{std::move(stats)} {}
 
 template <
     typename ObjectType,
@@ -193,7 +190,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getImpl(
   auto* item = folly::get_ptr(state.items, id);
   if (!item) {
     XLOG(DBG6, "ObjectCache::getImpl missed");
-    state.stats->increment(&ObjectCacheStats::getMiss);
+    stats_->increment(&ObjectCacheStats::getMiss);
 
   } else {
     XLOG(DBG6, "ObjectCache::getImpl hit");
@@ -204,7 +201,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getImpl(
         state.evictionQueue.end(),
         state.evictionQueue,
         state.evictionQueue.iterator_to(*item));
-    state.stats->increment(&ObjectCacheStats::getHit);
+    stats_->increment(&ObjectCacheStats::getHit);
   }
 
   return item;
@@ -434,14 +431,13 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getStats(
     }
   };
 
-  stats.hitCount =
-      getCounterValue(state->stats->getName(&ObjectCacheStats::getHit));
+  stats.hitCount = getCounterValue(stats_->getName(&ObjectCacheStats::getHit));
   stats.missCount =
-      getCounterValue(state->stats->getName(&ObjectCacheStats::getMiss));
+      getCounterValue(stats_->getName(&ObjectCacheStats::getMiss));
   stats.evictionCount =
-      getCounterValue(state->stats->getName(&ObjectCacheStats::insertEviction));
+      getCounterValue(stats_->getName(&ObjectCacheStats::insertEviction));
   stats.dropCount =
-      getCounterValue(state->stats->getName(&ObjectCacheStats::objectDrop));
+      getCounterValue(stats_->getName(&ObjectCacheStats::objectDrop));
   return stats;
 }
 
@@ -477,7 +473,7 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::dropInterestHandle(
 
   if (--item->referenceCount == 0) {
     state->evictionQueue.erase(state->evictionQueue.iterator_to(*item));
-    state->stats->increment(&ObjectCacheStats::objectDrop);
+    stats_->increment(&ObjectCacheStats::objectDrop);
     evictItem(*state, *item);
   }
 }
@@ -509,7 +505,7 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::evictOne(
     State& state) noexcept {
   const auto& front = state.evictionQueue.front();
   state.evictionQueue.pop_front();
-  state.stats->increment(&ObjectCacheStats::insertEviction);
+  stats_->increment(&ObjectCacheStats::insertEviction);
   evictItem(state, front);
 }
 
