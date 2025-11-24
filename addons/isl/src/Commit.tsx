@@ -334,9 +334,11 @@ export const Commit = memo(
         });
       }
       if (commit.fullRepoBranch != null) {
-        const item = Internal.getFullRepoBranchMergeContextMenuItem?.(commit.fullRepoBranch);
-        if (item != null) {
-          items.push(item);
+        const fullRepoBranchItems = Internal.getFullRepoBranchMergeContextMenuItems?.(
+          commit.fullRepoBranch,
+        );
+        if (fullRepoBranchItems != null && fullRepoBranchItems instanceof Array) {
+          items.push(...fullRepoBranchItems);
         }
       }
       return items;
