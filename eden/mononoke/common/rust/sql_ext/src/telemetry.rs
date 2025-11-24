@@ -761,6 +761,8 @@ mod facebook {
         log_entry.set_success(0); // 0 indicates failed query
         // Set error message
         log_entry.set_error(format!("{:?}", err));
+        mysql_errno(err).map(|errno| log_entry.set_mysql_errno(errno));
+        mysql_error_type(err).map(|etype| log_entry.set_mysql_error_type(etype));
         // Set retry fields
         log_entry.set_attempt(attempt as i64);
         log_entry.set_will_retry(will_retry);
@@ -1070,6 +1072,17 @@ mod facebook {
                 (shard_name.to_string(), query_name.to_string(), error_key),
             );
         }
+    }
+
+    fn mysql_errno(e: &anyhow::Error) -> Option<i64> {
+        e.downcast_ref::<MysqlError>()
+            .and_then(|e| e.mysql_errno())
+            .and_then(|errno| errno.try_into().ok())
+    }
+    fn mysql_error_type(e: &anyhow::Error) -> Option<String> {
+        e.downcast_ref::<MysqlError>()
+            .and_then(|e| std::any::type_name_of_val(e).split("::").last())
+            .map(|s| s.to_string())
     }
 
     pub(super) fn add_mysql_query_telemetry(
