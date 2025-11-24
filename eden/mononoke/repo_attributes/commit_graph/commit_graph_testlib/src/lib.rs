@@ -55,6 +55,7 @@ macro_rules! impl_commit_graph_tests {
             test_storage_store_and_fetch,
             test_is_ancestor_exact_prefetching,
             test_is_ancestor_skew_ancestors_prefetching,
+            test_is_linear_stack,
             test_skip_tree,
             test_p1_linear_tree,
             test_ancestors_difference,
@@ -427,6 +428,81 @@ async fn test_is_ancestor_impl(
                 name_cs_id("I"),
                 vec![name_cs_id("G"), name_cs_id("H")]
             )
+            .await?
+    );
+
+    Ok(())
+}
+
+pub async fn test_is_linear_stack(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag(
+        &ctx,
+        r"
+             A-B-C-D-G-H-I
+              \     /
+               E---F
+         ",
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    assert!(
+        graph
+            .is_linear_stack(&ctx, name_cs_id("C"), name_cs_id("C"))
+            .await?
+    );
+    assert!(
+        !graph
+            .is_linear_stack(&ctx, name_cs_id("G"), name_cs_id("I"))
+            .await?
+    );
+    assert!(
+        graph
+            .is_linear_stack(&ctx, name_cs_id("H"), name_cs_id("I"))
+            .await?
+    );
+    assert!(
+        !graph
+            .is_linear_stack(&ctx, name_cs_id("A"), name_cs_id("H"))
+            .await?
+    );
+    assert!(
+        graph
+            .is_linear_stack(&ctx, name_cs_id("A"), name_cs_id("F"))
+            .await?
+    );
+    assert!(
+        graph
+            .is_linear_stack(&ctx, name_cs_id("B"), name_cs_id("D"))
+            .await?
+    );
+    assert!(
+        !graph
+            .is_linear_stack(&ctx, name_cs_id("F"), name_cs_id("I"))
+            .await?
+    );
+    assert!(
+        !graph
+            .is_linear_stack(&ctx, name_cs_id("C"), name_cs_id("I"))
+            .await?
+    );
+    assert!(
+        !graph
+            .is_linear_stack(&ctx, name_cs_id("I"), name_cs_id("A"))
+            .await?
+    );
+    assert!(
+        !graph
+            .is_linear_stack(&ctx, name_cs_id("E"), name_cs_id("D"))
+            .await?
+    );
+    assert!(
+        !graph
+            .is_linear_stack(&ctx, name_cs_id("B"), name_cs_id("E"))
             .await?
     );
 

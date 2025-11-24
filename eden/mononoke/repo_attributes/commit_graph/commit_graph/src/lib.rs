@@ -29,6 +29,7 @@ use commit_graph_types::edges::FirstParentLinear;
 use commit_graph_types::edges::Parents;
 use commit_graph_types::edges::ParentsAndSubtreeSources;
 use commit_graph_types::frontier::AncestorsWithinDistance;
+use commit_graph_types::frontier::ChangesetFrontier;
 use commit_graph_types::frontier::ChangesetFrontierWithinDistance;
 use commit_graph_types::segments::BoundaryChangesets;
 pub use commit_graph_types::segments::ChangesetSegment;
@@ -480,6 +481,42 @@ impl<E: EdgeType> CommitGraphOps<E> {
             self.changeset_generation(ctx, ancestor)
         )?;
         debug_assert!(!frontier.is_empty(), "frontier should contain descendant");
+        self.lower_frontier(ctx, &mut frontier, target_gen).await?;
+        Ok(frontier.highest_generation_contains(ancestor, target_gen))
+    }
+
+    /// Returns true if the changesets that are ancestors of `ancestor` excluding
+    /// strict ancestors of `descendant` form a linear stack i.e. none of them have
+    /// more than one parent and `ancestor` is an ancestor of `descendant`.
+    pub async fn is_linear_stack(
+        &self,
+        ctx: &CoreContext,
+        ancestor: ChangesetId,
+        descendant: ChangesetId,
+    ) -> Result<bool> {
+        let (ancestor_edges, descendant_edges) = futures::try_join!(
+            self.storage.fetch_edges(ctx, ancestor),
+            self.storage.fetch_edges(ctx, descendant),
+        )?;
+
+        let target_gen = ancestor_edges.node().generation::<Parents>();
+
+        if descendant_edges.node().generation::<Parents>() < target_gen {
+            return Ok(false);
+        }
+
+        if let Some(merge_ancestor) = descendant_edges.merge_ancestor::<Parents>()
+            && merge_ancestor.generation::<Parents>() > FIRST_GENERATION
+            && merge_ancestor.generation::<Parents>() >= target_gen
+        {
+            return Ok(false);
+        }
+
+        let mut frontier = ChangesetFrontier::new_single(
+            descendant,
+            descendant_edges.node().generation::<Parents>(),
+        );
+
         self.lower_frontier(ctx, &mut frontier, target_gen).await?;
         Ok(frontier.highest_generation_contains(ancestor, target_gen))
     }
