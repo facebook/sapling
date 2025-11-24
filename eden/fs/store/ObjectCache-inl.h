@@ -89,9 +89,11 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectCache(
     size_t maximumCacheSizeBytes,
     size_t minimumEntryCount,
     EdenStatsPtr stats)
-    : maximumCacheSizeBytes_{maximumCacheSizeBytes},
-      minimumEntryCount_{minimumEntryCount},
-      state_{std::in_place, std::move(stats)} {}
+    : state_{
+          std::in_place,
+          maximumCacheSizeBytes,
+          minimumEntryCount,
+          std::move(stats)} {}
 
 template <
     typename ObjectType,
@@ -488,13 +490,13 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::evictUntilFits(
     State& state) noexcept {
   XLOGF(
       DBG6,
-      "ObjectCache::evictUntilFits state.totalSize={}, maximumCacheSizeBytes_={}, evictionQueue.size()={}, minimumEntryCount_={}",
+      "ObjectCache::evictUntilFits state.totalSize={}, maximumCacheSizeBytes={}, evictionQueue.size()={}, minimumEntryCount={}",
       state.totalSize,
-      maximumCacheSizeBytes_,
+      state.maximumCacheSizeBytes,
       state.evictionQueue.size(),
-      minimumEntryCount_);
-  while (state.totalSize > maximumCacheSizeBytes_ &&
-         state.evictionQueue.size() > minimumEntryCount_) {
+      state.minimumEntryCount);
+  while (state.totalSize > state.maximumCacheSizeBytes &&
+         state.evictionQueue.size() > state.minimumEntryCount) {
     evictOne(state);
   }
 }
