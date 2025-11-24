@@ -1060,6 +1060,16 @@ export type ClientToServerMessage =
       id: string;
       fullRepoBranch: InternalTypes['FullRepoBranch'];
       paths: Array<RepoRelativePath>;
+    }
+  | {
+      type: 'subscribeToFullRepoBranch';
+      id: string;
+      fullRepoBranch: InternalTypes['FullRepoBranch'];
+    }
+  | {
+      type: 'unsubscribeToFullRepoBranch';
+      id: string;
+      fullRepoBranch: InternalTypes['FullRepoBranch'];
     };
 
 export type SubscriptionResultsData = {

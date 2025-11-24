@@ -1282,6 +1282,14 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'subscribeToFullRepoBranch': {
+        Internal.subscribeToFullRepoBranch?.(ctx, repo, data.fullRepoBranch);
+        break;
+      }
+      case 'unsubscribeToFullRepoBranch': {
+        Internal.unsubscribeToFullRepoBranch?.(ctx, repo, data.fullRepoBranch);
+        break;
+      }
       default: {
         if (
           repo.codeReviewProvider?.handleClientToServerMessage?.(data, message =>
