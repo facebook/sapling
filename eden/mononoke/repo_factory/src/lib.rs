@@ -1477,11 +1477,21 @@ impl RepoFactory {
             None
         };
 
+        // Construct scuba builder for logging access to restricted paths.
+        // Check for environment variable override for integration tests.
+        let scuba_builder = if let Ok(scuba_file_path) = std::env::var("ACCESS_LOG_SCUBA_FILE_PATH")
+        {
+            MononokeScubaSampleBuilder::with_discard().with_log_file(scuba_file_path)?
+        } else {
+            MononokeScubaSampleBuilder::new(self.env.fb, restricted_paths::ACCESS_LOG_SCUBA_TABLE)?
+        };
+
         let restricted_paths = RestrictedPaths::new(
             repo_config.restricted_paths_config.clone(),
             restricted_paths_manifest_id_store.clone(),
             self.env.acl_provider.clone(),
             manifest_id_cache,
+            scuba_builder,
         );
 
         Ok(Arc::new(restricted_paths))

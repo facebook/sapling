@@ -761,11 +761,16 @@ impl TestRepoFactory {
         .await?;
 
         let acl_provider = DummyAclProvider::new(self.fb)?;
+
+        // Create scuba builder with discard for tests
+        let scuba_builder = MononokeScubaSampleBuilder::with_discard();
+
         Ok(Arc::new(RestrictedPaths::new(
             restricted_paths_config,
             restricted_paths_manifest_id_store.clone(),
             acl_provider,
             Some(Arc::new(cache)),
+            scuba_builder,
         )))
     }
 

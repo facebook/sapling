@@ -47,6 +47,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use restricted_paths::*;
+use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
@@ -259,13 +260,15 @@ impl RestrictedPathsTestDataBuilder {
         let ctx = CoreContext::test_mock_session(session_container);
 
         let temp_file = tempfile::NamedTempFile::new()?;
-        let log_file_path = temp_file.path().to_path_buf();
+        let log_file_path = temp_file.into_temp_path().keep()?;
 
-        unsafe {
-            std::env::set_var("ACCESS_LOG_SCUBA_FILE_PATH", &log_file_path);
-        }
-
-        let repo = setup_test_repo(&ctx, self.restricted_paths, self.acls).await?;
+        let repo = setup_test_repo(
+            &ctx,
+            self.restricted_paths,
+            self.acls,
+            log_file_path.clone(),
+        )
+        .await?;
 
         Ok(RestrictedPathsTestData {
             ctx,
@@ -506,6 +509,7 @@ async fn setup_test_repo(
     ctx: &CoreContext,
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
     acls: Option<Acls>,
+    log_file_path: std::path::PathBuf,
 ) -> Result<TestRepo> {
     let repo_id = RepositoryId::new(0);
     let use_manifest_id_cache = true;
@@ -539,11 +543,15 @@ async fn setup_test_repo(
             .await?,
     );
 
+    // Create scuba builder that logs to the test file
+    let scuba_builder = MononokeScubaSampleBuilder::with_discard().with_log_file(log_file_path)?;
+
     let repo_restricted_paths = Arc::new(RestrictedPaths::new(
         config,
         manifest_id_store.clone(),
         acl_provider,
         Some(cache),
+        scuba_builder,
     ));
 
     // Create the test repo
@@ -580,6 +588,7 @@ fn deserialize_scuba_log_file(
         .map(|line| {
             serde_json::from_str::<serde_json::Value>(&line)
                 .map_err(anyhow::Error::from)
+                .with_context(|| format!("Failed to parse line: {}", line))
                 .map(|json| {
                     // Scuba groups the logs by type (e.g. int, normal), so
                     // let's remove those and flatten the sample into a single

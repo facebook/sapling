@@ -25,7 +25,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use crate::manifest_id_store::ManifestId;
 use crate::manifest_id_store::ManifestType;
 
-const ACCESS_LOG_SCUBA_TABLE: &str = "mononoke_restricted_paths_access_test";
+pub const ACCESS_LOG_SCUBA_TABLE: &str = "mononoke_restricted_paths_access_test";
 
 pub(crate) enum RestrictedPathAccessData {
     /// When the tree is accessed by manifest id
@@ -41,6 +41,7 @@ pub(crate) async fn log_access_to_restricted_path(
     acls: Vec<&MononokeIdentity>,
     access_data: RestrictedPathAccessData,
     acl_provider: Arc<dyn AclProvider>,
+    scuba: MononokeScubaSampleBuilder,
 ) -> Result<bool> {
     // TODO(T239041722): store permission checkers in RestrictedPaths to improve
     // performance if needed.
@@ -71,6 +72,7 @@ pub(crate) async fn log_access_to_restricted_path(
         access_data,
         has_authorization,
         acls,
+        scuba,
     )?;
 
     Ok(has_authorization)
@@ -83,14 +85,8 @@ fn log_access_to_scuba(
     access_data: RestrictedPathAccessData,
     has_authorization: bool,
     acls: Vec<&MononokeIdentity>,
+    mut scuba: MononokeScubaSampleBuilder,
 ) -> Result<()> {
-    // Log to file if ACCESS_LOG_SCUBA_FILE_PATH is set (for testing)
-    let mut scuba = if let Ok(scuba_file_path) = std::env::var("ACCESS_LOG_SCUBA_FILE_PATH") {
-        MononokeScubaSampleBuilder::with_discard().with_log_file(scuba_file_path)?
-    } else {
-        MononokeScubaSampleBuilder::new(ctx.fb, ACCESS_LOG_SCUBA_TABLE)?
-    };
-
     scuba.add_metadata(ctx.metadata());
 
     scuba.add_common_server_data();

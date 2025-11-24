@@ -22,7 +22,9 @@ use metaconfig_types::RestrictedPathsConfig;
 use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
+use scuba_ext::MononokeScubaSampleBuilder;
 
+pub use crate::access_log::ACCESS_LOG_SCUBA_TABLE;
 use crate::access_log::log_access_to_restricted_path;
 pub use crate::cache::ManifestIdCache;
 pub use crate::cache::RestrictedPathsManifestIdCache;
@@ -48,6 +50,8 @@ pub struct RestrictedPaths {
     /// Optional in-memory cache for manifest ID lookups, instead of direct DB
     /// queries
     manifest_id_cache: Option<Arc<RestrictedPathsManifestIdCache>>,
+    /// Scuba sample builder for logging access to restricted paths
+    scuba: MononokeScubaSampleBuilder,
 }
 
 impl RestrictedPaths {
@@ -56,12 +60,14 @@ impl RestrictedPaths {
         manifest_id_store: Arc<dyn RestrictedPathsManifestIdStore>,
         acl_provider: Arc<dyn AclProvider>,
         manifest_id_cache: Option<Arc<RestrictedPathsManifestIdCache>>,
+        scuba: MononokeScubaSampleBuilder,
     ) -> Self {
         Self {
             config,
             manifest_id_store,
             acl_provider,
             manifest_id_cache,
+            scuba,
         }
     }
 
@@ -172,6 +178,7 @@ impl RestrictedPaths {
             acls,
             crate::access_log::RestrictedPathAccessData::Manifest(manifest_id, manifest_type),
             self.acl_provider.clone(),
+            self.scuba.clone(),
         )
         .await
     }
@@ -213,6 +220,7 @@ impl RestrictedPaths {
             matched_acls,
             crate::access_log::RestrictedPathAccessData::FullPath { full_path: path },
             self.acl_provider.clone(),
+            self.scuba.clone(),
         )
         .await
     }
@@ -245,11 +253,15 @@ mod tests {
                 .expect("Failed to create Sqlite connection")
                 .with_repo_id(repo_id),
         );
+
+        let scuba = MononokeScubaSampleBuilder::with_discard();
+
         let repo_restricted_paths = RestrictedPaths::new(
             RestrictedPathsConfig::default(),
             manifest_id_store,
             acl_provider,
             None,
+            scuba,
         );
 
         assert!(!repo_restricted_paths.has_restricted_paths());
@@ -287,8 +299,11 @@ mod tests {
             use_manifest_id_cache,
             cache_update_interval_ms,
         };
+
+        let scuba = MononokeScubaSampleBuilder::with_discard();
+
         let repo_restricted_paths =
-            RestrictedPaths::new(config, manifest_id_store, acl_provider, None);
+            RestrictedPaths::new(config, manifest_id_store, acl_provider, None, scuba);
 
         assert!(repo_restricted_paths.has_restricted_paths());
         Ok(())
@@ -319,8 +334,11 @@ mod tests {
             use_manifest_id_cache,
             cache_update_interval_ms,
         };
+
+        let scuba = MononokeScubaSampleBuilder::with_discard();
+
         let repo_restricted_paths =
-            RestrictedPaths::new(config, manifest_id_store, acl_provider, None);
+            RestrictedPaths::new(config, manifest_id_store, acl_provider, None, scuba);
 
         // Test exact match
         let exact_path = NonRootMPath::new("restricted/dir").unwrap();
