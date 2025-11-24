@@ -121,7 +121,7 @@ impl Store {
         let mut log = self.write();
 
         for (k, v) in items {
-            log.append_direct(|buf| serialize(k, &v, buf))?;
+            log.append_direct(|buf| serialize(k, v, buf))?;
         }
 
         Ok(())
