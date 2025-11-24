@@ -107,3 +107,15 @@ cpp_unittest(
         "//folly/futures:core",
     ],
 )
+
+cpp_unittest(
+    name = "eden_server_test",
+    srcs = ["EdenServerTest.cpp"],
+    labels = ["autodeps2_generated"],
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/fs/service:server",
+        "//eden/fs/testharness:test_server",
+        "//folly:cancellation_token",
+    ],
+)
