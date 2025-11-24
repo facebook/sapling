@@ -226,6 +226,9 @@ constexpr StringPiece kNFSStatPrefix{"nfs"};
 #endif
 constexpr StringPiece kStateConfig{"config.toml"};
 
+// seconds offset to call cancellation before sigkill
+constexpr std::chrono::seconds kCancellationOffsetBeforeShutdown{4};
+
 std::optional<std::string> getUnixDomainSocketPath(
     const folly::SocketAddress& address) {
   return AF_UNIX == address.getFamily() ? std::make_optional(address.getPath())
@@ -420,9 +423,34 @@ class EdenServer::ThriftServerEventHandler
             // via default signal handling the next time we get the signal.
             XLOGF(INFO, "unregistering signal handler for signal {}", sig);
             unregisterSignalHandler(sig);
+
+            edenServer_->getHandler()->cancelAllActiveRequests(
+                "SIGINT received");
           } else {
-            // Otherwise we are using shutdownTimeout. Schedule a call to
-            // _exit() after the timeout.
+            // Otherwise we are using shutdownTimeout.
+
+            // Schedule cancellation of active requests, leave some time for
+            // requests to complete.
+            auto cancelDelay =
+                shutdownTimeout - kCancellationOffsetBeforeShutdown;
+            auto delayMs = std::max(
+                std::chrono::milliseconds(0),
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    cancelDelay));
+
+            XLOGF(
+                DBG3,
+                "Scheduling cancellation in {} milliseconds",
+                delayMs.count());
+            edenServer_->getMainEventBase()->runAfterDelay(
+                [handler = edenServer_->getHandler()] {
+                  XLOG(DBG3, "Cancelling all active requests before timeout");
+                  handler->cancelAllActiveRequests(
+                      "Shutdown timeout approaching");
+                },
+                static_cast<uint32_t>(delayMs.count()));
+
+            // Schedule a call to _exit() after the timeout.
             XLOGF(
                 INFO,
                 "scheduling _exit() if not done shutting down in {}",
@@ -2572,6 +2600,8 @@ void EdenServer::stop() {
     }
     state->state = RunState::SHUTTING_DOWN;
   }
+
+  handler_->cancelAllActiveRequests("EdenServer::stop() called");
   clearStartupStatusPublishers();
   shutdownSubscribers();
   server_->stop();

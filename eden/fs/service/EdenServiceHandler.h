@@ -545,6 +545,17 @@ class EdenServiceHandler
   std::optional<folly::CancellationToken> getCancellationToken(
       uint64_t requestId);
 
+  /**
+   * Cancel all active Thrift requests.
+   *
+   * Iterates through all active requests in requestCancellationStore_ and
+   * requests cancellation for each one. This is used during server shutdown
+   * to allow operations to finish gracefully before terminating.
+   *
+   * @param reason Description of why cancellation was requested (for logging)
+   */
+  void cancelAllActiveRequests(std::string_view reason);
+
  private:
   EdenMountHandle lookupMount(const MountId& mountId);
   EdenMountHandle lookupMount(const std::unique_ptr<std::string>& mountId);

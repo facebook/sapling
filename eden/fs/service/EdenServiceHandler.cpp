@@ -6661,4 +6661,36 @@ EdenServiceHandler::getCancellationToken(uint64_t requestId) {
   return std::nullopt;
 }
 
+void EdenServiceHandler::cancelAllActiveRequests(std::string_view reason) {
+  XLOGF(DBG3, "Cancelling all active Thrift requests: {}", reason);
+
+  // Collect all cancellation sources while holding lock
+  size_t requestCount = 0;
+  std::vector<folly::CancellationSource> cancellationSources;
+
+  {
+    auto lockedStore = requestCancellationStore_.rlock();
+    requestCount = lockedStore->size();
+    cancellationSources.reserve(requestCount);
+
+    for (const auto& [requestId, cancellationInfo] : *lockedStore) {
+      if (cancellationInfo.isCancelable()) {
+        cancellationSources.push_back(*cancellationInfo.cancellationSource);
+      }
+    }
+  }
+
+  XLOGF(
+      DBG3,
+      "Requested cancellation for {} active Thrift requests, {} requests are cancellable",
+      requestCount,
+      cancellationSources.size());
+
+  for (auto& cancelSource : cancellationSources) {
+    if (!cancelSource.isCancellationRequested()) {
+      cancelSource.requestCancellation();
+    }
+  }
+}
+
 } // namespace facebook::eden
