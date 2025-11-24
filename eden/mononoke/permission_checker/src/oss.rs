@@ -122,7 +122,11 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
         None
     }
 
-    fn main_client_identity(&self, _sandcastle_alias: Option<&str>) -> String {
+    fn main_client_identity(
+        &self,
+        _sandcastle_alias: Option<&str>,
+        _clientinfo_atlas_env_id: Option<&str>,
+    ) -> String {
         String::from("PLACEHOLDER_CLIENT_IDENTITY")
     }
 
