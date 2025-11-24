@@ -557,3 +557,141 @@ TEST(
   handle3.reset();
   EXPECT_TRUE(cache->contains(id3));
 }
+
+/**
+ * Multi-shard test cases
+ */
+
+TEST(ObjectCache, multi_shard_basic_operations) {
+  // Create cache with 4 shards, large enough to hold all test objects
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          400, 40, makeRefPtr<EdenStats>(), 4);
+
+  // Insert objects and verify they can be retrieved
+  cache->insertSimple(object3->getObjectId(), object3);
+  cache->insertSimple(object4->getObjectId(), object4);
+  cache->insertSimple(object5->getObjectId(), object5);
+
+  EXPECT_TRUE(cache->contains(object3->getObjectId()));
+  EXPECT_TRUE(cache->contains(object4->getObjectId()));
+  EXPECT_TRUE(cache->contains(object5->getObjectId()));
+  EXPECT_EQ(object3, cache->getSimple(object3->getObjectId()));
+  EXPECT_EQ(object4, cache->getSimple(object4->getObjectId()));
+  EXPECT_EQ(object5, cache->getSimple(object5->getObjectId()));
+}
+
+TEST(ObjectCache, multi_shard_total_size_aggregation) {
+  // Create cache with 4 shards, large enough to avoid evictions
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          400, 40, makeRefPtr<EdenStats>(), 4);
+
+  cache->insertSimple(object3->getObjectId(), object3);
+  cache->insertSimple(object4->getObjectId(), object4);
+  cache->insertSimple(object5->getObjectId(), object5);
+
+  // Total size should be sum across all shards
+  EXPECT_EQ(12, cache->getTotalSizeBytes());
+}
+
+TEST(ObjectCache, multi_shard_object_count_aggregation) {
+  // Create cache with 4 shards, large enough to avoid evictions
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          400, 40, makeRefPtr<EdenStats>(), 4);
+
+  cache->insertSimple(object3->getObjectId(), object3);
+  cache->insertSimple(object4->getObjectId(), object4);
+  cache->insertSimple(object5->getObjectId(), object5);
+
+  // Total count should be sum across all shards
+  EXPECT_EQ(3, cache->getObjectCount());
+}
+
+TEST(ObjectCache, multi_shard_clear) {
+  // Create cache with 4 shards
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          400, 40, makeRefPtr<EdenStats>(), 4);
+
+  cache->insertSimple(object3->getObjectId(), object3);
+  cache->insertSimple(object4->getObjectId(), object4);
+  cache->insertSimple(object5->getObjectId(), object5);
+
+  EXPECT_EQ(3, cache->getObjectCount());
+
+  cache->clear();
+
+  // All objects should be gone across all shards
+  EXPECT_EQ(0, cache->getObjectCount());
+  EXPECT_EQ(0, cache->getTotalSizeBytes());
+  EXPECT_FALSE(cache->contains(object3->getObjectId()));
+  EXPECT_FALSE(cache->contains(object4->getObjectId()));
+  EXPECT_FALSE(cache->contains(object5->getObjectId()));
+}
+
+TEST(ObjectCache, multi_shard_eviction_with_minimum_entry_count) {
+  // Create cache with 4 shards, verify minimum entry count prevents eviction
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          40, 4, makeRefPtr<EdenStats>(), 4);
+
+  // Insert an 11-byte object - even though it exceeds per-shard limit (10
+  // bytes), minimum entry count ensures it stays cached
+  cache->insertSimple(object11->getObjectId(), object11);
+
+  // The large object should be in cache
+  EXPECT_TRUE(cache->contains(object11->getObjectId()));
+  EXPECT_EQ(11, cache->getTotalSizeBytes());
+}
+
+TEST(ObjectCache, multi_shard_interest_handle_basic) {
+  // Create cache with 4 shards, verify interest handles work correctly
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
+          create(400, 4, makeRefPtr<EdenStats>(), 4);
+
+  auto handle3 = cache->insertInterestHandle(
+      object3->getObjectId(),
+      object3,
+      ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle, FakeStats>::
+          Interest::WantHandle);
+
+  // Object should be retrievable
+  EXPECT_TRUE(cache->getInterestHandle(id3).object);
+
+  // Drop the handle - object should remain due to minimum entry count
+  handle3.reset();
+
+  // Still present due to minimum entry count
+  EXPECT_TRUE(cache->getInterestHandle(id3).object);
+}
+
+TEST(ObjectCache, multi_shard_size_limit_enforcement) {
+  // Create cache with 2 shards and max size of 10x object size
+  // Each shard gets 5x object size as its limit
+  constexpr size_t objectSize = 3;
+  constexpr size_t numShards = 2;
+  constexpr size_t maxSize = 10 * objectSize;
+  auto cache =
+      ObjectCache<CacheObject, ObjectCacheFlavor::Simple, FakeStats>::create(
+          maxSize, 0, makeRefPtr<EdenStats>(), numShards);
+
+  // Insert 100 objects of size 3 each
+  for (size_t i = 0; i < 100; ++i) {
+    auto id = ObjectId::sha1(
+        folly::StringPiece{reinterpret_cast<const char*>(&i), sizeof(i)});
+    auto obj = std::make_shared<CacheObject>(id, objectSize);
+    cache->insertSimple(id, obj);
+  }
+
+  // Total cache size should be between 5x and 10x the object size
+  // 5x if all objects go to one shard (that shard holds ~5 objects)
+  // 10x if objects are evenly distributed (each shard holds ~5 objects)
+  size_t totalSize = cache->getTotalSizeBytes();
+  EXPECT_GE(totalSize, 5 * objectSize)
+      << "Cache should hold at least 5 objects (worst case: all in one shard)";
+  EXPECT_LE(totalSize, 10 * objectSize)
+      << "Cache should not exceed size limit (best case: evenly distributed)";
+}

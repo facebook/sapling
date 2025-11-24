@@ -172,7 +172,8 @@ class ObjectCache : public std::enable_shared_from_this<
   create(
       size_t maximumCacheSizeBytes,
       size_t minimumEntryCount,
-      EdenStatsPtr stats);
+      EdenStatsPtr stats,
+      size_t shards = 1);
   ~ObjectCache() {
     clear();
   }
@@ -266,7 +267,8 @@ class ObjectCache : public std::enable_shared_from_this<
   explicit ObjectCache(
       size_t maximumCacheSizeBytes,
       size_t minimumEntryCount,
-      EdenStatsPtr stats);
+      EdenStatsPtr stats,
+      size_t shards = 1);
 
   void invalidate(const ObjectId& id) noexcept;
 
@@ -410,7 +412,27 @@ class ObjectCache : public std::enable_shared_from_this<
   void evictOne(State& state) noexcept;
   void evictItem(State&, const CacheItem& item) noexcept;
 
-  folly::Synchronized<State, folly::DistributedMutex> state_;
+  /**
+   * Get the shard for the given ObjectId.
+   */
+  folly::Synchronized<State, folly::DistributedMutex>& getShard(
+      const ObjectId& id) {
+    // Avoid getHashCode() call when there is only one shard.
+    if (shards_.size() == 1) {
+      return shards_[0];
+    }
+    return shards_[id.getHashCode() % shards_.size()];
+  }
+
+  const folly::Synchronized<State, folly::DistributedMutex>& getShard(
+      const ObjectId& id) const {
+    if (shards_.size() == 1) {
+      return shards_[0];
+    }
+    return shards_[id.getHashCode() % shards_.size()];
+  }
+
+  std::vector<folly::Synchronized<State, folly::DistributedMutex>> shards_;
   EdenStatsPtr stats_;
 
   friend class ObjectInterestHandle<ObjectType, ObjectCacheStats>;

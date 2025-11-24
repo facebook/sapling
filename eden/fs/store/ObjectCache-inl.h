@@ -68,17 +68,19 @@ std::shared_ptr<ObjectCache<ObjectType, Flavor, ObjectCacheStats>>
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::create(
     size_t maximumCacheSizeBytes,
     size_t minimumEntryCount,
-    EdenStatsPtr stats) {
+    EdenStatsPtr stats,
+    size_t shards) {
   // Allow make_shared with private constructor.
   struct OC : ObjectCache<ObjectType, Flavor, ObjectCacheStats> {
-    OC(size_t x, size_t y, EdenStatsPtr stats)
+    OC(size_t x, size_t y, EdenStatsPtr stats, size_t shards)
         : ObjectCache<ObjectType, Flavor, ObjectCacheStats>{
               x,
               y,
-              std::move(stats)} {}
+              std::move(stats),
+              shards} {}
   };
   return std::make_shared<OC>(
-      maximumCacheSizeBytes, minimumEntryCount, std::move(stats));
+      maximumCacheSizeBytes, minimumEntryCount, std::move(stats), shards);
 }
 
 template <
@@ -88,9 +90,26 @@ template <
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectCache(
     size_t maximumCacheSizeBytes,
     size_t minimumEntryCount,
-    EdenStatsPtr stats)
-    : state_{std::in_place, maximumCacheSizeBytes, minimumEntryCount},
-      stats_{std::move(stats)} {}
+    EdenStatsPtr stats,
+    size_t shards)
+    : stats_{std::move(stats)} {
+  XCHECK_GT(shards, 0u);
+
+  // Split the maximum cache size evenly among shards.
+  size_t perShardMaxSize = maximumCacheSizeBytes / shards;
+
+  // Split the minimum entry count among shards, but ensure each shard
+  // gets at least 1 if the total is > 0.
+  size_t perShardMinCount = minimumEntryCount / shards;
+  if (minimumEntryCount > 0 && perShardMinCount == 0) {
+    perShardMinCount = 1;
+  }
+
+  shards_.reserve(shards);
+  for (size_t i = 0; i < shards; ++i) {
+    shards_.emplace_back(std::in_place, perShardMaxSize, perShardMinCount);
+  }
+}
 
 template <
     typename ObjectType,
@@ -111,7 +130,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getInterestHandle(
   if (interest == Interest::None) {
     return GetResult{};
   }
-  auto state = state_.lock();
+  auto state = getShard(id).lock();
   return getInterestHandleCore(state, id, interest);
 }
 
@@ -170,7 +189,7 @@ typename std::enable_if_t<
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getSimple(
     const ObjectId& id) {
   XLOGF(DBG6, "ObjectCache::getSimple {}", id);
-  auto state = state_.lock();
+  auto state = getShard(id).lock();
 
   if (auto item = getImpl(id, *state)) {
     return item->object;
@@ -234,7 +253,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertInterestHandle(
       " creating entry with generation={}",
       preProcessRes.cacheItemGeneration);
 
-  auto state = state_.lock();
+  auto state = getShard(id).lock();
   return insertInterestHandleCore(
       std::move(id),
       std::move(object),
@@ -322,7 +341,7 @@ ObjectCache<ObjectType, Flavor, ObjectCacheStats>::insertSimple(
     ObjectId id,
     ObjectCache<ObjectType, Flavor, ObjectCacheStats>::ObjectPtr object) {
   XLOGF(DBG6, "ObjectCache::insertSimple {}", id);
-  auto state = state_.lock();
+  auto state = getShard(id).lock();
   insertImpl(std::move(id), std::move(object), *state);
 }
 
@@ -372,7 +391,7 @@ template <
     typename ObjectCacheStats>
 bool ObjectCache<ObjectType, Flavor, ObjectCacheStats>::contains(
     const ObjectId& id) const {
-  auto state = state_.lock();
+  auto state = getShard(id).lock();
   return 1 == state->items.count(id);
 }
 
@@ -382,10 +401,12 @@ template <
     typename ObjectCacheStats>
 void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::clear() {
   XLOG(DBG6, "ObjectCache::clear");
-  auto state = state_.lock();
-  state->totalSize = 0;
-  state->evictionQueue.clear();
-  state->items.clear();
+  for (auto& shard : shards_) {
+    auto state = shard.lock();
+    state->totalSize = 0;
+    state->evictionQueue.clear();
+    state->items.clear();
+  }
 }
 
 template <
@@ -394,8 +415,12 @@ template <
     typename ObjectCacheStats>
 size_t ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getTotalSizeBytes()
     const {
-  auto state = state_.lock();
-  return state->totalSize;
+  size_t totalSize = 0;
+  for (auto& shard : shards_) {
+    auto state = shard.lock();
+    totalSize += state->totalSize;
+  }
+  return totalSize;
 }
 
 template <
@@ -404,8 +429,12 @@ template <
     typename ObjectCacheStats>
 size_t ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getObjectCount()
     const {
-  auto state = state_.lock();
-  return state->items.size();
+  size_t objectCount = 0;
+  for (auto& shard : shards_) {
+    auto state = shard.lock();
+    objectCount += state->items.size();
+  }
+  return objectCount;
 }
 
 template <
@@ -415,12 +444,15 @@ template <
 typename ObjectCache<ObjectType, Flavor, ObjectCacheStats>::Stats
 ObjectCache<ObjectType, Flavor, ObjectCacheStats>::getStats(
     const std::map<std::string, int64_t>& counters) const {
-  auto state = state_.lock();
   Stats stats;
-  // Explicitly don't call getTotalSizeBytes or getObjectCount helpers here to
-  // avoid double-locking state_
-  stats.objectCount = state->items.size();
-  stats.totalSizeInBytes = state->totalSize;
+
+  // Aggregate stats from all shards.
+  for (auto& shard : shards_) {
+    auto state = shard.lock();
+    stats.objectCount += state->items.size();
+    stats.totalSizeInBytes += state->totalSize;
+  }
+
   auto getCounterValue = [&counters](const std::string_view& name) -> int64_t {
     std::string_view kStatsCountSuffix{".count"};
     auto it = counters.find(fmt::format("{}{}", name, kStatsCountSuffix));
@@ -449,7 +481,7 @@ void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::dropInterestHandle(
     const ObjectId& id,
     uint64_t generation) noexcept {
   XLOGF(DBG6, "dropInterestHandle {} generation={}", id, generation);
-  auto state = state_.lock();
+  auto state = getShard(id).lock();
 
   auto* item = folly::get_ptr(state->items, id);
   if (!item) {
@@ -538,7 +570,7 @@ template <
 void ObjectCache<ObjectType, Flavor, ObjectCacheStats>::invalidate(
     const ObjectId& id) noexcept {
   XLOGF(DBG6, "ObjectCache::invalidate {}", id);
-  auto state = state_.lock();
+  auto state = getShard(id).lock();
 
   if (auto item = getImpl(id, *state)) {
     state->evictionQueue.erase(state->evictionQueue.iterator_to(*item));
