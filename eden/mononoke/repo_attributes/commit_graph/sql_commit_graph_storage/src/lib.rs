@@ -1665,12 +1665,10 @@ impl SqlCommitGraphStorage {
                     self.repo_id,
                     e.node().cs_id,
                     e.node().generation::<Parents>().value(),
-                    Some(e.node().generation::<ParentsAndSubtreeSources>().value())
-                        .filter(|r#gen| *r#gen != e.node().generation::<Parents>().value()),
+                    Some(e.node().generation::<ParentsAndSubtreeSources>().value()),
                     e.node().skip_tree_depth::<Parents>(),
                     e.node().skip_tree_depth::<FirstParentLinear>(),
-                    Some(e.node().skip_tree_depth::<ParentsAndSubtreeSources>())
-                        .filter(|depth| *depth != e.node().skip_tree_depth::<Parents>()),
+                    Some(e.node().skip_tree_depth::<ParentsAndSubtreeSources>()),
                     e.parent_count(),
                     e.subtree_source_count(),
                 )
@@ -1728,12 +1726,10 @@ impl SqlCommitGraphStorage {
                     self.repo_id,
                     e.node().cs_id,
                     e.node().generation::<Parents>().value(),
-                    Some(e.node().generation::<ParentsAndSubtreeSources>().value())
-                        .filter(|r#gen| *r#gen != e.node().generation::<Parents>().value()),
+                    Some(e.node().generation::<ParentsAndSubtreeSources>().value()),
                     e.node().skip_tree_depth::<Parents>(),
                     e.node().skip_tree_depth::<FirstParentLinear>(),
-                    Some(e.node().skip_tree_depth::<ParentsAndSubtreeSources>())
-                        .filter(|depth| depth != &e.node().skip_tree_depth::<Parents>()),
+                    Some(e.node().skip_tree_depth::<ParentsAndSubtreeSources>()),
                     e.parent_count(),
                     e.subtree_source_count(),
                     maybe_get_id(e.parents::<Parents>().next())?,
@@ -1741,18 +1737,9 @@ impl SqlCommitGraphStorage {
                     maybe_get_id(e.skip_tree_parent::<Parents>())?,
                     maybe_get_id(e.skip_tree_skew_ancestor::<Parents>())?,
                     maybe_get_id(e.skip_tree_skew_ancestor::<FirstParentLinear>())?,
-                    maybe_get_id(
-                        e.merge_ancestor::<ParentsAndSubtreeSources>()
-                            .filter(|node| Some(*node) != e.merge_ancestor::<Parents>()),
-                    )?,
-                    maybe_get_id(
-                        e.skip_tree_parent::<ParentsAndSubtreeSources>()
-                            .filter(|node| Some(*node) != e.skip_tree_parent::<Parents>()),
-                    )?,
-                    maybe_get_id(
-                        e.skip_tree_skew_ancestor::<ParentsAndSubtreeSources>()
-                            .filter(|node| Some(*node) != e.skip_tree_skew_ancestor::<Parents>()),
-                    )?,
+                    maybe_get_id(e.merge_ancestor::<ParentsAndSubtreeSources>())?,
+                    maybe_get_id(e.skip_tree_parent::<ParentsAndSubtreeSources>())?,
+                    maybe_get_id(e.skip_tree_skew_ancestor::<ParentsAndSubtreeSources>())?,
                 ))
             })
             .collect::<Result<Vec<_>>>()
@@ -1922,12 +1909,10 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                     .node()
                     .generation::<ParentsAndSubtreeSources>()
                     .value(),
-            )
-            .filter(|r#gen| *r#gen != edges.node().generation::<Parents>().value()),
+            ),
             &edges.node().skip_tree_depth::<Parents>(),
             &edges.node().skip_tree_depth::<FirstParentLinear>(),
-            &Some(edges.node().skip_tree_depth::<ParentsAndSubtreeSources>())
-                .filter(|depth| *depth != edges.node().skip_tree_depth::<Parents>()),
+            &Some(edges.node().skip_tree_depth::<ParentsAndSubtreeSources>()),
             &edges.parent_count(),
             &edges.subtree_source_count(),
             &edges.parents::<Parents>().next().map(|node| node.cs_id),
@@ -1941,15 +1926,12 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
                 .map(|node| node.cs_id),
             &edges
                 .merge_ancestor::<ParentsAndSubtreeSources>()
-                .filter(|node| edges.merge_ancestor::<Parents>() != Some(*node))
                 .map(|node| node.cs_id),
             &edges
                 .skip_tree_parent::<ParentsAndSubtreeSources>()
-                .filter(|node| edges.skip_tree_parent::<Parents>() != Some(*node))
                 .map(|node| node.cs_id),
             &edges
                 .skip_tree_skew_ancestor::<ParentsAndSubtreeSources>()
-                .filter(|node| edges.skip_tree_skew_ancestor::<Parents>() != Some(*node))
                 .map(|node| node.cs_id),
         )
         .await?;

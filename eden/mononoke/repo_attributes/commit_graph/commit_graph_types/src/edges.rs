@@ -66,11 +66,10 @@ impl ChangesetNode {
             generation: thrift::Generation(self.generation.value() as i64),
             skip_tree_depth: self.skip_tree_depth as i64,
             p1_linear_depth: self.p1_linear_depth as i64,
-            subtree_source_generation: Some(self.subtree_source_generation.value() as i64)
-                .filter(|r#gen| *r#gen != self.generation.value() as i64)
-                .map(thrift::Generation),
-            subtree_source_depth: Some(self.subtree_source_depth as i64)
-                .filter(|depth| *depth != self.skip_tree_depth as i64),
+            subtree_source_generation: Some(thrift::Generation(
+                self.subtree_source_generation.value() as i64,
+            )),
+            subtree_source_depth: Some(self.subtree_source_depth as i64),
         }
     }
 
@@ -233,19 +232,16 @@ impl ChangesetEdges {
                 .inner
                 .subtree_or_merge_ancestor
                 .as_ref()
-                .filter(|node| self.inner.merge_ancestor.as_ref() != Some(*node))
                 .map(ChangesetNode::to_thrift),
             subtree_source_parent: self
                 .inner
                 .subtree_source_parent
                 .as_ref()
-                .filter(|node| self.inner.skip_tree_parent.as_ref() != Some(*node))
                 .map(ChangesetNode::to_thrift),
             subtree_source_skew_ancestor: self
                 .inner
                 .subtree_source_skew_ancestor
                 .as_ref()
-                .filter(|node| self.inner.skip_tree_skew_ancestor.as_ref() != Some(*node))
                 .map(ChangesetNode::to_thrift),
         }
     }
