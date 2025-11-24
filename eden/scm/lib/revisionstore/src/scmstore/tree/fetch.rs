@@ -317,8 +317,6 @@ impl FetchState {
                                 Ok(Some(data)) => {
                                     let deserialization_result = match data {
                                         Blob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref()),
-                                        #[allow(unexpected_cfgs)]
-                                        #[cfg(fbcode_build)]
                                         Blob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor()),
                                     };
                                     match deserialization_result {

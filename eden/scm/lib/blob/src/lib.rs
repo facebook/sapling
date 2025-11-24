@@ -7,7 +7,6 @@
 
 #![allow(unexpected_cfgs)]
 
-#[cfg(fbcode_build)]
 use bytes::Buf;
 pub use minibytes::Bytes;
 use types::Blake3;
@@ -16,7 +15,6 @@ use types::Sha1;
 #[derive(Clone, Debug)]
 pub enum Blob {
     Bytes(minibytes::Bytes),
-    #[cfg(fbcode_build)]
     IOBuf(iobuf::IOBufShared),
 }
 
@@ -28,7 +26,6 @@ impl Blob {
     pub fn to_bytes(&self) -> minibytes::Bytes {
         match self {
             Self::Bytes(bytes) => bytes.clone(),
-            #[cfg(fbcode_build)]
             Self::IOBuf(buf) => minibytes::Bytes::from(Vec::<u8>::from(buf.clone())),
         }
     }
@@ -36,7 +33,6 @@ impl Blob {
     pub fn into_bytes(self) -> minibytes::Bytes {
         match self {
             Self::Bytes(bytes) => bytes,
-            #[cfg(fbcode_build)]
             Self::IOBuf(buf) => minibytes::Bytes::from(Vec::<u8>::from(buf)),
         }
     }
@@ -44,12 +40,10 @@ impl Blob {
     pub fn into_vec(self) -> Vec<u8> {
         match self {
             Self::Bytes(bytes) => bytes.into(),
-            #[cfg(fbcode_build)]
             Self::IOBuf(buf) => Vec::<u8>::from(buf),
         }
     }
 
-    #[cfg(fbcode_build)]
     pub fn into_iobuf(self) -> iobuf::IOBufShared {
         match self {
             // safety: `minibytes::Bytes`'s deref as `[u8]` is valid when `bytes` is alive.
@@ -61,7 +55,6 @@ impl Blob {
     pub fn len(&self) -> usize {
         match self {
             Self::Bytes(bytes) => bytes.len(),
-            #[cfg(fbcode_build)]
             Self::IOBuf(buf) => buf.len(),
         }
     }
@@ -69,7 +62,6 @@ impl Blob {
     pub fn is_empty(&self) -> bool {
         match self {
             Self::Bytes(bytes) => bytes.is_empty(),
-            #[cfg(fbcode_build)]
             Self::IOBuf(buf) => buf.is_empty(),
         }
     }
@@ -113,7 +105,6 @@ impl Blob {
     ) -> std::io::Result<()> {
         match self {
             Self::Bytes(bytes) => f(bytes),
-            #[cfg(fbcode_build)]
             Self::IOBuf(buf) => {
                 let mut cur = buf.clone().cursor();
                 loop {
@@ -136,7 +127,6 @@ impl From<Vec<u8>> for Blob {
     }
 }
 
-#[cfg(fbcode_build)]
 fn iobuf_from_bytes(bytes: minibytes::Bytes) -> iobuf::IOBufShared {
     unsafe { iobuf::IOBufShared::from_owner(bytes) }
 }
@@ -145,13 +135,10 @@ impl PartialEq for Blob {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Bytes(l), Self::Bytes(r)) => l == r,
-            #[cfg(fbcode_build)]
             (Self::IOBuf(l), Self::IOBuf(r)) => l == r,
-            #[cfg(fbcode_build)]
             (Self::IOBuf(buf), Self::Bytes(bytes)) => {
                 buf.len() == bytes.len() && buf == &iobuf_from_bytes(bytes.clone())
             }
-            #[cfg(fbcode_build)]
             (Self::Bytes(bytes), Self::IOBuf(buf)) => {
                 buf.len() == bytes.len() && buf == &iobuf_from_bytes(bytes.clone())
             }
@@ -170,7 +157,6 @@ pub enum Builder {
     // capacity
     Empty(usize),
     Bytes(Vec<u8>),
-    #[cfg(fbcode_build)]
     IOBuf(iobuf::IOBufShared),
 }
 
@@ -186,23 +172,11 @@ impl Builder {
     pub fn append(&mut self, chunk: Bytes) {
         match self {
             Builder::Empty(size) => {
-                #[cfg(fbcode_build)]
-                {
-                    // Using IOBuf - ignore size for pre-allocation.
-                    let _ = size;
-                    *self = Self::IOBuf(iobuf_from_bytes(chunk));
-                }
-
-                #[cfg(not(fbcode_build))]
-                {
-                    // Not using IOBuf - pre-allocate with given size.
-                    let mut data = Vec::with_capacity(*size);
-                    data.extend_from_slice(chunk.as_ref());
-                    *self = Self::Bytes(data);
-                }
+                // Using IOBuf - ignore size for pre-allocation.
+                let _ = size;
+                *self = Self::IOBuf(iobuf_from_bytes(chunk));
             }
             Builder::Bytes(data) => data.extend_from_slice(chunk.as_ref()),
-            #[cfg(fbcode_build)]
             Builder::IOBuf(iobuf) => iobuf.append_to_end(iobuf_from_bytes(chunk)),
         }
     }
@@ -211,7 +185,6 @@ impl Builder {
         match self {
             Builder::Empty(_) => Blob::Bytes(Bytes::new()),
             Builder::Bytes(data) => Blob::Bytes(data.into()),
-            #[cfg(fbcode_build)]
             Builder::IOBuf(iobuf) => Blob::IOBuf(iobuf),
         }
     }
@@ -221,7 +194,6 @@ impl Builder {
 mod test {
     use super::*;
 
-    #[cfg(fbcode_build)]
     #[test]
     fn test_iobuf_sha1_and_blake3() {
         let blob1 = Blob::Bytes(minibytes::Bytes::from("hello world!"));
@@ -246,18 +218,15 @@ mod test {
         let b = Blob::Bytes(minibytes::Bytes::from("oops"));
         assert!(a != b);
 
-        #[cfg(fbcode_build)]
-        {
-            let a = Blob::Bytes(minibytes::Bytes::from("hello world!"));
-            let b = Blob::IOBuf(iobuf::IOBufShared::from("hello world!"));
-            assert_eq!(a, b);
-            assert_eq!(b, a);
+        let a = Blob::Bytes(minibytes::Bytes::from("hello world!"));
+        let b = Blob::IOBuf(iobuf::IOBufShared::from("hello world!"));
+        assert_eq!(a, b);
+        assert_eq!(b, a);
 
-            let a = Blob::Bytes(minibytes::Bytes::from("hello world!"));
-            let b = Blob::IOBuf(iobuf::IOBufShared::from("oops"));
-            assert!(a != b);
-            assert!(b != a);
-        }
+        let a = Blob::Bytes(minibytes::Bytes::from("hello world!"));
+        let b = Blob::IOBuf(iobuf::IOBufShared::from("oops"));
+        assert!(a != b);
+        assert!(b != a);
     }
 
     #[test]
@@ -291,21 +260,18 @@ mod test {
         let res = a.each_chunk(|_| Err(std::io::Error::other("oops")));
         assert!(res.is_err());
 
-        #[cfg(fbcode_build)]
-        {
-            let mut iobuf = iobuf::IOBufShared::from("hello");
-            iobuf.append_to_end(iobuf::IOBufShared::from(""));
-            iobuf.append_to_end(iobuf::IOBufShared::from(" world!"));
+        let mut iobuf = iobuf::IOBufShared::from("hello");
+        iobuf.append_to_end(iobuf::IOBufShared::from(""));
+        iobuf.append_to_end(iobuf::IOBufShared::from(" world!"));
 
-            let a = Blob::IOBuf(iobuf);
+        let a = Blob::IOBuf(iobuf);
 
-            let mut got = Vec::new();
-            let res = a.each_chunk(|chunk| {
-                got.extend_from_slice(chunk);
-                Ok(())
-            });
-            assert_eq!(got, b"hello world!");
-            assert!(res.is_ok());
-        }
+        let mut got = Vec::new();
+        let res = a.each_chunk(|chunk| {
+            got.extend_from_slice(chunk);
+            Ok(())
+        });
+        assert_eq!(got, b"hello world!");
+        assert!(res.is_ok());
     }
 }

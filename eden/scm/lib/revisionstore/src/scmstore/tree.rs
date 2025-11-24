@@ -236,8 +236,6 @@ impl TreeStore {
                     TREE_STORE_FETCH_METRICS.cas.hit(1);
                     let augmented_tree = match blob {
                         Blob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref())?,
-                        #[allow(unexpected_cfgs)]
-                        #[cfg(fbcode_build)]
                         Blob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor())?,
                     };
                     self.cache_child_aux_data(tree_aux_store, &augmented_tree)?;
