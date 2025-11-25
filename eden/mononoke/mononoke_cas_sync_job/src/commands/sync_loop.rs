@@ -186,7 +186,7 @@ impl MononokeCasSyncProcessExecutor {
                     if self.cancellation_requested.load(Ordering::Relaxed) {
                         info!("sync stopping due to cancellation request at attempt {}", attempt);
                     } else {
-                        match self.maybe_become_leader(mode, self.ctx.logger().clone()).await {
+                        match self.maybe_become_leader(mode).await {
                             Ok(_leader_token) => {
                                 run_sync(
                                     attempt,

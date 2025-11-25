@@ -306,7 +306,7 @@ impl RepoShardedProcessExecutor for XRepoSyncProcessExecutor {
             "Starting up X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"
         );
         let mode: ZkMode = self.args.leader_only.into();
-        let guard = self.maybe_become_leader(mode, self.ctx.logger().clone())
+        let guard = self.maybe_become_leader(mode)
             .await.with_context(|| format!("Failed to become leader for X Repo Sync from small repo {small_repo_name} to large repo {large_repo_name}"))?;
         if guard.is_some() {
             info!(

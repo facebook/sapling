@@ -9,7 +9,6 @@
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
-use slog::Logger;
 #[cfg(fbcode_build)]
 use tracing::info;
 #[cfg(fbcode_build)]
@@ -51,16 +50,12 @@ pub trait LeaderElection {
     fn get_shared_lock_path(&self) -> String;
 
     #[cfg(not(fbcode_build))]
-    async fn maybe_become_leader(&self, _mode: ZkMode, _logger: Logger) -> Result<Option<()>> {
+    async fn maybe_become_leader(&self, _mode: ZkMode) -> Result<Option<()>> {
         Ok(None)
     }
 
     #[cfg(fbcode_build)]
-    async fn maybe_become_leader(
-        &self,
-        mode: ZkMode,
-        _logger: Logger,
-    ) -> Result<Option<ServerGuard>> {
+    async fn maybe_become_leader(&self, mode: ZkMode) -> Result<Option<ServerGuard>> {
         match mode {
             ZkMode::Enabled => {
                 let path = self.get_shared_lock_path();
