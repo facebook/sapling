@@ -6,7 +6,6 @@ oncall("scm_server_infra")
 rust_library(
     name = "context",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:governor",

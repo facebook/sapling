@@ -13,7 +13,6 @@ use fbinit::FacebookInit;
 use metadata::Metadata;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 use sql_query_telemetry::SqlQueryTelemetry;
 
 use crate::logging::LoggingContainer;
@@ -103,10 +102,6 @@ impl CoreContext {
             session: self.session.clone(),
             logging: self.logging.with_mutated_scuba(mutator),
         }
-    }
-
-    pub fn logger(&self) -> &Logger {
-        self.logging.logger()
     }
 
     pub fn sampling_key(&self) -> Option<&SamplingKey> {

@@ -13,7 +13,6 @@ use std::sync::atomic::Ordering;
 use fbinit::FacebookInit;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 
 use crate::perf_counters::PerfCounters;
 use crate::perf_counters_stack::PerfCountersStack;
@@ -81,11 +80,6 @@ impl LoggingContainer {
     pub fn with_scribe(&mut self, scribe: Scribe) -> &mut Self {
         self.scribe = scribe;
         self
-    }
-
-    pub fn logger(&self) -> &'static Logger {
-        static LOGGER: Logger = Logger::Tracing;
-        &LOGGER
     }
 
     pub fn scuba(&self) -> &MononokeScubaSampleBuilder {
