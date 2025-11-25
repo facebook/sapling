@@ -36,11 +36,9 @@ rust_library(
     name = "cmdlib_logging",
     srcs = glob(["logging/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "log"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:clap",
-        "fbsource//third-party/rust:env_filter",
         "fbsource//third-party/rust:log",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-glog",

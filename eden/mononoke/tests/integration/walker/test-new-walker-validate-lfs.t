@@ -18,7 +18,7 @@ setup configuration
   blobimporting
 
 validate with LFS enabled, shallow
-  $ mononoke_walker --scuba-log-file scuba-validate-shallow.json -L graph validate --include-check-type=FileContentIsLfs -I shallow -I BookmarkToBonsaiHgMapping -i hg -x HgFileNode -i FileContent -i FileContentMetadataV2 -q -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
+  $ mononoke_walker --scuba-log-file scuba-validate-shallow.json validate --include-check-type=FileContentIsLfs -I shallow -I BookmarkToBonsaiHgMapping -i hg -x HgFileNode -i FileContent -i FileContentMetadataV2 -q -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToBonsaiHgMapping, FileContentToFileContentMetadataV2, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgManifestFileNode]
   [INFO] Walking node types [BonsaiHgMapping, FileContent, FileContentMetadataV2, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgManifest, HgManifestFileNode]
   [INFO] [walker validate{repo=repo}] Performing check types [FileContentIsLfs]

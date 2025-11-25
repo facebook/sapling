@@ -1503,8 +1503,6 @@ def setup_environment_variables(stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         get_configerator_relative_path(mononoke_just_knobs_overrides_path, env),
         "--local-configerator-path",
         local_configerator_path,
-        "--log-exclude-tag",
-        "futures_watchdog",
         "--with-test-megarepo-configs-client=true",
         "--acl-file",
         acl_file,

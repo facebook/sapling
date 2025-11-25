@@ -59,21 +59,6 @@ impl GlogLevel {
     }
 }
 
-impl From<slog::Level> for GlogLevel {
-    fn from(log_level: slog::Level) -> GlogLevel {
-        use slog::Level;
-        match log_level {
-            Level::Critical => GlogLevel::Critical,
-            Level::Error => GlogLevel::Error,
-            Level::Warning => GlogLevel::Warning,
-            // Reduce log spew in dependencies by limiting to warning at info level
-            Level::Info => GlogLevel::Warning,
-            // Reduce log spew in dependencies by limiting to info at debug and trace level
-            Level::Debug | Level::Trace => GlogLevel::Info,
-        }
-    }
-}
-
 impl From<tracing_subscriber::filter::LevelFilter> for GlogLevel {
     fn from(log_level: tracing_subscriber::filter::LevelFilter) -> GlogLevel {
         use tracing_subscriber::filter::LevelFilter;

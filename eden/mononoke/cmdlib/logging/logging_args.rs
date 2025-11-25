@@ -17,7 +17,6 @@ use clap::builder::PossibleValuesParser;
 use fbinit::FacebookInit;
 use observability::ObservabilityContext;
 use panichandler::Fate;
-use slog::Logger;
 use tracing::Event;
 use tracing::Subscriber;
 use tracing_glog::FormatLevelChars;
@@ -38,7 +37,7 @@ use tracing_subscriber::registry::LookupSpan;
 const LOG_LEVEL_NAMES: [&str; 6] = ["OFF", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 const DEFAULT_TRACING_LEVEL: filter::LevelFilter = filter::LevelFilter::INFO;
 
-/// Command line arguments for spawning slog Logger
+/// Command line arguments for tracing/logging configuration
 #[derive(Args, Debug)]
 pub struct LoggingArgs {
     /// Configure tracing to output in test format
@@ -59,29 +58,9 @@ pub struct LoggingArgs {
     #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES))]
     pub cxx_log_level: Option<String>,
 
-    /// Include only log messages with these slog::Record::tags() or
-    /// log::Record::targets
-    #[clap(long, short = 'l')]
-    pub log_include_tag: Vec<String>,
-
-    /// Exclude log messages with these slog::Record::tags() or
-    /// log::Record::targets
-    #[clap(long, short = 'L')]
-    pub log_exclude_tag: Vec<String>,
-
-    /// Logview category to log to. Logview is not used if not set
-    #[clap(long)]
+    /// Deprecated: Logview category (no longer used, accepted for compatibility)
+    #[clap(long, hide = true)]
     pub logview_category: Option<String>,
-
-    /// Logview level to filter
-    ///
-    /// If logview-category is not set then this is ignored.
-    ///
-    /// Note that this level is applied AFTER --log-level/--debug was applied,
-    /// so it doesn't make sense to set this parameter to a lower level than
-    /// --log-level.
-    #[clap(long, requires = "logview_category", value_parser = PossibleValuesParser::new(&slog::LOG_LEVEL_NAMES))]
-    pub logview_additional_level_filter: Option<String>,
 
     /// Fate of the process when a panic happens
     #[clap(long, value_enum, default_value_t=PanicFate::Abort)]
@@ -250,9 +229,8 @@ impl LoggingArgs {
         }
     }
 
-    pub fn setup_logging(&self, fb: FacebookInit) -> Result<Logger> {
-        self.setup_tracing(fb)?;
-        Ok(Logger::Tracing)
+    pub fn setup_logging(&self, fb: FacebookInit) -> Result<()> {
+        self.setup_tracing(fb)
     }
 }
 

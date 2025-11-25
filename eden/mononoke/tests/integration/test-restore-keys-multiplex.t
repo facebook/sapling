@@ -30,7 +30,7 @@ Write one blob with corrupt content
 
 
 Check that walker fails on the corrupted blobstore
-  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | grep -v 'Walking .* types'
+  $ mononoke_walker scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | grep -v 'Walking .* types'
   [ERROR] Execution error: Could not step to OutgoingEdge { label: HgManifestToHgFileEnvelope, target: HgFileEnvelope(HgFileNodeId(HgNodeHash(Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)))), path: None } via Some(EmptyRoute) in repo repo
   
   Caused by:
@@ -41,7 +41,7 @@ Check that walker fails on the corrupted blobstore
 
 
 Check that walker detects keys, which need to be repaired
-  $ mononoke_walker --scuba-log-file scuba-reportonly.json -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -b master_bookmark 2>&1 | grep -v 'Walking .* types'
+  $ mononoke_walker --scuba-log-file scuba-reportonly.json --blobstore-scrub-action=ReportOnly scrub -q -I deep -b master_bookmark 2>&1 | grep -v 'Walking .* types'
   [ERROR] Execution error: Could not step to OutgoingEdge { label: HgManifestToHgFileEnvelope, target: HgFileEnvelope(HgFileNodeId(HgNodeHash(Sha1(005d992c5dcf32993668f7cede29d296c494a5d9)))), path: None } via Some(EmptyRoute) in repo repo
   
   Caused by:
@@ -68,6 +68,6 @@ Copy missing key from the healthy inner blobstore
 
 Walker now should process previously corrupted blobstore correctly
 # TODO(mbthomas): concurrent fetches may not hit in the cache
-  $ mononoke_walker -L graph scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | grep -v 'Walking .* types' | grep -v 'Walked/s'
+  $ mononoke_walker scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | grep -v 'Walking .* types' | grep -v 'Walked/s'
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 43,43
   [INFO] [walker scrub{repo=repo}] Bytes/s,Keys/s,Bytes,Keys; Delta 000000/s,000000/s,2*,*,0s; Run 000000/s,000000/s,2*,*,0s; Type:Raw,Compressed AliasContentMapping:* BonsaiHgMapping:* Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadataV2:* HgBonsaiMapping:0,0 HgChangeset:* HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3 (glob)

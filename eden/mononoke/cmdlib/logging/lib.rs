@@ -7,7 +7,6 @@
 
 #[cfg(fbcode_build)]
 pub mod glog;
-pub mod log;
 mod logging_args;
 mod scribe;
 mod scuba;
