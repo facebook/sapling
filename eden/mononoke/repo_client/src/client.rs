@@ -137,7 +137,6 @@ use revisionstore_types::Metadata;
 use scuba_ext::MononokeScubaSampleBuilder;
 use serde::Deserialize;
 use serde_json::json;
-use slog::o;
 use stats::prelude::*;
 use streaming_clone::RevlogStreamingChunks;
 use streaming_clone::StreamingCloneArc;
@@ -441,20 +440,15 @@ impl<R: Repo> RepoClient<R> {
     ) -> (CoreContext, CommandLogger) {
         info!("{}", command);
 
-        let logger = self
-            .logging
-            .logger()
-            .new(o!("command" => command.to_owned()));
-
         let mut scuba = self.logging.scuba().clone();
         scuba
             .sampled_unless_verbose(sampling_rate.0)
             .add("command", command);
         scuba.clone().log_with_msg("Start processing", None);
 
-        let ctx =
-            self.session
-                .new_context_with_scribe(logger, scuba, self.logging.scribe().clone());
+        let ctx = self
+            .session
+            .new_context_with_scribe(scuba, self.logging.scribe().clone());
 
         let command_logger = CommandLogger::new(ctx.clone(), self.request_perf_counters.clone());
 

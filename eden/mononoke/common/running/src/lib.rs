@@ -16,7 +16,6 @@ use futures::TryFutureExt;
 use futures::future;
 use futures::future::Either;
 use mononoke_macros::mononoke;
-use slog::Logger;
 use tokio::signal::unix::SignalKind;
 use tokio::signal::unix::signal;
 use tokio::time;
@@ -41,7 +40,6 @@ use tracing::info;
 /// and an error is returned.
 pub async fn run_until_terminated<Server, QuiesceFn, ShutdownFut>(
     server: Server,
-    logger: impl Into<Logger>,
     quiesce: QuiesceFn,
     shutdown_grace_period: Duration,
     shutdown: ShutdownFut,
@@ -53,8 +51,6 @@ where
     QuiesceFn: FnOnce(),
     ShutdownFut: Future<Output = ()>,
 {
-    let _logger = logger.into();
-
     // We want to prevent Folly's signal handlers overriding our
     // intended action with a termination signal. Mononoke server,
     // in particular, depends on this - otherwise our attempts to

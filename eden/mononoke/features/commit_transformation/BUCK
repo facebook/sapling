@@ -6,7 +6,6 @@ rust_library(
     name = "commit_transformation",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "commit_transformation"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/facet:facet",

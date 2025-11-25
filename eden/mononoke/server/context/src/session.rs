@@ -95,11 +95,10 @@ impl SessionContainer {
 
     pub fn new_context_with_scribe(
         &self,
-        logger: Logger,
         scuba: MononokeScubaSampleBuilder,
         scribe: Scribe,
     ) -> CoreContext {
-        let mut logging = LoggingContainer::new(self.fb, logger, scuba);
+        let mut logging = LoggingContainer::new(self.fb, slog::Logger::Tracing, scuba);
         logging.with_scribe(scribe);
 
         CoreContext::from_parts(self.fb, logging, self.clone())

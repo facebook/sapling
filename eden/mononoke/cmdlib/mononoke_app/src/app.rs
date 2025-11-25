@@ -117,11 +117,8 @@ impl MononokeApp {
         extension_args: HashMap<TypeId, Box<dyn BoxedAppExtensionArgs>>,
     ) -> Result<Self> {
         let env = Arc::new(env);
-        let configs = ConfigArgs::from_arg_matches(&args)?.create_mononoke_configs(
-            runtime.handle().clone(),
-            env.logger.clone(),
-            &env.as_ref().config_store,
-        )?;
+        let configs = ConfigArgs::from_arg_matches(&args)?
+            .create_mononoke_configs(runtime.handle().clone(), &env.as_ref().config_store)?;
 
         let repo_factory = Arc::new(RepoFactory::new(env.clone()));
 
@@ -268,7 +265,6 @@ impl MononokeApp {
         QuiesceFn: FnOnce(),
         ShutdownFut: Future<Output = ()>,
     {
-        let logger = self.logger().clone();
         let runtime = self
             .runtime
             .take()
@@ -276,7 +272,6 @@ impl MononokeApp {
         let server = async move { server(self).await };
         runtime.block_on(run_until_terminated(
             server,
-            logger,
             quiesce,
             shutdown_grace_period,
             shutdown,

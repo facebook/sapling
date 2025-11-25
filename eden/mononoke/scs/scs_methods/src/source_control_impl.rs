@@ -84,7 +84,6 @@ use scs_errors::ServiceErrorResultExt;
 use scs_errors::Status;
 use scuba_ext::MononokeScubaSampleBuilder;
 use scuba_ext::ScubaValue;
-use slog::Logger;
 use source_control as thrift;
 use source_control_services::SourceControlService;
 use source_control_services::errors::source_control_service as service;
@@ -146,7 +145,6 @@ pub struct SourceControlServiceImpl {
     pub(crate) fb: FacebookInit,
     pub(crate) mononoke: Arc<Mononoke<Repo>>,
     pub(crate) megarepo_api: Arc<MegarepoApi<Repo>>,
-    pub(crate) logger: Logger,
     pub(crate) scuba_builder: MononokeScubaSampleBuilder,
     pub(crate) identity: Identity,
     pub(crate) scribe: Scribe,
@@ -169,7 +167,6 @@ impl SourceControlServiceImpl {
         app: &MononokeApp,
         mononoke: Arc<Mononoke<Repo>>,
         megarepo_api: Arc<MegarepoApi<Repo>>,
-        logger: Logger,
         mut scuba_builder: MononokeScubaSampleBuilder,
         scribe: Scribe,
         identity_proxy_checker: ConnectionSecurityChecker,
@@ -186,7 +183,6 @@ impl SourceControlServiceImpl {
             fb,
             mononoke: mononoke.clone(),
             megarepo_api,
-            logger,
             scuba_builder,
             identity: Identity::new(
                 common_config.internal_identity.id_type.as_str(),
@@ -224,7 +220,7 @@ impl SourceControlServiceImpl {
         let session_uuid = session.metadata().session_id().to_string();
         scuba.add("session_uuid", session_uuid.clone());
 
-        let ctx = session.new_context_with_scribe(self.logger.clone(), scuba, self.scribe.clone());
+        let ctx = session.new_context_with_scribe(scuba, self.scribe.clone());
 
         let repo_name = if let Some(specifier) = specifier {
             specifier.scuba_reponame()

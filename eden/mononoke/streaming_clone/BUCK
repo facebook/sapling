@@ -5,9 +5,6 @@ oncall("scm_server_infra")
 rust_binary(
     name = "new_streaming_clone",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
-    test_deps = [
-    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:blake2",

@@ -40,8 +40,6 @@ use mutable_blobstore::MutableRepoBlobstore;
 use mutable_blobstore::MutableRepoBlobstoreRef;
 use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
-use slog::Logger;
-use slog::o;
 use streaming_clone::StreamingClone;
 use streaming_clone::StreamingCloneRef;
 use tokio::io::AsyncReadExt;
@@ -106,7 +104,6 @@ struct Repo {
 
 async fn streaming_clone(fb: FacebookInit, app: &MononokeApp) -> Result<(), Error> {
     let args: StreamingCloneArgs = app.args()?;
-    let logger = app.logger();
     let repo: Repo = app.open_repo(&args.repo).await?;
     info!(
         "using repo \"{}\" repoid {:?}",
@@ -122,7 +119,10 @@ async fn streaming_clone(fb: FacebookInit, app: &MononokeApp) -> Result<(), Erro
             let tag: Option<&str> = create_args.tag.as_deref();
             async {
                 scuba.add_opt("tag", tag);
-                let ctx = build_context(fb, logger, &repo, &tag);
+                let ctx = CoreContext::new_with_client_info(
+                    fb,
+                    ClientInfo::default_with_entry_point(ClientEntryPoint::StreamingClone),
+                );
                 // This command works only if there are no streaming chunks at all for a give repo.
                 // So exit quickly if database is not empty
                 let count = repo.streaming_clone().count_chunks(&ctx, tag).await?;
@@ -140,7 +140,10 @@ async fn streaming_clone(fb: FacebookInit, app: &MononokeApp) -> Result<(), Erro
             let tag: Option<&str> = update_args.tag.as_deref();
             async {
                 scuba.add_opt("tag", tag);
-                let ctx = build_context(fb, logger, &repo, &tag);
+                let ctx = CoreContext::new_with_client_info(
+                    fb,
+                    ClientInfo::default_with_entry_point(ClientEntryPoint::StreamingClone),
+                );
                 update_streaming_changelog(&ctx, &repo, &update_args, tag).await
             }
             .instrument(tracing::info_span!("streaming clone update", repo = %repo.repo_identity().name(), tag))
@@ -162,25 +165,6 @@ async fn streaming_clone(fb: FacebookInit, app: &MononokeApp) -> Result<(), Erro
     scuba.log();
     res?;
     Ok(())
-}
-
-fn build_context(
-    fb: FacebookInit,
-    logger: &Logger,
-    repo: &Repo,
-    tag: &Option<&str>,
-) -> CoreContext {
-    let logger = if let Some(tag) = tag {
-        logger.new(o!("repo" => repo.repo_identity().name().to_string(), "tag" => tag.to_string()))
-    } else {
-        logger.new(o!("repo" => repo.repo_identity().name().to_string()))
-    };
-
-    CoreContext::new_with_logger_and_client_info(
-        fb,
-        logger,
-        ClientInfo::default_with_entry_point(ClientEntryPoint::StreamingClone),
-    )
 }
 
 // Returns how many chunks were inserted

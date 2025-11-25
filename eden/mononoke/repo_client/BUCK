@@ -9,7 +9,6 @@ rust_library(
     ]),
     named_deps = {
         "futures-old": "fbsource//third-party/rust:futures-old",
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
     },
     test_deps = [
         "fbcode//common/rust/shed/fbinit:fbinit",

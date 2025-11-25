@@ -38,7 +38,6 @@ use movers::Movers;
 use pushrebase::find_bonsai_diff;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
-use slog::Logger;
 use sorted_vector_map::SortedVectorMap;
 use tracing::debug;
 use tracing::error;
@@ -184,7 +183,6 @@ pub async fn rewrite_commit_with_file_changes_filter<'a>(
     };
 
     rewrite_commit_with_implicit_deletes(
-        ctx.logger(),
         cs,
         remapped_parents,
         mover,
@@ -246,7 +244,6 @@ pub async fn rewrite_as_squashed_commit<'a>(
 
 // TODO(T182311609): reduce visibility to crate
 pub fn rewrite_commit_with_implicit_deletes<'a>(
-    logger: &Logger,
     mut cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: Arc<dyn MultiMover + 'a>,
@@ -274,7 +271,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
     if !cs.subtree_changes.is_empty() || cs.hg_extra.contains_key("subtree") {
         cs.subtree_changes.clear();
         cs.hg_extra.remove("subtree");
-        mark_as_created_by_lossy_conversion(logger, &mut cs, LossyConversionReason::SubtreeChanges);
+        mark_as_created_by_lossy_conversion(&mut cs, LossyConversionReason::SubtreeChanges);
     }
 
     let empty_commit = cs.file_changes.is_empty();
@@ -375,11 +372,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
             .iter()
             .any(|rewritten| rewritten.is_empty())
         {
-            mark_as_created_by_lossy_conversion(
-                logger,
-                &mut cs,
-                LossyConversionReason::FileChanges,
-            );
+            mark_as_created_by_lossy_conversion(&mut cs, LossyConversionReason::FileChanges);
         // If any implicit delete in the source bonsai changeset has no equivalent file change in the destination
         // changeset, the conversion was lossy
         } else if renamed_implicit_deletes
@@ -387,7 +380,6 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
             .any(|rewritten| rewritten.is_empty())
         {
             mark_as_created_by_lossy_conversion(
-                logger,
                 &mut cs,
                 LossyConversionReason::ImplicitFileChanges,
             );
@@ -543,11 +535,7 @@ pub fn create_directory_source_to_target_multi_mover(
     }))
 }
 
-fn mark_as_created_by_lossy_conversion(
-    _logger: &Logger,
-    cs: &mut BonsaiChangesetMut,
-    reason: LossyConversionReason,
-) {
+fn mark_as_created_by_lossy_conversion(cs: &mut BonsaiChangesetMut, reason: LossyConversionReason) {
     let reason = match reason {
         LossyConversionReason::FileChanges => {
             "the file changes from the source changeset don't all have an equivalent file change in the target changeset"

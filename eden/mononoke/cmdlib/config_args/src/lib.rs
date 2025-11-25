@@ -120,7 +120,6 @@ impl ConfigArgs {
     pub fn create_mononoke_configs(
         &self,
         handle: Handle,
-        logger: Logger,
         config_store: &ConfigStore,
     ) -> Result<Arc<MononokeConfigs>> {
         let config_path = self.config_path();
@@ -128,7 +127,6 @@ impl ConfigArgs {
             config_path,
             config_store,
             handle,
-            logger,
         )?))
     }
 }

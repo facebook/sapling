@@ -26,7 +26,6 @@ use repos::RawRepoConfigs;
 use serde::Serialize;
 use sha2::Digest;
 use sha2::Sha256;
-use slog::Logger;
 use stats::prelude::*;
 use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
@@ -65,7 +64,6 @@ impl MononokeConfigs {
         config_path: impl AsRef<Path>,
         config_store: &ConfigStore,
         runtime_handle: Handle,
-        _logger: Logger,
     ) -> Result<Self> {
         let storage_configs = metaconfig_parser::load_storage_configs(&config_path, config_store)?;
         let storage_configs = Arc::new(ArcSwap::from_pointee(storage_configs));
@@ -102,7 +100,6 @@ impl MononokeConfigs {
                 config_info,
                 update_receivers,
                 config_watcher,
-                _logger,
             ))
         });
         Ok(Self {
@@ -188,7 +185,6 @@ async fn watch_and_update(
     config_info: Swappable<Option<ConfigInfo>>,
     update_receivers: Swappable<Vec<Arc<dyn ConfigUpdateReceiver>>>,
     mut config_watcher: ConfigUpdateWatcher<RawRepoConfigs>,
-    _logger: Logger,
 ) {
     loop {
         match config_watcher.wait_for_next().await {

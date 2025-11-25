@@ -408,7 +408,6 @@ async fn create_bonsai_for_new_repo<'a, R: MononokeRepo>(
     });
 
     let rewritten_bcs_mut = rewrite_commit_with_implicit_deletes(
-        &slog::Logger::Tracing,
         mut_bcs,
         &remapped_parents,
         multi_mover,

@@ -257,7 +257,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .build::<ScsServerArgs>()?;
 
     let args: ScsServerArgs = app.args()?;
-    let logger = app.logger().clone();
     let runtime = app.runtime();
     let env = app.environment();
 
@@ -316,7 +315,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             &app,
             mononoke.clone(),
             megarepo_api,
-            logger.clone(),
             scuba_builder,
             args.scribe_logging_args.get_scribe(fb)?,
             security_checker,
@@ -330,7 +328,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let monitoring_forever = {
-        let monitoring_ctx = CoreContext::new_with_logger(fb, logger.clone());
+        let monitoring_ctx = CoreContext::new(fb);
         monitoring::monitoring_stats_submitter(monitoring_ctx, mononoke)
     };
     runtime.spawn(monitoring_forever);
