@@ -832,7 +832,6 @@ impl MononokeApp {
         let repos_mgr = MononokeReposManager::new_with_redaction_disabled(
             self.configs.clone(),
             self.repo_factory().clone(),
-            self.logger().clone(),
             service,
             repo_names,
             redaction_disabled,

@@ -36,8 +36,6 @@ use mononoke_configs::MononokeConfigs;
 use mononoke_repos::MononokeRepos;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
-use slog::Logger;
-use slog::o;
 use stats::prelude::*;
 use tracing::info;
 
@@ -59,7 +57,6 @@ pub struct MononokeReposManager<Repo> {
     repos: Arc<MononokeRepos<Repo>>,
     configs: Arc<MononokeConfigs>,
     repo_factory: Arc<RepoFactory>,
-    logger: Logger,
     redaction_disabled: bool,
 }
 
@@ -73,7 +70,6 @@ impl<Repo> MononokeReposManager<Repo> {
     pub(crate) async fn new<Names>(
         configs: Arc<MononokeConfigs>,
         repo_factory: Arc<RepoFactory>,
-        logger: Logger,
         service_name: Option<ShardedService>,
         repo_names: Names,
     ) -> Result<Self>
@@ -84,21 +80,13 @@ impl<Repo> MononokeReposManager<Repo> {
             + Sync
             + 'static,
     {
-        Self::new_with_redaction_disabled(
-            configs,
-            repo_factory,
-            logger,
-            service_name,
-            repo_names,
-            false,
-        )
-        .await
+        Self::new_with_redaction_disabled(configs, repo_factory, service_name, repo_names, false)
+            .await
     }
 
     pub(crate) async fn new_with_redaction_disabled<Names>(
         configs: Arc<MononokeConfigs>,
         repo_factory: Arc<RepoFactory>,
-        logger: Logger,
         service_name: Option<ShardedService>,
         repo_names: Names,
         redaction_disabled: bool,
@@ -115,14 +103,12 @@ impl<Repo> MononokeReposManager<Repo> {
             repos,
             configs,
             repo_factory,
-            logger,
             redaction_disabled,
         };
         mgr.populate_repos(repo_names).await?;
         let update_receiver = MononokeConfigUpdateReceiver::new(
             mgr.repos.clone(),
             mgr.repo_factory.clone(),
-            mgr.logger.clone(),
             service_name,
         );
         mgr.configs
@@ -137,16 +123,6 @@ impl<Repo> MononokeReposManager<Repo> {
 
     pub fn configs(&self) -> Arc<MononokeConfigs> {
         self.configs.clone()
-    }
-
-    /// The logger for the app.
-    pub fn logger(&self) -> &Logger {
-        &self.logger
-    }
-
-    /// Construct a logger for a specific repo.
-    pub fn repo_logger(&self, repo_name: &str) -> Logger {
-        self.logger.new(o!("repo" => repo_name.to_string()))
     }
 
     /// Return a repo config for a named repo.  This reads from the main
@@ -278,7 +254,6 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
     fn new(
         repos: Arc<MononokeRepos<Repo>>,
         repo_factory: Arc<RepoFactory>,
-        _logger: Logger,
         service_name: Option<ShardedService>,
     ) -> Self {
         Self {
