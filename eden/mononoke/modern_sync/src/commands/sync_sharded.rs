@@ -169,19 +169,17 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         exit_file,
         cancellation_requested,
     ));
-    let logger = process.app.logger().clone();
 
     if let Some(executor) = app_args.sharded_executor_args.clone().build_executor(
         process.app.fb,
         process.app.runtime().clone(),
-        &logger,
         || process.clone(),
         true, // enable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
         tracing::info!("Running sharded sync loop");
         let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
-        executor.block_and_execute(&logger, receiver).await?;
+        executor.block_and_execute(receiver).await?;
         drop(sender);
     } else {
         bail!("can only run sharded")

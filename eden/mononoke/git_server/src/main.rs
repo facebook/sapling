@@ -349,28 +349,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             if let Some(executor) = args.sharded_executor_args.build_executor(
                 app.fb,
                 runtime.clone(),
-                &logger,
                 || Arc::new(MononokeGitServerProcess::new(repos_mgr)),
                 false, // disable shard (repo) level healing
                 SM_CLEANUP_TIMEOUT_SECS,
             )? {
                 // The Sharded Process Executor needs to branch off and execute
                 // on its own dedicated task spawned off the common tokio runtime.
-                runtime.spawn({
-                    let logger = app.logger().clone();
-                    {
-                        async move {
-                            executor
-                                .block_and_execute_with_quiesce_timeout(
-                                    &logger,
-                                    receiver,
-                                    Some(quiesce_timeout),
-                                    Some(quiesce_sender),
-                                )
-                                .await
-                        }
-                    }
-                });
+                runtime.spawn(executor.block_and_execute_with_quiesce_timeout(
+                    receiver,
+                    Some(quiesce_timeout),
+                    Some(quiesce_sender),
+                ));
             }
 
             let serve = async move {

@@ -348,7 +348,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             if let Some(executor) = args.sharded_executor_args.build_executor(
                 app.fb,
                 runtime.clone(),
-                app.logger(),
                 || {
                     Arc::new(MononokeServerProcess::new(
                         app.fb,
@@ -361,16 +360,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             )? {
                 // The Sharded Process Executor needs to branch off and execute
                 // on its own dedicated task spawned off the common tokio runtime.
-                runtime.spawn({
-                    let logger = app.logger().clone();
-                    {
-                        async move {
-                            executor
-                                .block_and_execute(&logger, sm_shutdown_receiver)
-                                .await
-                        }
-                    }
-                });
+                runtime.spawn(executor.block_and_execute(sm_shutdown_receiver));
             }
             repo_listener::create_repo_listeners(
                 fb,

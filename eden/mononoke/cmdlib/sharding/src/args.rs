@@ -10,7 +10,6 @@ use std::sync::Arc;
 use anyhow::Result;
 use clap::Args;
 use fbinit::FacebookInit;
-use slog::Logger;
 use tokio::runtime::Handle;
 
 use crate::RepoShardedProcess;
@@ -39,7 +38,6 @@ impl ShardedExecutorArgs {
         self,
         fb: FacebookInit,
         runtime: Handle,
-        logger: &Logger,
         process_fn: impl FnOnce() -> Arc<dyn RepoShardedProcess>,
         shard_healing: bool,
         cleanup_timeout_secs: u64,
@@ -51,7 +49,6 @@ impl ShardedExecutorArgs {
             Ok(Some(ShardedProcessExecutor::new(
                 fb,
                 runtime,
-                logger,
                 // The service name & scope needs to be 'static to satisfy SM contract
                 Box::leak(Box::new(sharded_service_name)),
                 Box::leak(Box::new(sharded_scope_name)),

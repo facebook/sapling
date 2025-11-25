@@ -11,7 +11,6 @@ use std::time::Duration;
 
 use anyhow::Result;
 use fbinit::FacebookInit;
-use slog::Logger;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot::Receiver;
 use tokio::sync::oneshot::Sender;
@@ -24,7 +23,6 @@ impl ShardedProcessExecutor {
     pub fn new(
         _fb: FacebookInit,
         _runtime_handle: Handle,
-        _logger: &Logger,
         _service_name: &'static str,
         _service_scope: &'static str,
         _timeout_secs: u64,
@@ -34,17 +32,12 @@ impl ShardedProcessExecutor {
         unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }
 
-    pub async fn block_and_execute(
-        mut self,
-        _logger: &Logger,
-        _terminate_signal_receiver: Receiver<bool>,
-    ) -> Result<()> {
+    pub async fn block_and_execute(self, _terminate_signal_receiver: Receiver<bool>) -> Result<()> {
         unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }
 
     pub async fn block_and_execute_with_quiesce_timeout(
         mut self,
-        _logger: &Logger,
         _terminate_signal_receiver: Receiver<bool>,
         _quiesce_timeout: Option<Duration>,
         _quiesce_completion_sender: Option<Sender<bool>>,
@@ -52,7 +45,7 @@ impl ShardedProcessExecutor {
         unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }
 
-    pub fn execute(&mut self, _logger: &Logger) {
+    pub fn execute(&mut self) {
         unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }
 }

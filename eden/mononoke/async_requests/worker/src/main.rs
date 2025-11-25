@@ -158,7 +158,6 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let args: Arc<AsyncRequestsWorkerArgs> = Arc::new(app.args()?);
     let env = app.environment();
-    let logger = app.logger().clone();
     let runtime = app.runtime().clone();
     let session = SessionContainer::new_with_defaults(env.fb);
     let ctx = Arc::new(session.new_context(app.logger().clone(), env.scuba_sample_builder.clone()));
@@ -185,7 +184,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     if let Some(executor) = args.sharded_executor_args.clone().build_executor(
         app.fb,
         runtime.clone(),
-        &logger,
         || {
             Arc::new(WorkerProcess::new(
                 ctx.clone(),
@@ -204,16 +202,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         info!("Starting sharded process");
         // The Sharded Process Executor needs to branch off and execute
         // on its own dedicated task spawned off the common tokio runtime.
-        runtime.spawn({
-            let logger = logger.clone();
-            {
-                async move {
-                    executor
-                        .block_and_execute(&logger, sm_shutdown_receiver)
-                        .await
-                }
-            }
-        });
+        runtime.spawn(executor.block_and_execute(sm_shutdown_receiver));
 
         if args.process_global_queue {
             info!("Starting executor for global queue");

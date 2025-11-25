@@ -222,7 +222,6 @@ async fn run(app: MononokeApp) -> Result<()> {
 
 async fn run_sharded(app: MononokeApp, sharded_service_name: String) -> Result<()> {
     let process = TestProcess::new(app);
-    let logger = process.app.logger().clone();
     /// The name of the deployed ShardManager job that will orchestrate
     /// the below BP. For testing purposes, keep it mononoke.shardmanager.test
     /// and deploy the resultant binary to mononoke_shardmanager_test TW job.
@@ -234,7 +233,6 @@ async fn run_sharded(app: MononokeApp, sharded_service_name: String) -> Result<(
     let executor = ShardedProcessExecutor::new(
         process.app.fb,
         process.app.runtime().clone(),
-        &logger,
         SM_SERVICE_NAME.get_or_init(|| sharded_service_name),
         SM_SERVICE_SCOPE,
         SM_CLEANUP_TIMEOUT_SECS,
@@ -242,7 +240,7 @@ async fn run_sharded(app: MononokeApp, sharded_service_name: String) -> Result<(
         true, // enable shard (repo) level healing
     )?;
     let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
-    executor.block_and_execute(&logger, receiver).await?;
+    executor.block_and_execute(receiver).await?;
     drop(sender);
     Ok(())
 }

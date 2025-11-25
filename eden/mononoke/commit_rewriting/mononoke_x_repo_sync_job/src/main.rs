@@ -573,11 +573,9 @@ async fn async_main(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
     let ctx = Arc::new(ctx);
     let repo_args = args.repo_args.clone();
     let runtime = app.runtime().clone();
-    let logger = app.logger().clone();
     let res = if let Some(executor) = args.sharded_executor_args.clone().build_executor(
         app.fb,
         runtime.clone(),
-        &logger,
         || {
             Arc::new(XRepoSyncProcess::new(
                 ctx.clone(),
@@ -589,7 +587,7 @@ async fn async_main(app: MononokeApp, ctx: CoreContext) -> Result<(), Error> {
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
         let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
-        executor.block_and_execute(&logger, receiver).await?;
+        executor.block_and_execute(receiver).await?;
         drop(sender);
         Ok(())
     } else {

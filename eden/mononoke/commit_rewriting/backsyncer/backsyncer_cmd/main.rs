@@ -45,13 +45,12 @@ async fn async_main(ctx: CoreContext, app: MononokeApp) -> Result<(), Error> {
     let res = if let Some(executor) = args.sharded_executor_args.clone().build_executor(
         app.fb,
         runtime.clone(),
-        ctx.logger(),
         || Arc::new(BacksyncProcess::new(ctx.clone(), app.clone())),
         true, // enable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
         let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
-        executor.block_and_execute(ctx.logger(), receiver).await?;
+        executor.block_and_execute(receiver).await?;
         drop(sender);
         Ok(())
     } else {

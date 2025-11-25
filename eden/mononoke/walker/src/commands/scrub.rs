@@ -211,13 +211,11 @@ pub async fn run_sharded(
     service_name: String,
 ) -> Result<(), Error> {
     let scrub_process = WalkerScrubProcess::new(app, args);
-    let logger = scrub_process.app.logger().clone();
     // The service name needs to be 'static to satisfy SM contract
     static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
     let executor = ShardedProcessExecutor::new(
         scrub_process.app.fb,
         scrub_process.app.runtime().clone(),
-        &logger,
         SM_SERVICE_NAME.get_or_init(|| service_name),
         SM_SERVICE_SCOPE,
         SM_CLEANUP_TIMEOUT_SECS,
@@ -225,7 +223,7 @@ pub async fn run_sharded(
         true, // enable shard (repo) level healing
     )?;
     let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
-    executor.block_and_execute(&logger, receiver).await?;
+    executor.block_and_execute(receiver).await?;
     drop(sender);
     Ok(())
 }

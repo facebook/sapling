@@ -394,28 +394,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     if let Some(executor) = args.sharded_executor_args.build_executor(
         fb,
         runtime.clone(),
-        app.logger(),
         || Arc::new(ScsServerProcess::new(repos_mgr)),
         false, // disable shard (repo) level healing
         SM_CLEANUP_TIMEOUT_SECS,
     )? {
         // The Sharded Process Executor needs to branch off and execute
         // on its own dedicated task spawned off the common tokio runtime.
-        runtime.spawn({
-            let logger = logger.clone();
-            {
-                async move {
-                    executor
-                        .block_and_execute_with_quiesce_timeout(
-                            &logger,
-                            sm_shutdown_receiver,
-                            Some(quiesce_timeout),
-                            Some(quiesce_sender),
-                        )
-                        .await
-                }
-            }
-        });
+        runtime.spawn(executor.block_and_execute_with_quiesce_timeout(
+            sm_shutdown_receiver,
+            Some(quiesce_timeout),
+            Some(quiesce_sender),
+        ));
     }
 
     // Monitoring is provided by the `Fb303Module`, but we must still start

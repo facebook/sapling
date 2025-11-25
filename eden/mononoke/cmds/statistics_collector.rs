@@ -684,13 +684,11 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
             statistics_collector.execute().await
         }
         Some(name) => {
-            let logger = process.app.logger().clone();
             // The service name needs to be 'static to satisfy SM contract
             static SM_SERVICE_NAME: OnceLock<String> = OnceLock::new();
             let executor = ShardedProcessExecutor::new(
                 process.app.fb,
                 process.app.runtime().clone(),
-                &logger,
                 SM_SERVICE_NAME.get_or_init(|| name),
                 SM_SERVICE_SCOPE,
                 SM_CLEANUP_TIMEOUT_SECS,
@@ -698,7 +696,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 true, // enable shard (repo) level healing
             )?;
             let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
-            executor.block_and_execute(&logger, receiver).await?;
+            executor.block_and_execute(receiver).await?;
             drop(sender);
             Ok(())
         }

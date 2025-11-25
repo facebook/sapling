@@ -26,7 +26,6 @@ use futures::stream::TryStreamExt;
 use sharding_ext::RepoShard;
 use shardmanager_lib::smtypes;
 use shardmanager_lib::{self as sm};
-use slog::Logger;
 use stats::prelude::*;
 use tokio::runtime::Handle;
 use tokio::sync::RwLock;
@@ -210,7 +209,7 @@ impl RepoExecutionProcess {
 
     /// Performs a destructive close over this repo executing process.
     /// Cannot be used again.
-    async fn close(self, timeout_secs: u64, _logger: &Logger) -> Result<()> {
+    async fn close(self, timeout_secs: u64) -> Result<()> {
         info!("Terminating execution of shard {}.", self.repo_shard);
         // Invoke the stop() callback allowing the process code to signal its
         // execution unit to prepare for termination via AtomicBool, OneShot
@@ -279,7 +278,7 @@ impl RepoExecutionProcess {
 
     /// Checks if the executing process has been terminated either
     /// due to error or successful completion.
-    fn is_terminated(&mut self, runtime_handle: &Handle, _logger: &Logger) -> Result<bool> {
+    fn is_terminated(&mut self, runtime_handle: &Handle) -> Result<bool> {
         // Check if the underlying task for the execution handle is finished.
         if self.execution_handle.is_finished() {
             // Safe to block on the handle since the underlying task has finished execution.
@@ -317,19 +316,12 @@ pub(crate) struct RepoCleanupProcess {
 impl RepoCleanupProcess {
     /// Create a new repo cleanup process and initiate the clean
     /// up activity for the given repo execution.
-    fn new(
-        executor: RepoExecutionProcess,
-        timeout_secs: u64,
-        _logger: &Logger,
-        runtime_handle: &Handle,
-    ) -> Self {
+    fn new(executor: RepoExecutionProcess, timeout_secs: u64, runtime_handle: &Handle) -> Self {
         Self {
             shard: executor.shard.clone(),
             repo_shard: executor.repo_shard.clone(),
-            repo_cleanup_handle: runtime_handle.spawn({
-                let logger = _logger.clone();
-                async move { executor.close(timeout_secs, &logger).await }
-            }),
+            repo_cleanup_handle: runtime_handle
+                .spawn({ async move { executor.close(timeout_secs).await } }),
         }
     }
 
@@ -390,8 +382,6 @@ pub struct ShardedProcessHandler {
     /// underlying process to perform the necessary clean-up before exiting
     /// forcefully.
     timeout_secs: u64,
-    /// Logger instance for trace and info logs.
-    logger: Logger,
     /// Flag determining whether shard-level healing is enabled for the service.
     shard_healing: bool,
 }
@@ -402,7 +392,6 @@ impl ShardedProcessHandler {
         runtime_handle: Handle,
         timeout_secs: u64,
         setup_job: Arc<dyn RepoShardedProcess>,
-        logger: Logger,
         shard_healing: bool,
     ) -> Self {
         Self {
@@ -410,7 +399,6 @@ impl ShardedProcessHandler {
             runtime_handle,
             setup_job,
             timeout_secs,
-            logger,
             shard_healing,
             healthy: AtomicBool::new(true),
             repo_map: RwLock::new(HashMap::new()),
@@ -478,7 +466,7 @@ impl ShardedProcessHandler {
                     // termination is not time-bounded and can be awaited.
                     Execution(old_repo_execution_process) => {
                         old_repo_execution_process
-                            .close(self.timeout_secs, &self.logger)
+                            .close(self.timeout_secs)
                             .await?;
                     }
                     // A repo that was being cleaned up post execution is no longer assigned
@@ -732,7 +720,6 @@ impl ShardedProcessHandler {
                         let repo_cleanup_process = RepoCleanupProcess::new(
                             repo_execution_process,
                             self.timeout_secs.clone(),
-                            &self.logger,
                             &self.runtime_handle,
                         );
                         guarded_repo_map.insert(key, RepoProcess::Cleanup(repo_cleanup_process));
@@ -832,7 +819,7 @@ impl ShardedProcessHandler {
         {
             guarded_repo_map.retain(|repo_name, repo_process| match repo_process {
                 Execution(repo_execution_process) => {
-                    match repo_execution_process.is_terminated(&self.runtime_handle, &self.logger) {
+                    match repo_execution_process.is_terminated(&self.runtime_handle) {
                         Ok(true) => {
                             error!(
                                 "Removing unhealthy shard {} after valid termination",
@@ -1081,7 +1068,6 @@ impl ShardedProcessExecutor {
     pub fn new(
         fb: FacebookInit,
         runtime_handle: Handle,
-        _logger: &Logger,
         service_name: &'static str,
         service_scope: &'static str,
         timeout_secs: u64,
@@ -1123,7 +1109,6 @@ impl ShardedProcessExecutor {
             runtime_handle,
             timeout_secs,
             process_handle,
-            _logger.clone(),
             shard_healing,
         ));
         Ok(Self {
@@ -1134,25 +1119,20 @@ impl ShardedProcessExecutor {
 
     /// Non-blocking call to begin execution of the underlying process based on the
     /// repos assigned by ShardManager
-    pub fn execute(&mut self, _logger: &Logger) {
+    pub fn execute(&mut self) {
         info!("Initiating sharded execution for service");
         self.client.start_callbacks_server();
     }
 
     /// Blocking call to begin execution of the underlying process based on the repos
     /// assigned by ShardManager
-    pub async fn block_and_execute(
-        self,
-        logger: &Logger,
-        terminate_signal_receiver: Receiver<bool>,
-    ) -> Result<()> {
-        self.block_and_execute_with_quiesce_timeout(logger, terminate_signal_receiver, None, None)
+    pub async fn block_and_execute(self, terminate_signal_receiver: Receiver<bool>) -> Result<()> {
+        self.block_and_execute_with_quiesce_timeout(terminate_signal_receiver, None, None)
             .await
     }
 
     pub async fn block_and_execute_with_quiesce_timeout(
         mut self,
-        _logger: &Logger,
         terminate_signal_receiver: Receiver<bool>,
         quiesce_timeout: Option<Duration>,
         quiesce_completion_sender: Option<Sender<bool>>,
