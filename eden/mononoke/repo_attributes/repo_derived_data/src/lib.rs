@@ -16,7 +16,6 @@ use anyhow::Result;
 use anyhow::anyhow;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
-use cacheblob::LeaseOps;
 use commit_graph::CommitGraph;
 use context::CoreContext;
 use derived_data_manager::BonsaiDerivable;
@@ -61,7 +60,6 @@ impl RepoDerivedData {
         repo_blobstore: RepoBlobstore,
         repo_config: Arc<RepoConfig>,
         filestore_config: FilestoreConfig,
-        lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
         config: DerivedDataConfig,
         derivation_service_client: Option<Arc<dyn DerivationClient>>,
@@ -83,7 +81,6 @@ impl RepoDerivedData {
                         repo_blobstore.clone(),
                         repo_config.clone(),
                         filestore_config,
-                        lease.clone(),
                         scuba.clone(),
                         config_name.to_string(),
                         config.clone(),
@@ -122,20 +119,6 @@ impl RepoDerivedData {
             config: self.config.clone(),
             managers: updated_managers,
             enabled_manager: self.enabled_manager.with_mutated_scuba(mutator),
-        }
-    }
-
-    // For dangerous-override: allow replacement of lease-ops
-    pub fn with_replaced_lease(&self, lease: Arc<dyn LeaseOps>) -> Self {
-        let updated_managers = self
-            .managers
-            .iter()
-            .map(|(name, manager)| (name.clone(), manager.with_replaced_lease(lease.clone())))
-            .collect::<HashMap<_, _>>();
-        Self {
-            config: self.config.clone(),
-            managers: updated_managers,
-            enabled_manager: self.enabled_manager.with_replaced_lease(lease),
         }
     }
 
@@ -291,11 +274,6 @@ impl RepoDerivedData {
     /// Config for the currently active derived data.
     pub fn active_config(&self) -> &DerivedDataTypesConfig {
         self.manager().config()
-    }
-
-    /// Derived data lease for this repo.
-    pub fn lease(&self) -> &Arc<dyn LeaseOps> {
-        self.manager().lease().lease_ops()
     }
 
     /// Default manager for derivation.

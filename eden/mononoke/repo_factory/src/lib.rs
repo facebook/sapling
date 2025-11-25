@@ -65,9 +65,6 @@ use bookmarks_cache::ArcBookmarksCache;
 use bundle_uri::ArcGitBundleUri;
 use bundle_uri::SqlGitBundleMetadataStorageBuilder;
 use cacheblob::CachelibBlobstoreOptions;
-use cacheblob::InProcessLease;
-use cacheblob::LeaseOps;
-use cacheblob::MemcacheOps;
 use cacheblob::new_cachelib_blobstore_no_lease;
 use cacheblob::new_memcache_blobstore;
 use caching_commit_graph_storage::CachingCommitGraphStorage;
@@ -238,7 +235,6 @@ use zeus_client::ZeusClient;
 #[cfg(fbcode_build)]
 use zeus_client::zeus_cpp_client::ZeusCppClient;
 
-const DERIVED_DATA_LEASE: &str = "derived-data-lease";
 #[cfg(fbcode_build)]
 const ZEUS_CLIENT_ID: &str = "mononoke";
 
@@ -343,7 +339,6 @@ pub struct RepoFactory {
     zelos_clients: RepoFactoryCache<ZelosConfig, Arc<dyn ZeusClient>>,
     repo_event_publishers: RepoFactoryCache<Option<MetadataCacheConfig>, ArcRepoEventPublisher>,
     blobstore_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
-    lease_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn LeaseOps>>>>,
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     bonsai_hg_mapping_overwrite: bool,
@@ -360,7 +355,6 @@ impl RepoFactory {
             zelos_clients: RepoFactoryCache::new(env.fb, "zelos_clients"),
             repo_event_publishers: RepoFactoryCache::new(env.fb, "repo_event_publishers"),
             blobstore_override: None,
-            lease_override: None,
             scrub_handler: default_scrub_handler(),
             blobstore_component_sampler: None,
             bonsai_hg_mapping_overwrite: false,
@@ -374,14 +368,6 @@ impl RepoFactory {
         blobstore_override: impl RepoFactoryOverride<Arc<dyn Blobstore>>,
     ) -> &mut Self {
         self.blobstore_override = Some(Arc::new(blobstore_override));
-        self
-    }
-
-    pub fn with_lease_override(
-        &mut self,
-        lease_override: impl RepoFactoryOverride<Arc<dyn LeaseOps>>,
-    ) -> &mut Self {
-        self.lease_override = Some(Arc::new(lease_override));
         self
     }
 
@@ -601,32 +587,6 @@ impl RepoFactory {
                 Ok(zelos_client)
             })
             .await
-    }
-
-    fn lease_init(
-        fb: FacebookInit,
-        caching: Caching,
-        lease_type: &'static str,
-    ) -> Result<Arc<dyn LeaseOps>> {
-        // Derived data leasing is performed through the cache, so is only
-        // available if caching is enabled.
-        if let Caching::Enabled(_) = caching {
-            Ok(Arc::new(MemcacheOps::new(fb, lease_type, "")?))
-        } else {
-            Ok(Arc::new(InProcessLease::new()))
-        }
-    }
-
-    fn lease(&self, lease_type: &'static str) -> Result<Arc<dyn LeaseOps>> {
-        let fb = self.env.fb;
-        let caching = self.env.caching;
-        Self::lease_init(fb, caching, lease_type).map(|lease| {
-            if let Some(lease_override) = &self.lease_override {
-                lease_override(lease)
-            } else {
-                lease
-            }
-        })
     }
 
     pub async fn redacted_blobs(
@@ -1305,7 +1265,6 @@ impl RepoFactory {
             .derived_data_scuba_table_overwrite
             .clone()
             .or(config.scuba_table.clone());
-        let lease = self.lease(DERIVED_DATA_LEASE)?;
         let scuba = build_scuba(self.env.fb, scuba_table, repo_identity.name())?;
         let derivation_service_client = get_derivation_client(
             self.env.fb,
@@ -1323,7 +1282,6 @@ impl RepoFactory {
             repo_blobstore.as_ref().clone(),
             repo_config.clone(),
             **filestore_config,
-            lease,
             scuba,
             config,
             derivation_service_client,

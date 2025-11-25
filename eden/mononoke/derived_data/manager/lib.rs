@@ -10,7 +10,6 @@
 pub mod context;
 pub mod derivable;
 pub mod error;
-pub mod lease;
 pub mod manager;
 
 pub use mononoke_types::DerivableType;
@@ -19,7 +18,6 @@ pub use self::context::DerivationContext;
 pub use self::derivable::BonsaiDerivable;
 pub use self::error::DerivationError;
 pub use self::error::SharedDerivationError;
-pub use self::lease::DerivedDataLease;
 pub use self::manager::DerivedDataManager;
 pub use self::manager::derive::Rederivation;
 pub use self::manager::derive::VisitedDerivableTypesMap;

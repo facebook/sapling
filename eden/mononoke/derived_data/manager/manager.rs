@@ -10,7 +10,6 @@ use std::sync::Arc;
 use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
-use cacheblob::LeaseOps;
 use commit_graph::CommitGraph;
 use context::CoreContext;
 use derived_data_remote::DerivationClient;
@@ -26,7 +25,6 @@ use restricted_paths::ArcRestrictedPaths;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::DerivationContext;
-use crate::lease::DerivedDataLease;
 
 pub mod bubble;
 pub mod derive;
@@ -51,7 +49,6 @@ pub struct DerivedDataManagerInner {
     commit_graph: Arc<CommitGraph>,
     repo_blobstore: RepoBlobstore,
     repo_config: Arc<RepoConfig>,
-    lease: DerivedDataLease,
     scuba: MononokeScubaSampleBuilder,
     /// If a (primary) manager has a secondary manager, that means some of the
     /// changesets should be derived using the primary manager, and some the secondary,
@@ -96,14 +93,12 @@ impl DerivedDataManager {
         repo_blobstore: RepoBlobstore,
         repo_config: Arc<RepoConfig>,
         filestore_config: FilestoreConfig,
-        lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
         config_name: String,
         config: DerivedDataTypesConfig,
         derivation_service_client: Option<Arc<dyn DerivationClient>>,
         restricted_paths: ArcRestrictedPaths,
     ) -> Self {
-        let lease = DerivedDataLease::new(lease);
         DerivedDataManager {
             inner: Arc::new(DerivedDataManagerInner {
                 repo_id,
@@ -112,7 +107,6 @@ impl DerivedDataManager {
                 commit_graph,
                 repo_blobstore: repo_blobstore.clone(),
                 repo_config,
-                lease,
                 scuba,
                 secondary: None,
                 derivation_service_client,
@@ -137,16 +131,6 @@ impl DerivedDataManager {
         Self {
             inner: Arc::new(DerivedDataManagerInner {
                 scuba: mutator(self.inner.scuba.clone()),
-                ..self.inner.as_ref().clone()
-            }),
-        }
-    }
-
-    // For dangerous-override: allow replacement of lease-ops
-    pub fn with_replaced_lease(&self, lease: Arc<dyn LeaseOps>) -> Self {
-        Self {
-            inner: Arc::new(DerivedDataManagerInner {
-                lease: DerivedDataLease::new(lease),
                 ..self.inner.as_ref().clone()
             }),
         }
@@ -271,10 +255,6 @@ impl DerivedDataManager {
 
     pub fn repo_blobstore(&self) -> &RepoBlobstore {
         &self.inner.repo_blobstore
-    }
-
-    pub fn lease(&self) -> &DerivedDataLease {
-        &self.inner.lease
     }
 
     pub fn scuba(&self) -> &MononokeScubaSampleBuilder {

@@ -32,7 +32,6 @@ bounded_traversal = { version = "0.1.0", git = "https://github.com/facebookexper
 bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivation" }
 bundle_uri = { version = "0.1.0", path = "../../git/bundle_uri" }
 bytes = { version = "1.10", features = ["serde"] }
-cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 cas_client = { version = "0.1.0", path = "../../cas_client/client" }
 case_conflict_skeleton_manifest = { version = "0.1.0", path = "../../derived_data/case_conflict_skeleton_manifest" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }

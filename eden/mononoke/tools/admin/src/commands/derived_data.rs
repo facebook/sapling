@@ -14,8 +14,6 @@ mod list_manifest;
 mod slice;
 mod verify_manifests;
 
-use std::sync::Arc;
-
 use anyhow::Context;
 use anyhow::Result;
 use bonsai_git_mapping::BonsaiGitMapping;
@@ -23,7 +21,6 @@ use bonsai_globalrev_mapping::BonsaiGlobalrevMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::Bookmarks;
-use cacheblob::dummy::DummyLease;
 use clap::Parser;
 use clap::Subcommand;
 use commit_graph::CommitGraph;
@@ -171,15 +168,9 @@ async fn open_repo_for_derive(
     bypass_redaction: bool,
 ) -> Result<Repo> {
     let repo_customization: Box<dyn Fn(&mut RepoFactory) -> &mut RepoFactory + Send> = if rederive {
-        Box::new(|repo_factory| {
-            {
-                repo_factory
-                    .with_lease_override(|_| Arc::new(DummyLease {}))
-                    .with_bonsai_hg_mapping_override()
-            }
-        })
+        Box::new(|repo_factory| repo_factory.with_bonsai_hg_mapping_override())
     } else {
-        Box::new(|repo_factory| repo_factory.with_lease_override(|_| Arc::new(DummyLease {})))
+        Box::new(|repo_factory| repo_factory)
     };
 
     if bypass_redaction {

@@ -34,7 +34,6 @@ use bundle_uri::BundleUri;
 use bundle_uri::LocalFSBUndleUriGenerator;
 use bundle_uri::SqlGitBundleMetadataStorageBuilder;
 use cacheblob::InProcessLease;
-use cacheblob::LeaseOps;
 use commit_cloud::ArcCommitCloud;
 use commit_cloud::CommitCloud;
 use commit_cloud::sql::builder::SqlCommitCloudBuilder;
@@ -180,7 +179,6 @@ pub struct TestRepoFactory {
     hg_mutation_db: SqlConnections,
     redacted: Option<Arc<RedactedBlobs>>,
     permission_checker: Option<ArcRepoPermissionChecker>,
-    derived_data_lease: Option<Box<dyn Fn() -> Arc<dyn LeaseOps> + Send + Sync>>,
     filenodes_override: Option<Box<dyn Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync>>,
     restricted_paths: Option<ArcRestrictedPaths>,
 }
@@ -327,7 +325,6 @@ impl TestRepoFactory {
             hg_mutation_db,
             redacted: None,
             permission_checker: None,
-            derived_data_lease: None,
             filenodes_override: None,
             live_commit_sync_config: None,
             bookmarks_cache: None,
@@ -389,15 +386,6 @@ impl TestRepoFactory {
     /// Modify the config of the repo.
     pub fn with_config_override(&mut self, modify: impl FnOnce(&mut RepoConfig)) -> &mut Self {
         modify(&mut self.config);
-        self
-    }
-
-    /// Override the constructor for the derived data lease.
-    pub fn with_derived_data_lease(
-        &mut self,
-        lease: impl Fn() -> Arc<dyn LeaseOps> + Send + Sync + 'static,
-    ) -> &mut Self {
-        self.derived_data_lease = Some(Box::new(lease));
         self
     }
 
@@ -655,8 +643,7 @@ impl TestRepoFactory {
         ))
     }
 
-    /// Construct RepoDerivedData.  Derived data uses an in-process lease for
-    /// tests.
+    /// Construct RepoDerivedData
     pub fn repo_derived_data(
         &self,
         repo_identity: &ArcRepoIdentity,
@@ -669,10 +656,6 @@ impl TestRepoFactory {
         filestore_config: &ArcFilestoreConfig,
         restricted_paths: &ArcRestrictedPaths,
     ) -> Result<ArcRepoDerivedData> {
-        let lease = self.derived_data_lease.as_ref().map_or_else(
-            || Arc::new(InProcessLease::new()) as Arc<dyn LeaseOps>,
-            |lease| lease(),
-        );
         Ok(Arc::new(RepoDerivedData::new(
             repo_identity.id(),
             repo_identity.name().to_string(),
@@ -683,7 +666,6 @@ impl TestRepoFactory {
             repo_blobstore.as_ref().clone(),
             repo_config.clone(),
             **filestore_config,
-            lease,
             MononokeScubaSampleBuilder::with_discard(),
             repo_config.derived_data_config.clone(),
             None, // derivation_service_client = None
