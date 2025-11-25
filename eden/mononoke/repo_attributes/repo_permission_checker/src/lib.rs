@@ -17,7 +17,6 @@ use permission_checker::BoxPermissionChecker;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::PermissionCheckerBuilder;
-use slog::Logger;
 use tokio::join;
 use tracing::trace;
 
@@ -145,7 +144,6 @@ pub struct ProdRepoPermissionChecker {
 
 impl ProdRepoPermissionChecker {
     pub async fn new(
-        _logger: &Logger,
         acl_provider: &dyn AclProvider,
         repo_hipster_acl: Option<&str>,
         service_hipster_acl: Option<&str>,

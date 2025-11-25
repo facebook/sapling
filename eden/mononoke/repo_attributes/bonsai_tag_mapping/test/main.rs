@@ -324,8 +324,7 @@ async fn test_cached_bonsai_tag_mappings(fb: FacebookInit) -> Result<(), Error> 
                 Arc::new(SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO));
             let ctx = CoreContext::test_mock(fb);
             let (sender, receiver) = broadcast::channel(10);
-            let mapping =
-                CachedBonsaiTagMapping::new(&ctx, mapping, receiver, ctx.logger().clone()).await?;
+            let mapping = CachedBonsaiTagMapping::new(&ctx, mapping, receiver).await?;
             // Add a few mappings
             let entry = BonsaiTagMappingEntry {
                 changeset_id: bonsai::ONES_CSID,

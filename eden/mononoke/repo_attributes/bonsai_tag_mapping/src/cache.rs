@@ -50,7 +50,6 @@ impl CachedBonsaiTagMapping {
         ctx: &CoreContext,
         inner: Arc<dyn BonsaiTagMapping>,
         update_notification_receiver: Receiver<PlainBookmarkInfo>,
-        logger: slog::Logger,
     ) -> Result<Self> {
         let initial_entries = inner
             .get_all_entries(ctx)
@@ -60,7 +59,7 @@ impl CachedBonsaiTagMapping {
         let updater_task = mononoke::spawn_task({
             cloned!(entries, inner);
             let ctx = ctx.clone();
-            update_cache(ctx, entries, inner, update_notification_receiver, logger)
+            update_cache(ctx, entries, inner, update_notification_receiver)
         });
         Ok(Self {
             inner,
@@ -75,7 +74,6 @@ async fn update_cache(
     entries: Swappable<Vec<BonsaiTagMappingEntry>>,
     bonsai_tag_mapping: Arc<dyn BonsaiTagMapping>,
     mut update_notification_receiver: Receiver<PlainBookmarkInfo>,
-    _logger: slog::Logger,
 ) {
     loop {
         let fallible_notification = update_notification_receiver.recv().await;

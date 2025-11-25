@@ -1061,14 +1061,12 @@ impl RepoFactory {
         )
         .unwrap_or(false)
         {
-            let logger = self.env.logger.clone();
             match repo_event_publisher.subscribe_for_tag_updates(&repo_name.to_string()) {
                 Ok(update_notification_receiver) => {
                     let cached_bonsai_tag_mapping = CachedBonsaiTagMapping::new(
                         &self.ctx(),
                         Arc::new(bonsai_tag_mapping),
                         update_notification_receiver,
-                        logger,
                     )
                     .await?;
                     Ok(Arc::new(cached_bonsai_tag_mapping))
@@ -1215,7 +1213,6 @@ impl RepoFactory {
     ) -> Result<ArcRepoPermissionChecker> {
         let repo_name = repo_identity.name();
         let permission_checker = ProdRepoPermissionChecker::new(
-            &self.env.logger,
             self.env.acl_provider.as_ref(),
             repo_config.hipster_acl.as_deref(),
             repo_config
