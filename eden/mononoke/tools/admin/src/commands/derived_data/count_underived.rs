@@ -39,7 +39,7 @@ pub(super) async fn count_underived(
     stream::iter(cs_ids)
         .map(|cs_id| async move {
             let underived =
-                BulkDerivation::count_underived(manager, ctx, cs_id, None, None, derived_data_type)
+                BulkDerivation::count_underived(manager, ctx, cs_id, None, derived_data_type)
                     .await?;
             Ok((cs_id, underived))
         })

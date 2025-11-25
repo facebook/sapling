@@ -315,13 +315,12 @@ impl RepoDerivedData {
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
-        limit: Option<u64>,
     ) -> Result<u64, DerivationError>
     where
         Derivable: BonsaiDerivable,
     {
         self.manager()
-            .count_underived::<Derivable>(ctx, csid, limit, None)
+            .count_underived::<Derivable>(ctx, csid, None)
             .await
     }
 

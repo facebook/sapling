@@ -296,7 +296,6 @@ impl DerivedDataManager {
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
-        limit: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<u64, DerivationError>
     where
@@ -304,7 +303,7 @@ impl DerivedDataManager {
     {
         self.get_manager(ctx, csid)
             .await?
-            .count_underived_impl::<Derivable>(ctx, csid, limit, rederivation)
+            .count_underived_impl::<Derivable>(ctx, csid, rederivation)
             .await
     }
 
@@ -312,7 +311,6 @@ impl DerivedDataManager {
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
-        limit: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<u64, DerivationError>
     where
@@ -340,13 +338,6 @@ impl DerivedDataManager {
             .into_iter()
             .map(|segment| segment.length)
             .sum();
-        // The limit is somewhat fictitious. Since underived_count is cheap to calculate, we don't
-        // actually need to do magic to only partially evaluate the sum
-        if let Some(limit) = limit {
-            if underived_count > limit {
-                return Ok(limit);
-            }
-        }
         Ok(underived_count)
     }
 

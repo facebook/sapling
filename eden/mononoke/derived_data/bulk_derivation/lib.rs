@@ -145,7 +145,6 @@ pub trait BulkDerivation {
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
-        limit: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_type: DerivableType,
     ) -> Result<u64, DerivationError>;
@@ -225,7 +224,6 @@ trait SingleTypeDerivation: Send + Sync {
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
-        limit: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<u64, DerivationError>;
 
@@ -335,11 +333,10 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
-        limit: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<u64, DerivationError> {
         self.manager
-            .count_underived::<T>(ctx, csid, limit, rederivation)
+            .count_underived::<T>(ctx, csid, rederivation)
             .await
     }
 
@@ -547,14 +544,11 @@ impl BulkDerivation for DerivedDataManager {
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
-        limit: Option<u64>,
         rederivation: Option<Arc<dyn Rederivation>>,
         derived_data_type: DerivableType,
     ) -> Result<u64, DerivationError> {
         let manager = manager_for_type(self, derived_data_type);
-        manager
-            .count_underived(ctx, csid, limit, rederivation)
-            .await
+        manager.count_underived(ctx, csid, rederivation).await
     }
 
     async fn derive_from_predecessor(

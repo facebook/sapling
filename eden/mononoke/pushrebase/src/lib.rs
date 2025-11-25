@@ -315,7 +315,7 @@ async fn check_filenodes_backfilled(
 
     let underived = repo
         .repo_derived_data()
-        .count_underived::<FilenodesOnlyPublic>(ctx, *head, Some(limit))
+        .count_underived::<FilenodesOnlyPublic>(ctx, *head)
         .await?;
     if underived >= limit {
         Err(format_err!(
