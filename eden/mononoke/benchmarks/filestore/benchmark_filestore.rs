@@ -373,9 +373,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let args: BenchmarkArgs = app.args()?;
 
     let runtime = app.runtime();
-    let logger = app.logger();
+
     let config_store = app.config_store();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new(fb);
 
     let blobstore = runtime.block_on(open_blobstore(
         fb,

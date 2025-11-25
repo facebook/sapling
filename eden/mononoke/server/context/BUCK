@@ -11,7 +11,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:governor",
         "//common/rust/shed/fbinit:fbinit",
-        "//common/rust/shed/slog_glog_fmt:slog_glog_fmt",
         "//eden/mononoke/common/async_limiter:async_limiter",
         "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/common/rust/sql_ext/sql_query_telemetry:sql_query_telemetry",

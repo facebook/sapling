@@ -154,7 +154,6 @@ async fn cache_warmup_target(
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let env = app.environment();
-    let logger = app.logger();
     let args: MononokeMicrowaveArgs = app.args()?;
 
     let repo_factory = Arc::clone(app.repo_factory());
@@ -180,7 +179,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 let ctx = {
                     scuba.add("reponame", name.clone());
                     let session = SessionContainer::new_with_defaults(app.fb);
-                    session.new_context_with_logger(logger.clone(), scuba)
+                    session.new_context(scuba)
                 };
 
                 let (filenodes_sender, filenodes_receiver) = mpsc::channel(1000);

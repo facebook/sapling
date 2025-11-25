@@ -74,7 +74,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
     }
 
     let caching = app.environment().caching;
-    let logger = app.logger();
+
     let config_store = app.config_store();
 
     let storage_configs = app.storage_configs();
@@ -84,7 +84,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
         .ok_or_else(|| anyhow!("unknown storage config"))?;
     let mysql_options = app.mysql_options();
     let blobstore_options = app.blobstore_options();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new(fb);
 
     let blobstore = || async {
         let blobstore = make_blobstore(

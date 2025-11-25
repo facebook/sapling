@@ -146,11 +146,10 @@ fn main(fb: FacebookInit) -> Result<()> {
     let print_progress = args.print_progress;
 
     let env = app.environment();
-    let logger = app.logger();
     let runtime = app.runtime();
     let config_store = app.config_store();
 
-    let ctx = CoreContext::new_for_bulk_processing(fb, logger.clone());
+    let ctx = CoreContext::new(fb);
     let readonly_storage = &env.readonly_storage;
     let blobstore_options = &env.blobstore_options;
 

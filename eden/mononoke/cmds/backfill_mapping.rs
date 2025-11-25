@@ -147,10 +147,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let args: BackFillArgs = app.args()?;
 
-    let logger = app.logger();
     let runtime = app.runtime();
 
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new(fb);
 
     let mode = if args.git {
         BackfillMode::Git

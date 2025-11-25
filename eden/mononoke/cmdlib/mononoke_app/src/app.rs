@@ -390,11 +390,7 @@ impl MononokeApp {
     /// contain basic logging, and also scuba logging if configured by the
     /// command line arguments.
     pub fn new_basic_context(&self) -> CoreContext {
-        CoreContext::new_with_logger_and_scuba(
-            self.env.fb,
-            self.logger().clone(),
-            self.env.scuba_sample_builder.clone(),
-        )
+        CoreContext::new_with_scuba(self.env.fb, self.env.scuba_sample_builder.clone())
     }
 
     /// Return repo factory used by app.

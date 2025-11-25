@@ -202,7 +202,6 @@ use restricted_paths::RestrictedPaths;
 use restricted_paths::RestrictedPathsManifestIdCacheBuilder;
 use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::o;
 use sql_commit_graph_storage::ArcCommitGraphBulkFetcher;
 use sql_commit_graph_storage::CommitGraphBulkFetcher;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
@@ -491,7 +490,7 @@ impl RepoFactory {
             Redaction::Enabled => {
                 let redacted_blobs = self
                     .redacted_blobs(
-                        self.ctx(None),
+                        self.ctx(),
                         &repo_config.storage_config.metadata,
                         common_config,
                     )
@@ -660,22 +659,14 @@ impl RepoFactory {
         Ok(Arc::new(RedactionConfigBlobstore::new(blobstore)))
     }
 
-    fn ctx(&self, repo_identity: Option<&ArcRepoIdentity>) -> CoreContext {
-        self.ctx_with_client_entry_point(repo_identity, None)
+    fn ctx(&self) -> CoreContext {
+        self.ctx_with_client_entry_point(None)
     }
 
     fn ctx_with_client_entry_point(
         &self,
-        repo_identity: Option<&ArcRepoIdentity>,
         client_entry_point: Option<ClientEntryPoint>,
     ) -> CoreContext {
-        let logger = repo_identity.map_or_else(
-            || self.env.logger.new(o!()),
-            |id| {
-                let repo_name = String::from(id.name());
-                self.env.logger.new(o!("repo" => repo_name))
-            },
-        );
         let session = if let Some(client_entry_point) = client_entry_point {
             SessionContainer::new_with_client_info(
                 self.env.fb,
@@ -684,7 +675,7 @@ impl RepoFactory {
         } else {
             SessionContainer::new_with_defaults(self.env.fb)
         };
-        session.new_context_with_logger(logger, self.env.scuba_sample_builder.clone())
+        session.new_context(self.env.scuba_sample_builder.clone())
     }
 
     /// Returns a cache builder for the named pool if caching is enabled
@@ -906,7 +897,6 @@ impl RepoFactory {
         Ok(Arc::new(
             RepoStatsLogger::new(
                 self.env.fb,
-                self.env.logger.clone(),
                 repo_identity.name().to_string(),
                 repo_config.clone(),
                 bookmarks.clone(),
@@ -1075,7 +1065,7 @@ impl RepoFactory {
             match repo_event_publisher.subscribe_for_tag_updates(&repo_name.to_string()) {
                 Ok(update_notification_receiver) => {
                     let cached_bonsai_tag_mapping = CachedBonsaiTagMapping::new(
-                        &self.ctx(Some(repo_identity)),
+                        &self.ctx(),
                         Arc::new(bonsai_tag_mapping),
                         update_notification_receiver,
                         logger,
@@ -1114,7 +1104,7 @@ impl RepoFactory {
             match repo_event_publisher.subscribe_for_content_refs_updates(&repo_name.to_string()) {
                 Ok(update_notification_receiver) => {
                     let cached_git_ref_content_mapping = CachedGitRefContentMapping::new(
-                        &self.ctx(Some(repo_identity)),
+                        &self.ctx(),
                         Arc::new(git_ref_content_mapping),
                         update_notification_receiver,
                     )
@@ -1175,11 +1165,8 @@ impl RepoFactory {
         {
             Ok(Arc::new(git_symbolic_refs))
         } else {
-            let cached_git_symbolic_refs = CachedGitSymbolicRefs::new(
-                &self.ctx(Some(repo_identity)),
-                Arc::new(git_symbolic_refs),
-            )
-            .await?;
+            let cached_git_symbolic_refs =
+                CachedGitSymbolicRefs::new(&self.ctx(), Arc::new(git_symbolic_refs)).await?;
             Ok(Arc::new(cached_git_symbolic_refs))
         }
     }
@@ -1193,10 +1180,7 @@ impl RepoFactory {
             .open_sql::<SqlRepoMetadataCheckpointBuilder>(repo_config)
             .await
             .context(RepoFactoryError::RepoMetadataCheckpoint)?
-            .build(
-                repo_identity.id(),
-                self.ctx(Some(repo_identity)).sql_query_telemetry(),
-            );
+            .build(repo_identity.id(), self.ctx().sql_query_telemetry());
         Ok(Arc::new(repo_metadata_info))
     }
 
@@ -1448,10 +1432,9 @@ impl RepoFactory {
     pub async fn restricted_paths(
         &self,
         repo_config: &ArcRepoConfig,
-        repo_identity: &ArcRepoIdentity,
         restricted_paths_manifest_id_store: &ArcRestrictedPathsManifestIdStore,
     ) -> Result<ArcRestrictedPaths> {
-        let ctx = self.ctx(Some(repo_identity)).clone();
+        let ctx = self.ctx().clone();
         let restricted_paths_config = repo_config.restricted_paths_config.clone();
 
         let manifest_id_cache = if !restricted_paths_config.is_empty()
@@ -1752,10 +1735,7 @@ impl RepoFactory {
                 let scuba_sample_builder =
                     self.env.warm_bookmarks_cache_scuba_sample_builder.clone();
                 let ctx = self
-                    .ctx_with_client_entry_point(
-                        Some(repo_identity),
-                        Some(self.env.client_entry_point_for_service),
-                    )
+                    .ctx_with_client_entry_point(Some(self.env.client_entry_point_for_service))
                     .with_mutated_scuba(|_| scuba_sample_builder);
 
                 let mut wbc_builder = WarmBookmarksCacheBuilder::new(
@@ -1864,11 +1844,10 @@ impl RepoFactory {
 
     pub async fn repo_handler_base(
         &self,
-        repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
         push_redirector_mode: &ArcPushRedirectorMode,
     ) -> Result<ArcRepoHandlerBase> {
-        let ctx = self.ctx(Some(repo_identity));
+        let ctx = self.ctx();
         let scuba = ctx.scuba().clone();
         let repo_client_knobs = repo_config.repo_client_knobs.clone();
         let maybe_push_redirector_base = match **push_redirector_mode {
@@ -1934,7 +1913,7 @@ impl RepoFactory {
                     .await?;
 
                 let preloaded_commit_graph_storage = PreloadedCommitGraphStorage::from_blobstore(
-                    &self.ctx(Some(repo_identity)),
+                    &self.ctx(),
                     repo_identity.id(),
                     Arc::new(blobstore_without_cache),
                     preloaded_commit_graph_key.clone(),
@@ -1965,7 +1944,7 @@ impl RepoFactory {
                     .await?;
                 Ok(Arc::new(
                     CGDMComponentsReloader::from_blobstore(
-                        &self.ctx(Some(repo_identity)),
+                        &self.ctx(),
                         Arc::new(blobstore_without_cache),
                         preloaded_cgdm_key.to_string(),
                     )
@@ -2072,7 +2051,7 @@ impl RepoFactory {
             bonsai_hg_mapping.clone(),
             bonsai_git_mapping.clone(),
             repo_derived_data.clone(),
-            self.ctx(None),
+            self.ctx(),
             self.env.acl_provider.clone(),
             repo_config.commit_cloud_config.clone().into(),
         )))

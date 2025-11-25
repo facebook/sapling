@@ -14,7 +14,6 @@ use metadata::Metadata;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use slog_glog_fmt::logger_that_can_work_in_tests;
 use sql_query_telemetry::SqlQueryTelemetry;
 
 use crate::logging::LoggingContainer;
@@ -63,39 +62,12 @@ impl CoreContext {
         session.new_context(scuba)
     }
 
-    pub fn new_with_logger(fb: FacebookInit, logger: impl Into<Logger>) -> Self {
-        let session = SessionContainer::new_with_defaults(fb);
-        session.new_context_with_logger(logger.into(), MononokeScubaSampleBuilder::with_discard())
-    }
-
-    pub fn new_with_logger_and_client_info(
-        fb: FacebookInit,
-        logger: Logger,
-        client_info: ClientInfo,
-    ) -> Self {
-        let mut metadata = Metadata::default();
-        metadata.add_client_info(client_info);
-        let session = SessionContainer::builder(fb)
-            .metadata(Arc::new(metadata))
-            .build();
-        session.new_context_with_logger(logger, MononokeScubaSampleBuilder::with_discard())
-    }
-
-    pub fn new_with_logger_and_scuba(
-        fb: FacebookInit,
-        logger: Logger,
-        scuba: MononokeScubaSampleBuilder,
-    ) -> Self {
-        let session = SessionContainer::new_with_defaults(fb);
-        session.new_context_with_logger(logger, scuba)
-    }
-
     // Context for bulk processing like scrubbing or bulk backfilling
-    pub fn new_for_bulk_processing(fb: FacebookInit, logger: Logger) -> Self {
+    pub fn new_for_bulk_processing(fb: FacebookInit) -> Self {
         let session = SessionContainer::builder(fb)
             .session_class(SessionClass::Background)
             .build();
-        session.new_context_with_logger(logger, MononokeScubaSampleBuilder::with_discard())
+        session.new_context(MononokeScubaSampleBuilder::with_discard())
     }
 
     pub fn test_mock(fb: FacebookInit) -> Self {
@@ -105,15 +77,13 @@ impl CoreContext {
     }
 
     pub fn test_mock_session(session: SessionContainer) -> Self {
-        let logger = logger_that_can_work_in_tests().unwrap().into();
-        session.new_context_with_logger(logger, MononokeScubaSampleBuilder::with_discard())
+        session.new_context(MononokeScubaSampleBuilder::with_discard())
     }
 
     /// Create a new CoreContext, with a reset LoggingContainer. This is useful to reset perf
     /// counters. The existing CoreContext is unaffected.
     pub fn clone_and_reset(&self) -> Self {
-        self.session
-            .new_context_with_logger(self.logger().clone(), self.scuba().clone())
+        self.session.new_context(self.scuba().clone())
     }
 
     pub fn clone_and_sample(&self, sampling_key: SamplingKey) -> Self {

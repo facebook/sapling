@@ -61,8 +61,7 @@ struct CheckGitWCArgs {
 }
 
 async fn run_check_git_wc(app: MononokeApp) -> Result<()> {
-    let logger = app.logger();
-    let ctx = CoreContext::new_with_logger(app.fb, logger.clone());
+    let ctx = CoreContext::new(app.fb);
 
     let args: CheckGitWCArgs = app.args()?;
     let cs = ChangesetId::from_str(&args.csid)?;

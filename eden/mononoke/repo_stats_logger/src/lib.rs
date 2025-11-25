@@ -25,7 +25,6 @@ use mononoke_types::ChangesetId;
 use repo_blobstore::ArcRepoBlobstore;
 use repo_derived_data::ArcRepoDerivedData;
 use sharding_ext::encode_repo_name;
-use slog::Logger;
 use stats::define_stats;
 use stats::prelude::DynamicSingletonCounter;
 use tracing::warn;
@@ -46,14 +45,13 @@ pub struct RepoStatsLogger {
 impl RepoStatsLogger {
     pub async fn new(
         fb: FacebookInit,
-        logger: Logger,
         repo_name: String,
         repo_config: ArcRepoConfig,
         bookmarks: ArcBookmarks,
         repo_blobstore: ArcRepoBlobstore,
         repo_derived_data: ArcRepoDerivedData,
     ) -> Result<Self, Error> {
-        let ctx = CoreContext::new_for_bulk_processing(fb, logger.clone());
+        let ctx = CoreContext::new_for_bulk_processing(fb);
 
         let fut = async move {
             loop {

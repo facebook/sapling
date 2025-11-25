@@ -6,9 +6,7 @@ oncall("scm_server_infra")
 rust_library(
     name = "repo_factory",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
-    } | ({} if rust_oss.is_oss_build() else {
+    named_deps = ({} if rust_oss.is_oss_build() else {
         "MononokeRepoFactoryStats_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeRepoFactoryStats_ods3-rust",
     }),
     deps = [

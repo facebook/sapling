@@ -243,10 +243,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
-    let logger = app.logger();
-    let ctx = CoreContext::new_with_logger_and_client_info(
+    let ctx = CoreContext::new_with_client_info(
         app.fb,
-        logger.clone(),
         ClientInfo::default_with_entry_point(ClientEntryPoint::GitImport),
     );
     let args: GitimportArgs = app.args()?;

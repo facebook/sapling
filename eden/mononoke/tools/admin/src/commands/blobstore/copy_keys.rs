@@ -137,7 +137,7 @@ pub async fn copy_keys(app: MononokeApp, args: BlobstoreCopyKeysArgs) -> Result<
 
     // Background session class tells multiplexed blobstore to wait
     // for all blobstores to finish.
-    let mut ctx = CoreContext::new_with_logger(app.fb, app.logger().clone());
+    let mut ctx = CoreContext::new(app.fb);
     ctx.session_mut()
         .override_session_class(SessionClass::Background);
 

@@ -8,7 +8,6 @@ rust_binary(
         "src/**/*.rs",
         "schemas/**/*.sql",
     ]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",

@@ -150,9 +150,8 @@ impl LeaderElection for MononokeCasSyncProcessExecutor {
 
 impl MononokeCasSyncProcessExecutor {
     fn new(app: Arc<MononokeApp>, repo_name: String, args: Arc<CommandArgs>) -> Result<Self> {
-        let ctx = CoreContext::new_with_logger_and_client_info(
+        let ctx = CoreContext::new_with_client_info(
             app.fb,
-            app.logger().clone(),
             ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeCasSync),
         );
 

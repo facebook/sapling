@@ -22,7 +22,6 @@ use rate_limiting::RateLimiter;
 use rate_limiting::Scope;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 
 pub use self::builder::SessionContainerBuilder;
 use crate::core::CoreContext;
@@ -80,16 +79,6 @@ impl SessionContainer {
 
     pub fn new_context(&self, scuba: MononokeScubaSampleBuilder) -> CoreContext {
         let logging = LoggingContainer::new(self.fb, scuba);
-        CoreContext::from_parts(self.fb, logging, self.clone())
-    }
-
-    pub fn new_context_with_logger(
-        &self,
-        _logger: Logger,
-        scuba: MononokeScubaSampleBuilder,
-    ) -> CoreContext {
-        let logging = LoggingContainer::new(self.fb, scuba);
-
         CoreContext::from_parts(self.fb, logging, self.clone())
     }
 
