@@ -17,7 +17,6 @@ use megarepo_configs::SyncTargetConfig;
 use megarepo_configs::Target;
 use megarepo_error::MegarepoError;
 use metaconfig_types::RepoConfig;
-use slog::Logger;
 use tracing::info;
 
 use crate::MononokeMegarepoConfigs;
@@ -29,7 +28,7 @@ pub struct TestMononokeMegarepoConfigs {
 }
 
 impl TestMononokeMegarepoConfigs {
-    pub fn new(_logger: &Logger) -> Self {
+    pub fn new() -> Self {
         info!("Creating a new TestMononokeMegarepoConfigs");
         Self {
             config_versions: Arc::new(Mutex::new(HashMap::new())),

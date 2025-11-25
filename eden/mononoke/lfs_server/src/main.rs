@@ -199,7 +199,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let args: LfsServerArgs = app.args()?;
 
-    let logger = app.logger().clone();
     let config_store = app.config_store();
     let acl_provider = app.environment().acl_provider.clone();
 
@@ -256,7 +255,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let internal_identity = common.internal_identity.clone();
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     let server = {
-        cloned!(acl_provider, common, logger, will_exit);
+        cloned!(acl_provider, common, will_exit);
         move |app| async move {
             let repos = LfsRepos::new(&app)
                 .await
@@ -299,7 +298,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             let repos_config = repos.config.clone();
 
-            let bandwidth = get_bandwidth(&logger);
+            let bandwidth = get_bandwidth();
 
             let ctx = LfsServerContext::new(
                 repos,

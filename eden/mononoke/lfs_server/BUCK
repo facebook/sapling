@@ -6,7 +6,6 @@ oncall("scm_server_infra")
 rust_binary(
     name = "lfs_server",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:pretty_assertions",
         "fbsource//third-party/rust:tokio",

@@ -58,7 +58,7 @@ impl MegarepoTest<Repo> {
         let repo: Repo = factory.build().await?;
         let mononoke =
             Arc::new(Mononoke::new_test(vec![("repo".to_string(), repo.clone())]).await?);
-        let configs_storage = TestMononokeMegarepoConfigs::new(ctx.logger());
+        let configs_storage = TestMononokeMegarepoConfigs::new();
 
         Ok(Self {
             repo,

@@ -55,7 +55,6 @@ use repo_factory::RepoFactory;
 use repo_identity::ArcRepoIdentity;
 use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
-use slog::o;
 use tracing::warn;
 
 mod add_branching_sync_target;
@@ -139,7 +138,6 @@ impl<R: MononokeRepo> MegarepoApi<R> {
     pub fn new(app: &MononokeApp, mononoke: Arc<Mononoke<R>>) -> Result<Self, MegarepoError> {
         let env = app.environment();
         let fb = env.fb;
-        let logger = env.logger.new(o!("megarepo" => ""));
 
         let megarepo_configs: Arc<dyn MononokeMegarepoConfigs> = match &env.megarepo_configs_options
         {
@@ -147,13 +145,12 @@ impl<R: MononokeRepo> MegarepoApi<R> {
             | MononokeMegarepoConfigsOptions::IntegrationTest(_) => {
                 Arc::new(CfgrMononokeMegarepoConfigs::new(
                     fb,
-                    &logger,
                     env.mysql_options.clone(),
                     env.readonly_storage,
                 )?)
             }
             MononokeMegarepoConfigsOptions::UnitTest => {
-                Arc::new(TestMononokeMegarepoConfigs::new(&logger))
+                Arc::new(TestMononokeMegarepoConfigs::new())
             }
         };
 

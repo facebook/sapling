@@ -16,7 +16,6 @@ use megarepo_configs::SyncTargetConfig;
 use megarepo_configs::Target;
 use megarepo_error::MegarepoError;
 use metaconfig_types::RepoConfig;
-use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use tracing::info;
 
@@ -35,7 +34,6 @@ pub struct CfgrMononokeMegarepoConfigs {
 impl CfgrMononokeMegarepoConfigs {
     pub fn new(
         fb: FacebookInit,
-        _logger: &Logger,
         mysql_options: MysqlOptions,
         readonly_storage: ReadOnlyStorage,
     ) -> Result<Self, MegarepoError> {

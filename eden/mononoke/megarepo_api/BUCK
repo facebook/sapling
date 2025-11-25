@@ -56,7 +56,6 @@ rust_library(
         "megarepo_config/schemas/**/*.sql",
     ]),
     autocargo = {"cargo_toml_dir": "megarepo_config"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit",
@@ -116,7 +115,6 @@ rust_library(
 rust_library(
     name = "megarepo_api",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit",
