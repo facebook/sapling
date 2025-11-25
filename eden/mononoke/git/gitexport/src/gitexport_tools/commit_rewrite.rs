@@ -57,7 +57,6 @@ use rand::distributions::DistString;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use scuba_ext::FutureStatsScubaExt;
-use slog::Logger;
 use sql::rusqlite::Connection as SqliteConnection;
 use test_repo_factory::TestRepoFactory;
 use tracing::debug;
@@ -95,7 +94,6 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
     let ctx = source_repo_ctx.ctx().clone();
     let changesets = graph_info.changesets;
     let changeset_parents = &graph_info.parents_map;
-    let logger = ctx.logger();
 
     info!("Copying changesets to temporary repo...");
 
@@ -116,7 +114,7 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
     let all_export_paths: HashSet<NonRootMPath> =
         export_paths.iter().cloned().map(|p| p.0).collect();
 
-    let mb_progress_bar = get_progress_bar(logger, num_changesets, "Copying changesets")?;
+    let mb_progress_bar = get_progress_bar(num_changesets, "Copying changesets")?;
 
     let export_paths = Arc::new(export_paths);
 
@@ -149,10 +147,7 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
                         })
                         .collect::<Vec<_>>();
 
-                    let multi_mover = Arc::new(GitExportMultiMover::new(
-                        source_repo_ctx.ctx().logger(),
-                        export_paths.as_slice(),
-                    ));
+                    let multi_mover = Arc::new(GitExportMultiMover::new(export_paths.as_slice()));
 
                     if file_changes.is_empty() {
                         return Err(anyhow!("No relevant file changes in changeset"));
@@ -194,8 +189,7 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
 
                 async move {
                     let ctx: &CoreContext = source_repo_ctx.ctx();
-                    let multi_mover =
-                        Arc::new(GitExportMultiMover::new(ctx.logger(), &export_paths));
+                    let multi_mover = Arc::new(GitExportMultiMover::new(&export_paths));
                     let (new_bcs, remapped_parents, export_paths_not_created) =
                         create_bonsai_for_new_repo(
                             &source_repo_ctx,
@@ -296,7 +290,6 @@ async fn create_bonsai_for_new_repo<'a, R: MononokeRepo>(
     ),
     MononokeError,
 > {
-    let logger = changeset_ctx.ctx().logger();
     trace!(
         "Rewriting changeset: {:#?} | {:#?}",
         &changeset_ctx.id(),
@@ -415,7 +408,7 @@ async fn create_bonsai_for_new_repo<'a, R: MononokeRepo>(
     });
 
     let rewritten_bcs_mut = rewrite_commit_with_implicit_deletes(
-        logger,
+        &slog::Logger::Tracing,
         mut_bcs,
         &remapped_parents,
         multi_mover,
@@ -495,7 +488,7 @@ struct GitExportMultiMover<'a> {
 }
 
 impl<'a> GitExportMultiMover<'a> {
-    fn new(_logger: &'a Logger, export_paths: &'a [NonRootMPath]) -> Self {
+    fn new(export_paths: &'a [NonRootMPath]) -> Self {
         Self { export_paths }
     }
 }
@@ -594,12 +587,8 @@ async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoCon
     Ok(temp_repo_ctx)
 }
 
-fn get_progress_bar(
-    logger: &Logger,
-    num_changesets: u64,
-    message: &'static str,
-) -> Result<Option<ProgressBar>> {
-    if logger.is_enabled(slog::Level::Info) {
+fn get_progress_bar(num_changesets: u64, message: &'static str) -> Result<Option<ProgressBar>> {
+    if tracing::enabled!(tracing::Level::INFO) {
         let progress_bar = ProgressBar::new(num_changesets)
   .with_message(message)
   .with_style(

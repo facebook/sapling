@@ -42,7 +42,6 @@ use mononoke_types::FileType;
 use mononoke_types::MPathElement;
 use mononoke_types::SortedVectorTrieMap;
 use mononoke_types::hash;
-use slog::Logger;
 use smallvec::SmallVec;
 use sorted_vector_map::SortedVectorMap;
 use tokio::io::AsyncBufReadExt;
@@ -342,7 +341,7 @@ pub struct TagMetadata {
 
 impl TagMetadata {
     pub async fn new<Reader: GitReader>(
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         oid: ObjectId,
         maybe_tag_name: Option<String>,
         reader: &Reader,
@@ -375,10 +374,10 @@ impl TagMetadata {
                 // only be set to `None`
                 let author = None;
 
-                let message = decode_message(tag.message, &None, ctx.logger())?;
+                let message = decode_message(tag.message, &None)?;
                 let name = match maybe_tag_name {
                     Some(name) => name,
-                    None => decode_message(tag.name, &None, ctx.logger())?,
+                    None => decode_message(tag.name, &None)?,
                 };
                 let pgp_signature = tag
                     .pgp_signature
@@ -450,11 +449,7 @@ pub fn decode_with_bom<'a>(
 /// accordingly, the conversion will be lossy.
 /// These latin1-encoded bytes: `b"Hello, R\xe9mi-\xc9tienne!"` will convert to `"Hello, R�mi-�tienne!"`
 /// if the encoding is not specified (so it will default to UTF-8).
-fn decode_message(
-    message: &[u8],
-    encoding: &Option<BString>,
-    _logger: &Logger,
-) -> Result<String, Error> {
+fn decode_message(message: &[u8], encoding: &Option<BString>) -> Result<String, Error> {
     let explicit_encoding_provided = encoding.is_some();
     let mut encoding_or_utf8 = encoding.clone().unwrap_or_else(|| BString::from("utf-8"));
     // remove single quotes so that "'utf8'" will be accepted
@@ -491,7 +486,7 @@ fn decode_message(
 
 impl ExtractedCommit {
     pub async fn new<Reader: GitReader>(
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         oid: ObjectId,
         reader: &Reader,
     ) -> Result<Self, Error> {
@@ -524,11 +519,8 @@ impl ExtractedCommit {
                 let committer_date = DateTime::from_gix(commit.committer.time()?)?;
                 let author = format_signature(commit.author);
                 let committer = format_signature(commit.committer);
-                let message = decode_message(
-                    commit.message,
-                    &commit.encoding.map(|e| e.to_owned()),
-                    ctx.logger(),
-                )?;
+                let message =
+                    decode_message(commit.message, &commit.encoding.map(|e| e.to_owned()))?;
                 let parents = commit.parents().collect();
                 let git_extra_headers = commit
                     .extra_headers
@@ -675,23 +667,19 @@ impl BackfillDerivation {
 #[cfg(test)]
 mod tests {
     use mononoke_macros::mononoke;
-    use slog::o;
 
     use super::BString;
-    use super::Logger;
     use super::decode_message;
 
     fn should_decode_into(message: &[u8], encoding: &Option<BString>, expected: &str) {
-        let logger = Logger::root(slog::Discard, o!());
-        let m = decode_message(message, encoding, &logger);
+        let m = decode_message(message, encoding);
         if m.is_err() {
             panic!("{:?}", m);
         }
         assert_eq!(expected, &m.unwrap())
     }
     fn should_fail_to_decode(message: &[u8], encoding: &Option<BString>) {
-        let logger = Logger::root(slog::Discard, o!());
-        let m = decode_message(message, encoding, &logger);
+        let m = decode_message(message, encoding);
         assert!(m.is_err());
     }
 

@@ -217,7 +217,6 @@ async fn async_main_impl(
     args: GitExportArgs,
     ctx: CoreContext,
 ) -> Result<(), Error> {
-    let logger = ctx.logger().clone();
     let repo: Arc<Repo> = app.open_repo(&args.hg_repo_args).await?;
 
     if !app.environment().readonly_storage.0 {
@@ -286,18 +285,15 @@ async fn async_main_impl(
         export_path_infos
     );
 
-    let graph_info = build_partial_commit_graph_for_export(
-        &logger,
-        export_path_infos.clone(),
-        args.oldest_commit_ts,
-    )
-    .try_timed()
-    .await?
-    .log_future_stats(
-        repo_ctx.ctx().scuba().clone(),
-        "Build partial commit graph",
-        None,
-    );
+    let graph_info =
+        build_partial_commit_graph_for_export(export_path_infos.clone(), args.oldest_commit_ts)
+            .try_timed()
+            .await?
+            .log_future_stats(
+                repo_ctx.ctx().scuba().clone(),
+                "Build partial commit graph",
+                None,
+            );
 
     trace!("changesets: {:#?}", &graph_info.changesets);
     trace!("changeset parents: {:#?}", &graph_info.parents_map);

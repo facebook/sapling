@@ -6,9 +6,7 @@ oncall("scm_server_infra")
 rust_binary(
     name = "git_server",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
-    } | ({} if rust_oss.is_oss_build() else {
+    named_deps = ({} if rust_oss.is_oss_build() else {
         "MononokeGitRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rust",
     }),
     test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],

@@ -289,7 +289,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let git_server_context = GitServerContext::new(
                 repos,
                 enforce_authorization,
-                logger.clone(),
                 args.upstream_lfs_server,
                 tls_args,
             );

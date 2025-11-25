@@ -31,7 +31,6 @@ use mononoke_api::RepoContext;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
-use slog_glog_fmt::logger_that_can_work_in_tests;
 use test_utils::GitExportTestRepoOptions;
 use test_utils::build_test_repo;
 use test_utils::repo_with_multiple_renamed_export_directories;
@@ -41,7 +40,6 @@ use tracing::info;
 #[mononoke::fbinit_test]
 async fn test_partial_commit_graph_for_single_export_path(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let logger = logger_that_can_work_in_tests().unwrap().into();
 
     let test_data = build_test_repo(fb, &ctx, GitExportTestRepoOptions::default()).await?;
     let source_repo_ctx = test_data.repo_ctx;
@@ -78,7 +76,7 @@ async fn test_partial_commit_graph_for_single_export_path(fb: FacebookInit) -> R
         .ok_or(anyhow!("Couldn't find master bookmark in source repo."))?;
 
     let graph_info =
-        build_partial_commit_graph_for_export(&logger, vec![(export_dir, master_cs)], None).await?;
+        build_partial_commit_graph_for_export(vec![(export_dir, master_cs)], None).await?;
 
     let relevant_cs_ids = graph_info
         .changesets
@@ -96,7 +94,6 @@ async fn test_partial_commit_graph_for_single_export_path(fb: FacebookInit) -> R
 #[mononoke::fbinit_test]
 async fn test_directories_with_merge_commits_fail_hard(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let logger = logger_that_can_work_in_tests().unwrap().into();
 
     let test_repo_opts = GitExportTestRepoOptions {
         add_branch_commit: true,
@@ -122,7 +119,6 @@ async fn test_directories_with_merge_commits_fail_hard(fb: FacebookInit) -> Resu
         .ok_or(anyhow!("Couldn't find master bookmark in source repo."))?;
 
     let error = build_partial_commit_graph_for_export(
-        &logger,
         vec![
             (export_dir, master_cs.clone()),
             (second_export_dir, master_cs),
@@ -144,7 +140,6 @@ async fn test_directories_with_merge_commits_fail_hard(fb: FacebookInit) -> Resu
 #[mononoke::fbinit_test]
 async fn test_partial_commit_graph_for_multiple_export_paths(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let logger = logger_that_can_work_in_tests().unwrap().into();
 
     let test_repo_opts = GitExportTestRepoOptions {
         add_branch_commit: false,
@@ -189,7 +184,6 @@ async fn test_partial_commit_graph_for_multiple_export_paths(fb: FacebookInit) -
         .ok_or(anyhow!("Couldn't find master bookmark in source repo."))?;
 
     let graph_info = build_partial_commit_graph_for_export(
-        &logger,
         vec![
             (export_dir, master_cs.clone()),
             (second_export_dir, master_cs),
@@ -214,7 +208,6 @@ async fn test_partial_commit_graph_for_multiple_export_paths(fb: FacebookInit) -
 #[mononoke::fbinit_test]
 async fn test_oldest_commit_ts_option(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let logger = logger_that_can_work_in_tests().unwrap().into();
 
     let test_repo_opts = GitExportTestRepoOptions {
         add_branch_commit: false,
@@ -265,7 +258,6 @@ async fn test_oldest_commit_ts_option(fb: FacebookInit) -> Result<()> {
     let oldest_ts = fifth_cs.author_date().await?.timestamp();
 
     let graph_info = build_partial_commit_graph_for_export(
-        &logger,
         vec![
             (export_dir, master_cs.clone()),
             (second_export_dir, master_cs),
@@ -303,8 +295,6 @@ async fn test_renamed_export_paths_are_followed<R: MononokeRepo>(
     expected_relevant_changesets: Vec<&str>,
     expected_parent_map: HashMap<&str, Vec<&str>>,
 ) -> Result<()> {
-    let logger = logger_that_can_work_in_tests().unwrap().into();
-
     info!(
         "Testing renamed export paths with the following paths {0:#?}",
         export_paths
@@ -341,8 +331,7 @@ async fn test_renamed_export_paths_are_followed<R: MononokeRepo>(
         .try_collect::<Vec<(NonRootMPath, ChangesetContext<R>)>>()
         .await?;
 
-    let graph_info =
-        build_partial_commit_graph_for_export(&logger, export_path_infos, None).await?;
+    let graph_info = build_partial_commit_graph_for_export(export_path_infos, None).await?;
 
     let relevant_cs_ids = graph_info
         .changesets

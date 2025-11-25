@@ -20,7 +20,6 @@ use mononoke_app::args::TLSArgs;
 use mononoke_repos::MononokeRepos;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
-use slog::Logger;
 
 use super::GitMethodInfo;
 use super::Pushvars;
@@ -51,10 +50,6 @@ impl RepositoryRequestContext {
         git_ctx.request_context(ctx, method_info, pushvars).await
     }
 
-    pub fn _logger(&self) -> &Logger {
-        self.ctx.logger()
-    }
-
     pub fn bundle_uri_trusted_only(&self) -> bool {
         self.repo
             .repo_config
@@ -74,21 +69,18 @@ pub struct GitServerContextInner {
     upstream_lfs_server: Option<String>,
     // Used for communicating with upstream LFS server
     tls_args: Option<TLSArgs>,
-    _logger: Logger,
 }
 
 impl GitServerContextInner {
     pub fn new(
         repos: GitRepos,
         enforce_auth: bool,
-        _logger: Logger,
         upstream_lfs_server: Option<String>,
         tls_args: Option<TLSArgs>,
     ) -> Self {
         Self {
             repos,
             enforce_auth,
-            _logger,
             upstream_lfs_server,
             tls_args,
         }
@@ -104,14 +96,12 @@ impl GitServerContext {
     pub fn new(
         repos: GitRepos,
         enforce_auth: bool,
-        _logger: Logger,
         upstream_lfs_server: Option<String>,
         tls_args: Option<TLSArgs>,
     ) -> Self {
         let inner = Arc::new(RwLock::new(GitServerContextInner::new(
             repos,
             enforce_auth,
-            _logger,
             upstream_lfs_server,
             tls_args,
         )));

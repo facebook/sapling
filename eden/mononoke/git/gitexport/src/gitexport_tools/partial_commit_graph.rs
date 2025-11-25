@@ -19,7 +19,6 @@ use mononoke_api::MononokeRepo;
 use mononoke_api::changeset_path::ChangesetPathHistoryOptions;
 use mononoke_types::ChangesetId;
 use mononoke_types::NonRootMPath;
-use slog::Logger;
 use tracing::debug;
 use tracing::info;
 
@@ -61,7 +60,6 @@ where
 /// The commit graph is returned as a topologically sorted list of changesets
 /// and a hashmap of changeset id to their parents' ids.
 pub async fn build_partial_commit_graph_for_export<R: MononokeRepo>(
-    logger: &Logger,
     paths: Vec<ExportPathInfo<R>>,
     // Consider history until the provided timestamp, i.e. all commits in the
     // graph will have its creation time greater than or equal to it.
@@ -83,7 +81,7 @@ pub async fn build_partial_commit_graph_for_export<R: MononokeRepo>(
         .await?;
 
     let (sorted_changesets, parents_map) =
-        merge_cs_lists_and_build_parents_map(logger, history_changesets).await?;
+        merge_cs_lists_and_build_parents_map(history_changesets).await?;
 
     info!(
         "Number of changesets to export: {0:?}",
@@ -125,7 +123,6 @@ async fn get_relevant_changesets_for_single_path<R: MononokeRepo>(
 /// have modified export paths, the parent map should be `{A: [D]}`, because
 /// the partial graph is `A -> D`.
 async fn merge_cs_lists_and_build_parents_map<R: MononokeRepo>(
-    _logger: &Logger,
     changeset_lists: Vec<Vec<ChangesetContext<R>>>,
 ) -> Result<(Vec<ChangesetContext<R>>, ChangesetParents)> {
     info!("Merging changeset lists and building parents map...");
