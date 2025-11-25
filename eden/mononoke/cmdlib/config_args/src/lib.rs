@@ -15,7 +15,6 @@ use clap::ArgGroup;
 use clap::Args;
 use fbinit::FacebookInit;
 use mononoke_configs::MononokeConfigs;
-use slog::Logger;
 use tokio::runtime::Handle;
 
 #[derive(Args, Debug)]
@@ -83,14 +82,14 @@ impl ConfigArgs {
         ConfigMode::Development
     }
 
-    pub fn create_config_store(&self, fb: FacebookInit, logger: Logger) -> Result<ConfigStore> {
+    pub fn create_config_store(&self, fb: FacebookInit) -> Result<ConfigStore> {
         const CRYPTO_PROJECT: &str = "SCM";
         const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
         const CONFIGERATOR_REFRESH_TIMEOUT: Duration = Duration::from_secs(1);
 
         if let Some(path) = &self.local_configerator_path {
             Ok(ConfigStore::file(
-                logger,
+                true,
                 path.clone(),
                 String::new(),
                 CONFIGERATOR_POLL_INTERVAL,
@@ -109,7 +108,7 @@ impl ConfigArgs {
                 .collect();
             ConfigStore::regex_signed_configerator(
                 fb,
-                logger,
+                true,
                 crypto_regex,
                 CONFIGERATOR_POLL_INTERVAL,
                 CONFIGERATOR_REFRESH_TIMEOUT,

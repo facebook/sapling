@@ -185,7 +185,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .build::<GitServerArgs>()?;
 
     let args: GitServerArgs = app.args()?;
-    let logger = app.logger().clone();
 
     let listen_host = args.listen_host.clone();
     let listen_port = args.listen_port.clone();
@@ -203,7 +202,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 tls_params.tls_private_key,
                 tls_params.tls_ticket_seeds,
             )
-            .build_tls_acceptor(logger.clone())
+            .build_tls_acceptor(())
         })
         .transpose()?;
     let acl_provider = app.environment().acl_provider.clone();

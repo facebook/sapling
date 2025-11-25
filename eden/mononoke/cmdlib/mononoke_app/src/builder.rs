@@ -330,7 +330,7 @@ impl MononokeAppBuilder {
         };
 
         let config_store = config_args
-            .create_config_store(self.fb, logger.clone())
+            .create_config_store(self.fb)
             .context("Failed to create config store")?;
 
         let observability_context = logging_args

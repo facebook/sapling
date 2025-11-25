@@ -221,7 +221,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 tls_params.tls_private_key,
                 tls_params.tls_ticket_seeds,
             )
-            .build_tls_acceptor(logger.clone())
+            .build_tls_acceptor(())
         })
         .transpose()?;
 

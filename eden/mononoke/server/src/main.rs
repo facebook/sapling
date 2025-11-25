@@ -267,7 +267,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             &args.tls_args.tls_private_key,
             args.tls_args.tls_ticket_seeds,
         )
-        .tls_acceptor_builder(root_log.clone())
+        .tls_acceptor_builder(())
         .context("Failed to instantiate TLS Acceptor builder")?;
 
         builder.set_alpn_protos(ALPN_MONONOKE_PROTOS_OFFERS)?;
