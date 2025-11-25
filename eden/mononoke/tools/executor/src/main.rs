@@ -21,7 +21,6 @@ use fbinit::FacebookInit;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use sharding_ext::RepoShard;
-use slog::Logger;
 use tokio::time;
 use tracing::info;
 
@@ -58,7 +57,7 @@ impl RepoShardedProcess for TestProcess {
         // to be performed here. In common cases, this would involve generating the
         // Repo struct or related entity utilizing a factory and then storing the
         // generated entities as part of the returned struct.
-        Ok(Arc::new(TestProcessExecutor::new(&self.app, repo)))
+        Ok(Arc::new(TestProcessExecutor::new(repo)))
     }
 }
 
@@ -70,14 +69,12 @@ impl RepoShardedProcess for TestProcess {
 pub struct TestProcessExecutor {
     terminate_execution: Arc<AtomicBool>,
     repo: RepoShard,
-    logger: Logger,
 }
 
 impl TestProcessExecutor {
-    fn new(app: &MononokeApp, repo: &RepoShard) -> Self {
+    fn new(repo: &RepoShard) -> Self {
         Self {
             terminate_execution: Arc::new(AtomicBool::new(false)),
-            logger: app.logger().clone(),
             repo: repo.clone(),
         }
     }
@@ -106,11 +103,7 @@ impl TestProcessExecutor {
 ///
 /// Function representing the work that need to be done on the repo
 /// as part of this BP.
-async fn do_busy_work(
-    _logger: &Logger,
-    repo: &RepoShard,
-    terminate_execution: Arc<AtomicBool>,
-) -> Result<()> {
+async fn do_busy_work(repo: &RepoShard, terminate_execution: Arc<AtomicBool>) -> Result<()> {
     info!("Beginning execution of test process for repo {}", repo,);
     let mut iteration = 1;
     loop {
@@ -157,12 +150,7 @@ impl RepoShardedProcessExecutor for TestProcessExecutor {
     /// Post the completion of stop() callback, the execute() method
     /// has timeout secs to finish its book-keeping activities.
     async fn execute(&self) -> Result<()> {
-        do_busy_work(
-            &self.logger,
-            &self.repo,
-            Arc::clone(&self.terminate_execution),
-        )
-        .await
+        do_busy_work(&self.repo, Arc::clone(&self.terminate_execution)).await
     }
 
     /// Note that this method is responsible ONLY for signalling the termination
@@ -254,5 +242,5 @@ async fn run_unsharded(app: MononokeApp) -> Result<()> {
     // Terminate execution can still be used to halt execution even in unsharded mode.
     // For this example, we are immediately terminating after one loop.
     let terminate_execution = Arc::new(AtomicBool::new(true));
-    do_busy_work(app.logger(), &repo, Arc::clone(&terminate_execution)).await
+    do_busy_work(&repo, Arc::clone(&terminate_execution)).await
 }

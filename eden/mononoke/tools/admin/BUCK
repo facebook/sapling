@@ -21,7 +21,6 @@ rust_binary(
     labels = [
         ci.heavyweight(),
     ],
-    named_deps = ({} if rust_oss.is_oss_build() else {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"}),
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit-tokio",
