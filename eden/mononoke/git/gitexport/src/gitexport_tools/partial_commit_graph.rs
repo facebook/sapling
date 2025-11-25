@@ -15,7 +15,6 @@ use futures::stream::TryStreamExt;
 use futures::stream::{self};
 use itertools::Itertools;
 use mononoke_api::ChangesetContext;
-use mononoke_api::CoreContext;
 use mononoke_api::MononokeRepo;
 use mononoke_api::changeset_path::ChangesetPathHistoryOptions;
 use mononoke_types::ChangesetId;
@@ -62,7 +61,6 @@ where
 /// The commit graph is returned as a topologically sorted list of changesets
 /// and a hashmap of changeset id to their parents' ids.
 pub async fn build_partial_commit_graph_for_export<R: MononokeRepo>(
-    ctx: &CoreContext,
     logger: &Logger,
     paths: Vec<ExportPathInfo<R>>,
     // Consider history until the provided timestamp, i.e. all commits in the
@@ -79,7 +77,7 @@ pub async fn build_partial_commit_graph_for_export<R: MononokeRepo>(
 
     let history_changesets: Vec<Vec<ChangesetContext<R>>> = stream::iter(paths)
         .then(|(p, cs_ctx)| async move {
-            get_relevant_changesets_for_single_path(ctx, p, &cs_ctx, &cs_path_history_options).await
+            get_relevant_changesets_for_single_path(p, &cs_ctx, &cs_path_history_options).await
         })
         .try_collect::<Vec<_>>()
         .await?;
@@ -102,7 +100,6 @@ pub async fn build_partial_commit_graph_for_export<R: MononokeRepo>(
 /// Get all changesets that affected the provided path up to a specific head
 /// commit.
 async fn get_relevant_changesets_for_single_path<R: MononokeRepo>(
-    ctx: &CoreContext,
     path: NonRootMPath,
     head_cs: &ChangesetContext<R>,
     cs_path_history_opts: &ChangesetPathHistoryOptions,
@@ -110,7 +107,7 @@ async fn get_relevant_changesets_for_single_path<R: MononokeRepo>(
     let cs_path_hist_ctx = head_cs.path_with_history(path).await?;
 
     let changesets: Vec<ChangesetContext<R>> = cs_path_hist_ctx
-        .history(ctx, *cs_path_history_opts)
+        .history(*cs_path_history_opts)
         .await?
         .try_collect()
         .await?;

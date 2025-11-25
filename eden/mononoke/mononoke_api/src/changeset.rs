@@ -803,7 +803,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .repo()
             .commit_graph()
             .common_base(self.ctx(), self.id, other_commit)
-            .watched(self.ctx().logger())
+            .watched()
             .await?;
         Ok(lca.first().map(|id| Self::new(self.repo_ctx.clone(), *id)))
     }
@@ -825,7 +825,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             ChangesetFileOrdering::Unordered,
             None,
         )
-        .watched(self.ctx().logger())
+        .watched()
         .await
     }
 
@@ -1555,7 +1555,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         let diff_trees = diff_items.contains(&ChangesetDiffItem::TREES);
 
         self.find_entries(to_vec1(path_restrictions), ordering)
-            .watched(self.ctx().logger())
+            .watched()
             .await?
             .yield_periodically()
             .on_large_overshoot(|budget, elapsed| {
@@ -1592,7 +1592,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                 }
             })
             .try_collect::<Vec<_>>()
-            .watched(self.ctx().logger())
+            .watched()
             .await
     }
 

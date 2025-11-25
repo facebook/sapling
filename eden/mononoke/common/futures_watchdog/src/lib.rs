@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::panic::Location;
 use std::pin::Pin;
 use std::time::Duration;
 use std::time::Instant;
@@ -12,22 +13,20 @@ use std::time::Instant;
 use futures::future::Future;
 use futures::task::Context;
 use futures::task::Poll;
-use maybe_owned::MaybeOwned;
 use pin_project::pin_project;
-use slog::Logger;
-use slog::Record;
+use tracing::warn;
 
 #[pin_project]
-pub struct WatchedFuture<R, F> {
-    reporter: R,
+pub struct WatchedFuture<F> {
     #[pin]
     inner: F,
+    location: &'static Location<'static>,
     max_poll: Duration,
     label: Option<String>,
     unique_id: Option<String>,
 }
 
-impl<R, F> WatchedFuture<R, F> {
+impl<F> WatchedFuture<F> {
     pub fn with_max_poll(mut self, max_poll: u64) -> Self {
         self.max_poll = Duration::from_millis(max_poll);
         self
@@ -44,9 +43,8 @@ impl<R, F> WatchedFuture<R, F> {
     }
 }
 
-impl<R, F> Future for WatchedFuture<R, F>
+impl<F> Future for WatchedFuture<F>
 where
-    R: Reporter,
     F: Future,
 {
     type Output = F::Output;
@@ -56,63 +54,52 @@ where
 
         let now = Instant::now();
         let ret = this.inner.poll(cx);
-        this.reporter
-            .report(this.label, this.unique_id, this.max_poll, now.elapsed());
+
+        report(
+            this.location,
+            this.label.as_deref(),
+            this.unique_id.as_deref(),
+            this.max_poll,
+            now.elapsed(),
+        );
 
         ret
     }
 }
 
-pub trait Reporter {
-    fn report(
-        &self,
-        name: &Option<String>,
-        unique_id: &Option<String>,
-        max_poll: &Duration,
-        poll: Duration,
-    );
-}
+fn report(
+    location: &Location,
+    label: Option<&str>,
+    unique_id: Option<&str>,
+    max_poll: &Duration,
+    poll: Duration,
+) {
+    if poll <= *max_poll {
+        return;
+    }
 
-pub struct SlogReporter<'a> {
-    logger: MaybeOwned<'a, Logger>,
-    location: slog::RecordLocation,
-}
-
-impl Reporter for SlogReporter<'_> {
-    fn report(
-        &self,
-        name: &Option<String>,
-        unique_id: &Option<String>,
-        max_poll: &Duration,
-        poll: Duration,
-    ) {
-        if poll <= *max_poll {
-            return;
-        }
-
-        let name = name.as_deref().unwrap_or("");
-        let unique_id_suffix = match unique_id {
-            Some(unique_id) => format!(", unique_id={}", unique_id),
-            None => "".to_string(),
-        };
-
-        self.logger.log(&Record::new(
-            &slog::RecordStatic {
-                location: &self.location,
-                level: slog::Level::Warning,
-                tag: "futures_watchdog",
-            },
-            &format_args!("Slow poll({}) ran for {:?}{}", name, poll, unique_id_suffix),
-            slog::b!(),
-        ));
+    let label = label.unwrap_or("");
+    if let Some(unique_id) = unique_id {
+        warn!(
+            %unique_id,
+            file = location.file(),
+            line = location.line(),
+            column = location.column(),
+            "Slow poll({label}) ran for {poll:.3?}"
+        );
+    } else {
+        warn!(
+            file = location.file(),
+            line = location.line(),
+            column = location.column(),
+            "Slow poll({label}) ran for {poll:.3?}"
+        );
     }
 }
 
 pub trait WatchdogExt: Sized {
     #[track_caller]
-    fn watched<'a, L>(self, logger: L) -> WatchedFuture<SlogReporter<'a>, Self>
-    where
-        L: Into<MaybeOwned<'a, Logger>>;
+    fn watched(self) -> WatchedFuture<Self>;
 }
 
 impl<F> WatchdogExt for F
@@ -120,33 +107,18 @@ where
     F: Future + Sized,
 {
     #[track_caller]
-    fn watched<'a, L>(self, logger: L) -> WatchedFuture<SlogReporter<'a>, Self>
-    where
-        L: Into<MaybeOwned<'a, Logger>>,
-    {
-        let logger = logger.into();
-
+    fn watched(self) -> WatchedFuture<Self> {
         let location = std::panic::Location::caller();
-
-        let location = slog::RecordLocation {
-            file: location.file(),
-            line: location.line(),
-            column: location.column(),
-            function: "",
-            module: "",
-        };
 
         // This is a bit arbitrary but generally a very conservative default.
         let max_poll = Duration::from_millis(500);
 
-        let reporter = SlogReporter { logger, location };
-
         WatchedFuture {
-            reporter,
             inner: self,
+            location,
+            max_poll,
             label: None,
             unique_id: None,
-            max_poll,
         }
     }
 }

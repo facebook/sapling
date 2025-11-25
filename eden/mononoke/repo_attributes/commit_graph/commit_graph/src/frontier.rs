@@ -209,7 +209,7 @@ impl<E: EdgeType> CommitGraphOps<E> {
                 move |node| future::ready(Ok(node.generation::<E>() < target_generation)),
                 Prefetch::for_exact_skip_tree_traversal(target_generation),
             )
-            .watched(ctx.logger())
+            .watched()
             .await?;
         }
     }

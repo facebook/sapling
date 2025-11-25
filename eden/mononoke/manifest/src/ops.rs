@@ -399,11 +399,11 @@ where
                         Diff::Changed(path, left, right) => {
                             let l = mononoke::spawn_task({
                                 cloned!(ctx, left, store);
-                                async move { left.load(&ctx, &store).watched(ctx.logger()).await }
+                                async move { left.load(&ctx, &store).watched().await }
                             });
                             let r = mononoke::spawn_task({
                                 cloned!(ctx, right, other_store);
-                                async move { right.load(&ctx, &other_store).watched(ctx.logger()).await }
+                                async move { right.load(&ctx, &other_store).watched().await }
                             });
                             let (left_mf, right_mf) = future::try_join(l, r).await?;
                             let (left_mf, right_mf) = (left_mf?, right_mf?);
@@ -413,7 +413,8 @@ where
                                 tokio::task::consume_budget().await;
 
                                 let path = path.join(&name);
-                                let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
+                                let (replacement, child_replacements) =
+                                    replacements.remove(&name).unwrap_or_default().deconstruct();
                                 let left = replacement.unwrap_or(left);
 
                                 if let Some(right) =
@@ -426,22 +427,29 @@ where
                                             }
                                             (Entry::Tree(tree), right @ Entry::Leaf(_)) => {
                                                 output.push(Diff::Added(path.clone(), right));
-                                                recurse.push(Diff::Removed(path, tree), child_replacements);
+                                                recurse.push(
+                                                    Diff::Removed(path, tree),
+                                                    child_replacements,
+                                                );
                                             }
                                             (left @ Entry::Leaf(_), Entry::Tree(tree)) => {
                                                 output.push(Diff::Removed(path.clone(), left));
-                                                recurse.push(Diff::Added(path, tree), child_replacements);
+                                                recurse.push(
+                                                    Diff::Added(path, tree),
+                                                    child_replacements,
+                                                );
                                             }
-                                            (Entry::Tree(left), Entry::Tree(right)) => {
-                                                recurse.push(Diff::Changed(path, left, right), child_replacements)
-                                            }
+                                            (Entry::Tree(left), Entry::Tree(right)) => recurse
+                                                .push(
+                                                    Diff::Changed(path, left, right),
+                                                    child_replacements,
+                                                ),
                                         }
                                     }
                                 } else {
                                     match left {
-                                        Entry::Tree(tree) => {
-                                            recurse.push(Diff::Removed(path, tree), child_replacements)
-                                        }
+                                        Entry::Tree(tree) => recurse
+                                            .push(Diff::Removed(path, tree), child_replacements),
                                         _ => output.push(Diff::Removed(path, left)),
                                     }
                                 }
@@ -453,28 +461,39 @@ where
 
                                 if left_mf.lookup(ctx, &store, &name).await?.is_none() {
                                     let path = path.join(&name);
-                                    let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
+                                    let (replacement, child_replacements) = replacements
+                                        .remove(&name)
+                                        .unwrap_or_default()
+                                        .deconstruct();
                                     match (replacement, right) {
-                                        (None, Entry::Tree(tree)) => recurse.push(Diff::Added(path, tree), child_replacements),
+                                        (None, Entry::Tree(tree)) => recurse
+                                            .push(Diff::Added(path, tree), child_replacements),
                                         (None, right) => output.push(Diff::Added(path, right)),
                                         (Some(left @ Entry::Leaf(_)), right @ Entry::Leaf(_)) => {
                                             output.push(Diff::Changed(path, left, right));
                                         }
                                         (Some(Entry::Tree(tree)), right @ Entry::Leaf(_)) => {
                                             output.push(Diff::Added(path.clone(), right));
-                                            recurse.push(Diff::Removed(path, tree), child_replacements);
+                                            recurse.push(
+                                                Diff::Removed(path, tree),
+                                                child_replacements,
+                                            );
                                         }
                                         (Some(left @ Entry::Leaf(_)), Entry::Tree(tree)) => {
                                             output.push(Diff::Removed(path.clone(), left));
-                                            recurse.push(Diff::Added(path, tree), child_replacements);
+                                            recurse
+                                                .push(Diff::Added(path, tree), child_replacements);
                                         }
-                                        (Some(Entry::Tree(left)), Entry::Tree(right)) => {
-                                            recurse.push(Diff::Changed(path, left, right), child_replacements)
-                                        }
+                                        (Some(Entry::Tree(left)), Entry::Tree(right)) => recurse
+                                            .push(
+                                                Diff::Changed(path, left, right),
+                                                child_replacements,
+                                            ),
                                     }
                                 }
                             }
-                            ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for changed tree")?;
+                            ReplacementsHolder::finalize(&path, replacements)
+                                .context("Failed to finalize replacements for changed tree")?;
                             output.push(Diff::Changed(path, Entry::Tree(left), Entry::Tree(right)));
                             anyhow::Ok((output.into_output(), recurse.into_diffs()))
                         }
@@ -485,9 +504,12 @@ where
                                 tokio::task::consume_budget().await;
 
                                 let path = path.join(&name);
-                                let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
+                                let (replacement, child_replacements) =
+                                    replacements.remove(&name).unwrap_or_default().deconstruct();
                                 match (replacement, right) {
-                                    (None, Entry::Tree(tree)) => recurse.push(Diff::Added(path, tree), child_replacements),
+                                    (None, Entry::Tree(tree)) => {
+                                        recurse.push(Diff::Added(path, tree), child_replacements)
+                                    }
                                     (None, right) => output.push(Diff::Added(path, right)),
                                     (Some(left @ Entry::Leaf(_)), right @ Entry::Leaf(_)) => {
                                         output.push(Diff::Changed(path, left, right));
@@ -500,12 +522,12 @@ where
                                         output.push(Diff::Removed(path.clone(), left));
                                         recurse.push(Diff::Added(path, tree), child_replacements);
                                     }
-                                    (Some(Entry::Tree(left)), Entry::Tree(right)) => {
-                                        recurse.push(Diff::Changed(path, left, right), child_replacements)
-                                    }
+                                    (Some(Entry::Tree(left)), Entry::Tree(right)) => recurse
+                                        .push(Diff::Changed(path, left, right), child_replacements),
                                 }
                             }
-                            ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for added tree")?;
+                            ReplacementsHolder::finalize(&path, replacements)
+                                .context("Failed to finalize replacements for added tree")?;
                             output.push(Diff::Added(path, Entry::Tree(tree)));
                             anyhow::Ok((output.into_output(), recurse.into_diffs()))
                         }
@@ -516,14 +538,18 @@ where
                                 tokio::task::consume_budget().await;
 
                                 let path = path.join(&name);
-                                let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
+                                let (replacement, child_replacements) =
+                                    replacements.remove(&name).unwrap_or_default().deconstruct();
                                 let entry = replacement.unwrap_or(entry);
                                 match entry {
-                                    Entry::Tree(tree) => recurse.push(Diff::Removed(path, tree), child_replacements),
+                                    Entry::Tree(tree) => {
+                                        recurse.push(Diff::Removed(path, tree), child_replacements)
+                                    }
                                     _ => output.push(Diff::Removed(path, entry)),
                                 }
                             }
-                            ReplacementsHolder::finalize(&path, replacements).context("Failed to finalize replacements for removed tree")?;
+                            ReplacementsHolder::finalize(&path, replacements)
+                                .context("Failed to finalize replacements for removed tree")?;
                             output.push(Diff::Removed(path, Entry::Tree(tree)));
                             anyhow::Ok((output.into_output(), recurse.into_diffs()))
                         }

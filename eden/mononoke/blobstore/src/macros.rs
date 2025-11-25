@@ -87,7 +87,7 @@ macro_rules! impl_loadable_storable {
                 let id = *self;
                 let bytes = blobstore
                     .get(ctx, &id.blobstore_key())
-                    .watched(ctx.logger())
+                    .watched()
                     .with_max_poll($crate::BLOBSTORE_MAX_POLL_TIME_MS)
                     .await?;
                 match bytes {

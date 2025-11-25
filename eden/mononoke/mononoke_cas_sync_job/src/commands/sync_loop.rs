@@ -427,7 +427,7 @@ async fn run_sync(
                 &combined_entry,
                 main_bookmark_to_sync,
             )
-            .watched(ctx.logger())
+            .watched()
             .timed()
             .await;
 
@@ -436,12 +436,12 @@ async fn run_sync(
                 Ok(ok) => Ok((stats, ok)),
                 Err(err) => Err((Some(stats), err)),
             };
-            let res = reporting_handler(res).watched(ctx.logger()).await;
-            let entry = outcome_handler(res).watched(ctx.logger()).await?;
+            let res = reporting_handler(res).watched().await;
+            let entry = outcome_handler(res).watched().await?;
             let next_id = get_id_to_search_after(&entry);
             let success = replayed_sync_counter
                 .set_counter(ctx, next_id.try_into()?)
-                .watched(ctx.logger())
+                .watched()
                 .await?;
 
             if success {

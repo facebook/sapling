@@ -421,7 +421,7 @@ impl RepoFactory {
                     self.env.mysql_options.clone(),
                     self.env.readonly_storage,
                 )
-                .watched(&self.env.logger)
+                .watched()
                 .await
                 .inspect_err(|e| {
                     error!(
@@ -472,7 +472,7 @@ impl RepoFactory {
             &self.scrub_handler,
             self.blobstore_component_sampler.as_ref(),
         )
-        .watched(&self.env.logger)
+        .watched()
         .await
     }
 
@@ -538,7 +538,7 @@ impl RepoFactory {
             &self.env.blobstore_options,
             &self.env.logger,
         )
-        .watched(&self.env.logger)
+        .watched()
         .await
     }
 
@@ -1673,7 +1673,7 @@ impl RepoFactory {
 
             <Result<_, anyhow::Error>>::Ok(hook_manager)
         }
-        .watched(&self.env.logger)
+        .watched()
         .await
         .context(RepoFactoryError::HookManager)?;
 
@@ -1790,9 +1790,7 @@ impl RepoFactory {
                     BookmarkCacheDerivedData::NoDerivation => {}
                 }
 
-                Ok(Arc::new(
-                    wbc_builder.build().watched(&self.env.logger).await?,
-                ))
+                Ok(Arc::new(wbc_builder.build().watched().await?))
             }
             #[cfg(fbcode_build)]
             BookmarkCacheKind::Remote(address) => {

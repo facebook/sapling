@@ -837,7 +837,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
                 &repo_id,
                 &limit,
             )
-            .watched(ctx.logger())
+            .watched()
             .await?;
 
             let homogenous_entries: Vec<_> = match entries.first().cloned() {

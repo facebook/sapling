@@ -118,9 +118,7 @@ rust_library(
     name = "warm_bookmarks_cache",
     srcs = glob(["warm_bookmarks_cache/*.rs"]),
     autocargo = {"cargo_toml_dir": "warm_bookmarks_cache"},
-    named_deps = {
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
-    } | ({} if rust_oss.is_oss_build() else {
+    named_deps = ({} if rust_oss.is_oss_build() else {
         "MononokeWarmBookmarkCacheStats_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeWarmBookmarkCacheStats_ods3-rust",
     }),
     test_deps = [

@@ -221,7 +221,7 @@ impl HgBlobChangeset {
         changesetid: HgChangesetId,
     ) -> Result<Option<Self>> {
         let got = RevlogChangeset::load(ctx, blobstore, changesetid)
-            .watched(ctx.logger())
+            .watched()
             .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
             .await?;
         Ok(got.map(|revlogcs| {

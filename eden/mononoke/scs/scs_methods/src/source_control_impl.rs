@@ -1154,7 +1154,7 @@ macro_rules! impl_thrift_methods {
                             let (stats, res) = async {
                                 check_memory_usage(&ctx, stringify!($method_name), start_mem_stats.as_ref())?;
                                 let f = svc.$method_name(ctx.clone(), $( $param_name ),* );
-                                    f.watched(ctx.logger())
+                                    f.watched()
                                     .with_label(stringify!($method_name))
                                     .with_unique_id(&session_uuid)
                                     .with_max_poll(watchdog_max_poll).await
@@ -1215,7 +1215,7 @@ macro_rules! impl_thrift_stream_methods {
                             let (stats, res) = async {
                                 check_memory_usage(&ctx, stringify!($method_name), start_mem_stats.as_ref())?;
                                 let f = svc.$method_name(ctx.clone(), $( $param_name ),* );
-                                    f.watched(ctx.logger())
+                                    f.watched()
                                     .with_label(stringify!($method_name))
                                     .with_unique_id(&session_uuid)
                                     .with_max_poll(50).await

@@ -1375,10 +1375,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                         // has no warm value, this might mean we have to
                         // filter this bookmark out.
                         let bookmark_name = bookmark.into_key();
-                        let maybe_cs_id = cache
-                            .get(&self.ctx, &bookmark_name)
-                            .watched(self.ctx.logger())
-                            .await?;
+                        let maybe_cs_id = cache.get(&self.ctx, &bookmark_name).watched().await?;
                         Ok(maybe_cs_id.map(|cs_id| (bookmark_name.into_string(), cs_id)))
                     }
                 })
@@ -1391,7 +1388,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             Ok(stream::iter(
                 cache
                     .list(&self.ctx, &prefix, &pagination, limit)
-                    .watched(self.ctx.logger())
+                    .watched()
                     .await?,
             )
             .map(|(bookmark, (cs_id, _kind))| Ok((bookmark.into_string(), cs_id)))

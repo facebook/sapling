@@ -43,7 +43,7 @@ impl Loadable for HgFileNodeId {
         let blobstore_key = self.blobstore_key();
         let bytes = blobstore
             .get(ctx, &blobstore_key)
-            .watched(ctx.logger())
+            .watched()
             .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
             .await?;
         let blobstore_bytes = match bytes {

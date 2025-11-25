@@ -192,7 +192,7 @@ impl HgBlobManifest {
         } else {
             async {
                 let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifestid)
-                    .watched(ctx.logger())
+                    .watched()
                     .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
                     .await?;
                 match envelope {
@@ -209,7 +209,7 @@ impl HgBlobManifest {
                     None => anyhow::Ok(None),
                 }
             }
-            .watched(ctx.logger())
+            .watched()
             .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
             .await
             .context(format!(
@@ -277,7 +277,7 @@ impl Loadable for HgManifestId {
     ) -> Result<Self::Value, LoadableError> {
         let id = *self;
         HgBlobManifest::load(ctx, blobstore, id)
-            .watched(ctx.logger())
+            .watched()
             .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
             .await?
             .ok_or_else(|| LoadableError::Missing(id.blobstore_key()))

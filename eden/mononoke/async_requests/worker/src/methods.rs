@@ -92,7 +92,7 @@ async fn megarepo_sync_changeset<R: MononokeRepo>(
             params.target.into_config_format(&megarepo_api.mononoke())?,
             target_location,
         )
-        .watched(ctx.logger())
+        .watched()
         .await?
         .as_ref()
         .into();
@@ -251,7 +251,7 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
     match params.into() {
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_add_target_params(params) => {
             Ok(megarepo_add_sync_target(ctx, megarepo_api, params)
-                .watched(ctx.logger())
+                .watched()
                 .with_max_poll(METHOD_MAX_POLL_TIME_MS)
                 .with_label("megarepo_add_sync_target")
                 .await
@@ -260,7 +260,7 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_add_branching_target_params(params) => {
             Ok(megarepo_add_branching_sync_target(ctx, megarepo_api, params)
-                .watched(ctx.logger())
+                .watched()
                 .with_max_poll(METHOD_MAX_POLL_TIME_MS)
                 .with_label("megarepo_add_branching_sync_target")
                 .await
@@ -269,7 +269,7 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_change_target_params(params) => {
             Ok(megarepo_change_target_config(ctx, megarepo_api, params)
-                .watched(ctx.logger())
+                .watched()
                 .with_max_poll(METHOD_MAX_POLL_TIME_MS)
                 .with_label("megarepo_change_target_config")
                 .await
@@ -278,7 +278,7 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_remerge_source_params(params) => {
             Ok(megarepo_remerge_source(ctx, megarepo_api, params)
-                .watched(ctx.logger())
+                .watched()
                 .with_max_poll(METHOD_MAX_POLL_TIME_MS)
                 .with_label("megarepo_remerge_source")
                 .await
@@ -287,7 +287,7 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
         }
         async_requests_types_thrift::AsynchronousRequestParams::megarepo_sync_changeset_params(params) => {
             Ok(megarepo_sync_changeset(ctx, megarepo_api, params)
-                .watched(ctx.logger())
+                .watched()
                 .with_max_poll(METHOD_MAX_POLL_TIME_MS)
                 .with_label("megarepo_sync_changeset")
                 .await
@@ -302,7 +302,7 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
         }
         async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_size_params(params) => {
             Ok(commit_sparse_profile_size(ctx, mononoke, params)
-                .watched(ctx.logger())
+                .watched()
                 .with_max_poll(METHOD_MAX_POLL_TIME_MS)
                 .with_label("commit_sparse_profile_size")
                 .await
@@ -310,7 +310,7 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
         }
         async_requests_types_thrift::AsynchronousRequestParams::commit_sparse_profile_delta_params(params) => {
             Ok(commit_sparse_profile_delta(ctx, mononoke, params)
-                .watched(ctx.logger())
+                .watched()
                 .with_max_poll(METHOD_MAX_POLL_TIME_MS)
                 .with_label("commit_sparse_profile_delta")
                 .await

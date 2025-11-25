@@ -134,13 +134,10 @@ async fn fetch_history_for_path<R: MononokeRepo>(
                 .context(ErrorKind::UnexpectedEmptyPath)?,
         )
         .await?
-        .history(
-            repo.ctx(),
-            ChangesetPathHistoryOptions {
-                follow_mutable_file_history: true,
-                ..Default::default()
-            },
-        )
+        .history(ChangesetPathHistoryOptions {
+            follow_mutable_file_history: true,
+            ..Default::default()
+        })
         .await?
         .try_collect::<Vec<_>>()
         .await?;

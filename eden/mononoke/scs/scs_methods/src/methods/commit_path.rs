@@ -181,7 +181,7 @@ impl SourceControlServiceImpl {
         match params.format {
             thrift::BlameFormat::COMPACT => {
                 self.commit_path_blame_compact(ctx.clone(), commit_path, params)
-                    .watched(ctx.logger())
+                    .watched()
                     .await
             }
             other_format => Err(scs_errors::invalid_request(format!(
@@ -200,12 +200,12 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitPathBlameResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self
             .repo_changeset(ctx.clone(), &commit_path.commit)
-            .watched(ctx.logger())
+            .watched()
             .await?;
         borrowed!(repo);
         let path = changeset
             .path_with_history(&commit_path.path)
-            .watched(ctx.logger())
+            .watched()
             .await?;
 
         let options = params.format_options.unwrap_or_else(|| {
@@ -252,13 +252,11 @@ impl SourceControlServiceImpl {
         // Fetch the blame, and optionally its associated content.
         let (blame, content) = if option_include_contents {
             path.blame_with_content(follow_mutable_file_history)
-                .watched(ctx.logger())
+                .watched()
                 .await?
         } else {
             (
-                path.blame(follow_mutable_file_history)
-                    .watched(ctx.logger())
-                    .await?,
+                path.blame(follow_mutable_file_history).watched().await?,
                 Bytes::new(),
             )
         };
@@ -276,7 +274,7 @@ impl SourceControlServiceImpl {
             .collect::<Vec<_>>();
         let mut mapped_commit_ids =
             map_commit_identities(repo, csids.clone(), &params.identity_schemes)
-                .watched(ctx.logger())
+                .watched()
                 .await?;
         for (id, num) in csids_and_nums {
             if let Some(mapped_ids) = mapped_commit_ids.remove(&id) {
@@ -323,17 +321,14 @@ impl SourceControlServiceImpl {
 
             Ok::<_, MononokeError>((*csid, (author, date, message, title)))
         }))
-        .watched(ctx.logger())
+        .watched()
         .await?
         .into_iter()
         .collect();
 
         // Collect parent information for each changeset if requested.
         let parent_commit_ids = if option_include_parent {
-            let changeset_parents = repo
-                .many_changeset_parents(csids.clone())
-                .watched(ctx.logger())
-                .await?;
+            let changeset_parents = repo.many_changeset_parents(csids.clone()).watched().await?;
             let all_parent_csids = changeset_parents
                 .iter()
                 .flat_map(|(_, parents)| parents)
@@ -343,7 +338,7 @@ impl SourceControlServiceImpl {
                 .collect::<Vec<_>>();
             let parent_commit_ids_map =
                 map_commit_identities(repo, all_parent_csids, &params.identity_schemes)
-                    .watched(ctx.logger())
+                    .watched()
                     .await?;
             let mut parent_commit_ids = Vec::with_capacity(indexed_csids.len());
             for csid in indexed_csids {
@@ -499,19 +494,17 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitPathHistoryResponse, scs_errors::ServiceError> {
         let (repo, changeset) = self
             .repo_changeset(ctx.clone(), &commit_path.commit)
-            .watched(ctx.logger())
+            .watched()
             .await?;
         let path = changeset
             .path_with_history(&commit_path.path)
-            .watched(ctx.logger())
+            .watched()
             .await?;
         let (descendants_of, exclude_changeset_and_ancestors) = try_join!(
             async {
                 if let Some(descendants_of) = &params.descendants_of {
                     Ok::<_, scs_errors::ServiceError>(Some(
-                        self.changeset_id(&repo, descendants_of)
-                            .watched(ctx.logger())
-                            .await?,
+                        self.changeset_id(&repo, descendants_of).watched().await?,
                     ))
                 } else {
                     Ok(None)
@@ -523,7 +516,7 @@ impl SourceControlServiceImpl {
                 {
                     Ok::<_, scs_errors::ServiceError>(Some(
                         self.changeset_id(&repo, exclude_changeset_and_ancestors)
-                            .watched(ctx.logger())
+                            .watched()
                             .await?,
                     ))
                 } else {
@@ -558,22 +551,16 @@ impl SourceControlServiceImpl {
         }
 
         let history_stream = path
-            .history(
-                &ctx,
-                ChangesetPathHistoryOptions {
-                    until_timestamp: after_timestamp.clone(),
-                    descendants_of,
-                    exclude_changeset_and_ancestors,
-                    follow_history_across_deletions: params.follow_history_across_deletions,
-                    follow_mutable_file_history: params
-                        .follow_mutable_file_history
-                        .unwrap_or(false),
-                },
-            )
-            .watched(ctx.logger())
+            .history(ChangesetPathHistoryOptions {
+                until_timestamp: after_timestamp.clone(),
+                descendants_of,
+                exclude_changeset_and_ancestors,
+                follow_history_across_deletions: params.follow_history_across_deletions,
+                follow_mutable_file_history: params.follow_mutable_file_history.unwrap_or(false),
+            })
+            .watched()
             .await?;
         let history = collect_history(
-            &ctx,
             history_stream,
             skip,
             limit,
@@ -584,7 +571,7 @@ impl SourceControlServiceImpl {
             params.format,
             &params.identity_schemes,
         )
-        .watched(ctx.logger())
+        .watched()
         .await?;
 
         Ok(thrift::CommitPathHistoryResponse {

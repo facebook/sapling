@@ -90,7 +90,7 @@ impl Loadable for BlameV2Id {
         let fetch = blobstore.get(ctx, &blobstore_key);
 
         let bytes = fetch
-            .watched(ctx.logger())
+            .watched()
             .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
             .await?
             .ok_or(LoadableError::Missing(blobstore_key))?;

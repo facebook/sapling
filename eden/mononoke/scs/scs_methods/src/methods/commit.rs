@@ -328,18 +328,18 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitLookupResponse, scs_errors::ServiceError> {
         let (_repo, changeset, other_changeset) = self
             .repo_changeset_pair(ctx.clone(), &commit, &params.other_commit_id)
-            .watched(ctx.logger())
+            .watched()
             .await?;
         let lca = changeset
             .common_base_with(other_changeset.id())
-            .watched(ctx.logger())
+            .watched()
             .await?;
         Ok(thrift::CommitLookupResponse {
             exists: lca.is_some(),
             ids: if let Some(lca) = lca {
                 Some(
                     map_commit_identity(&lca, &params.identity_schemes)
-                        .watched(ctx.logger())
+                        .watched()
                         .await?,
                 )
             } else {
@@ -841,24 +841,22 @@ impl SourceControlServiceImpl {
             Some(id) => {
                 let (_repo, mut base_changeset, other_changeset) = self
                     .repo_changeset_pair(ctx.clone(), &commit, id)
-                    .watched(ctx.logger())
+                    .watched()
                     .await?;
                 add_mutable_renames(&mut base_changeset, &params)
-                    .watched(ctx.logger())
+                    .watched()
                     .await?;
                 (base_changeset, Some(other_changeset))
             }
             None => {
-                let (repo, mut base_changeset) = self
-                    .repo_changeset(ctx.clone(), &commit)
-                    .watched(ctx.logger())
-                    .await?;
+                let (repo, mut base_changeset) =
+                    self.repo_changeset(ctx.clone(), &commit).watched().await?;
                 add_mutable_renames(&mut base_changeset, &params)
-                    .watched(ctx.logger())
+                    .watched()
                     .await?;
                 let other_changeset = self
                     .find_commit_compare_parent(&repo, &mut base_changeset, &params)
-                    .watched(ctx.logger())
+                    .watched()
                     .await?;
                 (base_changeset, other_changeset)
             }
@@ -866,13 +864,9 @@ impl SourceControlServiceImpl {
 
         // Log the generation difference to drill down on clients making
         // expensive `commit_compare` requests
-        let base_generation = base_changeset
-            .generation()
-            .watched(ctx.logger())
-            .await?
-            .value();
+        let base_generation = base_changeset.generation().watched().await?.value();
         let other_generation = match other_changeset {
-            Some(ref cs) => cs.generation().watched(ctx.logger()).await?.value(),
+            Some(ref cs) => cs.generation().watched().await?.value(),
             // If there isn't another commit, let's use the same generation
             // to have a difference of 0.
             None => base_generation,
@@ -922,13 +916,13 @@ impl SourceControlServiceImpl {
                                 paths,
                                 diff_items,
                             )
-                            .watched(ctx.logger())
+                            .watched()
                             .await?
                     }
                     None => {
                         base_changeset
                             .diff_root_unordered(paths, diff_items)
-                            .watched(ctx.logger())
+                            .watched()
                             .await?
                     }
                 };
@@ -936,7 +930,7 @@ impl SourceControlServiceImpl {
                     .map(|diff| CommitComparePath::from_path_diff(diff, &params.identity_schemes))
                     .buffer_unordered(CONCURRENCY_LIMIT)
                     .try_collect::<Vec<_>>()
-                    .watched(ctx.logger())
+                    .watched()
                     .await?
                     .into_iter()
                     .partition_map(|diff| match diff {
@@ -973,7 +967,7 @@ impl SourceControlServiceImpl {
                                 ChangesetFileOrdering::Ordered { after },
                                 Some(limit),
                             )
-                            .watched(ctx.logger())
+                            .watched()
                             .await?
                     }
                     None => {
@@ -984,7 +978,7 @@ impl SourceControlServiceImpl {
                                 ChangesetFileOrdering::Ordered { after },
                                 Some(limit),
                             )
-                            .watched(ctx.logger())
+                            .watched()
                             .await?
                     }
                 };
@@ -993,7 +987,7 @@ impl SourceControlServiceImpl {
                     .map(|diff| CommitComparePath::from_path_diff(diff, &params.identity_schemes))
                     .collect::<FuturesOrdered<_>>()
                     .try_collect::<Vec<_>>()
-                    .watched(ctx.logger())
+                    .watched()
                     .await?;
                 if diff_items.len() >= limit {
                     if let Some(item) = diff_items.last() {
@@ -1011,7 +1005,7 @@ impl SourceControlServiceImpl {
             None => None,
             Some(other_changeset) => Some(
                 map_commit_identity(&other_changeset, &params.identity_schemes)
-                    .watched(ctx.logger())
+                    .watched()
                     .await?,
             ),
         };
@@ -1249,7 +1243,6 @@ impl SourceControlServiceImpl {
             })
             .await?;
         let history = collect_history(
-            &ctx,
             history_stream,
             skip,
             limit,
@@ -1310,7 +1303,6 @@ impl SourceControlServiceImpl {
             })
             .await?;
         let history = collect_history(
-            &ctx,
             history_stream,
             // We set the skip to 0 as skipping is already done as part of ChangesetContext::linear_history.
             0,

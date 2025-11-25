@@ -332,7 +332,7 @@ pub async fn make_packblob<'a>(
             logger,
             config_store,
         )
-        .watched(logger)
+        .watched()
         .await?;
 
         Ok(make_packblob_wrapper(
@@ -397,7 +397,7 @@ async fn make_physical_blobstore_unlink_ops<'a>(
     blobconfig: BlobConfig,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
+    _logger: &'a Logger,
     config_store: &'a ConfigStore,
 ) -> Result<Arc<dyn BlobstorePutOps>, Error> {
     use BlobConfig::*;
@@ -409,12 +409,12 @@ async fn make_physical_blobstore_unlink_ops<'a>(
             blobstore_options,
             config_store,
         )
-        .watched(logger)
+        .watched()
         .await
         .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>),
         Manifold { .. } | ManifoldWithTtl { .. } => {
             make_manifold_blobstore_enumerable_with_unlink(fb, blobconfig, blobstore_options)
-                .watched(logger)
+                .watched()
                 .await
                 .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)
         }
@@ -430,7 +430,7 @@ async fn make_physical_blobstore_unlink_ops<'a>(
             let client_backend = AwsS3ClientPool::new(region, num_concurrent_operations).await?;
 
             S3Blob::new(bucket, client_backend, blobstore_options.put_behaviour)
-                .watched(logger)
+                .watched()
                 .await
                 .context(ErrorKind::StateOpen)
                 .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)
@@ -457,7 +457,7 @@ pub async fn make_blobstore_enumerable_with_unlink<'a>(
         } => {
             let store =
                 raw_blobstore_enumerable_with_unlink(fb, *blobconfig, blobstore_options, logger)
-                    .watched(logger)
+                    .watched()
                     .await?;
             let pack_store = make_packblob_wrapper(pack_config, blobstore_options, store)?;
             Ok(Arc::new(pack_store) as Arc<dyn BlobstoreEnumerableWithUnlink>)
@@ -472,13 +472,13 @@ pub async fn raw_blobstore_enumerable_with_unlink<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
+    _logger: &'a Logger,
 ) -> Result<Arc<dyn BlobstoreEnumerableWithUnlink>, Error> {
     use BlobConfig::*;
     match blobconfig {
         Manifold { .. } | ManifoldWithTtl { .. } => {
             make_manifold_blobstore_enumerable_with_unlink(fb, blobconfig, blobstore_options)
-                .watched(logger)
+                .watched()
                 .await
         }
         Files { .. } => make_files_blobstore(blobconfig, blobstore_options)
@@ -532,7 +532,7 @@ pub fn make_blobstore_put_ops<'a>(
                     AwsS3ClientPool::new(region, num_concurrent_operations).await?;
 
                 S3Blob::new(bucket, client_backend, blobstore_options.put_behaviour)
-                    .watched(logger)
+                    .watched()
                     .await
                     .context(ErrorKind::StateOpen)
                     .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?
@@ -571,7 +571,7 @@ pub fn make_blobstore_put_ops<'a>(
                     scrub_handler,
                     component_sampler,
                 )
-                .watched(logger)
+                .watched()
                 .await?
             }
             Logging {
@@ -592,7 +592,7 @@ pub fn make_blobstore_put_ops<'a>(
                     component_sampler,
                     None,
                 )
-                .watched(logger)
+                .watched()
                 .await?;
 
                 let scuba = scuba_table
@@ -611,7 +611,7 @@ pub fn make_blobstore_put_ops<'a>(
                     logger,
                     config_store,
                 )
-                .watched(logger)
+                .watched()
                 .await
                 .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?
             }
@@ -637,7 +637,7 @@ pub fn make_blobstore_put_ops<'a>(
             let store = if blobstore_options.throttle_options.has_throttle() {
                 Arc::new(
                     ThrottledBlob::new(store, blobstore_options.throttle_options)
-                        .watched(logger)
+                        .watched()
                         .await,
                 ) as Arc<dyn BlobstorePutOps>
             } else {
@@ -796,7 +796,7 @@ async fn setup_inner_blobstores<'a>(
                     component_sampler,
                     Some(blobstoreid),
                 )
-                .watched(logger)
+                .watched()
                 .await?;
 
                 Result::<_, Error>::Ok((blobstoreid, store_type, store))

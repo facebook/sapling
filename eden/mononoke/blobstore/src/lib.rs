@@ -653,13 +653,13 @@ where
         match self {
             Either::Left(id) => Ok(Either::Left(
                 id.load(ctx, blobstore)
-                    .watched(ctx.logger())
+                    .watched()
                     .with_max_poll(BLOBSTORE_MAX_POLL_TIME_MS)
                     .await?,
             )),
             Either::Right(id) => Ok(Either::Right(
                 id.load(ctx, blobstore)
-                    .watched(ctx.logger())
+                    .watched()
                     .with_max_poll(BLOBSTORE_MAX_POLL_TIME_MS)
                     .await?,
             )),
@@ -693,7 +693,7 @@ impl<L: Loadable + Sync + std::fmt::Debug, S: KeyedBlobstore> StoreLoadable<S> f
         store: &'a S,
     ) -> Result<Self::Value, LoadableError> {
         self.load(ctx, store)
-            .watched(ctx.logger())
+            .watched()
             .with_label(format!("{:?}", self).as_str())
             .with_max_poll(BLOBSTORE_MAX_POLL_TIME_MS)
             .await
@@ -746,7 +746,7 @@ where
         Ok((
             *t,
             id.load(ctx, blobstore)
-                .watched(ctx.logger())
+                .watched()
                 .with_label(format!("{:?}", id).as_str())
                 .with_max_poll(BLOBSTORE_MAX_POLL_TIME_MS)
                 .await?,

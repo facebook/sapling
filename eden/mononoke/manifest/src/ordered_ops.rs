@@ -395,13 +395,13 @@ where
                             Diff::Changed(path, left, right) => {
                                 let l = mononoke::spawn_task({
                                     cloned!(ctx, left, store);
-                                    async move { left.load(&ctx, &store).watched(ctx.logger()).await }
+                                    async move { left.load(&ctx, &store).watched().await }
                                 });
                                 let r = mononoke::spawn_task({
                                     cloned!(ctx, right, other_store);
-                                    async move { right.load(&ctx, &other_store).watched(ctx.logger()).await }
+                                    async move { right.load(&ctx, &other_store).watched().await }
                                 });
-                                let (left_mf, right_mf) = future::try_join(l, r).watched(ctx.logger()).await?;
+                                let (left_mf, right_mf) = future::try_join(l, r).watched().await?;
                                 let (left_mf, right_mf) = (left_mf?, right_mf?);
 
                                 if after.include_self() {
@@ -416,8 +416,8 @@ where
                                 }
 
                                 let iter = EntryDiffIterator::new(
-                                    left_mf.list_weighted(ctx, store).watched(ctx.logger()).await?.try_collect::<Vec<_>>().watched(ctx.logger()).await?.into_iter(),
-                                    right_mf.list_weighted(ctx, other_store).watched(ctx.logger()).await?.try_collect::<Vec<_>>().watched(ctx.logger()).await?.into_iter(),
+                                    left_mf.list_weighted(ctx, store).watched().await?.try_collect::<Vec<_>>().watched().await?.into_iter(),
+                                    right_mf.list_weighted(ctx, other_store).watched().await?.try_collect::<Vec<_>>().watched().await?.into_iter(),
                                 );
                                 for (name, left, right) in iter {
                                     let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
@@ -544,9 +544,9 @@ where
                                         Diff::Added(path.clone(), Entry::Tree(tree.clone())),
                                     );
                                 }
-                                let manifest = tree.load(ctx, other_store).watched(ctx.logger()).await?;
-                                let mut stream = manifest.list_weighted(ctx, store).watched(ctx.logger()).await?;
-                                while let Some((name, right)) = stream.try_next().watched(ctx.logger()).await? {
+                                let manifest = tree.load(ctx, other_store).watched().await?;
+                                let mut stream = manifest.list_weighted(ctx, store).watched().await?;
+                                while let Some((name, right)) = stream.try_next().watched().await? {
                                     let (replacement, child_replacements) = replacements.remove(&name).unwrap_or_default().deconstruct();
                                     if after.skip(&name) {
                                         // Note: we must do this *after* extracting the replacement so that the finalize
@@ -631,9 +631,9 @@ where
                                         Diff::Removed(path.clone(), Entry::Tree(tree.clone())),
                                     );
                                 }
-                                let manifest = tree.load(ctx, store).watched(ctx.logger()).await?;
-                                let mut stream = manifest.list_weighted(ctx, store).watched(ctx.logger()).await?;
-                                while let Some((name, entry)) = stream.try_next().watched(ctx.logger()).await? {
+                                let manifest = tree.load(ctx, store).watched().await?;
+                                let mut stream = manifest.list_weighted(ctx, store).watched().await?;
+                                while let Some((name, entry)) = stream.try_next().watched().await? {
                                     if after.skip(&name) {
                                         continue;
                                     }
@@ -670,7 +670,7 @@ where
             );
 
             pin_mut!(s);
-            while let Some(value) = s.next().watched(ctx.logger()).await {
+            while let Some(value) = s.next().watched().await {
                 yield value;
             }
         })

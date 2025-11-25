@@ -258,7 +258,7 @@ pub async fn try_sync_single_combined_entry<'a>(
         .map(move |bcs_id| async move { try_sync(re_cas_client, repo, ctx, bcs_id).await })
         .buffer_unordered(DEFAULT_UPLOAD_CONCURRENT_COMMITS)
         .try_collect::<Vec<_>>()
-        .watched(ctx.logger())
+        .watched()
         .await?
         .into_iter()
         .fold(

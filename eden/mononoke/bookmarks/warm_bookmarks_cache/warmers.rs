@@ -13,7 +13,6 @@ use futures_watchdog::WatchdogExt;
 use mononoke_types::ChangesetId;
 use phases::ArcPhases;
 use repo_derived_data::ArcRepoDerivedData;
-use slog::o;
 use tracing::Instrument;
 use tracing::info;
 
@@ -46,7 +45,6 @@ where
 
     let is_warm: Box<IsWarmFn> = Box::new({
         move |ctx: &CoreContext, cs_id: ChangesetId| {
-            let logger = ctx.logger().new(o!("type" => Derivable::NAME));
             cloned!(repo_derived_data);
             async move {
                 let maybe_derived = repo_derived_data
@@ -54,7 +52,7 @@ where
                     .await?;
                 Ok(maybe_derived.is_some())
             }
-            .watched(logger)
+            .watched()
             .instrument(tracing::info_span!("is warm", ddt = %Derivable::NAME))
             .boxed()
         }

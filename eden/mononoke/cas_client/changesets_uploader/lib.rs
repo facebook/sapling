@@ -318,7 +318,7 @@ where
             }
         }
         .try_collect::<Vec<_>>()
-        .watched(ctx.logger())
+        .watched()
         .await?;
 
         let manifests_list = diff_stream
@@ -365,7 +365,7 @@ where
             UploadPolicy::BlobsOnly => {
                 self.client
                     .ensure_upload_file_contents(ctx, &blobstore, files_list, blobs_lookup)
-                    .watched(ctx.logger())
+                    .watched()
                     .await?
                     .into_iter()
                     .for_each(|(_, outcome)| {
@@ -375,7 +375,7 @@ where
             UploadPolicy::TreesOnly => {
                 self.client
                     .ensure_upload_augmented_trees(ctx, &blobstore, manifests_list, trees_lookup)
-                    .watched(ctx.logger())
+                    .watched()
                     .await?
                     .into_iter()
                     .for_each(|(_, outcome)| {
@@ -394,10 +394,10 @@ where
                                 .filter(|(treeid, _)| *treeid != hg_root_manifest_id),
                             trees_lookup
                         )
-                        .watched(ctx.logger()),
+                        .watched(),
                     self.client
                         .ensure_upload_file_contents(ctx, &blobstore, files_list, blobs_lookup)
-                        .watched(ctx.logger())
+                        .watched()
                 )?;
 
                 outcomes_trees.into_iter().for_each(|(_, outcome)| {
@@ -418,7 +418,7 @@ where
                         None,
                         trees_lookup,
                     )
-                    .watched(ctx.logger())
+                    .watched()
                     .await?;
                 upload_counter.tick_trees(ctx, outcome_root);
             }

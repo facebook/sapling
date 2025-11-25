@@ -728,9 +728,7 @@ async fn init_bookmarks(
 
             let remaining = total - i - 1;
 
-            let warm_state = get_warm_state(ctx, cs_id, warmers)
-                .watched(ctx.logger())
-                .await?;
+            let warm_state = get_warm_state(ctx, cs_id, warmers).watched().await?;
             if !warm_state.are_all_warm() {
                 match mode {
                     InitMode::Rewind => {
@@ -741,7 +739,7 @@ async fn init_bookmarks(
                             &book,
                             warmers,
                         )
-                        .watched(ctx.logger())
+                        .watched()
                         .await?;
 
                         tracing::info!(
@@ -765,7 +763,7 @@ async fn init_bookmarks(
                     }
                     InitMode::Warm => {
                         tracing::info!("warmed bookmark {} at {}", book, cs_id);
-                        warm_all(ctx, cs_id, warmers).watched(ctx.logger()).await?;
+                        warm_all(ctx, cs_id, warmers).watched().await?;
                         let mut bookmarks_state = BookmarkState::from_warmers(kind, warmers);
                         bookmarks_state.set_all_tracked(cs_id);
                         Ok((remaining, Some((book, bookmarks_state))))
@@ -1107,9 +1105,7 @@ pub async fn find_latest_derived_and_underived(
         ))
         .buffered(100);
 
-        while let Some((maybe_cs_id_ts, warm_state)) =
-            maybe_derived.next().watched(ctx.logger()).await
-        {
+        while let Some((maybe_cs_id_ts, warm_state)) = maybe_derived.next().watched().await {
             if warm_state?.are_all_warm() {
                 // Remove bookmark update log id
                 let maybe_cs_ts =

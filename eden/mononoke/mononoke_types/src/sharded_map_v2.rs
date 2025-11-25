@@ -163,7 +163,7 @@ impl<Value: ShardedMapV2Value> LoadableShardedMapV2Node<Value> {
             Self::Stored(stored) => stored
                 .id
                 .load(ctx, blobstore)
-                .watched(ctx.logger())
+                .watched()
                 .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
                 .await
                 .with_context(|| "Failed to load stored sharded map node"),
@@ -1347,7 +1347,7 @@ mod test {
             map: LoadableShardedMapV2Node<TestValue>,
         ) -> Result<ShardedMapV2Node<TestValue>> {
             map.load(&self.0, &self.1)
-                .watched(self.0.logger())
+                .watched()
                 .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
                 .await
         }

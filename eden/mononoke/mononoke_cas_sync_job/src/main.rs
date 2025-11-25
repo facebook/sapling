@@ -363,7 +363,7 @@ pub fn loop_over_log_entries<'a>(
                                 Freshness::MostRecent,
                             )
                             .try_collect::<Vec<_>>()
-                            .watched(ctx.logger())
+                            .watched()
                             .await?;
 
                         match entries.iter().last().cloned() {

@@ -204,7 +204,7 @@ impl<I: Clone + 'static + Send + Sync, M: Loadable + Send + Sync> Loadable for T
         let v = self
             .1
             .load(ctx, blobstore)
-            .watched(ctx.logger())
+            .watched()
             .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
             .await?;
         Ok(Traced(id, v))

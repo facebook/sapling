@@ -154,7 +154,7 @@ impl Loadable for FetchKey {
             FetchKey::Aliased(alias) => {
                 alias
                     .load(ctx, blobstore)
-                    .watched(ctx.logger())
+                    .watched()
                     .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
                     .await
             }
@@ -195,7 +195,7 @@ impl Loadable for Alias {
         let key = self.blobstore_key();
         let get = blobstore.get(ctx, &key);
         let maybe_alias = get
-            .watched(ctx.logger())
+            .watched()
             .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
             .await?;
         let blob = maybe_alias.ok_or_else(|| LoadableError::Missing(key.clone()))?;

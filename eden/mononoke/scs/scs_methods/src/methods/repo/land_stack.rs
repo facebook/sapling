@@ -143,18 +143,18 @@ impl SourceControlServiceImpl {
         };
         let repo = self
             .repo_for_service(ctx.clone(), &repo, params.service_identity)
-            .watched(ctx.logger())
+            .watched()
             .await?;
         borrowed!(params.head, params.base);
         let head = repo
             .changeset(ChangesetSpecifier::from_request(head)?)
-            .watched(ctx.logger())
+            .watched()
             .await
             .context("failed to resolve head commit")?
             .ok_or_else(|| scs_errors::commit_not_found(head.to_string()))?;
         let base = repo
             .changeset(ChangesetSpecifier::from_request(base)?)
-            .watched(ctx.logger())
+            .watched()
             .await
             .context("failed to resolve base commit")?
             .ok_or_else(|| scs_errors::commit_not_found(base.to_string()))?;
@@ -179,14 +179,14 @@ impl SourceControlServiceImpl {
                 push_authored_by,
                 force_local_pushrebase,
             )
-            .watched(ctx.logger())
+            .watched()
             .await?
             .into_response_with(&(
                 repo.clone(),
                 params.identity_schemes,
                 params.old_identity_schemes,
             ))
-            .watched(ctx.logger())
+            .watched()
             .await?;
 
         Ok(thrift::RepoLandStackResponse {

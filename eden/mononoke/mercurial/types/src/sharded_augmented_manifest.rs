@@ -572,7 +572,7 @@ impl HgAugmentedManifestEnvelope {
             let blobstore_key = manifestid.blobstore_key();
             let bytes = blobstore
                 .get(ctx, &blobstore_key)
-                .watched(ctx.logger())
+                .watched()
                 .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
                 .await
                 .context("While fetching aurmented manifest envelope blob")?;
@@ -594,7 +594,7 @@ impl HgAugmentedManifestEnvelope {
                 blobstore_key,
             ))
         }
-        .watched(ctx.logger())
+        .watched()
         .with_max_poll(blobstore::BLOBSTORE_MAX_POLL_TIME_MS)
         .await
         .context(format!(

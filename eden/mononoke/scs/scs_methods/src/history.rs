@@ -8,7 +8,6 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
-use cloned::cloned;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
@@ -16,7 +15,6 @@ use futures::stream::TryStreamExt;
 use futures_ext::FbStreamExt;
 use futures_watchdog::WatchdogExt;
 use mononoke_api::ChangesetContext;
-use mononoke_api::CoreContext;
 use mononoke_api::MononokeError;
 use mononoke_api::Repo;
 use source_control as thrift;
@@ -25,7 +23,6 @@ use tracing::warn;
 use crate::into_response::AsyncIntoResponseWith;
 
 pub(crate) async fn collect_history(
-    ctx: &CoreContext,
     history_stream: impl Stream<Item = Result<ChangesetContext<Repo>, MononokeError>>,
     skip: usize,
     limit: usize,
@@ -49,7 +46,7 @@ pub(crate) async fn collect_history(
             .map(move |changeset| async move {
                 let changeset = changeset?;
                 if after_timestamp.is_some() || before_timestamp.is_some() {
-                    let date = changeset.author_date().watched(ctx.logger()).await?;
+                    let date = changeset.author_date().watched().await?;
 
                     if let Some(after) = after_timestamp {
                         if after > date.timestamp() {
@@ -65,9 +62,9 @@ pub(crate) async fn collect_history(
 
                 if after_committer_timestamp.is_some() || before_committer_timestamp.is_some() {
                     // Get committer_date if available, otherwise fall back to author_date
-                    let date = match changeset.committer_date().watched(ctx.logger()).await? {
+                    let date = match changeset.committer_date().watched().await? {
                         Some(committer_date) => committer_date,
-                        None => changeset.author_date().watched(ctx.logger()).await?,
+                        None => changeset.author_date().watched().await?,
                     };
 
                     if let Some(after) = after_committer_timestamp {
@@ -103,7 +100,7 @@ pub(crate) async fn collect_history(
                     match changeset {
                         Ok(cs) => {
                             cs.into_response_with(identity_schemes)
-                                .watched(ctx.logger())
+                                .watched()
                                 .await
                         }
                         Err(err) => Err(err),
@@ -115,7 +112,7 @@ pub(crate) async fn collect_history(
                     warn!("yield_periodically(): budget overshot: current_budget={budget:?}, elapsed={elapsed:?}");
                 })
                 .try_collect()
-                .watched(ctx.logger())
+                .watched()
                 .await?;
             Ok(thrift::History::commit_infos(commit_infos))
         }
@@ -127,12 +124,11 @@ pub(crate) async fn collect_history(
                 .map(|chunk| chunk.into_iter().collect::<Result<Vec<_>, _>>())
                 .and_then(move |changesets: Vec<ChangesetContext<Repo>>| {
                     let identity_schemes = identity_schemes.clone();
-                    cloned!(ctx);
                     async move {
                         Ok(stream::iter(
                             changesets
                                 .into_response_with(&identity_schemes)
-                                .watched(ctx.logger())
+                                .watched()
                                 .await?
                                 .into_iter()
                                 .map(Ok::<_, scs_errors::ServiceError>)
@@ -142,7 +138,7 @@ pub(crate) async fn collect_history(
                 })
                 .try_flatten()
                 .try_collect()
-                .watched(ctx.logger())
+                .watched()
                 .await?;
             Ok(thrift::History::commit_ids(commit_ids))
         }
