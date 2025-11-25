@@ -76,11 +76,6 @@ cpp_binary(
             "/STACK:2097152",  # This was picked arbitrarily as 2 MB
         ],
     }),
-    metadata = {
-        "buck.cfg_modifiers": [
-            "fbcode//eden/scm/lib/backingstore:edenfs-include-cas",
-        ],
-    },
     os_deps = [
         (
             "linux",

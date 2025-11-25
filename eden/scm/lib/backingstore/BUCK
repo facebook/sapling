@@ -1,19 +1,8 @@
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
-load("@fbsource//tools/build_defs:fb_native_wrapper.bzl", "fb_native")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("sapling")
-
-fb_native.constraint_setting(
-    name = "edenfs-cas",
-)
-
-fb_native.constraint_value(
-    name = "edenfs-include-cas",
-    constraint_setting = ":edenfs-cas",
-    visibility = ["PUBLIC"],
-)
 
 cpp_library(
     name = "sapling_backingstore_error",
@@ -79,24 +68,7 @@ rust_library(
     ],
     crate_root = "src/lib.rs",
     cxx_bridge = "src/ffi.rs",
-    features = ["scuba"] + select({
-        "DEFAULT": [],
-        "fbcode//eden/scm/lib/backingstore:edenfs-include-cas": select({
-            "DEFAULT": [],
-            "ovr_config//os:linux": ["cas"],
-        }),
-    }),
-    # thin-cas-client should be in deps but Autocargo does not support selects
-    # and will ignore fields with them. Since we don't have any OSS named_deps,
-    # we can put the select here and let Autocargo ignore it safely, while
-    # still getting the dep.
-    named_deps = select({
-        "DEFAULT": {},
-        "fbcode//eden/scm/lib/backingstore:edenfs-include-cas": select({
-            "DEFAULT": {},
-            "ovr_config//os:linux": {"thin_cas_client": "//eden/scm/lib/cas-client/thin-client:thin-cas-client"},
-        }),
-    }),
+    features = ["scuba"],
     test_deps = [
         "fbsource//third-party/rust:http",
         "fbsource//third-party/rust:rand_chacha",

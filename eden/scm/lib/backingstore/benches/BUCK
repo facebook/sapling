@@ -16,11 +16,6 @@ rust_binary(
         "features": {"fb": ["sapling-configloader/fb"]},
     }},
     crate_root = "src/main.rs",
-    metadata = {
-        "buck.cfg_modifiers": [
-            "fbcode//eden/scm/lib/backingstore:edenfs-include-cas",
-        ],
-    },
     deps = [
         "fbsource//third-party/rust:tempfile",
         "//eden/scm/lib/backingstore:backingstore",
