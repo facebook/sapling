@@ -121,7 +121,6 @@ rust_library(
     name = "fsnodes",
     srcs = glob(["fsnodes/*.rs"]),
     autocargo = {"cargo_toml_dir": "fsnodes"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbsource//third-party/rust:tokio",
         ":derived_data_test_utils",
@@ -153,6 +152,7 @@ rust_library(
         "fbsource//third-party/rust:sha1",
         "fbsource//third-party/rust:sha2",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tracing",
         ":derived_data",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/cloned:cloned",

@@ -214,11 +214,10 @@ impl<'a> DiffRouter<'a> {
 
                 async move {
                     if attempt > 1 {
-                        slog::info!(
-                            ctx.logger(),
-                            "Retrying diff service call for repo '{}', attempt {}",
-                            repo_name,
-                            attempt
+                        tracing::info!(
+                            repo_name = %repo_name,
+                            attempt = attempt,
+                            "Retrying diff service call"
                         );
                     }
 
@@ -341,11 +340,10 @@ impl<'a> DiffRouter<'a> {
 
                 async move {
                     if attempt > 1 {
-                        slog::info!(
-                            ctx.logger(),
-                            "Retrying diff service call for repo '{}', attempt {}",
-                            repo_name,
-                            attempt
+                        tracing::info!(
+                            repo_name = %repo_name,
+                            attempt = attempt,
+                            "Retrying diff service call"
                         );
                     }
 
@@ -416,11 +414,10 @@ impl<'a> DiffRouter<'a> {
 
                 async move {
                     if attempt > 1 {
-                        slog::info!(
-                            ctx.logger(),
-                            "Retrying diff service call for repo '{}', attempt {}",
-                            repo_name,
-                            attempt
+                        tracing::info!(
+                            repo_name = %repo_name,
+                            attempt = attempt,
+                            "Retrying diff service call"
                         );
                     }
 

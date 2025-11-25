@@ -380,9 +380,10 @@ async fn create_fsnode(
             .await
         {
             // Log error but don't fail manifest derivation
-            slog::warn!(
-                ctx.logger(),
-                "Failed to track restricted path at {path}: {e}"
+            tracing::warn!(
+                path = %path,
+                error = %e,
+                "Failed to track restricted path"
             );
         }
     }

@@ -30,10 +30,10 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 restricted_paths = { version = "0.1.0", path = "../../repo_attributes/restricted_paths" }
 sha1 = "0.10.5"
 sha2 = "0.10.6"
-slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2.0.12"
+tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }

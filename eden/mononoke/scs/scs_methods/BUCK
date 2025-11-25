@@ -7,9 +7,7 @@ rust_library(
     name = "scs_methods",
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
-    named_deps = {
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
-    } | ({} if rust_oss.is_oss_build() else {
+    named_deps = ({} if rust_oss.is_oss_build() else {
         "MononokeScsRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeScsRequest_ods3-rust",
     }),
     deps = ([
