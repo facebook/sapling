@@ -265,7 +265,6 @@ members = [
   "common/rendezvous",
   "common/running",
   "common/rust/caching_ext",
-  "common/rust/slog_ext",
   "common/rust/sql_ext",
   "common/rust/sql_ext/proc_macros",
   "common/rust/sql_ext/sql_query_telemetry",
