@@ -462,15 +462,10 @@ class CloneCmd(Subcmd):
             "--backing-store",
             help=(
                 "Clone the path with a specified Backing Store implementation. "
-                "Currently only supports 'filteredhg' (all), 'recas' (Linux), "
+                "Currently only supports 'filteredhg' (all), "
                 "and 'http' (Linux). Takes precedent over the inferred backing"
                 "store type from the existing repository we're cloning from."
             ),
-        )
-
-        parser.add_argument(
-            "--re-use-case",
-            help="The Remote Execution use-case to use when --backing-store=recas",
         )
 
         parser.add_argument(
@@ -624,7 +619,6 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                 args.case_sensitive,
                 overlay_type=args.overlay_type,
                 backing_store_type=args.backing_store,
-                re_use_case=args.re_use_case,
                 enable_windows_symlinks=enable_windows_symlinks,
                 off_mount_repo_dir=instance.get_config_bool(
                     "clone.off-mount-repo-dir",
@@ -670,18 +664,6 @@ is case-sensitive. This is not recommended and is intended only for testing."""
                     )
                     return 1
 
-        elif args.backing_store == "recas":
-            if sys.platform != "linux":
-                print_stderr(
-                    "error: recas backing store was passed but this feature is only available on Linux"
-                )
-                return 1
-            if args.rev is not None:
-                commit = args.rev
-            else:
-                NULL_REVISION = "0" * 40
-                # A special digest for RE CAS representing an empty folder
-                commit = f"{NULL_REVISION}:0"
         elif args.backing_store == "http":
             if sys.platform != "linux":
                 print_stderr(

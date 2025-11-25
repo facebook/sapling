@@ -144,7 +144,6 @@ class FakeEdenInstance(AbstractEdenInstance):
             predictive_prefetch_num_dirs=0,
             enable_sqlite_overlay=True,
             use_write_back_cache=False,
-            re_use_case="buck2-default",
             enable_windows_symlinks=False,
             inode_catalog_type=None,
             off_mount_repo_dir=False,

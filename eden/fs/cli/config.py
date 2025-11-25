@@ -104,7 +104,6 @@ DEFAULT_REVISION = {  # supported repo name -> default bookmark
     "git": "refs/heads/master",
     "hg": "first(present(master) + .)",
     "filteredhg": "first(present(master) + .)",
-    "recas": "",
     "http": "",
 }
 
@@ -222,7 +221,6 @@ class CheckoutConfig(typing.NamedTuple):
     predictive_prefetch_num_dirs: int
     enable_sqlite_overlay: bool
     use_write_back_cache: bool
-    re_use_case: str
     enable_windows_symlinks: bool
     inode_catalog_type: Optional[str]
     off_mount_repo_dir: bool
@@ -1495,9 +1493,6 @@ class EdenCheckout:
             "predictive-prefetch": {
                 "predictive-prefetch-active": checkout_config.predictive_prefetch_profiles_active,
             },
-            "recas": {
-                "use-case": checkout_config.re_use_case,
-            },
         }
 
         if checkout_config.predictive_prefetch_num_dirs:
@@ -1650,12 +1645,6 @@ class EdenCheckout:
         if not isinstance(use_write_back_cache, bool):
             use_write_back_cache = False
 
-        re_use_case = "buck2-default"
-        recas = config.get("recas")
-        if recas is not None:
-            if recas.get("use-case") is not None:
-                re_use_case = str(recas.get("use-case"))
-
         enable_windows_symlinks = repository.get("enable-windows-symlinks")
         if not isinstance(enable_windows_symlinks, bool):
             enable_windows_symlinks = False
@@ -1708,7 +1697,6 @@ class EdenCheckout:
             predictive_prefetch_num_dirs=predictive_num_dirs,
             enable_sqlite_overlay=enable_sqlite_overlay,
             use_write_back_cache=use_write_back_cache,
-            re_use_case=re_use_case,
             enable_windows_symlinks=enable_windows_symlinks,
             inode_catalog_type=inode_catalog_type,
             off_mount_repo_dir=off_mount_repo_dir,
@@ -2228,7 +2216,6 @@ def get_repo_info(
     case_sensitive: bool,
     overlay_type: Optional[str],
     backing_store_type: Optional[str] = None,
-    re_use_case: Optional[str] = None,
     enable_windows_symlinks: bool = False,
     off_mount_repo_dir: bool = False,
 ) -> Tuple[util.Repo, CheckoutConfig]:
@@ -2261,7 +2248,6 @@ def get_repo_info(
         case_sensitive,
         overlay_type,
         backing_store_type=backing_store_type,
-        re_use_case=re_use_case,
         enable_windows_symlinks=enable_windows_symlinks,
         off_mount_repo_dir=off_mount_repo_dir,
     )
@@ -2276,7 +2262,6 @@ def create_checkout_config(
     case_sensitive: bool,
     overlay_type: Optional[str],
     backing_store_type: Optional[str] = None,
-    re_use_case: Optional[str] = None,
     enable_windows_symlinks: bool = False,
     off_mount_repo_dir: bool = False,
 ) -> CheckoutConfig:
@@ -2330,7 +2315,6 @@ def create_checkout_config(
         predictive_prefetch_num_dirs=0,
         enable_sqlite_overlay=enable_sqlite_overlay,
         use_write_back_cache=False,
-        re_use_case=re_use_case or "buck2-default",
         enable_windows_symlinks=enable_windows_symlinks,
         inode_catalog_type=overlay_type,
         off_mount_repo_dir=off_mount_repo_dir,
