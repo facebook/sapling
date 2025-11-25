@@ -14,7 +14,6 @@ use fbinit::FacebookInit;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use slog::o;
 
 use crate::perf_counters::PerfCounters;
 use crate::perf_counters_stack::PerfCountersStack;
@@ -42,7 +41,6 @@ impl SamplingKey {
 
 #[derive(Debug, Clone)]
 pub struct LoggingContainer {
-    logger: Logger,
     scuba: Arc<MononokeScubaSampleBuilder>,
     perf_counters: PerfCountersStack,
     sampling_key: Option<SamplingKey>,
@@ -50,7 +48,7 @@ pub struct LoggingContainer {
 }
 
 impl LoggingContainer {
-    pub fn new(fb: FacebookInit, logger: Logger, scuba: MononokeScubaSampleBuilder) -> Self {
+    pub fn new(fb: FacebookInit, scuba: MononokeScubaSampleBuilder) -> Self {
         let scribe_logging_directory = env::var("MONONOKE_TEST_SCRIBE_LOGGING_DIRECTORY").ok();
         let scribe = if let Some(dir_path) = scribe_logging_directory {
             Scribe::new_to_file(dir_path.into())
@@ -58,7 +56,6 @@ impl LoggingContainer {
             Scribe::new(fb)
         };
         Self {
-            logger,
             scuba: Arc::new(scuba),
             perf_counters: Default::default(),
             sampling_key: None,
@@ -74,30 +71,9 @@ impl LoggingContainer {
 
     pub fn clone_and_sample(&self, sampling_key: SamplingKey) -> Self {
         Self {
-            logger: self.logger.clone(),
             scuba: self.scuba.clone(),
             perf_counters: self.perf_counters.clone(),
             sampling_key: Some(sampling_key),
-            scribe: self.scribe.clone(),
-        }
-    }
-
-    pub fn clone_with_logger(&self, logger: Logger) -> Self {
-        Self {
-            logger,
-            scuba: self.scuba.clone(),
-            perf_counters: self.perf_counters.clone(),
-            sampling_key: self.sampling_key.clone(),
-            scribe: self.scribe.clone(),
-        }
-    }
-
-    pub fn clone_with_repo_name(&self, repo_name: &str) -> Self {
-        Self {
-            logger: self.logger.new(o!("repo" => repo_name.to_string())),
-            scuba: self.scuba.clone(),
-            perf_counters: self.perf_counters.clone(),
-            sampling_key: self.sampling_key.clone(),
             scribe: self.scribe.clone(),
         }
     }
@@ -107,8 +83,9 @@ impl LoggingContainer {
         self
     }
 
-    pub fn logger(&self) -> &Logger {
-        &self.logger
+    pub fn logger(&self) -> &'static Logger {
+        static LOGGER: Logger = Logger::Tracing;
+        &LOGGER
     }
 
     pub fn scuba(&self) -> &MononokeScubaSampleBuilder {
@@ -132,7 +109,6 @@ impl LoggingContainer {
         mutator: impl FnOnce(MononokeScubaSampleBuilder) -> MononokeScubaSampleBuilder,
     ) -> Self {
         Self {
-            logger: self.logger.clone(),
             scuba: Arc::new(mutator(self.scuba().clone())),
             perf_counters: self.perf_counters.clone(),
             sampling_key: self.sampling_key.clone(),

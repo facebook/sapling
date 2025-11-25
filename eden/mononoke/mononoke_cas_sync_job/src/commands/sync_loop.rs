@@ -154,8 +154,7 @@ impl MononokeCasSyncProcessExecutor {
             app.fb,
             app.logger().clone(),
             ClientInfo::default_with_entry_point(ClientEntryPoint::MononokeCasSync),
-        )
-        .clone_with_repo_name(&repo_name);
+        );
 
         Ok(Self {
             fb: app.fb,

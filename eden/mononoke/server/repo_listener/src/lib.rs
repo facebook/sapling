@@ -37,7 +37,6 @@ use permission_checker::AclProvider;
 use rate_limiting::RateLimitEnvironment;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 
 use crate::connection_acceptor::connection_acceptor;
 pub use crate::connection_acceptor::wait_for_connections_closed;
@@ -49,7 +48,6 @@ pub async fn create_repo_listeners<'a>(
     configs: Arc<MononokeConfigs>,
     common_config: CommonConfig,
     mononoke: Arc<Mononoke<Repo>>,
-    root_log: Logger,
     sockname: String,
     tls_acceptor: SslAcceptor,
     service: ReadyFlagService,
@@ -104,7 +102,6 @@ pub async fn create_repo_listeners<'a>(
         common_config,
         sockname,
         service,
-        root_log,
         mononoke,
         tls_acceptor,
         terminate_process,

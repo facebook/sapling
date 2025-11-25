@@ -52,8 +52,6 @@ use openssl::ssl::AlpnError;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
-use slog::Logger;
-use slog::o;
 use tracing::Instrument;
 use tracing::error;
 use tracing::info;
@@ -119,20 +117,14 @@ impl MononokeServerProcess {
         }
     }
 
-    async fn add_repo(
-        &self,
-        repo_name: &str,
-        logger: &Logger,
-        scuba: &MononokeScubaSampleBuilder,
-    ) -> Result<()> {
+    async fn add_repo(&self, repo_name: &str, scuba: &MononokeScubaSampleBuilder) -> Result<()> {
         // Check if the input repo is already initialized. This can happen if the repo is a
         // shallow-sharded repo, in which case it would already be initialized during service startup.
         if self.repos_mgr.repos().get_by_name(repo_name).is_none() {
             // The input repo is a deep-sharded repo, so it needs to be added now.
             let repo = self.repos_mgr.add_repo(repo_name).await?;
             let cache_warmup_params = repo.repo_config().cache_warmup.clone();
-            let ctx =
-                CoreContext::new_with_logger_and_scuba(self.fb, logger.clone(), scuba.clone());
+            let ctx = CoreContext::new_with_scuba(self.fb, scuba.clone());
             cache_warmup(
                 &ctx,
                 &repo,
@@ -153,9 +145,8 @@ impl MononokeServerProcess {
 impl RepoShardedProcess for MononokeServerProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.clone();
-        let logger = self.repos_mgr.repo_logger(&repo_name);
         info!("Setting up repo {} in Mononoke service", repo_name);
-        self.add_repo(&repo_name, &logger, &self.scuba.clone())
+        self.add_repo(&repo_name, &self.scuba.clone())
             .await
             .with_context(|| {
                 format!(
@@ -240,7 +231,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         .build::<MononokeServerArgs>()?;
     let args: MononokeServerArgs = app.args()?;
 
-    let root_log = app.logger().clone();
     let runtime = app.runtime().clone();
 
     let cslb_config = args.cslb_config.clone();
@@ -308,7 +298,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     app.start_stats_aggregation()?;
 
     let repo_listeners = {
-        cloned!(root_log, will_exit, env, runtime, service_name);
+        cloned!(will_exit, env, runtime, service_name);
         move |app: MononokeApp| async move {
             let common = configs.common.clone();
             let repos_mgr = app.open_managed_repos::<Repo>(service_name).await?;
@@ -319,12 +309,10 @@ fn main(fb: FacebookInit) -> Result<()> {
             stream::iter(mononoke.repos())
                 .map(|repo| {
                     let repo_name = repo.repo_identity().name().to_string();
-                    let root_log = root_log.clone();
                     let cache_warmup_params = repo.repo_config().cache_warmup.clone();
                     cloned!(scuba);
                     async move {
-                        let logger = root_log.new(o!("repo" => repo_name.clone()));
-                        let ctx = CoreContext::new_with_logger_and_scuba(fb, logger, scuba);
+                        let ctx = CoreContext::new_with_scuba(fb, scuba);
                         cache_warmup(
                             &ctx,
                             &repo,
@@ -367,7 +355,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                 app.configs(),
                 common,
                 mononoke.clone(),
-                root_log,
                 host_port,
                 acceptor,
                 service,
@@ -397,7 +384,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             if let Err(err) = terminate_sender.send(()) {
                 error!("could not send termination signal: {:?}", err);
             }
-            repo_listener::wait_for_connections_closed(&root_log).await;
+            repo_listener::wait_for_connections_closed().await;
         },
         args.shutdown_timeout_args.shutdown_timeout,
         None,

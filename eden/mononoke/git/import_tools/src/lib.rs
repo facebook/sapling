@@ -394,7 +394,6 @@ pub async fn import_commit_contents<Uploader: GitUploader, Reader: GitReader>(
     let nb_commits_to_import = all_commits.len();
     let backfill_derivation = prefs.backfill_derivation.clone();
     let acc = Arc::new(acc);
-    let ctx = &ctx.clone_with_repo_name(&repo_name);
     let scuba = ctx.scuba().clone();
     // How many commits to query from bonsai git mapping per SQL query.
     const SQL_CONCURRENCY: usize = 10_000;

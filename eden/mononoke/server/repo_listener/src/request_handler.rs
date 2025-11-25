@@ -152,7 +152,7 @@ pub async fn request_handler(
 
     let session = session_builder.build();
 
-    let mut logging = LoggingContainer::new(fb, slog::Logger::Tracing, scuba.clone());
+    let mut logging = LoggingContainer::new(fb, scuba.clone());
     logging.with_scribe(scribe);
 
     let repo_client = RepoClient::new(

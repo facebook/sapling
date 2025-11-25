@@ -56,7 +56,6 @@ use quiet_stream::QuietShutdownStream;
 use rate_limiting::RateLimitEnvironment;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 use sshrelay::IoStream;
 use sshrelay::SshDecoder;
 use sshrelay::SshEncoder;
@@ -97,7 +96,7 @@ lazy_static! {
     static ref OPEN_CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
 }
 
-pub async fn wait_for_connections_closed(_logger: &Logger) {
+pub async fn wait_for_connections_closed() {
     loop {
         let conns = OPEN_CONNECTIONS.load(Ordering::Relaxed);
         if conns == 0 {
@@ -115,7 +114,6 @@ pub async fn connection_acceptor(
     common_config: CommonConfig,
     sockname: String,
     service: ReadyFlagService,
-    _root_log: Logger,
     mononoke: Arc<Mononoke<Repo>>,
     tls_acceptor: SslAcceptor,
     terminate_process: oneshot::Receiver<()>,

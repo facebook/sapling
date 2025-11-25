@@ -337,9 +337,7 @@ pub fn build_context(app: Arc<MononokeApp>, repo_name: &str, dry_run: bool) -> C
         .metadata(Arc::new(metadata))
         .build();
 
-    session_container
-        .new_context(scuba)
-        .clone_with_repo_name(repo_name)
+    session_container.new_context(scuba)
 }
 
 pub async fn build_edenfs_client(

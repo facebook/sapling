@@ -95,7 +95,7 @@ async fn push(
             shallow: _,
         } = push_args;
         let (ctx, blobstore) = (
-            &request_context.ctx.clone_with_repo_name(&repo_name),
+            &request_context.ctx.clone(),
             request_context.repo.repo_blobstore_arc().clone(),
         );
         PushData::inject_in_state(state, pack_file.get_ref().len());

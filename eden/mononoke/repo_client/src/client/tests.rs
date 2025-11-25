@@ -408,11 +408,7 @@ async fn run_and_check_if_lfs(ctx: &CoreContext, lfs_params: LfsParams) -> Resul
         }
     };
 
-    let logging = LoggingContainer::new(
-        ctx.fb,
-        ctx.logger().clone(),
-        MononokeScubaSampleBuilder::with_discard(),
-    );
+    let logging = LoggingContainer::new(ctx.fb, MononokeScubaSampleBuilder::with_discard());
 
     let repo_client = RepoClient::new(
         repo,

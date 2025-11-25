@@ -79,16 +79,16 @@ impl SessionContainer {
     }
 
     pub fn new_context(&self, scuba: MononokeScubaSampleBuilder) -> CoreContext {
-        let logging = LoggingContainer::new(self.fb, slog::Logger::Tracing, scuba);
+        let logging = LoggingContainer::new(self.fb, scuba);
         CoreContext::from_parts(self.fb, logging, self.clone())
     }
 
     pub fn new_context_with_logger(
         &self,
-        logger: Logger,
+        _logger: Logger,
         scuba: MononokeScubaSampleBuilder,
     ) -> CoreContext {
-        let logging = LoggingContainer::new(self.fb, logger, scuba);
+        let logging = LoggingContainer::new(self.fb, scuba);
 
         CoreContext::from_parts(self.fb, logging, self.clone())
     }
@@ -98,7 +98,7 @@ impl SessionContainer {
         scuba: MononokeScubaSampleBuilder,
         scribe: Scribe,
     ) -> CoreContext {
-        let mut logging = LoggingContainer::new(self.fb, slog::Logger::Tracing, scuba);
+        let mut logging = LoggingContainer::new(self.fb, scuba);
         logging.with_scribe(scribe);
 
         CoreContext::from_parts(self.fb, logging, self.clone())
