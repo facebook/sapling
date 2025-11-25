@@ -25,7 +25,6 @@ use cacheblob::CachelibBlobstoreOptions;
 use cached_config::ConfigStore;
 use chaosblob::ChaosBlobstore;
 use chaosblob::ChaosOptions;
-use context::CoreContext;
 use delayblob::DelayOptions;
 use delayblob::DelayedBlobstore;
 use fbinit::FacebookInit;
@@ -59,8 +58,8 @@ use s3blob::store::S3Blob;
 use samplingblob::ComponentSamplingHandler;
 use samplingblob::SamplingBlobstoreSamplingComponentBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 use sql_construct::SqlConstructFromShardedDatabaseConfig;
+use sql_ext::SqlQueryTelemetry;
 use sql_ext::facebook::MysqlOptions;
 use sqlblob::CountedSqlblob;
 use sqlblob::Sqlblob;
@@ -192,7 +191,6 @@ pub fn make_blobstore<'a>(
     mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
     config_store: &'a ConfigStore,
     scrub_handler: &'a Arc<dyn ScrubHandler>,
     component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
@@ -204,7 +202,6 @@ pub fn make_blobstore<'a>(
             mysql_options,
             readonly_storage,
             blobstore_options,
-            logger,
             config_store,
             scrub_handler,
             component_sampler,
@@ -316,7 +313,6 @@ pub async fn make_packblob<'a>(
     blobconfig: BlobConfig,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
     config_store: &'a ConfigStore,
 ) -> Result<PackBlob<Arc<dyn BlobstorePutOps>>, Error> {
     if let BlobConfig::Pack {
@@ -329,7 +325,6 @@ pub async fn make_packblob<'a>(
             *blobconfig,
             readonly_storage,
             blobstore_options,
-            logger,
             config_store,
         )
         .watched()
@@ -397,7 +392,6 @@ async fn make_physical_blobstore_unlink_ops<'a>(
     blobconfig: BlobConfig,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
-    _logger: &'a Logger,
     config_store: &'a ConfigStore,
 ) -> Result<Arc<dyn BlobstorePutOps>, Error> {
     use BlobConfig::*;
@@ -447,7 +441,6 @@ pub async fn make_blobstore_enumerable_with_unlink<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
 ) -> Result<Arc<dyn BlobstoreEnumerableWithUnlink>, Error> {
     use BlobConfig::*;
     match blobconfig {
@@ -455,14 +448,13 @@ pub async fn make_blobstore_enumerable_with_unlink<'a>(
             pack_config,
             blobconfig,
         } => {
-            let store =
-                raw_blobstore_enumerable_with_unlink(fb, *blobconfig, blobstore_options, logger)
-                    .watched()
-                    .await?;
+            let store = raw_blobstore_enumerable_with_unlink(fb, *blobconfig, blobstore_options)
+                .watched()
+                .await?;
             let pack_store = make_packblob_wrapper(pack_config, blobstore_options, store)?;
             Ok(Arc::new(pack_store) as Arc<dyn BlobstoreEnumerableWithUnlink>)
         }
-        _ => raw_blobstore_enumerable_with_unlink(fb, blobconfig, blobstore_options, logger).await,
+        _ => raw_blobstore_enumerable_with_unlink(fb, blobconfig, blobstore_options).await,
     }
 }
 
@@ -472,7 +464,6 @@ pub async fn raw_blobstore_enumerable_with_unlink<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     blobstore_options: &'a BlobstoreOptions,
-    _logger: &'a Logger,
 ) -> Result<Arc<dyn BlobstoreEnumerableWithUnlink>, Error> {
     use BlobConfig::*;
     match blobconfig {
@@ -495,7 +486,6 @@ pub fn make_blobstore_put_ops<'a>(
     mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
     config_store: &'a ConfigStore,
     scrub_handler: &'a Arc<dyn ScrubHandler>,
     component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
@@ -517,7 +507,6 @@ pub fn make_blobstore_put_ops<'a>(
                 blobconfig,
                 readonly_storage,
                 blobstore_options,
-                logger,
                 config_store,
             )
             .await
@@ -566,7 +555,6 @@ pub fn make_blobstore_put_ops<'a>(
                     mysql_options,
                     readonly_storage,
                     blobstore_options,
-                    logger,
                     config_store,
                     scrub_handler,
                     component_sampler,
@@ -586,7 +574,6 @@ pub fn make_blobstore_put_ops<'a>(
                     mysql_options,
                     readonly_storage,
                     blobstore_options,
-                    logger,
                     config_store,
                     scrub_handler,
                     component_sampler,
@@ -608,7 +595,6 @@ pub fn make_blobstore_put_ops<'a>(
                     blobconfig,
                     readonly_storage,
                     blobstore_options,
-                    logger,
                     config_store,
                 )
                 .watched()
@@ -685,7 +671,6 @@ async fn make_multiplexed_wal<'a>(
     mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
     config_store: &'a ConfigStore,
     scrub_handler: &'a Arc<dyn ScrubHandler>,
     component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
@@ -695,7 +680,6 @@ async fn make_multiplexed_wal<'a>(
         inner_config,
         mysql_options,
         blobstore_options,
-        logger,
         config_store,
         scrub_handler,
         component_sampler,
@@ -709,15 +693,13 @@ async fn make_multiplexed_wal<'a>(
         scuba_sample_rate,
     )?;
 
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
-
     let sql_blob_wal = SqlBlobstoreWalBuilder::with_sharded_database_config(
         fb,
         &queue_db,
         mysql_options,
         readonly_storage.0,
     )?
-    .build(ctx.sql_query_telemetry());
+    .build(SqlQueryTelemetry::new(fb, Default::default()));
     let wal_queue = Arc::new(sql_blob_wal);
 
     let blobstore = match &blobstore_options.scrub_options {
@@ -755,7 +737,6 @@ async fn setup_inner_blobstores<'a>(
     inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
     mysql_options: &'a MysqlOptions,
     blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
     config_store: &'a ConfigStore,
     scrub_handler: &'a Arc<dyn ScrubHandler>,
     component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
@@ -790,7 +771,6 @@ async fn setup_inner_blobstores<'a>(
                     mysql_options,
                     component_readonly,
                     &blobstore_options,
-                    logger,
                     config_store,
                     scrub_handler,
                     component_sampler,

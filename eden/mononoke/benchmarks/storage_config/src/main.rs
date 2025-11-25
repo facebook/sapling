@@ -93,7 +93,6 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
             mysql_options,
             blobstore_factory::ReadOnlyStorage(false),
             blobstore_options,
-            logger,
             config_store,
             &blobstore_factory::default_scrub_handler(),
             None,

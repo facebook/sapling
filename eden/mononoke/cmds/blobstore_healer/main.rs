@@ -262,7 +262,6 @@ async fn setup_blobstores(
                 mysql_options,
                 readonly_storage,
                 blobstore_options,
-                ctx.logger(),
                 config_store,
                 &blobstore_factory::default_scrub_handler(),
                 None,

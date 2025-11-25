@@ -62,7 +62,6 @@ pub async fn open_blobstore(
             app.mysql_options(),
             blobstore_factory::ReadOnlyStorage(false),
             app.blobstore_options(),
-            app.logger(),
             app.config_store(),
             &blobstore_factory::default_scrub_handler(),
             None,

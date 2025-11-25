@@ -18,7 +18,6 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 chaosblob = { version = "0.1.0", path = "../chaosblob" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-context = { version = "0.1.0", path = "../../server/context" }
 delayblob = { version = "0.1.0", path = "../delayblob" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fileblob = { version = "0.1.0", path = "../fileblob" }
@@ -35,7 +34,6 @@ readonlyblob = { version = "0.1.0", path = "../readonlyblob" }
 s3blob = { version = "0.1.0", path = "../s3blob" }
 samplingblob = { version = "0.1.0", path = "../samplingblob" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-slog = { package = "tracing_slog_compat", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }

@@ -210,7 +210,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                 inner_blobconfig,
                 *readonly_storage,
                 blobstore_options,
-                logger,
                 config_store,
             )
             .await

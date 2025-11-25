@@ -1191,12 +1191,6 @@ mod test {
         use governor::RateLimiter;
         use mononoke_macros::mononoke;
         use nonzero_ext::nonzero;
-        use scuba_ext::MononokeScubaSampleBuilder;
-        use slog::Drain;
-        use slog::Level;
-        use slog::Logger;
-        use slog::o;
-        use slog_glog_fmt::default_drain;
 
         use super::*;
 
@@ -1250,11 +1244,6 @@ mod test {
             }
         }
 
-        fn logger() -> Logger {
-            let drain = default_drain().filter_level(Level::Debug).ignore_res();
-            Logger::root(drain, o![])
-        }
-
         #[mononoke::fbinit_test]
         async fn test_qps(fb: FacebookInit) -> Result<()> {
             let l1 = RateLimiter::direct(Quota::with_period(Duration::from_millis(10)).unwrap());
@@ -1265,7 +1254,7 @@ mod test {
                 .blobstore_read_limiter(l1)
                 .blobstore_write_limiter(l2)
                 .build();
-            let ctx = session.new_context(logger(), MononokeScubaSampleBuilder::with_discard());
+            let ctx = CoreContext::test_mock_session(session);
 
             let blobstore = make_blobstore(
                 fb,
@@ -1325,7 +1314,7 @@ mod test {
                 .blobstore_read_limiter(l1)
                 .blobstore_write_limiter(l2)
                 .build();
-            let ctx = &session.new_context(logger(), MononokeScubaSampleBuilder::with_discard());
+            let ctx = CoreContext::test_mock_session(session);
             borrowed!(ctx);
 
             let blobstore = &make_blobstore(

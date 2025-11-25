@@ -467,7 +467,6 @@ impl RepoFactory {
             &self.env.mysql_options,
             self.env.readonly_storage,
             &self.env.blobstore_options,
-            &self.env.logger,
             &self.env.config_store,
             &self.scrub_handler,
             self.blobstore_component_sampler.as_ref(),
@@ -536,7 +535,6 @@ impl RepoFactory {
             self.env.fb,
             config.clone(),
             &self.env.blobstore_options,
-            &self.env.logger,
         )
         .watched()
         .await
