@@ -319,8 +319,15 @@ class Client:
         except (KeyError, IndexError):
             raise ClientError(
                 None,
-                _("Failed to get diff info via Phabricator. GraphQL response: %s")
-                % json.dumps(ret),
+                _(
+                    "Failed to get diff info via Phabricator. GraphQL response: %s. "
+                    # NOTE: The original GraphQL error messages that are specifically
+                    # related to invalid or expired authentication tokens are defined at
+                    # https://fburl.com/code/62xjvzx7.
+                    "If this is an authentication issue, try running `jf auth` or "
+                    "check your ~/.arcrc file."
+                )
+                % (json.dumps(ret)),
             )
 
         for result in diffnodes:
