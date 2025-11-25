@@ -187,14 +187,12 @@ fn subcommand_round_trip(
     let (end_sender, end_receiver) = ::std::sync::mpsc::channel();
 
     let verify_fut = async {
-        let logger = logger.clone();
         let valid = valid.clone();
         let invalid = invalid.clone();
         let errors = errors.clone();
         let ignored = ignored.clone();
         let bonsai_verify = BonsaiMFVerify {
             ctx: ctx.clone(),
-            logger: logger.clone(),
             repo,
             follow_limit,
             ignores: config.ignores.into_iter().collect(),

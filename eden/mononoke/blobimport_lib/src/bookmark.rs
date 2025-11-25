@@ -28,7 +28,6 @@ use futures_old::stream;
 use mercurial_revlog::RevlogRepo;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
-use slog::Logger;
 use tracing::info;
 
 use crate::BlobimportRepoLike;
@@ -66,14 +65,12 @@ pub fn get_bookmark_prefixer(prefix: AsciiString) -> BookmarkKeyTransformer {
 
 pub fn upload_bookmarks(
     ctx: CoreContext,
-    logger: &Logger,
     revlogrepo: RevlogRepo,
     repo: impl BlobimportRepoLike + Clone + 'static,
     stale_bookmarks: Vec<(Vec<u8>, HgChangesetId)>,
     mononoke_bookmarks: Vec<(BookmarkKey, ChangesetId)>,
     bookmark_name_transformer: BookmarkKeyTransformer,
 ) -> BoxFuture<(), Error> {
-    let _logger = logger.clone();
     let stale_bookmarks = Arc::new(stale_bookmarks.into_iter().collect::<HashMap<_, _>>());
 
     read_bookmarks(&revlogrepo)

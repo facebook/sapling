@@ -7,7 +7,6 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     named_deps = {
         "futures-old": "fbsource//third-party/rust:futures-old",
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
     },
     deps = [
         "fbsource//third-party/rust:anyhow",

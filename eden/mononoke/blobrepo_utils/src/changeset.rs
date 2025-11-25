@@ -18,8 +18,6 @@ use futures::Stream;
 use futures::try_join;
 use mercurial_types::HgChangesetId;
 use mononoke_macros::mononoke;
-use slog::Logger;
-use slog::o;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio_stream::wrappers::ReceiverStream;
@@ -43,7 +41,6 @@ pub struct ChangesetVisitMeta {
 /// be canceled.
 pub fn visit_changesets<I, R: Repo>(
     ctx: CoreContext,
-    logger: Logger,
     repo: R,
     visitor: BonsaiMFVerifyVisitor,
     start_points: I,
@@ -65,7 +62,6 @@ where
     let (mut sender, receiver) = mpsc::channel(16);
 
     let inner = Arc::new(VisitOneShared {
-        logger,
         repo,
         visitor,
         visit_started: DashMap::new(),
@@ -83,7 +79,6 @@ where
 }
 
 struct VisitOneShared<R> {
-    logger: Logger,
     repo: R,
     visitor: BonsaiMFVerifyVisitor,
     visit_started: DashMap<HgChangesetId, ()>,
@@ -102,7 +97,6 @@ impl<R> VisitOneShared<R> {
 struct VisitOne<R> {
     ctx: CoreContext,
     shared: Arc<VisitOneShared<R>>,
-    logger: Logger,
     changeset_id: HgChangesetId,
     follow_remaining: usize,
     sender: Sender<Result<(BonsaiMFVerifyResult<R>, ChangesetVisitMeta)>>,
@@ -128,14 +122,9 @@ impl<R: Repo> VisitOne<R> {
             return None;
         }
 
-        let logger = shared
-            .logger
-            .new(o!["changeset_id" => format!("{}", changeset_id)]);
-
         Some(Self {
             ctx,
             shared: shared.clone(),
-            logger,
             changeset_id,
             follow_remaining: prev_follow_remaining - 1,
             sender: sender.clone(),
@@ -147,7 +136,6 @@ impl<R: Repo> VisitOne<R> {
         let Self {
             ctx,
             shared,
-            logger,
             changeset_id,
             follow_remaining,
             sender,
@@ -198,7 +186,7 @@ impl<R: Repo> VisitOne<R> {
                 let item = shared
                     .visitor
                     .clone()
-                    .visit(ctx, logger, repo, changeset)
+                    .visit(ctx, repo, changeset)
                     .instrument(tracing::info_span!("visit", %changeset_id))
                     .await?;
 

@@ -105,7 +105,6 @@ mod test {
 
                     let verify = BonsaiMFVerify {
                         ctx: ctx.clone(),
-                        logger: ctx.logger().clone(),
                         repo: repo.clone(),
                         follow_limit: 1024,
                         ignores: HashSet::new(),

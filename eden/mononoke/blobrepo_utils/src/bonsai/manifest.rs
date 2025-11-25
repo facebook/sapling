@@ -36,7 +36,6 @@ use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::blobs::HgBlobManifest;
 use mononoke_types::DateTime;
 use mononoke_types::FileType;
-use slog::Logger;
 use tracing::debug;
 
 use crate::Repo;
@@ -139,7 +138,6 @@ impl<R> fmt::Debug for BonsaiMFVerifyDifference<R> {
 
 pub struct BonsaiMFVerify<R> {
     pub ctx: CoreContext,
-    pub logger: Logger,
     pub repo: R,
     pub follow_limit: usize,
     pub ignores: HashSet<HgChangesetId>,
@@ -162,7 +160,6 @@ impl<R: Repo> BonsaiMFVerify<R> {
 
         visit_changesets(
             self.ctx,
-            self.logger,
             repo,
             BonsaiMFVerifyVisitor {
                 ignores: Arc::new(self.ignores),
@@ -186,7 +183,6 @@ impl BonsaiMFVerifyVisitor {
     pub async fn visit<R: Repo>(
         self,
         ctx: CoreContext,
-        _logger: Logger,
         repo: R,
         changeset: HgBlobChangeset,
     ) -> Result<BonsaiMFVerifyResult<R>> {

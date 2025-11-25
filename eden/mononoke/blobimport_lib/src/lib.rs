@@ -282,7 +282,6 @@ impl<'a, R: BlobimportRepoLike + Clone + 'static> Blobimport<'a, R> {
             BookmarkImportPolicy::Prefix(prefix) => {
                 bookmark::upload_bookmarks(
                     ctx.clone(),
-                    ctx.logger(),
                     revlogrepo,
                     repo.clone(),
                     stale_bookmarks,
