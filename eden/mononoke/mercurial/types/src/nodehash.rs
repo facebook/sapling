@@ -664,26 +664,3 @@ impl Display for HgNodeKey {
         write!(f, "path: {}, hash: {}", self.path, self.hash)
     }
 }
-
-macro_rules! impl_hash {
-    ($hash_type: ident) => {
-        impl slog::Value for $hash_type {
-            fn serialize(
-                &self,
-                _record: &slog::Record,
-                key: slog::Key,
-                serializer: &mut dyn slog::Serializer,
-            ) -> slog::Result {
-                let hex = self.to_hex();
-                serializer.emit_str(key, hex.as_str())
-            }
-        }
-    };
-}
-
-impl_hash!(HgNodeHash);
-impl_hash!(HgChangesetId);
-impl_hash!(HgManifestId);
-impl_hash!(HgAugmentedManifestId);
-impl_hash!(HgFileNodeId);
-impl_hash!(HgEntryId);
