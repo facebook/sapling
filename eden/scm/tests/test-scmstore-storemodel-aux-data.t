@@ -1,11 +1,3 @@
-#testcases cas no-cas
-
-#if cas
-  $ setconfig scmstore.cas-mode=on
-#else
-  $ setconfig scmstore.cas-mode=off
-#endif
-
   $ setconfig push.edenapi=true
   $ setconfig scmstore.tree-metadata-mode=always
 
