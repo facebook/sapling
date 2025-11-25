@@ -60,8 +60,6 @@ use repo_factory::RepoFactoryBuilder;
 use running::run_until_terminated;
 use scuba_ext::MononokeScubaSampleBuilder;
 use services::Fb303Service;
-use slog::Logger;
-use slog::o;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
 #[cfg(not(test))]
@@ -160,13 +158,7 @@ impl MononokeApp {
         Service: Fb303Service + Sync + Send + 'static,
     {
         let monitoring_args = self.extension_args::<MonitoringAppExtension>()?;
-        monitoring_args.start_monitoring_server(
-            self.fb,
-            handle,
-            app_name,
-            self.logger(),
-            service,
-        )?;
+        monitoring_args.start_monitoring_server(self.fb, handle, app_name, service)?;
         Ok(())
     }
 
@@ -357,16 +349,6 @@ impl MononokeApp {
     /// The storage configs for this app.
     pub fn storage_configs(&self) -> Arc<StorageConfigs> {
         self.configs.storage_configs()
-    }
-
-    /// The logger for this app.
-    pub fn logger(&self) -> &Logger {
-        &self.env.logger
-    }
-
-    /// Construct a logger for a specific repo.
-    pub fn repo_logger(&self, repo_name: &str) -> Logger {
-        self.env.logger.new(o!("repo" => repo_name.to_string()))
     }
 
     /// The mysql options for this app.

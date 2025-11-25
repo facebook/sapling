@@ -19,7 +19,6 @@ use fbinit::FacebookInit;
 pub use services::AliveService;
 use services::Fb303Service;
 use services::FbStatus;
-use slog::Logger;
 use tokio::runtime::Handle;
 use tracing::info;
 
@@ -52,7 +51,6 @@ impl MonitoringArgs {
         fb: FacebookInit,
         handle: &Handle,
         service_name: &str,
-        _logger: &Logger,
         service: S,
     ) -> Result<Option<()>, Error> {
         let service_name = service_name.to_string();

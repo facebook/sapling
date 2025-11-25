@@ -46,7 +46,6 @@ use permission_checker::AclProvider;
 use permission_checker::DefaultAclProvider;
 use permission_checker::InternalAclProvider;
 use rendezvous::RendezVousArgs;
-use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use sql_ext::facebook::PoolConfig;
 use sql_ext::facebook::ReadConnectionType;
@@ -323,11 +322,9 @@ impl MononokeAppBuilder {
 
         gflags_args.propagate(self.fb)?;
 
-        let logger = if self.with_logging {
-            logging_args.setup_logging(self.fb)?
-        } else {
-            Logger::Tracing
-        };
+        if self.with_logging {
+            logging_args.setup_logging(self.fb)?;
+        }
 
         let config_store = config_args
             .create_config_store(self.fb)
@@ -387,13 +384,12 @@ impl MononokeAppBuilder {
         init_just_knobs_worker(
             &just_knobs_args,
             &config_store,
-            logger.clone(),
+            (),
             runtime.handle().clone(),
         )?;
 
         Ok(MononokeEnvironment {
             fb: self.fb,
-            logger,
             scuba_sample_builder,
             warm_bookmarks_cache_scuba_sample_builder,
             config_store,
@@ -522,7 +518,7 @@ fn create_blobstore_options(
 fn init_just_knobs_worker(
     just_knobs_args: &JustKnobsArgs,
     config_store: &ConfigStore,
-    logger: Logger,
+    logger: impl justknobs::cached_config::IntoLogger,
     handle: Handle,
 ) -> Result<()> {
     if let Some(just_knobs_config_path) = &just_knobs_args.just_knobs_config_path {

@@ -23,7 +23,6 @@ use observability::ObservabilityContext;
 use permission_checker::AclProvider;
 use rendezvous::RendezVousOptions;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use strum::EnumString;
 use tokio::runtime::Handle;
@@ -116,7 +115,6 @@ pub struct RemoteDiffOptions {
 /// is immutable post the point of app construction.
 pub struct MononokeEnvironment {
     pub fb: FacebookInit,
-    pub logger: Logger,
     pub scuba_sample_builder: MononokeScubaSampleBuilder,
     pub warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder,
     pub config_store: ConfigStore,

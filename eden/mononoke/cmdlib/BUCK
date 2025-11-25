@@ -12,7 +12,6 @@ rust_library(
     name = "environment",
     srcs = glob(["environment/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "environment"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:strum",
