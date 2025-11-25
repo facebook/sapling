@@ -52,7 +52,6 @@ use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::monitoring::AliveService;
 use mononoke_app::monitoring::MonitoringAppExtension;
-use slog::o;
 use sql_construct::SqlConstructFromShardedDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use tracing::info;
@@ -237,7 +236,7 @@ fn setup_wal(
 
 async fn setup_blobstores(
     fb: FacebookInit,
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     blobstore_configs: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
     mysql_options: &MysqlOptions,
     blobstore_options: &BlobstoreOptions,
@@ -269,8 +268,7 @@ async fn setup_blobstores(
             .await?;
 
             let blobstore: Arc<dyn Blobstore> = if dry_run {
-                let logger = ctx.logger().new(o!("blobstore" => format!("{:?}", id)));
-                Arc::new(DummyBlobstore::new(blobstore, logger))
+                Arc::new(DummyBlobstore::new(blobstore))
             } else {
                 blobstore
             };
@@ -308,7 +306,7 @@ async fn schedule_healing(
         }
 
         wait_for_replication
-            .wait_for_replication(ctx.logger())
+            .wait_for_replication()
             .await
             .context("While waiting for replication")?;
 
@@ -351,7 +349,6 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
     let env = app.environment();
 
     let storage_id = args.storage_id;
-    let logger = app.logger();
     let config_store = app.config_store();
     let mysql_options = &env.mysql_options;
     let readonly_storage = env.readonly_storage;
@@ -376,7 +373,7 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
 
     let scuba = env.scuba_sample_builder.clone();
 
-    let ctx = SessionContainer::new_with_defaults(app.fb).new_context(logger.clone(), scuba);
+    let ctx = SessionContainer::new_with_defaults(app.fb).new_context(scuba);
     let buffered_params = BufferedParams {
         weight_limit: heal_max_bytes,
         buffer_size: heal_concurrency,

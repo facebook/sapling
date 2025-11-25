@@ -19,7 +19,6 @@ use context::CoreContext;
 use metaconfig_types::MultiplexId;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::Timestamp;
-use slog::Logger;
 use tracing::info;
 
 #[derive(Debug)]
@@ -34,7 +33,7 @@ impl<B: std::fmt::Display> std::fmt::Display for DummyBlobstore<B> {
 }
 
 impl<B: Blobstore> DummyBlobstore<B> {
-    pub fn new(inner: B, _logger: Logger) -> Self {
+    pub fn new(inner: B) -> Self {
         Self { inner }
     }
 }

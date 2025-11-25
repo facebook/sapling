@@ -684,7 +684,7 @@ impl RepoFactory {
         } else {
             SessionContainer::new_with_defaults(self.env.fb)
         };
-        session.new_context(logger, self.env.scuba_sample_builder.clone())
+        session.new_context_with_logger(logger, self.env.scuba_sample_builder.clone())
     }
 
     /// Returns a cache builder for the named pool if caching is enabled

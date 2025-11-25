@@ -50,7 +50,6 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedData;
 use restricted_paths::RestrictedPaths;
 use restricted_paths::RestrictedPathsArc;
-use slog::Logger;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
@@ -152,13 +151,10 @@ fn main(fb: FacebookInit) -> Result<()> {
     let args: CommandArgs = app.args()?;
     let runtime = app.runtime();
     let repo: Repo = runtime.block_on(app.open_repo(&args.repo))?;
-    let logger = app.logger();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = CoreContext::new(fb);
 
     match args.subcmd {
-        BonsaiSubCommand::RoundTrip(args) => {
-            subcommand_round_trip(ctx, logger.clone(), runtime, repo, args)
-        }
+        BonsaiSubCommand::RoundTrip(args) => subcommand_round_trip(ctx, runtime, repo, args),
         BonsaiSubCommand::HgManifest(args) => {
             subcommmand_hg_manifest_verify(&ctx, runtime, &repo, args)
         }
@@ -167,7 +163,6 @@ fn main(fb: FacebookInit) -> Result<()> {
 
 fn subcommand_round_trip(
     ctx: CoreContext,
-    logger: Logger,
     runtime: &tokio::runtime::Handle,
     repo: Repo,
     args: RoundTrip,
@@ -281,13 +276,10 @@ fn subcommand_round_trip(
     let _ = runtime.block_on(verify_fut);
 
     let end_points: Vec<_> = end_receiver.into_iter().collect();
-    process::exit(summarize(
-        logger, end_points, valid, invalid, errors, ignored,
-    ));
+    process::exit(summarize(end_points, valid, invalid, errors, ignored));
 }
 
 fn summarize(
-    _logger: Logger,
     end_points: Vec<HgChangesetId>,
     valid: Arc<AtomicUsize>,
     invalid: Arc<AtomicUsize>,

@@ -68,7 +68,6 @@ use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sharding_ext::RepoShard;
-use slog::Logger;
 use stats::prelude::*;
 use tokio::io::AsyncReadExt;
 use tokio::time::sleep;
@@ -136,13 +135,12 @@ impl StatisticsCollectorProcess {
 #[async_trait]
 impl RepoShardedProcess for StatisticsCollectorProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        let logger = self.app.repo_logger(&repo.to_string());
         info!(
             "Setting up statistics collector for repo {}",
             repo.to_string()
         );
         let statistics_collector =
-            StatisticsCollector::from_process(self, repo.repo_name.to_string(), logger).await?;
+            StatisticsCollector::from_process(self, repo.repo_name.to_string()).await?;
         Ok(Arc::new(statistics_collector))
     }
 }
@@ -162,9 +160,8 @@ impl StatisticsCollector {
     async fn from_process(
         process: &StatisticsCollectorProcess,
         repo_name: String,
-        logger: Logger,
     ) -> anyhow::Result<Self> {
-        let ctx = CoreContext::new_with_logger(process.app.fb, logger.clone());
+        let ctx = CoreContext::new(process.app.fb);
         let repos = process
             .app
             .open_named_managed_repos(Some(repo_name.to_string()), None)

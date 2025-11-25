@@ -148,7 +148,8 @@ impl Middleware for RequestContextMiddleware {
             .metadata(Arc::new(metadata))
             .readonly(self.readonly)
             .build();
-        let ctx = session.new_context(logger, MononokeScubaSampleBuilder::with_discard());
+        let ctx =
+            session.new_context_with_logger(logger, MononokeScubaSampleBuilder::with_discard());
 
         state.put(RequestContext::new(ctx, should_log));
 

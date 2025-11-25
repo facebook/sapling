@@ -173,7 +173,7 @@ pub(crate) async fn process_stream_and_wait_for_replication<R: cross_repo_sync::
         }
     };
 
-    let wait_config = WaitForReplicationConfig::default().with_logger(ctx.logger());
+    let wait_config = WaitForReplicationConfig::default();
     let replica_lag_monitor: Arc<dyn ReplicaLagMonitor> = match db_address {
         None => Arc::new(NoReplicaLagMonitor()),
         Some(address) => {

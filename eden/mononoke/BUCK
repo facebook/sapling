@@ -48,7 +48,6 @@ tokio_dependency_test(
 rust_binary(
     name = "bonsai_verify",
     srcs = glob(["cmds/bonsai_verify/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     unittests = False,
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -83,7 +82,6 @@ rust_binary(
     name = "blobimport",
     srcs = ["cmds/blobimport.rs"],
     autocargo = {"cargo_toml_dir": "blobimport"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
@@ -117,7 +115,6 @@ rust_binary(
     autocargo = {"cargo_toml_dir": "blobstore_healer"},
     named_deps = {
         "futures_03_ext": "//common/rust/shed/futures_ext:futures_ext",
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
     },
     test_deps = [
         "fbsource//third-party/rust:bytes",
@@ -155,7 +152,6 @@ rust_binary(
     name = "aliasverify",
     srcs = ["cmds/aliasverify.rs"],
     autocargo = {"cargo_toml_dir": "aliasverify"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
@@ -212,7 +208,6 @@ rust_binary(
     autocargo = {"cargo_toml_dir": "statistics_collector"},
     named_deps = {
         "futures_ext": "//common/rust/shed/futures_01_ext:futures_01_ext",
-        "slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat",
     },
     test_deps = [
         "fbsource//third-party/rust:bytes",
@@ -260,7 +255,6 @@ rust_binary(
 rust_binary(
     name = "sqlblob_gc",
     srcs = glob(["cmds/sqlblob_gc/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -283,7 +277,6 @@ rust_binary(
 rust_binary(
     name = "packer",
     srcs = glob(["cmds/packer/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],

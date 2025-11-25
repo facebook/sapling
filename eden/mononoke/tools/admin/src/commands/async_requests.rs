@@ -63,7 +63,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .context("acquiring the async requests queue")?;
 
     let session = SessionContainer::new_with_defaults(app.environment().fb);
-    let ctx = session.new_context(
+    let ctx = session.new_context_with_logger(
         app.logger().clone(),
         app.environment().scuba_sample_builder.clone(),
     );

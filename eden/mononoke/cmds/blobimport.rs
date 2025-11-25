@@ -44,7 +44,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mutable_counters::MutableCountersRef;
 use repo_identity::RepoIdentityRef;
-use slog::Logger;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use synced_commit_mapping::SqlSyncedCommitMappingBuilder;
 use tracing::error;
@@ -52,7 +51,6 @@ use tracing::info;
 use tracing::warn;
 
 fn parse_fixed_parent_order<P: AsRef<Path>>(
-    _logger: &Logger,
     p: P,
 ) -> Result<HashMap<HgChangesetId, Vec<HgChangesetId>>> {
     let content = read(p)?;
@@ -170,8 +168,8 @@ mod facebook {
 async fn async_main(app: MononokeApp) -> Result<()> {
     let args: MononokeBlobImportArgs = app.args()?;
     let env = app.environment();
-    let ctx = &SessionContainer::new_with_defaults(app.fb)
-        .new_context(app.logger().clone(), env.scuba_sample_builder.clone());
+    let ctx =
+        &SessionContainer::new_with_defaults(app.fb).new_context(env.scuba_sample_builder.clone());
 
     let changeset = args
         .changeset
@@ -193,8 +191,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
     };
 
     let fixed_parent_order = if let Some(path) = args.fix_parent_order {
-        parse_fixed_parent_order(ctx.logger(), path)
-            .context("while parsing file with fixed parent order")?
+        parse_fixed_parent_order(path).context("while parsing file with fixed parent order")?
     } else {
         HashMap::new()
     };

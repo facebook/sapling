@@ -26,7 +26,6 @@ use metaconfig_types::ShardedDatabaseConfig;
 use metaconfig_types::StorageConfig;
 use replication_lag_config::ReplicationLagBlobstoreConfig;
 use replication_lag_config::ReplicationLagTableConfig;
-use slog::Logger;
 #[cfg(fbcode_build)]
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::NoReplicaLagMonitor;
@@ -115,7 +114,7 @@ impl WaitForReplication {
         })
     }
 
-    pub async fn wait_for_replication(&self, logger: &Logger) -> Result<()> {
+    pub async fn wait_for_replication(&self) -> Result<()> {
         let mut state_lock = self.state.lock().await;
         let State {
             last_sync_queue_lag,
@@ -123,14 +122,12 @@ impl WaitForReplication {
         } = state_lock.deref_mut();
         try_join!(
             self.wait_for_table(
-                logger,
                 "sync queue",
                 last_sync_queue_lag,
                 &self.sync_queue_monitor,
                 || self.config_handle.get().sync_queue.clone(),
             ),
             self.wait_for_table(
-                logger,
                 "XDB blobstore",
                 last_xdb_blobstore_lag,
                 &self.xdb_blobstore_monitor,
@@ -142,7 +139,6 @@ impl WaitForReplication {
 
     async fn wait_for_table<'a>(
         &'a self,
-        logger: &'a Logger,
         name: &'static str,
         last_lag: &'a mut Option<(Instant, Duration)>,
         monitor: &'a Arc<dyn ReplicaLagMonitor>,
@@ -191,11 +187,7 @@ impl WaitForReplication {
                         } else {
                             (max_replication_lag_allowed, poll_interval)
                         };
-                    WaitForReplicationConfig::new(
-                        max_replication_lag_allowed,
-                        poll_interval,
-                        logger,
-                    )
+                    WaitForReplicationConfig::new(max_replication_lag_allowed, poll_interval, name)
                 })
                 .await?;
             *last_lag = Some((Instant::now(), new_last_lag.delay));

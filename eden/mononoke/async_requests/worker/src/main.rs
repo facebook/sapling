@@ -160,7 +160,9 @@ fn main(fb: FacebookInit) -> Result<()> {
     let env = app.environment();
     let runtime = app.runtime().clone();
     let session = SessionContainer::new_with_defaults(env.fb);
-    let ctx = Arc::new(session.new_context(app.logger().clone(), env.scuba_sample_builder.clone()));
+    let ctx = Arc::new(
+        session.new_context_with_logger(app.logger().clone(), env.scuba_sample_builder.clone()),
+    );
 
     let sharded_args = args.sharded_executor_args.clone();
     let repos_mgr = if sharded_args.is_sharded() {

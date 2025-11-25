@@ -26,7 +26,6 @@ use packblob::PackBlob;
 use packblob::SingleCompressed;
 use packblob::get_entry_compressed_size;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 use tokio::task::spawn_blocking;
 use tracing::info;
 
@@ -135,7 +134,6 @@ pub async fn repack_keys_with_retry<T: BlobstorePutOps>(
     dry_run: bool,
     scuba: &MononokeScubaSampleBuilder,
     tuning_info_scuba: &MononokeScubaSampleBuilder,
-    _logger: &Logger,
 ) -> Result<()> {
     retry(
         |_| {

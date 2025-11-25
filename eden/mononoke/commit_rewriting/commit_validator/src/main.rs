@@ -239,7 +239,7 @@ async fn async_main(app: MononokeApp) -> Result<()> {
         .metadata(Arc::new(metadata))
         .build();
 
-    let ctx = session_container.new_context(app.logger().clone(), scuba);
+    let ctx = session_container.new_context(scuba);
 
     run(fb, ctx, app).await
 }

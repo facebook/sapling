@@ -231,7 +231,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                             dry_run,
                             scuba,
                             tuning_info_scuba,
-                            &logger.clone(),
                         )
                         .await
                     }

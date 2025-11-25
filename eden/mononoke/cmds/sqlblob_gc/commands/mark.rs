@@ -21,7 +21,6 @@ use futures::stream::TryStreamExt;
 use futures_retry::retry;
 use mononoke_app::MononokeApp;
 use mononoke_macros::mononoke;
-use slog::Logger;
 use sqlblob::Sqlblob;
 use tracing::info;
 
@@ -50,7 +49,6 @@ async fn handle_one_key(
     key: String,
     store: Arc<Sqlblob>,
     inline_small_values: bool,
-    _logger: Arc<Logger>,
     mark_generation: u64,
 ) -> Result<()> {
     retry(
@@ -65,12 +63,7 @@ async fn handle_one_key(
     Ok(())
 }
 
-async fn handle_initial_generation(
-    ctx: &CoreContext,
-    store: &Sqlblob,
-    shard: usize,
-    _logger: &Logger,
-) -> Result<()> {
+async fn handle_initial_generation(ctx: &CoreContext, store: &Sqlblob, shard: usize) -> Result<()> {
     retry(
         |_| store.set_initial_generation(ctx, shard),
         BASE_RETRY_DELAY,
@@ -90,8 +83,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let common_args: MononokeSQLBlobGCArgs = app.args()?;
     let ctx = app.new_basic_context();
 
-    let logger: Logger = app.logger().clone();
-
     let max_parallelism: usize = common_args.scheduled_max;
 
     let (sqlblob, shard_range) = utils::get_sqlblob_and_shard_range(&app).await?;
@@ -100,7 +91,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         info!("Starting initial generation set");
         let set_initial_generation_futures: Vec<_> = shard_range
             .clone()
-            .map(|shard| Ok(handle_initial_generation(&ctx, &sqlblob, shard, &logger)))
+            .map(|shard| Ok(handle_initial_generation(&ctx, &sqlblob, shard)))
             .collect();
         stream::iter(set_initial_generation_futures.into_iter())
             .try_for_each_concurrent(max_parallelism, |fut| fut)
@@ -113,7 +104,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     }
 
     let sqlblob = Arc::new(sqlblob);
-    let logger = Arc::new(logger);
 
     let inline_small_values = !args.skip_inline_small_values;
 
@@ -124,7 +114,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     // Set up a task to process each key in parallel in its own task.
     let (key_channel, processor) = {
         let sqlblob = Arc::clone(&sqlblob);
-        let logger = Arc::clone(&logger);
         let (tx, rx) = mpsc::channel(10);
         let new_ctx = ctx.clone();
         let task = mononoke::spawn_task(async move {
@@ -132,7 +121,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                 .try_for_each_concurrent(max_parallelism, {
                     |key| {
                         let sqlblob = sqlblob.clone();
-                        let logger = logger.clone();
                         let new_ctx = new_ctx.clone();
                         async move {
                             mononoke::spawn_task(handle_one_key(
@@ -140,7 +128,6 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
                                 key,
                                 sqlblob,
                                 inline_small_values,
-                                logger,
                                 mark_generation,
                             ))
                             .await?

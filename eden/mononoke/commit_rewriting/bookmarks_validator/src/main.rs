@@ -89,7 +89,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .metadata(Arc::new(metadata))
         .build();
 
-    let ctx = session_container.new_context(app.logger().clone(), scuba);
+    let ctx = session_container.new_context(scuba);
 
     info!("Starting session with id {}", ctx.metadata().session_id(),);
 

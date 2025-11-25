@@ -638,7 +638,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .metadata(Arc::new(metadata))
         .build();
 
-    let ctx = session_container.new_context(app.logger().clone(), scuba);
+    let ctx = session_container.new_context(scuba);
 
     log_info(
         &ctx,

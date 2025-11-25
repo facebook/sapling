@@ -338,7 +338,7 @@ pub fn build_context(app: Arc<MononokeApp>, repo_name: &str, dry_run: bool) -> C
         .build();
 
     session_container
-        .new_context(app.logger().clone(), scuba)
+        .new_context(scuba)
         .clone_with_repo_name(repo_name)
 }
 

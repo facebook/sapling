@@ -78,10 +78,19 @@ impl SessionContainer {
         Self::builder(fb).metadata(Arc::new(metadata)).build()
     }
 
-    pub fn new_context(&self, logger: Logger, scuba: MononokeScubaSampleBuilder) -> CoreContext {
+    pub fn new_context(&self, scuba: MononokeScubaSampleBuilder) -> CoreContext {
+        let logging = LoggingContainer::new(self.fb, slog::Logger::Tracing, scuba);
+        CoreContext::from_parts(self.fb, logging, self.clone())
+    }
+
+    pub fn new_context_with_logger(
+        &self,
+        logger: Logger,
+        scuba: MononokeScubaSampleBuilder,
+    ) -> CoreContext {
         let logging = LoggingContainer::new(self.fb, logger, scuba);
 
-        CoreContext::new(self.fb, logging, self.clone())
+        CoreContext::from_parts(self.fb, logging, self.clone())
     }
 
     pub fn new_context_with_scribe(
@@ -93,7 +102,7 @@ impl SessionContainer {
         let mut logging = LoggingContainer::new(self.fb, logger, scuba);
         logging.with_scribe(scribe);
 
-        CoreContext::new(self.fb, logging, self.clone())
+        CoreContext::from_parts(self.fb, logging, self.clone())
     }
 
     pub fn fb(&self) -> FacebookInit {

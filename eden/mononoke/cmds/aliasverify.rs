@@ -62,7 +62,6 @@ use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentity;
 use sharding_ext::RepoShard;
-use slog::Logger;
 use sql_commit_graph_storage::CommitGraphBulkFetcher;
 use sql_commit_graph_storage::CommitGraphBulkFetcherRef;
 use tracing::debug;
@@ -150,7 +149,6 @@ impl AliasVerifyProcess {
 #[async_trait]
 impl RepoShardedProcess for AliasVerifyProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
-        let logger = self.app.repo_logger(&repo.to_string());
         let repo_name = repo.repo_name.as_str();
         let start = repo.chunk_id.unwrap_or(0) as u64;
         let total = repo.total_chunks.unwrap_or(1) as u64;
@@ -173,7 +171,6 @@ impl RepoShardedProcess for AliasVerifyProcess {
             .await?;
         let redacted_content_ids = redacted_blobs.redacted().keys().cloned().collect();
         Ok(Arc::new(AliasVerification::new(
-            logger.clone(),
             repo_name.to_string(),
             self.repos_mgr.repos().clone(),
             self.args.clone(),
@@ -215,7 +212,6 @@ struct AliasVerifyArgs {
 
 /// Struct representing the Alias Verify process over the context of Repo.
 struct AliasVerification {
-    _logger: Logger,
     repos: Arc<MononokeRepos<Repo>>,
     repo_name: String,
     args: Arc<AliasVerifyArgs>,
@@ -261,7 +257,6 @@ impl RepoShardedProcessExecutor for AliasVerification {
 
 impl AliasVerification {
     pub fn new(
-        logger: Logger,
         repo_name: String,
         repos: Arc<MononokeRepos<Repo>>,
         args: Arc<AliasVerifyArgs>,
@@ -272,7 +267,6 @@ impl AliasVerification {
         redacted_content_ids: HashSet<String>,
     ) -> Self {
         Self {
-            _logger: logger,
             repo_name,
             repos,
             args,

@@ -10,7 +10,6 @@ use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use slog::Logger;
 use tokio::time;
 use tracing::info;
 
@@ -51,8 +50,8 @@ pub trait ReplicaLagMonitor: Send + Sync {
         loop {
             let max_lag = self.get_max_replica_lag().await?;
             let config = config_getter();
-            if let Some(_logger) = config.logger {
-                info!("{}", max_lag);
+            if let Some(trace_name) = config.trace_name {
+                info!("{}: {}", trace_name, max_lag);
             }
             if max_lag.delay < config.max_replication_lag_allowed {
                 return Ok(max_lag);
@@ -113,7 +112,7 @@ impl fmt::Debug for ReplicaLag {
 
 #[derive(Clone)]
 pub struct WaitForReplicationConfig<'a> {
-    logger: Option<&'a Logger>,
+    trace_name: Option<&'a str>,
     max_replication_lag_allowed: Duration,
     poll_interval: Duration,
 }
@@ -121,7 +120,7 @@ pub struct WaitForReplicationConfig<'a> {
 impl<'a> Default for WaitForReplicationConfig<'a> {
     fn default() -> Self {
         WaitForReplicationConfig {
-            logger: None,
+            trace_name: None,
             max_replication_lag_allowed: Duration::from_secs(MAX_ALLOWED_REPLICATION_LAG_SECS),
             poll_interval: Duration::from_secs(REPLICATION_LAG_POLL_INTERVAL_SECS),
         }
@@ -132,16 +131,16 @@ impl<'a> WaitForReplicationConfig<'a> {
     pub fn new(
         max_replication_lag_allowed: Duration,
         poll_interval: Duration,
-        logger: &'a Logger,
+        trace_name: &'a str,
     ) -> Self {
         Self {
             max_replication_lag_allowed,
             poll_interval,
-            logger: Some(logger),
+            trace_name: Some(trace_name),
         }
     }
-    pub fn with_logger(mut self, logger: &'a Logger) -> Self {
-        self.logger = Some(logger);
+    pub fn with_tracing(mut self, trace_name: &'a str) -> Self {
+        self.trace_name = Some(trace_name);
         self
     }
 }
