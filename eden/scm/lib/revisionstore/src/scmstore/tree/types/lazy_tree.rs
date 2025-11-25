@@ -35,10 +35,6 @@ pub(crate) enum LazyTree {
     /// An SaplingRemoteApi TreeEntry.
     SaplingRemoteApi(TreeEntry),
 
-    /// Tree data from CAS. Note that CAS actually contains AugmentedTree (without
-    /// digest), but we have the digest in-hand so we store an AugmentedTreeWithDigest.
-    Cas(AugmentedTreeWithDigest),
-
     // Null tree is a special case with null content.
     Null,
 }
@@ -55,7 +51,6 @@ impl LazyTree {
         match self {
             IndexedLog(entry_with_aux) => Some(entry_with_aux.node()),
             SaplingRemoteApi(entry) => Some(entry.key().hgid),
-            Cas(entry) => Some(entry.augmented_tree.hg_node_id),
             Null => Some(NULL_ID),
         }
     }
@@ -66,12 +61,6 @@ impl LazyTree {
         Ok(match self {
             IndexedLog(entry_with_aux) => entry_with_aux.content()?,
             SaplingRemoteApi(entry) => entry.data()?,
-            Cas(entry) => {
-                let tree = &entry.augmented_tree;
-                let mut data = Vec::with_capacity(tree.sapling_tree_blob_size);
-                tree.write_sapling_tree_blob(&mut data)?;
-                data.into()
-            }
             Null => Bytes::default(),
         })
     }
@@ -82,8 +71,6 @@ impl LazyTree {
         Ok(match self {
             IndexedLog(entry_with_aux) => Some(entry_with_aux.entry.clone()),
             SaplingRemoteApi(entry) => Some(Entry::new(node, entry.data()?, Metadata::default())),
-            // Don't write CAS entries to local cache.
-            Cas(_) => None,
             Null => None,
         })
     }
@@ -99,10 +86,6 @@ impl LazyTree {
     pub(crate) fn parents(&self) -> Option<Parents> {
         match &self {
             Self::SaplingRemoteApi(entry) => entry.parents,
-            Self::Cas(entry) => Some(Parents::new(
-                entry.augmented_tree.p1.unwrap_or(NULL_ID),
-                entry.augmented_tree.p2.unwrap_or(NULL_ID),
-            )),
             _ => None,
         }
     }
@@ -111,10 +94,6 @@ impl LazyTree {
         match &self {
             Self::IndexedLog(entry_with_aux) => entry_with_aux.tree_aux.clone(),
             Self::SaplingRemoteApi(entry) => entry.tree_aux_data.clone(),
-            Self::Cas(entry) => Some(TreeAuxData {
-                augmented_manifest_id: entry.augmented_manifest_id,
-                augmented_manifest_size: entry.augmented_manifest_size,
-            }),
             _ => None,
         }
     }
@@ -147,31 +126,6 @@ impl LazyTree {
                     })
                     .collect::<Vec<_>>()
             }),
-            Cas(entry) => entry
-                .augmented_tree
-                .entries
-                .iter()
-                .map(|(_path, child)| match child {
-                    AugmentedTreeEntry::FileNode(file) => (
-                        file.filenode,
-                        AuxData::File(FileAuxData {
-                            total_size: file.total_size,
-                            sha1: file.content_sha1,
-                            blake3: file.content_blake3,
-                            file_header_metadata: Some(
-                                file.file_header_metadata.clone().unwrap_or_default(),
-                            ),
-                        }),
-                    ),
-                    AugmentedTreeEntry::DirectoryNode(dir) => (
-                        dir.treenode,
-                        AuxData::Tree(TreeAuxData {
-                            augmented_manifest_id: dir.augmented_manifest_id,
-                            augmented_manifest_size: dir.augmented_manifest_size,
-                        }),
-                    ),
-                })
-                .collect(),
             _ => Vec::new(),
         }
     }

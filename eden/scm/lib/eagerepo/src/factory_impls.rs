@@ -14,7 +14,6 @@ use storemodel::StoreInfo;
 use storemodel::StoreOutput;
 
 use crate::EagerRepoStore;
-use crate::cas::cas_client_from_config;
 
 pub(crate) fn init() {
     fn maybe_construct_eagerepo_store(
@@ -44,6 +43,4 @@ pub(crate) fn init() {
         }
     }
     factory::register_constructor("eager", maybe_construct_eagerepo_store);
-
-    factory::register_constructor("eager", cas_client_from_config);
 }

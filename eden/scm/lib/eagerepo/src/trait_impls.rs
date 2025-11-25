@@ -10,16 +10,11 @@
 use std::ops::Deref;
 
 use blob::Blob;
-use cas_client::CasClient;
-use cas_client::CasFetchedStats;
 use format_util::commit_text_to_root_tree_id;
 use format_util::git_sha1_serialize;
 use format_util::hg_sha1_serialize;
 use format_util::split_hg_file_metadata;
 use format_util::strip_file_metadata;
-use futures::StreamExt;
-use futures::stream;
-use futures::stream::BoxStream;
 use storemodel::BoxIterator;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
@@ -29,9 +24,6 @@ use storemodel::ReadRootTreeIds;
 use storemodel::SerializationFormat;
 use storemodel::TreeStore;
 use storemodel::types;
-use types::CasDigest;
-use types::CasDigestType;
-use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -177,66 +169,5 @@ impl ReadRootTreeIds for EagerRepoStore {
             }
         }
         Ok(res)
-    }
-}
-
-#[async_trait::async_trait]
-impl CasClient for EagerRepoStore {
-    /// Fetch a single blob from local CAS caches.
-    fn fetch_single_locally_cached(
-        &self,
-        digest: &CasDigest,
-    ) -> anyhow::Result<(CasFetchedStats, Option<Blob>)> {
-        self.get_cas_blob(*digest)
-            .map_err(Into::into)
-            .map(|data| (CasFetchedStats::default(), data.map(Blob::Bytes)))
-    }
-
-    /// Upload blobs to CAS.
-    async fn upload(&self, _blobs: Vec<Blob>) -> anyhow::Result<Vec<CasDigest>> {
-        unimplemented!("EagerRepoStore does not support uploading blobs to CAS")
-    }
-
-    async fn fetch<'a>(
-        &'a self,
-        _fctx: FetchContext,
-        digests: &'a [CasDigest],
-        log_name: CasDigestType,
-    ) -> BoxStream<
-        'a,
-        anyhow::Result<(
-            CasFetchedStats,
-            Vec<(CasDigest, anyhow::Result<Option<Blob>>)>,
-        )>,
-    > {
-        stream::once(async move {
-            tracing::debug!(target: "cas_client", "EagerRepoStore fetching {} {}(s)", digests.len(), log_name);
-
-            Ok((CasFetchedStats::default(), digests
-                .iter()
-                .map(|digest| {
-                    (
-                        *digest,
-                        self.get_cas_blob(*digest)
-                            .map_err(Into::into)
-                            .map(|data| data.map(Blob::Bytes)),
-                    )
-                })
-                .collect()))
-        }).boxed()
-    }
-
-    /// Prefetch blobs into the CAS cache
-    /// Returns a stream of (stats, digests_prefetched, digests_not_found) tuples
-    async fn prefetch<'a>(
-        &'a self,
-        _fctx: FetchContext,
-        digests: &'a [CasDigest],
-        log_name: CasDigestType,
-    ) -> BoxStream<'a, anyhow::Result<(CasFetchedStats, Vec<CasDigest>, Vec<CasDigest>)>> {
-        stream::once(async move {
-            tracing::debug!(target: "cas_client", "EagerRepoStore prefetching {} {}(s)", digests.len(), log_name);
-            Ok((CasFetchedStats::default(), digests.to_owned(), vec![]))
-        }).boxed()
     }
 }

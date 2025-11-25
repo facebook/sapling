@@ -70,7 +70,6 @@ rust_library(
         "//eden/mononoke/lfs_protocol:lfs_protocol",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/blob:blob",
-        "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/edenapi:edenapi",
         "//eden/scm/lib/edenapi/types:edenapi_types",

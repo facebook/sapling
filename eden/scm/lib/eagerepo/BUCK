@@ -31,7 +31,6 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/blob:blob",
-        "//eden/scm/lib/cas-client:cas-client",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/eagerepo/id20store:id20store",

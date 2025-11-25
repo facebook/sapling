@@ -32,7 +32,6 @@ quickcheck_arbitrary_derive = { version = "0.1.0", git = "https://github.com/fac
 rand = { version = "0.8", features = ["small_rng"] }
 redacted = { version = "0.1.0", path = "../util/redacted" }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
-sapling-cas-client = { version = "0.1.0", path = "../cas-client" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
 sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-edenapi_types = { version = "0.1.0", path = "../edenapi/types" }

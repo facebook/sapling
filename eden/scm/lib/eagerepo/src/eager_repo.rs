@@ -33,7 +33,6 @@ use eagerepo_trait::EagerRepoExtension;
 use format_util::commit_text_to_root_tree_id;
 use format_util::git_sha1_serialize;
 use format_util::hg_sha1_serialize;
-use format_util::split_hg_file_metadata;
 use futures::lock::Mutex;
 use futures::lock::MutexGuard;
 use id20store::Id20Store;
@@ -144,47 +143,6 @@ impl EagerRepoStore {
     // Explicitly defined to avoid conflicts with storemodel.
     pub fn get_content(&self, id: Id20) -> Result<Option<Bytes>> {
         self.inner.get_content(id)
-    }
-
-    /// Read CAS data for digest.
-    #[tracing::instrument(skip(self), level = "trace")]
-    pub fn get_cas_blob(&self, digest: CasDigest) -> Result<Option<Bytes>> {
-        ::fail::fail_point!("eagerepo::cas", |_| {
-            Err(anyhow!("stub eagerepo CAS error").into())
-        });
-
-        let Some(pointer_data) = self.get_sha1_blob(digest_id(digest))? else {
-            tracing::trace!("no CAS pointer data");
-            return Ok(None);
-        };
-
-        let pointer = CasPointer::deserialize(&pointer_data)?;
-        tracing::trace!("found CAS pointer {pointer:?}");
-
-        match CasPointer::deserialize(&pointer_data)? {
-            CasPointer::Tree(id) => {
-                // We store data for AugmentedTreeWithDigest, but we want to return data for AugmentedTree.
-                // Strip off the first line (which is the digest).
-                self.get_sha1_blob(augmented_id(id)).and_then(|blob| {
-                    tracing::trace!("found CAS tree data");
-                    blob.map(|blob| {
-                        if let Some(idx) = blob.as_ref().iter().position(|&b| b == b'\n') {
-                            Ok(blob.slice(idx + 1..))
-                        } else {
-                            Err(anyhow!("augmented tree data has no newline?").into())
-                        }
-                    })
-                    .transpose()
-                })
-            }
-            CasPointer::File(id) => match self.get_content(id)? {
-                Some(data) => {
-                    tracing::trace!("found CAS file data");
-                    Ok(Some(split_hg_file_metadata(&data).0))
-                }
-                None => Ok(None),
-            },
-        }
     }
 
     /// Read SHA1 blob from zstore for augmented data.
@@ -462,16 +420,8 @@ impl EagerRepo {
 
     /// Insert SHA1 blob to zstore for augmented trees.
     /// These blobs are not content addressed
-    pub fn add_augmented_tree_blob(&self, id: Id20, digest: CasDigest, data: &[u8]) -> Result<()> {
-        self.store.add_arbitrary_blob(augmented_id(id), data)?;
-        // Store a mapping from CasDigest to hg id so we can query augmented data by CasDigest.
-        self.add_cas_mapping(digest, CasPointer::Tree(id))
-    }
-
-    fn add_cas_mapping(&self, digest: CasDigest, pointer: CasPointer) -> Result<()> {
-        tracing::trace!("adding CAS mapping from {digest:?} to {pointer:?}");
-        self.store
-            .add_arbitrary_blob(digest_id(digest), &pointer.serialize())
+    pub fn add_augmented_tree_blob(&self, id: Id20, data: &[u8]) -> Result<()> {
+        self.store.add_arbitrary_blob(augmented_id(id), data)
     }
 
     pub(crate) fn format(&self) -> SerializationFormat {
@@ -543,15 +493,6 @@ impl EagerRepo {
                             let (raw_data, copy_from) = Self::parse_file_blob_hg(bytes.unwrap());
                             let aux_data = FileAuxData::from_content(&Blob::Bytes(raw_data));
 
-                            // Store a mapping from CasDigest to hg id so we can query augmented data by CasDigest.
-                            self.add_cas_mapping(
-                                CasDigest {
-                                    hash: aux_data.blake3,
-                                    size: aux_data.total_size,
-                                },
-                                CasPointer::File(hgid),
-                            )?;
-
                             sapling_tree_blob_size += HgId::hex_len();
 
                             AugmentedTreeEntry::FileNode(AugmentedFileNode {
@@ -596,7 +537,7 @@ impl EagerRepo {
                     .expect("writing failed");
 
                 // Store the augmented tree in zstore
-                self.add_augmented_tree_blob(id, digest, &buf)?;
+                self.add_augmented_tree_blob(id, &buf)?;
 
                 Ok(Some(Bytes::from(buf)))
             }
@@ -777,51 +718,6 @@ fn augmented_id(id: Id20) -> Id20 {
     hasher.update(id.as_ref());
     let hash: [u8; 20] = hasher.finalize().into();
     Id20::from_byte_array(hash)
-}
-
-fn digest_id(digest: CasDigest) -> Id20 {
-    let mut hasher = Sha1::new();
-    hasher.update(digest.hash.as_ref());
-    let hash: [u8; 20] = hasher.finalize().into();
-    Id20::from_byte_array(hash)
-}
-
-// Point to either a tree blob or file blob. Tree blobs are stored in the desired
-// augmented format, but files are stored with hg metadata prepended, so we must
-// differentiat the two.
-#[derive(Debug)]
-enum CasPointer {
-    Tree(Id20),
-    File(Id20),
-}
-
-impl CasPointer {
-    fn serialize(&self) -> Vec<u8> {
-        let mut data = Vec::with_capacity(21);
-        match self {
-            Self::File(id) => {
-                data.push(0);
-                data.extend_from_slice(id.as_ref());
-            }
-            Self::Tree(id) => {
-                data.push(1);
-                data.extend_from_slice(id.as_ref());
-            }
-        }
-        data
-    }
-
-    fn deserialize(data: &[u8]) -> Result<Self> {
-        if data.len() != 21 {
-            Err(anyhow!("bad CAS pointer length {}", data.len()).into())
-        } else {
-            match data[0] {
-                0 => Ok(Self::File(Id20::from_slice(&data[1..]).unwrap())),
-                1 => Ok(Self::Tree(Id20::from_slice(&data[1..]).unwrap())),
-                _ => Err(anyhow!("bad pointer type {}", data[0]).into()),
-            }
-        }
-    }
 }
 
 pub fn is_eager_repo(path: &Path) -> bool {

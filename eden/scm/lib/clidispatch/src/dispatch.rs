@@ -157,9 +157,6 @@ fn initialize_libraries(config: &dyn Config) -> Result<()> {
     indexedlog::config::configure(config)?;
     gitcompat::GlobalGit::set_default_config(config);
 
-    #[cfg(feature = "cas")]
-    cas_client::init();
-
     Ok(())
 }
 

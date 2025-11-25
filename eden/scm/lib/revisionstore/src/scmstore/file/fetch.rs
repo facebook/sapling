@@ -7,9 +7,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::future;
 use std::sync::Arc;
-use std::time::Instant;
 
 use anyhow::Result;
 use anyhow::anyhow;
@@ -17,7 +15,6 @@ use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use async_runtime::stream_to_iter;
 use blob::Blob;
-use cas_client::CasClient;
 use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use flume::Sender;
@@ -28,9 +25,6 @@ use progress_model::ProgressBar;
 use storemodel::SerializationFormat;
 use tracing::debug;
 use tracing::field;
-use types::CasDigest;
-use types::CasDigestType;
-use types::CasFetchedStats;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
@@ -88,8 +82,6 @@ pub struct FetchState {
 
     format: SerializationFormat,
 
-    cas_cache_threshold_bytes: Option<u64>,
-
     file_cache: Option<Arc<IndexedLogHgIdDataStore>>,
     files_to_cache: Vec<(HgId, Entry)>,
 }
@@ -102,7 +94,6 @@ impl FetchState {
         found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,
         lfs_enabled: bool,
         fctx: FetchContext,
-        cas_cache_threshold_bytes: Option<u64>,
         bar: Arc<ProgressBar>,
         file_cache: Option<Arc<IndexedLogHgIdDataStore>>,
     ) -> Self {
@@ -121,7 +112,6 @@ impl FetchState {
             lfs_enabled,
             format: file_store.format(),
             fctx,
-            cas_cache_threshold_bytes,
             file_cache,
             files_to_cache: Vec::new(),
         }
@@ -267,27 +257,16 @@ impl FetchState {
         }
     }
 
-    pub(crate) fn fetch_aux_indexedlog(
-        &mut self,
-        store: &AuxStore,
-        loc: StoreLocation,
-        have_cas: bool,
-    ) {
+    pub(crate) fn fetch_aux_indexedlog(&mut self, store: &AuxStore, loc: StoreLocation) {
         let fetch_start = std::time::Instant::now();
 
         let mut found = 0;
         let mut errors = 0;
         let mut count = 0;
         let mut error: Option<String> = None;
-        let ignore_results = self.fctx.mode().ignore_result() && !have_cas;
+        let ignore_results = self.fctx.mode().ignore_result();
 
         let mut wants_aux = FileAttributes::AUX;
-        if have_cas && loc == StoreLocation::Cache {
-            // Also fetch AUX data if we are going to try fetching from CAS. This does two things:
-            // 1. Fetches hash and size info needed to query CAS for file contents.
-            // 2. Fetches hg content header, which is not available from CAS.
-            wants_aux |= FileAttributes::PURE_CONTENT;
-        }
 
         // If we are querying for content header without content, that can be satisfied
         // purely from AUX. Otherwise, don't say AUX can satisfy CONTENT_HEADER (to avoid
@@ -317,17 +296,11 @@ impl FetchState {
                 };
                 match res {
                     Ok(Some(aux)) => {
-                        if have_cas {
-                            tracing::trace!(target: "cas_client", ?key, ?aux, "found file aux data");
-                        }
                         self.metrics.aux.store(loc).hit(1);
                         found += 1;
                         return Some(aux.into());
                     }
                     Ok(None) => {
-                        if have_cas {
-                            tracing::trace!(target: "cas_client", ?key, "no file aux data");
-                        }
                         self.metrics.aux.store(loc).miss(1);
                     }
                     Err(err) => {
@@ -628,8 +601,7 @@ impl FetchState {
                             // If caller doesn't care about content, swap to a stub file to avoid
                             // needlessly shuffling data around.
                             file = StoreFile {
-                                // We obviously aren't Cas, but this is the simplest LazyFile variant to stub.
-                                content: Some(LazyFile::Cas(Blob::Bytes(minibytes::Bytes::new()))),
+                                content: Some(LazyFile::Raw(Blob::Bytes(minibytes::Bytes::new()))),
                                 aux_data: file.aux_data,
                             }
                         }
@@ -711,225 +683,6 @@ impl FetchState {
         self.metrics.edenapi.fetch(count - found_pointers);
         self.metrics.edenapi.err(errors);
         self.metrics.edenapi.hit(found);
-    }
-
-    pub(crate) fn fetch_cas(&mut self, cas_client: &dyn CasClient) {
-        self.fctx.set_fetch_from_cas_attempted(true);
-
-        if self.common.request_attrs == FileAttributes::AUX {
-            // If we are only requesting aux data, don't bother querying CAS. Aux data is
-            // required to query CAS, so CAS cannot possibly help.
-            return;
-        }
-
-        let span = tracing::info_span!(
-            "fetch_cas",
-            keys = field::Empty,
-            hits = field::Empty,
-            requests = field::Empty,
-            time = field::Empty,
-        );
-        let _enter = span.enter();
-
-        let fetchable = FileAttributes::PURE_CONTENT;
-
-        let bar = ProgressBar::new_adhoc("CAS", 0, "digests");
-
-        let digest_with_keys: Vec<(CasDigest, Key)> = self
-            // TODO: fetch LFS files
-            .pending_nonlfs(fetchable)
-            .into_iter()
-            // Get AUX data from "pending" (assuming we previously fetched it).
-            .filter_map(|key| {
-                // TODO: fetch aux data from edenapi on-demand?
-
-                let store_file = self.common.pending.get(&key)?;
-
-                let aux_data = match store_file.aux_data.as_ref() {
-                    Some(aux_data) => {
-                        tracing::trace!(target: "cas_client", ?key, ?aux_data, "found aux data for file digest");
-                        aux_data
-                    }
-                    None => {
-                        tracing::trace!(target: "cas_client", ?key, "no aux data for file digest");
-                        return None;
-                    }
-                };
-
-                if let Some(cas_threshold) = self.cas_cache_threshold_bytes {
-                    if aux_data.total_size > cas_threshold {
-                        // If the file's size exceeds the configured threshold, don't fetch it from CAS.
-                        return None;
-                    }
-                }
-
-                bar.increase_position(1);
-
-                if self.common.request_attrs.content_header && !store_file.attrs().content_header {
-                    // If the caller wants hg content header but the aux data didn't have it,
-                    // we won't find it in CAS, so don't bother fetching content from CAS.
-                    tracing::trace!(target: "cas_client", ?key, "no content header in AUX data");
-                    None
-                } else {
-                    Some((
-                        CasDigest {
-                            hash: aux_data.blake3,
-                            size: aux_data.total_size,
-                        },
-                        key,
-                    ))
-                }
-            })
-            .collect();
-
-        drop(bar);
-
-        // Include the duplicates in the count.
-        let keys_fetch_count = digest_with_keys.len();
-
-        span.record("keys", keys_fetch_count);
-
-        let mut digest_to_key: HashMap<CasDigest, Vec<Key>> = HashMap::default();
-
-        for (digest, key) in digest_with_keys {
-            digest_to_key.entry(digest).or_default().push(key);
-        }
-
-        if digest_to_key.is_empty() {
-            return;
-        }
-
-        let digests: Vec<CasDigest> = digest_to_key.keys().cloned().collect();
-
-        let mut keys_found_count = 0;
-        let mut error = 0;
-        let mut reqs = 0;
-
-        let start_time = Instant::now();
-        let mut total_stats = CasFetchedStats::default();
-
-        let bar = ProgressBar::new_adhoc("CAS", digests.len() as u64, "files");
-
-        if self.fctx.mode().ignore_result() {
-            // Prefetching files, so we don't need the data, just to ensure digests are in the CAS local Cache.
-            block_on(async {
-                cas_client.prefetch(self.fctx.clone(), &digests, CasDigestType::File).await.for_each(|results| {
-                    match results {
-                    Ok((stats, digests_prefetched, digests_not_found)) => {
-                        reqs += 1;
-                        total_stats.add(&stats);
-                        if !digests_not_found.is_empty() {
-                            tracing::trace!(target: "cas_client", "{} digests are missing in CAS", digests_not_found.len());
-                        }
-                        for digest in digests_prefetched {
-                            bar.increase_position(1);
-
-                            let Some(keys) = digest_to_key.remove(&digest) else {
-                                tracing::error!("got CAS result for unrequested digest {:?}", digest);
-                                continue;
-                            };
-                            keys_found_count += keys.len();
-                            tracing::trace!(target: "cas_client", ?keys, ?digest, "file(s) prefetched in cas");
-                            for key in keys {
-                                self.found_attributes(
-                                    key,
-                                    StoreFile {
-                                        content: Some(LazyFile::Cas(Blob::Bytes(minibytes::Bytes::new()))),
-                                        aux_data: None,
-                                    },
-                                );
-                            }
-                        }
-                        future::ready(())
-                    }
-                    Err(err) => {
-                        tracing::error!(?err, "overall CAS error");
-                        tracing::error!(target: "cas_client", ?err, "CAS error prefetching files");
-                        // Don't propagate CAS error - we want to fall back to SLAPI.
-                        reqs += 1;
-                        error += 1;
-                        future::ready(())
-                    }
-                }}).await;
-            });
-        } else {
-            // Fetching files, we need the data.
-            block_on(async {
-                cas_client.fetch(self.fctx.clone(), &digests, CasDigestType::File).await.for_each(|results|{
-                    match results {
-                    Ok((stats, results)) => {
-                        reqs += 1;
-                        total_stats.add(&stats);
-                        for (digest, data) in results {
-                            bar.increase_position(1);
-
-                            let Some(mut keys) = digest_to_key.remove(&digest) else {
-                                tracing::error!("got CAS result for unrequested digest {:?}", digest);
-                                continue;
-                            };
-                            match data {
-                                Err(err) => {
-                                    tracing::error!(?err, ?keys, ?digest, "CAS fetch error");
-                                    tracing::error!(target: "cas_client", ?err, ?keys, ?digest, "file(s) fetch error");
-                                    error += keys.len();
-                                    self.errors.multiple_keyed_error(keys, "CAS fetch error", err);
-                                }
-                                Ok(None) => {
-                                    tracing::trace!(target: "cas_client", ?keys, ?digest, "file(s) not in cas");
-                                    // miss
-                                }
-                                Ok(Some(data)) => {
-                                    keys_found_count += keys.len();
-                                    tracing::trace!(target: "cas_client", ?keys, ?digest, "file(s) found in cas");
-                                    if !keys.is_empty() {
-                                        let last = keys.pop().unwrap();
-                                        for key in keys {
-                                            self.found_attributes(
-                                                key,
-                                                StoreFile {
-                                                    content: Some(LazyFile::Cas(data.clone())),
-                                                    aux_data: None,
-                                                },
-                                            );
-                                        }
-                                        // zero copy here
-                                        self.found_attributes(
-                                            last,
-                                            StoreFile {
-                                                content: Some(LazyFile::Cas(data)),
-                                                aux_data: None,
-                                            },
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                        future::ready(())
-                    }
-                    Err(err) => {
-                        tracing::error!(?err, "overall CAS error");
-                        tracing::error!(target: "cas_client", ?err, "CAS error fetching files");
-
-                        // Don't propagate CAS error - we want to fall back to SLAPI.
-                        reqs += 1;
-                        error += 1;
-                        future::ready(())
-                    }
-                }}).await;
-            });
-        }
-
-        span.record("hits", keys_found_count);
-        span.record("requests", reqs);
-        span.record("time", start_time.elapsed().as_millis() as u64);
-
-        let _ = self.metrics.cas.time_from_duration(start_time.elapsed());
-        self.metrics.cas.fetch(keys_fetch_count);
-        self.metrics.cas.err(error);
-        self.metrics.cas.hit(keys_found_count);
-        self.metrics.cas.miss(keys_fetch_count - keys_found_count);
-        self.metrics.cas_backend.update(&total_stats);
-        self.metrics.cas_local_cache.update(&total_stats);
     }
 
     pub(crate) fn fetch_lfs_remote(&mut self, client: &LfsClient, buffer_in_memory: bool) {

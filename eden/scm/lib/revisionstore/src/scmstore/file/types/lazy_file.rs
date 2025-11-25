@@ -33,8 +33,8 @@ pub(crate) enum LazyFile {
     /// An SaplingRemoteApi FileEntry.
     SaplingRemoteApi(FileEntry, SerializationFormat),
 
-    /// File content read from CAS (no hg header).
-    Cas(Blob),
+    /// File content (only) read from content store (no hg header).
+    Raw(Blob),
 }
 
 impl std::fmt::Debug for LazyFile {
@@ -59,7 +59,7 @@ impl std::fmt::Debug for LazyFile {
                 .field(entry)
                 .field(format)
                 .finish(),
-            LazyFile::Cas(data) => f.debug_tuple("Cas").field(&data.to_bytes()).finish(),
+            LazyFile::Raw(data) => f.debug_tuple("Raw").field(&data.to_bytes()).finish(),
         }
     }
 }
@@ -72,7 +72,7 @@ impl LazyFile {
             IndexedLog(entry, _) => Some(entry.node()),
             Lfs(_, ptr, _) => Some(ptr.hgid()),
             SaplingRemoteApi(entry, _) => Some(entry.key().hgid),
-            Cas(_) => None,
+            Raw(_) => None,
         }
     }
 
@@ -117,7 +117,7 @@ impl LazyFile {
                 let (content, header) = split_file_metadata(&entry.data()?, *format);
                 (Blob::Bytes(content), header)
             }
-            Cas(data) => (data.clone(), None),
+            Raw(data) => (data.clone(), None),
         })
     }
 
@@ -129,7 +129,7 @@ impl LazyFile {
             // TODO(muirdm): avoid blob copy
             Lfs(blob, ptr, _) => rebuild_metadata(blob.to_bytes(), ptr),
             SaplingRemoteApi(entry, _) => entry.data()?,
-            Cas(_) => bail!("CAS data has no copy info"),
+            Raw(_) => bail!("Raw data has no copy info"),
         })
     }
 }

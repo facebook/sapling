@@ -88,7 +88,7 @@ impl StoreFile {
 
     // File content including hg copy info header.
     pub fn hg_content(&self) -> Result<Bytes> {
-        if let Some(LazyFile::Cas(ref pure_content)) = self.content {
+        if let Some(LazyFile::Raw(ref pure_content)) = self.content {
             if let Some(FileAuxData {
                 file_header_metadata: Some(ref header),
                 ..
@@ -133,7 +133,7 @@ impl StoreFile {
     fn content_contains_hg_header(&self) -> bool {
         self.content
             .as_ref()
-            .is_some_and(|f| !matches!(f, LazyFile::Cas(_)))
+            .is_some_and(|f| !matches!(f, LazyFile::Raw(_)))
     }
 
     fn aux_data_contains_hg_header(&self) -> bool {

@@ -15,7 +15,6 @@ use std::sync::atomic::Ordering;
 use std::time::Instant;
 
 use ::metrics::Counter;
-use ::types::CasDigest;
 use ::types::FetchContext;
 use ::types::HgId;
 use ::types::Key;
@@ -26,7 +25,6 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use blob::Blob;
-use cas_client::CasClient;
 use flume::bounded;
 use flume::unbounded;
 use indexedlog::log::AUTO_SYNC_COUNT;
@@ -97,8 +95,6 @@ pub struct FileStore {
     // Aux Data Store
     pub(crate) aux_cache: Option<Arc<AuxStore>>,
 
-    pub(crate) cas_client: Option<Arc<dyn CasClient>>,
-
     // Metrics, statistics, debugging
     pub(crate) activity_logger: Option<Arc<Mutex<ActivityLogger>>>,
     pub(crate) metrics: Arc<RwLock<FileStoreMetrics>>,
@@ -108,9 +104,6 @@ pub struct FileStore {
 
     // The serialization format that the store should use
     pub format: SerializationFormat,
-
-    // The threshold for using CAS cache
-    pub(crate) cas_cache_threshold_bytes: Option<u64>,
 
     // This bar "aggregates" across concurrent uses of this FileStore from different
     // threads (so that only a single progress bar shows up to the user).
@@ -141,9 +134,6 @@ impl FileStore {
     pub(crate) fn get_local_content_direct(&self, id: &HgId) -> Result<Option<Blob>> {
         let m = &FILE_STORE_FETCH_METRICS;
 
-        if let Ok(Some(blob)) = self.get_local_content_cas_cache(id) {
-            return Ok(Some(blob));
-        }
         try_local_content!(id, self.indexedlog_cache, m.indexedlog.cache);
         try_local_content!(id, self.indexedlog_local, m.indexedlog.local);
         try_local_content!(id, self.lfs_client.as_ref().map(|c| &c.shared), m.lfs.cache);
@@ -152,36 +142,6 @@ impl FileStore {
             self.lfs_client.as_ref().and_then(|c| c.local.as_ref()),
             m.lfs.local
         );
-        Ok(None)
-    }
-
-    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<Blob>> {
-        if let (Some(aux_cache), Some(cas_client)) = (&self.aux_cache, &self.cas_client) {
-            let aux_data = aux_cache.get(id)?;
-            if let Some(aux_data) = aux_data {
-                if let Some(cas_threshold) = self.cas_cache_threshold_bytes {
-                    if aux_data.total_size > cas_threshold {
-                        // If the file's size exceeds the configured threshold, don't fetch it from CAS.
-                        return Ok(None);
-                    }
-                }
-
-                let (stats, maybe_blob) = cas_client.fetch_single_locally_cached(&CasDigest {
-                    hash: aux_data.blake3,
-                    size: aux_data.total_size,
-                })?;
-
-                FILE_STORE_FETCH_METRICS.cas.fetch(1);
-                FILE_STORE_FETCH_METRICS
-                    .cas_direct_local_cache
-                    .update(&stats);
-
-                if let Some(blob) = maybe_blob {
-                    FILE_STORE_FETCH_METRICS.cas.hit(1);
-                    return Ok(Some(blob));
-                }
-            }
-        }
         Ok(None)
     }
 
@@ -253,7 +213,6 @@ impl FileStore {
             found_tx,
             self.lfs_threshold_bytes.is_some(),
             fctx.clone(),
-            self.cas_cache_threshold_bytes,
             bar.clone(),
             indexedlog_cache.clone(),
         );
@@ -292,7 +251,6 @@ impl FileStore {
         let aux_cache = self.aux_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
         let edenapi = self.edenapi.clone();
-        let cas_client = self.cas_client.clone();
         let lfs_client = self.lfs_client.clone();
         let activity_logger = self.activity_logger.clone();
         let format = self.format();
@@ -323,8 +281,6 @@ impl FileStore {
             );
             let _enter = span.enter();
 
-            let fetch_from_cas = fetch_remote && cas_client.is_some();
-
             let mut prev_pending = state.pending_len();
             let mut fetched_since_last_time = |state: &FetchState| -> u64 {
                 let new_pending = state.pending_len();
@@ -333,54 +289,12 @@ impl FileStore {
                 diff as u64
             };
 
-            if fetch_local || fetch_from_cas {
+            if fetch_local {
                 if let Some(ref aux_cache) = aux_cache {
-                    state.fetch_aux_indexedlog(
-                        aux_cache,
-                        StoreLocation::Cache,
-                        cas_client.is_some(),
-                    );
-                }
-            }
-
-            if fetch_from_cas {
-                // When fetching from CAS, first fetch from local repo to avoid network
-                // request for data that is only available locally (e.g. locally
-                // committed).
-                if fetch_local {
-                    if let Some(ref indexedlog_local) = indexedlog_local {
-                        state.fetch_indexedlog(indexedlog_local, StoreLocation::Local);
-                    }
-
-                    if let Some(lfs_local) = lfs_client.as_ref().and_then(|c| c.local.as_ref()) {
-                        state.fetch_lfs(lfs_local, StoreLocation::Local);
-                    }
+                    state.fetch_aux_indexedlog(aux_cache, StoreLocation::Cache);
                 }
 
-                fctx.inc_local(fetched_since_last_time(&state));
-
-                // Then fetch from CAS since we essentially always expect a hit.
-                if let (Some(cas_client), true) = (&cas_client, fetch_remote) {
-                    state.fetch_cas(cas_client);
-                }
-
-                fctx.inc_remote(fetched_since_last_time(&state));
-
-                // Finally fetch from local cache (shouldn't normally get here).
-                if fetch_local {
-                    if let Some(ref indexedlog_cache) = indexedlog_cache {
-                        state.fetch_indexedlog(indexedlog_cache, StoreLocation::Cache);
-                    }
-
-                    if let Some(lfs_cache) = lfs_client.as_ref().map(|c| c.shared.as_ref()) {
-                        state.fetch_lfs(lfs_cache, StoreLocation::Cache);
-                    }
-                }
-
-                fctx.inc_local(fetched_since_last_time(&state));
-            } else if fetch_local {
-                // If not using CAS, fetch from cache first then local (hit rate in cache
-                // is typically much higher).
+                // Fetch from cache first then local (hit rate in cache is typically much higher).
                 if let Some(ref indexedlog_cache) = indexedlog_cache {
                     state.fetch_indexedlog(indexedlog_cache, StoreLocation::Cache);
                 }
@@ -616,7 +530,6 @@ impl FileStore {
 
             edenapi: None,
             lfs_client: None,
-            cas_client: None,
 
             metrics: FileStoreMetrics::new(),
             activity_logger: None,
@@ -625,8 +538,6 @@ impl FileStore {
 
             flush_on_drop: true,
             format: SerializationFormat::Hg,
-
-            cas_cache_threshold_bytes: None,
 
             progress_bar: AggregatingProgressBar::new("", ""),
 
@@ -666,7 +577,6 @@ impl FileStore {
 
             edenapi: None,
             lfs_client: self.lfs_client.as_ref().map(|c| c.with_shared_only()),
-            cas_client: None,
 
             metrics: self.metrics.clone(),
             activity_logger: self.activity_logger.clone(),
@@ -676,8 +586,6 @@ impl FileStore {
             // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
             flush_on_drop: true,
             format: self.format(),
-
-            cas_cache_threshold_bytes: self.cas_cache_threshold_bytes.clone(),
 
             progress_bar: self.progress_bar.clone(),
 

@@ -11,7 +11,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
-use cas_client::CasClient;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::convert::ByteCount;
@@ -56,7 +55,6 @@ pub struct FileStoreBuilder<'a> {
     indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
 
     edenapi: Option<Arc<SaplingRemoteApiFileStore>>,
-    cas_client: Option<Arc<dyn CasClient>>,
     format: Option<SerializationFormat>,
 }
 
@@ -70,7 +68,6 @@ impl<'a> FileStoreBuilder<'a> {
             indexedlog_local: None,
             indexedlog_cache: None,
             edenapi: None,
-            cas_client: None,
             format: None,
         }
     }
@@ -92,11 +89,6 @@ impl<'a> FileStoreBuilder<'a> {
 
     pub fn edenapi(mut self, edenapi: Arc<SaplingRemoteApiFileStore>) -> Self {
         self.edenapi = Some(edenapi);
-        self
-    }
-
-    pub fn cas_client(mut self, cas_client: Arc<dyn CasClient>) -> Self {
-        self.cas_client = Some(cas_client);
         self
     }
 
@@ -328,27 +320,6 @@ impl<'a> FileStoreBuilder<'a> {
                 None
             };
 
-        let is_casc_enabled = match self
-            .config
-            .get_or_default::<String>("scmstore", "cas-mode")?
-            .as_str()
-        {
-            "files" | "on" => true,
-            _ if std::env::var("EDEN_USE_PASSTHROUGH").is_ok() => true,
-            _ => false,
-        };
-        let cas_client = if is_casc_enabled {
-            self.cas_client
-        } else {
-            tracing::debug!(target: "cas_client", "scmstore disabled (scmstore.cas-mode!=files|on)");
-            None
-        };
-
-        let cas_cache_threshold_bytes = self
-            .config
-            .get_opt::<ByteCount>("scmstore", "fetch-from-cas-threshold")?
-            .map(|threshold_bytes| threshold_bytes.value());
-
         tracing::trace!(target: "revisionstore::filestore", "constructing FileStore");
         Ok(FileStore {
             lfs_threshold_bytes,
@@ -362,7 +333,6 @@ impl<'a> FileStoreBuilder<'a> {
 
             edenapi,
             lfs_client,
-            cas_client,
 
             activity_logger,
             metrics: FileStoreMetrics::new(),
@@ -371,8 +341,6 @@ impl<'a> FileStoreBuilder<'a> {
 
             flush_on_drop: true,
             format,
-
-            cas_cache_threshold_bytes,
 
             progress_bar: AggregatingProgressBar::new("fetching from ScmStore", "files"),
 
@@ -398,7 +366,6 @@ pub struct TreeStoreBuilder<'a> {
     edenapi: Option<Arc<SaplingRemoteApiTreeStore>>,
     tree_aux_store: Option<Arc<TreeAuxStore>>,
     filestore: Option<Arc<FileStore>>,
-    cas_client: Option<Arc<dyn CasClient>>,
     format: Option<SerializationFormat>,
 }
 
@@ -414,7 +381,6 @@ impl<'a> TreeStoreBuilder<'a> {
             edenapi: None,
             tree_aux_store: None,
             filestore: None,
-            cas_client: None,
             format: None,
         }
     }
@@ -436,11 +402,6 @@ impl<'a> TreeStoreBuilder<'a> {
 
     pub fn edenapi(mut self, edenapi: Arc<SaplingRemoteApiTreeStore>) -> Self {
         self.edenapi = Some(edenapi);
-        self
-    }
-
-    pub fn cas_client(mut self, cas_client: Arc<dyn CasClient>) -> Self {
-        self.cas_client = Some(cas_client);
         self
     }
 
@@ -639,21 +600,10 @@ impl<'a> TreeStoreBuilder<'a> {
             self.build_indexedlog_cache()?
         };
 
-        let is_casc_enabled = match self
-            .config
-            .get_or_default::<String>("scmstore", "cas-mode")?
-            .as_str()
-        {
-            "trees" | "on" => true,
-            _ if std::env::var("EDEN_USE_PASSTHROUGH").is_ok() => true,
-            _ => false,
-        };
-
         tracing::trace!(target: "revisionstore::treestore", "processing tree_aux_store");
-        let tree_aux_store = if is_casc_enabled
-            || self
-                .config
-                .get_or("scmstore", "store-tree-aux-data", || true)?
+        let tree_aux_store = if self
+            .config
+            .get_or("scmstore", "store-tree-aux-data", || true)?
         {
             if let Some(tree_aux_store) = self.tree_aux_store.take() {
                 Some(tree_aux_store)
@@ -685,19 +635,16 @@ impl<'a> TreeStoreBuilder<'a> {
             .config
             .get_or_default("scmstore", "prefetch-tree-parents")?;
 
-        let tree_metadata_mode = match is_casc_enabled {
-            true => TreeMetadataMode::Always,
-            _ => match self.config.get("scmstore", "tree-metadata-mode").as_deref() {
-                Some("always") => TreeMetadataMode::Always,
-                None | Some("opt-in") => TreeMetadataMode::OptIn,
-                _ => TreeMetadataMode::Never,
-            },
+        let tree_metadata_mode = match self.config.get("scmstore", "tree-metadata-mode").as_deref()
+        {
+            Some("always") => TreeMetadataMode::Always,
+            None | Some("opt-in") => TreeMetadataMode::OptIn,
+            _ => TreeMetadataMode::Never,
         };
 
-        let fetch_tree_aux_data = is_casc_enabled
-            || self
-                .config
-                .get_or_default::<bool>("scmstore", "fetch-tree-aux-data")?;
+        let fetch_tree_aux_data = self
+            .config
+            .get_or_default::<bool>("scmstore", "fetch-tree-aux-data")?;
 
         if fetch_tree_aux_data && tree_aux_store.is_none() {
             tracing::warn!(
@@ -705,29 +652,12 @@ impl<'a> TreeStoreBuilder<'a> {
             );
         }
 
-        let cas_client = if is_casc_enabled {
-            if self.cas_client.is_some() {
-                if !fetch_tree_aux_data {
-                    tracing::warn!(target: "cas_client", "augmented tree fetching disabled (scmstore.fetch-tree-aux-data=false)");
-                }
-                if tree_aux_store.is_none() {
-                    tracing::warn!(target: "cas_client", "tree aux store disabled (scmstore.store-tree-aux-data=false)");
-                }
-            }
-
-            self.cas_client
-        } else {
-            tracing::debug!(target: "cas_client", "scmstore disabled (scmstore.cas-mode!=trees|on)");
-            None
-        };
-
         tracing::trace!(target: "revisionstore::treestore", "constructing TreeStore");
         Ok(TreeStore {
             indexedlog_local,
             indexedlog_cache,
             cache_to_local_cache: true,
             edenapi,
-            cas_client,
             tree_aux_store,
             historystore_local,
             historystore_cache,

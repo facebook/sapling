@@ -5,26 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::HashMap;
-use std::future;
 use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
-use async_runtime::block_on;
-use blob::Blob;
-use cas_client::CasClient;
 use flume::Sender;
-use futures::StreamExt;
-use manifest_augmented_tree::AugmentedTree;
-use manifest_augmented_tree::AugmentedTreeWithDigest;
 use progress_model::ProgressBar;
 use storemodel::FileAuxData;
 use storemodel::TreeAuxData;
 use tracing::field;
-use types::CasDigest;
-use types::CasDigestType;
-use types::CasFetchedStats;
 use types::FetchContext;
 use types::HgId;
 use types::Key;
@@ -211,188 +200,6 @@ impl FetchState {
             .time_from_duration(start_time.elapsed());
 
         Ok(())
-    }
-
-    pub(crate) fn fetch_cas(&mut self, cas_client: &dyn CasClient) {
-        self.common.fctx.set_fetch_from_cas_attempted(true);
-
-        if self.common.request_attrs == TreeAttributes::AUX_DATA {
-            // If we are only requesting aux data, don't bother querying CAS. Aux data is
-            // required to query CAS, so CAS cannot possibly help.
-            return;
-        }
-
-        let span = tracing::info_span!(
-            "fetch_cas",
-            keys = field::Empty,
-            hits = field::Empty,
-            requests = field::Empty,
-            time = field::Empty,
-        );
-        let _enter = span.enter();
-
-        let bar = ProgressBar::new_adhoc("CAS", 0, "digests");
-
-        let digest_with_keys: Vec<(CasDigest, Key)> = self
-            .common
-            .pending(TreeAttributes::CONTENT | TreeAttributes::PARENTS, false)
-            .filter_map(|(key, store_tree)| {
-                bar.increase_position(1);
-
-                let aux_data = match store_tree.aux_data() {
-                    Some(aux_data) => {
-                        tracing::trace!(target: "cas_client", ?key, ?aux_data, "found aux data for tree digest");
-                        aux_data
-                    }
-                    None => {
-                        tracing::trace!(target: "cas_client", ?key, "no aux data for tree digest");
-                        return None;
-                    }
-                };
-
-                Some((
-                    CasDigest {
-                        hash: aux_data.augmented_manifest_id,
-                        size: aux_data.augmented_manifest_size,
-                    },
-                    key.clone(),
-                ))
-            })
-            .collect();
-
-        drop(bar);
-
-        // Include the duplicates in the count.
-        let keys_fetch_count = digest_with_keys.len();
-
-        span.record("keys", keys_fetch_count);
-
-        let mut digest_to_key: HashMap<CasDigest, Vec<Key>> = HashMap::default();
-
-        for (digest, key) in digest_with_keys {
-            digest_to_key.entry(digest).or_default().push(key);
-        }
-
-        if digest_to_key.is_empty() {
-            return;
-        }
-
-        let digests: Vec<CasDigest> = digest_to_key.keys().cloned().collect();
-
-        let mut keys_found_count = 0;
-        let mut error = 0;
-        let mut reqs = 0;
-
-        let start_time = Instant::now();
-        let mut total_stats = CasFetchedStats::default();
-
-        let bar = ProgressBar::new_adhoc("CAS", digests.len() as u64, "trees");
-
-        async_runtime::block_in_place(|| {
-            block_on(async {
-                cas_client.fetch(self.common.fctx.clone(), &digests, CasDigestType::Tree).await.for_each(|results| {
-                    match results {
-                    Ok((stats, results)) => {
-                        reqs += 1;
-                        total_stats.add(&stats);
-                        for (digest, data) in results {
-                            bar.increase_position(1);
-
-                            let Some(mut keys) = digest_to_key.remove(&digest) else {
-                                tracing::error!("got CAS result for unrequested digest {:?}", digest);
-                                continue;
-                            };
-
-                            match data {
-                                Err(err) => {
-                                    tracing::error!(?err, ?keys, ?digest, "CAS fetch error");
-                                    tracing::error!(target: "cas_client", ?err, ?keys, ?digest, "tree fetch error");
-                                    error += keys.len();
-                                    self.errors.multiple_keyed_error(keys, "CAS fetch error", err);
-                                }
-                                Ok(None) => {
-                                    tracing::trace!(target: "cas_client", ?keys, ?digest, "tree not in cas");
-                                    // miss
-                                }
-                                Ok(Some(data)) => {
-                                    let deserialization_result = match data {
-                                        Blob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref()),
-                                        #[allow(unexpected_cfgs)]
-                                        #[cfg(fbcode_build)]
-                                        Blob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor()),
-                                    };
-                                    match deserialization_result {
-                                        Ok(tree) => {
-                                            keys_found_count += keys.len();
-                                            tracing::trace!(target: "cas_client", ?keys, ?digest, "tree found in cas");
-
-                                            let lazy_tree = LazyTree::Cas(AugmentedTreeWithDigest {
-                                                augmented_manifest_id: digest.hash,
-                                                augmented_manifest_size: digest.size,
-                                                augmented_tree: tree,
-                                            });
-
-                                            self.cache_child_aux_data(
-                                                &lazy_tree,
-                                            );
-                                            if !keys.is_empty() {
-                                                let last = keys.pop().unwrap();
-                                                for key in keys {
-                                                    self.common.found(
-                                                        key,
-                                                        StoreTree {
-                                                            content: Some(lazy_tree.clone()),
-                                                            parents: None,
-                                                            aux_data: None,
-                                                        },
-                                                    );
-                                                }
-                                                // no clones needed
-                                                self.common.found(
-                                                    last,
-                                                    StoreTree {
-                                                        content: Some(lazy_tree),
-                                                        parents: None,
-                                                        aux_data: None,
-                                                    },
-                                                );
-                                            }
-                                        }
-                                        Err(err) => {
-                                            error += keys.len();
-                                            tracing::error!(target: "cas_client", ?err, ?keys, ?digest, "error deserializing tree");
-                                            self.errors.multiple_keyed_error(keys, "CAS tree deserialization failed", err);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        future::ready(())
-                    }
-                    Err(err) => {
-                        tracing::error!(?err, "overall CAS error");
-                        tracing::error!(target: "cas_client", ?err, "CAS error fetching trees");
-
-                        // Don't propagate CAS error - we want to fall back to SLAPI.
-                        reqs += 1;
-                        error += 1;
-                        future::ready(())
-                    }
-                }}).await;
-            })
-        });
-
-        span.record("hits", keys_found_count);
-        span.record("requests", reqs);
-        span.record("time", start_time.elapsed().as_millis() as u64);
-
-        let _ = self.metrics.cas.time_from_duration(start_time.elapsed());
-        self.metrics.cas.fetch(keys_fetch_count);
-        self.metrics.cas.err(error);
-        self.metrics.cas.hit(keys_found_count);
-        self.metrics.cas.miss(keys_fetch_count - keys_found_count);
-        self.metrics.cas_backend.update(&total_stats);
-        self.metrics.cas_local_cache.update(&total_stats);
     }
 
     fn cache_child_aux_data(&mut self, tree: &LazyTree) {

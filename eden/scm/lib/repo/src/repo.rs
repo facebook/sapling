@@ -15,7 +15,6 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_runtime::block_on;
-use cas_client::CasClient;
 use commits_trait::DagCommits;
 use configloader::Config;
 use configloader::config::ConfigSet;
@@ -98,7 +97,6 @@ pub struct Repo {
     working_copy: OnceCell<Arc<RwLock<WorkingCopy>>>,
     eager_store: Option<EagerRepoStore>,
     locker: Arc<RepoLocker>,
-    cas_client: OnceCell<Option<Arc<dyn CasClient>>>,
     tree_resolver: OnceCell<Arc<dyn ReadTreeManifest>>,
 }
 
@@ -188,7 +186,6 @@ impl Repo {
             repo_name,
             metalog: Default::default(),
             eden_api: Default::default(),
-            cas_client: Default::default(),
             dag_commits: Default::default(),
             file_store: Default::default(),
             file_scm_store: Default::default(),
@@ -456,13 +453,6 @@ impl Repo {
         }
     }
 
-    pub fn cas_client(&self) -> Result<Option<Arc<dyn CasClient>>> {
-        Ok(self
-            .cas_client
-            .get_or_try_init(|| cas_client::new(self.config.clone()).context("building CasClient"))?
-            .clone())
-    }
-
     #[cached_field]
     pub fn dag_commits(&self) -> Result<Arc<RwLock<Box<dyn DagCommits + Send + 'static>>>> {
         let info: &dyn StoreInfo = self;
@@ -534,13 +524,6 @@ impl Repo {
             file_builder = file_builder.override_edenapi(false);
         }
 
-        if let Some(cas_client) = self.cas_client()? {
-            tracing::trace!(target: "repo::file_store", "setting cas client");
-            file_builder = file_builder.cas_client(cas_client.clone());
-        } else {
-            tracing::trace!(target: "repo::file_store", "no cas client");
-        }
-
         // Note: This currently does nothing, since the "git" repo requirement makes
         // try_construct_file_tree_store return a GitStore. Therefore we never hit this code path.
         let info: &dyn StoreInfo = self;
@@ -588,13 +571,6 @@ impl Repo {
         } else {
             tracing::trace!(target: "repo::tree_store", "disabling edenapi");
             tree_builder = tree_builder.override_edenapi(false);
-        }
-
-        if let Some(cas_client) = self.cas_client()? {
-            tracing::trace!(target: "repo::tree_store", "setting cas client");
-            tree_builder = tree_builder.cas_client(cas_client.clone());
-        } else {
-            tracing::trace!(target: "repo::tree_store", "no cas client");
         }
 
         // Trigger construction of file store.

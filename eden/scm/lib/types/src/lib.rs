@@ -34,8 +34,6 @@ pub mod workingcopy_client;
 pub use crate::blake3::Blake3;
 pub use crate::cas::CasDigest;
 pub use crate::cas::CasDigestType;
-pub use crate::cas::CasFetchedStats;
-pub use crate::cas::CasPrefetchOutcome;
 pub use crate::fetch_context::FetchContext;
 pub use crate::format::SerializationFormat;
 pub use crate::hgid::HgId;

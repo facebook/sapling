@@ -11,14 +11,10 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 
 use crate::scmstore::metrics::ApiMetrics;
-use crate::scmstore::metrics::CasBackendMetrics;
-use crate::scmstore::metrics::CasLocalCacheMetrics;
 use crate::scmstore::metrics::FetchMetrics;
 use crate::scmstore::metrics::LocalAndCacheFetchMetrics;
 use crate::scmstore::metrics::WriteMetrics;
 use crate::scmstore::metrics::namespaced;
-use crate::scmstore::metrics::static_cas_backend_metrics;
-use crate::scmstore::metrics::static_cas_local_cache_metrics;
 use crate::scmstore::metrics::static_fetch_metrics;
 use crate::scmstore::metrics::static_local_cache_fetch_metrics;
 
@@ -27,45 +23,24 @@ static_local_cache_fetch_metrics!(INDEXEDLOG, "scmstore.file.fetch.indexedlog");
 static_local_cache_fetch_metrics!(LFS, "scmstore.file.fetch.lfs");
 static_local_cache_fetch_metrics!(AUX, "scmstore.file.fetch.aux");
 static_fetch_metrics!(EDENAPI, "scmstore.file.fetch.edenapi");
-static_fetch_metrics!(CAS, "scmstore.file.fetch.cas");
-
-static_cas_backend_metrics!(CAS_BACKEND, "scmstore.file.fetch.cas");
-static_cas_local_cache_metrics!(CAS_LOCAL_CACHE, "scmstore.file.fetch.cas");
-static_cas_local_cache_metrics!(CAS_DIRECT_LOCAL_CACHE, "scmstore.file.fetch.cas_direct");
 
 pub(crate) static FILE_STORE_FETCH_METRICS: FileStoreFetchMetrics = FileStoreFetchMetrics {
     indexedlog: &INDEXEDLOG,
     lfs: &LFS,
     aux: &AUX,
     edenapi: &EDENAPI,
-    cas: &CAS,
-    cas_backend: &CAS_BACKEND,
-    cas_local_cache: &CAS_LOCAL_CACHE,
-    cas_direct_local_cache: &CAS_DIRECT_LOCAL_CACHE,
 };
 
 static_local_cache_fetch_metrics!(INDEXEDLOG_PREFETCH, "scmstore.file.prefetch.indexedlog");
 static_local_cache_fetch_metrics!(LFS_PREFETCH, "scmstore.file.prefetch.lfs");
 static_local_cache_fetch_metrics!(AUX_PREFETCH, "scmstore.file.prefetch.aux");
 static_fetch_metrics!(EDENAPI_PREFETCH, "scmstore.file.prefetch.edenapi");
-static_fetch_metrics!(CAS_PREFETCH, "scmstore.file.prefetch.cas");
-
-static_cas_backend_metrics!(CAS_BACKEND_PREFETCH, "scmstore.file.prefetch.cas");
-static_cas_local_cache_metrics!(CAS_LOCAL_CACHE_PREFETCH, "scmstore.file.prefetch.cas");
-static_cas_local_cache_metrics!(
-    CAS_DIRECT_LOCAL_CACHE_PREFETCH,
-    "scmstore.file.prefetch.cas_direct"
-);
 
 pub(crate) static FILE_STORE_PREFETCH_METRICS: FileStoreFetchMetrics = FileStoreFetchMetrics {
     indexedlog: &INDEXEDLOG_PREFETCH,
     lfs: &LFS_PREFETCH,
     aux: &AUX_PREFETCH,
     edenapi: &EDENAPI_PREFETCH,
-    cas: &CAS_PREFETCH,
-    cas_backend: &CAS_BACKEND_PREFETCH,
-    cas_local_cache: &CAS_LOCAL_CACHE_PREFETCH,
-    cas_direct_local_cache: &CAS_DIRECT_LOCAL_CACHE_PREFETCH,
 };
 
 pub struct FileStoreFetchMetrics {
@@ -73,10 +48,6 @@ pub struct FileStoreFetchMetrics {
     pub(crate) lfs: &'static LocalAndCacheFetchMetrics,
     pub(crate) aux: &'static LocalAndCacheFetchMetrics,
     pub(crate) edenapi: &'static FetchMetrics,
-    pub(crate) cas: &'static FetchMetrics,
-    pub(crate) cas_backend: &'static CasBackendMetrics,
-    pub(crate) cas_local_cache: &'static CasLocalCacheMetrics,
-    pub(crate) cas_direct_local_cache: &'static CasLocalCacheMetrics,
 }
 
 #[derive(Clone, Debug, Default)]

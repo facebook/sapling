@@ -11,8 +11,6 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use ::metrics::Counter;
-use ::types::Blake3;
-use ::types::CasDigest;
 use ::types::FetchContext;
 use ::types::HgId;
 use ::types::Key;
@@ -29,7 +27,6 @@ use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
 use blob::Blob;
-use cas_client::CasClient;
 use edenapi_types::FileAuxData;
 use edenapi_types::TreeAuxData;
 use fetch::FetchState;
@@ -37,7 +34,6 @@ use flume::bounded;
 use flume::unbounded;
 use manifest_augmented_tree::AugmentedTree;
 use manifest_augmented_tree::AugmentedTreeEntry;
-use manifest_augmented_tree::AugmentedTreeWithDigest;
 use metrics::TREE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
@@ -138,8 +134,6 @@ pub struct TreeStore {
     pub historystore_local: Option<Arc<IndexedLogHgIdHistoryStore>>,
     pub historystore_cache: Option<Arc<IndexedLogHgIdHistoryStore>>,
 
-    pub cas_client: Option<Arc<dyn CasClient>>,
-
     /// Write tree parents to history cache even if parents weren't requested.
     pub prefetch_tree_parents: bool,
 
@@ -172,11 +166,9 @@ impl TreeStore {
 
         tracing::trace!(target: "tree_fetches", %id, "direct_content");
 
-        if let Ok(Some(blob)) = self.get_local_content_cas_cache(id) {
-            return Ok(Some(blob));
-        }
         try_local_content!(id, self.indexedlog_cache, m.indexedlog.cache);
         try_local_content!(id, self.indexedlog_local, m.indexedlog.local);
+
         Ok(None)
     }
 
@@ -196,10 +188,6 @@ impl TreeStore {
             return Ok(Some(basic_parse_tree(Bytes::default(), self.format())?));
         }
 
-        if let Ok(Some(tree)) = self.get_local_tree_cas_cache(&node) {
-            return Ok(Some(tree));
-        }
-
         match self.get_indexedlog_caches_content_direct(&node)? {
             None => Ok(None),
             Some(blob) => {
@@ -213,117 +201,6 @@ impl TreeStore {
                 Ok(Some(res))
             }
         }
-    }
-
-    fn fetch_local_tree_cas_cache(
-        &self,
-        id: &HgId,
-    ) -> Result<Option<(AugmentedTree, Blake3, u64)>> {
-        if let (Some(tree_aux_store), Some(cas_client)) = (&self.tree_aux_store, &self.cas_client) {
-            let aux_data = tree_aux_store.get(id)?;
-            if let Some(aux_data) = aux_data {
-                let (stats, maybe_blob) = cas_client.fetch_single_locally_cached(&CasDigest {
-                    hash: aux_data.augmented_manifest_id,
-                    size: aux_data.augmented_manifest_size,
-                })?;
-
-                TREE_STORE_FETCH_METRICS.cas.fetch(1);
-                TREE_STORE_FETCH_METRICS
-                    .cas_direct_local_cache
-                    .update(&stats);
-
-                if let Some(blob) = maybe_blob {
-                    TREE_STORE_FETCH_METRICS.cas.hit(1);
-                    let augmented_tree = match blob {
-                        Blob::Bytes(bytes) => AugmentedTree::try_deserialize(bytes.as_ref())?,
-                        #[allow(unexpected_cfgs)]
-                        #[cfg(fbcode_build)]
-                        Blob::IOBuf(buf) => AugmentedTree::try_deserialize(buf.cursor())?,
-                    };
-                    self.cache_child_aux_data(tree_aux_store, &augmented_tree)?;
-                    return Ok(Some((
-                        augmented_tree,
-                        aux_data.augmented_manifest_id,
-                        aux_data.augmented_manifest_size,
-                    )));
-                }
-            }
-        }
-        Ok(None)
-    }
-
-    /// Fetch a tree from the local caches and convert it to a sapling tree blob.
-    fn get_local_content_cas_cache(&self, id: &HgId) -> Result<Option<Blob>> {
-        match self.fetch_local_tree_cas_cache(id)? {
-            Some((augmented_tree, _, _)) => {
-                Ok(Some(Blob::Bytes(augmented_tree.into_sapling_tree_blob()?)))
-            }
-            None => Ok(None),
-        }
-    }
-
-    /// Fetch a tree from the local caches and return it as a TreeEntry.
-    fn get_local_tree_cas_cache(&self, id: &HgId) -> Result<Option<Arc<dyn TreeEntry>>> {
-        if let Some((augmented_tree, augmented_manifest_id, augmented_manifest_size)) =
-            self.fetch_local_tree_cas_cache(id)?
-        {
-            let tree = LazyTree::Cas(AugmentedTreeWithDigest {
-                augmented_manifest_id,
-                augmented_manifest_size,
-                augmented_tree,
-            });
-            return Ok(Some(Arc::<ScmStoreTreeEntry>::new(tree.into())));
-        }
-        Ok(None)
-    }
-
-    fn cache_child_aux_data(
-        &self,
-        tree_aux_store: &Arc<TreeAuxStore>,
-        augmented_tree: &AugmentedTree,
-    ) -> Result<()> {
-        let filestore = if let Some(filestore) = &self.filestore {
-            filestore
-        } else {
-            return Ok(());
-        };
-        let aux_cache = if let Some(aux_cache) = &filestore.aux_cache {
-            aux_cache
-        } else {
-            return Ok(());
-        };
-
-        for (_path, entry) in augmented_tree.entries.iter() {
-            match entry {
-                AugmentedTreeEntry::FileNode(file) => {
-                    if !aux_cache.contains(file.filenode)? {
-                        aux_cache.put(
-                            file.filenode,
-                            &FileAuxData {
-                                total_size: file.total_size,
-                                sha1: file.content_sha1,
-                                blake3: file.content_blake3,
-                                file_header_metadata: Some(
-                                    file.file_header_metadata.clone().unwrap_or_default(),
-                                ),
-                            },
-                        )?;
-                    }
-                }
-                AugmentedTreeEntry::DirectoryNode(tree) => {
-                    if !tree_aux_store.contains(tree.treenode)? {
-                        tree_aux_store.put(
-                            tree.treenode,
-                            &TreeAuxData {
-                                augmented_manifest_id: tree.augmented_manifest_id,
-                                augmented_manifest_size: tree.augmented_manifest_size,
-                            },
-                        )?
-                    }
-                }
-            }
-        }
-        Ok(())
     }
 
     pub(crate) fn get_local_aux_direct(&self, id: &HgId) -> Result<Option<TreeAuxData>> {
@@ -424,7 +301,6 @@ impl TreeStore {
         let historystore_local = self.historystore_local.clone();
 
         let cache_to_local_cache = self.cache_to_local_cache;
-        let cas_client = self.cas_client.clone();
 
         let fetch_children_metadata = match self.tree_metadata_mode {
             TreeMetadataMode::Always => true,
@@ -469,47 +345,34 @@ impl TreeStore {
                     }
                 });
 
-            let fetch_cas = fetch_remote && cas_client.is_some();
-
-            if fetch_local || fetch_cas {
+            if fetch_local {
                 if let Some(tree_aux_store) = &tree_aux_store {
-                    let mut wants_aux = TreeAttributes::AUX_DATA;
-                    if cas_client.is_some() {
-                        // We need the tree aux data in order to fetch from CAS, so fetch
-                        // tree aux data for any key we want CONTENT for.
-                        wants_aux |= TreeAttributes::CONTENT;
-                    }
-
                     let (mut found, mut miss, mut errors) = (0, 0, 0);
-                    state.common.iter_pending(wants_aux, false, |key| {
-                        match tree_aux_store.get(&key.hgid) {
+                    state
+                        .common
+                        .iter_pending(TreeAttributes::AUX_DATA, false, |key| match tree_aux_store
+                            .get(&key.hgid)
+                        {
                             Ok(Some(entry)) => {
+                                found += 1;
 
-                            found += 1;
-
-                            tracing::trace!(?key, ?entry, "found tree aux entry in cache");
-                            if cas_client.is_some() {
-                                tracing::trace!(target: "cas_client", ?key, ?entry, "found tree aux data");
-                            }
-                            Some(
-                                StoreTree {
+                                tracing::trace!(?key, ?entry, "found tree aux entry in cache");
+                                Some(StoreTree {
                                     content: None,
                                     parents: None,
                                     aux_data: Some(entry),
-                                },
-                            )
-                        },
-                        Ok(None) => {
-                            miss += 1;
-                            None
-                        },
-                        Err(err) => {
-                          errors += 1;
-                            state.errors.keyed_error(key.clone(), err);
-                            None
-                        },
-                    }
-                    });
+                                })
+                            }
+                            Ok(None) => {
+                                miss += 1;
+                                None
+                            }
+                            Err(err) => {
+                                errors += 1;
+                                state.errors.keyed_error(key.clone(), err);
+                                None
+                            }
+                        });
                     state.metrics.aux.cache.hit(found);
                     state.metrics.aux.cache.miss(miss);
                     state.metrics.aux.cache.err(errors);
@@ -566,31 +429,11 @@ impl TreeStore {
                 Ok(())
             };
 
-            if fetch_cas {
-                // When fetching from CAS, first fetch from local repo to avoid network
-                // request for data that is only available locally (e.g. locally
-                // committed).
-                if fetch_local {
-                    process_local(&mut state, &indexedlog_local, StoreLocation::Local)?;
-                }
-
-                // Then fetch from CAS since we essentially always expect a hit.
-                if let Some(cas_client) = &cas_client {
-                    state.fetch_cas(cas_client);
-                }
-
-                // Finally fetch from local cache (shouldn't normally get here).
-                if fetch_local {
-                    process_local(&mut state, &indexedlog_cache, StoreLocation::Cache)?;
-                }
-            } else if fetch_local {
-                // If not using CAS, fetch from cache first then local (hit rate in cache
-                // is typically much higher).
+            if fetch_local {
+                // Fetch from cache first then local (hit rate in cache is typically much higher).
                 process_local(&mut state, &indexedlog_cache, StoreLocation::Cache)?;
                 process_local(&mut state, &indexedlog_local, StoreLocation::Local)?;
-            }
 
-            if fetch_local {
                 for (name, log) in [
                     ("cache", &historystore_cache),
                     ("local", &historystore_local),
@@ -697,7 +540,6 @@ impl TreeStore {
             indexedlog_cache: None,
             cache_to_local_cache: true,
             edenapi: None,
-            cas_client: None,
             historystore_cache: None,
             historystore_local: None,
             filestore: None,
@@ -763,7 +605,6 @@ impl TreeStore {
             historystore_cache: None,
             cache_to_local_cache: false,
             edenapi: None,
-            cas_client: None,
             filestore: None,
             tree_aux_store: None,
             flush_on_drop: true,
@@ -1045,7 +886,6 @@ impl ScmStoreTreeEntry {
 }
 
 impl TreeEntry for ScmStoreTreeEntry {
-    // TODO (liubovd): We should support iter directly for CAS.
     fn iter<'a>(
         &'a self,
     ) -> Result<BoxRefIterator<'a, Result<(&'a PathComponent, HgId, TreeItemFlag)>>> {
@@ -1098,7 +938,6 @@ impl TreeEntry for ScmStoreTreeEntry {
                 .map(|t| t.size_hint())
                 .unwrap_or_default(),
             LazyTree::SaplingRemoteApi(slapi) => slapi.children.as_ref().map(|c| c.len()),
-            LazyTree::Cas(cas) => Some(cas.augmented_tree.entries.len()),
             LazyTree::Null => Some(0),
         }
     }

@@ -6,7 +6,6 @@
  */
 
 use std::io;
-use std::sync::Arc;
 use std::sync::Once;
 
 use tracing_subscriber::EnvFilter;
@@ -22,7 +21,7 @@ macro_rules! maybe_add_scuba_logger {
     ($var:ident) => {
         // Tracing subscriber that logs to edenfs_events.
         #[cfg(feature = "scuba")]
-        let $var = $var.with(edenfs_telemetry::TracingLogger::new(Arc::new(
+        let $var = $var.with(edenfs_telemetry::TracingLogger::new(std::sync::Arc::new(
             edenfs_telemetry::QueueingScubaLogger::new(
                 edenfs_telemetry::new_scuba_logger(edenfs_telemetry::EDEN_EVENTS_SCUBA),
                 100,
@@ -63,9 +62,6 @@ pub fn backingstore_global_init() {
         env_logger::init();
 
         edenapi::Builder::register_customize_build_func(eagerepo::edenapi_from_config);
-
-        #[cfg(feature = "cas")]
-        thin_cas_client::init();
 
         // Put progress into "no-op" mode to avoid overhead in eden.
         progress_model::Registry::main().disable(true);

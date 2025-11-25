@@ -22,7 +22,6 @@
 //! "lazy evaluation".
 
 mod api;
-mod cas;
 mod eager_repo;
 mod errors;
 mod factory_impls;
