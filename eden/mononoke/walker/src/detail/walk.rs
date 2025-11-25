@@ -80,7 +80,6 @@ use repo_derived_data::RepoDerivedDataRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
-use slog::Logger;
 use thiserror::Error;
 use tracing::info;
 use tracing::warn;
@@ -253,7 +252,7 @@ pub trait TailingWalkVisitor {
         interned_types: &HashSet<InternedType>,
     );
 
-    fn end_chunks(&mut self, logger: &Logger, contiguous_bounds: bool) -> Result<(), Error>;
+    fn end_chunks(&mut self, contiguous_bounds: bool) -> Result<(), Error>;
 
     fn num_deferred(&self) -> usize;
 }
@@ -1903,7 +1902,6 @@ impl<V: VisitOne> Checker<V> {
 #[derive(Clone)]
 pub struct RepoWalkParams {
     pub repo: Repo,
-    pub logger: Logger,
     pub scuba_builder: MononokeScubaSampleBuilder,
     pub scheduled_max: usize,
     pub sql_shard_info: SqlShardInfo,

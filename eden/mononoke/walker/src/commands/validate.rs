@@ -21,7 +21,6 @@ use fbinit::FacebookInit;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::MultiRepoArgs;
 use sharding_ext::RepoShard;
-use slog::Logger;
 use tracing::info;
 
 use crate::WalkerArgs;
@@ -62,7 +61,6 @@ impl WalkerValidateProcess {
 impl RepoShardedProcess for WalkerValidateProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.as_str();
-        let logger = self.app.repo_logger(repo_name);
         info!("Setting up walker validate for repo {}", repo_name);
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
@@ -79,7 +77,6 @@ impl RepoShardedProcess for WalkerValidateProcess {
         info!("Completed walker validate setup for repo {}", repo_name);
         Ok(Arc::new(WalkerValidateProcessExecutor::new(
             self.app.fb,
-            logger,
             job_params,
             command,
             repo_name.to_string(),
@@ -100,7 +97,6 @@ pub struct WalkerValidateProcessExecutor {
 impl WalkerValidateProcessExecutor {
     fn new(
         fb: FacebookInit,
-        _logger: Logger,
         job_params: JobParams,
         command: ValidateCommand,
         repo_name: String,

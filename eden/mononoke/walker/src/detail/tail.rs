@@ -35,7 +35,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use repo_identity::RepoIdentityRef;
-use slog::Logger;
 use sql_commit_graph_storage::CommitGraphBulkFetcherArc;
 use strum::IntoEnumIterator;
 use tokio::time::Duration;
@@ -132,7 +131,6 @@ impl BestBounds {
     // Checkpoint if necessary given the existing bounds. If there was a change return new bounds and checkpoint.
     async fn checkpoint(
         &self,
-        logger: &Logger,
         repo_id: RepositoryId,
         checkpoints: &CheckpointsByName,
         chunk_low: u64,
@@ -148,14 +146,7 @@ impl BestBounds {
                 );
                 if let Some(new_best) = new_best {
                     let checkpoint = checkpoints
-                        .persist(
-                            logger,
-                            repo_id,
-                            chunk_num,
-                            checkpoint,
-                            new_best,
-                            *repo_high_bound,
-                        )
+                        .persist(repo_id, chunk_num, checkpoint, new_best, *repo_high_bound)
                         .await?;
                     return Ok(Some((
                         BestBounds::NewestFirst(Some(new_best), *repo_high_bound),
@@ -176,14 +167,7 @@ impl BestBounds {
                 );
                 if let Some(new_best) = new_best {
                     let checkpoint = checkpoints
-                        .persist(
-                            logger,
-                            repo_id,
-                            chunk_num,
-                            checkpoint,
-                            *repo_low_bound,
-                            new_best,
-                        )
+                        .persist(repo_id, chunk_num, checkpoint, *repo_low_bound, new_best)
                         .await?;
                     return Ok(Some((
                         BestBounds::OldestFirst(*repo_low_bound, Some(new_best)),
@@ -233,7 +217,7 @@ where
         // Each loop get new ctx and thus session id so we can distinguish runs
         let ctx = CoreContext::new_with_logger_and_client_info(
             fb,
-            repo_params.logger.clone(),
+            slog::Logger::Tracing,
             ClientInfo::default_with_entry_point(ClientEntryPoint::Walker),
         );
         let session_text = ctx.session().metadata().session_id().to_string();
@@ -413,7 +397,6 @@ where
                 })
                 .collect();
 
-            cloned!(repo_params.logger);
             if is_chunking {
                 match (last_chunk_low, last_chunk_upper) {
                     (Some(last_chunk_low), Some(last_chunk_upper))
@@ -487,7 +470,6 @@ where
                         let maybe_new = if let Some(best_bounds) = best_bounds.as_ref() {
                             best_bounds
                                 .checkpoint(
-                                    &logger,
                                     repo_id,
                                     checkpoints,
                                     chunk_low,
@@ -518,7 +500,6 @@ where
 
         if let Some(chunking) = tail_params.chunking.as_ref() {
             visitor.end_chunks(
-                &repo_params.logger,
                     contiguous_bounds
                         && !chunking.allow_remaining_deferred
                         // If lower bound overridden then not contiguous to repo start. Overriding upper bound should not result in deferred.

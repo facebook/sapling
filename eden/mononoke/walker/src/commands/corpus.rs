@@ -21,7 +21,6 @@ use fbinit::FacebookInit;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::MultiRepoArgs;
 use sharding_ext::RepoShard;
-use slog::Logger;
 use tracing::info;
 
 use crate::WalkerArgs;
@@ -68,7 +67,6 @@ impl WalkerCorpusProcess {
 impl RepoShardedProcess for WalkerCorpusProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.as_str();
-        let logger = self.app.repo_logger(repo_name);
         info!("Setting up walker corpus for repo {}", repo_name);
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
@@ -85,7 +83,6 @@ impl RepoShardedProcess for WalkerCorpusProcess {
         info!("Completed walker corpus setup for repo {}", repo_name);
         Ok(Arc::new(WalkerCorpusProcessExecutor::new(
             self.app.fb,
-            logger,
             job_params,
             command,
             repo_name.to_string(),
@@ -106,7 +103,6 @@ pub struct WalkerCorpusProcessExecutor {
 impl WalkerCorpusProcessExecutor {
     fn new(
         fb: FacebookInit,
-        _logger: Logger,
         job_params: JobParams,
         command: CorpusCommand,
         repo_name: String,

@@ -21,7 +21,6 @@ use fbinit::FacebookInit;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::MultiRepoArgs;
 use sharding_ext::RepoShard;
-use slog::Logger;
 use tracing::info;
 
 use crate::WalkerArgs;
@@ -69,7 +68,6 @@ impl WalkerSizingProcess {
 impl RepoShardedProcess for WalkerSizingProcess {
     async fn setup(&self, repo: &RepoShard) -> anyhow::Result<Arc<dyn RepoShardedProcessExecutor>> {
         let repo_name = repo.repo_name.as_str();
-        let logger = self.app.repo_logger(repo_name);
         info!("Setting up walker sizing for repo {}", repo_name);
         let repos = MultiRepoArgs {
             repo_name: vec![repo_name.to_string()],
@@ -86,7 +84,6 @@ impl RepoShardedProcess for WalkerSizingProcess {
         info!("Completed walker sizing setup for repo {}", repo_name);
         Ok(Arc::new(WalkerSizingProcessExecutor::new(
             self.app.fb,
-            logger,
             job_params,
             command,
             repo_name.to_string(),
@@ -107,7 +104,6 @@ pub struct WalkerSizingProcessExecutor {
 impl WalkerSizingProcessExecutor {
     fn new(
         fb: FacebookInit,
-        _logger: Logger,
         job_params: JobParams,
         command: SizingCommand,
         repo_name: String,

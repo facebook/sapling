@@ -13,7 +13,6 @@ use anyhow::Error;
 use anyhow::bail;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
-use slog::Logger;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::SqlConnections;
@@ -133,7 +132,6 @@ impl CheckpointsByName {
 
     pub async fn persist(
         &self,
-        _logger: &Logger,
         repo_id: RepositoryId,
         chunk_num: u64,
         checkpoint: Option<Checkpoint>,

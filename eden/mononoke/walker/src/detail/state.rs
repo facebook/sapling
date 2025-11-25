@@ -41,7 +41,6 @@ use mononoke_types::ManifestUnodeId;
 use mononoke_types::SkeletonManifestId;
 use phases::Phase;
 use phases::Phases;
-use slog::Logger;
 use strum::EnumCount;
 use strum::EnumIter;
 use strum::EnumString;
@@ -856,7 +855,7 @@ impl TailingWalkVisitor for WalkState {
         interned_types.iter().for_each(|t| self.clear_interned(*t));
     }
 
-    fn end_chunks(&mut self, _logger: &Logger, contiguous_bounds: bool) -> Result<(), Error> {
+    fn end_chunks(&mut self, contiguous_bounds: bool) -> Result<(), Error> {
         if !self.deferred_bcs.is_empty() {
             let summary: HashMap<EdgeType, usize> = self
                 .deferred_bcs

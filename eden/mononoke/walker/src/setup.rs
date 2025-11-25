@@ -33,8 +33,6 @@ use samplingblob::ComponentSamplingHandler;
 use samplingblob::SamplingBlobstore;
 use samplingblob::SamplingHandler;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
-use slog::o;
 use sql_ext::facebook::MysqlOptions;
 use tracing::info;
 use tracing::warn;
@@ -74,7 +72,6 @@ pub async fn setup_common(
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
 ) -> Result<JobParams, Error> {
     let ctx = app.new_basic_context();
-    let logger = app.logger();
     let mut scuba_builder = app.environment().scuba_sample_builder.clone();
     let walker_type = app.args::<WalkerArgs>()?.walker_type;
     scuba_builder.add(WALK_TYPE, walk_stats_key);
@@ -124,7 +121,6 @@ pub async fn setup_common(
         blobstore_sampler,
         blobstore_component_sampler,
         scuba_builder.clone(),
-        logger,
         common_args.quiet,
     );
 
@@ -215,7 +211,6 @@ pub async fn setup_common(
         let one_repo = setup_repo(
             walk_stats_key,
             app.fb,
-            logger,
             &repo_factory,
             scuba_builder.clone(),
             sql_shard_info,
@@ -322,7 +317,6 @@ fn setup_repo_factory<'a>(
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
     scuba_builder: MononokeScubaSampleBuilder,
-    _logger: &'a Logger,
     quiet: bool,
 ) -> RepoFactory {
     // We want to customize the repo factory, so take a deep clone
@@ -388,7 +382,6 @@ async fn parse_tail_params(
 async fn setup_repo<'a>(
     walk_stats_key: &'static str,
     fb: FacebookInit,
-    logger: &'a Logger,
     repo_factory: &'a RepoFactory,
     mut scuba_builder: MononokeScubaSampleBuilder,
     sql_shard_info: SqlShardInfo,
@@ -405,8 +398,6 @@ async fn setup_repo<'a>(
     progress_options: ProgressOptions,
     common_config: CommonConfig,
 ) -> Result<(RepoSubcommandParams, RepoWalkParams), Error> {
-    let logger = logger.new(o!("repo" => repo_name.clone()));
-
     let scheduled_max = scheduled_max / repo_count;
     scuba_builder.add(REPO, repo_name.clone());
 
@@ -454,7 +445,6 @@ async fn setup_repo<'a>(
 
     let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
         fb,
-        logger.clone(),
         walk_stats_key,
         repo_name.clone(),
         progress_node_types,
@@ -473,7 +463,6 @@ async fn setup_repo<'a>(
         },
         RepoWalkParams {
             repo,
-            logger: logger.clone(),
             scheduled_max,
             sql_shard_info,
             walk_roots,

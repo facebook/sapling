@@ -23,7 +23,6 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 use stats::prelude::*;
 use tracing::info;
 
@@ -142,7 +141,6 @@ where
 {
     pub fn new(
         fb: FacebookInit,
-        _logger: Logger,
         subcommand_stats_key: &'static str,
         repo_stats_key: String,
         included_types: HashSet<NodeType>,

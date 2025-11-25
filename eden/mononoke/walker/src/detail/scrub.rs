@@ -461,7 +461,6 @@ async fn run_one(
     let sizing_progress_state =
         ProgressStateMutex::new(ProgressStateCountByType::<ScrubStats, ScrubStats>::new(
             fb,
-            repo_params.logger.clone(),
             SCRUB,
             repo_params.repo.repo_identity().name().to_string(),
             command.sampling_options.node_types.clone(),

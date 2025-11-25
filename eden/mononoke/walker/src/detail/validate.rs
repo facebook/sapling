@@ -39,7 +39,6 @@ use phases::Phase;
 use phases::Phases;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 use stats::prelude::*;
 use tracing::Instrument;
 use tracing::info;
@@ -467,8 +466,8 @@ impl TailingWalkVisitor for ValidatingVisitor {
         self.inner.clear_state(node_types, interned_types)
     }
 
-    fn end_chunks(&mut self, logger: &Logger, contiguous_bounds: bool) -> Result<(), Error> {
-        self.inner.end_chunks(logger, contiguous_bounds)
+    fn end_chunks(&mut self, contiguous_bounds: bool) -> Result<(), Error> {
+        self.inner.end_chunks(contiguous_bounds)
     }
 
     fn num_deferred(&self) -> usize {
@@ -612,7 +611,6 @@ struct ValidateProgressState {
 
 impl ValidateProgressState {
     fn new(
-        _logger: Logger,
         fb: FacebookInit,
         scuba_builder: MononokeScubaSampleBuilder,
         repo_stats_key: String,
@@ -902,7 +900,6 @@ async fn run_one(
     );
 
     let validate_progress_state = ProgressStateMutex::new(ValidateProgressState::new(
-        repo_params.logger.clone(),
         fb,
         repo_params.scuba_builder.clone(),
         repo_params.repo.repo_identity().name().to_string(),

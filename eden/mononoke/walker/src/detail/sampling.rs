@@ -22,7 +22,6 @@ use mononoke_types::ChangesetId;
 use mononoke_types::datetime::DateTime;
 use phases::Phases;
 use regex::Regex;
-use slog::Logger;
 
 use crate::detail::fetcher::Direction;
 use crate::detail::graph::EdgeType;
@@ -228,8 +227,8 @@ impl<T> TailingWalkVisitor for SamplingWalkVisitor<T> {
         self.inner.clear_state(node_types, interned_types)
     }
 
-    fn end_chunks(&mut self, logger: &Logger, contiguous_bounds: bool) -> Result<(), Error> {
-        self.inner.end_chunks(logger, contiguous_bounds)
+    fn end_chunks(&mut self, contiguous_bounds: bool) -> Result<(), Error> {
+        self.inner.end_chunks(contiguous_bounds)
     }
 
     fn num_deferred(&self) -> usize {
