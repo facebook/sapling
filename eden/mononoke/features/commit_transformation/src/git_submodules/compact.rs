@@ -37,8 +37,8 @@ use mononoke_types::NonRootMPath;
 use movers::Mover;
 use reporting::log_debug;
 use reporting::log_error;
-use reporting::log_trace;
 use scuba_ext::FutureStatsScubaExt;
+use tracing::trace;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::git_hash_from_submodule_metadata_file;
@@ -101,12 +101,9 @@ pub(crate) async fn compact_all_submodule_expansion_file_changes<'a, R: Repo>(
 ) -> Result<CompactedSubmoduleBonsai> {
     let bonsai = bonsai_mut.freeze()?;
 
-    log_trace(
-        ctx,
-        format!(
-            "Compacting all submodule expansions of bonsai: {0:#?}",
-            bonsai.message()
-        ),
+    trace!(
+        "Compacting all submodule expansions of bonsai: {0:#?}",
+        bonsai.message()
     );
 
     let valid_bonsai = ValidSubmoduleExpansionBonsai::validate_all_submodule_expansions(
@@ -224,12 +221,7 @@ async fn compact_submodule_expansion_file_changes<'a, R: Repo>(
         x_repo_submodule_metadata_file_prefix,
     )?;
 
-    log_trace(
-        ctx,
-        format!(
-            "Compacting submodule {sm_path}. Metadata file path: {x_repo_sm_metadata_file_path}"
-        ),
-    );
+    trace!("Compacting submodule {sm_path}. Metadata file path: {x_repo_sm_metadata_file_path}");
 
     let synced_sm_metadata_file_path = forward_sync_mover
         .move_path(&x_repo_sm_metadata_file_path)
@@ -245,10 +237,7 @@ async fn compact_submodule_expansion_file_changes<'a, R: Repo>(
             "Forward sync mover didn't provide large repo path for submodule path: {sm_path}"
         ))?;
 
-    log_trace(
-        ctx,
-        format!("synced_sm_metadata_file_path is {synced_sm_metadata_file_path}"),
-    );
+    trace!("synced_sm_metadata_file_path is {synced_sm_metadata_file_path}");
 
     // Consindering that the provided bonsai is valid, any change affecting the
     // expansion will be affecting the expansion's metadata file.
@@ -257,10 +246,7 @@ async fn compact_submodule_expansion_file_changes<'a, R: Repo>(
         .remove(&synced_sm_metadata_file_path)
     {
         Some(sm_metadata_file_fc) => {
-            log_trace(
-                ctx,
-                format!("Submodule metadata file {synced_sm_metadata_file_path} was modified"),
-            );
+            trace!("Submodule metadata file {synced_sm_metadata_file_path} was modified");
             match sm_metadata_file_fc {
                 FileChange::Change(tfc) => {
                     compact_submodule_expansion_update(
@@ -285,10 +271,7 @@ async fn compact_submodule_expansion_file_changes<'a, R: Repo>(
             }
         }
         None => {
-            log_trace(
-                ctx,
-                format!("Submodule metadata file {synced_sm_metadata_file_path} was NOT modified"),
-            );
+            trace!("Submodule metadata file {synced_sm_metadata_file_path} was NOT modified");
             Ok(bonsai_mut)
         }
     }
@@ -395,14 +378,13 @@ async fn compact_submodule_expansion_deletion<'a, R: Repo>(
                     // File in expansion is being deleted, as expected
                     Some(FileChange::Deletion) => (),
                     Some(fc) => {
-                        log_trace(
-                            ctx,
-                            format!("File {file_path} is being modified when it should be deleted. Change: {fc:#?}"),
+                        trace!(
+                            "File {file_path} is being modified when it should be deleted. Change: {fc:#?}"
                         );
                         missing_paths.insert(file_path);
                     }
                     None => {
-                        log_trace(ctx, format!("File {file_path} was not deleted"));
+                        trace!("File {file_path} was not deleted");
                         missing_paths.insert(file_path);
                     }
                 };

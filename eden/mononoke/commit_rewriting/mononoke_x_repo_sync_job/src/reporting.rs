@@ -14,7 +14,6 @@ use futures_stats::FutureStats;
 use mononoke_types::ChangesetId;
 use mononoke_types::Timestamp;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 use tracing::error;
 use tracing::info;
 use tracing::warn;
@@ -84,8 +83,7 @@ fn log_error_to_scuba(
     scuba_sample.log();
 }
 
-fn log_success_to_logger(
-    _logger: &Logger,
+fn trace_success(
     source_cs_id: &ChangesetId,
     maybe_synced_cs_id: &Option<ChangesetId>,
     stats: &FutureStats,
@@ -114,8 +112,7 @@ fn log_success_to_logger(
     };
 }
 
-fn log_error_to_logger(
-    _logger: &Logger,
+fn trace_error(
     action: &'static str,
     source_cs_id: &ChangesetId,
     stats: &FutureStats,
@@ -128,9 +125,8 @@ fn log_error_to_logger(
     );
 }
 
-/// Log the fact of syncing of a single changeset both to Scuba and to slog
+/// Log the fact of syncing of a single changeset both to Scuba and via tracing
 fn log_sync_single_changeset_result(
-    ctx: CoreContext,
     scuba_sample: MononokeScubaSampleBuilder,
     bcs_id: ChangesetId,
     res: &Result<Option<ChangesetId>, Error>,
@@ -139,8 +135,7 @@ fn log_sync_single_changeset_result(
 ) {
     match res {
         Ok(maybe_synced_cs_id) => {
-            log_success_to_logger(
-                ctx.logger(),
+            trace_success(
                 &bcs_id,
                 maybe_synced_cs_id,
                 &stats,
@@ -156,14 +151,14 @@ fn log_sync_single_changeset_result(
         }
         Err(e) => {
             let es = format!("{}", e);
-            log_error_to_logger(ctx.logger(), "Syncing", &bcs_id, &stats, &es);
+            trace_error("Syncing", &bcs_id, &stats, &es);
             log_error_to_scuba(scuba_sample, bcs_id, stats, es, bookmark_update_timestamp);
         }
     }
 }
 
 pub fn log_pushrebase_sync_single_changeset_result(
-    ctx: CoreContext,
+    _ctx: CoreContext,
     mut scuba_sample: MononokeScubaSampleBuilder,
     bcs_id: ChangesetId,
     res: &Result<Option<ChangesetId>, Error>,
@@ -171,18 +166,11 @@ pub fn log_pushrebase_sync_single_changeset_result(
     bookmark_update_timestamp: Option<Timestamp>,
 ) {
     scuba_sample.add(SYNC_TYPE_ARG, "pushrebase");
-    log_sync_single_changeset_result(
-        ctx,
-        scuba_sample,
-        bcs_id,
-        res,
-        stats,
-        bookmark_update_timestamp,
-    )
+    log_sync_single_changeset_result(scuba_sample, bcs_id, res, stats, bookmark_update_timestamp)
 }
 
 pub fn log_non_pushrebase_sync_single_changeset_result(
-    ctx: CoreContext,
+    _ctx: CoreContext,
     mut scuba_sample: MononokeScubaSampleBuilder,
     bcs_id: ChangesetId,
     res: &Result<Option<ChangesetId>, Error>,
@@ -190,14 +178,7 @@ pub fn log_non_pushrebase_sync_single_changeset_result(
     bookmark_update_timestamp: Option<Timestamp>,
 ) {
     scuba_sample.add(SYNC_TYPE_ARG, "non-pushrebase");
-    log_sync_single_changeset_result(
-        ctx,
-        scuba_sample,
-        bcs_id,
-        res,
-        stats,
-        bookmark_update_timestamp,
-    )
+    log_sync_single_changeset_result(scuba_sample, bcs_id, res, stats, bookmark_update_timestamp)
 }
 
 pub fn log_bookmark_deletion_result(

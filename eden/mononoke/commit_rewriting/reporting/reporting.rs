@@ -16,7 +16,6 @@ use scuba_ext::ScubaValue;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
-use tracing::trace;
 use tracing::warn;
 
 const SCUBA_TABLE: &str = "mononoke_x_repo_mapping";
@@ -119,59 +118,35 @@ pub fn get_scuba_sample(
 
 // Helpers to log both to terminal and to scuba
 
-pub fn log_error<S: Into<String>>(ctx: &CoreContext, msg: S) {
-    log_with_level(ctx, slog::Level::Error, msg);
+pub fn log_error(ctx: &CoreContext, msg: impl Into<String>) {
+    let msg = msg.into();
+    error!("{}", msg);
+    if tracing::enabled!(tracing::Level::ERROR) {
+        ctx.scuba().clone().log_with_msg("ERROR", msg);
+    }
 }
 
-pub fn log_warning<S: Into<String>>(ctx: &CoreContext, msg: S) {
-    log_with_level(ctx, slog::Level::Warning, msg);
+pub fn log_warning(ctx: &CoreContext, msg: impl Into<String>) {
+    let msg = msg.into();
+    warn!("{}", msg);
+    if tracing::enabled!(tracing::Level::WARN) {
+        ctx.scuba().clone().log_with_msg("WARNING", msg);
+    }
 }
 
-pub fn log_info<S: Into<String>>(ctx: &CoreContext, msg: S) {
-    log_with_level(ctx, slog::Level::Info, msg);
+pub fn log_info(ctx: &CoreContext, msg: impl Into<String>) {
+    let msg = msg.into();
+    info!("{}", msg);
+    if tracing::enabled!(tracing::Level::INFO) {
+        ctx.scuba().clone().log_with_msg("INFO", msg);
+    }
 }
 
-pub fn log_debug<S: Into<String>>(ctx: &CoreContext, msg: S) {
-    log_with_level(ctx, slog::Level::Debug, msg);
-}
-
-pub fn log_trace<S: Into<String>>(ctx: &CoreContext, msg: S) {
-    log_with_level(ctx, slog::Level::Trace, msg);
-}
-
-fn log_with_level<S: Into<String>>(ctx: &CoreContext, level: slog::Level, msg: S) {
-    let msg: String = msg.into();
-
-    let level_tag = match level {
-        slog::Level::Critical => {
-            error!("{}", msg);
-            "CRITICAL"
-        }
-        slog::Level::Error => {
-            error!("{}", msg);
-            "ERROR"
-        }
-        slog::Level::Warning => {
-            warn!("{}", msg);
-            "WARNING"
-        }
-        slog::Level::Info => {
-            info!("{}", msg);
-            "INFO"
-        }
-        slog::Level::Debug => {
-            debug!("{}", msg);
-            "DEBUG"
-        }
-        slog::Level::Trace => {
-            trace!("{}", msg);
-            "TRACE"
-        }
-    };
-
-    if ctx.logger().is_enabled(level) {
-        let mut scuba = ctx.scuba().clone();
-        scuba.log_with_msg(level_tag, msg);
+pub fn log_debug(ctx: &CoreContext, msg: impl Into<String>) {
+    let msg = msg.into();
+    debug!("{}", msg);
+    if tracing::enabled!(tracing::Level::DEBUG) {
+        ctx.scuba().clone().log_with_msg("DEBUG", msg);
     }
 }
 

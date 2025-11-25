@@ -34,7 +34,6 @@ use cross_repo_sync::find_toposorted_unsynced_ancestors_with_commit_graph;
 use cross_repo_sync::get_version_and_parent_map_for_sync_via_pushrebase;
 use cross_repo_sync::log_debug;
 use cross_repo_sync::log_info;
-use cross_repo_sync::log_trace;
 use cross_repo_sync::log_warning;
 use cross_repo_sync::unsafe_always_rewrite_sync_commit;
 use cross_repo_sync::unsafe_get_parent_map_for_target_bookmark_rewrite;
@@ -56,6 +55,7 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use scuba_ext::FutureStatsScubaExt;
 use scuba_ext::MononokeScubaSampleBuilder;
+use tracing::trace;
 
 use crate::reporting::log_bookmark_deletion_result;
 use crate::reporting::log_non_pushrebase_sync_single_changeset_result;
@@ -641,10 +641,7 @@ where
         format!("Found {0} unsynced ancestors", num_unsynced_ancestors),
     );
 
-    log_trace(
-        ctx,
-        format!("Unsynced ancestors: {0:#?}", &unsynced_ancestors),
-    );
+    trace!("Unsynced ancestors: {0:#?}", &unsynced_ancestors);
 
     let mb_prog_bar = if disable_progress_bar {
         None
@@ -703,12 +700,9 @@ where
             .repo_derived_data()
             .derive::<RootFsnodeId>(ctx, synced)
             .await?;
-        log_trace(
-            ctx,
-            format!(
-                "Root fsnode id from {synced}: {0}",
-                root_fsnode_id.into_fsnode_id()
-            ),
+        trace!(
+            "Root fsnode id from {synced}: {0}",
+            root_fsnode_id.into_fsnode_id()
         );
 
         if !no_automatic_derivation {

@@ -40,8 +40,8 @@ use mononoke_types::fsnode::FsnodeEntry;
 use mononoke_types::fsnode::FsnodeFile;
 use movers::Mover;
 use reporting::log_error;
-use reporting::log_trace;
 use scuba_ext::FutureStatsScubaExt;
+use tracing::trace;
 
 use crate::git_submodules::expand::SubmoduleExpansionData;
 use crate::git_submodules::utils::build_recursive_submodule_deps;
@@ -149,13 +149,10 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     submodule_repo: &'a R,
     mover: Arc<dyn Mover>,
 ) -> Result<BonsaiChangeset> {
-    log_trace(
-        ctx,
-        format!(
-            "Validating expansion of submodule {0} while syncing commit {1:?}",
-            submodule_path,
-            bonsai.get_changeset_id()
-        ),
+    trace!(
+        "Validating expansion of submodule {0} while syncing commit {1:?}",
+        submodule_path,
+        bonsai.get_changeset_id()
     );
 
     // STEP 1: Check if any changes were made to this submodule's expansion
@@ -306,10 +303,7 @@ async fn validate_submodule_expansion<'a, R: Repo>(
     if submodule_fsnode_id == expansion_fsnode_id {
         // If fsnodes are an exact match, there are no recursive submodules and the
         // working copy is the same.
-        log_trace(
-            ctx,
-            "Root submodule expansion fsnode is the same as submodule repo's fsnode",
-        );
+        trace!("Root submodule expansion fsnode is the same as submodule repo's fsnode",);
         return Ok(bonsai);
     };
 
@@ -522,12 +516,9 @@ pub async fn validate_working_copy_of_expansion_with_recursive_submodules<'a, R>
 where
     R: Repo,
 {
-    log_trace(
-        ctx,
-        format!(
-            "Validating expansion working copy of submodule repo {0}",
-            submodule_repo.repo_identity().name()
-        ),
+    trace!(
+        "Validating expansion working copy of submodule repo {0}",
+        submodule_repo.repo_identity().name()
     );
     let large_repo = sm_exp_data.large_repo.clone();
     let large_repo_blobstore = large_repo.repo_blobstore_arc();
@@ -694,26 +685,17 @@ where
         )
         .await?;
 
-    log_trace(
-        ctx,
-        format!(
-            "Remaining directories in submodule's manifest: {:#?}",
-            final_submodule_dirs
-        ),
+    trace!(
+        "Remaining directories in submodule's manifest: {:#?}",
+        final_submodule_dirs
     );
-    log_trace(
-        ctx,
-        format!(
-            "Remaining files in submodule's manifest: {:#?}",
-            final_submodule_files
-        ),
+    trace!(
+        "Remaining files in submodule's manifest: {:#?}",
+        final_submodule_files
     );
-    log_trace(
-        ctx,
-        format!(
-            "Remaining files in expansion's manifest: {:#?}",
-            final_expansion_only_files
-        ),
+    trace!(
+        "Remaining files in expansion's manifest: {:#?}",
+        final_expansion_only_files
     );
 
     /// Helper to assert that there are no unexpected files/directories in

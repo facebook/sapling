@@ -56,7 +56,6 @@ pub use reporting::CommitSyncContext;
 pub use reporting::log_debug;
 pub use reporting::log_error;
 pub use reporting::log_info;
-pub use reporting::log_trace;
 pub use reporting::log_warning;
 pub use sync_commit::CommitSyncData;
 pub use sync_commit::sync_commit;
