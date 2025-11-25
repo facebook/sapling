@@ -27,7 +27,6 @@ use metadata::Metadata;
 use percent_encoding::percent_decode;
 use permission_checker::MononokeIdentity;
 use permission_checker::MononokeIdentitySet;
-use slog::Logger;
 use tracing::error;
 
 use super::Middleware;
@@ -54,7 +53,6 @@ impl MetadataState {
 
 pub struct MetadataMiddleware {
     fb: FacebookInit,
-    _logger: Logger,
     internal_identity: Identity,
     entry_point: ClientEntryPoint,
     mtls_disabled: bool,
@@ -64,7 +62,6 @@ pub struct MetadataMiddleware {
 impl MetadataMiddleware {
     pub fn new(
         fb: FacebookInit,
-        logger: Logger, // This will be stored as _logger
         internal_identity: Identity,
         entry_point: ClientEntryPoint,
         mtls_disabled: bool,
@@ -72,7 +69,6 @@ impl MetadataMiddleware {
     ) -> Self {
         Self {
             fb,
-            _logger: logger,
             internal_identity,
             entry_point,
             mtls_disabled,

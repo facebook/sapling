@@ -18,29 +18,24 @@ use hyper::Response;
 use metadata::Metadata;
 use rate_limiting::RateLimitEnvironment;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
-use slog::o;
 
 use crate::middleware::MetadataState;
 use crate::middleware::Middleware;
-use crate::state_ext::StateExt;
 
 #[derive(StateData, Clone)]
 pub struct RequestContext {
     pub ctx: CoreContext,
-    pub logger: Logger,
 }
 
 impl RequestContext {
-    async fn new(ctx: CoreContext, logger: Logger) -> Self {
-        Self { ctx, logger }
+    async fn new(ctx: CoreContext) -> Self {
+        Self { ctx }
     }
 }
 
 #[derive(Clone)]
 pub struct RequestContextMiddleware {
     fb: FacebookInit,
-    logger: Logger,
     scuba: Arc<MononokeScubaSampleBuilder>,
     rate_limiter: Option<RateLimitEnvironment>,
     readonly: bool,
@@ -49,14 +44,12 @@ pub struct RequestContextMiddleware {
 impl RequestContextMiddleware {
     pub fn new(
         fb: FacebookInit,
-        logger: Logger,
         scuba: MononokeScubaSampleBuilder,
         rate_limiter: Option<RateLimitEnvironment>,
         readonly: bool,
     ) -> Self {
         Self {
             fb,
-            logger,
             scuba: Arc::new(scuba),
             rate_limiter,
             readonly,
@@ -79,12 +72,10 @@ impl Middleware for RequestContextMiddleware {
             .rate_limiter(self.rate_limiter.as_ref().map(|r| r.get_rate_limiter()))
             .build();
 
-        let request_id = state.short_request_id();
-        let logger = self.logger.new(o!("request_id" => request_id.to_string()));
         let scuba = (*self.scuba).clone().with_seq("seq");
-        let ctx = session.new_context_with_logger(logger.clone(), scuba);
+        let ctx = session.new_context(scuba);
 
-        state.put(RequestContext::new(ctx, logger).await);
+        state.put(RequestContext::new(ctx).await);
 
         None
     }

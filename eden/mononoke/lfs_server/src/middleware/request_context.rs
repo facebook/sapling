@@ -24,8 +24,6 @@ use hyper::body::Body;
 use metadata::Metadata;
 use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
-use slog::o;
 use tracing::error;
 
 #[derive(Copy, Clone)]
@@ -91,21 +89,14 @@ impl RequestContext {
 #[derive(Clone)]
 pub struct RequestContextMiddleware {
     fb: FacebookInit,
-    logger: Logger,
     enforce_authentication: bool,
     readonly: bool,
 }
 
 impl RequestContextMiddleware {
-    pub fn new(
-        fb: FacebookInit,
-        logger: Logger,
-        enforce_authentication: bool,
-        readonly: bool,
-    ) -> Self {
+    pub fn new(fb: FacebookInit, enforce_authentication: bool, readonly: bool) -> Self {
         Self {
             fb,
-            logger,
             enforce_authentication,
             readonly,
         }
@@ -115,9 +106,6 @@ impl RequestContextMiddleware {
 #[async_trait::async_trait]
 impl Middleware for RequestContextMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
-        let request_id = state.short_request_id();
-
-        let logger = self.logger.new(o!("request_id" => request_id.to_string()));
         let metadata = if let Some(metadata_state) = MetadataState::try_borrow_from(state) {
             metadata_state.metadata().clone()
         } else {
@@ -148,8 +136,7 @@ impl Middleware for RequestContextMiddleware {
             .metadata(Arc::new(metadata))
             .readonly(self.readonly)
             .build();
-        let ctx =
-            session.new_context_with_logger(logger, MononokeScubaSampleBuilder::with_discard());
+        let ctx = session.new_context(MononokeScubaSampleBuilder::with_discard());
 
         state.put(RequestContext::new(ctx, should_log));
 

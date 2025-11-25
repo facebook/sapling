@@ -40,7 +40,6 @@ use mononoke_api::Mononoke;
 use mononoke_configs::MononokeConfigs;
 use rate_limiting::RateLimitEnvironment;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 
 use crate::context::ServerContext;
 use crate::handlers::build_router;
@@ -53,7 +52,6 @@ pub type SaplingRemoteApi = MononokeHttpHandler<Router>;
 
 pub fn build<R: Send + Sync + Clone + 'static>(
     fb: FacebookInit,
-    logger: Logger,
     scuba: MononokeScubaSampleBuilder,
     mononoke: Arc<Mononoke<R>>,
     will_exit: Arc<AtomicBool>,
@@ -70,10 +68,7 @@ pub fn build<R: Send + Sync + Clone + 'static>(
     let log_middleware = if test_friendly_logging {
         LogMiddleware::test_friendly()
     } else {
-        LogMiddleware::slog(
-            logger.clone(),
-            "scm/mononoke:request_log_enabled".to_string(),
-        )
+        LogMiddleware::tracing("scm/mononoke:request_log_enabled".to_string())
     };
 
     // Set up the router and handler for serving HTTP requests, along with custom middleware.
@@ -87,7 +82,6 @@ pub fn build<R: Send + Sync + Clone + 'static>(
         .add(ConfigInfoMiddleware::new(configs))
         .add(MetadataMiddleware::new(
             fb,
-            logger.clone(),
             common_config.internal_identity.clone(),
             ClientEntryPoint::SaplingRemoteApi,
             mtls_disabled,
@@ -99,7 +93,6 @@ pub fn build<R: Send + Sync + Clone + 'static>(
         .add(PostResponseMiddleware::default())
         .add(RequestContextMiddleware::new(
             fb,
-            logger,
             scuba.clone(),
             rate_limiter,
             readonly,

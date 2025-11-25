@@ -38,7 +38,6 @@ use rate_limiting::RateLimitEnvironment;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use slog::o;
 
 use crate::connection_acceptor::connection_acceptor;
 pub use crate::connection_acceptor::wait_for_connections_closed;
@@ -85,7 +84,6 @@ pub async fn create_repo_listeners<'a>(
 
         edenapi_service::build(
             fb,
-            root_log.new(o!("service" => "edenapi")),
             scuba,
             Arc::clone(&mononoke),
             will_exit.clone(),

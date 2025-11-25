@@ -246,10 +246,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let log_middleware = if args.test_friendly_logging {
         LogMiddleware::test_friendly()
     } else {
-        LogMiddleware::slog(
-            logger.clone(),
-            "scm/mononoke:request_log_enabled".to_string(),
-        )
+        LogMiddleware::tracing("scm/mononoke:request_log_enabled".to_string())
     };
 
     app.start_monitoring(app.runtime(), SERVICE_NAME, AliveService)?;
@@ -325,7 +322,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(ConfigInfoMiddleware::new(repos_config))
                 .add(MetadataMiddleware::new(
                     fb,
-                    logger.clone(),
                     internal_identity,
                     ClientEntryPoint::LfsServer,
                     false,
@@ -335,7 +331,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(<ScubaMiddleware<LfsScubaHandler>>::new(scuba_logger))
                 .add(RequestContextMiddleware::new(
                     fb,
-                    logger.clone(),
                     enforce_authentication,
                     args.readonly.readonly,
                 ))
@@ -363,7 +358,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         ConnectionSecurityChecker::new(acl_provider.as_ref(), &common).await?;
 
                     serve::https(
-                        logger,
                         listener,
                         tls_acceptor,
                         capture_session_data,
@@ -372,7 +366,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     )
                     .await
                 } else {
-                    serve::http(logger, listener, handler).await
+                    serve::http(listener, handler).await
                 }
             };
             pin_mut!(serve);

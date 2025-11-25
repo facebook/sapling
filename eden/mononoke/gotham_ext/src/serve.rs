@@ -19,7 +19,6 @@ use mononoke_macros::mononoke;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
 use quiet_stream::QuietShutdownStream;
-use slog::Logger;
 use tokio::net::TcpListener;
 use tokio_openssl::SslStream;
 use tracing::warn;
@@ -32,7 +31,6 @@ use crate::socket_data::TlsSocketData;
 struct Empty {}
 
 pub async fn https<H>(
-    logger: impl Into<Logger>,
     listener: TcpListener,
     acceptor: SslAcceptor,
     capture_session_data: bool,
@@ -42,7 +40,6 @@ pub async fn https<H>(
 where
     H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe,
 {
-    let _logger = logger.into();
     let connection_security_checker = Arc::new(connection_security_checker);
     let acceptor = Arc::new(acceptor);
 
@@ -92,16 +89,10 @@ where
     }
 }
 
-pub async fn http<H>(
-    logger: impl Into<Logger>,
-    listener: TcpListener,
-    handler: MononokeHttpHandler<H>,
-) -> Result<(), Error>
+pub async fn http<H>(listener: TcpListener, handler: MononokeHttpHandler<H>) -> Result<(), Error>
 where
     H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe,
 {
-    let _logger = logger.into();
-
     loop {
         let (socket, peer_addr) = listener
             .accept()

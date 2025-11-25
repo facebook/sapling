@@ -214,10 +214,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let log_middleware = if args.test_friendly_logging {
         LogMiddleware::test_friendly()
     } else {
-        LogMiddleware::slog(
-            logger.clone(),
-            "scm/mononoke:request_log_enabled".to_string(),
-        )
+        LogMiddleware::tracing("scm/mononoke:request_log_enabled".to_string())
     };
     let will_exit = Arc::new(AtomicBool::new(false));
     let (sender, receiver) = tokio::sync::oneshot::channel::<bool>();
@@ -264,7 +261,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let requests_counter = Arc::new(AtomicI64::new(0));
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     let server = {
-        cloned!(logger, requests_counter);
+        cloned!(requests_counter);
         let tls_args = args.tls_params.clone();
         move |app: MononokeApp| async move {
             let repos_mgr = Arc::new(app.open_managed_repos(service_name).await?);
@@ -308,7 +305,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 )))
                 .add(MetadataMiddleware::new(
                     fb,
-                    logger.clone(),
                     common.internal_identity.clone(),
                     ClientEntryPoint::MononokeGitServer,
                     false,
@@ -317,7 +313,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .add(RequestContentEncodingMiddleware {})
                 .add(RequestContextMiddleware::new(
                     fb,
-                    logger.clone(),
                     git_scuba,
                     None,
                     args.readonly.readonly,
@@ -367,7 +362,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         ConnectionSecurityChecker::new(acl_provider.as_ref(), &common).await?;
 
                     serve::https(
-                        logger,
                         listener,
                         tls_acceptor,
                         capture_session_data,
@@ -376,7 +370,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     )
                     .await
                 } else {
-                    serve::http(logger, listener, handler).await
+                    serve::http(listener, handler).await
                 }
             };
             pin_mut!(serve);

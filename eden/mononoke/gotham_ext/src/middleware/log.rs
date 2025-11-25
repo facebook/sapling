@@ -19,8 +19,6 @@ use hyper::Response;
 use hyper::StatusCode;
 use hyper::Uri;
 use hyper::Version;
-use slog::Logger;
-use slog::o;
 use time_ext::DurationExt;
 use tracing::info;
 
@@ -28,7 +26,6 @@ use super::MetadataState;
 use super::Middleware;
 use super::PostResponseCallbacks;
 use super::RequestLoad;
-use crate::state_ext::StateExt;
 
 const DIRECTION_REQUEST_IN: &str = "IN  >";
 const DIRECTION_RESPONSE_OUT: &str = "OUT <";
@@ -73,7 +70,7 @@ impl Display for DurationForDisplay {
 #[derive(Clone)]
 pub enum LogMiddleware {
     TestFriendly,
-    Slog { logger: Logger, jk_name: String },
+    Tracing { jk_name: String },
 }
 
 enum LogEntry {
@@ -86,17 +83,12 @@ impl LogMiddleware {
         Self::TestFriendly
     }
 
-    pub fn slog(logger: Logger, jk_name: String) -> Self {
-        Self::Slog { logger, jk_name }
+    pub fn tracing(jk_name: String) -> Self {
+        Self::Tracing { jk_name }
     }
 }
 
-fn log_request_slog(
-    logger: &Logger,
-    state: &mut State,
-    entry: LogEntry,
-    jk_name: &str,
-) -> Option<()> {
+fn log_request_tracing(state: &mut State, entry: LogEntry, jk_name: &str) -> Option<()> {
     if !justknobs::eval(jk_name, None, None).unwrap_or(false) {
         return None;
     }
@@ -113,7 +105,6 @@ fn log_request_slog(
     let load = *RequestLoad::borrow_from(state);
     let method = Method::borrow_from(state).clone();
     let version = *Version::borrow_from(state);
-    let request_id = state.short_request_id().to_string();
 
     let (address, client_port) = if let Some(metadata) = MetadataState::try_borrow_from(state) {
         (
@@ -135,7 +126,6 @@ fn log_request_slog(
         .map(|x| x.get(..20).unwrap_or(x).to_string());
 
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
-    let _logger = logger.new(o!("request_id" => request_id));
     match entry {
         LogEntry::RequestIn => {
             info!(
@@ -206,8 +196,8 @@ impl LogMiddleware {
             Self::TestFriendly => {
                 log_request_test_friendly(state, entry);
             }
-            Self::Slog { logger, jk_name } => {
-                log_request_slog(logger, state, entry, jk_name);
+            Self::Tracing { jk_name } => {
+                log_request_tracing(state, entry, jk_name);
             }
         }
     }
