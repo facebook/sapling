@@ -33,9 +33,6 @@ use partial_io::quickcheck_types::PartialWithErrors;
 use phases::Phase;
 use quickcheck::Gen;
 use quickcheck::QuickCheck;
-use slog::Discard;
-use slog::Logger;
-use slog::o;
 use tokio::io::AsyncBufRead;
 use tokio::io::BufReader;
 use tokio::runtime::Runtime;
@@ -131,8 +128,7 @@ fn test_empty_bundle_roundtrip_uncompressed() {
     buf.set_position(0);
 
     // Now decode it.
-    let logger = Logger::root(Discard, o!());
-    let stream = bundle2_stream(logger, buf, None);
+    let stream = bundle2_stream(buf, None);
     let (item, stream) = runtime.next_stream(stream);
 
     let mut mparams = HashMap::new();
@@ -210,8 +206,7 @@ fn test_unknown_part_uncompressed() {
 
     let app_errors = Arc::new(Mutex::new(Vec::new()));
 
-    let logger = Logger::root(Discard, o!());
-    let stream = bundle2_stream(logger, buf, Some(app_errors.clone()));
+    let stream = bundle2_stream(buf, Some(app_errors.clone()));
 
     let parts: Vec<_> = runtime
         .block_on(async move { stream.try_collect().await })
@@ -586,8 +581,7 @@ fn parse_stream_start<R: AsyncBufRead + Send + Unpin + 'static>(
         a_stream_params,
     };
 
-    let logger = Logger::root(Discard, o!());
-    let mut stream = bundle2_stream(logger, reader, Some(app_errors));
+    let mut stream = bundle2_stream(reader, Some(app_errors));
     let (item, stream) = runtime.block_on(async move {
         let item = stream.try_next().await?;
         anyhow::Ok((item, stream))

@@ -19,7 +19,6 @@ use byteorder::ByteOrder;
 use bytes::Buf;
 use bytes::BytesMut;
 use mercurial_types::RepoPath;
-use slog::Logger;
 use tokio_util::codec::Decoder;
 use tracing::trace;
 
@@ -85,19 +84,15 @@ impl Decoder for WirePackUnpacker {
     }
 }
 
-pub fn new(logger: Logger, kind: Kind) -> WirePackUnpacker {
+pub fn new(kind: Kind) -> WirePackUnpacker {
     WirePackUnpacker {
         state: State::Filename,
-        inner: UnpackerInner {
-            _logger: logger,
-            kind,
-        },
+        inner: UnpackerInner { kind },
     }
 }
 
 #[derive(Debug)]
 struct UnpackerInner {
-    _logger: Logger,
     kind: Kind,
 }
 
@@ -274,19 +269,15 @@ mod test {
     use std::io::Cursor;
 
     use futures::TryStreamExt;
-    use slog::Discard;
-    use slog::o;
     use tokio_util::codec::FramedRead;
 
     use super::*;
 
     #[tokio::test]
     async fn test_empty() {
-        let logger = Logger::root(Discard, o!());
-
         // Absolutely nothing in here.
         let empty_1 = Cursor::new(WIREPACK_END);
-        let unpacker = new(logger.clone(), Kind::Tree);
+        let unpacker = new(Kind::Tree);
         let stream = FramedRead::new(empty_1, unpacker);
         let parts: Vec<_> = stream.try_collect().await.unwrap();
 
@@ -298,7 +289,7 @@ mod test {
         // - data count: b"\0\0\0\0"
         // - next filename, end of stream: b"\0\0\0\0\0\0\0\0\0\0"
         let empty_2 = Cursor::new(b"\0\x03foo\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
-        let unpacker = new(logger.clone(), Kind::File);
+        let unpacker = new(Kind::File);
         let stream = FramedRead::new(empty_2, unpacker);
         let parts: Vec<_> = stream.try_collect().await.unwrap();
 

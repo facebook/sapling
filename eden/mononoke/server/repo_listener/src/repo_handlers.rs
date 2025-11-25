@@ -13,13 +13,11 @@ use mononoke_api::Mononoke;
 use mononoke_api::Repo;
 use repo_client::PushRedirectorArgs;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 
 use crate::errors::ErrorKind;
 
 #[derive(Clone)]
 pub struct RepoHandler {
-    pub logger: Logger,
     pub scuba: MononokeScubaSampleBuilder,
     pub repo: Arc<Repo>,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs<Repo>>,
@@ -51,7 +49,6 @@ pub fn repo_handler(mononoke: Arc<Mononoke<Repo>>, repo_name: &str) -> anyhow::R
     };
 
     Ok(RepoHandler {
-        logger: base.logger.clone(),
         scuba: base.scuba.clone(),
         repo_client_knobs: base.repo_client_knobs.clone(),
         repo: source_repo,

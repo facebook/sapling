@@ -22,7 +22,6 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use qps::Qps;
-use slog::Logger;
 use tokio_util::codec::Decoder;
 use tokio_util::codec::FramedRead;
 use tokio_util::io::StreamReader;
@@ -52,7 +51,6 @@ struct HgProtoHandlerInner<H, Dec, Enc> {
 
 impl HgProtoHandler {
     pub fn new<In, H, Dec, Enc>(
-        logger: Logger,
         input: In,
         commands: H,
         reqdec: Dec,
@@ -70,7 +68,7 @@ impl HgProtoHandler {
         Error: From<Dec::Error>,
     {
         let inner = Arc::new(HgProtoHandlerInner {
-            commands_handler: HgCommandHandler::new(logger, commands, qps, src_region),
+            commands_handler: HgCommandHandler::new(commands, qps, src_region),
             reqdec,
             respenc,
             wireproto_calls,

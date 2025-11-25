@@ -23,7 +23,6 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::pin_mut;
 use futures::stream::BoxStream;
-use slog::Logger;
 use tokio::io::AsyncBufRead;
 use tokio::io::AsyncReadExt;
 use tokio_util::codec::FramedRead;
@@ -65,7 +64,6 @@ pub type Bundle2Stream<R> =
     BoxStream<'static, Result<StreamEvent<Bundle2Item<'static>, Remainder<R>>>>;
 
 pub fn bundle2_stream<R>(
-    logger: Logger,
     read: R,
     app_errors: Option<Arc<Mutex<Vec<ErrorKind>>>>,
 ) -> Bundle2Stream<R>
@@ -80,7 +78,7 @@ where
             let read_buf = stream.read_buffer_mut().split();
             let io = stream.into_inner();
 
-            let mut stream = outer_stream(logger.clone(), &start, Cursor::new(read_buf).chain(io))?;
+            let mut stream = outer_stream(&start, Cursor::new(read_buf).chain(io))?;
 
             yield StreamEvent::Next(Bundle2Item::Start(start));
 
@@ -101,7 +99,7 @@ where
                         }
                     },
                     Ok(OuterFrame::Header(header)) => {
-                        let (bundle2item, remainder) = inner_stream(logger.clone(), header, stream);
+                        let (bundle2item, remainder) = inner_stream(header, stream);
                         yield StreamEvent::Next(bundle2item);
                         pin_mut!(remainder);
                         stream = remainder.await?;

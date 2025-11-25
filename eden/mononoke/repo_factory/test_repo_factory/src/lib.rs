@@ -828,7 +828,6 @@ impl TestRepoFactory {
         mutable_counters: &ArcMutableCounters,
     ) -> Result<ArcRepoHandlerBase> {
         let scuba = self.ctx.scuba().clone();
-        let logger = self.ctx.logger().clone();
         let repo_client_knobs = repo_config.repo_client_knobs.clone();
 
         let common_commit_sync_config = repo_cross_repo
@@ -851,7 +850,6 @@ impl TestRepoFactory {
                 })
             });
         Ok(Arc::new(RepoHandlerBase {
-            logger,
             scuba,
             repo_client_knobs,
             maybe_push_redirector_base,

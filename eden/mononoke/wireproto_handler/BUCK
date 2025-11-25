@@ -5,7 +5,6 @@ oncall("scm_server_infra")
 rust_library(
     name = "wireproto_handler",
     srcs = glob(["src/**/*.rs"]),
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     deps = [
         "//common/rust/shed/facet:facet",
         "//eden/mononoke/bookmarks:bookmarks",

@@ -141,7 +141,6 @@ rust_library(
     name = "mercurial_bundles",
     srcs = glob(["bundles/src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "bundles"},
-    named_deps = {"slog": "//common/rust/shed/tracing_slog_compat:tracing_slog_compat"},
     test_deps = [
         "fbcode//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "fbsource//third-party/rust:assert_matches",

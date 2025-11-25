@@ -14,7 +14,6 @@ use metaconfig_types::CommonCommitSyncConfig;
 use metaconfig_types::RepoClientKnobs;
 use mutable_counters::ArcMutableCounters;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
 use synced_commit_mapping::SyncedCommitMapping;
 
 #[derive(Clone)]
@@ -47,7 +46,6 @@ pub struct TargetRepoDbs {
 #[facet]
 /// The base struct for serving wireproto traffic for a repo
 pub struct RepoHandlerBase {
-    pub logger: Logger,
     pub scuba: MononokeScubaSampleBuilder,
     pub maybe_push_redirector_base: Option<Arc<PushRedirectorBase>>,
     pub repo_client_knobs: RepoClientKnobs,

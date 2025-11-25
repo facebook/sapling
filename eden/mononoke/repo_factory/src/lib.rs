@@ -1872,14 +1872,12 @@ impl RepoFactory {
     ) -> Result<ArcRepoHandlerBase> {
         let ctx = self.ctx(Some(repo_identity));
         let scuba = ctx.scuba().clone();
-        let logger = ctx.logger().clone();
         let repo_client_knobs = repo_config.repo_client_knobs.clone();
         let maybe_push_redirector_base = match **push_redirector_mode {
             Enabled(ref push_redirector_base) => Some(Arc::clone(push_redirector_base)),
             PushRedirectorMode::Disabled => None,
         };
         Ok(Arc::new(RepoHandlerBase {
-            logger,
             scuba,
             maybe_push_redirector_base,
             repo_client_knobs,

@@ -75,7 +75,6 @@ pub async fn request_handler(
     } = stdio;
 
     let handler = repo_handler(mononoke, &reponame).with_context(|| {
-        // We don't have a logger yet as the repo hasn't been created yet, so only log to client
         log_error_to_client(
             stderr.clone(),
             "Unknown Repo:",
@@ -86,7 +85,6 @@ pub async fn request_handler(
     })?;
 
     let RepoHandler {
-        logger,
         mut scuba,
         repo,
         maybe_push_redirector_args,
@@ -154,7 +152,7 @@ pub async fn request_handler(
 
     let session = session_builder.build();
 
-    let mut logging = LoggingContainer::new(fb, logger.clone(), scuba.clone());
+    let mut logging = LoggingContainer::new(fb, slog::Logger::Tracing, scuba.clone());
     logging.with_scribe(scribe);
 
     let repo_client = RepoClient::new(
@@ -168,7 +166,6 @@ pub async fn request_handler(
 
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
-        logger.clone(),
         stdin,
         repo_client,
         sshproto::HgSshCommandDecode,

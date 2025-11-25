@@ -44,7 +44,6 @@ use mercurial_types::HgChangesetId;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::NonRootMPath;
 use qps::Qps;
-use slog::Logger;
 use tokio::io::AsyncBufRead;
 use tokio::io::AsyncBufReadExt;
 use tokio_util::codec::Decoder;
@@ -58,21 +57,14 @@ use crate::dechunker::Dechunker;
 use crate::errors::*;
 
 pub struct HgCommandHandler<H> {
-    logger: Logger,
     commands: H,
     qps: Option<Arc<Qps>>,
     src_region: Option<String>,
 }
 
 impl<H: HgCommands + Send + Sync + 'static> HgCommandHandler<H> {
-    pub fn new(
-        logger: Logger,
-        commands: H,
-        qps: Option<Arc<Qps>>,
-        src_region: Option<String>,
-    ) -> Self {
+    pub fn new(commands: H, qps: Option<Arc<Qps>>, src_region: Option<String>) -> Self {
         HgCommandHandler {
-            logger,
             commands,
             qps,
             src_region,
@@ -271,7 +263,7 @@ impl<H: HgCommands + Send + Sync + 'static> HgCommandHandler<H> {
         let hgcmds = &self.commands;
         let dechunker = Dechunker::new(instream);
 
-        let bundle2stream = bundle2_stream(self.logger.clone(), dechunker, None);
+        let bundle2stream = bundle2_stream(dechunker, None);
         let (bundle2stream, remainder) = extract_remainder_from_bundle2(bundle2stream);
 
         let remainder = async move {
@@ -651,8 +643,6 @@ mod test {
     use bytes::BufMut;
     use futures::stream;
     use mononoke_macros::mononoke;
-    use slog::Discard;
-    use slog::o;
 
     use super::*;
 
@@ -677,8 +667,7 @@ mod test {
 
     #[tokio::test]
     async fn hello() -> Result<()> {
-        let logger = Logger::root(Discard, o!());
-        let handler = HgCommandHandler::new(logger, Dummy, None, None);
+        let handler = HgCommandHandler::new(Dummy, None, None);
 
         let (r, _) = handler.handle(SingleRequest::Hello, StreamReader::new(stream::empty()));
         let r = assert_one(r.collect::<Vec<_>>().await);
@@ -697,8 +686,7 @@ mod test {
 
     #[tokio::test]
     async fn unimpl() -> Result<()> {
-        let logger = Logger::root(Discard, o!());
-        let handler = HgCommandHandler::new(logger, Dummy, None, None);
+        let handler = HgCommandHandler::new(Dummy, None, None);
 
         let (r, _) = handler.handle(SingleRequest::Heads, StreamReader::new(stream::empty()));
         let r = assert_one(r.collect::<Vec<_>>().await);

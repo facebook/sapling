@@ -23,7 +23,6 @@ use bytes::Buf;
 use bytes::BytesMut;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RevFlags;
-use slog::Logger;
 use tokio_util::codec::Decoder;
 
 use super::CgDeltaChunk;
@@ -74,8 +73,6 @@ const CHUNK_HEADER3_LEN: usize = 20 + 20 + 20 + 20 + 20 + 2 + 4;
 
 #[derive(Debug)]
 pub struct CgUnpacker {
-    #[allow(dead_code)]
-    logger: Logger,
     state: State,
     version: CgVersion,
 }
@@ -155,9 +152,8 @@ impl Decoder for CgUnpacker {
 }
 
 impl CgUnpacker {
-    pub fn new(logger: Logger, version: CgVersion) -> Self {
+    pub fn new(version: CgVersion) -> Self {
         CgUnpacker {
-            logger,
             state: State::Changeset,
             version,
         }
