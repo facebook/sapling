@@ -5,7 +5,6 @@ base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "
 bindgen = { git = "https://github.com/jsgf/rust-bindgen", rev = "c185e3fb83839fb0909e261db783fe81943b000c" }
 bindgen-cli = { git = "https://github.com/jsgf/rust-bindgen", rev = "c185e3fb83839fb0909e261db783fe81943b000c" }
 c2pa = { git = "https://github.com/dhruvmongia/c2pa-rs", rev = "871a0f10d6a3a627229fc769de3d88f85024b64d" }
-cargo = { git = "https://github.com/rust-lang/cargo", rev = "f5b3a6ba899c2eb9285dd3769aa6d84179ee7f8b" }
 cargo-platform = { git = "https://github.com/rust-lang/cargo", rev = "f5b3a6ba899c2eb9285dd3769aa6d84179ee7f8b" }
 cbindgen = { git = "https://github.com/mozilla/cbindgen.git", rev = "cf94b56ef35d91f8420e8f89fee70074d39d068d" }
 cxx = { git = "https://github.com/facebookexperimental/cxx.git", rev = "870ebbecad0f6be394d4f9fb9bd62b551662651a" }
