@@ -16,7 +16,7 @@ dott_test(
     ]),
     deps = [
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/mononoke_cas_sync_job:mononoke_cas_sync_job",
+        "//eden/mononoke/jobs/cas_sync:mononoke_cas_sync_job",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],

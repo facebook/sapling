@@ -74,7 +74,7 @@ There are several possible further memory usage improvements to consider.
 - Interning `WrappedPath`, and `Node`
    - If paths still a major memory user even after interning,  intern MPathElement and/or intern to a prefix tree
 - Only returning the `NodeData` objects required. Currently we return `NodeData` unconditionally, however these usually don't dominate, except for very large manifests (large files return a stream which is conditionally consumed).
-- Return interator/stream of expanded nodes to avoid intermediate `Vec`'s from `collect()`
+- Return iterator/stream of expanded nodes to avoid intermediate `Vec`'s from `collect()`
 - Extending `bounded_traversal_stream` to reduced the size of pending queues as much as possible based on expected unfold size of a `Node`'s `NodeType`.
 - Extend the sampling approach (see below)
 
