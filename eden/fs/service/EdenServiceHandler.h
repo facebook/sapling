@@ -50,11 +50,16 @@ extern const char* const kServiceName;
 
 const int EXPENSIVE_GLOB_FILES_DURATION = 5;
 
+// Maximum expected time in seconds for a cancelled request to be removed from
+// the cancellation map. Used for verification metrics.
+const int CANCELLATION_VERIFICATION_THRESHOLD_SECONDS = 1;
+
 enum class RequestStatus { ACTIVE, REQUESTED, UNCANCELABLE };
 
 struct RequestCancellationInfo {
   std::optional<folly::CancellationSource> cancellationSource;
   RequestStatus status = RequestStatus::ACTIVE;
+  std::optional<std::chrono::steady_clock::time_point> cancellationRequestedAt;
 
   RequestCancellationInfo() = default;
 
@@ -74,6 +79,7 @@ struct RequestCancellationInfo {
   bool requestCancellation() {
     if (cancellationSource.has_value() && status == RequestStatus::ACTIVE) {
       status = RequestStatus::REQUESTED;
+      cancellationRequestedAt = std::chrono::steady_clock::now();
       cancellationSource->requestCancellation();
       return true;
     }

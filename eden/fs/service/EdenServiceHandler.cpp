@@ -6598,15 +6598,47 @@ EdenServiceHandler::getCancellationSource(uint64_t requestId) {
 
 bool EdenServiceHandler::removeCancellationSource(uint64_t requestId) {
   auto lockedStore = requestCancellationStore_.wlock();
-  auto erased = lockedStore->erase(requestId);
-  if (erased > 0) {
+  auto it = lockedStore->find(requestId);
+
+  if (it != lockedStore->end()) {
+    // Check if cancellation was requested and how long it took to remove
+    if (it->second.cancellationRequestedAt.has_value()) {
+      auto now = std::chrono::steady_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+          now - it->second.cancellationRequestedAt.value());
+
+      if (elapsed <=
+          std::chrono::seconds(CANCELLATION_VERIFICATION_THRESHOLD_SECONDS)) {
+        // Request cancelled within threshold - success
+        XLOGF(
+            DBG3,
+            "Request {} cancelled after {} ms (<= {} second)",
+            requestId,
+            elapsed.count(),
+            CANCELLATION_VERIFICATION_THRESHOLD_SECONDS);
+        server_->getStats()->increment(&ThriftStats::cancelRequestSuccess);
+      } else {
+        // Request took too long to cancel (>= threshold) - long running
+        XLOGF(
+            DBG3,
+            "Request {} cancelled after {} ms (> {} second)",
+            requestId,
+            elapsed.count(),
+            CANCELLATION_VERIFICATION_THRESHOLD_SECONDS);
+        server_->getStats()->increment(&ThriftStats::cancelRequesLongRunning);
+      }
+    }
+
+    lockedStore->erase(it);
     XLOGF(
         DBG6,
         "Removed cancellation source for request ID: {}. Remaining active: {}",
         requestId,
         lockedStore->size());
+    return true;
   }
-  return erased > 0;
+
+  return false;
 }
 
 bool EdenServiceHandler::requestCancellation(uint64_t requestId) {

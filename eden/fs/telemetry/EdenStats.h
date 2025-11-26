@@ -627,6 +627,11 @@ struct ThriftStats : StatsGroup<ThriftStats> {
       "thrift.EdenServiceHandler.glob_files.local_duration_us"};
   Duration globFilesLocalOffloadableDuration{
       "thrift.EdenServiceHandler.glob_files.local_offloadable_duration_us"};
+
+  Counter cancelRequestSuccess{
+      "thrift.EdenServiceHandler.cancel_request.success"};
+  Counter cancelRequesLongRunning{
+      "thrift.EdenServiceHandler.cancel_request.long_running"};
 };
 
 struct OverlayStats : StatsGroup<OverlayStats> {
