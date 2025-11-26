@@ -92,7 +92,7 @@ dott_test(
     dott_files = ["test-blobstore-healer.t"],
     deps = [
         "//eden/mononoke:blobimport",
-        "//eden/mononoke:blobstore_healer",
+        "//eden/mononoke/jobs/blobstore_healer:blobstore_healer",
     ],
 )
 
@@ -102,7 +102,7 @@ dott_test(
     use_mysql = True,
     deps = [
         "//eden/mononoke:blobimport",
-        "//eden/mononoke:blobstore_healer",
+        "//eden/mononoke/jobs/blobstore_healer:blobstore_healer",
     ],
 )
 

@@ -25,7 +25,7 @@ dott_test(
         "//eden/mononoke/tests/integration:urlencode",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
-        "//eden/mononoke:blobstore_healer",
+        "//eden/mononoke/jobs/blobstore_healer:blobstore_healer",
     ],
 )
 
