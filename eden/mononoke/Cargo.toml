@@ -356,6 +356,7 @@ members = [
   "gotham_ext",
   "hgproto",
   "hooks",
+  "jobs/walker",
   "lfs_import_lib",
   "lfs_protocol",
   "lfs_server",
@@ -494,7 +495,6 @@ members = [
   "tools/import",
   "tools/tail-to-cloudwatch",
   "tools/testtool",
-  "walker",
   "wireproto_handler",
 ]
 
