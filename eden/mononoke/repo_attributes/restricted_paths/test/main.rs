@@ -136,6 +136,13 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
                 .with_has_authorization(true)
                 .with_acls(vec![project_acl.clone()])
                 .build()?,
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["user_project/foo"]))
+                .with_full_path(NonRootMPath::new("user_project/foo/bar/a")?)
+                .with_has_authorization(true)
+                .with_acls(vec![project_acl.clone()])
+                .build()?,
         ])
         .build(fb)
         .await?
@@ -226,6 +233,13 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
             // Path fsnode access log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_full_path(NonRootMPath::new("restricted/dir/a")?)
+                .with_has_authorization(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
             base_sample
                 .clone()
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
@@ -341,6 +355,22 @@ async fn test_single_dir_many_restricted_changes(fb: FacebookInit) -> Result<()>
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
+            // Blame access log - for the directory containing both files
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_full_path(NonRootMPath::new("restricted/dir/a")?)
+                .with_has_authorization(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // Blame access log - for the directory containing both files
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_full_path(NonRootMPath::new("restricted/dir/b")?)
+                .with_has_authorization(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
         ])
         .build(fb)
         .await?
@@ -434,6 +464,14 @@ async fn test_single_dir_restricted_and_unrestricted(fb: FacebookInit) -> Result
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
             // Path fsnode access log - only for restricted directory
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_full_path(NonRootMPath::new("restricted/dir/a")?)
+                .with_has_authorization(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // Blame access logs
             base_sample
                 .clone()
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
@@ -588,6 +626,22 @@ async fn test_multiple_restricted_dirs(fb: FacebookInit) -> Result<()> {
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/one"]))
                 .with_manifest_id(expected_fsnode_id_one.clone())
                 .with_manifest_type(ManifestType::Fsnode)
+                .with_has_authorization(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // restricted/two access - path log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/two"]))
+                .with_full_path(NonRootMPath::new("restricted/two/b")?)
+                .with_has_authorization(false)
+                .with_acls(vec![another_acl.clone()])
+                .build()?,
+            // restricted/one access - path log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/one"]))
+                .with_full_path(NonRootMPath::new("restricted/one/a")?)
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
@@ -763,6 +817,23 @@ async fn test_multiple_restricted_dirs_with_partial_access(fb: FacebookInit) -> 
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/one"]))
                 .with_manifest_id(expected_fsnode_id_restricted.clone())
                 .with_manifest_type(ManifestType::Fsnode)
+                .with_has_authorization(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // user_project/foo access - path log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["user_project/foo"]))
+                .with_full_path(NonRootMPath::new("user_project/foo/b")?)
+                // User had access to this restricted path
+                .with_has_authorization(true)
+                .with_acls(vec![myusername_project_acl.clone()])
+                .build()?,
+            // restricted/one access - path log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/one"]))
+                .with_full_path(NonRootMPath::new("restricted/one/a")?)
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
@@ -959,6 +1030,18 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
                 .with_has_authorization(true)
                 .with_acls(vec![more_restricted_acl.clone(), project_acl.clone()])
                 .build()?,
+            // project/restricted access - path log (includes both ACLs)
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec![
+                    "project",
+                    "project/restricted",
+                ]))
+                .with_full_path(NonRootMPath::new("project/restricted/sensitive_file.txt")?)
+                // User has access to the broader project ACL
+                .with_has_authorization(true)
+                .with_acls(vec![more_restricted_acl.clone(), project_acl.clone()])
+                .build()?,
         ])
         .build(fb)
         .await?
@@ -1086,6 +1169,13 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted"]))
                 .with_manifest_id(expected_fsnode_id.clone())
                 .with_manifest_type(ManifestType::Fsnode)
+                .with_has_authorization(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted"]))
+                .with_full_path(NonRootMPath::new("restricted/foo/bar")?)
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,

@@ -190,6 +190,7 @@ impl MononokeScubaSampleBuilder {
                     "hg_tree_context_new_check_exists",
                     "changeset_path_context_new",
                     "changeset_path_content_context_new",
+                    "changeset_path_history_context_new",
                     "hg_augmented_manifest_write",
                     "hg_augmented_tree_context_new_check_exists",
                     "fsnodes_write",
