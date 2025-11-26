@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -383,10 +384,25 @@ impl RestrictedPathsTestData {
             .collect::<BTreeSet<_>>();
 
         let _path_contexts = cs_ctx
-            .paths_with_content(paths.into_iter())
+            .paths_with_content(paths.clone().into_iter())
             .await?
             .map_ok(|path_context| (path_context.path().clone(), path_context))
             .try_collect::<HashMap<_, _>>()
+            .await?;
+
+        let _path_last_modified = cs_ctx
+            .paths_with_history(paths.iter().cloned())
+            .await?
+            .map_ok(|context| async move {
+                let context_path = context.path().clone();
+                let last_modified = context.last_modified().await?;
+                Ok::<_, _>((context_path, last_modified))
+            })
+            .try_buffer_unordered(100)
+            .try_filter_map(|(path, maybe_last_changed)| async move {
+                Ok(maybe_last_changed.map(move |last_changed| (path, last_changed.id())))
+            })
+            .try_collect::<BTreeMap<_, _>>()
             .await?;
 
         // Get all entries in the manifest id store
@@ -402,8 +418,6 @@ impl RestrictedPathsTestData {
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
         let scuba_logs = deserialize_scuba_log_file(&self.log_file_path)?;
-
-        println!("scuba_logs: {scuba_logs:#?}");
 
         // Verify expectations if they were set
         if let Some(expected_manifest_entries) = self.expected_manifest_entries.clone() {
