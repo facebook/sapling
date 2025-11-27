@@ -14,46 +14,41 @@ Set up local hgrc and Mononoke config.
 Initialize test repo.
   $ hginit_treemanifest repo
   $ cd repo
-
-Populate test repo
-  $ echo "my commit message" > test.txt
-  $ hg commit -Aqm "add test.txt"
-  $ COMMIT_1=$(hg log -r . -T '{node}')
-  $ hg cp test.txt copy.txt
-  $ hg commit -Aqm "copy test.txt to test2.txt"
-  $ COMMIT_2=$(hg log -r . -T '{node}')
-  $ echo "this is the second file" > test2.txt
-  $ hg commit -Aqm "update test2.txt"
-  $ COMMIT_B1=$(hg log -r . -T '{node}')
-  $ hg co -q $COMMIT_2
-  $ echo "this is the first file" > test.txt
-  $ hg commit -Aqm "update test.txt"
-  $ COMMIT_B2=$(hg log -r . -T '{node}')
-  $ hg merge -q $COMMIT_B1
-  $ hg commit -m "merge commit!!!"
-  $ COMMIT_MERGE=$(hg log -r . -T '{node}')
-  $ echo "third file" > test3.txt
-  $ hg commit -Aqm "add test3.txt"
-  $ COMMIT_M1=$(hg log -r . -T '{node}')
-  $ hg bookmark "master_bookmark"
-  $ hg log -G -T '{node} {desc}\n' -r "all()"
-  @  b5bc5249412595662f15a1aca5ae50fec4a93628 add test3.txt
-  │
-  o    ce33edd793793f108fbe78aa90f3fedbeae09082 merge commit!!!
-  ├─╮
-  │ o  b6f0fa5a73b54553c0d4b6f483c8ef18efb3bde2 update test.txt
-  │ │
-  o │  45a08a9d95ee1053cf34273c8a427973d4ffd11a update test2.txt
-  ├─╯
-  o  c7dcf24fab3a8ab956273fa40d5cc44bc26ec655 copy test.txt to test2.txt
-  │
-  o  e83645968c8f2954b97a3c79ce5a6b90a464c54d add test.txt
-  
+  $ testtool_drawdag -R repo --print-hg-hashes <<EOF
+  > COMMIT_M1
+  > |
+  > COMMIT_MERGE
+  > |\
+  > | COMMIT_B2
+  > | |
+  > COMMIT_B1 |
+  > |/
+  > COMMIT_2
+  > |
+  > COMMIT_1
+  > # modify: COMMIT_1 "test.txt" "my commit message\n"
+  > # modify: COMMIT_2 "copy.txt" "my commit message\n"
+  > # modify: COMMIT_B1 "test2.txt" "this is the second file\n"
+  > # modify: COMMIT_B2 "test.txt" "this is the first file\n"
+  > # modify: COMMIT_M1 "test3.txt" "third file\n"
+  > # message: COMMIT_1 "add test.txt"
+  > # message: COMMIT_2 "copy test.txt to test2.txt"
+  > # message: COMMIT_B1 "update test2.txt"
+  > # message: COMMIT_B2 "update test.txt"
+  > # message: COMMIT_MERGE "merge commit!!!"
+  > # message: COMMIT_M1 "add test3.txt"
+  > # bookmark: COMMIT_M1 master_bookmark
+  > EOF
+  COMMIT_1=2c73711572dcc5fba150bc86885bed40a3950176
+  COMMIT_2=87d56d8162fe716b567ccf245ad56fa9a90b5069
+  COMMIT_B1=356dd8c2d65699b1b43e2be32547e33c80dca639
+  COMMIT_B2=b5a17706990db58956e666fe67766032a8938359
+  COMMIT_M1=7062f7f9196c60b81ecb10086c3f9049f9379cd7
+  COMMIT_MERGE=017843be220beb61aa305bbce56de076f029c7a8
 
 
-Blobimport test repo.
+Import test repo.
   $ cd ..
-  $ blobimport repo/.hg repo
 
 Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
@@ -70,15 +65,15 @@ Prepare request.
 Check files in response.
   $ hg debugapi mono:repo -e commitlocationtohash -f req --sort
   [{"count": 2,
-    "hgids": [bin("c7dcf24fab3a8ab956273fa40d5cc44bc26ec655"),
-              bin("e83645968c8f2954b97a3c79ce5a6b90a464c54d")],
+    "hgids": [bin("87d56d8162fe716b567ccf245ad56fa9a90b5069"),
+              bin("2c73711572dcc5fba150bc86885bed40a3950176")],
     "location": {"distance": 1,
-                 "descendant": bin("45a08a9d95ee1053cf34273c8a427973d4ffd11a")}},
+                 "descendant": bin("356dd8c2d65699b1b43e2be32547e33c80dca639")}},
    {"count": 1,
-    "hgids": [bin("e83645968c8f2954b97a3c79ce5a6b90a464c54d")],
+    "hgids": [bin("2c73711572dcc5fba150bc86885bed40a3950176")],
     "location": {"distance": 2,
-                 "descendant": bin("45a08a9d95ee1053cf34273c8a427973d4ffd11a")}},
+                 "descendant": bin("356dd8c2d65699b1b43e2be32547e33c80dca639")}},
    {"count": 1,
-    "hgids": [bin("ce33edd793793f108fbe78aa90f3fedbeae09082")],
+    "hgids": [bin("017843be220beb61aa305bbce56de076f029c7a8")],
     "location": {"distance": 1,
-                 "descendant": bin("b5bc5249412595662f15a1aca5ae50fec4a93628")}}]
+                 "descendant": bin("7062f7f9196c60b81ecb10086c3f9049f9379cd7")}}]
