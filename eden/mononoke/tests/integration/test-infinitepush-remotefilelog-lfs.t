@@ -13,17 +13,19 @@ Setup configuration
 Setup repo
   $ hginit_treemanifest repo
   $ cd repo
-  $ touch a && hg addremove && hg ci -q -ma
-  adding a
-  $ hg log -T '{short(node)}\n'
-  3903775176ed
-  $ hg bookmark master_bookmark -r tip
 
+Create commits using testtool drawdag
+  $ testtool_drawdag -R repo --no-default-files <<'EOF'
+  > A
+  > # modify: A "a" "a\n"
+  > # bookmark: A master_bookmark
+  > EOF
+  A=a420a36db20fa79a604ce354128048c7bdb7c25b881dfe71d37b7443f458a3f0
+
+Import and start mononoke
   $ cd "$TESTTMP"
-  $ blobimport repo/.hg repo
-
-Start Mononoke
-  $ start_and_wait_for_mononoke_server
+  $ mononoke
+  $ wait_for_mononoke
   $ lfs_uri="$(lfs_server)/repo"
 
 Setup common client configuration for these tests
@@ -57,8 +59,9 @@ Do infinitepush (aka commit cloud) push
   $ yes A 2>/dev/null | head -c 200 > large
   $ hg addremove -q
   $ hg ci -m new
+  $ NEW_COMMIT=$(hg log -r . -T '{node}')
   $ hg cloud backup
-  commitcloud: head '68394cf51f7e' hasn't been uploaded yet
+  commitcloud: head '5339cb7b16c1' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
   edenapi: queue 2 files for upload
   edenapi: uploaded 2 files
@@ -68,6 +71,6 @@ Do infinitepush (aka commit cloud) push
 
 Try to pull it
   $ cd "${TESTTMP}/repo-pull"
-  $ hg pull -r 68394cf51f7e96952fe832a3c05d17a9b49e8b4b
+  $ hg pull -r $NEW_COMMIT
   pulling from mono:repo
   searching for changes
