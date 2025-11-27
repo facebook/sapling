@@ -29,7 +29,7 @@ environment = { version = "0.1.0", path = "../cmdlib/environment" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
-filestore = { version = "0.1.0", path = "../filestore" }
+filestore = { version = "0.1.0", path = "../repo_attributes/filestore" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 git_ref_content_mapping = { version = "0.1.0", path = "../repo_attributes/git_ref_content_mapping" }
 git_source_of_truth = { version = "0.1.0", path = "../repo_attributes/git_source_of_truth" }

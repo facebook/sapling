@@ -45,7 +45,7 @@ bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-filestore = { version = "0.1.0", path = "../../filestore" }
+filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }

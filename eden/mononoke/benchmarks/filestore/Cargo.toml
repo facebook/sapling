@@ -24,7 +24,7 @@ cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../../server/context" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-filestore = { version = "0.1.0", path = "../../filestore" }
+filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }

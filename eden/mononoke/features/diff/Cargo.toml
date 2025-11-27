@@ -12,7 +12,7 @@ anyhow = "1.0.98"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.10", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
-filestore = { version = "0.1.0", path = "../../filestore" }
+filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 git_types = { version = "0.1.0", path = "../../git/git_types" }

@@ -20,7 +20,7 @@ commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/c
 content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-filestore = { version = "0.1.0", path = "../../filestore" }
+filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

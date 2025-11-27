@@ -39,7 +39,7 @@ rust_binary(
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data/mercurial_derivation:mercurial_derivation",
         "//eden/mononoke/edenapi_service:edenapi_service",
-        "//eden/mononoke/filestore:filestore",
+        "//eden/mononoke/repo_attributes/filestore:filestore",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",

@@ -14,9 +14,9 @@ rust_binary(
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
-        "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/lfs_import_lib:lfs_import_lib",
         "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/repo_attributes/filestore:filestore",
         "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
     ],
 )

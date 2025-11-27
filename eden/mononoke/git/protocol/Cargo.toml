@@ -24,7 +24,7 @@ commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/c
 commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph_types" }
 context = { version = "0.1.0", path = "../../server/context" }
 faster-hex = "0.6.1"
-filestore = { version = "0.1.0", path = "../../filestore" }
+filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_ref_content_mapping = { version = "0.1.0", path = "../../repo_attributes/git_ref_content_mapping" }
