@@ -136,50 +136,68 @@ Verification function
   > }
 
 setup hg server repos
-  $ function createfile { mkdir -p "$(dirname  $1)" && echo "$1" > "$1" && hg add -q "$1"; }
-  $ function create_first_post_move_commit {
-  >   echo 1 > "$1/filetoremove" && hg add "$1/filetoremove" && hg ci -m 'first post-move commit'
-  >   hg revert -r .^ "$1/filetoremove"
-  > }
-
-  $ cd $TESTTMP
-  $ hginit_treemanifest small-1
-  $ hginit_treemanifest small-2
-  $ cd "$TESTTMP/small-1"
-  $ echo 1 > file.txt
-  $ hg addremove -q && hg ci -q -m 'pre-move commit 1'
-  $ cd "$TESTTMP/small-2"
-  $ echo 2 > file.txt
-  $ hg addremove -q && hg ci -q -m 'pre-move commit 2'
-
   $ cd "$TESTTMP"
-  $ cp -r small-1 large
-  $ cd large
-  $ mkdir smallrepofolder1
-  $ hg mv file.txt smallrepofolder1/file.txt
-  $ hg ci -m 'move commit'
-  $ mkdir smallrepofolder2
-  $ echo 2 > smallrepofolder2/file.txt
-  $ hg addremove -q
-  $ hg ci -m "move commit for repo 2"
-  $ create_first_post_move_commit smallrepofolder1
-  $ hg book -r . master_bookmark
 
-  $ cd "$TESTTMP/small-1"
-  $ create_first_post_move_commit .
-  $ hg book -r . master_bookmark
+  $ quiet testtool_drawdag -R small-1 --no-default-files <<EOF
+  > S1_B
+  > |
+  > S1_A
+  > # message: S1_A "pre-move commit 1"
+  > # author: S1_A test
+  > # modify: S1_A file.txt "1\n"
+  > # message: S1_B "first post-move commit"
+  > # author: S1_B test
+  > # modify: S1_B filetoremove "1\n"
+  > # bookmark: S1_B master_bookmark
+  > EOF
 
-  $ cd "$TESTTMP/small-2"
-  $ hg book -r . master_bookmark
+  $ quiet testtool_drawdag -R small-2 --no-default-files <<EOF
+  > S2_A
+  > # message: S2_A "pre-move commit 2"
+  > # author: S2_A test
+  > # modify: S2_A file.txt "2\n"
+  > # bookmark: S2_A master_bookmark
+  > EOF
 
-blobimport hg servers repos into Mononoke repos
-  $ cd $TESTTMP
+  $ quiet testtool_drawdag -R large --no-default-files <<EOF
+  > L_D
+  > |
+  > L_C
+  > |
+  > L_B
+  > |
+  > L_A
+  > # message: L_A "pre-move commit 1"
+  > # author: L_A test
+  > # modify: L_A file.txt "1\n"
+  > # message: L_B "move commit"
+  > # author: L_B test
+  > # copy: L_B smallrepofolder1/file.txt "1\n" L_A file.txt
+  > # delete: L_B file.txt
+  > # message: L_C "move commit for repo 2"
+  > # author: L_C test
+  > # modify: L_C smallrepofolder1/file.txt "1\n"
+  > # modify: L_C smallrepofolder2/file.txt "2\n"
+  > # message: L_D "first post-move commit"
+  > # author: L_D test
+  > # modify: L_D smallrepofolder1/filetoremove "1\n"
+  > # modify: L_D smallrepofolder2/file.txt "2\n"
+  > # bookmark: L_D master_bookmark
+  > EOF
+
   $ REPOIDLARGE=0
   $ REPOIDSMALL1=1
   $ REPOIDSMALL2=2
-  $ REPOID="$REPOIDLARGE" blobimport large/.hg large
-  $ REPOID="$REPOIDSMALL1" blobimport small-1/.hg small-1
-  $ REPOID="$REPOIDSMALL2" blobimport small-2/.hg small-2
+  $ LARGE_MASTER_BONSAI=$L_D
+  $ SMALL1_MASTER_BONSAI=$S1_B
+  $ SMALL2_MASTER_BONSAI=$S2_A
+
+start mononoke server
+  $ start_and_wait_for_mononoke_server
+Make sure mapping is set up and we know what we don't have to sync initial entries
+  $ add_synced_commit_mapping_entry $REPOIDSMALL1 $SMALL1_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI TEST_VERSION_NAME_LIVE
+  $ add_synced_commit_mapping_entry $REPOIDSMALL2 $SMALL2_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI TEST_VERSION_NAME_LIVE
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($REPOIDSMALL1, 'backsync_from_$REPOIDLARGE', 1)";
 
 setup hg client repos
   $ function init_client() {
@@ -197,18 +215,6 @@ setup hg client repos
   $ cd "$TESTTMP"
   $ init_client large large-hg-client
 
-Setup helpers
-  $ LARGE_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id $REPOIDLARGE get master_bookmark)
-  $ SMALL1_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id $REPOIDSMALL1 get master_bookmark)
-  $ SMALL2_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id $REPOIDSMALL2 get master_bookmark)
-
-start mononoke server
-  $ start_and_wait_for_mononoke_server
-Make sure mapping is set up and we know what we don't have to sync initial entries
-  $ add_synced_commit_mapping_entry $REPOIDSMALL1 $SMALL1_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI TEST_VERSION_NAME_LIVE
-  $ add_synced_commit_mapping_entry $REPOIDSMALL2 $SMALL2_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI TEST_VERSION_NAME_LIVE
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($REPOIDSMALL1, 'backsync_from_$REPOIDLARGE', 1)";
-
 Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
   $ hg up -q master_bookmark
@@ -224,12 +230,12 @@ Normal pushrebase with one commit
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
-  o  first post-move commit [public;rev=3;bca7e9574548] remote/master_bookmark
+  o  first post-move commit [public;rev=3;7b4785fb6152] remote/master_bookmark
   │
   ~
   $ hg pull -q
   $ log -r master_bookmark
-  o  newcommit [public;rev=4;7c9a729ceb57] remote/master_bookmark
+  o  newcommit [public;rev=4;f47bdebb4c79] remote/master_bookmark
   │
   ~
 - compare the working copies
@@ -243,7 +249,7 @@ At the same time, the tailed repo gets new commits
   $ hg push --to master_bookmark -q
 -- tailer puts this commit into a large repo
   $ mononoke_x_repo_sync $REPOIDSMALL2 $REPOIDLARGE once --target-bookmark master_bookmark -B master_bookmark 2>&1 | grep "synced as"
-  * changeset 46d7f49c05a72a305692183a11274a0fbbdc4f8a4b53ca759fb3d257ba54184e synced as 3a9ffb4771519f86b79729a543da084c6a70ff385933aed540e2112a049a0697 * (glob)
+  * changeset * synced as * (glob)
 
 Force pushrebase should fail, because it pushes to a shared bookmark
   $ cd "$TESTTMP/small-hg-client-1"
@@ -260,7 +266,7 @@ Non-shared bookmark should work
   $ cd "$TESTTMP/large-hg-client"
   $ hg pull -q
   $ log -r bookprefix1/master_bookmark_non_fast_forward
-  o  non-forward move [public;rev=281474976710656;6b6a308437bb] remote/bookprefix1/master_bookmark_non_fast_forward
+  o  non-forward move [public;rev=281474976710656;1ebb56d88b81] remote/bookprefix1/master_bookmark_non_fast_forward
   │
   ~
 
@@ -278,9 +284,9 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   $ hg pull -q
   $ hg book --all
   no bookmarks set
-     remote/bookprefix1/master_bookmark_2 bca7e9574548
-     remote/bookprefix1/master_bookmark_non_fast_forward 6b6a308437bb
-     remote/master_bookmark    bf8e8d65212d
+     remote/bookprefix1/master_bookmark_2 7b4785fb6152
+     remote/bookprefix1/master_bookmark_non_fast_forward 1ebb56d88b81
+     remote/master_bookmark    1974f31a7d81
 - compare the working copies
   $ verify_wc $(hg log -r bookprefix1/master_bookmark_2 -T '{node}')
 
@@ -296,5 +302,5 @@ Delete a bookmark
   $ hg pull -q
   $ hg book --all
   no bookmarks set
-     remote/bookprefix1/master_bookmark_non_fast_forward 6b6a308437bb
-     remote/master_bookmark    bf8e8d65212d
+     remote/bookprefix1/master_bookmark_non_fast_forward 1ebb56d88b81
+     remote/master_bookmark    1974f31a7d81
