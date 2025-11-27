@@ -91,8 +91,8 @@ dott_test(
     name = "blobstore-healer",
     dott_files = ["test-blobstore-healer.t"],
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke/jobs/blobstore_healer:blobstore_healer",
+        "//eden/mononoke/tools/blobimport:blobimport",
     ],
 )
 
@@ -101,8 +101,8 @@ dott_test(
     dott_files = ["test-blobstore-healer.t"],
     use_mysql = True,
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke/jobs/blobstore_healer:blobstore_healer",
+        "//eden/mononoke/tools/blobimport:blobimport",
     ],
 )
 
@@ -153,9 +153,9 @@ dott_test(
             exclude = ["test-lfs-server*.t"],
         ),
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/lfs_server:lfs_server",
+        "//eden/mononoke/tools/blobimport:blobimport",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -178,8 +178,8 @@ dott_test(
     name = "packer",
     dott_files = ["test-packer.t"],
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:packer",
+        "//eden/mononoke/tools/blobimport:blobimport",
     ],
 )
 
@@ -187,9 +187,9 @@ dott_test(
     name = "redaction",
     dott_files = glob(["test-redaction*.t"]),
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/blobimport:blobimport",
     ],
 )
 
@@ -199,6 +199,7 @@ dott_test(
     deps = [
         "//eden/mononoke/jobs/walker:walker",
         "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/blobimport:blobimport",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

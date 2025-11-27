@@ -1,0 +1,34 @@
+load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("scm_server_infra")
+
+rust_binary(
+    name = "blobimport",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "tools/blobimport"},
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:ascii",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tracing",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/blobimport_lib:blobimport_lib",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mercurial:mercurial_revlog",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/bonsai_globalrev_mapping:bonsai_globalrev_mapping",
+        "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
+        "//eden/mononoke/repo_attributes/mutable_counters:mutable_counters",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/server/context:context",
+        "//manifold/clients/rust:manifold_client",
+    ],
+)

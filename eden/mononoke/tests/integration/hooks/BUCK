@@ -15,8 +15,8 @@ dott_test(
             exclude = ["test-hook-tailer.t"],
         ),
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/blobimport:blobimport",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
