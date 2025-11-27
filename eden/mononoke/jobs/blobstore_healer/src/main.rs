@@ -264,6 +264,7 @@ async fn setup_blobstores(
                 config_store,
                 &blobstore_factory::default_scrub_handler(),
                 None,
+                None,
             )
             .await?;
 

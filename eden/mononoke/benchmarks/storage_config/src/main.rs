@@ -96,6 +96,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
             config_store,
             &blobstore_factory::default_scrub_handler(),
             None,
+            None,
         )
         .await
         .context("Could not make blobstore")?;

@@ -455,6 +455,7 @@ impl RepoFactory {
             &self.env.config_store,
             &self.scrub_handler,
             self.blobstore_component_sampler.as_ref(),
+            None,
         )
         .watched()
         .await

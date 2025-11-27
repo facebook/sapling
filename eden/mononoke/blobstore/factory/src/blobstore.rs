@@ -180,40 +180,6 @@ impl BlobstoreOptions {
     }
 }
 
-/// Construct a blobstore according to the specification. The multiplexed blobstore
-/// needs an SQL DB for its queue, as does the MySQL blobstore.
-/// If `throttling.read_qps` or `throttling.write_qps` are Some then ThrottledBlob will be used to limit
-/// QPS to the underlying blobstore
-pub fn make_blobstore<'a>(
-    fb: FacebookInit,
-    blobconfig: BlobConfig,
-    mysql_options: &'a MysqlOptions,
-    readonly_storage: ReadOnlyStorage,
-    blobstore_options: &'a BlobstoreOptions,
-    config_store: &'a ConfigStore,
-    scrub_handler: &'a Arc<dyn ScrubHandler>,
-    component_sampler: Option<&'a Arc<dyn ComponentSamplingHandler>>,
-) -> BoxFuture<'a, Result<Arc<dyn Blobstore>, Error>> {
-    async move {
-        let store = make_blobstore_put_ops(
-            fb,
-            blobconfig,
-            mysql_options,
-            readonly_storage,
-            blobstore_options,
-            config_store,
-            scrub_handler,
-            component_sampler,
-            None,
-        )
-        .await?;
-        // Workaround for trait A {} trait B:A {} but Arc<dyn B> is not a Arc<dyn A>
-        // See https://github.com/rust-lang/rfcs/issues/2765 if interested
-        Ok(Arc::new(store) as Arc<dyn Blobstore>)
-    }
-    .boxed()
-}
-
 pub async fn make_sql_blobstore<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
@@ -478,8 +444,11 @@ pub async fn raw_blobstore_enumerable_with_unlink<'a>(
     }
 }
 
-// Constructs the Blobstore store implementations for low level blobstore access
-pub fn make_blobstore_put_ops<'a>(
+/// Construct a blobstore according to the specification. The multiplexed blobstore
+/// needs an SQL DB for its queue, as does the MySQL blobstore.
+/// If `throttling.read_qps` or `throttling.write_qps` are Some then ThrottledBlob will be used to limit
+/// QPS to the underlying blobstore
+pub fn make_blobstore<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     mysql_options: &'a MysqlOptions,
@@ -567,7 +536,7 @@ pub fn make_blobstore_put_ops<'a>(
                 scuba_sample_rate,
             } => {
                 needs_wrappers = false;
-                let store = make_blobstore_put_ops(
+                let store = make_blobstore(
                     fb,
                     *blobconfig,
                     mysql_options,
@@ -764,7 +733,7 @@ async fn setup_inner_blobstores<'a>(
             }
 
             async move {
-                let store = make_blobstore_put_ops(
+                let store = make_blobstore(
                     fb,
                     config,
                     mysql_options,

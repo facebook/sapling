@@ -41,7 +41,6 @@ pub use crate::args::BlobstoreArgs;
 pub use crate::blobstore::BlobstoreOptions;
 pub use crate::blobstore::make_blobstore;
 pub use crate::blobstore::make_blobstore_enumerable_with_unlink;
-pub use crate::blobstore::make_blobstore_put_ops;
 pub use crate::blobstore::make_manifold_blobstore_enumerable_with_unlink;
 pub use crate::blobstore::make_packblob;
 pub use crate::blobstore::make_sql_blobstore;

@@ -885,6 +885,7 @@ impl MononokeApp {
             &self.env.config_store,
             &blobstore_factory::default_scrub_handler(),
             None,
+            None,
         )
         .await?;
 
@@ -940,6 +941,7 @@ impl MononokeApp {
             &self.env.blobstore_options,
             &self.env.config_store,
             &blobstore_factory::default_scrub_handler(),
+            None,
             None,
         )
         .await?;
