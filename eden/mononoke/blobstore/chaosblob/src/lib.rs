@@ -12,7 +12,6 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -91,7 +90,7 @@ impl<T> ChaosBlobstore<T> {
 }
 
 #[async_trait]
-impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
+impl<T: Blobstore> Blobstore for ChaosBlobstore<T> {
     #[inline]
     async fn get<'a>(
         &'a self,
@@ -116,6 +115,27 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
     ) -> Result<()> {
         self.put_impl(ctx, key, value, None).await?;
         Ok(())
+    }
+
+    #[inline]
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, Some(put_behaviour)).await
+    }
+
+    #[inline]
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, None).await
     }
 
     #[inline]
@@ -145,7 +165,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
     }
 }
 
-impl<T: BlobstorePutOps> ChaosBlobstore<T> {
+impl<T: Blobstore> ChaosBlobstore<T> {
     async fn put_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -169,28 +189,6 @@ impl<T: BlobstorePutOps> ChaosBlobstore<T> {
             None => Err(ErrorKind::InjectedChaosPut(key).into()),
             Some(put) => put.await,
         }
-    }
-}
-
-#[async_trait]
-impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
-    async fn put_explicit<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
-    ) -> Result<OverwriteStatus> {
-        self.put_impl(ctx, key, value, Some(put_behaviour)).await
-    }
-
-    async fn put_with_status<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<OverwriteStatus> {
-        self.put_impl(ctx, key, value, None).await
     }
 }
 

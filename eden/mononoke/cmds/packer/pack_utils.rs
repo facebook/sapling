@@ -14,7 +14,6 @@ use anyhow::Result;
 use anyhow::anyhow;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
-use blobstore::BlobstorePutOps;
 use context::CoreContext;
 use futures::future::FutureExt;
 use futures::stream::FuturesUnordered;
@@ -99,7 +98,7 @@ async fn find_best_pack(
     Ok(container)
 }
 
-async fn fetch_blobs<T: BlobstorePutOps>(
+async fn fetch_blobs<T: Blobstore>(
     ctx: &CoreContext,
     blobstore: &PackBlob<T>,
     repo_prefix: &str,
@@ -124,7 +123,7 @@ async fn fetch_blobs<T: BlobstorePutOps>(
 }
 
 /// Given a list of keys to repack, convert them to a single pack with retries
-pub async fn repack_keys_with_retry<T: BlobstorePutOps>(
+pub async fn repack_keys_with_retry<T: Blobstore>(
     ctx: &CoreContext,
     blobstore: &PackBlob<T>,
     pack_prefix: &str,
@@ -159,7 +158,7 @@ pub async fn repack_keys_with_retry<T: BlobstorePutOps>(
 }
 
 /// Given a list of keys to repack, convert them to a single pack
-pub async fn repack_keys<T: BlobstorePutOps>(
+pub async fn repack_keys<T: Blobstore>(
     ctx: &CoreContext,
     blobstore: &PackBlob<T>,
     pack_prefix: &str,

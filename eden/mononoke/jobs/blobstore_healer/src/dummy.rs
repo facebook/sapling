@@ -13,6 +13,8 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use blobstore_sync_queue::BlobstoreWal;
 use blobstore_sync_queue::BlobstoreWalEntry;
 use context::CoreContext;
@@ -56,6 +58,27 @@ impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
     ) -> Result<()> {
         info!("I would have written blob {} of size {}", key, value.len());
         Ok(())
+    }
+
+    async fn put_explicit<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        _put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        info!("I would have written blob {} of size {}", key, value.len());
+        Ok(OverwriteStatus::NotChecked)
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        info!("I would have written blob {} of size {}", key, value.len());
+        Ok(OverwriteStatus::NotChecked)
     }
 
     async fn is_present<'a>(

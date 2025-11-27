@@ -698,6 +698,8 @@ mod test {
     use blobstore::Blobstore;
     use blobstore::BlobstoreBytes;
     use blobstore::BlobstoreGetData;
+    use blobstore::OverwriteStatus;
+    use blobstore::PutBehaviour;
     use bytes::Bytes;
     use context::CoreContext;
     use fbinit::FacebookInit;
@@ -1049,6 +1051,27 @@ mod test {
             value: BlobstoreBytes,
         ) -> Result<(), Error> {
             self.inner.put(ctx, key, value).await
+        }
+
+        async fn put_explicit<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+            put_behaviour: PutBehaviour,
+        ) -> Result<OverwriteStatus, Error> {
+            self.inner
+                .put_explicit(ctx, key, value, put_behaviour)
+                .await
+        }
+
+        async fn put_with_status<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+        ) -> Result<OverwriteStatus, Error> {
+            self.inner.put_with_status(ctx, key, value).await
         }
 
         async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<(), Error> {

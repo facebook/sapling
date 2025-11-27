@@ -14,7 +14,6 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use blobstore::Blobstore;
-use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use borrowed::borrowed;
@@ -30,7 +29,7 @@ use sqlblob::get_test_config_store;
 use strum::IntoEnumIterator;
 use tempfile::TempDir;
 
-async fn overwrite<B: Blobstore + BlobstorePutOps>(
+async fn overwrite<B: Blobstore>(
     fb: FacebookInit,
     blobstore: B,
     has_ctime: bool,

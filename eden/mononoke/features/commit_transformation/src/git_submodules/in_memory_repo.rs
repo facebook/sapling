@@ -16,6 +16,8 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
 use blobstore::KeyedBlobstore;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use bonsai_hg_mapping::MemWritesBonsaiHgMapping;
 use cacheblob::MemWritesBlobstore;
 use context::CoreContext;
@@ -151,6 +153,27 @@ impl<T: Blobstore + Clone, R: Repo + Clone> Blobstore for MemWritesBlobstoreWith
     ) -> Result<()> {
         self.inner.put(ctx, key, value).await?;
         Ok(())
+    }
+
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        self.inner
+            .put_explicit(ctx, key, value, put_behaviour)
+            .await
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        self.inner.put_with_status(ctx, key, value).await
     }
 
     async fn get<'a>(

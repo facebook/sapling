@@ -14,6 +14,8 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreBytes;
 use blobstore::BlobstoreGetData;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use blobstore_sync_queue::SqlBlobstoreWalBuilder;
 use bytes::Bytes;
 use context::CoreContext;
@@ -51,6 +53,29 @@ impl Blobstore for GoodBlob {
         Ok(())
     }
 
+    async fn put_explicit<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        _put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        let mut inner = self.inner.lock().expect("lock poison");
+        inner.insert(key, value);
+        Ok(OverwriteStatus::NotChecked)
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        let mut inner = self.inner.lock().expect("lock poison");
+        inner.insert(key, value);
+        Ok(OverwriteStatus::NotChecked)
+    }
+
     async fn get<'a>(
         &'a self,
         _ctx: &'a CoreContext,
@@ -85,6 +110,25 @@ impl Blobstore for FailingBlob {
         _key: String,
         _value: BlobstoreBytes,
     ) -> Result<()> {
+        anyhow::bail!("Failed put!");
+    }
+
+    async fn put_explicit<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _key: String,
+        _value: BlobstoreBytes,
+        _put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        anyhow::bail!("Failed put!");
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _key: String,
+        _value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
         anyhow::bail!("Failed put!");
     }
 

@@ -15,7 +15,6 @@ use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreKeyParam;
 use blobstore::BlobstoreKeySource;
 use blobstore::BlobstoreMetadata;
-use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -65,7 +64,7 @@ impl<T> PackBlob<T> {
 pub const ENVELOPE_SUFFIX: &str = ".pack";
 
 #[async_trait]
-impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
+impl<T: Blobstore> Blobstore for PackBlob<T> {
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -106,8 +105,27 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
+        self.put_with_status(ctx, key, value).await?;
         Ok(())
+    }
+
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, Some(put_behaviour)).await
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, None).await
     }
 
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
@@ -116,7 +134,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
     }
 }
 
-impl<T: BlobstorePutOps> PackBlob<T> {
+impl<T: Blobstore> PackBlob<T> {
     async fn put_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -146,29 +164,7 @@ impl<T: BlobstorePutOps> PackBlob<T> {
 }
 
 #[async_trait]
-impl<B: BlobstorePutOps> BlobstorePutOps for PackBlob<B> {
-    async fn put_explicit<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
-    ) -> Result<OverwriteStatus> {
-        self.put_impl(ctx, key, value, Some(put_behaviour)).await
-    }
-
-    async fn put_with_status<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<OverwriteStatus> {
-        self.put_impl(ctx, key, value, None).await
-    }
-}
-
-#[async_trait]
-impl<B: BlobstoreKeySource + BlobstorePutOps> BlobstoreKeySource for PackBlob<B> {
+impl<B: BlobstoreKeySource> BlobstoreKeySource for PackBlob<B> {
     async fn enumerate<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -194,7 +190,7 @@ impl<B: BlobstoreKeySource + BlobstorePutOps> BlobstoreKeySource for PackBlob<B>
     }
 }
 
-impl<T: Blobstore + BlobstorePutOps> PackBlob<T> {
+impl<T: Blobstore> PackBlob<T> {
     /// Put packed content, returning the pack's key if successful.
     ///
     /// `key_prefix` is prefixed to all keys within the pack and used to

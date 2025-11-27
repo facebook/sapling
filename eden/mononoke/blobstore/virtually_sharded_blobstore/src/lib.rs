@@ -31,6 +31,8 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreMetadata;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use bytes::Buf;
 use bytes::BufMut;
 use bytes::Bytes;
@@ -575,6 +577,118 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
         mononoke::spawn_task(fut).await?
     }
 
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        cloned!(self.inner, ctx);
+
+        STATS::puts.add_value(1);
+        let cache_key = CacheKey::from_key(&key);
+        let presence = PresenceData::from_put(&value);
+
+        // Only deduplicate if we're not forcing an overwrite
+        if !put_behaviour.should_overwrite() {
+            if let Ok(Some(KnownToExist)) = inner.cache.check_presence(&cache_key, presence) {
+                report_deduplicated_put(&ctx, &key);
+                return Ok(OverwriteStatus::Prevented);
+            }
+        }
+
+        let fut = async move {
+            let ticket = Ticket::new(&ctx, AccessReason::Write);
+
+            let acq = inner
+                .write_shards
+                .acquire(&ctx, &key, ticket, || {
+                    if put_behaviour.should_overwrite() {
+                        Ok(None)
+                    } else {
+                        inner.cache.check_presence(&cache_key, presence)
+                    }
+                })
+                .await?;
+
+            let permit = match acq {
+                SemaphoreAcquisition::Cancelled(KnownToExist, ticket) => {
+                    report_deduplicated_put(&ctx, &key);
+                    ticket.cancel();
+                    return Ok(OverwriteStatus::Prevented);
+                }
+                SemaphoreAcquisition::Acquired(permit) => permit,
+            };
+
+            scopeguard::defer! { drop(permit) };
+
+            let status = inner
+                .blobstore
+                .put_explicit(&ctx, key, value.clone(), put_behaviour)
+                .await?;
+
+            let value = BlobstoreGetData::new(BlobstoreMetadata::default(), value);
+            let _ = inner.cache.set_in_cache(&cache_key, presence, value);
+
+            Ok(status)
+        };
+
+        mononoke::spawn_task(fut).await?
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        cloned!(self.inner, ctx);
+
+        STATS::puts.add_value(1);
+        let cache_key = CacheKey::from_key(&key);
+        let presence = PresenceData::from_put(&value);
+
+        if let Ok(Some(KnownToExist)) = inner.cache.check_presence(&cache_key, presence) {
+            report_deduplicated_put(&ctx, &key);
+            return Ok(OverwriteStatus::Prevented);
+        }
+
+        let fut = async move {
+            let ticket = Ticket::new(&ctx, AccessReason::Write);
+
+            let acq = inner
+                .write_shards
+                .acquire(&ctx, &key, ticket, || {
+                    inner.cache.check_presence(&cache_key, presence)
+                })
+                .await?;
+
+            let permit = match acq {
+                SemaphoreAcquisition::Cancelled(KnownToExist, ticket) => {
+                    report_deduplicated_put(&ctx, &key);
+                    ticket.cancel();
+                    return Ok(OverwriteStatus::Prevented);
+                }
+                SemaphoreAcquisition::Acquired(permit) => permit,
+            };
+
+            scopeguard::defer! { drop(permit) };
+
+            let status = inner
+                .blobstore
+                .put_with_status(&ctx, key, value.clone())
+                .await?;
+
+            let value = BlobstoreGetData::new(BlobstoreMetadata::default(), value);
+            let _ = inner.cache.set_in_cache(&cache_key, presence, value);
+
+            Ok(status)
+        };
+
+        mononoke::spawn_task(fut).await?
+    }
+
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -786,6 +900,33 @@ mod test {
                 blob.puts += 1;
                 blob.data = Some(BlobData::Bytes(value));
                 Ok(())
+            }
+
+            async fn put_explicit<'a>(
+                &'a self,
+                _ctx: &'a CoreContext,
+                key: String,
+                value: BlobstoreBytes,
+                _put_behaviour: PutBehaviour,
+            ) -> Result<OverwriteStatus> {
+                let mut data = self.data.lock().unwrap();
+                let blob = data.entry(key).or_default();
+                blob.puts += 1;
+                blob.data = Some(BlobData::Bytes(value));
+                Ok(OverwriteStatus::NotChecked)
+            }
+
+            async fn put_with_status<'a>(
+                &'a self,
+                _ctx: &'a CoreContext,
+                key: String,
+                value: BlobstoreBytes,
+            ) -> Result<OverwriteStatus> {
+                let mut data = self.data.lock().unwrap();
+                let blob = data.entry(key).or_default();
+                blob.puts += 1;
+                blob.data = Some(BlobData::Bytes(value));
+                Ok(OverwriteStatus::NotChecked)
             }
 
             async fn get<'a>(
@@ -1229,6 +1370,25 @@ mod test {
                 _value: BlobstoreBytes,
             ) -> Result<()> {
                 Ok(())
+            }
+
+            async fn put_explicit<'a>(
+                &'a self,
+                _ctx: &'a CoreContext,
+                _key: String,
+                _value: BlobstoreBytes,
+                _put_behaviour: PutBehaviour,
+            ) -> Result<OverwriteStatus> {
+                Ok(OverwriteStatus::NotChecked)
+            }
+
+            async fn put_with_status<'a>(
+                &'a self,
+                _ctx: &'a CoreContext,
+                _key: String,
+                _value: BlobstoreBytes,
+            ) -> Result<OverwriteStatus> {
+                Ok(OverwriteStatus::NotChecked)
             }
 
             async fn is_present<'a>(

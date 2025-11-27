@@ -13,7 +13,6 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstorePutOps;
 use blobstore::KeyedBlobstore;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
@@ -68,7 +67,7 @@ impl<B> DelayedBlobstore<B> {
 }
 
 #[async_trait]
-impl<B: BlobstorePutOps> Blobstore for DelayedBlobstore<B> {
+impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -84,8 +83,8 @@ impl<B: BlobstorePutOps> Blobstore for DelayedBlobstore<B> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        self.put_impl(ctx, key, value, None).await?;
-        Ok(())
+        delay(self.put_dist).await;
+        self.inner.put(ctx, key, value).await
     }
 
     async fn is_present<'a>(
@@ -101,30 +100,7 @@ impl<B: BlobstorePutOps> Blobstore for DelayedBlobstore<B> {
         delay(self.put_dist).await;
         self.inner.unlink(ctx, key).await
     }
-}
 
-impl<T: BlobstorePutOps> DelayedBlobstore<T> {
-    async fn put_impl<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-        put_behaviour: Option<PutBehaviour>,
-    ) -> Result<OverwriteStatus> {
-        delay(self.put_dist).await;
-
-        if let Some(put_behaviour) = put_behaviour {
-            self.inner
-                .put_explicit(ctx, key.clone(), value, put_behaviour)
-                .await
-        } else {
-            self.inner.put_with_status(ctx, key.clone(), value).await
-        }
-    }
-}
-
-#[async_trait]
-impl<T: BlobstorePutOps> BlobstorePutOps for DelayedBlobstore<T> {
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -141,7 +117,28 @@ impl<T: BlobstorePutOps> BlobstorePutOps for DelayedBlobstore<T> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
+        delay(self.put_dist).await;
         self.put_impl(ctx, key, value, None).await
+    }
+}
+
+impl<T: Blobstore> DelayedBlobstore<T> {
+    async fn put_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: Option<PutBehaviour>,
+    ) -> Result<OverwriteStatus> {
+        delay(self.put_dist).await;
+
+        if let Some(put_behaviour) = put_behaviour {
+            self.inner
+                .put_explicit(ctx, key.clone(), value, put_behaviour)
+                .await
+        } else {
+            self.inner.put_with_status(ctx, key.clone(), value).await
+        }
     }
 }
 

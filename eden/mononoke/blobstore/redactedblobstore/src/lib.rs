@@ -18,7 +18,6 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -238,10 +237,7 @@ impl<B: Blobstore> Blobstore for RedactedBlobstoreInner<B> {
         let blobstore = self.access_blobstore(ctx, key, config::PUT_OPERATION)?;
         blobstore.unlink(ctx, key).await
     }
-}
 
-#[async_trait]
-impl<B: BlobstorePutOps> BlobstorePutOps for RedactedBlobstoreInner<B> {
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -252,6 +248,7 @@ impl<B: BlobstorePutOps> BlobstorePutOps for RedactedBlobstoreInner<B> {
         let blobstore = self.access_blobstore(ctx, &key, config::PUT_OPERATION)?;
         blobstore.put_explicit(ctx, key, value, put_behaviour).await
     }
+
     async fn put_with_status<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -291,10 +288,7 @@ impl<B: Blobstore> Blobstore for RedactedBlobstore<B> {
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         self.inner.unlink(ctx, key).await
     }
-}
 
-#[async_trait]
-impl<B: BlobstorePutOps> BlobstorePutOps for RedactedBlobstore<B> {
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -306,6 +300,7 @@ impl<B: BlobstorePutOps> BlobstorePutOps for RedactedBlobstore<B> {
             .put_explicit(ctx, key, value, put_behaviour)
             .await
     }
+
     async fn put_with_status<'a>(
         &'a self,
         ctx: &'a CoreContext,

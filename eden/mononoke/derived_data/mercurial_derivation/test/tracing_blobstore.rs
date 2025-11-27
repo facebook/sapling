@@ -13,6 +13,8 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
@@ -54,6 +56,27 @@ impl<T: Blobstore> Blobstore for TracingBlobstore<T> {
             .expect("poisoned lock")
             .push(key.to_owned());
         self.inner.get(ctx, key).await
+    }
+
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        self.inner
+            .put_explicit(ctx, key, value, put_behaviour)
+            .await
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        self.inner.put_with_status(ctx, key, value).await
     }
 
     async fn put<'a>(

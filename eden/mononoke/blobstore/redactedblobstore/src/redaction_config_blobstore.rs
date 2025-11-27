@@ -12,6 +12,8 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use prefixblob::PrefixBlobstore;
@@ -60,5 +62,24 @@ impl Blobstore for RedactionConfigBlobstore {
 
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         self.0.unlink(ctx, key).await
+    }
+
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        self.0.put_explicit(ctx, key, value, put_behaviour).await
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        self.0.put_with_status(ctx, key, value).await
     }
 }

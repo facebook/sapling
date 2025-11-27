@@ -19,7 +19,6 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreMetadata;
-use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use blobstore_sync_queue::BlobstoreWal;
@@ -134,25 +133,6 @@ impl Blobstore for Tickable<(BlobstoreBytes, u64)> {
         }))
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
-        Ok(())
-    }
-
-    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        self.on_tick().await?;
-        self.remove(key);
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl BlobstorePutOps for Tickable<(BlobstoreBytes, u64)> {
     async fn put_explicit<'a>(
         &'a self,
         _ctx: &'a CoreContext,
@@ -178,6 +158,12 @@ impl BlobstorePutOps for Tickable<(BlobstoreBytes, u64)> {
     ) -> Result<OverwriteStatus> {
         self.put_explicit(ctx, key, value, PutBehaviour::Overwrite)
             .await
+    }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.on_tick().await?;
+        self.remove(key);
+        Ok(())
     }
 }
 

@@ -22,7 +22,6 @@ use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreKeyParam;
 use blobstore::BlobstoreKeySource;
-use blobstore::BlobstorePutOps;
 use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use blobstore::KeyedBlobstore;
 use blobstore::OverwriteStatus;
@@ -133,7 +132,18 @@ impl Default for Memblob {
 }
 
 #[async_trait]
-impl BlobstorePutOps for Memblob {
+impl Blobstore for Memblob {
+    async fn get<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let state = self.state.clone();
+
+        let inner = state.lock().expect("lock poison");
+        Ok(inner.get(key).map(|bytes| bytes.clone().into()))
+    }
+
     async fn put_explicit<'a>(
         &'a self,
         _ctx: &'a CoreContext,
@@ -154,30 +164,6 @@ impl BlobstorePutOps for Memblob {
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         self.put_explicit(ctx, key, value, self.put_behaviour).await
-    }
-}
-
-#[async_trait]
-impl Blobstore for Memblob {
-    async fn get<'a>(
-        &'a self,
-        _ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<Option<BlobstoreGetData>> {
-        let state = self.state.clone();
-
-        let inner = state.lock().expect("lock poison");
-        Ok(inner.get(key).map(|bytes| bytes.clone().into()))
-    }
-
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
-        Ok(())
     }
 
     async fn copy<'a>(

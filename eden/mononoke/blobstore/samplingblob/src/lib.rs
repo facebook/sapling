@@ -12,7 +12,6 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -91,6 +90,36 @@ impl<T: Blobstore> Blobstore for SamplingBlobstore<T> {
     }
 
     #[inline]
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        let sample_res = self.handler.sample_put(ctx, &key, &value);
+        let status = self
+            .inner
+            .put_explicit(ctx, key, value, put_behaviour)
+            .await?;
+        sample_res?;
+        Ok(status)
+    }
+
+    #[inline]
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        let sample_res = self.handler.sample_put(ctx, &key, &value);
+        let status = self.inner.put_with_status(ctx, key, value).await?;
+        sample_res?;
+        Ok(status)
+    }
+
+    #[inline]
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -161,11 +190,7 @@ pub struct SamplingBlobstoreSamplingComponentBlobstore<T> {
 
 impl<T: std::fmt::Display> std::fmt::Display for SamplingBlobstoreSamplingComponentBlobstore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "SamplingBlobstorePutOps<{}, {:?}>",
-            &self.inner, self.inner_id
-        )
+        write!(f, "SamplingBlobstore<{}, {:?}>", &self.inner, self.inner_id)
     }
 }
 
@@ -184,7 +209,7 @@ impl<T> SamplingBlobstoreSamplingComponentBlobstore<T> {
 }
 
 #[async_trait]
-impl<T: Blobstore + BlobstorePutOps> Blobstore for SamplingBlobstoreSamplingComponentBlobstore<T> {
+impl<T: Blobstore> Blobstore for SamplingBlobstoreSamplingComponentBlobstore<T> {
     #[inline]
     async fn get<'a>(
         &'a self,
@@ -210,6 +235,31 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for SamplingBlobstoreSamplingComp
     }
 
     #[inline]
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        self.handler.sample_put(ctx, &key, &value, self.inner_id)?;
+        self.inner
+            .put_explicit(ctx, key, value, put_behaviour)
+            .await
+    }
+
+    #[inline]
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        self.handler.sample_put(ctx, &key, &value, self.inner_id)?;
+        self.inner.put_with_status(ctx, key, value).await
+    }
+
+    #[inline]
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -225,32 +275,6 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for SamplingBlobstoreSamplingComp
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         self.handler.sample_unlink(ctx, key, self.inner_id)?;
         self.inner.unlink(ctx, key).await
-    }
-}
-
-#[async_trait]
-impl<T: BlobstorePutOps> BlobstorePutOps for SamplingBlobstoreSamplingComponentBlobstore<T> {
-    async fn put_explicit<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
-    ) -> Result<OverwriteStatus> {
-        self.handler.sample_put(ctx, &key, &value, self.inner_id)?;
-        self.inner
-            .put_explicit(ctx, key, value, put_behaviour)
-            .await
-    }
-
-    async fn put_with_status<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<OverwriteStatus> {
-        self.handler.sample_put(ctx, &key, &value, self.inner_id)?;
-        self.inner.put_with_status(ctx, key, value).await
     }
 }
 

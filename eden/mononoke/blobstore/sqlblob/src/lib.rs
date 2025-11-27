@@ -39,7 +39,6 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreMetadata;
-use blobstore::BlobstorePutOps;
 use blobstore::CountedBlobstore;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
@@ -593,65 +592,6 @@ impl Blobstore for Sqlblob {
         self.get_impl(ctx, key).await
     }
 
-    async fn is_present<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<BlobstoreIsPresent> {
-        let present = self.data_store.is_present(ctx, key).await?;
-        Ok(if present {
-            BlobstoreIsPresent::Present
-        } else {
-            BlobstoreIsPresent::Absent
-        })
-    }
-
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
-        Ok(())
-    }
-
-    async fn copy<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        old_key: &'a str,
-        new_key: String,
-    ) -> Result<()> {
-        let existing_data = self
-            .data_store
-            .get(ctx, old_key)
-            .await?
-            .ok_or_else(|| format_err!("Key {} does not exist in the blobstore", old_key))?;
-        self.data_store
-            .put(
-                ctx,
-                &new_key,
-                existing_data.ctime,
-                &existing_data.id,
-                existing_data.count,
-                existing_data.chunking_method,
-            )
-            .await
-    }
-
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        if !self.data_store.is_present(ctx, key).await? {
-            bail!(
-                "Sqlblob::unlink: key {} does not exist in the blobstore",
-                key
-            )
-        };
-        self.data_store.unlink(ctx, key).await
-    }
-}
-
-#[async_trait]
-impl BlobstorePutOps for Sqlblob {
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -793,6 +733,52 @@ impl BlobstorePutOps for Sqlblob {
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
         self.put_explicit(ctx, key, value, self.put_behaviour).await
+    }
+
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        let present = self.data_store.is_present(ctx, key).await?;
+        Ok(if present {
+            BlobstoreIsPresent::Present
+        } else {
+            BlobstoreIsPresent::Absent
+        })
+    }
+
+    async fn copy<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        old_key: &'a str,
+        new_key: String,
+    ) -> Result<()> {
+        let existing_data = self
+            .data_store
+            .get(ctx, old_key)
+            .await?
+            .ok_or_else(|| format_err!("Key {} does not exist in the blobstore", old_key))?;
+        self.data_store
+            .put(
+                ctx,
+                &new_key,
+                existing_data.ctime,
+                &existing_data.id,
+                existing_data.count,
+                existing_data.chunking_method,
+            )
+            .await
+    }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        if !self.data_store.is_present(ctx, key).await? {
+            bail!(
+                "Sqlblob::unlink: key {} does not exist in the blobstore",
+                key
+            )
+        };
+        self.data_store.unlink(ctx, key).await
     }
 }
 

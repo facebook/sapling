@@ -13,6 +13,8 @@ use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
 use blobstore::CountedBlobstore;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use cloned::cloned;
 use context::CoreContext;
 use context::PerfCounterType;
@@ -255,6 +257,65 @@ where
 
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         self.blobstore.unlink(ctx, key).await
+    }
+
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        let can_put = self.take_put_lease(&key).await;
+        if can_put {
+            let status = self
+                .blobstore
+                .put_explicit(ctx, key.clone(), value.clone(), put_behaviour)
+                .await?;
+
+            cloned!(self.cache, self.lease);
+            let cache_put = async move {
+                cache.put(&key, value.into()).await;
+                lease.release_lease(&key).await
+            };
+            if self.lazy_cache_put {
+                mononoke::spawn_task(cache_put);
+            } else {
+                let _ = cache_put.await;
+            }
+            Ok(status)
+        } else {
+            Ok(OverwriteStatus::NotChecked)
+        }
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        let can_put = self.take_put_lease(&key).await;
+        if can_put {
+            let status = self
+                .blobstore
+                .put_with_status(ctx, key.clone(), value.clone())
+                .await?;
+
+            cloned!(self.cache, self.lease);
+            let cache_put = async move {
+                cache.put(&key, value.into()).await;
+                lease.release_lease(&key).await
+            };
+            if self.lazy_cache_put {
+                mononoke::spawn_task(cache_put);
+            } else {
+                let _ = cache_put.await;
+            }
+            Ok(status)
+        } else {
+            Ok(OverwriteStatus::NotChecked)
+        }
     }
 }
 

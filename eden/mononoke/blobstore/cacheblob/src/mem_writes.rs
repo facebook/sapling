@@ -19,7 +19,10 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
+use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use blobstore::KeyedBlobstore;
+use blobstore::OverwriteStatus;
+use blobstore::PutBehaviour;
 use context::CoreContext;
 use futures::future;
 use futures::stream::StreamExt;
@@ -65,6 +68,41 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
             cache: Default::default(),
             flush_mutex: Default::default(),
             no_access_to_inner: Default::default(),
+        }
+    }
+
+    /// Internal implementation for put operations that respects PutBehaviour
+    async fn put_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        match put_behaviour {
+            PutBehaviour::Overwrite => {
+                // Just insert without checking
+                self.cache.with(|cache| cache.live.insert(key, value));
+                Ok(OverwriteStatus::NotChecked)
+            }
+            PutBehaviour::IfAbsent | PutBehaviour::OverwriteAndLog => {
+                // Check if key is already present
+                let is_present = self.is_present(ctx, &key).await?;
+                if is_present.assume_not_found_if_unsure() {
+                    if put_behaviour.should_overwrite() {
+                        // OverwriteAndLog: overwrite and report it
+                        self.cache.with(|cache| cache.live.insert(key, value));
+                        Ok(OverwriteStatus::Overwrote)
+                    } else {
+                        // IfAbsent: don't overwrite
+                        Ok(OverwriteStatus::Prevented)
+                    }
+                } else {
+                    // Key doesn't exist, insert it
+                    self.cache.with(|cache| cache.live.insert(key, value));
+                    Ok(OverwriteStatus::New)
+                }
+            }
         }
     }
 
@@ -158,8 +196,53 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
         }
     }
 
+    async fn is_present<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<BlobstoreIsPresent> {
+        // Check cache first
+        let in_cache = self.cache.with(|cache| {
+            cache.live.contains_key(key)
+                || cache
+                    .flushing
+                    .as_ref()
+                    .is_some_and(|flushing| flushing.contains_key(key))
+        });
+
+        if in_cache {
+            return Ok(BlobstoreIsPresent::Present);
+        }
+
+        // Check inner blobstore if access is allowed
+        if self.no_access_to_inner.load(Ordering::Relaxed) {
+            return Ok(BlobstoreIsPresent::Absent);
+        }
+
+        self.inner.is_present(ctx, key).await
+    }
+
     async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
         Err(anyhow!("MemWritesBlobstore does not support unlink"))
+    }
+
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, put_behaviour).await
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, DEFAULT_PUT_BEHAVIOUR).await
     }
 }
 
@@ -497,6 +580,37 @@ mod test {
 
         async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, _key: &'a str) -> Result<()> {
             unimplemented!("GatedBlobstore does not support unlink")
+        }
+
+        async fn put_explicit<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+            put_behaviour: PutBehaviour,
+        ) -> Result<OverwriteStatus> {
+            let mut allow = self.allow.clone();
+            while !*allow.borrow() {
+                // Wait until we are allowed to continue.
+                allow.changed().await?;
+            }
+            self.inner
+                .put_explicit(ctx, key, value, put_behaviour)
+                .await
+        }
+
+        async fn put_with_status<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+        ) -> Result<OverwriteStatus> {
+            let mut allow = self.allow.clone();
+            while !*allow.borrow() {
+                // Wait until we are allowed to continue.
+                allow.changed().await?;
+            }
+            self.inner.put_with_status(ctx, key, value).await
         }
     }
 

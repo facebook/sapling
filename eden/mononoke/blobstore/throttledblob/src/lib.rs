@@ -15,7 +15,6 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -198,10 +197,7 @@ impl<T: Blobstore> Blobstore for ThrottledBlob<T> {
         }
         self.blobstore.unlink(ctx, key).await
     }
-}
 
-#[async_trait]
-impl<T: BlobstorePutOps> BlobstorePutOps for ThrottledBlob<T> {
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,

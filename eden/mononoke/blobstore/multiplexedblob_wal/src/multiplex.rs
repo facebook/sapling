@@ -22,7 +22,6 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use blobstore_stats::OperationType;
@@ -206,8 +205,8 @@ impl WalMultiplexedBlobstore {
     pub fn new(
         multiplex_id: MultiplexId,
         wal_queue: Arc<dyn BlobstoreWal>,
-        blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
-        write_only_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+        blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        write_only_blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
         write_quorum: usize,
         timeout: Option<MultiplexTimeout>,
         scuba: Scuba,
@@ -669,34 +668,6 @@ impl Blobstore for WalMultiplexedBlobstore {
         result
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
-        Ok(())
-    }
-
-    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        let mut scuba = self.scuba.clone();
-        scuba.add_client_request_info(ctx);
-        let (stats, result) = self.unlink_impl(ctx, key, &scuba).timed().await;
-        scuba::record_unlink(
-            ctx,
-            &mut scuba.multiplex_scuba,
-            &self.multiplex_id,
-            key,
-            stats,
-            &result,
-        );
-        result
-    }
-}
-
-#[async_trait]
-impl BlobstorePutOps for WalMultiplexedBlobstore {
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -742,6 +713,21 @@ impl BlobstorePutOps for WalMultiplexedBlobstore {
             &self.multiplex_id,
             &key,
             size,
+            stats,
+            &result,
+        );
+        result
+    }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        let mut scuba = self.scuba.clone();
+        scuba.add_client_request_info(ctx);
+        let (stats, result) = self.unlink_impl(ctx, key, &scuba).timed().await;
+        scuba::record_unlink(
+            ctx,
+            &mut scuba.multiplex_scuba,
+            &self.multiplex_id,
+            key,
             stats,
             &result,
         );

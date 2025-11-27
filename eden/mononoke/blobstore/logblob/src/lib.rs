@@ -12,7 +12,6 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use blobstore::BlobstoreGetData;
 use blobstore::BlobstoreIsPresent;
-use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use blobstore_stats::OperationType;
@@ -55,7 +54,7 @@ impl<T: std::fmt::Display> std::fmt::Display for LogBlob<T> {
 }
 
 #[async_trait]
-impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
+impl<B: Blobstore> Blobstore for LogBlob<B> {
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -137,7 +136,7 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
+        self.put_with_status(ctx, key, value).await?;
         Ok(())
     }
 
@@ -164,15 +163,13 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
 
         result
     }
-}
 
-impl<B: BlobstorePutOps> LogBlob<B> {
-    async fn put_impl<'a>(
+    async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
-        put_behaviour: Option<PutBehaviour>,
+        put_behaviour: PutBehaviour,
     ) -> Result<OverwriteStatus> {
         let mut ctx = ctx.clone();
         let mut scuba = self.scuba.clone();
@@ -183,12 +180,9 @@ impl<B: BlobstorePutOps> LogBlob<B> {
 
         let pc = ctx.fork_perf_counters();
 
-        let put = if let Some(put_behaviour) = put_behaviour {
-            self.inner
-                .put_explicit(&ctx, key.clone(), value, put_behaviour)
-        } else {
-            self.inner.put_with_status(&ctx, key.clone(), value)
-        };
+        let put = self
+            .inner
+            .put_explicit(&ctx, key.clone(), value, put_behaviour);
         let (stats, result) = put.timed().await;
         record_put_stats(
             &mut scuba,
@@ -216,19 +210,6 @@ impl<B: BlobstorePutOps> LogBlob<B> {
 
         result
     }
-}
-
-#[async_trait]
-impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
-    async fn put_explicit<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
-    ) -> Result<OverwriteStatus> {
-        self.put_impl(ctx, key, value, Some(put_behaviour)).await
-    }
 
     async fn put_with_status<'a>(
         &'a self,
@@ -236,6 +217,41 @@ impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
-        self.put_impl(ctx, key, value, None).await
+        let mut ctx = ctx.clone();
+        let mut scuba = self.scuba.clone();
+        let size = value.len();
+
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::BlobPuts);
+
+        let pc = ctx.fork_perf_counters();
+
+        let put = self.inner.put_with_status(&ctx, key.clone(), value);
+        let (stats, result) = put.timed().await;
+        record_put_stats(
+            &mut scuba,
+            &pc,
+            stats,
+            result.as_ref(),
+            &key,
+            ctx.metadata().session_id().as_str(),
+            size,
+            None,
+            &self.inner,
+            None,
+        );
+
+        if result.is_ok() {
+            ctx.perf_counters().set_max_counter(
+                PerfCounterType::BlobPutsMaxSize,
+                size.try_into().unwrap_or(0),
+            );
+            ctx.perf_counters().add_to_counter(
+                PerfCounterType::BlobPutsTotalSize,
+                size.try_into().unwrap_or(0),
+            );
+        }
+
+        result
     }
 }

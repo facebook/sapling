@@ -332,15 +332,40 @@ pub trait Blobstore: fmt::Display + fmt::Debug + Send + Sync {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>>;
+
+    /// Adds ability to specify the put behaviour explicitly so that even if per process default was
+    /// IfAbsent once could chose to OverwriteAndLog. Expected to be used only in admin tools
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus>;
+
+    /// Similar to `put`, but returns the OverwriteStatus as feedback rather than unit.
+    /// Uses the default put behaviour for this blobstore.
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus>;
+
     /// Associate `value` with `key` for future gets; if `put` is called with different `value`s
     /// for the same key, the implementation may return any `value` it's been given in response
     /// to a `get` for that `key`.
+    /// Default implementation calls put_with_status and discards the status.
     async fn put<'a>(
         &'a self,
         ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> Result<()>;
+    ) -> Result<()> {
+        self.put_with_status(ctx, key, value).await?;
+        Ok(())
+    }
+
     /// Check that `get` will return a value for a given `key`, and not None. The provided
     /// implementation just calls `get`, and discards the return value; this can be overridden to
     /// avoid transferring data. In the absence of concurrent `put` calls, this must return
@@ -474,7 +499,7 @@ impl PutBehaviour {
 }
 
 /// For use from logging blobstores so they can record the overwrite status
-/// `BlobstorePutOps::put_with_status`, and eventually `Blobstore::copy()` will return this.
+/// `Blobstore::put_with_status`, and eventually `Blobstore::copy()` will return this.
 #[derive(AsRefStr, Clone, Copy, Debug, Eq, PartialEq)]
 pub enum OverwriteStatus {
     // We did not check if the key existed before writing it
@@ -485,30 +510,6 @@ pub enum OverwriteStatus {
     Overwrote,
     // This did exist before, and the overwrite was prevented
     Prevented,
-}
-
-/// Lower level blobstore put api used by blobstore implementors and admin tooling
-#[async_trait]
-#[auto_impl(Arc, Box)]
-pub trait BlobstorePutOps: Blobstore {
-    /// Adds ability to specify the put behaviour explicitly so that even if per process default was
-    /// IfAbsent  once could chose to OverwriteAndLog.  Expected to be used only in admin tools
-    async fn put_explicit<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
-    ) -> Result<OverwriteStatus>;
-
-    /// Similar to `Blobstore::put`, but returns the OverwriteStatus as feedback rather than unit.
-    /// Its here rather so we don't reveal the OverwriteStatus to regular put users.
-    async fn put_with_status<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<OverwriteStatus>;
 }
 
 /// BlobstoreKeySource Interface
@@ -527,7 +528,7 @@ trait_set! {
     /// A trait alias that represents blobstores that can be enumerated,
     /// updated and have their keys unlinked.
     #[auto_impl(Arc, Box)]
-    pub trait BlobstoreEnumerableWithUnlink = BlobstoreKeySource + BlobstorePutOps;
+    pub trait BlobstoreEnumerableWithUnlink = BlobstoreKeySource + Blobstore;
 }
 
 /// Range of keys.  The range is inclusive (both start and end key are

@@ -562,6 +562,29 @@ impl Bubble {
         self.blobstore.put(ctx, key, value).await
     }
 
+    pub(crate) async fn put_explicit(
+        &self,
+        ctx: &CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: blobstore::PutBehaviour,
+    ) -> Result<blobstore::OverwriteStatus> {
+        self.check_unexpired()?;
+        self.blobstore
+            .put_explicit(ctx, key, value, put_behaviour)
+            .await
+    }
+
+    pub(crate) async fn put_with_status(
+        &self,
+        ctx: &CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<blobstore::OverwriteStatus> {
+        self.check_unexpired()?;
+        self.blobstore.put_with_status(ctx, key, value).await
+    }
+
     pub(crate) async fn is_present(
         &self,
         ctx: &CoreContext,

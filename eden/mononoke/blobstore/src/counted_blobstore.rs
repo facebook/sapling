@@ -20,7 +20,6 @@ use crate::BlobstoreGetData;
 use crate::BlobstoreIsPresent;
 use crate::BlobstoreKeyParam;
 use crate::BlobstoreKeySource;
-use crate::BlobstorePutOps;
 use crate::OverwriteStatus;
 use crate::PutBehaviour;
 
@@ -110,6 +109,25 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         res
     }
 
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, Some(put_behaviour)).await
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, None).await
+    }
+
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -150,7 +168,7 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
     }
 }
 
-impl<T: BlobstorePutOps> CountedBlobstore<T> {
+impl<T: Blobstore> CountedBlobstore<T> {
     async fn put_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -179,28 +197,6 @@ impl<T: BlobstorePutOps> CountedBlobstore<T> {
             Err(_) => self.stats.put_err.add_value(1),
         }
         res
-    }
-}
-
-#[async_trait]
-impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
-    async fn put_explicit<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
-    ) -> Result<OverwriteStatus> {
-        self.put_impl(ctx, key, value, Some(put_behaviour)).await
-    }
-
-    async fn put_with_status<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<OverwriteStatus> {
-        self.put_impl(ctx, key, value, None).await
     }
 }
 

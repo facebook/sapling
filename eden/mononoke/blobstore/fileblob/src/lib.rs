@@ -23,7 +23,6 @@ use blobstore::BlobstoreIsPresent;
 use blobstore::BlobstoreKeyParam;
 use blobstore::BlobstoreKeySource;
 use blobstore::BlobstoreMetadata;
-use blobstore::BlobstorePutOps;
 use blobstore::OverwriteStatus;
 use blobstore::PutBehaviour;
 use context::CoreContext;
@@ -107,7 +106,30 @@ async fn ctime(file: &File) -> Option<i64> {
 }
 
 #[async_trait]
-impl BlobstorePutOps for Fileblob {
+impl Blobstore for Fileblob {
+    async fn get<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let p = self.path(key);
+
+        let ret = match File::open(&p).await {
+            Err(ref r) if r.kind() == io::ErrorKind::NotFound => None,
+            Err(e) => return Err(e.into()),
+            Ok(mut f) => {
+                let mut v = Vec::new();
+                f.read_to_end(&mut v).await?;
+
+                Some(BlobstoreGetData::new(
+                    BlobstoreMetadata::new(ctime(&f).await, None),
+                    BlobstoreBytes::from_bytes(v),
+                ))
+            }
+        };
+        Ok(ret)
+    }
+
     async fn put_explicit<'a>(
         &'a self,
         _ctx: &'a CoreContext,
@@ -159,32 +181,6 @@ impl BlobstorePutOps for Fileblob {
     ) -> Result<OverwriteStatus> {
         self.put_explicit(ctx, key, value, self.put_behaviour).await
     }
-}
-
-#[async_trait]
-impl Blobstore for Fileblob {
-    async fn get<'a>(
-        &'a self,
-        _ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<Option<BlobstoreGetData>> {
-        let p = self.path(key);
-
-        let ret = match File::open(&p).await {
-            Err(ref r) if r.kind() == io::ErrorKind::NotFound => None,
-            Err(e) => return Err(e.into()),
-            Ok(mut f) => {
-                let mut v = Vec::new();
-                f.read_to_end(&mut v).await?;
-
-                Some(BlobstoreGetData::new(
-                    BlobstoreMetadata::new(ctime(&f).await, None),
-                    BlobstoreBytes::from_bytes(v),
-                ))
-            }
-        };
-        Ok(ret)
-    }
 
     async fn is_present<'a>(
         &'a self,
@@ -203,16 +199,6 @@ impl Blobstore for Fileblob {
         } else {
             BlobstoreIsPresent::Absent
         })
-    }
-
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
-        Ok(())
     }
 
     // This uses hardlink semantics as the production blobstores also have hardlink like semantics
