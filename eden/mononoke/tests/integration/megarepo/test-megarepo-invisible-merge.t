@@ -50,51 +50,59 @@ Setup repositories
   $ cd $TESTTMP
   $ hginit_treemanifest fbs-mon
   $ cd fbs-mon
--- create an initial commit, which will be the last_synced_commit
-  $ createfile fbcode/fbcodefile_fbsource
-  $ createfile arvr/arvrfile_fbsource
-  $ createfile otherfile_fbsource
-  $ hg -q ci -m "fbsource commit 1" && hg book -ir . master_bookmark
+-- create an initial commit using testtool drawdag
+  $ testtool_drawdag -R fbs-mon --no-default-files <<'EOF'
+  > A
+  > # modify: A "fbcode/fbcodefile_fbsource" "fbcode/fbcodefile_fbsource\n"
+  > # modify: A "arvr/arvrfile_fbsource" "arvr/arvrfile_fbsource\n"
+  > # modify: A "otherfile_fbsource" "otherfile_fbsource\n"
+  > # bookmark: A master_bookmark
+  > EOF
+  A=b0eeea20bb5a84cf2c2fb6befdae9507c67d6d7837aef2f275ca315c1018fdf8
 
 -- init hg ovrsource server repo
   $ cd $TESTTMP
   $ hginit_treemanifest ovr-mon
   $ cd ovr-mon
-  $ createfile fbcode/fbcodefile_ovrsource
-  $ createfile arvr/arvrfile_ovrsource
-  $ createfile otherfile_ovrsource
-  $ createfile Research/researchfile_ovrsource
-  $ hg -q ci -m "ovrsource commit 1" && hg book -r . master_bookmark
+-- create an initial commit using testtool drawdag
+  $ testtool_drawdag -R ovr-mon --no-default-files <<'EOF'
+  > A
+  > # modify: A "fbcode/fbcodefile_ovrsource" "fbcode/fbcodefile_ovrsource\n"
+  > # modify: A "arvr/arvrfile_ovrsource" "arvr/arvrfile_ovrsource\n"
+  > # modify: A "otherfile_ovrsource" "otherfile_ovrsource\n"
+  > # modify: A "Research/researchfile_ovrsource" "Research/researchfile_ovrsource\n"
+  > # bookmark: A master_bookmark
+  > EOF
+  A=813af7d6ec0fe85fc2982a7b8127df45aa0240fc38a3f1f83d3608a26aaa44ab
 
 -- init hg megarepo server repo
   $ cd $TESTTMP
   $ hginit_treemanifest meg-mon
   $ cd meg-mon
-  $ createfile fbcode/fbcodefile_fbsource
-  $ createfile_with_content .fbsource-rest/arvr/arvrfile_fbsource arvr/arvrfile_fbsource
-  $ createfile otherfile_fbsource
-  $ createfile_with_content .ovrsource-rest/fbcode/fbcodefile_ovrsource fbcode/fbcodefile_ovrsource
-  $ createfile arvr/arvrfile_ovrsource
-  $ createfile_with_content arvr-legacy/otherfile_ovrsource otherfile_ovrsource
-  $ createfile_with_content arvr-legacy/Research/researchfile_ovrsource Research/researchfile_ovrsource
-  $ hg -q ci -m "megarepo commit 1"
-  $ hg book -r . master_bookmark
+-- create an initial commit using testtool drawdag
+  $ testtool_drawdag -R meg-mon --no-default-files <<'EOF'
+  > A
+  > # modify: A "fbcode/fbcodefile_fbsource" "fbcode/fbcodefile_fbsource\n"
+  > # modify: A ".fbsource-rest/arvr/arvrfile_fbsource" "arvr/arvrfile_fbsource\n"
+  > # modify: A "otherfile_fbsource" "otherfile_fbsource\n"
+  > # modify: A ".ovrsource-rest/fbcode/fbcodefile_ovrsource" "fbcode/fbcodefile_ovrsource\n"
+  > # modify: A "arvr/arvrfile_ovrsource" "arvr/arvrfile_ovrsource\n"
+  > # modify: A "arvr-legacy/otherfile_ovrsource" "otherfile_ovrsource\n"
+  > # modify: A "arvr-legacy/Research/researchfile_ovrsource" "Research/researchfile_ovrsource\n"
+  > # bookmark: A master_bookmark
+  > EOF
+  A=141871105196d9fe6d0b0b6ee508d07983b6a543ac5f751e2f7b5dfd6fcd5fba
 
--- blobimport hg server repos into Mononoke repos
+Import and start mononoke
   $ cd "$TESTTMP"
-  $ REPOID=$MEG_REPOID blobimport meg-mon/.hg meg-mon
-  $ REPOID=$FBS_REPOID blobimport fbs-mon/.hg fbs-mon
-  $ REPOID=$OVR_REPOID blobimport ovr-mon/.hg ovr-mon
+  $ REPOID=$MEG_REPOID mononoke
+  $ wait_for_mononoke
 
 -- setup hg client repos
   $ cd "$TESTTMP"
   $ hg clone -q mono:fbs-mon fbs-hg-cnt --noupdate
   $ hg clone -q mono:ovr-mon ovr-hg-cnt --noupdate
   $ hg clone -q mono:meg-mon meg-hg-cnt --noupdate
-
-
-Start mononoke server
-  $ start_and_wait_for_mononoke_server
 
 Setup commit sync mapping
 -- get some bonsai hashes to avoid magic strings later
@@ -114,7 +122,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
   $ hg up -q master_bookmark
   $ echo 1 > pushredirected_1 && hg addremove -q && hg ci -q -m pushredirected_1
   $ hg push -r . --to master_bookmark
-  pushing rev bb12ff0dc64f to destination mono:ovr-mon bookmark master_bookmark
+  pushing rev f3217265d27a to destination mono:ovr-mon bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -122,14 +130,14 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
   updating bookmark master_bookmark
 -- pushredirected_1 was correctly pushed to master_bookmark in ovrsource
   $ log -r master_bookmark
-  @  pushredirected_1 [public;rev=1;bb12ff0dc64f] remote/master_bookmark
+  @  pushredirected_1 [public;rev=1;f3217265d27a] remote/master_bookmark
   │
   ~
 -- pushredirected_1 is also present in megarepo
   $ cd "$TESTTMP"/meg-hg-cnt
   $ hg pull -q
   $ log -r master_bookmark
-  o  pushredirected_1 [public;rev=1;4358fa9b678c] remote/master_bookmark
+  o  pushredirected_1 [public;rev=1;a386326a200d] remote/master_bookmark
   │
   ~
 -- ensure that ovrsource root path ends up in megarepo's arvr-legacy
@@ -145,7 +153,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
   $ hg up -q master_bookmark
   $ echo 2 > pushredirected_2 && hg addremove -q && hg ci -q -m pushredirected_2
   $ hg push -r . --to master_bookmark
-  pushing rev 2d72ff1821dd to destination mono:ovr-mon bookmark master_bookmark
+  pushing rev 43653dc8751c to destination mono:ovr-mon bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -153,14 +161,14 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
   updating bookmark master_bookmark
 -- pushredirected_2 was correctly pushed to master_bookmark
   $ log -r master_bookmark
-  @  pushredirected_2 [public;rev=2;2d72ff1821dd] remote/master_bookmark
+  @  pushredirected_2 [public;rev=2;43653dc8751c] remote/master_bookmark
   │
   ~
 -- pushredirected_2 is also present in the megarepo
   $ cd "$TESTTMP"/meg-hg-cnt
   $ hg pull -q
   $ log -r master_bookmark
-  o  pushredirected_2 [public;rev=2;538143697725] remote/master_bookmark
+  o  pushredirected_2 [public;rev=2;998920b302f8] remote/master_bookmark
   │
   ~
 -- let's see what's where in megarepo
@@ -227,17 +235,20 @@ Prepare for the invisible merge
 3. Implement a gradual merge policy
   $ COMMIT_DATE="1985-09-04T00:00:00.00Z"
   $ cd "$TESTTMP"
-  $ mononoke_admin megarepo pre-merge-delete --repo-id $FBS_REPOID  \
+  $ PREDELETES=($(mononoke_admin megarepo pre-merge-delete --repo-id $FBS_REPOID  \
   > --bookmark ovrsource/moved_master \
   >  -a author -m "merge preparation" \
   >  --even-chunk-size 2 \
-  > --commit-date-rfc3339 "$COMMIT_DATE" 2>/dev/null
-  bffa0e47c22b600605917892c9c9a2604d1640dbac8ae8c88530e0f32bb2c965
-  cad6246b8ea9efdb756e6adb2f1a2da2f8d9d43bdabfeceaa4a4213abd334b61
-  $ mononoke_admin bookmarks --repo-id $FBS_REPOID get ovrsource/moved_master
-  0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a
+  > --commit-date-rfc3339 "$COMMIT_DATE" 2>/dev/null))
+  $ echo "${PREDELETES[0]}"
+  * (glob)
+  $ echo "${PREDELETES[1]}"
+  * (glob)
+  $ MOVED_MASTER=$(mononoke_admin bookmarks --repo-id $FBS_REPOID get ovrsource/moved_master)
+  $ echo "$MOVED_MASTER"
+  * (glob)
 -- a list of commits we want to merge also includes the pre-delete commit
-  $ TOMERGES=(bffa0e47c22b600605917892c9c9a2604d1640dbac8ae8c88530e0f32bb2c965 cad6246b8ea9efdb756e6adb2f1a2da2f8d9d43bdabfeceaa4a4213abd334b61 0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a)
+  $ TOMERGES=("${PREDELETES[@]}" "$MOVED_MASTER")
 -- calculate to-merge working copy sizes, they should be gradually increasing
   $ cd "$TESTTMP/fbs-hg-cnt"
   $ for TOMERGE in "${TOMERGES[@]}"; do
@@ -246,9 +257,9 @@ Prepare for the invisible merge
   >  FILECOUNT=$(find . -path ./.hg -prune -o -type f -print | wc -l)
   >  echo "$HGHASH: $FILECOUNT files"
   > done
-  0bcd370350f8ffa50b01a71ebde58685eb8a48c4: 2 files
-  7ed84adf14359250fce47e358e02da84a69432d3: 4 files
-  1bb93fce182b04f42c237baaea017ed96becdc72: 6 files
+  e1fffeb909369766a664bfdcfeba3684b1350921: 2 files
+  29d5f54eaa58592f0de6e66ff95480a1f8aeb64c: 4 files
+  278538d7ca136ce6ba45516edbce02469e5bd356: 6 files
 
 Do the invisible merge by gradually merging TOMERGES into master
   $ cd "$TESTTMP/fbs-hg-cnt"
@@ -274,27 +285,27 @@ Do the invisible merge by gradually merging TOMERGES into master
   >  hg ci -qm "intermediate commit between gradual merge commits"
   >  hg push -q --to master_bookmark
   > done
-  Current: cb536a1a0bd5e1e5226a09530ab95ae790b717d7
-  To merge: bffa0e47c22b600605917892c9c9a2604d1640dbac8ae8c88530e0f32bb2c965
-  Merged as (bonsai): 1ccca1cf322891f156df9dbee891293ed9fc8fa706cb057d351f5cc560eaabcd
-  Merged as (hg): 91d643697945d5bb502a2c1c2f75ec36b855f308
+  Current: a77a3f22071a3289ac6f928b4092093e71aae061
+  To merge: cebabad19ac8be96b888095b917bfe1ac2e002d66a75025e7f639f93ba436fa4
+  Merged as (bonsai): 2f71e45f331a85a46ca2b30db10d3701c68fe9bbd0ed1145eed7c2c2a73138d0
+  Merged as (hg): 54ed8c743812888172298eb744a6200702aa3c2e
   file count is: 2
-  Updating publishing bookmark master_bookmark from 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 to 1ccca1cf322891f156df9dbee891293ed9fc8fa706cb057d351f5cc560eaabcd
-  Current: 51c49b0bd6828234ce57148769ca56f254e463bd
-  To merge: cad6246b8ea9efdb756e6adb2f1a2da2f8d9d43bdabfeceaa4a4213abd334b61
-  Merged as (bonsai): 67252d06a4b77e0c8a752dc199bad2441235eece95a63886048fb9ccc58d0298
-  Merged as (hg): f2ac779eb5ef342aab788bcb278e57e53b2bc83e
+  Updating publishing bookmark master_bookmark from b0eeea20bb5a84cf2c2fb6befdae9507c67d6d7837aef2f275ca315c1018fdf8 to 2f71e45f331a85a46ca2b30db10d3701c68fe9bbd0ed1145eed7c2c2a73138d0
+  Current: da6451df3ff79a6397d51b5551f713ea1209da23
+  To merge: 9823b0918638a386a2ddad37b60dfbf844650fb09fc2d9ac66dc44b6f5553ae4
+  Merged as (bonsai): 1939f09a3a48a8264c3b3f089290343a066a75dadd0a9b4f958e026827a3a479
+  Merged as (hg): c1c74770419c3d7213c9f265d6b68a814a5c4233
   file count is: 4
-  Updating publishing bookmark master_bookmark from f2ef38d6bcd2abdf522813eba80f473ca3186afcef68d0e2050b2cc85fa59ec6 to 67252d06a4b77e0c8a752dc199bad2441235eece95a63886048fb9ccc58d0298
-  Current: 0eb9c5feca13f5b7c5daf2c34b659c3846569fad
-  To merge: 0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a
-  Merged as (bonsai): ab96a1f9335f5757936bb540d424482dbf41284c90d89e277fee7052fb165561
-  Merged as (hg): 005686fbc230dc0be4e1cc2fabf46d87bbb19001
+  Updating publishing bookmark master_bookmark from 832d5bbe85038b1a9cb9f5f92a05a1882da15af0baff1d02d6997f1e034e42c1 to 1939f09a3a48a8264c3b3f089290343a066a75dadd0a9b4f958e026827a3a479
+  Current: 4e214ea0a9f2c7b76476bd18305796335038756c
+  To merge: 005f16a1a75b12fa40bf342d00fde249882367f0c494499a606b4ebf44beae48
+  Merged as (bonsai): 2991ba0563bbbdb9759f86c34ac74fa5cf8d641fcd80cc64cdcdb9521ec51b90
+  Merged as (hg): f6470d2d3c4b94c7fa12c11eac3962a5de6a50a0
   file count is: 6
-  Updating publishing bookmark master_bookmark from eeb3fe5b22e7d210f39d953a0f99a6ef5aa45ecbaf120cd1e5ee73e09fccc89a to ab96a1f9335f5757936bb540d424482dbf41284c90d89e277fee7052fb165561
+  Updating publishing bookmark master_bookmark from 5159a8eaf10456f6bc05154288620bef9040eccba0ebe7d5f1f06d75c72cb821 to 2991ba0563bbbdb9759f86c34ac74fa5cf8d641fcd80cc64cdcdb9521ec51b90
   $ hg pull -q
   $ hg log -r "$MASTER_BEFORE_MERGES::master_bookmark" -T "{phase} {desc|firstline}\n"
-  public fbsource commit 1
+  public A
   public merge execution
   public intermediate commit between gradual merge commits
   public merge execution
@@ -307,7 +318,7 @@ Create special marker commits in both repos, which can be just marked as rewritt
   $ cd "$TESTTMP/ovr-hg-cnt"
   $ hg ci -qm "pre push-redirection marker" --config ui.allowemptycommit=True
   $ hg push -r . --to master_bookmark
-  pushing rev d4f961891514 to destination mono:ovr-mon bookmark master_bookmark
+  pushing rev 07ff3584268a to destination mono:ovr-mon bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -316,7 +327,7 @@ Create special marker commits in both repos, which can be just marked as rewritt
   $ cd "$TESTTMP/fbs-hg-cnt"
   $ hg ci -qm "pre push-redirection marker" --config ui.allowemptycommit=True
   $ hg push -r . --to master_bookmark
-  pushing rev 95ffa14a8361 to destination mono:fbs-mon bookmark master_bookmark
+  pushing rev 5be64eb21882 to destination mono:fbs-mon bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -346,7 +357,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   $ hg up -q master_bookmark
   $ echo 1 > pushredirected_3 && hg addremove -q && hg ci -q -m pushredirected_3
   $ hg push -r . --to master_bookmark
-  pushing rev 4355e6b9eafb to destination mono:ovr-mon bookmark master_bookmark
+  pushing rev 007d06273bc3 to destination mono:ovr-mon bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
@@ -354,7 +365,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   updating bookmark master_bookmark
 -- pushredirected_3 was correctly pushed to master_bookmark in ovrsource
   $ log -r master_bookmark
-  @  pushredirected_3 [public;rev=4;4355e6b9eafb] remote/master_bookmark
+  @  pushredirected_3 [public;rev=4;007d06273bc3] remote/master_bookmark
   │
   ~
 -- make the bookmark change visible to other repos. the cache invalidates
@@ -364,7 +375,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   $ cd "$TESTTMP"/fbs-hg-cnt
   $ hg pull -q
   $ log -r master_bookmark
-  o  pushredirected_3 [public;rev=14;223e2529a7b8] remote/master_bookmark
+  o  pushredirected_3 [public;rev=14;f2be84ab7d21] remote/master_bookmark
   │
   ~
 -- ensure that ovrsource root path ends up in megarepo's arvr-legacy
