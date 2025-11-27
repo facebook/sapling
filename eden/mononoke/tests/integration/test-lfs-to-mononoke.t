@@ -15,17 +15,18 @@ Setup hg repo, create a commit there. No LFS blobs yet.
   $ hginit_treemanifest repo
   $ cd repo
 
-Commit small file
-  $ echo s > smallfile
-  $ hg commit -Aqm "add small file"
-  $ hg bookmark master_bookmark -r tip
-  $ cd ..
+Commit small file using testtool drawdag
+  $ testtool_drawdag -R repo --no-default-files <<'EOF'
+  > A
+  > # modify: A "smallfile" "s\n"
+  > # bookmark: A master_bookmark
+  > EOF
+  A=b7c61980054dfc722035397cd93fc215b2dadd4af0c1c61c6252a27a7eabb3c3
 
-Blobimport the hg repo to Mononoke
-  $ blobimport repo/.hg repo
-
-Start Mononoke with LFS enabled.
-  $ start_and_wait_for_mononoke_server
+Import and start mononoke
+  $ cd "$TESTTMP"
+  $ mononoke
+  $ wait_for_mononoke
 Start Mononoke API server, to serve LFS blobs
   $ lfs_uri="$(lfs_server)/repo"
 
@@ -49,7 +50,7 @@ Perform LFS push
   $ echo "${LONG}for-rename" > lfs-largefile-for-rename
   $ hg commit -Aqm "add lfs-large files"
   $ hg push -r . --to master_bookmark -v
-  pushing rev 99765c8d839c to destination mono:repo bookmark master_bookmark
+  pushing rev eecda6d93ed8 to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -66,7 +67,7 @@ Perform LFS push
   $ hg mv lfs-largefile-for-rename lfs-largefile-renamed
   $ hg commit -Aqm "rename"
   $ hg push -r . --to master_bookmark -v
-  pushing rev c651f052c52d to destination mono:repo bookmark master_bookmark
+  pushing rev 981c2aedba14 to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -89,7 +90,7 @@ Verify that if we fail to upload LFS blobs first, the push fails
   $ echo "${LONG}ANOTHER-LFS" > f
   $ hg commit -m f -A f
   $ hg push -r . --to master_bookmark -v
-  pushing rev e4337405c947 to destination mono:repo bookmark master_bookmark
+  pushing rev 6ee0305a30bb to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
