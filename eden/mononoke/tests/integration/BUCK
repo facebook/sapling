@@ -168,7 +168,7 @@ dott_test(
         ],
     deps = [
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/microwave:builder",
+        "//eden/mononoke/features/microwave:builder",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
     ],

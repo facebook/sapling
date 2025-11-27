@@ -44,14 +44,15 @@ rust_binary(
 rust_library(
     name = "microwave",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "features/microwave"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
         "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/features/microwave/if:microwave-if-rust",
         "//eden/mononoke/mercurial:mercurial_types",
-        "//eden/mononoke/microwave/if:microwave-if-rust",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/filenodes:filenodes",
         "//eden/mononoke/repo_attributes/mutable_blobstore:mutable_blobstore",

@@ -6,8 +6,8 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
+eden/mononoke/features/microwave/if/microwave.thrift crate //eden/mononoke/features/microwave/if:microwave-if-rust
 eden/mononoke/mercurial/types/if/mercurial_thrift.thrift mercurial_thrift //eden/mononoke/mercurial/types/if:mercurial-thrift-rust
-eden/mononoke/microwave/if/microwave.thrift crate //eden/mononoke/microwave/if:microwave-if-rust
 eden/mononoke/mononoke_types/serialization/blame.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bonsai.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bssm.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
@@ -40,7 +40,7 @@ fn main() {
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
     Config::from_env(GenContext::Clients)
         .expect("Failed to instantiate thrift_compiler::Config")
-        .base_path("../../../../..")
+        .base_path("../../../../../..")
         .types_crate("microwave-if__types")
         .clients_crate("microwave-if__clients")
         .run(["../microwave.thrift"])
