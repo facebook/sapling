@@ -20,7 +20,7 @@ enum_dispatch = "0.3.13"
 lru = { version = "=0.12.4", default-features = false }
 memmap2 = "0.9.5"
 notify = { version = "5", optional = true }
-regex = "1.11.1"
+regex = "1.12.2"
 scopeguard = "1.2.0"
 serde = { version = "1.0.219", features = ["derive"] }
 smallvec = { version = "1.15", default-features = false }

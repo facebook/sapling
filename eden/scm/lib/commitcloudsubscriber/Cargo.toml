@@ -33,7 +33,7 @@ lazy_static = "1.5"
 log = { version = "0.4.27", features = ["kv_unstable", "kv_unstable_std"] }
 mime = "0.3.14"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
-regex = "1.11.1"
+regex = "1.12.2"
 reqwest = { version = "0.11.18", features = ["blocking", "cookies", "gzip", "json", "multipart", "native-tls", "rustls-tls", "rustls-tls-native-roots", "socks", "stream"] }
 sapling-configset = { version = "0.1.0", path = "../config/set" }
 sapling-identity = { version = "0.1.0", path = "../identity" }

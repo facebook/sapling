@@ -83,7 +83,7 @@ protocol = { version = "0.1.0", path = "../git/protocol" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
 pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../pushrebase_mutation_mapping" }
-regex = "1.11.1"
+regex = "1.12.2"
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../repo_attributes/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../repo_attributes/repo_bookmark_attrs" }

@@ -35,7 +35,7 @@ manifest = { version = "0.1.0", path = "../../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../../permission_checker" }
-regex = "1.11.1"
+regex = "1.12.2"
 repo_blobstore = { version = "0.1.0", path = "../../repo_blobstore" }
 repo_cross_repo = { version = "0.1.0", path = "../../repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_derived_data" }

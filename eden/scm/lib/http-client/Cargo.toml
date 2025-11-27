@@ -28,7 +28,7 @@ openssl = "0.10.72"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 paste = "1.0.14"
 pin-project = "1.1.10"
-regex = "1.11.1"
+regex = "1.12.2"
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }

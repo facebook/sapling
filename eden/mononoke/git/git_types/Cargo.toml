@@ -41,7 +41,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
 ouroboros = "0.18.5"
 quickcheck = "1.0"
-regex = "1.11.1"
+regex = "1.12.2"
 reloader = { version = "0.1.0", path = "../../common/reloader" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 sha1 = "0.10.5"
