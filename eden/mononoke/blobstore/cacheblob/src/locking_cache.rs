@@ -216,30 +216,6 @@ where
         }
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        let can_put = self.take_put_lease(&key).await;
-        if can_put {
-            self.blobstore.put(ctx, key.clone(), value.clone()).await?;
-
-            cloned!(self.cache, self.lease);
-            let cache_put = async move {
-                cache.put(&key, value.into()).await;
-                lease.release_lease(&key).await
-            };
-            if self.lazy_cache_put {
-                mononoke::spawn_task(cache_put);
-            } else {
-                let _ = cache_put.await;
-            }
-        }
-        Ok(())
-    }
-
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,

@@ -528,55 +528,6 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
         mononoke::spawn_task(fut).await?
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        cloned!(self.inner, ctx);
-
-        STATS::puts.add_value(1);
-        let cache_key = CacheKey::from_key(&key);
-        let presence = PresenceData::from_put(&value);
-
-        if let Ok(Some(KnownToExist)) = inner.cache.check_presence(&cache_key, presence) {
-            report_deduplicated_put(&ctx, &key);
-            return Ok(());
-        }
-
-        let fut = async move {
-            let ticket = Ticket::new(&ctx, AccessReason::Write);
-
-            let acq = inner
-                .write_shards
-                .acquire(&ctx, &key, ticket, || {
-                    inner.cache.check_presence(&cache_key, presence)
-                })
-                .await?;
-
-            let permit = match acq {
-                SemaphoreAcquisition::Cancelled(KnownToExist, ticket) => {
-                    report_deduplicated_put(&ctx, &key);
-                    ticket.cancel();
-                    return Ok(());
-                }
-                SemaphoreAcquisition::Acquired(permit) => permit,
-            };
-
-            scopeguard::defer! { drop(permit) };
-
-            let res = inner.blobstore.put(&ctx, key, value.clone()).await?;
-
-            let value = BlobstoreGetData::new(BlobstoreMetadata::default(), value);
-            let _ = inner.cache.set_in_cache(&cache_key, presence, value);
-
-            Ok(res)
-        };
-
-        mononoke::spawn_task(fut).await?
-    }
-
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -889,19 +840,6 @@ mod test {
 
         #[async_trait]
         impl Blobstore for TestBlobstore {
-            async fn put<'a>(
-                &'a self,
-                _ctx: &'a CoreContext,
-                key: String,
-                value: BlobstoreBytes,
-            ) -> Result<()> {
-                let mut data = self.data.lock().unwrap();
-                let blob = data.entry(key).or_default();
-                blob.puts += 1;
-                blob.data = Some(BlobData::Bytes(value));
-                Ok(())
-            }
-
             async fn put_explicit<'a>(
                 &'a self,
                 _ctx: &'a CoreContext,
@@ -1361,15 +1299,6 @@ mod test {
                     BlobstoreMetadata::default(),
                     BlobstoreBytes::from_bytes("foo"),
                 )))
-            }
-
-            async fn put<'a>(
-                &'a self,
-                _ctx: &'a CoreContext,
-                _key: String,
-                _value: BlobstoreBytes,
-            ) -> Result<()> {
-                Ok(())
             }
 
             async fn put_explicit<'a>(

@@ -93,14 +93,6 @@ impl Blobstore for MutableRepoBlobstore {
     ) -> Result<Option<BlobstoreGetData>> {
         self.0.0.get(ctx, key).await
     }
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.0.0.put(ctx, key, value).await
-    }
 
     async fn put_explicit<'a>(
         &'a self,

@@ -153,16 +153,6 @@ impl<ClientBackend: S3ClientBackend + Send + Sync> Blobstore for S3Blob<ClientBa
         .await
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.put_with_status(ctx, key, value).await?;
-        Ok(())
-    }
-
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,

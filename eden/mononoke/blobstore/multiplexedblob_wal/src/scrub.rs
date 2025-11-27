@@ -188,15 +188,6 @@ impl Blobstore for WalScrubBlobstore {
         self.inner.is_present(ctx, key).await
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.inner.put(ctx, key, value).await
-    }
-
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,

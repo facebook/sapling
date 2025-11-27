@@ -50,16 +50,6 @@ impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
         self.inner.get(ctx, key).await
     }
 
-    async fn put<'a>(
-        &'a self,
-        _ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        info!("I would have written blob {} of size {}", key, value.len());
-        Ok(())
-    }
-
     async fn put_explicit<'a>(
         &'a self,
         _ctx: &'a CoreContext,

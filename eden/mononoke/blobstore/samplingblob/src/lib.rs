@@ -78,18 +78,6 @@ impl<T: Blobstore> Blobstore for SamplingBlobstore<T> {
     }
 
     #[inline]
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        let sample_res = self.handler.sample_put(ctx, &key, &value);
-        self.inner.put(ctx, key, value).await?;
-        sample_res
-    }
-
-    #[inline]
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -220,18 +208,6 @@ impl<T: Blobstore> Blobstore for SamplingBlobstoreSamplingComponentBlobstore<T> 
         self.handler
             .sample_get(ctx, key, opt_blob.as_ref(), self.inner_id)?;
         Ok(opt_blob)
-    }
-
-    #[inline]
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        let sample_res = self.handler.sample_put(ctx, &key, &value, self.inner_id);
-        self.inner.put(ctx, key, value).await?;
-        sample_res
     }
 
     #[inline]

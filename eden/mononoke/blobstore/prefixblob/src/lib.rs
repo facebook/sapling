@@ -77,16 +77,6 @@ impl<T: Blobstore> Blobstore for PrefixBlobstore<T> {
     }
 
     #[inline]
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.blobstore.put(ctx, self.prepend(key), value).await
-    }
-
-    #[inline]
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,

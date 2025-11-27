@@ -79,15 +79,6 @@ impl<T: Blobstore> Blobstore for TracingBlobstore<T> {
         self.inner.put_with_status(ctx, key, value).await
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.inner.put(ctx, key, value).await
-    }
-
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,

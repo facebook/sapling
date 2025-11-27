@@ -77,16 +77,6 @@ impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
         self.inner.get(ctx, key).await
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        delay(self.put_dist).await;
-        self.inner.put(ctx, key, value).await
-    }
-
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -117,7 +107,6 @@ impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
-        delay(self.put_dist).await;
         self.put_impl(ctx, key, value, None).await
     }
 }

@@ -158,23 +158,6 @@ impl<T: Blobstore> Blobstore for ThrottledBlob<T> {
         Ok(get_data)
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        if let Some(limiter) = self.write_qps_limiter.as_ref() {
-            limiter.until_ready_with_jitter(jitter()).await;
-        }
-        if let Some(limiter) = self.write_bytes_limiter.as_ref() {
-            limiter
-                .until_n_ready_with_jitter(self.count_n(value.len()), jitter())
-                .await?;
-        }
-        self.blobstore.put(ctx, key, value).await
-    }
-
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,

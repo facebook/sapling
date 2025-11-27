@@ -47,16 +47,6 @@ impl<T: Blobstore> Blobstore for ReadOnlyBlobstore<T> {
     }
 
     #[inline]
-    async fn put<'a>(
-        &'a self,
-        _ctx: &'a CoreContext,
-        key: String,
-        _value: BlobstoreBytes,
-    ) -> Result<()> {
-        Err(ErrorKind::ReadOnlyPut(key).into())
-    }
-
-    #[inline]
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,

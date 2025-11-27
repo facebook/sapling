@@ -42,17 +42,6 @@ impl std::fmt::Display for GoodBlob {
 
 #[async_trait]
 impl Blobstore for GoodBlob {
-    async fn put<'a>(
-        &'a self,
-        _ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        let mut inner = self.inner.lock().expect("lock poison");
-        inner.insert(key, value);
-        Ok(())
-    }
-
     async fn put_explicit<'a>(
         &'a self,
         _ctx: &'a CoreContext,
@@ -104,15 +93,6 @@ impl std::fmt::Display for FailingBlob {
 
 #[async_trait]
 impl Blobstore for FailingBlob {
-    async fn put<'a>(
-        &'a self,
-        _ctx: &'a CoreContext,
-        _key: String,
-        _value: BlobstoreBytes,
-    ) -> Result<()> {
-        anyhow::bail!("Failed put!");
-    }
-
     async fn put_explicit<'a>(
         &'a self,
         _ctx: &'a CoreContext,

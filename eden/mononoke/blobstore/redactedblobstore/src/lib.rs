@@ -204,16 +204,6 @@ impl<B: Blobstore> Blobstore for RedactedBlobstoreInner<B> {
         blobstore.get(ctx, key).await
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        let blobstore = self.access_blobstore(ctx, &key, config::PUT_OPERATION)?;
-        blobstore.put(ctx, key, value).await
-    }
-
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -268,14 +258,6 @@ impl<B: Blobstore> Blobstore for RedactedBlobstore<B> {
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
         self.inner.get(ctx, key).await
-    }
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.inner.put(ctx, key, value).await
     }
     async fn is_present<'a>(
         &'a self,

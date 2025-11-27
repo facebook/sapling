@@ -44,14 +44,6 @@ impl Blobstore for RedactionConfigBlobstore {
     ) -> Result<Option<BlobstoreGetData>> {
         self.0.get(ctx, key).await
     }
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.0.put(ctx, key, value).await
-    }
     async fn is_present<'a>(
         &'a self,
         ctx: &'a CoreContext,

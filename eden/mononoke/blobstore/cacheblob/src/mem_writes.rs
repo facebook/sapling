@@ -556,20 +556,6 @@ mod test {
 
     #[async_trait]
     impl<T: Blobstore + Clone> Blobstore for GatedBlobstore<T> {
-        async fn put<'a>(
-            &'a self,
-            ctx: &'a CoreContext,
-            key: String,
-            value: BlobstoreBytes,
-        ) -> Result<()> {
-            let mut allow = self.allow.clone();
-            while !*allow.borrow() {
-                // Wait until we are allowed to continue.
-                allow.changed().await?;
-            }
-            self.inner.put(ctx, key, value).await
-        }
-
         async fn get<'a>(
             &'a self,
             ctx: &'a CoreContext,

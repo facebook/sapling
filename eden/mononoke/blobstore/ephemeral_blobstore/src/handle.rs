@@ -61,15 +61,6 @@ impl<B: Blobstore> Blobstore for EphemeralHandle<B> {
         })
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.bubble.put(ctx, key, value).await
-    }
-
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,

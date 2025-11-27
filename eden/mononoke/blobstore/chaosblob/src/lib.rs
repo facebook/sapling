@@ -107,17 +107,6 @@ impl<T: Blobstore> Blobstore for ChaosBlobstore<T> {
     }
 
     #[inline]
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.put_impl(ctx, key, value, None).await?;
-        Ok(())
-    }
-
-    #[inline]
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,

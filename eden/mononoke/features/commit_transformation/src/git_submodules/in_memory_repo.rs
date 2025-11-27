@@ -145,16 +145,6 @@ impl<T: Blobstore + Clone, R: Repo + Clone> MemWritesBlobstoreWithFallback<T, R>
 
 #[async_trait]
 impl<T: Blobstore + Clone, R: Repo + Clone> Blobstore for MemWritesBlobstoreWithFallback<T, R> {
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.inner.put(ctx, key, value).await?;
-        Ok(())
-    }
-
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,

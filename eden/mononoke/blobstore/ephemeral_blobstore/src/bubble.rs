@@ -552,16 +552,6 @@ impl Bubble {
         self.blobstore.get(ctx, key).await
     }
 
-    pub(crate) async fn put(
-        &self,
-        ctx: &CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.check_unexpired()?;
-        self.blobstore.put(ctx, key, value).await
-    }
-
     pub(crate) async fn put_explicit(
         &self,
         ctx: &CoreContext,

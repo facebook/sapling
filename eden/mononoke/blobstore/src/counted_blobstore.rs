@@ -94,21 +94,6 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         res
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.stats.put.add_value(1);
-        let res = self.blobstore.put(ctx, key, value).await;
-        match res {
-            Ok(()) => self.stats.put_ok.add_value(1),
-            Err(_) => self.stats.put_err.add_value(1),
-        }
-        res
-    }
-
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,

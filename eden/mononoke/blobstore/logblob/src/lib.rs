@@ -130,16 +130,6 @@ impl<B: Blobstore> Blobstore for LogBlob<B> {
         result
     }
 
-    async fn put<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> Result<()> {
-        self.put_with_status(ctx, key, value).await?;
-        Ok(())
-    }
-
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
         let mut ctx = ctx.clone();
         let mut scuba = self.scuba.clone();
