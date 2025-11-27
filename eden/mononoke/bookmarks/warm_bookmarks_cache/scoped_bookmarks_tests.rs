@@ -445,3 +445,73 @@ async fn test_scoped_list_filtering(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+#[mononoke::fbinit_test]
+async fn test_bookmark_deletion_with_scopes(fb: FacebookInit) -> Result<()> {
+    // Test that bookmark deletion is handled correctly across scopes
+
+    let repo: Repo = Linear::get_repo(fb).await;
+    let ctx = CoreContext::test_mock(fb);
+
+    let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+    derive_data(&ctx, &repo, master_cs_id, true, true, true).await?;
+
+    // Create and derive a commit
+    let commit = CreateCommitContext::new(&ctx, &repo, vec![master_cs_id])
+        .add_file("file", "content")
+        .commit()
+        .await?;
+    derive_data(&ctx, &repo, commit, true, true, true).await?;
+
+    // Create bookmark
+    bookmark(&ctx, &repo, "deletable").set_to(commit).await?;
+
+    let warmers = setup_warmers(&ctx, &repo, WarmerConfig::all_warmers());
+    let cache = init_cache_with_warmers(
+        &ctx,
+        &repo,
+        Arc::try_unwrap(warmers).ok().unwrap(),
+        InitMode::Rewind,
+    )
+    .await?;
+
+    // Verify bookmark exists in all scopes
+    let bookmark_key = BookmarkKey::new("deletable")?;
+    assert_scoped_get(
+        &cache,
+        &ctx,
+        &bookmark_key,
+        Some(commit),
+        Some(commit),
+        Some(commit),
+        "Before deletion",
+    )
+    .await?;
+
+    // Delete bookmark
+    bookmark(&ctx, &repo, "deletable").delete().await?;
+
+    // Re-initialize cache
+    let warmers2 = setup_warmers(&ctx, &repo, WarmerConfig::all_warmers());
+    let cache_after_delete = init_cache_with_warmers(
+        &ctx,
+        &repo,
+        Arc::try_unwrap(warmers2).ok().unwrap(),
+        InitMode::Rewind,
+    )
+    .await?;
+
+    // Verify bookmark is gone from all scopes
+    assert_scoped_get(
+        &cache_after_delete,
+        &ctx,
+        &bookmark_key,
+        None,
+        None,
+        None,
+        "After deletion",
+    )
+    .await?;
+
+    Ok(())
+}
