@@ -515,3 +515,102 @@ async fn test_bookmark_deletion_with_scopes(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+#[mononoke::fbinit_test]
+async fn test_empty_history_bookmark(fb: FacebookInit) -> Result<()> {
+    // Test bookmarks with no derivation history
+
+    let repo: Repo = Linear::get_repo(fb).await;
+    let ctx = CoreContext::test_mock(fb);
+
+    let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+
+    // Create a commit with no derivation
+    let commit = CreateCommitContext::new(&ctx, &repo, vec![master_cs_id])
+        .add_file("underived", "content")
+        .commit()
+        .await?;
+
+    bookmark(&ctx, &repo, "underived_bookmark")
+        .set_to(commit)
+        .await?;
+
+    let warmers = setup_warmers(&ctx, &repo, WarmerConfig::all_warmers());
+    let sub = repo
+        .bookmarks()
+        .create_subscription(&ctx, Freshness::MostRecent)
+        .await?;
+
+    let bookmarks = init_bookmarks(
+        &ctx,
+        &*sub,
+        repo.bookmarks(),
+        repo.bookmark_update_log(),
+        &warmers,
+        InitMode::Rewind,
+    )
+    .await?;
+
+    // Bookmark should not appear in any scope since nothing is derived
+    let bookmark_key = BookmarkKey::new("underived_bookmark")?;
+    assert_eq!(
+        bookmarks.get(&bookmark_key),
+        None,
+        "Underived bookmark should not appear when nothing is derived"
+    );
+
+    // Now derive just Hg
+    derive_data(&ctx, &repo, commit, true, false, true).await?;
+
+    let warmers2 = setup_warmers(&ctx, &repo, WarmerConfig::all_warmers());
+    let bookmarks_after_hg = init_bookmarks(
+        &ctx,
+        &*sub,
+        repo.bookmarks(),
+        repo.bookmark_update_log(),
+        &warmers2,
+        InitMode::Rewind,
+    )
+    .await?;
+
+    let state_after_hg = bookmarks_after_hg
+        .get(&bookmark_key)
+        .expect("Bookmark should appear after Hg derivation");
+
+    assert_bookmark_pointers(
+        state_after_hg,
+        Some(commit),
+        None,
+        None,
+        "After Hg derivation only",
+    );
+
+    // Derive Git as well
+    derive_data(&ctx, &repo, commit, false, true, false).await?;
+
+    let warmers3 = setup_warmers(&ctx, &repo, WarmerConfig::all_warmers());
+    let bookmarks_after_both = init_bookmarks(
+        &ctx,
+        &*sub,
+        repo.bookmarks(),
+        repo.bookmark_update_log(),
+        &warmers3,
+        InitMode::Rewind,
+    )
+    .await?;
+
+    // Now it should appear in all scopes
+    let state_after_both = bookmarks_after_both
+        .get(&bookmark_key)
+        .expect("Bookmark should appear after both derivations");
+
+    assert_bookmark_pointers(
+        state_after_both,
+        Some(commit),
+        Some(commit),
+        Some(commit),
+        "After both derivations",
+    );
+
+    Ok(())
+}
