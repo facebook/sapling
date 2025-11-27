@@ -1,3 +1,4 @@
+load("@fbcode//registry:defs.bzl", "rpm")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("scm_client_infra")
@@ -8,4 +9,128 @@ cpp_library(
     exported_deps = [
         "//common/base:build_info_values",
     ],
+)
+
+# TODO(T75318904): clean up the old packages once conveyor+slowroll is in
+#                  place.
+rpm.builder(
+    name = "fb-eden-test",
+    # We are setting up conveyor+slowroll after which we can much lower this
+    # limit. A higher limit is required for now to avoid weekly breakages as in
+    # S209761.
+    autoclean_keep_versions = 200,
+    buck_opts = rpm.buck_opts(
+        config = {
+            "fbcode.dwp": "true",
+            # split-dwarf is required for reduce binary size
+            "fbcode.split-dwarf": "true",
+        },
+    ),
+    configurations = [
+        rpm.configuration(
+            arch = "x86_64",
+            os = "linux",
+        ),
+        rpm.configuration(
+            arch = "aarch64",
+            os = "linux",
+        ),
+        rpm.configuration(
+            arch = "noarch",
+            os = "mac",
+            repo = "darwin/any",
+        ),
+    ],
+    features = [
+        rpm.install(
+            src = "fbcode//eden/fs/service:edenfs",
+            dst = "/usr/local/libexec/eden/edenfs",
+        ),
+        rpm.install(
+            src = "fbcode//eden/fs/service:edenfs_privhelper",
+            dst = "/usr/local/libexec/eden/edenfs_privhelper",
+            mode = 0o04755,
+        ),
+        rpm.install(
+            src = "fbcode//eden/fs/store:eden_store_util",
+            dst = "/usr/local/libexec/eden/eden_store_util",
+        ),
+        rpm.install(
+            src = "fbcode//eden/fs/cli:edenfsctl",
+            dst = "/usr/local/bin/edenfsctl.real",
+        ),
+        rpm.install(
+            src = "fbcode//eden/fs/cli_rs/edenfsctl:edenfsctl",
+            dst = "/usr/local/bin/edenfsctl",
+        ),
+        rpm.install(
+            src = "fbcode//eden/fs/facebook:eden-fb303-collector",
+            dst = "/usr/local/libexec/eden/eden-fb303-collector",
+        ),
+        rpm.install(
+            src = "fbcode//eden/fs/facebook:edenfs_restarter",
+            dst = "/usr/local/libexec/eden/edenfs_restarter",
+        ),
+        rpm.install(
+            src = "fbcode//eden/fs/config/facebook:edenfs_config_manager",
+            dst = "/usr/local/libexec/eden/edenfs_config_manager",
+        ),
+        rpm.install(
+            src = "fbcode//eden/fs/monitor:edenfs_monitor",
+            dst = "/usr/local/libexec/eden/edenfs_monitor",
+        ),
+        rpm.install(
+            src = "fbcode//eden/fs/cli/trace:trace_stream",
+            dst = "/usr/local/libexec/eden/eden_trace_stream",
+        ),
+        rpm.install(
+            src = "fbcode//eden/fs/inodes/fscatalog:eden_fsck",
+            dst = "/usr/local/libexec/eden/eden_fsck",
+        ),
+        rpm.install(
+            src = "facebook/packaging/config.d/00-defaults.toml",
+            dst = "/etc/eden/config.d/00-defaults.toml",
+            mode = 0o0755,
+        ),
+        rpm.install(
+            src = "facebook/packaging/config.d/doctor.toml",
+            dst = "/etc/eden/config.d/doctor.toml",
+            mode = 0o0755,
+        ),
+        rpm.install(
+            src = "facebook/packaging/ignore",
+            dst = "/etc/eden/ignore",
+            mode = 0o0755,
+        ),
+        rpm.install(
+            src = "facebook/packaging/NOT_MOUNTED_README.txt",
+            dst = "/etc/eden/NOT_MOUNTED_README.txt",
+        ),
+        rpm.install(
+            src = "scripts/facebook/rg_perf_test",
+            dst = "/usr/local/libexec/eden/eden_rg_perf_script",
+            mode = 0o0755,
+        ),
+        rpm.install(
+            src = "scripts/facebook/eden_bench.sh",
+            dst = "/usr/local/libexec/eden/eden_bench.sh",
+            mode = 0o0755,
+        ),
+        rpm.install(
+            src = "scripts/facebook/eden_prof",
+            dst = "/usr/local/libexec/eden/eden_prof",
+            mode = 0o0755,
+        ),
+        rpm.file_symlink(
+            link = "/usr/local/bin/eden",
+            target = "/usr/local/bin/edenfsctl",
+        ),
+        rpm.ensure_dirs_exist(
+            dirs = "/etc/eden",
+        ),
+        rpm.ensure_dirs_exist(
+            dirs = "/etc/eden/config.d",
+        ),
+    ],
+    summary = "Source control aware virtual filesystem",
 )

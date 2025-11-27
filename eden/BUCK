@@ -1,4 +1,5 @@
 load("@fbcode//fbpkg:fbpkg.bzl", "fbpkg")
+load("@fbcode//registry:defs.bzl", "rpm")
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
 
 oncall("scm_client_infra")
@@ -18,6 +19,7 @@ buck_genrule(
     ],
 )
 
+# TODO: T246598314: Unify with rpm.builder in eden/fs
 fbpkg.builder(
     name = "scm.edenfs",
     architectures = [
@@ -73,4 +75,26 @@ fbpkg.builder(
         "sandcastle_install.sh": "facebook/sandcastle_install.sh",
     },
     split_debuginfo = True,
+)
+
+rpm.builder(
+    name = "fb-eden-locale",
+    autoclean_keep_versions = 200,
+    configurations = [
+        rpm.configuration(
+            arch = "x86_64",
+        ),
+        rpm.configuration(
+            arch = "aarch64",
+        ),
+    ],
+    features = [
+        rpm.install(
+            src = "locale/glibc_en.mo",
+            dst = "/usr/share/locale/en/LC_MESSAGES/libc.mo",
+            mode = 0o0755,
+        ),
+    ],
+    strip_debuginfo_without_saving_symbols = True,
+    summary = "Customized errno message translations for Eden.",
 )
