@@ -37,7 +37,7 @@ blobstore = { version = "0.1.0", path = "blobstore" }
 blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }
 bonsai_git_mapping = { version = "0.1.0", path = "bonsai_git_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "bonsai_hg_mapping" }
-bonsai_svnrev_mapping = { version = "0.1.0", path = "bonsai_svnrev_mapping" }
+bonsai_svnrev_mapping = { version = "0.1.0", path = "repo_attributes/bonsai_svnrev_mapping" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bytesize = "2.0"
 check_git_wc = { version = "0.1.0", path = "git/check_git_wc" }
@@ -192,11 +192,6 @@ members = [
   "bonsai_hg_mapping/if/clients",
   "bonsai_hg_mapping/if/mocks",
   "bonsai_hg_mapping/if/services",
-  "bonsai_svnrev_mapping",
-  "bonsai_svnrev_mapping/if",
-  "bonsai_svnrev_mapping/if/clients",
-  "bonsai_svnrev_mapping/if/mocks",
-  "bonsai_svnrev_mapping/if/services",
   "cache_warmup",
   "cas_client/changesets_uploader",
   "cas_client/client",
@@ -400,6 +395,11 @@ members = [
   "quiet_stream",
   "rate_limiting",
   "repo_attributes/bonsai_blob_mapping",
+  "repo_attributes/bonsai_svnrev_mapping",
+  "repo_attributes/bonsai_svnrev_mapping/if",
+  "repo_attributes/bonsai_svnrev_mapping/if/clients",
+  "repo_attributes/bonsai_svnrev_mapping/if/mocks",
+  "repo_attributes/bonsai_svnrev_mapping/if/services",
   "repo_attributes/bonsai_tag_mapping",
   "repo_attributes/bookmarks",
   "repo_attributes/bookmarks/bookmarks_cache",

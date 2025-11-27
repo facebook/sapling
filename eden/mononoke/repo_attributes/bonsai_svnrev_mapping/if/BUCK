@@ -13,7 +13,7 @@ thrift_library(
     # The Thrift definitions are private and only used for serialization -- do
     # not allow other code to use them.
     visibility = [
-        "//eden/mononoke/bonsai_svnrev_mapping:",
+        "//eden/mononoke/repo_attributes/bonsai_svnrev_mapping:",
     ],
     deps = [
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
