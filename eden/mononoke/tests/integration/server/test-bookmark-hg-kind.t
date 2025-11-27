@@ -19,13 +19,11 @@ setup repo
 
   $ hginit_treemanifest repo
   $ cd repo
-  $ touch a && hg addremove && hg ci -q -m 'add a'
-  adding a
-  $ hg log -T '{short(node)}\n'
-  ac82d8b1f7c4
-
-create master bookmark
-  $ hg bookmark master_bookmark -r tip
+  $ quiet testtool_drawdag -R repo <<EOF
+  > A
+  > # modify: A "a" "content"
+  > # bookmark: A master_bookmark
+  > EOF
 
   $ cd $TESTTMP
 
@@ -33,9 +31,6 @@ setup repo-push, repo-pull
   $ hg clone -q mono:repo repo-push --noupdate
   $ hg clone -q mono:repo repo-pull --noupdate
 
-blobimport
-
-  $ blobimport repo/.hg repo
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind FROM bookmarks;'
   master_bookmark|pull_default
 start mononoke
@@ -43,18 +38,18 @@ start mononoke
   $ start_and_wait_for_mononoke_server
 create new bookmarks, then update their properties
   $ cd repo-push
-  $ hg up tip
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg pull -q
+  $ hg up -q "min(all())"
   $ touch b && hg addremove && hg ci -q -m 'add b'
   adding b
   $ hg push -r . --to "not_pull_default" --create
-  pushing rev 907767d421e4 to destination mono:repo bookmark not_pull_default
+  pushing rev 8db75f0f53d8 to destination mono:repo bookmark not_pull_default
   searching for changes
   exporting bookmark not_pull_default
   $ touch c && hg addremove && hg ci -q -m 'add c'
   adding c
   $ hg push -r . --to "scratch" --create
-  pushing rev b2d646f64a99 to destination mono:repo bookmark scratch
+  pushing rev 20396342f200 to destination mono:repo bookmark scratch
   searching for changes
   exporting bookmark scratch
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE CAST(name AS TEXT) LIKE 'scratch';"
@@ -65,48 +60,48 @@ create new bookmarks, then update their properties
   not_pull_default|publishing
   scratch|scratch
   $ tglogpnr
-  @  b2d646f64a99 draft 'add c'
+  @  20396342f200 draft 'add c'
   │
-  o  907767d421e4 draft 'add b'
+  o  8db75f0f53d8 draft 'add b'
   │
-  o  ac82d8b1f7c4 public 'add a'  remote/master_bookmark
+  o  43806d3afe2b public 'A'  remote/master_bookmark
   
+
 test publishing
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
-  o  ac82d8b1f7c4 public 'add a'  remote/master_bookmark
-  
   $ hg pull
   pulling from mono:repo
-  $ hg up 907767d421e4cb28c7978bedef8ccac7242b155e
-  pulling '907767d421e4cb28c7978bedef8ccac7242b155e' from 'mono:repo'
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg up b2d646f64a9978717516887968786c6b7a33edf9
-  pulling 'b2d646f64a9978717516887968786c6b7a33edf9' from 'mono:repo'
+  $ hg up 8db75f0f53d84e2684b2368e760cfb3555875a53
+  pulling '8db75f0f53d84e2684b2368e760cfb3555875a53' from 'mono:repo'
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up 20396342f20004f5f3c139f12681b3dd07b08d8b
+  pulling '20396342f20004f5f3c139f12681b3dd07b08d8b' from 'mono:repo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglogpnr
-  @  b2d646f64a99 draft 'add c'
+  @  20396342f200 draft 'add c'
   │
-  o  907767d421e4 draft 'add b'
+  o  8db75f0f53d8 draft 'add b'
   │
-  o  ac82d8b1f7c4 public 'add a'  remote/master_bookmark
+  o  43806d3afe2b public 'A'  remote/master_bookmark
   
+
   $ hg bookmarks
   no bookmarks set
   $ hg bookmarks --list-remote "*"
-     master_bookmark           ac82d8b1f7c418c61a493ed229ffaa981bda8e90
-     not_pull_default          907767d421e4cb28c7978bedef8ccac7242b155e
-     scratch                   b2d646f64a9978717516887968786c6b7a33edf9
+     master_bookmark           43806d3afe2b66f1765d44d1191c66cd3adbbe93
+     not_pull_default          8db75f0f53d84e2684b2368e760cfb3555875a53
+     scratch                   20396342f20004f5f3c139f12681b3dd07b08d8b
 Exercise the limit (5 bookmarks should be allowed, this was our limit)
   $ cd ../repo-push
   $ hg push -r . --to "more/1" --create >/dev/null 2>&1
   $ hg push -r . --to "more/2" --create >/dev/null 2>&1
   $ hg bookmarks --list-remote "*"
-     master_bookmark           ac82d8b1f7c418c61a493ed229ffaa981bda8e90
-     more/1                    b2d646f64a9978717516887968786c6b7a33edf9
-     more/2                    b2d646f64a9978717516887968786c6b7a33edf9
-     not_pull_default          907767d421e4cb28c7978bedef8ccac7242b155e
-     scratch                   b2d646f64a9978717516887968786c6b7a33edf9
+     master_bookmark           43806d3afe2b66f1765d44d1191c66cd3adbbe93
+     more/1                    20396342f20004f5f3c139f12681b3dd07b08d8b
+     more/2                    20396342f20004f5f3c139f12681b3dd07b08d8b
+     not_pull_default          8db75f0f53d84e2684b2368e760cfb3555875a53
+     scratch                   20396342f20004f5f3c139f12681b3dd07b08d8b
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE bookmarks SET hg_kind = CAST('scratch' AS BLOB) WHERE CAST(name AS TEXT) LIKE 'more/%';"
   $ flush_mononoke_bookmarks
 Exercise the limit (6 bookmarks should fail)
@@ -120,6 +115,6 @@ Exercise the limit (6 bookmarks should fail)
 
 Narrowing down our query should fix it:
   $ hg bookmarks --list-remote "more/*"
-     more/1                    b2d646f64a9978717516887968786c6b7a33edf9
-     more/2                    b2d646f64a9978717516887968786c6b7a33edf9
-     more/3                    b2d646f64a9978717516887968786c6b7a33edf9
+     more/1                    20396342f20004f5f3c139f12681b3dd07b08d8b
+     more/2                    20396342f20004f5f3c139f12681b3dd07b08d8b
+     more/3                    20396342f20004f5f3c139f12681b3dd07b08d8b
