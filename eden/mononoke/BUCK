@@ -22,7 +22,7 @@ rust_binary(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/secure_utils:secure_utils",
-        "//eden/mononoke/cache_warmup:cache_warmup",
+        "//eden/mononoke/features/cache_warmup:cache_warmup",
         "//eden/mononoke/cmdlib:cmdlib_logging",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
