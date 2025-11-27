@@ -18,24 +18,18 @@
   $ hginit_treemanifest repo
   $ cd repo
 
-# Commit small file
-  $ echo s > smallfile
-  $ hg commit -Aqm "add small file"
+# Commit small file using testtool drawdag
+  $ testtool_drawdag -R repo --no-default-files <<'EOF'
+  > A
+  > # modify: A "smallfile" "s\n"
+  > # bookmark: A master_bookmark
+  > EOF
+  A=b7c61980054dfc722035397cd93fc215b2dadd4af0c1c61c6252a27a7eabb3c3
 
-  $ hg bookmark master_bookmark -r tip
-
-  $ cd ..
-
-# 2. Blobimport hg nolfs to mononoke (blob_files).
-#   2.a Motivation: Blobimport for now does not support import of lfs hg repos. (Error with RevlogRepo parsing).
-#       So we need to blobimport hg repo without lsf extension.
-#   2.b Motivation: For blob_files storage, is because we need to run Mononoke and Mononoke API server.
-#       We cannot have 2 processes for 1 RocksDB repo, as RocksDb does not allows us to do that.
-#   2.c Still Mononoke config is blobimported to Rocks DB. As Api server and Mononoke server are using them separately.
-  $ blobimport repo/.hg repo
-
-# 3. Setup Mononoke. Introduce LFS_THRESHOLD into Mononoke server config.
-  $ start_and_wait_for_mononoke_server
+Import and start mononoke
+  $ cd "$TESTTMP"
+  $ mononoke
+  $ wait_for_mononoke
 # 4. Setup Mononoke API server.
   $ lfs_uri="$(lfs_server)/repo"
 
@@ -58,7 +52,7 @@
   $ echo $LONG > lfs-largefile
   $ hg commit -Aqm "add lfs-large file"
   $ hg push -r . --to master_bookmark -v
-  pushing rev 0db8825b9792 to destination mono:repo bookmark master_bookmark
+  pushing rev e193e13333e3 to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
