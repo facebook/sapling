@@ -34,7 +34,7 @@ fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rus
 fileblob = { version = "0.1.0", path = "../../blobstore/fileblob" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-git_symbolic_refs = { version = "0.1.0", path = "../../git_symbolic_refs" }
+git_symbolic_refs = { version = "0.1.0", path = "../../repo_attributes/git_symbolic_refs" }
 git_types = { version = "0.1.0", path = "../git_types" }
 indicatif = { version = "0.18.3", features = ["futures", "improved_unicode", "rayon", "tokio"] }
 itertools = "0.14.0"

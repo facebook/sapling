@@ -13,8 +13,8 @@ thrift_library(
     # The Thrift definitions are private and only used for serialization -- do
     # not allow other code to use them.
     visibility = [
-        "//eden/mononoke/git_symbolic_refs:git_symbolic_refs",
-        "//eden/mononoke/git_symbolic_refs:git_symbolic_refs-unittest",
+        "//eden/mononoke/repo_attributes/git_symbolic_refs:git_symbolic_refs",
+        "//eden/mononoke/repo_attributes/git_symbolic_refs:git_symbolic_refs-unittest",
     ],
     deps = [
         "//thrift/annotation:rust",

@@ -6,7 +6,7 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-eden/mononoke/git_symbolic_refs/if/git_symbolic_refs.thrift crate //eden/mononoke/git_symbolic_refs/if:git_symbolic_refs_entry_thrift-rust
+eden/mononoke/repo_attributes/git_symbolic_refs/if/git_symbolic_refs.thrift crate //eden/mononoke/repo_attributes/git_symbolic_refs/if:git_symbolic_refs_entry_thrift-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
 ";
@@ -16,9 +16,9 @@ fn main() {
     let out_dir = env::var_os("OUT_DIR").expect("OUT_DIR env not provided");
     let cratemap_path = Path::new(&out_dir).join("cratemap");
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
-    Config::from_env(GenContext::Mocks)
+    Config::from_env(GenContext::Clients)
         .expect("Failed to instantiate thrift_compiler::Config")
-        .base_path("../../../../..")
+        .base_path("../../../../../..")
         .types_crate("git_symbolic_refs_entry_thrift__types")
         .clients_crate("git_symbolic_refs_entry_thrift__clients")
         .run(["../git_symbolic_refs.thrift"])
