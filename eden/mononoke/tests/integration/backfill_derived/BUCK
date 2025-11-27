@@ -11,10 +11,10 @@ dott_test(
         ["*.t"],
     ),
     deps = [
-        "//eden/mononoke:backfill_mapping",
         "//eden/mononoke:blobimport",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/backfill_mapping:backfill_mapping",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
