@@ -13,34 +13,19 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ echo "a file content" > a
-  $ hg add a
-  $ hg ci -ma
+  $ testtool_drawdag -R repo << EOF
+  > A
+  > # bookmark: A master_bookmark
+  > # modify: A a "a file content"
+  > EOF
+  A=d672564be4c568b4d175fb2283de2485ea31cbe1d632ff2a6850b69e2940bad8
 
-setup master bookmarks
-
-  $ hg bookmark master_bookmark -r 'tip'
-
-verify content
-  $ hg log
-  commit:      0e7ec5675652
-  bookmark:    master_bookmark
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
-   (re)
-
-  $ cd $TESTTMP
-  $ blobimport repo/.hg repo
+start mononoke
+  $ start_and_wait_for_mononoke_server
 
 setup push source repo
   $ hg clone -q mono:repo repo2
 
-start mononoke
-
-  $ start_and_wait_for_mononoke_server
 create new commit in repo2 and check that push fails
 
   $ cd repo2
@@ -49,7 +34,7 @@ create new commit in repo2 and check that push fails
   $ hg ci -ma
 
   $ hg push -r . --to master_bookmark
-  pushing rev 2b761f0782ab to destination mono:repo bookmark master_bookmark
+  pushing rev 36dabb88c248 to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -61,7 +46,7 @@ create new commit in repo2 and check that push fails
   $ echo "1" >> a
   $ hg ci -maaaa
   $ hg push -r . --to master_bookmark
-  pushing rev 3a090ff5a2b7 to destination mono:repo bookmark master_bookmark
+  pushing rev 4179bfee0535 to destination mono:repo bookmark master_bookmark
   searching for changes
   remote: Command failed
   remote:   Error:
