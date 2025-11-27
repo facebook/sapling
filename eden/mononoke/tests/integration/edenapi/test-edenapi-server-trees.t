@@ -13,24 +13,39 @@ Set up local hgrc and Mononoke config.
 Initialize test repo.
   $ hginit_treemanifest repo
   $ cd repo
+  $ testtool_drawdag -R repo --print-hg-hashes <<EOF
+  > COMMIT_2
+  > |
+  > COMMIT_1
+  > # modify: COMMIT_1 "test.txt" "test content\n"
+  > # message: COMMIT_1 "add test.txt"
+  > # copy: COMMIT_2 "copy.txt" "test content\n" "COMMIT_1" "test.txt"
+  > # message: COMMIT_2 "copy test.txt to test2.txt"
+  > EOF
+  COMMIT_1=* (glob)
+  COMMIT_2=* (glob)
 
-Populate test repo
-  $ echo "test content" > test.txt
-  $ hg commit -Aqm "add test.txt"
-  $ ROOT_MFID_1=$(hg log -r . -T '{manifest}')
-  $ HG_ID_1=$(hg log -r . -T '{node}')
-  $ hg cp test.txt copy.txt
-  $ hg commit -Aqm "copy test.txt to test2.txt"
-  $ ROOT_MFID_2=$(hg log -r . -T '{manifest}')
-  $ HG_ID_2=$(hg log -r . -T '{node}')
-
-Blobimport test repo.
+Import test repo.
   $ cd ..
-  $ blobimport repo/.hg repo
 
 Start up SaplingRemoteAPI server.
+  $ setup_mononoke_config
   $ SCUBA="$TESTTMP/scuba.json"
   $ start_and_wait_for_mononoke_server --scuba-log-file "$SCUBA"
+
+Extract manifest IDs and commit hashes
+  $ cd $TESTTMP/repo
+  $ cat >> .hg/hgrc <<EOF
+  > [paths]
+  > default = mono:repo
+  > EOF
+  $ hg pull -q -r $COMMIT_1 -r $COMMIT_2
+  $ ROOT_MFID_1=$(hg log -r $COMMIT_1 -T '{manifest}')
+  $ ROOT_MFID_2=$(hg log -r $COMMIT_2 -T '{manifest}')
+  $ HG_ID_1="$COMMIT_1"
+  $ HG_ID_2="$COMMIT_2"
+  $ cd $TESTTMP
+
 Create and send tree request.
   $ cat > keys << EOF
   > [
@@ -48,11 +63,19 @@ Create and send tree request.
   > EOF
 
   $ hg debugapi mono:repo -e trees -f keys -f attrs --sort
-  [{"key": {"node": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
+  [{"key": {"node": bin("b3930c8a2f6a25b56d20ed48ce1d30cd98026792"),
             "path": ""},
-    "data": b"test.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
+    "data": b"COMMIT_1\05690dd090bcba4b8f272493af3c574cd5242c4d1\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
     "parents": None,
-    "children": [{"Ok": {"File": {"key": {"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
+    "children": [{"Ok": {"File": {"key": {"node": bin("5690dd090bcba4b8f272493af3c574cd5242c4d1"),
+                                          "path": "COMMIT_1"},
+                                  "file_metadata": {"size": 8,
+                                                    "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "content_sha1": bin("caeda72b3c84736c17cc15dfd79bf5c3efa08c8c"),
+                                                    "content_blake3": bin("f345aeb96f603ce728210cd8481f50d3f73679d206afbdaa5dc554c05f1501ae"),
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": b""}}}},
+                 {"Ok": {"File": {"key": {"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
                                           "path": "test.txt"},
                                   "file_metadata": {"size": 13,
                                                     "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
@@ -61,11 +84,27 @@ Create and send tree request.
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": b""}}}}],
     "tree_aux_data": None},
-   {"key": {"node": bin("c8743b14e0789cc546125213c18a18d813862db5"),
+   {"key": {"node": bin("dfe7fab71e1f96a0f0f53b0c76725c01d79b244d"),
             "path": ""},
-    "data": b"copy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
-    "parents": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
-    "children": [{"Ok": {"File": {"key": {"node": bin("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
+    "data": b"COMMIT_1\05690dd090bcba4b8f272493af3c574cd5242c4d1\nCOMMIT_2\030a356c25fb06508d81ed1dceb0550bcaa1ba9e0\ncopy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
+    "parents": bin("b3930c8a2f6a25b56d20ed48ce1d30cd98026792"),
+    "children": [{"Ok": {"File": {"key": {"node": bin("5690dd090bcba4b8f272493af3c574cd5242c4d1"),
+                                          "path": "COMMIT_1"},
+                                  "file_metadata": {"size": 8,
+                                                    "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "content_sha1": bin("caeda72b3c84736c17cc15dfd79bf5c3efa08c8c"),
+                                                    "content_blake3": bin("f345aeb96f603ce728210cd8481f50d3f73679d206afbdaa5dc554c05f1501ae"),
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": b""}}}},
+                 {"Ok": {"File": {"key": {"node": bin("30a356c25fb06508d81ed1dceb0550bcaa1ba9e0"),
+                                          "path": "COMMIT_2"},
+                                  "file_metadata": {"size": 8,
+                                                    "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "content_sha1": bin("0d5c8bf514dfef3ebe753eaf921d3eb63780d5dc"),
+                                                    "content_blake3": bin("478f37d7d3cc01195aa96f425b687dc04fc038d565c08ad438516755d3396a63"),
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": b""}}}},
+                 {"Ok": {"File": {"key": {"node": bin("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
                                           "path": "copy.txt"},
                                   "file_metadata": {"size": 13,
                                                     "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
@@ -94,11 +133,19 @@ Create and send tree request.
 
 Expected fallback (tree_aux_data is not returned)
   $ hg debugapi mono:repo -e trees -f keys -f attrs --sort
-  [{"key": {"node": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
+  [{"key": {"node": bin("b3930c8a2f6a25b56d20ed48ce1d30cd98026792"),
             "path": ""},
-    "data": b"test.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
+    "data": b"COMMIT_1\05690dd090bcba4b8f272493af3c574cd5242c4d1\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
     "parents": None,
-    "children": [{"Ok": {"File": {"key": {"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
+    "children": [{"Ok": {"File": {"key": {"node": bin("5690dd090bcba4b8f272493af3c574cd5242c4d1"),
+                                          "path": "COMMIT_1"},
+                                  "file_metadata": {"size": 8,
+                                                    "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "content_sha1": bin("caeda72b3c84736c17cc15dfd79bf5c3efa08c8c"),
+                                                    "content_blake3": bin("f345aeb96f603ce728210cd8481f50d3f73679d206afbdaa5dc554c05f1501ae"),
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": b""}}}},
+                 {"Ok": {"File": {"key": {"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
                                           "path": "test.txt"},
                                   "file_metadata": {"size": 13,
                                                     "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
@@ -107,11 +154,27 @@ Expected fallback (tree_aux_data is not returned)
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": b""}}}}],
     "tree_aux_data": None},
-   {"key": {"node": bin("c8743b14e0789cc546125213c18a18d813862db5"),
+   {"key": {"node": bin("dfe7fab71e1f96a0f0f53b0c76725c01d79b244d"),
             "path": ""},
-    "data": b"copy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
-    "parents": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
-    "children": [{"Ok": {"File": {"key": {"node": bin("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
+    "data": b"COMMIT_1\05690dd090bcba4b8f272493af3c574cd5242c4d1\nCOMMIT_2\030a356c25fb06508d81ed1dceb0550bcaa1ba9e0\ncopy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
+    "parents": bin("b3930c8a2f6a25b56d20ed48ce1d30cd98026792"),
+    "children": [{"Ok": {"File": {"key": {"node": bin("5690dd090bcba4b8f272493af3c574cd5242c4d1"),
+                                          "path": "COMMIT_1"},
+                                  "file_metadata": {"size": 8,
+                                                    "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "content_sha1": bin("caeda72b3c84736c17cc15dfd79bf5c3efa08c8c"),
+                                                    "content_blake3": bin("f345aeb96f603ce728210cd8481f50d3f73679d206afbdaa5dc554c05f1501ae"),
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": b""}}}},
+                 {"Ok": {"File": {"key": {"node": bin("30a356c25fb06508d81ed1dceb0550bcaa1ba9e0"),
+                                          "path": "COMMIT_2"},
+                                  "file_metadata": {"size": 8,
+                                                    "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "content_sha1": bin("0d5c8bf514dfef3ebe753eaf921d3eb63780d5dc"),
+                                                    "content_blake3": bin("478f37d7d3cc01195aa96f425b687dc04fc038d565c08ad438516755d3396a63"),
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": b""}}}},
+                 {"Ok": {"File": {"key": {"node": bin("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
                                           "path": "copy.txt"},
                                   "file_metadata": {"size": 13,
                                                     "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
@@ -132,11 +195,19 @@ Expected fallback (tree_aux_data is not returned)
 Expected for tree_aux_data to be returned.
   $ mononoke_admin derived-data -R repo derive --derived-data-types hg_augmented_manifests -i $HG_ID_1 -i $HG_ID_2 --from-predecessor
   $ hg debugapi mono:repo -e trees -f keys -f attrs --sort
-  [{"key": {"node": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
+  [{"key": {"node": bin("b3930c8a2f6a25b56d20ed48ce1d30cd98026792"),
             "path": ""},
-    "data": b"test.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
+    "data": b"COMMIT_1\05690dd090bcba4b8f272493af3c574cd5242c4d1\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
     "parents": None,
-    "children": [{"Ok": {"File": {"key": {"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
+    "children": [{"Ok": {"File": {"key": {"node": bin("5690dd090bcba4b8f272493af3c574cd5242c4d1"),
+                                          "path": "COMMIT_1"},
+                                  "file_metadata": {"size": 8,
+                                                    "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "content_sha1": bin("caeda72b3c84736c17cc15dfd79bf5c3efa08c8c"),
+                                                    "content_blake3": bin("f345aeb96f603ce728210cd8481f50d3f73679d206afbdaa5dc554c05f1501ae"),
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": b""}}}},
+                 {"Ok": {"File": {"key": {"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
                                           "path": "test.txt"},
                                   "file_metadata": {"size": 13,
                                                     "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
@@ -144,13 +215,29 @@ Expected for tree_aux_data to be returned.
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": b""}}}}],
-    "tree_aux_data": {"augmented_manifest_id": bin("b607f9f2497ec96ef5f73f363886a3df48759ea864bff648e0f8de382236f71e"),
-                      "augmented_manifest_size": 212}},
-   {"key": {"node": bin("c8743b14e0789cc546125213c18a18d813862db5"),
+    "tree_aux_data": {"augmented_manifest_id": bin("3fa0541cdf451ab034a94a5006399bde88da365896ed364798106c5757248d41"),
+                      "augmented_manifest_size": 373}},
+   {"key": {"node": bin("dfe7fab71e1f96a0f0f53b0c76725c01d79b244d"),
             "path": ""},
-    "data": b"copy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
-    "parents": bin("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
-    "children": [{"Ok": {"File": {"key": {"node": bin("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
+    "data": b"COMMIT_1\05690dd090bcba4b8f272493af3c574cd5242c4d1\nCOMMIT_2\030a356c25fb06508d81ed1dceb0550bcaa1ba9e0\ncopy.txt\017b8d4e3bafd4ec4812ad7c930aace9bf07ab033\ntest.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n",
+    "parents": bin("b3930c8a2f6a25b56d20ed48ce1d30cd98026792"),
+    "children": [{"Ok": {"File": {"key": {"node": bin("5690dd090bcba4b8f272493af3c574cd5242c4d1"),
+                                          "path": "COMMIT_1"},
+                                  "file_metadata": {"size": 8,
+                                                    "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "content_sha1": bin("caeda72b3c84736c17cc15dfd79bf5c3efa08c8c"),
+                                                    "content_blake3": bin("f345aeb96f603ce728210cd8481f50d3f73679d206afbdaa5dc554c05f1501ae"),
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": b""}}}},
+                 {"Ok": {"File": {"key": {"node": bin("30a356c25fb06508d81ed1dceb0550bcaa1ba9e0"),
+                                          "path": "COMMIT_2"},
+                                  "file_metadata": {"size": 8,
+                                                    "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "content_sha1": bin("0d5c8bf514dfef3ebe753eaf921d3eb63780d5dc"),
+                                                    "content_blake3": bin("478f37d7d3cc01195aa96f425b687dc04fc038d565c08ad438516755d3396a63"),
+                                                    "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
+                                                    "file_header_metadata": b""}}}},
+                 {"Ok": {"File": {"key": {"node": bin("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
                                           "path": "copy.txt"},
                                   "file_metadata": {"size": 13,
                                                     "content_id": bin("0000000000000000000000000000000000000000000000000000000000000000"),
@@ -166,8 +253,8 @@ Expected for tree_aux_data to be returned.
                                                     "content_blake3": bin("7e9a0ce0d68016f0502ac50ff401830c7e2e9c894b43b242439f90f99af8835a"),
                                                     "content_sha256": bin("0000000000000000000000000000000000000000000000000000000000000000"),
                                                     "file_header_metadata": b""}}}}],
-    "tree_aux_data": {"augmented_manifest_id": bin("f5d56263e1ffc9a4bf1e637a5d7c5245dfd89ec7b9109147cc7dcc5187e8a73f"),
-                      "augmented_manifest_size": 504}}]
+    "tree_aux_data": {"augmented_manifest_id": bin("0692535594cfc449a55b4c4b1a0c2ce290dd6bae40e188805f97ff6b9e88b79d"),
+                      "augmented_manifest_size": 826}}]
 
   $ cat "$SCUBA" | jq '. | select(.normal.log_tag == "EdenAPI Request Processed" and .normal.edenapi_method == "trees") | {edenapi_method: .normal.edenapi_method, fetch_from_cas_attempted: .normal.fetch_from_cas_attempted}' | jq -s '.[0]'
   {
