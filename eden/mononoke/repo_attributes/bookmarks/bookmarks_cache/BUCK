@@ -3,13 +3,15 @@ load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 oncall("scm_server_infra")
 
 rust_library(
-    name = "repo_bookmark_attrs",
+    name = "bookmarks_cache",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "."},
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:enum-map",
         "//common/rust/shed/facet:facet",
-        "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/permission_checker:permission_checker",
+        "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/bookmarks/bookmarks_types:bookmarks_types",
         "//eden/mononoke/server/context:context",
     ],

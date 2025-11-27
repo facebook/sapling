@@ -1,0 +1,66 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:rust_unittest.bzl", "rust_unittest")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "dbbookmarks",
+    srcs = glob([
+        "src/**/*.rs",
+        "schemas/**/*.sql",
+    ]),
+    autocargo = {"cargo_toml_dir": "."},
+    test_deps = [
+        "fbsource//third-party/rust:ascii",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/ascii_ext:ascii_ext",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:tracing",
+        "//common/rust/shed/cloned:cloned",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/justknobs_stub:justknobs",
+        "//common/rust/shed/stats:stats",
+        "//eden/mononoke/common/futures_watchdog:futures_watchdog",
+        "//eden/mononoke/common/rust/sql_ext:sql_ext",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
+        "//eden/mononoke/server/context:context",
+    ],
+)
+
+rust_unittest(
+    name = "dbbookmarks-test",
+    srcs = glob(["tests/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "."},
+    crate = "dbbookmarks_test",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:quickcheck",
+        "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
+        "//common/rust/shed/sql:sql",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/mononoke_types:mononoke_types-mocks",
+        "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
+        "//eden/mononoke/repo_attributes/bookmarks/dbbookmarks:dbbookmarks",
+        "//eden/mononoke/server/context:context",
+    ],
+)

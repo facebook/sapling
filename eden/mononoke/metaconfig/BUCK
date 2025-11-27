@@ -25,7 +25,7 @@ rust_library(
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/permission_checker:permission_checker",
-        "//eden/mononoke/repo_attributes/bookmarks:bookmarks_types",
+        "//eden/mononoke/repo_attributes/bookmarks/bookmarks_types:bookmarks_types",
     ],
 )
 
@@ -58,7 +58,7 @@ rust_library(
         "//configerator/structs/scm/mononoke/repos:repos-rust",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/permission_checker:permission_checker",
-        "//eden/mononoke/repo_attributes/bookmarks:bookmarks_types",
+        "//eden/mononoke/repo_attributes/bookmarks/bookmarks_types:bookmarks_types",
         "//eden/scm/lib/repo/url:repourl",
     ],
 )
