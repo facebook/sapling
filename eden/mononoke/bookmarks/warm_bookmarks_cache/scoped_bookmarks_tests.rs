@@ -207,3 +207,61 @@ async fn test_scoped_pointers_track_independently(fb: FacebookInit) -> Result<()
 
     Ok(())
 }
+
+#[mononoke::fbinit_test]
+async fn test_complex_warmer_dependencies(fb: FacebookInit) -> Result<()> {
+    // Test with warmers that have dependencies (Unodes requires both Hg and Git)
+
+    let repo: Repo = Linear::get_repo(fb).await;
+    let ctx = CoreContext::test_mock(fb);
+
+    let warmers = setup_warmers(&ctx, &repo, WarmerConfig::all_warmers());
+    let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+
+    let mut builder = CommitChainBuilder::new(&ctx, &repo, master_cs_id);
+
+    // commit1: Everything derived
+    let commit1 = builder.add_commit("file1", true, true, true).await?;
+    bookmark(&ctx, &repo, "complex_bookmark")
+        .create_publishing(commit1)
+        .await?;
+
+    // commit2: Hg
+    let commit2 = builder.add_commit("file2", true, false, true).await?;
+    bookmark(&ctx, &repo, "complex_bookmark")
+        .set_to(commit2)
+        .await?;
+
+    // commit3: Git
+    let commit3 = builder.add_commit("file3", false, true, true).await?;
+    bookmark(&ctx, &repo, "complex_bookmark")
+        .set_to(commit3)
+        .await?;
+
+    // commit4: Only Hg and Git specific, but none complete
+    let commit4 = builder.add_commit("file4", true, true, false).await?;
+    bookmark(&ctx, &repo, "complex_bookmark")
+        .set_to(commit4)
+        .await?;
+
+    let cache = init_cache_with_warmers(
+        &ctx,
+        &repo,
+        Arc::try_unwrap(warmers).ok().unwrap(),
+        InitMode::Rewind,
+    )
+    .await?;
+
+    assert_scoped_get(
+        &cache,
+        &ctx,
+        &BookmarkKey::new("complex_bookmark")?,
+        Some(commit3), // HgOnly: through transitive derivation, Hg was derived for 3, when we derived 4
+        Some(commit3), // GitOnly: All requirements present at 3
+        Some(commit3), // AllKinds: transitive derivation gives everything at 3
+        "Complex warmer dependencies",
+    )
+    .await?;
+
+    Ok(())
+}
