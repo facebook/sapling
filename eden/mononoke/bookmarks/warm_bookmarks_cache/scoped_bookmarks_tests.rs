@@ -779,3 +779,112 @@ async fn test_init_mode_warm_vs_rewind(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+#[mononoke::fbinit_test]
+async fn test_multiple_bookmarks_different_states(fb: FacebookInit) -> Result<()> {
+    // Test multiple bookmarks with different derivation states
+
+    let repo: Repo = Linear::get_repo(fb).await;
+    let ctx = CoreContext::test_mock(fb);
+
+    let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+    derive_data(&ctx, &repo, master_cs_id, true, true, true).await?;
+
+    // Create multiple bookmarks with different derivation patterns
+    let mut bookmarks = Vec::new();
+
+    for i in 0..3 {
+        let bookmark_name = format!("bookmark{}", i);
+
+        // Create bookmarks at master first to build history
+        bookmark(&ctx, &repo, &*bookmark_name)
+            .create_publishing(master_cs_id)
+            .await?;
+
+        let file_name = format!("file{}", i);
+        let commit = CreateCommitContext::new(&ctx, &repo, vec![master_cs_id])
+            .add_file(&*file_name, "content")
+            .commit()
+            .await?;
+
+        match i {
+            0 => {
+                // Fully derived
+                derive_data(&ctx, &repo, commit, true, true, true).await?;
+            }
+            1 => {
+                // Only Hg and Unodes
+                derive_data(&ctx, &repo, commit, true, false, true).await?;
+            }
+            2 => {
+                // Only Git and Unodes
+                derive_data(&ctx, &repo, commit, false, true, true).await?;
+            }
+            _ => {}
+        }
+
+        // Move bookmark to the new commit
+        bookmark(&ctx, &repo, &*bookmark_name)
+            .set_to(commit)
+            .await?;
+        bookmarks.push((bookmark_name, commit));
+    }
+
+    let warmers = setup_warmers(&ctx, &repo, WarmerConfig::all_warmers());
+    let sub = repo
+        .bookmarks()
+        .create_subscription(&ctx, Freshness::MostRecent)
+        .await?;
+
+    let bookmark_states = init_bookmarks(
+        &ctx,
+        &*sub,
+        repo.bookmarks(),
+        repo.bookmark_update_log(),
+        &warmers,
+        InitMode::Rewind,
+    )
+    .await?;
+
+    // Verify each bookmark's state
+    let (name0, commit0) = &bookmarks[0];
+    let state0 = bookmark_states
+        .get(&BookmarkKey::new(name0)?)
+        .expect("Bookmark 0 should exist");
+
+    assert_bookmark_pointers(
+        state0,
+        Some(*commit0),
+        Some(*commit0),
+        Some(*commit0),
+        "Fully derived bookmark",
+    );
+
+    let (name1, commit1) = &bookmarks[1];
+    let state1 = bookmark_states
+        .get(&BookmarkKey::new(name1)?)
+        .expect("Bookmark 1 should exist");
+
+    assert_bookmark_pointers(
+        state1,
+        Some(*commit1),     // HgOnly: has Hg at commit
+        Some(master_cs_id), // GitOnly: rewound to master
+        Some(master_cs_id), // AllKinds: rewound to master
+        "Hg-only bookmark",
+    );
+
+    let (name2, commit2) = &bookmarks[2];
+    let state2 = bookmark_states
+        .get(&BookmarkKey::new(name2)?)
+        .expect("Bookmark 2 should exist");
+
+    assert_bookmark_pointers(
+        state2,
+        Some(master_cs_id), // HgOnly: rewound to master
+        Some(*commit2),     // GitOnly: has Git at commit
+        Some(master_cs_id), // AllKinds: rewound to master
+        "Git-only bookmark",
+    );
+
+    Ok(())
+}
