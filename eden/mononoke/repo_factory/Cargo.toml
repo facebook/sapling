@@ -56,7 +56,7 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mutable_blobstore = { version = "0.1.0", path = "../repo_attributes/mutable_blobstore" }
 mutable_counters = { version = "0.1.0", path = "../repo_attributes/mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
-newfilenodes = { version = "0.1.0", path = "../newfilenodes" }
+newfilenodes = { version = "0.1.0", path = "../repo_attributes/newfilenodes" }
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 phases = { version = "0.1.0", path = "../phases" }
