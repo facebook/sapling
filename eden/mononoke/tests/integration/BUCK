@@ -110,8 +110,8 @@ dott_test(
     name = "bonsai-verify",
     dott_files = ["test-bonsai-verify.t"],
     deps = [
-        "//eden/mononoke:bonsai_verify",
         "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/bonsai_verify:bonsai_verify",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

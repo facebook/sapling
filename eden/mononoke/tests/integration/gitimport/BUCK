@@ -12,10 +12,10 @@ dott_test(
             "*.t",
         ]),
     deps = [
-        "//eden/mononoke:bonsai_verify",
         "//eden/mononoke:mononoke",
         "//eden/mononoke/git/gitimport:gitimport",
         "//eden/mononoke/lfs_server:lfs_server",
         "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/bonsai_verify:bonsai_verify",
     ],
 )
