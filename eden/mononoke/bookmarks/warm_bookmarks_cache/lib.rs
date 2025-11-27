@@ -729,6 +729,7 @@ async fn init_bookmarks(
             let remaining = total - i - 1;
 
             let warm_state = get_warm_state(ctx, cs_id, warmers).watched().await?;
+
             if !warm_state.are_all_warm() {
                 match mode {
                     InitMode::Rewind => {
@@ -742,24 +743,38 @@ async fn init_bookmarks(
                         .watched()
                         .await?;
 
-                        tracing::info!(
-                            "moved {} back in history to {:?}",
-                            book,
-                            derived_cs_ids.changesets[WarmerRequirement::AllKinds]
-                        );
-
-                        let mut bookmarks_state = BookmarkState::from_warmers(kind, warmers);
-                        // Set each requirement to its derived changeset if it was found
-                        for (req, derived_cs_id_opt) in derived_cs_ids.changesets {
-                            if let Some(derived_cs_id) = derived_cs_id_opt {
-                                bookmarks_state.set(req, derived_cs_id)?;
+                        for (requirement, maybe_cs_id) in derived_cs_ids.changesets {
+                            if let Some(cs_id) = maybe_cs_id {
+                                tracing::info!(
+                                    "moved {} back in {:?} history to {:?}",
+                                    book,
+                                    requirement,
+                                    cs_id
+                                );
                             }
                         }
-                        Ok((
-                            remaining,
-                            derived_cs_ids.changesets[WarmerRequirement::AllKinds]
-                                .map(|_cs_id| (book, bookmarks_state)),
-                        ))
+
+                        // Insert bookmark if ANY scope is ready (not just AllKinds).
+                        // This allows bookmarks to become visible with partial warming.
+                        let has_any_scope = derived_cs_ids.changesets.values().any(|v| v.is_some());
+
+                        let key_and_state_pair = if has_any_scope {
+                            // Create BookmarkState from warmers to track the right requirements
+                            let mut state = BookmarkState::from_warmers(kind, warmers);
+
+                            // Set each requirement that we found a derived version for
+                            for (requirement, maybe_cs_id) in derived_cs_ids.changesets {
+                                if let Some(cs_id) = maybe_cs_id {
+                                    state.set(requirement, cs_id)?;
+                                }
+                            }
+
+                            Some((book, state))
+                        } else {
+                            None
+                        };
+
+                        Ok((remaining, key_and_state_pair))
                     }
                     InitMode::Warm => {
                         tracing::info!("warmed bookmark {} at {}", book, cs_id);
@@ -983,37 +998,36 @@ async fn move_bookmark_back_in_history_until_derived(
         find_latest_derived_and_underived(ctx, bookmarks, bookmark_update_log, book, warmers)
             .await?;
 
-    match entries.derived_entries[WarmerRequirement::AllKinds] {
-        LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => {
-            let maybe_cs = maybe_cs_id_and_ts.map(|(cs_id, _)| cs_id);
-            // TODO Right now we are just tracking AllKinds, and we move the other pointers at the same step
-            Ok(DerivedChangesetIds {
-                changesets: enum_map::enum_map! {
-                    WarmerRequirement::HgOnly => maybe_cs,
-                    WarmerRequirement::GitOnly => maybe_cs,
-                    WarmerRequirement::AllKinds => maybe_cs,
-                },
-            })
-        }
-        LatestDerivedBookmarkEntry::NotFound => {
-            let cur_bookmark_value = bookmarks
-                .get(ctx.clone(), book, bookmarks::Freshness::MostRecent)
-                .await?;
-            tracing::warn!(
-                "cannot find previous derived version of {}, returning current version {:?}",
-                book,
+    let mut derived_changesets = EnumMap::default();
+    let mut cur_bookmark_value = None;
+    let mut tried = false;
+    for (requirement, derived_entry) in entries.derived_entries {
+        let cs_id = match derived_entry {
+            LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => {
+                maybe_cs_id_and_ts.map(|(cs_id, _)| cs_id)
+            }
+            LatestDerivedBookmarkEntry::NotFound => {
+                if !tried && cur_bookmark_value.is_none() {
+                    tried = true;
+                    cur_bookmark_value = bookmarks
+                        .get(ctx.clone(), book, bookmarks::Freshness::MostRecent)
+                        .await?;
+                }
+                tracing::warn!(
+                    "cannot find previous derived version of {} for {:?} warmers, returning current version {:?}",
+                    book,
+                    requirement,
+                    cur_bookmark_value
+                );
                 cur_bookmark_value
-            );
-            Ok(DerivedChangesetIds {
-                // TODO Right now we are just tracking AllKinds, and we move the other pointers at the same step
-                changesets: enum_map::enum_map! {
-                    WarmerRequirement::HgOnly => cur_bookmark_value,
-                    WarmerRequirement::GitOnly => cur_bookmark_value,
-                    WarmerRequirement::AllKinds => cur_bookmark_value,
-                },
-            })
-        }
+            }
+        };
+        derived_changesets[requirement] = cs_id;
     }
+
+    Ok(DerivedChangesetIds {
+        changesets: derived_changesets,
+    })
 }
 
 #[derive(Clone, Copy)]
@@ -1048,6 +1062,7 @@ pub async fn find_latest_derived_and_underived(
     warmers: &[Warmer],
 ) -> Result<LatestBookmarkEntries, Error> {
     let mut latest_underived = LatestUnderivedBookmarkEntry::default();
+    let mut derived_entries = EnumMap::<WarmerTag, Option<LatestDerivedBookmarkEntry>>::default();
     let mut found_latest_entry = false;
     let history_depth_limits = vec![0, 10, 50, 100, 1000, 10000];
 
@@ -1106,17 +1121,25 @@ pub async fn find_latest_derived_and_underived(
         .buffered(100);
 
         while let Some((maybe_cs_id_ts, warm_state)) = maybe_derived.next().watched().await {
-            if warm_state?.are_all_warm() {
-                // Remove bookmark update log id
-                let maybe_cs_ts =
-                    maybe_cs_id_ts.map(|(cs_id, id_and_ts)| (cs_id, id_and_ts.map(|(_, ts)| ts)));
+            let warm_state = warm_state?;
+            let maybe_cs_ts =
+                maybe_cs_id_ts.map(|(cs_id, id_and_ts)| (cs_id, id_and_ts.map(|(_, ts)| ts)));
 
+            for (tag, maybe_entry) in derived_entries {
+                if maybe_entry.is_none() && warm_state.is_warm(tag) {
+                    derived_entries[tag] = Some(LatestDerivedBookmarkEntry::Found(maybe_cs_ts));
+                }
+            }
+
+            if warm_state.are_all_warm() {
+                let latest_all = LatestDerivedBookmarkEntry::Found(maybe_cs_ts);
                 return Ok(LatestBookmarkEntries {
                     latest_underived,
                     derived_entries: enum_map::enum_map! {
-                        WarmerRequirement::HgOnly => LatestDerivedBookmarkEntry::Found(None),
-                        WarmerRequirement::GitOnly => LatestDerivedBookmarkEntry::Found(None),
-                        WarmerRequirement::AllKinds => LatestDerivedBookmarkEntry::Found(maybe_cs_ts),
+                        // If they are all warm, the unwrap sections should never run
+                        WarmerRequirement::HgOnly => derived_entries[WarmerTag::Hg].unwrap_or(LatestDerivedBookmarkEntry::Found(None)),
+                        WarmerRequirement::GitOnly => derived_entries[WarmerTag::Git].unwrap_or(LatestDerivedBookmarkEntry::Found(None)),
+                        WarmerRequirement::AllKinds => latest_all,
                     },
                 });
             } else {
@@ -1125,13 +1148,13 @@ pub async fn find_latest_derived_and_underived(
             }
         }
 
-        // Bookmark has been created recently and wasn't derived at all
+        // Bookmark has been created recently - return what we found for each scope
         if (log_entries_fetched as u32) < limit {
             return Ok(LatestBookmarkEntries {
                 latest_underived,
                 derived_entries: enum_map::enum_map! {
-                    WarmerRequirement::HgOnly => LatestDerivedBookmarkEntry::Found(None),
-                    WarmerRequirement::GitOnly => LatestDerivedBookmarkEntry::Found(None),
+                    WarmerRequirement::HgOnly => derived_entries[WarmerTag::Hg].unwrap_or(LatestDerivedBookmarkEntry::Found(None)),
+                    WarmerRequirement::GitOnly => derived_entries[WarmerTag::Git].unwrap_or(LatestDerivedBookmarkEntry::Found(None)),
                     WarmerRequirement::AllKinds => LatestDerivedBookmarkEntry::Found(None),
                 },
             });
@@ -1141,8 +1164,8 @@ pub async fn find_latest_derived_and_underived(
     Ok(LatestBookmarkEntries {
         latest_underived,
         derived_entries: enum_map::enum_map! {
-            WarmerRequirement::HgOnly => LatestDerivedBookmarkEntry::NotFound,
-            WarmerRequirement::GitOnly => LatestDerivedBookmarkEntry::NotFound,
+            WarmerRequirement::HgOnly => derived_entries[WarmerTag::Hg].unwrap_or(LatestDerivedBookmarkEntry::NotFound),
+            WarmerRequirement::GitOnly => derived_entries[WarmerTag::Git].unwrap_or(LatestDerivedBookmarkEntry::NotFound),
             WarmerRequirement::AllKinds => LatestDerivedBookmarkEntry::NotFound,
         },
     })
