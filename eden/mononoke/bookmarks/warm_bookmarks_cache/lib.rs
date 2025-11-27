@@ -6,6 +6,8 @@
  */
 
 #[cfg(test)]
+mod scoped_bookmarks_tests;
+#[cfg(test)]
 mod test_helpers;
 
 use std::borrow::Cow;

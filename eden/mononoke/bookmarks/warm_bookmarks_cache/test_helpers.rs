@@ -47,11 +47,11 @@ pub struct WarmerConfig {
 }
 
 impl WarmerConfig {
-    pub fn hg_and_git() -> Self {
+    pub fn git_only() -> Self {
         Self {
-            include_hg: true,
+            include_hg: false,
             include_git: true,
-            include_unodes: false,
+            include_unodes: true,
         }
     }
 
@@ -68,7 +68,7 @@ impl WarmerConfig {
         Self {
             include_hg: true,
             include_git: false,
-            include_unodes: false,
+            include_unodes: true,
         }
     }
 }
