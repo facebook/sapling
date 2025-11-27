@@ -7,7 +7,6 @@ use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 eden/mononoke/derived_data/remote/if/derived_data_service.thrift crate //eden/mononoke/derived_data/remote/if:derived_data_service_if-rust
-eden/mononoke/filenodes/if/filenodes.thrift filenodes_if //eden/mononoke/filenodes/if:filenodes-if-rust
 eden/mononoke/git/git_types/if/git_types_thrift.thrift git_types_thrift //eden/mononoke/git/git_types/if:git-types-thrift-rust
 eden/mononoke/mercurial/types/if/mercurial_thrift.thrift mercurial_thrift //eden/mononoke/mercurial/types/if:mercurial-thrift-rust
 eden/mononoke/mononoke_types/serialization/blame.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
@@ -31,6 +30,7 @@ eden/mononoke/mononoke_types/serialization/skeleton_manifest.thrift mononoke_typ
 eden/mononoke/mononoke_types/serialization/test_manifest.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/time.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/unodes.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/repo_attributes/filenodes/if/filenodes.thrift filenodes_if //eden/mononoke/repo_attributes/filenodes/if:filenodes-if-rust
 fb303/thrift/fb303_core.thrift fb303_core //fb303/thrift:fb303_core-rust
 thrift/annotation/cpp.thrift fb303_core->cpp //thrift/annotation:cpp-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust

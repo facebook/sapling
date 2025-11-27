@@ -24,9 +24,9 @@ fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git",
 fb303_core_clients = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fb303_core_mocks = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
-filenodes_if = { version = "0.1.0", path = "../../../../filenodes/if" }
-filenodes_if_clients = { version = "0.1.0", path = "../../../../filenodes/if/clients" }
-filenodes_if_mocks = { version = "0.1.0", path = "../../../../filenodes/if/mocks" }
+filenodes_if = { version = "0.1.0", path = "../../../../repo_attributes/filenodes/if" }
+filenodes_if_clients = { version = "0.1.0", path = "../../../../repo_attributes/filenodes/if/clients" }
+filenodes_if_mocks = { version = "0.1.0", path = "../../../../repo_attributes/filenodes/if/mocks" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 git_types_thrift = { version = "0.1.0", path = "../../../../git/git_types/if" }
 git_types_thrift_clients = { version = "0.1.0", path = "../../../../git/git_types/if/clients" }

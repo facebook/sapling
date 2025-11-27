@@ -12,9 +12,9 @@ rust_library(
         "fbsource//third-party/rust:quickcheck",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
-        "//eden/mononoke/filenodes/if:filenodes-if-rust",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/filenodes/if:filenodes-if-rust",
         "//eden/mononoke/server/context:context",
     ],
 )

@@ -28,7 +28,7 @@ context = { version = "0.1.0", path = "../../server/context" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-filenodes = { version = "0.1.0", path = "../../filenodes" }
+filenodes = { version = "0.1.0", path = "../../repo_attributes/filenodes" }
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }

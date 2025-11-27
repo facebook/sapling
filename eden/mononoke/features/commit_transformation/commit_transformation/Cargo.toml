@@ -31,7 +31,7 @@ derivative = "2.2"
 derived_data = { version = "0.1.0", path = "../../../derived_data" }
 either = "1.5"
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-filenodes = { version = "0.1.0", path = "../../../filenodes" }
+filenodes = { version = "0.1.0", path = "../../../repo_attributes/filenodes" }
 filestore = { version = "0.1.0", path = "../../../repo_attributes/filestore" }
 fsnodes = { version = "0.1.0", path = "../../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }

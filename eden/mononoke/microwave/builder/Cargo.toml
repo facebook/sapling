@@ -26,7 +26,7 @@ commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/c
 context = { version = "0.1.0", path = "../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-filenodes = { version = "0.1.0", path = "../../filenodes" }
+filenodes = { version = "0.1.0", path = "../../repo_attributes/filenodes" }
 filenodes_derivation = { version = "0.1.0", path = "../../derived_data/filenodes_derivation" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }

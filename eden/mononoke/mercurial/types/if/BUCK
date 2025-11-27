@@ -19,11 +19,11 @@ thrift_library(
     visibility = [
         "//eden/mononoke/bonsai_hg_mapping/if:",
         "//eden/mononoke/derived_data/remote/if:",
-        "//eden/mononoke/filenodes/if:",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mercurial:mercurial_types-unittest",
         "//eden/mononoke/mercurial/mutation/if:",
         "//eden/mononoke/microwave/if:",
+        "//eden/mononoke/repo_attributes/filenodes/if:",
     ],
     deps = [
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",

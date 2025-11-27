@@ -17,10 +17,10 @@ thrift_library(
         "derived_data_service.thrift": ["DerivedDataService"],
     },
     deps = [
-        "//eden/mononoke/filenodes/if:filenodes-if",
         "//eden/mononoke/git/git_types/if:git-types-thrift",
         "//eden/mononoke/mercurial/types/if:mercurial-thrift",
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
+        "//eden/mononoke/repo_attributes/filenodes/if:filenodes-if",
         "//fb303/thrift:fb303_core",
         "//thrift/annotation:rust",
     ],
