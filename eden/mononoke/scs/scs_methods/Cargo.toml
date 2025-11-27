@@ -55,7 +55,7 @@ mononoke_configs = { version = "0.1.0", path = "../../mononoke_configs" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
-phases = { version = "0.1.0", path = "../../phases" }
+phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../repo_attributes/pushrebase_mutation_mapping" }
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }

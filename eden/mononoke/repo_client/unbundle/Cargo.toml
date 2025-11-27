@@ -40,7 +40,7 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 obsolete = { version = "0.1.0", path = "../obsolete" }
-phases = { version = "0.1.0", path = "../../phases" }
+phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
 pin-project = "1.1.10"
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_client = { version = "0.1.0", path = "../../pushrebase/client" }

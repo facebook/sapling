@@ -42,7 +42,7 @@ lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-phases = { version = "0.1.0", path = "../../phases" }
+phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_event_publisher = { version = "0.1.0", path = "../../repo_attributes/repo_event_publisher" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }

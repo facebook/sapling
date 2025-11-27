@@ -29,7 +29,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../repo_attributes/mutable_counters" }
-phases = { version = "0.1.0", path = "../../phases" }
+phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../repo_attributes/pushrebase_mutation_mapping" }
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bookmark_attrs" }

@@ -78,7 +78,7 @@ mutable_blobstore = { version = "0.1.0", path = "../repo_attributes/mutable_blob
 mutable_counters = { version = "0.1.0", path = "../repo_attributes/mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 packfile = { version = "0.1.0", path = "../git/packfile" }
-phases = { version = "0.1.0", path = "../phases" }
+phases = { version = "0.1.0", path = "../repo_attributes/phases" }
 protocol = { version = "0.1.0", path = "../git/protocol" }
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
 pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }

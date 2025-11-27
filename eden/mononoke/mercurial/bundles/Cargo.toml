@@ -27,7 +27,7 @@ mercurial_types = { version = "0.1.0", path = "../types" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 percent-encoding = "2.1"
-phases = { version = "0.1.0", path = "../../phases" }
+phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
 pin-project = "1.1.10"
 quickcheck = "1.0"
 sapling-revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }

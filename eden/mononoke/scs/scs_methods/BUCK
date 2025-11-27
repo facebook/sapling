@@ -79,7 +79,7 @@ rust_library(
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/permission_checker:permission_checker",
-        "//eden/mononoke/phases:phases",
+        "//eden/mononoke/repo_attributes/phases:phases",
         "//eden/mononoke/pushrebase:pushrebase",
         "//eden/mononoke/repo_attributes/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
