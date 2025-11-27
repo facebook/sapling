@@ -694,3 +694,88 @@ async fn test_transitive_derivation_effects(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+#[mononoke::fbinit_test]
+async fn test_init_mode_warm_vs_rewind(fb: FacebookInit) -> Result<()> {
+    // Test the difference between InitMode::Warm and InitMode::Rewind
+
+    let repo: Repo = Linear::get_repo(fb).await;
+    let ctx = CoreContext::test_mock(fb);
+
+    let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+    derive_data(&ctx, &repo, master_cs_id, true, true, true).await?;
+
+    // Create bookmark at master first to build history
+    bookmark(&ctx, &repo, "partial_bookmark")
+        .create_publishing(master_cs_id)
+        .await?;
+
+    // Create a commit with only Hg derived
+    let commit = CreateCommitContext::new(&ctx, &repo, vec![master_cs_id])
+        .add_file("partial", "content")
+        .commit()
+        .await?;
+    derive_data(&ctx, &repo, commit, true, false, true).await?;
+
+    // Move bookmark to the new commit
+    bookmark(&ctx, &repo, "partial_bookmark")
+        .set_to(commit)
+        .await?;
+
+    let bookmark_key = BookmarkKey::new("partial_bookmark")?;
+    let sub = repo
+        .bookmarks()
+        .create_subscription(&ctx, Freshness::MostRecent)
+        .await?;
+
+    // Test with InitMode::Rewind FIRST (before Warm mode derives everything)
+    let warmers_rewind = setup_warmers(&ctx, &repo, WarmerConfig::all_warmers());
+    let bookmarks_rewind = init_bookmarks(
+        &ctx,
+        &*sub,
+        repo.bookmarks(),
+        repo.bookmark_update_log(),
+        &warmers_rewind,
+        InitMode::Rewind,
+    )
+    .await?;
+
+    let rewind_state = bookmarks_rewind
+        .get(&bookmark_key)
+        .expect("Bookmark should exist in Rewind mode");
+
+    assert_bookmark_pointers(
+        rewind_state,
+        Some(commit),       // HgOnly: has Hg at commit
+        Some(master_cs_id), // GitOnly: rewound to master
+        Some(master_cs_id), // AllKinds: rewound to master
+        "Rewind mode",
+    );
+
+    // Test with InitMode::Warm
+    let warmers_warm = setup_warmers(&ctx, &repo, WarmerConfig::all_warmers());
+    let bookmarks_warm = init_bookmarks(
+        &ctx,
+        &*sub,
+        repo.bookmarks(),
+        repo.bookmark_update_log(),
+        &warmers_warm,
+        InitMode::Warm,
+    )
+    .await?;
+
+    // Warm mode warms everything at startup, so everything will go to the latest commit
+    let warm_state = bookmarks_warm
+        .get(&bookmark_key)
+        .expect("Bookmark should exist in Warm mode");
+
+    assert_bookmark_pointers(
+        warm_state,
+        Some(commit),
+        Some(commit),
+        Some(commit),
+        "Warm mode",
+    );
+
+    Ok(())
+}
