@@ -13,24 +13,30 @@ Set up local hgrc and Mononoke config.
 Initialize test repo.
   $ hginit_treemanifest repo
   $ cd repo
+  $ testtool_drawdag -R repo --print-hg-hashes <<EOF
+  > COMMIT_2
+  > |
+  > COMMIT_1
+  > # modify: COMMIT_1 "test.txt" "test content\n"
+  > # message: COMMIT_1 "add test.txt"
+  > # copy: COMMIT_2 "copy.txt" "test content\n" "COMMIT_1" "test.txt"
+  > # message: COMMIT_2 "copy test.txt to test2.txt"
+  > EOF
+  COMMIT_1=* (glob)
+  COMMIT_2=* (glob)
 
-Populate test repo
-  $ echo "test content" > test.txt
-  $ hg commit -Aqm "add test.txt"
-  $ TEST_FILENODE=$(hg manifest --debug | grep test.txt | awk '{print $1}')
-  $ hg cp test.txt copy.txt
-  $ hg commit -Aqm "copy test.txt to test2.txt"
-  $ COPY_FILENODE=$(hg manifest --debug | grep copy.txt | awk '{print $1}')
-
-Blobimport test repo.
+Import test repo.
   $ cd ..
-  $ blobimport repo/.hg repo
 
 Start up SaplingRemoteAPI server.
   $ setup_mononoke_config
-
   $ SCUBA="$TESTTMP/scuba.json"
   $ start_and_wait_for_mononoke_server --scuba-log-file "$SCUBA"
+
+Set filenodes for API request
+  $ TEST_FILENODE="186cafa3319c24956783383dc44c5cbc68c5a0ca"
+  $ COPY_FILENODE="17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"
+
 Create and send file request.
   $ cat > req << EOF
   > [{
