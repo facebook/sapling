@@ -70,7 +70,7 @@ topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-changesets_creation = { version = "0.1.0", path = "../../repo_attributes/changesets/changesets_creation" }
+changesets_creation = { version = "0.1.0", path = "../changesets_creation" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 fn-error-context = "0.2"

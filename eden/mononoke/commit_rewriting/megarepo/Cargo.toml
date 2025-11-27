@@ -12,7 +12,7 @@ anyhow = "1.0.98"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
-changesets_creation = { version = "0.1.0", path = "../../repo_attributes/changesets/changesets_creation" }
+changesets_creation = { version = "0.1.0", path = "../../features/changesets_creation" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../server/context" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
