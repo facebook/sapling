@@ -115,7 +115,6 @@ zenohd = { git = "https://github.com/nitinsingh-meta/zenoh", rev = "9b525dceb275
 members = [
   ".",
   "acl_regions",
-  "aliasverify",
   "async_requests/async_requests_client",
   "async_requests/if",
   "async_requests/if/clients",
@@ -481,6 +480,7 @@ members = [
   "third_party/git_delta",
   "time_window_counter",
   "tools/admin",
+  "tools/aliasverify/tools/aliasverify",
   "tools/backfill_mapping",
   "tools/example",
   "tools/executor",

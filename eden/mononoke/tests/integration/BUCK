@@ -73,8 +73,8 @@ dott_test(
     name = "aliasverify",
     dott_files = ["test-alias-verify.t"],
     deps = [
-        "//eden/mononoke:aliasverify",
         "//eden/mononoke:mononoke",
+        "//eden/mononoke/tools/aliasverify:aliasverify",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

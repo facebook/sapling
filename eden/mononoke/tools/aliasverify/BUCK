@@ -1,0 +1,34 @@
+load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("scm_server_infra")
+
+rust_binary(
+    name = "aliasverify",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "tools/aliasverify"},
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
+        "//common/rust/shed/facet:facet",
+        "//common/rust/shed/fbinit:fbinit",
+        "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/cmdlib/sharding:executor_lib",
+        "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
+        "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/mononoke_repos:mononoke_repos",
+        "//eden/mononoke/mononoke_types:mononoke_types",
+        "//eden/mononoke/repo_attributes/commit_graph/sql_commit_graph_storage:sql_commit_graph_storage",
+        "//eden/mononoke/repo_attributes/filestore:filestore",
+        "//eden/mononoke/repo_attributes/mutable_counters:mutable_counters",
+        "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
+        "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/server/context:context",
+    ],
+)
