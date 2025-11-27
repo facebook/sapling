@@ -197,9 +197,9 @@ dott_test(
     name = "restore-keys",
     dott_files = glob(["test-restore-keys*.t"]),
     deps = [
-        "//eden/mononoke:blobimport",
         "//eden/mononoke/jobs/walker:walker",
         "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/testtool:testtool",
     ],
 )
 
