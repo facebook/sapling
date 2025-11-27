@@ -12,11 +12,11 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0.98"
-bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
+bonsai_git_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
 bookmarks_types = { version = "0.1.0", path = "../../repo_attributes/bookmarks/bookmarks_types" }
 context = { version = "0.1.0", path = "../../server/context" }
-git_mapping_pushrebase_hook = { version = "0.1.0", path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook" }
+git_mapping_pushrebase_hook = { version = "0.1.0", path = "../../repo_attributes/bonsai_git_mapping/git_mapping_pushrebase_hook" }
 globalrev_pushrebase_hook = { version = "0.1.0", path = "../../bonsai_globalrev_mapping/globalrev_pushrebase_hook" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 pushrebase_hook = { version = "0.1.0", path = "../pushrebase_hook" }

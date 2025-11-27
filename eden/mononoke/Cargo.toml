@@ -35,7 +35,7 @@ blobrepo_override = { version = "0.1.0", path = "blobrepo/override" }
 blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "blobstore" }
 blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }
-bonsai_git_mapping = { version = "0.1.0", path = "bonsai_git_mapping" }
+bonsai_git_mapping = { version = "0.1.0", path = "repo_attributes/bonsai_git_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "repo_attributes/bonsai_hg_mapping" }
 bonsai_svnrev_mapping = { version = "0.1.0", path = "repo_attributes/bonsai_svnrev_mapping" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -175,12 +175,6 @@ members = [
   "blobstore/throttledblob",
   "blobstore/virtually_sharded_blobstore",
   "blobstore_sync_queue",
-  "bonsai_git_mapping",
-  "bonsai_git_mapping/git_mapping_pushrebase_hook",
-  "bonsai_git_mapping/if",
-  "bonsai_git_mapping/if/clients",
-  "bonsai_git_mapping/if/mocks",
-  "bonsai_git_mapping/if/services",
   "bonsai_globalrev_mapping",
   "bonsai_globalrev_mapping/globalrev_pushrebase_hook",
   "bonsai_globalrev_mapping/if",
@@ -385,6 +379,12 @@ members = [
   "quiet_stream",
   "rate_limiting",
   "repo_attributes/bonsai_blob_mapping",
+  "repo_attributes/bonsai_git_mapping",
+  "repo_attributes/bonsai_git_mapping/git_mapping_pushrebase_hook",
+  "repo_attributes/bonsai_git_mapping/if",
+  "repo_attributes/bonsai_git_mapping/if/clients",
+  "repo_attributes/bonsai_git_mapping/if/mocks",
+  "repo_attributes/bonsai_git_mapping/if/services",
   "repo_attributes/bonsai_hg_mapping",
   "repo_attributes/bonsai_hg_mapping/if",
   "repo_attributes/bonsai_hg_mapping/if/clients",

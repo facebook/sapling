@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.98"
 async-trait = "0.1.86"
-bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
+bonsai_git_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_git_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_tag_mapping" }
 bytes = { version = "1.10", features = ["serde"] }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }

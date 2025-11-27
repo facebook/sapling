@@ -15,7 +15,7 @@ doctest = false
 anyhow = "1.0.98"
 async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = "../../../blobstore" }
-bonsai_git_mapping = { version = "0.1.0", path = "../../../bonsai_git_mapping" }
+bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../../bonsai_tag_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }

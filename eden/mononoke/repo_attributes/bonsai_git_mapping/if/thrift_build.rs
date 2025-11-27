@@ -6,7 +6,6 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-eden/mononoke/bonsai_git_mapping/if/bonsai_git_mapping.thrift crate //eden/mononoke/bonsai_git_mapping/if:bonsai_git_mapping_entry_thrift-rust
 eden/mononoke/mononoke_types/serialization/blame.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bonsai.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/bssm.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
@@ -28,6 +27,7 @@ eden/mononoke/mononoke_types/serialization/skeleton_manifest.thrift mononoke_typ
 eden/mononoke/mononoke_types/serialization/test_manifest.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/time.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/unodes.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
+eden/mononoke/repo_attributes/bonsai_git_mapping/if/bonsai_git_mapping.thrift crate //eden/mononoke/repo_attributes/bonsai_git_mapping/if:bonsai_git_mapping_entry_thrift-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
 ";
@@ -39,7 +39,7 @@ fn main() {
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
     Config::from_env(GenContext::Types)
         .expect("Failed to instantiate thrift_compiler::Config")
-        .base_path("../../../..")
+        .base_path("../../../../..")
         .types_crate("bonsai_git_mapping_entry_thrift__types")
         .clients_crate("bonsai_git_mapping_entry_thrift__clients")
         .run(["bonsai_git_mapping.thrift"])

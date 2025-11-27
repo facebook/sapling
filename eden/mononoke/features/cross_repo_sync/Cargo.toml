@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.98"
 ascii = "1.0"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
+bonsai_git_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 bookmark_renaming = { version = "0.1.0", path = "../../commit_rewriting/bookmark_renaming" }

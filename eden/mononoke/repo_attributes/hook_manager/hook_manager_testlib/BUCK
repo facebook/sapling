@@ -9,8 +9,8 @@ rust_library(
     ]),
     deps = [
         "//common/rust/shed/facet:facet",
-        "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/repo_attributes/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/repo_attributes/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/repo_attributes/bonsai_tag_mapping:bonsai_tag_mapping",
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
