@@ -220,7 +220,7 @@ dott_test(
     dott_files = glob(["test-streaming-clone*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/streaming_clone:new_streaming_clone",
+        "//eden/mononoke/tools/streaming_clone:new_streaming_clone",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
