@@ -10,7 +10,7 @@ dott_test(
     dott_files = glob(["*.t"]),
     deps = [
         "//eden/mononoke:mononoke",
-        "//eden/mononoke:sqlblob_gc",
+        "//eden/mononoke/tools/sqlblob_gc:sqlblob_gc",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
