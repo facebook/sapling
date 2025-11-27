@@ -178,8 +178,8 @@ dott_test(
     name = "packer",
     dott_files = ["test-packer.t"],
     deps = [
-        "//eden/mononoke:packer",
         "//eden/mononoke/tools/blobimport:blobimport",
+        "//eden/mononoke/tools/packer:packer",
     ],
 )
 
