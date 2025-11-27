@@ -12,7 +12,7 @@ acl_regions = { version = "0.1.0", path = "../../acl_regions" }
 anyhow = "1.0.98"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_git_mapping" }
-bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 bonsai_svnrev_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_svnrev_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_tag_mapping" }
