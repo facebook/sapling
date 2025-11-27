@@ -614,3 +614,83 @@ async fn test_empty_history_bookmark(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+#[mononoke::fbinit_test]
+async fn test_transitive_derivation_effects(fb: FacebookInit) -> Result<()> {
+    // Test that transitive derivation correctly affects scope pointers
+
+    let repo: Repo = Linear::get_repo(fb).await;
+    let ctx = CoreContext::test_mock(fb);
+
+    let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+
+    // Create a chain of commits
+    let commit1 = CreateCommitContext::new(&ctx, &repo, vec![master_cs_id])
+        .add_file("file1", "content1")
+        .commit()
+        .await?;
+
+    let commit2 = CreateCommitContext::new(&ctx, &repo, vec![commit1])
+        .add_file("file2", "content2")
+        .commit()
+        .await?;
+
+    let commit3 = CreateCommitContext::new(&ctx, &repo, vec![commit2])
+        .add_file("file3", "content3")
+        .commit()
+        .await?;
+
+    // Only derive Hg and Unodes for commit1
+    derive_data(&ctx, &repo, commit1, true, false, true).await?;
+
+    // Create bookmark at commit1 to start building history
+    bookmark(&ctx, &repo, "transitive_test")
+        .create_publishing(commit1)
+        .await?;
+
+    // Derive Hg and Unodes for commit2 (but not Git yet - that will be transitive from commit3)
+    derive_data(&ctx, &repo, commit2, true, false, false).await?;
+
+    // Move bookmark to commit2
+    bookmark(&ctx, &repo, "transitive_test")
+        .set_to(commit2)
+        .await?;
+
+    // Move bookmark to commit3 (before deriving anything there)
+    bookmark(&ctx, &repo, "transitive_test")
+        .set_to(commit3)
+        .await?;
+
+    // Now derive Git for commit3 - this should transitively derive Git for commit1 and commit2
+    derive_data(&ctx, &repo, commit3, false, true, true).await?;
+
+    let warmers = setup_warmers(&ctx, &repo, WarmerConfig::all_warmers());
+    let sub = repo
+        .bookmarks()
+        .create_subscription(&ctx, Freshness::MostRecent)
+        .await?;
+
+    let bookmarks = init_bookmarks(
+        &ctx,
+        &*sub,
+        repo.bookmarks(),
+        repo.bookmark_update_log(),
+        &warmers,
+        InitMode::Rewind,
+    )
+    .await?;
+
+    let state = bookmarks
+        .get(&BookmarkKey::new("transitive_test")?)
+        .expect("Bookmark should exist");
+
+    assert_bookmark_pointers(
+        state,
+        Some(commit2),
+        Some(commit3),
+        Some(commit2), // Git was derived transitively
+        "Transitive derivation",
+    );
+
+    Ok(())
+}
