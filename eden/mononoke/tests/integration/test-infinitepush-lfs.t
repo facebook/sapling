@@ -13,17 +13,17 @@ Setup configuration
 Setup repo
   $ hginit_treemanifest repo
   $ cd repo
-  $ touch a && hg addremove && hg ci -q -ma
-  adding a
-  $ hg log -T '{short(node)}\n'
-  3903775176ed
-  $ hg bookmark master_bookmark -r tip
+  $ testtool_drawdag -R repo <<EOF
+  > A
+  > # modify: A "a" "a\n"
+  > # bookmark: A master_bookmark
+  > EOF
+  A=3fddecdce2d4f7f1c8a02110eea417a78142c3c5fc95eba77d64eb7248e38dd2
 
+Import and start mononoke
   $ cd "$TESTTMP"
-  $ blobimport repo/.hg repo
-
-Start Mononoke
-  $ start_and_wait_for_mononoke_server  
+  $ mononoke
+  $ wait_for_mononoke
   $ lfs_uri="$(lfs_server)/repo"
 
 Setup common client configuration for these tests
@@ -50,15 +50,16 @@ setup repo-push and repo-pull
 Do infinitepush (aka commit cloud) push
   $ cd "${TESTTMP}/repo-push"
   $ hg up tip
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo new > newfile
   $ yes A 2>/dev/null | head -c 200 > large
   $ hg addremove -q
   $ hg ci -m new
+  $ NEW_COMMIT=$(hg log -r . -T '{node}')
   $ hg cloud upload -qr .
 
 Try to pull it
   $ cd "${TESTTMP}/repo-pull"
-  $ hg pull -r 68394cf51f7e96952fe832a3c05d17a9b49e8b4b
+  $ hg pull -r $NEW_COMMIT
   pulling from mono:repo
   searching for changes
