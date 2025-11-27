@@ -13,7 +13,7 @@ async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = "../../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../../bonsai_globalrev_mapping" }
-bonsai_hg_mapping = { version = "0.1.0", path = "../../../bonsai_hg_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = ".." }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks_types" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

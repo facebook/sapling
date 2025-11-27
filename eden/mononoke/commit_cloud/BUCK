@@ -20,7 +20,6 @@ rust_library(
         "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/sql:sql",
         "//eden/mononoke/bonsai_git_mapping:bonsai_git_mapping",
-        "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/commit_cloud/helpers:commit_cloud_helpers",
         "//eden/mononoke/commit_cloud/types:commit_cloud_types",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
@@ -32,6 +31,7 @@ rust_library(
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/permission_checker:permission_checker",
+        "//eden/mononoke/repo_attributes/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
         "//eden/mononoke/server/context:context",
     ] + ([] if rust_oss.is_oss_build() else [

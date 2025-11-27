@@ -23,7 +23,7 @@ repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 
 [dev-dependencies]
-bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../repo_attributes/bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -18,7 +18,7 @@ path = "benchmark_large_directory.rs"
 [dependencies]
 anyhow = "1.0.98"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }

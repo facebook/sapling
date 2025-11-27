@@ -20,7 +20,7 @@ sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 
 [dev-dependencies]
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../commit_graph/commit_graph" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

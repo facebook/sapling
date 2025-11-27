@@ -14,7 +14,7 @@ async-stream = "0.3"
 async-trait = "0.1.86"
 base64 = { version = "0.22.1", features = ["alloc"] }
 blobstore = { version = "0.1.0", path = "../blobstore" }
-bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../repo_attributes/bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../repo_attributes/bookmarks/bookmarks_movement" }
 bytes = { version = "1.10", features = ["serde"] }

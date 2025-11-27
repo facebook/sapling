@@ -14,7 +14,7 @@ path = "src/cache_warmup.rs"
 anyhow = "1.0.98"
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
-bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../repo_attributes/bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }

@@ -39,7 +39,7 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]
-bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 derived_data_test_utils = { version = "0.1.0", path = "../test_utils" }
