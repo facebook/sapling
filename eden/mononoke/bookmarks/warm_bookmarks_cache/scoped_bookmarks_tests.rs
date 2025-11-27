@@ -10,18 +10,25 @@
 //! These tests verify that the warm bookmarks cache correctly tracks different
 //! pointers for different warmer requirements (HgOnly, GitOnly, AllKinds).
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Result;
 use bookmarks::BookmarkKey;
+use bookmarks::BookmarkPagination;
+use bookmarks::BookmarkPrefix;
 use bookmarks::BookmarkUpdateLogRef;
 use bookmarks::BookmarksRef;
 use bookmarks::Freshness;
+use bookmarks_cache::ScopedBookmarksCache;
+use bookmarks_cache::WarmerRequirement;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::Linear;
 use fixtures::TestRepoFixture;
 use mononoke_macros::mononoke;
+use mononoke_types::ChangesetId;
+use tests_utils::CreateCommitContext;
 use tests_utils::bookmark;
 use tests_utils::resolve_cs_id;
 
@@ -262,6 +269,179 @@ async fn test_complex_warmer_dependencies(fb: FacebookInit) -> Result<()> {
         "Complex warmer dependencies",
     )
     .await?;
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_scoped_list_filtering(fb: FacebookInit) -> Result<()> {
+    // Test that list() API correctly filters bookmarks by scope
+
+    let repo: Repo = Linear::get_repo(fb).await;
+    let ctx = CoreContext::test_mock(fb);
+
+    let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+
+    // Derive both Hg and Git for master
+    derive_data(&ctx, &repo, master_cs_id, true, true, true).await?;
+
+    // Create bookmark "both_derived" - both Hg and Git
+    let both_cs = CreateCommitContext::new(&ctx, &repo, vec![master_cs_id])
+        .add_file("both", "content")
+        .commit()
+        .await?;
+    derive_data(&ctx, &repo, both_cs, true, true, true).await?;
+    bookmark(&ctx, &repo, "both_derived")
+        .set_to(both_cs)
+        .await?;
+    bookmark(&ctx, &repo, "hg_only").set_to(both_cs).await?;
+
+    // Create bookmark "hg_only" - only Hg derived at tip
+    let hg_base = CreateCommitContext::new(&ctx, &repo, vec![both_cs])
+        .add_file("hg_base", "content")
+        .commit()
+        .await?;
+    derive_data(&ctx, &repo, hg_base, true, false, true).await?;
+    bookmark(&ctx, &repo, "hg_only").set_to(hg_base).await?;
+
+    let hg_tip = CreateCommitContext::new(&ctx, &repo, vec![hg_base])
+        .add_file("hg_tip", "content")
+        .commit()
+        .await?;
+    derive_data(&ctx, &repo, hg_tip, true, false, true).await?;
+    bookmark(&ctx, &repo, "hg_only").set_to(hg_tip).await?;
+
+    // Create bookmark "git_only" - only Git derived at tip
+    let git_base = CreateCommitContext::new(&ctx, &repo, vec![both_cs])
+        .add_file("git_base", "content")
+        .commit()
+        .await?;
+    derive_data(&ctx, &repo, git_base, false, true, true).await?;
+    bookmark(&ctx, &repo, "git_only").set_to(git_base).await?;
+
+    let git_tip = CreateCommitContext::new(&ctx, &repo, vec![git_base])
+        .add_file("git_tip", "content")
+        .commit()
+        .await?;
+    derive_data(&ctx, &repo, git_tip, false, true, true).await?;
+    bookmark(&ctx, &repo, "git_only").set_to(git_tip).await?;
+
+    let warmers = setup_warmers(&ctx, &repo, WarmerConfig::all_warmers());
+    let cache = init_cache_with_warmers(
+        &ctx,
+        &repo,
+        Arc::try_unwrap(warmers).ok().unwrap(),
+        InitMode::Rewind,
+    )
+    .await?;
+
+    // Test HgOnly scope
+    let hg_list = ScopedBookmarksCache::list(
+        &cache,
+        &ctx,
+        &BookmarkPrefix::empty(),
+        &BookmarkPagination::FromStart,
+        None,
+        WarmerRequirement::HgOnly,
+    )
+    .await?;
+
+    let hg_bookmarks: HashMap<String, ChangesetId> = hg_list
+        .into_iter()
+        .map(|(name, (cs_id, _kind))| (name.to_string(), cs_id))
+        .collect();
+
+    assert!(
+        hg_bookmarks.contains_key("master"),
+        "HgOnly should include master"
+    );
+    assert!(
+        hg_bookmarks.contains_key("both_derived"),
+        "HgOnly should include both_derived"
+    );
+    assert!(
+        hg_bookmarks.contains_key("hg_only"),
+        "HgOnly should include hg_only"
+    );
+    assert_eq!(
+        hg_bookmarks["hg_only"], hg_tip,
+        "HgOnly should point hg_only to tip"
+    );
+
+    // Test GitOnly scope
+    let git_list = ScopedBookmarksCache::list(
+        &cache,
+        &ctx,
+        &BookmarkPrefix::empty(),
+        &BookmarkPagination::FromStart,
+        None,
+        WarmerRequirement::GitOnly,
+    )
+    .await?;
+
+    let git_bookmarks: HashMap<String, ChangesetId> = git_list
+        .into_iter()
+        .map(|(name, (cs_id, _kind))| (name.to_string(), cs_id))
+        .collect();
+
+    assert!(
+        git_bookmarks.contains_key("master"),
+        "GitOnly should include master"
+    );
+    assert!(
+        git_bookmarks.contains_key("both_derived"),
+        "GitOnly should include both_derived"
+    );
+    assert!(
+        git_bookmarks.contains_key("git_only"),
+        "GitOnly should include git_only"
+    );
+    assert_eq!(
+        git_bookmarks["git_only"], git_tip,
+        "GitOnly should point git_only to tip"
+    );
+
+    // For hg_only bookmark, GitOnly should rewind to base
+    if let Some(&cs_id) = git_bookmarks.get("hg_only") {
+        assert_eq!(cs_id, both_cs, "GitOnly should rewind hg_only to both_cs");
+    }
+
+    // Test AllKinds scope - most restrictive
+    let all_list = ScopedBookmarksCache::list(
+        &cache,
+        &ctx,
+        &BookmarkPrefix::empty(),
+        &BookmarkPagination::FromStart,
+        None,
+        WarmerRequirement::AllKinds,
+    )
+    .await?;
+
+    let all_bookmarks: HashMap<String, ChangesetId> = all_list
+        .into_iter()
+        .map(|(name, (cs_id, _kind))| (name.to_string(), cs_id))
+        .collect();
+
+    assert!(
+        all_bookmarks.contains_key("master"),
+        "AllKinds should include master"
+    );
+    assert!(
+        all_bookmarks.contains_key("both_derived"),
+        "AllKinds should include both_derived"
+    );
+
+    // Bookmarks with missing derivations should be rewound
+    assert_eq!(
+        all_bookmarks.get("hg_only"),
+        Some(&both_cs),
+        "AllKinds should rewind hg_only to base"
+    );
+    assert_eq!(
+        all_bookmarks.get("git_only"),
+        None,
+        "AllKinds should not be derived anywhere in the bookmark"
+    );
 
     Ok(())
 }
