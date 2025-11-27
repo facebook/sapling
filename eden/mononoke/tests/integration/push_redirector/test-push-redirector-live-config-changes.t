@@ -96,41 +96,57 @@ setup configerator configs
   > EOF
 
 setup hg server repos
-  $ function createfile { mkdir -p "$(dirname  $1)" && echo "$1" > "$1" && hg add -q "$1"; }
-  $ function create_first_post_move_commit {
-  >   echo 1 > "$1/filetoremove" && hg add "$1/filetoremove" && hg ci -m 'first post-move commit'
-  >   hg revert -r .^ "$1/filetoremove"
-  > }
-
-  $ cd $TESTTMP
-  $ hginit_treemanifest small-mon-1
-  $ cd "$TESTTMP/small-mon-1"
-  $ echo 1 > file.txt
-  $ hg addremove -q && hg ci -q -m 'pre-move commit 1'
-
   $ cd "$TESTTMP"
-  $ cp -r small-mon-1 large-mon
-  $ cd large-mon
-  $ mkdir smallrepofolder1
-  $ hg mv file.txt smallrepofolder1/file.txt
-  $ hg ci -m 'move commit'
-  $ mkdir smallrepofolder2
-  $ echo 2 > smallrepofolder2/file.txt
-  $ hg addremove -q
-  $ hg ci -m "move commit for repo 2"
-  $ create_first_post_move_commit smallrepofolder1
-  $ hg book -r . master_bookmark
 
-  $ cd "$TESTTMP/small-mon-1"
-  $ create_first_post_move_commit .
-  $ hg book -r . master_bookmark
+  $ quiet testtool_drawdag -R small-mon-1 --no-default-files <<EOF
+  > S_B
+  > |
+  > S_A
+  > # message: S_A "pre-move commit 1"
+  > # author: S_A test
+  > # modify: S_A file.txt "1\n"
+  > # message: S_B "first post-move commit"
+  > # author: S_B test
+  > # modify: S_B file.txt "1\n"
+  > # bookmark: S_B master_bookmark
+  > EOF
 
-blobimport hg servers repos into Mononoke repos
-  $ cd $TESTTMP
+  $ quiet testtool_drawdag -R large-mon --no-default-files <<EOF
+  > L_D
+  > |
+  > L_C
+  > |
+  > L_B
+  > |
+  > L_A
+  > # message: L_A "pre-move commit 1"
+  > # author: L_A test
+  > # modify: L_A file.txt "1\n"
+  > # message: L_B "move commit"
+  > # author: L_B test
+  > # copy: L_B smallrepofolder1/file.txt "1\n" L_A file.txt
+  > # delete: L_B file.txt
+  > # message: L_C "move commit for repo 2"
+  > # author: L_C test
+  > # modify: L_C smallrepofolder1/file.txt "1\n"
+  > # modify: L_C smallrepofolder2/file.txt "2\n"
+  > # message: L_D "first post-move commit"
+  > # author: L_D test
+  > # modify: L_D smallrepofolder1/file.txt "1\n"
+  > # modify: L_D smallrepofolder2/file.txt "2\n"
+  > # bookmark: L_D master_bookmark
+  > EOF
+
   $ REPOIDLARGE=0
   $ REPOIDSMALL1=1
-  $ REPOID="$REPOIDLARGE" blobimport large-mon/.hg large-mon
-  $ REPOID="$REPOIDSMALL1" blobimport small-mon-1/.hg small-mon-1
+  $ LARGE_MASTER_BONSAI=$L_D
+  $ SMALL1_MASTER_BONSAI=$S_B
+
+start mononoke server
+  $ start_and_wait_for_mononoke_server
+Make sure mapping is set up and we know what we don't have to sync initial entries
+  $ add_synced_commit_mapping_entry $REPOIDSMALL1 $SMALL1_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI TEST_VERSION_NAME_LIVE_V1
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($REPOIDSMALL1, 'backsync_from_$REPOIDLARGE', 1)";
 
 setup hg client repos
   $ function init_client() {
@@ -147,37 +163,27 @@ setup hg client repos
   $ cd "$TESTTMP"
   $ init_client large-mon large-hg-client
 
-Setup helpers
-  $ LARGE_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id $REPOIDLARGE get master_bookmark)
-  $ SMALL1_MASTER_BONSAI=$(mononoke_admin bookmarks --repo-id $REPOIDSMALL1 get master_bookmark)
-
-start mononoke server
-  $ start_and_wait_for_mononoke_server
-Make sure mapping is set up and we know what we don't have to sync initial entries
-  $ add_synced_commit_mapping_entry $REPOIDSMALL1 $SMALL1_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI TEST_VERSION_NAME_LIVE_V1
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($REPOIDSMALL1, 'backsync_from_$REPOIDLARGE', 1)";
-
 Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
   $ hg up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
   $ hg push -r . --to master_bookmark 2>&1 | grep "updated remote bookmark"
-  updated remote bookmark master_bookmark to 6989db12d1e5
+  updated remote bookmark master_bookmark to 3a873fa1db38
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
-  @  newcommit [public;rev=2;6989db12d1e5] remote/master_bookmark
+  @  newcommit [public;rev=2;3a873fa1db38] remote/master_bookmark
   │
   ~
 
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
-  o  first post-move commit [public;rev=3;bca7e9574548] remote/master_bookmark
+  o  first post-move commit [public;rev=3;866a83b473f9] remote/master_bookmark
   │
   ~
   $ hg pull -q
   $ log -r master_bookmark
-  o  newcommit [public;rev=4;7c9a729ceb57] remote/master_bookmark
+  o  newcommit [public;rev=4;ec8a08687f89] remote/master_bookmark
   │
   ~
 
@@ -220,14 +226,14 @@ Do a push it should fail because we disallow pushing over a changeset that chang
   $ mkdir -p special
   $ echo f > special/f && hg ci -Aqm post_config_change_commit
   $ hg push -r . --to master_bookmark
-  pushing rev 318b198c67b1 to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
+  pushing rev acab1c469b6a to destination https://localhost:$LOCAL_PORT/edenapi/ bookmark master_bookmark
   edenapi: queue 1 commit for upload
   edenapi: queue 1 file for upload
   edenapi: uploaded 1 file
   edenapi: queue 2 trees for upload
   edenapi: uploaded 2 trees
   edenapi: uploaded 1 changeset
-  pushrebasing stack (ef1b32df8f95, 318b198c67b1] (1 commit) to remote bookmark master_bookmark
+  pushrebasing stack (364a1f667bfc, acab1c469b6a] (1 commit) to remote bookmark master_bookmark
   abort: Server error: invalid request: Pushrebase failed: Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is *) (glob)
   [255]
 
