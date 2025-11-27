@@ -109,6 +109,28 @@ Test subtree copy protected path
   abort: copying protected path to an unprotected path is not allowed
   [255]
 
+Test subtree copy protected path with absolute path
+
+  $ hg subtree copy --from-path $TESTTMP/client1/foo --to-path $TESTTMP/client1/baz
+  WARNING: You are attempting to copy protected data to an unprotected location:
+   * from-path: foo (contains protected data)
+   * to-path: baz
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
+
+Test subtree copy protected path in a non-root directory
+
+  $ cd foo
+  $ hg subtree copy --from-path ../foo --to-path ../baz
+  WARNING: You are attempting to copy protected data to an unprotected location:
+   * from-path: foo (contains protected data)
+   * to-path: baz
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
+  $ cd ..
+
 Test subtree merge protected path
 
   $ hg subtree merge --from-path foo --to-path bar
@@ -119,6 +141,29 @@ Test subtree merge protected path
   abort: copying protected path to an unprotected path is not allowed
   [255]
 
+Test subtree merge protected path with absolute path
+
+  $ hg subtree merge --from-path $TESTTMP/client1/foo --to-path $TESTTMP/client1/bar
+  WARNING: You are attempting to merge protected data to an unprotected location:
+   * from-path: foo (contains protected data)
+   * to-path: bar
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
+
+Test subtree merge protected path in a non-root directory
+
+  $ cd foo
+  $ hg subtree merge --from-path ../foo --to-path ../bar
+  WARNING: You are attempting to merge protected data to an unprotected location:
+   * from-path: foo (contains protected data)
+   * to-path: bar
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
+
+  $ cd ..
+
 Test subtree graft protected path
 
   $ hg subtree graft --from-path foo --to-path bar -r bf60887fbaff
@@ -128,6 +173,28 @@ Test subtree graft protected path
   Do you still wish to continue (y/n)?  n
   abort: copying protected path to an unprotected path is not allowed
   [255]
+
+Test subtree graft protected path with absolute path
+
+  $ hg subtree graft --from-path $TESTTMP/client1/foo --to-path $TESTTMP/client1/bar -r bf60887fbaff
+  WARNING: You are attempting to graft protected data to an unprotected location:
+   * from-path: foo/protected/x (contains protected data)
+   * to-path: bar
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
+
+Test subtree graft protected path in a non-root directory
+
+  $ cd foo
+  $ hg subtree graft --from-path ../foo --to-path ../bar -r bf60887fbaff
+  WARNING: You are attempting to graft protected data to an unprotected location:
+   * from-path: foo/protected/x (contains protected data)
+   * to-path: bar
+  Do you still wish to continue (y/n)?  n
+  abort: copying protected path to an unprotected path is not allowed
+  [255]
+  $ cd ..
 
 Test subtree copy with addtional filter (sparse profile) path
   $ hg subtree copy --from-path foo --to-path baz --filter tent-filter-not-exist
