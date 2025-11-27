@@ -75,7 +75,7 @@ mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_blobstore = { version = "0.1.0", path = "../repo_attributes/mutable_blobstore" }
-mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
+mutable_counters = { version = "0.1.0", path = "../repo_attributes/mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 packfile = { version = "0.1.0", path = "../git/packfile" }
 phases = { version = "0.1.0", path = "../phases" }

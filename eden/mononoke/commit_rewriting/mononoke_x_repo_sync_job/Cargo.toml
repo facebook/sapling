@@ -32,7 +32,7 @@ metadata = { version = "0.1.0", path = "../../common/metadata" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
+mutable_counters = { version = "0.1.0", path = "../../repo_attributes/mutable_counters" }
 pushredirect = { version = "0.1.0", path = "../../megarepo_api/pushredirect" }
 regex = "1.12.2"
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }

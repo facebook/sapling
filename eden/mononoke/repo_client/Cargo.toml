@@ -49,7 +49,7 @@ mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
+mutable_counters = { version = "0.1.0", path = "../repo_attributes/mutable_counters" }
 nonzero_ext = "0.2"
 percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../phases" }

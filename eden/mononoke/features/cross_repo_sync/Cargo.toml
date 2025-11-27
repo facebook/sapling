@@ -41,7 +41,7 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 movers = { version = "0.1.0", path = "../../commit_rewriting/movers" }
-mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
+mutable_counters = { version = "0.1.0", path = "../../repo_attributes/mutable_counters" }
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_hooks = { version = "0.1.0", path = "../../pushrebase/pushrebase_hooks" }

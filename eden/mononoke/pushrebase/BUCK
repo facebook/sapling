@@ -19,7 +19,7 @@ rust_library(
         "//eden/mononoke/filestore:filestore",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
-        "//eden/mononoke/mutable_counters:mutable_counters",
+        "//eden/mononoke/repo_attributes/mutable_counters:mutable_counters",
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/fixtures:fixtures",
         "//eden/mononoke/tests/utils:tests_utils",
