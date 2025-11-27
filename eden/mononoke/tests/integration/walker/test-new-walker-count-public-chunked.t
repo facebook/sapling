@@ -7,15 +7,19 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ default_setup_pre_blobimport "blob_files"
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  $ blobimport repo/.hg repo --derived-data-type=blame --derived-data-type=changeset_info --derived-data-type=deleted_manifest --derived-data-type=fastlog --derived-data-type=fsnodes --derived-data-type=skeleton_manifests --derived-data-type=unodes
+  $ setup_common_config "blob_files"
+
+  $ testtool_drawdag -R repo --derive-all << EOF
+  > C
+  > |
+  > B
+  > |
+  > A
+  > # bookmark: C master_bookmark
+  > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
 bonsai core data, deep, unchunked. This is the base case
   $ mononoke_walker scrub -q -b master_bookmark -I bonsai 2>&1 | grep -vE "(Bytes|Walked)/s"

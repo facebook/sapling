@@ -7,15 +7,19 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ default_setup_blobimport "blob_files"
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
+  $ setup_common_config "blob_files"
+
+  $ testtool_drawdag -R repo --derive-all << EOF
+  > C
+  > |
+  > B
+  > |
+  > A
+  > # bookmark: C master_bookmark
+  > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
 Base case, check can walk fine
   $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
@@ -24,11 +28,11 @@ Base case, check can walk fine
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 43,43
 
 Delete a gitsha1 alias so that we get errors
-  $ ls blobstore/blobs/* | wc -l
-  33
-  $ rm blobstore/blobs/*.alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c*
-  $ ls blobstore/blobs/* | wc -l
-  32
+  $ ls $TESTTMP/blobstore/blobs/* | wc -l
+  138
+  $ rm $TESTTMP/blobstore/blobs/*.alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c*
+  $ ls $TESTTMP/blobstore/blobs/* | wc -l
+  137
 
 Check we get an error due to the missing aliases
   $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
@@ -39,6 +43,7 @@ Check we get an error due to the missing aliases
   Caused by:
       alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c is missing
   Error: Execution failed
+
 Check error as data fails if not in readonly-storage mode
   $ mononoke_walker --with-readonly-storage=false scrub --error-as-data-node-type AliasContentMapping -I deep -q -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
   [ERROR] Execution error: Error as data could mean internal state is invalid, run with --with-readonly-storage=true to ensure no risk of persisting it
@@ -70,6 +75,7 @@ Check error-as-data-edge-type, should get an error on FileContentMetadataV2ToGit
   Caused by:
       alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c is missing
   Error: Execution failed
+
 Check error-as-data-edge-type, should get no errors as FileContentMetadataV2ToGitSha1Alias has its errors converted to data
   $ mononoke_walker scrub -q --error-as-data-node-type AliasContentMapping --error-as-data-edge-type FileContentMetadataV2ToGitSha1Alias -I deep -b master_bookmark 2>&1 | grep -vE "(Bytes|Raw|Walked)/s" | sed -re 's/(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
   1 [WARN] Error as data enabled, walk results may not be complete. Errors as data enabled for node types [AliasContentMapping] edge types [FileContentMetadataV2ToGitSha1Alias]

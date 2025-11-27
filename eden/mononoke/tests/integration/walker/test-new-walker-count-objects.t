@@ -7,15 +7,19 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ default_setup_pre_blobimport "blob_files"
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  $ blobimport repo/.hg repo --derived-data-type=blame --derived-data-type=changeset_info --derived-data-type=deleted_manifest --derived-data-type=fastlog --derived-data-type=fsnodes --derived-data-type=skeleton_manifests --derived-data-type=unodes
+  $ setup_common_config "blob_files"
+
+  $ testtool_drawdag -R repo --derive-all << EOF
+  > C
+  > |
+  > B
+  > |
+  > A
+  > # bookmark: C master_bookmark
+  > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
 check blobstore numbers, walk will do some more steps for mappings
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
@@ -27,7 +31,7 @@ check blobstore numbers, walk will do some more steps for mappings
   12
   $ BLOBCOUNT=$(ls $BLOBPREFIX.* | grep -v .alias. | wc -l)
   $ echo "$BLOBCOUNT"
-  64
+  126
 
 count-objects, all types, shallow edges
   $ mononoke_walker scrub -q -b master_bookmark -I shallow -i all 2>&1 | grep -vE "(Bytes|Walked)/s"
@@ -45,7 +49,7 @@ count-objects, all types, all edges, difference in final count vs deep edges is 
   $ mononoke_walker scrub -q -b master_bookmark -I all -i all 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BlameToChangeset, BonsaiHgMappingToHgBonsaiMapping, BonsaiHgMappingToHgChangesetViaBonsai, BookmarkToBonsaiHgMapping, BookmarkToChangeset, ChangesetInfoMappingToChangesetInfo, ChangesetInfoToChangesetInfoParent, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToChangesetInfo, ChangesetToChangesetInfoMapping, ChangesetToDeletedManifestV2Mapping, ChangesetToFileContent, ChangesetToFsnodeMapping, ChangesetToPhaseMapping, ChangesetToSkeletonManifestMapping, ChangesetToUnodeMapping, DeletedManifestV2MappingToRootDeletedManifestV2, DeletedManifestV2ToDeletedManifestV2Child, DeletedManifestV2ToLinkedChangeset, FastlogBatchToChangeset, FastlogBatchToPreviousBatch, FastlogDirToChangeset, FastlogDirToPreviousBatch, FastlogFileToChangeset, FastlogFileToPreviousBatch, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, FsnodeMappingToRootFsnode, FsnodeToChildFsnode, FsnodeToFileContent, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgManifestFileNode, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestFileNodeToHgCopyfromFileNode, HgManifestFileNodeToHgParentFileNode, HgManifestFileNodeToLinkedHgBonsaiMapping, HgManifestFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode, HgManifestToHgManifestFileNode, PublishedBookmarksToBonsaiHgMapping, PublishedBookmarksToChangeset, RootToAliasContentMapping, RootToBlame, RootToBonsaiHgMapping, RootToBookmark, RootToChangeset, RootToChangesetInfo, RootToChangesetInfoMapping, RootToDeletedManifestV2, RootToDeletedManifestV2Mapping, RootToFastlogBatch, RootToFastlogDir, RootToFastlogFile, RootToFileContent, RootToFileContentMetadataV2, RootToFsnode, RootToFsnodeMapping, RootToHgBonsaiMapping, RootToHgChangeset, RootToHgChangesetViaBonsai, RootToHgFileEnvelope, RootToHgFileNode, RootToHgManifest, RootToHgManifestFileNode, RootToPhaseMapping, RootToPublishedBookmarks, RootToSkeletonManifest, RootToSkeletonManifestMapping, RootToUnodeFile, RootToUnodeManifest, RootToUnodeMapping, SkeletonManifestMappingToRootSkeletonManifest, SkeletonManifestToSkeletonManifestChild, UnodeFileToBlame, UnodeFileToFastlogFile, UnodeFileToFileContent, UnodeFileToLinkedChangeset, UnodeFileToUnodeFileParent, UnodeManifestToFastlogDir, UnodeManifestToLinkedChangeset, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]
   [INFO] Walking node types [AliasContentMapping, Blame, BonsaiHgMapping, Bookmark, Changeset, ChangesetInfo, ChangesetInfoMapping, DeletedManifestV2, DeletedManifestV2Mapping, FastlogBatch, FastlogDir, FastlogFile, FileContent, FileContentMetadataV2, Fsnode, FsnodeMapping, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, HgManifestFileNode, PhaseMapping, PublishedBookmarks, SkeletonManifest, SkeletonManifestMapping, UnodeFile, UnodeManifest, UnodeMapping]
-  [INFO] [walker scrub{repo=repo}] Suppressing edge OutgoingEdge { label: ChangesetToBonsaiHgMapping, target: BonsaiHgMapping(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false }), path: None }
+  [INFO] [walker scrub{repo=repo}] Suppressing edge OutgoingEdge { label: ChangesetToBonsaiHgMapping, target: BonsaiHgMapping(ChangesetKey { inner: ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), filenode_known_derived: false }), path: None }
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 89,89
 
 count-objects, bonsai core data.  total nodes is BONSAICOUNT plus one for the root bookmark step.
@@ -82,7 +86,7 @@ count-objects, default shallow walk across bonsai and hg data, including mutable
   $ mononoke_walker scrub -q --walk-root PublishedBookmarks -I shallow -I marker 2>&1 | grep -vE "(Bytes|Walked)/s"
   [INFO] Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangesetViaBonsai, ChangesetToBonsaiHgMapping, ChangesetToFileContent, ChangesetToPhaseMapping, FileContentMetadataV2ToGitSha1Alias, FileContentMetadataV2ToSeededBlake3Alias, FileContentMetadataV2ToSha1Alias, FileContentMetadataV2ToSha256Alias, FileContentToFileContentMetadataV2, HgChangesetToHgManifest, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode, PublishedBookmarksToBonsaiHgMapping, PublishedBookmarksToChangeset]
   [INFO] Walking node types [AliasContentMapping, BonsaiHgMapping, Changeset, FileContent, FileContentMetadataV2, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping, PublishedBookmarks]
-  [INFO] [walker scrub{repo=repo}] Suppressing edge OutgoingEdge { label: ChangesetToBonsaiHgMapping, target: BonsaiHgMapping(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false }), path: None }
+  [INFO] [walker scrub{repo=repo}] Suppressing edge OutgoingEdge { label: ChangesetToBonsaiHgMapping, target: BonsaiHgMapping(ChangesetKey { inner: ChangesetId(Blake2(e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2)), filenode_known_derived: false }), path: None }
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 31,31
 
 count-objects, shallow walk across bonsai and changeset_info
