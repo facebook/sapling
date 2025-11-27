@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(test)]
+mod test_helpers;
+
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::collections::HashSet;
