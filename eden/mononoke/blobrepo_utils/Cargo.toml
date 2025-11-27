@@ -38,7 +38,7 @@ tokio-stream = { version = "0.1.17", features = ["fs", "io-util", "net", "signal
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-bookmarks = { version = "0.1.0", path = "../bookmarks" }
+bookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

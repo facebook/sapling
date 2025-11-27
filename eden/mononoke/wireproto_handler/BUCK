@@ -7,10 +7,10 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "//common/rust/shed/facet:facet",
-        "//eden/mononoke/bookmarks:bookmarks",
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/metaconfig:metaconfig_types",
+        "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
         "//eden/mononoke/repo_attributes/mutable_counters:mutable_counters",
     ],
 )

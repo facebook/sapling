@@ -21,7 +21,7 @@ path = "tests/gitexport_tools/lib.rs"
 [dependencies]
 anyhow = "1.0.98"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-bookmarks_types = { version = "0.1.0", path = "../../bookmarks/bookmarks_types" }
+bookmarks_types = { version = "0.1.0", path = "../../repo_attributes/bookmarks/bookmarks_types" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
@@ -61,7 +61,7 @@ test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_fa
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
-warm_bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/warm_bookmarks_cache" }
+warm_bookmarks_cache = { version = "0.1.0", path = "../../repo_attributes/bookmarks/warm_bookmarks_cache" }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

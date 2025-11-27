@@ -13,7 +13,7 @@ rust_library(
         "fbsource//third-party/rust:clap",
         "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
         "//eden/mononoke/blobstore:blobstore",
-        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
         "//eden/mononoke/common/dedupmap:dedupmap",
         "//eden/mononoke/derived_data:blame",
         "//eden/mononoke/derived_data:changeset_info",

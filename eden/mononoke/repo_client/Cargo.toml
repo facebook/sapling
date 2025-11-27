@@ -14,9 +14,9 @@ blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
-bookmarks = { version = "0.1.0", path = "../bookmarks" }
-bookmarks_cache = { version = "0.1.0", path = "../bookmarks/bookmarks_cache" }
-bookmarks_types = { version = "0.1.0", path = "../bookmarks/bookmarks_types" }
+bookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks" }
+bookmarks_cache = { version = "0.1.0", path = "../repo_attributes/bookmarks/bookmarks_cache" }
+bookmarks_types = { version = "0.1.0", path = "../repo_attributes/bookmarks/bookmarks_types" }
 bytes = { version = "1.10", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
@@ -86,4 +86,4 @@ mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
-warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_cache" }
+warm_bookmarks_cache = { version = "0.1.0", path = "../repo_attributes/bookmarks/warm_bookmarks_cache" }

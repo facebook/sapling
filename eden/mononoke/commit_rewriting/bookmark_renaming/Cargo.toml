@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.98"
 ascii = "1.0"
-bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 thiserror = "2.0.12"

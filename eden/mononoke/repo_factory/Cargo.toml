@@ -19,8 +19,8 @@ bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapp
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bonsai_svnrev_mapping = { version = "0.1.0", path = "../bonsai_svnrev_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../repo_attributes/bonsai_tag_mapping" }
-bookmarks = { version = "0.1.0", path = "../bookmarks" }
-bookmarks_cache = { version = "0.1.0", path = "../bookmarks/bookmarks_cache" }
+bookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks" }
+bookmarks_cache = { version = "0.1.0", path = "../repo_attributes/bookmarks/bookmarks_cache" }
 bundle_uri = { version = "0.1.0", path = "../git/bundle_uri" }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -31,7 +31,7 @@ commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/comm
 commit_graph_types = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph_types" }
 context = { version = "0.1.0", path = "../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../features/cross_repo_sync" }
-dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
+dbbookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks/dbbookmarks" }
 deletion_log = { version = "0.1.0", path = "../repo_attributes/deletion_log" }
 derived_data_remote = { version = "0.1.0", path = "../derived_data/remote" }
 environment = { version = "0.1.0", path = "../cmdlib/environment" }
@@ -91,5 +91,5 @@ thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 virtually_sharded_blobstore = { version = "0.1.0", path = "../blobstore/virtually_sharded_blobstore" }
-warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_cache" }
+warm_bookmarks_cache = { version = "0.1.0", path = "../repo_attributes/bookmarks/warm_bookmarks_cache" }
 wireproto_handler = { version = "0.1.0", path = "../wireproto_handler" }

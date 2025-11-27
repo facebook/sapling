@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.98"
 async-trait = "0.1.86"
-bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 bytes = { version = "1.10", features = ["serde"] }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 context = { version = "0.1.0", path = "../../server/context" }

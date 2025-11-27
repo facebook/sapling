@@ -43,7 +43,7 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 [dev-dependencies]
 ascii = "1.0"
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
-bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changesets_creation = { version = "0.1.0", path = "../../changesets/changesets_creation" }
 cmdlib_caching = { version = "0.1.0", path = "../../cmdlib/caching" }

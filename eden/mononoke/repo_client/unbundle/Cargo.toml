@@ -14,8 +14,8 @@ backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
-bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_movement" }
+bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
+bookmarks_movement = { version = "0.1.0", path = "../../repo_attributes/bookmarks/bookmarks_movement" }
 bytes = { version = "1.10", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }

@@ -16,14 +16,14 @@ bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_m
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bonsai_svnrev_mapping = { version = "0.1.0", path = "../../bonsai_svnrev_mapping" }
 bonsai_tag_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_tag_mapping" }
-bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/bookmarks_cache" }
+bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
+bookmarks_cache = { version = "0.1.0", path = "../../repo_attributes/bookmarks/bookmarks_cache" }
 bundle_uri = { version = "0.1.0", path = "../../git/bundle_uri" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 commit_cloud = { version = "0.1.0", path = "../../commit_cloud" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../server/context" }
-dbbookmarks = { version = "0.1.0", path = "../../bookmarks/dbbookmarks" }
+dbbookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks/dbbookmarks" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -73,5 +73,5 @@ sqlphases = { version = "0.1.0", path = "../../repo_attributes/phases/sqlphases"
 streaming_clone = { version = "0.1.0", path = "../../repo_client/streaming_clone" }
 strum = { version = "0.27.1", features = ["derive"] }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
-warm_bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/warm_bookmarks_cache" }
+warm_bookmarks_cache = { version = "0.1.0", path = "../../repo_attributes/bookmarks/warm_bookmarks_cache" }
 wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }

@@ -17,8 +17,8 @@ async-trait = "0.1.86"
 blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
-bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/bookmarks_cache" }
+bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
+bookmarks_cache = { version = "0.1.0", path = "../../repo_attributes/bookmarks/bookmarks_cache" }
 cache_warmup = { version = "0.1.0", path = "../../cache_warmup" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -41,4 +41,4 @@ repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobsto
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-warm_bookmarks_cache = { version = "0.1.0", path = "../../bookmarks/warm_bookmarks_cache" }
+warm_bookmarks_cache = { version = "0.1.0", path = "../../repo_attributes/bookmarks/warm_bookmarks_cache" }

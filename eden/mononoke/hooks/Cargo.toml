@@ -15,7 +15,7 @@ doctest = false
 anyhow = "1.0.98"
 async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = "../blobstore" }
-bookmarks = { version = "0.1.0", path = "../bookmarks" }
+bookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks" }
 bytes = { version = "1.10", features = ["serde"] }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../server/context" }

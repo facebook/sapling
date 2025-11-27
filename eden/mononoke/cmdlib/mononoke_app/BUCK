@@ -38,7 +38,7 @@ rust_library(
         "//common/rust/shed/futures_retry:futures_retry",
         "//eden/mononoke/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/bonsai_svnrev_mapping:bonsai_svnrev_mapping",
-        "//eden/mononoke/bookmarks:bookmarks",
+        "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
         "//eden/mononoke/cmdlib:arg_extensions",
         "//eden/mononoke/cmdlib:cmdlib_logging",
         "//eden/mononoke/cmdlib:environment",
