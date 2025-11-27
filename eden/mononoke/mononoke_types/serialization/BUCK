@@ -46,9 +46,9 @@ thrift_library(
         "//eden/mononoke/microwave/if:",
         "//eden/mononoke/mononoke_types:",
         "//eden/mononoke/mononoke_types/if:",
-        "//eden/mononoke/mutable_renames/if:",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types/if:",
         "//eden/mononoke/repo_attributes/filenodes/if:",
+        "//eden/mononoke/repo_attributes/mutable_renames/if:",
         "//eden/mononoke/repo_attributes/repo_derivation_queues/if:",
     ],
     deps = [

@@ -88,7 +88,7 @@ mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 movers = { version = "0.1.0", path = "../../commit_rewriting/movers" }
 mutable_counters = { version = "0.1.0", path = "../../repo_attributes/mutable_counters" }
-mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
+mutable_renames = { version = "0.1.0", path = "../../repo_attributes/mutable_renames" }
 packfile = { version = "0.1.0", path = "../../git/packfile" }
 phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
 preloaded_commit_graph_storage = { version = "0.1.0", path = "../../repo_attributes/commit_graph/preloaded_commit_graph_storage" }
