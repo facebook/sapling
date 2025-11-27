@@ -45,7 +45,7 @@ mutable_counters = { version = "0.1.0", path = "../../repo_attributes/mutable_co
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 pushrebase_hooks = { version = "0.1.0", path = "../../pushrebase/pushrebase_hooks" }
-pushrebase_mutation_mapping = { version = "0.1.0", path = "../../pushrebase_mutation_mapping" }
+pushrebase_mutation_mapping = { version = "0.1.0", path = "../../repo_attributes/pushrebase_mutation_mapping" }
 rand = { version = "0.8", features = ["small_rng"] }
 ref-cast = "1.0.18"
 regex = "1.12.2"

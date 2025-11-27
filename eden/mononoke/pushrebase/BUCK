@@ -80,7 +80,7 @@ rust_library(
         "//eden/mononoke/commit_rewriting/synced_commit_mapping:synced_commit_mapping_pushrebase_hook",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/pushrebase:pushrebase_hook",
-        "//eden/mononoke/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
+        "//eden/mononoke/repo_attributes/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
         "//eden/mononoke/repo_attributes/repo_bookmark_attrs:repo_bookmark_attrs",
         "//eden/mononoke/repo_attributes/repo_cross_repo:repo_cross_repo",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
