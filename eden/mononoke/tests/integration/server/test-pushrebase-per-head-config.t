@@ -36,33 +36,25 @@ Setup
 
 Prepare the server-side repo
 
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ hg debugdrawdag <<EOF
+  $ quiet testtool_drawdag -R repo <<EOF
   > B
   > |
   > A
+  > # bookmark: B date-rewrite
+  > # bookmark: B no-date-rewrite
+  > # bookmark: B use-repo-config
   > EOF
-
-- Create two bookmarks, one with rewritedate enabled, one disabled
-
-  $ hg bookmark date-rewrite -r B
-  $ hg bookmark no-date-rewrite -r B
-  $ hg bookmark use-repo-config -r B
-
-- Import and start Mononoke (the Mononoke repo name is 'repo')
-
-  $ cd $TESTTMP
-  $ blobimport repo/.hg repo
   $ start_and_wait_for_mononoke_server
 Prepare the client-side repo
 
   $ hg clone -q mono:repo client-repo --noupdate
   $ cd $TESTTMP/client-repo
-  $ hg debugdrawdag <<'EOS'
+  $ hg pull -r date-rewrite -q
+  $ A=$(hg log -r 'desc(A)' -T '{node}')
+  $ hg debugdrawdag << EOS
   > E C D
   >  \|/
-  >   A
+  >   $A
   > EOS
 
 Push
