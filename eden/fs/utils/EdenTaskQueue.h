@@ -24,7 +24,7 @@ class EdenTaskQueue
                 maxInflightRequests}) {}
 
   folly::BlockingQueueAddResult add(
-      folly::CPUThreadPoolExecutor::CPUTask item) override;
+      folly::CPUThreadPoolExecutor::CPUTask&& item) override;
 
   folly::CPUThreadPoolExecutor::CPUTask take() override;
 

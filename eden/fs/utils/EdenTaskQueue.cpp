@@ -10,7 +10,7 @@
 namespace facebook::eden {
 
 folly::BlockingQueueAddResult EdenTaskQueue::add(
-    folly::CPUThreadPoolExecutor::CPUTask item) {
+    folly::CPUThreadPoolExecutor::CPUTask&& item) {
   queue_.enqueue(std::move(item));
   return sem_.post();
 }
