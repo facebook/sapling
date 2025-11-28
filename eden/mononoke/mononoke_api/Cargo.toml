@@ -63,7 +63,7 @@ hooks = { version = "0.1.0", path = "../features/hooks" }
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.5"
-live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
+live_commit_sync_config = { version = "0.1.0", path = "../features/commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 megarepo_error = { version = "0.1.0", path = "../megarepo_api/megarepo_error" }
@@ -80,8 +80,8 @@ mutable_renames = { version = "0.1.0", path = "../repo_attributes/mutable_rename
 packfile = { version = "0.1.0", path = "../git/packfile" }
 phases = { version = "0.1.0", path = "../repo_attributes/phases" }
 protocol = { version = "0.1.0", path = "../git/protocol" }
-pushrebase = { version = "0.1.0", path = "../pushrebase" }
-pushrebase_client = { version = "0.1.0", path = "../pushrebase/client" }
+pushrebase = { version = "0.1.0", path = "../features/pushrebase" }
+pushrebase_client = { version = "0.1.0", path = "../features/pushrebase/pushrebase_client" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../repo_attributes/pushrebase_mutation_mapping" }
 regex = "1.12.2"
 repo_authorization = { version = "0.1.0", path = "../repo_authorization" }
@@ -112,7 +112,7 @@ sql_commit_graph_storage = { version = "0.1.0", path = "../repo_attributes/commi
 sql_query_config = { version = "0.1.0", path = "../repo_attributes/sql_query_config" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 streaming_clone = { version = "0.1.0", path = "../repo_client/streaming_clone" }
-synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
+synced_commit_mapping = { version = "0.1.0", path = "../features/commit_rewriting/synced_commit_mapping" }
 thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

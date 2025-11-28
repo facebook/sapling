@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.98"
 ascii = "1.0"
-backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
+backsyncer = { version = "0.1.0", path = "../../features/commit_rewriting/backsyncer" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
@@ -30,7 +30,7 @@ hook_manager = { version = "0.1.0", path = "../../repo_attributes/hook_manager/h
 hooks = { version = "0.1.0", path = "../../features/hooks" }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.5"
-live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
+live_commit_sync_config = { version = "0.1.0", path = "../../features/commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_bundles = { version = "0.1.0", path = "../../mercurial/bundles" }
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
@@ -42,8 +42,8 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 obsolete = { version = "0.1.0", path = "../obsolete" }
 phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
 pin-project = "1.1.10"
-pushrebase = { version = "0.1.0", path = "../../pushrebase" }
-pushrebase_client = { version = "0.1.0", path = "../../pushrebase/client" }
+pushrebase = { version = "0.1.0", path = "../../features/pushrebase" }
+pushrebase_client = { version = "0.1.0", path = "../../features/pushrebase/pushrebase_client" }
 quickcheck = "1.0"
 remotefilelog = { version = "0.1.0", path = "../remotefilelog" }
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
@@ -53,7 +53,7 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 repo_update_logger = { version = "0.1.0", path = "../../features/repo_update_logger" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
+synced_commit_mapping = { version = "0.1.0", path = "../../features/commit_rewriting/synced_commit_mapping" }
 thiserror = "2.0.12"
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

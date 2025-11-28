@@ -45,14 +45,14 @@ megarepo_configs = { version = "0.1.0", path = "../../../megarepo_api/if/megarep
 mercurial_types = { version = "0.1.0", path = "../../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
-movers = { version = "0.1.0", path = "../../../commit_rewriting/movers" }
-pushrebase = { version = "0.1.0", path = "../../../pushrebase" }
+movers = { version = "0.1.0", path = "../../commit_rewriting/movers" }
+pushrebase = { version = "0.1.0", path = "../../pushrebase" }
 readonlyblob = { version = "0.1.0", path = "../../../blobstore/readonlyblob" }
 repo_blobstore = { version = "0.1.0", path = "../../../repo_attributes/repo_blobstore" }
 repo_cross_repo = { version = "0.1.0", path = "../../../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../../repo_attributes/repo_identity" }
-reporting = { version = "0.1.0", path = "../../../commit_rewriting/reporting" }
+reporting = { version = "0.1.0", path = "../../commit_rewriting/reporting" }
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../../../derived_data/skeleton_manifest" }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

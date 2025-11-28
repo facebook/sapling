@@ -14,7 +14,7 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
-bookmark_renaming = { version = "0.1.0", path = "../../commit_rewriting/bookmark_renaming" }
+bookmark_renaming = { version = "0.1.0", path = "../commit_rewriting/bookmark_renaming" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -34,17 +34,17 @@ fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 git_source_of_truth = { version = "0.1.0", path = "../../repo_attributes/git_source_of_truth" }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
+live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-movers = { version = "0.1.0", path = "../../commit_rewriting/movers" }
+movers = { version = "0.1.0", path = "../commit_rewriting/movers" }
 mutable_counters = { version = "0.1.0", path = "../../repo_attributes/mutable_counters" }
 phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
-pushrebase = { version = "0.1.0", path = "../../pushrebase" }
-pushrebase_hooks = { version = "0.1.0", path = "../../pushrebase/pushrebase_hooks" }
+pushrebase = { version = "0.1.0", path = "../pushrebase" }
+pushrebase_hooks = { version = "0.1.0", path = "../pushrebase/pushrebase_hooks" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../repo_attributes/pushrebase_mutation_mapping" }
 rand = { version = "0.8", features = ["small_rng"] }
 ref-cast = "1.0.18"
@@ -54,14 +54,14 @@ repo_bookmark_attrs = { version = "0.1.0", path = "../../repo_attributes/repo_bo
 repo_cross_repo = { version = "0.1.0", path = "../../repo_attributes/repo_cross_repo" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-reporting = { version = "0.1.0", path = "../../commit_rewriting/reporting" }
+reporting = { version = "0.1.0", path = "../commit_rewriting/reporting" }
 scopeguard = "1.2.0"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
 static_assertions = "1.1.0"
-synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
-synced_commit_mapping_pushrebase_hook = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping/pushrebase_hook" }
+synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
+synced_commit_mapping_pushrebase_hook = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping/features/commit_rewriting/pushrebase_hook" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 thiserror = "2.0.12"

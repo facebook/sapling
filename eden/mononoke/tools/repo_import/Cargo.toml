@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.98"
-backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
+backsyncer = { version = "0.1.0", path = "../../features/commit_rewriting/backsyncer" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_globalrev_mapping" }
@@ -37,7 +37,7 @@ gix-hash = "0.18.0"
 import_direct = { version = "0.1.0", path = "../../git/import_direct" }
 import_tools = { version = "0.1.0", path = "../../git/import_tools" }
 itertools = "0.14.0"
-live_commit_sync_config = { version = "0.1.0", path = "../../commit_rewriting/live_commit_sync_config" }
+live_commit_sync_config = { version = "0.1.0", path = "../../features/commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
@@ -46,10 +46,10 @@ metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-movers = { version = "0.1.0", path = "../../commit_rewriting/movers" }
+movers = { version = "0.1.0", path = "../../features/commit_rewriting/movers" }
 mutable_counters = { version = "0.1.0", path = "../../repo_attributes/mutable_counters" }
 phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
-pushrebase = { version = "0.1.0", path = "../../pushrebase" }
+pushrebase = { version = "0.1.0", path = "../../features/pushrebase" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../repo_attributes/pushrebase_mutation_mapping" }
 pushredirect = { version = "0.1.0", path = "../../megarepo_api/pushredirect" }
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }
@@ -60,7 +60,7 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 sql_query_config = { version = "0.1.0", path = "../../repo_attributes/sql_query_config" }
-synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
+synced_commit_mapping = { version = "0.1.0", path = "../../features/commit_rewriting/synced_commit_mapping" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

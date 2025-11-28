@@ -14,7 +14,7 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 context = { version = "0.1.0", path = "../../server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-pushrebase_hook = { version = "0.1.0", path = "../../pushrebase/pushrebase_hook" }
+pushrebase_hook = { version = "0.1.0", path = "../../features/pushrebase/pushrebase_hook" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 
@@ -30,7 +30,7 @@ maplit = "1.0"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
-pushrebase = { version = "0.1.0", path = "../../pushrebase" }
+pushrebase = { version = "0.1.0", path = "../../features/pushrebase" }
 repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
 repo_derived_data = { version = "0.1.0", path = "../repo_derived_data" }
 repo_identity = { version = "0.1.0", path = "../repo_identity" }

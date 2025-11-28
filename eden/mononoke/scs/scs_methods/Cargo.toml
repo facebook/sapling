@@ -56,7 +56,7 @@ mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
-pushrebase = { version = "0.1.0", path = "../../pushrebase" }
+pushrebase = { version = "0.1.0", path = "../../features/pushrebase" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../repo_attributes/pushrebase_mutation_mapping" }
 repo_authorization = { version = "0.1.0", path = "../../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }
@@ -71,7 +71,7 @@ sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexper
 source_control = { version = "0.1.0", path = "../if" }
 source_control_services = { version = "0.1.0", path = "../if/services" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
+synced_commit_mapping = { version = "0.1.0", path = "../../features/commit_rewriting/synced_commit_mapping" }
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

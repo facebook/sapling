@@ -35,7 +35,7 @@ rust_binary(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/scm/lib/clientinfo:clientinfo",
     ] + ([] if rust_oss.is_oss_build() else [
-        "//eden/mononoke/pushrebase:pushrebase_client",
+        "//eden/mononoke/features/pushrebase:pushrebase_client",
     ])) + ["fbsource//third-party/rust:tokio"],
 )
 

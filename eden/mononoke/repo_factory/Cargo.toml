@@ -49,7 +49,7 @@ hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook
 hooks = { version = "0.1.0", path = "../features/hooks" }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.5"
-live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
+live_commit_sync_config = { version = "0.1.0", path = "../features/commit_rewriting/live_commit_sync_config" }
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
@@ -86,7 +86,7 @@ sql_query_config = { version = "0.1.0", path = "../repo_attributes/sql_query_con
 sqlphases = { version = "0.1.0", path = "../repo_attributes/phases/sqlphases" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 streaming_clone = { version = "0.1.0", path = "../repo_client/streaming_clone" }
-synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
+synced_commit_mapping = { version = "0.1.0", path = "../features/commit_rewriting/synced_commit_mapping" }
 thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
