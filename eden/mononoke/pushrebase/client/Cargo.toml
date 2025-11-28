@@ -19,7 +19,7 @@ bookmarks_movement = { version = "0.1.0", path = "../../repo_attributes/bookmark
 bookmarks_types = { version = "0.1.0", path = "../../repo_attributes/bookmarks/bookmarks_types" }
 bytes = { version = "1.10", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
-hooks = { version = "0.1.0", path = "../../hooks" }
+hooks = { version = "0.1.0", path = "../../features/hooks" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = ".." }

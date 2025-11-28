@@ -59,7 +59,7 @@ git_types = { version = "0.1.0", path = "../git/git_types" }
 gix-hash = "0.18.0"
 history_traversal = { version = "0.1.0", path = "../features/history_traversal" }
 hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager" }
-hooks = { version = "0.1.0", path = "../hooks" }
+hooks = { version = "0.1.0", path = "../features/hooks" }
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 lazy_static = "1.5"

@@ -65,7 +65,7 @@ rust_library(
         "//eden/mononoke/derived_data:derived_data_manager",
         "//eden/mononoke/repo_attributes/git_source_of_truth:git_source_of_truth",
         "//eden/mononoke/git/git_types:git_types",
-        "//eden/mononoke/hooks:hooks",
+        "//eden/mononoke/features/hooks:hooks",
         "//eden/mononoke/megarepo_api:megarepo_api",
         "//eden/mononoke/megarepo_api:megarepo_config",
         "//eden/mononoke/metaconfig:metaconfig_types",

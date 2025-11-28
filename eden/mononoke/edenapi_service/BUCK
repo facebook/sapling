@@ -68,7 +68,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/filestore:filestore",
         "//eden/mononoke/git/git_types:git_types",
         "//eden/mononoke/gotham_ext:gotham_ext",
-        "//eden/mononoke/hooks:hooks",
+        "//eden/mononoke/features/hooks:hooks",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",

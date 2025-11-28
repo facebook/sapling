@@ -101,7 +101,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/bookmarks/bookmarks_types:bookmarks_types",
         "//eden/mononoke/common/facebook/thrift_client:thrift_client",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
-        "//eden/mononoke/hooks:hooks",
+        "//eden/mononoke/features/hooks:hooks",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/pushrebase:pushrebase",
