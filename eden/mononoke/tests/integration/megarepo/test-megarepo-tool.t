@@ -20,42 +20,33 @@ setup hg server repo
 
   $ hginit_treemanifest repo
   $ cd repo
-  $ function createfile { mkdir -p "$(dirname  $1)" && echo "$1" > "$1" && hg add "$1"; }
-
--- create some semblance of fbsource
-  $ createfile fbcode/fbcodfile_fbsource
-  $ createfile fbobjc/fbobjcfile_fbsource
-  $ createfile fbandroid/fbandroidfile_fbsource
-  $ createfile xplat/xplatfile_fbsource
-  $ createfile arvr/arvrfile_fbsource
-  $ createfile third-party/thirdpartyfile_fbsource
-  $ hg ci -m "fbsource-like commit"
-  $ hg book -r . fbsource_master
-
--- create some semblance of ovrsource
-  $ hg up null -q
-  $ createfile fbcode/fbcodfile_ovrsource
-  $ createfile fbobjc/fbobjcfile_ovrsource
-  $ createfile fbandroid/fbandroidfile_ovrsource
-  $ createfile xplat/xplatfile_ovrsource
-  $ createfile arvr/arvrfile_ovrsource
-  $ createfile third-party/thirdpartyfile_ovrsource
-  $ createfile Software/softwarefile_ovrsource
-  $ createfile Research/researchfile_ovrsource
-  $ hg ci -m "ovrsource-like commit"
-  $ hg book -r . ovrsource_master
-
-  $ hg log -T "{node} {bookmarks}\n" -r "all()"
-  4da689e6447cf99bbc121eaa7b05ea1504cf2f7c fbsource_master
-  4d79e7d65a781c6c80b3ee4faf63452e8beafa97 ovrsource_master
-
+  $ testtool_drawdag -R repo --no-default-files <<'EOF'
+  > FBSOURCE OVRSOURCE
+  > # modify: FBSOURCE "fbcode/fbcodfile_fbsource" "fbcode/fbcodfile_fbsource\n"
+  > # modify: FBSOURCE "fbobjc/fbobjcfile_fbsource" "fbobjc/fbobjcfile_fbsource\n"
+  > # modify: FBSOURCE "fbandroid/fbandroidfile_fbsource" "fbandroid/fbandroidfile_fbsource\n"
+  > # modify: FBSOURCE "xplat/xplatfile_fbsource" "xplat/xplatfile_fbsource\n"
+  > # modify: FBSOURCE "arvr/arvrfile_fbsource" "arvr/arvrfile_fbsource\n"
+  > # modify: FBSOURCE "third-party/thirdpartyfile_fbsource" "third-party/thirdpartyfile_fbsource\n"
+  > # modify: OVRSOURCE "fbcode/fbcodfile_ovrsource" "fbcode/fbcodfile_ovrsource\n"
+  > # modify: OVRSOURCE "fbobjc/fbobjcfile_ovrsource" "fbobjc/fbobjcfile_ovrsource\n"
+  > # modify: OVRSOURCE "fbandroid/fbandroidfile_ovrsource" "fbandroid/fbandroidfile_ovrsource\n"
+  > # modify: OVRSOURCE "xplat/xplatfile_ovrsource" "xplat/xplatfile_ovrsource\n"
+  > # modify: OVRSOURCE "arvr/arvrfile_ovrsource" "arvr/arvrfile_ovrsource\n"
+  > # modify: OVRSOURCE "third-party/thirdpartyfile_ovrsource" "third-party/thirdpartyfile_ovrsource\n"
+  > # modify: OVRSOURCE "Software/softwarefile_ovrsource" "Software/softwarefile_ovrsource\n"
+  > # modify: OVRSOURCE "Research/researchfile_ovrsource" "Research/researchfile_ovrsource\n"
+  > # bookmark: FBSOURCE fbsource_master
+  > # bookmark: OVRSOURCE ovrsource_master
+  > # message: FBSOURCE "fbsource-like commit"
+  > # message: OVRSOURCE "ovrsource-like commit"
+  > EOF
+  FBSOURCE=ced1efc1c752e00f6a984bb92a598d23aedffd8d3dbf6a8adc83692cd31bf373
+  OVRSOURCE=23227cbe43072a39ad47a537a879ffadc63dce19c3ce9ad2cedbb8f4d34e04b1
   $ cd $TESTTMP
 
 setup repo-pull
   $ hg clone -q mono:repo repo-pull --noupdate
-
-blobimport
-  $ blobimport repo/.hg repo
 
   $ export COMMIT_DATE="1985-09-04T00:00:00.00Z"
 move things in fbsource
@@ -166,9 +157,9 @@ test pre-merge deletes functionality
   > -a author -m "merge preparation" \
   > --even-chunk-size 4 \
   > --commit-date-rfc3339 "$COMMIT_DATE" 2>/dev/null
-  32d2e80ff176b65df5cdeadec6dc52fdf8b66264965b001b91fab99dfb7aad75
-  8807f350542a43aa815abc0c250c4a79ba35fd5bb68594e3ce6555e6630d81c2
-  090a140adb3da3f4a629014cd9625055d8bd992a967ad7fc7e4e4d74892c4b71
+  3c56085394e5ca1d5c0fc66cdbfbb8f05d1cb0b7a6ba2868f41cb698a732553c
+  302cbf62158949d2bddac21ba30d7aba01d54df2aecc66f68f3ba4d7a0431ea5
+  91e46871162377faa9026e39d9c90fb371e2c5953864198dfb834e14104b7e31
 
 test gradual-delete functionality
   $ LAST_DELETION_BONSAI=$(mononoke_admin megarepo gradual-delete --repo-id 0 \
@@ -178,15 +169,15 @@ test gradual-delete functionality
   > --commit-date-rfc3339 "$COMMIT_DATE" \
   > arvr fbcode 2>/dev/null | tail -1)
   $ echo $LAST_DELETION_BONSAI
-  87e09c9ddd7190bf5b19f4003e7356779b8df5487ab5f7ecf794100301b9e64b
+  8f64fd6997e30133216e1f03bc803959ee49bb5cca98caf234c7fb7fcd287376
   $ LAST_DELETION_COMMIT=$(mononoke_admin convert -R repo -f bonsai -t hg --derive $LAST_DELETION_BONSAI)
   $ echo $LAST_DELETION_COMMIT
-  e7ee4708d8e0cd96c843ef598c7ad94882e42096
+  4b384e4a818424eab83bc86e547bad5f9183459b
 
   $ cd $TESTTMP/repo-pull
   $ sl pull -q -r $LAST_DELETION_COMMIT
   $ sl log --stat -r "reverse($LAST_DELETION_COMMIT % master_bookmark)"
-  commit:      e7ee4708d8e0
+  commit:      4b384e4a8184
   user:        author
   date:        Wed Sep 04 00:00:00 1985 +0000
   summary:     [MEGAREPO DELETE] gradual deletion (1)
@@ -194,7 +185,7 @@ test gradual-delete functionality
    fbcode/fbcodfile_fbsource |  1 -
    1 files changed, 0 insertions(+), 1 deletions(-)
   
-  commit:      cd9e15c2d8e0
+  commit:      92dbf1c8c06c
   user:        author
   date:        Wed Sep 04 00:00:00 1985 +0000
   summary:     [MEGAREPO DELETE] gradual deletion (0)
