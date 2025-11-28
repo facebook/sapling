@@ -66,13 +66,14 @@ enum ChangeAction {
     /// Set the content of a file (optionally with file type).
     ///
     /// ```text
-    ///     # modify: COMMIT path/to/file [TYPE] [LFS] "content"
+    ///     # modify: COMMIT path/to/file [TYPE] [LFS] [pad=SIZE] "content"
     /// ```
     Modify {
         path: Vec<u8>,
         file_type: FileType,
         git_lfs: GitLfs,
         content: Vec<u8>,
+        pad_to_size: Option<usize>,
     },
     /// Mark a file as deleted.
     ///
@@ -90,13 +91,14 @@ enum ChangeAction {
     /// Mark a file as a copy of another file (optionally with file type).
     ///
     /// ```text
-    ///     # copy: COMMIT path/to/file [TYPE] [LFS] "content" PARENT_COMMIT_ID path/copied/from
+    ///     # copy: COMMIT path/to/file [TYPE] [LFS] [pad=SIZE] "content" PARENT_COMMIT_ID path/copied/from
     /// ```
     Copy {
         path: Vec<u8>,
         file_type: FileType,
         git_lfs: GitLfs,
         content: Vec<u8>,
+        pad_to_size: Option<usize>,
         parent: String,
         parent_path: Vec<u8>,
     },
@@ -191,17 +193,27 @@ impl Action {
                         ChangeAction::CommitterDate { committer_date },
                     ))
                 }
-                ("modify", [name, path, rest @ .., content]) if rest.len() < 3 => {
+                ("modify", [name, path, rest @ .., content]) if rest.len() < 4 => {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
-                    let file_type = match rest.first() {
-                        Some(file_type) => file_type.to_string()?.parse()?,
-                        None => FileType::Regular,
-                    };
-                    let git_lfs = match rest.get(1) {
-                        Some(git_lfs) => git_lfs.to_string()?.parse()?,
-                        None => GitLfs::FullContent,
-                    };
+                    let mut file_type = FileType::Regular;
+                    let mut git_lfs = GitLfs::FullContent;
+                    let mut pad_to_size = None;
+
+                    // Parse optional arguments in rest
+                    for arg in rest {
+                        let arg_str = arg.to_string()?;
+                        if let Some(size_str) = arg_str.strip_prefix("pad=") {
+                            pad_to_size = Some(size_str.parse()?);
+                        } else if let Ok(ft) = arg_str.parse::<FileType>() {
+                            file_type = ft;
+                        } else if let Ok(lfs) = arg_str.parse::<GitLfs>() {
+                            git_lfs = lfs;
+                        } else {
+                            return Err(anyhow!("Unknown modify parameter: {}", arg_str));
+                        }
+                    }
+
                     let content = content.to_bytes();
                     Ok(Action::make_change(
                         name,
@@ -210,6 +222,7 @@ impl Action {
                             file_type,
                             git_lfs,
                             content,
+                            pad_to_size,
                         },
                     ))
                 }
@@ -233,18 +246,28 @@ impl Action {
                     ))
                 }
                 ("copy", [name, path, rest @ .., content, parent, parent_path])
-                    if rest.len() < 3 =>
+                    if rest.len() < 4 =>
                 {
                     let name = name.to_string()?;
                     let path = path.to_bytes();
-                    let file_type = match rest.first() {
-                        Some(file_type) => file_type.to_string()?.parse()?,
-                        None => FileType::Regular,
-                    };
-                    let git_lfs = match rest.get(1) {
-                        Some(git_lfs) => git_lfs.to_string()?.parse()?,
-                        None => GitLfs::FullContent,
-                    };
+                    let mut file_type = FileType::Regular;
+                    let mut git_lfs = GitLfs::FullContent;
+                    let mut pad_to_size = None;
+
+                    // Parse optional arguments in rest
+                    for arg in rest {
+                        let arg_str = arg.to_string()?;
+                        if let Some(size_str) = arg_str.strip_prefix("pad=") {
+                            pad_to_size = Some(size_str.parse()?);
+                        } else if let Ok(ft) = arg_str.parse::<FileType>() {
+                            file_type = ft;
+                        } else if let Ok(lfs) = arg_str.parse::<GitLfs>() {
+                            git_lfs = lfs;
+                        } else {
+                            return Err(anyhow!("Unknown copy parameter: {}", arg_str));
+                        }
+                    }
+
                     let content = content.to_bytes();
                     let parent = parent.to_string()?;
                     let parent_path = parent_path.to_bytes();
@@ -255,6 +278,7 @@ impl Action {
                             file_type,
                             git_lfs,
                             content,
+                            pad_to_size,
                             parent,
                             parent_path,
                         },
@@ -346,7 +370,7 @@ impl ActionArg {
                         }
                     }
                     ch if ch.is_alphanumeric()
-                        || "_-./".contains(ch)
+                        || "_-.=/".contains(ch)
                         || (ch == '*' && arg.is_empty()) =>
                     {
                         arg.push(ch);
@@ -370,6 +394,32 @@ impl ActionArg {
     }
 }
 
+/// Pad content to a specified size by repeating it.
+/// If the content is already larger than the size, it will be truncated.
+fn pad_content(content: Vec<u8>, size: usize) -> Vec<u8> {
+    if content.len() >= size {
+        // If content is already large enough, truncate to exact size
+        let mut result = content;
+        result.truncate(size);
+        return result;
+    }
+
+    // Create padded content by repeating the original content
+    let pattern = if content.is_empty() {
+        b".".to_vec()
+    } else {
+        let mut p = content.clone();
+        p.push(b'.');
+        p
+    };
+
+    let pattern_len = pattern.len();
+    let repeats = (size + pattern_len - 1) / pattern_len;
+    let mut result = pattern.repeat(repeats);
+    result.truncate(size);
+    result
+}
+
 fn apply_changes<'a, R: Repo>(
     mut c: CreateCommitContext<'a, R>,
     committed: &'_ BTreeMap<String, ChangesetId>,
@@ -382,8 +432,15 @@ fn apply_changes<'a, R: Repo>(
                 file_type,
                 git_lfs,
                 content,
-                ..
-            } => c = c.add_file_with_type_and_lfs(path.as_slice(), content, file_type, git_lfs),
+                pad_to_size,
+            } => {
+                let final_content = if let Some(size) = pad_to_size {
+                    pad_content(content, size)
+                } else {
+                    content
+                };
+                c = c.add_file_with_type_and_lfs(path.as_slice(), final_content, file_type, git_lfs)
+            }
             ChangeAction::Delete { path, .. } => c = c.delete_file(path.as_slice()),
             ChangeAction::Forget { path, .. } => c = c.forget_file(path.as_slice()),
             ChangeAction::Extra { key, value, .. } => c = c.add_extra(key, value),
@@ -401,13 +458,18 @@ fn apply_changes<'a, R: Repo>(
                 parent_path,
                 file_type,
                 git_lfs,
-                ..
+                pad_to_size,
             } => {
+                let final_content = if let Some(size) = pad_to_size {
+                    pad_content(content, size)
+                } else {
+                    content
+                };
                 let parent: CommitIdentifier =
                     committed.get(&parent).map_or(parent.into(), |&c| c.into());
                 c = c.add_file_with_copy_info_and_type(
                     path.as_slice(),
-                    content,
+                    final_content,
                     (parent, parent_path.as_slice()),
                     file_type,
                     git_lfs,
@@ -756,6 +818,7 @@ mod test {
                     file_type: FileType::Regular,
                     git_lfs: GitLfs::FullContent,
                     content: b"this has \xaa content\n\ton \x02 lines with \"quotes\"".to_vec(),
+                    pad_to_size: None,
                 }
             }
         );
@@ -768,6 +831,7 @@ mod test {
                     file_type: FileType::Executable,
                     git_lfs: GitLfs::FullContent,
                     content: b"\xfa\xce\xb0\x0c".to_vec(),
+                    pad_to_size: None,
                 }
             }
         );
@@ -785,6 +849,27 @@ mod test {
             Action::ChangeAll {
                 change: ChangeAction::AuthorDate {
                     author_date: DateTime::from_rfc3339("2024-02-29T13:37:00Z")?,
+                }
+            }
+        );
+        assert_eq!(
+            Action::new("default_files: false")?,
+            Action::DefaultFiles { enabled: false }
+        );
+        assert_eq!(
+            Action::new("default_files: true")?,
+            Action::DefaultFiles { enabled: true }
+        );
+        assert_eq!(
+            Action::new("modify: A \"file\" pad=10000 \"data\"")?,
+            Action::Change {
+                name: "A".to_string(),
+                change: ChangeAction::Modify {
+                    path: b"file".to_vec(),
+                    file_type: FileType::Regular,
+                    git_lfs: GitLfs::FullContent,
+                    content: b"data".to_vec(),
+                    pad_to_size: Some(10000),
                 }
             }
         );
