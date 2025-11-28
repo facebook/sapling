@@ -1,0 +1,9 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("scm_server_infra")
+
+rust_library(
+    name = "land_service",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [],
+)

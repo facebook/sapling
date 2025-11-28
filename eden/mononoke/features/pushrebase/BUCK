@@ -109,8 +109,8 @@ rust_library(
         "//eden/mononoke/server/context:context",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:arc-swap",
-        "//eden/mononoke/land_service/if:land_service_if-rust",
-        "//eden/mononoke/land_service/if:land_service_if-rust-clients",
+        "//eden/mononoke/servers/land_service/if:land_service_if-rust",
+        "//eden/mononoke/servers/land_service/if:land_service_if-rust-clients",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/common/facebook/db_primary_region:db_primary_region",
     ])),
