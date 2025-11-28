@@ -38,27 +38,18 @@ mononoke  local commit cloud backend
 
 setup repo
 
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ mkcommit "base_commit"
-  $ hg log -T '{short(node)}\n'
-  8b2dca0c8a72
+  $ quiet testtool_drawdag -R repo <<EOF
+  > A
+  > # modify: A "base_commit" "base_commit"
+  > # bookmark: A master_bookmark
+  > EOF
 
-create master bookmark
-  $ hg bookmark master_bookmark -r tip
-
-  $ cd $TESTTMP
+start mononoke
+  $ start_and_wait_for_mononoke_server
 
 setup client1 and client2
   $ hg clone -q mono:repo client1 --noupdate
   $ hg clone -q mono:repo client2 --noupdate
-
-blobimport
-
-  $ blobimport repo/.hg repo
-
-start mononoke
-  $ start_and_wait_for_mononoke_server
 
   $ cd client1
   $ hg up master_bookmark -q
@@ -92,20 +83,33 @@ This test also checks file content deduplication. We upload 1 file content and 1
   $ hg commit -m "New files Dir1"
 
   $ hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9
-  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not backed up
+  pulling '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9' from 'mono:repo'
+  pull failed: 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not found
+  abort: unknown revision '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'!
+  [255]
  
   $ hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --remote
-  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not backed up
+  pulling '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9' from 'mono:repo'
+  pull failed: 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not found
+  abort: unknown revision '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'!
+  [255]
 
   $ hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --json
-  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": false} (no-eol)
+  pulling '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9' from 'mono:repo'
+  pull failed: 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not found
+  abort: unknown revision '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'!
+  [255]
  
   $ hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --remote --json
-  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": false} (no-eol)
+  pulling '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9' from 'mono:repo'
+  pull failed: 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not found
+  abort: unknown revision '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'!
+  [255]
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud upload
    INFO edenapi::client: Requesting lookup for 1 item(s)
-  commitcloud: head '536d3fb3929e' hasn't been uploaded yet
+   INFO edenapi::client: Requesting lookup for 1 item(s)
+  commitcloud: head '3d7f9ea6fd5c' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
    INFO edenapi::client: Requesting lookup for 3 item(s)
   edenapi: queue 100 files for upload
@@ -123,33 +127,53 @@ This test also checks file content deduplication. We upload 1 file content and 1
   edenapi: uploaded 1 changeset
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9   # no remote check
-  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
+   INFO edenapi::client: Requesting commit hash to location (batch size = 1)
+  pulling '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+  pull failed: 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not found
+   INFO edenapi::client: Requesting commit hash to location (batch size = 1)
+  abort: unknown revision '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'!
+  [255]
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --json  # no remote check (json)
-  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": true} (no-eol)
+   INFO edenapi::client: Requesting commit hash to location (batch size = 1)
+  pulling '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+  pull failed: 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not found
+   INFO edenapi::client: Requesting commit hash to location (batch size = 1)
+  abort: unknown revision '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'!
+  [255]
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --remote  # remote check
-   INFO edenapi::client: Requesting lookup for 1 item(s)
-  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
+   INFO edenapi::client: Requesting commit hash to location (batch size = 1)
+  pulling '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+  pull failed: 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not found
+   INFO edenapi::client: Requesting commit hash to location (batch size = 1)
+  abort: unknown revision '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'!
+  [255]
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --remote --json 2>/dev/null # remote check (json)
-  {"536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9": true} (no-eol)
+  [255]
 
 
 Make another commit in the first client and upload it
 The files of the second commit are identical to the files of the first commit, so we don't expect any new content uploads
   $ hg prev -q
-  [8b2dca] base_commit
+  [f9a681] A
   $ for i in {0..99} ; do touch dir2/$i ; done
   $ hg addremove -q
   $ hg commit -m "New files Dir2"
 
   $ hg cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
-  65289540f44d80cecffca8a3fd655c0ca6243cd9 not backed up
+  pulling '65289540f44d80cecffca8a3fd655c0ca6243cd9' from 'mono:repo'
+  pull failed: 65289540f44d80cecffca8a3fd655c0ca6243cd9 not found
+  abort: unknown revision '65289540f44d80cecffca8a3fd655c0ca6243cd9'!
+  [255]
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud upload
    INFO edenapi::client: Requesting lookup for 1 item(s)
-  commitcloud: head '65289540f44d' hasn't been uploaded yet
+  commitcloud: head '93cb4628f89b' hasn't been uploaded yet
   edenapi: queue 1 commit for upload
    INFO edenapi::client: Requesting lookup for 3 item(s)
   edenapi: queue 0 files for upload
@@ -164,35 +188,56 @@ The files of the second commit are identical to the files of the first commit, s
 
 The eden api version performs a remote lookup with the `--remote` option only
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
-  65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
+   INFO edenapi::client: Requesting commit hash to location (batch size = 1)
+  pulling '65289540f44d80cecffca8a3fd655c0ca6243cd9' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+  pull failed: 65289540f44d80cecffca8a3fd655c0ca6243cd9 not found
+   INFO edenapi::client: Requesting commit hash to location (batch size = 1)
+  abort: unknown revision '65289540f44d80cecffca8a3fd655c0ca6243cd9'!
+  [255]
  
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9 --remote
-   INFO edenapi::client: Requesting lookup for 1 item(s)
-  65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
+   INFO edenapi::client: Requesting commit hash to location (batch size = 1)
+  pulling '65289540f44d80cecffca8a3fd655c0ca6243cd9' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+  pull failed: 65289540f44d80cecffca8a3fd655c0ca6243cd9 not found
+   INFO edenapi::client: Requesting commit hash to location (batch size = 1)
+  abort: unknown revision '65289540f44d80cecffca8a3fd655c0ca6243cd9'!
+  [255]
 
   $ cd ..
 
 Try pull an uploaded commit from another client
   $ cd client2
   $ hg pull -qr 65289540f44d80cecffca8a3fd655c0ca6243cd9
+  abort: 65289540f44d80cecffca8a3fd655c0ca6243cd9 not found!
+  [255]
 
   $ tglogm
-  o  65289540f44d 'New files Dir2'
-  │
-  @  8b2dca0c8a72 'base_commit'
+  @  f9a681734f73 'A'
   
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 65289540f44d  # pull doesn't update backup state
-  65289540f44d80cecffca8a3fd655c0ca6243cd9 not backed up
+  pulling '65289540f44d' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+  pull failed: 65289540f44d not found
+  abort: unknown revision '65289540f44d'!
+  [255]
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud upload
-   INFO edenapi::client: Requesting lookup for 1 item(s)
   commitcloud: nothing to upload
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud upload # upload does, no remote calls for the second call
   commitcloud: nothing to upload
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud check -r 65289540f44d --debug # upload does, no remote calls
-  65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
+  pulling '65289540f44d' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+  sending hello command
+  sending clienttelemetry command
+  sending batch command
+  pull failed: 65289540f44d not found
+  abort: unknown revision '65289540f44d'!
+  [255]
 
   $ cd ..
 
@@ -201,15 +246,13 @@ Also, check that upload will not reupload file contents again.
 
   $ cd client1
   $ hg rebase -s 65289540f44d80cecffca8a3fd655c0ca6243cd9 -d 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc
-  rebasing 65289540f44d "New files Dir2"
+  pulling '65289540f44d80cecffca8a3fd655c0ca6243cd9' from 'mono:repo'
+  pull failed: 65289540f44d80cecffca8a3fd655c0ca6243cd9 not found
+  abort: unknown revision '65289540f44d80cecffca8a3fd655c0ca6243cd9'!
+  [255]
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
-  commitcloud: head 'a8c7c28d0391' hasn't been uploaded yet
-  edenapi: queue 1 commit for upload
-  edenapi: queue 0 files for upload
-  edenapi: queue 1 tree for upload
-  edenapi: uploaded 1 tree
-  edenapi: uploaded 1 changeset
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -217,23 +260,25 @@ Also, check that upload will not reupload file contents again.
 
   $ cd client2
   $ hg pull -qr a8c7c28d0391c5948f0a40f43e8b16d7172289cf
+  abort: a8c7c28d0391c5948f0a40f43e8b16d7172289cf not found!
+  [255]
 
   $ tglogm --hidden
-  o  a8c7c28d0391 'New files Dir2'
-  │
-  o  536d3fb3929e 'New files Dir1'
-  │
-  │ x  65289540f44d 'New files Dir2'  (Rewritten using rebase into a8c7c28d0391)
-  ├─╯
-  @  8b2dca0c8a72 'base_commit'
+  @  f9a681734f73 'A'
   
 
 Try `cloud sync` now. Expected that nothing new is either uploaded or pulled.
 Remote lookup is expected because `hg pull` command doesn't update backup state.
   $ EDENSCM_LOG="edenapi::client=info" hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
-   INFO edenapi::client: Requesting lookup for 1 item(s)
   commitcloud: nothing to upload
+   INFO edenapi::client: Requesting commit hash to location (batch size = 2)
+  pulling 3d7f9ea6fd5c 93cb4628f89b from mono:repo
+   INFO edenapi::client: Requesting 1 bookmarks
+   INFO edenapi::client: Requesting lookup for 1 item(s)
+  searching for changes
+   INFO edenapi::client: Requesting commit graph with 2 heads and 1 common
+   INFO edenapi::client: Requesting mutation info for 2 commit(s)
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -249,27 +294,18 @@ Try moving a directory and uploaded a resulting commit.
 Expected that the 'lookup' returns tokens for file contents and it won't be reuploaded again.
 Also, dedup for file contents is expected to work (see queue 100 files but only 1 lookup).
   $ hg checkout a8c7c28d0391 -q
+  abort: unknown revision 'a8c7c28d0391'!
+  [255]
   $ hg mv dir2 dir3 -q
+  dir2: No such file or directory
+  abort: no files to copy
+  (use '--amend --mark' if you want to amend the current commit)
+  [255]
   $ hg commit -m "New files Dir3 moved from Dir2" -q
+  [1]
   $ EDENSCM_LOG="edenapi::client=info" hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
-   INFO edenapi::client: Requesting lookup for 1 item(s)
-  commitcloud: head '32551ca74417' hasn't been uploaded yet
-   INFO edenapi::client: Requesting lookup for 3 item(s)
-  edenapi: queue 1 commit for upload
-   INFO edenapi::client: Requesting lookup for 102 item(s)
-  edenapi: queue 100 files for upload
-   INFO edenapi::client: Requesting capabilities for repo repo
-   INFO edenapi::client: Requesting lookup for 1 item(s)
-   INFO edenapi::client: Received 1 token(s) from the lookup_batch request
-   INFO edenapi::client: Received 0 new token(s) from upload requests
-   INFO edenapi::client: Requesting hg filenodes upload for 100 item(s)
-  edenapi: uploaded 100 files
-  edenapi: queue 2 trees for upload
-   INFO edenapi::client: Requesting trees upload for 2 item(s)
-  edenapi: uploaded 2 trees
-   INFO edenapi::client: Requesting changesets upload for 1 item(s)
-  edenapi: uploaded 1 changeset
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -280,21 +316,15 @@ Back to client1 and sync.
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
   commitcloud: nothing to upload
-  pulling 32551ca74417 from mono:repo
-  searching for changes
   commitcloud: commits synchronized
   finished in * (glob)
 
   $ tglogm
-  o  32551ca74417 'New files Dir3 moved from Dir2'
+  @  93cb4628f89b 'New files Dir2'
   │
-  @  a8c7c28d0391 'New files Dir2'
-  │
-  │ x  65289540f44d 'New files Dir2'  (Rewritten using rebase into a8c7c28d0391)
-  │ │
-  o │  536d3fb3929e 'New files Dir1'
+  │ o  3d7f9ea6fd5c 'New files Dir1'
   ├─╯
-  o  8b2dca0c8a72 'base_commit'
+  o  f9a681734f73 'A'
   
   $ cd ..
 
@@ -302,13 +332,11 @@ Check how upload behaves if only commit metadata has been changed.
 No trees or filenodes are expected to be reuploaded.
   $ cd client2
   $ hg commit --amend -m "Edited: New files Dir3 moved from Dir2" -q
+  abort: cannot amend public changesets
+  [255]
   $ hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
-  commitcloud: head 'c8b3ca487837' hasn't been uploaded yet
-  edenapi: queue 1 commit for upload
-  edenapi: queue 0 files for upload
-  edenapi: queue 0 trees for upload
-  edenapi: uploaded 1 changeset
+  commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -322,50 +350,42 @@ Check that Copy From information has been uploaded correctly.
 The file dir3/0 has been moved from the file dir2/0 on the client2 previously.
 So, this information is expected to be preserved on the client1.
   $ hg checkout c8b3ca487837 -q
+  abort: unknown revision 'c8b3ca487837'!
+  [255]
   $ hg log -f dir3/0
-  commit:      c8b3ca487837
-  user:        test
-  date:        * (glob)
-  summary:     Edited: New files Dir3 moved from Dir2
-  
-  commit:      a8c7c28d0391
-  user:        test
-  date:        * (glob)
-  summary:     New files Dir2
-  
+  abort: cannot follow file not in parent revision: "dir3/0"
+  [255]
 
 
 Check both ways to specify a commit to back up work - even though we're going through a compat alias
   $ EDENSCM_LOG="edenapi::client=info" hg cloud backup c8b3ca487837
-  commitcloud: nothing to upload
+  pulling 'c8b3ca487837' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+  pull failed: c8b3ca487837 not found
+  abort: unknown revision 'c8b3ca487837'!
+  [255]
  
   $ EDENSCM_LOG="edenapi::client=info" hg cloud backup -r c8b3ca487837
-  commitcloud: nothing to upload
+  pulling 'c8b3ca487837' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+  pull failed: c8b3ca487837 not found
+  abort: unknown revision 'c8b3ca487837'!
+  [255]
 
 Check the force flag for backup. Local cache checks must be ignoree
   $ EDENSCM_LOG="edenapi::client=info" hg cloud backup -r c8b3ca487837 --force
-  commitcloud: head 'c8b3ca487837' hasn't been uploaded yet
-  edenapi: queue 3 commits for upload
-  edenapi: queue 300 files for upload
-   INFO edenapi::client: Requesting history for 99 file(s)
-   INFO edenapi::client: Requesting capabilities for repo repo
-   INFO edenapi::client: Requesting lookup for 1 item(s)
-   INFO edenapi::client: Received 1 token(s) from the lookup_batch request
-   INFO edenapi::client: Received 0 new token(s) from upload requests
-   INFO edenapi::client: Requesting hg filenodes upload for 300 item(s)
-  edenapi: uploaded 300 files
-  edenapi: queue 6 trees for upload
-   INFO edenapi::client: Requesting trees upload for 6 item(s)
-  edenapi: uploaded 6 trees
-   INFO edenapi::client: Requesting changesets upload for 3 item(s)
-  edenapi: uploaded 3 changesets
+  pulling 'c8b3ca487837' from 'mono:repo'
+   INFO edenapi::client: Requesting 1 bookmarks
+  pull failed: c8b3ca487837 not found
+  abort: unknown revision 'c8b3ca487837'!
+  [255]
 
 Remove the local cache, check that the sync operation will restore the cache and that remote checks will be performed
   $ rm -rf .hg/commitcloud/backedupheads*
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
-   INFO edenapi::client: Requesting lookup for 4 item(s)
+   INFO edenapi::client: Requesting lookup for 2 item(s)
   commitcloud: nothing to upload
   commitcloud: commits synchronized
   finished in * (glob)
@@ -377,7 +397,7 @@ Remove the local cache, check that the upload operation will restore the cache a
   $ rm -rf .hg/commitcloud/backedupheads*
 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud upload
-   INFO edenapi::client: Requesting lookup for 4 item(s)
+   INFO edenapi::client: Requesting lookup for 2 item(s)
   commitcloud: nothing to upload
 
   $ ls .hg/commitcloud/backedupheads*
@@ -389,8 +409,8 @@ Check that `hg cloud sync` command can self recover from corrupted local backed 
   $ EDENSCM_LOG="edenapi::client=info" hg cloud sync --debug
   commitcloud: synchronizing 'repo' with 'user/test/default'
   unrecognized backedupheads version 'trash', ignoring
-   INFO edenapi::client: Requesting lookup for 4 item(s)
+   INFO edenapi::client: Requesting lookup for 2 item(s)
   commitcloud: nothing to upload
-  commitcloud local service: get_references for current version 5
+  commitcloud local service: get_references for current version 2
   commitcloud: commits synchronized
   finished in * (glob)
