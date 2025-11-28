@@ -4,8 +4,8 @@ oncall("scm_server_infra")
 
 rust_library(
     name = "async_requests",
-    srcs = glob(["lib/src/**/*.rs"]),
-    autocargo = {"cargo_toml_dir": "lib"},
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "."},
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:serde_json",
@@ -25,10 +25,10 @@ rust_library(
         ":requests_table",
         "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/stats:stats",
-        "//eden/mononoke/async_requests/if:async_requests_types-thrift-rust",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:memblob",
         "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/features/async_requests/if:async_requests_types-thrift-rust",
         "//eden/mononoke/megarepo_api:megarepo_config",
         "//eden/mononoke/megarepo_api:megarepo_error",
         "//eden/mononoke/mononoke_api:mononoke_api",
@@ -42,8 +42,8 @@ rust_library(
 
 rust_library(
     name = "async_requests_client",
-    srcs = glob(["async_requests_client/src/**/*.rs"]),
-    autocargo = {"cargo_toml_dir": "async_requests_client"},
+    srcs = glob(["client/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "client"},
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:tracing",
@@ -76,8 +76,8 @@ rust_library(
     visibility = [
         ":async_requests",
         ":client",
-        "//eden/mononoke/async_requests/worker:worker",
-        "//eden/mononoke/async_requests/worker:worker-unittest",
+        "//eden/mononoke/features/async_requests/worker:worker",
+        "//eden/mononoke/features/async_requests/worker:worker-unittest",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

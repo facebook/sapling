@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-async_requests = { version = "0.1.0", path = "../../async_requests/lib" }
+async_requests = { version = "0.1.0", path = "../../features/async_requests" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 megarepo_error = { version = "0.1.0", path = "../../megarepo_api/megarepo_error" }

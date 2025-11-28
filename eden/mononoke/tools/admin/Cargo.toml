@@ -10,8 +10,8 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.98"
 async-stream = "0.3"
-async_requests = { version = "0.1.0", path = "../../async_requests/lib" }
-async_requests_client = { version = "0.1.0", path = "../../async_requests/async_requests_client" }
+async_requests = { version = "0.1.0", path = "../../features/async_requests" }
+async_requests_client = { version = "0.1.0", path = "../../features/async_requests/client" }
 backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
 blame = { version = "0.1.0", path = "../../derived_data/blame" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }

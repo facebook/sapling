@@ -43,7 +43,7 @@ rust_library(
         "//configerator/configo/if:configo-rust-srclients",
         "//configerator/structs/common/fbtype:fbtypes-rust",
         "//configerator/structs/scm/mononoke/repos:repos-rust",
-        "//eden/mononoke/async_requests:async_requests",
+        "//eden/mononoke/features/async_requests:async_requests",
         "//eden/mononoke/blobstore:ephemeral_blobstore",
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
         "//eden/mononoke/repo_attributes/bookmarks/bookmarks_movement:bookmarks_movement",
