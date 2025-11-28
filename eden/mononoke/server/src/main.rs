@@ -60,8 +60,8 @@ use tracing::warn;
 const SM_CLEANUP_TIMEOUT_SECS: u64 = 120;
 
 // We will select the first protocol supported by the server which is also supported by the client.
-// Order of preferences: hgcli, h2, http/1.1.
-pub const ALPN_MONONOKE_PROTOS_OFFERS: &[u8] = b"\x05hgcli\x02h2\x08http/1.1";
+// Order of preferences: h2, http/1.1.
+pub const ALPN_MONONOKE_PROTOS_OFFERS: &[u8] = b"\x02h2\x08http/1.1";
 
 /// Mononoke Server
 #[derive(Parser)]
