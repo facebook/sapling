@@ -14,29 +14,22 @@ setup repo
 
   $ hginit_treemanifest repo
   $ cd repo
-  $ echo "a" > a
-  $ echo "b" > b
-  $ hg addremove && hg ci -q -ma
-  adding a
-  adding b
-  $ hg log -T '{node}\n'
-  0cd96de13884b090099512d4794ae87ad067ea8e
+  $ testtool_drawdag -R repo --no-default-files <<EOF
+  > A
+  > # modify: A "a" "a\n"
+  > # modify: A "b" "b\n"
+  > # bookmark: A master_bookmark
+  > EOF
+  A=e93503fcfd7e17a6b75dac01b921dbf2bc9648c86e110bbcf3fd99dd62cc44ad
 
-create master bookmark
-  $ hg bookmark master_bookmark -r tip
+Import and start mononoke
+  $ cd "$TESTTMP"
+  $ mononoke
+  $ wait_for_mononoke
 
 setup repo-push and repo-pull
-  $ cd $TESTTMP
   $ hg clone -q mono:repo repo-push --noupdate
   $ hg clone -q mono:repo repo-pull --noupdate
-
-blobimport
-
-  $ blobimport repo/.hg repo
-
-start mononoke
-
-  $ start_and_wait_for_mononoke_server
 push some files with copy/move files
 
   $ cd $TESTTMP/repo-push
@@ -46,7 +39,7 @@ push some files with copy/move files
   $ hg mv b b_move
   $ hg addremove && hg ci -q -mb
   $ hg push --to master_bookmark
-  pushing rev 4b747ca852a4 to destination mono:repo bookmark master_bookmark
+  pushing rev 0c8370c70e36 to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -56,13 +49,13 @@ pull them
   $ hg up master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -T '{node}\n'
-  0cd96de13884b090099512d4794ae87ad067ea8e
+  f1acf6b30a86b0bba3dbc806d29c910a4e7c245b
   $ hg pull
   pulling from mono:repo
   imported commit graph for 1 commit (1 segment)
   $ hg log -T '{node}\n'
-  4b747ca852a40a105b9bb71cd4d07248ea80f704
-  0cd96de13884b090099512d4794ae87ad067ea8e
+  0c8370c70e3622b7ddf1c0130615586b65e09bc3
+  f1acf6b30a86b0bba3dbc806d29c910a4e7c245b
 
 push files that modify copied and moved files
 
@@ -71,7 +64,7 @@ push files that modify copied and moved files
   $ echo "bb" >> b_move
   $ hg addremove && hg ci -q -mc
   $ hg push --to master_bookmark
-  pushing rev 8b374fd7e2ef to destination mono:repo bookmark master_bookmark
+  pushing rev c0e2c2487ea1 to destination mono:repo bookmark master_bookmark
   searching for changes
   updating bookmark master_bookmark
 
@@ -79,15 +72,15 @@ pull them
 
   $ cd $TESTTMP/repo-pull
   $ hg log -T '{node}\n'
-  4b747ca852a40a105b9bb71cd4d07248ea80f704
-  0cd96de13884b090099512d4794ae87ad067ea8e
+  0c8370c70e3622b7ddf1c0130615586b65e09bc3
+  f1acf6b30a86b0bba3dbc806d29c910a4e7c245b
   $ hg pull
   pulling from mono:repo
   imported commit graph for 1 commit (1 segment)
   $ hg log -T '{node}\n'
-  8b374fd7e2ef1cc418b9c68f484ebd2cb6c6c6a1
-  4b747ca852a40a105b9bb71cd4d07248ea80f704
-  0cd96de13884b090099512d4794ae87ad067ea8e
+  c0e2c2487ea1495342b88fdd4a1a50557ee6c4ab
+  0c8370c70e3622b7ddf1c0130615586b65e09bc3
+  f1acf6b30a86b0bba3dbc806d29c910a4e7c245b
   $ hg up master_bookmark
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ cat a_copy
