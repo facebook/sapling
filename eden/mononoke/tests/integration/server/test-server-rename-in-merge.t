@@ -21,45 +21,32 @@ setup common configuration
 setup repo
   $ hginit_treemanifest repo
   $ cd repo
-  $ echo 1 > 1 && hg addremove && hg ci -m 1
-  adding 1
-  $ hg up null
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ echo 2 > 2 && hg addremove && hg ci -m 2
-  adding 2
-
-Clone the repo
-  $ cd ..
-  $ hg clone -q mono:repo repo2 --noupdate
-  $ cd repo2
-  $ cd ../repo
-
-Create merge commit with rename
-  $ hg up -q "min(all())"
-  $ hg merge 1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
-  $ hg mv 1 2 --force
-  $ hg ci -m merge
-  $ hg st --change . -C
-  A 2
-    1
-  R 1
-
-create master bookmark
-
-  $ hg bookmark master_bookmark -r tip
-
-blobimport them into Mononoke storage and start Mononoke
-  $ cd ..
-  $ blobimport repo/.hg repo
+  $ testtool_drawdag -R repo --no-default-files <<'EOF'
+  > merge
+  >  /|
+  > A  B
+  > # modify: A "1" "1\n"
+  > # modify: B "2" "2\n"
+  > # copy: merge "2" "1\n" A "1"
+  > # delete: merge "1"
+  > # message: A "1"
+  > # message: B "2"
+  > # message: merge "merge"
+  > # bookmark: merge master_bookmark
+  > EOF
+  A=cb8421187885c79e0faeedd7adde4eb80b1c5b6f9d0cd11e0806f42cf2e4c88b
+  B=4958e71d48160073ff185bbf886e3b88ac9586eefc279b618d8fe5cbe7935c0d
+  merge=2c1bb37eb324c5b677922b34a6f810bd0743cfca3ec5beab7327b1f7ab724b2e
+  $ cd $TESTTMP
 
 start mononoke
-  $ start_and_wait_for_mononoke_server
+  $ mononoke
+  $ wait_for_mononoke
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
-  $ hg pull
+  $ hg pull -B master_bookmark
   pulling from mono:repo
-  $ hg up 2
+  $ hg up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st --change . -C
   A 2
