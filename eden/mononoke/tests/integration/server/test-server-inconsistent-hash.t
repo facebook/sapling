@@ -16,17 +16,17 @@
 # 1. Setup nolfs hg repo, create several commit to it
   $ hginit_treemanifest repo
   $ cd repo
-
-# Commit small file
-  $ echo s > smallfile
-  $ hg commit -Aqm "add small file"
-  $ hg bookmark master_bookmark -r tip
-  $ cd ..
-
-  $ blobimport repo/.hg repo
+  $ testtool_drawdag -R repo --no-default-files <<EOF
+  > A
+  > # modify: A "smallfile" "s\n"
+  > # bookmark: A master_bookmark
+  > EOF
+  A=b7c61980054dfc722035397cd93fc215b2dadd4af0c1c61c6252a27a7eabb3c3
 
 # 2. Setup Mononoke.
-  $ start_and_wait_for_mononoke_server
+  $ cd "$TESTTMP"
+  $ mononoke
+  $ wait_for_mononoke
 # 3. Clone hg server repo to hg client repo
   $ hg clone -q mono:repo repo-client --noupdate
   $ cd repo-client
@@ -57,7 +57,7 @@ Corrupt file contents via an extension:
 Do a push, but disable cache verification on the client side, otherwise
 filenode won't be send at all
   $ hg push -r . --to master_bookmark -v --config remotefilelog.validatecachehashes=False --config extensions.corrupt=$TESTTMP/corrupt.py
-  pushing rev cb67355f2348 to destination mono:repo bookmark master_bookmark
+  pushing rev d729605ceda3 to destination mono:repo bookmark master_bookmark
   searching for changes
   validated revset for rebase
   1 changesets found
@@ -66,10 +66,10 @@ filenode won't be send at all
        140  file
   remote: Command failed
   remote:   Error:
-  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b)))]
+  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(d729605ceda3fef2a24b19d835173761b21b6360)))]
   remote: 
   remote:     Caused by:
-  remote:         0: While creating Changeset Some(HgNodeHash(Sha1(cb67355f234869bb9bf94787d5a69e21e23a8c9b))), uuid: * (glob)
+  remote:         0: While creating Changeset Some(HgNodeHash(Sha1(d729605ceda3fef2a24b19d835173761b21b6360))), uuid: * (glob)
   remote:         1: While creating and verifying Changeset for blobstore
   remote:         2: While processing entries
   remote:         3: While uploading child entries
