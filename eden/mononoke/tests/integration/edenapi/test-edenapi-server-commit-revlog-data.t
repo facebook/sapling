@@ -13,25 +13,27 @@ Set up local hgrc and Mononoke config.
 Initialize test repo.
   $ hginit_treemanifest repo
   $ cd repo
+  $ testtool_drawdag -R repo --print-hg-hashes <<EOF
+  > COMMIT_2
+  > |
+  > COMMIT_1
+  > # modify: COMMIT_1 "test.txt" "my commit message\n"
+  > # modify: COMMIT_2 "copy.txt" "my commit message\n"
+  > # message: COMMIT_1 "add test.txt"
+  > # message: COMMIT_2 "copy test.txt to test2.txt"
+  > # bookmark: COMMIT_2 master_bookmark
+  > EOF
+  COMMIT_1=2c73711572dcc5fba150bc86885bed40a3950176
+  COMMIT_2=87d56d8162fe716b567ccf245ad56fa9a90b5069
 
-Populate test repo
-  $ echo "my commit message" > test.txt
-  $ hg commit -Aqm "add test.txt"
-  $ COMMIT_1=$(hg log -r . -T '{node}')
-  $ hg cp test.txt copy.txt
-  $ hg commit -Aqm "copy test.txt to test2.txt"
-  $ COMMIT_2=$(hg log -r . -T '{node}')
-
-Blobimport test repo.
+Import test repo.
   $ cd ..
-  $ blobimport repo/.hg repo
 
 Start up SaplingRemoteAPI server.
   $ start_and_wait_for_mononoke_server
 Check response.
   $ hg debugapi mono:repo -e commitdata -i "['$COMMIT_1','$COMMIT_2']"
-  [{"hgid": bin("e83645968c8f2954b97a3c79ce5a6b90a464c54d"),
-    "revlog_data": b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\09b8fa746094652af6be3a05047424c31a48c5fac\ntest\n0 0\ntest.txt\n\nadd test.txt"},
-   {"hgid": bin("c7dcf24fab3a8ab956273fa40d5cc44bc26ec655"),
-    "revlog_data": b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\xe86E\x96\x8c\x8f)T\xb9z<y\xceZk\x90\xa4d\xc5M815f6cad2ce1ccbf87151e2d7223c92899d9026c\ntest\n0 0\ncopy.txt\n\ncopy test.txt to test2.txt"}]
-
+  [{"hgid": bin("2c73711572dcc5fba150bc86885bed40a3950176"),
+    "revlog_data": b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\03aa4499a34ac1ed79157ffad61e912c79a64989b\nauthor\n0 0\nCOMMIT_1\ntest.txt\n\nadd test.txt"},
+   {"hgid": bin("87d56d8162fe716b567ccf245ad56fa9a90b5069"),
+    "revlog_data": b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0,sq\x15r\xdc\xc5\xfb\xa1P\xbc\x86\x88[\xed@\xa3\x95\x01v30dbf93b36115c8d99b722ff0a0556f0cff4d883\nauthor\n0 0\nCOMMIT_2\ncopy.txt\n\ncopy test.txt to test2.txt"}]
