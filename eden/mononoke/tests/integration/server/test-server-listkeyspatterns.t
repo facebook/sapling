@@ -12,64 +12,61 @@ setup configuration
 
 setup repo
   $ hginit_treemanifest repo
-
-setup hg server repo
   $ cd repo
-  $ cd $TESTTMP
-
-setup client repo
-  $ hg clone -q mono:repo repo-client --noupdate
-  $ cd repo-client
-
-make a few commits on the server
-  $ cd $TESTTMP/repo
-  $ hg debugdrawdag <<'EOF'
+  $ testtool_drawdag -R repo <<'EOF'
   > C E G
   > | | |
   > B D F
   >  \|/
   >   A
+  > # bookmark: C test/one
+  > # bookmark: E test/two
+  > # bookmark: G test/three
+  > # bookmark: B special/__test__
+  > # bookmark: D special/xxtestxx
   > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  D=fa8ba037ceed6e3f11f3bd0d21a866ca4c7a8c721ff13ca7c0b3442e1e4cbb16
+  E=2b9b61bcf926e1e354ecb23c529868b1368af2e315b7b8ad720795184764020c
+  F=9ba339596c48b2c9b6ed1921e999ecfaef9a03e2f63353e66e642b8f1a12c308
+  G=d9ab90dd09369a009cb4f8b913a9a6861c98a86bf4659c712352071503a3d074
 
-create bookmarks
-  $ hg bookmark test/one -r C
-  $ hg bookmark test/two -r E
-  $ hg bookmark test/three -r G
-  $ hg bookmark special/__test__ -r B
-  $ hg bookmark special/xxtestxx -r D
+Import and start mononoke
+  $ cd "$TESTTMP"
+  $ mononoke
+  $ wait_for_mononoke
 
-blobimport them into Mononoke storage and start Mononoke
-  $ cd ..
-  $ blobimport repo/.hg repo
-
-start mononoke
-  $ start_and_wait_for_mononoke_server
-switch to client and enable extension
+setup client repo
+  $ hg clone -q mono:repo repo-client --noupdate
   $ cd repo-client
+
+switch to client and enable extension
   $ setconfig extensions.commitcloud=
 
 match with glob pattern
   $ hg book --list-remote test/*
-     test/one                  26805aba1e600a82e93661149f2313866a221a7b
-     test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
-     test/two                  4b61ff5c62e28cff36152201967390a6e7375604
+     test/one                  d3b399ca8757acdb81c3681b052eb978db6768d8
+     test/three                a5418225e3986ee2c8c49429c777f01469d4c8c7
+     test/two                  4a55f53cc855ecee0391508d73e905770b0361e6
 
 match with literal pattern
   $ hg book --list-remote test
   $ hg book --list-remote test/three
-     test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
+     test/three                a5418225e3986ee2c8c49429c777f01469d4c8c7
   $ hg book --list-remote test/t*
-     test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
-     test/two                  4b61ff5c62e28cff36152201967390a6e7375604
+     test/three                a5418225e3986ee2c8c49429c777f01469d4c8c7
+     test/two                  4a55f53cc855ecee0391508d73e905770b0361e6
 
 match multiple patterns
   $ hg book --list-remote test/one --list-remote test/th*
-     test/one                  26805aba1e600a82e93661149f2313866a221a7b
-     test/three                051cf22dff5ca70a5ba3d06d1f9dd08407dfd1a6
+     test/one                  d3b399ca8757acdb81c3681b052eb978db6768d8
+     test/three                a5418225e3986ee2c8c49429c777f01469d4c8c7
 
 match with SQL wildcards doesn't match arbitrary things (should match nothing)
   $ hg book --list-remote t__t/*
 
 match with SQL wildcards does match things with those characters
   $ hg book --list-remote special/__test*
-     special/__test__          112478962961147124edd43549aedd1a335e44bf
+     special/__test__          80521a640a0c8f51dcc128c2658b224d595840ac
