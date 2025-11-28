@@ -7,15 +7,15 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ default_setup_pre_blobimport "blob_files"
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  $ blobimport repo/.hg repo
+  $ setup_common_config "blob_files"
+  $ cd "$TESTTMP"
+  $ testtool_drawdag -R repo <<'EOF'
+  > A-B-C
+  > # bookmark: C master_bookmark
+  > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
 
 bonsai core data, deep, unchunked. This is the base case
   $ mononoke_walker scrub --checkpoint-version=v2 -q -b master_bookmark -I bonsai 2>&1 | grep -vE "(Bytes|Walked)/s"
@@ -102,10 +102,14 @@ inspect the checkpoint table, check the update time is at least one second after
   0|bonsai_deep2|1|4
 
 additional commit
-  $ cd repo
-  $ mkcommit D
-  $ cd ..
-  $ blobimport repo/.hg repo
+  $ testtool_drawdag -R repo <<'EOF'
+  > A-B-C-D
+  > # bookmark: D master_bookmark
+  > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  D=f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5
 
 run again, should catchup with new data since checkpoint and nothing to do in main bounds
   $ mononoke_walker scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
@@ -116,7 +120,8 @@ run again, should catchup with new data since checkpoint and nothing to do in ma
   [INFO] [walker scrub{repo=repo}] Continuing from checkpoint run 1 chunk 2 with catchup Some((4, 5)) and main None bounds
   [INFO] [walker scrub{repo=repo}] Starting chunk 3 with bounds (4, 5)
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 2,2
-  [INFO] [walker scrub{repo=repo}] Deferred: 0
+  [INFO] [walker scrub{repo=repo}] Deferred: 1
+  [INFO] [walker scrub{repo=repo}] Deferred edge counts by type were: ChangesetToBonsaiParent:1
   [INFO] [walker scrub{repo=repo}] Completed in 3 chunks of size 2
 
 setup for both a catchup due to a new commit, plus continuation from a checkpoint.  First create the partial checkpoint by setting sample rate
@@ -126,9 +131,9 @@ setup for both a catchup due to a new commit, plus continuation from a checkpoin
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 5)
   [INFO] [walker scrub{repo=repo}] Starting chunk 1 with bounds (4, 5)
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 2,2
-  [INFO] [walker scrub{repo=repo}] Deferred: 0
+  [INFO] [walker scrub{repo=repo}] Deferred: 1
   [INFO] [walker scrub{repo=repo}] Starting chunk 2 with bounds (3, 4)
-  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 2,2
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 3,3
   [INFO] [walker scrub{repo=repo}] Deferred: 1
   [INFO] [walker scrub{repo=repo}] Starting chunk 3 with bounds (2, 3)
   [INFO] [walker scrub{repo=repo}] Seen,Loaded: 3,3
@@ -145,17 +150,17 @@ setup for both a catchup due to a new commit, plus continuation from a checkpoin
   [INFO] Walking node types [BonsaiHgMapping, FileContent, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, HgManifestFileNode]
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 5)
   [INFO] [walker scrub{repo=repo}] Starting chunk 1 with bounds (4, 5)
-  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 9,9
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 1,1
   [INFO] [walker scrub{repo=repo}] Deferred: 0
   [INFO] [walker scrub{repo=repo}] Starting chunk 2 with bounds (3, 4)
-  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 17,13
-  [INFO] [walker scrub{repo=repo}] Deferred: 2
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 1,1
+  [INFO] [walker scrub{repo=repo}] Deferred: 0
   [INFO] [walker scrub{repo=repo}] Starting chunk 3 with bounds (2, 3)
-  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 9,7
-  [INFO] [walker scrub{repo=repo}] Deferred: 1
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 1,1
+  [INFO] [walker scrub{repo=repo}] Deferred: 0
   [INFO] [walker scrub{repo=repo}] Chunk 3 inserting checkpoint (2, 5)
   [INFO] [walker scrub{repo=repo}] Starting chunk 4 with bounds (1, 2)
-  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 7,7
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 1,1
   [INFO] [walker scrub{repo=repo}] Deferred: 0
   [INFO] [walker scrub{repo=repo}] Completed in 4 chunks of size 1
 
@@ -203,10 +208,15 @@ OldestFirst hg setup
   [INFO] [walker scrub{repo=repo}] Completed in 4 chunks of size 1
 
 now the additional commit
-  $ cd repo
-  $ mkcommit E
-  $ cd ..
-  $ blobimport repo/.hg repo
+  $ testtool_drawdag -R repo <<'EOF'
+  > A-B-C-D-E
+  > # bookmark: E master_bookmark
+  > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+  B=f8c75e41a0c4d29281df765f39de47bca1dcadfdc55ada4ccc2f6df567201658
+  C=e32a1e342cdb1e38e88466b4c1a01ae9f410024017aa21dc0a1c5da6b3963bf2
+  D=f41e886d61d03021b73d006acf237244086eb7a5d9c7989e44e59b76d3c3f2b5
+  E=3a2426d009267ba6f83945ecb29f63116a21984fb62df772d3bbe0143163b8fd
 
 finally, bonsai should have a run with both catchup and main bounds
   $ mononoke_walker scrub --checkpoint-version=v2 -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | grep -vE "(Bytes|Walked)/s"
@@ -232,12 +242,11 @@ hg should have a run with both catchup and main bounds, and some deferred expect
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 6)
   [INFO] [walker scrub{repo=repo}] Continuing from checkpoint run 1 chunk 3 with catchup Some((5, 6)) and main Some((1, 2)) bounds
   [INFO] [walker scrub{repo=repo}] Starting chunk 4 with bounds (5, 6)
-  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 12,9
-  [INFO] [walker scrub{repo=repo}] Deferred: 1
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 1,1
+  [INFO] [walker scrub{repo=repo}] Deferred: 0
   [INFO] [walker scrub{repo=repo}] Starting chunk 5 with bounds (1, 2)
-  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 8,8
-  [INFO] [walker scrub{repo=repo}] Deferred: 1
-  [INFO] [walker scrub{repo=repo}] Deferred edge counts by type were: HgChangesetToHgParent:1 HgManifestFileNodeToHgParentFileNode:1 HgManifestToHgFileNode:1
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 1,1
+  [INFO] [walker scrub{repo=repo}] Deferred: 0
   [INFO] [walker scrub{repo=repo}] Completed in 5 chunks of size 1
 
 OldestFirst, has only main bounds as the start point of the repo has not changed
@@ -263,7 +272,7 @@ OldestFirst, hg should have a run with only main bounds
   [INFO] [walker scrub{repo=repo}] Repo bounds: (1, 6)
   [INFO] [walker scrub{repo=repo}] Continuing from checkpoint run 1 chunk 4 with catchup None and main Some((5, 6)) bounds
   [INFO] [walker scrub{repo=repo}] Starting chunk 5 with bounds (5, 6)
-  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 12,12
+  [INFO] [walker scrub{repo=repo}] Seen,Loaded: 1,1
   [INFO] [walker scrub{repo=repo}] Deferred: 0
   [INFO] [walker scrub{repo=repo}] Chunk 5 updating checkpoint to (1, 6)
   [INFO] [walker scrub{repo=repo}] Completed in 5 chunks of size 1
