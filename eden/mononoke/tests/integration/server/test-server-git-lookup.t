@@ -11,26 +11,30 @@ setup configuration
 
 setup repo
   $ cd $TESTTMP
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ touch a
-  $ hg add a
-  $ hg ci -ma --extra convert_revision=37b0a167e07f2b84149c918cec818ffeb183dddd --extra hg-git-rename-source=git
-  $ touch b
-  $ hg add b
-  $ hg ci -mb --extra convert_revision=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb --extra hg-git-rename-source=git
-  $ hg log -r '.^::.' -T '{node}\n'
-  d5b0942fd0ec9189debf6915e9505390564e1247
-  4f4a1f2b7bdc23710132eeb620424bf195f95568
-  $ hg book -r d5b0942fd0ec9189debf6915e9505390564e1247 _gitlookup_git_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-  $ hg book master_bookmark
+  $ testtool_drawdag --print-hg-hashes -R repo --no-default-files <<EOF
+  > A-B
+  > # modify: A "a" "a\n"
+  > # modify: B "a" "a\n"
+  > # modify: B "b" "b\n"
+  > # message: A "a"
+  > # message: B "b"
+  > # extra: A convert_revision "37b0a167e07f2b84149c918cec818ffeb183dddd"
+  > # extra: A hg-git-rename-source "git"
+  > # extra: B convert_revision "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  > # extra: B hg-git-rename-source "git"
+  > # bookmark: B master_bookmark
+  > EOF
+  A=ed9644eae39ff1952e43102db42c36faf093e042
+  B=795c4a7447011a567dfc4f73e15702962cf801d4
 
-blobimport
-  $ cd $TESTTMP
-  $ blobimport repo/.hg repo
+backfill git mapping
+  $ echo $A > $TESTTMP/hash_list
+  $ echo $B >> $TESTTMP/hash_list
+  $ backfill_mapping --git $TESTTMP/hash_list
 
 start mononoke
-  $ start_and_wait_for_mononoke_server
+  $ mononoke
+  $ wait_for_mononoke
   $ cd
   $ hg clone -q mono:repo client
   $ cd client
@@ -39,13 +43,13 @@ start mononoke
   $ hg paths
   default = mono:repo
   $ hg id -r _gitlookup_git_37b0a167e07f2b84149c918cec818ffeb183dddd mono:repo
-  d5b0942fd0ec
-  $ hg id -r _gitlookup_hg_d5b0942fd0ec9189debf6915e9505390564e1247 mono:repo
+  ed9644eae39f
+  $ hg id -r _gitlookup_hg_$A mono:repo
   37b0a167e07f
-  $ hg id -r _gitlookup_hg_4f4a1f2b7bdc23710132eeb620424bf195f95568 mono:repo
+  $ hg id -r _gitlookup_hg_$B mono:repo
   bbbbbbbbbbbb
 
 We have bookmark with the same name which points to d5b0942fd0ec9189debf6915e9505390564e1247
 Make sure that git lookup takes preference
   $ hg id -r _gitlookup_git_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb mono:repo
-  4f4a1f2b7bdc
+  795c4a744701

@@ -26,6 +26,7 @@ dott_test(
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
         "//eden/mononoke/jobs/blobstore_healer:blobstore_healer",
+        "//eden/mononoke/tools/backfill_mapping:backfill_mapping",
     ],
 )
 
