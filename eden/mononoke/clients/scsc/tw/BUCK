@@ -10,6 +10,6 @@ fbpkg.builder(
     expire_days = 3,
     fail_on_redundant_configerator_fbpkg = False,
     path_actions = {
-        "scsc": "fbcode//eden/mononoke/scs/client:scsc",
+        "scsc": "fbcode//eden/mononoke/clients/scsc:scsc",
     },
 )

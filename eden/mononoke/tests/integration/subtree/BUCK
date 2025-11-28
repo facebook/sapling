@@ -15,7 +15,7 @@ dott_test(
         ),
     deps = [
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/scs/client:scsc",
+        "//eden/mononoke/clients/scsc:scsc",
         "//eden/mononoke/scs/scs_server:scs_server",
         "//eden/mononoke/tests/integration:urlencode",
         "//eden/mononoke/tools/admin:admin",

@@ -92,6 +92,8 @@ members = [
   "cas_client/client",
   "cas_client/scm_client",
   "cats",
+  "clients/scsc",
+  "clients/scsc/raw_client_lib",
   "cmdlib/base_app",
   "cmdlib/caching",
   "cmdlib/commit_id",
