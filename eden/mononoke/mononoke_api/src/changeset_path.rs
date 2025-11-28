@@ -40,7 +40,6 @@ use history_traversal::Visitor;
 use history_traversal::list_file_history;
 use manifest::Entry;
 use manifest::ManifestOps;
-use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentMetadataV2;
 /// Metadata about a file.
@@ -168,26 +167,12 @@ impl<R: MononokeRepo> ChangesetPathContentContext<R> {
             )
             .await?;
 
-        let restricted_paths_enabled = justknobs::eval(
-            "scm/mononoke:enabled_restricted_paths_access_logging",
-            None, // hashing
-            // Adding a switch value to be able to disable writes only
-            Some("changeset_path_content_context_new"),
+        restricted_paths::spawn_log_restricted_path_access(
+            changeset.ctx(),
+            changeset.repo_ctx().repo().restricted_paths_arc().clone(),
+            &path,
+            "changeset_path_content_context_new",
         )?;
-        if restricted_paths_enabled {
-            let ctx_clone = changeset.ctx().clone();
-            let restricted_paths = changeset.repo_ctx().repo().restricted_paths_arc();
-            if let Ok(non_root_mpath) = NonRootMPath::try_from(path.clone()) {
-                // No need to check or log if the path is root.
-
-                // Log asynchronously to avoid blocking the request
-                let _spawned_task = mononoke::spawn_task(async move {
-                    let _is_restricted = restricted_paths
-                        .log_access_by_path_if_restricted(&ctx_clone, non_root_mpath)
-                        .await;
-                });
-            };
-        }
 
         Ok(Self {
             changeset,
@@ -213,25 +198,12 @@ impl<R: MononokeRepo> ChangesetPathContentContext<R> {
             )
             .await?;
 
-        let restricted_paths_enabled = justknobs::eval(
-            "scm/mononoke:enabled_restricted_paths_access_logging",
-            None,
-            Some("changeset_path_context_fsnode_new"),
+        restricted_paths::spawn_log_restricted_path_access(
+            changeset.ctx(),
+            changeset.repo_ctx().repo().restricted_paths_arc().clone(),
+            &path,
+            "changeset_path_context_fsnode_new",
         )?;
-        if restricted_paths_enabled {
-            let ctx_clone = changeset.ctx().clone();
-            let restricted_paths = changeset.repo_ctx().repo().restricted_paths_arc();
-            if let Ok(non_root_mpath) = NonRootMPath::try_from(path.clone()) {
-                // No need to check or log if the path is root.
-
-                // Log asynchronously to avoid blocking the request
-                let _spawned_task = mononoke::spawn_task(async move {
-                    let _is_restricted = restricted_paths
-                        .log_access_by_path_if_restricted(&ctx_clone, non_root_mpath)
-                        .await;
-                });
-            };
-        }
 
         Ok(Self {
             changeset,
@@ -397,26 +369,12 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
             )
             .await?;
 
-        let restricted_paths_enabled = justknobs::eval(
-            "scm/mononoke:enabled_restricted_paths_access_logging",
-            None, // hashing
-            // Adding a switch value to be able to disable writes only
-            Some("changeset_path_history_context_new"),
+        restricted_paths::spawn_log_restricted_path_access(
+            changeset.ctx(),
+            changeset.repo_ctx().repo().restricted_paths_arc().clone(),
+            &path,
+            "changeset_path_history_context_new",
         )?;
-        if restricted_paths_enabled {
-            let ctx_clone = changeset.ctx().clone();
-            let restricted_paths = changeset.repo_ctx().repo().restricted_paths_arc();
-            if let Ok(non_root_mpath) = NonRootMPath::try_from(path.clone()) {
-                // No need to check or log if the path is root.
-
-                // Log asynchronously to avoid blocking the request
-                let _spawned_task = mononoke::spawn_task(async move {
-                    let _is_restricted = restricted_paths
-                        .log_access_by_path_if_restricted(&ctx_clone, non_root_mpath)
-                        .await;
-                });
-            };
-        }
 
         Ok(Self {
             changeset,
@@ -443,26 +401,12 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
             )
             .await?;
 
-        let restricted_paths_enabled = justknobs::eval(
-            "scm/mononoke:enabled_restricted_paths_access_logging",
-            None, // hashing
-            // Adding a switch value to be able to disable writes only
-            Some("changeset_path_history_context_new"),
+        restricted_paths::spawn_log_restricted_path_access(
+            changeset.ctx(),
+            changeset.repo_ctx().repo().restricted_paths_arc().clone(),
+            &path,
+            "changeset_path_history_context_new",
         )?;
-        if restricted_paths_enabled {
-            let ctx_clone = changeset.ctx().clone();
-            let restricted_paths = changeset.repo_ctx().repo().restricted_paths_arc();
-            if let Ok(non_root_mpath) = NonRootMPath::try_from(path.clone()) {
-                // No need to check or log if the path is root.
-
-                // Log asynchronously to avoid blocking the request
-                let _spawned_task = mononoke::spawn_task(async move {
-                    let _is_restricted = restricted_paths
-                        .log_access_by_path_if_restricted(&ctx_clone, non_root_mpath)
-                        .await;
-                });
-            };
-        }
 
         Ok(Self {
             changeset,
@@ -490,27 +434,12 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
         let ctx = changeset.ctx().clone();
         let blobstore = changeset.repo_ctx().repo().repo_blobstore().clone();
 
-        let restricted_paths_enabled = justknobs::eval(
-            "scm/mononoke:enabled_restricted_paths_access_logging",
-            None, // hashing
-            // Adding a switch value to be able to disable writes only
-            Some("changeset_path_history_context_new"),
+        restricted_paths::spawn_log_restricted_path_access(
+            changeset.ctx(),
+            changeset.repo_ctx().repo().restricted_paths_arc().clone(),
+            &path,
+            "changeset_path_history_context_new",
         )?;
-
-        if restricted_paths_enabled {
-            let ctx_clone = changeset.ctx().clone();
-            let restricted_paths = changeset.repo_ctx().repo().restricted_paths_arc();
-            if let Ok(non_root_mpath) = NonRootMPath::try_from(path.clone()) {
-                // No need to check or log if the path is root.
-
-                // Log asynchronously to avoid blocking the request
-                let _spawned_task = mononoke::spawn_task(async move {
-                    let _is_restricted = restricted_paths
-                        .log_access_by_path_if_restricted(&ctx_clone, non_root_mpath)
-                        .await;
-                });
-            };
-        }
 
         Ok(Self {
             changeset,
@@ -878,26 +807,12 @@ impl<R: MononokeRepo> ChangesetPathContext<R> {
             )
             .await?;
 
-        let restricted_paths_enabled = justknobs::eval(
-            "scm/mononoke:enabled_restricted_paths_access_logging",
-            None, // hashing
-            // Adding a switch value to be able to disable writes only
-            Some("changeset_path_context_new"),
+        restricted_paths::spawn_log_restricted_path_access(
+            changeset.ctx(),
+            changeset.repo_ctx().repo().restricted_paths_arc().clone(),
+            &path,
+            "changeset_path_context_new",
         )?;
-        if restricted_paths_enabled {
-            let ctx_clone = changeset.ctx().clone();
-            let restricted_paths = changeset.repo_ctx().repo().restricted_paths_arc();
-            if let Ok(non_root_mpath) = NonRootMPath::try_from(path.clone()) {
-                // No need to check or log if the path is root.
-
-                // Log asynchronously to avoid blocking the request
-                let _spawned_task = mononoke::spawn_task(async move {
-                    let _is_restricted = restricted_paths
-                        .log_access_by_path_if_restricted(&ctx_clone, non_root_mpath)
-                        .await;
-                });
-            };
-        }
 
         Ok(Self {
             changeset,

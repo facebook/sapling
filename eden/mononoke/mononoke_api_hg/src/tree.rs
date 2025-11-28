@@ -64,24 +64,14 @@ impl<R: MononokeRepo> HgTreeContext<R> {
         let blobstore = repo_ctx.repo().repo_blobstore();
         let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id).await?;
 
-        let restricted_paths_enabled = justknobs::eval(
-            "scm/mononoke:enabled_restricted_paths_access_logging",
-            None, // hashing
-            // Adding a switch value to be able to disable writes only
-            Some("hg_tree_context_new_check_exists"),
+        let manifest_id = ManifestId::new(manifest_id.as_bytes().into());
+        restricted_paths::spawn_log_restricted_manifest_access(
+            ctx,
+            repo_ctx.repo_ctx().repo().restricted_paths_arc().clone(),
+            manifest_id,
+            ManifestType::Hg,
+            "hg_tree_context_new_check_exists",
         )?;
-        if restricted_paths_enabled {
-            let ctx_clone = ctx.clone();
-            let manifest_id = ManifestId::new(manifest_id.as_bytes().into());
-            let restricted_paths = repo_ctx.repo_ctx().repo().restricted_paths_arc();
-
-            // Spawn asynchronous task for logging restricted path access
-            let _spawned_task = mononoke::spawn_task(async move {
-                let _is_restricted = restricted_paths
-                    .log_access_by_manifest_if_restricted(&ctx_clone, manifest_id, ManifestType::Hg)
-                    .await;
-            });
-        }
 
         Ok(envelope.map(move |envelope| Self { repo_ctx, envelope }))
     }
@@ -115,28 +105,14 @@ impl<R: MononokeRepo> HgAugmentedTreeContext<R> {
         let envelope =
             fetch_augmented_manifest_envelope_opt(ctx, blobstore, augmented_manifest_id).await?;
 
-        let restricted_paths_enabled = justknobs::eval(
-            "scm/mononoke:enabled_restricted_paths_access_logging",
-            None, // hashing
-            // Adding a switch value to be able to disable writes only
-            Some("hg_augmented_tree_context_new_check_exists"),
+        let manifest_id = ManifestId::new(augmented_manifest_id.as_bytes().into());
+        restricted_paths::spawn_log_restricted_manifest_access(
+            ctx,
+            repo_ctx.repo_ctx().repo().restricted_paths_arc().clone(),
+            manifest_id,
+            ManifestType::HgAugmented,
+            "hg_augmented_tree_context_new_check_exists",
         )?;
-        if restricted_paths_enabled {
-            let ctx_clone = ctx.clone();
-            let manifest_id = ManifestId::new(augmented_manifest_id.as_bytes().into());
-            let restricted_paths = repo_ctx.repo_ctx().repo().restricted_paths_arc();
-
-            // Spawn asynchronous task for logging restricted path access
-            let _spawned_task = mononoke::spawn_task(async move {
-                let _is_restricted = restricted_paths
-                    .log_access_by_manifest_if_restricted(
-                        &ctx_clone,
-                        manifest_id,
-                        ManifestType::HgAugmented,
-                    )
-                    .await;
-            });
-        }
 
         if let Some(envelope) = envelope {
             let preloaded_manifest =

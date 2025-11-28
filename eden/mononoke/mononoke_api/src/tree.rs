@@ -12,7 +12,6 @@ use blobstore::Loadable;
 use blobstore::LoadableError;
 use cloned::cloned;
 use futures_lazy_shared::LazyShared;
-use mononoke_macros::mononoke;
 // Trees are identified by their FsnodeId.
 pub use mononoke_types::FsnodeId as TreeId;
 use mononoke_types::fsnode::Fsnode;
@@ -83,28 +82,14 @@ impl<R: MononokeRepo> TreeContext<R> {
         {
             Ok(fsnode) => {
                 // Log restricted path access if enabled
-                let restricted_paths_enabled = justknobs::eval(
-                    "scm/mononoke:enabled_restricted_paths_access_logging",
-                    None,
-                    Some("fsnodes_new_check_exists"),
+                let manifest_id = ManifestId::from(&id.blake2().into_inner());
+                restricted_paths::spawn_log_restricted_manifest_access(
+                    repo_ctx.ctx(),
+                    repo_ctx.repo().restricted_paths_arc().clone(),
+                    manifest_id,
+                    ManifestType::Fsnode,
+                    "fsnodes_new_check_exists",
                 )?;
-
-                if restricted_paths_enabled {
-                    let ctx_clone = repo_ctx.ctx().clone();
-                    let manifest_id = ManifestId::from(&id.blake2().into_inner());
-                    let restricted_paths = repo_ctx.repo().restricted_paths_arc();
-
-                    // Spawn asynchronous task for logging restricted path access
-                    let _spawned_task = mononoke::spawn_task(async move {
-                        let _is_restricted = restricted_paths
-                            .log_access_by_manifest_if_restricted(
-                                &ctx_clone,
-                                manifest_id,
-                                ManifestType::Fsnode,
-                            )
-                            .await;
-                    });
-                }
 
                 Ok(Some(Self {
                     repo_ctx,

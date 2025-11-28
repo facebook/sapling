@@ -19,6 +19,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use context::CoreContext;
 use metaconfig_types::RestrictedPathsConfig;
+use mononoke_macros::mononoke;
 use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
@@ -224,6 +225,110 @@ impl RestrictedPaths {
         )
         .await
     }
+}
+
+/// Helper function to spawn an async task that logs access to restricted paths.
+///
+/// This function checks if restricted paths access logging is enabled via justknobs,
+/// and if so, spawns an async task to log the access. The logging is done asynchronously
+/// to avoid blocking the request.
+///
+/// Only spawns a task when scuba logging is actually enabled (not a discard builder).
+/// This avoids unnecessary task spawning overhead when logging is disabled.
+///
+/// # Arguments
+/// * `ctx` - The core context for the operation
+/// * `restricted_paths` - Arc to the RestrictedPaths configuration
+/// * `path` - The path being accessed (as an MPath)
+/// * `switch_value` - The justknobs switch value to use for feature gating
+///
+/// # Returns
+/// Ok(()) if the justknobs check succeeds, Err otherwise
+pub fn spawn_log_restricted_path_access(
+    ctx: &CoreContext,
+    restricted_paths: Arc<RestrictedPaths>,
+    path: &mononoke_types::MPath,
+    switch_value: &str,
+) -> Result<()> {
+    // Early return if logging is disabled - avoid all overhead
+    if !justknobs::eval(
+        "scm/mononoke:enabled_restricted_paths_access_logging",
+        None,
+        Some(switch_value),
+    )? {
+        return Ok(());
+    }
+
+    // Early return if config is empty - no restricted paths to check
+    if restricted_paths.config().is_empty() {
+        return Ok(());
+    }
+
+    // Only spawn task if we're actually going to log something
+    if let Ok(non_root_mpath) = NonRootMPath::try_from(path.clone()) {
+        let ctx_clone = ctx.clone();
+
+        // Log asynchronously to avoid blocking the request
+        let _spawned_task = mononoke::spawn_task(async move {
+            let _is_restricted = restricted_paths
+                .log_access_by_path_if_restricted(&ctx_clone, non_root_mpath)
+                .await;
+        });
+    }
+
+    Ok(())
+}
+
+/// Helper function to spawn an async task that logs access to restricted paths by manifest ID.
+///
+/// This function checks if restricted paths access logging is enabled via justknobs,
+/// and if so, spawns an async task to log the access. The logging is done asynchronously
+/// to avoid blocking the request.
+///
+/// Only spawns a task when scuba logging is actually enabled (not a discard builder).
+/// This avoids unnecessary task spawning overhead when logging is disabled.
+///
+/// # Arguments
+/// * `ctx` - The core context for the operation
+/// * `restricted_paths` - Arc to the RestrictedPaths configuration
+/// * `manifest_id` - The manifest ID being accessed
+/// * `manifest_type` - The type of manifest (e.g., Fsnode, HgManifest)
+/// * `switch_value` - The justknobs switch value to use for feature gating
+///
+/// # Returns
+/// Ok(()) if the justknobs check succeeds, Err otherwise
+pub fn spawn_log_restricted_manifest_access(
+    ctx: &CoreContext,
+    restricted_paths: Arc<RestrictedPaths>,
+    manifest_id: ManifestId,
+    manifest_type: ManifestType,
+    switch_value: &str,
+) -> Result<()> {
+    // Early return if logging is disabled - avoid all overhead
+    if !justknobs::eval(
+        "scm/mononoke:enabled_restricted_paths_access_logging",
+        None,
+        Some(switch_value),
+    )? {
+        return Ok(());
+    }
+
+    // Early return if config is empty - no restricted paths to check
+    if restricted_paths.config().is_empty() {
+        return Ok(());
+    }
+
+    // Only spawn task if we're actually going to log something
+    let ctx_clone = ctx.clone();
+
+    // Log asynchronously to avoid blocking the request
+    let _spawned_task = mononoke::spawn_task(async move {
+        let _is_restricted = restricted_paths
+            .log_access_by_manifest_if_restricted(&ctx_clone, manifest_id, manifest_type)
+            .await;
+    });
+
+    Ok(())
 }
 
 #[cfg(test)]
