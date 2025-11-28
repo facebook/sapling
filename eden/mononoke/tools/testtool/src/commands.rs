@@ -9,4 +9,5 @@ mononoke_app::subcommands! {
     mod create_bonsai;
     mod drawdag;
     mod modify_bookmark;
+    mod populate_wal;
 }
