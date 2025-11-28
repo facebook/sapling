@@ -14,53 +14,44 @@ Set up local hgrc and Mononoke config.
 Initialize test repo.
   $ hginit_treemanifest repo
   $ cd repo
-
-Populate test repo
-  $ drawdag << EOS
-  >   F
-  >   |
-  > D |
-  > | E
-  > C |
-  >  \|
+  $ testtool_drawdag -R repo --print-hg-hashes <<EOF
+  > D   F
+  > |   |
+  > C   E
+  >  \ /
   >   B
   >   |
   >   A
-  > EOS
-  $ hg log -G -r "all()" -T "{desc} {node}\n"
-  o  F 11abe3fb10b8689b560681094b17fe161871d043
-  │
-  │ o  D f585351a92f85104bff7c284233c338b10eb1df7
-  │ │
-  o │  E 49cb92066bfd0763fff729c354345650b7428554
-  │ │
-  │ o  C 26805aba1e600a82e93661149f2313866a221a7b
-  ├─╯
-  o  B 112478962961147124edd43549aedd1a335e44bf
-  │
-  o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
-  
+  > # bookmark: D master_bookmark
+  > EOF
+  A=20ca2a4749a439b459125ef0f6a4f26e88ee7538
+  B=80521a640a0c8f51dcc128c2658b224d595840ac
+  C=d3b399ca8757acdb81c3681b052eb978db6768d8
+  D=74dbcd84493ad579ee26bb326c4272983098f69c
+  E=a66a30bed387971d9b4505eff1d9599dc16c141a
+  F=d6e9a5359dcbb3b00616ebba901199b45d039851
 
 Import and start mononoke
   $ cd ..
-  $ blobimport repo/.hg repo
   $ setup_mononoke_config
   $ start_and_wait_for_mononoke_server
-Check response.
-  $ hg debugapi mono:repo -e hashlookup -i '["4", "26805aba1e600a82e93661149f2313866a221a7b", "", "ffff"]'
-  [{"hgids": [bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0"),
-              bin("49cb92066bfd0763fff729c354345650b7428554")],
-    "request": {"InclusiveRange": [bin("4000000000000000000000000000000000000000"),
-                                   bin("4fffffffffffffffffffffffffffffffffffffff")]}},
-   {"hgids": [bin("26805aba1e600a82e93661149f2313866a221a7b")],
-    "request": {"InclusiveRange": [bin("26805aba1e600a82e93661149f2313866a221a7b"),
-                                   bin("26805aba1e600a82e93661149f2313866a221a7b")]}},
-   {"hgids": [bin("112478962961147124edd43549aedd1a335e44bf"),
-              bin("11abe3fb10b8689b560681094b17fe161871d043"),
-              bin("26805aba1e600a82e93661149f2313866a221a7b"),
-              bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0"),
-              bin("49cb92066bfd0763fff729c354345650b7428554"),
-              bin("f585351a92f85104bff7c284233c338b10eb1df7")],
+
+Check response - test hash lookup with actual commit hashes
+First test: look up commits in range starting with 'd' (should find commits C and F)
+  $ hg debugapi mono:repo -e hashlookup -i "[\"d\", \"$A\", \"\", \"ffff\"]"
+  [{"hgids": [bin("d3b399ca8757acdb81c3681b052eb978db6768d8"),
+              bin("d6e9a5359dcbb3b00616ebba901199b45d039851")],
+    "request": {"InclusiveRange": [bin("d000000000000000000000000000000000000000"),
+                                   bin("dfffffffffffffffffffffffffffffffffffffff")]}},
+   {"hgids": [bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538")],
+    "request": {"InclusiveRange": [bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538"),
+                                   bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538")]}},
+   {"hgids": [bin("20ca2a4749a439b459125ef0f6a4f26e88ee7538"),
+              bin("74dbcd84493ad579ee26bb326c4272983098f69c"),
+              bin("80521a640a0c8f51dcc128c2658b224d595840ac"),
+              bin("a66a30bed387971d9b4505eff1d9599dc16c141a"),
+              bin("d3b399ca8757acdb81c3681b052eb978db6768d8"),
+              bin("d6e9a5359dcbb3b00616ebba901199b45d039851")],
     "request": {"InclusiveRange": [bin("0000000000000000000000000000000000000000"),
                                    bin("ffffffffffffffffffffffffffffffffffffffff")]}},
    {"hgids": [],
