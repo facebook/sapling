@@ -11,16 +11,14 @@ setup configuration
   $ setup_common_config "blob_files"
   $ cd $TESTTMP
 
-Setup repo and blobimport it
+Setup repo
 
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ echo "a file content" > a
-  $ hg add a
-  $ hg ci -ma
-  $ hg bookmark master_bookmark -r 'tip'
-  $ cd "$TESTTMP"
-  $ blobimport repo/.hg repo
+  $ testtool_drawdag -R repo <<EOF
+  > A
+  > # modify: A a "a file content"
+  > # bookmark: A master_bookmark
+  > EOF
+  A=d672564be4c568b4d175fb2283de2485ea31cbe1d632ff2a6850b69e2940bad8
 
 Start mononoke and the LFS Server
 
@@ -44,7 +42,7 @@ Create new commits
   $ hg push --debug --to master_bookmark
   sending hello command
   sending clienttelemetry command
-  pushing rev 48d4d2fa17e5 to destination mono:repo bookmark master_bookmark
+  pushing rev 8e48c8a863b5 to destination mono:repo bookmark master_bookmark
   query 1; heads
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
@@ -54,7 +52,7 @@ Create new commits
   received listkey for "bookmarks": 56 bytes
   1 changesets found
   list of changesets:
-  48d4d2fa17e54179e24de7fcb4a8ced38738ca4e
+  8e48c8a863b58f9eddc3b3d152801cb45a81dfd4
   sending unbundle command
   bundle2-output-bundle: "HG20", 4 parts total
   bundle2-output-part: "replycaps" 219 bytes payload
