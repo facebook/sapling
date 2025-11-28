@@ -13,35 +13,48 @@ setup configuration
 setup repo
 
   $ hginit_treemanifest repo
-
-setup client repo2
-  $ hg clone -q mono:repo repo-client --noupdate
-  $ cd repo-client
-
-make a few commits on the server
-  $ cd $TESTTMP/repo
-  $ drawdag <<EOF
+  $ cd repo
+  $ testtool_drawdag -R repo --no-default-files <<'EOF'
   > C
   > |
   > B
   > |
   > A
+  > # modify: A "file1" "content1\n"
+  > # modify: B "file1" "content1\n"
+  > # modify: B "file2" "content2\n"
+  > # modify: C "file1" "content1\n"
+  > # modify: C "file2" "content2\n"
+  > # modify: C "file3" "content3\n"
+  > # message: A "A"
+  > # message: B "B"
+  > # message: C "C"
+  > # bookmark: C master_bookmark
   > EOF
+  A=* (glob)
+  B=* (glob)
+  C=* (glob)
 
-create master bookmark
-
-  $ hg bookmark master_bookmark -r tip
-
-blobimport them into Mononoke storage and start Mononoke
-  $ cd ..
-  $ blobimport repo/.hg repo
-
-Corrupt blobs by replacing one content blob with another
-  $ cd blobstore/blobs
-  $ cp blob-repo0000.content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d blob-repo0000.content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9
+  $ cd $TESTTMP
 
 start mononoke
+  $ start_and_wait_for_mononoke_server
 
+setup client repo2
+  $ hg clone -q mono:repo repo-client --noupdate
+  $ cd repo-client
+
+Stop mononoke before corrupting blobs
+  $ killandwait $MONONOKE_PID
+
+Corrupt blobs by replacing one content blob with another
+  $ cd $TESTTMP/blobstore/blobs
+  $ FIRST_BLOB=$(ls blob-repo0000.content.blake2.* | head -1 | xargs basename)
+  $ SECOND_BLOB=$(ls blob-repo0000.content.blake2.* | head -2 | tail -1 | xargs basename)
+  $ cp "$FIRST_BLOB" "$SECOND_BLOB"
+
+Restart mononoke to pick up corrupted blobs
+  $ rm -rf "$TESTTMP/mononoke_logs"
   $ start_and_wait_for_mononoke_server
 
 Prefetch should fail with corruption error
@@ -50,4 +63,4 @@ Prefetch should fail with corruption error
   pulling from mono:repo
 
   $ LOG=revisionstore=debug hg prefetch -r ":" 2>&1 | grep "Invalid hash"
-  * Errors = 1, Error = Some("005d992c5dcf32993668f7cede29d296c494a5d9 : Invalid hash: 005d992c5dcf32993668f7cede29d296c494a5d9 (expected) != a2e456504a5e61f763f1a0b36a6c247c7541b2b3 (computed)") (glob)
+  * Errors = 1, Error = Some("0eb86721b74ed44cf176ee48b5e95f0192dc2824 : Invalid hash: 0eb86721b74ed44cf176ee48b5e95f0192dc2824 (expected) != 07c0d950fdeb8c7d82ae7f15b6d1cb7f330da8a7 (computed)") (glob)
