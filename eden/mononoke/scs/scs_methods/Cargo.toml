@@ -19,8 +19,8 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 bytes = { version = "1.10", features = ["serde"] }
 chrono = { version = "0.4.41", features = ["clock", "serde", "std"], default-features = false }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-commit_cloud_helpers = { version = "0.1.0", path = "../../commit_cloud/helpers" }
-commit_cloud_types = { version = "0.1.0", path = "../../commit_cloud/types" }
+commit_cloud_helpers = { version = "0.1.0", path = "../../features/commit_cloud/helpers" }
+commit_cloud_types = { version = "0.1.0", path = "../../features/commit_cloud/types" }
 connection_security_checker = { version = "0.1.0", path = "../../common/connection_security_checker" }
 context = { version = "0.1.0", path = "../../server/context" }
 dedupmap = { version = "0.1.0", path = "../../common/dedupmap" }
