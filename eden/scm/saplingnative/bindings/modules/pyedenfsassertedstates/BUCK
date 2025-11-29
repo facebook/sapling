@@ -6,6 +6,15 @@ oncall("sapling")
 rust_python_library(
     name = "pyedenfsassertedstates",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "fbsource//third-party/rust:anyhow",
+                ],
+            },
+        },
+    },
     crate_root = "src/lib.rs",
     features = ["fb"],
     deps = [

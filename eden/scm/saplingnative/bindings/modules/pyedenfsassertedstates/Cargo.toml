@@ -6,6 +6,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0.98"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 edenfs-asserted-states-client = { version = "0.1.0", path = "../../../../../fs/rust/edenfs-asserted-states-client" }
 sapling-configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
