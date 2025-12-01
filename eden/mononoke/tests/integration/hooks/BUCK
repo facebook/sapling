@@ -12,7 +12,6 @@ dott_test(
             [
                 "*.t",
             ],
-            exclude = ["test-hook-tailer.t"],
         ),
     deps = [
         "//eden/mononoke:mononoke",
