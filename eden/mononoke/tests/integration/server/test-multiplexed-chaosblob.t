@@ -7,15 +7,17 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ MULTIPLEXED=2 default_setup_blobimport "blob_files"
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
+  $ MULTIPLEXED=2 setup_common_config "blob_files"
+  $ cd "$TESTTMP"
+
+Create commits using testtool drawdag
+  $ testtool_drawdag -R repo --print-hg-hashes <<'EOF'
+  > A-B-C
+  > # bookmark: C master_bookmark
+  > EOF
+  A=* (glob)
+  B=* (glob)
+  C=* (glob)
 
 Base case, check the stores have expected counts
   $ ls blobstore/0/blobs/ | wc -l
@@ -25,12 +27,11 @@ Base case, check the stores have expected counts
   $ ls blobstore/2/blobs/ | wc -l
   33
 
-
-Erase the sqllites and blobstore_sync_queue
-  $ rm -rf "$TESTTMP/blobstore/"*/blobs/*
-
-blobimport them into Mononoke storage again, but with failures on one side
-  $ blobimport repo/.hg repo --blobstore-write-chaos-rate=1
+Populate WAL queue by simulating failed writes to blobstore 0
+  $ mononoke_testtool populate-wal -R repo --blobstore-path "$TESTTMP/blobstore" --source-blobstore-id 1 --target-blobstore-id 1 --delete-target-blobs
+  Found 33 blobs in source blobstore 1
+  Deleted 33 blobs from target blobstore 0
+  Inserted 33 WAL entries for target multiplex_id 1
 
 Check the stores have expected counts
   $ ls blobstore/0/blobs/ | wc -l
