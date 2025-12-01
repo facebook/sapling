@@ -14,27 +14,18 @@ setup configuration
 
 setup repo
 
-  $ hginit_treemanifest repo
-  $ cd repo
-  $ echo "a file content" > a
-  $ hg add a
-  $ hg ci -ma
+  $ quiet testtool_drawdag -R repo <<EOF
+  > A
+  > # modify: A "a" "a file content"
+  > # delete: A "A"
+  > # bookmark: A master_bookmark
+  > # message: A "a"
+  > # author: A test
+  > EOF
 
-setup master bookmarks
+start mononoke
 
-  $ hg bookmark master_bookmark -r 'tip'
-
-verify content
-  $ hg log
-  commit:      0e7ec5675652
-  bookmark:    master_bookmark
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
-  
-
-  $ cd $TESTTMP
-  $ blobimport repo/.hg repo
+  $ start_and_wait_for_mononoke_server
 
 setup two repos: one will be used to push from, another will be used
 to pull these pushed commits
@@ -45,9 +36,6 @@ to pull these pushed commits
   $ hg pull ssh://user@dummy/repo
   pulling from ssh://user@dummy/repo
 
-start mononoke
-
-  $ start_and_wait_for_mononoke_server
 BEGIN Creation of new commits
 
 create new commits in repo2 and check that they are seen as outgoing
@@ -109,7 +97,7 @@ move master bookmarks
   $ hg bookmark -f master_bookmark -r 'tip'
 
   $ hg log -r "reverse(all())" --stat
-  commit:      f40c09205504
+  commit:      164fa3d7a55c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -118,7 +106,7 @@ move master bookmarks
    c_dir/c |  1 +
    2 files changed, 2 insertions(+), 1 deletions(-)
   
-  commit:      634de738bb0f
+  commit:      d57b20e747f8
   bookmark:    master_bookmark
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -133,7 +121,7 @@ move master bookmarks
    e_dir/e     |  1 +
    7 files changed, 4 insertions(+), 4 deletions(-)
   
-  commit:      8315ea53ef41
+  commit:      c1872d432eba
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -144,7 +132,7 @@ move master bookmarks
    d_dir/d |  2 +-
    4 files changed, 4 insertions(+), 3 deletions(-)
   
-  commit:      30da5bf63484
+  commit:      20c500549573
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
@@ -153,7 +141,7 @@ move master bookmarks
    b_dir/b |  2 +-
    2 files changed, 2 insertions(+), 2 deletions(-)
   
-  commit:      fbd6b221382e
+  commit:      17a13ec35321
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
@@ -162,7 +150,7 @@ move master bookmarks
    d_dir/d |  1 +
    2 files changed, 2 insertions(+), 1 deletions(-)
   
-  commit:      bb0985934a0f
+  commit:      73a82cfa87df
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
@@ -171,7 +159,7 @@ move master bookmarks
    b_dir/b |  1 +
    2 files changed, 2 insertions(+), 1 deletions(-)
   
-  commit:      0e7ec5675652
+  commit:      c0fe33181ed1
   bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
@@ -202,12 +190,12 @@ push to Mononoke
   received listkey for "bookmarks": 57 bytes
   6 changesets found
   list of changesets:
-  bb0985934a0f8a493887892173b68940ceb40b4f
-  fbd6b221382efa5d5bc53130cdaccf06e04c97d3
-  30da5bf63484d2d6572edafb3ea211c17cd8c005
-  8315ea53ef41d34f56232c88669cc80225b6e66d
-  634de738bb0ff135e32d48567718fb9d7dedf575
-  f40c09205504d8410f8c8679bf7a85fef25f9337
+  73a82cfa87dfc23097b4a429eac744ec99394b30
+  17a13ec3532124b3c071bdac0c3c32b3c36f1130
+  20c50054957345c7c7c8a8ec480c310134c24e87
+  c1872d432eba363d07c2abebb03ae55d1c6c0f95
+  d57b20e747f87b1a264bd3b58dbaea2dbc154180
+  164fa3d7a55cf68a4dafc6383ac9d3cad3d72f56
   sending unbundle command
   bundle2-output-bundle: "HG20", 4 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
@@ -227,7 +215,7 @@ Now pull what was just pushed
 
   $ cd ../repo3
   $ hg log -r "reverse(all())" --stat
-  commit:      0e7ec5675652
+  commit:      c0fe33181ed1
   bookmark:    remote/master_bookmark
   hoistedname: master_bookmark
   user:        test
@@ -242,108 +230,110 @@ Now pull what was just pushed
 Because the revision numbers are assigned nondeterministically we cannot
 compare output of the entire tree. Instead we compare only linear histories
 
-  $ hg log --graph --template '{node} {bookmarks}' -r "::f40c09205504"
-  pulling 'f40c09205504' from 'mono:repo'
-  o  f40c09205504d8410f8c8679bf7a85fef25f9337
+  $ hg log --graph --template '{node} {bookmarks}' -r "::164fa3d7a55cf68a4dafc6383ac9d3cad3d72f56"
+  pulling '164fa3d7a55cf68a4dafc6383ac9d3cad3d72f56' from 'mono:repo'
+  o  164fa3d7a55cf68a4dafc6383ac9d3cad3d72f56
   │
-  o  bb0985934a0f8a493887892173b68940ceb40b4f
+  o  73a82cfa87dfc23097b4a429eac744ec99394b30
   │
-  @  0e7ec5675652a04069cbf976a42e45b740f3243c
-   (re)
-  $ hg log --graph --template '{node} {bookmarks}' -r "::634de738bb0f"
-  o  634de738bb0ff135e32d48567718fb9d7dedf575
+  @  c0fe33181ed12aadb7078edd469d1a5ee3da8f29
+  
+  $ hg log --graph --template '{node} {bookmarks}' -r "::d57b20e747f87b1a264bd3b58dbaea2dbc154180"
+  o  d57b20e747f87b1a264bd3b58dbaea2dbc154180
   │
-  o  8315ea53ef41d34f56232c88669cc80225b6e66d
+  o  c1872d432eba363d07c2abebb03ae55d1c6c0f95
   │
-  o  30da5bf63484d2d6572edafb3ea211c17cd8c005
+  o  20c50054957345c7c7c8a8ec480c310134c24e87
   │
-  o  fbd6b221382efa5d5bc53130cdaccf06e04c97d3
+  o  17a13ec3532124b3c071bdac0c3c32b3c36f1130
   │
-  o  bb0985934a0f8a493887892173b68940ceb40b4f
+  o  73a82cfa87dfc23097b4a429eac744ec99394b30
   │
-  @  0e7ec5675652a04069cbf976a42e45b740f3243c
-   (re)
+  @  c0fe33181ed12aadb7078edd469d1a5ee3da8f29
+  
 This last step is verifying every commit one by one, it is done in a single
 command, but the output of this command is long
 
-  $ for commit in `hg log --template '{node} ' -r '0e7ec567::634de738'` f40c09205504d8410f8c8679bf7a85fef25f9337; do \
+  $ for commit in `hg log --template '{node} ' -r 'c0fe33181ed1::d57b20e747f87b1a264bd3b58dbaea2dbc154180'` 164fa3d7a55cf68a4dafc6383ac9d3cad3d72f56; do \
   $ if [ "`hg export -R $TESTTMP/repo2 ${commit}`" == "`hg export ${commit} 2> /dev/null`" ]; then echo "${commit} comparison SUCCESS"; fi; hg export ${commit}; echo; echo; done
-  0e7ec5675652a04069cbf976a42e45b740f3243c comparison SUCCESS
+  c0fe33181ed12aadb7078edd469d1a5ee3da8f29 comparison SUCCESS
   # HG changeset patch
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 0e7ec5675652a04069cbf976a42e45b740f3243c
+  # Node ID c0fe33181ed12aadb7078edd469d1a5ee3da8f29
   # Parent  0000000000000000000000000000000000000000
   a
    (re)
-  diff -r 000000000000 -r 0e7ec5675652 a
+  diff -r 000000000000 -r c0fe33181ed1 a
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +a file content
+  \ No newline at end of file
    (re)
-   (re)
-  bb0985934a0f8a493887892173b68940ceb40b4f comparison SUCCESS
+  
+  73a82cfa87dfc23097b4a429eac744ec99394b30 comparison SUCCESS
   # HG changeset patch
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID bb0985934a0f8a493887892173b68940ceb40b4f
-  # Parent  0e7ec5675652a04069cbf976a42e45b740f3243c
+  # Node ID 73a82cfa87dfc23097b4a429eac744ec99394b30
+  # Parent  c0fe33181ed12aadb7078edd469d1a5ee3da8f29
   b
   
-  diff -r 0e7ec5675652 -r bb0985934a0f a
+  diff -r c0fe33181ed1 -r 73a82cfa87df a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -a file content
+  \ No newline at end of file
   +new a file content
-  diff -r 0e7ec5675652 -r bb0985934a0f b_dir/b
+  diff -r c0fe33181ed1 -r 73a82cfa87df b_dir/b
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +b file content
   
   
-  fbd6b221382efa5d5bc53130cdaccf06e04c97d3 comparison SUCCESS
+  17a13ec3532124b3c071bdac0c3c32b3c36f1130 comparison SUCCESS
   # HG changeset patch
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID fbd6b221382efa5d5bc53130cdaccf06e04c97d3
-  # Parent  bb0985934a0f8a493887892173b68940ceb40b4f
+  # Node ID 17a13ec3532124b3c071bdac0c3c32b3c36f1130
+  # Parent  73a82cfa87dfc23097b4a429eac744ec99394b30
   d
   
-  diff -r bb0985934a0f -r fbd6b221382e b_dir/b
+  diff -r 73a82cfa87df -r 17a13ec35321 b_dir/b
   --- a/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
   +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -b file content
   +updated b file content
-  diff -r bb0985934a0f -r fbd6b221382e d_dir/d
+  diff -r 73a82cfa87df -r 17a13ec35321 d_dir/d
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/d_dir/d	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +d file content
   
   
-  30da5bf63484d2d6572edafb3ea211c17cd8c005 comparison SUCCESS
+  20c50054957345c7c7c8a8ec480c310134c24e87 comparison SUCCESS
   # HG changeset patch
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 30da5bf63484d2d6572edafb3ea211c17cd8c005
-  # Parent  fbd6b221382efa5d5bc53130cdaccf06e04c97d3
+  # Node ID 20c50054957345c7c7c8a8ec480c310134c24e87
+  # Parent  17a13ec3532124b3c071bdac0c3c32b3c36f1130
   e
   
-  diff -r fbd6b221382e -r 30da5bf63484 a
+  diff -r 17a13ec35321 -r 20c500549573 a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -new a file content
   +a file content
-  diff -r fbd6b221382e -r 30da5bf63484 b_dir/b
+  diff -r 17a13ec35321 -r 20c500549573 b_dir/b
   --- a/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
   +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
@@ -351,33 +341,33 @@ command, but the output of this command is long
   +b file content
   
   
-  8315ea53ef41d34f56232c88669cc80225b6e66d comparison SUCCESS
+  c1872d432eba363d07c2abebb03ae55d1c6c0f95 comparison SUCCESS
   # HG changeset patch
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 8315ea53ef41d34f56232c88669cc80225b6e66d
-  # Parent  30da5bf63484d2d6572edafb3ea211c17cd8c005
+  # Node ID c1872d432eba363d07c2abebb03ae55d1c6c0f95
+  # Parent  20c50054957345c7c7c8a8ec480c310134c24e87
   f
   
-  diff -r 30da5bf63484 -r 8315ea53ef41 a
+  diff -r 20c500549573 -r c1872d432eba a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -a file content
   +b file content
-  diff -r 30da5bf63484 -r 8315ea53ef41 b_dir/b
+  diff -r 20c500549573 -r c1872d432eba b_dir/b
   --- a/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
   +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -b file content
   +a file content
-  diff -r 30da5bf63484 -r 8315ea53ef41 c_dir/c
+  diff -r 20c500549573 -r c1872d432eba c_dir/c
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c_dir/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +a file content
-  diff -r 30da5bf63484 -r 8315ea53ef41 d_dir/d
+  diff -r 20c500549573 -r c1872d432eba d_dir/d
   --- a/d_dir/d	Thu Jan 01 00:00:00 1970 +0000
   +++ b/d_dir/d	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
@@ -385,69 +375,69 @@ command, but the output of this command is long
   +b file content
   
   
-  634de738bb0ff135e32d48567718fb9d7dedf575 comparison SUCCESS
+  d57b20e747f87b1a264bd3b58dbaea2dbc154180 comparison SUCCESS
   # HG changeset patch
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 634de738bb0ff135e32d48567718fb9d7dedf575
-  # Parent  8315ea53ef41d34f56232c88669cc80225b6e66d
+  # Node ID d57b20e747f87b1a264bd3b58dbaea2dbc154180
+  # Parent  c1872d432eba363d07c2abebb03ae55d1c6c0f95
   g
   
-  diff -r 8315ea53ef41 -r 634de738bb0f a
+  diff -r c1872d432eba -r d57b20e747f8 a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +0,0 @@
   -b file content
-  diff -r 8315ea53ef41 -r 634de738bb0f a_dir/a
+  diff -r c1872d432eba -r d57b20e747f8 a_dir/a
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a_dir/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +a file content
-  diff -r 8315ea53ef41 -r 634de738bb0f b_dir/a_bis
+  diff -r c1872d432eba -r d57b20e747f8 b_dir/a_bis
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/b_dir/a_bis	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +a file content
-  diff -r 8315ea53ef41 -r 634de738bb0f b_dir/b
+  diff -r c1872d432eba -r d57b20e747f8 b_dir/b
   --- a/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
   +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -a file content
   +b file content
-  diff -r 8315ea53ef41 -r 634de738bb0f c_dir/c
+  diff -r c1872d432eba -r d57b20e747f8 c_dir/c
   --- a/c_dir/c	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +0,0 @@
   -a file content
-  diff -r 8315ea53ef41 -r 634de738bb0f d_dir/d
+  diff -r c1872d432eba -r d57b20e747f8 d_dir/d
   --- a/d_dir/d	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +0,0 @@
   -b file content
-  diff -r 8315ea53ef41 -r 634de738bb0f e_dir/e
+  diff -r c1872d432eba -r d57b20e747f8 e_dir/e
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/e_dir/e	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +a file content
   
   
-  f40c09205504d8410f8c8679bf7a85fef25f9337 comparison SUCCESS
+  164fa3d7a55cf68a4dafc6383ac9d3cad3d72f56 comparison SUCCESS
   # HG changeset patch
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID f40c09205504d8410f8c8679bf7a85fef25f9337
-  # Parent  bb0985934a0f8a493887892173b68940ceb40b4f
+  # Node ID 164fa3d7a55cf68a4dafc6383ac9d3cad3d72f56
+  # Parent  73a82cfa87dfc23097b4a429eac744ec99394b30
   c
   
-  diff -r bb0985934a0f -r f40c09205504 b_dir/b
+  diff -r 73a82cfa87df -r 164fa3d7a55c b_dir/b
   --- a/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
   +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
   -b file content
   +updated b file content
-  diff -r bb0985934a0f -r f40c09205504 c_dir/c
+  diff -r 73a82cfa87df -r 164fa3d7a55c c_dir/c
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/c_dir/c	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
