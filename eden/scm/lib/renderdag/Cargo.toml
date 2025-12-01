@@ -19,7 +19,7 @@ serde = { version = "1.0.219", features = ["derive", "rc"], optional = true }
 
 [dev-dependencies]
 sapling-drawdag = { version = "0.1.0", path = "../drawdag" }
-unicode-width = "=0.1.12"
+unicode-width = "0.1.12"
 
 [features]
 default = []

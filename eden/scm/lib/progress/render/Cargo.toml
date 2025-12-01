@@ -19,4 +19,4 @@ serde = { version = "1.0.219", features = ["derive", "rc"] }
 termwiz = { version = "0.23", features = ["use_serde", "widgets"], default-features = false }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unicode-segmentation = "1.12.0"
-unicode-width = "=0.1.12"
+unicode-width = "0.1.12"
