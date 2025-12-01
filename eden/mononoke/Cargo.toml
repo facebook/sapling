@@ -94,7 +94,6 @@ members = [
   "cats",
   "clients/git_pushrebase",
   "clients/scsc",
-  "clients/scsc/raw_client_lib",
   "cmdlib/base_app",
   "cmdlib/caching",
   "cmdlib/commit_id",
