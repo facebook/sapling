@@ -186,34 +186,38 @@ impl ParsedFileContent {
     }
 }
 
-fn calculate_lines_count(
+async fn calculate_lines_count(
     old_parsed_file_content: Option<&ParsedFileContent>,
     new_parsed_file_content: Option<&ParsedFileContent>,
     old_file_type: Option<&DiffFileType>,
     new_file_type: Option<&DiffFileType>,
-) -> Option<MetadataLinesCount> {
+) -> Result<Option<MetadataLinesCount>, DiffError> {
     if matches!(old_file_type, Some(&DiffFileType::GitSubmodule))
         || matches!(new_file_type, Some(&DiffFileType::GitSubmodule))
     {
-        return None;
+        return Ok(None);
     }
 
     match (old_parsed_file_content, new_parsed_file_content) {
         (
             Some(ParsedFileContent::Text(old_text_file)),
             Some(ParsedFileContent::Text(new_text_file)),
-        ) => Some(diff_files(old_text_file, new_text_file)),
-        (Some(ParsedFileContent::Text(old_text_file)), _) => Some(file_deleted(old_text_file)),
-        (_, Some(ParsedFileContent::Text(new_text_file))) => Some(file_created(new_text_file)),
-        _ => None,
+        ) => Ok(Some(diff_files(old_text_file, new_text_file).await?)),
+        (Some(ParsedFileContent::Text(old_text_file)), _) => Ok(Some(file_deleted(old_text_file))),
+        (_, Some(ParsedFileContent::Text(new_text_file))) => Ok(Some(file_created(new_text_file))),
+        _ => Ok(None),
     }
 }
 
-fn diff_files(old_text_file: &TextFile, new_text_file: &TextFile) -> MetadataLinesCount {
-    let hunks = xdiff::diff_hunks(
-        old_text_file.file_content.clone(),
-        new_text_file.file_content.clone(),
-    );
+async fn diff_files(old_text_file: &TextFile, new_text_file: &TextFile) -> Result<MetadataLinesCount, DiffError> {
+    let old_content = old_text_file.file_content.clone();
+    let new_content = new_text_file.file_content.clone();
+
+    let hunks = tokio::task::spawn_blocking(move || {
+        xdiff::diff_hunks(old_content, new_content)
+    })
+    .await
+    .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {}", e)))?;
 
     let mut added_lines = 0i64;
     let mut deleted_lines = 0i64;
@@ -233,13 +237,13 @@ fn diff_files(old_text_file: &TextFile, new_text_file: &TextFile) -> MetadataLin
         }
     }
 
-    MetadataLinesCount {
+    Ok(MetadataLinesCount {
         added_lines,
         deleted_lines,
         significant_added_lines,
         significant_deleted_lines,
         first_added_line_number,
-    }
+    })
 }
 
 fn file_created(new_text_file: &TextFile) -> MetadataLinesCount {
@@ -384,7 +388,7 @@ pub async fn metadata(
         other_parsed_content.as_ref(),
         base_file_type.as_ref(),
         other_file_type.as_ref(),
-    );
+    ).await?;
 
     let base_file_info = create_file_info(base_file_type, base_parsed_content.as_ref());
     let other_file_info = create_file_info(other_file_type, other_parsed_content.as_ref());

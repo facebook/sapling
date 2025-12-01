@@ -63,7 +63,11 @@ pub async fn headerless_unified(
     let raw_diff = if is_binary {
         b"Binary files differ\n".to_vec()
     } else {
-        xdiff::diff_unified_headerless(&other_content, &base_content, xdiff_opts)
+        tokio::task::spawn_blocking(move || {
+            xdiff::diff_unified_headerless(&other_content, &base_content, xdiff_opts)
+        })
+        .await
+        .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {}", e)))?
     };
 
     Ok(HeaderlessUnifiedDiff {

@@ -19,6 +19,7 @@ rust_library(
         "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:thiserror",
+        "fbsource//third-party/rust:tokio",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/git/git_types:git_types",
