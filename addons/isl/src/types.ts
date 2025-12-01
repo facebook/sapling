@@ -985,14 +985,6 @@ export type ClientToServerMessage =
   | {type: 'bulkFetchFeatureFlags'; id: string; names: Array<string>}
   | {type: 'fetchInternalUserInfo'}
   | {type: 'fetchDevEnvType'; id: string}
-  | {
-      type: 'generateSuggestionWithAI';
-      id: string;
-      comparison: Comparison;
-      fieldName: string;
-      latestFields: InternalCommitMessageFields;
-      suggestionId: string;
-    }
   | {type: 'splitCommitWithAI'; id: string; diffCommit: DiffCommit; args: Args}
   | {type: 'gotUiState'; state: string}
   | CodeReviewProviderSpecificClientToServerMessages
@@ -1157,11 +1149,6 @@ export type ServerToClientMessage =
   | {type: 'bulkFetchedFeatureFlags'; id: string; result: Record<string, boolean>}
   | {type: 'fetchedInternalUserInfo'; info: Serializable}
   | {type: 'fetchedDevEnvType'; envType: string; id: string}
-  | {
-      type: 'generatedSuggestionWithAI';
-      message: Result<string>;
-      id: string;
-    }
   | {
       type: 'splitCommitWithAI';
       id: string;

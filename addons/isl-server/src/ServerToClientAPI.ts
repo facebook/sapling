@@ -1033,28 +1033,6 @@ export default class ServerToClientAPI {
           });
         break;
       }
-      case 'generateSuggestionWithAI': {
-        if (Internal.generateSuggestionWithAI == null) {
-          break;
-        }
-        repo.runDiff(ctx, data.comparison, /* context lines */ 4).then(diff => {
-          Internal.generateSuggestionWithAI?.(repo.initialConnectionContext, {
-            context: diff,
-            fieldName: data.fieldName,
-            latestFields: data.latestFields,
-            suggestionId: data.suggestionId,
-          })
-            .catch((error: Error) => ({error}))
-            .then((result: Result<string>) => {
-              this.postMessage({
-                type: 'generatedSuggestionWithAI',
-                message: result,
-                id: data.id,
-              });
-            });
-        });
-        break;
-      }
       case 'splitCommitWithAI': {
         Internal.splitCommitWithAI?.(ctx, data.diffCommit, data.args).then(
           (result: Result<ReadonlyArray<PartiallySelectedDiffCommit>>) => {
