@@ -6,6 +6,7 @@ rust_library(
     name = "scs_client_raw",
     srcs = glob(["src/**/*.rs"]),
     allow_oss_build = False,
+    autocargo = {"ignore_rule": True},
     os_deps = [
         (
             "linux",
