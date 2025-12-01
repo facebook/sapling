@@ -4,8 +4,8 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-  $ export CACHEDIR=$PWD/cachepath
   $ . "${TEST_FIXTURES}/library.sh"
+  $ export CACHEDIR=$PWD/cachepath
 
 # setup config repo
 
@@ -14,11 +14,12 @@
   $ export PACK_BLOB=1
   $ setup_common_config $REPOTYPE
   $ cd $TESTTMP
+  $ MONONOKE_START_TIMEOUT=10 start_and_wait_for_mononoke_server || exit
 
-  $ hginit_treemanifest repo
-  $ cd repo
+  $ hg clone -q mono:repo repo --noupdate
 
 # Commit files
+  $ cd repo
   $ cp "${TEST_FIXTURES}/raw_text.txt" f1
   $ hg commit -Aqm "f1"
   $ cp f1 f2
@@ -28,11 +29,10 @@
   $ echo "Yet more text" >> f3
   $ hg commit -Aqm "f3"
 
-  $ hg bookmark master_bookmark -r tip
+  $ hg push -q --to master_bookmark --create
 
-  $ cd ..
+  $ cd $TESTTMP
 
-  $ blobimport repo/.hg repo
 
 # Get the space consumed by the content as-is
   $ stat -c '%s %h %N' $TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.* | sort -n
