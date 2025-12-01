@@ -16,6 +16,7 @@ import {Internal} from './Internal';
 import {stagedThrottler} from './StagedThrottler';
 import type {SubscriptionCallback} from './__generated__/node-edenfs-notifications-client';
 import {EdenFSUtils} from './__generated__/node-edenfs-notifications-client';
+import {type ServerSideTracker} from './analytics/serverSideTracker';
 import {ONE_MINUTE_MS} from './constants';
 import {EdenFSNotifications} from './edenFsNotifications';
 import type {RepositoryContext} from './serverTypes';
@@ -60,7 +61,7 @@ export class WatchForChanges {
   ) {
     this.logger = ctx.logger;
     this.tracker = ctx.tracker;
-    this.watchman = watchman ?? new Watchman(ctx.logger);
+    this.watchman = watchman ?? new Watchman(ctx.logger, ctx.tracker);
 
     const {repoRoot} = this.repoInfo;
     this.edenfs = edenfs ?? new EdenFSNotifications(ctx.logger, repoRoot);

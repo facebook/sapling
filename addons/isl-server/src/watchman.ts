@@ -10,6 +10,7 @@ import type {Logger} from './logger';
 import watchman from 'fb-watchman';
 import {EventEmitter} from 'node:events';
 import path from 'node:path';
+import {type ServerSideTracker} from './analytics/serverSideTracker';
 import {firstOfIterable, serializeAsyncCall, sleep} from './utils';
 
 export type WatchmanSubscriptionOptions = {
@@ -71,7 +72,10 @@ export class Watchman {
   public readonly status: 'initializing' | 'reconnecting' | 'healthy' | 'ended' | 'errored' =
     'initializing';
 
-  constructor(private logger: Logger) {
+  constructor(
+    private logger: Logger,
+    private tracker: ServerSideTracker,
+  ) {
     this.client = new watchman.Client({
       // find watchman using PATH
       watchmanBinaryPath: undefined,
