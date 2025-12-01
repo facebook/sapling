@@ -1060,7 +1060,7 @@ impl Node {
                 async move {
                     let content_id = envelope.content_id();
                     let file_bytes = filestore::fetch(
-                        repo.repo_blobstore(),
+                        repo.repo_blobstore().clone(),
                         &ctx,
                         &envelope.content_id().into(),
                     )

@@ -239,7 +239,7 @@ pub async fn exists<B: KeyedBlobstore>(
 /// be determined or if opening the file failed. File contents are returned in chunks configured by
 /// FilestoreConfig::read_chunk_size - this defines the max chunk size, but they may be shorter
 /// (not just the final chunks - any of them). Chunks are guaranteed to have non-zero size.
-pub async fn fetch_with_size<'a, B: KeyedBlobstore + Clone + 'a>(
+pub async fn fetch_with_size<'a, B: KeyedBlobstore + Clone + 'static>(
     blobstore: B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -257,7 +257,7 @@ pub async fn fetch_with_size<'a, B: KeyedBlobstore + Clone + 'a>(
 ///
 /// Requests for data beyond the end of the file will return only the part of
 /// the file that overlaps with the requested range, if any.
-pub async fn fetch_range_with_size<'a, B: KeyedBlobstore + Clone + 'a>(
+pub async fn fetch_range_with_size<'a, B: KeyedBlobstore + Clone + 'static>(
     blobstore: B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -270,7 +270,7 @@ pub async fn fetch_range_with_size<'a, B: KeyedBlobstore + Clone + 'a>(
 }
 
 /// This function has the same functionality as fetch_with_size, but doesn't return the file size.
-pub async fn fetch<'a, B: KeyedBlobstore + Clone + 'a>(
+pub async fn fetch<'a, B: KeyedBlobstore + Clone + 'static>(
     blobstore: B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -280,13 +280,13 @@ pub async fn fetch<'a, B: KeyedBlobstore + Clone + 'a>(
 }
 
 /// Fetch the contents of a blob concatenated together.
-async fn fetch_concat_impl<B: KeyedBlobstore>(
+async fn fetch_concat_impl<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
     size: Option<u64>,
 ) -> Result<Option<Bytes>, Error> {
-    let res = fetch_with_size(blobstore, ctx, key).await?;
+    let res = fetch_with_size(blobstore.clone(), ctx, key).await?;
 
     match res {
         Some((stream, len)) => {
@@ -318,7 +318,7 @@ async fn fetch_concat_impl<B: KeyedBlobstore>(
 
 /// Fetch the contents of a blob concatenated together. This bad for buffering, and you shouldn't
 /// add new callsites. This is only for compatibility with existing callsites.
-pub async fn fetch_concat_opt<B: KeyedBlobstore>(
+pub async fn fetch_concat_opt<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
@@ -327,7 +327,7 @@ pub async fn fetch_concat_opt<B: KeyedBlobstore>(
 }
 
 /// Similar to `fetch_concat_opt`, but requires the blob to be present, or errors out.
-pub async fn fetch_concat<B: KeyedBlobstore>(
+pub async fn fetch_concat<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     ctx: &CoreContext,
     key: impl Into<FetchKey>,
@@ -339,7 +339,7 @@ pub async fn fetch_concat<B: KeyedBlobstore>(
 
 /// Similar to `fetch_concat, but requires the content to be a known exact
 /// size.  Suitable for use when the size is known and relatively small.
-pub async fn fetch_concat_exact<'a, B: KeyedBlobstore>(
+pub async fn fetch_concat_exact<'a, B: KeyedBlobstore + Clone + 'static>(
     blobstore: &'a B,
     ctx: &'a CoreContext,
     key: impl Into<FetchKey>,
@@ -355,7 +355,7 @@ pub async fn fetch_concat_exact<'a, B: KeyedBlobstore>(
 ///
 /// Mostly behaves as the `fetch`, except it is pushing missing content error into stream if
 /// data associated with the key was not found.
-pub fn fetch_stream<'a, B: KeyedBlobstore + Clone + 'a, K: Into<FetchKey>>(
+pub fn fetch_stream<'a, B: KeyedBlobstore + Clone + 'static, K: Into<FetchKey>>(
     blobstore: B,
     ctx: &CoreContext,
     key: K,
@@ -373,26 +373,26 @@ pub fn fetch_stream<'a, B: KeyedBlobstore + Clone + 'a, K: Into<FetchKey>>(
 }
 
 /// This function has the same functionality as fetch_range_with_size, but doesn't return the file size.
-pub async fn fetch_range<'a, B: KeyedBlobstore>(
+pub async fn fetch_range<'a, B: KeyedBlobstore + Clone + 'static>(
     blobstore: &'a B,
     ctx: &'a CoreContext,
     key: &FetchKey,
     range: Range,
 ) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + use<'a, B>>, Error> {
-    let res = fetch_range_with_size(blobstore, ctx, key, range).await?;
+    let res = fetch_range_with_size(blobstore.clone(), ctx, key, range).await?;
     Ok(res.map(|(stream, _len)| stream))
 }
 
 /// Fetch the start of a file. Returns a Future that resolves with Some(Bytes) if the file was
 /// found, and None otherwise. If Bytes are found, this function is guaranteed to return as many
 /// Bytes as requested unless the file is shorter than that.
-pub async fn peek<B: KeyedBlobstore>(
+pub async fn peek<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     ctx: &CoreContext,
     key: &FetchKey,
     size: usize,
 ) -> Result<Option<Bytes>, Error> {
-    let maybe_stream = fetch(blobstore, ctx, key).await?;
+    let maybe_stream = fetch(blobstore.clone(), ctx, key).await?;
 
     match maybe_stream {
         None => Ok(None),

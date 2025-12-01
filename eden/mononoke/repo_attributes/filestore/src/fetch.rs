@@ -244,7 +244,7 @@ pub fn stream_file_bytes<'a, B: KeyedBlobstore + Clone + 'a>(
     Ok(stream)
 }
 
-pub async fn fetch_with_size<'a, B: KeyedBlobstore + Clone + 'a>(
+pub async fn fetch_with_size<'a, B: KeyedBlobstore + Clone + 'static>(
     blobstore: B,
     ctx: &CoreContext,
     content_id: ContentId,

@@ -173,7 +173,7 @@ impl ParsedFileContent {
             let file_content = {
                 let blobstore = repo.repo_blobstore();
                 let fetch_key = filestore::FetchKey::Canonical(content_id);
-                filestore::fetch_concat_opt(&blobstore, ctx, &fetch_key)
+                filestore::fetch_concat_opt(blobstore, ctx, &fetch_key)
                     .await
                     .map_err(DiffError::internal)?
                     .ok_or_else(|| DiffError::content_not_found(content_id))?

@@ -88,11 +88,11 @@ where
     async fn fetch_upload_file<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl KeyedBlobstore,
+        blobstore: &'a (impl KeyedBlobstore + Clone + 'static),
         content_id: ContentId,  // for fetching
         digest: MononokeDigest, // for uploading
     ) -> Result<UploadOutcome, Error> {
-        let stream = filestore::fetch(blobstore, ctx, &content_id.into())
+        let stream = filestore::fetch(blobstore.clone(), ctx, &content_id.into())
             .await?
             .ok_or(ErrorKind::MissingInBlobstore(content_id))?;
         if digest.1 <= MAX_BYTES_FOR_INLINE_UPLOAD {
@@ -114,7 +114,7 @@ where
     pub async fn upload_file_content<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl KeyedBlobstore,
+        blobstore: &'a (impl KeyedBlobstore + Clone + 'static),
         filenode_id: &HgFileNodeId,
         digest: Option<&MononokeDigest>,
         prior_lookup: bool,
@@ -143,7 +143,7 @@ where
     pub async fn upload_file_by_content_id<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl KeyedBlobstore,
+        blobstore: &'a (impl KeyedBlobstore + Clone + 'static),
         content_id: &ContentId,
         prior_lookup: bool,
     ) -> Result<UploadOutcome, Error> {
@@ -164,7 +164,7 @@ where
     pub async fn upload_file_contents<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl KeyedBlobstore,
+        blobstore: &'a (impl KeyedBlobstore + Clone + 'static),
         ids: impl IntoIterator<Item = (HgFileNodeId, Option<MononokeDigest>)>,
         prior_lookup: bool,
     ) -> Vec<Result<(HgFileNodeId, UploadOutcome), Error>> {
@@ -185,7 +185,7 @@ where
     pub async fn upload_files_by_content_id<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl KeyedBlobstore,
+        blobstore: &'a (impl KeyedBlobstore + Clone + 'static),
         ids: impl IntoIterator<Item = ContentId>,
         prior_lookup: bool,
     ) -> Vec<Result<(ContentId, UploadOutcome), Error>> {
@@ -203,7 +203,7 @@ where
     pub async fn ensure_upload_file_contents<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl KeyedBlobstore,
+        blobstore: &'a (impl KeyedBlobstore + Clone + 'static),
         ids: impl IntoIterator<Item = (HgFileNodeId, Option<MononokeDigest>)>,
         prior_lookup: bool,
     ) -> Result<Vec<(HgFileNodeId, UploadOutcome)>, Error> {
@@ -216,7 +216,7 @@ where
     pub async fn ensure_upload_files_by_content_id<'a>(
         &self,
         ctx: &'a CoreContext,
-        blobstore: &'a impl KeyedBlobstore,
+        blobstore: &'a (impl KeyedBlobstore + Clone + 'static),
         ids: Vec<ContentId>,
         prior_lookup: bool,
     ) -> Result<Vec<(ContentId, UploadOutcome)>, Error> {

@@ -156,7 +156,7 @@ impl<R: MononokeRepo> FileContext<R> {
         size: u64,
     ) -> Result<Bytes, MononokeError> {
         let ret = filestore::fetch_range_with_size(
-            self.repo_ctx().repo().repo_blobstore(),
+            self.repo_ctx().repo().repo_blobstore().clone(),
             self.ctx(),
             &self.fetch_key,
             filestore::Range::sized(start, size),

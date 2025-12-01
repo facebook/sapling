@@ -90,7 +90,7 @@ impl GitLeaf {
         metadata.git_sha1.to_object_id()
     }
 
-    pub async fn new<B: KeyedBlobstore + Clone>(
+    pub async fn new<B: KeyedBlobstore + Clone + 'static>(
         ctx: &CoreContext,
         blobstore: &B,
         file_change: &BasicFileChange,

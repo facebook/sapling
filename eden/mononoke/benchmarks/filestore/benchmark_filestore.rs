@@ -120,8 +120,8 @@ fn log_perf<I, E: Debug>(stats: FutureStats, res: &Result<I, E>, len: u64) {
     };
 }
 
-async fn read<B: KeyedBlobstore>(
-    blobstore: &B,
+async fn read<B: KeyedBlobstore + Clone + 'static>(
+    blobstore: B,
     ctx: &CoreContext,
     content_metadata: &ContentMetadataV2,
 ) -> Result<(), Error> {
@@ -196,7 +196,7 @@ async fn run_benchmark_filestore<'a>(
     eprintln!("Write committed: {:?}", metadata.content_id.blobstore_key());
 
     for _c in 0..args.read_count {
-        read(&blobstore, ctx, &metadata).await?;
+        read(blobstore.clone(), ctx, &metadata).await?;
     }
 
     Ok(())

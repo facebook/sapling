@@ -36,7 +36,7 @@ use crate::incremental_hash::Sha256IncrementalHasher;
 use crate::incremental_hash::hash_bytes;
 
 /// Fetching through any alias should return the same outcome.
-async fn check_consistency<B: KeyedBlobstore>(
+async fn check_consistency<B: KeyedBlobstore + Clone + 'static>(
     blobstore: &B,
     ctx: &CoreContext,
     bytes: &Bytes,
@@ -52,10 +52,10 @@ async fn check_consistency<B: KeyedBlobstore>(
     let git_sha1 = FetchKey::Aliased(Alias::GitSha1(git_sha1.sha1()));
 
     let futs = vec![
-        filestore::fetch(blobstore, ctx, &content_id),
-        filestore::fetch(blobstore, ctx, &sha1),
-        filestore::fetch(blobstore, ctx, &sha256),
-        filestore::fetch(blobstore, ctx, &git_sha1),
+        filestore::fetch(blobstore.clone(), ctx, &content_id),
+        filestore::fetch(blobstore.clone(), ctx, &sha1),
+        filestore::fetch(blobstore.clone(), ctx, &sha256),
+        filestore::fetch(blobstore.clone(), ctx, &git_sha1),
     ];
 
     let futs: Vec<_> = futs

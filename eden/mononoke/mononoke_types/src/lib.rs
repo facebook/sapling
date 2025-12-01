@@ -6,7 +6,6 @@
  */
 
 //! Base types used throughout Mononoke.
-#![feature(round_char_boundary)]
 #![feature(debug_closure_helpers)]
 
 pub mod basename_suffix_skeleton_manifest_v3;

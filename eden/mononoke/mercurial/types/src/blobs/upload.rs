@@ -353,10 +353,10 @@ impl UploadHgFileContents {
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
     ) -> impl Future<Output = Result<HgFileNodeId>> + Send + use<> {
-        cloned!(blobstore);
+        cloned!(blobstore, ctx);
         async move {
             let file_bytes = async_stream::stream! {
-                let stream = filestore::fetch(&blobstore, &ctx, &FetchKey::Canonical(content_id))
+                let stream = filestore::fetch(blobstore, &ctx, &FetchKey::Canonical(content_id))
                     .await?
                     .ok_or(MononokeHgBlobError::ContentBlobMissing(content_id))?;
 

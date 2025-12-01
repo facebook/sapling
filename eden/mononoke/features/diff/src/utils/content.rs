@@ -57,7 +57,7 @@ pub async fn load_content(
         // to use the streaming version.
         // Use fetch_concat_opt which returns Option<Bytes> to properly handle missing content
         // TODO: Add size limit to avoid overloading the service
-        match filestore::fetch_concat_opt(&blobstore, ctx, &fetch_key).await {
+        match filestore::fetch_concat_opt(blobstore, ctx, &fetch_key).await {
             Ok(Some(bytes)) => Ok(Some(bytes)),
             Ok(None) => {
                 // Content not found - this is a client error

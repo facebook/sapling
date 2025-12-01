@@ -377,24 +377,23 @@ async fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
     let data = &b"foobar"[..];
     let req = request(data);
     let content_id = canonical(data);
-    borrowed!(ctx, blob, req);
 
     let part = &b"foo"[..];
     let part_id = chunk(part);
 
     filestore::store(
-        blob,
+        &blob,
         config,
-        ctx,
-        req,
+        &ctx,
+        &req,
         stream::once(future::ready(Ok(Bytes::from(data)))),
     )
     .await?;
 
-    assert!(blob.unlink(ctx, &part_id.blobstore_key()).await.is_ok());
+    assert!(blob.unlink(&ctx, &part_id.blobstore_key()).await.is_ok());
 
     // This should fail
-    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id)).await;
+    let res = filestore::fetch_concat_opt(&blob, &ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
     assert!(res.is_err());
@@ -673,7 +672,7 @@ async fn filestore_get_range(fb: FacebookInit) -> Result<()> {
 
     let res = async {
         let stream = filestore::fetch_range_with_size(
-            &blob,
+            blob.clone(),
             ctx,
             &FetchKey::Canonical(content_id),
             filestore::Range::sized(7, 5),
@@ -720,7 +719,7 @@ async fn filestore_get_invalid_range(fb: FacebookInit) -> Result<()> {
     .await?;
 
     let res = filestore::fetch_range_with_size(
-        &blob,
+        blob.clone(),
         ctx,
         &FetchKey::Canonical(content_id),
         filestore::Range::sized(0, 40),
@@ -730,7 +729,7 @@ async fn filestore_get_invalid_range(fb: FacebookInit) -> Result<()> {
     assert!(res.is_ok());
 
     let res = filestore::fetch_range_with_size(
-        &blob,
+        blob.clone(),
         ctx,
         &FetchKey::Canonical(content_id),
         filestore::Range::sized(0, HELLO_WORLD.len() as u64).strict(),
@@ -740,7 +739,7 @@ async fn filestore_get_invalid_range(fb: FacebookInit) -> Result<()> {
     assert!(res.is_ok());
 
     let res = filestore::fetch_range_with_size(
-        &blob,
+        blob.clone(),
         ctx,
         &FetchKey::Canonical(content_id),
         filestore::Range::sized(0, 40).strict(),
@@ -781,7 +780,7 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     // 5th one).
     let res = async {
         let stream = filestore::fetch_range_with_size(
-            blob,
+            blob.clone(),
             ctx,
             &FetchKey::Canonical(full_id),
             filestore::Range::sized(4, 6),
@@ -809,7 +808,7 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     // Check that we don't fetch things we do not need (extra chunks to the left).
     let res = async {
         let stream = filestore::fetch_range_with_size(
-            blob,
+            blob.clone(),
             ctx,
             &FetchKey::Canonical(full_id),
             filestore::Range::sized(3, 2),
@@ -831,7 +830,7 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     // Check that we don't fetch things we do not need (extra chunks to the right).
     let res = async {
         let stream = filestore::fetch_range_with_size(
-            blob,
+            blob.clone(),
             ctx,
             &FetchKey::Canonical(full_id),
             filestore::Range::sized(0, 3),
@@ -1293,7 +1292,7 @@ async fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let res = filestore::fetch_with_size(blob, ctx, &FetchKey::Canonical(content_id)).await;
+    let res = filestore::fetch_with_size(blob.clone(), ctx, &FetchKey::Canonical(content_id)).await;
 
     let (stream, size) = res?.unwrap();
 
@@ -1473,7 +1472,7 @@ async fn filestore_test_rechunk_if_needed_tiny_chunks(fb: FacebookInit) -> Resul
     assert_fetches_as(ctx, blob, full_id, vec!["foob", "ar"]).await
 }
 
-async fn assert_fetches_as<B: KeyedBlobstore, S: Into<Bytes>>(
+async fn assert_fetches_as<B: KeyedBlobstore + Clone + 'static, S: Into<Bytes>>(
     ctx: &CoreContext,
     blobstore: &B,
     content_id: ContentId,
@@ -1481,7 +1480,7 @@ async fn assert_fetches_as<B: KeyedBlobstore, S: Into<Bytes>>(
 ) -> Result<()> {
     let expected = expected.into_iter().map(|s| s.into()).collect();
     let key = FetchKey::Canonical(content_id);
-    let maybe_stream = filestore::fetch(blobstore, ctx, &key).await?;
+    let maybe_stream = filestore::fetch(blobstore.clone(), ctx, &key).await?;
     let res = match maybe_stream {
         Some(stream) => Some(stream.try_collect::<Vec<_>>().await?),
         None => None,

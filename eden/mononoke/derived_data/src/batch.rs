@@ -852,7 +852,7 @@ mod test {
                     let maybe_content = match maybe_content {
                         Some((content_id, file_type)) => {
                             let content = filestore::fetch_concat(
-                                &repo.repo_blobstore(),
+                                &repo.repo_blobstore().clone(),
                                 ctx,
                                 filestore::FetchKey::Canonical(content_id),
                             )
