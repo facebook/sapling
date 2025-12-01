@@ -157,7 +157,6 @@ dott_test(
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/lfs_server:lfs_server",
-        "//eden/mononoke/tools/blobimport:blobimport",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -192,7 +191,6 @@ dott_test(
     deps = [
         "//eden/mononoke:mononoke",
         "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/blobimport:blobimport",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
@@ -203,7 +201,6 @@ dott_test(
     deps = [
         "//eden/mononoke/jobs/walker:walker",
         "//eden/mononoke/tools/admin:admin",
-        "//eden/mononoke/tools/blobimport:blobimport",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
