@@ -399,6 +399,25 @@ except AttributeError:
         return False
 
 
+# Since Python 3.6 it is deprecated to create a SSLSocket instance directly,
+# and it should be created through SSLContext instead. The direct ssl.wrap_socket
+# method was removed in Python 3.12. This helper fixes the deprecated call by
+# first creating a SSLContext, in a way that is backwards compatible.
+def _py312_wrap_socket(sock, server_hostname=None, **ssl_options):
+    ssl_context = ssl.SSLContext(ssl_options.pop("ssl_version", ssl.PROTOCOL_TLS))
+    if "cert_reqs" in ssl_options:
+        ssl_context.verify_mode = ssl_options.pop("cert_reqs")
+    if "ca_certs" in ssl_options:
+        ssl_context.load_verify_locations(ssl_options.pop("ca_certs"))
+    if "certfile" in ssl_options:
+        ssl_context.load_cert_chain(
+            ssl_options.pop("certfile"), ssl_options.pop("keyfile")
+        )
+    if "ciphers" in ssl_options:
+        ssl_context.set_ciphers(ssl_options.pop("ciphers"))
+    return ssl_context.wrap_socket(sock, server_hostname=server_hostname, **ssl_options)
+
+
 class HTTPConnection:
     """Connection to a single http server.
 
@@ -461,7 +480,7 @@ class HTTPConnection:
         if ssl_wrap_socket is not None:
             _wrap_socket = ssl_wrap_socket
         else:
-            _wrap_socket = ssl.wrap_socket
+            _wrap_socket = _py312_wrap_socket
         call_wrap_socket = None
         handlesubar = _handlesarg(_wrap_socket, "server_hostname")
         if handlesubar is True:

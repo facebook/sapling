@@ -250,8 +250,8 @@ globalrevs.
 fallback to the slow lookup path.
 
   $ hg up -q m5000
-  *DeprecationWarning: ssl.wrap_socket() is deprecated, use SSLContext.wrap_socket() (glob) (?)
-  *return _wrap_socket(sock, **ssl_opts) (glob) (?)
+  *DeprecationWarning: ssl.PROTOCOL_TLS is deprecated (glob) (?)
+  *ssl_context = ssl.SSLContext(ssl_options.pop("ssl_version", ssl.PROTOCOL_TLS)) (glob) (?)
   failed to lookup globalrev 5000 from scmquery: * (glob)
   failed to lookup globalrev 5000 from scmquery: * (glob)
   failed to lookup globalrev 5000 from scmquery: * (glob)
