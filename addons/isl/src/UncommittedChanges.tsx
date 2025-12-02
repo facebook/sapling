@@ -877,7 +877,13 @@ function MergeConflictButtons({
         key="continue"
         disabled={!allConflictsResolved || shouldDisableButtons}
         data-testid="conflict-continue-button"
-        onClick={() => {
+        onClick={async () => {
+          const conflictFiles =
+            conflicts.state === 'loaded' ? conflicts.files.map(f => f.path) : [];
+          if (!(await confirmSuggestedEditsForFiles('merge-continue', 'accept', conflictFiles))) {
+            return;
+          }
+
           if (readAtom(shouldAutoResolveAllBeforeContinue)) {
             runOperation(new RunMergeDriversOperation());
           }
