@@ -11,7 +11,7 @@ import type {CommitInfo, RepoRelativePath, SlocInfo} from '../types';
 
 import {atom, useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
-import {useRef} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import serverAPI from '../ClientToServerAPI';
 import {commitInfoViewCurrentCommits} from '../CommitInfoView/CommitInfoState';
 import {getGeneratedFilesFrom} from '../GeneratedFile';
@@ -168,12 +168,6 @@ const fetchPendingAmendSloc = async (
   return slocInfo;
 };
 
-let pendingAmendRequestId = 0;
-const pendingAmendSlocAtom = atom(get => {
-  const selectedFiles = get(selectedFilesAtom);
-  return fetchPendingAmendSloc(get, selectedFiles, pendingAmendRequestId++);
-});
-
 /**
  * FETCH PENDING SLOC
  */
@@ -230,16 +224,6 @@ const fetchPendingSloc = async (
   return pendingLocData;
 };
 
-let pendingRequestId = 0;
-
-const pendingChangesSlocAtom = atom(get => {
-  const selectedFiles = get(selectedFilesAtom);
-  return fetchPendingSloc(get, selectedFiles, pendingRequestId++);
-});
-
-const pendingAmendSlocLoadableAtom = loadable(pendingAmendSlocAtom);
-const pendingChangesSlocLoadableAtom = loadable(pendingChangesSlocAtom);
-
 function useFetchWithPrevious(atom: Atom<Loadable<Promise<SlocInfo | undefined>>>): {
   slocInfo: SlocInfo | undefined;
   isLoading: boolean;
@@ -274,10 +258,65 @@ export function useFetchSignificantLinesOfCode(commit: CommitInfo) {
   return {slocInfo: result.data, isLoading: false};
 }
 
-export function useFetchPendingSignificantLinesOfCode() {
-  return useFetchWithPrevious(pendingChangesSlocLoadableAtom);
+// Debounce delay for SLOC requests to prevent spamming when many files are selected quickly
+const DEBOUNCE_DELAY_MS = 300;
+
+// Hook that debounces an atom value
+function useDebouncedAtomValue<T>(sourceAtom: Atom<T>, debounceMs: number): T {
+  const currentValue = useAtomValue(sourceAtom);
+  const [debouncedValue, setDebouncedValue] = useState(currentValue);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      setDebouncedValue(currentValue);
+    }, debounceMs);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [currentValue, debounceMs]);
+
+  return debouncedValue;
 }
 
+let pendingRequestId = 0;
+export function useFetchPendingSignificantLinesOfCode() {
+  // Debounce selected files to prevent spamming SLOC requests
+  const debouncedSelectedFiles = useDebouncedAtomValue(selectedFilesAtom, DEBOUNCE_DELAY_MS);
+
+  // Use a derived atom that depends on the debounced value
+  const debouncedAtom = useMemo(() => {
+    return atom(get => {
+      // Force the atom to use the debounced value by creating a dependency
+      // Note: we can't pass debouncedSelectedFiles directly to the atom,
+      // so we create a new fetch call with it
+      return fetchPendingSloc(get, debouncedSelectedFiles, pendingRequestId++);
+    });
+  }, [debouncedSelectedFiles]);
+
+  const loadableAtom = loadable(debouncedAtom);
+  return useFetchWithPrevious(loadableAtom);
+}
+
+let pendingAmendRequestId = 0;
 export function useFetchPendingAmendSignificantLinesOfCode() {
-  return useFetchWithPrevious(pendingAmendSlocLoadableAtom);
+  // Debounce selected files to prevent spamming SLOC requests
+  const debouncedSelectedFiles = useDebouncedAtomValue(selectedFilesAtom, DEBOUNCE_DELAY_MS);
+
+  // Use a derived atom that depends on the debounced value
+  const debouncedAtom = useMemo(() => {
+    return atom(get => {
+      return fetchPendingAmendSloc(get, debouncedSelectedFiles, pendingAmendRequestId++);
+    });
+  }, [debouncedSelectedFiles]);
+
+  const loadableAtom = loadable(debouncedAtom);
+  return useFetchWithPrevious(loadableAtom);
 }
