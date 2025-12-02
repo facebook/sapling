@@ -55,7 +55,11 @@ pub async fn verify(
         .ok_or_else(|| anyhow!("Content not found"))?;
 
     let (content_id, sha1, sha256, git_sha1, seeded_blake3) = futures::future::join5(
-        filestore::fetch(blobstore.clone(), ctx, &FetchKey::Canonical(metadata.content_id)),
+        filestore::fetch(
+            blobstore.clone(),
+            ctx,
+            &FetchKey::Canonical(metadata.content_id),
+        ),
         filestore::fetch(
             blobstore.clone(),
             ctx,
