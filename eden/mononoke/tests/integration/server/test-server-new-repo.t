@@ -13,15 +13,15 @@ setup configuration
   $ setup_common_config
   $ cd $TESTTMP
 
+setup repo
+  $ testtool_drawdag -R repo <<EOF
+  > A
+  > # bookmark: A master_bookmark
+  > EOF
+  A=aa53d24251ff3f54b1b2c29ae02826701b2abeb0079f1bb13b8434b54cd87675
+
 start mononoke
   $ start_and_wait_for_mononoke_server
-setup repo
-  $ hg clone -q mono:repo repo
-  $ cd repo
-  $ echo "a file content" > a
-  $ hg add a
-  $ hg ci -ma
-  $ hg push -q --to master_bookmark --create
 
 clone from the new repo as well
   $ hg clone -q mono:repo repo-clone
@@ -31,9 +31,9 @@ Push with bookmark
   $ echo withbook > withbook && hg addremove && hg ci -m withbook
   adding withbook
   $ hg push --to withbook --create
-  pushing rev 11f53bbd855a to destination mono:repo bookmark withbook
+  pushing rev cdbb2b8b2cf1 to destination mono:repo bookmark withbook
   searching for changes
   exporting bookmark withbook
   $ hg book --remote
-     remote/master_bookmark           0e7ec5675652a04069cbf976a42e45b740f3243c
-     remote/withbook                  11f53bbd855ac06521a8895bd57e6ce5f46a9980
+     remote/master_bookmark           20ca2a4749a439b459125ef0f6a4f26e88ee7538
+     remote/withbook                  cdbb2b8b2cf1612cd6a1271c96a7a89d98b36dd4
