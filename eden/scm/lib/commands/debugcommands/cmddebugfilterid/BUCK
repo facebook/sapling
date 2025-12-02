@@ -1,4 +1,3 @@
-load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("sapling")
@@ -20,15 +19,11 @@ rust_library(
         },
     }},
     crate_root = "src/lib.rs",
-    features = [
-        "fb",
-    ],
     deps = [
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/commands/cmdutil:cmdutil",
-        "//eden/scm/lib/repo:repo",
-    ] + ([] if rust_oss.is_oss_build() else [
         "//eden/scm/lib/filters:filters",
+        "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/types:types",
-    ]),
+    ],
 )

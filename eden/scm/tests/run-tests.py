@@ -2913,7 +2913,7 @@ class TestSuite(unittest.TestSuite):
                 timepassed = now - suitestart
                 lines = []
                 runningfrac = 0.0
-                for name, (test, teststart) in runningtests.items():
+                for name, (test, teststart) in list(runningtests.items()):
                     try:
                         saltseen, saltcount, linenum = getattr(test, "progress")
                         runningfrac += saltseen * 1.0 / saltcount

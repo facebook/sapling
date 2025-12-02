@@ -6,6 +6,7 @@ Test client git repo with lazy blob/tree objects.
   $ . $TESTDIR/git.sh
   $ git -c init.defaultBranch=main init -q server-repo
   $ cd server-repo
+  $ git config uploadpack.allowFilter true
   $ SL_IDENTITY=sl drawdag << 'EOS'
   > B  # bookmark main = B
   > |  # B/dir/1=2\n

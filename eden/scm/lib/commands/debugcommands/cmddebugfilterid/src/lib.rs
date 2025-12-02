@@ -7,17 +7,13 @@
 
 #![allow(unexpected_cfgs)]
 
-#[cfg(feature = "fb")]
 use std::str::FromStr;
 
 use clidispatch::ReqCtx;
 use cmdutil::define_flags;
-#[cfg(feature = "fb")]
 use filters::filter::FilterGenerator;
 use repo::repo::Repo;
-#[cfg(feature = "fb")]
 use types::HgId;
-#[cfg(feature = "fb")]
 use types::RepoPathBuf;
 
 define_flags! {
@@ -34,25 +30,18 @@ define_flags! {
 }
 
 pub fn run(ctx: ReqCtx<DebugFilterIdOpts>, repo: &Repo) -> cmdutil::Result<u8> {
-    #[cfg(feature = "fb")]
-    {
-        let config = repo.config();
-        let mut filter_gen =
-            FilterGenerator::from_dot_dirs(repo.dot_hg_path(), repo.shared_dot_hg_path(), config)?;
-        let paths = ctx
-            .opts
-            .args
-            .into_iter()
-            .map(RepoPathBuf::from_string)
-            .collect::<Result<Vec<RepoPathBuf>, _>>()?;
-        let commit_id = HgId::from_str(&ctx.opts.rev)?;
-        let filter = filter_gen.generate_filter_id(commit_id, &paths)?;
-        ctx.core.io.write(filter.id()?)?
-    }
-
-    #[cfg(not(feature = "fb"))]
-    let _ = (ctx, repo);
-
+    let config = repo.config();
+    let mut filter_gen =
+        FilterGenerator::from_dot_dirs(repo.dot_hg_path(), repo.shared_dot_hg_path(), config)?;
+    let paths = ctx
+        .opts
+        .args
+        .into_iter()
+        .map(RepoPathBuf::from_string)
+        .collect::<Result<Vec<RepoPathBuf>, _>>()?;
+    let commit_id = HgId::from_str(&ctx.opts.rev)?;
+    let filter = filter_gen.generate_filter_id(commit_id, &paths)?;
+    ctx.core.io.write(filter.id()?)?;
     Ok(0)
 }
 
