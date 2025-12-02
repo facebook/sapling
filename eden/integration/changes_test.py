@@ -7,9 +7,12 @@
 # pyre-unsafe
 
 import errno
+import json
 import os
 import re
+import subprocess
 import sys
+import time
 
 from eden.fs.service.eden.thrift_types import (
     Added,
@@ -18,6 +21,7 @@ from eden.fs.service.eden.thrift_types import (
     Dtype,
     EdenError,
     EdenErrorType,
+    FaultDefinition,
     LostChanges,
     LostChangesReason,
     Modified,
@@ -25,6 +29,7 @@ from eden.fs.service.eden.thrift_types import (
     Renamed,
     Replaced,
     StateEntered,
+    UnblockFaultArg,
 )
 
 from .lib import testcase
@@ -573,6 +578,145 @@ class ChangesTestCommon(testBase):
             changes = await self.getChangesSinceV2(position=position, root=b"root")
             expected_changes = []
             self.assertEqual(changes.changes, expected_changes)
+
+    async def test_sequence_race(self):
+        async with self.get_thrift_client() as client:
+            fault = FaultDefinition(
+                keyClass="changesSince",
+                keyValueRegex="sequence",
+                block=True,
+            )
+            await client.injectFault(fault)
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            # Run the "eden notify changes-since" CLI command.
+            # This won't succeed until we unblock the mount.
+            cmd, edenfsctl_env = self.eden.get_edenfsctl_cmd_env(
+                "notify",
+                "changes-since",
+                "-p",
+                f"{position.mountGeneration}:{position.sequenceNumber}:{position.snapshotHash.hex()}",
+                self.mount_path,
+                "--json",
+            )
+            proc = subprocess.Popen(
+                cmd, env=edenfsctl_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+
+            time.sleep(1)
+
+            for _ in range(10):
+                await self.repo_write_file(
+                    "test_folder/test_file", "contents", add=True
+                )
+                self.rm("test_folder/test_file")
+
+            await client.unblockFault(
+                UnblockFaultArg(keyClass="changesSince", keyValueRegex="sequence")
+            )
+            raw_changes, _ = proc.communicate()
+
+            sequence_result = json.loads(raw_changes)["to_position"]["sequence_number"]
+            # Expect that the sequence number is at least 20 higher than the original position
+            self.assertGreater(
+                sequence_result,
+                position.sequenceNumber + 19,
+                msg=f"{sequence_result}, {position.sequenceNumber}",
+            )
+
+    async def test_sequence_race_dirs(self):
+        self.mkdir("test_folder")
+        async with self.get_thrift_client() as client:
+            fault = FaultDefinition(
+                keyClass="changesSince",
+                keyValueRegex="sequence",
+                block=True,
+            )
+            await client.injectFault(fault)
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            # Run the "eden notify changes-since" CLI command.
+            # This won't succeed until we unblock the mount.
+            cmd, edenfsctl_env = self.eden.get_edenfsctl_cmd_env(
+                "notify",
+                "changes-since",
+                "-p",
+                f"{position.mountGeneration}:{position.sequenceNumber}:{position.snapshotHash.hex()}",
+                self.mount_path,
+                "--json",
+            )
+            proc = subprocess.Popen(
+                cmd, env=edenfsctl_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+
+            time.sleep(2)
+
+            for _ in range(10):
+                self.rename("test_folder", "test_folder2")
+                if sys.platform == "win32":
+                    time.sleep(1)
+                self.rename("test_folder2", "test_folder")
+                if sys.platform == "win32":
+                    time.sleep(1)
+
+            time.sleep(2)
+            await client.unblockFault(
+                UnblockFaultArg(keyClass="changesSince", keyValueRegex="sequence")
+            )
+            raw_changes, _ = proc.communicate()
+
+            sequence_result = json.loads(raw_changes)["to_position"]["sequence_number"]
+            # Expect that the sequence number is at least 20 higher than the original position
+            self.assertGreater(
+                sequence_result,
+                position.sequenceNumber + 19,
+                msg=f"{sequence_result}, {position.sequenceNumber}",
+            )
+
+    async def test_sequence_race_commits(self):
+        async with self.get_thrift_client() as client:
+            fault = FaultDefinition(
+                keyClass="changesSince",
+                keyValueRegex="sequence",
+                block=True,
+            )
+            await self.repo_write_file("test_folder/test_file", "contents", add=True)
+            commit1 = self.eden_repo.commit("commit 1")
+            await self.repo_write_file("test_folder/test_file2", "contents", add=True)
+            commit2 = self.eden_repo.commit("commit 2")
+            await client.injectFault(fault)
+            position = await client.getCurrentJournalPosition(self.mount_path_bytes)
+            # Run the "eden notify changes-since" CLI command.
+            # This won't succeed until we unblock the mount.
+            cmd, edenfsctl_env = self.eden.get_edenfsctl_cmd_env(
+                "notify",
+                "changes-since",
+                "-p",
+                f"{position.mountGeneration}:{position.sequenceNumber}:{position.snapshotHash.hex()}",
+                self.mount_path,
+                "--json",
+            )
+            proc = subprocess.Popen(
+                cmd, env=edenfsctl_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+
+            time.sleep(2)
+
+            for _ in range(10):
+                self.eden_repo.update(commit1)
+                self.eden_repo.update(commit2)
+
+            time.sleep(2)
+            await client.unblockFault(
+                UnblockFaultArg(keyClass="changesSince", keyValueRegex="sequence")
+            )
+            raw_changes, _ = proc.communicate()
+
+            sequence_result = json.loads(raw_changes)["to_position"]["sequence_number"]
+            # Expect that the sequence number is at least 20 higher than the original position
+            self.assertGreater(
+                sequence_result,
+                position.sequenceNumber + 19,
+                msg=f"{sequence_result}, {position.sequenceNumber}",
+            )
 
 
 @testcase.eden_repo_test

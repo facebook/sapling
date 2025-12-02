@@ -2445,6 +2445,9 @@ void EdenServiceHandler::sync_changesSinceV2(
   RootId currentRoot = toSnapshotId;
   RootIdCodec& rootIdCodec = mountHandle.getObjectStore();
 
+  auto& faultInjector = server_->getServerState()->getFaultInjector();
+  faultInjector.checkAsync("changesSince", "sequence").get();
+
   auto& fetchContext = helper->getFetchContext();
 
   auto& mount = mountHandle.getEdenMount();
@@ -2518,6 +2521,14 @@ void EdenServiceHandler::sync_changesSinceV2(
             XLOG(
                 DFATAL,
                 "FileChangeJournalDetal::isPath1Valid should never be false");
+          }
+
+          // Even though we picked up toSequence previously, if there was a
+          // change in between then and calling forEachDelta the latest sequence
+          // could be different.
+          if (toSequence.has_value() &&
+              current.sequenceID > toSequence.value()) {
+            toSequence = current.sequenceID;
           }
 
           // Check if it's a notifications state event.
@@ -2757,6 +2768,11 @@ void EdenServiceHandler::sync_changesSinceV2(
           return true;
         },
         [&](const RootUpdateJournalDelta& current) -> bool {
+          if (toSequence.has_value() &&
+              current.sequenceID > toSequence.value()) {
+            toSequence = current.sequenceID;
+          }
+
           CommitTransition commitTransition;
           commitTransition.from() = rootIdCodec.renderRootId(current.fromRoot);
           commitTransition.to() = rootIdCodec.renderRootId(currentRoot);
