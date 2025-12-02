@@ -41,7 +41,6 @@ sapling-repo-minimal-info = { version = "0.1.0", path = "../../repo/repo-minimal
 sapling-repourl = { version = "0.1.0", path = "../../repo/url" }
 sapling-spawn-ext = { version = "0.1.0", path = "../../spawn-ext" }
 sapling-staticconfig = { version = "0.1.0", path = "../static" }
-sapling-thrift-types = { version = "0.1.0", path = "../../thrift-types" }
 sapling-types = { version = "0.1.0", path = "../../types", optional = true }
 sapling-unionconfig = { version = "0.1.0", path = "../union" }
 sapling-util = { version = "0.1.0", path = "../../util" }
