@@ -67,11 +67,13 @@ impl Middleware for UploadPackRateLimitingMiddleware {
                 .client_info()
                 .and_then(|client_info| client_info.request_info.clone())
                 .and_then(|request_info| request_info.main_id);
+            let atlas = metadata.clientinfo_atlas();
             let mut scuba = self.scuba.clone();
             if let LoadShedResult::Fail(err) = rate_limiter.check_load_shed(
                 metadata.identities(),
                 main_client_id.as_deref(),
                 &mut scuba,
+                atlas,
             ) {
                 MononokeGitScubaHandler::log_rejected(
                     scuba,

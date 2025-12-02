@@ -115,6 +115,7 @@ impl RateLimiter for MononokeRateLimits {
         identities: &MononokeIdentitySet,
         main_id: Option<&str>,
         scuba: &mut MononokeScubaSampleBuilder,
+        atlas: Option<bool>,
     ) -> Result<RateLimitResult, Error> {
         for limit in &self.config.rate_limits {
             let fci_metric = limit.fci_metric;
@@ -123,7 +124,7 @@ impl RateLimiter for MononokeRateLimits {
                 continue;
             }
 
-            if !limit.applies_to_client(identities, main_id) {
+            if !limit.applies_to_client(identities, main_id, atlas) {
                 continue;
             }
 
@@ -155,6 +156,7 @@ impl RateLimiter for MononokeRateLimits {
         identities: &MononokeIdentitySet,
         main_id: Option<&str>,
         scuba: &mut MononokeScubaSampleBuilder,
+        atlas: Option<bool>,
     ) -> LoadShedResult {
         for limit in &self.config.load_shed_limits {
             if let LoadShedResult::Fail(reason) = limit.should_load_shed(
@@ -163,6 +165,7 @@ impl RateLimiter for MononokeRateLimits {
                 main_id,
                 scuba,
                 self.ods_counters.clone(),
+                atlas,
             ) {
                 return LoadShedResult::Fail(reason);
             }
@@ -188,6 +191,7 @@ impl RateLimiter for MononokeRateLimits {
         metric: Metric,
         identities: Option<MononokeIdentitySet>,
         main_id: Option<&str>,
+        atlas: Option<bool>,
     ) -> Option<crate::RateLimit> {
         // First, try to find a rate limit that matches the main client ID
         if let Some(main_id) = main_id {
@@ -218,7 +222,7 @@ impl RateLimiter for MononokeRateLimits {
                 .rate_limits
                 .iter()
                 .filter(|r| r.fci_metric.metric == metric)
-                .filter(|r| r.applies_to_client(&identities, None))
+                .filter(|r| r.applies_to_client(&identities, None, atlas))
                 .for_each(|r| match &r.target {
                     Some(crate::Target::Identities(is)) => {
                         let num_identities = is.len();

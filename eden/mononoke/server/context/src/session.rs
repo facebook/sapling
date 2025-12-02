@@ -125,10 +125,12 @@ impl SessionContainer {
                     .client_info()
                     .and_then(|client_info| client_info.request_info.clone())
                     .and_then(|request_info| request_info.main_id);
+                let atlas = self.metadata().clientinfo_atlas();
                 match limiter.check_load_shed(
                     self.metadata().identities(),
                     main_client_id.as_deref(),
                     scuba,
+                    atlas,
                 ) {
                     LoadShedResult::Fail(reason) => Err(reason),
                     LoadShedResult::Pass => Ok(()),
@@ -150,12 +152,14 @@ impl SessionContainer {
                     .client_info()
                     .and_then(|client_info| client_info.request_info.clone())
                     .and_then(|request_info| request_info.main_id);
+                let atlas = self.metadata().clientinfo_atlas();
                 match limiter
                     .check_rate_limit(
                         metric,
                         self.metadata().identities(),
                         main_client_id.as_deref(),
                         scuba,
+                        atlas,
                     )
                     .await
                     .unwrap_or(RateLimitResult::Pass)

@@ -17,6 +17,7 @@ use serde::Deserialize;
 use serde::de::Deserializer;
 use serde::de::Error as _;
 
+use crate::AtlasTarget;
 use crate::FciMetric;
 use crate::LoadShedLimit;
 use crate::Metric;
@@ -49,6 +50,7 @@ impl TryFrom<rate_limiting_config::Target> for Target {
                     .map(|s| MononokeIdentity::from_str(&s))
                     .collect::<Result<MononokeIdentitySet, _>>()?,
             )),
+            rate_limiting_config::Target::atlas(_) => Ok(Target::Atlas(AtlasTarget {})),
             _ => Err(anyhow!(
                 "Invalid target. Are you using deprecated `and`, `or` or `not` targets?"
             )),

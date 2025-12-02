@@ -218,10 +218,13 @@ async fn bump_counter_check_ratelimit(
         }
     };
 
+    let atlas = ctx.metadata().clientinfo_atlas();
+
     let limit = match rate_limiter.find_rate_limit(
         Metric::CommitsPerUser,
         None,
         client_request_info.main_id.as_deref(),
+        atlas,
     ) {
         Some(limit) => limit,
         None => {

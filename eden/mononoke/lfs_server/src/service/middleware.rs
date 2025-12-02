@@ -59,15 +59,20 @@ impl Middleware for ThrottleMiddleware {
             }
         }
 
-        let (identities, main_client_id) = match state.try_borrow::<MetadataState>() {
+        let (identities, main_client_id, atlas) = match state.try_borrow::<MetadataState>() {
             Some(metadata_state) => {
                 let client_id = metadata_state
                     .metadata()
                     .client_request_info()
                     .and_then(|info| info.main_id.clone());
-                (Some(metadata_state.metadata().identities()), client_id)
+                let atlas = metadata_state.metadata().clientinfo_atlas();
+                (
+                    Some(metadata_state.metadata().identities()),
+                    client_id,
+                    atlas,
+                )
             }
-            None => (None, None),
+            None => (None, None, None),
         };
 
         for limit in self.handle.get().loadshedding_limits().iter() {
@@ -77,6 +82,7 @@ impl Middleware for ThrottleMiddleware {
                 main_client_id.as_deref(),
                 &mut self.scuba,
                 OdsCounterManager::new(self.fb),
+                atlas,
             ) {
                 let err = HttpError::e429(err);
 

@@ -108,10 +108,12 @@ pub async fn request_handler(
                 .client_info()
                 .and_then(|client_info| client_info.request_info.clone())
                 .and_then(|request_info| request_info.main_id);
+            let atlas = metadata.clientinfo_atlas();
             rate_limiter.check_load_shed(
                 metadata.identities(),
                 main_client_id.as_deref(),
                 &mut scuba,
+                atlas,
             )
         } {
             scuba.log_with_msg("Request rejected due to load shedding", format!("{}", err));

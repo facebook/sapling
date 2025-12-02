@@ -70,11 +70,14 @@ impl Middleware for ThrottleMiddleware {
         })?;
 
         let identities = state.try_borrow::<MetadataState>()?.metadata().identities();
+        let metadata = state.try_borrow::<MetadataState>()?.metadata();
+        let atlas = metadata.clientinfo_atlas();
 
         let limit = rate_limiter.find_rate_limit(
             Metric::EdenApiQps,
             Some(identities.clone()),
             Some(&client_main_id),
+            atlas,
         )?;
 
         let enforced = match limit.body.raw_config.status {

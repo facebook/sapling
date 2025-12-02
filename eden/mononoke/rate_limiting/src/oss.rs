@@ -52,6 +52,7 @@ impl RateLimiter for FakeLimiter {
         _identities: &MononokeIdentitySet,
         _main_id: Option<&str>,
         _scuba: &mut MononokeScubaSampleBuilder,
+        _atlas: Option<bool>,
     ) -> Result<RateLimitResult, Error> {
         Ok(RateLimitResult::Pass)
     }
@@ -61,6 +62,7 @@ impl RateLimiter for FakeLimiter {
         _identities: &MononokeIdentitySet,
         _main_id: Option<&str>,
         _scuba: &mut MononokeScubaSampleBuilder,
+        _atlas: Option<bool>,
     ) -> LoadShedResult {
         LoadShedResult::Pass
     }
@@ -76,6 +78,7 @@ impl RateLimiter for FakeLimiter {
         _metric: Metric,
         _identities: Option<MononokeIdentitySet>,
         _main_id: Option<&str>,
+        _atlas: Option<bool>,
     ) -> Option<crate::RateLimit> {
         None
     }

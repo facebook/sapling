@@ -59,6 +59,7 @@ pub trait RateLimiter {
         identities: &MononokeIdentitySet,
         main_id: Option<&str>,
         scuba: &mut MononokeScubaSampleBuilder,
+        atlas: Option<bool>,
     ) -> Result<RateLimitResult, Error>;
 
     fn check_load_shed(
@@ -66,6 +67,7 @@ pub trait RateLimiter {
         identities: &MononokeIdentitySet,
         main_id: Option<&str>,
         scuba: &mut MononokeScubaSampleBuilder,
+        atlas: Option<bool>,
     ) -> LoadShedResult;
 
     fn bump_load(&self, metric: Metric, scope: Scope, load: LoadCost);
@@ -77,6 +79,7 @@ pub trait RateLimiter {
         metric: Metric,
         identities: Option<MononokeIdentitySet>,
         main_id: Option<&str>,
+        atlas: Option<bool>,
     ) -> Option<RateLimit>;
 }
 
@@ -192,11 +195,16 @@ pub struct RateLimit {
 
 #[cfg(fbcode_build)]
 impl RateLimit {
-    fn applies_to_client(&self, identities: &MononokeIdentitySet, main_id: Option<&str>) -> bool {
+    fn applies_to_client(
+        &self,
+        identities: &MononokeIdentitySet,
+        main_id: Option<&str>,
+        atlas: Option<bool>,
+    ) -> bool {
         match &self.target {
             // TODO (harveyhunt): Pass identities rather than Some(identities) once LFS server has
             // been updated to require certs.
-            Some(t) => t.matches_client(Some(identities), main_id),
+            Some(t) => t.matches_client(Some(identities), main_id, atlas),
             None => true,
         }
     }
@@ -245,9 +253,10 @@ impl LoadShedLimit {
         main_id: Option<&str>,
         scuba: &mut MononokeScubaSampleBuilder,
         ods_counters: Arc<RwLock<OdsCounterManager>>,
+        atlas: Option<bool>,
     ) -> LoadShedResult {
         let applies_to_client = match &self.target {
-            Some(t) => t.matches_client(identities, main_id),
+            Some(t) => t.matches_client(identities, main_id, atlas),
             None => true,
         };
 
@@ -336,6 +345,7 @@ pub enum Target {
     StaticSlice(StaticSlice),
     MainClientId(String),
     Identities(MononokeIdentitySet),
+    Atlas(AtlasTarget),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -363,6 +373,11 @@ pub struct StaticSlice {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct AtlasTarget {
+    // Empty struct - applies to all Atlas environments
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum StaticSliceTarget {
     Identities(MononokeIdentitySet),
     MainClientId(String),
@@ -373,6 +388,7 @@ impl Target {
         &self,
         identities: Option<&MononokeIdentitySet>,
         main_client_id: Option<&str>,
+        atlas: Option<bool>,
     ) -> bool {
         match self {
             Self::Identities(target_identities) => {
@@ -398,6 +414,10 @@ impl Target {
                     true => in_throttled_slice(identities, s.slice_pct, &s.nonce),
                     false => false,
                 }
+            }
+            Self::Atlas(_atlas_target) => {
+                // Check if the client is an Atlas client
+                atlas == Some(true)
             }
         }
     }
@@ -462,28 +482,28 @@ mod test {
 
         let ident_target = Target::Identities([test_ident.clone()].into());
 
-        assert!(!ident_target.matches_client(empty_idents.as_ref(), None));
+        assert!(!ident_target.matches_client(empty_idents.as_ref(), None, None));
 
         let mut idents = MononokeIdentitySet::new();
         idents.insert(test_ident.clone());
         idents.insert(test2_ident.clone());
         let idents = Some(idents);
 
-        assert!(ident_target.matches_client(idents.as_ref(), None));
+        assert!(ident_target.matches_client(idents.as_ref(), None, None));
 
         let two_idents = Target::Identities([test_ident, test2_ident].into());
 
-        assert!(two_idents.matches_client(idents.as_ref(), None));
+        assert!(two_idents.matches_client(idents.as_ref(), None, None));
 
         let client_id_target = Target::MainClientId(test_client_id.clone());
-        assert!(client_id_target.matches_client(None, Some(&test_client_id)));
+        assert!(client_id_target.matches_client(None, Some(&test_client_id), None));
 
         // Check that all match if the target is empty.
         let empty_ident_target = Target::Identities([].into());
-        assert!(empty_ident_target.matches_client(None, None));
-        assert!(empty_ident_target.matches_client(idents.as_ref(), None));
-        assert!(empty_ident_target.matches_client(None, Some(&test_client_id)));
-        assert!(empty_ident_target.matches_client(idents.as_ref(), Some(&test_client_id)));
+        assert!(empty_ident_target.matches_client(None, None, None));
+        assert!(empty_ident_target.matches_client(idents.as_ref(), None, None));
+        assert!(empty_ident_target.matches_client(None, Some(&test_client_id), None));
+        assert!(empty_ident_target.matches_client(idents.as_ref(), Some(&test_client_id), None));
     }
 
     #[mononoke::test]
@@ -519,6 +539,19 @@ mod test {
         ));
     }
 
+    #[mononoke::test]
+    fn test_atlas_target_matches() {
+        // Test Atlas target - matches all Atlas
+        let atlas_target = Target::Atlas(AtlasTarget {});
+
+        // Should match any Atlas client
+        assert!(atlas_target.matches_client(None, None, Some(true)));
+
+        // Should not match non-Atlas clients
+        assert!(!atlas_target.matches_client(None, None, Some(false)));
+        assert!(!atlas_target.matches_client(None, None, None));
+    }
+
     #[cfg(fbcode_build)]
     #[mononoke::test]
     fn test_static_slice_of_identity_set() {
@@ -552,19 +585,19 @@ mod test {
         let idents2 = Some(idents);
 
         // All of SERVICE_IDENTITY: bar
-        assert!(ident_target.matches_client(idents1.as_ref(), None));
+        assert!(ident_target.matches_client(idents1.as_ref(), None, None));
 
         // 20% of SERVICE_IDENTITY: bar. ratelimited host
-        assert!(twenty_pct_service_identity.matches_client(idents1.as_ref(), None));
+        assert!(twenty_pct_service_identity.matches_client(idents1.as_ref(), None, None));
 
         // 20% of SERVICE_IDENTITY: bar. not ratelimited host
-        assert!(!twenty_pct_service_identity.matches_client(idents2.as_ref(), None));
+        assert!(!twenty_pct_service_identity.matches_client(idents2.as_ref(), None, None));
 
         // 100% of SERVICE_IDENTITY: bar
-        assert!(hundred_pct_service_identity.matches_client(idents1.as_ref(), None));
+        assert!(hundred_pct_service_identity.matches_client(idents1.as_ref(), None, None));
 
         // 100% of SERVICE_IDENTITY: bar
-        assert!(hundred_pct_service_identity.matches_client(idents2.as_ref(), None));
+        assert!(hundred_pct_service_identity.matches_client(idents2.as_ref(), None, None));
     }
 
     #[cfg(fbcode_build)]
@@ -623,25 +656,31 @@ mod test {
             rate_limiter.find_rate_limit(
                 Metric::EgressBytes,
                 Some(idents.clone()),
-                Some("non_matching_id")
+                Some("non_matching_id"),
+                None,
             ) == Some(empty_target_rate_limit)
         );
         assert!(
             rate_limiter.find_rate_limit(
                 Metric::EgressBytes,
                 Some(idents.clone()),
-                Some("client_id")
+                Some("client_id"),
+                None,
             ) == Some(main_client_id_rate_limit.clone())
         );
 
         idents.insert(MononokeIdentity::new("TIER", "foo"));
         assert!(
-            rate_limiter.find_rate_limit(Metric::EgressBytes, Some(idents.clone()), None)
+            rate_limiter.find_rate_limit(Metric::EgressBytes, Some(idents.clone()), None, None,)
                 == Some(identities_rate_limit)
         );
         assert!(
-            rate_limiter.find_rate_limit(Metric::EgressBytes, Some(idents), Some("client_id"))
-                == Some(main_client_id_rate_limit)
+            rate_limiter.find_rate_limit(
+                Metric::EgressBytes,
+                Some(idents),
+                Some("client_id"),
+                None,
+            ) == Some(main_client_id_rate_limit)
         );
     }
 }
