@@ -39,7 +39,10 @@ cpp_library(
     ],
     deps = [
         "//eden/common/utils:enum",
+        "//eden/fs/config:config",
         "//eden/fs/inodes/fscatalog:fsinodecatalog",
+        "//eden/fs/store:store",
+        "//eden/fs/store/hg:hg_proxy_hash",
         "//folly:conv",
         "//folly:exception_wrapper",
         "//folly:file",
@@ -57,9 +60,12 @@ cpp_library(
         ":overlay_checker_util",
         "//eden/common/utils:immediate_future",
         "//eden/common/utils:path",
+        "//eden/common/utils:ref_ptr",
         "//eden/fs/inodes:inode_catalog",
         "//eden/fs/inodes:inode_number",
         "//eden/fs/model:model",
+        "//eden/fs/store:store_type",
+        "//eden/fs/telemetry:stats",
         "//folly:cpp_attributes",
     ],
     external_deps = [

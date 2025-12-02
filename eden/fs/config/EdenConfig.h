@@ -2026,6 +2026,17 @@ class EdenConfig : private ConfigSettingManager {
       4,
       this};
 
+  /**
+   * Use fsck to "repair" hg proxy hashes in the overlay by migrating them to
+   * modern "embedded" ids.
+   *
+   * The migration is only run for old clones from 2022 or earlier, once.
+   */
+  ConfigSetting<bool> fsckMigrateProxyHashes{
+      "fsck:migrate-proxy-hashes",
+      true,
+      this};
+
   // [glob]
 
   /**

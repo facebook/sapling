@@ -27,7 +27,11 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/common/utils/EnumValue.h"
+#include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/inodes/fscatalog/FsInodeCatalog.h"
+#include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/telemetry/EdenStats.h"
 
 using apache::thrift::CompactSerializer;
 using folly::ByteRange;
@@ -49,17 +53,26 @@ struct OverlayChecker::Impl {
   FsFileContentStore* const fcs;
   std::optional<InodeNumber> loadedNextInodeNumber;
   InodeCatalog::LookupCallback& lookupCallback;
+  std::shared_ptr<LocalStore> localStore;
+  EdenStatsPtr stats;
+  bool shouldMigrateLegacyProxyHashes;
   std::unordered_map<InodeNumber, InodeInfo> inodes;
 
   Impl(
       InodeCatalog* inodeCatalog,
       FsFileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
-      InodeCatalog::LookupCallback& lookupCallback)
+      InodeCatalog::LookupCallback& lookupCallback,
+      std::shared_ptr<LocalStore> localStore,
+      EdenStatsPtr stats,
+      bool shouldMigrateLegacyProxyHashes)
       : inodeCatalog{inodeCatalog},
         fcs{fcs},
         loadedNextInodeNumber{nextInodeNumber},
-        lookupCallback{lookupCallback} {}
+        lookupCallback{lookupCallback},
+        localStore{std::move(localStore)},
+        stats{std::move(stats)},
+        shouldMigrateLegacyProxyHashes{shouldMigrateLegacyProxyHashes} {}
 };
 
 class OverlayChecker::RepairState {
@@ -89,7 +102,8 @@ class OverlayChecker::RepairState {
   template <typename Arg1, typename... Args>
   void warn(const Arg1& arg1, const Args&... args) {
     auto msg = fmt::to_string(
-        fmt::join(std::make_tuple<const Arg1&, const Args&...>(arg1, args...)));
+        fmt::join(
+            std::make_tuple<const Arg1&, const Args&...>(arg1, args...), ""));
     XLOGF(WARN, "fsck:{}:{}", checker_->impl_->fcs->getLocalDir(), msg);
     logLine(msg);
   }
@@ -757,17 +771,121 @@ class OverlayChecker::BadNextInodeNumber : public OverlayChecker::Error {
   InodeNumber expectedNumber_;
 };
 
+class OverlayChecker::LegacyProxyHash : public OverlayChecker::Error {
+ public:
+  explicit LegacyProxyHash(InodeNumber parent) : parent_(parent) {}
+
+  string getMessage(OverlayChecker* checker) const override {
+    auto parentPath = checker->computePath(parent_);
+    return fmt::format(
+        "directory {} has legacy proxy hash entries that need migration",
+        parentPath.toString());
+  }
+
+  bool repair(RepairState& repair) const override {
+    // Check if we have LocalStore access
+    if (!repair.checker()->impl_->localStore ||
+        !repair.checker()->impl_->stats) {
+      repair.warn(
+          "Legacy proxy hash detected but cannot be repaired without LocalStore access");
+      return false;
+    }
+
+    try {
+      // Load the parent directory
+      auto parentDirOpt = repair.inodeCatalog()->loadOverlayDir(parent_);
+      if (!parentDirOpt.has_value()) {
+        repair.warn(
+            "Failed to load parent directory ",
+            repair.checker()->computePath(parent_).toString(),
+            " to repair legacy proxy hash");
+        return false;
+      }
+
+      auto parentDir = parentDirOpt.value();
+      auto entries = parentDir.entries();
+
+      // Migrate all legacy proxy hashes in this directory
+      size_t migratedCount = 0;
+      for (auto& [childNameStr, entry] : *entries) {
+        const auto& id = entry.hash().as_const();
+        if (!id.has_value() || id->empty()) {
+          continue;
+        }
+
+        if (!HgProxyHash::looksLikeLegacyProxyHash(
+                folly::ByteRange{id.value()})) {
+          continue;
+        }
+
+        // Load the proxy hash from LocalStore to get the actual hgRevHash and
+        // path
+        ObjectId objectId(id.value());
+        auto proxyHash = HgProxyHash::load(
+            repair.checker()->impl_->localStore.get(),
+            objectId,
+            "fsck repair",
+            *repair.checker()->impl_->stats);
+
+        // Re-encode using the modern embedded format
+        auto modernObjectId = HgProxyHash::store(
+            proxyHash.path(), proxyHash.revHash(), HgObjectIdFormat::WithPath);
+
+        // Update the entry with the modern ObjectId
+        entry.hash() = modernObjectId.asString();
+        ++migratedCount;
+      }
+
+      if (migratedCount == 0) {
+        // This shouldn't happen since we detected at least one legacy proxy
+        // hash
+        repair.warn(
+            "No legacy proxy hashes found in parent directory ",
+            repair.checker()->computePath(parent_).toString(),
+            " during repair");
+        return false;
+      }
+
+      // Save the updated overlay directory once with all migrations
+      repair.inodeCatalog()->saveOverlayDir(parent_, std::move(parentDir));
+
+      repair.log(
+          "Successfully migrated ",
+          migratedCount,
+          " legacy proxy hash entries in directory ",
+          repair.checker()->computePath(parent_).toString());
+      return true;
+    } catch (const std::exception& ex) {
+      repair.warn(
+          "Failed to repair legacy proxy hash in directory ",
+          repair.checker()->computePath(parent_).toString(),
+          ": ",
+          folly::exceptionStr(ex));
+      return false;
+    }
+  }
+
+ private:
+  InodeNumber parent_;
+};
+
 OverlayChecker::OverlayChecker(
     InodeCatalog* inodeCatalog,
     FsFileContentStore* fcs,
-    optional<InodeNumber> nextInodeNumber,
+    std::optional<InodeNumber> nextInodeNumber,
     InodeCatalog::LookupCallback& lookupCallback,
-    uint64_t numErrorDiscoveryThreads)
+    uint64_t numErrorDiscoveryThreads,
+    std::shared_ptr<LocalStore> localStore,
+    EdenStatsPtr stats,
+    bool shouldMigrateLegacyProxyHashes)
     : impl_{std::make_unique<Impl>(
           inodeCatalog,
           fcs,
           nextInodeNumber,
-          lookupCallback)},
+          lookupCallback,
+          std::move(localStore),
+          std::move(stats),
+          shouldMigrateLegacyProxyHashes)},
       numErrorDiscoveryThreads_{numErrorDiscoveryThreads} {
   XCHECK_GT(numErrorDiscoveryThreads_, 0u);
 }
@@ -1164,6 +1282,8 @@ std::optional<InodeInfo> OverlayChecker::loadInodeInfoFromFileContentStore(
 
 void OverlayChecker::linkInodeChildren() {
   for (const auto& [parentInodeNumber, parent] : impl_->inodes) {
+    bool hasLegacyProxyHash = false;
+
     for (const auto& [childName, child] : *parent.children.entries()) {
       auto childRawInode = *child.inodeNumber();
       if (childRawInode == 0) {
@@ -1194,6 +1314,19 @@ void OverlayChecker::linkInodeChildren() {
 
         // TODO: It would be nice to also check for mismatch between
         // childInfo->type and child.mode
+      }
+
+      // Check if this child has a legacy proxy hash
+      // Only check for legacy proxy hashes if we're in migration mode
+      if (impl_->shouldMigrateLegacyProxyHashes) {
+        const auto& id = child.hash();
+        if (!hasLegacyProxyHash && id.has_value() && !id->empty()) {
+          if (HgProxyHash::looksLikeLegacyProxyHash(
+                  folly::ByteRange{id.value()})) {
+            addError<LegacyProxyHash>(parentInodeNumber);
+            hasLegacyProxyHash = true;
+          }
+        }
       }
     }
   }

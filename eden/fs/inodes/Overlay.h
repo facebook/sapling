@@ -121,6 +121,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   [[nodiscard]] folly::SemiFuture<folly::Unit> initialize(
       const std::shared_ptr<ReloadableConfig>& config,
+      std::shared_ptr<LocalStore> localStore = nullptr,
       std::optional<AbsolutePath> mountPath = std::nullopt,
       OverlayChecker::ProgressCallback&& progressCallback = [](auto) {},
       InodeCatalog::LookupCallback&& lookupCallback =
@@ -347,11 +348,19 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   void initOverlay(
       std::shared_ptr<ReloadableConfig> config,
+      std::shared_ptr<LocalStore> localStore,
       std::optional<AbsolutePath> mountPath,
       const OverlayChecker::ProgressCallback& progressCallback,
       InodeCatalog::LookupCallback& lookupCallback);
   void gcThread() noexcept;
   void handleGCRequest(GCRequest& request);
+
+  /**
+   * Helper function to determine if we should force a one-time fsck run
+   * to migrate legacy proxy hashes for old clones.
+   */
+  bool shouldForceFsckForMigration(
+      const std::shared_ptr<ReloadableConfig>& config);
 
   // Serialize EdenFS overlay data structure into Thrift data structure
   overlay::OverlayEntry serializeOverlayEntry(const DirEntry& entry);

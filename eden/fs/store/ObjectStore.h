@@ -149,6 +149,14 @@ class ObjectStore : public IObjectStore,
   void deprioritizeWhenFetchHeavy(ObjectFetchContext& context) const;
 
   /**
+   * Get the LocalStore pointer. This is used by OverlayChecker to access
+   * HgProxyHash data during fsck.
+   */
+  std::shared_ptr<LocalStore> getLocalStore() const {
+    return localStore_;
+  }
+
+  /**
    * Each BackingStore implementation defines its interpretation of root IDs.
    * This function gives the BackingStore a chance to parse and canonicalize the
    * root ID at API boundaries such as Thrift.

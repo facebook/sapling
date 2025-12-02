@@ -46,6 +46,8 @@ namespace facebook::eden {
 namespace {
 constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
 constexpr uint64_t ioClosedMask = 1ull << 63;
+constexpr folly::StringPiece kMigratedProxyHashesMarker =
+    "migrated-proxy-hashes";
 
 std::unique_ptr<InodeCatalog> makeInodeCatalog(
     AbsolutePathPiece localDir,
@@ -301,6 +303,7 @@ struct statfs Overlay::statFs() {
 
 folly::SemiFuture<Unit> Overlay::initialize(
     const std::shared_ptr<ReloadableConfig>& config,
+    std::shared_ptr<LocalStore> localStore,
     std::optional<AbsolutePath> mountPath,
     OverlayChecker::ProgressCallback&& progressCallback,
     InodeCatalog::LookupCallback&& lookupCallback) {
@@ -314,6 +317,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
 
   gcThread_ = std::thread([this,
                            config,
+                           localStore = std::move(localStore),
                            mountPath = std::move(mountPath),
                            progressCallback = std::move(progressCallback),
                            lookupCallback = lookupCallback,
@@ -321,6 +325,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
     try {
       initOverlay(
           std::move(config),
+          std::move(localStore),
           std::move(mountPath),
           progressCallback,
           lookupCallback);
@@ -343,6 +348,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
 
 void Overlay::initOverlay(
     std::shared_ptr<ReloadableConfig> config,
+    std::shared_ptr<LocalStore> localStore,
     std::optional<AbsolutePath> mountPath,
     [[maybe_unused]] const OverlayChecker::ProgressCallback& progressCallback,
     [[maybe_unused]] InodeCatalog::LookupCallback& lookupCallback) {
@@ -365,6 +371,7 @@ void Overlay::initOverlay(
     // TODO(helsel): teach SqliteInodeCatalog to manage its own fileContentStore
     fileContentStore_->initialize(/*createIfNonExisting=*/true);
   }
+
   if (!optNextInodeNumber.has_value()) {
 #ifndef _WIN32
     // FSCK is not currently supported for LMDB overlays. If we cannot load the
@@ -395,7 +402,21 @@ void Overlay::initOverlay(
         WARN,
         "Overlay {} was not shut down cleanly.  Performing fsck scan.",
         localDir_);
+#else
+    // SqliteInodeCatalog will always return the value of next Inode number, if
+    // we end up here - it's a bug.
+    EDEN_BUG() << "Tree Overlay is null value for NextInodeNumber";
+#endif
+  } else {
+    hadCleanStartup_ = true;
+  }
 
+#ifndef _WIN32
+  // Check if we need to force a one-time fsck run to migrate legacy proxy
+  // hashes
+  bool forceFsckForMigration = shouldForceFsckForMigration(config);
+
+  if (!hadCleanStartup_ || forceFsckForMigration) {
     // TODO(zeyi): `OverlayCheck` should be associated with the specific
     // Overlay implementation.
     //
@@ -407,7 +428,10 @@ void Overlay::initOverlay(
         static_cast<FsFileContentStore*>(fileContentStore_.get()),
         std::nullopt,
         lookupCallback,
-        config->getEdenConfig()->fsckNumErrorDiscoveryThreads.getValue());
+        config->getEdenConfig()->fsckNumErrorDiscoveryThreads.getValue(),
+        localStore,
+        stats_.copy(),
+        forceFsckForMigration);
     folly::stop_watch<> fsckRuntime;
     checker.scanForErrors(progressCallback);
     auto result = checker.repairErrors();
@@ -428,14 +452,22 @@ void Overlay::initOverlay(
     }
 
     optNextInodeNumber = checker.getNextInodeNumber();
-#else
-    // SqliteInodeCatalog will always return the value of next Inode number, if
-    // we end up here - it's a bug.
-    EDEN_BUG() << "Tree Overlay is null value for NextInodeNumber";
-#endif
-  } else {
-    hadCleanStartup_ = true;
+
+    // If we forced fsck for migration, create the migrated-proxy-hashes marker
+    // file
+    if (forceFsckForMigration) {
+      auto clientDir = localDir_.dirname();
+      auto migratedFile =
+          clientDir + PathComponentPiece(kMigratedProxyHashesMarker);
+      folly::File file(
+          migratedFile.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
+      XLOGF(
+          INFO,
+          "Created migrated-proxy-hashes marker file at {}",
+          migratedFile);
+    }
   }
+#endif // !_WIN32
 
   // On Windows, we need to scan the state of the repository every time at
   // start up to find any potential changes happened when EdenFS is not
@@ -851,6 +883,47 @@ void Overlay::closeAndWaitForOutstandingIO() {
   if (outstanding & ioCountMask) {
     lastOutstandingRequestIsComplete_.wait();
   }
+}
+
+bool Overlay::shouldForceFsckForMigration(
+    const std::shared_ptr<ReloadableConfig>& config) {
+  if (!config->getEdenConfig()->fsckMigrateProxyHashes.getValue()) {
+    return false;
+  }
+
+  // (Assume) the client directory is the parent of the overlay directory.
+  auto clientDir = localDir_.dirname();
+
+  // Check if we've already migrated.
+  auto migratedFile =
+      clientDir + PathComponentPiece(kMigratedProxyHashesMarker);
+  if (access(migratedFile.c_str(), F_OK) == 0 || errno != ENOENT) {
+    // Migration file exists or we got unexpected error - don't migrate.
+    return false;
+  }
+
+  // Check the mtime of clone-succeeded file.
+  auto cloneSucceededFile = clientDir + PathComponentPiece("clone-succeeded");
+  struct stat st{};
+  if (stat(cloneSucceededFile.c_str(), &st) != 0) {
+    // clone-succeeded doesn't exist (unexpected) - don't migrate
+    return false;
+  }
+
+  // We stopped writing proxy hashes in D38867736.
+  // We deleted the code to write proxy hashes in D40032883.
+  // 2022-07-01 00:00:00 -0700
+  constexpr time_t cutoffTime = 1656658800;
+  if (st.st_mtime < cutoffTime) {
+    // Clone is old - could have proxy hashes.
+    XLOGF(
+        INFO,
+        "clone-succeeded file is older than 2022-07-01 ({}). Forcing fsck to migrate legacy proxy hashes.",
+        st.st_mtime);
+    return true;
+  }
+
+  return false;
 }
 
 void Overlay::gcThread() noexcept {
