@@ -21,7 +21,6 @@ rpm.builder(
     autoclean_keep_versions = 200,
     buck_opts = rpm.buck_opts(
         config = {
-            "fbcode.dwp": "true",
             # split-dwarf is required for reduce binary size
             "fbcode.split-dwarf": "true",
         },
