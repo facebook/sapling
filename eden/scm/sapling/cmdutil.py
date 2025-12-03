@@ -3399,11 +3399,11 @@ def displaygraph(
     renderer = renderer(minheight)
 
     if reserved:
-        for rev in reserved:
-            renderer.reserve(rev)
+        for graphnodeid in reserved:
+            renderer.reserve(graphnodeid)
 
     show_abbreviated_ancestors = ShowAbbreviatedAncestorsWhen.load_from_config(repo.ui)
-    for rev, _type, ctx, parents in dag:
+    for graphnodeid, _type, ctx, parents in dag:
         curr_repo = ctx.repo()
         char = formatnode(curr_repo, ctx)
         copies = None
@@ -3428,16 +3428,16 @@ def displaygraph(
         else:
             gpnodes = curr_repo.changelog.tonodes(gprevs)
         revcache = {"copies": copies, "gpnodes": gpnodes}
-        width = renderer.width(rev, parents)
+        width = renderer.width(graphnodeid, parents)
         displayer.show(
             ctx, revcache=revcache, matchfn=revmatchfn, _graphwidth=width, **props
         )
         # The Rust graph renderer works with unicode.
         msg = "".join(
             s if isinstance(s, str) else s.decode(errors="replace")
-            for s in displayer.hunk.pop(rev)
+            for s in displayer.hunk.pop(graphnodeid)
         )
-        nextrow = renderer.nextrow(rev, parents, char, msg)
+        nextrow = renderer.nextrow(graphnodeid, parents, char, msg)
         if out is not None:
             out(nextrow)
         else:
