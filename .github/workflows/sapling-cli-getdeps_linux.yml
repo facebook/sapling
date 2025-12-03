@@ -3,7 +3,12 @@
 name: Sapling CLI Getdeps Linux
 
 on:
-  workflow_dispatch
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
 
 permissions:
   contents: read  #  to fetch code (actions/checkout)
