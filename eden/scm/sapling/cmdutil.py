@@ -67,7 +67,7 @@ from . import (
 )
 from .i18n import _, _x
 from .node import bin, hex, nullid, nullrev, short
-from .utils import pathaclutil, subtreeutil
+from .utils import iterutil, pathaclutil, subtreeutil
 
 if typing.TYPE_CHECKING:
     from .ui import ui
@@ -3517,8 +3517,40 @@ def _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher):
 
     repogetrenamed[repo.root] = getrenamed
     repofilematcher[repo.root] = filematcher
+    return _dagfollowxrepo(repo, pats, opts, revdag, repogetrenamed, repofilematcher)
 
-    return revdag
+
+def _dagfollowxrepo(repo, pats, opts, revdag, repogetrenamed, repofilematcher):
+    for item, is_last in iterutil.mark_last(revdag):
+        # It currently doesn't handle multiple imports/merges. In those cases, the
+        # xrepo operation can appear in the middle of the dag.
+        if is_last:
+            xrepoinfo = xrepologinfo(repo, pats, opts, item[2])
+            if not xrepoinfo:
+                yield item
+                break
+
+            from_repo, from_commit, from_path = xrepoinfo
+            pats = [os.path.join(from_repo.root, from_path)]
+            opts = opts.copy()
+            opts["rev"] = [f"reverse(::{from_commit})"]
+            for from_item, is_first in iterutil.mark_first(
+                _logdagwalker(
+                    from_repo,
+                    pats,
+                    opts,
+                    repogetrenamed,
+                    repofilematcher,
+                )
+            ):
+                if is_first:
+                    # clear the in-repo missing parents and add cross-repo parents
+                    item[3].clear()
+                    item[3].append((graphmod.XREPOPARENT, from_item[0]))
+                    yield item
+                yield from_item
+        else:
+            yield item
 
 
 def xrepologinfo(curr_repo, curr_pats, curr_opts, lastctx):

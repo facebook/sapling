@@ -132,3 +132,25 @@ Test xreponame keyword
   
   gitrepo
   gitrepo
+
+Test log with --graph
+  $ hg log bar/alpha --graph
+  @  commit:      * (glob)
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     update bar/alpha
+  │
+  o  commit:      * (glob)
+  ╷  user:        test
+  ╷  date:        Thu Jan 01 00:00:00 1970 +0000
+  ╷  summary:     import gitrepo to bar
+  ╷
+  @  commit:      6a5b13188f04
+  │  user:        test <test@example.org>
+  │  date:        Mon Jan 01 00:00:10 2007 +0000
+  │  summary:     update alpha\nhttps://phabricator.test.com/D1234567
+  │
+  o  commit:      b6c31add3e60
+     user:        test <test@example.org>
+     date:        Mon Jan 01 00:00:10 2007 +0000
+     summary:     alpha
