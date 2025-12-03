@@ -2407,18 +2407,22 @@ def debugpreviewbindag(ui, repo, path):
     data = util.readfile(path)
     revs, parentrevs = dagparser.parsebindag(data)
 
-    def gendag(revs, parentrevs):
+    def gendag(repo, revs, parentrevs):
         for rev in reversed(revs):
-            yield (rev, "C", dummyctx(rev), [("P", p) for p in parentrevs(rev)])
+            yield (rev, "C", dummyctx(repo, rev), [("P", p) for p in parentrevs(rev)])
 
     class dummyctx:
         """A dummy changeset object"""
 
-        def __init__(self, id):
+        def __init__(self, repo, id):
             self.id = id
+            self._repo = repo
 
         def rev(self):
             return self.id
+
+        def repo(self):
+            return self._repo
 
         # required methods by displayer
 
@@ -2430,7 +2434,7 @@ def debugpreviewbindag(ui, repo, path):
 
     opts = {"template": "{rev}", "graph": True}
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-    cmdutil.displaygraph(ui, repo, gendag(revs, parentrevs), displayer)
+    cmdutil.displaygraph(ui, repo, gendag(repo, revs, parentrevs), displayer)
 
 
 @command(
