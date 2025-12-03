@@ -3360,13 +3360,15 @@ def displaygraph(
     repo,
     dag,
     displayer,
-    getrenamed=None,
-    filematcher=None,
+    repogetrenamed=None,
+    repofilematcher=None,
     props=None,
     reserved=None,
     out=None,
     on_output=None,
 ):
+    repogetrenamed = repogetrenamed or {}
+    repofilematcher = repofilematcher or {}
     props = props or {}
     formatnode = _graphnodeformatter(ui, displayer)
     if ui.plain("graph"):
@@ -3402,9 +3404,18 @@ def displaygraph(
         for graphnodeid in reserved:
             renderer.reserve(graphnodeid)
 
+    getrenamed = repogetrenamed.get(repo.root)
+    filematcher = repofilematcher.get(repo.root)
+    prev_repo = repo
+
     show_abbreviated_ancestors = ShowAbbreviatedAncestorsWhen.load_from_config(repo.ui)
     for graphnodeid, _type, ctx, parents in dag:
         curr_repo = ctx.repo()
+        if curr_repo.root != prev_repo.root:
+            getrenamed = repogetrenamed.get(curr_repo.root)
+            filematcher = repofilematcher.get(curr_repo.root)
+            prev_repo = curr_repo
+
         char = formatnode(curr_repo, ctx)
         copies = None
         if getrenamed and ctx.rev():
@@ -3497,7 +3508,16 @@ def graphlog(ui, repo, pats, opts):
 
     ui.pager("log")
     displayer = show_changeset(ui, repo, opts, buffered=True)
-    displaygraph(ui, repo, revdag, displayer, getrenamed, filematcher)
+    repogetrenamed = {repo.root: getrenamed}
+    repofilematcher = {repo.root: filematcher}
+    displaygraph(
+        ui,
+        repo,
+        revdag,
+        displayer,
+        repogetrenamed=repogetrenamed,
+        repofilematcher=repofilematcher,
+    )
 
 
 def checkunsupportedgraphflags(pats, opts):
