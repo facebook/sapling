@@ -3404,7 +3404,8 @@ def displaygraph(
 
     show_abbreviated_ancestors = ShowAbbreviatedAncestorsWhen.load_from_config(repo.ui)
     for rev, _type, ctx, parents in dag:
-        char = formatnode(repo, ctx)
+        curr_repo = ctx.repo()
+        char = formatnode(curr_repo, ctx)
         copies = None
         if getrenamed and ctx.rev():
             copies = []
@@ -3425,7 +3426,7 @@ def displaygraph(
             # parents are already nodes (when called from ext/commitcloud/commands.py)
             gpnodes = gprevs
         else:
-            gpnodes = repo.changelog.tonodes(gprevs)
+            gpnodes = curr_repo.changelog.tonodes(gprevs)
         revcache = {"copies": copies, "gpnodes": gpnodes}
         width = renderer.width(rev, parents)
         displayer.show(
