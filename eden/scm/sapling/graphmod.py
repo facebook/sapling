@@ -28,6 +28,7 @@ from .node import nullrev
 CHANGESET = "C"
 PARENT = "P"
 GRANDPARENT = "G"
+XREPOPARENT = "X"
 MISSINGPARENT = "M"
 # Style of line to draw. None signals a line that ends and is removed at this
 # point. A number prefix means only the last N characters of the current block

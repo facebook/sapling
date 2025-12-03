@@ -73,6 +73,7 @@ fn convert_parents(py: Python, parents: Vec<(String, PyNode)>) -> PyResult<Vec<A
         .map(|(kind, parent)| match kind.as_str() {
             "P" => Ok(Ancestor::Parent(parent.into())),
             "G" => Ok(Ancestor::Ancestor(parent.into())),
+            "X" => Ok(Ancestor::Ancestor(parent.into())),
             "M" => Ok(Ancestor::Anonymous),
             _ => Err(PyErr::new::<exc::ValueError, _>(
                 py,
