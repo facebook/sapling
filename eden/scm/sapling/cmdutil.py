@@ -3435,7 +3435,7 @@ def displaygraph(
         # The Rust graph renderer works with unicode.
         msg = "".join(
             s if isinstance(s, str) else s.decode(errors="replace")
-            for s in displayer.hunk.pop(graphnodeid)
+            for s in displayer.hunk.pop(ctx.rev())
         )
         nextrow = renderer.nextrow(graphnodeid, parents, char, msg)
         if out is not None:
