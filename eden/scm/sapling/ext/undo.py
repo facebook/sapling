@@ -1418,7 +1418,7 @@ def _preview(ui, repo, reverseindex):
     opts["rev"] = [revstring]
     try:
         with ui.configoverride(overrides):
-            cmdutil.graphlog(ui, repo, None, opts)
+            cmdutil.graphlog(ui, repo, (), opts)
         # informative output
         nodedict = _readindex(repo, reverseindex)
         time = _readnode(repo, "date.i", nodedict["date"])

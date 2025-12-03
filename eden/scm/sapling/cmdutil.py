@@ -22,7 +22,7 @@ import subprocess
 import tempfile
 import typing
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import bindings
 from bindings import renderdag
@@ -3493,7 +3493,7 @@ class ShowAbbreviatedAncestorsWhen(Enum):
         )
 
 
-def graphlog(ui, repo, pats, opts):
+def graphlog(ui, repo, pats: Tuple[str, ...], opts: Dict[str, Any]):
     # Parameters are identical to log command ones
     repogetrenamed, repofilematcher = {}, {}
     revdag = _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher)

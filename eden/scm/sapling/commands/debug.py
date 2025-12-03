@@ -351,7 +351,7 @@ def debugbisect(ui, repo, **opts):
     cmdutil.graphlog(
         ui,
         repo,
-        [],
+        (),
         {
             "rev": [hex(n) for n in node_to_infos],
             "template": "{desc|firstline}: {debugbisect}",
