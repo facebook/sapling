@@ -103,16 +103,3 @@ def dagwalker(repo, revs, template, idfunc=None):
                 pset.update(gp)
 
         yield (idfunc(ctx.rev()), CHANGESET, ctx, parents)
-
-
-def nodes(repo, nodes):
-    """cset DAG generator yielding (id, CHANGESET, ctx, [parentids]) tuples
-
-    This generator function walks the given nodes. It only returns parents
-    that are in nodes, too.
-    """
-    include = set(nodes)
-    for node in nodes:
-        ctx = repo[node]
-        parents = set((PARENT, p.rev()) for p in ctx.parents() if p.node() in include)
-        yield (ctx.rev(), CHANGESET, ctx, sorted(parents))

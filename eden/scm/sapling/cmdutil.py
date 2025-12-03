@@ -3618,14 +3618,6 @@ def checkunsupportedgraphflags(pats, opts):
             )
 
 
-def graphrevs(repo, nodes, opts):
-    limit = loglimit(opts)
-    nodes.reverse()
-    if limit is not None:
-        nodes = nodes[:limit]
-    return graphmod.nodes(repo, nodes)
-
-
 def add(ui, repo, match, prefix, explicitonly, **opts):
     bad = []
 
