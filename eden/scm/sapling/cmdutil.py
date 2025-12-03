@@ -3521,6 +3521,34 @@ def _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher):
     return revdag
 
 
+def xrepologinfo(curr_repo, curr_pats, curr_opts, lastctx):
+    # XXX: currently supports only one path
+    if lastctx is None or len(curr_pats) != 1:
+        return None
+    match, pats = scmutil.matchandpats(curr_repo[None], curr_pats, curr_opts)
+    if len(match.files()) != 1:
+        return None
+
+    curr_path = match.files()[0]
+    subtree_import = subtreeutil.find_subtree_import(
+        curr_repo, lastctx.node(), curr_path
+    )
+    if not subtree_import:
+        return None
+
+    from_url, from_commit, from_path = subtree_import
+    # XXX: currently only support import from git repo
+    git_url = git.maybegiturl(from_url)
+    if not git_url:
+        return None
+
+    with curr_repo.ui.configoverride({("ui", "quiet"): True}):
+        from_repo = subtreeutil.get_or_clone_git_repo(
+            curr_repo.ui, git_url, from_commit
+        )
+    return from_repo, from_commit, from_path
+
+
 def checkunsupportedgraphflags(pats, opts):
     for op in ["newest_first"]:
         if op in opts and opts[op]:
