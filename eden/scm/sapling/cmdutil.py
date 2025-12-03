@@ -3495,6 +3495,15 @@ class ShowAbbreviatedAncestorsWhen(Enum):
 
 def graphlog(ui, repo, pats, opts):
     # Parameters are identical to log command ones
+    repogetrenamed, repofilematcher = {}, {}
+    revdag = _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher)
+
+    ui.pager("log")
+    displayer = show_changeset(ui, repo, opts, buffered=True)
+    displaygraph(ui, repo, revdag, displayer, repogetrenamed, repofilematcher)
+
+
+def _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher):
     revs, expr, filematcher = getgraphlogrevs(repo, pats, opts)
     template = opts.get("template") or ""
     revdag = graphmod.dagwalker(repo, revs, template)
@@ -3506,18 +3515,10 @@ def graphlog(ui, repo, pats, opts):
             endrev = scmutil.revrange(repo, opts.get("rev")).max() + 1
         getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
 
-    ui.pager("log")
-    displayer = show_changeset(ui, repo, opts, buffered=True)
-    repogetrenamed = {repo.root: getrenamed}
-    repofilematcher = {repo.root: filematcher}
-    displaygraph(
-        ui,
-        repo,
-        revdag,
-        displayer,
-        repogetrenamed=repogetrenamed,
-        repofilematcher=repofilematcher,
-    )
+    repogetrenamed[repo.root] = getrenamed
+    repofilematcher[repo.root] = filematcher
+
+    return revdag
 
 
 def checkunsupportedgraphflags(pats, opts):
