@@ -10,7 +10,6 @@ import type {StableLocationData} from './types';
 import {atom} from 'jotai';
 import {tracker} from './analytics';
 import serverAPI from './ClientToServerAPI';
-import {featureFlagLoadable} from './featureFlags';
 import {Internal} from './Internal';
 import {lazyAtom, localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import {latestCommits} from './serverAPIState';
@@ -123,11 +122,6 @@ export const recommendedBookmarksOnboarding = localStorageBackedAtom<boolean>(
   'isl.recommended-bookmarks-onboarding',
   true,
 );
-
-export const recommendedBookmarksGKAtom = atom(get => {
-  const flag = get(featureFlagLoadable(Internal.featureFlags?.RecommendedBookmarks));
-  return flag.state === 'hasData' ? flag.data : false;
-});
 
 export const recommendedBookmarksAtom = lazyAtom(async _get => {
   const recommendedBookmarks = await (Internal.getRecommendedBookmarks?.() ??

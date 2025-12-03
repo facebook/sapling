@@ -28,7 +28,6 @@ import {
   REMOTE_MASTER_BOOKMARK,
 } from './BookmarksData';
 import {Row} from './ComponentUtils';
-import {useFeatureFlagSync} from './featureFlags';
 import {T, t} from './i18n';
 import {Internal} from './Internal';
 import {BookmarkCreateOperation} from './operations/BookmarkCreateOperation';
@@ -144,7 +143,6 @@ export function AllBookmarksTruncated({
 }) {
   const bookmarksData = useAtomValue(bookmarksDataStorage);
   const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
-  const recommendedBookmarksGK = useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks);
   const recommendedBookmarksAvailable = useAtomValue(recommendedBookmarksAvailableAtom);
 
   const FullRepoBranchBookmark = Internal.FullRepoBranchBookmark;
@@ -171,9 +169,8 @@ export function AllBookmarksTruncated({
         .map(bookmark => {
           const value = typeof bookmark === 'string' ? bookmark : bookmark.value;
           const isRecommended =
-            recommendedBookmarksGK &&
-            (recommendedBookmarks.has(value) ||
-              (typeof bookmark === 'object' && bookmark.isRecommended === true));
+            recommendedBookmarks.has(value) ||
+            (typeof bookmark === 'object' && bookmark.isRecommended === true);
           const tooltipOverride = typeof bookmark === 'string' ? undefined : bookmark.description;
           const {icon, tooltip} = getBookmarkAddons(
             value,

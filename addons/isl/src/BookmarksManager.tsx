@@ -42,7 +42,6 @@ import {Column, Row, ScrollY} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
 import {useCommandEvent} from './ISLShortcuts';
 import {Internal} from './Internal';
-import {useFeatureFlagSync} from './featureFlags';
 import {T, t} from './i18n';
 import {readAtom} from './jotaiUtils';
 import {latestDag} from './serverAPIState';
@@ -100,10 +99,7 @@ function BookmarksManager(_props: {dismiss: () => void}) {
   const bookmarksData = useAtomValue(bookmarksDataStorage);
   const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
   const recommendedBookmarksAvailable = useAtomValue(recommendedBookmarksAvailableAtom);
-  const enableRecommended =
-    useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks) &&
-    bookmarksData.useRecommendedBookmark &&
-    recommendedBookmarksAvailable;
+  const enableRecommended = bookmarksData.useRecommendedBookmark && recommendedBookmarksAvailable;
 
   // Place recommended bookmarks (and remote/master) first if enabled, then the rest
   const priority = new Set(recommendedBookmarks).add(REMOTE_MASTER_BOOKMARK);
@@ -347,7 +343,6 @@ function BookmarksList({
   kind: BookmarkKind;
 }) {
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
-  const recommendedBookmarksGK = useFeatureFlagSync(Internal.featureFlags?.RecommendedBookmarks);
   const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
   const recommendedBookmarksAvailable = useAtomValue(recommendedBookmarksAvailableAtom);
 
@@ -364,10 +359,8 @@ function BookmarksList({
           const name = typeof bookmark === 'string' ? bookmark : bookmark.name;
           const extra = typeof bookmark === 'string' ? undefined : bookmark.extra;
           const enableRecommended =
-            recommendedBookmarksGK &&
-            bookmarksData.useRecommendedBookmark &&
-            recommendedBookmarksAvailable;
-          const isRecommended = recommendedBookmarksGK && recommendedBookmarks.has(name);
+            bookmarksData.useRecommendedBookmark && recommendedBookmarksAvailable;
+          const isRecommended = recommendedBookmarks.has(name);
           const tooltipOverride = typeof bookmark === 'string' ? undefined : bookmark.info;
           const {icon, tooltip} = getBookmarkAddons(
             name,

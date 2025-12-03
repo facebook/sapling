@@ -32,7 +32,6 @@ import {
   bookmarksDataStorage,
   recommendedBookmarksAtom,
   recommendedBookmarksAvailableAtom,
-  recommendedBookmarksGKAtom,
   REMOTE_MASTER_BOOKMARK,
 } from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
@@ -307,10 +306,7 @@ export const latestDag = atom(get => {
   const successorMap = get(latestSuccessorsMapAtom);
   const bookmarksData = get(bookmarksDataStorage);
   const recommendedBookmarksAvailable = get(recommendedBookmarksAvailableAtom);
-  const enableRecommended =
-    get(recommendedBookmarksGKAtom) &&
-    bookmarksData.useRecommendedBookmark &&
-    recommendedBookmarksAvailable;
+  const enableRecommended = bookmarksData.useRecommendedBookmark && recommendedBookmarksAvailable;
   const recommendedBookmarks = get(recommendedBookmarksAtom);
   const commitDag = undefined; // will be populated from `commits`
 
