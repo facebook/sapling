@@ -177,3 +177,27 @@ Test commit color with --graph
      [log.user|user:        test <test@example.org>]
      [log.date|date:        Mon Jan 01 00:00:10 2007 +0000]
      [log.summary|summary:     alpha]
+
+Test log.follow-xrepo config
+
+  $ hg log bar/alpha --config log.follow-xrepo=False
+  commit:      * (glob)
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     update bar/alpha
+  
+  commit:      * (glob)
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     import gitrepo to bar
+  
+  $ hg log bar/alpha --graph --config log.follow-xrepo=False
+  @  commit:      * (glob)
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     update bar/alpha
+  │
+  o  commit:      * (glob)
+  │  user:        test
+  ~  date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     import gitrepo to bar

@@ -3580,6 +3580,9 @@ def _dagfollowxrepo(repo, pats, opts, revdag, repogetrenamed, repofilematcher, r
 
 
 def xrepologinfo(curr_repo, curr_pats, curr_opts, lastctx):
+    if not curr_repo.ui.configbool("log", "follow-xrepo", True):
+        return None
+
     # XXX: currently supports only one path
     if lastctx is None or len(curr_pats) != 1:
         return None
