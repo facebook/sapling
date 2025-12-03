@@ -9,6 +9,7 @@
 # Main EdenFS build targets used in packaging
 # Maps build target -> install path(s)
 
+load("@fbcode//fbpkg:fbpkg.bzl", "fbpkg")
 load("@fbcode//registry:defs.bzl", "rpm")
 
 EDENFS_TARGETS = {
@@ -44,6 +45,9 @@ CONFIG_D_TARGETS = {
     "facebook/packaging/config.d/00-defaults.toml": "/etc/eden/config.d/00-defaults.toml",
     "facebook/packaging/config.d/doctor.toml": "/etc/eden/config.d/doctor.toml",
 }
+
+FBPKG_STATIC_ADD_PREFIX = "fs/"
+FBPKG_STRIP_PREFIX = "/usr/local/"
 
 TARGET_MODES = {
     "//eden/fs/service:edenfs_privhelper": 0o04755,
@@ -96,3 +100,29 @@ def make_rpm_features():
             }),
         )
     return features
+
+def make_fbpkg_path_actions():
+    path_actions = {}
+    for target, install_path in EDENFS_TARGETS.items():
+        path_actions[install_path.removeprefix(FBPKG_STRIP_PREFIX)] = fbpkg.copy(target)
+        if install_path in SYMLINKS:
+            path_actions[SYMLINKS.get(install_path).removeprefix(FBPKG_STRIP_PREFIX)] = fbpkg.symlink(install_path.removeprefix(FBPKG_STRIP_PREFIX))
+
+    for target, install_path in SCRIPTS_TARGETS.items():
+        path_actions[install_path.removeprefix(FBPKG_STRIP_PREFIX)] = FBPKG_STATIC_ADD_PREFIX + target
+
+    for target, install_path in STATIC_TARGETS.items():
+        path_actions[install_path.removeprefix("/")] = FBPKG_STATIC_ADD_PREFIX + target
+    path_actions["etc/eden/config.d"] = "fs/facebook/packaging/config.d"
+
+    # Misc fbpkg files
+    # static file for DevFeature installation instructions
+    path_actions["install.toml"] = "facebook/dev_feature_install.toml"
+
+    # static file for eden-locale
+    path_actions["locale/en/LC_MESSAGES/libc.mo"] = "locale/glibc_en.mo"
+
+    # static file for Sandcastle live-installation
+    path_actions["sandcastle_install.sh"] = "facebook/sandcastle_install.sh"
+
+    return path_actions
