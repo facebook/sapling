@@ -3366,6 +3366,7 @@ def displaygraph(
     reserved=None,
     out=None,
     on_output=None,
+    graphnodeid_to_rev=None,
 ):
     repogetrenamed = repogetrenamed or {}
     repofilematcher = repofilematcher or {}
@@ -3432,7 +3433,12 @@ def displaygraph(
                 parents = []
         elif show_abbreviated_ancestors is ShowAbbreviatedAncestorsWhen.NEVER:
             parents = [p for p in parents if p[0] != graphmod.MISSINGPARENT]
-        gprevs = [p[1] for p in parents if p[0] == graphmod.GRANDPARENT]
+
+        gprevs = [
+            graphnodeid_to_rev(p[1]) if graphnodeid_to_rev else p[1]
+            for p in parents
+            if p[0] == graphmod.GRANDPARENT
+        ]
         if all(isinstance(gp, bytes) for gp in gprevs):
             # parents are already nodes (when called from ext/commitcloud/commands.py)
             gpnodes = gprevs
@@ -3495,18 +3501,31 @@ class ShowAbbreviatedAncestorsWhen(Enum):
 
 def graphlog(ui, repo, pats: Tuple[str, ...], opts: Dict[str, Any]):
     # Parameters are identical to log command ones
-    repogetrenamed, repofilematcher = {}, {}
-    revdag = _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher)
+    repogetrenamed, repofilematcher, repoids = {}, {}, {}
+    revdag = _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher, repoids)
 
     ui.pager("log")
     displayer = show_changeset(ui, repo, opts, buffered=True)
-    displaygraph(ui, repo, revdag, displayer, repogetrenamed, repofilematcher)
+    graphnodeid_to_rev = lambda graphnodeid: graphnodeid[1]
+    displaygraph(
+        ui,
+        repo,
+        revdag,
+        displayer,
+        repogetrenamed,
+        repofilematcher,
+        graphnodeid_to_rev=graphnodeid_to_rev,
+    )
 
 
-def _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher):
+def _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher, repoids):
     revs, expr, filematcher = getgraphlogrevs(repo, pats, opts)
     template = opts.get("template") or ""
-    revdag = graphmod.dagwalker(repo, revs, template)
+    if repo.root not in repoids:
+        repoids[repo.root] = len(repoids)
+    rid = repoids[repo.root]
+    rev_to_graphnodeid = lambda rev: (rid, rev)
+    revdag = graphmod.dagwalker(repo, revs, template, idfunc=rev_to_graphnodeid)
 
     getrenamed = None
     if opts.get("copies"):
@@ -3517,10 +3536,12 @@ def _logdagwalker(repo, pats, opts, repogetrenamed, repofilematcher):
 
     repogetrenamed[repo.root] = getrenamed
     repofilematcher[repo.root] = filematcher
-    return _dagfollowxrepo(repo, pats, opts, revdag, repogetrenamed, repofilematcher)
+    return _dagfollowxrepo(
+        repo, pats, opts, revdag, repogetrenamed, repofilematcher, repoids
+    )
 
 
-def _dagfollowxrepo(repo, pats, opts, revdag, repogetrenamed, repofilematcher):
+def _dagfollowxrepo(repo, pats, opts, revdag, repogetrenamed, repofilematcher, repoids):
     for item, is_last in iterutil.mark_last(revdag):
         # It currently doesn't handle multiple imports/merges. In those cases, the
         # xrepo operation can appear in the middle of the dag.
@@ -3541,6 +3562,7 @@ def _dagfollowxrepo(repo, pats, opts, revdag, repogetrenamed, repofilematcher):
                     opts,
                     repogetrenamed,
                     repofilematcher,
+                    repoids,
                 )
             ):
                 if is_first:
