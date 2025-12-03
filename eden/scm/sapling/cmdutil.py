@@ -3408,6 +3408,7 @@ def displaygraph(
     getrenamed = repogetrenamed.get(repo.root)
     filematcher = repofilematcher.get(repo.root)
     prev_repo = repo
+    xreponame = None
 
     show_abbreviated_ancestors = ShowAbbreviatedAncestorsWhen.load_from_config(repo.ui)
     for graphnodeid, _type, ctx, parents in dag:
@@ -3415,6 +3416,7 @@ def displaygraph(
         if curr_repo.root != prev_repo.root:
             getrenamed = repogetrenamed.get(curr_repo.root)
             filematcher = repofilematcher.get(curr_repo.root)
+            xreponame = curr_repo.ui.config("remotefilelog", "reponame", "unknown")
             prev_repo = curr_repo
 
         char = formatnode(curr_repo, ctx)
@@ -3445,6 +3447,8 @@ def displaygraph(
         else:
             gpnodes = curr_repo.changelog.tonodes(gprevs)
         revcache = {"copies": copies, "gpnodes": gpnodes}
+        if xreponame:
+            revcache["xreponame"] = xreponame
         width = renderer.width(graphnodeid, parents)
         displayer.show(
             ctx, revcache=revcache, matchfn=revmatchfn, _graphwidth=width, **props
