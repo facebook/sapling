@@ -1148,11 +1148,6 @@ struct RepoDeleteBookmarkParams {
   3: optional string service_identity;
 }
 
-enum CrossRepoPushSource {
-  NATIVE_TO_THIS_REPO = 0,
-  PUSH_REDIRECTED = 1,
-}
-
 enum BookmarkKindRestrictions {
   ANY_KIND = 0,
   ONLY_SCRATCH = 1,

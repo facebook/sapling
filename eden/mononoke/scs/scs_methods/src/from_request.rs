@@ -21,7 +21,6 @@ use chrono::TimeZone;
 use derived_data_manager::DerivableType;
 use ephemeral_blobstore::BubbleId;
 use faster_hex::hex_string;
-use hooks::CrossRepoPushSource;
 use metaconfig_types::CommitIdentityScheme;
 use mononoke_api::BookmarkKey;
 use mononoke_api::CandidateSelectionHintArgs;
@@ -65,21 +64,6 @@ impl FromRequest<str> for BookmarkKey {
                 bookmark, e
             ))
         })
-    }
-}
-
-impl FromRequest<thrift::CrossRepoPushSource> for CrossRepoPushSource {
-    fn from_request(
-        push_source: &thrift::CrossRepoPushSource,
-    ) -> Result<Self, thrift::RequestError> {
-        match push_source {
-            &thrift::CrossRepoPushSource::NATIVE_TO_THIS_REPO => Ok(Self::NativeToThisRepo),
-            &thrift::CrossRepoPushSource::PUSH_REDIRECTED => Ok(Self::PushRedirected),
-            other => Err(scs_errors::invalid_request(format!(
-                "Unknown CrossRepoPushSource: {}",
-                other
-            ))),
-        }
     }
 }
 
