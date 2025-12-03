@@ -36,7 +36,7 @@ MISSINGPARENT = "M"
 EDGES = {PARENT: "|", GRANDPARENT: ":", MISSINGPARENT: None}
 
 
-def dagwalker(repo, revs, template):
+def dagwalker(repo, revs, template, idfunc=None):
     """cset DAG generator yielding (id, CHANGESET, ctx, [parentinfo]) tuples
 
     This generator function walks through revisions (which should be ordered
@@ -47,6 +47,7 @@ def dagwalker(repo, revs, template):
     are arbitrary integers which identify a node in the context of the graph
     returned.
 
+    The idfunc is a function that takes a rev number and returns an id for it.
     """
     if not revs:
         return
@@ -58,6 +59,9 @@ def dagwalker(repo, revs, template):
     if simplifygrandparents:
         rootnodes = cl.tonodes(revs)
 
+    if idfunc is None:
+        idfunc = lambda rev: rev
+
     gpcache = {}
     ctxstream = revs.prefetchbytemplate(repo, template).iterctx()
     for ctx in ctxstream:
@@ -68,7 +72,7 @@ def dagwalker(repo, revs, template):
         mpars = [
             p.rev() for p in ctx.parents() if p.rev() != nullrev and p.rev() not in pset
         ]
-        parents = [(PARENT, p) for p in sorted(pset)]
+        parents = [(PARENT, idfunc(p)) for p in sorted(pset)]
 
         for mpar in mpars:
             gp = gpcache.get(mpar)
@@ -91,13 +95,13 @@ def dagwalker(repo, revs, template):
                         set(dagop.reachableroots(repo, revs, [mpar]))
                     )
             if not gp:
-                parents.append((MISSINGPARENT, mpar))
+                parents.append((MISSINGPARENT, idfunc(mpar)))
                 pset.add(mpar)
             else:
-                parents.extend((GRANDPARENT, g) for g in gp if g not in pset)
+                parents.extend((GRANDPARENT, idfunc(g)) for g in gp if g not in pset)
                 pset.update(gp)
 
-        yield (ctx.rev(), CHANGESET, ctx, parents)
+        yield (idfunc(ctx.rev()), CHANGESET, ctx, parents)
 
 
 def nodes(repo, nodes):
