@@ -2,6 +2,7 @@ load("@fbcode//cpe/nupkg_builder:nupkg.bzl", "nupkg")
 load("@fbcode//eden/fs:build_targets.bzl", "make_rpm_features")
 load("@fbcode//registry:defs.bzl", "rpm")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbcode_macros//build_defs:python_binary.bzl", "python_binary")
 
 oncall("scm_client_infra")
 
@@ -70,4 +71,9 @@ nupkg.builder(
         # TODO: Figure out symbol package "//arvr/tools/translator:symbol_ents"
         # TODO: Set up install script to copy files to the appropriate locations
     ],
+)
+
+python_binary(
+    name = "generate_version_release",
+    main_src = "scripts/generate_version_release.py",
 )
