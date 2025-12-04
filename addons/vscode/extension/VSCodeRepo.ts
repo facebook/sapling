@@ -18,6 +18,7 @@ import type {
   SaplingCommitInfo,
   SaplingComparison,
   SaplingConflictContext,
+  SaplingCurrentCommitDiff,
   SaplingRepository,
 } from './api/types';
 import type {EnabledSCMApiFeature} from './types';
@@ -27,6 +28,8 @@ import {Repository} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
 import {getMainFetchTemplate, parseCommitInfoOutput} from 'isl-server/src/templates';
 import {ResolveOperation, ResolveTool} from 'isl/src/operations/ResolveOperation';
+import {diffCurrentCommit} from 'isl/src/stackEdit/diffSplit';
+import type {DiffCommit} from 'isl/src/stackEdit/diffSplitTypes';
 import * as path from 'path';
 import {beforeRevsetForComparison, ComparisonType} from 'shared/Comparison';
 import {filterFilesFromPatch, parsePatch} from 'shared/patch/parse';
@@ -517,6 +520,15 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
     }
 
     return JSON.parse(result.stdout) as SaplingConflictContext[];
+  }
+
+  async getCurrentCommitDiff(): Promise<SaplingCurrentCommitDiff> {
+    const diff = (await diffCurrentCommit(
+      this.repo,
+      this.repo.initialConnectionContext,
+    )) as DiffCommit;
+
+    return {message: diff.message, files: diff.files};
   }
 }
 

@@ -129,6 +129,11 @@ export interface SaplingRepository {
    */
   getMergeConflictContext(): Promise<SaplingConflictContext[]>;
 
+  /**
+   * Get diff info about the current commit.
+   */
+  getCurrentCommitDiff(): Promise<SaplingCurrentCommitDiff>;
+
   // TODO: refresh
   // TODO: moveFile / copyFile
   // TODO: run operations (commit, amend, discard, purge, rebase, pull, ...)
@@ -191,6 +196,65 @@ export type SaplingComparison =
   | {
       type: 'Uncommitted' | 'Head' | 'Stack';
     };
+
+export type SaplingCurrentCommitDiff = {
+  message: string;
+  files: ReadonlyArray<DiffFile>;
+};
+
+/** Unified diff represent in a JSON-friendly format. */
+export type DiffFile = {
+  /** File path on the left side (previous version). */
+  aPath: RepoPath;
+  /** File path on the right side (current version). */
+  bPath: RepoPath;
+  /**
+   * File flag on the left side (previous version).
+   * '': normal; 'x': executable; 'l': symlink; 'a': absent (deleted); 'm': submodule.
+   * Cannot be ".".
+   */
+  aFlag: FileFlag;
+  /** File flag on the right side (current version). */
+  bFlag: FileFlag;
+  /** Unified diff. See `DiffLine`. */
+  lines: ReadonlyArray<DiffLine>;
+};
+
+/** Path in the repository. Uses '/' path separator on all platforms. */
+export type RepoPath = string;
+
+/**
+ * - 'x': executable.
+ * - 'l': symlink.
+ * - 'm': submodule.
+ * - 'a': absent (deleted), only used in ISL, not by debugimportstack.
+ * - '.': unchanged, only used by debugimportstack.
+ */
+export type FileFlag = '' | 'x' | 'l' | 'm' | 'a' | '.';
+
+/** A line in unified diff. */
+export type DiffLine = {
+  /**
+   * Line number on the left side (previous version).
+   * Starting from 0.
+   * `null` means the line does not exist on the left side,
+   * aka. the line was added.
+   */
+  a: number | null;
+  /**
+   * Line number on the right side (current version).
+   * Starting from 0.
+   * `null` means the line does not exist on the right side,
+   * aka. the line was deleted.
+   */
+  b: number | null;
+  /**
+   * Line content.
+   * Trailing new-line is preserved.
+   * The last line might have no trailing new-line.
+   */
+  content: string;
+};
 
 /**
  * Useful context about conflicting file(s)

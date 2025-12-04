@@ -752,6 +752,12 @@ export type PlatformSpecificClientToServerMessages =
       source: 'commitInfoView' | 'smartAction';
     }
   | {
+      type: 'platform/splitCommitWithAI';
+      diffCommit: string;
+      args?: string;
+      repoPath?: string;
+    }
+  | {
       type: 'platform/createTestForModifiedCodeWithAI';
     }
   | {

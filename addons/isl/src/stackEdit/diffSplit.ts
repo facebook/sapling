@@ -11,6 +11,8 @@ import type {CommitRev, FileFlag, FileRev} from './common';
 import type {DiffCommit, DiffFile, DiffLine, PartiallySelectedDiffCommit} from './diffSplitTypes';
 
 import {Set as ImSet, List, Range} from 'immutable';
+import type {Repository} from 'isl-server/src/Repository';
+import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import {readableDiffBlocks as diffBlocks, splitLines} from 'shared/diff';
 import {nullthrows} from 'shared/utils';
 import {FlattenLine} from '../linelog';
@@ -224,4 +226,166 @@ export function diffFile({
     bFlag,
     lines,
   };
+}
+/**
+ * Calculate the diff between two commits using `sl debugexport stack`.
+ * This is similar to `diffCommit` but works with commit hashes instead of CommitStackState.
+ *
+ * @param runSlCommand - Function to run sl commands, typically from SaplingRepository.runSlCommand
+ * @param commitHash - The commit hash to diff
+ * @param parentHash - The parent commit hash to diff against
+ * @returns DiffCommit containing the message and file diffs
+ */
+export async function diffCurrentCommit(
+  repo: Repository,
+  ctx: RepositoryContext,
+): Promise<DiffCommit> {
+  // Export both commits
+  const results = await repo.runCommand(
+    ['debugexportstack', '-r', '.|.^'],
+    'ExportStackCommand',
+    ctx,
+  );
+
+  if (results.exitCode !== 0) {
+    throw new Error(`Failed to export commit . ${results.stderr}`);
+  }
+
+  // Parse the exported stacks
+  const stack: Array<{
+    node: string;
+    text: string;
+    requested: boolean;
+    files?: {[path: string]: {data?: string; flags?: FileFlag; copyFrom?: RepoPath} | null};
+    relevantFiles?: {[path: string]: {data?: string; flags?: FileFlag; copyFrom?: RepoPath} | null};
+  }> = JSON.parse(results.stdout);
+  const requestedCommits = stack.filter(commit => commit.requested);
+
+  if (requestedCommits.length !== 2) {
+    throw new Error(`Expected 2 commits from debugexportstack, got ${requestedCommits.length}`);
+  }
+
+  // The second requested commit is the current one (.), the first is parent (.^)
+  // because debugexportstack sorts topologically (ancestors first, descendants last)
+  const parentCommit = requestedCommits[0];
+  const currentCommit = requestedCommits[1];
+
+  // Get all file paths from the commit
+  const commitFiles = currentCommit.files ?? {};
+  const parentFiles = parentCommit.files ?? {};
+  const parentRelevantFiles = parentCommit.relevantFiles ?? {};
+
+  // Collect all paths that changed
+  const allPaths = new Set([...Object.keys(commitFiles)]);
+
+  const files = [];
+  for (const bPath of allPaths) {
+    const bFile = commitFiles[bPath];
+    const aPath = bFile?.copyFrom ?? bPath;
+    // Get parent file from either files or relevantFiles
+    const aFile =
+      aPath === bPath
+        ? (parentFiles[bPath] ?? parentRelevantFiles[bPath])
+        : (parentFiles[aPath] ?? parentRelevantFiles[aPath]);
+
+    const aContent = aFile?.data ?? '';
+    const bContent = bFile?.data ?? '';
+
+    // Skip if both are null (shouldn't happen, but be safe)
+    if (aFile === null && bFile === null) {
+      continue;
+    }
+
+    const aFlag = aFile?.flags ?? '';
+    const bFlag = bFile?.flags ?? '';
+
+    // Skip if content and flags are unchanged
+    if (aContent === bContent && aFlag === bFlag) {
+      continue;
+    }
+
+    const diff = diffFile({aContent, bContent, aPath, bPath, aFlag, bFlag});
+    const reducedLines = reduceContextualLines(diff.lines, 10);
+    files.push({...diff, lines: reducedLines});
+  }
+
+  return {
+    message: currentCommit.text,
+    files,
+  };
+}
+
+export type PhabricatorAiDiffSplitCommitDiffFileLine = {
+  a: number | null;
+  b: number | null;
+  content: string;
+};
+
+/**
+ * Reduces the number of lines in a diff by keeping only the lines that are within
+ * a specified number of lines from a changed line.
+ *
+ * @param lines The lines to filter
+ * @param maxContextLines The maximum number of lines to keep around each changed line
+ * @returns A new array with only the lines that are within the specified number of lines from a changed line
+ */
+export function reduceContextualLines(
+  lines: ReadonlyArray<PhabricatorAiDiffSplitCommitDiffFileLine>,
+  maxContextLines: number = 3,
+): Array<PhabricatorAiDiffSplitCommitDiffFileLine> {
+  const distanceToLastClosestChangedLine: number[] = [];
+  let lastClosestChangedLineIndex = -1;
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
+
+    const a = line.a;
+    const b = line.b;
+    if ((a == null && b != null) || (a != null && b == null)) {
+      // line was added or removed
+      lastClosestChangedLineIndex = lineIndex;
+    }
+
+    if (lastClosestChangedLineIndex === -1) {
+      distanceToLastClosestChangedLine.push(Number.MAX_SAFE_INTEGER);
+    } else {
+      distanceToLastClosestChangedLine.push(lineIndex - lastClosestChangedLineIndex);
+    }
+  }
+
+  const distanceToNextClosestChangedLine: number[] = [];
+  let nextClosestChangedLineIndex = -1;
+
+  for (let lineIndex = lines.length - 1; lineIndex >= 0; lineIndex--) {
+    const line = lines[lineIndex];
+
+    const a = line.a;
+    const b = line.b;
+    if ((a == null && b != null) || (a != null && b == null)) {
+      // line was added or removed
+      nextClosestChangedLineIndex = lineIndex;
+    }
+
+    if (nextClosestChangedLineIndex === -1) {
+      distanceToNextClosestChangedLine.push(Number.MAX_SAFE_INTEGER);
+    } else {
+      distanceToNextClosestChangedLine.push(nextClosestChangedLineIndex - lineIndex);
+    }
+  }
+
+  // Reverse the array since we built it backwards
+  distanceToNextClosestChangedLine.reverse();
+
+  const newLines: Array<PhabricatorAiDiffSplitCommitDiffFileLine> = [];
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    if (
+      distanceToLastClosestChangedLine[lineIndex] <= maxContextLines ||
+      distanceToNextClosestChangedLine[lineIndex] <= maxContextLines
+    ) {
+      newLines.push(lines[lineIndex]);
+    }
+  }
+
+  return newLines;
 }

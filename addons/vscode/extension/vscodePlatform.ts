@@ -302,6 +302,15 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           );
           break;
         }
+        case 'platform/splitCommitWithAI': {
+          const {diffCommit, args, repoPath} = message;
+          // Prompt AI to split a commit based on the changes
+          Internal.promptAIAgent?.(
+            {type: 'splitCommit', diffCommit, args, repoPath},
+            ActionTriggerType.ISL2SplitCommit,
+          );
+          break;
+        }
         case 'platform/createTestForModifiedCodeWithAI': {
           Internal.promptTestGeneration?.();
           break;

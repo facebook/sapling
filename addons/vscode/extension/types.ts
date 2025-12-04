@@ -23,4 +23,5 @@ export enum ActionTriggerType {
   ISL2SmartActions = 'ISL2SmartActions', // provided from the Sapling ISL Smart Actions Menu
   ISL2CommitInfoView = 'ISL2CommitInfoView', // provided from the Sapling ISL Commit Info View
   ISL2MergeConflictView = 'ISL2MergeConflictView', // provided from the Sapling ISL Merge Conflict View
+  ISL2SplitCommit = 'ISL2SplitCommit', // provided from the Sapling ISL Split Commit UI
 }
