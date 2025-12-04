@@ -42,6 +42,7 @@ from sapling import (
     commands,
     error,
     extensions,
+    git,
     json,
     mutation,
     namespaces,
@@ -1098,6 +1099,23 @@ def parsedesc(repo, resp, ignoreparsefailure):
     return match.group("id")
 
 
+def _gitrevtohgnode(repo, rev) -> Optional[List[bytes]]:
+    """Convert git rev to hg node by calling SLAPI (edenapi).
+    Returns None if not successful.
+    """
+    try:
+        translations = repo.edenapi.committranslateids(
+            [{"GitSha1": node.bin(rev)}], "Hg", lookup_behavior="exact"
+        )
+        translations = list(translations)
+        if translations:
+            hgnode = translations[0]["translated"]["Hg"]
+            return hgnode
+    except Exception as e:
+        repo.ui.warn(_x("could not translate rev %s as git hash: %s\n") % (rev, e))
+    return None
+
+
 @util.lrucachefunc
 def diffidtonode(repo, diffid, localreponame=None, version=None):
     """Return node that matches a given Differential ID or None.
@@ -1175,8 +1193,13 @@ def diffidtonode(repo, diffid, localreponame=None, version=None):
 
         if rev:
             # The response from phabricator contains a changeset ID.
-            # Convert it back to a node.
             try:
+                if vcs == "git" and not git.isgitformat(repo):
+                    # Try converting the git rev to an hg node.
+                    hgnode = _gitrevtohgnode(repo, rev)
+                    if hgnode is not None:
+                        return hgnode
+                # Convert the changeset ID to a node.
                 return repo[rev].node()
             except error.RepoLookupError:
                 # TODO: 's/svnrev/globalrev' after turning off Subversion
