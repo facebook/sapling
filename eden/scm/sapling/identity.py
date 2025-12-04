@@ -16,6 +16,7 @@ from bindings import identity
 
 sniffroot = identity.sniffroot
 default = identity.default
+envvar = identity.envvar
 
 
 def templatemap():

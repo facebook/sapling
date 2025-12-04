@@ -532,7 +532,7 @@ class ui:
         ($LOGNAME or $USER or $LNAME or $USERNAME) + "@full.hostname".
         If no username could be found, raise an Abort error.
         """
-        user = encoding.environ.get("HGUSER")
+        user = identity.envvar("USER")
         if user is None:
             user = self.config("ui", "username") or self.config("ui", "user")
             if user is not None:

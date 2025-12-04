@@ -125,3 +125,10 @@ Export/import works:
   @@ -0,0 +1,1 @@
   +A
   \ No newline at end of file
+
+
+$SL_USER works for setting user:
+  $ HGIDENTITY=hg SL_USER=foo HGUSER=bar hg dbsh -c 'print(ui.username())'
+  bar
+  $ HGIDENTITY=sl SL_USER=foo HGUSER=bar hg dbsh -c 'print(ui.username())'
+  foo
