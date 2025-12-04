@@ -8,6 +8,7 @@
 import type {Repository} from 'isl-server/src/Repository';
 import type {RepositoryContext} from 'isl-server/src/serverTypes';
 import type {Operation} from 'isl/src/operations/Operation';
+import type {PartiallySelectedDiffCommit} from 'isl/src/stackEdit/diffSplitTypes';
 import type {AbsolutePath, RepoRelativePath} from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 
@@ -97,7 +98,10 @@ type ExternalVSCodeCommands = {
     description: string,
     mode?: 'commit' | 'amend',
   ) => Thenable<void>;
-  'sapling.open-split-view-with-commits': () => Thenable<void>;
+  'sapling.open-split-view-with-commits': (
+    commits: Array<PartiallySelectedDiffCommit>,
+    commitHash?: string,
+  ) => Thenable<void>;
   'sapling.open-comparison-view': (comparison: Comparison) => Thenable<void>;
   setContext: (key: string, value: unknown) => Thenable<void>;
   'fb-hg.open-or-focus-interactive-smartlog': (

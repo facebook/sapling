@@ -1239,8 +1239,9 @@ export type ServerToClientMessage =
       result: Result<Array<string>>;
     }
   | {
-      type: 'setAISplitCommits';
-      commits: Array<PartiallySelectedDiffCommit>;
+      type: 'openSplitViewForCommit';
+      commitHash: string;
+      commits?: Array<PartiallySelectedDiffCommit>;
     };
 
 export type Disposable = {

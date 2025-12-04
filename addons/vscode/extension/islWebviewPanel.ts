@@ -223,7 +223,7 @@ export function registerISLCommands(
     ),
     vscode.commands.registerCommand(
       'sapling.open-split-view-with-commits',
-      async (commits: Array<PartiallySelectedDiffCommit>) => {
+      async (commits: Array<PartiallySelectedDiffCommit>, commitHash?: string) => {
         try {
           let readySignal: Deferred<void>;
 
@@ -238,12 +238,19 @@ export function registerISLCommands(
 
           const currentPanelOrViewResult = islPanelOrViewResult;
           if (currentPanelOrViewResult) {
-            const message: ServerToClientMessage = {
-              type: 'setAISplitCommits',
-              commits,
-            };
-
-            currentPanelOrViewResult.panel.webview.postMessage(serializeToString(message));
+            if (commitHash) {
+              // Send a single message that opens the split view and applies commits after loading
+              const openSplitMessage: ServerToClientMessage = {
+                type: 'openSplitViewForCommit',
+                commitHash,
+                commits,
+              };
+              currentPanelOrViewResult.panel.webview.postMessage(
+                serializeToString(openSplitMessage),
+              );
+            } else {
+              vscode.window.showErrorMessage(`Error opening split view: no commit hash provided`);
+            }
           }
         } catch (err: unknown) {
           vscode.window.showErrorMessage(`Error opening split view: ${err}`);
