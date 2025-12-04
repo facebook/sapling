@@ -1398,8 +1398,7 @@ def _matchcallsigns(
 def _matchreponames(diffreponame: Optional[str], localreponame: Optional[str]) -> bool:
     """Makes sure two different repo names look mostly the same, ignoring `.git`
     suffixes and checking that suffixes considering repos names separated by
-    slashes look the same. It's assumed that `localreponame` should be a longer
-    version of `diffreponame`.
+    slashes look the same.
 
     >>> _matchreponames("bar.git", "foo/bar")
     True
@@ -1411,6 +1410,8 @@ def _matchreponames(diffreponame: Optional[str], localreponame: Optional[str]) -
     False
     >>> _matchreponames("w/x/y", "z/x/y")
     False
+    >>> _matchreponames("aosp/x/y/z.git", "aosp")
+    True
     """
 
     def _processreponame(reponame: str) -> List[str]:
@@ -1420,7 +1421,9 @@ def _matchreponames(diffreponame: Optional[str], localreponame: Optional[str]) -
     localreponame = _processreponame(localreponame)
     dilen = len(diffreponame)
     lolen = len(localreponame)
-    return dilen <= lolen and diffreponame[-dilen:] == localreponame[-dilen:]
+    return (dilen <= lolen and diffreponame[-dilen:] == localreponame[-dilen:]) or (
+        dilen > lolen and diffreponame[:lolen] == localreponame[:lolen]
+    )
 
 
 def _get_shell_cmd(ui, args: List[str]) -> str:
