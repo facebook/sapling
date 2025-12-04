@@ -34,7 +34,7 @@ import re
 import socket
 import ssl
 import sys
-from typing import Any, List, Optional, Pattern, Sized
+from typing import Any, List, Optional, Pattern, Set, Sized
 
 from sapling import (
     autopull,
@@ -92,6 +92,9 @@ DIFFID_VERSION_REGEX: Pattern[str] = re.compile(r"^D(\d+)(?:([Vv]\d+(?:\.\d+)?))
 DEFAULT_TIMEOUT = 60
 MAX_CONNECT_RETRIES = 3
 COMMITTEDSTATUS = "Committed"
+
+# Valid callsign prefixes for git diffs that may have long callsigns
+GIT_CALLSIGN_PREFIXES: Set[str] = {"AOSP"}
 
 githashre: Pattern[str] = re.compile(r"g([0-9a-f]{40})")
 svnrevre: Pattern[str] = re.compile(r"^r[A-Z]+(\d+)$")
@@ -1084,6 +1087,7 @@ def parsedesc(repo, resp, ignoreparsefailure):
 
     callsign = match.group("callsign")
     repo_callsigns = _get_callsigns(repo)
+    _prefixes = _getcallsignprefixes(repo_callsigns, resp)
 
     if callsign not in repo_callsigns:
         raise error.Abort(
@@ -1342,6 +1346,26 @@ def _get_callsigns(repo) -> List[str]:
         except Exception:
             pass
     return callsigns
+
+
+def _getcallsignprefixes(repocallsigns: List[str], resp) -> Set[str]:
+    """Returns a set whose elements are valid for diff callsign to match by prefix.
+
+    For some Git repos, it's considered a match even if the callsign only matches
+    a prefix. For example, diffs in the AOSP repos may have callsigns
+    longer than `AOSP`.
+
+    >>> _getcallsignprefixes(['FBS'], {"source_control_system": "hg"})
+    set()
+    >>> _getcallsignprefixes(['AOSP'], {"source_control_system": "git"})
+    {'AOSP'}
+    >>> _getcallsignprefixes(['SOMEGITREPO'], {"source_control_system": "git"})
+    set()
+    """
+    vcs = resp.get("source_control_system")
+    prefixes = set(repocallsigns) & GIT_CALLSIGN_PREFIXES if vcs == "git" else set()
+
+    return prefixes
 
 
 def _matchreponames(diffreponame: Optional[str], localreponame: Optional[str]) -> bool:
