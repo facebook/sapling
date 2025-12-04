@@ -33,7 +33,7 @@
 # Callsign is invalid
 
   $ hg log -r D1234 --config phrevset.callsign=C -T '{desc}\n'
-  abort: Diff callsign 'CALLSIGN' is different from repo callsigns '['C']'
+  abort: Diff callsign 'CALLSIGN' does not match repo callsigns '['C']'
   [255]
 
 # Now we have two callsigns, and one of them is correct. Make sure it works

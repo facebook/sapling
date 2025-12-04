@@ -1087,11 +1087,11 @@ def parsedesc(repo, resp, ignoreparsefailure):
 
     callsign = match.group("callsign")
     repo_callsigns = _get_callsigns(repo)
-    _prefixes = _getcallsignprefixes(repo_callsigns, resp)
+    prefixes = _getcallsignprefixes(repo_callsigns, resp)
 
-    if callsign not in repo_callsigns:
+    if not _matchcallsigns(callsign, repo_callsigns, prefixes):
         raise error.Abort(
-            "Diff callsign '%s' is different from repo"
+            "Diff callsign '%s' does not match repo"
             " callsigns '%s'" % (callsign, repo_callsigns)
         )
 
@@ -1366,6 +1366,33 @@ def _getcallsignprefixes(repocallsigns: List[str], resp) -> Set[str]:
     prefixes = set(repocallsigns) & GIT_CALLSIGN_PREFIXES if vcs == "git" else set()
 
     return prefixes
+
+
+def _matchcallsigns(
+    callsign: str, repocallsigns: List[str], prefixes: Set[str]
+) -> bool:
+    """Diff callsign needs to either be exactly match one of the
+    repo callsigns or start with one of the valid prefixes.
+
+    >>> _matchcallsigns('FBS', ['FBS'], [])
+    True
+    >>> _matchcallsigns('CF', ['CF', 'CFHG'], [])
+    True
+    >>> _matchcallsigns('CFHG', ['CF', 'CFHG'], [])
+    True
+    >>> _matchcallsigns('AOSP', ['CF', 'CFHG'], [])
+    False
+    >>> _matchcallsigns('AOSPFOOBAR', ['AOSP'], ['AOSP'])
+    True
+    >>> _matchcallsigns('AOSPFOOBAR', ['AOSP'], [])
+    False
+    """
+    if callsign in repocallsigns:
+        return True
+    for p in prefixes:
+        if callsign.startswith(p):
+            return True
+    return False
 
 
 def _matchreponames(diffreponame: Optional[str], localreponame: Optional[str]) -> bool:
