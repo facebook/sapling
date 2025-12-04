@@ -23,6 +23,7 @@ interface ISLWebviewResult<W extends WebviewPanel | WebviewView> {
 
 import {onClientConnection} from 'isl-server/src';
 import {deserializeFromString, serializeToString} from 'isl/src/serialize';
+import type {PartiallySelectedDiffCommit} from 'isl/src/stackEdit/diffSplitTypes';
 import {ComparisonType, isComparison, labelForComparison} from 'shared/Comparison';
 import type {Deferred} from 'shared/utils';
 import {defer} from 'shared/utils';
@@ -217,6 +218,35 @@ export function registerISLCommands(
           }
         } catch (err: unknown) {
           vscode.window.showErrorMessage(`Error opening ISL with commit message: ${err}`);
+        }
+      },
+    ),
+    vscode.commands.registerCommand(
+      'sapling.open-split-view-with-commits',
+      async (commits: Array<PartiallySelectedDiffCommit>) => {
+        try {
+          let readySignal: Deferred<void>;
+
+          if (shouldUseWebviewView()) {
+            executeVSCodeCommand('sapling.isl.focus');
+            readySignal = webviewViewProvider.readySignal;
+          } else {
+            const result = createOrFocusISLWebview(context, platform, logger);
+            readySignal = result.readySignal;
+          }
+          await readySignal.promise;
+
+          const currentPanelOrViewResult = islPanelOrViewResult;
+          if (currentPanelOrViewResult) {
+            const message: ServerToClientMessage = {
+              type: 'setAISplitCommits',
+              commits,
+            };
+
+            currentPanelOrViewResult.panel.webview.postMessage(serializeToString(message));
+          }
+        } catch (err: unknown) {
+          vscode.window.showErrorMessage(`Error opening split view: ${err}`);
         }
       },
     ),

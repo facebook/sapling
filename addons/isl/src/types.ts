@@ -1237,6 +1237,10 @@ export type ServerToClientMessage =
       type: 'fetchedFullRepoBranchMergeSubtreePaths';
       id: string;
       result: Result<Array<string>>;
+    }
+  | {
+      type: 'setAISplitCommits';
+      commits: Array<PartiallySelectedDiffCommit>;
     };
 
 export type Disposable = {

@@ -97,6 +97,7 @@ type ExternalVSCodeCommands = {
     description: string,
     mode?: 'commit' | 'amend',
   ) => Thenable<void>;
+  'sapling.open-split-view-with-commits': () => Thenable<void>;
   'sapling.open-comparison-view': (comparison: Comparison) => Thenable<void>;
   setContext: (key: string, value: unknown) => Thenable<void>;
   'fb-hg.open-or-focus-interactive-smartlog': (

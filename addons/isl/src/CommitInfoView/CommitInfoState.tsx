@@ -8,6 +8,7 @@
 import type {Hash} from '../types';
 import type {CommitMessageFields} from './types';
 
+import {List} from 'immutable';
 import {atom} from 'jotai';
 import {firstLine} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
@@ -23,6 +24,10 @@ import {onOperationExited, queuedOperations, queuedOperationsErrorAtom} from '..
 import {dagWithPreviews} from '../previews';
 import {selectedCommitInfos, selectedCommits} from '../selection';
 import {latestHeadCommit} from '../serverAPIState';
+import type {CommitRev} from '../stackEdit/common';
+import {applyDiffSplit} from '../stackEdit/diffSplit';
+import {next} from '../stackEdit/revMath';
+import {SplitRangeRecord, stackEditState} from '../stackEdit/ui/stackEditState';
 import {registerCleanup, registerDisposable} from '../utils';
 import {
   allFieldsBeingEdited,
@@ -143,6 +148,66 @@ registerDisposable(
     }
 
     writeAtom(rawCommitMode, mode);
+  }),
+);
+
+// Handle AI split commits message
+registerDisposable(
+  serverAPI,
+  serverAPI.onMessageOfType('setAISplitCommits', event => {
+    // Get the current stack edit state
+    const state = readAtom(stackEditState);
+
+    if (state.history.state !== 'hasValue') {
+      throw new Error('Stack edit state is not loaded');
+    }
+
+    const history = state.history.value;
+    const commitStack = history.current.state;
+
+    // When the intention is 'split', we're splitting a single commit
+    const intention = state.intention;
+    if (intention !== 'split') {
+      throw new Error('Cannot apply AI split when not in split mode');
+    }
+
+    // In split mode, startRev is 1 and endRev is size-1
+    const startRev = 1 as CommitRev;
+    const endRev = (commitStack.size - 1) as CommitRev;
+
+    // Extract a dense substack containing only the commit(s) to be split
+    // For split mode with a single commit, this is just [startRev]
+    const subStack = commitStack.denseSubStack(List([startRev]));
+
+    // Apply the diff split to the first commit in the subStack (position 0 relative to subStack)
+    const newSubStack = applyDiffSplit(subStack, 0 as CommitRev, event.commits);
+
+    // Replace the [start, end+1] range with the new stack in the commit stack
+    const newCommitStack = commitStack.applySubStack(startRev, next(endRev), newSubStack);
+
+    // Calculate the split range for UI selection
+    const endOffset = newCommitStack.size - commitStack.size;
+
+    // The split commits start at position startRev (the first new split commit)
+    // and end at position startRev + endOffset
+    const startKey = newCommitStack.get(startRev)?.key ?? '';
+    const endKey = newCommitStack.get(next(startRev, endOffset))?.key ?? '';
+    const splitRange = SplitRangeRecord({startKey, endKey});
+
+    // Update the state with the new split
+    writeAtom(stackEditState, prev => {
+      if (prev.history.state !== 'hasValue') {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        history: {
+          state: 'hasValue' as const,
+          value: prev.history.value.push(newCommitStack, {name: 'splitWithAI'}, {splitRange}),
+        },
+      };
+    });
   }),
 );
 
