@@ -1364,7 +1364,13 @@ def _get_callsigns(repo) -> List[str]:
     if not callsigns:
         # Try to read from '.arcconfig'
         try:
-            parsed = json.loads(repo["."][".arcconfig"].data())
+            arcconf = repo["."][".arcconfig"]
+            content = arcconf.data()
+            # follow path in the .arcconfig if it's a symlink
+            if "l" in arcconf.flags():
+                path = content.decode("utf-8")
+                content = repo["."][path].data()
+            parsed = json.loads(content)
             callsigns = [parsed["repository.callsign"]]
         except Exception:
             pass
