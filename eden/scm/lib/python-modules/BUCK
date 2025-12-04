@@ -8,7 +8,10 @@ buck_genrule(
     name = "gen=compiled.rs",
     out = "compiled.rs",
     # exe_target respects PACKAGE Python version override. exe does not.
-    cmd = "$(exe_target //eden/scm/lib/python-modules/codegen-exe:codegen-exe) --out $OUT --sys-path $(location //eden/scm:pure-modules)",
+    cmd = select({
+        "DEFAULT": "$(exe_target //eden/scm/lib/python-modules/codegen-exe:codegen-exe) --out $OUT --sys-path $(location //eden/scm:pure-modules)",
+        "ovr_config//os:windows": "set PATH=C:\\tools\\fb-python\\fb-python312;%PATH% && $(exe_target //eden/scm/lib/python-modules/codegen-exe:codegen-exe) --out $OUT --sys-path $(location //eden/scm:pure-modules)",
+    }),
     # Force execution platform to match target platform to avoid "exec format error".
     # See docstring of exec_compatible_with_target.
     exec_compatible_with = exec_compatible_with_target(),

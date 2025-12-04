@@ -9,6 +9,7 @@
 import subprocess
 import sys
 import typing
+import warnings
 from typing import Dict, Optional
 
 from eden.fs.cli.config import EdenInstance
@@ -19,6 +20,13 @@ from eden.thrift import client
 from .lib.find_executables import FindExe
 from .lib.pexpect import pexpect_spawn, PexpectAssertionMixin, PexpectSpawnType
 from .lib.service_test_case import service_test, ServiceTestCaseBase
+
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    message=".*forkpty.*",
+    module="pty",
+)
 
 
 class RestartTestBase(ServiceTestCaseBase):

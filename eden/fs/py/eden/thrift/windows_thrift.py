@@ -12,10 +12,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import ctypes
 import errno
 import sys
+from typing import Union
 
 from thrift.transport.TSocket import TSocket
 from thrift.transport.TTransport import TTransportException
-from typing_extensions import Buffer
+
+# Using explicit type union as a workaround until Pyrefly is available
+# pyre-fixme[24]: Generic type `memoryview` expects 1 type parameter.
+Buffer = Union[bytes, bytearray, memoryview]
 
 
 if sys.platform == "win32":

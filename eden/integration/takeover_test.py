@@ -11,6 +11,7 @@ import signal
 import subprocess
 import sys
 import threading
+import warnings
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -26,6 +27,16 @@ from fb303_core.thrift_types import fb303_status
 
 from .lib import testcase
 from .lib.find_executables import FindExe
+
+# Suppress Python 3.12 DeprecationWarning about forkpty() in multi-threaded processes.
+# This is a Python stdlib internal warning that we cannot fix. It affects the takeover
+# tests which use subprocess calls during graceful restarts.
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    message=".*forkpty.*",
+    module="pty",
+)
 
 
 class TakeoverTestBase(testcase.EdenRepoTest):
