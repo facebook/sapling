@@ -579,15 +579,21 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece childName,
       std::unique_ptr<InodeBase> childInode);
 
+  /**
+   * Start loading inode for name. If async=true, potentially blocking
+   * operations are forced to run through the executor (async).
+   */
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInodeNoThrow(
       const DirEntry& entry,
       PathComponentPiece name,
-      const ObjectFetchContextPtr& context) noexcept;
+      const ObjectFetchContextPtr& context,
+      bool async) noexcept;
 
-  folly::Future<std::unique_ptr<InodeBase>> startLoadingInode(
+  ImmediateFuture<std::unique_ptr<InodeBase>> startLoadingInode(
       const DirEntry& entry,
       PathComponentPiece name,
-      const ObjectFetchContextPtr& context);
+      const ObjectFetchContextPtr& context,
+      bool async);
 
   /**
    * Materialize this directory in the overlay.

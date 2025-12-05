@@ -313,7 +313,7 @@ TreeInode::loadChild(
   if (startLoad) {
     // The inode is not already being loaded.  We have to start
     // loading it now.
-    auto loadFuture = startLoadingInodeNoThrow(entry, name, context);
+    auto loadFuture = startLoadingInodeNoThrow(entry, name, context, false);
     if (loadFuture.isReady() && loadFuture.hasValue()) {
       // If we finished loading the inode immediately, just call
       // InodeMap::inodeLoadComplete() now, since we still have the
@@ -631,7 +631,7 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
     // a null fetch context because we don't need to record statistics.
     static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
         "TreeInode::loadChildInode");
-    future = startLoadingInodeNoThrow(entry, name, context);
+    future = startLoadingInodeNoThrow(entry, name, context, false);
   }
   registerInodeLoadComplete(future, name, number);
 }
@@ -699,7 +699,8 @@ void TreeInode::inodeLoadComplete(
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
     const DirEntry& entry,
     PathComponentPiece name,
-    const ObjectFetchContextPtr& fetchContext) noexcept {
+    const ObjectFetchContextPtr& fetchContext,
+    bool async) noexcept {
   // The callers of startLoadingInodeNoThrow() need to make sure that they
   // always call InodeMap::inodeLoadComplete() or InodeMap::inodeLoadFailed()
   // afterwards.
@@ -707,8 +708,18 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
   // It simplifies their logic to guarantee that we never throw an exception,
   // and always return a Future object.  Therefore we simply wrap
   // startLoadingInode() and convert any thrown exceptions into Future.
-  return folly::makeFutureWith(
-      [&] { return startLoadingInode(entry, name, fetchContext); });
+  return folly::makeFutureWith([&]() -> Future<unique_ptr<InodeBase>> {
+    auto fut = startLoadingInode(entry, name, fetchContext, async);
+
+    // Fast path: if the ImmediateFuture is already ready, return its value
+    // directly without going through semi().via().
+    if (fut.isReady()) {
+      return std::move(fut).get();
+    }
+
+    return std::move(fut).semi().via(
+        &folly::QueuedImmediateExecutor::instance());
+  });
 }
 
 static std::vector<std::string> computeEntryDifferences(
@@ -745,10 +756,11 @@ std::optional<std::vector<std::string>> findEntryDifferences(
   return std::nullopt;
 }
 
-Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
+ImmediateFuture<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     const DirEntry& entry,
     PathComponentPiece name,
-    const ObjectFetchContextPtr& fetchContext) {
+    const ObjectFetchContextPtr& fetchContext,
+    bool async) {
   XLOGF(
       DBG5,
       "starting to load inode {}: {} / \"{}\"",
@@ -772,13 +784,27 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         entry.getObjectIdPtr());
   }
 
+  // Helper that optionally adds an async point before executing the given
+  // function. When async=true, chains on makeNotReadyImmediateFuture() to
+  // yield before calling func(). Works with functions returning either
+  // plain values or ImmediateFutures (thenValue handles flattening).
+  auto maybeAddAsyncPoint = [async](auto func) {
+    auto base = async ? makeNotReadyImmediateFuture()
+                      : ImmediateFuture<folly::Unit>{folly::unit};
+    return std::move(base).thenValue(
+        [f = std::move(func)](auto&&) mutable { return f(); });
+  };
+
   if (!entry.isMaterialized()) {
     auto getTreeSpan = fetchContext->createSpan("getTree");
 
-    return getObjectStore()
-        .getTree(entry.getObjectId(), fetchContext)
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance())
+    auto getTreeFunc = [self = inodePtrFromThis(),
+                        treeId = entry.getObjectId(),
+                        fetchContext = fetchContext.copy()]() mutable {
+      return self->getObjectStore().getTree(treeId, fetchContext);
+    };
+
+    return maybeAddAsyncPoint(std::move(getTreeFunc))
         .thenValue(
             [self = inodePtrFromThis(),
              childName = PathComponent{name},
@@ -786,9 +812,9 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
              entryMode = entry.getInitialMode(),
              number = entry.getInodeNumber(),
              fetchContext = fetchContext.copy(),
-             getTreeSpan = std::move(getTreeSpan)](
-                std::shared_ptr<const Tree> tree) mutable
-                -> unique_ptr<InodeBase> {
+             getTreeSpan = std::move(getTreeSpan),
+             maybeAddAsyncPoint](std::shared_ptr<const Tree> tree) mutable
+                -> ImmediateFuture<unique_ptr<InodeBase>> {
               // Tree has been loaded, end the getTree span
               getTreeSpan.reset();
 
@@ -796,65 +822,91 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
               // numbers stored in the overlay.
               auto loadOverlayDirSpan =
                   fetchContext->createSpan("loadOverlayDir");
-              auto overlayDir = self->loadOverlayDir(number);
-              loadOverlayDirSpan.reset();
 
-              // If the directory we loaded from overlay is empty, there is no
-              // need to compare them and we can just use the version from
-              // backing store. The differences between nonexistent overlay and
-              // empty directory does not matter here.
-              if (!overlayDir.empty()) {
-                // Compare the Tree and the Dir from the overlay.  If they
-                // differ, something is wrong, so log the difference.
-                if (auto differences =
-                        findEntryDifferences(overlayDir, *tree)) {
-                  std::string diffString;
-                  for (const auto& diff : *differences) {
-                    diffString += diff;
-                    diffString += '\n';
+              auto loadOverlayDirFunc =
+                  [self = std::move(self),
+                   childName = std::move(childName),
+                   treeId,
+                   entryMode,
+                   number,
+                   tree = std::move(tree),
+                   loadOverlayDirSpan = std::move(
+                       loadOverlayDirSpan)]() mutable -> unique_ptr<InodeBase> {
+                auto overlayDir = self->loadOverlayDir(number);
+                loadOverlayDirSpan.reset();
+
+                // If the directory we loaded from overlay is empty,
+                // there is no need to compare them and we can just use
+                // the version from backing store. The differences
+                // between nonexistent overlay and empty directory does
+                // not matter here.
+                if (!overlayDir.empty()) {
+                  // Compare the Tree and the Dir from the overlay.  If
+                  // they differ, something is wrong, so log the
+                  // difference.
+                  if (auto differences =
+                          findEntryDifferences(overlayDir, *tree)) {
+                    std::string diffString;
+                    for (const auto& diff : *differences) {
+                      diffString += diff;
+                      diffString += '\n';
+                    }
+                    XLOGF(
+                        ERR,
+                        "loaded entry {} / {} (inode number {}) from overlay but the entries don't correspond with the tree.  Something is wrong!\n{}",
+                        self->getLogPath(),
+                        childName,
+                        number,
+                        diffString);
                   }
+
                   XLOGF(
-                      ERR,
-                      "loaded entry {} / {} (inode number {}) from overlay but the entries don't correspond with the tree.  Something is wrong!\n{}",
-                      self->getLogPath(),
+                      DBG6,
+                      "found entry {} with inode number {} in overlay",
                       childName,
+                      number);
+                  return make_unique<TreeInode>(
                       number,
-                      diffString);
+                      std::move(self),
+                      childName,
+                      entryMode,
+                      std::nullopt,
+                      std::move(overlayDir),
+                      treeId);
                 }
 
-                XLOGF(
-                    DBG6,
-                    "found entry {} with inode number {} in overlay",
-                    childName,
-                    number);
                 return make_unique<TreeInode>(
-                    number,
-                    std::move(self),
-                    childName,
-                    entryMode,
-                    std::nullopt,
-                    std::move(overlayDir),
-                    treeId);
-              }
+                    number, self, childName, entryMode, std::move(tree));
+              };
 
-              return make_unique<TreeInode>(
-                  number, self, childName, entryMode, std::move(tree));
+              return maybeAddAsyncPoint(std::move(loadOverlayDirFunc));
             });
   }
 
   // The entry is materialized, so data must exist in the overlay.
   auto loadOverlayDirSpan = fetchContext->createSpan("loadOverlayDir");
-  auto overlayDir = loadOverlayDir(entry.getInodeNumber());
-  loadOverlayDirSpan.reset();
 
-  return make_unique<TreeInode>(
-      entry.getInodeNumber(),
-      inodePtrFromThis(),
-      name,
-      entry.getInitialMode(),
-      std::nullopt,
-      std::move(overlayDir),
-      std::nullopt);
+  auto createInodeFunc =
+      [self = inodePtrFromThis(),
+       name = PathComponent{name},
+       number = entry.getInodeNumber(),
+       mode = entry.getInitialMode(),
+       loadOverlayDirSpan =
+           std::move(loadOverlayDirSpan)]() mutable -> unique_ptr<InodeBase> {
+    auto overlayDir = self->loadOverlayDir(number);
+    loadOverlayDirSpan.reset();
+
+    return make_unique<TreeInode>(
+        number,
+        std::move(self),
+        name,
+        mode,
+        std::nullopt,
+        std::move(overlayDir),
+        std::nullopt);
+  };
+
+  return maybeAddAsyncPoint(std::move(createInodeFunc));
 }
 
 void TreeInode::materialize(const RenameLock* renameLock) {
@@ -4383,7 +4435,7 @@ ImmediateFuture<InodePtr> TreeInode::loadChildLocked(
         this, name, childNumber, entry.getInitialMode(), std::move(promise));
   }
   if (startLoad) {
-    auto loadFuture = startLoadingInodeNoThrow(entry, name, fetchContext);
+    auto loadFuture = startLoadingInodeNoThrow(entry, name, fetchContext, true);
     pendingLoads.emplace_back(
         this, std::move(loadFuture), name, entry.getInodeNumber());
   }
