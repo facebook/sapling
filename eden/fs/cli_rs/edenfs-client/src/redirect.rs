@@ -1648,6 +1648,7 @@ pub mod scratch {
 
     use anyhow::Result;
     use edenfs_utils::metadata::MetadataExt;
+    use rayon::prelude::*;
     use subprocess::Exec;
     use subprocess::Redirection as SubprocessRedirection;
 
@@ -1666,41 +1667,48 @@ pub mod scratch {
             },
         };
 
-        let mut total_size = 0;
-        let mut failed_to_check_files = Vec::new();
-        for dirent in fs::read_dir(path)? {
-            match usage_for_dir_entry(dirent, device_id) {
-                Ok((subtotal_size, mut failed_files)) => {
-                    total_size += subtotal_size;
-                    failed_to_check_files.append(&mut failed_files);
-                    Ok(())
-                }
-                Err(e) if ignored_io_error(&e) => {
-                    failed_to_check_files.push(path.to_path_buf());
-                    Ok(())
-                }
-                Err(e) => Err(e),
-            }?;
+        // Collect directory entries and process them in parallel
+        let entries: Vec<DirEntry> = match fs::read_dir(path) {
+            Ok(read_dir) => read_dir.filter_map(|e| e.ok()).collect(),
+            Err(e) if ignored_io_error(&e) => return Ok((0, vec![path.to_path_buf()])),
+            Err(e) => return Err(e),
+        };
+
+        let results: Vec<(u64, Vec<PathBuf>)> = entries
+            .par_iter()
+            .map(|entry| usage_for_dir_entry(entry, device_id))
+            .collect();
+
+        let mut total_size = 0u64;
+        let mut failed_files = Vec::new();
+        for (size, mut failed) in results {
+            total_size += size;
+            failed_files.append(&mut failed);
         }
-        Ok((total_size, failed_to_check_files))
+
+        Ok((total_size, failed_files))
     }
 
-    /// Intended to only be called by [usage_for_dir]
-    fn usage_for_dir_entry(
-        dirent: std::io::Result<DirEntry>,
-        parent_device_id: u64,
-    ) -> std::io::Result<(u64, Vec<PathBuf>)> {
-        let entry = dirent?;
-        let symlink_metadata = fs::symlink_metadata(entry.path())?;
-        if symlink_metadata.is_dir() {
-            // Don't recurse onto different filesystems
-            if cfg!(windows) || symlink_metadata.eden_dev() == parent_device_id {
-                usage_for_dir(&entry.path(), Some(parent_device_id))
-            } else {
-                Ok((0, vec![]))
+    fn usage_for_dir_entry(entry: &DirEntry, parent_device_id: u64) -> (u64, Vec<PathBuf>) {
+        let path = entry.path();
+        match fs::symlink_metadata(&path) {
+            Ok(metadata) => {
+                if metadata.is_dir() {
+                    // Don't recurse onto different filesystems
+                    if cfg!(windows) || metadata.eden_dev() == parent_device_id {
+                        match usage_for_dir(&path, Some(parent_device_id)) {
+                            Ok((size, failed)) => (size, failed),
+                            Err(_) => (0, vec![path]),
+                        }
+                    } else {
+                        (0, vec![])
+                    }
+                } else {
+                    (metadata.eden_file_size(), vec![])
+                }
             }
-        } else {
-            Ok((symlink_metadata.eden_file_size(), vec![]))
+            Err(e) if ignored_io_error(&e) => (0, vec![path]),
+            Err(_) => (0, vec![path]),
         }
     }
 

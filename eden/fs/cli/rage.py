@@ -414,7 +414,7 @@ def print_diagnostic_info(
     print_system_mount_table(out)
     print_env_variables(out, edenfs_instance_pid)
 
-    get_disk_space_usauge(out, processor, dry_run)
+    get_disk_space_usage(out, processor, dry_run)
 
     print_eden_doctor(out, processor, dry_run)
 
@@ -534,7 +534,7 @@ def print_system_info(out: IOWithRedaction, host: str) -> None:
 
 
 @timer_decorator
-def get_disk_space_usauge(out: IOWithRedaction, processor: str, dry_run: bool) -> None:
+def get_disk_space_usage(out: IOWithRedaction, processor: str, dry_run: bool) -> None:
     section_title("Disk Space Usage:", out)
     paste_output(
         lambda sink: print_disk_space_usage(sink),
