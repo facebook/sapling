@@ -1626,7 +1626,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> windowsRememberExecutableBit{
       "experimental:windows-remember-executable-bit",
-      false,
+      true,
       this};
 
   /**
