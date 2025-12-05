@@ -1822,7 +1822,7 @@ mod test {
 
         // Extend TTL with a longer duration (2 minutes)
         let result = eph
-            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(120)))
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_mins(2)))
             .await?;
 
         // Should return Extended with the new timestamp
@@ -1830,7 +1830,7 @@ mod test {
             ExtendBubbleTtlOutcome::Extended(timestamp) => {
                 // The new expiration should be approximately 2 minutes from now
                 let now = DateTime::now();
-                let expected_expiry = now + to_chrono(Duration::from_secs(120));
+                let expected_expiry = now + to_chrono(Duration::from_mins(2));
                 let actual_expiry: DateTime = timestamp.into();
 
                 // Allow for some time difference due to test execution time
@@ -1858,7 +1858,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn extend_bubble_ttl_with_shorter_duration_test(fb: FacebookInit) -> Result<()> {
-        let initial = Duration::from_secs(120); // 2 minutes initial lifespan
+        let initial = Duration::from_mins(2); // 2 minutes initial lifespan
         let grace = Duration::from_secs(30);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
 
@@ -1876,7 +1876,7 @@ mod test {
             ExtendBubbleTtlOutcome::NotChanged(timestamp) => {
                 // The timestamp should be approximately the original expiration time
                 let now = DateTime::now();
-                let expected_expiry = now + to_chrono(Duration::from_secs(120));
+                let expected_expiry = now + to_chrono(Duration::from_mins(2));
                 let actual_expiry: DateTime = timestamp.into();
 
                 // Allow for some time difference due to test execution time
@@ -2019,7 +2019,7 @@ mod test {
 
         // Extend TTL with a longer duration
         let result = eph
-            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(120)))
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_mins(2)))
             .await?;
 
         // Should return Extended
@@ -2049,7 +2049,7 @@ mod test {
 
         // First extension
         let result1 = eph
-            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(120)))
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_mins(2)))
             .await?;
         assert!(matches!(result1, ExtendBubbleTtlOutcome::Extended(_)));
 
@@ -2093,13 +2093,13 @@ mod test {
 
         // Extend with a longer duration
         let result = eph
-            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(120)))
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_mins(2)))
             .await?;
 
         match result {
             ExtendBubbleTtlOutcome::Extended(new_timestamp) => {
                 let new_expiry: DateTime = new_timestamp.into();
-                let expected_expiry = now_before + to_chrono(Duration::from_secs(120));
+                let expected_expiry = now_before + to_chrono(Duration::from_mins(2));
 
                 // The new expiry should be approximately 2 minutes from the original time
                 let new_expiry_chrono = new_expiry.into_chrono();
