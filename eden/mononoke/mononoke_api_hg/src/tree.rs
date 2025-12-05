@@ -21,7 +21,6 @@ use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::fetch_manifest_envelope_opt;
 use mononoke_api::MononokeRepo;
 use mononoke_api::errors::MononokeError;
-use mononoke_macros::mononoke;
 use mononoke_types::MPathElement;
 use mononoke_types::hash::Blake3;
 use repo_blobstore::RepoBlobstoreRef;

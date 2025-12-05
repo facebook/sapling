@@ -47,6 +47,7 @@ pub struct WarmerConfig {
 }
 
 impl WarmerConfig {
+    #[allow(dead_code)]
     pub fn git_only() -> Self {
         Self {
             include_hg: false,
