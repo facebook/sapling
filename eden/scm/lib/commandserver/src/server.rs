@@ -39,7 +39,7 @@ pub fn serve_one_client<'a>(
         // `for ipc in incoming` might block forever waiting for
         // a client. Detect that and exit early.
         s.spawn(|| {
-            let idle_timeout = Duration::from_secs(1800);
+            let idle_timeout = Duration::from_mins(30);
             let interval = Duration::from_secs(5);
             while is_waiting.load(Ordering::Acquire)
                 && start_time.elapsed() < idle_timeout
