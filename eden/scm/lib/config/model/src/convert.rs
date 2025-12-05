@@ -538,7 +538,7 @@ mod tests {
 
         assert_eq!(Duration::try_from_str("555ns")?, Duration::from_nanos(555));
         assert_eq!(Duration::try_from_str("1m")?, Duration::from_mins(1));
-        assert_eq!(Duration::try_from_str("2h")?, Duration::from_secs(7200));
+        assert_eq!(Duration::try_from_str("2h")?, Duration::from_hours(2));
         assert_eq!(Duration::try_from_str("5ms")?, Duration::from_millis(5));
         assert_eq!(Duration::try_from_str("123us")?, Duration::from_micros(123));
         assert_eq!(Duration::try_from_str("1.5h")?, Duration::from_mins(90));
