@@ -541,7 +541,7 @@ mod tests {
         assert_eq!(Duration::try_from_str("2h")?, Duration::from_secs(7200));
         assert_eq!(Duration::try_from_str("5ms")?, Duration::from_millis(5));
         assert_eq!(Duration::try_from_str("123us")?, Duration::from_micros(123));
-        assert_eq!(Duration::try_from_str("1.5h")?, Duration::from_secs(5400));
+        assert_eq!(Duration::try_from_str("1.5h")?, Duration::from_mins(90));
 
         assert!(Duration::try_from_str("-1").is_err());
         // Don't allow capitals for now - ambiguous with "month" potentially if we ever
