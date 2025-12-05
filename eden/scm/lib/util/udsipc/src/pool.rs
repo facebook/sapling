@@ -106,7 +106,7 @@ pub fn list_uds_paths<'a>(
         let name = name.to_str().unwrap_or_default();
         if !name.starts_with(prefix) {
             // Remove stale uds files if they are older than 12 hours.
-            let _ = maybe_remove_stale_file(&entry, Duration::from_secs(43200));
+            let _ = maybe_remove_stale_file(&entry, Duration::from_hours(12));
             return None;
         }
 
