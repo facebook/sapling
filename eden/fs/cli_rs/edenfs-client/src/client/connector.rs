@@ -24,7 +24,7 @@ pub type StreamingEdenFsThriftClientFuture =
 
 // TODO: select better defaults (e.g. 1s connection timeout, 1m recv timeout)
 const DEFAULT_CONN_TIMEOUT: Duration = Duration::from_secs(120);
-const DEFAULT_RECV_TIMEOUT: Duration = Duration::from_secs(300);
+const DEFAULT_RECV_TIMEOUT: Duration = Duration::from_mins(5);
 
 /// A trait that defines the common interface for EdenFS connectors.
 ///

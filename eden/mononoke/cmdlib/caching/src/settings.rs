@@ -217,7 +217,7 @@ impl Default for CachelibSettings {
             synced_commit_mapping_cache_size: None,
             expected_item_size_bytes: None,
             rebalancing_use_lru: false,
-            rebalancing_interval: Duration::from_secs(300),
+            rebalancing_interval: Duration::from_mins(5),
             cache_file_path: None,
             cache_file_size: 32 * ONE_GIB as u64,
         }

@@ -289,7 +289,7 @@ impl BackingStore {
                 .unwrap_or(Duration::from_secs(5)),
             reload_interval: config
                 .get_opt("backingstore", "reload-interval-secs")?
-                .unwrap_or(Duration::from_secs(300)),
+                .unwrap_or(Duration::from_mins(5)),
             prefetch_send,
             walk_mode,
             walk_detector,

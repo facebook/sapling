@@ -44,7 +44,7 @@ pub fn fsync_glob(dir: &Path, patterns: &[&str], newer_than: Option<SystemTime>)
 
         let newer_than = newer_than.unwrap_or_else(|| {
             let now = SystemTime::now();
-            now.checked_sub(Duration::from_secs(300)).unwrap_or(now)
+            now.checked_sub(Duration::from_mins(5)).unwrap_or(now)
         });
 
         for path in matches {

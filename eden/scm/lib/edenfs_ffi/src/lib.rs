@@ -57,7 +57,7 @@ static OBJECT_CACHE_MISSES: Counter = Counter::new_counter("edenffi.ffs.object_c
 static OBJECT_CACHE_HITS: Counter = Counter::new_counter("edenffi.ffs.object_cache_hits");
 static OBJECT_CACHE_CLEANUPS: Counter = Counter::new_counter("edenffi.ffs.object_cache_cleanups");
 
-const DEFAULT_CACHE_EXPIRY_DURATION: Duration = Duration::from_secs(300); // 5 minutes
+const DEFAULT_CACHE_EXPIRY_DURATION: Duration = Duration::from_mins(5); // 5 minutes
 
 // Background thread to clean up expired objects
 fn cleanup_expired_objects() {

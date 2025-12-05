@@ -28,7 +28,7 @@ use tokio_util::codec::FramedRead;
 use crate::http_service::HttpError;
 
 const NETSPEEDTEST_MAX_NBYTES: u64 = 100 * 1024 * 1024;
-const NETSPEEDTEST_TIMEOUT: Duration = Duration::from_secs(300);
+const NETSPEEDTEST_TIMEOUT: Duration = Duration::from_mins(5);
 
 const HEADER_DOWNLOAD_NBYTES: &str = "x-netspeedtest-nbytes";
 

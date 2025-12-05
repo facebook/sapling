@@ -37,5 +37,5 @@ fn main() {
         println!();
         println!("The child should not have more file handles than the parent.");
     }
-    std::thread::sleep(std::time::Duration::from_secs(300))
+    std::thread::sleep(std::time::Duration::from_mins(5))
 }
