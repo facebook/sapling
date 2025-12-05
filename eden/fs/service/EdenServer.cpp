@@ -2293,14 +2293,29 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
   getServerState()->getNotifier()->signalCheckout(
       enumerateInProgressCheckouts() + 1);
 
+  ImmediateFuture<folly::Unit> asyncPoint{std::in_place};
+  if (thriftUseCheckoutExecutor_) {
+    // Insert an async point to ensure work happens on the checkout executor.
+    // Without this, any sync work in edenMount.checkout will run on the
+    // Thrift worker thread instead of the checkout executor.
+    asyncPoint = makeNotReadyImmediateFuture();
+  }
+
   auto checkoutFuture =
-      edenMount
-          .checkout(
-              mountHandle.getRootInode(),
-              root,
-              fetchContext,
-              callerName,
-              checkoutMode)
+      std::move(asyncPoint)
+          .thenValue([&edenMount,
+                      rootInode = mountHandle.getRootInode(),
+                      root,
+                      fetchContext = fetchContext.copy(),
+                      callerName = callerName.str(),
+                      checkoutMode](auto&&) mutable {
+            return edenMount.checkout(
+                std::move(rootInode),
+                root,
+                fetchContext,
+                callerName,
+                checkoutMode);
+          })
           .thenValue([this, checkoutMode, isNfs, mountPath = mountPath.copy()](
                          CheckoutResult&& result) {
             getServerState()->getNotifier()->signalCheckout(
