@@ -80,6 +80,11 @@ class MiniTracer {
   std::string summarize() const;
   std::string summarize(uint64_t endTimeNs) const;
 
+  /**
+   * Returns the elapsed duration since the tracer was created.
+   */
+  std::chrono::steady_clock::duration elapsed() const;
+
  private:
   [[nodiscard]] Span createSpanImpl(const char* name);
   [[nodiscard]] Span createSpanImpl(const char* name, uint64_t startTimeNs);

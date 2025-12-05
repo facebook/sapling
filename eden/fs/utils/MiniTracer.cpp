@@ -155,6 +155,11 @@ MiniTracer::Span MiniTracer::createSpanImpl(
   return Span{std::move(metadata), startTimeNs};
 }
 
+std::chrono::steady_clock::duration MiniTracer::elapsed() const {
+  auto currentTimeNs = toNanosSinceEpoch(std::chrono::steady_clock::now());
+  return std::chrono::nanoseconds{currentTimeNs - startTimeNs_};
+}
+
 std::string MiniTracer::summarize() const {
   return summarize(toNanosSinceEpoch(std::chrono::steady_clock::now()));
 }

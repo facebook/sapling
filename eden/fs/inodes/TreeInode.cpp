@@ -773,6 +773,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   }
 
   if (!entry.isMaterialized()) {
+    auto getTreeSpan = fetchContext->createSpan("getTree");
+
     return getObjectStore()
         .getTree(entry.getObjectId(), fetchContext)
         .semi()
@@ -782,12 +784,20 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
              childName = PathComponent{name},
              treeId = entry.getObjectId(),
              entryMode = entry.getInitialMode(),
-             number = entry.getInodeNumber()](
+             number = entry.getInodeNumber(),
+             fetchContext = fetchContext.copy(),
+             getTreeSpan = std::move(getTreeSpan)](
                 std::shared_ptr<const Tree> tree) mutable
                 -> unique_ptr<InodeBase> {
+              // Tree has been loaded, end the getTree span
+              getTreeSpan.reset();
+
               // Even if the inode is not materialized, it may have inode
               // numbers stored in the overlay.
+              auto loadOverlayDirSpan =
+                  fetchContext->createSpan("loadOverlayDir");
               auto overlayDir = self->loadOverlayDir(number);
+              loadOverlayDirSpan.reset();
 
               // If the directory we loaded from overlay is empty, there is no
               // need to compare them and we can just use the version from
@@ -833,7 +843,10 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   }
 
   // The entry is materialized, so data must exist in the overlay.
+  auto loadOverlayDirSpan = fetchContext->createSpan("loadOverlayDir");
   auto overlayDir = loadOverlayDir(entry.getInodeNumber());
+  loadOverlayDirSpan.reset();
+
   return make_unique<TreeInode>(
       entry.getInodeNumber(),
       inodePtrFromThis(),
@@ -2638,6 +2651,8 @@ ImmediateFuture<Unit> TreeInode::loadGitIgnoreThenDiff(
     std::vector<shared_ptr<const Tree>> trees,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
+  auto loadGitIgnoreThenDiffSpan = context->createSpan("loadGitIgnoreThenDiff");
+
   return makeImmediateFutureWith([gitignoreInode = std::move(gitignoreInode),
                                   context] {
            auto fileInode = gitignoreInode.asFileOrNull();
@@ -2719,6 +2734,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
   XDCHECK(isIgnored || ignore != nullptr)
       << "the ignore stack is required if this directory is not ignored";
 
+  auto computeDiffSpan = context->createSpan("computeDiff");
+
   std::vector<std::unique_ptr<DeferredDiffEntry>> deferredEntries;
   auto self = inodePtrFromThis();
   bool windowsSymlinksEnabled = context->getWindowsSymlinksEnabled();
@@ -2747,6 +2764,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
     auto contents = std::move(contentsLock);
 
     auto processUntracked = [&](PathComponentPiece name, DirEntry* inodeEntry) {
+      auto processUntrackedSpan = context->createSpan("processUntracked");
+
       bool entryIgnored = isIgnored;
       auto fileType = inodeEntry->isDirectory() ? GitIgnore::TYPE_DIR
                                                 : GitIgnore::TYPE_FILE;
@@ -2788,12 +2807,15 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
                     ignore.get(),
                     entryIgnored));
           } else if (inodeEntry->isMaterialized()) {
-            auto inodeFuture = self->loadChildLocked(
-                contents->entries,
-                name,
-                *inodeEntry,
-                pendingLoads,
-                context->getFetchContext());
+            auto loadChildLockedSpan = context->createSpan("loadChildLocked");
+            auto inodeFuture =
+                self->loadChildLocked(
+                        contents->entries,
+                        name,
+                        *inodeEntry,
+                        pendingLoads,
+                        context->getFetchContext())
+                    .ensure([span = std::move(loadChildLockedSpan)]() {});
             deferredEntries.emplace_back(
                 DeferredDiffEntry::createUntrackedEntry(
                     context,
@@ -2834,6 +2856,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
     auto processBothPresent = [&](PathComponentPiece componentPath,
                                   std::vector<TreeEntry> scmEntries,
                                   DirEntry* inodeEntry) {
+      auto processBothPresentSpan = context->createSpan("processBothPresent");
+
       XCHECK_GT(scmEntries.size(), 0ull);
 
       // We only need to know the ignored status if this is a directory.
@@ -2871,12 +2895,15 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
       } else if (inodeEntry->isMaterialized()) {
         // This inode is not loaded but is materialized.
         // We'll have to load it to confirm if it is the same or different.
-        auto inodeFuture = self->loadChildLocked(
-            contents->entries,
-            componentPath,
-            *inodeEntry,
-            pendingLoads,
-            context->getFetchContext());
+        auto loadChildLockedSpan = context->createSpan("loadChildLocked");
+        auto inodeFuture =
+            self->loadChildLocked(
+                    contents->entries,
+                    componentPath,
+                    *inodeEntry,
+                    pendingLoads,
+                    context->getFetchContext())
+                .ensure([span = std::move(loadChildLockedSpan)]() {});
         deferredEntries.emplace_back(
             DeferredDiffEntry::createModifiedEntry(
                 context,
@@ -3156,6 +3183,8 @@ ImmediateFuture<Unit> TreeInode::checkout(
       (fromTree ? fromTree->getObjectId().toLogString() : "<none>"),
       (toTree ? toTree->getObjectId().toLogString() : "<none>"));
 
+  auto checkoutSpan = ctx->createSpan("TreeInode::checkout");
+
   std::vector<std::shared_ptr<CheckoutAction>> actions;
   std::vector<IncompleteInodeLoad> pendingLoads;
 
@@ -3336,6 +3365,8 @@ void TreeInode::computeCheckoutActions(
     vector<std::shared_ptr<CheckoutAction>>& actions,
     vector<IncompleteInodeLoad>& pendingLoads,
     bool& wasDirectoryListModified) {
+  auto computeActionsSpan = ctx->createSpan("computeCheckoutActions");
+
   // Grab the contents_ lock for the duration of this function
   auto contents = contents_.wlock();
 
@@ -4187,6 +4218,8 @@ ImmediateFuture<folly::Unit> TreeInode::invalidateChannelDirCache(
 void TreeInode::saveOverlayPostCheckout(
     CheckoutContext* ctx,
     const Tree* tree) {
+  auto saveOverlaySpan = ctx->createSpan("saveOverlayPostCheckout");
+
   if (ctx->isDryRun()) {
     // If this is a dry run, then we do not want to update the parents or make
     // any sort of unnecessary writes to the overlay, so we bail out.
@@ -4342,8 +4375,13 @@ ImmediateFuture<InodePtr> TreeInode::loadChildLocked(
 
   auto [promise, future] = folly::makePromiseContract<InodePtr>();
   auto childNumber = entry.getInodeNumber();
-  bool startLoad = getInodeMap()->startLoadingChildIfNotLoading(
-      this, name, childNumber, entry.getInitialMode(), std::move(promise));
+
+  bool startLoad;
+  {
+    auto span = fetchContext->createSpan("startLoadingChildIfNotLoading");
+    startLoad = getInodeMap()->startLoadingChildIfNotLoading(
+        this, name, childNumber, entry.getInitialMode(), std::move(promise));
+  }
   if (startLoad) {
     auto loadFuture = startLoadingInodeNoThrow(entry, name, fetchContext);
     pendingLoads.emplace_back(

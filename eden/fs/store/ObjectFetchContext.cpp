@@ -7,6 +7,7 @@
 
 #include "eden/fs/store/ObjectFetchContext.h"
 #include <folly/CppAttributes.h>
+#include "eden/fs/utils/MiniTracer.h"
 
 namespace {
 

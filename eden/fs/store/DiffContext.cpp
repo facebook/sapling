@@ -35,7 +35,10 @@ DiffContext::DiffContext(
       fetchContext_{statsContext_.copy()},
       caseSensitive_{caseSensitive},
       windowsSymlinksEnabled_{windowsSymlinksEnabled},
-      windowsRememberExecutableBit_{store->getWindowsRememberExecutableBit()} {}
+      windowsRememberExecutableBit_{store->getWindowsRememberExecutableBit()} {
+  // Propagate time tracer object (e.g. from "checkout").
+  fetchContext_->setTimeTracer(fetchContext->getTimeTracer());
+}
 
 DiffContext::~DiffContext() = default;
 

@@ -15,6 +15,7 @@
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/utils/MiniTracer.h"
 
 namespace facebook::eden {
 
@@ -193,11 +194,40 @@ class ObjectFetchContext : public RefCounted {
    */
   static ObjectFetchContextPtr getNullPrefetchContext();
 
+  /**
+   * Set the time tracer.
+   */
+  void setTimeTracer(std::shared_ptr<MiniTracer> tracer) {
+    timeTracer_ = std::move(tracer);
+  }
+
+  /**
+   * Get the time tracer.
+   */
+  std::shared_ptr<MiniTracer> getTimeTracer() {
+    return timeTracer_;
+  }
+
+  /**
+   * Create a span for timing instrumentation if a time tracer is set.
+   * Returns nullopt if no time tracer is set.
+   */
+  template <typename... Args>
+  std::optional<MiniTracer::Span> createSpan(Args&&... args) const {
+    if (timeTracer_) {
+      return timeTracer_->createSpan(std::forward<Args>(args)...);
+    }
+    return std::nullopt;
+  }
+
  private:
   ObjectFetchContext(const ObjectFetchContext&) = delete;
   ObjectFetchContext& operator=(const ObjectFetchContext&) = delete;
 
   FetchedSource fetchedSource_{FetchedSource::Unknown};
+
+  // Time tracer for instrumentation (may be nullptr)
+  std::shared_ptr<MiniTracer> timeTracer_{nullptr};
 
   std::unordered_map<
       std::tuple<FetchedSource, ObjectType>,

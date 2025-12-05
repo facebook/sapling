@@ -37,6 +37,9 @@ CheckoutContext::CheckoutContext(
       windowsSymlinksEnabled_{
           mount_->getCheckoutConfig()->getEnableWindowsSymlinks()},
       windowsRememberExecutableBit_{mount_->getWindowsRememberExecutableBit()} {
+  if (mount_->getEdenConfig()->thriftCheckoutTimeTracing.getValue()) {
+    fetchContext_->setTimeTracer(std::make_shared<MiniTracer>());
+  }
 }
 
 CheckoutContext::~CheckoutContext() = default;
@@ -93,6 +96,11 @@ ImmediateFuture<vector<CheckoutConflict>> CheckoutContext::finish(
             .value(),
         newSnapshot);
     config->setCheckedOutCommit(newSnapshot);
+  }
+
+  std::shared_ptr<MiniTracer> tracer = fetchContext_->getTimeTracer();
+  if (tracer && tracer->elapsed() > std::chrono::seconds(1)) {
+    XLOGF(INFO, "Checkout time summary:\n{}", tracer->summarize());
   }
 
   // Release the rename lock.

@@ -19,6 +19,7 @@
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/StatsFetchContext.h"
+#include "eden/fs/utils/MiniTracer.h"
 
 namespace folly {
 class exception_wrapper;
@@ -151,6 +152,15 @@ class CheckoutContext {
   }
 
   void increaseCheckoutCounter(int64_t inc) const;
+
+  /**
+   * Create a span for timing instrumentation.
+   * Returns nullopt if no time tracer is set.
+   */
+  template <typename... Args>
+  std::optional<MiniTracer::Span> createSpan(Args&&... args) {
+    return fetchContext_->createSpan(std::forward<Args>(args)...);
+  }
 
  private:
   CheckoutMode checkoutMode_;

@@ -457,6 +457,13 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Enable use of MiniTracer to collect checkout timing info.
+   */
+  ConfigSetting<bool> thriftCheckoutTimeTracing{
+      "thrift:checkout-time-tracing",
+      true,
+      this};
+  /**
    * Configures the amount of time workers should spend completing outstanding
    * requests during Thrift server shutdown. If the timeout is reached, the
    * server exits immediately (i.e. crashes).

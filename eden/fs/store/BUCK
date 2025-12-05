@@ -109,6 +109,7 @@ cpp_library(
         "//eden/common/os:os",
         "//eden/common/utils:ref_ptr",
         "//eden/fs/telemetry:stats",
+        "//eden/fs/utils:mini_tracer",
     ],
 )
 
@@ -215,6 +216,7 @@ cpp_library(
         "//eden/fs/model:model-fwd",
         "//eden/fs/service:thrift-cpp2-types",
         "//eden/fs/telemetry:stats",
+        "//eden/fs/utils:mini_tracer",
         "//eden/fs/utils:sharded_lru_cache",
         "//folly:cancellation_token",
         "//folly:executor",

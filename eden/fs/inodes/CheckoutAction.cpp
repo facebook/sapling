@@ -70,13 +70,15 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::run(
     if (oldScmEntry_.has_value()) {
       const auto& oldEntry = oldScmEntry_.value();
       if (oldEntry.second.isTree()) {
+        auto getTreeSpan = ctx->createSpan("getTree");
         loadFutures.emplace_back(
             store
                 ->getTree(oldEntry.second.getObjectId(), ctx->getFetchContext())
-                .thenValue([self = shared_from_this()](
-                               std::shared_ptr<const Tree> oldTree) {
-                  self->setOldTree(std::move(oldTree));
-                })
+                .thenValue(
+                    [self = shared_from_this(), span = std::move(getTreeSpan)](
+                        std::shared_ptr<const Tree> oldTree) mutable {
+                      self->setOldTree(std::move(oldTree));
+                    })
                 .thenError([self = shared_from_this()](exception_wrapper&& ew) {
                   self->error("error getting old tree", std::move(ew));
                 }));
@@ -98,13 +100,15 @@ ImmediateFuture<InvalidationRequired> CheckoutAction::run(
     if (newScmEntry_.has_value()) {
       const auto& newEntry = newScmEntry_.value();
       if (newEntry.second.isTree()) {
+        auto getTreeSpan = ctx->createSpan("getTree");
         loadFutures.emplace_back(
             store
                 ->getTree(newEntry.second.getObjectId(), ctx->getFetchContext())
-                .thenValue([self = shared_from_this()](
-                               std::shared_ptr<const Tree> newTree) {
-                  self->setNewTree(std::move(newTree));
-                })
+                .thenValue(
+                    [self = shared_from_this(), span = std::move(getTreeSpan)](
+                        std::shared_ptr<const Tree> newTree) mutable {
+                      self->setNewTree(std::move(newTree));
+                    })
                 .thenError([self = shared_from_this()](exception_wrapper&& ew) {
                   self->error("error getting new tree", std::move(ew));
                 }));

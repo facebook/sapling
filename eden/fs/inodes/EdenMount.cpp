@@ -1538,9 +1538,13 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
             if (resumingCheckout) {
               trees.push_back(std::get<1>(treeResults).tree);
             }
+            auto diffSpan = ctx->createSpan("performDiff");
             return journalDiffCallback
                 ->performDiff(this, rootInode, std::move(trees), ctx)
-                .thenValue([ctx, journalDiffCallback, treeResults](
+                .thenValue([ctx,
+                            journalDiffCallback,
+                            treeResults,
+                            diffSpan = std::move(diffSpan)](
                                const StatsFetchContext& diffFetchContext) {
                   ctx->getStatsContext().merge(diffFetchContext);
                   return treeResults;
@@ -1553,7 +1557,11 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         // Perform the requested checkout operation after the journal diff
         // completes. This also updates the SNAPSHOT file to make sure that an
         // interrupted checkout can be properly detected.
-        auto renameLock = this->acquireRenameLock();
+        RenameLock renameLock;
+        {
+          auto renameLockSpan = ctx->createSpan("acquireRenameLock");
+          renameLock = this->acquireRenameLock();
+        }
         ctx->start(
             std::move(renameLock),
             parentState_.wlock(),
@@ -1588,7 +1596,10 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         // user to wait for us to just-in-time write a lot of directories to the
         // overlay. The assumption is it is okay to regenerate inode numbers at
         // checkout time for inodes with fs-ref-count==0.
-        rootInode->unloadChildrenUnreferencedByFs(false);
+        {
+          auto unloadSpan = ctx->createSpan("unloadChildrenUnreferencedByFs");
+          rootInode->unloadChildrenUnreferencedByFs(false);
+        }
 
         return serverState_->getFaultInjector()
             .checkAsync("inodeCheckout", getPath().view())
@@ -1660,71 +1671,75 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
               return result;
             }
 
-            // Write a journal entry
-            //
-            // Note that we do not call journalDiffCallback->performDiff() a
-            // second time here to compute the files that are now different
-            // from the new state.  The checkout operation will only touch
-            // files that are changed between fromTree and toTree.
-            //
-            // Any files that are unclean after the checkout operation must
-            // have either been unclean before it started, or different
-            // between the two trees.  Therefore the JournalDelta already
-            // includes information that these files changed.
-            auto uncleanPaths = journalDiffCallback->stealUncleanPaths();
-            journal_->recordUncleanPaths(
-                oldParent, snapshotId, std::move(uncleanPaths));
+            {
+              auto journalSpan = ctx->createSpan("journalUpdate");
 
-            // Record journal entries for file changes caused by
-            // a force checkout. Do this here after the checkout finishes
-            // in case there are any errors during the checkout.
-            if (checkoutMode == CheckoutMode::FORCE) {
-              for (const auto& conflict : result.conflicts) {
-                switch (conflict.type().value()) {
-                  case ConflictType::ERROR:
-                    // Ignore
-                    break;
-                  case ConflictType::MODIFIED_REMOVED:
-                    journal_->recordRemoved(
-                        RelativePathPiece(conflict.path().value()),
-                        static_cast<dtype_t>(conflict.dtype().value()));
-                    break;
-                  case ConflictType::UNTRACKED_ADDED:
-                    // An untracked file in current differs from a tracked file
-                    // inside the target commit.
-                    // Basically a modify
-                    journal_->recordChanged(
-                        RelativePathPiece(conflict.path().value()),
-                        static_cast<dtype_t>(conflict.dtype().value()));
-                    break;
-                  case ConflictType::REMOVED_MODIFIED:
-                    // Not sure if the created is required
-                    journal_->recordCreated(
-                        RelativePathPiece(conflict.path().value()),
-                        static_cast<dtype_t>(conflict.dtype().value()));
-                    journal_->recordChanged(
-                        RelativePathPiece(conflict.path().value()),
-                        static_cast<dtype_t>(conflict.dtype().value()));
-                    break;
-                  case ConflictType::MISSING_REMOVED:
-                    // By the comment in MISSING_REMOVED, the file should
-                    // have already been removed from the filesystem so it
-                    // should already be recorded
-                    break;
-                  case ConflictType::MODIFIED_MODIFIED:
-                    journal_->recordChanged(
-                        RelativePathPiece(conflict.path().value()),
-                        static_cast<dtype_t>(conflict.dtype().value()));
-                    break;
-                  case ConflictType::DIRECTORY_NOT_EMPTY:
-                    // Ignore
-                    break;
-                  default:
-                    // Ignore
-                    break;
+              // Write a journal entry
+              //
+              // Note that we do not call journalDiffCallback->performDiff() a
+              // second time here to compute the files that are now different
+              // from the new state.  The checkout operation will only touch
+              // files that are changed between fromTree and toTree.
+              //
+              // Any files that are unclean after the checkout operation must
+              // have either been unclean before it started, or different
+              // between the two trees.  Therefore the JournalDelta already
+              // includes information that these files changed.
+              auto uncleanPaths = journalDiffCallback->stealUncleanPaths();
+              journal_->recordUncleanPaths(
+                  oldParent, snapshotId, std::move(uncleanPaths));
+
+              // Record journal entries for file changes caused by
+              // a force checkout. Do this here after the checkout finishes
+              // in case there are any errors during the checkout.
+              if (checkoutMode == CheckoutMode::FORCE) {
+                for (const auto& conflict : result.conflicts) {
+                  switch (conflict.type().value()) {
+                    case ConflictType::ERROR:
+                      // Ignore
+                      break;
+                    case ConflictType::MODIFIED_REMOVED:
+                      journal_->recordRemoved(
+                          RelativePathPiece(conflict.path().value()),
+                          static_cast<dtype_t>(conflict.dtype().value()));
+                      break;
+                    case ConflictType::UNTRACKED_ADDED:
+                      // An untracked file in current differs from a tracked
+                      // file inside the target commit. Basically a modify
+                      journal_->recordChanged(
+                          RelativePathPiece(conflict.path().value()),
+                          static_cast<dtype_t>(conflict.dtype().value()));
+                      break;
+                    case ConflictType::REMOVED_MODIFIED:
+                      // Not sure if the created is required
+                      journal_->recordCreated(
+                          RelativePathPiece(conflict.path().value()),
+                          static_cast<dtype_t>(conflict.dtype().value()));
+                      journal_->recordChanged(
+                          RelativePathPiece(conflict.path().value()),
+                          static_cast<dtype_t>(conflict.dtype().value()));
+                      break;
+                    case ConflictType::MISSING_REMOVED:
+                      // By the comment in MISSING_REMOVED, the file should
+                      // have already been removed from the filesystem so it
+                      // should already be recorded
+                      break;
+                    case ConflictType::MODIFIED_MODIFIED:
+                      journal_->recordChanged(
+                          RelativePathPiece(conflict.path().value()),
+                          static_cast<dtype_t>(conflict.dtype().value()));
+                      break;
+                    case ConflictType::DIRECTORY_NOT_EMPTY:
+                      // Ignore
+                      break;
+                    default:
+                      // Ignore
+                      break;
+                  }
                 }
               }
             }
+
             return result;
           })
       .thenTry([this, ctx, stopWatch, oldParent, snapshotId, checkoutMode](

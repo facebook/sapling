@@ -12,6 +12,7 @@
 
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/store/StatsFetchContext.h"
+#include "eden/fs/utils/MiniTracer.h"
 
 namespace facebook::eden {
 
@@ -85,6 +86,15 @@ class DiffContext {
   // Whether executable are remember on Windows or not
   bool getWindowsRememberExecutableBit() const {
     return windowsRememberExecutableBit_;
+  }
+
+  /**
+   * Create a span for timing instrumentation if a time tracer is set.
+   * Returns nullopt if no time tracer is set.
+   */
+  template <typename... Args>
+  std::optional<MiniTracer::Span> createSpan(Args&&... args) {
+    return fetchContext_->createSpan(std::forward<Args>(args)...);
   }
 
  private:

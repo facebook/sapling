@@ -240,6 +240,7 @@ cpp_library(
         "//eden/fs/telemetry:stats",
         "//eden/fs/utils:bufvec",
         "//eden/fs/utils:glob",
+        "//eden/fs/utils:mini_tracer",
         "//eden/fs/utils:static_assert",
         "//folly:cancellation_token",
         "//folly:exception_wrapper",

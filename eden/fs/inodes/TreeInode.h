@@ -24,6 +24,7 @@ namespace facebook::eden {
 
 class CheckoutAction;
 class CheckoutContext;
+class MiniTracer;
 class DiffContext;
 class FuseDirList;
 class NfsDirList;
