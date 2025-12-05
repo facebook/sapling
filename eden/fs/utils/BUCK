@@ -325,3 +325,12 @@ cpp_library(
         "//folly/container:evicting_cache_map",
     ],
 )
+
+cpp_library(
+    name = "mini_tracer",
+    srcs = ["MiniTracer.cpp"],
+    headers = ["MiniTracer.h"],
+    deps = [
+        "fbsource//third-party/fmt:fmt",
+    ],
+)

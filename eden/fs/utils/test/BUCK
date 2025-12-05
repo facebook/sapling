@@ -135,6 +135,16 @@ cpp_unittest(
     ],
 )
 
+cpp_unittest(
+    name = "mini_tracer_test",
+    srcs = ["MiniTracerTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/utils:mini_tracer",
+        "//folly/portability:gtest",
+    ],
+)
+
 cpp_benchmark(
     name = "bench",
     srcs = [
