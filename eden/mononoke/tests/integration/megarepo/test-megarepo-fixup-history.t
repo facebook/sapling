@@ -26,24 +26,24 @@ Setup repositories
   > A-B-C
   > D-E-F
   > # message: A "master commit 1"
-  > # modify: A fbcode/file_with_correct_history fbcode/file_with_correct_history 
+  > # modify: A fbcode/file_with_correct_history fbcode/file_with_correct_history
   > # message: B "commit commit 2 [incorrect history]"
-  > # modify: B fbcode/file_with_incorrect_history fbcode/file_with_incorrect_history 
+  > # modify: B fbcode/file_with_incorrect_history fbcode/file_with_incorrect_history
   > # message: C "commit commit 3 [incorrect history]"
-  > # modify: C fbcode/file_with_incorrect_history changed 
-  > # modify: E file_with_incorrect_history2 file_with_incorrect_history2 
+  > # modify: C fbcode/file_with_incorrect_history changed
+  > # modify: E file_with_incorrect_history2 file_with_incorrect_history2
   > # bookmark: C master_bookmark
   > # message: D "small repo commit 1"
-  > # modify: D fbcode/file_with_incorrect_history fbcode/file_with_incorrect_history 
+  > # modify: D fbcode/file_with_incorrect_history fbcode/file_with_incorrect_history
   > # message: E "small repo commit 2 [corrected history]"
-  > # modify: E fbcode/file_with_incorrect_history changed_ 
-  > # modify: E file_with_incorrect_history2 file_with_incorrect_history2 
-  > # modify: E fbcode/file_with_correct_history fbcode/file_with_correct_history 
+  > # modify: E fbcode/file_with_incorrect_history changed_
+  > # modify: E file_with_incorrect_history2 file_with_incorrect_history2
+  > # modify: E fbcode/file_with_correct_history fbcode/file_with_correct_history
   > # message: F "small repo commit 3"
-  > # modify: F some_file_that_should_stay_in_small_repo_only some_file_that_should_stay_in_small_repo_only 
-  > # modify: F some_file_that_should_stay_in_small_repo_only2 some_file_that_should_stay_in_small_repo_only2 
-  > # modify: F some_file_that_should_stay_in_small_repo_only3 some_file_that_should_stay_in_small_repo_only3 
-  > # modify: F some_file_that_should_stay_in_small_repo_only4 some_file_that_should_stay_in_small_repo_only4 
+  > # modify: F some_file_that_should_stay_in_small_repo_only some_file_that_should_stay_in_small_repo_only
+  > # modify: F some_file_that_should_stay_in_small_repo_only2 some_file_that_should_stay_in_small_repo_only2
+  > # modify: F some_file_that_should_stay_in_small_repo_only3 some_file_that_should_stay_in_small_repo_only3
+  > # modify: F some_file_that_should_stay_in_small_repo_only4 some_file_that_should_stay_in_small_repo_only4
   > # bookmark: F correct_history_branch
   > EOF
   A=73d782e237be52aed2e83a6636ea6bf23e2a722d
@@ -57,14 +57,7 @@ Setup repositories
   $ cd $TESTTMP
   $ start_and_wait_for_mononoke_server
   $ hg clone -q mono:repo fbs-hg-cnt --noupdate
-  $ cd fbs-hg-cnt 
 
-
--- blobimport hg server repos into Mononoke repos
-  $ cd "$TESTTMP"
-
--- setup hg client repos
-  $ cd "$TESTTMP"
 
 Start mononoke server
   $ start_and_wait_for_mononoke_server
@@ -95,6 +88,7 @@ Start mononoke server
   fbcode:
   file_with_correct_history
   file_with_incorrect_history
+
 
 
   $ hg log -f fbcode/file_with_incorrect_history -T "{node} {desc}\n"
