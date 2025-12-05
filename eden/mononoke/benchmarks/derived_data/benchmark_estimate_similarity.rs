@@ -26,7 +26,7 @@ pub const MB: usize = KB * 1024;
 #[fbinit::main]
 fn main(_fb: FacebookInit) -> Result<(), Error> {
     let mut c = Criterion::default()
-        .measurement_time(Duration::from_secs(60))
+        .measurement_time(Duration::from_mins(1))
         .sample_size(10);
 
     let mut group = c.benchmark_group("estimate_similarity");

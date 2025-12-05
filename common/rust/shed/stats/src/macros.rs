@@ -63,9 +63,9 @@ pub mod common_macro_prelude {
 ///     dtest_t: dynamic_timeseries("test_t.{}", (region: &'static str); Rate, Sum),
 ///     dtest_t2: dynamic_timeseries("test_t.two.{}.{}", (job: u64, region: &'static str); Count),
 ///     dtest_h: dynamic_histogram("test_h.{}", (region: &'static str); 1, 0, 1000, Sum; P 99),
-///     test_qs: quantile_stat("test_qs"; Count, Sum, Average; P 95, P 99; Duration::from_secs(60)),
-///     test_qs_two: quantile_stat(Count, Sum, Average; P 95; Duration::from_secs(60)),
-///     test_dynqs: dynamic_quantile_stat("test_dynqs_{}", (num: i32); Count, Sum, Average; P 95, P 99; Duration::from_secs(60)),
+///     test_qs: quantile_stat("test_qs"; Count, Sum, Average; P 95, P 99; Duration::from_mins(1)),
+///     test_qs_two: quantile_stat(Count, Sum, Average; P 95; Duration::from_mins(1)),
+///     test_dynqs: dynamic_quantile_stat("test_dynqs_{}", (num: i32); Count, Sum, Average; P 95, P 99; Duration::from_mins(1)),
 /// }
 ///
 /// #[allow(non_snake_case)]

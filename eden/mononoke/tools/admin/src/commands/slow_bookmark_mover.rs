@@ -366,7 +366,7 @@ async fn wait_for_phases_to_catch_up(
     sleep_duration: Duration,
 ) -> Result<()> {
     // Force first log
-    let mut time_since_log = Duration::from_secs(60);
+    let mut time_since_log = Duration::from_mins(1);
 
     loop {
         let public = repo

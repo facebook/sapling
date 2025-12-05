@@ -1812,7 +1812,7 @@ mod test {
     // Tests for lifetime extension logic
     #[mononoke::fbinit_test]
     async fn extend_bubble_ttl_with_longer_duration_test(fb: FacebookInit) -> Result<()> {
-        let initial = Duration::from_secs(60); // 1 minute initial lifespan
+        let initial = Duration::from_mins(1); // 1 minute initial lifespan
         let grace = Duration::from_secs(30);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
 
@@ -1904,7 +1904,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn extend_bubble_ttl_without_duration_test(fb: FacebookInit) -> Result<()> {
-        let initial = Duration::from_secs(60); // 1 minute initial lifespan
+        let initial = Duration::from_mins(1); // 1 minute initial lifespan
         let grace = Duration::from_secs(30);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
 
@@ -1923,7 +1923,7 @@ mod test {
             ExtendBubbleTtlOutcome::Extended(timestamp) => {
                 // The new expiration should be approximately 1 minute from now (default lifetime)
                 let now = DateTime::now();
-                let expected_expiry = now + to_chrono(Duration::from_secs(60));
+                let expected_expiry = now + to_chrono(Duration::from_mins(1));
                 let actual_expiry: DateTime = timestamp.into();
 
                 // Allow for some time difference due to test execution time
@@ -1963,7 +1963,7 @@ mod test {
 
         // Try to extend TTL of the expired bubble
         let result = eph
-            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(60)))
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_mins(1)))
             .await;
 
         // Should return an error since the bubble is expired
@@ -1982,14 +1982,14 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn extend_bubble_ttl_nonexistent_bubble_test(fb: FacebookInit) -> Result<()> {
-        let initial = Duration::from_secs(60);
+        let initial = Duration::from_mins(1);
         let grace = Duration::from_secs(30);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
 
         // Try to extend TTL of a non-existent bubble
         let fake_bubble_id = BubbleId::new(std::num::NonZeroU64::new(99999).unwrap());
         let result = eph
-            .extend_bubble_ttl(&ctx, fake_bubble_id, Some(Duration::from_secs(60)))
+            .extend_bubble_ttl(&ctx, fake_bubble_id, Some(Duration::from_mins(1)))
             .await;
 
         // Should return an error since the bubble doesn't exist
@@ -2008,7 +2008,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn extend_bubble_ttl_with_labels_test(fb: FacebookInit) -> Result<()> {
-        let initial = Duration::from_secs(60);
+        let initial = Duration::from_mins(1);
         let grace = Duration::from_secs(30);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
 
@@ -2039,7 +2039,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn extend_bubble_ttl_multiple_times_test(fb: FacebookInit) -> Result<()> {
-        let initial = Duration::from_secs(60);
+        let initial = Duration::from_mins(1);
         let grace = Duration::from_secs(30);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
 
@@ -2061,7 +2061,7 @@ mod test {
 
         // Third extension with shorter duration (should not change)
         let result3 = eph
-            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(60)))
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_mins(1)))
             .await?;
         assert!(matches!(result3, ExtendBubbleTtlOutcome::NotChanged(_)));
 
@@ -2080,7 +2080,7 @@ mod test {
 
     #[mononoke::fbinit_test]
     async fn extend_bubble_ttl_outcome_timestamps_test(fb: FacebookInit) -> Result<()> {
-        let initial = Duration::from_secs(60);
+        let initial = Duration::from_mins(1);
         let grace = Duration::from_secs(30);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
 

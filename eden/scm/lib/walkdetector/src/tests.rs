@@ -857,7 +857,7 @@ fn test_important_metadata() {
     detector.dir_read(p("big_cached"), 1000, 1000, 0);
 
     // Trigger a GC.
-    MockClock::advance(Duration::from_secs(60));
+    MockClock::advance(Duration::from_mins(1));
     assert!(detector.file_walks().is_empty());
 
     // Make sure we remembered the important metadata.

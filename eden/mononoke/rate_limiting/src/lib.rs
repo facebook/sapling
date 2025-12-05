@@ -117,7 +117,7 @@ impl RateLimitEnvironment {
 
         mononoke::spawn_task(periodic_fetch_counter(
             counter_manager.clone(),
-            Duration::from_secs(60),
+            Duration::from_mins(1),
         ));
 
         Self {
@@ -150,7 +150,7 @@ impl RateLimitEnvironment {
 
         runtime.spawn(periodic_fetch_counter(
             counter_manager.clone(),
-            Duration::from_secs(60),
+            Duration::from_mins(1),
         ));
 
         Self {
@@ -608,7 +608,7 @@ mod test {
             target: Some(Target::MainClientId("client_id".to_string())),
             fci_metric: FciMetric {
                 metric: Metric::EgressBytes,
-                window: Duration::from_secs(60),
+                window: Duration::from_mins(1),
                 scope: Scope::Global,
             },
         };
@@ -620,7 +620,7 @@ mod test {
             )),
             fci_metric: FciMetric {
                 metric: Metric::EgressBytes,
-                window: Duration::from_secs(60),
+                window: Duration::from_mins(1),
                 scope: Scope::Global,
             },
         };
@@ -630,7 +630,7 @@ mod test {
             target: Some(Target::Identities([].into())),
             fci_metric: FciMetric {
                 metric: Metric::EgressBytes,
-                window: Duration::from_secs(60),
+                window: Duration::from_mins(1),
                 scope: Scope::Global,
             },
         };

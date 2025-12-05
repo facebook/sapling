@@ -55,7 +55,7 @@ impl RepoStatsLogger {
 
         let fut = async move {
             loop {
-                let interval = Duration::from_secs(60);
+                let interval = Duration::from_mins(1);
                 tokio::time::sleep(interval).await;
 
                 let repo_key = encode_repo_name(&repo_name);

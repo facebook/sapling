@@ -72,7 +72,7 @@ use crate::types::Repo;
 use crate::types::Source;
 use crate::types::Target;
 
-const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
+const LEASE_WARNING_THRESHOLD: Duration = Duration::from_mins(1);
 
 pub(crate) async fn remap_parents<'a, R: Repo>(
     ctx: &CoreContext,

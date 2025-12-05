@@ -2038,7 +2038,7 @@ impl LimitedBufferPool {
         let pool = Self {
             tx,
             rx,
-            gc_timeout: Duration::from_secs(60),
+            gc_timeout: Duration::from_mins(1),
         };
 
         for _ in 0..max {

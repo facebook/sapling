@@ -124,7 +124,7 @@ impl ConfigeratorRedactedBlobs {
     ) -> Result<Self> {
         let loader = InnerConfigLoader::new(ctx.clone(), handle, blobstore);
         let reloader =
-            Reloader::reload_periodically(ctx, || std::time::Duration::from_secs(60), loader)
+            Reloader::reload_periodically(ctx, || std::time::Duration::from_mins(1), loader)
                 .await?;
 
         Ok(ConfigeratorRedactedBlobs(reloader))

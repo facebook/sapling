@@ -44,7 +44,7 @@ use crate::types::ThriftParams;
 use crate::types::Token;
 
 const INITIAL_POLL_DELAY_MS: u64 = 1000;
-const MAX_POLL_DURATION: Duration = Duration::from_secs(60);
+const MAX_POLL_DURATION: Duration = Duration::from_mins(1);
 const JK_RETRY_LIMIT: &str = "scm/mononoke:async_requests_retry_limit";
 
 define_stats! {

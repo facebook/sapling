@@ -166,7 +166,7 @@ impl WorkspaceSubscriberService {
         Ok(tokio::spawn(async move {
             info!("Starting CommitCloud Workspace Subscriber Service");
             loop {
-                let command = self.channel.1.recv_timeout(Duration::from_secs(60));
+                let command = self.channel.1.recv_timeout(Duration::from_mins(1));
                 match command {
                     Ok(CommitCloudCancelSubscriptions) => {
                         info!(

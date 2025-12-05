@@ -121,7 +121,7 @@ pub fn list_uds_paths<'a>(
         if path.extension().unwrap_or_default() == "private" {
             // Remove stale files.
             // Rename bumps "accessed" time. Use it to detect stale files.
-            let _ = maybe_remove_stale_file(&entry, Duration::from_secs(60));
+            let _ = maybe_remove_stale_file(&entry, Duration::from_mins(1));
             return None;
         }
 

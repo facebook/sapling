@@ -58,9 +58,9 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
     let args: BenchmarkArgs = app.args()?;
 
     let mut criterion = Criterion::default()
-        .measurement_time(Duration::from_secs(60))
+        .measurement_time(Duration::from_mins(1))
         .sample_size(10)
-        .warm_up_time(Duration::from_secs(60));
+        .warm_up_time(Duration::from_mins(1));
 
     if let Some(baseline) = &args.save_baseline {
         criterion = criterion.save_baseline(baseline.to_string());

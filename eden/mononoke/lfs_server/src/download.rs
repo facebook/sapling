@@ -48,12 +48,12 @@ define_stats! {
     size_bytes_sent: timeseries(
         "size_bytes_sent";
         Sum;
-        Duration::from_secs(5), Duration::from_secs(15), Duration::from_secs(60)
+        Duration::from_secs(5), Duration::from_secs(15), Duration::from_mins(1)
     ),
     net_util: timeseries(
         "net_util";
         Average;
-        Duration::from_secs(5), Duration::from_secs(15), Duration::from_secs(60)
+        Duration::from_secs(5), Duration::from_secs(15), Duration::from_mins(1)
     ),
     load_shed_counter: dynamic_singleton_counter("{}", (key: String)),
 }

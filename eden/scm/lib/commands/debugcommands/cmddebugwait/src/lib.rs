@@ -192,7 +192,7 @@ fn should_retry(error: &anyhow::Error, error_start: &mut Option<Instant>) -> boo
             if error.error_type == "OUT_OF_DATE_PARENT"
                 || error.error_type == "CHECKOUT_IN_PROGRESS"
             {
-                patience = Some(Duration::from_secs(60));
+                patience = Some(Duration::from_mins(1));
             }
         }
     }
