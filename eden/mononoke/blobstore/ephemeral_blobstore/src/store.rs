@@ -2055,7 +2055,7 @@ mod test {
 
         // Second extension with even longer duration
         let result2 = eph
-            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_secs(180)))
+            .extend_bubble_ttl(&ctx, bubble_id, Some(Duration::from_mins(3)))
             .await?;
         assert!(matches!(result2, ExtendBubbleTtlOutcome::Extended(_)));
 
