@@ -80,6 +80,6 @@ mod test {
         assert_eq!(human_duration(Duration::from_secs(60)), "1.0m");
         assert_eq!(human_duration(Duration::from_secs(330)), "5.5m");
         assert_eq!(human_duration(Duration::from_secs(3600)), "1.0h");
-        assert_eq!(human_duration(Duration::from_secs(36000)), "10h");
+        assert_eq!(human_duration(Duration::from_hours(10)), "10h");
     }
 }
