@@ -2484,6 +2484,12 @@ folly::SemiFuture<Unit> EdenServer::createThriftServer() {
   size_t thriftCpuThreads = edenConfig->thriftNumWorkers.getValue();
   if (!thriftUseResourcePools_) {
     server_->setNumCPUWorkerThreads(thriftCpuThreads);
+
+    // Use SIMPLE (instead of the default PRIORITY) to avoid creation of
+    // "important" threads (which spam logs with `setpriority(-7) on thread
+    // "EdenThrift.IXX" failed with error 13 (Permission denied)`).
+    server_->setThreadManagerType(
+        apache::thrift::ThriftServer::ThreadManagerType::SIMPLE);
   } else {
     server_->requireResourcePools();
     auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(
