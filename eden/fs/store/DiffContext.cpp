@@ -36,8 +36,11 @@ DiffContext::DiffContext(
       caseSensitive_{caseSensitive},
       windowsSymlinksEnabled_{windowsSymlinksEnabled},
       windowsRememberExecutableBit_{store->getWindowsRememberExecutableBit()} {
-  // Propagate time tracer object (e.g. from "checkout").
+  // Propagate certain fields from the caller's fetch context. This is basically
+  // so important fields from checkout's context are propagated to the diff
+  // operation that checkout runs.
   fetchContext_->setTimeTracer(fetchContext->getTimeTracer());
+  fetchContext_->setDetachedExecutor(fetchContext->getDetachedExecutor());
 }
 
 DiffContext::~DiffContext() = default;

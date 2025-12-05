@@ -2293,6 +2293,13 @@ ImmediateFuture<CheckoutResult> EdenServer::checkOutRevision(
   getServerState()->getNotifier()->signalCheckout(
       enumerateInProgressCheckouts() + 1);
 
+  // Set the detached executor on the fetch context if the checkout executor is
+  // enabled. This allows inode loading during checkout to run on the
+  // checkout executor instead of the immediate executor.
+  if (thriftUseCheckoutExecutor_) {
+    fetchContext->setDetachedExecutor(checkoutRevisionExecutor_.get());
+  }
+
   ImmediateFuture<folly::Unit> asyncPoint{std::in_place};
   if (thriftUseCheckoutExecutor_) {
     // Insert an async point to ensure work happens on the checkout executor.

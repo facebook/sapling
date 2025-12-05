@@ -1471,6 +1471,12 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         thriftMethodCaller,
         progressTracker,
         fetchContext->getRequestInfo());
+
+    // Propagate the detached executor from the incoming fetch context to the
+    // CheckoutContext's fetch context so async operations use the same
+    // executor.
+    ctx->getFetchContext()->setDetachedExecutor(
+        fetchContext->getDetachedExecutor());
   }
 
   XLOGF(

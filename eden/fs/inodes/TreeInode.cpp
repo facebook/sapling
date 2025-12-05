@@ -717,8 +717,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
       return std::move(fut).get();
     }
 
-    return std::move(fut).semi().via(
-        &folly::QueuedImmediateExecutor::instance());
+    return std::move(fut).semi().via(fetchContext->getDetachedExecutor());
   });
 }
 

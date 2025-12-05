@@ -11,6 +11,9 @@
 #include <string_view>
 #include <unordered_map>
 
+#include <folly/Executor.h>
+#include <folly/executors/QueuedImmediateExecutor.h>
+
 #include "eden/common/os/ProcessId.h"
 #include "eden/common/utils/RefPtr.h"
 #include "eden/fs/store/ImportPriority.h"
@@ -220,6 +223,21 @@ class ObjectFetchContext : public RefCounted {
     return std::nullopt;
   }
 
+  /**
+   * Set the executor to use for certain detached async operations.
+   */
+  void setDetachedExecutor(folly::Executor::KeepAlive<> executor) {
+    detachedExecutor_ = std::move(executor);
+  }
+
+  /**
+   * Get the executor for use with certain detached async operations.
+   * Defaults to QueuedImmediateExecutor if not explicitly set.
+   */
+  const folly::Executor::KeepAlive<>& getDetachedExecutor() const {
+    return detachedExecutor_;
+  }
+
  private:
   ObjectFetchContext(const ObjectFetchContext&) = delete;
   ObjectFetchContext& operator=(const ObjectFetchContext&) = delete;
@@ -228,6 +246,11 @@ class ObjectFetchContext : public RefCounted {
 
   // Time tracer for instrumentation (may be nullptr)
   std::shared_ptr<MiniTracer> timeTracer_{nullptr};
+
+  // Executor for certain detached async operations. This should only be used
+  // in exceptional cases (such as the detached inode loading futures).
+  folly::Executor::KeepAlive<> detachedExecutor_{
+      &folly::QueuedImmediateExecutor::instance()};
 
   std::unordered_map<
       std::tuple<FetchedSource, ObjectType>,
