@@ -235,7 +235,7 @@ mod tests {
         }
 
         // No longer locked since file store is closed, but haven't met threshold.
-        FileStore::cleanup(&td, Duration::from_secs(3600))?;
+        FileStore::cleanup(&td, Duration::from_hours(1))?;
         assert!(entry_path.exists());
 
         // Met threshold - delete.

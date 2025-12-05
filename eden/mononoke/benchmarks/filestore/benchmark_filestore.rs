@@ -203,7 +203,7 @@ async fn run_benchmark_filestore<'a>(
 }
 
 #[cfg(fbcode_build)]
-const TEST_DATA_TTL: Option<Duration> = Some(Duration::from_secs(3600));
+const TEST_DATA_TTL: Option<Duration> = Some(Duration::from_hours(1));
 
 async fn open_blobstore(
     fb: FacebookInit,

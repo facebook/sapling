@@ -228,7 +228,7 @@ impl EntityStore<HgMutationCacheEntry> for CacheRequest<'_> {
     }
 
     fn cache_determinator(&self, _: &HgMutationCacheEntry) -> CacheDisposition {
-        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_secs(3600)))
+        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_hours(1)))
     }
 
     caching_ext::impl_singleton_stats!("hg_mutation_store");
