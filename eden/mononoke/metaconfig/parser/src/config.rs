@@ -1457,7 +1457,7 @@ mod test {
                         metadata: DatabaseConfig::Local(LocalDatabaseConfig {
                             path: "/tmp/www-ephemeral".into(),
                         }),
-                        initial_bubble_lifespan: Duration::from_secs(86400),
+                        initial_bubble_lifespan: Duration::from_hours(24),
                         bubble_expiration_grace: Duration::from_secs(3600),
                         bubble_deletion_mode: BubbleDeletionMode::MarkOnly,
                     }),
