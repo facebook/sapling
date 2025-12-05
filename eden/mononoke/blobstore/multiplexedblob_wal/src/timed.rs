@@ -32,7 +32,7 @@ use tokio::time::timeout;
 
 // inferred from the current timeout, see https://fburl.com/code/rgj8497o
 const GET_REQUEST_TIMEOUT: Duration = Duration::from_secs(100);
-const PUT_REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
+const PUT_REQUEST_TIMEOUT: Duration = Duration::from_mins(10);
 
 #[derive(Clone, Debug)]
 pub struct MultiplexTimeout {

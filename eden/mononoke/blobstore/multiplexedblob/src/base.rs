@@ -34,7 +34,7 @@ use twox_hash::XxHash;
 
 use crate::scrub::SrubWriteOnly;
 
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
+const REQUEST_TIMEOUT: Duration = Duration::from_mins(10);
 
 type BlobstoresWithEntry = Vec<HashSet<BlobstoreId>>;
 type BlobstoresReturnedNone = HashSet<BlobstoreId>;

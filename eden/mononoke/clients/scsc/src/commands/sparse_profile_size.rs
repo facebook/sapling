@@ -84,7 +84,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
 
     let now = std::time::Instant::now();
     let response = loop {
-        if now.elapsed() > std::time::Duration::from_secs(600) {
+        if now.elapsed() > std::time::Duration::from_mins(10) {
             return Err(anyhow::anyhow!("request timed out"));
         }
 
