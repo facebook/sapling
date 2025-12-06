@@ -187,7 +187,7 @@ impl<'a> EntityStore<HasMutableRename> for CachedHasMutableRename<'a> {
         // Worst case is we fill memcache just before the change, giving us 4 hours
         // in memcache, then all tasks fill from memcache just before it expires,
         // giving us a further 4 hours (8 total) where all tasks have the stale data.
-        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_secs(4 * 60 * 60)))
+        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_hours(4)))
     }
 
     caching_ext::impl_singleton_stats!("mutable_renames.presence");
@@ -402,7 +402,7 @@ impl<'a> EntityStore<CachedMutableRenameEntry> for CachedGetMutableRename<'a> {
     }
 
     fn cache_determinator(&self, _v: &CachedMutableRenameEntry) -> CacheDisposition {
-        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_secs(4 * 60 * 60)))
+        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_hours(4)))
     }
 
     caching_ext::impl_singleton_stats!("mutable_renames.get_rename");
@@ -527,7 +527,7 @@ impl<'a> EntityStore<ChangesetIdSet> for CachedGetCsIdsWithRename<'a> {
     }
 
     fn cache_determinator(&self, _v: &ChangesetIdSet) -> CacheDisposition {
-        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_secs(4 * 60 * 60)))
+        CacheDisposition::Cache(CacheTtl::Ttl(Duration::from_hours(4)))
     }
 
     caching_ext::impl_singleton_stats!("mutable_renames.get_cs_ids_with_rename");
