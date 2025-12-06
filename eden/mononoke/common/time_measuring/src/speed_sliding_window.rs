@@ -133,7 +133,7 @@ impl BasicSpeedTracker {
         Self {
             s_10m: WeightSlidingWindow::start_at(now, Duration::from_secs(60 * 10)),
             s_1h: WeightSlidingWindow::start_at(now, Duration::from_secs(60 * 60)),
-            s_1d: WeightSlidingWindow::start_at(now, Duration::from_secs(60 * 60 * 24)),
+            s_1d: WeightSlidingWindow::start_at(now, Duration::from_hours(24)),
         }
     }
 
