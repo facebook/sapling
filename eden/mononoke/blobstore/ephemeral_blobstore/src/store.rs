@@ -921,7 +921,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn basic_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, blobstore, repo_blobstore, eph) =
             bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         let key = "test_key".to_string();
@@ -987,7 +987,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn basic_test_with_labels(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         let labels = vec!["workspace".to_string(), "debug_version".to_string()];
         // Create a bubble with labels associated to it.
@@ -1009,7 +1009,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn add_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble with labels associated to it.
         let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
@@ -1035,7 +1035,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn add_duplicate_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble with labels associated to it.
         let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
@@ -1068,7 +1068,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn add_empty_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble with labels associated to it.
         let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
@@ -1088,7 +1088,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn empty_labels_from_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble with no labels associated to it.
         let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
@@ -1103,7 +1103,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn non_empty_labels_from_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         let labels = vec!["workspace".to_string(), "debug".to_string()];
         // Create a bubble with some labels associated to it.
@@ -1120,7 +1120,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn added_removed_labels_from_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble with no labels associated to it.
         let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
@@ -1146,7 +1146,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn remove_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         let labels = vec!["workspace".to_string(), "debug_version".to_string()];
         // Create a bubble with labels associated to it.
@@ -1173,7 +1173,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn partial_remove_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble with labels associated to it.
         let bubble = eph
@@ -1198,7 +1198,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn remove_absent_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble with labels associated to it.
         let labels = vec!["workspace".to_string(), "debug_version".to_string()];
@@ -1228,7 +1228,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn remove_duplicate_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble with labels associated to it.
         let labels = vec!["workspace".to_string(), "debug_version".to_string()];
@@ -1259,7 +1259,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn remove_all_bubble_labels_without_input_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble with labels associated to it.
         let labels = vec!["workspace".to_string(), "debug_version".to_string()];
@@ -1278,7 +1278,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn remove_all_bubble_labels_with_empty_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble with no labels associated to it.
         let bubble = eph.create_bubble(&ctx, None, Vec::new()).await?;
@@ -1297,7 +1297,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn add_and_remove_bubble_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble with labels associated to it.
         let bubble = eph.create_bubble(&ctx, None, vec![]).await?;
@@ -1337,7 +1337,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn create_and_fetch_labels_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         let labels = vec!["workspace".to_string(), "debug_version".to_string()];
         // Create a bubble with labels associated to it.
@@ -1359,7 +1359,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn create_and_fetch_active_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         let bubble1 = eph.create_bubble(&ctx, None, vec![]).await?;
         // Ensure a newly created bubble exists in Active status
@@ -1373,7 +1373,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn deletion_mode_disabled_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         // We want an ephemeral store where deletion is disabled.
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::Disabled)?;
         // Create an empty bubble.
@@ -1396,7 +1396,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn deletion_mode_markonly_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         // We want an ephemeral store where deletion mode is mark only.
         let (ctx, blobstore, repo_blobstore, eph) =
             bootstrap(fb, initial, grace, BubbleDeletionMode::MarkOnly)?;
@@ -1447,7 +1447,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn delete_empty_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create an empty bubble.
         let bubble1 = eph.create_bubble(&ctx, None, vec![]).await?;
@@ -1461,7 +1461,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn delete_empty_bubble_with_label_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, _, eph) = bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create an empty bubble with labels.
         let labels = vec!["workspace".to_string(), "test".to_string()];
@@ -1476,7 +1476,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn delete_nonempty_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, blobstore, repo_blobstore, eph) =
             bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble and add data to it.
@@ -1528,7 +1528,7 @@ mod test {
     #[mononoke::fbinit_test]
     async fn reopen_deleted_bubble_test(fb: FacebookInit) -> Result<()> {
         let initial = Duration::from_secs(30 * 24 * 60 * 60);
-        let grace = Duration::from_secs(6 * 60 * 60);
+        let grace = Duration::from_hours(6);
         let (ctx, _, repo_blobstore, eph) =
             bootstrap(fb, initial, grace, BubbleDeletionMode::MarkAndDelete)?;
         // Create a bubble and add data to it.
