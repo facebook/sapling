@@ -18,7 +18,7 @@ use stats::define_stats;
 use stats::prelude::*;
 use tracing::warn;
 
-const STATS_LOOP_INTERNAL: Duration = Duration::from_secs(5 * 60);
+const STATS_LOOP_INTERNAL: Duration = Duration::from_mins(5);
 
 const STATUSES: [RequestStatus; 4] = [
     RequestStatus::New,

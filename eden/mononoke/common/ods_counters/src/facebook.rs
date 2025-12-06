@@ -27,7 +27,7 @@ use tokio::time::interval;
 use crate::CounterManager;
 
 const ODS_STALENESS_THRESHOLD: TimeDelta = TimeDelta::seconds(60);
-const ODS_QUERY_INTERVAL: Duration = Duration::from_secs(5 * 60);
+const ODS_QUERY_INTERVAL: Duration = Duration::from_mins(5);
 
 #[derive(Clone)]
 pub struct OdsCounterManager {
