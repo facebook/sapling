@@ -295,7 +295,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let mut old_bookmark_value = bookmark_val;
     let mut commit_tracker = BasicSpeedTracker::start();
     let mut file_count_tracker = BasicSpeedTracker::start();
-    let catch_up_tracker = AvgTimeSlidingWindows::start(Duration::from_secs(60 * 60));
+    let catch_up_tracker = AvgTimeSlidingWindows::start(Duration::from_hours(1));
     let mut wait_window = VecDeque::new();
     let mut last_cs_id = None;
     while let Some(cs) = ordered_changesets.try_next().await? {

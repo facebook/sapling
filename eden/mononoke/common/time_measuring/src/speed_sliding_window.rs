@@ -132,7 +132,7 @@ impl BasicSpeedTracker {
         let now = Instant::now();
         Self {
             s_10m: WeightSlidingWindow::start_at(now, Duration::from_mins(10)),
-            s_1h: WeightSlidingWindow::start_at(now, Duration::from_secs(60 * 60)),
+            s_1h: WeightSlidingWindow::start_at(now, Duration::from_hours(1)),
             s_1d: WeightSlidingWindow::start_at(now, Duration::from_hours(24)),
         }
     }
