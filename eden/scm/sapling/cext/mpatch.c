@@ -30,11 +30,9 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h> // @manual=fbsource//third-party/python:python
 #include <stdlib.h>
-#include <string.h>
 
 #include "eden/scm/sapling/bitmanipulation.h"
 #include "eden/scm/sapling/cext/util.h"
-#include "eden/scm/sapling/compat.h"
 #include "eden/scm/sapling/mpatch.h"
 
 static char mpatch_doc[] = "Efficient binary patching.";
