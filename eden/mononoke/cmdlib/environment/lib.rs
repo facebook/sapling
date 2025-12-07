@@ -106,6 +106,36 @@ impl Default for BookmarkCacheOptions {
     }
 }
 
+/// Convert BookmarkCacheDerivedData to WarmerRequirement for scoped bookmark cache queries.
+/// NoDerivation and SpecificTypes default to AllKinds as they need all configured warmers.
+impl From<BookmarkCacheDerivedData> for bookmarks_cache::WarmerRequirement {
+    fn from(derived_data: BookmarkCacheDerivedData) -> Self {
+        use bookmarks_cache::WarmerRequirement;
+        match derived_data {
+            BookmarkCacheDerivedData::HgOnly => WarmerRequirement::HgOnly,
+            BookmarkCacheDerivedData::GitOnly => WarmerRequirement::GitOnly,
+            BookmarkCacheDerivedData::AllKinds => WarmerRequirement::AllKinds,
+            // SpecificTypes don't apply remotely. When instantated locally, we wait for all warmers.
+            BookmarkCacheDerivedData::SpecificTypes(_) => WarmerRequirement::AllKinds,
+            // If there are no warmers we will not wait for anything. We use AllKinds as a default.
+            BookmarkCacheDerivedData::NoDerivation => WarmerRequirement::AllKinds,
+        }
+    }
+}
+
+impl From<&BookmarkCacheDerivedData> for bookmarks_cache::WarmerRequirement {
+    fn from(derived_data: &BookmarkCacheDerivedData) -> Self {
+        use bookmarks_cache::WarmerRequirement;
+        match derived_data {
+            BookmarkCacheDerivedData::HgOnly => WarmerRequirement::HgOnly,
+            BookmarkCacheDerivedData::GitOnly => WarmerRequirement::GitOnly,
+            BookmarkCacheDerivedData::AllKinds => WarmerRequirement::AllKinds,
+            BookmarkCacheDerivedData::SpecificTypes(_) => WarmerRequirement::AllKinds,
+            BookmarkCacheDerivedData::NoDerivation => WarmerRequirement::AllKinds,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct RemoteDiffOptions {
     pub diff_remotely: bool,

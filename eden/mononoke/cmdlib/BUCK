@@ -27,6 +27,7 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/observability:observability",
         "//eden/mononoke/permission_checker:permission_checker",
+        "//eden/mononoke/repo_attributes/bookmarks/bookmarks_cache:bookmarks_cache",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
