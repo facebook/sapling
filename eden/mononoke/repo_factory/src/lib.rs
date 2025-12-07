@@ -62,6 +62,8 @@ use bookmarks::ArcBookmarks;
 use bookmarks::CachedBookmarks;
 use bookmarks::bookmark_heads_fetcher;
 use bookmarks_cache::ArcBookmarksCache;
+use bookmarks_cache::ArcScopedBookmarksCache;
+use bookmarks_cache::CombinedBookmarksCache;
 use bookmarks_cache::WarmerRequirement;
 use bundle_uri::ArcGitBundleUri;
 use bundle_uri::SqlGitBundleMetadataStorageBuilder;
@@ -1687,6 +1689,28 @@ impl RepoFactory {
         repo_event_publisher: &ArcRepoEventPublisher,
         phases: &ArcPhases,
     ) -> Result<ArcBookmarksCache> {
+        let cache = self
+            .build_bookmarks_cache_impl(
+                bookmarks,
+                bookmark_update_log,
+                repo_identity,
+                repo_derived_data,
+                repo_event_publisher,
+                phases,
+            )
+            .await?;
+        Ok(cache as ArcBookmarksCache)
+    }
+
+    async fn build_bookmarks_cache_impl(
+        &self,
+        bookmarks: &ArcBookmarks,
+        bookmark_update_log: &ArcBookmarkUpdateLog,
+        repo_identity: &ArcRepoIdentity,
+        repo_derived_data: &ArcRepoDerivedData,
+        repo_event_publisher: &ArcRepoEventPublisher,
+        phases: &ArcPhases,
+    ) -> Result<Arc<dyn CombinedBookmarksCache + Send + Sync>> {
         let warmer_requirement: WarmerRequirement =
             (&self.env.bookmark_cache_options.derived_data).into();
 
@@ -1727,7 +1751,8 @@ impl RepoFactory {
                     BookmarkCacheDerivedData::NoDerivation => {}
                 }
 
-                Ok(Arc::new(wbc_builder.build().watched().await?))
+                Ok(Arc::new(wbc_builder.build().watched().await?)
+                    as Arc<dyn CombinedBookmarksCache + Send + Sync>)
             }
             #[cfg(fbcode_build)]
             BookmarkCacheKind::Remote(address) => {
@@ -1759,7 +1784,7 @@ impl RepoFactory {
                     warmer_requirement,
                 );
 
-                Ok(Arc::new(repo_client))
+                Ok(Arc::new(repo_client) as Arc<dyn CombinedBookmarksCache + Send + Sync>)
             }
             #[cfg(not(fbcode_build))]
             BookmarkCacheKind::Remote(_addr) => {
@@ -1767,8 +1792,31 @@ impl RepoFactory {
                     "Remote bookmark cache not supported in non-fbcode builds"
                 ));
             }
-            BookmarkCacheKind::Disabled => Ok(Arc::new(NoopBookmarksCache::new(bookmarks.clone()))),
+            BookmarkCacheKind::Disabled => Ok(Arc::new(NoopBookmarksCache::new(bookmarks.clone()))
+                as Arc<dyn CombinedBookmarksCache + Send + Sync>),
         }
+    }
+
+    pub async fn scoped_bookmarks_cache(
+        &self,
+        bookmarks: &ArcBookmarks,
+        bookmark_update_log: &ArcBookmarkUpdateLog,
+        repo_identity: &ArcRepoIdentity,
+        repo_derived_data: &ArcRepoDerivedData,
+        repo_event_publisher: &ArcRepoEventPublisher,
+        phases: &ArcPhases,
+    ) -> Result<ArcScopedBookmarksCache> {
+        let cache = self
+            .build_bookmarks_cache_impl(
+                bookmarks,
+                bookmark_update_log,
+                repo_identity,
+                repo_derived_data,
+                repo_event_publisher,
+                phases,
+            )
+            .await?;
+        Ok(cache as ArcScopedBookmarksCache)
     }
 
     pub async fn target_repo_dbs(

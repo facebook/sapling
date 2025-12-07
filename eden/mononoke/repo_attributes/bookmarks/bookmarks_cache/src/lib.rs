@@ -77,3 +77,10 @@ pub trait ScopedBookmarksCache: Send + Sync {
     /// Awaits the completion of any ongoing update.
     async fn sync(&self, ctx: &CoreContext);
 }
+
+/// Combined trait for types that implement both BookmarksCache and ScopedBookmarksCache.
+/// This is used internally by RepoFactory to avoid code duplication.
+pub trait CombinedBookmarksCache: BookmarksCache + ScopedBookmarksCache {}
+
+/// Auto-implement CombinedBookmarksCache for any type that implements both traits.
+impl<T: BookmarksCache + ScopedBookmarksCache> CombinedBookmarksCache for T {}
