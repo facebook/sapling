@@ -235,6 +235,7 @@ pub struct WarmBookmarksCache {
     terminate: Option<oneshot::Sender<()>>,
     notify_sync_start: Arc<Notify>,
     notify_sync_complete: Arc<Notify>,
+    default_warmer_requirement: WarmerRequirement,
 }
 
 pub type WarmerFn =
@@ -276,6 +277,7 @@ pub struct WarmBookmarksCacheBuilder {
     repo_event_publisher: ArcRepoEventPublisher,
     warmers: Vec<Warmer>,
     init_mode: InitMode,
+    default_warmer_requirement: WarmerRequirement,
 }
 
 impl WarmBookmarksCacheBuilder {
@@ -285,6 +287,7 @@ impl WarmBookmarksCacheBuilder {
         bookmark_update_log: ArcBookmarkUpdateLog,
         repo_identity: ArcRepoIdentity,
         repo_event_publisher: ArcRepoEventPublisher,
+        warmer_requirement: WarmerRequirement,
     ) -> Self {
         ctx.session_mut()
             .override_session_class(SessionClass::WarmBookmarksCache);
@@ -302,6 +305,7 @@ impl WarmBookmarksCacheBuilder {
             repo_event_publisher,
             warmers: vec![],
             init_mode: InitMode::Rewind,
+            default_warmer_requirement: warmer_requirement,
         }
     }
 
@@ -511,6 +515,7 @@ impl WarmBookmarksCacheBuilder {
             &self.repo_event_publisher,
             self.warmers,
             self.init_mode,
+            self.default_warmer_requirement,
         )
         .await
     }
@@ -518,6 +523,8 @@ impl WarmBookmarksCacheBuilder {
 
 /// A drop-in replacement for warm bookmark cache that doesn't
 /// cache anything but goes to bookmarks struct every time.
+/// Implements both ScopedBookmarksCache and BookmarksCache traits,
+/// ignoring the WarmerRequirement scope parameter.
 pub struct NoopBookmarksCache {
     bookmarks: ArcBookmarks,
 }
@@ -529,11 +536,12 @@ impl NoopBookmarksCache {
 }
 
 #[async_trait]
-impl BookmarksCache for NoopBookmarksCache {
+impl ScopedBookmarksCache for NoopBookmarksCache {
     async fn get(
         &self,
         ctx: &CoreContext,
         bookmark: &BookmarkKey,
+        _scope: WarmerRequirement,
     ) -> Result<Option<ChangesetId>, Error> {
         self.bookmarks
             .get(ctx.clone(), bookmark, bookmarks::Freshness::MostRecent)
@@ -546,6 +554,7 @@ impl BookmarksCache for NoopBookmarksCache {
         prefix: &BookmarkPrefix,
         pagination: &BookmarkPagination,
         limit: Option<u64>,
+        _scope: WarmerRequirement,
     ) -> Result<Vec<(BookmarkKey, (ChangesetId, BookmarkKind))>, Error> {
         self.bookmarks
             .list(
@@ -568,6 +577,41 @@ impl BookmarksCache for NoopBookmarksCache {
     async fn sync(&self, _ctx: &CoreContext) {}
 }
 
+/// Implements BookmarksCache by delegating to ScopedBookmarksCache with AllKinds scope.
+/// NoopBookmarksCache doesn't do any caching or warming, so the scope doesn't matter.
+#[async_trait]
+impl BookmarksCache for NoopBookmarksCache {
+    async fn get(
+        &self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkKey,
+    ) -> Result<Option<ChangesetId>, Error> {
+        ScopedBookmarksCache::get(self, ctx, bookmark, WarmerRequirement::AllKinds).await
+    }
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        prefix: &BookmarkPrefix,
+        pagination: &BookmarkPagination,
+        limit: Option<u64>,
+    ) -> Result<Vec<(BookmarkKey, (ChangesetId, BookmarkKind))>, Error> {
+        ScopedBookmarksCache::list(
+            self,
+            ctx,
+            prefix,
+            pagination,
+            limit,
+            WarmerRequirement::AllKinds,
+        )
+        .await
+    }
+
+    async fn sync(&self, ctx: &CoreContext) {
+        ScopedBookmarksCache::sync(self, ctx).await;
+    }
+}
+
 impl WarmBookmarksCache {
     pub async fn new(
         ctx: &CoreContext,
@@ -577,6 +621,7 @@ impl WarmBookmarksCache {
         repo_event_publisher: &ArcRepoEventPublisher,
         warmers: Vec<Warmer>,
         init_mode: InitMode,
+        default_warmer_requirement: WarmerRequirement,
     ) -> Result<Self, Error> {
         let warmers = Arc::new(warmers);
         let (sender, receiver) = oneshot::channel();
@@ -623,6 +668,7 @@ impl WarmBookmarksCache {
             terminate: Some(sender),
             notify_sync_start,
             notify_sync_complete,
+            default_warmer_requirement,
         })
     }
 }
@@ -698,6 +744,44 @@ impl ScopedBookmarksCache for WarmBookmarksCache {
         let notified = self.notify_sync_complete.notified();
         self.notify_sync_start.notify_one();
         notified.await;
+    }
+}
+
+/// Implements BookmarksCache by delegating to ScopedBookmarksCache with the configured default_warmer_requirement.
+/// This allows different services (Hg, Git, SCS) to use different scopes without passing the requirement
+/// through every API call.
+#[async_trait]
+impl BookmarksCache for WarmBookmarksCache {
+    async fn get(
+        &self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkKey,
+    ) -> Result<Option<ChangesetId>, Error> {
+        // Use the stored default_warmer_requirement instead of always using AllKinds
+        ScopedBookmarksCache::get(self, ctx, bookmark, self.default_warmer_requirement).await
+    }
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        prefix: &BookmarkPrefix,
+        pagination: &BookmarkPagination,
+        limit: Option<u64>,
+    ) -> Result<Vec<(BookmarkKey, (ChangesetId, BookmarkKind))>, Error> {
+        // Use the stored default_warmer_requirement instead of always using AllKinds
+        ScopedBookmarksCache::list(
+            self,
+            ctx,
+            prefix,
+            pagination,
+            limit,
+            self.default_warmer_requirement,
+        )
+        .await
+    }
+
+    async fn sync(&self, ctx: &CoreContext) {
+        ScopedBookmarksCache::sync(self, ctx).await;
     }
 }
 

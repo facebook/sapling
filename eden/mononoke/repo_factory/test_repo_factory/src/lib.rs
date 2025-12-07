@@ -29,6 +29,7 @@ use bookmarks::ArcBookmarkUpdateLog;
 use bookmarks::ArcBookmarks;
 use bookmarks::bookmark_heads_fetcher;
 use bookmarks_cache::ArcBookmarksCache;
+use bookmarks_cache::WarmerRequirement;
 use bundle_uri::ArcGitBundleUri;
 use bundle_uri::BundleUri;
 use bundle_uri::LocalFSBUndleUriGenerator;
@@ -993,6 +994,7 @@ impl TestRepoFactory {
                     bookmark_update_log.clone(),
                     repo_identity.clone(),
                     repo_event_publisher.clone(),
+                    WarmerRequirement::AllKinds,
                 );
                 warm_bookmarks_cache_builder.add_all_warmers(repo_derived_data, phases)?;
                 warm_bookmarks_cache_builder.wait_until_warmed();

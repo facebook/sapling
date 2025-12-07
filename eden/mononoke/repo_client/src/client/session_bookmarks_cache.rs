@@ -305,6 +305,7 @@ mod test {
     use bookmarks::BookmarkKey;
     use bookmarks::BookmarkUpdateLogArc;
     use bookmarks::BookmarksArc;
+    use bookmarks_cache::WarmerRequirement;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_macros::mononoke;
@@ -380,6 +381,7 @@ mod test {
             repo.bookmark_update_log_arc(),
             repo.repo_identity_arc(),
             repo.repo_event_publisher_arc(),
+            WarmerRequirement::AllKinds,
         );
         builder.add_hg_warmers(&repo.repo_derived_data_arc(), &repo.phases_arc())?;
         let wbc = builder.build().await?;

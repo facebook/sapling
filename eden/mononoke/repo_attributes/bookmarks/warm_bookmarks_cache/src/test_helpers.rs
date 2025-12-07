@@ -123,6 +123,7 @@ pub async fn init_cache_with_warmers(
         &repo.repo_event_publisher_arc(),
         warmers,
         mode,
+        WarmerRequirement::AllKinds,
     )
     .await
 }

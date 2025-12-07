@@ -62,6 +62,7 @@ use bookmarks::ArcBookmarks;
 use bookmarks::CachedBookmarks;
 use bookmarks::bookmark_heads_fetcher;
 use bookmarks_cache::ArcBookmarksCache;
+use bookmarks_cache::WarmerRequirement;
 use bundle_uri::ArcGitBundleUri;
 use bundle_uri::SqlGitBundleMetadataStorageBuilder;
 use cacheblob::CachelibBlobstoreOptions;
@@ -1686,6 +1687,9 @@ impl RepoFactory {
         repo_event_publisher: &ArcRepoEventPublisher,
         phases: &ArcPhases,
     ) -> Result<ArcBookmarksCache> {
+        let warmer_requirement: WarmerRequirement =
+            (&self.env.bookmark_cache_options.derived_data).into();
+
         match &self.env.bookmark_cache_options.cache_kind {
             BookmarkCacheKind::Local => {
                 let scuba_sample_builder =
@@ -1700,6 +1704,7 @@ impl RepoFactory {
                     bookmark_update_log.clone(),
                     repo_identity.clone(),
                     repo_event_publisher.clone(),
+                    warmer_requirement,
                 );
 
                 match self.env.bookmark_cache_options.derived_data {
@@ -1726,11 +1731,19 @@ impl RepoFactory {
             }
             #[cfg(fbcode_build)]
             BookmarkCacheKind::Remote(address) => {
-                anyhow::ensure!(
-                    self.env.bookmark_cache_options.derived_data
-                        == BookmarkCacheDerivedData::HgOnly,
-                    "HgOnly derivation supported right now"
-                );
+                match self.env.bookmark_cache_options.derived_data {
+                    BookmarkCacheDerivedData::SpecificTypes(_) => {
+                        anyhow::bail!("Remote bookmarks for 'SpecificTypes' is not supported");
+                    }
+                    BookmarkCacheDerivedData::NoDerivation => {
+                        anyhow::bail!("Remote bookmarks for 'NoDerivation' is not supported");
+                    }
+                    BookmarkCacheDerivedData::HgOnly
+                    | BookmarkCacheDerivedData::GitOnly
+                    | BookmarkCacheDerivedData::AllKinds => {
+                        // Valid cases - continue execution
+                    }
+                }
 
                 let client = match address {
                     BookmarkCacheAddress::HostPort(host_port) => {
@@ -1740,8 +1753,11 @@ impl RepoFactory {
                         BookmarkServiceClient::from_tier_name(self.env.fb, tier_name.to_string())?
                     }
                 };
-                let repo_client =
-                    RepoBookmarkServiceClient::new(repo_identity.name().to_string(), client);
+                let repo_client = RepoBookmarkServiceClient::new(
+                    repo_identity.name().to_string(),
+                    client,
+                    warmer_requirement,
+                );
 
                 Ok(Arc::new(repo_client))
             }
