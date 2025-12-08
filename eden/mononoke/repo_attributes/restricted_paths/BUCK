@@ -11,6 +11,7 @@ rust_library(
     ]),
     test_deps = [
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/sql_construct:sql_construct",
     ],
     deps = [

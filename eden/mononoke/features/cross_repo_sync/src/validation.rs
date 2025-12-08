@@ -1848,12 +1848,7 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    fn test_bookmark_small_to_large(fb: FacebookInit) -> Result<(), Error> {
-        let runtime = tokio::runtime::Runtime::new()?;
-        runtime.block_on(test_bookmark_small_to_large_impl(fb))
-    }
-
-    async fn test_bookmark_small_to_large_impl(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_bookmark_small_to_large(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _config) = init(fb, CommitSyncDirection::Forward).await?;
         let commit_sync_data = syncers.small_to_large;
@@ -1872,12 +1867,7 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    fn test_bookmark_no_sync_outcome(fb: FacebookInit) -> Result<(), Error> {
-        let runtime = tokio::runtime::Runtime::new()?;
-        runtime.block_on(test_bookmark_no_sync_outcome_impl(fb))
-    }
-
-    async fn test_bookmark_no_sync_outcome_impl(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_bookmark_no_sync_outcome(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _config) = init(fb, CommitSyncDirection::Backwards).await?;
         let commit_sync_data = syncers.large_to_small;

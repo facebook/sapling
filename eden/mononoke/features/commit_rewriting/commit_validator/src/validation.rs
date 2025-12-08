@@ -1555,7 +1555,6 @@ mod tests {
     use mononoke_macros::mononoke;
     use tests_utils::CommitIdentifier;
     use tests_utils::CreateCommitContext;
-    use tokio::runtime::Runtime;
 
     use super::*;
 
@@ -1638,7 +1637,7 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    fn test_topological_order_validation_ok(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_topological_order_validation_ok(fb: FacebookInit) -> Result<(), Error> {
         // Large repo  Mapping  Small repo
         //    2    -------------    1
         //    |                     |
@@ -1646,31 +1645,30 @@ mod tests {
         //    |                     |
         //    0    -------------    0
         //   ..                     ..
-        let runtime = Runtime::new()?;
-        runtime.block_on(async {
-            let validation_result = test_topological_order_validation(
-                fb,
-                vec![
-                    hashmap! {"newfile0" => "newcontent"},
-                    hashmap! {"newfile1" => "newcontent"},
-                    hashmap! {"newfile2" => "newcontent"},
-                ],
-                vec![
-                    hashmap! {"newfile0" => "newcontent"},
-                    hashmap! {"newfile2" => "newcontent"},
-                ],
-                hashmap! {0 => 0, 2 => 1},
-                2,
-                1,
-            )
-            .await;
-            assert!(validation_result.is_ok());
-            Ok(())
-        })
+        let validation_result = test_topological_order_validation(
+            fb,
+            vec![
+                hashmap! {"newfile0" => "newcontent"},
+                hashmap! {"newfile1" => "newcontent"},
+                hashmap! {"newfile2" => "newcontent"},
+            ],
+            vec![
+                hashmap! {"newfile0" => "newcontent"},
+                hashmap! {"newfile2" => "newcontent"},
+            ],
+            hashmap! {0 => 0, 2 => 1},
+            2,
+            1,
+        )
+        .await;
+        assert!(validation_result.is_ok());
+        Ok(())
     }
 
     #[mononoke::fbinit_test]
-    fn test_topological_order_validation_bad_direct_parents(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_topological_order_validation_bad_direct_parents(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
         // Large repo  Mapping  Small repo
         //    1      --\   /--      1
         //    |         \ /         |
@@ -1678,30 +1676,29 @@ mod tests {
         //    |         / \         |
         //    0      --/   \--      0
         //   ..                     ..
-        let runtime = Runtime::new()?;
-        runtime.block_on(async {
-            let validation_result = test_topological_order_validation(
-                fb,
-                vec![
-                    hashmap! {"newfile0" => "newcontent"},
-                    hashmap! {"newfile1" => "newcontent"},
-                ],
-                vec![
-                    hashmap! {"newfile0" => "newcontent"},
-                    hashmap! {"newfile1" => "newcontent"},
-                ],
-                hashmap! {0 => 1, 1 => 0},
-                0,
-                1,
-            )
-            .await;
-            assert!(validation_result.is_err());
-            Ok(())
-        })
+        let validation_result = test_topological_order_validation(
+            fb,
+            vec![
+                hashmap! {"newfile0" => "newcontent"},
+                hashmap! {"newfile1" => "newcontent"},
+            ],
+            vec![
+                hashmap! {"newfile0" => "newcontent"},
+                hashmap! {"newfile1" => "newcontent"},
+            ],
+            hashmap! {0 => 1, 1 => 0},
+            0,
+            1,
+        )
+        .await;
+        assert!(validation_result.is_err());
+        Ok(())
     }
 
     #[mononoke::fbinit_test]
-    fn test_topological_order_validation_bad_ancestors(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_topological_order_validation_bad_ancestors(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
         // Large repo  Mapping  Small repo
         //    2      --\   /--      1
         //    |         \ /         |
@@ -1709,31 +1706,28 @@ mod tests {
         //    |         / \         |
         //    0      --/   \--      0
         //   ..                     ..
-        let runtime = Runtime::new()?;
-        runtime.block_on(async {
-            let validation_result = test_topological_order_validation(
-                fb,
-                vec![
-                    hashmap! {"newfile0" => "newcontent"},
-                    hashmap! {"newfile1" => "newcontent"},
-                    hashmap! {"newfile2" => "newcontent"},
-                ],
-                vec![
-                    hashmap! {"newfile0" => "newcontent"},
-                    hashmap! {"newfile2" => "newcontent"},
-                ],
-                hashmap! {0 => 1, 2 => 0},
-                0,
-                1,
-            )
-            .await;
-            assert!(validation_result.is_err());
-            Ok(())
-        })
+        let validation_result = test_topological_order_validation(
+            fb,
+            vec![
+                hashmap! {"newfile0" => "newcontent"},
+                hashmap! {"newfile1" => "newcontent"},
+                hashmap! {"newfile2" => "newcontent"},
+            ],
+            vec![
+                hashmap! {"newfile0" => "newcontent"},
+                hashmap! {"newfile2" => "newcontent"},
+            ],
+            hashmap! {0 => 1, 2 => 0},
+            0,
+            1,
+        )
+        .await;
+        assert!(validation_result.is_err());
+        Ok(())
     }
 
     #[mononoke::fbinit_test]
-    fn test_topological_order_validation_bad_unremapped_ancestors(
+    async fn test_topological_order_validation_bad_unremapped_ancestors(
         fb: FacebookInit,
     ) -> Result<(), Error> {
         // Large repo  Mapping  Small repo
@@ -1743,26 +1737,23 @@ mod tests {
         //    |                     |
         //    0                     0
         //   ..                     ..
-        let runtime = Runtime::new()?;
-        runtime.block_on(async {
-            let validation_result = test_topological_order_validation(
-                fb,
-                vec![
-                    hashmap! {"newfile0" => "newcontent"},
-                    hashmap! {"newfile1" => "newcontent"},
-                    hashmap! {"newfile2" => "newcontent"},
-                ],
-                vec![
-                    hashmap! {"newfile0" => "newcontent"},
-                    hashmap! {"newfile2" => "newcontent"},
-                ],
-                hashmap! {2 => 1},
-                2,
-                1,
-            )
-            .await;
-            assert!(validation_result.is_err());
-            Ok(())
-        })
+        let validation_result = test_topological_order_validation(
+            fb,
+            vec![
+                hashmap! {"newfile0" => "newcontent"},
+                hashmap! {"newfile1" => "newcontent"},
+                hashmap! {"newfile2" => "newcontent"},
+            ],
+            vec![
+                hashmap! {"newfile0" => "newcontent"},
+                hashmap! {"newfile2" => "newcontent"},
+            ],
+            hashmap! {2 => 1},
+            2,
+            1,
+        )
+        .await;
+        assert!(validation_result.is_err());
+        Ok(())
     }
 }

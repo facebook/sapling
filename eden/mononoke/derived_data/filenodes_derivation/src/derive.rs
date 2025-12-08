@@ -375,7 +375,8 @@ mod tests {
         Ok(())
     }
 
-    async fn test_generate_filenodes_simple(fb: FacebookInit) -> Result<()> {
+    #[mononoke::fbinit_test]
+    async fn generate_filenodes_simple(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let filename = "path";
@@ -397,12 +398,7 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    fn generate_filenodes_simple(fb: FacebookInit) -> Result<()> {
-        let runtime = tokio::runtime::Runtime::new()?;
-        runtime.block_on(test_generate_filenodes_simple(fb))
-    }
-
-    async fn test_generate_filenodes_merge(fb: FacebookInit) -> Result<()> {
+    async fn generate_filenodes_merge(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let first_p1 = CreateCommitContext::new_root(&ctx, &repo)
@@ -426,12 +422,7 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    fn generate_filenodes_merge(fb: FacebookInit) -> Result<()> {
-        let runtime = tokio::runtime::Runtime::new()?;
-        runtime.block_on(test_generate_filenodes_merge(fb))
-    }
-
-    async fn test_generate_type_change(fb: FacebookInit) -> Result<()> {
+    async fn generate_filenodes_type_change(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let parent = CreateCommitContext::new_root(&ctx, &repo)
@@ -451,12 +442,7 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    fn generate_filenodes_type_change(fb: FacebookInit) -> Result<()> {
-        let runtime = tokio::runtime::Runtime::new()?;
-        runtime.block_on(test_generate_type_change(fb))
-    }
-
-    async fn test_many_parents(fb: FacebookInit) -> Result<()> {
+    async fn many_parents(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let p1 = CreateCommitContext::new_root(&ctx, &repo)
@@ -492,12 +478,7 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    fn many_parents(fb: FacebookInit) -> Result<()> {
-        let runtime = tokio::runtime::Runtime::new()?;
-        runtime.block_on(test_many_parents(fb))
-    }
-
-    async fn test_derive_empty_commits(fb: FacebookInit) -> Result<()> {
+    async fn derive_empty_commits(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
         let parent_empty = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
@@ -523,12 +504,7 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    fn derive_empty_commits(fb: FacebookInit) -> Result<()> {
-        let runtime = tokio::runtime::Runtime::new()?;
-        runtime.block_on(test_derive_empty_commits(fb))
-    }
-
-    async fn test_derive_only_empty_commits(fb: FacebookInit) -> Result<()> {
+    async fn derive_only_empty_commits(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: TestRepo = test_repo_factory::build_empty(ctx.fb).await?;
 
@@ -548,12 +524,6 @@ mod tests {
             .await?;
         assert_eq!(maps.len(), 2);
         Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    fn derive_only_empty_commits(fb: FacebookInit) -> Result<()> {
-        let runtime = tokio::runtime::Runtime::new()?;
-        runtime.block_on(test_derive_only_empty_commits(fb))
     }
 
     #[mononoke::fbinit_test]

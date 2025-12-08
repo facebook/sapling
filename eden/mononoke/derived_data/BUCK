@@ -120,7 +120,6 @@ rust_library(
     srcs = glob(["fsnodes/*.rs"]),
     autocargo = {"cargo_toml_dir": "fsnodes"},
     test_deps = [
-        "fbsource//third-party/rust:tokio",
         ":derived_data_test_utils",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
@@ -173,7 +172,6 @@ rust_library(
     autocargo = {"cargo_toml_dir": "skeleton_manifest"},
     test_deps = [
         "fbsource//third-party/rust:pretty_assertions",
-        "fbsource//third-party/rust:tokio",
         ":derived_data_test_utils",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",

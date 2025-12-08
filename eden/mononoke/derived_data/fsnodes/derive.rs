@@ -499,7 +499,6 @@ mod test {
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentity;
-    use tokio::runtime::Runtime;
 
     use super::*;
     use crate::mapping::get_file_changes;
@@ -518,16 +517,15 @@ mod test {
     );
 
     #[mononoke::fbinit_test]
-    fn flat_linear_test(fb: FacebookInit) {
-        let runtime = Runtime::new().unwrap();
-        let repo: TestRepo = runtime.block_on(Linear::get_repo(fb));
+    async fn flat_linear_test(fb: FacebookInit) {
+        let repo: TestRepo = Linear::get_repo(fb).await;
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
 
         let ctx = CoreContext::test_mock(fb);
         let parent_fsnode_id = {
             let parent_hg_cs = "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536";
-            let (_bcs_id, bcs) = runtime
-                .block_on(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
+            let (_bcs_id, bcs) = bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs)
+                .await
                 .unwrap();
 
             let f = derive_fsnode(
@@ -538,20 +536,20 @@ mod test {
                 Vec::new(),
             );
 
-            let root_fsnode_id = runtime.block_on(f).unwrap();
+            let root_fsnode_id = f.await.unwrap();
 
             // Make sure it's saved in the blobstore.
-            let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(&ctx, repo.repo_blobstore()))
+            let root_fsnode = root_fsnode_id
+                .load(&ctx, repo.repo_blobstore())
+                .await
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
-            let all_fsnodes: BTreeMap<_, _> = runtime
-                .block_on(
-                    iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_fsnode_id))
-                        .try_collect(),
-                )
-                .unwrap();
+            let all_fsnodes: BTreeMap<_, _> =
+                iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_fsnode_id))
+                    .try_collect()
+                    .await
+                    .unwrap();
             assert_eq!(
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![
@@ -583,8 +581,8 @@ mod test {
 
         {
             let child_hg_cs = "3e0e761030db6e479a7fb58b12881883f9f8c63f";
-            let (_bcs_id, bcs) = runtime
-                .block_on(bonsai_changeset_from_hg(&ctx, &repo, child_hg_cs))
+            let (_bcs_id, bcs) = bonsai_changeset_from_hg(&ctx, &repo, child_hg_cs)
+                .await
                 .unwrap();
 
             let f = derive_fsnode(
@@ -595,20 +593,20 @@ mod test {
                 Vec::new(),
             );
 
-            let root_fsnode_id = runtime.block_on(f).unwrap();
+            let root_fsnode_id = f.await.unwrap();
 
             // Make sure it's saved in the blobstore
-            let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(&ctx, repo.repo_blobstore()))
+            let root_fsnode = root_fsnode_id
+                .load(&ctx, repo.repo_blobstore())
+                .await
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
-            let all_fsnodes: BTreeMap<_, _> = runtime
-                .block_on(
-                    iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_fsnode_id))
-                        .try_collect(),
-                )
-                .unwrap();
+            let all_fsnodes: BTreeMap<_, _> =
+                iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_fsnode_id))
+                    .try_collect()
+                    .await
+                    .unwrap();
             assert_eq!(
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![
@@ -640,9 +638,8 @@ mod test {
     }
 
     #[mononoke::fbinit_test]
-    fn nested_directories_test(fb: FacebookInit) {
-        let runtime = Runtime::new().unwrap();
-        let repo: TestRepo = runtime.block_on(ManyFilesDirs::get_repo(fb));
+    async fn nested_directories_test(fb: FacebookInit) {
+        let repo: TestRepo = ManyFilesDirs::get_repo(fb).await;
         let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
 
         let ctx = CoreContext::test_mock(fb);
@@ -650,8 +647,8 @@ mod test {
         // Derive fsnodes for the first two commits.  We will look at commit 3 and 4.
         let parent_fsnode_id = {
             let parent_hg_cs = "5a28e25f924a5d209b82ce0713d8d83e68982bc8";
-            let (_bcs_id, bcs) = runtime
-                .block_on(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
+            let (_bcs_id, bcs) = bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs)
+                .await
                 .unwrap();
             let f = derive_fsnode(
                 &ctx,
@@ -660,13 +657,13 @@ mod test {
                 get_file_changes(&bcs),
                 Vec::new(),
             );
-            runtime.block_on(f).unwrap()
+            f.await.unwrap()
         };
 
         let parent_fsnode_id = {
             let parent_hg_cs = "2f866e7e549760934e31bf0420a873f65100ad63";
-            let (_bcs_id, bcs) = runtime
-                .block_on(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
+            let (_bcs_id, bcs) = bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs)
+                .await
                 .unwrap();
             let f = derive_fsnode(
                 &ctx,
@@ -675,13 +672,13 @@ mod test {
                 get_file_changes(&bcs),
                 Vec::new(),
             );
-            runtime.block_on(f).unwrap()
+            f.await.unwrap()
         };
 
         let parent_fsnode_id = {
             let parent_hg_cs = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4";
-            let (_bcs_id, bcs) = runtime
-                .block_on(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
+            let (_bcs_id, bcs) = bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs)
+                .await
                 .unwrap();
 
             let f = derive_fsnode(
@@ -692,20 +689,20 @@ mod test {
                 Vec::new(),
             );
 
-            let root_fsnode_id = runtime.block_on(f).unwrap();
+            let root_fsnode_id = f.await.unwrap();
 
             // Make sure it's saved in the blobstore.
-            let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(&ctx, repo.repo_blobstore()))
+            let root_fsnode = root_fsnode_id
+                .load(&ctx, repo.repo_blobstore())
+                .await
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
-            let all_fsnodes: BTreeMap<_, _> = runtime
-                .block_on(
-                    iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_fsnode_id))
-                        .try_collect(),
-                )
-                .unwrap();
+            let all_fsnodes: BTreeMap<_, _> =
+                iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_fsnode_id))
+                    .try_collect()
+                    .await
+                    .unwrap();
             assert_eq!(
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![
@@ -771,8 +768,9 @@ mod test {
                 Some(Entry::Tree(fsnode_id)) => fsnode_id,
                 _ => panic!("dir1/subdir1 fsnode should be a tree"),
             };
-            let deep_fsnode = runtime
-                .block_on(deep_fsnode_id.load(&ctx, repo.repo_blobstore()))
+            let deep_fsnode = deep_fsnode_id
+                .load(&ctx, repo.repo_blobstore())
+                .await
                 .unwrap();
             let deep_fsnode_entries: Vec<_> = deep_fsnode.list().collect();
             assert_eq!(
@@ -866,8 +864,8 @@ mod test {
 
         {
             let child_hg_cs = "051946ed218061e925fb120dac02634f9ad40ae2";
-            let (_bcs_id, bcs) = runtime
-                .block_on(bonsai_changeset_from_hg(&ctx, &repo, child_hg_cs))
+            let (_bcs_id, bcs) = bonsai_changeset_from_hg(&ctx, &repo, child_hg_cs)
+                .await
                 .unwrap();
 
             let f = derive_fsnode(
@@ -878,20 +876,20 @@ mod test {
                 Vec::new(),
             );
 
-            let root_fsnode_id = runtime.block_on(f).unwrap();
+            let root_fsnode_id = f.await.unwrap();
 
             // Make sure it's saved in the blobstore
-            let root_fsnode = runtime
-                .block_on(root_fsnode_id.load(&ctx, repo.repo_blobstore()))
+            let root_fsnode = root_fsnode_id
+                .load(&ctx, repo.repo_blobstore())
+                .await
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
-            let all_fsnodes: BTreeMap<_, _> = runtime
-                .block_on(
-                    iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_fsnode_id))
-                        .try_collect(),
-                )
-                .unwrap();
+            let all_fsnodes: BTreeMap<_, _> =
+                iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_fsnode_id))
+                    .try_collect()
+                    .await
+                    .unwrap();
             assert_eq!(
                 all_fsnodes.keys().collect::<Vec<_>>(),
                 vec![

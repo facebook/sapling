@@ -45,6 +45,7 @@ rust_library(
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/features/pushrebase:pushrebase",
         "//eden/mononoke/mononoke_macros:mononoke_macros",

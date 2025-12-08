@@ -349,7 +349,7 @@ mod tests {
     use crate::SqlRestrictedPathsManifestIdStoreBuilder;
 
     #[mononoke::fbinit_test]
-    fn test_empty_config(fb: FacebookInit) -> Result<()> {
+    async fn test_empty_config(fb: FacebookInit) -> Result<()> {
         let repo_id = RepositoryId::new(0);
 
         let acl_provider = DummyAclProvider::new(fb)?;
@@ -378,7 +378,7 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    fn test_with_config(fb: FacebookInit) -> Result<()> {
+    async fn test_with_config(fb: FacebookInit) -> Result<()> {
         let repo_id = RepositoryId::new(0);
         let mut path_acls = HashMap::new();
         let use_manifest_id_cache = true;
@@ -415,7 +415,7 @@ mod tests {
     }
 
     #[mononoke::fbinit_test]
-    fn test_path_matching(fb: FacebookInit) -> Result<()> {
+    async fn test_path_matching(fb: FacebookInit) -> Result<()> {
         let repo_id = RepositoryId::new(0);
         let mut path_acls = HashMap::new();
         let use_manifest_id_cache = true;

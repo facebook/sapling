@@ -269,7 +269,6 @@ mod test {
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataRef;
     use repo_identity::RepoIdentity;
-    use tokio::runtime::Runtime;
 
     use super::*;
 
@@ -348,39 +347,35 @@ mod test {
             }))
     }
 
-    fn verify_repo<F>(fb: FacebookInit, repo: F, runtime: &Runtime)
+    async fn verify_repo<F>(fb: FacebookInit, repo: F)
     where
         F: Future<Output = TestRepo>,
     {
         let ctx = CoreContext::test_mock(fb);
-        let repo = runtime.block_on(repo);
+        let repo = repo.await;
         borrowed!(ctx, repo);
 
-        runtime
-            .block_on(async move {
-                all_commits(ctx, repo)
-                    .await
-                    .unwrap()
-                    .try_for_each(move |(bcs_id, hg_cs_id)| async move {
-                        verify_skeleton_manifest(ctx, repo, bcs_id, hg_cs_id).await
-                    })
-                    .await
+        all_commits(ctx, repo)
+            .await
+            .unwrap()
+            .try_for_each(move |(bcs_id, hg_cs_id)| async move {
+                verify_skeleton_manifest(ctx, repo, bcs_id, hg_cs_id).await
             })
+            .await
             .unwrap();
     }
 
     #[mononoke::fbinit_test]
-    fn test_derive_data(fb: FacebookInit) {
-        let runtime = Runtime::new().unwrap();
-        verify_repo(fb, Linear::get_repo(fb), &runtime);
-        verify_repo(fb, BranchEven::get_repo(fb), &runtime);
-        verify_repo(fb, BranchUneven::get_repo(fb), &runtime);
-        verify_repo(fb, BranchWide::get_repo(fb), &runtime);
-        verify_repo(fb, ManyDiamonds::get_repo(fb), &runtime);
-        verify_repo(fb, ManyFilesDirs::get_repo(fb), &runtime);
-        verify_repo(fb, MergeEven::get_repo(fb), &runtime);
-        verify_repo(fb, MergeUneven::get_repo(fb), &runtime);
-        verify_repo(fb, UnsharedMergeEven::get_repo(fb), &runtime);
-        verify_repo(fb, UnsharedMergeUneven::get_repo(fb), &runtime);
+    async fn test_derive_data(fb: FacebookInit) {
+        verify_repo(fb, Linear::get_repo(fb)).await;
+        verify_repo(fb, BranchEven::get_repo(fb)).await;
+        verify_repo(fb, BranchUneven::get_repo(fb)).await;
+        verify_repo(fb, BranchWide::get_repo(fb)).await;
+        verify_repo(fb, ManyDiamonds::get_repo(fb)).await;
+        verify_repo(fb, ManyFilesDirs::get_repo(fb)).await;
+        verify_repo(fb, MergeEven::get_repo(fb)).await;
+        verify_repo(fb, MergeUneven::get_repo(fb)).await;
+        verify_repo(fb, UnsharedMergeEven::get_repo(fb)).await;
+        verify_repo(fb, UnsharedMergeUneven::get_repo(fb)).await;
     }
 }

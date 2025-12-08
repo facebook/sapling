@@ -14,6 +14,7 @@ rust_binary(
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/borrowed:borrowed",
+        "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_attributes/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/tests/fixtures:fixtures",

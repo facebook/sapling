@@ -84,12 +84,7 @@ fn test_parsing_caps_simple() {
 }
 
 #[mononoke::fbinit_test]
-fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(get_changed_manifests_stream_test_impl(fb))
-}
-
-async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), Error> {
+async fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: RepoClientRepo = ManyFilesDirs::get_repo(fb).await;
 
@@ -152,12 +147,7 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
 }
 
 #[mononoke::fbinit_test]
-fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(get_changed_manifests_stream_test_depth_impl(fb))
-}
-
-async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Result<(), Error> {
+async fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: RepoClientRepo = ManyFilesDirs::get_repo(fb).await;
 
@@ -206,12 +196,7 @@ async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Resul
 }
 
 #[mononoke::fbinit_test]
-fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(get_changed_manifests_stream_test_base_path_impl(fb))
-}
-
-async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> Result<(), Error> {
+async fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: RepoClientRepo = ManyFilesDirs::get_repo(fb).await;
 

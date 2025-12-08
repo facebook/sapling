@@ -96,7 +96,6 @@ use tests_utils::list_working_copy_utf8;
 use tests_utils::resolve_cs_id;
 use tests_utils::store_files;
 use tests_utils::store_rename;
-use tokio::runtime::Runtime;
 use wireproto_handler::TargetRepoDbs;
 
 use crate::BacksyncLimit;
@@ -170,73 +169,70 @@ async fn backsync_linear_simple(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[mononoke::fbinit_test]
-fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
+async fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
     // Test makes sure sync_entries() actually sync ALL entries even if transaction
     // for updating bookmark and/or counter failed. This transaction failure is benign and
     // expected, it means that two backsyncers doing the same job in parallel
 
-    let runtime = Runtime::new()?;
-    runtime.block_on(async move {
-        let (commit_sync_data, small_repo_dbs) =
-            init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
+    let (commit_sync_data, small_repo_dbs) =
+        init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
 
-        let small_repo_dbs = Arc::new(small_repo_dbs);
-        // Backsync a few entries
-        let ctx = CoreContext::test_mock(fb);
-        let fut = backsync_latest(
+    let small_repo_dbs = Arc::new(small_repo_dbs);
+    // Backsync a few entries
+    let ctx = CoreContext::test_mock(fb);
+    let fut = backsync_latest(
+        ctx.clone(),
+        commit_sync_data.clone(),
+        small_repo_dbs.clone(),
+        BacksyncLimit::Limit(2),
+        Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
+        false,
+        Box::new(future::ready(())),
+    )
+    .map_err(Error::from)
+    .await?;
+
+    let large_repo = commit_sync_data.get_source_repo();
+
+    let next_log_entries: Vec<_> = large_repo
+        .bookmark_update_log()
+        .read_next_bookmark_log_entries(
             ctx.clone(),
-            commit_sync_data.clone(),
-            small_repo_dbs.clone(),
-            BacksyncLimit::Limit(2),
-            Arc::new(AtomicBool::new(false)),
-            CommitSyncContext::Backsyncer,
-            false,
-            Box::new(future::ready(())),
+            BookmarkUpdateLogId(0),
+            1000,
+            Freshness::MostRecent,
         )
-        .map_err(Error::from)
+        .try_collect()
         .await?;
 
-        let large_repo = commit_sync_data.get_source_repo();
+    // Sync entries starting from counter 0. sync_entries() function should skip
+    // 2 first entries, and sync all entries after that
+    sync_entries(
+        ctx.clone(),
+        &commit_sync_data,
+        small_repo_dbs.clone(),
+        next_log_entries.clone(),
+        BookmarkUpdateLogId(0),
+        Arc::new(AtomicBool::new(false)),
+        CommitSyncContext::Backsyncer,
+        false,
+        fut,
+    )
+    .await?
+    .await;
 
-        let next_log_entries: Vec<_> = large_repo
-            .bookmark_update_log()
-            .read_next_bookmark_log_entries(
-                ctx.clone(),
-                BookmarkUpdateLogId(0),
-                1000,
-                Freshness::MostRecent,
-            )
-            .try_collect()
-            .await?;
+    let latest_log_id = next_log_entries.len() as i64;
 
-        // Sync entries starting from counter 0. sync_entries() function should skip
-        // 2 first entries, and sync all entries after that
-        sync_entries(
-            ctx.clone(),
-            &commit_sync_data,
-            small_repo_dbs.clone(),
-            next_log_entries.clone(),
-            BookmarkUpdateLogId(0),
-            Arc::new(AtomicBool::new(false)),
-            CommitSyncContext::Backsyncer,
-            false,
-            fut,
-        )
-        .await?
-        .await;
+    // Make sure all of the entries were synced
+    let fetched_value = small_repo_dbs
+        .counters
+        .get_counter(&ctx, &format_counter(&large_repo.repo_identity().id()))
+        .await?;
 
-        let latest_log_id = next_log_entries.len() as i64;
+    assert_eq!(fetched_value, Some(latest_log_id));
 
-        // Make sure all of the entries were synced
-        let fetched_value = small_repo_dbs
-            .counters
-            .get_counter(&ctx, &format_counter(&large_repo.repo_identity().id()))
-            .await?;
-
-        assert_eq!(fetched_value, Some(latest_log_id));
-
-        Ok(())
-    })
+    Ok(())
 }
 
 #[mononoke::fbinit_test]

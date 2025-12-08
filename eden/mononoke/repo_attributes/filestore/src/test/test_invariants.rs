@@ -87,12 +87,11 @@ async fn check_metadata<B: KeyedBlobstore>(
 }
 
 #[mononoke::fbinit_test]
-fn test_invariants(fb: FacebookInit) -> Result<()> {
+async fn test_invariants(fb: FacebookInit) -> Result<()> {
     // NOTE: We make calls to our Blobstore succeed with 75% probability below. This might seem
     // high, but this actually makes most store() calls fail, since there is a lot that needs to go
     // right for a store() call to succeed (all the chunks need to be saved, then we need to write
     // 3 aliases, and then the content).
-    let rt = tokio::runtime::Runtime::new()?;
     let mut r#gen = Gen::new(128);
 
     let memblob = KeyedMemblob::default();
@@ -111,21 +110,22 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
         let req = request(&bytes);
 
         // Try to store with a broken blobstore. It doesn't matter if we succeed or not.
-        let res = rt.block_on(filestore::store(
+        let res = filestore::store(
             blob,
             config,
             ctx,
             &req,
             stream::once(future::ready(Ok(bytes.clone()))),
-        ));
+        )
+        .await;
         println!("store: {:?}", res);
 
         // Try to read with a functional blobstore. All results should be consistent.
-        let content_ok = rt.block_on(check_consistency(memblob, ctx, &bytes))?;
+        let content_ok = check_consistency(memblob, ctx, &bytes).await?;
         println!("content_ok: {:?}", content_ok);
 
         // If we can read the content metadata, then we should also be able to read a metadata.
-        let metadata_ok = rt.block_on(check_metadata(memblob, ctx, &bytes))?;
+        let metadata_ok = check_metadata(memblob, ctx, &bytes).await?;
         println!("metadata_ok: {:?}", metadata_ok);
         assert_eq!(content_ok, metadata_ok)
     }

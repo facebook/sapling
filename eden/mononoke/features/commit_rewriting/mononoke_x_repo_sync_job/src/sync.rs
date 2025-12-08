@@ -1073,319 +1073,298 @@ mod test {
     use tests_utils::CreateCommitContext;
     use tests_utils::bookmark;
     use tests_utils::resolve_cs_id;
-    use tokio::runtime::Runtime;
 
     use super::*;
 
     #[mononoke::fbinit_test]
-    fn test_simple(fb: FacebookInit) -> Result<(), Error> {
-        let runtime = Runtime::new()?;
-        runtime.block_on(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_sync_data = syncers.small_to_large;
-            let smallrepo = commit_sync_data.get_source_repo();
+    async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
+        let commit_sync_data = syncers.small_to_large;
+        let smallrepo = commit_sync_data.get_source_repo();
 
-            // Single commit
-            let new_master = CreateCommitContext::new(&ctx, &smallrepo, vec!["master"])
-                .add_file("newfile", "newcontent")
-                .commit()
-                .await?;
-            bookmark(&ctx, &smallrepo, "master")
-                .set_to(new_master)
-                .await?;
+        // Single commit
+        let new_master = CreateCommitContext::new(&ctx, &smallrepo, vec!["master"])
+            .add_file("newfile", "newcontent")
+            .commit()
+            .await?;
+        bookmark(&ctx, &smallrepo, "master")
+            .set_to(new_master)
+            .await?;
 
-            sync_and_validate(&ctx, &commit_sync_data).await?;
+        sync_and_validate(&ctx, &commit_sync_data).await?;
 
-            let non_master_commit = CreateCommitContext::new(&ctx, &smallrepo, vec!["master"])
-                .add_file("nonmasterfile", "nonmastercontent")
-                .commit()
-                .await?;
-            bookmark(&ctx, &smallrepo, "nonmasterbookmark")
-                .set_to(non_master_commit)
-                .await?;
+        let non_master_commit = CreateCommitContext::new(&ctx, &smallrepo, vec!["master"])
+            .add_file("nonmasterfile", "nonmastercontent")
+            .commit()
+            .await?;
+        bookmark(&ctx, &smallrepo, "nonmasterbookmark")
+            .set_to(non_master_commit)
+            .await?;
 
-            sync_and_validate(&ctx, &commit_sync_data).await?;
+        sync_and_validate(&ctx, &commit_sync_data).await?;
 
-            // Create a stack of commits
-            let first_in_stack = CreateCommitContext::new(&ctx, &smallrepo, vec!["master"])
-                .add_file("stack", "first")
-                .commit()
-                .await?;
+        // Create a stack of commits
+        let first_in_stack = CreateCommitContext::new(&ctx, &smallrepo, vec!["master"])
+            .add_file("stack", "first")
+            .commit()
+            .await?;
 
-            let second_in_stack = CreateCommitContext::new(&ctx, &smallrepo, vec![first_in_stack])
-                .add_file("stack", "second")
-                .commit()
-                .await?;
-            bookmark(&ctx, &smallrepo, "master")
-                .set_to(second_in_stack)
-                .await?;
+        let second_in_stack = CreateCommitContext::new(&ctx, &smallrepo, vec![first_in_stack])
+            .add_file("stack", "second")
+            .commit()
+            .await?;
+        bookmark(&ctx, &smallrepo, "master")
+            .set_to(second_in_stack)
+            .await?;
 
-            // Create a commit that's based on commit rewritten with noop mapping
-            // - it should NOT be rewritten
-            let premove = CreateCommitContext::new(&ctx, &smallrepo, vec!["premove"])
-                .add_file("premove", "premovecontent")
-                .commit()
-                .await?;
-            bookmark(&ctx, &smallrepo, "newpremove")
-                .set_to(premove)
-                .await?;
+        // Create a commit that's based on commit rewritten with noop mapping
+        // - it should NOT be rewritten
+        let premove = CreateCommitContext::new(&ctx, &smallrepo, vec!["premove"])
+            .add_file("premove", "premovecontent")
+            .commit()
+            .await?;
+        bookmark(&ctx, &smallrepo, "newpremove")
+            .set_to(premove)
+            .await?;
 
-            // Move a bookmark
-            bookmark(&ctx, &smallrepo, "newpremove")
-                .set_to("premove")
-                .await?;
-            sync_and_validate(&ctx, &commit_sync_data).await?;
-            let commit_sync_outcome = commit_sync_data
-                .get_commit_sync_outcome(&ctx, premove)
-                .await?
-                .ok_or_else(|| format_err!("commit sync outcome not set"))?;
-            match commit_sync_outcome {
-                CommitSyncOutcome::RewrittenAs(_cs_id, version) => {
-                    assert_eq!(version, CommitSyncConfigVersion("noop".to_string()));
-                }
-                _ => {
-                    return Err(format_err!("unexpected outcome"));
-                }
-            };
+        // Move a bookmark
+        bookmark(&ctx, &smallrepo, "newpremove")
+            .set_to("premove")
+            .await?;
+        sync_and_validate(&ctx, &commit_sync_data).await?;
+        let commit_sync_outcome = commit_sync_data
+            .get_commit_sync_outcome(&ctx, premove)
+            .await?
+            .ok_or_else(|| format_err!("commit sync outcome not set"))?;
+        match commit_sync_outcome {
+            CommitSyncOutcome::RewrittenAs(_cs_id, version) => {
+                assert_eq!(version, CommitSyncConfigVersion("noop".to_string()));
+            }
+            _ => {
+                return Err(format_err!("unexpected outcome"));
+            }
+        };
 
-            // Delete bookmarks
-            bookmark(&ctx, &smallrepo, "newpremove").delete().await?;
-            bookmark(&ctx, &smallrepo, "nonmasterbookmark")
-                .delete()
-                .await?;
+        // Delete bookmarks
+        bookmark(&ctx, &smallrepo, "newpremove").delete().await?;
+        bookmark(&ctx, &smallrepo, "nonmasterbookmark")
+            .delete()
+            .await?;
 
-            sync_and_validate(&ctx, &commit_sync_data).await?;
-            Ok(())
-        })
+        sync_and_validate(&ctx, &commit_sync_data).await?;
+        Ok(())
     }
 
     #[mononoke::fbinit_test]
-    fn test_simple_merge(fb: FacebookInit) -> Result<(), Error> {
-        let runtime = Runtime::new()?;
-        runtime.block_on(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_sync_data = syncers.small_to_large;
-            let smallrepo = commit_sync_data.get_source_repo();
+    async fn test_simple_merge(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
+        let commit_sync_data = syncers.small_to_large;
+        let smallrepo = commit_sync_data.get_source_repo();
 
-            // Merge new repo
-            let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
-                .add_file("firstnewrepo", "newcontent")
-                .commit()
-                .await?;
-            let second_new_repo = CreateCommitContext::new(&ctx, &smallrepo, vec![first_new_repo])
-                .add_file("secondnewrepo", "anothercontent")
-                .commit()
-                .await?;
-
-            bookmark(&ctx, &smallrepo, "newrepohead")
-                .set_to(second_new_repo)
-                .await?;
-
-            let res = sync(
-                &ctx,
-                &commit_sync_data,
-                &hashset! {BookmarkKey::new("master")?},
-                PushrebaseRewriteDates::No,
-            )
+        // Merge new repo
+        let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
+            .add_file("firstnewrepo", "newcontent")
+            .commit()
             .await?;
-            assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
+        let second_new_repo = CreateCommitContext::new(&ctx, &smallrepo, vec![first_new_repo])
+            .add_file("secondnewrepo", "anothercontent")
+            .commit()
+            .await?;
 
-            let merge = CreateCommitContext::new(&ctx, &smallrepo, vec!["master", "newrepohead"])
+        bookmark(&ctx, &smallrepo, "newrepohead")
+            .set_to(second_new_repo)
+            .await?;
+
+        let res = sync(
+            &ctx,
+            &commit_sync_data,
+            &hashset! {BookmarkKey::new("master")?},
+            PushrebaseRewriteDates::No,
+        )
+        .await?;
+        assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
+
+        let merge = CreateCommitContext::new(&ctx, &smallrepo, vec!["master", "newrepohead"])
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
+
+        sync_and_validate_with_common_bookmarks(
+            &ctx,
+            &commit_sync_data,
+            &hashset! {BookmarkKey::new("master")?},
+            &hashset! {BookmarkKey::new("newrepohead")?},
+            PushrebaseRewriteDates::No,
+        )
+        .await?;
+
+        // Diamond merges are not allowed
+        let diamond_merge =
+            CreateCommitContext::new(&ctx, &smallrepo, vec!["master", "newrepohead"])
+                .commit()
+                .await?;
+        bookmark(&ctx, &smallrepo, "master")
+            .set_to(diamond_merge)
+            .await?;
+        assert!(sync_and_validate(&ctx, &commit_sync_data,).await.is_err());
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_merge_added_in_single_bookmark_update(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
+        let commit_sync_data = syncers.small_to_large;
+        let smallrepo = commit_sync_data.get_source_repo();
+
+        // Merge new repo
+        let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
+            .add_file("firstnewrepo", "newcontent")
+            .commit()
+            .await?;
+        let second_new_repo = CreateCommitContext::new(&ctx, &smallrepo, vec![first_new_repo])
+            .add_file("secondnewrepo", "anothercontent")
+            .commit()
+            .await?;
+
+        let master_cs_id = resolve_cs_id(&ctx, &smallrepo, "master").await?;
+        let merge = CreateCommitContext::new(&ctx, &smallrepo, vec![master_cs_id, second_new_repo])
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
+        sync_and_validate(&ctx, &commit_sync_data).await?;
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_merge_of_a_merge_one_step(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
+        let commit_sync_data = syncers.small_to_large;
+        let smallrepo = commit_sync_data.get_source_repo();
+
+        // Merge new repo, which itself has a merge
+        let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
+            .add_file("firstnewrepo", "newcontent")
+            .commit()
+            .await?;
+        let second_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
+            .add_file("secondnewrepo", "anothercontent")
+            .commit()
+            .await?;
+
+        let merge_new_repo =
+            CreateCommitContext::new(&ctx, &smallrepo, vec![first_new_repo, second_new_repo])
                 .commit()
                 .await?;
 
-            bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
+        let master_cs_id = resolve_cs_id(&ctx, &smallrepo, "master").await?;
+        let merge = CreateCommitContext::new(&ctx, &smallrepo, vec![master_cs_id, merge_new_repo])
+            .commit()
+            .await?;
 
+        bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
+        sync_and_validate(&ctx, &commit_sync_data).await?;
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_merge_of_a_merge_two_steps(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
+        let commit_sync_data = syncers.small_to_large;
+        let smallrepo = commit_sync_data.get_source_repo();
+
+        // Merge new repo, which itself has a merge
+        let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
+            .add_file("firstnewrepo", "newcontent")
+            .commit()
+            .await?;
+        let second_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
+            .add_file("secondnewrepo", "anothercontent")
+            .commit()
+            .await?;
+
+        let merge_new_repo =
+            CreateCommitContext::new(&ctx, &smallrepo, vec![first_new_repo, second_new_repo])
+                .commit()
+                .await?;
+        bookmark(&ctx, &smallrepo, "newrepoimport")
+            .set_to(merge_new_repo)
+            .await?;
+        let res = sync(
+            &ctx,
+            &commit_sync_data,
+            &hashset! {BookmarkKey::new("master")?},
+            PushrebaseRewriteDates::No,
+        )
+        .await?;
+        assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
+
+        let merge = CreateCommitContext::new(&ctx, &smallrepo, vec!["master", "newrepoimport"])
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
+        sync_and_validate_with_common_bookmarks(
+            &ctx,
+            &commit_sync_data,
+            &hashset! {BookmarkKey::new("master")?},
+            &hashset! {BookmarkKey::new("newrepoimport")?},
+            PushrebaseRewriteDates::No,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_merge_non_shared_bookmark(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+
+        let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
+        let commit_sync_data = syncers.small_to_large;
+        let smallrepo = commit_sync_data.get_source_repo();
+
+        let new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
+            .add_file("firstnewrepo", "newcontent")
+            .commit()
+            .await?;
+        bookmark(&ctx, &smallrepo, "newrepohead")
+            .set_to(new_repo)
+            .await?;
+        let res = sync(
+            &ctx,
+            &commit_sync_data,
+            &hashset! {BookmarkKey::new("master")?},
+            PushrebaseRewriteDates::No,
+        )
+        .await?;
+        assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
+
+        let merge = CreateCommitContext::new(&ctx, &smallrepo, vec!["master", "newrepohead"])
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &smallrepo, "somebook").set_to(merge).await?;
+        assert!(
             sync_and_validate_with_common_bookmarks(
                 &ctx,
                 &commit_sync_data,
                 &hashset! {BookmarkKey::new("master")?},
-                &hashset! {BookmarkKey::new("newrepohead")?},
+                &hashset! {BookmarkKey::new("newrepohead")?, BookmarkKey::new("somebook")?},
                 PushrebaseRewriteDates::No,
             )
-            .await?;
-
-            // Diamond merges are not allowed
-            let diamond_merge =
-                CreateCommitContext::new(&ctx, &smallrepo, vec!["master", "newrepohead"])
-                    .commit()
-                    .await?;
-            bookmark(&ctx, &smallrepo, "master")
-                .set_to(diamond_merge)
-                .await?;
-            assert!(sync_and_validate(&ctx, &commit_sync_data,).await.is_err());
-            Ok(())
-        })
-    }
-
-    #[mononoke::fbinit_test]
-    fn test_merge_added_in_single_bookmark_update(fb: FacebookInit) -> Result<(), Error> {
-        let runtime = Runtime::new()?;
-        runtime.block_on(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_sync_data = syncers.small_to_large;
-            let smallrepo = commit_sync_data.get_source_repo();
-
-            // Merge new repo
-            let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
-                .add_file("firstnewrepo", "newcontent")
-                .commit()
-                .await?;
-            let second_new_repo = CreateCommitContext::new(&ctx, &smallrepo, vec![first_new_repo])
-                .add_file("secondnewrepo", "anothercontent")
-                .commit()
-                .await?;
-
-            let master_cs_id = resolve_cs_id(&ctx, &smallrepo, "master").await?;
-            let merge =
-                CreateCommitContext::new(&ctx, &smallrepo, vec![master_cs_id, second_new_repo])
-                    .commit()
-                    .await?;
-
-            bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
-            sync_and_validate(&ctx, &commit_sync_data).await?;
-
-            Ok(())
-        })
-    }
-
-    #[mononoke::fbinit_test]
-    fn test_merge_of_a_merge_one_step(fb: FacebookInit) -> Result<(), Error> {
-        let runtime = Runtime::new()?;
-        runtime.block_on(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_sync_data = syncers.small_to_large;
-            let smallrepo = commit_sync_data.get_source_repo();
-
-            // Merge new repo, which itself has a merge
-            let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
-                .add_file("firstnewrepo", "newcontent")
-                .commit()
-                .await?;
-            let second_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
-                .add_file("secondnewrepo", "anothercontent")
-                .commit()
-                .await?;
-
-            let merge_new_repo =
-                CreateCommitContext::new(&ctx, &smallrepo, vec![first_new_repo, second_new_repo])
-                    .commit()
-                    .await?;
-
-            let master_cs_id = resolve_cs_id(&ctx, &smallrepo, "master").await?;
-            let merge =
-                CreateCommitContext::new(&ctx, &smallrepo, vec![master_cs_id, merge_new_repo])
-                    .commit()
-                    .await?;
-
-            bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
-            sync_and_validate(&ctx, &commit_sync_data).await?;
-
-            Ok(())
-        })
-    }
-
-    #[mononoke::fbinit_test]
-    fn test_merge_of_a_merge_two_steps(fb: FacebookInit) -> Result<(), Error> {
-        let runtime = Runtime::new()?;
-        runtime.block_on(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_sync_data = syncers.small_to_large;
-            let smallrepo = commit_sync_data.get_source_repo();
-
-            // Merge new repo, which itself has a merge
-            let first_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
-                .add_file("firstnewrepo", "newcontent")
-                .commit()
-                .await?;
-            let second_new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
-                .add_file("secondnewrepo", "anothercontent")
-                .commit()
-                .await?;
-
-            let merge_new_repo =
-                CreateCommitContext::new(&ctx, &smallrepo, vec![first_new_repo, second_new_repo])
-                    .commit()
-                    .await?;
-            bookmark(&ctx, &smallrepo, "newrepoimport")
-                .set_to(merge_new_repo)
-                .await?;
-            let res = sync(
-                &ctx,
-                &commit_sync_data,
-                &hashset! {BookmarkKey::new("master")?},
-                PushrebaseRewriteDates::No,
-            )
-            .await?;
-            assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
-
-            let merge = CreateCommitContext::new(&ctx, &smallrepo, vec!["master", "newrepoimport"])
-                .commit()
-                .await?;
-
-            bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
-            sync_and_validate_with_common_bookmarks(
-                &ctx,
-                &commit_sync_data,
-                &hashset! {BookmarkKey::new("master")?},
-                &hashset! {BookmarkKey::new("newrepoimport")?},
-                PushrebaseRewriteDates::No,
-            )
-            .await?;
-
-            Ok(())
-        })
-    }
-
-    #[mononoke::fbinit_test]
-    fn test_merge_non_shared_bookmark(fb: FacebookInit) -> Result<(), Error> {
-        let runtime = Runtime::new()?;
-        runtime.block_on(async move {
-            let ctx = CoreContext::test_mock(fb);
-
-            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
-            let commit_sync_data = syncers.small_to_large;
-            let smallrepo = commit_sync_data.get_source_repo();
-
-            let new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
-                .add_file("firstnewrepo", "newcontent")
-                .commit()
-                .await?;
-            bookmark(&ctx, &smallrepo, "newrepohead")
-                .set_to(new_repo)
-                .await?;
-            let res = sync(
-                &ctx,
-                &commit_sync_data,
-                &hashset! {BookmarkKey::new("master")?},
-                PushrebaseRewriteDates::No,
-            )
-            .await?;
-            assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
-
-            let merge = CreateCommitContext::new(&ctx, &smallrepo, vec!["master", "newrepohead"])
-                .commit()
-                .await?;
-
-            bookmark(&ctx, &smallrepo, "somebook").set_to(merge).await?;
-            assert!(
-                sync_and_validate_with_common_bookmarks(
-                    &ctx,
-                    &commit_sync_data,
-                    &hashset! {BookmarkKey::new("master")?},
-                    &hashset! {BookmarkKey::new("newrepohead")?, BookmarkKey::new("somebook")?},
-                    PushrebaseRewriteDates::No,
-                )
-                .await
-                .is_err()
-            );
-            Ok(())
-        })
+            .await
+            .is_err()
+        );
+        Ok(())
     }
 
     #[mononoke::fbinit_test]

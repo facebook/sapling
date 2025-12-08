@@ -111,7 +111,6 @@ mod test {
     use mercurial_types_mocks::nodehash;
     use mononoke_macros::mononoke;
     use quickcheck::quickcheck;
-    use tokio::runtime::Runtime;
 
     use super::*;
 
@@ -276,7 +275,7 @@ mod test {
     }
 
     #[mononoke::test]
-    fn test_stream_emits_version() {
+    async fn test_stream_emits_version() {
         let pairs_stream = stream_for_pairs(vec![
             (nodehash::ONES_CSID, vec![nodehash::TWOS_CSID]),
             (nodehash::THREES_CSID, vec![nodehash::FOURS_CSID]),
@@ -285,9 +284,9 @@ mod test {
         let meta = vec![];
         let packer = obsmarkers_packer_stream(pairs_stream, time, meta.clone());
 
-        let runtime = Runtime::new().unwrap();
-        let mut chunks = runtime
-            .block_on(packer.try_collect::<Vec<Chunk>>())
+        let mut chunks = packer
+            .try_collect::<Vec<Chunk>>()
+            .await
             .unwrap()
             .into_iter();
 

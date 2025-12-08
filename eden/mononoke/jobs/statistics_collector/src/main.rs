@@ -724,228 +724,210 @@ mod tests {
     use mononoke_macros::mononoke;
     use tests_utils::create_commit;
     use tests_utils::store_files;
-    use tokio::runtime::Runtime;
 
     use super::Repo as MyRepo;
     use super::*;
 
     #[mononoke::test]
-    fn test_number_of_lines_empty_stream() -> Result<(), Error> {
-        let rt = Runtime::new().unwrap();
-
+    async fn test_number_of_lines_empty_stream() -> Result<(), Error> {
         let stream = stream::once(async { Ok(FileBytes(Bytes::from(&b""[..]))) });
-        let result = rt.block_on(number_of_lines(stream))?;
+        let result = number_of_lines(stream).await?;
         assert_eq!(result, 0);
         Ok(())
     }
 
     #[mononoke::test]
-    fn test_number_of_lines_one_line() -> Result<(), Error> {
-        let rt = Runtime::new().unwrap();
-
+    async fn test_number_of_lines_one_line() -> Result<(), Error> {
         let stream = stream::once(async { Ok(FileBytes(Bytes::from(&b"First line\n"[..]))) });
-        let result = rt.block_on(number_of_lines(stream))?;
+        let result = number_of_lines(stream).await?;
         assert_eq!(result, 1);
         Ok(())
     }
 
     #[mononoke::test]
-    fn test_number_of_lines_many_lines() -> Result<(), Error> {
-        let rt = Runtime::new().unwrap();
-
+    async fn test_number_of_lines_many_lines() -> Result<(), Error> {
         let stream = stream::once(async {
             Ok(FileBytes(Bytes::from(
                 &b"First line\nSecond line\nThird line\n"[..],
             )))
         });
-        let result = rt.block_on(number_of_lines(stream))?;
+        let result = number_of_lines(stream).await?;
         assert_eq!(result, 3);
         Ok(())
     }
 
     #[mononoke::test]
-    fn test_number_of_lines_many_items() -> Result<(), Error> {
-        let rt = Runtime::new().unwrap();
-
+    async fn test_number_of_lines_many_items() -> Result<(), Error> {
         let vec = vec![
             FileBytes(Bytes::from(&b"First line\n"[..])),
             FileBytes(Bytes::from(&b""[..])),
             FileBytes(Bytes::from(&b"First line\nSecond line\nThird line\n"[..])),
         ];
         let stream = stream::iter(vec.into_iter().map(Ok));
-        let result = rt.block_on(number_of_lines(stream))?;
+        let result = number_of_lines(stream).await?;
         assert_eq!(result, 4);
         Ok(())
     }
 
     #[mononoke::fbinit_test]
-    fn linear_test_get_statistics_from_changeset(fb: FacebookInit) {
-        let runtime = Runtime::new().unwrap();
-        runtime.block_on(async move {
-            let repo: MyRepo = Linear::get_repo(fb).await;
+    async fn linear_test_get_statistics_from_changeset(fb: FacebookInit) {
+        let repo: MyRepo = Linear::get_repo(fb).await;
 
-            let ctx = CoreContext::test_mock(fb);
-            let blobstore = repo.repo_blobstore().clone();
-            borrowed!(ctx, blobstore, repo);
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore().clone();
+        borrowed!(ctx, blobstore, repo);
 
-            // Commit consists two files (name => content):
-            //     "1" => "1\n"
-            //     "files" => "1\n"
-            // */
-            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-            let p = repo
-                .bonsai_hg_mapping()
-                .get_bonsai_from_hg(ctx, root)
-                .await
-                .unwrap()
-                .unwrap();
-            let parents = vec![p];
-
-            let bcs_id = create_commit(
-                ctx.clone(),
-                repo,
-                parents,
-                store_files(
-                    ctx,
-                    btreemap! {
-                        "dir1/dir2/file1" => Some("first line\nsecond line\n"),
-                        "dir1/dir3/file2" => Some("first line\n"),
-                    },
-                    repo,
-                )
-                .await,
-            )
-            .await;
-
-            let hg_cs_id = derive_hg_changeset(ctx, repo.repo_derived_data(), bcs_id)
-                .await
-                .unwrap();
-
-            let stats = get_statistics_from_changeset(ctx, repo, blobstore, &hg_cs_id)
-                .await
-                .unwrap();
-
-            // (num_files, total_file_size, num_lines)
-            assert_eq!(stats, RepoStatistics::new(4, 38, 5));
-        });
-    }
-
-    #[mononoke::fbinit_test]
-    fn linear_test_get_statistics_from_entry_tree(fb: FacebookInit) {
-        let runtime = Runtime::new().unwrap();
-        runtime.block_on(async move {
-            let repo: MyRepo = Linear::get_repo(fb).await;
-
-            let ctx = CoreContext::test_mock(fb);
-            let blobstore = repo.repo_blobstore().clone();
-            borrowed!(ctx, blobstore, repo);
-
-            // Commit consists two files (name => content):
-            //     "1" => "1\n"
-            //     "files" => "1\n"
-            // */
-            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-            let p = repo
-                .bonsai_hg_mapping()
-                .get_bonsai_from_hg(ctx, root)
-                .await
-                .unwrap()
-                .unwrap();
-            let parents = vec![p];
-
-            let bcs_id = create_commit(
-                ctx.clone(),
-                repo,
-                parents,
-                store_files(
-                    ctx,
-                    btreemap! {
-                        "dir1/dir2/file1" => Some("first line\nsecond line\n"),
-                        "dir1/dir3/file2" => Some("first line\n"),
-                    },
-                    repo,
-                )
-                .await,
-            )
-            .await;
-
-            let hg_cs_id = derive_hg_changeset(ctx, repo.repo_derived_data(), bcs_id)
-                .await
-                .unwrap();
-
-            let manifest = get_manifest_from_changeset(ctx, repo, &hg_cs_id)
-                .await
-                .unwrap();
-
-            let mut tree_entries = manifest
-                .list_all_entries(ctx.clone(), blobstore.clone())
-                .try_filter_map(|(_, entry)| match entry {
-                    Entry::Tree(_) => future::ok(Some(entry)),
-                    _ => future::ok(None),
-                })
-                .try_collect::<Vec<_>>()
-                .await
-                .unwrap();
-
-            let stats = get_statistics_from_entry(ctx, repo, tree_entries.pop().unwrap())
-                .await
-                .unwrap();
-
-            // For Entry::Tree we expect repository with all statistics equal 0
-            // (num_files, total_file_size, num_lines)
-            assert_eq!(stats, RepoStatistics::default());
-        });
-    }
-
-    #[mononoke::fbinit_test]
-    fn linear_test_update_statistics(fb: FacebookInit) {
-        let runtime = Runtime::new().unwrap();
-        runtime.block_on(async move {
-            let repo: MyRepo = Linear::get_repo(fb).await;
-
-            let ctx = CoreContext::test_mock(fb);
-            let blobstore = repo.repo_blobstore().clone();
-            borrowed!(ctx, blobstore, repo);
-
-            /*
-            Commit consists two files (name => content):
-                "1" => "1\n"
-                "files" => "1\n"
-            */
-            let prev_hg_cs_id =
-                HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-            /*
-            Commit consists two files (name => content):
-                "2" => "2\n"
-                "files" => "1\n2\n"
-            */
-            let cur_hg_cs_id =
-                HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap();
-
-            let stats = get_statistics_from_changeset(ctx, repo, blobstore, &prev_hg_cs_id)
-                .await
-                .unwrap();
-
-            let (prev_manifest, cur_manifest) = try_join!(
-                get_manifest_from_changeset(ctx, repo, &prev_hg_cs_id),
-                get_manifest_from_changeset(ctx, repo, &cur_hg_cs_id),
-            )
+        // Commit consists two files (name => content):
+        //     "1" => "1\n"
+        //     "files" => "1\n"
+        // */
+        let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+        let p = repo
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(ctx, root)
+            .await
+            .unwrap()
             .unwrap();
+        let parents = vec![p];
 
-            let new_stats = update_statistics(
+        let bcs_id = create_commit(
+            ctx.clone(),
+            repo,
+            parents,
+            store_files(
                 ctx,
+                btreemap! {
+                    "dir1/dir2/file1" => Some("first line\nsecond line\n"),
+                    "dir1/dir3/file2" => Some("first line\n"),
+                },
                 repo,
-                stats,
-                prev_manifest
-                    .diff(ctx.clone(), blobstore.clone(), cur_manifest.clone())
-                    .compat()
-                    .boxify(),
             )
+            .await,
+        )
+        .await;
+
+        let hg_cs_id = derive_hg_changeset(ctx, repo.repo_derived_data(), bcs_id)
             .await
             .unwrap();
 
-            // (num_files, total_file_size, num_lines)
-            assert_eq!(new_stats, RepoStatistics::new(3, 8, 4));
-        });
+        let stats = get_statistics_from_changeset(ctx, repo, blobstore, &hg_cs_id)
+            .await
+            .unwrap();
+
+        // (num_files, total_file_size, num_lines)
+        assert_eq!(stats, RepoStatistics::new(4, 38, 5));
+    }
+
+    #[mononoke::fbinit_test]
+    async fn linear_test_get_statistics_from_entry_tree(fb: FacebookInit) {
+        let repo: MyRepo = Linear::get_repo(fb).await;
+
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore().clone();
+        borrowed!(ctx, blobstore, repo);
+
+        // Commit consists two files (name => content):
+        //     "1" => "1\n"
+        //     "files" => "1\n"
+        // */
+        let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+        let p = repo
+            .bonsai_hg_mapping()
+            .get_bonsai_from_hg(ctx, root)
+            .await
+            .unwrap()
+            .unwrap();
+        let parents = vec![p];
+
+        let bcs_id = create_commit(
+            ctx.clone(),
+            repo,
+            parents,
+            store_files(
+                ctx,
+                btreemap! {
+                    "dir1/dir2/file1" => Some("first line\nsecond line\n"),
+                    "dir1/dir3/file2" => Some("first line\n"),
+                },
+                repo,
+            )
+            .await,
+        )
+        .await;
+
+        let hg_cs_id = derive_hg_changeset(ctx, repo.repo_derived_data(), bcs_id)
+            .await
+            .unwrap();
+
+        let manifest = get_manifest_from_changeset(ctx, repo, &hg_cs_id)
+            .await
+            .unwrap();
+
+        let mut tree_entries = manifest
+            .list_all_entries(ctx.clone(), blobstore.clone())
+            .try_filter_map(|(_, entry)| match entry {
+                Entry::Tree(_) => future::ok(Some(entry)),
+                _ => future::ok(None),
+            })
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap();
+
+        let stats = get_statistics_from_entry(ctx, repo, tree_entries.pop().unwrap())
+            .await
+            .unwrap();
+
+        // For Entry::Tree we expect repository with all statistics equal 0
+        // (num_files, total_file_size, num_lines)
+        assert_eq!(stats, RepoStatistics::default());
+    }
+
+    #[mononoke::fbinit_test]
+    async fn linear_test_update_statistics(fb: FacebookInit) {
+        let repo: MyRepo = Linear::get_repo(fb).await;
+
+        let ctx = CoreContext::test_mock(fb);
+        let blobstore = repo.repo_blobstore().clone();
+        borrowed!(ctx, blobstore, repo);
+
+        /*
+        Commit consists two files (name => content):
+            "1" => "1\n"
+            "files" => "1\n"
+        */
+        let prev_hg_cs_id =
+            HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+        /*
+        Commit consists two files (name => content):
+            "2" => "2\n"
+            "files" => "1\n2\n"
+        */
+        let cur_hg_cs_id =
+            HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap();
+
+        let stats = get_statistics_from_changeset(ctx, repo, blobstore, &prev_hg_cs_id)
+            .await
+            .unwrap();
+
+        let (prev_manifest, cur_manifest) = try_join!(
+            get_manifest_from_changeset(ctx, repo, &prev_hg_cs_id),
+            get_manifest_from_changeset(ctx, repo, &cur_hg_cs_id),
+        )
+        .unwrap();
+
+        let new_stats = update_statistics(
+            ctx,
+            repo,
+            stats,
+            prev_manifest
+                .diff(ctx.clone(), blobstore.clone(), cur_manifest.clone())
+                .compat()
+                .boxify(),
+        )
+        .await
+        .unwrap();
+
+        // (num_files, total_file_size, num_lines)
+        assert_eq!(new_stats, RepoStatistics::new(3, 8, 4));
     }
 }

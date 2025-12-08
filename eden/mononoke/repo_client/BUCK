@@ -12,7 +12,6 @@ rust_library(
     },
     test_deps = [
         "fbcode//common/rust/shed/fbinit:fbinit",
-        "fbsource//third-party/rust:tokio",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mononoke_macros:mononoke_macros",

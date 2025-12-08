@@ -80,12 +80,7 @@ struct Repo {
 }
 
 #[mononoke::fbinit_test]
-fn pushrebase_assigns_globalrevs(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(pushrebase_assigns_globalrevs_impl(fb))
-}
-
-async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Error> {
+async fn pushrebase_assigns_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: Repo = TestRepoFactory::new(fb)?
         .with_id(RepositoryId::new(1))
@@ -189,12 +184,7 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
 }
 
 #[mononoke::fbinit_test]
-fn test_pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = tokio::runtime::Runtime::new()?;
-    runtime.block_on(pushrebase_race_assigns_monotonic_globalrevs(fb))
-}
-
-async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Result<(), Error> {
+async fn test_pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     #[derive(Copy, Clone)]
     struct SleepHook;
 

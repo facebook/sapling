@@ -31,8 +31,6 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::DateTime;
 use mononoke_types::hash::GitSha1;
-#[allow(unused_imports)]
-use tokio::runtime::Runtime;
 
 use crate::GitTreeId;
 use crate::MappedGitCommitId;
@@ -389,12 +387,9 @@ mod test {
     macro_rules! impl_test {
         ($test_name:ident, $fixture:ident) => {
             #[mononoke::fbinit_test]
-            fn $test_name(fb: FacebookInit) -> Result<(), anyhow::Error> {
-                let runtime = Runtime::new()?;
-                runtime.block_on(async move {
-                    let repo: Repo = fixtures::$fixture::get_repo(fb).await;
-                    run_commit_derivation_for_fixture(fb, repo).await
-                })
+            async fn $test_name(fb: FacebookInit) -> Result<(), anyhow::Error> {
+                let repo: Repo = fixtures::$fixture::get_repo(fb).await;
+                run_commit_derivation_for_fixture(fb, repo).await
             }
         };
     }
