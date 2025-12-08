@@ -121,6 +121,7 @@ pub enum DecodeAs {
     ContentManifestMapNode,
     InferredCopyFrom,
     InferredCopyFromMapNode,
+    PreloadedCommitGraph,
 }
 
 impl DecodeAs {
@@ -338,6 +339,9 @@ async fn decode(key: &str, data: BlobstoreGetData, mut decode_as: DecodeAs) -> D
                 &data.into_raw_bytes(),
             ))
         }
+        DecodeAs::PreloadedCommitGraph => Decoded::try_debug(
+            preloaded_commit_graph_storage::deserialize_preloaded_edges(data.into_raw_bytes()),
+        ),
     }
 }
 
