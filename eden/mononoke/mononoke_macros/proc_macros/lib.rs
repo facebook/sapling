@@ -24,10 +24,17 @@ pub fn test(args: TokenStream, input: TokenStream) -> TokenStream {
     let _ = parse_macro_input!(args as syn::parse::Nothing);
     let function = parse_macro_input!(input as ItemFn);
 
-    let modified_function = modify_function(function);
+    let modified_function = modify_function(function.clone());
+
+    // If the function is async, delegate to `tokio::test`
+    let test_attribute = if function.sig.asyncness.is_some() {
+        quote! { #[tokio::test] }
+    } else {
+        quote! { #[test] }
+    };
 
     quote! {
-        #[test]
+        #test_attribute
         #modified_function
     }
     .into()
