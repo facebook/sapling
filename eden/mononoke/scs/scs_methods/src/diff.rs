@@ -232,14 +232,14 @@ impl<'a> DiffRouter<'a> {
         .max_attempts(DIFF_SERVICE_MAX_RETRY_ATTEMPTS)
         .retry_if(|_attempt, e| is_transient_diff_error(e))
         .await
-        .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
+        .map_err(|e| scs_errors::internal_error(format!("diff service error: {:#?}", e)))?;
 
         let (response, mut stream) = result;
 
         let mut raw_diff = Vec::new();
         while let Some(chunk) = stream.next().await {
             let chunk = chunk.map_err(|e| {
-                scs_errors::internal_error(format!("diff service stream error: {}", e))
+                scs_errors::internal_error(format!("diff service stream error: {:#?}", e))
             })?;
             raw_diff.extend_from_slice(&chunk.content);
         }
@@ -358,13 +358,13 @@ impl<'a> DiffRouter<'a> {
         .max_attempts(DIFF_SERVICE_MAX_RETRY_ATTEMPTS)
         .retry_if(|_attempt, e| is_transient_diff_error(e))
         .await
-        .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
+        .map_err(|e| scs_errors::internal_error(format!("diff service error: {:#?}", e)))?;
 
         let (response, mut stream) = result;
         let mut raw_diff = Vec::new();
         while let Some(chunk) = stream.next().await {
             let chunk = chunk.map_err(|e| {
-                scs_errors::internal_error(format!("diff service stream error: {}", e))
+                scs_errors::internal_error(format!("diff service stream error: {:#?}", e))
             })?;
             raw_diff.extend_from_slice(&chunk.content);
         }
@@ -432,7 +432,7 @@ impl<'a> DiffRouter<'a> {
         .max_attempts(DIFF_SERVICE_MAX_RETRY_ATTEMPTS)
         .retry_if(|_attempt, e| is_transient_diff_error(e))
         .await
-        .map_err(|e| scs_errors::internal_error(format!("diff service error: {}", e)))?;
+        .map_err(|e| scs_errors::internal_error(format!("diff service error: {:#?}", e)))?;
 
         // Convert the diff_service_if enums to mononoke_api enums
         let convert_file_type = |ft: Option<diff_service_if::DiffFileType>| -> Result<
