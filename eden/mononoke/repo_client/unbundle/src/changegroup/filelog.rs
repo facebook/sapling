@@ -608,7 +608,7 @@ mod tests {
         true
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn correct_conversion_single(fb: FacebookInit, f: Filelog) -> bool {
         let ctx = CoreContext::test_mock(fb);
         check_conversion(ctx, vec![filelog_to_deltaed(&f)], vec![f]).await;
@@ -616,7 +616,7 @@ mod tests {
         true
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn correct_conversion_delta_against_first(
         fb: FacebookInit,
         f: Filelog,
@@ -646,7 +646,7 @@ mod tests {
         true
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn correct_conversion_delta_against_next(fb: FacebookInit, fs: Vec<Filelog>) -> bool {
         let ctx = CoreContext::test_mock(fb);
         let mut hash_gen = NodeHashGen::new();

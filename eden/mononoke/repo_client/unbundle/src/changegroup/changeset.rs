@@ -57,6 +57,7 @@ mod tests {
     use futures::stream::iter;
     use itertools::equal;
     use mercurial_types::HgNodeHash;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -107,7 +108,7 @@ mod tests {
         }
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn null_changeset_random(
         node: HgNodeHash,
         linknode: HgNodeHash,
@@ -121,7 +122,7 @@ mod tests {
         }
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn null_changeset_correct(node: HgNodeHash, p1: HgNodeHash, p2: HgNodeHash) -> bool {
         match check_null_changeset(node.clone(), node, NULL_HASH, p1, p2).await {
             ExpectedOk(true) => true,

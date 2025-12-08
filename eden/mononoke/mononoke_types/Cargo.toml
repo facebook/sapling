@@ -65,7 +65,6 @@ memblob = { version = "0.1.0", path = "../blobstore/memblob" }
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 paste = "1.0.14"
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
-quickcheck_async = "0.1.1"
 rand = { version = "0.8", features = ["small_rng"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

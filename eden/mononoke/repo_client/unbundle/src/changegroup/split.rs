@@ -188,6 +188,7 @@ mod tests {
     use itertools::equal;
     use mercurial_bundles::changegroup::CgDeltaChunk;
     use mercurial_types::NonRootMPath;
+    use mononoke_macros::mononoke;
 
     use super::*;
 
@@ -231,7 +232,7 @@ mod tests {
         )
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn splitting_minimal(c: CgDeltaChunk, f: CgDeltaChunk, f_p: NonRootMPath) -> bool {
         check_splitting(
             iter(
@@ -289,7 +290,7 @@ mod tests {
             .await
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn splitting_complex(
         c1: CgDeltaChunk,
         c2: CgDeltaChunk,
@@ -344,7 +345,7 @@ mod tests {
         .await
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn splitting_error_filelog_end(
         f: CgDeltaChunk,
         f1_p: NonRootMPath,
@@ -411,7 +412,7 @@ mod tests {
         true
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn splitting_error_manifest(
         c: CgDeltaChunk,
         m: CgDeltaChunk,

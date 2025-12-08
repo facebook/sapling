@@ -12,6 +12,7 @@ pub mod mononoke {
     use justknobs::test_helpers;
     use justknobs::test_helpers::JustKnobsInMemory;
     pub use mononoke_proc_macros::fbinit_test;
+    pub use mononoke_proc_macros::quickcheck_test;
     pub use mononoke_proc_macros::test;
     use tokio::task;
     use tracing::Instrument;

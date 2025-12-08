@@ -331,7 +331,7 @@ mod test {
         Ok(())
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn fastlog_roundtrip(fb: FacebookInit, hashes: Vec<(ChangesetId, i32)>) -> TestResult {
         let blobstore = Arc::new(KeyedMemblob::default());
         let ctx = CoreContext::test_mock(fb);

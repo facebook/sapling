@@ -2266,7 +2266,7 @@ mod test {
         Ok(())
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn test_sharded_map_v2_quickcheck(
         fb: FacebookInit,
         values: BTreeMap<String, u32>,
@@ -2337,7 +2337,7 @@ mod test {
         true
     }
 
-    #[quickcheck_async::tokio]
+    #[mononoke::quickcheck_test]
     async fn test_sharded_map_v2_quickcheck_batch_lookup(
         fb: FacebookInit,
         values: Vec<(String, u32)>,

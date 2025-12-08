@@ -179,7 +179,6 @@ rust_library(
     autocargo = {"cargo_toml_dir": "unbundle"},
     test_deps = [
         "fbsource//third-party/rust:itertools",
-        "fbsource//third-party/rust:quickcheck_async",
         "fbsource//third-party/rust:quickcheck_macros",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/facet:facet",
