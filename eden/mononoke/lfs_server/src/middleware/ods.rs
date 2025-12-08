@@ -23,6 +23,7 @@ define_stats! {
     prefix = "mononoke.lfs.request";
     request_load: histogram(100, 0, 5000, Average; P 50; P 75; P 95; P 99),
     success: timeseries(Rate, Sum),
+    success_206: timeseries(Rate, Sum),
     requests: timeseries(Rate, Sum),
     failure_4xx: timeseries(Rate, Sum),
     failure_429: timeseries(Rate, Sum),
@@ -45,6 +46,9 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
     // Not all requests have a valid method and repo, so calculate the top level HTTP stats first.
     STATS::requests.add_value(1);
     if status.is_success() {
+        if status == StatusCode::PARTIAL_CONTENT {
+            STATS::success_206.add_value(1);
+        }
         STATS::success.add_value(1);
     } else if status.is_client_error() {
         if status == StatusCode::TOO_MANY_REQUESTS {
