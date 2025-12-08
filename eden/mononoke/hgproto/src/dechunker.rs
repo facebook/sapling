@@ -205,13 +205,12 @@ mod tests {
 
     use anyhow::Result;
     use anyhow::ensure;
+    use mononoke_macros::mononoke;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
     use quickcheck::TestResult;
-    use quickcheck::quickcheck;
     use tokio::io::AsyncBufReadExt;
     use tokio::io::AsyncReadExt;
-    use tokio::runtime::Runtime;
 
     use super::*;
 
@@ -241,40 +240,30 @@ mod tests {
         }
     }
 
-    quickcheck! {
-        fn test_bufread_api(chunks: Chunks, remainder: Vec<u8>) -> TestResult {
-            let runtime = Runtime::new().unwrap();
-            let chunks = &chunks;
-            let remainder = remainder.as_slice();
-            let concat_chunks = concat_chunks(chunks, remainder);
+    #[mononoke::quickcheck_test]
+    async fn test_bufread_api(chunks: Chunks, remainder: Vec<u8>) -> TestResult {
+        let chunks = &chunks;
+        let remainder = remainder.as_slice();
+        let concat_chunks = concat_chunks(chunks, remainder);
 
-            let dechunker = Dechunker::new(Cursor::new(&concat_chunks));
-            match runtime.block_on(check_bufread_api(
-                dechunker,
-                chunks,
-                remainder,
-            )) {
-                Ok(()) => TestResult::passed(),
-                Err(e) =>TestResult::error(format!("{}", e)),
-            }
+        let dechunker = Dechunker::new(Cursor::new(&concat_chunks));
+        match check_bufread_api(dechunker, chunks, remainder).await {
+            Ok(()) => TestResult::passed(),
+            Err(e) => TestResult::error(format!("{}", e)),
         }
+    }
 
-        fn test_read_api(chunks: Chunks, remainder: Vec<u8>) -> TestResult {
-            let runtime = Runtime::new().unwrap();
-            let chunks = &chunks;
-            let remainder = remainder.as_slice();
-            let concat_chunks = concat_chunks(chunks, remainder);
+    #[mononoke::quickcheck_test]
+    async fn test_read_api(chunks: Chunks, remainder: Vec<u8>) -> TestResult {
+        let chunks = &chunks;
+        let remainder = remainder.as_slice();
+        let concat_chunks = concat_chunks(chunks, remainder);
 
-            let dechunker = Dechunker::new(Cursor::new(&concat_chunks));
+        let dechunker = Dechunker::new(Cursor::new(&concat_chunks));
 
-            match runtime.block_on(check_read_api(
-                dechunker,
-                chunks,
-                remainder,
-            )) {
-                Ok(()) => TestResult::passed(),
-                Err(e) => TestResult::error(format!("{}", e)),
-            }
+        match check_read_api(dechunker, chunks, remainder).await {
+            Ok(()) => TestResult::passed(),
+            Err(e) => TestResult::error(format!("{}", e)),
         }
     }
 

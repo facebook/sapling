@@ -202,8 +202,6 @@ mod test {
     use assert_matches::assert_matches;
     use futures::stream;
     use mononoke_macros::mononoke;
-    use quickcheck::quickcheck;
-    use tokio::runtime::Runtime;
 
     use super::*;
 
@@ -438,33 +436,33 @@ mod test {
         true
     }
 
-    quickcheck! {
-        fn check_chunk_stream(in_chunks: Vec<Vec<u8>>, size: u8) -> bool {
-            let size = (size as usize) + 1; // Don't allow 0 as the size.
-            let rt = Runtime::new().unwrap();
-            rt.block_on(do_check_chunk_stream(in_chunks, size))
-        }
+    #[mononoke::quickcheck_test]
+    async fn check_chunk_stream(in_chunks: Vec<Vec<u8>>, size: u8) -> bool {
+        let size = (size as usize) + 1; // Don't allow 0 as the size.
+        do_check_chunk_stream(in_chunks, size).await
+    }
 
-        fn check_make_chunks_fut_joins(in_chunks: Vec<Vec<u8>>) -> bool {
-            let rt = Runtime::new().unwrap();
+    #[mononoke::quickcheck_test]
+    async fn check_make_chunks_fut_joins(in_chunks: Vec<Vec<u8>>) -> bool {
+        let in_chunks: Vec<Bytes> = in_chunks.into_iter().map(Bytes::from).collect();
+        let in_stream = stream::iter(in_chunks.clone()).map(Ok);
 
-            let in_chunks: Vec<Bytes> = in_chunks.into_iter().map(Bytes::from).collect();
-            let in_stream = stream::iter(in_chunks.clone()).map(Ok);
-
-            let expected_bytes = in_chunks.iter().fold(BytesMut::new(), |mut bytes, chunk| {
+        let expected_bytes = in_chunks
+            .iter()
+            .fold(BytesMut::new(), |mut bytes, chunk| {
                 bytes.extend_from_slice(chunk);
                 bytes
-            }).freeze();
+            })
+            .freeze();
 
-            let len = expected_bytes.len() as u64;
+        let len = expected_bytes.len() as u64;
 
-            let fut = match make_chunks(in_stream, ExpectedSize::new(len), Some(len)) {
-                Chunks::Inline(fut) => fut,
-                c => panic!("Did not expect {:?}", c),
-            };
+        let fut = match make_chunks(in_stream, ExpectedSize::new(len), Some(len)) {
+            Chunks::Inline(fut) => fut,
+            c => panic!("Did not expect {:?}", c),
+        };
 
-            let out_bytes = rt.block_on(fut).unwrap();
-            out_bytes == expected_bytes
-        }
+        let out_bytes = fut.await.unwrap();
+        out_bytes == expected_bytes
     }
 }

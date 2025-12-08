@@ -167,7 +167,6 @@ mod test {
     use futures::stream;
     use mononoke_macros::mononoke;
     use quickcheck::TestResult;
-    use quickcheck::quickcheck;
     use tokio_util::codec::FramedRead;
     use tokio_util::codec::FramedWrite;
 
@@ -216,14 +215,8 @@ mod test {
         );
     }
 
-    #[mononoke::test]
-    fn test_roundtrip() {
-        // Avoid using the quickcheck! macro because it eats up line numbers in
-        // stack traces.
-        quickcheck(roundtrip as fn(Vec<Option<Vec<u8>>>) -> TestResult);
-    }
-
-    fn roundtrip(data: Vec<Option<Vec<u8>>>) -> TestResult {
+    #[mononoke::quickcheck_test]
+    async fn roundtrip(data: Vec<Option<Vec<u8>>>) -> TestResult {
         let count = data.len();
         // Treat Some(bytes) as a normal chunk, None as an error chunk.
         let chunks: Vec<Chunk> = data
@@ -239,26 +232,21 @@ mod test {
         let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
         let mut sink = FramedWrite::new(cursor, NewChunkEncoder);
 
-        let encode_fut = async move {
-            sink.send_all(&mut stream::iter(chunks_res)).await.unwrap();
-            let mut cursor = sink.into_inner();
-            cursor.set_position(0);
+        sink.send_all(&mut stream::iter(chunks_res)).await.unwrap();
+        let mut cursor = sink.into_inner();
+        cursor.set_position(0);
 
-            // cursor will now have the encoded byte stream. Run it through the decoder.
-            let stream = FramedRead::new(cursor, ChunkDecoder);
+        // cursor will now have the encoded byte stream. Run it through the decoder.
+        let stream = FramedRead::new(cursor, ChunkDecoder);
 
-            let mut collector: Vec<Chunk> = Vec::with_capacity(count);
-            collector
-                .send_all(&mut stream.map_err(|err| {
-                    panic!("Unexpected error: {}", err);
-                }))
-                .await
-                .unwrap();
-            assert_eq!(collector, chunks);
-        };
-
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(encode_fut);
+        let mut collector: Vec<Chunk> = Vec::with_capacity(count);
+        collector
+            .send_all(&mut stream.map_err(|err| {
+                panic!("Unexpected error: {}", err);
+            }))
+            .await
+            .unwrap();
+        assert_eq!(collector, chunks);
 
         TestResult::passed()
     }

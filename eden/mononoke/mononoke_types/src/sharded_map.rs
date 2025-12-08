@@ -1141,11 +1141,6 @@ mod test {
     use memblob::KeyedMemblob;
     use mononoke_macros::mononoke;
     use pretty_assertions::assert_eq;
-    use quickcheck::Arbitrary;
-    use quickcheck::Gen;
-    use quickcheck::QuickCheck;
-    use quickcheck::TestResult;
-    use quickcheck::Testable;
 
     use super::*;
     use crate::impl_typed_hash;
@@ -2160,45 +2155,58 @@ mod test {
         Ok(())
     }
 
-    #[mononoke::fbinit_test]
-    fn round_trip_quickcheck(fb: FacebookInit) {
+    #[mononoke::quickcheck_test]
+    async fn round_trip_quickcheck(
+        fb: FacebookInit,
+        values: BTreeMap<String, i32>,
+        extra_queries: Vec<String>,
+    ) -> bool {
         let ctx = CoreContext::test_mock(fb);
         let blobstore = KeyedMemblob::default();
-        use tokio::runtime::Runtime;
+        let mut map = MapHelper(Default::default(), ctx, blobstore);
 
-        struct Roundtrip(Runtime, CoreContext, KeyedMemblob);
-        impl Testable for Roundtrip {
-            fn result(&self, r#gen: &mut Gen) -> TestResult {
-                let res = self.0.block_on(async {
-                    let values: BTreeMap<String, i32> = Arbitrary::arbitrary(r#gen);
-                    let mut queries: Vec<String> = Arbitrary::arbitrary(r#gen);
-                    let keys: Vec<&String> = values.keys().collect();
-                    for _ in 0..values.len() / 2 {
-                        queries.push(r#gen.choose(&keys).unwrap().to_string());
-                    }
-                    let mut map = MapHelper(Default::default(), self.1.clone(), self.2.clone());
-                    let adds = values
-                        .iter()
-                        .map(|(k, v)| (k.as_str(), *v))
-                        .collect::<Vec<_>>();
-                    map.add_remove(&adds, &[]).await?;
-                    if map.size() != values.len() {
-                        return Ok(false);
-                    }
-                    for k in queries {
-                        let correct_v = values.get(&k);
-                        let test_v = map.lookup(&k).await?;
-                        if correct_v.cloned() != test_v {
-                            return Ok(false);
-                        }
-                    }
-                    let test_roundtrip = map.entries().try_collect::<BTreeMap<_, _>>().await?;
-                    Ok(values == test_roundtrip)
-                });
-                TestResult::from_bool(matches!(res, Result::Ok(true)))
+        // Add all values to the map
+        let adds = values
+            .iter()
+            .map(|(k, v)| (k.as_str(), *v))
+            .collect::<Vec<_>>();
+        if map.add_remove(&adds, &[]).await.is_err() {
+            return false;
+        }
+
+        // Check size matches
+        if map.size() != values.len() {
+            return false;
+        }
+
+        // Check all keys from the map exist with correct values
+        for (k, v) in &values {
+            if let Result::Ok(Some(test_v)) = map.lookup(k).await {
+                if test_v != *v {
+                    return false;
+                }
+            } else {
+                return false;
             }
         }
 
-        QuickCheck::new().quickcheck(Roundtrip(Runtime::new().unwrap(), ctx, blobstore));
+        // Check extra queries (may or may not exist in the map)
+        for k in &extra_queries {
+            let correct_v = values.get(k).cloned();
+            if let Result::Ok(test_v) = map.lookup(k).await {
+                if test_v != correct_v {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        // Check round trip - entries() should return the same BTreeMap
+        if let Result::Ok(test_roundtrip) = map.entries().try_collect::<BTreeMap<_, _>>().await {
+            values == test_roundtrip
+        } else {
+            false
+        }
     }
 }

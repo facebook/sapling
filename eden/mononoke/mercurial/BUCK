@@ -148,6 +148,7 @@ rust_library(
         ":mercurial_types-mocks",
         "//common/rust/shed/failure_ext:failure_ext",
         "//common/rust/shed/fbinit:fbinit",
+        "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
     test_srcs = glob(["bundles/src/fixtures/*"]),

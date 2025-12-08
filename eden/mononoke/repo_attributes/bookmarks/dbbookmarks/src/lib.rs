@@ -38,9 +38,7 @@ mod test {
     use mononoke_types_mocks::changesetid::ONES_CSID;
     use mononoke_types_mocks::changesetid::TWOS_CSID;
     use mononoke_types_mocks::repo::REPO_ZERO;
-    use quickcheck::quickcheck;
     use sql_construct::SqlConstruct;
-    use tokio::runtime::Runtime;
 
     use super::*;
 
@@ -164,7 +162,7 @@ mod test {
             .collect()
     }
 
-    fn insert_then_query(
+    async fn insert_then_query(
         fb: FacebookInit,
         bookmarks: &BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
         query_freshness: Freshness,
@@ -174,8 +172,6 @@ mod test {
         query_pagination: &BookmarkPagination,
         query_limit: u64,
     ) -> Vec<(Bookmark, ChangesetId)> {
-        let rt = Runtime::new().unwrap();
-
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(123);
 
@@ -187,12 +183,9 @@ mod test {
             .iter()
             .map(|(bookmark, (kind, changeset_id))| (&repo_id, bookmark, changeset_id, kind));
 
-        rt.block_on(crate::transaction::insert_bookmarks(
-            &ctx,
-            &store.connections.write_connection,
-            rows,
-        ))
-        .expect("insert failed");
+        crate::transaction::insert_bookmarks(&ctx, &store.connections.write_connection, rows)
+            .await
+            .expect("insert failed");
 
         let response = store
             .list(
@@ -206,52 +199,52 @@ mod test {
             )
             .try_collect::<Vec<_>>();
 
-        rt.block_on(response).expect("query failed")
+        response.await.expect("query failed")
     }
 
-    quickcheck! {
-        fn responses_match(
-            fb: FacebookInit,
-            bookmarks: BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
-            freshness: Freshness,
-            categories: HashSet<BookmarkCategory>,
-            kinds: HashSet<BookmarkKind>,
-            prefix_char: Option<ascii_ext::AsciiChar>,
-            after: Option<BookmarkKey>,
-            limit: u64
-        ) -> bool {
-            // Test that requests return what is expected.
-            let categories: Vec<_> = categories.into_iter().collect();
-            let kinds: Vec<_> = kinds.into_iter().collect();
-            let prefix = match prefix_char {
-                Some(ch) => BookmarkPrefix::new_ascii(AsciiString::from(&[ch.0][..])),
-                None => BookmarkPrefix::empty(),
-            };
-            let pagination = match after {
-                Some(key) => BookmarkPagination::After(key.into_name()),
-                None => BookmarkPagination::FromStart,
-            };
-            let mut have = insert_then_query(
-                fb,
-                &bookmarks,
-                freshness,
-                &prefix,
-                categories.as_slice(),
-                kinds.as_slice(),
-                &pagination,
-                limit,
-            );
-            let mut want = mock_bookmarks_response(
-                &bookmarks,
-                &prefix,
-                categories.as_slice(),
-                kinds.as_slice(),
-                &pagination,
-                limit,
-            );
-            have.sort_by_key(|(_, csid)| *csid);
-            want.sort_by_key(|(_, csid)| *csid);
-            have == want
-        }
+    #[mononoke::quickcheck_test]
+    async fn responses_match(
+        fb: FacebookInit,
+        bookmarks: BTreeMap<BookmarkKey, (BookmarkKind, ChangesetId)>,
+        freshness: Freshness,
+        categories: HashSet<BookmarkCategory>,
+        kinds: HashSet<BookmarkKind>,
+        prefix_char: Option<ascii_ext::AsciiChar>,
+        after: Option<BookmarkKey>,
+        limit: u64,
+    ) -> bool {
+        // Test that requests return what is expected.
+        let categories: Vec<_> = categories.into_iter().collect();
+        let kinds: Vec<_> = kinds.into_iter().collect();
+        let prefix = match prefix_char {
+            Some(ch) => BookmarkPrefix::new_ascii(AsciiString::from(&[ch.0][..])),
+            None => BookmarkPrefix::empty(),
+        };
+        let pagination = match after {
+            Some(key) => BookmarkPagination::After(key.into_name()),
+            None => BookmarkPagination::FromStart,
+        };
+        let mut have = insert_then_query(
+            fb,
+            &bookmarks,
+            freshness,
+            &prefix,
+            categories.as_slice(),
+            kinds.as_slice(),
+            &pagination,
+            limit,
+        )
+        .await;
+        let mut want = mock_bookmarks_response(
+            &bookmarks,
+            &prefix,
+            categories.as_slice(),
+            kinds.as_slice(),
+            &pagination,
+            limit,
+        );
+        have.sort_by_key(|(_, csid)| *csid);
+        want.sort_by_key(|(_, csid)| *csid);
+        have == want
     }
 }

@@ -189,8 +189,6 @@ mod test {
     use bytes::BytesMut;
     use futures::stream;
     use mononoke_macros::mononoke;
-    use quickcheck::quickcheck;
-    use tokio::runtime::Runtime;
 
     use super::*;
     use crate::blob::HgBlob;
@@ -257,24 +255,27 @@ mod test {
         assert_eq!(node1, node2);
     }
 
-    quickcheck! {
-        // Verify that the two Node Id computation implementations (in place and streaming) are
-        // consistent.
-        fn test_node_consistency(input: Vec<Vec<u8>>, hg_parents: HgParents) -> bool {
-            let rt = Runtime::new().unwrap();
-            let input: Vec<Bytes> = input.into_iter().map(Bytes::from).collect();
+    // Verify that the two Node Id computation implementations (in place and streaming) are
+    // consistent.
+    #[mononoke::quickcheck_test]
+    async fn test_node_consistency(input: Vec<Vec<u8>>, hg_parents: HgParents) -> bool {
+        let input: Vec<Bytes> = input.into_iter().map(Bytes::from).collect();
 
-            let stream = stream::iter(input.clone().into_iter().map(Ok));
+        let stream = stream::iter(input.clone().into_iter().map(Ok));
 
-            let bytes = input.iter().fold(BytesMut::new(), |mut bytes, chunk| {
+        let bytes = input
+            .iter()
+            .fold(BytesMut::new(), |mut bytes, chunk| {
                 bytes.extend_from_slice(chunk);
                 bytes
-            }).freeze();
+            })
+            .freeze();
 
-            let out_inplace = calculate_hg_node_id(bytes.as_ref(), &hg_parents);
-            let out_stream = rt.block_on(calculate_hg_node_id_stream(stream, &hg_parents)).unwrap();
+        let out_inplace = calculate_hg_node_id(bytes.as_ref(), &hg_parents);
+        let out_stream = calculate_hg_node_id_stream(stream, &hg_parents)
+            .await
+            .unwrap();
 
-            out_inplace == out_stream
-        }
+        out_inplace == out_stream
     }
 }
