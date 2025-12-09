@@ -138,10 +138,7 @@ pub(crate) fn prefetch_manager(
                 }
             };
 
-            if prev_commit_id
-                .as_ref()
-                .is_some_and(|id| *id != current_commit_id)
-            {
+            if prev_commit_id.as_ref() != Some(&current_commit_id) {
                 tracing::info!(
                     ?prev_commit_id,
                     ?current_commit_id,
@@ -153,13 +150,8 @@ pub(crate) fn prefetch_manager(
                 handled_prefetches.clear();
                 batch_dir_prefetches.clear();
                 current_manifest.take();
-                sparse_matcher.take();
-            }
 
-            prev_commit_id = Some(current_commit_id);
-
-            // Reevaluate the sparse matcher since it can change across commits
-            if sparse_matcher.is_none() {
+                // Reevaluate the sparse matcher since it can change across commits
                 sparse_matcher = match (make_matcher)(repo_root.clone()) {
                     Ok(m) => m,
                     Err(e) => {
@@ -167,6 +159,8 @@ pub(crate) fn prefetch_manager(
                         continue;
                     }
                 };
+
+                prev_commit_id = Some(current_commit_id);
             }
 
             // Currently active walks according to the walk detector. Note that it will only report
@@ -1070,7 +1064,7 @@ mod test {
 
         // Wait for prefetch to finish.
         for _ in 0..10 {
-            if store.key_fetch_count() < 4 {
+            if store.key_fetch_count() < 7 {
                 std::thread::sleep(Duration::from_millis(1));
             }
         }
