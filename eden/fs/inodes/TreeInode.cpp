@@ -1555,9 +1555,15 @@ void TreeInode::removeAllChildrenRecursively(
     InvalidationRequired invalidate,
     const ObjectFetchContextPtr& context,
     const RenameLock& renameLock) {
-  // TODO: Unconditional materialization is slightly conservative. If the
-  // BackingStore Tree is empty, then this function can return without
-  // materializing.
+  // If this tree is not materialized and has no entries, we can return early
+  // without materializing, since there's nothing to remove.
+  {
+    auto contents = contents_.rlock();
+    if (!contents->isMaterialized() && contents->entries.empty()) {
+      return;
+    }
+  }
+
   materialize(&renameLock);
 #ifndef _WIN32
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
