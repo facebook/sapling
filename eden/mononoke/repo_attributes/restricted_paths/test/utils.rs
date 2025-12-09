@@ -545,6 +545,7 @@ async fn setup_test_repo(
         path_acls,
         use_manifest_id_cache,
         cache_update_interval_ms,
+        ..Default::default()
     };
 
     // Build the manifest id cache with the specified refresh interval

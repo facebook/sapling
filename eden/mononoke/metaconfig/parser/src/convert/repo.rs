@@ -61,6 +61,7 @@ use metaconfig_types::RestrictedPathsConfig;
 use metaconfig_types::ServiceWriteRestrictions;
 use metaconfig_types::ShardedService;
 use metaconfig_types::ShardingModeConfig;
+use metaconfig_types::SoftRestrictedPathConfig;
 use metaconfig_types::SourceControlServiceMonitoring;
 use metaconfig_types::SourceControlServiceParams;
 use metaconfig_types::SparseProfilesConfig;
@@ -121,6 +122,7 @@ use repos::RawRestrictedPathsConfig;
 use repos::RawServiceWriteRestrictions;
 use repos::RawShardedService;
 use repos::RawShardingModeConfig;
+use repos::RawSoftRestrictedPathConfig;
 use repos::RawSourceControlServiceMonitoring;
 use repos::RawSourceControlServiceParams;
 use repos::RawSparseProfilesConfig;
@@ -1129,6 +1131,25 @@ impl Convert for RawDirectoryBranchClusterConfig {
     }
 }
 
+impl Convert for RawSoftRestrictedPathConfig {
+    type Output = SoftRestrictedPathConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        let path = NonRootMPath::new(self.path.as_bytes()).with_context(|| {
+            format!(
+                "Invalid path for soft restricted path config: {}",
+                self.path
+            )
+        })?;
+
+        Ok(SoftRestrictedPathConfig {
+            path,
+            acl: self.acl,
+            max_copied_files_limit: self.max_copied_files_limit.try_into()?,
+        })
+    }
+}
+
 impl Convert for RawRestrictedPathsConfig {
     type Output = RestrictedPathsConfig;
 
@@ -1155,10 +1176,18 @@ impl Convert for RawRestrictedPathsConfig {
             .transpose()?
             .unwrap_or(RestrictedPathsConfig::default().cache_update_interval_ms);
 
+        let soft_path_acls = self
+            .soft_path_acls
+            .unwrap_or_default()
+            .into_iter()
+            .map(|raw| raw.convert())
+            .collect::<Result<Vec<_>>>()?;
+
         Ok(RestrictedPathsConfig {
             path_acls,
             use_manifest_id_cache,
             cache_update_interval_ms,
+            soft_path_acls,
         })
     }
 }

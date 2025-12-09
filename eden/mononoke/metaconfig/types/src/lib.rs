@@ -2167,6 +2167,17 @@ pub struct DirectoryBranchClusterFixedCluster {
     pub secondaries: Vec<NonRootMPath>,
 }
 
+/// Configuration for a soft restricted path, this means we want to restrict dissemination of it but not necessarily restrict access to it
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SoftRestrictedPathConfig {
+    /// Path that is soft-restricted
+    pub path: NonRootMPath,
+    /// ACL for this path
+    pub acl: String,
+    /// Maximum number of files that can be copied from this path
+    pub max_copied_files_limit: u64,
+}
+
 /// Configuration for restricted paths and their associated ACLs
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RestrictedPathsConfig {
@@ -2177,6 +2188,8 @@ pub struct RestrictedPathsConfig {
     pub use_manifest_id_cache: bool,
     /// Interval to update the in-memory cache of manifest ids
     pub cache_update_interval_ms: u64,
+    /// Soft restricted paths configuration
+    pub soft_path_acls: Vec<SoftRestrictedPathConfig>,
 }
 
 impl Default for RestrictedPathsConfig {
@@ -2185,6 +2198,7 @@ impl Default for RestrictedPathsConfig {
             path_acls: HashMap::new(),
             use_manifest_id_cache: true,
             cache_update_interval_ms: 1000,
+            soft_path_acls: Vec::new(),
         }
     }
 }

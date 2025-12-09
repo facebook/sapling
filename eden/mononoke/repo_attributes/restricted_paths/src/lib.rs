@@ -403,6 +403,7 @@ mod tests {
             path_acls,
             use_manifest_id_cache,
             cache_update_interval_ms,
+            soft_path_acls: Vec::new(),
         };
 
         let scuba = MononokeScubaSampleBuilder::with_discard();
@@ -438,6 +439,7 @@ mod tests {
             path_acls,
             use_manifest_id_cache,
             cache_update_interval_ms,
+            soft_path_acls: Vec::new(),
         };
 
         let scuba = MononokeScubaSampleBuilder::with_discard();
