@@ -1016,11 +1016,6 @@ export default class ServerToClientAPI {
         );
         break;
       }
-      case 'fetchRecommendedBookmarks': {
-        repo.recommendedBookmarks = data.recommendedBookmarks;
-        repo.pullRecommendedBookmarks(ctx);
-        break;
-      }
       case 'fetchDevEnvType': {
         if (Internal.getDevEnvType == null) {
           break;

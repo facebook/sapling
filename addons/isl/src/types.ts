@@ -964,7 +964,6 @@ export type ClientToServerMessage =
   | {type: 'fetchLandInfo'; topOfStack: DiffId}
   | {type: 'fetchAndSetStables'; additionalStables: Array<string>}
   | {type: 'fetchStableLocationAutocompleteOptions'}
-  | {type: 'fetchRecommendedBookmarks'; recommendedBookmarks: Array<string>}
   | {type: 'confirmLand'; landConfirmationInfo: LandConfirmationInfo}
   | {type: 'getSuggestedReviewers'; context: {paths: Array<string>}; key: string}
   | {type: 'getConfiguredMergeTool'}
