@@ -35,6 +35,8 @@ pub(crate) mod no_questionable_filenames;
 pub(crate) mod no_windows_filenames;
 pub(crate) mod require_commit_message_pattern;
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use fbinit::FacebookInit;
 use metaconfig_types::HookParams;
@@ -48,7 +50,7 @@ use crate::FileHook;
 pub async fn make_bookmark_hook(
     _fb: FacebookInit,
     params: &HookParams,
-    _acl_provider: &dyn AclProvider,
+    _acl_provider: Arc<dyn AclProvider>,
     _reviewers_membership: ArcMembershipChecker,
     _repo_name: &str,
 ) -> Result<Option<Box<dyn BookmarkHook + 'static>>> {
@@ -78,7 +80,7 @@ pub async fn make_bookmark_hook(
 pub async fn make_changeset_hook(
     _fb: FacebookInit,
     params: &HookParams,
-    _acl_provider: &dyn AclProvider,
+    _acl_provider: Arc<dyn AclProvider>,
     _reviewers_membership: ArcMembershipChecker,
     _repo_name: &str,
 ) -> Result<Option<Box<dyn ChangesetHook + 'static>>> {

@@ -9,8 +9,8 @@
 
 #[cfg(test)]
 mod tests;
-
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use anyhow::Context;
 use anyhow::Error;
@@ -44,7 +44,7 @@ enum LoadedRustHook {
 
 pub async fn load_hooks(
     fb: FacebookInit,
-    acl_provider: &dyn AclProvider,
+    acl_provider: Arc<dyn AclProvider>,
     hook_manager: &mut HookManager,
     config: &RepoConfig,
     disabled_hooks: &HashSet<String>,
@@ -64,7 +64,7 @@ pub async fn load_hooks(
             if let Some(hook) = make_bookmark_hook(
                 fb,
                 &hook,
-                acl_provider,
+                acl_provider.clone(),
                 hook_manager.get_reviewers_perm_checker(),
                 hook_manager.repo_name(),
             )
@@ -75,7 +75,7 @@ pub async fn load_hooks(
             } else if let Some(hook) = make_changeset_hook(
                 fb,
                 &hook,
-                acl_provider,
+                acl_provider.clone(),
                 hook_manager.get_reviewers_perm_checker(),
                 hook_manager.repo_name(),
             )

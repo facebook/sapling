@@ -76,7 +76,7 @@ async fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
 
     match load_hooks(
         fb,
-        &InternalAclProvider::default(),
+        Arc::new(InternalAclProvider::default()),
         &mut hm,
         &config,
         &hashset![],
@@ -106,7 +106,7 @@ async fn test_load_disabled_hooks(fb: FacebookInit) {
 
     load_hooks(
         fb,
-        &InternalAclProvider::default(),
+        Arc::new(InternalAclProvider::default()),
         &mut hm,
         &config,
         &hashset!["hook1".to_string()],
@@ -141,7 +141,7 @@ async fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
 
     load_hooks(
         fb,
-        &InternalAclProvider::default(),
+        Arc::new(InternalAclProvider::default()),
         &mut hm,
         &config,
         &hashset!["hook1".to_string()],
@@ -157,7 +157,7 @@ async fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
 
     match load_hooks(
         fb,
-        &InternalAclProvider::default(),
+        Arc::new(InternalAclProvider::default()),
         &mut hm,
         &config,
         &hashset!["hook1".to_string()],
@@ -187,7 +187,7 @@ async fn test_load_hook_with_different_name_and_implementation(fb: FacebookInit)
 
     load_hooks(
         fb,
-        &InternalAclProvider::default(),
+        Arc::new(InternalAclProvider::default()),
         &mut hm,
         &config,
         &hashset![],

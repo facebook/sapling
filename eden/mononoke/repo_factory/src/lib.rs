@@ -1602,7 +1602,7 @@ impl RepoFactory {
 
             load_hooks(
                 self.env.fb,
-                self.env.acl_provider.as_ref(),
+                self.env.acl_provider.clone(),
                 &mut hook_manager,
                 repo_config,
                 &disabled_hooks,
