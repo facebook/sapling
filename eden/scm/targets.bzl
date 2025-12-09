@@ -121,7 +121,6 @@ def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
                     "fbsource//third-party/rust:dirs",
                     "fbsource//third-party/rust:libc",
                     ":chg",
-                    "//eden/scm/lib/config/loader:configloader",
                     "//eden/scm/lib/config/model:configmodel",
                     "//eden/scm/lib/encoding:encoding",
                     "//eden/scm/lib/identity:identity",
@@ -134,7 +133,6 @@ def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
                     "fbsource//third-party/rust:dirs",
                     "fbsource//third-party/rust:libc",
                     ":chg",
-                    "//eden/scm/lib/config/loader:configloader",
                     "//eden/scm/lib/config/model:configmodel",
                     "//eden/scm/lib/encoding:encoding",
                     "//eden/scm/lib/identity:identity",
@@ -153,6 +151,7 @@ def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
         deps = [
             "fbsource//third-party/rust:tracing",
             "//eden/scm/lib/clidispatch:clidispatch",
+            "//eden/scm/lib/config/loader:configloader",
             "//eden/scm/lib/commands:commands",
             "//eden/scm/lib/util/atexit:atexit",
         ] + extra_deps + ([] if rust_oss.is_oss_build() else [

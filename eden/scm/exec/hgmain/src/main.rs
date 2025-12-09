@@ -7,6 +7,8 @@
 
 #![allow(unexpected_cfgs)]
 
+use std::sync::atomic::Ordering;
+
 use clidispatch::dispatch;
 
 #[cfg(all(feature = "with_chg", not(windows)))]
@@ -107,6 +109,8 @@ fn main() {
     // Disable potentially noisy C++ logs.
     #[cfg(fbcode_build)]
     cpp_log_spew::disable(fbinit::expect_init());
+
+    configloader::hg::IS_SAPLING_BINARY.store(true, Ordering::Relaxed);
 
     let mut io = clidispatch::io::IO::stdio();
 

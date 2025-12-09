@@ -162,7 +162,7 @@ impl BackingStore {
         constructors::init();
 
         let info = RepoMinimalInfo::from_repo_root(root.to_path_buf())?;
-        let mut config = configloader::hg::embedded_load(RepoInfo::Disk(&info), extra_configs)?;
+        let mut config = configloader::hg::load(RepoInfo::Disk(&info), extra_configs)?;
 
         // Allow overrideing scmstore.tree-metadata-mode for eden only.
         if let Some(mode) = config.get_nonempty("eden", "tree-metadata-mode") {
@@ -521,7 +521,7 @@ impl BackingStore {
         if !inner.reload_interval.is_zero() && since_last_reload >= inner.reload_interval {
             if let Ok(info) = RepoMinimalInfo::from_repo_root(inner.repo.path().to_owned()) {
                 if let Ok(config) =
-                    configloader::hg::embedded_load(RepoInfo::Disk(&info), &inner.extra_configs)
+                    configloader::hg::load(RepoInfo::Disk(&info), &inner.extra_configs)
                 {
                     if let Some(reason) =
                         diff_config_files(&inner.repo.config().files(), &config.files())

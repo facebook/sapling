@@ -22,6 +22,7 @@ use std::path::PathBuf;
 #[cfg(feature = "fb")]
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use anyhow::Result;
 #[cfg(feature = "fb")]
@@ -42,6 +43,8 @@ use crate::error::Error;
 use crate::error::Errors;
 #[cfg(feature = "fb")]
 use crate::fb::FbConfigMode;
+
+pub static IS_SAPLING_BINARY: AtomicBool = AtomicBool::new(false);
 
 pub trait OptionsHgExt {
     /// Drop configs according to `$HGPLAIN` and `$HGPLAINEXCEPT`.
@@ -91,14 +94,6 @@ pub trait ConfigSetHgExt {
 /// `extra_files` contains additional config files (i.e. "--configfile" CLI values).
 pub fn load(info: RepoInfo, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
     load_with_options(info, pinned, Options::default())
-}
-
-/// Like `load`, but intended to be used by applications that embed Sapling libraries.
-/// In particular, defer to the system "sl" binary to refresh dynamic config.
-pub fn embedded_load(info: RepoInfo, pinned: &[PinnedConfig]) -> Result<ConfigSet> {
-    let mut opts: Options = Default::default();
-    opts.minimize_dynamic_gen = true;
-    load_with_options(info, pinned, opts)
 }
 
 /// Like `load`, but only use local configs (i.e. don't request remote config).
@@ -916,6 +911,8 @@ fn load_dynamic(
     domain_override: Option<Text>,
     errors: &mut Vec<Error>,
 ) -> Result<ConfigSet> {
+    use std::sync::atomic::Ordering;
+
     use crate::fb::dynamic_system::remote_cache_path;
     use crate::fb::internalconfig::Domain;
     use crate::fb::internalconfig::vpnless_config_path;
@@ -972,6 +969,11 @@ fn load_dynamic(
 
     let domain_override = domain_override.and_then(|d| Domain::from_str(d.as_ref()).ok());
 
+    // Only eagerly regenerate config if we are the "sl" binary so we avoid flapping the generated
+    // config back and forth. The dynamic config depends on the Sapling code version, and the "sl"
+    // binary's version is not going to match the version of Sapling code embedded elsewhere, so
+    // defer to the "sl" binary to generate the config unless absolutely necessary.
+    let eager_dynamic_gen = IS_SAPLING_BINARY.load(Ordering::Relaxed);
     let needs_sync_generation =
         // No current dynamic config - need to generate.
         version.is_none()
@@ -982,7 +984,7 @@ fn load_dynamic(
         // In-hand repo name differs from repo name in file.
         || repo_name.as_deref() != repo_name_in_file
         // Version mismatch between us and already generated - optionally generate.
-        || !opts.minimize_dynamic_gen && version != Some(this_version);
+        || eager_dynamic_gen && version != Some(this_version);
 
     if needs_sync_generation {
         tracing::info!(
