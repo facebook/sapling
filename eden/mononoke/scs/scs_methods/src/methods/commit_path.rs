@@ -532,6 +532,14 @@ impl SourceControlServiceImpl {
         // We will consider negative timestamps as invalid and zeros as unset.
         let after_timestamp = validate_timestamp(params.after_timestamp, "after_timestamp")?;
         let before_timestamp = validate_timestamp(params.before_timestamp, "before_timestamp")?;
+        let after_committer_timestamp = validate_timestamp(
+            params.after_committer_timestamp,
+            "after_committer_timestamp",
+        )?;
+        let before_committer_timestamp = validate_timestamp(
+            params.before_committer_timestamp,
+            "before_committer_timestamp",
+        )?;
 
         if let (Some(ats), Some(bts)) = (after_timestamp, before_timestamp) {
             if bts < ats {
@@ -542,8 +550,22 @@ impl SourceControlServiceImpl {
                 .into());
             }
         }
+        if let (Some(ats), Some(bts)) = (after_committer_timestamp, before_committer_timestamp) {
+            if bts < ats {
+                return Err(scs_errors::invalid_request(format!(
+                    "after_committer_timestamp ({}) cannot be greater than before_committer_timestamp ({})",
+                    ats, bts,
+                ))
+                .into());
+            }
+        }
 
-        if skip > 0 && (after_timestamp.is_some() || before_timestamp.is_some()) {
+        if skip > 0
+            && (after_timestamp.is_some()
+                || before_timestamp.is_some()
+                || after_committer_timestamp.is_some()
+                || before_committer_timestamp.is_some())
+        {
             return Err(scs_errors::invalid_request(
                 "Time filters cannot be applied if skip is not 0".to_string(),
             )
@@ -553,6 +575,7 @@ impl SourceControlServiceImpl {
         let history_stream = path
             .history(ChangesetPathHistoryOptions {
                 until_timestamp: after_timestamp.clone(),
+                until_committer_timestamp: after_committer_timestamp.clone(),
                 descendants_of,
                 exclude_changeset_and_ancestors,
                 follow_history_across_deletions: params.follow_history_across_deletions,
@@ -566,8 +589,8 @@ impl SourceControlServiceImpl {
             limit,
             before_timestamp,
             after_timestamp,
-            None,
-            None,
+            before_committer_timestamp,
+            after_committer_timestamp,
             params.format,
             &params.identity_schemes,
         )

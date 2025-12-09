@@ -72,6 +72,7 @@ pub struct HistoryEntry {
 #[derive(Default, Clone, Copy)]
 pub struct ChangesetPathHistoryOptions {
     pub until_timestamp: Option<i64>,
+    pub until_committer_timestamp: Option<i64>,
     pub descendants_of: Option<ChangesetId>,
     pub exclude_changeset_and_ancestors: Option<ChangesetId>,
     pub follow_history_across_deletions: bool,
@@ -620,6 +621,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
         struct FilterVisitor {
             cs_info_enabled: bool,
             until_timestamp: Option<i64>,
+            until_committer_timestamp: Option<i64>,
             descendants_of: Option<ChangesetId>,
             exclude_changeset_and_ancestors: Option<ChangesetId>,
             cache: HashMap<(Option<CsAndPath>, Vec<CsAndPath>), Vec<CsAndPath>>,
@@ -633,7 +635,9 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                 mut cs_ids: Vec<CsAndPath>,
             ) -> Result<Vec<CsAndPath>, Error> {
                 let cs_info_enabled = self.cs_info_enabled;
-                if let Some(until_ts) = self.until_timestamp {
+                if self.until_timestamp.is_some() || self.until_committer_timestamp.is_some() {
+                    let until_timestamp = self.until_timestamp;
+                    let until_committer_timestamp = self.until_committer_timestamp;
                     cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| async move {
                         let info = if cs_info_enabled {
                             repo.repo_derived_data()
@@ -644,8 +648,24 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                             let bonsai = cs_id.load(ctx, repo.repo_blobstore()).watched().await?;
                             Ok(ChangesetInfo::new(cs_id, bonsai))
                         }?;
-                        let timestamp = info.author_date().as_chrono().timestamp();
-                        Ok::<_, Error>((timestamp >= until_ts).then_some((cs_id, path)))
+
+                        if let Some(until_ts) = until_timestamp {
+                            let timestamp = info.author_date().as_chrono().timestamp();
+                            if timestamp < until_ts {
+                                return anyhow::Ok(None);
+                            }
+                        }
+                        if let Some(until_committer_ts) = until_committer_timestamp {
+                            // Get committer_date if available, otherwise fall back to author_date
+                            let timestamp = match info.committer_date() {
+                                Some(committer_date) => committer_date.as_chrono().timestamp(),
+                                None => info.author_date().as_chrono().timestamp(),
+                            };
+                            if timestamp < until_committer_ts {
+                                return anyhow::Ok(None);
+                            }
+                        }
+                        Ok(Some((cs_id, path)))
                     }))
                     .watched()
                     .await?
@@ -756,6 +776,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
             FilterVisitor {
                 cs_info_enabled,
                 until_timestamp: opts.until_timestamp,
+                until_committer_timestamp: opts.until_committer_timestamp,
                 descendants_of: opts.descendants_of,
                 exclude_changeset_and_ancestors: opts.exclude_changeset_and_ancestors,
                 cache: HashMap::new(),

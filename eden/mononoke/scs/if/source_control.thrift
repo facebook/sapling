@@ -1456,10 +1456,11 @@ struct CommitHistoryParams {
   7: optional CommitId descendants_of;
   /// Exclude commit and all of its ancestor from results.
   8: optional CommitId exclude_changeset_and_ancestors;
-
-  /// Similar to the before/after_timestamp above, these filter on
+  /// Similar to the before_timestamp above, this filters on
   /// committer_date instead of author_date.
   9: optional i64 before_committer_timestamp;
+  /// Similar to the after_timestamp above, this filters on
+  /// committer_date instead of author_date.
   10: optional i64 after_committer_timestamp;
 }
 
@@ -1597,9 +1598,11 @@ struct CommitPathHistoryParams {
   3: i32 skip;
   /// Show commits created only before the given timestamp.
   /// Timestamp must be greater than 0.
+  /// This is checked against author_date.
   4: optional i64 before_timestamp;
   /// Show commits created only after the given timestamp.
   /// Timestamp must be greater than 0.
+  /// This is checked against author_date.
   5: optional i64 after_timestamp;
   /// Commit identity schemes to return in the commit information.
   6: set<CommitIdentityScheme> identity_schemes;
@@ -1614,6 +1617,12 @@ struct CommitPathHistoryParams {
   /// Use mutable copy information to identify ancestry, instead of
   /// using commit parents to identify ancestry
   10: optional bool follow_mutable_file_history;
+  /// Similar to the before_timestamp above, this filters on
+  /// committer_date instead of author_date.
+  11: optional i64 before_committer_timestamp;
+  /// Similar to the after_timestamp above, this filters on
+  /// committer_date instead of author_date.
+  12: optional i64 after_committer_timestamp;
 }
 
 struct CommitPathLastChangedParams {
