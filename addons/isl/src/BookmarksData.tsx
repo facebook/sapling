@@ -10,8 +10,7 @@ import type {StableLocationData} from './types';
 import {atom} from 'jotai';
 import {tracker} from './analytics';
 import serverAPI from './ClientToServerAPI';
-import {Internal} from './Internal';
-import {lazyAtom, localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
+import {localStorageBackedAtom, readAtom, writeAtom} from './jotaiUtils';
 import {latestCommits} from './serverAPIState';
 import {registerDisposable} from './utils';
 
@@ -81,6 +80,22 @@ registerDisposable(
 );
 fetchStableLocations(); // fetch on startup
 
+registerDisposable(
+  serverAPI,
+  serverAPI.onMessageOfType('fetchedRecommendedBookmarks', data => {
+    writeAtom(recommendedBookmarksAtom, new Set(data.bookmarks));
+
+    const bookmarksData = readAtom(bookmarksDataStorage);
+    tracker.track('RecommendedBookmarksStatus', {
+      extras: {
+        enabled: bookmarksData.useRecommendedBookmark ?? false,
+        recommendedBookmarks: data.bookmarks,
+      },
+    });
+  }),
+  import.meta.hot,
+);
+
 export function fetchStableLocations() {
   const data = readAtom(bookmarksDataStorage);
   const additionalStables = data.additionalStables ?? [];
@@ -94,15 +109,6 @@ export const remoteBookmarks = atom(get => {
   commits.sort((a, b) => b.date.valueOf() - a.date.valueOf());
   return commits.flatMap(commit => commit.remoteBookmarks);
 });
-
-function fetchRecommendedBookmarks(recommendedBookmarks: Array<string>) {
-  if (recommendedBookmarks) {
-    serverAPI.postMessage({
-      type: 'fetchRecommendedBookmarks',
-      recommendedBookmarks,
-    });
-  }
-}
 
 /**
  * For determining if reminders to use recommended bookmarks should be shown
@@ -123,26 +129,7 @@ export const recommendedBookmarksOnboarding = localStorageBackedAtom<boolean>(
   true,
 );
 
-export const recommendedBookmarksAtom = lazyAtom(async _get => {
-  const recommendedBookmarks = await (Internal.getRecommendedBookmarks?.() ??
-    Promise.resolve(new Set<string>()));
-
-  // Fetch the recommended bookmarks from server on startup
-  if (recommendedBookmarks.size > 0) {
-    fetchRecommendedBookmarks(Array.from(recommendedBookmarks));
-
-    // Track recommended bookmarks to approximate adoption
-    const bookmarksData = readAtom(bookmarksDataStorage);
-    tracker.track('RecommendedBookmarksStatus', {
-      extras: {
-        enabled: bookmarksData.useRecommendedBookmark ?? false,
-        recommendedBookmarks: Array.from(recommendedBookmarks),
-      },
-    });
-  }
-
-  return recommendedBookmarks;
-}, new Set<string>());
+export const recommendedBookmarksAtom = atom<Set<string>>(new Set<string>());
 
 /** Checks if recommended bookmarks are available in remoteBookmarks */
 export const recommendedBookmarksAvailableAtom = atom(get => {

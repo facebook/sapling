@@ -171,8 +171,9 @@ export class Repository {
   /**
    * Recommended remote bookmarks to be include in batched `log` fetch.
    * If a bookmark is not in the subscriptions list yet, then it will be pulled explicitly.
+   * Undefined means not yet fetched.
    */
-  public recommendedBookmarks: Array<string> = [];
+  public recommendedBookmarks: Array<string> | undefined;
 
   /**
    * The context used when the repository was created.
@@ -953,6 +954,7 @@ export class Repository {
     const fetchStartTimestamp = Date.now();
     try {
       this.smartlogCommitsBeginFetchingEmitter.emit('start');
+
       const visibleCommitDayRange = this.visibleCommitRanges[this.currentVisibleCommitRangeIndex];
 
       const primaryRevset = '(interestingbookmarks() + heads(draft()))';
@@ -969,7 +971,7 @@ export class Repository {
         '.', // always include wdir parent
         // stable locations hashes may be newer than the repo has, wrap in `present()` to only include if available.
         ...this.stableLocations.map(location => `present(${location.hash})`),
-        ...this.recommendedBookmarks.map(bookmark => `present(${bookmark})`),
+        ...(this.recommendedBookmarks ?? []).map(bookmark => `present(${bookmark})`),
         ...(this.fullRepoBranchModule?.genRevset() ?? []),
       ]
         .filter(notEmpty)
@@ -1025,8 +1027,23 @@ export class Repository {
     }
   });
 
-  async pullRecommendedBookmarks(ctx: RepositoryContext) {
-    if (!this.recommendedBookmarks.length) {
+  public async fetchAndSetRecommendedBookmarks(onFetched?: (bookmarks: Array<string>) => void) {
+    if (!Internal.getRecommendedBookmarks) {
+      return;
+    }
+
+    try {
+      const bookmarks = await Internal.getRecommendedBookmarks(this.initialConnectionContext);
+      onFetched?.((this.recommendedBookmarks = bookmarks.map((b: string) => `remote/${b}`)));
+      void this.pullRecommendedBookmarks(this.initialConnectionContext);
+    } catch (err) {
+      this.initialConnectionContext.logger.error('Error fetching recommended bookmarks:', err);
+      void onFetched?.([]);
+    }
+  }
+
+  async pullRecommendedBookmarks(ctx: RepositoryContext): Promise<void> {
+    if (!this.recommendedBookmarks || !this.recommendedBookmarks.length) {
       return;
     }
 
@@ -1042,7 +1059,7 @@ export class Repository {
       );
 
       if (missingBookmarks.length > 0) {
-        // ISL prefixes bookmarks with remote/, so we need to strip this to pull the remote names
+        // We need to strip to pull the remote names
         const missingRemoteNames = missingBookmarks.map(bookmark =>
           bookmark.replace(/^remote\//, ''),
         );
