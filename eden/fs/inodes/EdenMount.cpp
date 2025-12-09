@@ -1483,8 +1483,8 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
       DBG1,
       "starting checkout for {}: {} to {}",
       this->getPath(),
-      oldParent,
-      snapshotId);
+      objectStore_->displayRootId(oldParent),
+      objectStore_->displayRootId(snapshotId));
 
   // Update lastCheckoutTime_ before starting the checkout operation.
   // This ensures that any inode objects created once the checkout starts will
@@ -1758,8 +1758,8 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
             "{}checkout for {} from {} to {} accessed {} trees ({}% chr), {} blobs ({}% chr), and {} metadata ({}% chr).",
             result.hasValue() ? "" : "failed ",
             this->getPath(),
-            oldParent,
-            snapshotId,
+            objectStore_->displayRootId(oldParent),
+            objectStore_->displayRootId(snapshotId),
             fetchStats.tree.accessCount,
             fetchStats.tree.cacheHitRate,
             fetchStats.blob.accessCount,
@@ -2208,8 +2208,8 @@ void EdenMount::resetParent(const RootId& parent) {
       DBG1,
       "resetting snapshot for {} from {} to {}",
       this->getPath(),
-      oldParent,
-      parent);
+      objectStore_->displayRootId(oldParent),
+      objectStore_->displayRootId(parent));
 
   // TODO: Maybe we should walk the inodes and see if we can dematerialize
   // some files using the new source control state.

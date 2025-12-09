@@ -158,6 +158,10 @@ std::string ObjectStore::renderRootId(const RootId& rootId) {
   return backingStore_->renderRootId(rootId);
 }
 
+std::string ObjectStore::displayRootId(const RootId& rootId) {
+  return backingStore_->displayRootId(rootId);
+}
+
 ObjectId ObjectStore::parseObjectId(folly::StringPiece objectId) {
   return backingStore_->parseObjectId(objectId);
 }

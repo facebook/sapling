@@ -918,7 +918,7 @@ EdenServiceHandler::semifuture_checkOutRevision(
       apache::thrift::util::enumName(checkoutMode, "(unknown)"),
       params->hgRootManifest().has_value() ? logHash(*params->hgRootManifest())
                                            : "(unspecified hg root manifest)",
-      rootIdOptions.fid().has_value() ? *rootIdOptions.fid()
+      rootIdOptions.fid().has_value() ? folly::hexlify(*rootIdOptions.fid())
                                       : "no fid provided");
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri());
   auto& fetchContext = helper->getFetchContext();
@@ -961,7 +961,7 @@ EdenServiceHandler::semifuture_resetParentCommits(
       logHash(*parents->parent1()),
       params->hgRootManifest().has_value() ? logHash(*params->hgRootManifest())
                                            : "(unspecified hg root manifest)",
-      rootIdOptions.fid().has_value() ? *rootIdOptions.fid()
+      rootIdOptions.fid().has_value() ? folly::hexlify(*rootIdOptions.fid())
                                       : "no fid provided");
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri());
 

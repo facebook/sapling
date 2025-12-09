@@ -226,6 +226,14 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     return std::nullopt;
   }
 
+  /**
+   * Returns a human-readable string representation of the given RootId for
+   * display purposes. The default implementation hexlifies the raw bytes.
+   */
+  virtual std::string displayRootId(const RootId& rootId) {
+    return folly::hexlify(rootId.value());
+  }
+
   virtual int64_t dropAllPendingRequestsFromQueue() = 0;
 
  private:

@@ -619,6 +619,14 @@ std::string FilteredBackingStore::renderRootId(const RootId& rootId) {
   return backingStore_->renderRootId(underlyingRootId);
 }
 
+std::string FilteredBackingStore::displayRootId(const RootId& rootId) {
+  auto [underlyingRootId, filterId] = parseFilterIdFromRootId(rootId);
+  return fmt::format(
+      "{} fid={}",
+      backingStore_->displayRootId(underlyingRootId),
+      folly::hexlify(filterId));
+}
+
 ObjectId FilteredBackingStore::parseObjectId(folly::StringPiece objectId) {
   auto foid = FilteredObjectId::parseFilteredObjectId(objectId, backingStore_);
   return ObjectId{foid.getValue()};

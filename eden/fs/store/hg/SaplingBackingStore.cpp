@@ -1131,6 +1131,11 @@ std::string SaplingBackingStore::renderRootId(const RootId& rootId) {
   }
 }
 
+std::string SaplingBackingStore::displayRootId(const RootId& rootId) {
+  // Root IDs are stored as 40-byte hex (the commit hash).
+  return fmt::format("commit={}", rootId.value());
+}
+
 ObjectId SaplingBackingStore::staticParseObjectId(folly::StringPiece objectId) {
   if (objectId.startsWith("proxy-")) {
     if (objectId.size() != 46) {

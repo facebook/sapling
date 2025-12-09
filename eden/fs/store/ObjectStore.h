@@ -170,6 +170,12 @@ class ObjectStore : public IObjectStore,
   std::string renderRootId(const RootId& rootId) override;
 
   /**
+   * Returns a human-readable string representation of the given RootId for
+   * display purposes.
+   */
+  std::string displayRootId(const RootId& rootId);
+
+  /**
    * Each BackingStore implementation defines its interpretation of object IDs.
    * This function gives the BackingStore a chance to parse and canonicalize the
    * object ID at API boundaries such as Thrift.

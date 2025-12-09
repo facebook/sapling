@@ -283,6 +283,7 @@ class SaplingBackingStore final : public BackingStore {
 
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;
+  std::string displayRootId(const RootId& rootId) override;
   ObjectId parseObjectId(folly::StringPiece objectId) override {
     return staticParseObjectId(objectId);
   }

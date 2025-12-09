@@ -14,6 +14,7 @@
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/ObjectStore.h"
 
 using std::vector;
 
@@ -79,8 +80,10 @@ void CheckoutContext::start(
         DBG1,
         "updated snapshot for {} from {} to {}",
         config->getMountPath(),
-        oldParent.has_value() ? oldParent->value() : kEmptyOldParent,
-        newSnapshot);
+        oldParent.has_value()
+            ? mount_->getObjectStore()->displayRootId(*oldParent)
+            : kEmptyOldParent,
+        mount_->getObjectStore()->displayRootId(newSnapshot));
   }
 }
 
