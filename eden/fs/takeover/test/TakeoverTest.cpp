@@ -45,14 +45,6 @@ class TestHandler : public TakeoverHandler {
 
   void closeStorage() override {}
 
-  bool shouldChunkTakeoverData() override {
-    /**
-     * shouldChunkTakeoverData() is a temporary function for rolling out
-     * TakeoverCapabilities::CHUNKED_MESSAGE protocol. In the test this value
-     * should be true to make sure tests cover chunked data */
-    return true;
-  }
-
  private:
   TakeoverData data_;
 };
@@ -67,14 +59,6 @@ class ErrorHandler : public TakeoverHandler {
         std::logic_error("purposely failing for testing"));
   }
   void closeStorage() override {}
-
-  bool shouldChunkTakeoverData() override {
-    /**
-     * shouldChunkTakeoverData() is a temporary function for rolling out
-     * TakeoverCapabilities::CHUNKED_MESSAGE protocol. In the test this value
-     * should be true to make sure tests cover chunked data */
-    return true;
-  }
 };
 
 /**
