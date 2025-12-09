@@ -112,8 +112,17 @@ async fn push(
             "scm/mononoke:git_server_max_packfile_size",
             Some(repo_name.as_str()),
         )?;
-        if pack_file.get_ref().len() > max_request_size {
-            return reject_too_large_push(repo_name.as_str(), state, &ref_updates).await;
+
+        let packfile_size = pack_file.get_ref().len();
+        if packfile_size > max_request_size {
+            return reject_too_large_push(
+                repo_name.as_str(),
+                state,
+                &ref_updates,
+                packfile_size,
+                max_request_size,
+            )
+            .await;
         }
         let concurrency = request_context.pushvars.concurrency();
 
@@ -370,8 +379,12 @@ async fn reject_too_large_push(
     repo_name: &str,
     state: &mut State,
     ref_updates: &[RefUpdate],
+    pushed_packfile_size: usize,
+    max_size: usize,
 ) -> anyhow::Result<Response<Body>> {
-    let error_message = format!("Push rejected: Pushed packfile is too large for repo {repo_name}");
+    let error_message = format!(
+        "Push rejected: Pushed packfile is too large for repo {repo_name}. The limit is {max_size}, while the pushed packfile size is {pushed_packfile_size}. Try pushing less commits at once, or put large binary blobs into LFS. Only if you can't do that, consult the wiki https://fburl.com/git_push_blocked_by_size_limit."
+    );
     reject_push_with_message(
         state,
         ref_updates,
