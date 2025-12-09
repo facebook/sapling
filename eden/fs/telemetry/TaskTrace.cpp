@@ -7,6 +7,7 @@
 
 #include "eden/fs/telemetry/TaskTrace.h"
 
+#include <folly/system/HardwareConcurrency.h>
 #include <folly/system/ThreadId.h>
 #include <folly/system/ThreadName.h>
 #include <chrono>
@@ -23,7 +24,7 @@ const std::shared_ptr<TraceBus<TaskTraceEvent>>& TaskTraceEvent::getTraceBus() {
   // Reserve 8 spots for each thread we can possibly run at the same time.
   static std::shared_ptr<TraceBus<TaskTraceEvent>> traceBus =
       TraceBus<TaskTraceEvent>::create(
-          "task", std::thread::hardware_concurrency() * 8);
+          "task", folly::hardware_concurrency() * 8);
   return traceBus;
 }
 

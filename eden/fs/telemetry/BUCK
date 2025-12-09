@@ -28,6 +28,7 @@ cpp_library(
         "TaskTrace.h",
     ],
     deps = [
+        "//folly/system:hardware_concurrency",
         "//folly/system:thread_id",
         "//folly/system:thread_name",
     ],

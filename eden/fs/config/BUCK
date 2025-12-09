@@ -45,6 +45,7 @@ cpp_library(
         "//folly/json:dynamic",
         "//folly/logging:logging",
         "//folly/portability:sys_types",
+        "//folly/system:hardware_concurrency",
         "//thrift/lib/cpp/concurrency:thread_manager",
     ],
     external_deps = [

@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/system/HardwareConcurrency.h>
 #include <chrono>
 #include <memory>
 #include <optional>
@@ -342,7 +343,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<size_t> thriftNumWorkers{
       "thrift:num-workers",
-      std::thread::hardware_concurrency(),
+      folly::hardware_concurrency(),
       this};
 
   /**
@@ -396,7 +397,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint64_t> numCheckoutThreads{
       "thrift:checkout-revision-num-servicing-threads",
-      std::thread::hardware_concurrency(),
+      folly::hardware_concurrency(),
       this};
 
   /**
@@ -417,7 +418,7 @@ class EdenConfig : private ConfigSettingManager {
       "thrift:prefetch-num-servicing-threads",
       // 16 is plenty - any more just leads to excess sl batch blob fetches that
       // use a lot of memory with no throughput increase.
-      std::min(std::thread::hardware_concurrency(), 16u),
+      std::min(folly::hardware_concurrency(), 16u),
       this};
 
   /**
@@ -1094,7 +1095,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint64_t> numFsChannelThreads{
       "fschannel:num-servicing-threads",
-      std::thread::hardware_concurrency(),
+      folly::hardware_concurrency(),
       this};
 
   /**
