@@ -24,7 +24,7 @@ fn main() {
         .base_path("../../../../..")
         .types_crate("land_service_if__types")
         .clients_crate("land_service_if__clients")
-        .options("deprecated_default_enum_min_i32,serde")
+        .options("default_enum_zero,serde")
         .run(["land_service.thrift"])
         .expect("Failed while running thrift compilation");
 }

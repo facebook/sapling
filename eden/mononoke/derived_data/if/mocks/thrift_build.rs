@@ -19,7 +19,7 @@ fn main() {
         .base_path("../../../../..")
         .types_crate("derived_data_type_if__types")
         .clients_crate("derived_data_type_if__clients")
-        .options("deprecated_default_enum_min_i32,serde")
+        .options("default_enum_zero,serde")
         .run(["../derived_data_type.thrift"])
         .expect("Failed while running thrift compilation");
 }

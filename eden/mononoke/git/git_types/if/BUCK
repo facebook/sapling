@@ -12,7 +12,7 @@ thrift_library(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:smallvec",
     ],
-    thrift_rust_options = ["deprecated_default_enum_min_i32"],
+    thrift_rust_options = ["default_enum_zero"],
     thrift_srcs = {"git_types_thrift.thrift": []},
     deps = [
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",

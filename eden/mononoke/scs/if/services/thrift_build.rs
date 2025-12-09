@@ -27,7 +27,7 @@ fn main() {
         .base_path("../../../../..")
         .types_crate("source_control__types")
         .clients_crate("source_control__clients")
-        .options("deprecated_default_enum_min_i32,serde")
+        .options("default_enum_zero,serde")
         .run(["../source_control.thrift"])
         .expect("Failed while running thrift compilation");
 }

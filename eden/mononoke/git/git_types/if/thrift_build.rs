@@ -42,7 +42,7 @@ fn main() {
         .base_path("../../../../..")
         .types_crate("git-types-thrift__types")
         .clients_crate("git-types-thrift__clients")
-        .options("deprecated_default_enum_min_i32")
+        .options("default_enum_zero")
         .run(["git_types_thrift.thrift"])
         .expect("Failed while running thrift compilation");
 }
