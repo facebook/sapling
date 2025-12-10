@@ -373,8 +373,8 @@ impl KeyedEntityStore<ChangesetId, CachedPrefetchedChangesetEdges> for CacheRequ
 
     fn on_memcache_hits<'a>(
         &self,
-        values: impl IntoIterator<Item = (&'a ChangesetId, &'a CachedPrefetchedChangesetEdges)>,
-    ) {
+        values: impl IntoIterator<Item = (&'a ChangesetId, &'a mut CachedPrefetchedChangesetEdges)>,
+    ) -> Result<()> {
         let mut fetched = 0;
         for (_cs_id, edges) in values {
             fetched += 1;
@@ -392,6 +392,7 @@ impl KeyedEntityStore<ChangesetId, CachedPrefetchedChangesetEdges> for CacheRequ
             }
         }
         STATS::memcache_fetched.add_value(fetched);
+        Ok(())
     }
 }
 

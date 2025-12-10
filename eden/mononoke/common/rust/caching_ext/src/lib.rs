@@ -148,11 +148,15 @@ pub trait KeyedEntityStore<K, V>: EntityStore<V> {
     /// Error for a failure to fetch, not absence
     async fn get_from_db(&self, keys: HashSet<K>) -> Result<HashMap<K, V>, Error>;
 
-    fn on_memcache_hits<'a>(&self, _values: impl IntoIterator<Item = (&'a K, &'a V)>)
+    fn on_memcache_hits<'a>(
+        &self,
+        _values: impl IntoIterator<Item = (&'a K, &'a mut V)>,
+    ) -> Result<(), Error>
     where
         K: 'a,
         V: 'a,
     {
+        Ok(())
     }
 }
 
@@ -225,7 +229,7 @@ where
         .collect();
 
     let to_fetch_from_store = {
-        let (fetched_from_memcache, to_fetch_from_store) =
+        let (mut fetched_from_memcache, to_fetch_from_store) =
             get_multiple_from_memcache(store.memcache(), to_fetch_from_memcache, stats).await;
 
         stats
@@ -235,7 +239,7 @@ where
             .memcache_miss
             .add_value(to_fetch_from_store.len() as i64);
 
-        store.on_memcache_hits(fetched_from_memcache.iter().map(|(k, (v, _))| (k, v)));
+        store.on_memcache_hits(fetched_from_memcache.iter_mut().map(|(k, (v, _))| (k, v)))?;
 
         fill_multiple_cachelib(
             store.cachelib(),
