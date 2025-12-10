@@ -164,13 +164,8 @@ pub async fn parse_commit_id(
     commit_id: &str,
 ) -> Result<ChangesetId> {
     if let Some((scheme, id)) = commit_id.split_once('=') {
-        let scheme = IdentityScheme::from_str(scheme, /* ignore_case */ true).map_err(|e| {
-            anyhow!(
-                "Failed to parse commit identity scheme '{}': {}",
-                scheme.to_string(),
-                e
-            )
-        })?;
+        let scheme = IdentityScheme::from_str(scheme, /* ignore_case */ true)
+            .map_err(|e| anyhow!("Failed to parse commit identity scheme '{}': {}", scheme, e))?;
         scheme.parse_commit_id(ctx, repo, id).await
     } else if let Some(globalrev) = commit_id.strip_prefix('m') {
         IdentityScheme::Globalrev
@@ -223,13 +218,7 @@ pub async fn print_commit_id(
             let commit_id = scheme
                 .map_commit_id(ctx, repo, cs_id)
                 .await?
-                .ok_or_else(|| {
-                    anyhow!(
-                        "bonsai-{} mapping not found for {}",
-                        scheme.to_string(),
-                        cs_id
-                    )
-                })?;
+                .ok_or_else(|| anyhow!("bonsai-{} mapping not found for {}", scheme, cs_id))?;
             println!("{}", commit_id);
         }
         schemes => {
