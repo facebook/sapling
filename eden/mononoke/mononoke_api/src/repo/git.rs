@@ -343,7 +343,7 @@ pub async fn create_annotated_tag(
         .map_err(|e| {
             anyhow::anyhow!(
                 "Error in storing bonsai tag mappings for tag {}, Cause: {:?}",
-                tag_id.to_string(),
+                tag_id,
                 e
             )
         })
