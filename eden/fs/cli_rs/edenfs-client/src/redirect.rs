@@ -767,7 +767,7 @@ impl Redirection {
         let symlink_path = checkout_path.join(&self.repo_path);
 
         // If .parent() resolves to None or parent().exists() == true, we skip directory creation
-        if !symlink_path.parent().map_or(true, |parent| parent.exists()) {
+        if !symlink_path.parent().is_none_or(|parent| parent.exists()) {
             symlink_path.parent().map(std::fs::create_dir_all);
         }
 
