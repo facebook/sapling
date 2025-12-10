@@ -608,7 +608,7 @@ fn spawn_progress_thread(
             }
 
             if let Some(run_logger) = &run_logger {
-                if last_runlog_time.map_or(true, |i| now - i >= runlog_interval) {
+                if last_runlog_time.is_none_or(|i| now - i >= runlog_interval) {
                     let progress = registry
                         .list_progress_bar()
                         .into_iter()
