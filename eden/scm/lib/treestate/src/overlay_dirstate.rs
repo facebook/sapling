@@ -428,7 +428,7 @@ mod tests {
     fn treestate() -> (BTreeMap<String, String>, HashMap<Box<[u8]>, FileStateV2>) {
         let mut metadata_bytes = b"p1=c94c85ea63ba784164f85d3c8c89b25706ec7a7f".as_slice();
         let metadata = Metadata::deserialize(&mut metadata_bytes).unwrap();
-        let entries = vec![
+        let entries = [
             (
                 "added",
                 FileStateV2 {
