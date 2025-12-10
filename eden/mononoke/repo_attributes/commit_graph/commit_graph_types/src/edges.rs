@@ -445,10 +445,8 @@ impl CompactChangesetEdges {
             skip_tree_parent: self.skip_tree_parent.map(|id| id.get() as i32),
             skip_tree_skew_ancestor: self.skip_tree_skew_ancestor.map(|id| id.get() as i32),
             p1_linear_skew_ancestor: self.p1_linear_skew_ancestor.map(|id| id.get() as i32),
-            subtree_source_generation: Some(self.subtree_source_generation as i32)
-                .filter(|r#gen| *r#gen != self.generation as i32),
-            subtree_source_depth: Some(self.subtree_source_depth as i32)
-                .filter(|depth| *depth != self.skip_tree_depth as i32),
+            subtree_source_generation: Some(self.subtree_source_generation as i32),
+            subtree_source_depth: Some(self.subtree_source_depth as i32),
             subtree_sources: Some(
                 self.subtree_sources
                     .iter()
@@ -457,17 +455,10 @@ impl CompactChangesetEdges {
                     .collect::<Vec<_>>(),
             )
             .filter(|sources| !sources.is_empty()),
-            subtree_or_merge_ancestor: self
-                .subtree_or_merge_ancestor
-                .filter(|id| Some(id) != self.merge_ancestor.as_ref())
-                .map(|id| id.get() as i32),
-            subtree_source_parent: self
-                .subtree_source_parent
-                .filter(|id| Some(id) != self.skip_tree_parent.as_ref())
-                .map(|id| id.get() as i32),
+            subtree_or_merge_ancestor: self.subtree_or_merge_ancestor.map(|id| id.get() as i32),
+            subtree_source_parent: self.subtree_source_parent.map(|id| id.get() as i32),
             subtree_source_skew_ancestor: self
                 .subtree_source_skew_ancestor
-                .filter(|id| Some(id) != self.skip_tree_skew_ancestor.as_ref())
                 .map(|id| id.get() as i32),
         }
     }
