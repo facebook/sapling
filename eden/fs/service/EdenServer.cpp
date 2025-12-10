@@ -2870,10 +2870,11 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
   // Use the member cancellation source for this operation
 
   return inode
-
+      // First step of garbage collection varies by platform (e.g., Linux,
+      // macOS, Windows)
       ->handleChildrenNotAccessedRecently(
           cutoff, context, gcCancelSource_.getToken())
-
+      // Second step of garbage collection deletes all the unreferenced inodes
       .ensure([inode, lease = std::move(lease)] {
         inode->unloadChildrenUnreferencedByFs();
       })

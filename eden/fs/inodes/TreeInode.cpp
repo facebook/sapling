@@ -4679,10 +4679,22 @@ TreeInode::handleChildrenNotAccessedRecently(
     return invalidateChildrenNotMaterializedPrjFS(
         cutoff, context, cancellationToken);
   }
-  // TODO: FUSE decrease the FS ref count by itself. Therefore we don't need to
-  // decrease FS ref count manually. This GC step can skip for FUSE for now.
-  // We can unload not recently used inodes for FUSE here, instead of running
-  // periodic inode unloading.
+#ifndef _WIN32
+  // FUSE decrease the FS ref count by itself. Therefore we don't need to
+  // decrease FS ref count manually. On FUSE, we don't invalidate any inode as
+  // the first step of GC. However, we can unload not recently used inodes to
+  // save eden resident memory
+  auto unloaded = unloadChildrenLastAccessedBefore(folly::to<timespec>(cutoff));
+  if (unloaded) {
+    XLOGF(
+        DBG6,
+        "Unloaded {} inodes in background from mount {}",
+        unloaded,
+        getMount()->getPath());
+  }
+#endif
+
+  // number of invalidations on Linux is zero
   return ImmediateFuture<uint64_t>{0ULL};
 }
 

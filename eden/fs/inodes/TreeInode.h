@@ -481,7 +481,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * The first step of inode garbage collection.
    * This step behaves differently depending on the platform:
-   * - On Linux, it is a no-op.
+   * - On Linux, FUSE decreases the FS ref couunt by itself. Therefore we don't
+   *   need to decrease FS ref count manually. We only unload not recently used
+   *   inodes here
    * - On Windows and macOS, it recursively collects all child inodes,
    *   then decreases the filesystem reference count to zero for inodes
    *   that have not been accessed since the specified cutoff time.
