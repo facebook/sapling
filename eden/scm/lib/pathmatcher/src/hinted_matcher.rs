@@ -307,7 +307,7 @@ mod test {
 
                     let should_be_all_recursive_paths = should_always_match
                         || should_never_match
-                        || fileset.map_or(true, |fs| fs.is_empty());
+                        || fileset.is_none_or(|fs| fs.is_empty());
                     assert_eq!(
                         m.all_recursive_paths(),
                         should_be_all_recursive_paths,

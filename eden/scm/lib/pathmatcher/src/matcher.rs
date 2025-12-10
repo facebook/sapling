@@ -118,7 +118,7 @@ where
     )?;
 
     for fs in [&patterns_filesets, &include_filesets, &exclude_filesets] {
-        if fs.map_or(false, |fs| fs.is_empty()) {
+        if fs.is_some_and(|fs| fs.is_empty()) {
             // TODO: pipe the original fileset string to this warning
             all_warnings.push("fileset evaluated to zero files".to_string());
             break;
