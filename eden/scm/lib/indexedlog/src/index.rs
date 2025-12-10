@@ -4809,7 +4809,7 @@ Disk[410]: Root { radix: Disk[402] }
         // Attempt to modify index1 by replacing its underlying file. This won't actaully break
         // index1, because Index operates at the file descriptor level, not the path level (unlike
         // Log), Index will not reload the file from the same path on flush.
-        fs::rename(&path1, &path1.with_extension("bak")).unwrap();
+        fs::rename(&path1, path1.with_extension("bak")).unwrap();
         fs::rename(&path2, &path1).unwrap();
 
         // "index1.flush" failure shouldn't change its internal state.
