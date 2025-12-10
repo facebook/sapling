@@ -80,7 +80,7 @@ pub async fn create_repo_listeners<'a>(
         let mut scuba = scuba.clone();
         scuba.add("service", "edenapi");
 
-        edenapi_service::build(
+        slapi_service::build(
             fb,
             scuba,
             Arc::clone(&mononoke),

@@ -11,7 +11,6 @@ use anyhow::ensure;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use edenapi_service::utils::to_hg_path_nonroot;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::BonsaiFileChange;
@@ -38,6 +37,7 @@ use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
 use repo_blobstore::RepoBlobstore;
+use slapi_service::utils::to_hg_path_nonroot;
 use sorted_vector_map::SortedVectorMap;
 
 pub async fn from_tree_to_entry(

@@ -9,18 +9,6 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use anyhow::anyhow;
-use edenapi_service::context::ServerContext;
-use edenapi_service::handlers::HandlerInfo;
-use edenapi_service::handlers::JsonErrorFormatter;
-use edenapi_service::handlers::encode_response_stream;
-use edenapi_service::handlers::handler::HandlerError;
-use edenapi_service::handlers::handler::PathExtractorWithRepo;
-use edenapi_service::handlers::handler::SaplingRemoteApiContext;
-use edenapi_service::handlers::handler::SaplingRemoteApiHandler;
-use edenapi_service::handlers::monitor_request;
-use edenapi_service::middleware::request_dumper::RequestDumper;
-use edenapi_service::utils::get_repo;
-use edenapi_service::utils::parse_wire_request;
 use edenapi_types::ToWire;
 use futures_stats::futures03::TimedFutureExt;
 use gotham::handler::HandlerError as GothamHandlerError;
@@ -36,6 +24,18 @@ use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::response::build_response;
 use hyper::Body;
 use hyper::Response;
+use slapi_service::context::ServerContext;
+use slapi_service::handlers::HandlerInfo;
+use slapi_service::handlers::JsonErrorFormatter;
+use slapi_service::handlers::encode_response_stream;
+use slapi_service::handlers::handler::HandlerError;
+use slapi_service::handlers::handler::PathExtractorWithRepo;
+use slapi_service::handlers::handler::SaplingRemoteApiContext;
+use slapi_service::handlers::handler::SaplingRemoteApiHandler;
+use slapi_service::handlers::monitor_request;
+use slapi_service::middleware::request_dumper::RequestDumper;
+use slapi_service::utils::get_repo;
+use slapi_service::utils::parse_wire_request;
 
 use crate::GitServerContext;
 

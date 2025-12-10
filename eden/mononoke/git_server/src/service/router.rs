@@ -8,9 +8,6 @@
 use std::pin::Pin;
 
 use bytes::Bytes;
-use edenapi_service::handlers::JsonErrorFormatter;
-use edenapi_service::handlers::handler::BasicPathExtractor;
-use edenapi_service::handlers::handler::PathExtractorWithRepo;
 use futures::FutureExt;
 use futures_stats::futures03::TimedFutureExt;
 use gotham::handler::HandlerFuture;
@@ -29,6 +26,9 @@ use gotham_ext::response::BytesBody;
 use gotham_ext::response::build_error_response;
 use gotham_ext::response::build_response;
 use hyper::HeaderMap;
+use slapi_service::handlers::JsonErrorFormatter;
+use slapi_service::handlers::handler::BasicPathExtractor;
+use slapi_service::handlers::handler::PathExtractorWithRepo;
 
 use super::error_formatter::GitErrorFormatter;
 use crate::model::GitServerContext;
@@ -173,16 +173,16 @@ pub fn build_router(context: GitServerContext) -> Router {
             .get("/edenapi/*repo/capabilities")
             .with_path_extractor::<BasicPathExtractor>()
             .to(slapi_capabilities_handler);
-        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudWorkspaces>(route);
-        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudWorkspace>(route);
-        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudReferences>(route);
-        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudSmartlog>(route);
-        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudUpdateReferences>(
+        GitHandlers::setup::<slapi_service::handlers::commit_cloud::CommitCloudWorkspaces>(route);
+        GitHandlers::setup::<slapi_service::handlers::commit_cloud::CommitCloudWorkspace>(route);
+        GitHandlers::setup::<slapi_service::handlers::commit_cloud::CommitCloudReferences>(route);
+        GitHandlers::setup::<slapi_service::handlers::commit_cloud::CommitCloudSmartlog>(route);
+        GitHandlers::setup::<slapi_service::handlers::commit_cloud::CommitCloudUpdateReferences>(
             route,
         );
-        GitHandlers::setup::<edenapi_service::handlers::commit_cloud::CommitCloudOtherRepoWorkspaces>(
+        GitHandlers::setup::<slapi_service::handlers::commit_cloud::CommitCloudOtherRepoWorkspaces>(
             route,
         );
-        GitHandlers::setup::<edenapi_service::handlers::lookup::LookupHandler>(route);
+        GitHandlers::setup::<slapi_service::handlers::lookup::LookupHandler>(route);
     })
 }

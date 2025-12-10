@@ -20,7 +20,6 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 cmdlib_caching = { version = "0.1.0", path = "../cmdlib/caching" }
 connection_security_checker = { version = "0.1.0", path = "../common/connection_security_checker" }
 context = { version = "0.1.0", path = "../server/context" }
-edenapi_service = { version = "0.1.0", path = "../edenapi_service" }
 either = "1.5"
 environment = { version = "0.1.0", path = "../cmdlib/environment" }
 executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
@@ -72,6 +71,7 @@ secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperiment
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
+slapi_service = { version = "0.1.0", path = "../servers/slapi/slapi_service" }
 strum = { version = "0.27.1", features = ["derive"] }
 thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

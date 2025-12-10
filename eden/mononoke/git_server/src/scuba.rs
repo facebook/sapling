@@ -6,7 +6,6 @@
  */
 
 use context::CoreContext;
-use edenapi_service::handlers::HandlerInfo as SlapiHandlerInfo;
 use gotham::state::State;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::PostResponseInfo;
@@ -15,6 +14,7 @@ use gotham_ext::middleware::request_context::RequestContext;
 use permission_checker::MononokeIdentitySet;
 use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
+use slapi_service::handlers::HandlerInfo as SlapiHandlerInfo;
 
 use crate::model::BundleUriOutcome;
 use crate::model::GitMethodInfo;
