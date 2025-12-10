@@ -96,7 +96,7 @@ fn read_git_shallow(git_dir: &Path) -> anyhow::Result<HashSet<HgId>> {
     let path = git_dir.join("shallow");
     match fs::read_to_string(&path) {
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(Default::default()),
-        Err(e) => return Err(e.into()),
+        Err(e) => Err(e.into()),
         Ok(text) => {
             let shallow = text
                 .trim_ascii_end()
