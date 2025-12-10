@@ -437,12 +437,6 @@ if sys.platform.startswith("linux"):
         }
     )
 
-    # For now, disable garbage collection tests on Linux.
-    # TODO: Fix garbage collection integration tests on Linux, and remove these from skip
-    TEST_DISABLED["invalidate_test.InvalidateTest"] = True
-    TEST_DISABLED["invalidate_test.InvalidateTestHg"] = True
-    TEST_DISABLED["invalidate_test.InvalidateTestGit"] = True
-
 if "SANDCASTLE" in os.environ:
     # This test seems to leave behind unkillable processes on sandcastle.
     # Disable it for now. Append to TEST_DISABLED below to preserve existing disabled tests.

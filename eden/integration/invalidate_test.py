@@ -56,14 +56,19 @@ class InvalidateTest(testcase.EdenRepoTest):
         self,
         invalidated: int,
         expected_invalidated_darwin: int,
-        expected_invalidated_other: int,
+        expected_invalidated_windows: int,
+        expected_invalidated_linux: int,
         expected_loaded_darwin: int,
-        expected_loaded_other: int,
+        expected_loaded_windows: int,
+        expected_loaded_linux: int,
+        delta: int = 0,
     ) -> None:
         """
-        On all platforms, both trees and files are invalidated.
+        On macOS and Windows, both trees and files are invalidated.
         On macOS, only invalidated trees are included in the
         invalidated count; invalidated file counts are not.
+        On Linux, we don't invalidate any inode as the first step of GC.
+        Because FUSE decrease the inode FS refcounts when needed
 
         Additionally, when all inodes are invalidated, GC
         unload behavior for top-level directories differs by
@@ -72,11 +77,16 @@ class InvalidateTest(testcase.EdenRepoTest):
         if sys.platform == "darwin":
             expected_invalidated = expected_invalidated_darwin
             expected_loaded = expected_loaded_darwin
+        elif sys.platform == "win32":
+            expected_invalidated = expected_invalidated_windows
+            expected_loaded = expected_loaded_windows
         else:
-            expected_invalidated = expected_invalidated_other
-            expected_loaded = expected_loaded_other
+            expected_invalidated = expected_invalidated_linux
+            expected_loaded = expected_loaded_linux
         self.assertEqual(invalidated, expected_invalidated)
-        self.assertEqual(await self.get_loaded_count(), expected_loaded)
+        self.assertAlmostEqual(
+            await self.get_loaded_count(), expected_loaded, delta=delta
+        )
 
     async def invalidate(
         self, path: str, seconds: int = 0, background: bool = False
@@ -111,9 +121,11 @@ class InvalidateTest(testcase.EdenRepoTest):
         await self.assert_invalidation(
             invalidated,
             expected_invalidated_darwin=3,
-            expected_invalidated_other=33,
+            expected_invalidated_windows=33,
+            expected_invalidated_linux=0,
             expected_loaded_darwin=initial_loaded + 2,
-            expected_loaded_other=initial_loaded - 1,
+            expected_loaded_windows=initial_loaded - 1,
+            expected_loaded_linux=1,
         )
         self.read_all()
 
@@ -125,9 +137,11 @@ class InvalidateTest(testcase.EdenRepoTest):
         await self.assert_invalidation(
             invalidated,
             expected_invalidated_darwin=1,
-            expected_invalidated_other=10,
+            expected_invalidated_windows=10,
+            expected_invalidated_linux=0,
             expected_loaded_darwin=initial_loaded + 23,
-            expected_loaded_other=initial_loaded + 23,
+            expected_loaded_windows=initial_loaded + 23,
+            expected_loaded_linux=initial_loaded + 23,
         )
         self.read_all()
 
@@ -148,9 +162,11 @@ class InvalidateTest(testcase.EdenRepoTest):
         await self.assert_invalidation(
             invalidated,
             expected_invalidated_darwin=1,
-            expected_invalidated_other=10,
+            expected_invalidated_windows=10,
+            expected_invalidated_linux=0,
             expected_loaded_darwin=initial_loaded + 23,
-            expected_loaded_other=initial_loaded + 23,
+            expected_loaded_windows=initial_loaded + 23,
+            expected_loaded_linux=initial_loaded + 23,
         )
         self.read_all()
 
@@ -165,9 +181,14 @@ class InvalidateTest(testcase.EdenRepoTest):
         await self.assert_invalidation(
             invalidated,
             expected_invalidated_darwin=1,
-            expected_invalidated_other=11,
+            expected_invalidated_windows=11,
+            expected_invalidated_linux=0,
             expected_loaded_darwin=initial_loaded + 11,
-            expected_loaded_other=initial_loaded + 10,
+            expected_loaded_windows=initial_loaded + 10,
+            expected_loaded_linux=initial_loaded + 5,
+            # different test flavors can have different initial_loaded.
+            # We use delta=1 to cover all the test flavors.
+            delta=1,
         )
         self.read_all()
 
@@ -185,9 +206,11 @@ class InvalidateTest(testcase.EdenRepoTest):
         await self.assert_invalidation(
             invalidated,
             expected_invalidated_darwin=0,
-            expected_invalidated_other=6,
+            expected_invalidated_windows=6,
+            expected_invalidated_linux=0,
             expected_loaded_darwin=initial_loaded + 11,
-            expected_loaded_other=initial_loaded + 5,
+            expected_loaded_windows=initial_loaded + 5,
+            expected_loaded_linux=initial_loaded + 5,
         )
         self.read_all()
 
