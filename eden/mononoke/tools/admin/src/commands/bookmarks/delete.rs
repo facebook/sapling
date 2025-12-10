@@ -75,7 +75,7 @@ pub async fn delete(
             .ok_or_else(|| {
                 anyhow!(
                     "Cannot delete non-existent {} bookmark {}",
-                    kind.to_string(),
+                    kind,
                     delete_args.name
                 )
             })?
