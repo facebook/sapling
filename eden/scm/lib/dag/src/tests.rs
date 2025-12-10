@@ -826,7 +826,7 @@ fn test_segment_ancestors_example1() {
         assert_eq!(dag.ancestors((*id).into()).unwrap().count(), *count);
     }
 
-    for (a, b, ancestor) in vec![
+    for (a, b, ancestor) in [
         (10, 3, 3.into()),
         (11, 0, 0.into()),
         (11, 10, 10.into()),
