@@ -38,4 +38,4 @@ sharding_ext = { version = "0.1.0", path = "../../../../../../cmdlib/sharding_ex
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-wireproto_handler = { version = "0.1.0", path = "../../../../../../wireproto_handler" }
+wireproto_handler = { version = "0.1.0", path = "../../../../../../servers/slapi/wireproto_handler" }

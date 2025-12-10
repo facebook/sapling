@@ -73,7 +73,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/wireproto_handler:wireproto_handler",
+        "//eden/mononoke/servers/slapi/wireproto_handler:wireproto_handler",
     ],
 )
 
@@ -108,7 +108,7 @@ rust_binary(
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/wireproto_handler:wireproto_handler",
+        "//eden/mononoke/servers/slapi/wireproto_handler:wireproto_handler",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

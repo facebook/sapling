@@ -118,7 +118,7 @@ tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 vec1 = { version = "1", features = ["serde"] }
-wireproto_handler = { version = "0.1.0", path = "../wireproto_handler" }
+wireproto_handler = { version = "0.1.0", path = "../servers/slapi/wireproto_handler" }
 
 [dev-dependencies]
 assert_matches = "1.5"

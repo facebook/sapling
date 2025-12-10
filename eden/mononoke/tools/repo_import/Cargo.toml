@@ -64,7 +64,7 @@ synced_commit_mapping = { version = "0.1.0", path = "../../features/commit_rewri
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
+wireproto_handler = { version = "0.1.0", path = "../../servers/slapi/wireproto_handler" }
 
 [dev-dependencies]
 ascii = "1.0"

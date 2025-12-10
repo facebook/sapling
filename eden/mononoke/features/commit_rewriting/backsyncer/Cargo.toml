@@ -43,7 +43,7 @@ sql_query_config = { version = "0.1.0", path = "../../../repo_attributes/sql_que
 thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-wireproto_handler = { version = "0.1.0", path = "../../../wireproto_handler" }
+wireproto_handler = { version = "0.1.0", path = "../../../servers/slapi/wireproto_handler" }
 
 [dev-dependencies]
 ascii = "1.0"

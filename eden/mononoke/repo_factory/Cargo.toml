@@ -92,4 +92,4 @@ tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 virtually_sharded_blobstore = { version = "0.1.0", path = "../blobstore/virtually_sharded_blobstore" }
 warm_bookmarks_cache = { version = "0.1.0", path = "../repo_attributes/bookmarks/warm_bookmarks_cache" }
-wireproto_handler = { version = "0.1.0", path = "../wireproto_handler" }
+wireproto_handler = { version = "0.1.0", path = "../servers/slapi/wireproto_handler" }

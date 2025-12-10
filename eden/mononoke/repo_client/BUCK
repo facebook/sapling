@@ -239,7 +239,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/wireproto_handler:wireproto_handler",
+        "//eden/mononoke/servers/slapi/wireproto_handler:wireproto_handler",
     ],
 )
 

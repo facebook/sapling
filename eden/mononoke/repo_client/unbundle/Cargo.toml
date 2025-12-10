@@ -58,7 +58,7 @@ thiserror = "2.0.12"
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 wirepack = { version = "0.1.0", path = "../wirepack" }
-wireproto_handler = { version = "0.1.0", path = "../../wireproto_handler" }
+wireproto_handler = { version = "0.1.0", path = "../../servers/slapi/wireproto_handler" }
 
 [dev-dependencies]
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

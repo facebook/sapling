@@ -96,7 +96,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
         "//eden/mononoke/repo_client:streaming_clone",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/wireproto_handler:wireproto_handler",
+        "//eden/mononoke/servers/slapi/wireproto_handler:wireproto_handler",
         "//eden/scm/lib/clientinfo:clientinfo",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:lazy_static",
@@ -175,7 +175,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
         "//eden/mononoke/repo_client:streaming_clone",
         "//eden/mononoke/server/context:context",
-        "//eden/mononoke/wireproto_handler:wireproto_handler",
+        "//eden/mononoke/servers/slapi/wireproto_handler:wireproto_handler",
     ],
 )
 

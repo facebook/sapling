@@ -408,6 +408,7 @@ members = [
   "servers/land_service/if/clients",
   "servers/land_service/if/mocks",
   "servers/land_service/if/services",
+  "servers/slapi/wireproto_handler",
   "servers/sshrelay",
   "tests/fixtures",
   "tests/utils",
@@ -428,7 +429,6 @@ members = [
   "tools/streaming_clone",
   "tools/tail-to-cloudwatch",
   "tools/testtool",
-  "wireproto_handler",
 ]
 resolver = "2"
 
