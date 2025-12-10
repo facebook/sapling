@@ -266,7 +266,7 @@ impl AsyncResponse {
                 }
                 Header::EndOfHeaders => {
                     // Check if this is a redirect status code and if so, continue
-                    let is_redirect = status.map_or(false, |s| s.is_redirection());
+                    let is_redirect = status.is_some_and(|s| s.is_redirection());
                     if !is_redirect {
                         break;
                     }
