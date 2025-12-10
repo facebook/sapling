@@ -124,7 +124,7 @@ eden@osxfuse0 on /Users/wez/fbsource (osxfuse_eden, nosuid, synchronous)
 "
     .to_string();
 
-    let expected = vec![
+    let expected = [
         MountTableInfo {
             device: "/dev/disk1s1".to_string(),
             mount_point: PathBuf::from("/"),
