@@ -34,10 +34,23 @@ html .vscode-dark {
 
   /* Editor colors */
   --diffEditor-foreground: rgb(201, 209, 217);
-  --diffEditor-insertedLineBackground: #5fff8422;
-  --diffEditor-insertedLineHighlightBackground: #5fff8433;
-  --diffEditor-removedLineBackground: #fa7e7c33;
-  --diffEditor-removedLineHighlightBackground: #fa7e7c55;
+  --diffEditor-insertedLineHighlightBackground: var(
+    --vscode-diffEditor-insertedTextBackground,
+    rgba(156, 204, 44, 0.2)
+  );
+  --diffEditor-removedLineHighlightBackground: var(
+    --vscode-diffEditor-removedTextBackground,
+    rgba(255, 0, 0, 0.2)
+  );
+  --diffEditor-insertedLineBackground: var(
+    --vscode-diffEditor-insertedLineBackground,
+    rgba(155, 185, 85, 0.2)
+  );
+  --diffEditor-removedLineBackground: var(
+    --vscode-diffEditor-removedLineBackground,
+    rgba(255, 0, 0, 0.2)
+  );
+
   --diffEditor-modifiedLineBackground: #deb94033;
   --diffEditor-modifiedLineHighlightBackground: #deb94066;
   --editor-selectionBackground: #264f78;
