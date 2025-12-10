@@ -111,7 +111,7 @@ pub(crate) async fn prepare_filenodes_for_cs(
             _ => Err(format_err!(
                 "expected exactly one root, found {} for cs_id {}",
                 roots_num,
-                bcs.get_changeset_id().to_string()
+                bcs.get_changeset_id()
             )),
         }
     }
