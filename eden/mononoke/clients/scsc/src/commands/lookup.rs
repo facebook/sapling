@@ -237,7 +237,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             } else {
                 bail!(
                     "Internal error: requested id {} is not in the response",
-                    aliases.commit_id.to_string()
+                    aliases.commit_id
                 );
             }
         }
