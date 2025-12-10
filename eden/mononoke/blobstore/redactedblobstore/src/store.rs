@@ -197,6 +197,6 @@ pub async fn load<'a, B: Blobstore>(
         .ok_or(LoadableError::Missing(blobstore_key.clone()))?;
 
     let blob: Blob<RedactionKeyListId> = Blob::new(keylist_id, bytes.into_raw_bytes());
-    let ret = <RedactionKeyList as BlobstoreValue>::from_blob(blob).map_err(LoadableError::Error);
-    ret
+
+    <RedactionKeyList as BlobstoreValue>::from_blob(blob).map_err(LoadableError::Error)
 }
