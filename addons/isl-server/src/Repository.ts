@@ -282,6 +282,22 @@ export class Repository {
               signal,
             ) ?? Promise.resolve()
           );
+        } else if (operation.runner === CommandRunner.Conf) {
+          const {args: normalizedArgs} = this.normalizeOperationArgs(cwd, operation);
+          if (this.codeReviewProvider?.runConfCommand == null) {
+            return Promise.reject(
+              Error('CodeReviewProvider does not support running conf commands'),
+            );
+          }
+
+          return (
+            this.codeReviewProvider?.runConfCommand(
+              cwd,
+              normalizedArgs,
+              handleCommandProgress,
+              signal,
+            ) ?? Promise.resolve()
+          );
         } else if (operation.runner === CommandRunner.InternalArcanist) {
           // TODO: support stdin
           const {args: normalizedArgs} = this.normalizeOperationArgs(cwd, operation);

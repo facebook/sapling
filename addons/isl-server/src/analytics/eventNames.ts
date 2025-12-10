@@ -155,6 +155,7 @@ export type TrackEventName =
   | 'ConfirmSyncNewDiffNumber'
   | 'UncommitOperation'
   | 'JfSubmitOperation'
+  | 'ConfSubmitOperation'
   | 'JfGetOperation'
   | 'JumpToInlineComment'
   | 'OptimisticFilesStateForceResolved'

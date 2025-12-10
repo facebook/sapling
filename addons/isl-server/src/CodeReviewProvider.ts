@@ -38,6 +38,14 @@ export interface CodeReviewProvider {
     signal: AbortSignal,
   ): Promise<void>;
 
+  /** Run a conf command for configerator operations */
+  runConfCommand?(
+    cwd: string,
+    args: Array<string>,
+    onProgress: OperationCommandProgressReporter,
+    signal: AbortSignal,
+  ): Promise<void>;
+
   dispose: () => void;
 
   /** Convert Code Review Provider info into a short summary string, usable in analytics */
