@@ -107,7 +107,7 @@ impl FileStore for EagerRepoStore {
                 let iter = keys.into_iter().filter_map(move |k| {
                     let id = k.hgid;
                     match store.get_content(id) {
-                        Err(e) => Some(Err(e.into())),
+                        Err(e) => Some(Err(e)),
                         Ok(Some(data)) => match strip_file_metadata(&data, store.format()) {
                             Err(e) => Some(Err(e)),
                             Ok((_, Some(copy_from))) => Some(Ok((k, copy_from))),

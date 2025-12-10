@@ -677,7 +677,7 @@ impl EagerRepo {
     pub async fn commit_to_manifest(&self, commit_id: HgId) -> Result<TreeManifest> {
         let commit_to_root_tree = self.store.read_root_tree_ids(vec![commit_id]).await?;
         if commit_to_root_tree.is_empty() {
-            return Err(anyhow!("commit {} cannot be found", commit_id.to_hex()).into());
+            return Err(anyhow!("commit {} cannot be found", commit_id.to_hex()));
         }
         let (_, tree_id) = commit_to_root_tree[0];
         Ok(TreeManifest::durable(Arc::new(self.store.clone()), tree_id))

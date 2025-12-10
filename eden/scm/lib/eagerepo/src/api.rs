@@ -1687,8 +1687,8 @@ pub fn edenapi_from_config(
                 "attempt to create EagerRepo as SaplingRemoteApi from config {section}.{name}={url}",
             );
             if let Some(path) = EagerRepo::url_to_dir(&url) {
-                let repo = EagerRepo::open(&path)
-                    .map_err(|e| edenapi::SaplingRemoteApiError::Other(e.into()))?;
+                let repo =
+                    EagerRepo::open(&path).map_err(|e| edenapi::SaplingRemoteApiError::Other(e))?;
                 return Ok(Some(Arc::new(repo)));
             }
         }
@@ -1763,7 +1763,7 @@ fn map_dag_err(e: dag::Error) -> SaplingRemoteApiError {
 }
 
 fn map_crate_err(e: crate::Error) -> SaplingRemoteApiError {
-    SaplingRemoteApiError::Other(e.into())
+    SaplingRemoteApiError::Other(e)
 }
 
 fn debug_key_list(keys: &[Key]) -> String {
