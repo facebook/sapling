@@ -230,14 +230,14 @@ pub fn generate_file_name(id: u64, seed: u64) -> String {
     // For each 4-bit of id, generate a word based on related 2-bit seed.
     let len = visit_names(id, seed, 0, |sum, word| sum + word.len() + 1);
     let name = String::with_capacity(len - 1);
-    let name = visit_names(id, seed, name, |mut name, word| {
+
+    visit_names(id, seed, name, |mut name, word| {
         if !name.is_empty() {
             name.push('-');
         }
         name.push_str(word);
         name
-    });
-    name
+    })
 }
 
 static NAMES: [[&str; 16]; 4] = [
