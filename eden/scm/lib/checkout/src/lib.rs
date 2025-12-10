@@ -586,7 +586,7 @@ impl CheckoutPlan {
                     }
                 }
             };
-            let unknown = state.map_or(true, |state| !state.state.is_tracked());
+            let unknown = state.is_none_or(|state| !state.state.is_tracked());
 
             if unknown && matches!(vfs.is_file(file), Ok(true)) {
                 let repo_path = file.as_repo_path();
