@@ -20,8 +20,6 @@ bookmarks_types = { version = "0.1.0", path = "../../../repo_attributes/bookmark
 bytes = { version = "1.10", features = ["serde"] }
 context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/context" }
 hooks = { version = "0.1.0", path = "../../hooks" }
-land_service_if = { version = "0.1.0", path = "../../../servers/land_service/if" }
-land_service_if_clients = { version = "0.1.0", path = "../../../servers/land_service/if/clients" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 pushrebase = { version = "0.1.0", path = ".." }

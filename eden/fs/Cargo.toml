@@ -4,6 +4,8 @@ audio_streams = { git = "https://github.com/google/crosvm", rev = "7d2e877a2a0a7
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
 bindgen = { git = "https://github.com/jsgf/rust-bindgen", rev = "c185e3fb83839fb0909e261db783fe81943b000c" }
 bindgen-cli = { git = "https://github.com/jsgf/rust-bindgen", rev = "c185e3fb83839fb0909e261db783fe81943b000c" }
+bytemuck = { git = "https://github.com/jsgf/bytemuck", rev = "e7ba210910d49dee833773b2a3e0f5e39805ba08" }
+bytemuck_derive = { git = "https://github.com/jsgf/bytemuck", rev = "e7ba210910d49dee833773b2a3e0f5e39805ba08" }
 c2pa = { git = "https://github.com/dhruvmongia/c2pa-rs", rev = "871a0f10d6a3a627229fc769de3d88f85024b64d" }
 cbindgen = { git = "https://github.com/mozilla/cbindgen.git", rev = "cf94b56ef35d91f8420e8f89fee70074d39d068d" }
 cxx = { git = "https://github.com/facebookexperimental/cxx.git", rev = "870ebbecad0f6be394d4f9fb9bd62b551662651a" }
