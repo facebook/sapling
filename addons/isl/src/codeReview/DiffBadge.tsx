@@ -26,7 +26,7 @@ import {configBackedAtom, useAtomGet} from '../jotaiUtils';
 import {PullRevOperation} from '../operations/PullRevOperation';
 import {useRunOperation} from '../operationsState';
 import platform from '../platform';
-import {exactRevset} from '../types';
+import {exactRevset, shouldUseConfCommand} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusAtom} from './syncStatus';
@@ -230,12 +230,21 @@ function ResubmitSyncButton({
 }) {
   const runOperation = useRunOperation();
   const confirmShouldSubmit = useShowConfirmSubmitStack();
+  const disabledReason =
+    shouldUseConfCommand(provider.system) && !commit.isDot
+      ? t('Checkout this commit to submit')
+      : undefined;
 
   return (
     <Tooltip
-      title={t('This commit has changed locally since it was last submitted. Click to resubmit.')}>
+      title={
+        disabledReason != null
+          ? disabledReason
+          : t('This commit has changed locally since it was last submitted. Click to resubmit.')
+      }>
       <Button
         icon
+        disabled={disabledReason != null}
         data-testid="commit-submit-button"
         onClick={async () => {
           const confirmation = await confirmShouldSubmit('submit', [commit]);
