@@ -75,7 +75,7 @@ impl ObjectType {
             "tree" => Some(ObjectType::Tree),
             "blob" => Some(ObjectType::Blob),
             "tag" => Some(ObjectType::Tag),
-            _ => return None,
+            _ => None,
         }
     }
 }
