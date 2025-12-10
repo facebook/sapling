@@ -50,7 +50,7 @@ async fn test_sparse_dag() {
     server2.drawdag("A-B-C G-C", &["C"]);
     server2.drawdag("C-D-E-M-X J-E", &["M"]);
 
-    for opt_remote_dag in vec![Some(server1.dag), None] {
+    for opt_remote_dag in [Some(server1.dag), None] {
         let mut client = server2.client_cloned_data().await;
 
         // Note: some ids (ex. 11) does not have matching name in its IdMap.
