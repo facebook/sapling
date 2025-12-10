@@ -408,7 +408,7 @@ members = [
   "servers/land_service/if/clients",
   "servers/land_service/if/mocks",
   "servers/land_service/if/services",
-  "sshrelay",
+  "servers/sshrelay",
   "tests/fixtures",
   "tests/utils",
   "third_party/git_delta",

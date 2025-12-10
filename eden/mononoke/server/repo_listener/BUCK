@@ -58,7 +58,7 @@ rust_library(
         "//eden/mononoke/repo_client:repo_client",
         "//eden/mononoke/server/context:context",
         "//eden/mononoke/server/qps:qps",
-        "//eden/mononoke/sshrelay:sshrelay",
+        "//eden/mononoke/servers/sshrelay:sshrelay",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )
