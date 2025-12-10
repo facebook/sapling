@@ -4143,7 +4143,7 @@ bool needDecFsRefcount(InodeMap& inodeMap, InodeNumber ino) {
 } // namespace
 #endif
 
-#ifdef __APPLE__
+#ifndef _WIN32
 folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
     TreeInodeState& state) {
   if (auto* nfsdChannel = getMount()->getNfsdChannel()) {
@@ -4603,6 +4603,65 @@ ImmediateFuture<std::vector<TreeInodePtr>> getLoadedOrRememberedTreeChildren(
   }
   return collectAllSafe(std::move(res));
 }
+
+/**
+ * Check for early termination conditions for garbage collection.
+ */
+bool shouldCancelGC(
+    const EdenMount* mount,
+    const folly::CancellationToken& cancellationToken) {
+  if (mount->getState() == EdenMount::State::SHUTTING_DOWN) {
+    return true;
+  }
+  if (cancellationToken.isCancellationRequested()) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Process tree children recursively and return a vector of results.
+ * Applies the given processor function to each child tree.
+ */
+template <typename Func>
+ImmediateFuture<
+    std::vector<typename std::invoke_result_t<Func, TreeInodePtr>::value_type>>
+processTreeChildren(
+    TreeInode* self,
+    InodeMap* inodeMap,
+    const ObjectFetchContextPtr& context,
+    const folly::CancellationToken& cancellationToken,
+    Func&& childProcessor) {
+  return getLoadedOrRememberedTreeChildren(self, inodeMap, context)
+      .thenValue([self,
+                  childProcessor = std::forward<Func>(childProcessor),
+                  cancellationToken](
+                     const std::vector<TreeInodePtr>& treeChildren) mutable {
+        using ResultType =
+            typename std::invoke_result_t<Func, TreeInodePtr>::value_type;
+
+        // Check for cancellation before processing children
+        if (shouldCancelGC(self->getMount(), cancellationToken)) {
+          return ImmediateFuture<std::vector<ResultType>>(
+              std::vector<ResultType>());
+        }
+
+        std::vector<ImmediateFuture<ResultType>> futures;
+        futures.reserve(treeChildren.size());
+        for (auto& tree : treeChildren) {
+          futures.push_back(childProcessor(tree));
+        }
+
+        // Check for cancellation after processing children
+        if (shouldCancelGC(self->getMount(), cancellationToken)) {
+          return ImmediateFuture<std::vector<ResultType>>(
+              std::vector<ResultType>());
+        }
+
+        return collectAllSafe(std::move(futures));
+      });
+}
+
 } // namespace
 
 ImmediateFuture<uint64_t /* numInvalidated */>
@@ -4610,58 +4669,49 @@ TreeInode::handleChildrenNotAccessedRecently(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
     folly::CancellationToken cancellationToken) {
-  return invalidateChildrenNotMaterialized(cutoff, context, cancellationToken)
-      .thenValue([](std::pair<uint64_t, bool> result) { return result.first; });
+  if (getMount()->getNfsdChannel()) {
+    return invalidateChildrenNotMaterializedNFS(
+               cutoff, context, cancellationToken)
+        .thenValue(
+            [](std::pair<uint64_t, bool> result) { return result.first; });
+
+  } else if (getMount()->getPrjfsChannel()) {
+    return invalidateChildrenNotMaterializedPrjFS(
+        cutoff, context, cancellationToken);
+  }
+  // TODO: FUSE decrease the FS ref count by itself. Therefore we don't need to
+  // decrease FS ref count manually. This GC step can skip for FUSE for now.
+  // We can unload not recently used inodes for FUSE here, instead of running
+  // periodic inode unloading.
+  return ImmediateFuture<uint64_t>{0ULL};
 }
 
 ImmediateFuture<std::pair<
     uint64_t /* numInvalidated */,
     bool /* allDescendantsInvalidated */>>
-TreeInode::invalidateChildrenNotMaterialized(
+TreeInode::invalidateChildrenNotMaterializedNFS(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
     folly::CancellationToken cancellationToken) {
-  // When the mount is shutting down, let's make sure to terminate quickly so
-  // unmount is not blocked for a potential very long amount of time.
-  if (getMount()->getState() == EdenMount::State::SHUTTING_DOWN) {
+  if (shouldCancelGC(getMount(), cancellationToken)) {
     return std::make_pair(0u, false);
   }
 
-  // Check for cancellation early
-  if (cancellationToken.isCancellationRequested()) {
-    return std::make_pair(uint64_t{0}, false);
-  }
-
-  return getLoadedOrRememberedTreeChildren(this, getInodeMap(), context)
-      .thenValue([context = context.copy(), cutoff, cancellationToken](
-                     const std::vector<TreeInodePtr>& treeChildren) {
-        // Check for cancellation before processing each children
-        if (cancellationToken.isCancellationRequested()) {
-          return ImmediateFuture<std::vector<std::pair<uint64_t, bool>>>(
-              std::vector<std::pair<uint64_t, bool>>());
-        }
-
-        std::vector<ImmediateFuture<std::pair<uint64_t, bool>>> futures;
-
-        futures.reserve(treeChildren.size());
-        for (auto& tree : treeChildren) {
-          futures.push_back(tree->invalidateChildrenNotMaterialized(
-              cutoff, context, cancellationToken));
-        }
-
-        // Check for cancellation after processing each children
-        if (cancellationToken.isCancellationRequested()) {
-          return ImmediateFuture<std::vector<std::pair<uint64_t, bool>>>(
-              std::vector<std::pair<uint64_t, bool>>());
-        }
-
-        return collectAllSafe(std::move(futures));
-      })
+  return processTreeChildren(
+             this,
+             getInodeMap(),
+             context,
+             cancellationToken,
+             [cutoff, context = context.copy(), cancellationToken](
+                 TreeInodePtr tree) {
+               return tree->invalidateChildrenNotMaterializedNFS(
+                   cutoff, context, cancellationToken);
+             })
       .thenValue([self = inodePtrFromThis(), cutoff, cancellationToken](
                      const std::vector<std::pair<uint64_t, bool>>&
                          invalidations) {
         // Check for cancellation before processing results
-        if (cancellationToken.isCancellationRequested()) {
+        if (shouldCancelGC(self->getMount(), cancellationToken)) {
           return std::make_pair(uint64_t{0}, false);
         }
 
@@ -4676,18 +4726,13 @@ TreeInode::invalidateChildrenNotMaterialized(
           }
         }
 
-        std::vector<InodePtr> deletedInodes;
         {
-          AbsolutePath selfPath;
-          if (auto path = self->getPath()) {
-            selfPath = self->getMount()->getPath() + path.value();
-          } else {
+          if (!self->getPath().has_value()) {
             // This directory was removed, no need to do anything.
             return std::make_pair(numInvalidated, true);
           }
 
           auto contents = self->contents_.wlock();
-#ifdef __APPLE__
           if (!allDescendantsInvalidated) {
             // If any of the children are not invalidated, we should skip
             // invalidation of this directory.
@@ -4735,105 +4780,29 @@ TreeInode::invalidateChildrenNotMaterialized(
               // invalidation.
 
               // Check for cancellation before invalidation
-              if (cancellationToken.isCancellationRequested()) {
+              if (shouldCancelGC(self->getMount(), cancellationToken)) {
                 return std::make_pair(uint64_t{0}, false);
               }
-
+#ifndef _WIN32
+              // Windows platforms should not get to this path
               auto invalidateResult =
                   self->nfsInvalidateCacheEntryForGC(*contents);
-              numInvalidated++;
-              isThisTreeInvalidated = true;
-            }
-          }
-#elif defined(_WIN32)
-          auto* inodeMap = self->getInodeMap();
-          for (auto& entry : contents->entries) {
-            if (entry.second.isMaterialized()) {
-              continue;
-            }
-
-            if (auto inode = entry.second.getInodePtr()) {
-              deletedInodes.push_back(std::move(inode));
-            }
-
-            auto inodeNumber = entry.second.getInodeNumber();
-            if (!inodeMap->isInodeLoadedOrRemembered(inodeNumber)) {
-              continue;
-            }
-
-            // If we're attempting to invalidate everything, don't bother
-            // checking the disk.
-            if (cutoff != std::chrono::system_clock::time_point::max()) {
-              // Let's focus only on files as directories will get their atime
-              // updated when we query the atime of the files contained in it.
-              if (!entry.second.isDirectory()) {
-                auto entryPath = selfPath + entry.first;
-                auto wEntryPath = entryPath.wide();
-                struct __stat64 buf;
-
-                // TODO: If the file isn't on disk this will lay a placeholder
-                // on disk and at the same time force it to not be invalidated
-                // due to its atime being newer than the cutoff.
-                if (_wstat64(wEntryPath.c_str(), &buf) < 0) {
-                  continue;
-                }
-
-                auto atime =
-                    std::chrono::system_clock::from_time_t(buf.st_atime);
-                if (atime > cutoff) {
-                  // That file has been touched too recently, continue.
-                  continue;
-                }
-              }
-            }
-
-            // TODO: In the case where the file becomes materialized on disk
-            // now, invalidateChannelEntryCache will happily remove it, leading
-            // to a potential loss of user data. To avoid this, we could try
-            // not passing PRJ_UPDATE_ALLOW_DIRTY_DATA and dealing with the
-            // side effects to close that race.
-
-            // Here, we rely on invalidateChannelEntryCache failing for
-            // non-empty directories to guarantee that we're not losing user
-            // data in the case where a user writes a file in a directory that
-            // we're attempting to invalidate. For directories with not
-            // invalidated children due to being read too recently, we also
-            // rely on invalidateChannelEntryCache failing.
-            auto invalidateResult = self->invalidateChannelEntryCache(
-                *contents, entry.first, inodeNumber);
-            if (invalidateResult.hasException()) {
-              XLOGF(
-                  DBG5,
-                  "Couldn't invalidate: {}/{}: {}",
-                  self->getLogPath(),
-                  entry.first,
-                  invalidateResult.exception());
-            } else {
-              numInvalidated++;
-              isThisTreeInvalidated = true;
-            }
-          }
-#else
-          // For now, there is no need for a inode GC on Linux, so let's not
-          // bother implementing it. only silence unused variable warning
-          (void)cutoff;
 #endif
-          // As we have accurate atime for non-mac platforms, we don't need to
-          // use allDescendantsInvalidated. Only silence unused variable warning
-          (void)allDescendantsInvalidated;
+              numInvalidated++;
+              isThisTreeInvalidated = true;
+            }
+          }
         }
 
         return std::make_pair(numInvalidated, isThisTreeInvalidated);
       })
-
-#ifdef __APPLE__
       .thenTry(
           [this,
            cancellationToken](folly::Try<std::pair<uint64_t, bool>>&& result)
               -> ImmediateFuture<std::pair<uint64_t, bool>> {
             // Check for cancellation before waiting for invalidation to
             // complete
-            if (cancellationToken.isCancellationRequested()) {
+            if (shouldCancelGC(getMount(), cancellationToken)) {
               return std::make_pair(uint64_t{0}, false);
             }
             auto* nfsdChannel = getMount()->getNfsdChannel();
@@ -4845,9 +4814,131 @@ TreeInode::invalidateChildrenNotMaterialized(
             } else {
               return std::move(result);
             }
-          })
+          });
+}
+
+ImmediateFuture<uint64_t /* numInvalidated */>
+TreeInode::invalidateChildrenNotMaterializedPrjFS(
+    std::chrono::system_clock::time_point cutoff,
+    const ObjectFetchContextPtr& context,
+    folly::CancellationToken cancellationToken) {
+  if (shouldCancelGC(getMount(), cancellationToken)) {
+    return 0ULL;
+  }
+
+  return processTreeChildren(
+             this,
+             getInodeMap(),
+             context,
+             cancellationToken,
+             [cutoff, context = context.copy(), cancellationToken](
+                 TreeInodePtr tree) {
+               return tree->invalidateChildrenNotMaterializedPrjFS(
+                   cutoff, context, cancellationToken);
+             })
+      .thenValue(
+          [self = inodePtrFromThis(), cutoff, cancellationToken](
+              const std::vector<uint64_t>& invalidations) -> uint64_t {
+            // Check for cancellation before processing results
+            if (shouldCancelGC(self->getMount(), cancellationToken)) {
+              return 0ULL;
+            }
+
+            uint64_t numInvalidated = 0;
+
+            for (auto invalidation : invalidations) {
+              numInvalidated += invalidation;
+            }
+
+            std::vector<InodePtr> deletedInodes;
+            {
+              AbsolutePath selfPath;
+              if (auto path = self->getPath()) {
+                selfPath = self->getMount()->getPath() + path.value();
+              } else {
+                // This directory was removed, no need to do anything.
+                return numInvalidated;
+              }
+
+              auto contents = self->contents_.wlock();
+              auto* inodeMap = self->getInodeMap();
+              for (auto& entry : contents->entries) {
+                if (entry.second.isMaterialized()) {
+                  continue;
+                }
+
+                if (auto inode = entry.second.getInodePtr()) {
+                  deletedInodes.push_back(std::move(inode));
+                }
+
+                auto inodeNumber = entry.second.getInodeNumber();
+                if (!inodeMap->isInodeLoadedOrRemembered(inodeNumber)) {
+                  continue;
+                }
+
+                // If we're attempting to invalidate everything, don't bother
+                // checking the disk.
+                if (cutoff != std::chrono::system_clock::time_point::max()) {
+                  // Let's focus only on files as directories will get their
+                  // atime updated when we query the atime of the files
+                  // contained in it.
+                  if (!entry.second.isDirectory()) {
+#ifdef _WIN32
+                    auto entryPath = selfPath + entry.first;
+                    auto wEntryPath = entryPath.wide();
+                    struct __stat64 buf;
+
+                    // TODO: If the file isn't on disk this will lay a
+                    // placeholder on disk and at the same time force it to not
+                    // be invalidated due to its atime being newer than the
+                    // cutoff.
+                    if (_wstat64(wEntryPath.c_str(), &buf) < 0) {
+                      continue;
+                    }
+
+                    auto atime =
+                        std::chrono::system_clock::from_time_t(buf.st_atime);
+                    if (atime > cutoff) {
+                      // That file has been touched too recently, continue.
+                      continue;
+                    }
+#else
+                    // This function should not get called from non-windows
+                    // platforms
+                    continue;
 #endif
-      ;
+                  }
+                }
+
+                // TODO: In the case where the file becomes materialized on disk
+                // now, invalidateChannelEntryCache will happily remove it,
+                // leading to a potential loss of user data. To avoid this, we
+                // could try not passing PRJ_UPDATE_ALLOW_DIRTY_DATA and dealing
+                // with the side effects to close that race.
+
+                // Here, we rely on invalidateChannelEntryCache failing for
+                // non-empty directories to guarantee that we're not losing user
+                // data in the case where a user writes a file in a directory
+                // that we're attempting to invalidate. For directories with not
+                // invalidated children due to being read too recently, we also
+                // rely on invalidateChannelEntryCache failing.
+                auto invalidateResult = self->invalidateChannelEntryCache(
+                    *contents, entry.first, inodeNumber);
+                if (invalidateResult.hasException()) {
+                  XLOGF(
+                      DBG5,
+                      "Couldn't invalidate: {}/{}: {}",
+                      self->getLogPath(),
+                      entry.first,
+                      invalidateResult.exception());
+                } else {
+                  numInvalidated++;
+                }
+              }
+            }
+
+            return numInvalidated;
+          });
 }
 
 void TreeInode::updateAtime() {

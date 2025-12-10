@@ -607,7 +607,13 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   ImmediateFuture<std::pair<
       uint64_t /* numInvalidated */,
       bool /* allDescendantsInvalidated */>>
-  invalidateChildrenNotMaterialized(
+  invalidateChildrenNotMaterializedNFS(
+      std::chrono::system_clock::time_point cutoff,
+      const ObjectFetchContextPtr& context,
+      folly::CancellationToken cancellationToken = {});
+
+  ImmediateFuture<uint64_t /* numInvalidated */>
+  invalidateChildrenNotMaterializedPrjFS(
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context,
       folly::CancellationToken cancellationToken = {});
@@ -914,7 +920,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       std::optional<InodeNumber> ino);
 
-#ifdef __APPLE__
+#ifndef _WIN32
   /**
    * Sends a request to the kernel to invalidate its cache for this tree and
    * then deletes all its children's inode. In NFS, this function is distinct
