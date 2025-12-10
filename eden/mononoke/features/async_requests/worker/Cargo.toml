@@ -36,10 +36,10 @@ mononoke_macros = { version = "0.1.0", path = "../../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 repo_authorization = { version = "0.1.0", path = "../../../repo_authorization" }
 requests_table = { version = "0.1.0", path = "../requests_table" }
-scs_errors = { version = "0.1.0", path = "../../../servers/scs/scs_errors" }
-scs_methods = { version = "0.1.0", path = "../../../servers/scs/scs_methods" }
+scs_errors = { version = "0.1.0", path = "../../../scs/scs_errors" }
+scs_methods = { version = "0.1.0", path = "../../../scs/scs_methods" }
 sharding_ext = { version = "0.1.0", path = "../../../cmdlib/sharding_ext" }
-source_control = { version = "0.1.0", path = "../../../servers/scs/if" }
+source_control = { version = "0.1.0", path = "../../../scs/if" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

@@ -8,7 +8,7 @@ use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 eden/mononoke/derived_data/if/derived_data_type.thrift derived_data_type_if //eden/mononoke/derived_data/if:derived_data_type_if-rust
 eden/mononoke/megarepo_api/if/megarepo_configs.thrift megarepo_configs //eden/mononoke/megarepo_api/if:megarepo_configs-rust
-eden/mononoke/servers/scs/if/source_control.thrift crate //eden/mononoke/servers/scs/if:source_control-rust
+eden/mononoke/scs/if/source_control.thrift crate //eden/mononoke/scs/if:source_control-rust
 fb303/thrift/fb303_core.thrift fb303_core //fb303/thrift:fb303_core-rust
 thrift/annotation/cpp.thrift fb303_core->cpp //thrift/annotation:cpp-rust
 thrift/annotation/hack.thrift hack //thrift/annotation:hack-rust
@@ -24,7 +24,7 @@ fn main() {
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
     Config::from_env(GenContext::Services)
         .expect("Failed to instantiate thrift_compiler::Config")
-        .base_path("../../../../../..")
+        .base_path("../../../../..")
         .types_crate("source_control__types")
         .clients_crate("source_control__clients")
         .options("default_enum_zero,serde")

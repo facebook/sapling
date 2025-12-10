@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/mononoke/servers/scs/scs_server/metadata.h"
-#include "eden/mononoke/servers/scs/if/gen-cpp2/source_control_metadata.h" // @manual=//eden/mononoke/servers/scs/if:source_control-cpp2-metadata
+#include "eden/mononoke/scs/scs_server/metadata.h"
+#include "eden/mononoke/scs/if/gen-cpp2/source_control_metadata.h" // @manual=//eden/mononoke/scs/if:source_control-cpp2-metadata
 
 namespace facebook {
 namespace scm {

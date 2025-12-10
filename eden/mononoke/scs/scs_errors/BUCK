@@ -11,7 +11,7 @@ rust_library(
         "//eden/mononoke/git/git_types:git_types",
         "//eden/mononoke/megarepo_api:megarepo_error",
         "//eden/mononoke/mononoke_api:mononoke_api",
-        "//eden/mononoke/servers/scs/if:source_control-rust",
-        "//eden/mononoke/servers/scs/if:source_control-rust-services",
+        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust-services",
     ],
 )

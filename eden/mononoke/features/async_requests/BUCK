@@ -34,7 +34,7 @@ rust_library(
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust",
-        "//eden/mononoke/servers/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//thrift/lib/rust:fbthrift",
     ],

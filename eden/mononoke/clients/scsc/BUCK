@@ -64,8 +64,8 @@ rust_binary(
         "//eden/mononoke/cmdlib/base_app:base_app",
         "//eden/mononoke/cmdlib/commit_id_types:commit_id_types",
         "//eden/mononoke/common/topo_sort:topo_sort",
-        "//eden/mononoke/servers/scs/if:source_control-rust",
-        "//eden/mononoke/servers/scs/if:source_control-rust-clients",
+        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/scs/if:source_control-rust-clients",
     ],
 )
 
