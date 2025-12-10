@@ -236,13 +236,11 @@ impl Identity {
             }
         };
 
-        let paths = self
-            .user
+        self.user
             .config_user_files
             .iter()
             .map(|f| config_dir.join(f))
-            .collect();
-        paths
+            .collect()
     }
 
     /// Return the first user config path that exists.
