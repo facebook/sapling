@@ -108,8 +108,8 @@ where
     St2: Stream<Item = St1::Item>,
 {
     fn is_terminated(&self) -> bool {
-        self.stream1.as_ref().map_or(true, |s| s.is_terminated())
-            && self.stream2.as_ref().map_or(true, |s| s.is_terminated())
+        self.stream1.as_ref().is_none_or(|s| s.is_terminated())
+            && self.stream2.as_ref().is_none_or(|s| s.is_terminated())
     }
 }
 
