@@ -144,7 +144,7 @@ rust_binary(
         "//eden/mononoke/repo_attributes/repo_lock:repo_lock",
         "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
         "//eden/mononoke/repo_factory:repo_factory",
-        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/servers/scs/if:source_control-rust",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/scm/lib/renderdag:renderdag",
         "//thrift/lib/rust:fbthrift",

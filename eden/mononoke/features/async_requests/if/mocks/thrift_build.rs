@@ -30,7 +30,7 @@ eden/mononoke/mononoke_types/serialization/skeleton_manifest.thrift mononoke_typ
 eden/mononoke/mononoke_types/serialization/test_manifest.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/time.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/unodes.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
-eden/mononoke/scs/if/source_control.thrift source_control //eden/mononoke/scs/if:source_control-rust
+eden/mononoke/servers/scs/if/source_control.thrift source_control //eden/mononoke/servers/scs/if:source_control-rust
 fb303/thrift/fb303_core.thrift source_control->fb303_core //fb303/thrift:fb303_core-rust
 thrift/annotation/cpp.thrift source_control->fb303_core->cpp //thrift/annotation:cpp-rust
 thrift/annotation/hack.thrift source_control->hack //thrift/annotation:hack-rust

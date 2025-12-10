@@ -11,7 +11,7 @@
 //! because they aren't configs. Rather, they are service implementation detail.
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
-include "eden/mononoke/scs/if/source_control.thrift"
+include "eden/mononoke/servers/scs/if/source_control.thrift"
 include "thrift/annotation/rust.thrift"
 
 // Id types for async service methods params and responses.

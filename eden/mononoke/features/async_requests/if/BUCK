@@ -12,7 +12,7 @@ thrift_library(
     },
     deps = [
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
-        "//eden/mononoke/scs/if:source_control",
+        "//eden/mononoke/servers/scs/if:source_control",
         "//thrift/annotation:rust",
     ],
 )

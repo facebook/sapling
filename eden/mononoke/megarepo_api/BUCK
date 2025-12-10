@@ -45,7 +45,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/derived_data:derived_data_manager",
-        "//eden/mononoke/scs/if:source_control-rust",
+        "//eden/mononoke/servers/scs/if:source_control-rust",
     ],
 )
 

@@ -49,8 +49,8 @@ serde_derive = "1.0.185"
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 serde_regex = "1"
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
-source_control = { version = "0.1.0", path = "../../scs/if" }
-source_control_clients = { version = "0.1.0", path = "../../scs/if/clients" }
+source_control = { version = "0.1.0", path = "../../servers/scs/if" }
+source_control_clients = { version = "0.1.0", path = "../../servers/scs/if/clients" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

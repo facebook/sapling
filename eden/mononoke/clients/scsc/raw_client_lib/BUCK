@@ -13,15 +13,15 @@ rust_library(
             [
                 "//common/rust/identity:identity",
                 "//common/rust/thrift/srclient:srclient",
-                "//eden/mononoke/scs/if:source_control-rust-srclients",
-                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
+                "//eden/mononoke/servers/scs/if:source_control-rust-srclients",
+                "//eden/mononoke/servers/scs/if:source_control-rust-thriftclients",
             ],
         ),
         (
             "macos",
             [
                 "//common/rust/identity:identity",
-                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
+                "//eden/mononoke/servers/scs/if:source_control-rust-thriftclients",
             ],
         ),
     ],
@@ -31,9 +31,9 @@ rust_library(
         "//c2p/secure_thrift/rust/client:x2pclient",
         "//common/rust/shed/fbinit:fbinit",
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
-        "//eden/mononoke/scs/if:source_control-rust",
-        "//eden/mononoke/scs/if:source_control-rust-clients",
-        "//eden/mononoke/scs/if:source_control-rust-x2pclients",
+        "//eden/mononoke/servers/scs/if:source_control-rust",
+        "//eden/mononoke/servers/scs/if:source_control-rust-clients",
+        "//eden/mononoke/servers/scs/if:source_control-rust-x2pclients",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )
