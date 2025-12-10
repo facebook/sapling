@@ -83,7 +83,7 @@ impl ApfsVolume {
     pub fn is_edenfs_managed_volume(&self) -> bool {
         self.name
             .as_ref()
-            .map_or(false, |name| name.starts_with("edenfs:"))
+            .is_some_and(|name| name.starts_with("edenfs:"))
     }
 
     /// Returns true if this is an edenfs managed volume and if the provided
