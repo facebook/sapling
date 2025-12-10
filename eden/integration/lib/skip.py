@@ -330,7 +330,6 @@ if sys.platform != "win32":
         {
             "changes_test.ChangesTestWin": True,
             "corrupt_overlay_test.CorruptSqliteOverlayTest": True,
-            "invalidate_test.InvalidateTest": True,
             "windows_fsck_test.WindowsFsckTest": True,
             "windows_fsck_test.WindowsRebuildOverlayTest": True,
             "prjfs_stress.PrjFSStress": True,
@@ -381,6 +380,7 @@ if sys.platform.startswith("linux"):
             # NFS mounts. So we inherently expect this test to fail on
             # NFS.
         ],
+        "invalidate_test.InvalidateTest": True,
         # EdenFS's NFS implementation is NFSv3, which doesn't support extended
         # attributes.
         "xattr_test.XattrTest": [  # T89439481
@@ -436,6 +436,12 @@ if sys.platform.startswith("linux"):
             ],
         }
     )
+
+    # For now, disable garbage collection tests on Linux.
+    # TODO: Fix garbage collection integration tests on Linux, and remove these from skip
+    TEST_DISABLED["invalidate_test.InvalidateTest"] = True
+    TEST_DISABLED["invalidate_test.InvalidateTestHg"] = True
+    TEST_DISABLED["invalidate_test.InvalidateTestGit"] = True
 
 if "SANDCASTLE" in os.environ:
     # This test seems to leave behind unkillable processes on sandcastle.

@@ -197,10 +197,6 @@ python_unittest(
 python_unittest(
     name = "invalidate",
     srcs = ["invalidate_test.py"],
-    compatible_with = [
-        "ovr_config//os:linux",
-        "ovr_config//os:windows",
-    ],
     env = artifacts["env"],
     supports_static_listing = False,
     deps = [

@@ -7,6 +7,7 @@
 # pyre-unsafe
 
 import os
+import sys
 import time
 from typing import Dict, List
 
@@ -51,6 +52,32 @@ class InvalidateTest(testcase.EdenRepoTest):
             return info.loadedFileCount + info.loadedTreeCount
         return 0  # Apppease pyre
 
+    async def assert_invalidation(
+        self,
+        invalidated: int,
+        expected_invalidated_darwin: int,
+        expected_invalidated_other: int,
+        expected_loaded_darwin: int,
+        expected_loaded_other: int,
+    ) -> None:
+        """
+        On all platforms, both trees and files are invalidated.
+        On macOS, only invalidated trees are included in the
+        invalidated count; invalidated file counts are not.
+
+        Additionally, when all inodes are invalidated, GC
+        unload behavior for top-level directories differs by
+        platform, so the expected loaded count after GC can vary.
+        """
+        if sys.platform == "darwin":
+            expected_invalidated = expected_invalidated_darwin
+            expected_loaded = expected_loaded_darwin
+        else:
+            expected_invalidated = expected_invalidated_other
+            expected_loaded = expected_loaded_other
+        self.assertEqual(invalidated, expected_invalidated)
+        self.assertEqual(await self.get_loaded_count(), expected_loaded)
+
     async def invalidate(
         self, path: str, seconds: int = 0, background: bool = False
     ) -> int:
@@ -81,8 +108,13 @@ class InvalidateTest(testcase.EdenRepoTest):
         self.read_all()
         self.assertEqual(await self.get_loaded_count(), initial_loaded + 33)
         invalidated = await self.invalidate("")
-        self.assertEqual(invalidated, 33)
-        self.assertAlmostEqual(await self.get_loaded_count(), initial_loaded, delta=1)
+        await self.assert_invalidation(
+            invalidated,
+            expected_invalidated_darwin=3,
+            expected_invalidated_other=33,
+            expected_loaded_darwin=initial_loaded + 2,
+            expected_loaded_other=initial_loaded - 1,
+        )
         self.read_all()
 
     async def test_invalidate_subdir(self) -> None:
@@ -90,8 +122,13 @@ class InvalidateTest(testcase.EdenRepoTest):
         self.read_all()
         self.assertEqual(await self.get_loaded_count(), initial_loaded + 33)
         invalidated = await self.invalidate("a")
-        self.assertEqual(invalidated, 10)
-        self.assertEqual(await self.get_loaded_count(), initial_loaded + 23)
+        await self.assert_invalidation(
+            invalidated,
+            expected_invalidated_darwin=1,
+            expected_invalidated_other=10,
+            expected_loaded_darwin=initial_loaded + 23,
+            expected_loaded_other=initial_loaded + 23,
+        )
         self.read_all()
 
     async def test_no_invalidation_with_age(self) -> None:
@@ -108,8 +145,13 @@ class InvalidateTest(testcase.EdenRepoTest):
         self.assertEqual(await self.get_loaded_count(), initial_loaded + 33)
         time.sleep(10)
         invalidated = await self.invalidate("a", seconds=5)
-        self.assertEqual(invalidated, 10)
-        self.assertEqual(await self.get_loaded_count(), initial_loaded + 23)
+        await self.assert_invalidation(
+            invalidated,
+            expected_invalidated_darwin=1,
+            expected_invalidated_other=10,
+            expected_loaded_darwin=initial_loaded + 23,
+            expected_loaded_other=initial_loaded + 23,
+        )
         self.read_all()
 
     async def test_partial_invalidate(self) -> None:
@@ -120,9 +162,12 @@ class InvalidateTest(testcase.EdenRepoTest):
         self.read_directory("b")
         self.assertEqual(await self.get_loaded_count(), initial_loaded + 22)
         invalidated = await self.invalidate("", seconds=5)
-        self.assertEqual(invalidated, 11)
-        self.assertAlmostEqual(
-            await self.get_loaded_count(), initial_loaded + 11, delta=1
+        await self.assert_invalidation(
+            invalidated,
+            expected_invalidated_darwin=1,
+            expected_invalidated_other=11,
+            expected_loaded_darwin=initial_loaded + 11,
+            expected_loaded_other=initial_loaded + 10,
         )
         self.read_all()
 
@@ -134,8 +179,16 @@ class InvalidateTest(testcase.EdenRepoTest):
         self.read_directory("a", 6)
         self.assertEqual(await self.get_loaded_count(), initial_loaded + 11)
         invalidated = await self.invalidate("a", seconds=5)
-        self.assertEqual(invalidated, 6)
-        self.assertEqual(await self.get_loaded_count(), initial_loaded + 5)
+        # On macOS, the lastAccessedTime of the directory is the latest lastAccessedTime
+        # of its children. Therefore, as one of the children is accessed after the cutoff,
+        # the whole directory is not invalidated.
+        await self.assert_invalidation(
+            invalidated,
+            expected_invalidated_darwin=0,
+            expected_invalidated_other=6,
+            expected_loaded_darwin=initial_loaded + 11,
+            expected_loaded_other=initial_loaded + 5,
+        )
         self.read_all()
 
     async def test_invalidate_background(self) -> None:
