@@ -2871,7 +2871,7 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
 
   return inode
 
-      ->invalidateChildrenNotMaterialized(
+      ->handleChildrenNotAccessedRecently(
           cutoff, context, gcCancelSource_.getToken())
 
       .ensure([inode, lease = std::move(lease)] {
@@ -2882,13 +2882,13 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
                 mountPath,
                 inodeMap = mount.getInodeMap(),
                 totalNumberOfInodesBeforeGC](
-                   folly::Try<std::pair<uint64_t, bool>> invalidatedTry) {
+                   folly::Try<uint64_t> invalidatedTry) {
         auto runtime =
             std::chrono::duration<double>{workingCopyRuntime.elapsed()};
 
         bool success = invalidatedTry.hasValue();
         int64_t numInvalidated =
-            success ? folly::to_signed(invalidatedTry.value().first) : 0;
+            success ? folly::to_signed(invalidatedTry.value()) : 0;
         auto inodeCountsAfterGC = inodeMap->getInodeCounts();
         auto totalNumberOfInodesAfterGC = inodeCountsAfterGC.fileCount +
             inodeCountsAfterGC.treeCount +
@@ -2909,7 +2909,7 @@ ImmediateFuture<uint64_t> EdenServer::garbageCollectWorkingCopy(
             runtime.count(),
             totalNumberOfInodesAfterGC);
 
-        return invalidatedTry.value().first;
+        return invalidatedTry.value();
       });
 }
 

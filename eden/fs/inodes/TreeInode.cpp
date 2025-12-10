@@ -4605,6 +4605,15 @@ ImmediateFuture<std::vector<TreeInodePtr>> getLoadedOrRememberedTreeChildren(
 }
 } // namespace
 
+ImmediateFuture<uint64_t /* numInvalidated */>
+TreeInode::handleChildrenNotAccessedRecently(
+    std::chrono::system_clock::time_point cutoff,
+    const ObjectFetchContextPtr& context,
+    folly::CancellationToken cancellationToken) {
+  return invalidateChildrenNotMaterialized(cutoff, context, cancellationToken)
+      .thenValue([](std::pair<uint64_t, bool> result) { return result.first; });
+}
+
 ImmediateFuture<std::pair<
     uint64_t /* numInvalidated */,
     bool /* allDescendantsInvalidated */>>

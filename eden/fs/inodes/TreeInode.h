@@ -479,20 +479,18 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 #endif
 
   /**
-   * Invalidate old non-materialized childrens recursively.
-   *
-   * File inodes touched before the passed in cutoff will be invalidated. Tree
-   * inodes will also be invalidated if all of their childrens have been
-   * invalidated.
-   *
-   * Returns the number of tree inodes invalidated underneath this tree (for
-   * logging purposes) and if this inode and all of its descendants were
-   * invalidated (for use as an unloading parameter)
+   * The first step of inode garbage collection.
+   * This step behaves differently depending on the platform:
+   * - On Linux, it is a no-op.
+   * - On Windows and macOS, it recursively collects all child inodes,
+   *   then decreases the filesystem reference count to zero for inodes
+   *   that have not been accessed since the specified cutoff time.
+   * This process is bottom-up recursive: if a child inode is retained,
+   * all of its parent inodes are also retained, regardless of their access
+   * time.
    */
-  ImmediateFuture<std::pair<
-      uint64_t /* numInvalidated */,
-      bool /* allDescendantsInvalidated */>>
-  invalidateChildrenNotMaterialized(
+  ImmediateFuture<uint64_t /* numInvalidated */>
+  handleChildrenNotAccessedRecently(
       std::chrono::system_clock::time_point cutoff,
       const ObjectFetchContextPtr& context,
       folly::CancellationToken cancellationToken = {});
@@ -594,6 +592,25 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       PathComponentPiece name,
       const ObjectFetchContextPtr& context,
       bool async);
+
+  /**
+   * Invalidate old non-materialized children's recursively.
+   *
+   * File inodes touched before the passed in cutoff will be invalidated. Tree
+   * inodes will also be invalidated if all of their children's have been
+   * invalidated.
+   *
+   * Returns the number of tree inodes invalidated underneath this tree (for
+   * logging purposes) and if this inode and all of its descendants were
+   * invalidated (for use as an unloading parameter)
+   */
+  ImmediateFuture<std::pair<
+      uint64_t /* numInvalidated */,
+      bool /* allDescendantsInvalidated */>>
+  invalidateChildrenNotMaterialized(
+      std::chrono::system_clock::time_point cutoff,
+      const ObjectFetchContextPtr& context,
+      folly::CancellationToken cancellationToken = {});
 
   /**
    * Materialize this directory in the overlay.
