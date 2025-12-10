@@ -124,7 +124,7 @@ impl BonsaiDerivable for RootBlameV2 {
                     }
                     thrift::DerivedDataUnode::UnknownField(x) => Err(anyhow!(
                         "Can't convert {} from provided thrift::DerivedData, unknown field: {}",
-                        Self::NAME.to_string(),
+                        Self::NAME,
                         x,
                     )),
                 }?,
@@ -132,7 +132,7 @@ impl BonsaiDerivable for RootBlameV2 {
         } else {
             Err(anyhow!(
                 "Can't convert {} from provided thrift::DerivedData",
-                Self::NAME.to_string(),
+                Self::NAME,
             ))
         }
     }
