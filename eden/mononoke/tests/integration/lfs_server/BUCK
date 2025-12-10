@@ -11,7 +11,7 @@ dott_test(
     disable_all_network_access_target = True,
     dott_files = glob(["*.t"]),
     deps = [
-        "//eden/mononoke/lfs_server:lfs_server",
+        "//eden/mononoke/servers/lfs/lfs_server:lfs_server",
         "//eden/mononoke/tools/import:import",
     ],
 )

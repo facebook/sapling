@@ -156,7 +156,7 @@ dott_test(
         ),
     deps = [
         "//eden/mononoke:mononoke",
-        "//eden/mononoke/lfs_server:lfs_server",
+        "//eden/mononoke/servers/lfs/lfs_server:lfs_server",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )
