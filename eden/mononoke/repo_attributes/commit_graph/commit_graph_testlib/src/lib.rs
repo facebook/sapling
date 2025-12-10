@@ -57,6 +57,7 @@ macro_rules! impl_commit_graph_tests {
             test_is_linear_stack,
             test_skip_tree,
             test_p1_linear_tree,
+            test_parents_and_subtree_sources_tree,
             test_ancestors_difference,
             test_ancestors_difference_segment_slices,
             test_find_by_prefix,
@@ -624,6 +625,79 @@ pub async fn test_p1_linear_tree(
     assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "L", "F", Some("B")).await?;
     assert_p1_linear_lowest_common_ancestor(&graph, &ctx, "F", "R", None).await?;
 
+    Ok(())
+}
+
+pub async fn test_parents_and_subtree_sources_tree(
+    ctx: CoreContext,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<()> {
+    let graph = from_dag_with_subtree_sources(
+        &ctx,
+        r"
+          K         V
+          |         |
+          J         U
+          |         |
+          I         T
+          |\        |
+          | \       S
+          F  |      |
+          |\ |  L   R
+          | \|  |   |
+          E  H /    Q
+          |  |/     |
+          D  G      P
+          |  |      |
+          C /       O
+          |/        |
+          B         N
+          |         |
+          A         M
+          ",
+        maplit::btreemap! {
+            "G".to_string() => vec!["Q".to_string()],
+            "I".to_string() => vec!["G".to_string()],
+            "K".to_string() => vec!["P".to_string(), "L".to_string()],
+            "V".to_string() => vec!["L".to_string()],
+        },
+        storage.clone(),
+    )
+    .await?;
+    storage.flush();
+
+    assert_parents_and_subtree_sources_skew_ancestor(&storage, &ctx, "A", None).await?;
+    assert_parents_and_subtree_sources_skew_ancestor(&storage, &ctx, "B", Some("A")).await?;
+    assert_parents_and_subtree_sources_skew_ancestor(&storage, &ctx, "C", Some("B")).await?;
+    assert_parents_and_subtree_sources_skew_ancestor(&storage, &ctx, "D", Some("A")).await?;
+    assert_parents_and_subtree_sources_skew_ancestor(&storage, &ctx, "E", Some("D")).await?;
+    assert_parents_and_subtree_sources_skew_ancestor(&storage, &ctx, "F", None).await?;
+    assert_parents_and_subtree_sources_skew_ancestor(&storage, &ctx, "G", None).await?;
+    assert_parents_and_subtree_sources_skew_ancestor(&storage, &ctx, "H", Some("G")).await?;
+    assert_parents_and_subtree_sources_skew_ancestor(&storage, &ctx, "I", None).await?;
+    assert_parents_and_subtree_sources_skew_ancestor(&storage, &ctx, "J", Some("I")).await?;
+    assert_parents_and_subtree_sources_skew_ancestor(&storage, &ctx, "K", None).await?;
+
+    assert_parents_and_subtree_sources_level_ancestor(&graph, &ctx, "S", 3, Some("P")).await?;
+    assert_parents_and_subtree_sources_level_ancestor(&graph, &ctx, "U", 6, Some("S")).await?;
+    assert_parents_and_subtree_sources_level_ancestor(&graph, &ctx, "T", 6, Some("S")).await?;
+    assert_parents_and_subtree_sources_level_ancestor(&graph, &ctx, "O", 1, Some("N")).await?;
+    assert_parents_and_subtree_sources_level_ancestor(&graph, &ctx, "N", 2, None).await?;
+    assert_parents_and_subtree_sources_level_ancestor(&graph, &ctx, "K", 1, None).await?;
+    assert_parents_and_subtree_sources_level_ancestor(&graph, &ctx, "F", 2, None).await?;
+    assert_parents_and_subtree_sources_level_ancestor(&graph, &ctx, "I", 2, None).await?;
+
+    assert_parents_and_subtree_sources_common_base(&graph, &ctx, "F", "D", vec!["D"]).await?;
+    assert_parents_and_subtree_sources_common_base(&graph, &ctx, "E", "H", vec!["B"]).await?;
+    assert_parents_and_subtree_sources_common_base(&graph, &ctx, "K", "I", vec!["I"]).await?;
+    assert_parents_and_subtree_sources_common_base(&graph, &ctx, "I", "G", vec!["G"]).await?;
+    assert_parents_and_subtree_sources_common_base(&graph, &ctx, "L", "H", vec!["G"]).await?;
+    assert_parents_and_subtree_sources_common_base(&graph, &ctx, "L", "F", vec!["G"]).await?;
+    assert_parents_and_subtree_sources_common_base(&graph, &ctx, "F", "R", vec!["Q"]).await?;
+    assert_parents_and_subtree_sources_common_base(&graph, &ctx, "V", "K", vec!["L"]).await?;
+    assert_parents_and_subtree_sources_common_base(&graph, &ctx, "K", "P", vec!["P"]).await?;
+    assert_parents_and_subtree_sources_common_base(&graph, &ctx, "V", "J", vec!["G"]).await?;
+    assert_parents_and_subtree_sources_common_base(&graph, &ctx, "F", "U", vec!["Q"]).await?;
     Ok(())
 }
 

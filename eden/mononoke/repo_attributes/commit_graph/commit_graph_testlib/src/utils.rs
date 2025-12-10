@@ -21,6 +21,7 @@ use commit_graph::LinearAncestorsStreamBuilder;
 use commit_graph_types::edges::ChangesetNode;
 use commit_graph_types::edges::FirstParentLinear;
 use commit_graph_types::edges::Parents;
+use commit_graph_types::edges::ParentsAndSubtreeSources;
 use commit_graph_types::segments::BoundaryChangesets;
 use commit_graph_types::segments::SegmentDescription;
 use commit_graph_types::segments::SegmentedSliceDescription;
@@ -95,7 +96,7 @@ pub async fn from_dag(
     dag: &str,
     storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<CommitGraph> {
-    from_dag_impl(ctx, dag, storage, false).await
+    from_dag_with_subtree_sources_impl(ctx, dag, BTreeMap::new(), storage, false).await
 }
 
 /// Build a commit graph from an ASCII-art dag, adding commits in a single batch.
@@ -104,13 +105,39 @@ pub async fn from_dag_batch(
     dag: &str,
     storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<CommitGraph> {
-    from_dag_impl(ctx, dag, storage, true).await
+    from_dag_with_subtree_sources_impl(ctx, dag, BTreeMap::new(), storage, true).await
 }
 
-/// Implementation of from_dag that can either add commits one by one or in a batch.
-async fn from_dag_impl(
+/// Build a commit graph from an ASCII-art dag with additional subtree sources.
+///
+/// The `subtree_sources` parameter is a map from changeset names to their
+/// additional subtree source names. These sources will be added to the changeset
+/// in addition to its regular parents.
+pub async fn from_dag_with_subtree_sources(
     ctx: &CoreContext,
     dag: &str,
+    subtree_sources: BTreeMap<String, Vec<String>>,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<CommitGraph> {
+    from_dag_with_subtree_sources_impl(ctx, dag, subtree_sources, storage, false).await
+}
+
+/// Build a commit graph from an ASCII-art dag with additional subtree sources,
+/// adding commits in a single batch.
+pub async fn from_dag_with_subtree_sources_batch(
+    ctx: &CoreContext,
+    dag: &str,
+    subtree_sources: BTreeMap<String, Vec<String>>,
+    storage: Arc<dyn CommitGraphStorageTest>,
+) -> Result<CommitGraph> {
+    from_dag_with_subtree_sources_impl(ctx, dag, subtree_sources, storage, true).await
+}
+
+/// Implementation of from_dag_with_subtree_sources that can either add commits one by one or in a batch.
+async fn from_dag_with_subtree_sources_impl(
+    ctx: &CoreContext,
+    dag: &str,
+    subtree_sources: BTreeMap<String, Vec<String>>,
     storage: Arc<dyn CommitGraphStorageTest>,
     batch: bool,
 ) -> Result<CommitGraph> {
@@ -134,15 +161,28 @@ async fn from_dag_impl(
                 continue;
             }
 
+            // Check if all subtree sources are already added
+            if let Some(sources) = subtree_sources.get(name) {
+                if sources.iter().any(|source| !added.contains_key(source)) {
+                    // This node still has unadded subtree sources.
+                    continue;
+                }
+            }
+
             let parent_ids = parents.iter().map(|parent| added[parent].clone()).collect();
+
+            let subtree_source_ids = subtree_sources
+                .get(name)
+                .map(|sources| sources.iter().map(|source| added[source].clone()).collect())
+                .unwrap_or_default();
 
             let cs_id = name_cs_id(name);
 
             if batch {
-                entries.push((cs_id, parent_ids, Default::default()));
+                entries.push((cs_id, parent_ids, subtree_source_ids));
             } else {
                 graph_writer
-                    .add(ctx, cs_id, parent_ids, Default::default())
+                    .add(ctx, cs_id, parent_ids, subtree_source_ids)
                     .await?;
             }
 
@@ -154,8 +194,10 @@ async fn from_dag_impl(
         }
     }
 
-    if batch && let Ok(entries) = entries.try_into() {
-        graph_writer.add_many(ctx, entries).await?;
+    if batch {
+        if let Ok(entries) = entries.try_into() {
+            graph_writer.add_many(ctx, entries).await?;
+        }
     }
 
     Ok(graph)
@@ -439,6 +481,64 @@ pub async fn assert_p1_linear_lowest_common_ancestor(
             .await?
             .map(|node| node.cs_id),
         lca.map(name_cs_id)
+    );
+    Ok(())
+}
+
+pub async fn assert_parents_and_subtree_sources_skew_ancestor(
+    storage: &Arc<dyn CommitGraphStorageTest>,
+    ctx: &CoreContext,
+    u: &str,
+    u_skew_ancestor: Option<&str>,
+) -> Result<()> {
+    assert_eq!(
+        storage
+            .maybe_fetch_edges(ctx, name_cs_id(u))
+            .await?
+            .unwrap()
+            .skip_tree_skew_ancestor::<ParentsAndSubtreeSources>()
+            .map(|node| node.cs_id),
+        u_skew_ancestor.map(name_cs_id),
+    );
+    Ok(())
+}
+
+pub async fn assert_parents_and_subtree_sources_level_ancestor(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    u: &str,
+    target_depth: u64,
+    u_level_ancestor: Option<&str>,
+) -> Result<()> {
+    assert_eq!(
+        graph
+            .parents_and_subtree_sources_graph()
+            .skip_tree_level_ancestor(ctx, name_cs_id(u), target_depth)
+            .await?
+            .map(|node| node.cs_id),
+        u_level_ancestor.map(name_cs_id),
+    );
+    Ok(())
+}
+
+pub async fn assert_parents_and_subtree_sources_common_base(
+    graph: &CommitGraph,
+    ctx: &CoreContext,
+    u: &str,
+    v: &str,
+    common_base: Vec<&str>,
+) -> Result<()> {
+    assert_eq!(
+        graph
+            .parents_and_subtree_sources_graph()
+            .common_base(ctx, name_cs_id(u), name_cs_id(v))
+            .await?
+            .into_iter()
+            .collect::<HashSet<_>>(),
+        common_base
+            .into_iter()
+            .map(name_cs_id)
+            .collect::<HashSet<_>>(),
     );
     Ok(())
 }

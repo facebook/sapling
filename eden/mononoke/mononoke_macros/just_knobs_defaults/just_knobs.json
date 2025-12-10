@@ -32,7 +32,7 @@
     "scm/mononoke:commit_graph_prefetch_store_in_memcache": false,
     "scm/mononoke:disable_commit_graph_memcache_for_prefetch": false,
     "scm/mononoke:disable_commit_graph_prefetch": false,
-    "scm/mononoke:commit_graph_disable_subtree_source_fallback": false,
+    "scm/mononoke:commit_graph_disable_subtree_source_fallback": true,
     "scm/mononoke:strip_commit_extras_in_xrepo_sync": true,
     "scm/mononoke:display_repo_fetch_message_on_git_server": false,
     "scm/mononoke:mononoke_api_find_files_use_skeleton_manifests_v2": true,
