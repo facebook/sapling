@@ -296,7 +296,7 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> io::Result<()> {
         }
         _ => {}
     }
-    result.map_err(Into::into)
+    result
 }
 
 #[cfg(windows)]
