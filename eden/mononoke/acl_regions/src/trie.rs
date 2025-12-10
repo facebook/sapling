@@ -169,7 +169,7 @@ mod test {
             hipster_acl: "acl3".to_string(),
         }));
 
-        let test_data = vec![
+        let test_data = [
             TestData::new("a", &[("rule1", 0), ("rule3", 0)]),
             TestData::new("aa", &[("rule3", 0)]),
             TestData::new("a/b/c", &[("rule1", 0), ("rule2", 0), ("rule3", 0)]),
