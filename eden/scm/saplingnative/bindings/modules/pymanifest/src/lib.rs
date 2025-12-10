@@ -342,8 +342,8 @@ py_class!(pub class treemanifest |py| {
         let other_tree = other.underlying(py);
 
         let results: Vec<_> = py.allow_threads(move || -> Result<_> {
-            let x = this_tree.read().diff(&other_tree.read(), matcher)?.collect();
-            x
+
+            this_tree.read().diff(&other_tree.read(), matcher)?.collect()
         }).map_pyerr(py)?;
         for entry in results {
             let path = if nodes_only {
@@ -389,7 +389,7 @@ py_class!(pub class treemanifest |py| {
         let this_tree = self.underlying(py);
         let other_tree = other.underlying(py);
         py.allow_threads(move || -> Result<_> {
-            let x = Ok(this_tree.read().diff(&other_tree.read(), matcher)?.next().is_none()); x
+             Ok(this_tree.read().diff(&other_tree.read(), matcher)?.next().is_none())
         }).map_pyerr(py)
     }
 
@@ -486,7 +486,7 @@ py_class!(pub class treemanifest |py| {
         let matcher: Arc<dyn Matcher + Sync + Send> = extract_option_matcher(py, matcher)?;
 
         let results: Vec<_> = py.allow_threads(move || -> Result<_> {
-            let x = this_tree.read().diff(&other_tree.read(), matcher)?.collect(); x
+             this_tree.read().diff(&other_tree.read(), matcher)?.collect()
         }).map_pyerr(py)?;
         for entry in results {
             match entry.diff_type {
