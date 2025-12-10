@@ -97,7 +97,7 @@ impl<const SUBMODULES: bool, Store: Send + Sync> Manifest<Store> for GitManifest
         _blobstore: &Store,
     ) -> Result<BoxStream<'async_trait, Result<(MPathElement, Entry<Self::TreeId, Self::Leaf>)>>>
     {
-        Ok(stream::iter(self.0.clone().into_iter()).map(Ok).boxed())
+        Ok(stream::iter(self.0.clone()).map(Ok).boxed())
     }
 
     async fn into_trie_map(
