@@ -28,6 +28,7 @@ use mononoke_api::FileId;
 use mononoke_api::FileType;
 use mononoke_api::Repo;
 use mononoke_api::RepoContext;
+use mononoke_types::DateTime as MononokeDateTime;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::Sha1;
 use mononoke_types::hash::Sha256;
@@ -253,9 +254,20 @@ impl SourceControlServiceImpl {
             .await?;
 
         let parents = Self::convert_create_commit_parents(&repo, &params.parents).await?;
-        let info = CreateInfo::from_request(&params.info)?;
+        let mut info = CreateInfo::from_request(&params.info)?;
         let changes = Self::convert_create_commit_changes(&repo, params.changes).await?;
         let bubble = None;
+
+        // For git, we need the committer info to be set - we'll copy the
+        // author info.
+        if repo.config().default_commit_identity_scheme == CommitIdentityScheme::GIT {
+            if info.committer.is_none() {
+                info.committer = Some(info.author.clone());
+            }
+            if info.committer_date.is_none() {
+                info.committer_date = Some(MononokeDateTime::now().into());
+            }
+        }
 
         let created_changeset = repo
             .create_changeset(
@@ -303,11 +315,25 @@ impl SourceControlServiceImpl {
         let repo = &repo;
 
         let stack_parents = Self::convert_create_commit_parents(repo, &params.parents).await?;
-        let info_stack = params
+        let mut info_stack = params
             .commits
             .iter()
             .map(|commit| CreateInfo::from_request(&commit.info))
             .collect::<Result<Vec<_>, _>>()?;
+
+        // For git, we need the committer info to be set - we'll copy the
+        // author info.
+        if repo.config().default_commit_identity_scheme == CommitIdentityScheme::GIT {
+            for info in info_stack.iter_mut() {
+                if info.committer.is_none() {
+                    info.committer = Some(info.author.clone());
+                }
+                if info.committer_date.is_none() {
+                    info.committer_date = Some(MononokeDateTime::now().into());
+                }
+            }
+        }
+
         let changes_stack =
             stream::iter(
                 params.commits.into_iter().map({
