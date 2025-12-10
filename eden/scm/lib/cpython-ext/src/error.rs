@@ -118,7 +118,7 @@ impl<T, E: Into<Error>> ResultPyErrExt<T> for Result<T, E> {
 
             // Nothing matches. Fallback to RuntimeError.
             // Hopefully this is not really used.
-            return cpython::PyErr::new::<exc::RuntimeError, _>(py, format!("{:?}", e));
+            cpython::PyErr::new::<exc::RuntimeError, _>(py, format!("{:?}", e))
         })
     }
 }
