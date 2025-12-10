@@ -475,7 +475,7 @@ impl BonsaiDerivable for RootGitDeltaManifestV3Id {
         } else {
             Err(anyhow!(
                 "Can't convert {} from provided thrift::DerivedData",
-                Self::NAME.to_string(),
+                Self::NAME,
             ))
         }
     }

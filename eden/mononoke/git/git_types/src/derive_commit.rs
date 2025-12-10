@@ -203,7 +203,7 @@ impl BonsaiDerivable for MappedGitCommitId {
         } else {
             Err(anyhow!(
                 "Can't convert {} from provided thrift::DerivedData",
-                Self::NAME.to_string(),
+                Self::NAME,
             ))
         }
     }
