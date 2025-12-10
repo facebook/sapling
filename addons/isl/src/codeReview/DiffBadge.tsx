@@ -18,19 +18,19 @@ import {Component, lazy, Suspense, useState} from 'react';
 import {useShowConfirmSubmitStack} from '../ConfirmSubmitStack';
 import {Internal} from '../Internal';
 import {Link} from '../Link';
-import {clipboardCopyLink, clipboardCopyText} from '../clipboard';
 import {T, t} from '../i18n';
-import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
-import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
 import {configBackedAtom, useAtomGet} from '../jotaiUtils';
 import {PullRevOperation} from '../operations/PullRevOperation';
 import {useRunOperation} from '../operationsState';
 import platform from '../platform';
-import {exactRevset, shouldUseConfCommand} from '../types';
+import {exactRevset} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusAtom} from './syncStatus';
 
+import {clipboardCopyLink, clipboardCopyText} from '../clipboard';
+import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
+import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
 import './DiffBadge.css';
 
 const DiffCommentsDetails = lazy(() => import('./DiffComments'));
@@ -231,7 +231,7 @@ function ResubmitSyncButton({
   const runOperation = useRunOperation();
   const confirmShouldSubmit = useShowConfirmSubmitStack();
   const disabledReason =
-    shouldUseConfCommand(provider.system) && !commit.isDot
+    Internal.shouldUseConfCommand?.(provider.system) && !commit.isDot
       ? t('Checkout this commit to submit')
       : undefined;
 

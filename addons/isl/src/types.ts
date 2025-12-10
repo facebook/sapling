@@ -290,11 +290,6 @@ export type CodeReviewSystem =
       path?: string;
     };
 
-export function shouldUseConfCommand(system: CodeReviewSystem): boolean {
-  // code review system looks like "CF,CFHG"
-  return (system.type === 'phabricator' && system.callsign?.includes('CFHG')) ?? false;
-}
-
 export type PreferredSubmitCommand = 'pr' | 'ghstack' | 'push';
 
 export type StableCommitMetadata = {
