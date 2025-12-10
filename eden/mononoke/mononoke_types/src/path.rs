@@ -1318,7 +1318,7 @@ impl<'a> CaseConflictTrie<'a> {
     where
         P: IntoIterator<Item = &'p MPathElement> + Clone,
     {
-        if self.exclusions.contains_prefix(path.clone().into_iter()) {
+        if self.exclusions.contains_prefix(path.clone()) {
             return Ok(());
         }
 
@@ -1365,7 +1365,7 @@ impl<'a> CaseConflictTrie<'a> {
     where
         P: IntoIterator<Item = &'p MPathElement> + Clone,
     {
-        if self.exclusions.contains_prefix(path.clone().into_iter()) {
+        if self.exclusions.contains_prefix(path.clone()) {
             return true;
         }
 
