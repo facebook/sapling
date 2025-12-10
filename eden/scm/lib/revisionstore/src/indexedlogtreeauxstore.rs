@@ -69,7 +69,7 @@ fn deserialize(bytes: Bytes) -> Result<(HgId, TreeAuxData)> {
 fn serialize(hgid: HgId, tree_aux_data: &TreeAuxData) -> Result<Vec<u8>> {
     let mut buf = Vec::with_capacity(HgId::len() + 1 + Blake3::len() + 8);
     serialize_to(&hgid, tree_aux_data, &mut buf)?;
-    Ok(buf.into())
+    Ok(buf)
 }
 
 fn serialize_to(hgid: &HgId, tree_aux_data: &TreeAuxData, buf: &mut dyn Write) -> Result<()> {
