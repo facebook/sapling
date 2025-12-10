@@ -25,7 +25,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
         "//eden/mononoke/repo_attributes/filestore:filestore",
         "//eden/mononoke/repo_factory:test_repo_factory",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/mononoke/tests/utils:tests_utils",
     ],
 )

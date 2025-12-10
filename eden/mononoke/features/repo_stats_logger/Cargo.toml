@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.98"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }

@@ -12,7 +12,7 @@ anyhow = "1.0.98"
 async-trait = "0.1.86"
 async_requests_types_thrift = { version = "0.1.0", path = "if" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

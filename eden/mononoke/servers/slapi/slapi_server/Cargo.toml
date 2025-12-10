@@ -10,24 +10,24 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.98"
 async-trait = "0.1.86"
-cache_warmup = { version = "0.1.0", path = "../features/cache_warmup" }
+cache_warmup = { version = "0.1.0", path = "../../../features/cache_warmup" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-cmdlib_logging = { version = "0.1.0", path = "../cmdlib/log" }
-environment = { version = "0.1.0", path = "../cmdlib/environment" }
-executor_lib = { version = "0.1.0", path = "../cmdlib/sharding" }
+cmdlib_logging = { version = "0.1.0", path = "../../../cmdlib/log" }
+environment = { version = "0.1.0", path = "../../../cmdlib/environment" }
+executor_lib = { version = "0.1.0", path = "../../../cmdlib/sharding" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
-mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
-mononoke_app = { version = "0.1.0", path = "../cmdlib/mononoke_app" }
+metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
+mononoke_api = { version = "0.1.0", path = "../../../mononoke_api" }
+mononoke_app = { version = "0.1.0", path = "../../../cmdlib/mononoke_app" }
 openssl = "0.10.72"
-pushrebase_client = { version = "0.1.0", path = "../features/pushrebase/pushrebase_client" }
-repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
+pushrebase_client = { version = "0.1.0", path = "../../../features/pushrebase/pushrebase_client" }
+repo_identity = { version = "0.1.0", path = "../../../repo_attributes/repo_identity" }
 repo_listener = { version = "0.1.0", path = "repo_listener" }
-sapling-clientinfo = { version = "0.1.0", path = "../../scm/lib/clientinfo" }
-scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
+sapling-clientinfo = { version = "0.1.0", path = "../../../../scm/lib/clientinfo" }
+scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-sharding_ext = { version = "0.1.0", path = "../cmdlib/sharding_ext" }
+sharding_ext = { version = "0.1.0", path = "../../../cmdlib/sharding_ext" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

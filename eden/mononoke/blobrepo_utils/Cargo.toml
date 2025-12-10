@@ -21,7 +21,7 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../repo_attributes/bonsai_hg_ma
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
-context = { version = "0.1.0", path = "../server/context" }
+context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
 dashmap = { version = "5.5.3", features = ["rayon", "serde"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../manifest" }

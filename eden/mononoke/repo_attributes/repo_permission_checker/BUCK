@@ -15,6 +15,6 @@ rust_library(
         "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/permission_checker:permission_checker",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )

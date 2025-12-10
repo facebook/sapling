@@ -86,7 +86,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
         "//eden/mononoke/repo_factory:test_repo_factory",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/mononoke/tests/utils:tests_utils",
     ],
 )

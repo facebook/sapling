@@ -36,7 +36,7 @@ rust_library(
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -61,6 +61,6 @@ rust_unittest(
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
         "//eden/mononoke/repo_attributes/bookmarks/dbbookmarks:dbbookmarks",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )

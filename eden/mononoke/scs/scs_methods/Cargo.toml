@@ -22,7 +22,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 commit_cloud_helpers = { version = "0.1.0", path = "../../features/commit_cloud/helpers" }
 commit_cloud_types = { version = "0.1.0", path = "../../features/commit_cloud/types" }
 connection_security_checker = { version = "0.1.0", path = "../../common/connection_security_checker" }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 dedupmap = { version = "0.1.0", path = "../../common/dedupmap" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 environment = { version = "0.1.0", path = "../../cmdlib/environment" }

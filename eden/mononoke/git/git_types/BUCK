@@ -66,7 +66,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/repo_attributes/filestore:filestore",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/mononoke/third_party/git_delta:git_delta",
         "//thrift/lib/rust:fbthrift",
     ],

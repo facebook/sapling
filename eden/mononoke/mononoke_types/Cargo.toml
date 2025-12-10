@@ -22,7 +22,7 @@ bytes = { version = "1.10", features = ["serde"] }
 chrono = { version = "0.4.41", features = ["clock", "serde", "std"], default-features = false }
 chrono-english = "0.1.7"
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-context = { version = "0.1.0", path = "../server/context" }
+context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
 derivative = "2.2"
 derived_data_type_if = { version = "0.1.0", path = "../derived_data/if" }
 either = "1.5"

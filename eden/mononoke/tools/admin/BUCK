@@ -145,7 +145,7 @@ rust_binary(
         "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
         "//eden/mononoke/repo_factory:repo_factory",
         "//eden/mononoke/scs/if:source_control-rust",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/scm/lib/renderdag:renderdag",
         "//thrift/lib/rust:fbthrift",
     ] + ([] if rust_oss.is_oss_build() else [

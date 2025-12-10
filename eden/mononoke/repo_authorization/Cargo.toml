@@ -13,7 +13,7 @@ anyhow = "1.0.98"
 bookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks" }
 commit_cloud = { version = "0.1.0", path = "../features/commit_cloud" }
 commit_cloud_helpers = { version = "0.1.0", path = "../features/commit_cloud/helpers" }
-context = { version = "0.1.0", path = "../server/context" }
+context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }

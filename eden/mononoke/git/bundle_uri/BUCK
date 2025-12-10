@@ -21,7 +21,7 @@ rust_library(
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//configerator/structs/infrasec/if:acl-rust",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//crypto/cat/rust:cryptocat",
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/git/git_env:git_env",

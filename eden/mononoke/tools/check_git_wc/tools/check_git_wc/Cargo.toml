@@ -15,7 +15,7 @@ path = "../../src/main.rs"
 anyhow = "1.0.98"
 check_git_wc = { version = "0.1.0", path = "../../../../git/check_git_wc" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
-context = { version = "0.1.0", path = "../../../../server/context" }
+context = { version = "0.1.0", path = "../../../../servers/slapi/slapi_server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git2 = "0.20.2"

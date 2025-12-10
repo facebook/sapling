@@ -15,7 +15,7 @@ bulk_derivation = { version = "0.1.0", path = "../../derived_data/bulk_derivatio
 bytes = { version = "1.10", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../commit_graph/commit_graph" }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 derivation_queue_thrift = { version = "0.1.0", path = "if" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }

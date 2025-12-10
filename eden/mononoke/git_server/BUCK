@@ -76,7 +76,7 @@ rust_binary(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_attributes/repo_permission_checker:repo_permission_checker",
         "//eden/mononoke/repo_authorization:repo_authorization",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/mononoke/servers/slapi/slapi_service:slapi_service",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/edenapi/types:edenapi_types",

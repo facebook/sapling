@@ -25,7 +25,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
         "//eden/mononoke/repo_attributes/commit_graph/in_memory_commit_graph_storage:in_memory_commit_graph_storage",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/scm/lib/drawdag:drawdag",
     ],
 )

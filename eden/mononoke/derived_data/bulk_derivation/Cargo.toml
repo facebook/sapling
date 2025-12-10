@@ -19,7 +19,7 @@ case_conflict_skeleton_manifest = { version = "0.1.0", path = "../case_conflict_
 changeset_info = { version = "0.1.0", path = "../changeset_info" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 content_manifest_derivation = { version = "0.1.0", path = "../content_manifest_derivation" }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 deleted_manifest = { version = "0.1.0", path = "../deleted_manifest" }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
 fastlog = { version = "0.1.0", path = "../fastlog" }

@@ -12,7 +12,7 @@ anyhow = "1.0.98"
 async-trait = "0.1.86"
 bytes = { version = "1.10", features = ["serde"] }
 caching_ext = { version = "0.1.0", path = "../../common/rust/caching_ext" }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 faster-hex = "0.6.1"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }

@@ -18,6 +18,6 @@ rust_library(
         "fbsource//third-party/rust:vec1",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types/if:commit_graph_thrift-rust",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )

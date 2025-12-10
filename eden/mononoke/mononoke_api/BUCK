@@ -131,7 +131,7 @@ rust_library(
         "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/repo_client:streaming_clone",
         "//eden/mononoke/repo_client:unbundle",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/mononoke/servers/slapi/wireproto_handler:wireproto_handler",
         "//eden/scm/lib/dag/dag-types:dag-types",
         "//eden/scm/lib/edenapi/types:edenapi_types",

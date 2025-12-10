@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.98"
 bytes = { version = "1.10", features = ["serde"] }
-context = { version = "0.1.0", path = "../server/context" }
+context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
 filestore = { version = "0.1.0", path = "../repo_attributes/filestore" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }

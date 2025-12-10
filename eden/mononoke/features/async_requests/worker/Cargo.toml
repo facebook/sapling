@@ -18,7 +18,7 @@ blobstore = { version = "0.1.0", path = "../../../blobstore" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib_logging = { version = "0.1.0", path = "../../../cmdlib/log" }
-context = { version = "0.1.0", path = "../../../server/context" }
+context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/context" }
 environment = { version = "0.1.0", path = "../../../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../../blobstore/ephemeral_blobstore" }
 executor_lib = { version = "0.1.0", path = "../../../cmdlib/sharding" }

@@ -15,7 +15,7 @@ path = "test/main.rs"
 anyhow = "1.0.98"
 async-trait = "0.1.86"
 auto_impl = "1.2.1"
-context = { version = "0.1.0", path = "../server/context" }
+context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

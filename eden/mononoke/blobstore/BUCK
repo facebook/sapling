@@ -69,7 +69,7 @@ rust_library(
         "fbsource//third-party/rust:zstd",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/common/futures_watchdog:futures_watchdog",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//thrift/lib/rust:fbthrift",
     ],
 )
@@ -106,7 +106,7 @@ rust_library(
         "//eden/mononoke/blobstore/if:memcache-lock-thrift-rust",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//thrift/lib/rust:fbthrift",
     ],
 )
@@ -131,7 +131,7 @@ rust_unittest(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -153,7 +153,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         ":blobstore",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -175,7 +175,7 @@ rust_library(
         ":blobstore",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -208,7 +208,7 @@ rust_library(
         "//eden/mononoke/common/reloader:reloader",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -240,7 +240,7 @@ rust_library(
         "//eden/mononoke/blobstore/packblob/if:packblob-thrift-rust",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//thrift/lib/rust:fbthrift",
     ],
 )
@@ -267,7 +267,7 @@ rust_library(
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -284,7 +284,7 @@ rust_library(
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -314,7 +314,7 @@ rust_library(
         "//eden/mononoke/common/rust/sql_ext:sql_ext",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -330,7 +330,7 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         ":blobstore",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -356,7 +356,7 @@ rust_library(
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -394,7 +394,7 @@ rust_library(
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -407,7 +407,7 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:futures",
         ":blobstore",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -430,7 +430,7 @@ rust_library(
         "fbsource//third-party/rust:inlinable_string",
         ":blobstore",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -451,7 +451,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         ":blobstore",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -472,7 +472,7 @@ rust_library(
         ":blobstore",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -487,7 +487,7 @@ rust_library(
         "fbsource//third-party/rust:nonzero_ext",
         ":blobstore",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -503,7 +503,7 @@ rust_library(
         "//common/rust/shed/futures_stats:futures_stats",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -520,7 +520,7 @@ rust_library(
         "//common/rust/shed/time_ext:time_ext",
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -557,7 +557,7 @@ rust_library(
         "//eden/mononoke/common/async_limiter:async_limiter",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -610,7 +610,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_attributes/sql_query_config:sql_query_config",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -628,6 +628,6 @@ rust_library(
         "//eden/mononoke/blobstore_sync_queue:blobstore_sync_queue",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )

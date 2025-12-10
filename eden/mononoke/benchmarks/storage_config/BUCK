@@ -20,6 +20,6 @@ rust_binary(
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
         "//eden/mononoke/repo_factory:repo_factory",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )

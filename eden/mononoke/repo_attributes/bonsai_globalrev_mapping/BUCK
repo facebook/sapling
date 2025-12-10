@@ -26,7 +26,7 @@ rust_library(
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/bonsai_globalrev_mapping/if:bonsai_globalrev_mapping_thrift-rust",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//thrift/lib/rust:fbthrift",
     ],
 )
@@ -67,7 +67,7 @@ rust_library(
         "//eden/mononoke/features/pushrebase:pushrebase_hook",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
 
@@ -87,6 +87,6 @@ rust_unittest(
         "//eden/mononoke/mercurial:mercurial_types-mocks",
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )

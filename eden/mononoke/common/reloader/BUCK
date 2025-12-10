@@ -20,6 +20,6 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/futures_ext:futures_ext",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )

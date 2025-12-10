@@ -15,7 +15,7 @@ anyhow = "1.0.98"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 bounded_traversal = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }

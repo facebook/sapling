@@ -29,6 +29,6 @@ rust_library(
         "//eden/mononoke/mercurial:mercurial_bundles",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/qps:qps",
+        "//eden/mononoke/servers/slapi/slapi_server/qps:qps",
     ],
 )

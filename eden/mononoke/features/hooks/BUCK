@@ -77,7 +77,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/restricted_paths:restricted_paths",
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/scs/if:source_control-rust-clients",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//infrasec/authorization/if:if-aclchecker-rust",
         "//infrasec/authorization/if:if-aclchecker-rust-clients",

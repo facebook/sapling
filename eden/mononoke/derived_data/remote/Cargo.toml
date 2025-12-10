@@ -15,5 +15,5 @@ anyhow = "1.0.98"
 arg_extensions = { version = "0.1.0", path = "../../cmdlib/extensions" }
 async-trait = "0.1.86"
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 derived_data_service_if = { version = "0.1.0", path = "if" }

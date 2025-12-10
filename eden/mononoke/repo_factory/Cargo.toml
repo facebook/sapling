@@ -29,7 +29,7 @@ caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
 commit_cloud = { version = "0.1.0", path = "../features/commit_cloud" }
 commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph" }
 commit_graph_types = { version = "0.1.0", path = "../repo_attributes/commit_graph/commit_graph_types" }
-context = { version = "0.1.0", path = "../server/context" }
+context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../features/cross_repo_sync" }
 dbbookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks/dbbookmarks" }
 deletion_log = { version = "0.1.0", path = "../repo_attributes/deletion_log" }

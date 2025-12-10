@@ -7,8 +7,8 @@ oncall("scm_server_infra")
 
 rust_binary(
     name = "mononoke",
-    srcs = glob(["server/src/**/*.rs"]),
-    autocargo = {"cargo_toml_dir": "server"},
+    srcs = glob(["servers/slapi/slapi_server/src/**/*.rs"]),
+    autocargo = {"cargo_toml_dir": "servers/slapi/slapi_server"},
     labels = [
         ci.heavyweight(),
     ],
@@ -31,7 +31,7 @@ rust_binary(
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
-        "//eden/mononoke/server/repo_listener:repo_listener",
+        "//eden/mononoke/servers/slapi/slapi_server/repo_listener:repo_listener",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/scm/lib/clientinfo:clientinfo",
     ] + ([] if rust_oss.is_oss_build() else [
@@ -41,5 +41,5 @@ rust_binary(
 
 tokio_dependency_test(
     name = "tokio_check",
-    rule = ":mononoke",
+    rule = ":slapi_server",
 )

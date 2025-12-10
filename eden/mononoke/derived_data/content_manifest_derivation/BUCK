@@ -18,6 +18,6 @@ rust_library(
         "//eden/mononoke/derived_data/remote/if:derived_data_service_if-rust",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mononoke_types:mononoke_types",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )

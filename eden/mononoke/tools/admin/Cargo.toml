@@ -49,7 +49,7 @@ commit_graph_types = { version = "0.1.0", path = "../../repo_attributes/commit_g
 commit_id = { version = "0.1.0", path = "../../cmdlib/commit_id" }
 commit_transformation = { version = "0.1.0", path = "../../features/commit_transformation/commit_transformation" }
 content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../features/cross_repo_sync" }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
 deletion_log = { version = "0.1.0", path = "../../repo_attributes/deletion_log" }

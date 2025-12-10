@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.98"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/content_manifest_derivation" }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 either = "1.5"
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }

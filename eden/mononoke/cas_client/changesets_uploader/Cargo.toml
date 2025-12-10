@@ -19,7 +19,7 @@ bounded_traversal = { version = "0.1.0", git = "https://github.com/facebookexper
 bytesize = "2.0"
 cas_client = { version = "0.1.0", path = "../client" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 manifest = { version = "0.1.0", path = "../../manifest" }

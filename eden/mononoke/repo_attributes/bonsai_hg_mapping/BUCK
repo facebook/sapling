@@ -31,7 +31,7 @@ rust_library(
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/bonsai_hg_mapping/if:bonsai_hg_mapping_entry_thrift-rust",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//thrift/lib/rust:fbthrift",
     ],
 )
@@ -54,6 +54,6 @@ rust_unittest(
         "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )

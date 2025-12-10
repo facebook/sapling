@@ -16,7 +16,7 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../../repo_attributes/commit_graph/commit_graph" }
-context = { version = "0.1.0", path = "../../../server/context" }
+context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../cross_repo_sync" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

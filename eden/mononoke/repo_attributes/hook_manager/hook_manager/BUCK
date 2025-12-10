@@ -59,6 +59,6 @@ rust_library(
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_attributes/repo_permission_checker:repo_permission_checker",
         "//eden/mononoke/repo_attributes/restricted_paths:restricted_paths",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )

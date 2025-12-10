@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0.98"
 async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = ".." }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 governor = "0.3.2"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 nonzero_ext = "0.2"

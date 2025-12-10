@@ -19,7 +19,7 @@ bonsai_svnrev_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsa
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 commit_id_types = { version = "0.1.0", path = "../commit_id_types" }
-context = { version = "0.1.0", path = "../../server/context" }
+context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

@@ -19,6 +19,6 @@ rust_library(
         "//eden/mononoke/repo_attributes/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/repo_attributes/bonsai_svnrev_mapping:bonsai_svnrev_mapping",
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",
-        "//eden/mononoke/server/context:context",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )
