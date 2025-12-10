@@ -1700,8 +1700,8 @@ impl DagAlgorithm for RevlogIndex {
                     return Err(e);
                 }
             };
-            let x = Ok((eval_contains)(id.0)?.lock().phases[id.0 as usize] == Phase::Public);
-            x
+
+            Ok((eval_contains)(id.0)?.lock().phases[id.0 as usize] == Phase::Public)
         };
         let unreachable_set = Set::from_evaluate_contains(
             move || {
