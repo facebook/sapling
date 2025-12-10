@@ -443,7 +443,7 @@ mod tests {
     fn test_checked_output() {
         let sh_path = Path::new("/bin/bash");
         if sh_path.exists() {
-            let mut cmd = Command::new(&sh_path);
+            let mut cmd = Command::new(sh_path);
             cmd.args(["-c", "echo my-message-to-stderr 1>&2 && false"]);
             let out_err = cmd.checked_output().unwrap_err();
             assert_eq!(
@@ -460,7 +460,7 @@ mod tests {
     fn test_report_error_with_output() {
         let sh_path = Path::new("/bin/bash");
         if sh_path.exists() {
-            let mut cmd = Command::new(&sh_path);
+            let mut cmd = Command::new(sh_path);
             cmd.args(["-c", "cat && false"]);
             cmd.stdin(Stdio::piped());
             cmd.stdout(Stdio::piped());
