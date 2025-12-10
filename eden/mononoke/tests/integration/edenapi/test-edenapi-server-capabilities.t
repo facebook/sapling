@@ -7,8 +7,18 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 Set up local hgrc and Mononoke config.
-  $ quiet default_setup_blobimport
+  $ setup_common_config
   $ setup_configerator_configs
+
+Setup testing repo for mononoke:
+  $ quiet testtool_drawdag -R repo <<EOF
+  > C
+  > |
+  > B
+  > |
+  > A
+  > # bookmark: C master_bookmark
+  > EOF
 
   $ start_and_wait_for_mononoke_server
   $ sslcurlas client0 -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/capabilities"
