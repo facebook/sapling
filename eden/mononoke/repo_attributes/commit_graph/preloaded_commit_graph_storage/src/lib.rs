@@ -134,57 +134,59 @@ impl PreloadedEdges {
             None => return Ok(None),
         };
 
-        Ok(Some(
-            ChangesetEdgesMut {
-                node: ChangesetNode::new(
-                    *cs_id,
-                    Generation::new(compact_edges.generation as u64),
-                    Generation::new(compact_edges.subtree_source_generation as u64),
-                    compact_edges.skip_tree_depth as u64,
-                    compact_edges.p1_linear_depth as u64,
-                    compact_edges.subtree_source_depth as u64,
-                ),
-                parents: compact_edges
-                    .parents
-                    .iter()
-                    .map(|parent_id| self.get_node(*parent_id))
-                    .collect::<Result<_>>()?,
-                subtree_sources: compact_edges
-                    .subtree_sources
-                    .iter()
-                    .map(|subtree_source_id| self.get_node(*subtree_source_id))
-                    .collect::<Result<_>>()?,
-                merge_ancestor: compact_edges
-                    .merge_ancestor
-                    .map(|merge_ancestor| self.get_node(merge_ancestor))
-                    .transpose()?,
-                skip_tree_parent: compact_edges
-                    .skip_tree_parent
-                    .map(|skip_tree_parent| self.get_node(skip_tree_parent))
-                    .transpose()?,
-                skip_tree_skew_ancestor: compact_edges
-                    .skip_tree_skew_ancestor
-                    .map(|skip_tree_skew_ancestor| self.get_node(skip_tree_skew_ancestor))
-                    .transpose()?,
-                p1_linear_skew_ancestor: compact_edges
-                    .p1_linear_skew_ancestor
-                    .map(|p1_linear_skew_ancestor| self.get_node(p1_linear_skew_ancestor))
-                    .transpose()?,
-                subtree_or_merge_ancestor: compact_edges
-                    .subtree_or_merge_ancestor
-                    .map(|subtree_or_merge_ancestor| self.get_node(subtree_or_merge_ancestor))
-                    .transpose()?,
-                subtree_source_parent: compact_edges
-                    .subtree_source_parent
-                    .map(|subtree_source_parent| self.get_node(subtree_source_parent))
-                    .transpose()?,
-                subtree_source_skew_ancestor: compact_edges
-                    .subtree_source_skew_ancestor
-                    .map(|subtree_source_skew_ancestor| self.get_node(subtree_source_skew_ancestor))
-                    .transpose()?,
-            }
-            .freeze(),
-        ))
+        let mut edges = ChangesetEdgesMut {
+            node: ChangesetNode::new(
+                *cs_id,
+                Generation::new(compact_edges.generation as u64),
+                Generation::new(compact_edges.subtree_source_generation as u64),
+                compact_edges.skip_tree_depth as u64,
+                compact_edges.p1_linear_depth as u64,
+                compact_edges.subtree_source_depth as u64,
+            ),
+            parents: compact_edges
+                .parents
+                .iter()
+                .map(|parent_id| self.get_node(*parent_id))
+                .collect::<Result<_>>()?,
+            subtree_sources: compact_edges
+                .subtree_sources
+                .iter()
+                .map(|subtree_source_id| self.get_node(*subtree_source_id))
+                .collect::<Result<_>>()?,
+            merge_ancestor: compact_edges
+                .merge_ancestor
+                .map(|merge_ancestor| self.get_node(merge_ancestor))
+                .transpose()?,
+            skip_tree_parent: compact_edges
+                .skip_tree_parent
+                .map(|skip_tree_parent| self.get_node(skip_tree_parent))
+                .transpose()?,
+            skip_tree_skew_ancestor: compact_edges
+                .skip_tree_skew_ancestor
+                .map(|skip_tree_skew_ancestor| self.get_node(skip_tree_skew_ancestor))
+                .transpose()?,
+            p1_linear_skew_ancestor: compact_edges
+                .p1_linear_skew_ancestor
+                .map(|p1_linear_skew_ancestor| self.get_node(p1_linear_skew_ancestor))
+                .transpose()?,
+            subtree_or_merge_ancestor: compact_edges
+                .subtree_or_merge_ancestor
+                .map(|subtree_or_merge_ancestor| self.get_node(subtree_or_merge_ancestor))
+                .transpose()?,
+            subtree_source_parent: compact_edges
+                .subtree_source_parent
+                .map(|subtree_source_parent| self.get_node(subtree_source_parent))
+                .transpose()?,
+            subtree_source_skew_ancestor: compact_edges
+                .subtree_source_skew_ancestor
+                .map(|subtree_source_skew_ancestor| self.get_node(subtree_source_skew_ancestor))
+                .transpose()?,
+        }
+        .freeze();
+
+        edges.apply_subtree_source_fallback();
+
+        Ok(Some(edges))
     }
 }
 

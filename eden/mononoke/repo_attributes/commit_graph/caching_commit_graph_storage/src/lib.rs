@@ -375,9 +375,20 @@ impl KeyedEntityStore<ChangesetId, CachedPrefetchedChangesetEdges> for CacheRequ
         &self,
         values: impl IntoIterator<Item = (&'a ChangesetId, &'a mut CachedPrefetchedChangesetEdges)>,
     ) -> Result<()> {
+        let should_apply_fallback = self.caching_storage.should_apply_fallback()?;
         let mut fetched = 0;
         for (_cs_id, edges) in values {
             fetched += 1;
+
+            // Apply fallback if needed
+            if should_apply_fallback {
+                edges.inner.edges.apply_subtree_source_fallback();
+                for prefetched_edge in edges.prefetched_edges.values_mut() {
+                    prefetched_edge.apply_subtree_source_fallback();
+                }
+            }
+
+            // Existing logic for stats and cachelib filling
             if !edges.prefetched_edges.is_empty() {
                 let prefetched_edges = edges
                     .prefetched_edges
@@ -471,6 +482,15 @@ impl CachingCommitGraphStorage {
             memcache_prefetch,
             required: true,
         }
+    }
+
+    /// Check if fallback should be applied for this repository
+    fn should_apply_fallback(&self) -> Result<bool> {
+        Ok(!justknobs::eval(
+            "scm/mononoke:commit_graph_disable_subtree_source_fallback",
+            None,
+            Some(self.repo_name()),
+        )?)
     }
 }
 

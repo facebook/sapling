@@ -277,23 +277,15 @@ impl ChangesetEdges {
         let subtree_or_merge_ancestor = edges
             .subtree_or_merge_ancestor
             .map(ChangesetNode::from_thrift)
-            .transpose()?
-            .or_else(|| {
-                subtree_sources
-                    .is_empty()
-                    .then(|| merge_ancestor.clone())
-                    .flatten()
-            });
+            .transpose()?;
         let subtree_source_parent = edges
             .subtree_source_parent
             .map(ChangesetNode::from_thrift)
-            .transpose()?
-            .or_else(|| skip_tree_parent.clone());
+            .transpose()?;
         let subtree_source_skew_ancestor = edges
             .subtree_source_skew_ancestor
             .map(ChangesetNode::from_thrift)
-            .transpose()?
-            .or_else(|| skip_tree_skew_ancestor.clone());
+            .transpose()?;
         Ok(Self {
             inner: ChangesetEdgesMut {
                 node: ChangesetNode::from_thrift(edges.node)?,
@@ -397,6 +389,20 @@ impl ChangesetEdges {
         }
         for n in &self.inner.subtree_sources {
             f(n.cs_id);
+        }
+    }
+
+    /// Apply subtree source fallback to edges that were deserialized without it.
+    /// This mutates the edges in-place.
+    pub fn apply_subtree_source_fallback(&mut self) {
+        if self.inner.subtree_or_merge_ancestor.is_none() && self.inner.subtree_sources.is_empty() {
+            self.inner.subtree_or_merge_ancestor = self.inner.merge_ancestor.clone();
+        }
+        if self.inner.subtree_source_parent.is_none() {
+            self.inner.subtree_source_parent = self.inner.skip_tree_parent.clone();
+        }
+        if self.inner.subtree_source_skew_ancestor.is_none() {
+            self.inner.subtree_source_skew_ancestor = self.inner.skip_tree_skew_ancestor.clone();
         }
     }
 }
@@ -522,7 +528,6 @@ impl CompactChangesetEdges {
                 .transpose()?,
             subtree_or_merge_ancestor: edges
                 .subtree_or_merge_ancestor
-                .or(edges.merge_ancestor)
                 .map(|id| {
                     NonZeroU32::new(id as u32).ok_or_else(|| {
                         anyhow!("Couldn't convert subtree or merge ancestor id to NonZeroU32")
@@ -531,7 +536,6 @@ impl CompactChangesetEdges {
                 .transpose()?,
             subtree_source_parent: edges
                 .subtree_source_parent
-                .or(edges.skip_tree_parent)
                 .map(|id| {
                     NonZeroU32::new(id as u32).ok_or_else(|| {
                         anyhow!("Couldn't convert subtree source parent id to NonZeroU32")
@@ -540,7 +544,6 @@ impl CompactChangesetEdges {
                 .transpose()?,
             subtree_source_skew_ancestor: edges
                 .subtree_source_skew_ancestor
-                .or(edges.skip_tree_skew_ancestor)
                 .map(|id| {
                     NonZeroU32::new(id as u32).ok_or_else(|| {
                         anyhow!("Couldn't convert subtree source skew ancestor id to NonZeroU32")
