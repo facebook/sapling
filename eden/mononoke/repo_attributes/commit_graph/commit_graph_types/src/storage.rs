@@ -22,6 +22,7 @@ use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::FIRST_GENERATION;
 use mononoke_types::Generation;
 use mononoke_types::RepositoryId;
+use repo_identity::ArcRepoIdentity;
 use vec1::Vec1;
 
 use crate::edges::ChangesetEdges;
@@ -203,8 +204,22 @@ impl FetchedChangesetEdges {
 /// Commit Graph Storage.
 #[async_trait]
 pub trait CommitGraphStorage: Send + Sync {
+    /// The repository identity (id and name).
+    fn repo_identity(&self) -> &ArcRepoIdentity;
+
     /// The repository this commit graph storage is for.
-    fn repo_id(&self) -> RepositoryId;
+    ///
+    /// Convenience method - delegates to repo_identity().id()
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_identity().id()
+    }
+
+    /// The repository name this commit graph storage is for.
+    ///
+    /// Convenience method - delegates to repo_identity().name()
+    fn repo_name(&self) -> &str {
+        self.repo_identity().name()
+    }
 
     /// Add a new changeset to the commit graph.
     ///

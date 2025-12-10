@@ -433,6 +433,7 @@ mod tests {
     use commit_graph_testlib::utils::from_dag;
     use commit_graph_testlib::utils::from_dag_batch;
     use commit_graph_testlib::utils::name_cs_id;
+    use commit_graph_testlib::utils::test_repo_identity;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use mononoke_macros::mononoke;
@@ -469,7 +470,7 @@ mod tests {
         let storage = Arc::new(
             SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
                 .unwrap()
-                .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+                .build(RendezVousOptions::for_test(), test_repo_identity()),
         );
         let graph = from_dag(
             &ctx,
@@ -562,7 +563,7 @@ mod tests {
         let sql_storage = Arc::new(
             SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
                 .unwrap()
-                .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+                .build(RendezVousOptions::for_test(), test_repo_identity()),
         );
         let storage = Arc::new(ShufflingCommitGraphStorage::new(sql_storage.clone()));
 

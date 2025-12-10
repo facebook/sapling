@@ -30,7 +30,6 @@ use maplit::hashset;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
-use mononoke_types::RepositoryId;
 use smallvec::smallvec;
 use vec1::vec1;
 
@@ -882,7 +881,7 @@ pub async fn test_add_recursive(
     ctx: CoreContext,
     storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
-    let reference_storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
+    let reference_storage = Arc::new(InMemoryCommitGraphStorage::new(test_repo_identity()));
 
     let reference_graph = Arc::new(
         from_dag(
@@ -960,7 +959,7 @@ pub async fn test_add_recursive_many_changesets(
     ctx: CoreContext,
     storage: Arc<dyn CommitGraphStorageTest>,
 ) -> Result<()> {
-    let reference_storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
+    let reference_storage = Arc::new(InMemoryCommitGraphStorage::new(test_repo_identity()));
 
     let reference_graph = Arc::new(
         from_dag(

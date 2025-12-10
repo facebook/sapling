@@ -1904,7 +1904,7 @@ impl RepoFactory {
         let sql_storage = self
             .open_sql::<SqlCommitGraphStorageBuilder>(repo_config)
             .await?
-            .build(self.env.rendezvous_options, repo_identity.id());
+            .build(self.env.rendezvous_options, repo_identity.clone());
 
         let maybe_cached_storage: Arc<dyn CommitGraphStorage> =
             if let Some(cache_handler_factory) = self.cache_handler_factory("commit_graph")? {
@@ -1934,7 +1934,6 @@ impl RepoFactory {
 
                 let preloaded_commit_graph_storage = PreloadedCommitGraphStorage::from_blobstore(
                     &self.ctx(),
-                    repo_identity.id(),
                     Arc::new(blobstore_without_cache),
                     preloaded_commit_graph_key.clone(),
                     maybe_cached_storage,
@@ -2007,7 +2006,7 @@ impl RepoFactory {
         let sql_storage = self
             .open_sql::<SqlCommitGraphStorageBuilder>(repo_config)
             .await?
-            .build(self.env.rendezvous_options, repo_identity.id());
+            .build(self.env.rendezvous_options, repo_identity.clone());
 
         Ok(Arc::new(CommitGraphBulkFetcher::new(Arc::new(sql_storage))))
     }

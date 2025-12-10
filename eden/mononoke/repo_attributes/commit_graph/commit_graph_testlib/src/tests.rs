@@ -23,7 +23,7 @@ where
     Fut: Future<Output = Result<()>>,
 {
     let ctx = CoreContext::test_mock(fb);
-    let storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
+    let storage = Arc::new(InMemoryCommitGraphStorage::new(test_repo_identity()));
     test_function(ctx, storage).await
 }
 

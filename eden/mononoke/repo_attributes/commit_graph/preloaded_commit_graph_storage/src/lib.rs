@@ -33,9 +33,9 @@ use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
 use mononoke_types::Generation;
-use mononoke_types::RepositoryId;
 use reloader::Loader;
 use reloader::Reloader;
+use repo_identity::ArcRepoIdentity;
 use tracing::info;
 use vec1::Vec1;
 
@@ -52,7 +52,6 @@ const DEFAULT_RELOADING_INTERVAL_SECS: u64 = 60 * 60;
 /// Useful for commit graphs with complicated structure that are small enough
 /// to fit into memory.
 pub struct PreloadedCommitGraphStorage {
-    repo_id: RepositoryId,
     preloaded_edges: Reloader<PreloadedEdges>,
     persistent_storage: Arc<dyn CommitGraphStorage>,
 }
@@ -328,7 +327,6 @@ impl Loader<PreloadedEdges> for PreloadedEdgesLoader {
 impl PreloadedCommitGraphStorage {
     pub async fn from_blobstore(
         ctx: &CoreContext,
-        repo_id: RepositoryId,
         blobstore_without_cache: Arc<dyn Blobstore>,
         preloaded_edges_blobstore_key: String,
         persistent_storage: Arc<dyn CommitGraphStorage>,
@@ -354,7 +352,6 @@ impl PreloadedCommitGraphStorage {
         )
         .await?;
         Ok(Arc::new(Self {
-            repo_id,
             preloaded_edges: reloader,
             persistent_storage,
         }))
@@ -363,8 +360,8 @@ impl PreloadedCommitGraphStorage {
 
 #[async_trait]
 impl CommitGraphStorage for PreloadedCommitGraphStorage {
-    fn repo_id(&self) -> RepositoryId {
-        self.repo_id
+    fn repo_identity(&self) -> &ArcRepoIdentity {
+        self.persistent_storage.repo_identity()
     }
 
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {

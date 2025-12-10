@@ -9,11 +9,11 @@ use std::future::Future;
 use std::sync::Arc;
 
 use anyhow::Result;
+use commit_graph_testlib::utils::test_repo_identity;
 use commit_graph_testlib::*;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
-use mononoke_types::RepositoryId;
 use rendezvous::RendezVousOptions;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
 use sql_construct::SqlConstruct;
@@ -34,7 +34,7 @@ where
         Arc::new(
             SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
                 .unwrap()
-                .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+                .build(RendezVousOptions::for_test(), test_repo_identity()),
         ),
         5,
     ));

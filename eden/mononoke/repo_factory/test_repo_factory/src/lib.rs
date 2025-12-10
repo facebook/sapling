@@ -945,10 +945,10 @@ impl TestRepoFactory {
     }
 
     /// Commit graph
-    pub fn commit_graph(&self, repo_identity: &RepoIdentity) -> Result<ArcCommitGraph> {
+    pub fn commit_graph(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcCommitGraph> {
         let sql_storage =
             SqlCommitGraphStorageBuilder::from_sql_connections(self.metadata_db.clone())
-                .build(RendezVousOptions::for_test(), repo_identity.id());
+                .build(RendezVousOptions::for_test(), repo_identity.clone());
         Ok(Arc::new(CommitGraph::new(Arc::new(sql_storage))))
     }
 
@@ -966,11 +966,11 @@ impl TestRepoFactory {
     /// Commit graph bulk fetcher
     pub fn commit_graph_bulk_fetcher(
         &self,
-        repo_identity: &RepoIdentity,
+        repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcCommitGraphBulkFetcher> {
         let sql_storage =
             SqlCommitGraphStorageBuilder::from_sql_connections(self.metadata_db.clone())
-                .build(RendezVousOptions::for_test(), repo_identity.id());
+                .build(RendezVousOptions::for_test(), repo_identity.clone());
 
         Ok(Arc::new(CommitGraphBulkFetcher::new(Arc::new(sql_storage))))
     }

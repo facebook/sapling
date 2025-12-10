@@ -31,8 +31,18 @@ use futures::stream::TryStreamExt;
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use mononoke_types::Generation;
+use repo_identity::ArcRepoIdentity;
+use repo_identity::RepoIdentity;
 
 use crate::CommitGraphStorageTest;
+
+/// Create a test repository identity for graph testing purposes.
+pub fn test_repo_identity() -> ArcRepoIdentity {
+    Arc::new(RepoIdentity::new(
+        mononoke_types::RepositoryId::new(1),
+        "test_repo".to_string(),
+    ))
+}
 
 /// Generate a fake changeset id for graph testing purposes by using the raw
 /// bytes of the changeset name, padded with zeroes.

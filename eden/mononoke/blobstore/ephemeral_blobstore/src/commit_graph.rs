@@ -135,10 +135,6 @@ impl EphemeralOnlyChangesetStorage {
         }
     }
 
-    fn repo_id(&self) -> RepositoryId {
-        self.repo_id
-    }
-
     async fn add(&self, ctx: &CoreContext, edges: &ChangesetEdges) -> Result<bool> {
         let result = InsertChangeset::query(
             &self.connections.write_connection,
@@ -260,8 +256,8 @@ impl ParentsFetcher for EphemeralOnlyChangesetStorage {
 
 #[async_trait]
 impl CommitGraphStorage for EphemeralCommitGraphStorage {
-    fn repo_id(&self) -> RepositoryId {
-        self.ephemeral_only_storage.repo_id()
+    fn repo_identity(&self) -> &repo_identity::ArcRepoIdentity {
+        self.mem_writes_storage.repo_identity()
     }
 
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {

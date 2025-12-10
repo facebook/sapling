@@ -13,6 +13,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use commit_graph_testlib::utils::from_dag;
 use commit_graph_testlib::utils::name_cs_id;
+use commit_graph_testlib::utils::test_repo_identity;
 use commit_graph_types::edges::ChangesetEdges;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
@@ -22,7 +23,6 @@ use fbthrift::compact_protocol;
 use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
-use mononoke_types::RepositoryId;
 use reloader::Reloader;
 
 use crate::ExtendablePreloadedEdges;
@@ -33,7 +33,6 @@ impl PreloadedCommitGraphStorage {
     /// Constructs PreloadedCommitGraphStorage from a fixed list of edges
     /// for unit tests.
     pub fn from_edges(
-        repo_id: RepositoryId,
         edges_vec: Vec<ChangesetEdges>,
         persistent_storage: Arc<dyn CommitGraphStorage>,
     ) -> Result<Arc<Self>> {
@@ -53,7 +52,6 @@ impl PreloadedCommitGraphStorage {
         let preloaded_edges = deserialize_preloaded_edges(bytes)?;
 
         Ok(Arc::new(Self {
-            repo_id,
             preloaded_edges: Reloader::fixed(preloaded_edges),
             persistent_storage,
         }))
@@ -100,7 +98,7 @@ async fn test_equivalent_storages(
 #[mononoke::fbinit_test]
 async fn test_preloaded_commit_graph_storage(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let underlying_storage = Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1)));
+    let underlying_storage = Arc::new(InMemoryCommitGraphStorage::new(test_repo_identity()));
     let _ = from_dag(
         &ctx,
         r"
@@ -130,11 +128,8 @@ async fn test_preloaded_commit_graph_storage(fb: FacebookInit) -> Result<()> {
             .await?,
     ];
 
-    let preloaded_storage = PreloadedCommitGraphStorage::from_edges(
-        RepositoryId::new(1),
-        edges_vec.clone(),
-        underlying_storage.clone(),
-    )?;
+    let preloaded_storage =
+        PreloadedCommitGraphStorage::from_edges(edges_vec.clone(), underlying_storage.clone())?;
 
     let graph = CommitGraph::new(preloaded_storage.clone());
     let graph_writer = BaseCommitGraphWriter::new(graph.clone());
@@ -157,9 +152,8 @@ async fn test_preloaded_commit_graph_storage(fb: FacebookInit) -> Result<()> {
     .await?;
 
     let preloaded_storage_with_empty_underlying_storage = PreloadedCommitGraphStorage::from_edges(
-        RepositoryId::new(1),
         edges_vec.clone(),
-        Arc::new(InMemoryCommitGraphStorage::new(RepositoryId::new(1))),
+        Arc::new(InMemoryCommitGraphStorage::new(test_repo_identity())),
     )?;
 
     // Test that fetching any of the preloaded edges doesn't

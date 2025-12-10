@@ -14,6 +14,7 @@ use anyhow::Result;
 use commit_graph_testlib::shuffling_storage::ShufflingCommitGraphStorage;
 use commit_graph_testlib::utils::from_dag;
 use commit_graph_testlib::utils::name_cs_id;
+use commit_graph_testlib::utils::test_repo_identity;
 use commit_graph_testlib::*;
 use commit_graph_types::storage::CommitGraphStorage;
 use commit_graph_types::storage::Prefetch;
@@ -40,7 +41,7 @@ where
     let storage = Arc::new(
         SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+            .build(RendezVousOptions::for_test(), test_repo_identity()),
     );
     test_function(ctx, storage).await
 }
@@ -53,7 +54,7 @@ pub async fn test_max_id_with_empty_graph(fb: FacebookInit) -> Result<()> {
     let storage = Arc::new(
         SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+            .build(RendezVousOptions::for_test(), test_repo_identity()),
     );
     let graph = from_dag(&ctx, r##""##, storage.clone()).await?;
     assert_eq!(storage.max_id(&ctx, false).await?, Some(0));
@@ -66,7 +67,7 @@ pub async fn test_lower_level_api(fb: FacebookInit) -> Result<()> {
     let storage = Arc::new(
         SqlCommitGraphStorageBuilder::with_sqlite_in_memory()
             .unwrap()
-            .build(RendezVousOptions::for_test(), RepositoryId::new(1)),
+            .build(RendezVousOptions::for_test(), test_repo_identity()),
     );
 
     let graph = from_dag(

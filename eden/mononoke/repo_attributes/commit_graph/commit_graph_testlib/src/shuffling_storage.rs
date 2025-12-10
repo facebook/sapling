@@ -18,8 +18,8 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::RepositoryId;
 use rand::seq::SliceRandom;
+use repo_identity::ArcRepoIdentity;
 use vec1::Vec1;
 
 use crate::CommitGraphStorageTest;
@@ -40,8 +40,8 @@ impl CommitGraphStorageTest for ShufflingCommitGraphStorage {}
 
 #[async_trait]
 impl CommitGraphStorage for ShufflingCommitGraphStorage {
-    fn repo_id(&self) -> RepositoryId {
-        self.inner.repo_id()
+    fn repo_identity(&self) -> &ArcRepoIdentity {
+        self.inner.repo_identity()
     }
 
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {

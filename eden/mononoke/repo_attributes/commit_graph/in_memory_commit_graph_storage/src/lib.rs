@@ -22,21 +22,21 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::RepositoryId;
 use parking_lot::RwLock;
+use repo_identity::ArcRepoIdentity;
 use vec1::Vec1;
 
 /// In-memory commit graph storage.
 pub struct InMemoryCommitGraphStorage {
-    repo_id: RepositoryId,
+    repo_identity: ArcRepoIdentity,
     changesets: RwLock<BTreeMap<ChangesetId, ChangesetEdges>>,
     children: RwLock<BTreeMap<ChangesetId, HashSet<ChangesetId>>>,
 }
 
 impl InMemoryCommitGraphStorage {
-    pub fn new(repo_id: RepositoryId) -> Self {
+    pub fn new(repo_identity: ArcRepoIdentity) -> Self {
         InMemoryCommitGraphStorage {
-            repo_id,
+            repo_identity,
             changesets: Default::default(),
             children: Default::default(),
         }
@@ -60,8 +60,8 @@ impl InMemoryCommitGraphStorage {
 
 #[async_trait]
 impl CommitGraphStorage for InMemoryCommitGraphStorage {
-    fn repo_id(&self) -> RepositoryId {
-        self.repo_id
+    fn repo_identity(&self) -> &ArcRepoIdentity {
+        &self.repo_identity
     }
 
     async fn add(&self, _ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {

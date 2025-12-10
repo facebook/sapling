@@ -20,7 +20,7 @@ use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::RepositoryId;
+use repo_identity::ArcRepoIdentity;
 use vec1::Vec1;
 
 #[cfg(test)]
@@ -36,7 +36,9 @@ pub struct MemWritesCommitGraphStorage {
 impl MemWritesCommitGraphStorage {
     pub fn new(persistent_storage: Arc<dyn CommitGraphStorage>) -> Self {
         Self {
-            in_memory_storage: InMemoryCommitGraphStorage::new(persistent_storage.repo_id()),
+            in_memory_storage: InMemoryCommitGraphStorage::new(
+                persistent_storage.repo_identity().clone(),
+            ),
             persistent_storage,
         }
     }
@@ -44,8 +46,8 @@ impl MemWritesCommitGraphStorage {
 
 #[async_trait]
 impl CommitGraphStorage for MemWritesCommitGraphStorage {
-    fn repo_id(&self) -> RepositoryId {
-        self.persistent_storage.repo_id()
+    fn repo_identity(&self) -> &ArcRepoIdentity {
+        self.persistent_storage.repo_identity()
     }
 
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {

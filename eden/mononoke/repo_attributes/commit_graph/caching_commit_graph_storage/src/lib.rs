@@ -40,7 +40,7 @@ use memcache::KeyGen;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::RepositoryId;
+use repo_identity::ArcRepoIdentity;
 use stats::prelude::*;
 use vec1::Vec1;
 
@@ -72,7 +72,6 @@ pub struct CachingCommitGraphStorage {
     keygen_single: KeyGen,
     keygen_prefetch_p1_linear: KeyGen,
     keygen_prefetch_skip_tree_exact: KeyGen,
-    repo_id: RepositoryId,
 }
 
 struct CacheRequest<'a> {
@@ -406,7 +405,7 @@ impl CachingCommitGraphStorage {
     }
 
     fn cache_key(&self, cs_id: &ChangesetId) -> String {
-        format!("{}.{}", self.repo_id.prefix(), cs_id)
+        format!("{}.{}", self.storage.repo_identity().id().prefix(), cs_id)
     }
 
     pub fn new(
@@ -414,7 +413,6 @@ impl CachingCommitGraphStorage {
         cache_handler_factory: CacheHandlerFactory,
     ) -> Self {
         Self {
-            repo_id: storage.repo_id(),
             storage,
             cachelib: cache_handler_factory.cachelib(),
             memcache: cache_handler_factory.memcache(),
@@ -477,8 +475,8 @@ impl CachingCommitGraphStorage {
 
 #[async_trait]
 impl CommitGraphStorage for CachingCommitGraphStorage {
-    fn repo_id(&self) -> RepositoryId {
-        self.repo_id
+    fn repo_identity(&self) -> &ArcRepoIdentity {
+        self.storage.repo_identity()
     }
 
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {

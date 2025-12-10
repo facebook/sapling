@@ -17,11 +17,15 @@ use mononoke_types_mocks::changesetid::TWOS_CSID;
 use mononoke_types_mocks::hash::ONES;
 use mononoke_types_mocks::hash::TWOS;
 use mononoke_types_mocks::repo::REPO_ZERO;
+use repo_identity::RepoIdentity;
 
 use super::*;
 
 async fn setup_commit_graph(ctx: &CoreContext) -> Result<CommitGraph, Error> {
-    let storage = InMemoryCommitGraphStorage::new(REPO_ZERO);
+    let storage = InMemoryCommitGraphStorage::new(Arc::new(RepoIdentity::new(
+        REPO_ZERO,
+        "test_repo".to_string(),
+    )));
     let commit_graph = CommitGraph::new(Arc::new(storage));
     let commit_graph_writer = BaseCommitGraphWriter::new(commit_graph.clone());
 

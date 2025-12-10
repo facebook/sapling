@@ -20,7 +20,7 @@ use in_memory_commit_graph_storage::InMemoryCommitGraphStorage;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
-use mononoke_types::RepositoryId;
+use repo_identity::ArcRepoIdentity;
 use vec1::Vec1;
 
 #[cfg(test)]
@@ -37,7 +37,9 @@ pub struct BufferedCommitGraphStorage {
 impl BufferedCommitGraphStorage {
     pub fn new(persistent_storage: Arc<dyn CommitGraphStorage>, max_in_memory_size: usize) -> Self {
         Self {
-            in_memory_storage: InMemoryCommitGraphStorage::new(persistent_storage.repo_id()),
+            in_memory_storage: InMemoryCommitGraphStorage::new(
+                persistent_storage.repo_identity().clone(),
+            ),
             persistent_storage,
             max_in_memory_size,
         }
@@ -56,8 +58,8 @@ impl BufferedCommitGraphStorage {
 
 #[async_trait]
 impl CommitGraphStorage for BufferedCommitGraphStorage {
-    fn repo_id(&self) -> RepositoryId {
-        self.persistent_storage.repo_id()
+    fn repo_identity(&self) -> &ArcRepoIdentity {
+        self.persistent_storage.repo_identity()
     }
 
     async fn add(&self, ctx: &CoreContext, edges: ChangesetEdges) -> Result<bool> {
