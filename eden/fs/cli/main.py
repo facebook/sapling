@@ -1590,26 +1590,6 @@ class RemoveCmd(Subcmd):
             help=argparse.SUPPRESS,
         )
 
-    def is_prjfs_path(self, path: str) -> bool:
-        if platform.system() != "Windows":
-            return False
-        try:
-            return (Path(path) / ".EDEN_TEST_NONEXISTENT_PATH").exists()
-        except OSError as e:
-            # HACK: similar to how we test if EdenFS is running, we will get
-            # this 369 error for partial removal because EdenFS is no longer
-            # serving this mount point. As a result, Windows will return this
-            # error for stat.
-            # Errno 369 is not documented but it is "The provider that supports
-            # file system virtualization is temporarily unavailable".
-
-            # pyre-ignore[16]: winerror is Windows only.
-            if e.winerror == 369:
-                return True
-            return False
-        except Exception:
-            return False
-
     # pyre-fixme[3]: Return type must be annotated.
     def optional_traceback(self, ex: Exception, debug: bool):
         if debug:
@@ -1668,8 +1648,6 @@ Do you still want to delete {path}?"""
                     mount_path = os.path.realpath(path)
                     if mount_path in configured_mounts:
                         remove_type = RemoveType.INACTIVE_MOUNT
-                    elif self.is_prjfs_path(path):
-                        remove_type = RemoveType.CLEANUP_ONLY
                     else:
                         # This is not located in the config file either, but it
                         # may be leftover from a failed `eden rm` attempt. The
