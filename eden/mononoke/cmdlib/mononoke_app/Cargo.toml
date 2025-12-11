@@ -41,7 +41,7 @@ memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
-mononoke_configs = { version = "0.1.0", path = "../../mononoke_configs" }
+mononoke_configs = { version = "0.1.0", path = "../../common/mononoke_configs" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_repos = { version = "0.1.0", path = "../../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

@@ -11,6 +11,6 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/cached_config:cached_config",
         "//common/rust/shed/fbinit:fbinit",
-        "//eden/mononoke/mononoke_configs:mononoke_configs",
+        "//eden/mononoke/common/mononoke_configs:mononoke_configs",
     ],
 )
