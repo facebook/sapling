@@ -81,7 +81,7 @@ rust_library(
         "//eden/mononoke/rate_limiting:rate_limiting",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
-        "//eden/mononoke/time_window_counter:time_window_counter",
+        "//eden/mononoke/common/time_window_counter:time_window_counter",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/dag/dag-types:dag-types",
         "//eden/scm/lib/edenapi/types:edenapi_types",
