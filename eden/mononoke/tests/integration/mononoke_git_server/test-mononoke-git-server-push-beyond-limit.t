@@ -58,8 +58,8 @@
 
 # Push all the changes made so far
   $ git_client push origin --all --follow-tags
-  error: remote unpack failed: Push rejected: Pushed packfile is too large for repo repo. The limit is 10485760, while the pushed packfile size is *. Try pushing less commits at once, or put large binary blobs into LFS. Only if you can't do that, consult the wiki https://fburl.com/git_push_blocked_by_size_limit. (glob)
+  error: remote unpack failed: Push rejected: Pushed packfile is too large for repo repo. The limit is 10485760, while the pushed packfile size is *. Try pushing fewer commits at once, or put large binary blobs into LFS. Only if you can't do that, consult the wiki https://fburl.com/git_push_blocked_by_size_limit. (glob)
   To https://*/repos/git/ro/repo.git (glob)
-   ! [remote rejected] master_bookmark -> master_bookmark (Push rejected: Pushed packfile is too large for repo repo. The limit is 10485760, while the pushed packfile size is *. Try pushing less commits at once, or put large binary blobs into LFS. Only if you can't do that, consult the wiki https://fburl.com/git_push_blocked_by_size_limit.) (glob)
+   ! [remote rejected] master_bookmark -> master_bookmark (Push rejected: Pushed packfile is too large for repo repo. The limit is 10485760, while the pushed packfile size is *. Try pushing fewer commits at once, or put large binary blobs into LFS. Only if you can't do that, consult the wiki https://fburl.com/git_push_blocked_by_size_limit.) (glob)
   error: failed to push some refs to 'https://localhost:$LOCAL_PORT/repos/git/ro/repo.git'
   [1]

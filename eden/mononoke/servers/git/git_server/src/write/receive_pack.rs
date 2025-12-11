@@ -383,7 +383,7 @@ async fn reject_too_large_push(
     max_size: usize,
 ) -> anyhow::Result<Response<Body>> {
     let error_message = format!(
-        "Push rejected: Pushed packfile is too large for repo {repo_name}. The limit is {max_size}, while the pushed packfile size is {pushed_packfile_size}. Try pushing less commits at once, or put large binary blobs into LFS. Only if you can't do that, consult the wiki https://fburl.com/git_push_blocked_by_size_limit."
+        "Push rejected: Pushed packfile is too large for repo {repo_name}. The limit is {max_size}, while the pushed packfile size is {pushed_packfile_size}. Try pushing fewer commits at once, or put large binary blobs into LFS. Only if you can't do that, consult the wiki https://fburl.com/git_push_blocked_by_size_limit."
     );
     reject_push_with_message(
         state,
