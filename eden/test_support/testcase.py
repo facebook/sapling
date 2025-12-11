@@ -18,17 +18,31 @@ from . import environment_variable as env_module
 from .temporary_directory import TempFileManager
 
 
+def _is_forkpty_deprecation_warning(w: warnings.WarningMessage) -> bool:
+    """Check if a warning is the forkpty deprecation warning from pty.py.
+
+    Python 3.12+ emits a DeprecationWarning when forkpty() is called in a
+    multi-threaded process. This is expected in our tests and should be ignored.
+    """
+    return (
+        w.category is DeprecationWarning
+        and "pty.py" in w.filename
+        and "forkpty" in str(w.message)
+    )
+
+
 @contextlib.contextmanager
 def no_warnings(self: unittest.TestCase):
     with warnings.catch_warnings(record=True) as wlist:
         yield
 
-    if wlist:
+    filtered_warnings = [w for w in wlist if not _is_forkpty_deprecation_warning(w)]
+    if filtered_warnings:
         msgs = [
             warnings.formatwarning(
                 cast(str, w.message), w.category, w.filename, w.lineno, w.line
             )
-            for w in wlist
+            for w in filtered_warnings
         ]
         self.fail("Warnings detected during test:\n" + "".join(msgs))
 
