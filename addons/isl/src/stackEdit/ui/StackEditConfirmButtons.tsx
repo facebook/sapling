@@ -19,7 +19,6 @@ import {
 } from '../../CommitInfoView/CommitInfoState';
 import {Internal} from '../../Internal';
 import {tracker} from '../../analytics';
-import {DevmateIcon} from '../../facebook/icons/DevmateIcon';
 import {useFeatureFlagSync} from '../../featureFlags';
 import {T, t} from '../../i18n';
 import {writeAtom} from '../../jotaiUtils';
@@ -161,14 +160,10 @@ export function StackEditConfirmButtons(): React.ReactElement {
   // Show [AI Split] [Undo] [Redo] [Cancel] [Save changes].
   return (
     <>
-      {stackIntention === 'split' && enableDevmateSplit && splitCommitHash != null && (
-        <Tooltip title={t('Split this commit using Devmate')} placement="bottom">
-          <Button onClick={handleAISplit}>
-            <DevmateIcon />
-            <T>Split with Devmate</T>
-          </Button>
-        </Tooltip>
-      )}
+      {stackIntention === 'split' &&
+        enableDevmateSplit &&
+        splitCommitHash != null &&
+        Internal.AISplitButton && <Internal.AISplitButton onClick={handleAISplit} />}
       {enableDevmateSplit && splitCommitHash != null && <div className="stack-edit-spacer" />}
       <Tooltip
         component={() =>

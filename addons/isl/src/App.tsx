@@ -35,6 +35,7 @@ import {repositoryInfoOrError} from './serverAPIState';
 
 import clientToServerAPI from './ClientToServerAPI';
 import './index.css';
+import './stackEdit/ui/AISplitMessageHandlers';
 
 declare global {
   interface Window {
