@@ -47,7 +47,6 @@ zenohd = { git = "https://github.com/nitinsingh-meta/zenoh", rev = "9b525dceb275
 
 [workspace]
 members = [
-  "acl_regions",
   "benchmarks/derived_data",
   "benchmarks/filestore",
   "benchmarks/storage_config",
@@ -112,6 +111,7 @@ members = [
   "cmdlib/sharding",
   "cmdlib/sharding_ext",
   "cmdlib/zk_leader_election",
+  "common/acl_regions",
   "common/assembly_line",
   "common/async_limiter",
   "common/async_limiter/examples/tokio_v2",

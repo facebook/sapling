@@ -19,7 +19,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:thiserror",
-        "//eden/mononoke/acl_regions:acl_regions",
+        "//eden/mononoke/common/acl_regions:acl_regions",
         "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/facebook/commit_cloud:commit_cloud_intern_utils",
         "//eden/mononoke/features/commit_cloud:commit_cloud",

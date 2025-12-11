@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-acl_regions = { version = "0.1.0", path = "../acl_regions" }
+acl_regions = { version = "0.1.0", path = "../common/acl_regions" }
 anyhow = "1.0.98"
 bookmarks = { version = "0.1.0", path = "../repo_attributes/bookmarks" }
 commit_cloud = { version = "0.1.0", path = "../features/commit_cloud" }
