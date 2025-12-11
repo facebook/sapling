@@ -59,7 +59,7 @@ rust_library(
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/common/mononoke_configs:mononoke_configs",
-        "//eden/mononoke/mononoke_repos:mononoke_repos",
+        "//eden/mononoke/common/mononoke_repos:mononoke_repos",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",

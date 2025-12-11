@@ -50,7 +50,7 @@ mime = "0.3.14"
 mononoke_api = { version = "0.1.0", path = "../../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../../cmdlib/mononoke_app" }
 mononoke_macros = { version = "0.1.0", path = "../../../mononoke_macros" }
-mononoke_repos = { version = "0.1.0", path = "../../../mononoke_repos" }
+mononoke_repos = { version = "0.1.0", path = "../../../common/mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 ods_counters = { version = "0.1.0", path = "../../../common/ods_counters" }
 packetline = { version = "0.1.0", path = "../../../git/packetline" }

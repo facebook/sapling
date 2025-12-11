@@ -71,7 +71,7 @@ mercurial_derivation = { version = "0.1.0", path = "../derived_data/mercurial_de
 mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
-mononoke_repos = { version = "0.1.0", path = "../mononoke_repos" }
+mononoke_repos = { version = "0.1.0", path = "../common/mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_blobstore = { version = "0.1.0", path = "../repo_attributes/mutable_blobstore" }
 mutable_counters = { version = "0.1.0", path = "../repo_attributes/mutable_counters" }
