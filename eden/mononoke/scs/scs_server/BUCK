@@ -60,6 +60,7 @@ cpp_library(
     headers = ["metadata.h"],
     deps = [
         "//eden/mononoke/scs/if:source_control-cpp2-metadata",
+        "//eden/mononoke/scs/if:source_control-cpp2-services",
     ],
     exported_deps = [
         "//common/rust/srserver:metadata-header",

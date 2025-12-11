@@ -6,6 +6,7 @@
  */
 
 #include "eden/mononoke/scs/scs_server/metadata.h"
+#include "eden/mononoke/scs/if/gen-cpp2/SourceControlService.h" // @manual=//eden/mononoke/scs/if:source_control-cpp2-services
 #include "eden/mononoke/scs/if/gen-cpp2/source_control_metadata.h" // @manual=//eden/mononoke/scs/if:source_control-cpp2-metadata
 
 namespace facebook {
