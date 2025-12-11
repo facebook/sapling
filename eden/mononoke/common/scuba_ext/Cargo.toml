@@ -15,7 +15,7 @@ justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 memory = { version = "0.1.0", path = "../memory" }
 metadata = { version = "0.1.0", path = "../metadata" }
 nonzero_ext = "0.2"
-observability = { version = "0.1.0", path = "../../observability" }
+observability = { version = "0.1.0", path = "../observability" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 sampling = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
