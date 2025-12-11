@@ -1662,7 +1662,6 @@ Do you still want to delete {path}?"""
                             else:
                                 try:
                                     fs_mod.new().rmdir(path, args.preserve_mount_point)
-                                    return 0
                                 except Exception as ex:
                                     if sys.platform != "win32":
                                         msg = f"Error: cannot remove contents of {path}: {ex}"
