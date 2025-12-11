@@ -43,7 +43,7 @@ permission_checker = { version = "0.1.0", path = "../../../../common/permission_
 pin-project = "1.1.10"
 qps = { version = "0.1.0", path = "../qps" }
 quiet_stream = { version = "0.1.0", path = "../../../../common/quiet_stream" }
-rate_limiting = { version = "0.1.0", path = "../../../../rate_limiting" }
+rate_limiting = { version = "0.1.0", path = "../../../../common/rate_limiting" }
 repo_client = { version = "0.1.0", path = "../../../../repo_client" }
 repo_permission_checker = { version = "0.1.0", path = "../../../../repo_attributes/repo_permission_checker" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../../../scm/lib/clientinfo" }

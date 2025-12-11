@@ -37,7 +37,7 @@ percent-encoding = "2.1"
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 pin-project = "1.1.10"
 quiet_stream = { version = "0.1.0", path = "../quiet_stream" }
-rate_limiting = { version = "0.1.0", path = "../../rate_limiting" }
+rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scopeguard = "1.2.0"
 scuba_ext = { version = "0.1.0", path = "../scuba_ext" }

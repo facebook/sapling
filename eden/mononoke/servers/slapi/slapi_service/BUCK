@@ -78,7 +78,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/bonsai_hg_mapping:bonsai_hg_mapping",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/common/permission_checker:permission_checker",
-        "//eden/mononoke/rate_limiting:rate_limiting",
+        "//eden/mononoke/common/rate_limiting:rate_limiting",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/mononoke/common/time_window_counter:time_window_counter",
