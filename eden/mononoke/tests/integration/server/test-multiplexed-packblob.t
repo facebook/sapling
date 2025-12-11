@@ -7,15 +7,33 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration in usual uncompressed way
-  $ MULTIPLEXED=1 PACK_BLOB=0 default_setup_blobimport "blob_files"
-  hg repo
-  o  C [draft;rev=2;26805aba1e60]
-  │
-  o  B [draft;rev=1;112478962961]
-  │
-  o  A [draft;rev=0;426bada5c675]
-  $
-  blobimporting
+  $ MULTIPLEXED=1 PACK_BLOB=0 setup_common_config "blob_files"
+  $ cd "$TESTTMP"
+
+Create commits using testtool_drawdag to populate Mononoke
+  $ testtool_drawdag -R repo --print-hg-hashes <<EOF
+  > A-B-C
+  > # bookmark: C master_bookmark
+  > EOF
+  A=* (glob)
+  B=* (glob)
+  C=* (glob)
+
+Also create a local hg repo for the second blobimport with zstd
+  $ hginit_treemanifest repo
+  $ cd repo
+  $ drawdag <<EOF
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOF
+  $ hg bookmark master_bookmark -r $C
+  $ cd "$TESTTMP"
+
+Start server
+  $ start_and_wait_for_mononoke_server
 
 Check the stores have expected counts
   $ ls blobstore/0/blobs/ | wc -l
