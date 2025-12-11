@@ -41,5 +41,5 @@ rust_binary(
 
 tokio_dependency_test(
     name = "tokio_check",
-    rule = ":slapi_server",
+    rule = ":mononoke",
 )
