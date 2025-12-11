@@ -32,7 +32,7 @@ futures_old = { package = "futures", version = "0.1.31" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 getbundle_response = { version = "0.1.0", path = "getbundle_response" }
 git_source_of_truth = { version = "0.1.0", path = "../repo_attributes/git_source_of_truth" }
-hgproto = { version = "0.1.0", path = "../hgproto" }
+hgproto = { version = "0.1.0", path = "../common/hgproto" }
 hook_manager = { version = "0.1.0", path = "../repo_attributes/hook_manager/hook_manager" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 iterhelpers = { version = "0.1.0", path = "../common/iterhelpers" }
