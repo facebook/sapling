@@ -14,8 +14,8 @@ async-trait = "0.1.86"
 bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-cas_client = { version = "0.1.0", path = "../../cas_client/client" }
-changesets_uploader = { version = "0.1.0", path = "../../cas_client/changesets_uploader" }
+cas_client = { version = "0.1.0", path = "../../common/cas_client/client" }
+changesets_uploader = { version = "0.1.0", path = "../../common/cas_client/changesets_uploader" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
