@@ -4,21 +4,22 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-  $ CACHEDIR=$PWD/cachepath
   $ . "${TEST_FIXTURES}/library.sh"
+  $ export CACHEDIR=$PWD/cachepath
 
 # setup config repo
 
-  $ REPOTYPE="blob_files"
-  $ MULTIPLEXED=1
-  $ PACK_BLOB=1
+  $ export REPOTYPE="blob_files"
+  $ export MULTIPLEXED=1
+  $ export PACK_BLOB=1
   $ setup_common_config $REPOTYPE
   $ cd $TESTTMP
+  $ MONONOKE_START_TIMEOUT=10 start_and_wait_for_mononoke_server || exit
 
-  $ hginit_treemanifest repo
-  $ cd repo
+  $ hg clone -q mono:repo repo --noupdate
 
 # Commit files
+  $ cd repo
   $ cp "${TEST_FIXTURES}/raw_text.txt" f1
   $ hg commit -Aqm "f1"
   $ cp f1 f2
@@ -28,11 +29,9 @@
   $ echo "Yet more text" >> f3
   $ hg commit -Aqm "f3"
 
-  $ hg bookmark master_bookmark -r tip
+  $ hg push -q --to master_bookmark --create
 
-  $ cd ..
-
-  $ blobimport repo/.hg repo
+  $ cd $TESTTMP
 
 # Get the space consumed by the content as-is
   $ stat -c '%s %h %N' $TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.* | sort -n
@@ -48,8 +47,8 @@
 
 # Pack content into a pack
   $ packer --zstd-level 19 --scuba-log-file packed.json --keys-dir $TESTTMP/pack_key_files4/ --print-progress --tuning-info-scuba-log-file "${TESTTMP}/tuning_scuba.json"
-  File *reporepo.store0.part0.keys.txt, which has 3 lines (glob)
-  Progress: 100.000%	processing took * (glob)
+  [INFO] File *reporepo.store0.part0.keys.txt, which has 3 lines (glob)
+  [INFO] Progress: 100.000%	processing took * (glob)
 
 # Check the tuning log has the following columns
   $ jq -r '.normal * .double | [.blobs_download_time, .compressing_blobs_invidivually_time, .finding_best_packing_strategy_time, .packed_size, .single_compressed_size, .repo_name, .possible_pack_sizes, .uncompressed_size] | @csv' < "${TESTTMP}/tuning_scuba.json" | sort
