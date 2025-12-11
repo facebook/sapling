@@ -13,7 +13,7 @@ rust_library(
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:lazy_static",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
     deps = ([
         "fbsource//third-party/rust:anyhow",

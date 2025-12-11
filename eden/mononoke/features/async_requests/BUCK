@@ -11,7 +11,7 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
         "//eden/mononoke/repo_factory:test_repo_factory",
     ],
@@ -69,7 +69,7 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
     # This crate contains internal implementation details that should not be
     # visible outside of this directory.

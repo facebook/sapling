@@ -29,7 +29,7 @@ rust_library(
         "//common/rust/shed/memcache_stub:memcache",
         "//common/rust/shed/services:services",
         "//common/rust/shed/stats:stats",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:blobstore_factory",
         "//eden/mononoke/blobstore:redactedblobstore",

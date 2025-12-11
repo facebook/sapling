@@ -12,7 +12,7 @@ autoexamples = false
 anyhow = "1.0.98"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 governor = "0.3.2"
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 thiserror = "2.0.12"
 
 [dev-dependencies]

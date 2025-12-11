@@ -8,7 +8,7 @@ rust_binary(
     test_deps = [
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/tests/utils:tests_utils",
     ],
     deps = [

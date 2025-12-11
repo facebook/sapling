@@ -13,7 +13,7 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
     ],
     deps = [
@@ -60,7 +60,7 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -95,7 +95,7 @@ rust_library(
     test_deps = [
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -119,7 +119,7 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
         "//eden/mononoke/repo_factory:test_repo_factory",
         "//eden/mononoke/tests/utils:tests_utils",

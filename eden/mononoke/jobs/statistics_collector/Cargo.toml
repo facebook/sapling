@@ -45,5 +45,5 @@ bytes = { version = "1.10", features = ["serde"] }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

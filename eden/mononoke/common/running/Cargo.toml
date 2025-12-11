@@ -11,6 +11,6 @@ license = "GPLv2+"
 anyhow = "1.0.98"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 libc = "0.2.139"
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

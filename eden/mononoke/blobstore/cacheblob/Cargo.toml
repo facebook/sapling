@@ -24,7 +24,7 @@ justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 memcache_lock_thrift = { version = "0.1.0", path = "../if" }
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 prefixblob = { version = "0.1.0", path = "../prefixblob" }
 redactedblobstore = { version = "0.1.0", path = "../redactedblobstore" }

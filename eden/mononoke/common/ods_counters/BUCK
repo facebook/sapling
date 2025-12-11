@@ -11,7 +11,7 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//configerator/structs/rapido:if-rust-mocks",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ])),
     deps = ([
         "fbsource//third-party/rust:async-trait",

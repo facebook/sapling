@@ -47,7 +47,7 @@ mercurial_mutation = { version = "0.1.0", path = "../mercurial/mutation" }
 mercurial_revlog = { version = "0.1.0", path = "../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
-mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../repo_attributes/mutable_counters" }
 nonzero_ext = "0.2"

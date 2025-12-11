@@ -7,7 +7,7 @@ rust_binary(
     srcs = ["src/main.rs"],
     test_deps = [
         "fbsource//third-party/rust:assert_approx_eq",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

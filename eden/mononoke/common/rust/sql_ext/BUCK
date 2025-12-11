@@ -21,7 +21,7 @@ rust_library(
         "//common/rust/shed/sql:sql_tests_lib",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/common/metadata:metadata",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//dsi/logger/rust/mock_transport:mock_transport",
         "//dsi/logger/configs/MononokeXdbTelemetryLoggerConfig:log_entry-rust",
     ]),

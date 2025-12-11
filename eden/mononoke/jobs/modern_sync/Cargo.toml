@@ -34,7 +34,7 @@ mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../../common/metadata" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../repo_attributes/mutable_counters" }
 repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobstore" }

@@ -18,7 +18,7 @@ rust_library(
         "//common/rust/shed/ascii_ext:ascii_ext",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
     ],
     deps = [
@@ -55,8 +55,8 @@ rust_unittest(
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
         "//common/rust/shed/sql:sql",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/sql_construct:sql_construct",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
         "//eden/mononoke/repo_attributes/bookmarks:bookmarks",

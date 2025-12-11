@@ -36,7 +36,7 @@ rust_unittest(
     deps = [
         "fbsource//third-party/rust:anyhow",
         ":thrift_convert",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/thrift_convert/tests/if:thrift-convert-test-rust",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
     ],
 )

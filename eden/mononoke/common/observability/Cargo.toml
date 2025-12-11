@@ -16,4 +16,4 @@ scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 
 [dev-dependencies]
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

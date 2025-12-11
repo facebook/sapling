@@ -18,4 +18,4 @@ sapling-edenapi_types = { version = "0.1.0", path = "../../../../scm/lib/edenapi
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 
 [dev-dependencies]
-mononoke_macros = { version = "0.1.0", path = "../../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../../common/mononoke_macros" }

@@ -38,8 +38,8 @@ rust_unittest(
         ":packfile",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/git/git_types:git_types",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/third_party/git_delta:git_delta",
     ],
 )

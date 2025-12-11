@@ -32,7 +32,7 @@ megarepo_error = { version = "0.1.0", path = "../../../megarepo_api/megarepo_err
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../../mononoke_api" }
 mononoke_app = { version = "0.1.0", path = "../../../cmdlib/mononoke_app" }
-mononoke_macros = { version = "0.1.0", path = "../../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 repo_authorization = { version = "0.1.0", path = "../../../repo_authorization" }
 requests_table = { version = "0.1.0", path = "../requests_table" }

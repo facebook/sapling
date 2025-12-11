@@ -37,4 +37,4 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 sapling-drawdag = { version = "0.1.0", path = "../../../scm/lib/drawdag" }
 
 [dev-dependencies]
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }

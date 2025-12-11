@@ -40,5 +40,5 @@ tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 
 [dev-dependencies]
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 tempfile = "3.22"

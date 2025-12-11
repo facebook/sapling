@@ -6,7 +6,7 @@ rust_binary(
     name = "packer",
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

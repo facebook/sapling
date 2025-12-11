@@ -9,7 +9,7 @@ rust_binary(
     named_deps = ({} if rust_oss.is_oss_build() else {
         "MononokeGitRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rust",
     }),
-    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
+    test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-stream",
@@ -49,6 +49,7 @@ rust_binary(
         "//eden/mononoke/common/connection_security_checker:connection_security_checker",
         "//eden/mononoke/common/gotham_ext:gotham_ext",
         "//eden/mononoke/common/metadata:metadata",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/mononoke_repos:mononoke_repos",
         "//eden/mononoke/common/ods_counters:ods_counters",
         "//eden/mononoke/common/permission_checker:permission_checker",
@@ -66,7 +67,6 @@ rust_binary(
         "//eden/mononoke/metaconfig:metaconfig_parser",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/bonsai_git_mapping:bonsai_git_mapping",
         "//eden/mononoke/repo_attributes/bonsai_tag_mapping:bonsai_tag_mapping",

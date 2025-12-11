@@ -18,8 +18,8 @@ rust_binary(
         "//eden/mononoke/blobstore:sqlblob",
         "//eden/mononoke/cmdlib:cmdlib_logging",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],
 )

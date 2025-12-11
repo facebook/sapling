@@ -13,4 +13,4 @@ dashmap = { version = "5.5.3", features = ["rayon", "serde"] }
 thiserror = "2.0.12"
 
 [dev-dependencies]
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

@@ -32,6 +32,6 @@ flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = f
 git_delta = { version = "0.1.0", path = "../../third_party/git_delta" }
 gix-features = { version = "0.42.1", features = ["parallel"] }
 gix-object = "0.49.1"
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 quickcheck = "1.0"
 tempfile = "3.22"

@@ -8,7 +8,7 @@ rust_binary(
     srcs = glob([
         "src/**/*.rs",
     ]),
-    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
+    test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
     deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
@@ -43,7 +43,7 @@ rust_binary(
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/mutable_counters:mutable_counters",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",

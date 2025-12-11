@@ -21,7 +21,7 @@ derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 thiserror = "2.0.12"
 unodes = { version = "0.1.0", path = "../unodes" }

@@ -8,4 +8,4 @@ edition = "2024"
 license = "GPLv2+"
 
 [dev-dependencies]
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../mononoke_macros" }

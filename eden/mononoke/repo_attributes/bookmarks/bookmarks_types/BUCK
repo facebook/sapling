@@ -6,7 +6,7 @@ rust_library(
     name = "bookmarks_types",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_dir": "."},
-    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
+    test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ascii",

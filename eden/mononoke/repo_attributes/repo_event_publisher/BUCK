@@ -15,7 +15,7 @@ rust_library(
         "//eden/mononoke/features/repo_update_logger:repo_update_logger",
     ] + ([] if rust_oss.is_oss_build() else [
         "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/stats:stats",
         "//common/rust/shed/justknobs_stub:justknobs",
@@ -37,7 +37,7 @@ rust_unittest(
         ":repo_event_publisher",
         "//eden/mononoke/features/repo_update_logger:repo_update_logger",
         "fbsource//third-party/rust:anyhow",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/scribe/api:scribe_api",

@@ -16,4 +16,4 @@ lazy_static = "1.5"
 mononoke_types = { version = "0.1.0", path = ".." }
 
 [dev-dependencies]
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }

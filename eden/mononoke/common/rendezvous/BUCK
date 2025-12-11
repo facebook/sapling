@@ -8,7 +8,7 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
@@ -23,6 +23,6 @@ rust_library(
         "//common/rust/shed/shared_error:shared_error",
         "//common/rust/shed/stats:stats",
         "//common/rust/shed/time_ext:time_ext",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
 )

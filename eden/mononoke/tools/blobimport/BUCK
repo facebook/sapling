@@ -8,7 +8,7 @@ rust_binary(
     autocargo = {"cargo_toml_dir": "tools/blobimport"},
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",

@@ -17,7 +17,7 @@ rust_library(
         "fbsource//third-party/rust:maplit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//common/rust/shed/sorted_vector_map:sorted_vector_map",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types-mocks",
         "//eden/mononoke/repo_attributes/hook_manager/hook_manager_testlib:hook_manager_testlib",
         "//eden/mononoke/repo_factory:test_repo_factory",

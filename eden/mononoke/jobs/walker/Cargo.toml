@@ -53,7 +53,7 @@ mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
-mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 multiplexedblob = { version = "0.1.0", path = "../../blobstore/multiplexedblob" }
 newfilenodes = { version = "0.1.0", path = "../../repo_attributes/newfilenodes" }

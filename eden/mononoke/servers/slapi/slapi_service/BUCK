@@ -12,7 +12,7 @@ rust_library(
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//configerator/structs/scm/mononoke/ratelimiting:rate_limiting_config-rust",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
     deps = ([
         "fbsource//third-party/rust:anyhow",
@@ -35,7 +35,7 @@ rust_library(
         "fbsource//third-party/rust:hyper-0-14",
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:lazy_static",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:mime",
         "fbsource//third-party/rust:nonzero_ext",

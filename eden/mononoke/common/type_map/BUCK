@@ -5,5 +5,5 @@ oncall("scm_server_infra")
 rust_library(
     name = "type_map",
     srcs = ["src/lib.rs"],
-    test_deps = ["//eden/mononoke/mononoke_macros:mononoke_macros"],
+    test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
 )

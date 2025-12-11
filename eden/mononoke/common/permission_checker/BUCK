@@ -8,7 +8,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:percent-encoding",
     ]),

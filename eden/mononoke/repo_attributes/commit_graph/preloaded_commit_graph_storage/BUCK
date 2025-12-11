@@ -8,7 +8,7 @@ rust_library(
     test_deps = [
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph:commit_graph",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_testlib:commit_graph_testlib",
         "//eden/mononoke/repo_attributes/commit_graph/in_memory_commit_graph_storage:in_memory_commit_graph_storage",
@@ -23,8 +23,8 @@ rust_library(
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/blobstore:blobstore",
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/reloader:reloader",
-        "//eden/mononoke/mononoke_macros:mononoke_macros",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types:commit_graph_types",
         "//eden/mononoke/repo_attributes/commit_graph/commit_graph_types/if:commit_graph_thrift-rust",

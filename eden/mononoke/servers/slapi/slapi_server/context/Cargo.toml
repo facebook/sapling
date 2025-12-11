@@ -18,7 +18,7 @@ chrono = { version = "0.4.41", features = ["clock", "serde", "std"], default-fea
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 governor = "0.3.2"
 metadata = { version = "0.1.0", path = "../../../../common/metadata" }
-mononoke_macros = { version = "0.1.0", path = "../../../../mononoke_macros" }
+mononoke_macros = { version = "0.1.0", path = "../../../../common/mononoke_macros" }
 permission_checker = { version = "0.1.0", path = "../../../../common/permission_checker" }
 rate_limiting = { version = "0.1.0", path = "../../../../common/rate_limiting" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../../../scm/lib/clientinfo" }
