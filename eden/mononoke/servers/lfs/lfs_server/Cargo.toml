@@ -30,7 +30,7 @@ hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 http = "0.2"
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
 hyper-openssl = "0.9"
-lfs_protocol = { version = "0.1.0", path = "../../../lfs_protocol" }
+lfs_protocol = { version = "0.1.0", path = "../../../common/lfs_protocol" }
 lfs_server_config = { version = "0.1.0", path = "../../../../../configerator/structs/scm/mononoke/lfs_server" }
 maplit = "1.0"
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
