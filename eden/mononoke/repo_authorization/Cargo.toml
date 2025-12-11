@@ -16,7 +16,7 @@ commit_cloud_helpers = { version = "0.1.0", path = "../features/commit_cloud/hel
 context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-permission_checker = { version = "0.1.0", path = "../permission_checker" }
+permission_checker = { version = "0.1.0", path = "../common/permission_checker" }
 repo_bookmark_attrs = { version = "0.1.0", path = "../repo_attributes/repo_bookmark_attrs" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 repo_permission_checker = { version = "0.1.0", path = "../repo_attributes/repo_permission_checker" }

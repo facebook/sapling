@@ -45,7 +45,7 @@ mononoke_configs = { version = "0.1.0", path = "../../mononoke_configs" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_repos = { version = "0.1.0", path = "../../mononoke_repos" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-permission_checker = { version = "0.1.0", path = "../../permission_checker" }
+permission_checker = { version = "0.1.0", path = "../../common/permission_checker" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
 regex = "1.12.2"
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }

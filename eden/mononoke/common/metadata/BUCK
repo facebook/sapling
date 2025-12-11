@@ -9,8 +9,8 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:trust-dns-resolver",
+        "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/common/session_id:session_id",
-        "//eden/mononoke/permission_checker:permission_checker",
         "//eden/scm/lib/clientinfo:clientinfo",
     ],
 )

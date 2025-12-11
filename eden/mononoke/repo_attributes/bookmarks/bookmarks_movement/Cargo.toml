@@ -32,7 +32,7 @@ itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
-permission_checker = { version = "0.1.0", path = "../../../permission_checker" }
+permission_checker = { version = "0.1.0", path = "../../../common/permission_checker" }
 phases = { version = "0.1.0", path = "../../phases" }
 pushrebase = { version = "0.1.0", path = "../../../features/pushrebase" }
 pushrebase_hook = { version = "0.1.0", path = "../../../features/pushrebase/pushrebase_hook" }

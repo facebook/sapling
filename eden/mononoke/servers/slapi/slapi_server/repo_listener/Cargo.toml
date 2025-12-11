@@ -39,7 +39,7 @@ mononoke_types = { version = "0.1.0", path = "../../../../mononoke_types" }
 ods_counters = { version = "0.1.0", path = "../../../../common/ods_counters" }
 openssl = "0.10.72"
 percent-encoding = "2.1"
-permission_checker = { version = "0.1.0", path = "../../../../permission_checker" }
+permission_checker = { version = "0.1.0", path = "../../../../common/permission_checker" }
 pin-project = "1.1.10"
 qps = { version = "0.1.0", path = "../qps" }
 quiet_stream = { version = "0.1.0", path = "../../../../quiet_stream" }

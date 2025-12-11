@@ -45,7 +45,7 @@ mutable_blobstore = { version = "0.1.0", path = "../../repo_attributes/mutable_b
 mutable_counters = { version = "0.1.0", path = "../../repo_attributes/mutable_counters" }
 mutable_renames = { version = "0.1.0", path = "../../repo_attributes/mutable_renames" }
 newfilenodes = { version = "0.1.0", path = "../../repo_attributes/newfilenodes" }
-permission_checker = { version = "0.1.0", path = "../../permission_checker" }
+permission_checker = { version = "0.1.0", path = "../../common/permission_checker" }
 phases = { version = "0.1.0", path = "../../repo_attributes/phases" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../../repo_attributes/pushrebase_mutation_mapping" }
 pushredirect = { version = "0.1.0", path = "../../megarepo_api/pushredirect" }

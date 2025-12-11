@@ -24,7 +24,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_macros = { version = "0.1.0", path = "../../mononoke_macros" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 path_hash = { version = "0.1.0", path = "../../common/path_hash" }
-permission_checker = { version = "0.1.0", path = "../../permission_checker" }
+permission_checker = { version = "0.1.0", path = "../../common/permission_checker" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specialization", "union"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

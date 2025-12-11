@@ -7,7 +7,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/permission_checker:permission_checker",
     ],
 )

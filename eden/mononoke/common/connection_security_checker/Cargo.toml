@@ -10,4 +10,4 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.98"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
-permission_checker = { version = "0.1.0", path = "../../permission_checker" }
+permission_checker = { version = "0.1.0", path = "../permission_checker" }

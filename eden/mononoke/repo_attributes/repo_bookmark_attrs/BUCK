@@ -8,8 +8,8 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "//common/rust/shed/facet:facet",
+        "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/permission_checker:permission_checker",
         "//eden/mononoke/repo_attributes/bookmarks/bookmarks_types:bookmarks_types",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],

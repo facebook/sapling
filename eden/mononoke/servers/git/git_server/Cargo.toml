@@ -55,7 +55,7 @@ mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 ods_counters = { version = "0.1.0", path = "../../../common/ods_counters" }
 packetline = { version = "0.1.0", path = "../../../git/packetline" }
 packfile = { version = "0.1.0", path = "../../../git/packfile" }
-permission_checker = { version = "0.1.0", path = "../../../permission_checker" }
+permission_checker = { version = "0.1.0", path = "../../../common/permission_checker" }
 protocol = { version = "0.1.0", path = "../../../git/protocol" }
 rate_limiting = { version = "0.1.0", path = "../../../rate_limiting" }
 repo_authorization = { version = "0.1.0", path = "../../../repo_authorization" }

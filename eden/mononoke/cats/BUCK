@@ -10,7 +10,7 @@ rust_library(
         "fbsource//third-party/rust:http",
         "//common/rust/shed/fbinit:fbinit",
         "//crypto/cat/rust:cryptocat",
+        "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/metaconfig:metaconfig_types",
-        "//eden/mononoke/permission_checker:permission_checker",
     ],
 )
