@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/mononoke/adaptive_rate_limiter/cpp/AdaptiveRateLimiterWrapper.h"
+#include "eden/mononoke/common/adaptive_rate_limiter/cpp/AdaptiveRateLimiterWrapper.h"
 
 #include <chrono>
 #include <memory>

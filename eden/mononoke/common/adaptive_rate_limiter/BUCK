@@ -14,7 +14,7 @@ cpp_library(
     undefined_symbols = True,
     deps = [],
     exported_deps = [
-        "//eden/mononoke/adaptive_rate_limiter/cpp:adaptive_rate_limiter_cpp",
+        "//eden/mononoke/common/adaptive_rate_limiter/cpp:adaptive_rate_limiter_cpp",
     ],
 )
 

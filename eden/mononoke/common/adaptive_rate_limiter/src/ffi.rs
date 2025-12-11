@@ -8,7 +8,7 @@
 #[cxx::bridge(namespace = "facebook::mononoke::ffi")]
 pub mod ffi {
     unsafe extern "C++" {
-        include!("eden/mononoke/adaptive_rate_limiter/src/ffi.h");
+        include!("eden/mononoke/common/adaptive_rate_limiter/src/ffi.h");
 
         // Opaque C++ types
         type CppAdaptiveRateLimiterWrapper;

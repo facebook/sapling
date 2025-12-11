@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include "eden/mononoke/adaptive_rate_limiter/cpp/AdaptiveRateLimiterConfig.h"
+#include "eden/mononoke/common/adaptive_rate_limiter/cpp/AdaptiveRateLimiterConfig.h"
 
 // Forward declarations to avoid including heavy proxygen headers
 namespace proxygen {
