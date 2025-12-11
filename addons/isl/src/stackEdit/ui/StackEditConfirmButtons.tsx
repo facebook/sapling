@@ -12,24 +12,32 @@ import {Icon} from 'isl-components/Icon';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
 import {useCallback} from 'react';
+import serverAPI from '../../ClientToServerAPI';
 import {
   editedCommitMessages,
   getDefaultEditedCommitMessage,
 } from '../../CommitInfoView/CommitInfoState';
+import {Internal} from '../../Internal';
+import {tracker} from '../../analytics';
+import {DevmateIcon} from '../../facebook/icons/DevmateIcon';
+import {useFeatureFlagSync} from '../../featureFlags';
 import {T, t} from '../../i18n';
 import {writeAtom} from '../../jotaiUtils';
 import {ImportStackOperation} from '../../operations/ImportStackOperation';
 import {RebaseOperation} from '../../operations/RebaseOperation';
 import {useRunOperation} from '../../operationsState';
-import {latestDag, latestHeadCommit} from '../../serverAPIState';
+import {latestDag, latestHeadCommit, repositoryInfo} from '../../serverAPIState';
 import {exactRevset, succeedableRevset} from '../../types';
 import {UndoDescription} from './StackEditSubTree';
 import {
   bumpStackEditMetric,
   editingStackIntentionHashes,
+  findStartEndRevs,
   sendStackEditMetrics,
   useStackEditState,
 } from './stackEditState';
+
+import './StackEditSubTree.css';
 
 export function StackEditConfirmButtons(): React.ReactElement {
   const [[stackIntention], setStackIntentionHashes] = useAtom(editingStackIntentionHashes);
@@ -110,6 +118,30 @@ export function StackEditConfirmButtons(): React.ReactElement {
     setStackIntentionHashes(['general', new Set<Hash>()]);
   };
 
+  // Get the commit hash for AI Split feature
+  const [startRev] = findStartEndRevs(stackEdit);
+  const {commitStack} = stackEdit;
+  const repo = useAtomValue(repositoryInfo);
+  const repoPath = repo?.repoRoot;
+  const enableDevmateSplit = useFeatureFlagSync(Internal.featureFlags?.DevmateSplitCommit) ?? false;
+
+  // Get the commit hash from the start of the split range
+  const startCommit = startRev != null ? commitStack.get(startRev) : null;
+  const splitCommitHash =
+    startCommit?.originalNodes != null ? [...startCommit.originalNodes][0] : null;
+
+  const handleAISplit = () => {
+    if (splitCommitHash == null) {
+      return;
+    }
+    tracker.track('SmartActionClicked', {extras: {action: 'SplitCommit'}});
+    serverAPI.postMessage({
+      type: 'platform/splitCommitWithAI',
+      diffCommit: splitCommitHash,
+      repoPath,
+    });
+  };
+
   let cancelTooltip = t('Discard stack editing changes');
   let confirmTooltip = t('Save stack editing changes');
   let confirmText = t('Save changes');
@@ -126,9 +158,18 @@ export function StackEditConfirmButtons(): React.ReactElement {
       break;
   }
 
-  // Show [Edit file stack] [Cancel] [Save changes] [Undo] [Redo].
+  // Show [AI Split] [Undo] [Redo] [Cancel] [Save changes].
   return (
     <>
+      {stackIntention === 'split' && enableDevmateSplit && splitCommitHash != null && (
+        <Tooltip title={t('Split this commit using Devmate')} placement="bottom">
+          <Button onClick={handleAISplit}>
+            <DevmateIcon />
+            <T>Split with Devmate</T>
+          </Button>
+        </Tooltip>
+      )}
+      {enableDevmateSplit && splitCommitHash != null && <div className="stack-edit-spacer" />}
       <Tooltip
         component={() =>
           canUndo ? (

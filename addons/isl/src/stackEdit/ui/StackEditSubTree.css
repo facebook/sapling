@@ -37,3 +37,7 @@
   padding: var(--button-icon-padding);
   touch-action: none;
 }
+
+.stack-edit-spacer {
+  margin-right: auto;
+}
