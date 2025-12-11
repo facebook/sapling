@@ -653,19 +653,28 @@ def get_eden_mount_name(path_arg: str) -> str:
     Get the path to the EdenFS checkout containing the specified path
     """
     if sys.platform == "win32":
-        path = path_arg
-        parent = os.path.dirname(path)
-        while path != parent:
-            if os.path.isdir(os.path.join(path, ".eden")):
-                return os.path.realpath(path)
-            from . import hg_util
-
-            if os.path.exists(os.path.join(path, hg_util.sniff_dot_dir(Path(path)))):
-                break
-            path = parent
+        try:
+            path = path_arg
             parent = os.path.dirname(path)
+            while path != parent:
+                if os.path.isdir(os.path.join(path, ".eden")):
+                    return os.path.realpath(path)
+                from . import hg_util
 
-        raise NotAnEdenMountError(path_arg)
+                if os.path.exists(
+                    os.path.join(path, hg_util.sniff_dot_dir(Path(path)))
+                ):
+                    break
+                path = parent
+                parent = os.path.dirname(path)
+            raise NotAnEdenMountError(path_arg)
+        except OSError as e:
+            # WinError 369 is "The provider that supports file system
+            # virtualization is temporarily unavailable". This usually
+            # indicates the path is leftover of a previous EdednFS mount.
+            if e.winerror == 369:
+                raise NotAnEdenMountError(path_arg)
+            raise
     else:
         path = os.path.join(path_arg, ".eden", "root")
         try:
