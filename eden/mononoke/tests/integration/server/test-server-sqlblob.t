@@ -22,68 +22,79 @@ setup common configuration
   > EOF
 
 
+start mononoke
+
+  $ start_and_wait_for_mononoke_server
+
 setup repo
 
-  $ hginit_treemanifest repo
-
-Init treemanifest and remotefilelog
+  $ hg clone -q mono:repo repo --noupdate
   $ cd repo
 
+Create linear chain commits
   $ touch a
   $ hg add a
-  $ hg ci -ma
-  $ hg log
-  commit:      3903775176ed
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
-   (re)
-  $ hg bookmark -r . master_bookmark
-  $ cd $TESTTMP
+  $ hg ci -qAm a
+  $ A_NODE=$(hg log -r . -T '{node}')
 
-setup repo2
-  $ hg clone -q mono:repo repo2 --noupdate
-  $ cd repo2
-  $ hg pull -q
-
-  $ cd $TESTTMP
-  $ cd repo
   $ touch b
   $ hg add b
-  $ hg ci -mb
+  $ hg ci -qAm b
+
   $ echo content > c
   $ hg add c
-  $ hg ci -mc
+  $ hg ci -qAm c
+
   $ mkdir dir
   $ echo 1 > dir/1
   $ mkdir dir2
   $ echo 2 > dir/2
-  $ hg addremove
-  adding dir/1
-  adding dir/2
-  $ hg ci -m 'new directory'
+  $ hg addremove -q
+  $ hg ci -qAm 'new directory'
+
   $ echo cc > c
-  $ hg addremove
-  $ hg ci -m 'modify file'
+  $ hg ci -qAm 'modify file'
+
   $ hg mv dir/1 dir/rename
-  $ hg ci -m 'rename'
-  $ hg debugdrawdag <<'EOS'
-  >   D  # D/D=1\n2\n
-  >  /|  # B/D=1\n
-  > B C  # C/D=2\n
-  > |/   # A/D=x\n
-  > A
-  > EOS
+  $ hg ci -qAm 'rename'
+  $ RENAME_NODE=$(hg log -r . -T '{node}')
+
+Create disconnected merge DAG
+  $ hg update -q null
+  $ echo "x" > D
+  $ hg commit -qAm A
+  $ A_DRAWDAG_NODE=$(hg log -r . -T '{node}')
+
+  $ echo "1" > D
+  $ hg commit -qAm B
+  $ B_NODE=$(hg log -r . -T '{node}')
+
+  $ hg update -q $A_DRAWDAG_NODE
+  $ echo "2" > D
+  $ hg commit -qAm C
+  $ C_NODE=$(hg log -r . -T '{node}')
+
+  $ hg update -q $B_NODE
+  $ hg merge -q $C_NODE || true
+  warning: 1 conflicts while merging D! (edit, then use 'hg resolve --mark')
+  $ printf '1\n2\n' > D
+  $ hg resolve -m D
+  (no more unresolved files)
+  $ hg commit -qAm D
+  $ D_NODE=$(hg log -r . -T '{node}')
+
+Push both histories
+  $ hg push --to master_bookmark --create -r $D_NODE -q
+  $ hg push --to master_bookmark2 --create -r $RENAME_NODE -q
+
+Export variables for use in other repos
+  $ export A_NODE
+  $ export RENAME_NODE
+  $ export C_NODE
+  $ export D_NODE
+
   $ hg log --graph -T '{node|short} {desc}'
-  o    e635b24c95f7 D
-  ├─╮
-  │ o  d351044ef463 C
-  │ │
-  o │  9a827afb7e25 B
-  ├─╯
-  o  af6aa0dfdf3d A
-   (re)
-  @  9f8e7242d9fa rename
+  o  9f8e7242d9fa rename
   │
   o  586ef37a04f7 modify file
   │
@@ -94,21 +105,19 @@ setup repo2
   o  0e067c57feba b
   │
   o  3903775176ed a
-   (re)
+  
+  @    1aceff28fe8c D
+  ├─╮
+  │ o  8a2febcd784f B
+  │ │
+  o │  d64c36ecf9aa C
+  ├─╯
+  o  295f4466d891 A
+  
 
-setup master bookmarks
 
-  $ hg bookmark master_bookmark -fr e635b24c95f7
-  $ hg bookmark master_bookmark2 -r 9f8e7242d9fa
+  $ cd $TESTTMP
 
-blobimport
-
-  $ cd ..
-  $ blobimport repo/.hg repo
-
-start mononoke
-
-  $ start_and_wait_for_mononoke_server
   $ hg debugwireargs mono:disabled_repo one two --three three
   remote: Unknown Repo:
   remote:   Error:
@@ -118,13 +127,18 @@ start mononoke
   $ hg debugwireargs mono:repo one two --three three
   one two three None None
 
+setup repo2
+  $ hg clone -q mono:repo repo2 --noupdate
   $ cd repo2
-  $ hg up -q 0
+  $ hg pull -q
+  $ hg up -q $A_NODE
 Test a pull of one specific revision
-  $ hg pull -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
+  $ hg pull -r $C_NODE -q
 (with selectivepull, pulling a commit hash also pulls the selected bookmarks)
 
-  $ hg log -r '3903775176ed::586ef37a04f7' --graph  -T '{node|short} {desc}'
+  $ hg log -r "$A_NODE::$RENAME_NODE" --graph  -T '{node|short} {desc}'
+  o  9f8e7242d9fa rename
+  │
   o  586ef37a04f7 modify file
   │
   o  e343d2f326cf new directory
@@ -135,9 +149,10 @@ Test a pull of one specific revision
   │
   @  3903775176ed a
    (re)
+
   $ ls
   a
-  $ hg up 9f8e7242d9fa -q
+  $ hg up $RENAME_NODE -q
   $ ls
   a
   b
@@ -145,7 +160,7 @@ Test a pull of one specific revision
   dir
   $ cat c
   cc
-  $ hg up 9f8e7242d9fa -q
+  $ hg up $RENAME_NODE -q
   $ hg log c -T '{node|short} {desc}\n'
   warning: file log can be slow on large repos - use -f to speed it up
   586ef37a04f7 modify file
@@ -157,19 +172,20 @@ Test a pull of one specific revision
   $ hg log dir/rename -f -T '{node|short} {desc}\n'
   9f8e7242d9fa rename
   e343d2f326cf new directory
-  $ hg st --change 9f8e7242d9fa -C
+  $ hg st --change $RENAME_NODE -C
   A dir/rename
     dir/1
   R dir/1
 
-  $ hg up -q e635b24c95f7
+  $ hg up -q $D_NODE
 
 Sort the output because it may be unpredictable because of the merge
   $ hg log D --follow -T '{node|short} {desc}\n' | sort
-  9a827afb7e25 B
-  af6aa0dfdf3d A
-  d351044ef463 C
-  e635b24c95f7 D
+  1aceff28fe8c D
+  295f4466d891 A
+  8a2febcd784f B
+  d64c36ecf9aa C
+
 
 Create a new bookmark and try and send it over the wire
 Test commented while we have no bookmark support in blobimport or easy method
