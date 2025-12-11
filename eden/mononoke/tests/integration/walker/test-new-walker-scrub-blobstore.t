@@ -18,14 +18,19 @@ setup configuration
   C=d3b399ca8757acdb81c3681b052eb978db6768d8
 
 setup repo2 so we can try multi-repo
-  $ hginit_treemanifest repo2
-  $ cd repo2
-  $ mkcommit X
-  $ hg bookmark master_bookmark -r tip
-  $ cd ..
   $ MULTIPLEXED=1 REPOID=2 setup_mononoke_repo_config repo2 blobstore
-  $ cd ..
-  $ REPOID=2 blobimport repo2/.hg repo2 --exclude-derived-data-type=filenodes
+
+Start mononoke server after both repos are configured
+  $ start_and_wait_for_mononoke_server
+
+Push data to repo2 via clone+push
+  $ hg clone -q mono:repo2 repo2-checkout --noupdate
+  $ cd repo2-checkout
+  $ echo "X" > X
+  $ hg add X
+  $ hg commit -m "X"
+  $ hg push --to master_bookmark --create -q
+  $ cd "$TESTTMP"
 
 Base case, check can walk fine, one repo
   $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | grep -vE "(Bytes|Walked)/s"
@@ -44,7 +49,7 @@ Check that multi repo runs for all repos specified
 
 Delete all data from one side of the multiplex
   $ ls blobstore/0/blobs/* | wc -l
-  44
+  46
   $ rm blobstore/0/blobs/*
 
 Check fails on only the deleted side

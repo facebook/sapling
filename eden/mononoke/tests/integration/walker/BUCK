@@ -9,6 +9,7 @@ dott_test(
     name = "walker",
     dott_files = glob(["*.t"]),
     deps = [
+        "//eden/mononoke:mononoke",
         "//eden/mononoke/jobs/walker:walker",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/blobimport:blobimport",
