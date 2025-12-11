@@ -22,7 +22,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures-util = { version = "0.3.30", features = ["compat"] }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-gotham_ext = { version = "0.1.0", path = "../../../../gotham_ext" }
+gotham_ext = { version = "0.1.0", path = "../../../../common/gotham_ext" }
 hgproto = { version = "0.1.0", path = "../../../../common/hgproto" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 http = "0.2"

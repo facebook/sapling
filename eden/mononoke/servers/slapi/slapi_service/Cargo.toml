@@ -31,7 +31,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git_types = { version = "0.1.0", path = "../../../git/git_types" }
 gotham = "0.7.1"
 gotham_derive = "0.7.0"
-gotham_ext = { version = "0.1.0", path = "../../../gotham_ext" }
+gotham_ext = { version = "0.1.0", path = "../../../common/gotham_ext" }
 hex = { version = "0.4.3", features = ["alloc"] }
 hooks = { version = "0.1.0", path = "../../../features/hooks" }
 http = "0.2"

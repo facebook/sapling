@@ -36,7 +36,7 @@ gix-packetline = { version = "0.19.0", features = ["blocking-io"] }
 gix-transport = "0.47.0"
 gotham = "0.7.1"
 gotham_derive = "0.7.0"
-gotham_ext = { version = "0.1.0", path = "../../../gotham_ext" }
+gotham_ext = { version = "0.1.0", path = "../../../common/gotham_ext" }
 http = "0.2"
 hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
 import_direct = { version = "0.1.0", path = "../../../git/import_direct" }
