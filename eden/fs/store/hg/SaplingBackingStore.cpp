@@ -1786,73 +1786,33 @@ SaplingBackingStore::getRootTree(
   folly::stop_watch<std::chrono::milliseconds> watch;
   ObjectId commitId = hashFromRootId(rootId);
 
-  return localStore_
-      ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
-      .thenValue(
-          [this, commitId, context = context.copy(), watch](StoreResult result)
-              -> folly::SemiFuture<BackingStore::GetRootTreeResult> {
-            if (!result.isValid()) {
-              return importTreeManifest(
-                         commitId,
-                         context,
-                         ObjectFetchContext::ObjectType::RootTree)
-                  .thenValue([this, commitId, watch](TreePtr rootTree) {
-                    XLOGF(
-                        DBG1,
-                        "imported mercurial commit {} as tree {}",
-                        commitId,
-                        rootTree->getObjectId());
-                    stats_->addDuration(
-                        &SaplingBackingStoreStats::getRootTree,
-                        watch.elapsed());
-                    localStore_->put(
-                        KeySpace::HgCommitToTreeFamily,
-                        commitId,
-                        rootTree->getObjectId().getBytes());
-                    return BackingStore::GetRootTreeResult{
-                        rootTree, rootTree->getObjectId()};
-                  });
-            }
-
-            auto rootTreeHash = HgProxyHash::load(
-                localStore_.get(),
-                ObjectId{result.bytes()},
-                "getRootTree",
-                *stats_);
-            return importTreeManifestImpl(
-                       rootTreeHash.revHash(),
-                       context,
-                       ObjectFetchContext::ObjectType::RootTree)
-                .thenValue([this, watch](TreePtr tree) {
-                  stats_->addDuration(
-                      &SaplingBackingStoreStats::getRootTree, watch.elapsed());
-                  return BackingStore::GetRootTreeResult{
-                      tree, tree->getObjectId()};
-                });
-          });
-}
-
-folly::Future<TreePtr> SaplingBackingStore::importTreeManifest(
-    const ObjectId& commitId,
-    const ObjectFetchContextPtr& context,
-    const ObjectFetchContext::ObjectType type) {
   return folly::via(
              serverThreadPool_,
              [this, commitId] { return getManifestNode(commitId); })
-      .thenValue([this, commitId, fetchContext = context.copy(), type](
+      .thenValue([this, commitId, watch, fetchContext = context.copy()](
                      auto manifestNode) {
         if (!manifestNode.has_value()) {
           auto ew = folly::exception_wrapper{std::runtime_error{
               "Manifest node could not be found for commitId"}};
-          return folly::makeFuture<TreePtr>(std::move(ew));
+          return folly::makeFuture<BackingStore::GetRootTreeResult>(
+              std::move(ew));
         }
         XLOGF(
             DBG2,
             "commit {} has manifest node {}",
             commitId,
             manifestNode.value());
+
         return importTreeManifestImpl(
-            *std::move(manifestNode), fetchContext, type);
+                   *std::move(manifestNode),
+                   fetchContext,
+                   ObjectFetchContext::ObjectType::RootTree)
+            .thenValue([this, watch](TreePtr rootTree) {
+              stats_->addDuration(
+                  &SaplingBackingStoreStats::getRootTree, watch.elapsed());
+              return BackingStore::GetRootTreeResult{
+                  rootTree, rootTree->getObjectId()};
+            });
       });
 }
 
