@@ -188,3 +188,36 @@ struct hash<facebook::eden::SaplingObjectId> {
   }
 };
 } // namespace std
+
+template <>
+struct fmt::formatter<facebook::eden::SaplingObjectId> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename Context>
+  auto format(const facebook::eden::SaplingObjectId& oid, Context& ctx) const {
+    return fmt::format_to(
+        ctx.out(), "{}", facebook::eden::SaplingObjectIdView{oid.data()});
+  }
+};
+
+template <>
+struct fmt::formatter<facebook::eden::SaplingObjectIdView> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename Context>
+  auto format(const facebook::eden::SaplingObjectIdView& oid, Context& ctx)
+      const {
+    auto out = ctx.out();
+    out = fmt::format_to(out, "node={}", oid.node());
+    auto bytes = oid.data();
+    if (!bytes.empty() &&
+        bytes[0] == facebook::eden::SaplingObjectId::TYPE_HG_ID_WITH_PATH) {
+      out = fmt::format_to(out, " path={}", oid.path());
+    }
+    return std::move(out);
+  }
+};
