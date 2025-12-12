@@ -16,6 +16,8 @@
 
 namespace facebook::eden {
 
+class SaplingObjectIdView;
+
 /**
  * SaplingObjectId represents SaplingBackingStore's ObjectId format, which
  * embeds the 20 byte Sapling hash and optionally the file/tree path.
@@ -61,6 +63,11 @@ class SaplingObjectId {
    */
   explicit SaplingObjectId(const Hash20& slHash);
 
+  /**
+   * Construct a SaplingObjectId by copying from a SaplingObjectIdView.
+   */
+  /* implicit */ SaplingObjectId(const SaplingObjectIdView& view);
+
   ~SaplingObjectId() = default;
 
   SaplingObjectId(const SaplingObjectId& other) = default;
@@ -93,6 +100,8 @@ class SaplingObjectId {
   folly::ByteRange data() const {
     return folly::ByteRange{value_};
   }
+
+  SaplingObjectIdView view() const;
 
   rust::Slice<const uint8_t> rustData() const {
     return rust::Slice<const uint8_t>{

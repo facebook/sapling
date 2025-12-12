@@ -141,3 +141,24 @@ TEST(SlOidTest, format_view_with_empty_path) {
   auto formatted = fmt::format("{}", view);
   EXPECT_EQ("node=0123456789abcdef0123456789abcdef01234567 path=", formatted);
 }
+
+TEST(SlOidTest, view_and_construct_from_view_roundtrip) {
+  Hash20 hash{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
+  auto original = SlOid{hash, RelativePathPiece{"test/path"}};
+
+  SlOidView view = original.view();
+  SlOid reconstructed{view};
+
+  EXPECT_EQ(original.node(), reconstructed.node());
+  EXPECT_EQ(original.path(), reconstructed.path());
+  EXPECT_EQ(original.data(), reconstructed.data());
+}
+
+TEST(SlOidTest, view_method_no_path) {
+  Hash20 hash{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
+  auto slOid = SlOid{hash};
+
+  SlOidView view = slOid.view();
+  EXPECT_EQ(hash, view.node());
+  EXPECT_EQ(RelativePathPiece{}, view.path());
+}

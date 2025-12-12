@@ -49,6 +49,11 @@ SaplingObjectId::SaplingObjectId(const Hash20& slHash) {
   value_.append((const char*)slHash.getBytes().data(), slHash.RAW_SIZE);
 }
 
+SaplingObjectId::SaplingObjectId(const SaplingObjectIdView& view)
+    : value_(
+          reinterpret_cast<const char*>(view.data().data()),
+          view.data().size()) {}
+
 SaplingObjectId::SaplingObjectId(folly::StringPiece value, bool validate)
     : value_{value} {
   if (validate) {
@@ -122,6 +127,10 @@ Hash20& SaplingObjectId::node() const noexcept {
   } else {
     return *reinterpret_cast<Hash20*>(const_cast<char*>(value_.data() + 1));
   }
+}
+
+SaplingObjectIdView SaplingObjectId::view() const {
+  return SaplingObjectIdView{data()};
 }
 
 bool SaplingObjectId::operator==(const SaplingObjectId& otherHash) const {
