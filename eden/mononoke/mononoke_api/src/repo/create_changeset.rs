@@ -229,7 +229,7 @@ pub enum CreateChangeFileContents {
 }
 
 impl CreateChangeFileContents {
-    async fn resolve(
+    pub(crate) async fn resolve(
         &mut self,
         ctx: &CoreContext,
         filestore_config: FilestoreConfig,
@@ -293,7 +293,7 @@ impl CreateChangeFile {
 
 // Enum for recording whether a path is not changed, changed or deleted.
 #[derive(Copy, Clone, Default, Eq, PartialEq, Debug)]
-enum CreateChangeType {
+pub(crate) enum CreateChangeType {
     #[default]
     None,
     Change,
@@ -311,7 +311,7 @@ impl CreateChangeType {
 }
 
 impl CreateChange {
-    async fn resolve<R: MononokeRepo>(
+    pub(crate) async fn resolve<R: MononokeRepo>(
         &mut self,
         ctx: &CoreContext,
         filestore_config: FilestoreConfig,
@@ -384,7 +384,7 @@ impl CreateChange {
         }
     }
 
-    fn change_type(&self) -> CreateChangeType {
+    pub(crate) fn change_type(&self) -> CreateChangeType {
         match self {
             CreateChange::Deletion | CreateChange::UntrackedDeletion => CreateChangeType::Deletion,
             CreateChange::Tracked(..) | CreateChange::Untracked(..) => CreateChangeType::Change,
@@ -427,7 +427,7 @@ pub struct CreateInfo {
 }
 
 /// Verify that all deleted files existed in at least one of the parents.
-async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
+pub(crate) async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
     parent_ctxs: &[ChangesetContext<R>],
     stack_changes: Option<&PathTree<CreateChangeType>>,
     mut deleted_files: BTreeSet<MPath>,
@@ -532,7 +532,7 @@ async fn verify_deleted_files_existed_in_a_parent<R: MononokeRepo>(
     }
 }
 
-async fn is_noop_file_change<R: MononokeRepo>(
+pub(crate) async fn is_noop_file_change<R: MononokeRepo>(
     parent_ctxs: &[ChangesetContext<R>],
     stack_changes: Option<&PathTree<Option<FileId>>>,
     path: &NonRootMPath,
@@ -588,7 +588,7 @@ async fn is_noop_file_change<R: MononokeRepo>(
     Ok(false)
 }
 
-async fn verify_no_noop_file_changes<R: MononokeRepo>(
+pub(crate) async fn verify_no_noop_file_changes<R: MononokeRepo>(
     parent_ctxs: &[ChangesetContext<R>],
     stack_changes: Option<PathTree<Option<FileId>>>,
     file_changes: &SortedVectorMap<NonRootMPath, CreateChange>,
@@ -633,7 +633,7 @@ async fn remove_noop_file_changes<R: MononokeRepo>(
 
 /// Returns `true` if any prefix of the path has a change.  Use for
 /// detecting when a directory is replaced by a file.
-fn is_prefix_changed(path: &MPath, paths: &PathTree<CreateChangeType>) -> bool {
+pub(crate) fn is_prefix_changed(path: &MPath, paths: &PathTree<CreateChangeType>) -> bool {
     MononokePathPrefixes::new(path)
         .any(|prefix| paths.get(&prefix) == Some(&CreateChangeType::Change))
 }
@@ -641,7 +641,7 @@ fn is_prefix_changed(path: &MPath, paths: &PathTree<CreateChangeType>) -> bool {
 /// Verify that any files in `prefix_paths` that exist in any of
 /// `parent_ctxs`, as modified by the existing stack changes, have been marked
 /// as deleted in `path_changes`.
-async fn verify_prefix_files_deleted<R: MononokeRepo>(
+pub(crate) async fn verify_prefix_files_deleted<R: MononokeRepo>(
     parent_ctxs: &[ChangesetContext<R>],
     stack_changes: Option<&PathTree<CreateChangeType>>,
     mut prefix_paths: BTreeSet<MPath>,
@@ -806,6 +806,17 @@ pub struct CreateChangesetChecks {
     pub noop_file_changes: CreateChangesetCheckMode,
     pub deleted_files_existed_in_a_parent: CreateChangesetCheckMode,
     pub empty_changeset: CreateChangesetCheckMode,
+}
+
+impl CreateChangesetChecks {
+    /// Create a checks config that validates all conditions (the common case).
+    pub fn check() -> Self {
+        Self {
+            noop_file_changes: CreateChangesetCheckMode::Check,
+            deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
+            empty_changeset: CreateChangesetCheckMode::Check,
+        }
+    }
 }
 
 impl<R: MononokeRepo> RepoContext<R> {

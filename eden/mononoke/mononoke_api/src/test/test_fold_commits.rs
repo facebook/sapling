@@ -23,10 +23,16 @@ use fbinit::FacebookInit;
 use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
+use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
+use mononoke_types::path::MPath;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 
 use crate::CoreContext;
+use crate::CreateChange;
+use crate::CreateChangeFile;
+use crate::CreateChangeFileContents;
+use crate::CreateChangesetChecks;
 use crate::CreateInfo;
 use crate::Repo;
 use crate::RepoContext;
@@ -96,7 +102,13 @@ async fn test_fold_commits_different_lines_same_file(fb: FacebookInit) -> Result
     .await?;
 
     let folded = repo
-        .fold_commits(commits["B"], Some(commits["C"]), None, None)
+        .fold_commits(
+            commits["B"],
+            Some(commits["C"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await?
         .changeset_ctx;
 
@@ -135,7 +147,13 @@ async fn test_fold_commits_multiple_files_across_directories(
     .await?;
 
     let folded = repo
-        .fold_commits(commits["B"], Some(commits["C"]), None, None)
+        .fold_commits(
+            commits["B"],
+            Some(commits["C"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await?
         .changeset_ctx;
 
@@ -171,7 +189,13 @@ async fn test_fold_commits_single_commit(fb: FacebookInit) -> Result<(), Error> 
     .await?;
 
     let folded = repo
-        .fold_commits(commits["B"], Some(commits["B"]), None, None)
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await?
         .changeset_ctx;
 
@@ -217,7 +241,13 @@ async fn test_fold_commits_complex_scenario(fb: FacebookInit) -> Result<(), Erro
     .await?;
 
     let folded = repo
-        .fold_commits(commits["B"], Some(commits["D"]), None, None)
+        .fold_commits(
+            commits["B"],
+            Some(commits["D"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await?
         .changeset_ctx;
 
@@ -280,7 +310,13 @@ async fn test_fold_commits_revert_changes(fb: FacebookInit) -> Result<(), Error>
     .await?;
 
     let result = repo
-        .fold_commits(commits["B"], Some(commits["C"]), None, None)
+        .fold_commits(
+            commits["B"],
+            Some(commits["C"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await;
 
     assert!(
@@ -310,7 +346,13 @@ async fn test_fold_commits_file_added_then_deleted(fb: FacebookInit) -> Result<(
     .await?;
 
     let result = repo
-        .fold_commits(commits["B"], Some(commits["C"]), None, None)
+        .fold_commits(
+            commits["B"],
+            Some(commits["C"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await;
 
     assert!(
@@ -338,7 +380,15 @@ async fn test_fold_commits_no_op(fb: FacebookInit) -> Result<(), Error> {
     )
     .await?;
 
-    let result = repo.fold_commits(commits["B"], None, None, None).await;
+    let result = repo
+        .fold_commits(
+            commits["B"],
+            None,
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await;
 
     assert!(result.is_err(), "No-op fold should fail");
     Ok(())
@@ -363,7 +413,13 @@ async fn test_fold_commits_delete_existing_file(fb: FacebookInit) -> Result<(), 
     .await?;
 
     let folded = repo
-        .fold_commits(commits["B"], Some(commits["C"]), None, None)
+        .fold_commits(
+            commits["B"],
+            Some(commits["C"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await?
         .changeset_ctx;
 
@@ -404,7 +460,13 @@ async fn test_fold_commits_implicit_deletion(fb: FacebookInit) -> Result<(), Err
     .await?;
 
     let folded = repo
-        .fold_commits(commits["B"], Some(commits["C"]), None, None)
+        .fold_commits(
+            commits["B"],
+            Some(commits["C"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await?
         .changeset_ctx;
 
@@ -458,7 +520,13 @@ async fn test_fold_commits_deleted_implicit_delete(fb: FacebookInit) -> Result<(
     assert!(base_dir_file.is_some(), "dir/file should exist in base");
 
     let folded = repo
-        .fold_commits(commits["B"], Some(commits["C"]), None, None)
+        .fold_commits(
+            commits["B"],
+            Some(commits["C"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await?
         .changeset_ctx;
 
@@ -515,7 +583,13 @@ async fn test_fold_commits_directory_rename_simulation(fb: FacebookInit) -> Resu
     .await?;
 
     let folded = repo
-        .fold_commits(commits["B"], Some(commits["C"]), None, None)
+        .fold_commits(
+            commits["B"],
+            Some(commits["C"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await?
         .changeset_ctx;
 
@@ -563,7 +637,13 @@ async fn test_fold_commits_move_file_across_directories(fb: FacebookInit) -> Res
 
     // Fold C..D (base is B which has a.txt)
     let folded = repo
-        .fold_commits(commits["C"], Some(commits["D"]), None, None)
+        .fold_commits(
+            commits["C"],
+            Some(commits["D"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await?
         .changeset_ctx;
 
@@ -628,7 +708,13 @@ async fn test_fold_commits_chained_renames(fb: FacebookInit) -> Result<(), Error
     let base = repo.changeset(commits["A"]).await?.expect("base exists");
 
     let folded = repo
-        .fold_commits(commits["B"], Some(commits["D"]), None, None)
+        .fold_commits(
+            commits["B"],
+            Some(commits["D"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
         .await?
         .changeset_ctx;
 
@@ -708,7 +794,13 @@ async fn test_fold_commits_with_custom_author(fb: FacebookInit) -> Result<(), Er
     };
 
     let folded = repo
-        .fold_commits(commits["B"], Some(commits["C"]), None, Some(custom_info))
+        .fold_commits(
+            commits["B"],
+            Some(commits["C"]),
+            None,
+            Some(custom_info),
+            CreateChangesetChecks::check(),
+        )
         .await?
         .changeset_ctx;
 
@@ -749,6 +841,439 @@ async fn test_fold_commits_with_custom_author(fb: FacebookInit) -> Result<(), Er
         .content_concat()
         .await?;
     assert_eq!(file2, Bytes::from("file2 content\n"));
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_with_additional_changes_add_file(fb: FacebookInit) -> Result<(), Error> {
+    // Graph: A-B
+    // additional_changes: add a new file
+    // Expected: Folded commit should have both B's changes and the additional file
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B file1.txt "file1 content\n"
+        "##,
+    )
+    .await?;
+
+    let additional_changes = BTreeMap::from([(
+        MPath::try_from("additional.txt")?,
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("additional content\n"),
+                },
+                file_type: FileType::Regular,
+                git_lfs: None,
+            },
+            None,
+        ),
+    )]);
+
+    let folded = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await?
+        .changeset_ctx;
+
+    // Verify both files exist
+    let file1 = folded
+        .path_with_content("file1.txt")
+        .await?
+        .file()
+        .await?
+        .expect("file1 should exist")
+        .content_concat()
+        .await?;
+    assert_eq!(file1, Bytes::from("file1 content\n"));
+
+    let additional = folded
+        .path_with_content("additional.txt")
+        .await?
+        .file()
+        .await?
+        .expect("additional.txt should exist")
+        .content_concat()
+        .await?;
+    assert_eq!(additional, Bytes::from("additional content\n"));
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_with_additional_changes_delete_nonexistent_file(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Graph: A-B
+    // additional_changes: try to delete a file that doesn't exist
+    // Expected: Should fail because deleted file doesn't exist
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B file1.txt "file1 content\n"
+        "##,
+    )
+    .await?;
+
+    let additional_changes =
+        BTreeMap::from([(MPath::try_from("nonexistent.txt")?, CreateChange::Deletion)]);
+
+    let result = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await;
+
+    assert!(
+        result.is_err(),
+        "Should fail because deleted file doesn't exist"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_with_additional_changes_delete_file_from_stack(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Graph: A-B
+    // additional_changes: delete a file that was added in the stack
+    // Expected: Should succeed (file exists in stack_changes)
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B file1.txt "file1 content\n"
+        "##,
+    )
+    .await?;
+
+    let additional_changes =
+        BTreeMap::from([(MPath::try_from("file1.txt")?, CreateChange::Deletion)]);
+
+    let result = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await;
+
+    // This should fail because deleting a file that was just added results in no net change
+    assert!(result.is_err(), "Should fail because net effect is empty");
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_with_additional_changes_modify_existing_file(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Graph: A-B
+    // additional_changes: modify a file that exists in base
+    // Expected: Should succeed with updated content
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B file1.txt "file1 content\n"
+        "##,
+    )
+    .await?;
+
+    let additional_changes = BTreeMap::from([(
+        MPath::try_from("a.txt")?,
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("modified base\n"),
+                },
+                file_type: FileType::Regular,
+                git_lfs: None,
+            },
+            None,
+        ),
+    )]);
+
+    let folded = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await?
+        .changeset_ctx;
+
+    // Verify a.txt has modified content
+    let a_txt = folded
+        .path_with_content("a.txt")
+        .await?
+        .file()
+        .await?
+        .expect("a.txt should exist")
+        .content_concat()
+        .await?;
+    assert_eq!(a_txt, Bytes::from("modified base\n"));
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_with_additional_changes_noop_fails(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Graph: A-B
+    // additional_changes: add content that matches the file in the stack
+    // Expected: Should fail because it's a no-op change
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B file1.txt "file1 content\n"
+        "##,
+    )
+    .await?;
+
+    // Try to "add" file1.txt with the same content it already has
+    let additional_changes = BTreeMap::from([(
+        MPath::try_from("file1.txt")?,
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("file1 content\n"),
+                },
+                file_type: FileType::Regular,
+                git_lfs: None,
+            },
+            None,
+        ),
+    )]);
+
+    let result = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await;
+
+    assert!(result.is_err(), "Should fail because it's a no-op change");
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_with_additional_changes_only(fb: FacebookInit) -> Result<(), Error> {
+    // Graph: A-B
+    // Fold single commit with only additional_changes (top_id = None)
+    // Expected: Should succeed with the additional changes applied
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B file1.txt "file1 content\n"
+        "##,
+    )
+    .await?;
+
+    let additional_changes = BTreeMap::from([(
+        MPath::try_from("additional.txt")?,
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("additional content\n"),
+                },
+                file_type: FileType::Regular,
+                git_lfs: None,
+            },
+            None,
+        ),
+    )]);
+
+    // Use None for top_id, relying only on additional_changes
+    let folded = repo
+        .fold_commits(
+            commits["B"],
+            None,
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await?
+        .changeset_ctx;
+
+    // Verify additional.txt exists
+    let additional = folded
+        .path_with_content("additional.txt")
+        .await?
+        .file()
+        .await?
+        .expect("additional.txt should exist")
+        .content_concat()
+        .await?;
+    assert_eq!(additional, Bytes::from("additional content\n"));
+
+    // file1.txt SHOULD exist because we folded bottom_id (commit B) with additional_changes.
+    // When top_id=None, bottom_id becomes the top of a 1-commit stack, so its changes are included.
+    let file_changes = folded.file_changes().await?;
+    assert_eq!(file_changes.len(), 2);
+    assert!(file_changes.contains_key(&NonRootMPath::try_from("additional.txt")?));
+    assert!(file_changes.contains_key(&NonRootMPath::try_from("file1.txt")?));
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_additional_changes_create_inside_file_without_delete(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Graph: A-B
+    // B creates "dir" as a file
+    // additional_changes: try to create "dir/subfile" without deleting "dir"
+    // Expected: Should fail because "dir" is a file and wasn't deleted
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B dir "dir is a file\n"
+        "##,
+    )
+    .await?;
+
+    let additional_changes = BTreeMap::from([(
+        MPath::try_from("dir/subfile.txt")?,
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("subfile content\n"),
+                },
+                file_type: FileType::Regular,
+                git_lfs: None,
+            },
+            None,
+        ),
+    )]);
+
+    let result = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await;
+
+    assert!(
+        result.is_err(),
+        "Should fail because creating inside a file path without deleting it"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_additional_changes_create_inside_file_with_delete(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Graph: A-B
+    // B creates "dir" as a file
+    // additional_changes: delete "dir" and create "dir/subfile"
+    // Expected: Should succeed
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B dir "dir is a file\n"
+        "##,
+    )
+    .await?;
+
+    let additional_changes = BTreeMap::from([
+        (MPath::try_from("dir")?, CreateChange::Deletion),
+        (
+            MPath::try_from("dir/subfile.txt")?,
+            CreateChange::Tracked(
+                CreateChangeFile {
+                    contents: CreateChangeFileContents::New {
+                        bytes: Bytes::from("subfile content\n"),
+                    },
+                    file_type: FileType::Regular,
+                    git_lfs: None,
+                },
+                None,
+            ),
+        ),
+    ]);
+
+    let folded = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await?
+        .changeset_ctx;
+
+    // Verify dir is not a file anymore
+    let dir = folded.path_with_content("dir").await?.file().await?;
+    assert!(dir.is_none(), "dir should not be a file");
+
+    // Verify dir/subfile.txt exists
+    let subfile = folded
+        .path_with_content("dir/subfile.txt")
+        .await?
+        .file()
+        .await?
+        .expect("dir/subfile.txt should exist")
+        .content_concat()
+        .await?;
+    assert_eq!(subfile, Bytes::from("subfile content\n"));
 
     Ok(())
 }

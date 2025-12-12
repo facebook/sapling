@@ -12,8 +12,10 @@ use std::collections::HashMap;
 use anyhow::Result;
 use chrono::Utc;
 use commit_graph::CommitGraphRef;
+use filestore::FilestoreConfigRef;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use futures_stats::TimedFutureExt;
 use manifest::PathTree;
 use maplit::btreemap;
 use mononoke_types::BasicFileChange;
@@ -21,6 +23,9 @@ use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
 use mononoke_types::TrackedFileChange;
 use mononoke_types::path::MPath;
+use repo_blobstore::RepoBlobstoreRef;
+use scuba_ext::FutureStatsScubaExt;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::ChangesetContext;
 use crate::ChangesetId;
@@ -36,7 +41,14 @@ use crate::CreateInfo;
 use crate::MononokeError;
 use crate::MononokeRepo;
 use crate::RepoContext;
+use crate::file::FileId;
+use crate::path::MononokePathPrefixes;
+use crate::repo::create_changeset::CreateChangeType;
 use crate::repo::create_changeset::CreatedChangeset;
+use crate::repo::create_changeset::is_prefix_changed;
+use crate::repo::create_changeset::verify_deleted_files_existed_in_a_parent;
+use crate::repo::create_changeset::verify_no_noop_file_changes;
+use crate::repo::create_changeset::verify_prefix_files_deleted;
 
 /// A wrapper around BasicFileChange that customizes equality and hashing for folding operations.
 ///
@@ -139,6 +151,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         top_id: Option<ChangesetId>,
         additional_changes: Option<BTreeMap<MPath, CreateChange>>,
         info: Option<CreateInfo>,
+        checks: CreateChangesetChecks,
     ) -> Result<CreatedChangeset<R>, MononokeError> {
         if top_id.is_none() && additional_changes.is_none() {
             return Err(MononokeError::InvalidRequest(
@@ -191,30 +204,21 @@ impl<R: MononokeRepo> RepoContext<R> {
             .collect::<Vec<_>>()
             .await;
 
-        let file_changes = self.merge_stack(cs_ids, bottom_parents[0]).await?;
-
-        // Return error if additional_changes is provided (not yet implemented)
-        if additional_changes.is_some() {
-            return Err(MononokeError::InvalidRequest(
-                "additional_changes is not yet implemented".to_string(),
-            ));
-        }
+        let file_changes = self
+            .merge_stack(cs_ids, bottom_parents[0], additional_changes, &checks)
+            .await?;
 
         // 5. Create commit info - use provided info or generate default from target commit
         let commit_info = Self::build_commit_info(info, bottom_id, &top_ctx).await?;
 
-        // 6. Create the new folded commit with skip checks
+        // 6. Create the new folded commit with the provided checks
         let created_changeset = self
             .create_changeset(
                 vec![bottom_parents[0]], // Parent is bottom's parent
                 commit_info,             // Commit metadata
                 Self::convert_file_changes_to_create_changes(file_changes)?, // All the file changes
                 None,                    // No bubble
-                CreateChangesetChecks {
-                    noop_file_changes: CreateChangesetCheckMode::Check,
-                    deleted_files_existed_in_a_parent: CreateChangesetCheckMode::Check,
-                    empty_changeset: CreateChangesetCheckMode::Check,
-                },
+                checks,
             )
             .await?;
 
@@ -310,6 +314,21 @@ impl<R: MononokeRepo> RepoContext<R> {
             .collect()
     }
 
+    /// Convert RepoFoldCommitsParams changes to SortedVectorMap<NonRootMPath, FileChange>
+    async fn convert_create_changes_to_file_changes(
+        create_changes: BTreeMap<MPath, CreateChange>,
+        parent_ids: &[ChangesetId],
+    ) -> Result<SortedVectorMap<NonRootMPath, FileChange>, MononokeError> {
+        create_changes
+            .into_iter()
+            .map(|(path, change)| {
+                // Convert MPath to NonRootMPath - skip root paths as they can't be in file_changes
+                let change_path = NonRootMPath::try_from(path)?;
+                let file_change = change.into_file_change(parent_ids)?;
+                Ok((change_path, file_change))
+            })
+            .collect()
+    }
     /// Merge a stack of changesets into a single changeset.
     ///
     /// This method uses PathTree to properly handle implicit deletions and avoid
@@ -325,10 +344,21 @@ impl<R: MononokeRepo> RepoContext<R> {
         &self,
         stack: Vec<ChangesetId>,
         base: ChangesetId,
+        additional_changes: Option<BTreeMap<MPath, CreateChange>>,
+        checks: &CreateChangesetChecks,
     ) -> Result<BTreeMap<NonRootMPath, FileChange>> {
         if stack.is_empty() {
             return Ok(BTreeMap::new());
         }
+
+        // Get base_ctx, which is the immediate parent of the commits to be
+        // folded, and will be the parent of the new commit.
+        let base_ctx = self
+            .changeset(ChangesetSpecifier::Bonsai(base))
+            .await?
+            .ok_or_else(|| {
+                MononokeError::InvalidRequest(format!("base commit {base} not found"))
+            })?;
 
         // Use PathTree to track file states (None = deleted, Some(FoldableFile) = exists)
         // PathTree's hierarchical structure automatically handles implicit deletions
@@ -347,6 +377,11 @@ impl<R: MononokeRepo> RepoContext<R> {
         // deletions if the replacing file is later deleted.
         let mut replaced_directory_paths: BTreeSet<NonRootMPath> = BTreeSet::new();
 
+        // Build stack_changes incrementally as we process each commit
+        // This mirrors the pattern in create_changeset.rs - uses insert_and_prune for
+        // changes (handles implicit deletes) and regular insert for deletions
+        let mut stack_changes: PathTree<CreateChangeType> = PathTree::default();
+
         // Apply each changeset in topological order
         for cs_id in stack {
             let curr_ctx = self
@@ -358,75 +393,163 @@ impl<R: MononokeRepo> RepoContext<R> {
 
             let file_changes = curr_ctx.file_changes().await?;
 
-            // Process file changes in two passes:
-            // 1. First pass: Process additions/modifications to build copy chains
-            //    before any deletions remove copy chain entries
-            // 2. Second pass: Process deletions
-            //
-            // This is necessary because BTreeMap iterates in alphabetical order,
-            // which can cause deletions to be processed before copies. For example,
-            // in a rename (file1 -> file2), "file1" deletion would be processed before
-            // "file2" addition, removing the copy chain entry before it can be used.
-
-            // First pass: additions/modifications
+            // Update stack_changes for each change in this commit
             for (path, change) in &file_changes {
-                all_paths.insert(path.clone());
-
-                if let FileChange::Change(tracked) = change {
-                    let file = FoldableFile::from(tracked.basic_file_change());
-
-                    // Handle copy chain resolution
-                    if let Some((src_path, _src_cs_id)) = tracked.copy_from() {
-                        all_paths.insert(src_path.clone());
-
-                        // Resolve the copy chain to find the ultimate source
-                        // If src_path was itself copied from somewhere, follow the chain
-                        let ultimate_src = copy_chain
-                            .get(src_path)
-                            .cloned()
-                            .unwrap_or_else(|| src_path.clone());
-
-                        copy_chain.insert(path.clone(), ultimate_src);
-                    } else {
-                        // No explicit copy_from, remove any previous copy chain info
-                        copy_chain.remove(path);
-                    }
-
-                    // Insert and prune children (handles implicit deletions when directory becomes file)
-                    working_tree.insert_and_prune(MPath::from(path.clone()), Some(file));
-                    // Track this path in case it had files underneath that need explicit deletion
-                    replaced_directory_paths.insert(path.clone());
-                }
-            }
-
-            // Second pass: deletions
-            for (path, change) in &file_changes {
+                let mpath = MPath::from(path.clone());
                 match change {
-                    FileChange::Deletion => {
-                        // Mark as deleted and prune all children (handles implicit deletions)
-                        working_tree.insert(MPath::from(path.clone()), None);
-                        // Remove from copy_chain - if file is deleted and later recreated with
-                        // a copy, that's a new copy relationship, not a continuation of the old one
-                        copy_chain.remove(path);
-                    }
                     FileChange::Change(_) => {
-                        // Already processed in first pass
+                        stack_changes.insert_and_prune(mpath, CreateChangeType::Change);
                     }
-                    FileChange::UntrackedDeletion | FileChange::UntrackedChange(_) => {
-                        // These shouldn't occur when processing committed changesets,
-                        // as untracked changes are only present in working copy state
+                    FileChange::Deletion => {
+                        stack_changes.insert(mpath, CreateChangeType::Deletion);
                     }
+                    _ => {}
                 }
             }
+
+            Self::apply_file_changes(
+                file_changes,
+                &mut all_paths,
+                &mut working_tree,
+                &mut copy_chain,
+                &mut replaced_directory_paths,
+            );
         }
 
-        // Build initial state from base commit
-        let base_ctx = self
-            .changeset(ChangesetSpecifier::Bonsai(base))
-            .await?
-            .ok_or_else(|| {
-                MononokeError::InvalidRequest(format!("base commit {base} not found"))
-            })?;
+        // Now resolve additional_changes
+        if let Some(mut create_changes) = additional_changes {
+            let filestore_config = *self.repo().filestore_config();
+            let repo_blobstore = self.repo().repo_blobstore().clone();
+
+            // Resolve each change (uploads file content, validates copy_from)
+            for change in create_changes.values_mut() {
+                change
+                    .resolve::<R>(
+                        self.ctx(),
+                        filestore_config,
+                        repo_blobstore.clone(),
+                        Some(&stack_changes),
+                        &[base_ctx.clone()],
+                    )
+                    .await?;
+            }
+
+            // Build path_changes for the additional changes
+            let path_changes: PathTree<CreateChangeType> = PathTree::from_iter(
+                create_changes
+                    .iter()
+                    .map(|(path, change)| (path.clone(), change.change_type())),
+            );
+
+            // Extract deleted files (tracked deletions only)
+            let deleted_files: BTreeSet<MPath> = create_changes
+                .iter()
+                .filter(|(_, change)| matches!(change, CreateChange::Deletion))
+                .map(|(path, _)| path.clone())
+                .collect();
+
+            // Determine prefix paths (directories that might need file deletion checks)
+            let prefix_paths: BTreeSet<MPath> = create_changes
+                .iter()
+                .filter(|(_, change)| change.change_type() == CreateChangeType::Change)
+                .flat_map(|(path, _)| MononokePathPrefixes::new(path))
+                .collect();
+
+            // Verify deleted files existed (in stack_changes or base commit)
+            let _deletions_to_remove = verify_deleted_files_existed_in_a_parent(
+                &[base_ctx.clone()],
+                Some(&stack_changes),
+                deleted_files,
+                checks.deleted_files_existed_in_a_parent,
+            )
+            .timed()
+            .await
+            .log_future_stats(
+                self.ctx().scuba().clone(),
+                "fold_commits: verify deleted files existed",
+                None,
+            )?;
+
+            // Verify prefix files are deleted when creating files inside a path that is a file
+            verify_prefix_files_deleted(
+                &[base_ctx.clone()],
+                Some(&stack_changes),
+                prefix_paths,
+                &path_changes,
+            )
+            .timed()
+            .await
+            .log_future_stats(
+                self.ctx().scuba().clone(),
+                "fold_commits: verify prefix files deleted",
+                None,
+            )?;
+
+            // Filter deletions that have a change at a path prefix (implicit from the change)
+            let create_changes: BTreeMap<MPath, CreateChange> = create_changes
+                .into_iter()
+                .filter(|(path, change)| {
+                    change.change_type() != CreateChangeType::Deletion
+                        || !is_prefix_changed(path, &path_changes)
+                })
+                .collect();
+
+            // Convert paths to NonRootMPath for noop check
+            let file_changes_for_noop_check: SortedVectorMap<NonRootMPath, CreateChange> =
+                create_changes
+                    .iter()
+                    .filter_map(|(path, change)| {
+                        path.clone()
+                            .into_optional_non_root_path()
+                            .map(|mpath| (mpath, change.clone()))
+                    })
+                    .collect();
+
+            // Build stack content changes for noop check (content_ids from the folded stack)
+            // We need to track what content exists at each path after the stack is processed
+            let stack_content_changes: PathTree<Option<FileId>> = {
+                let mut tree: PathTree<Option<FileId>> = PathTree::default();
+                // Add content from working_tree (the accumulated state of the folded stack)
+                for (mpath, state) in working_tree.clone().into_iter() {
+                    match state {
+                        Some(file) => {
+                            tree.insert_and_prune(mpath, Some(file.content_id()));
+                        }
+                        None => {
+                            tree.insert(mpath, None);
+                        }
+                    }
+                }
+                tree
+            };
+
+            // Verify no noop file changes (if check mode is not Skip)
+            if checks.noop_file_changes != CreateChangesetCheckMode::Skip {
+                verify_no_noop_file_changes(
+                    &[base_ctx.clone()],
+                    Some(stack_content_changes),
+                    &file_changes_for_noop_check,
+                )
+                .timed()
+                .await
+                .log_future_stats(
+                    self.ctx().scuba().clone(),
+                    "fold_commits: verify no noop file changes",
+                    None,
+                )?;
+            }
+
+            let file_changes =
+                Self::convert_create_changes_to_file_changes(create_changes, &[base]).await?;
+            Self::apply_file_changes(
+                file_changes,
+                &mut all_paths,
+                &mut working_tree,
+                &mut copy_chain,
+                &mut replaced_directory_paths,
+            );
+        }
+
         let mut initial_tree: PathTree<Option<FoldableFile>> = PathTree::default();
 
         // Remember which paths we check in this first pass
@@ -585,5 +708,67 @@ impl<R: MononokeRepo> RepoContext<R> {
         }
 
         Ok(merged)
+    }
+
+    /// Apply file changes to the working tree, tracking copy chains and replaced directories.
+    ///
+    /// Uses a two-pass approach:
+    /// 1. First pass: Process additions/modifications to build copy chains before any deletions
+    /// 2. Second pass: Process deletions
+    ///
+    /// This is necessary because the iterator may return deletions before copies alphabetically.
+    fn apply_file_changes(
+        file_changes: SortedVectorMap<NonRootMPath, FileChange>,
+        all_paths: &mut BTreeSet<NonRootMPath>,
+        working_tree: &mut PathTree<Option<FoldableFile>>,
+        copy_chain: &mut HashMap<NonRootMPath, NonRootMPath>,
+        replaced_directory_paths: &mut BTreeSet<NonRootMPath>,
+    ) {
+        // First pass: additions/modifications
+        for (path, change) in &file_changes {
+            all_paths.insert(path.clone());
+
+            if let FileChange::Change(tracked) = change {
+                let file = FoldableFile::from(tracked.basic_file_change());
+
+                // Handle copy chain resolution
+                if let Some((src_path, _src_cs_id)) = tracked.copy_from() {
+                    all_paths.insert(src_path.clone());
+
+                    // Resolve the copy chain to find the ultimate source
+                    let ultimate_src = copy_chain
+                        .get(src_path)
+                        .cloned()
+                        .unwrap_or_else(|| src_path.clone());
+
+                    copy_chain.insert(path.clone(), ultimate_src);
+                } else {
+                    // No explicit copy_from, remove any previous copy chain info
+                    copy_chain.remove(path);
+                }
+
+                // Insert and prune children (handles implicit deletions when directory becomes file)
+                working_tree.insert_and_prune(MPath::from(path.clone()), Some(file));
+                // Track this path in case it had files underneath that need explicit deletion
+                replaced_directory_paths.insert(path.clone());
+            }
+        }
+
+        // Second pass: deletions
+        for (path, change) in &file_changes {
+            match change {
+                FileChange::Deletion => {
+                    // Mark as deleted and prune all children (handles implicit deletions)
+                    working_tree.insert(MPath::from(path.clone()), None);
+                    copy_chain.remove(path);
+                }
+                FileChange::Change(_) => {
+                    // Already processed in first pass
+                }
+                FileChange::UntrackedDeletion | FileChange::UntrackedChange(_) => {
+                    // These shouldn't occur when processing committed changesets
+                }
+            }
+        }
     }
 }
