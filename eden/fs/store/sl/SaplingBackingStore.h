@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/Function.h>
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
 #include <folly/coro/Task.h>
@@ -633,7 +634,31 @@ class SaplingBackingStore final : public BackingStore {
   void logBackingStoreFetch(
       const ObjectFetchContext& context,
       folly::Range<SlOid*> hashes,
-      ObjectFetchContext::ObjectType type);
+      ObjectFetchContext::ObjectType type) {
+    logBackingStoreFetchImpl(context, hashes.size(), type, [&hashes](size_t i) {
+      return hashes[i].path();
+    });
+  }
+
+  void logBackingStoreFetch(
+      const ObjectFetchContext& context,
+      folly::Range<SlOidView*> hashes,
+      ObjectFetchContext::ObjectType type) {
+    logBackingStoreFetchImpl(context, hashes.size(), type, [&hashes](size_t i) {
+      return hashes[i].path();
+    });
+  }
+
+ private:
+  /**
+   * Implementation helper for logBackingStoreFetch that extracts paths
+   * using a provided function.
+   */
+  void logBackingStoreFetchImpl(
+      const ObjectFetchContext& context,
+      size_t count,
+      ObjectFetchContext::ObjectType type,
+      folly::FunctionRef<RelativePathPiece(size_t)> pathExtractor);
 
   /**
    * gets the watches timing `object` imports that are `stage`

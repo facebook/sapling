@@ -87,6 +87,7 @@ cpp_library(
         "//eden/scm/lib/backingstore:backingstore",  # @manual
         "//eden/scm/lib/backingstore:backingstore@header",  # @manual
         "//eden/scm/lib/backingstore:sapling_native_backingstore",
+        "//folly:function",
         "//folly:range",
         "//folly:synchronized",
         "//folly/coro:task",
