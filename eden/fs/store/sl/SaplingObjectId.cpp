@@ -50,11 +50,11 @@ SaplingObjectId::SaplingObjectId(const Hash20& slHash) {
 }
 
 SaplingObjectId::SaplingObjectId(folly::StringPiece value) : value_{value} {
-  validate();
+  validateSlOid(value_);
 }
 
 SaplingObjectId::SaplingObjectId(const ObjectId& oid) : value_{oid.getBytes()} {
-  validate();
+  validateSlOid(value_);
 }
 
 ObjectId SaplingObjectId::oid() && {
@@ -98,7 +98,7 @@ bool SaplingObjectId::hasValidType(const ObjectId& oid) {
 }
 
 RelativePathPiece SaplingObjectId::path() const noexcept {
-  XDCHECK((validate(), true));
+  XDCHECK((validateSlOid(value_), true));
   if (value_.empty() || value_[0] == TYPE_HG_ID_NO_PATH) {
     return RelativePathPiece{};
   } else {
@@ -111,7 +111,7 @@ RelativePathPiece SaplingObjectId::path() const noexcept {
 }
 
 Hash20& SaplingObjectId::node() const noexcept {
-  XDCHECK((validate(), true));
+  XDCHECK((validateSlOid(value_), true));
   if (value_.empty()) {
     return const_cast<Hash20&>(kZeroHash);
   } else {
@@ -127,36 +127,33 @@ bool SaplingObjectId::operator<(const SaplingObjectId& otherHash) const {
   return value_ < otherHash.value_;
 }
 
-void SaplingObjectId::validate() const {
-  if (value_.empty()) {
+void validateSlOid(folly::StringPiece value) {
+  if (value.empty()) {
     // Special case - empty value is okay.
     return;
   }
 
-  auto type = value_[0];
+  auto type = value[0];
   switch (type) {
-    case TYPE_HG_ID_WITH_PATH:
-      if (value_.size() < slOidLenSansPath) {
+    case SaplingObjectId::TYPE_HG_ID_WITH_PATH:
+      if (value.size() < slOidLenSansPath) {
         throwf<std::invalid_argument>(
             "Invalid SaplingObjectId size for TYPE_HG_ID_WITH_PATH: size {}",
-            value_.size());
+            value.size());
       }
       // Validate the path.
-      (void)RelativePathPiece{
-          std::string_view{value_}.substr(slOidLenSansPath)};
+      (void)RelativePathPiece{std::string_view{value}.substr(slOidLenSansPath)};
       break;
-    case TYPE_HG_ID_NO_PATH:
-      if (value_.size() != slOidLenSansPath) {
+    case SaplingObjectId::TYPE_HG_ID_NO_PATH:
+      if (value.size() != slOidLenSansPath) {
         throwf<std::invalid_argument>(
             "Invalid SaplingObjectId size for TYPE_HG_ID_NO_PATH: size {}",
-            value_.size());
+            value.size());
       }
       break;
     default:
       throwf<std::invalid_argument>(
-          "Unknown SaplingObjectId type: size {}, type {}",
-          value_.size(),
-          type);
+          "Unknown SaplingObjectId type: size {}, type {}", value.size(), type);
   }
 }
 

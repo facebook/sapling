@@ -111,14 +111,6 @@ class SaplingObjectId {
    */
   static bool hasValidType(const ObjectId& oid);
 
- private:
-  /**
-   * Validate data found in value_.
-   *
-   * Throws exception if `value_` is invalid.
-   */
-  void validate() const;
-
   enum Type : uint8_t {
     // If the Object ID's type is 1, then it contains a 20-byte manifest ID
     // followed by the path. This is a temporary scheme until HgImporter is
@@ -131,6 +123,7 @@ class SaplingObjectId {
     TYPE_HG_ID_NO_PATH = 0x02,
   };
 
+ private:
   /**
    * The serialized data as written in ObjectId.
    */
@@ -141,6 +134,13 @@ class SaplingObjectId {
  * Shorter alias for convenience.
  */
 using SlOid = SaplingObjectId;
+
+/**
+ * Validate data found in a SaplingObjectId value string.
+ *
+ * Throws exception if value is invalid.
+ */
+void validateSlOid(folly::StringPiece value);
 
 } // namespace facebook::eden
 
