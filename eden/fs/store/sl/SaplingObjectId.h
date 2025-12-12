@@ -89,6 +89,10 @@ class SaplingObjectId {
    */
   Hash20& node() const noexcept;
 
+  folly::ByteRange data() const {
+    return folly::ByteRange{value_};
+  }
+
   bool operator==(const SaplingObjectId&) const;
   bool operator<(const SaplingObjectId&) const;
 
@@ -159,6 +163,10 @@ class SaplingObjectIdView {
   RelativePathPiece path() const noexcept;
 
   Hash20& node() const noexcept;
+
+  folly::ByteRange data() const {
+    return value_;
+  }
 
  private:
   const folly::ByteRange value_;
