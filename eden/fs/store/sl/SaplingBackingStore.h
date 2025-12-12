@@ -396,7 +396,7 @@ class SaplingBackingStore final : public BackingStore {
 
   folly::Try<TreePtr> getTreeFromBackingStore(
       const RelativePath& path,
-      const SlOid& slOid,
+      SlOidView slOid,
       ObjectFetchContextPtr context,
       const ObjectFetchContext::ObjectType type);
 
@@ -404,16 +404,14 @@ class SaplingBackingStore final : public BackingStore {
    * Imports the tree identified by the given hash from the hg cache.
    * Returns nullptr if not found.
    */
-  TreePtr getTreeLocal(
-      const SlOid& slOid,
-      const ObjectFetchContextPtr& context);
+  TreePtr getTreeLocal(SlOidView oid, const ObjectFetchContextPtr& context);
 
   /**
    * Imports the tree identified by the given hash from the remote store.
    * Returns nullptr if not found.
    */
   folly::Try<TreePtr> getTreeRemote(
-      const SlOid& slOid,
+      SlOidView oid,
       const ObjectFetchContextPtr& context);
 
   /**
@@ -421,7 +419,7 @@ class SaplingBackingStore final : public BackingStore {
    * nullptr to avoid exception overhead.
    */
   folly::Try<facebook::eden::TreePtr> getNativeTree(
-      const SlOid& slOid,
+      SlOidView slOid,
       const ObjectFetchContextPtr& context,
       sapling::FetchMode fetch_mode);
 

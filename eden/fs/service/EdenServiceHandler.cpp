@@ -5223,7 +5223,7 @@ EdenServiceHandler::semifuture_debugGetTree(
   auto& context = helper->getFetchContext();
 
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
-    auto slOid = SlOid{id};
+    auto slOid = SlOidView{id};
 
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
@@ -5238,7 +5238,7 @@ EdenServiceHandler::semifuture_debugGetTree(
   }
 
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
-    auto slOid = SlOid{id};
+    auto slOid = SlOidView{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());

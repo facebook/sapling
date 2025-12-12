@@ -1250,7 +1250,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
     const ObjectFetchContextPtr& context) {
   DurationScope<EdenStats> scope{stats_, &SaplingBackingStoreStats::getTree};
 
-  SlOid slOid{id};
+  SlOidView slOid{id};
 
   logBackingStoreFetch(
       *context, folly::Range{&slOid, 1}, ObjectFetchContext::ObjectType::Tree);
@@ -1321,7 +1321,7 @@ SaplingBackingStore::getTreeEnqueue(
 }
 
 TreePtr SaplingBackingStore::getTreeLocal(
-    const SlOid& slOid,
+    SlOidView slOid,
     const ObjectFetchContextPtr& context) {
   auto tree = getNativeTree(slOid, context, sapling::FetchMode::LocalOnly);
 
@@ -1333,7 +1333,7 @@ TreePtr SaplingBackingStore::getTreeLocal(
 }
 
 folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
-    const SlOid& slOid,
+    SlOidView slOid,
     const ObjectFetchContextPtr& context) {
   return getNativeTree(
       slOid,
@@ -1342,12 +1342,13 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
 }
 
 folly::Try<facebook::eden::TreePtr> SaplingBackingStore::getNativeTree(
-    const SlOid& slOid,
+    SlOidView slOid,
     const ObjectFetchContextPtr& context,
     sapling::FetchMode fetch_mode) {
-  auto node = slOid.node();
-  XLOGF(DBG7, "Importing tree node={} from hgcache", node);
+  XLOGF(DBG7, "Importing tree {} from hgcache", slOid);
   return folly::makeTryWith([&] {
+    auto node = slOid.node();
+
     sapling::TreeBuilder tb =
         sapling::TreeBuilder{slOid, caseSensitive_, objectIdFormat_};
 
@@ -1740,7 +1741,8 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
       break;
   }
 
-  auto tree = getTreeFromBackingStore(path.copy(), slOid, context.copy(), type);
+  auto tree =
+      getTreeFromBackingStore(path.copy(), slOid.view(), context.copy(), type);
   bool success = tree.hasValue();
 
   // record stats
@@ -1785,7 +1787,7 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
 
 folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
     const RelativePath& path,
-    const SlOid& slOid,
+    SlOidView slOid,
     ObjectFetchContextPtr context,
     const ObjectFetchContext::ObjectType type) {
   using GetTreeResult = folly::Try<TreePtr>;
