@@ -116,16 +116,6 @@ class SaplingObjectId {
   }
 
   /**
-   * Load all the proxy hashes given.
-   *
-   * The caller is responsible for keeping the ObjectIdRange alive for the
-   * duration of the future.
-   */
-  static ImmediateFuture<std::vector<SaplingObjectId>> getBatch(
-      ObjectIdRange blobHashes,
-      bool prefetchOptimizations);
-
-  /**
    * Return whether oid starts with a valid SaplingObjectId type byte.
    */
   static bool hasValidType(const ObjectId& oid);

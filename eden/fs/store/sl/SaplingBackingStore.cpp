@@ -1843,135 +1843,121 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
   bool prefetchOptimizations =
       config_->getEdenConfig()->prefetchOptimizations.getValue();
 
-  return SlOid::getBatch(ids, prefetchOptimizations)
-      // The caller guarantees that ids will live at least longer than this
-      // future, thus we don't need to deep-copy it.
-      .thenTry([context = context.copy(), prefetchOptimizations, this, ids](
-                   folly::Try<std::vector<SlOid>> tryHashes) {
-        auto slOids = std::move(tryHashes).value();
+  std::vector<SlOidView> slOids;
+  slOids.reserve(ids.size());
+  for (const auto& id : ids) {
+    slOids.emplace_back(id);
+  }
 
-        if (slOids.empty()) {
-          return ImmediateFuture<folly::Unit>{folly::unit}.semi();
-        }
+  if (slOids.empty()) {
+    return ImmediateFuture<folly::Unit>{folly::unit}.semi();
+  }
 
-        logBackingStoreFetch(
-            *context,
-            folly::Range{slOids.data(), slOids.size()},
-            ObjectFetchContext::ObjectType::Blob);
+  logBackingStoreFetch(
+      *context,
+      folly::Range{slOids.data(), slOids.size()},
+      ObjectFetchContext::ObjectType::Blob);
 
-        if (prefetchOptimizations &&
-            config_->getEdenConfig()->ignorePrefetchResult.getValue()) {
-          // We perform two optimizations here:
-          //
-          // 1. We don't go through the queue. We already have a big batch
-          // of blobs to fetch - shuffling them through the queue
-          // one-at-a-time is very expensive. And then on the other side,
-          // they are chopped down into smaller batches, which loses more
-          // throughput.
-          //
-          // 2. We pass allowIgnoreResult=true, which lets sapling skip work
-          // fetching the blobs (because we don't actually care about the
-          // content).
+  if (prefetchOptimizations &&
+      config_->getEdenConfig()->ignorePrefetchResult.getValue()) {
+    // We perform two optimizations here:
+    //
+    // 1. We don't go through the queue. We already have a big batch
+    // of blobs to fetch - shuffling them through the queue
+    // one-at-a-time is very expensive. And then on the other side,
+    // they are chopped down into smaller batches, which loses more
+    // throughput.
+    //
+    // 2. We pass allowIgnoreResult=true, which lets sapling skip work
+    // fetching the blobs (because we don't actually care about the
+    // content).
 
-          std::vector<sapling::SaplingRequest> requests;
-          requests.reserve(ids.size());
-          for (size_t i = 0; i < ids.size(); i++) {
-            requests.emplace_back(
-                slOids[i], context->getCause(), context.copy());
-          }
+    std::vector<sapling::SaplingRequest> requests;
+    requests.reserve(ids.size());
+    for (size_t i = 0; i < ids.size(); i++) {
+      requests.emplace_back(slOids[i], context->getCause(), context.copy());
+    }
 
-          // Use makeNotReadyImmediateFuture to force going through the
-          // executor. This can be a large batch, and we don't want to block
-          // the caller.
-          return makeNotReadyImmediateFuture()
-              .thenValue([this,
-                          slOids = std::move(slOids),
-                          requests = std::move(requests),
-                          context = context.copy()](auto&&) {
-                auto importTracker =
-                    RequestMetricsScope{&pendingImportPrefetchWatches_};
+    // Use makeNotReadyImmediateFuture to force going through the
+    // executor. This can be a large batch, and we don't want to block
+    // the caller.
+    return makeNotReadyImmediateFuture()
+        .thenValue([this,
+                    slOids = std::move(slOids),
+                    requests = std::move(requests),
+                    context = context.copy()](auto&&) {
+          auto importTracker =
+              RequestMetricsScope{&pendingImportPrefetchWatches_};
 
-                auto unique = generateUniqueID();
-                traceBus_->publish(
-                    HgImportTraceEvent::start(
-                        unique,
-                        HgImportTraceEvent::BLOB_BATCH,
-                        slOids[0], // use the first item in batch
-                        context->getPriority().getClass(),
-                        context->getCause(),
-                        context->getClientPid()));
+          auto unique = generateUniqueID();
+          traceBus_->publish(
+              HgImportTraceEvent::start(
+                  unique,
+                  HgImportTraceEvent::BLOB_BATCH,
+                  slOids[0], // use the first item in batch
+                  context->getPriority().getClass(),
+                  context->getCause(),
+                  context->getClientPid()));
 
-                folly::stop_watch<std::chrono::milliseconds> watch;
-                XLOGF(
-                    DBG4,
-                    "Batch fetching {} blobs from Sapling",
-                    requests.size());
+          folly::stop_watch<std::chrono::milliseconds> watch;
+          XLOGF(DBG4, "Batch fetching {} blobs from Sapling", requests.size());
 
-                size_t failureCount = 0;
-                nativeGetBlobBatch(
-                    folly::range(requests),
-                    sapling::FetchMode::AllowRemote,
-                    // We aren't going through the queue, so we are certain
-                    // we can IGNORE_RESULT without impacting other fetches
-                    // for the same id.
-                    true,
-                    [&](size_t index,
-                        folly::Try<std::unique_ptr<folly::IOBuf>> content) {
-                      if (content.hasException()) {
-                        failureCount++;
-                        XLOGF(
-                            ERR,
-                            "Failed to batch import {} from Sapling: {}",
-                            requests[index].oid,
-                            content.exception().what().toStdString());
-                      }
-                    });
+          size_t failureCount = 0;
+          nativeGetBlobBatch(
+              folly::range(requests),
+              sapling::FetchMode::AllowRemote,
+              // We aren't going through the queue, so we are certain
+              // we can IGNORE_RESULT without impacting other fetches
+              // for the same id.
+              true,
+              [&](size_t index,
+                  folly::Try<std::unique_ptr<folly::IOBuf>> content) {
+                if (content.hasException()) {
+                  failureCount++;
+                  XLOGF(
+                      ERR,
+                      "Failed to batch import {} from Sapling: {}",
+                      requests[index].oid,
+                      content.exception().what().toStdString());
+                }
+              });
 
-                traceBus_->publish(
-                    HgImportTraceEvent::finish(
-                        unique,
-                        HgImportTraceEvent::BLOB_BATCH,
-                        slOids[0], // use the first item in batch
-                        context->getPriority().getClass(),
-                        context->getCause(),
-                        context->getClientPid(),
-                        context->getFetchedSource()));
+          traceBus_->publish(
+              HgImportTraceEvent::finish(
+                  unique,
+                  HgImportTraceEvent::BLOB_BATCH,
+                  slOids[0], // use the first item in batch
+                  context->getPriority().getClass(),
+                  context->getCause(),
+                  context->getClientPid(),
+                  context->getFetchedSource()));
 
-                stats_->increment(
-                    &SaplingBackingStoreStats::prefetchBlobFailure,
-                    failureCount);
-                stats_->increment(
-                    &SaplingBackingStoreStats::prefetchBlobSuccess,
-                    requests.size() - failureCount);
-                stats_->addDuration(
-                    &SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
-              })
-              .semi();
-        } else {
-          // Do not check for whether blobs are already present locally,
-          // this check is useful for latency oriented workflows, not for
-          // throughput oriented ones. Mercurial will anyway not re-fetch a
-          // blob that is already present locally, so the check for local
-          // blob is pure overhead when prefetching.
-          std::vector<ImmediateFuture<GetBlobResult>> futures;
-          futures.reserve(ids.size());
+          stats_->increment(
+              &SaplingBackingStoreStats::prefetchBlobFailure, failureCount);
+          stats_->increment(
+              &SaplingBackingStoreStats::prefetchBlobSuccess,
+              requests.size() - failureCount);
+          stats_->addDuration(
+              &SaplingBackingStoreStats::prefetchBlob, watch.elapsed());
+        })
+        .unit()
+        .semi();
+  } else {
+    // Do not check for whether blobs are already present locally,
+    // this check is useful for latency oriented workflows, not for
+    // throughput oriented ones. Mercurial will anyway not re-fetch a
+    // blob that is already present locally, so the check for local
+    // blob is pure overhead when prefetching.
+    std::vector<ImmediateFuture<GetBlobResult>> futures;
+    futures.reserve(ids.size());
 
-          for (size_t i = 0; i < ids.size(); i++) {
-            const auto& slOid = slOids[i];
+    for (size_t i = 0; i < ids.size(); i++) {
+      futures.emplace_back(getBlobEnqueue(
+          slOids[i], context, SaplingImportRequest::FetchType::Prefetch));
+    }
 
-            futures.emplace_back(getBlobEnqueue(
-                slOid, context, SaplingImportRequest::FetchType::Prefetch));
-          }
-
-          return collectAllSafe(std::move(futures))
-              .unit()
-              .ensure([slOids = std::move(slOids)]() {
-                // Keep slOids alive until all futures complete
-              })
-              .semi();
-        }
-      })
-      .semi();
+    return collectAllSafe(std::move(futures)).unit().semi();
+  }
 }
 
 void SaplingBackingStore::nativeGetBlobBatch(

@@ -40,11 +40,12 @@ using RootId = facebook::eden::RootId;
 using ObjectId = facebook::eden::ObjectId;
 using ObjectFetchContextPtr = facebook::eden::ObjectFetchContextPtr;
 using SlOid = facebook::eden::SlOid;
+using SlOidView = facebook::eden::SlOidView;
 
 struct SaplingRequest {
-  // These field is typically borrowed from a SaplingImportRequest - be
+  // This field is typically borrowed from a SaplingImportRequest - be
   // cognizant of lifetimes.
-  const SlOid& oid;
+  SlOidView oid;
 
   FetchCause cause;
   ObjectFetchContextPtr context;
@@ -52,7 +53,7 @@ struct SaplingRequest {
   // TODO: sapling::ClientRequestInfo cri;
 
   SaplingRequest(
-      const SlOid& oid_,
+      SlOidView oid_,
       FetchCause cause_,
       ObjectFetchContextPtr context_)
       : oid(oid_), cause(cause_), context(std::move(context_)) {}

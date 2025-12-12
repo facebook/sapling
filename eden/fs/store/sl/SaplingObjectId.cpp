@@ -71,33 +71,6 @@ ObjectId SaplingObjectId::oid() && {
   return ObjectId{std::move(value_)};
 }
 
-ImmediateFuture<std::vector<SaplingObjectId>> SaplingObjectId::getBatch(
-    ObjectIdRange blobHashes,
-    bool prefetchOptimizations) {
-  auto processBatch = [blobHashes]() {
-    std::vector<SaplingObjectId> results;
-    results.reserve(blobHashes.size());
-    for (size_t index = 0; index < blobHashes.size(); index++) {
-      results.emplace_back(blobHashes.at(index));
-    }
-
-    return ImmediateFuture<std::vector<SaplingObjectId>>{std::move(results)};
-  };
-
-  constexpr size_t kAsyncThreshold = 1000;
-
-  // If over the threshold, force the ObjectId->SaplingObjectId conversion to be
-  // async.
-  if (prefetchOptimizations && blobHashes.size() > kAsyncThreshold) {
-    return makeNotReadyImmediateFuture().thenValue(
-        [processBatch = std::move(processBatch)](auto&&) {
-          return processBatch();
-        });
-  } else {
-    return processBatch();
-  }
-}
-
 bool SaplingObjectId::hasValidType(const ObjectId& oid) {
   folly::ByteRange bytes = oid.getBytes();
   // 20 bytes is a legacy proxy hash (with no type byte).
