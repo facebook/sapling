@@ -413,7 +413,6 @@ InodeCatalogOptions EdenMount::getInodeCatalogOptions(
             return overlay_
                 ->initialize(
                     serverState_->getReloadableConfig(),
-                    objectStore_->getLocalStore(),
                     getPath(),
                     std::move(progressCallback),
                     [this](

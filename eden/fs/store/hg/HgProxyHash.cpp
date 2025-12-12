@@ -237,12 +237,6 @@ bool HgProxyHash::hasValidType(const ObjectId& oid) {
        (bytes[0] == TYPE_HG_ID_WITH_PATH || bytes[0] == TYPE_HG_ID_NO_PATH));
 }
 
-bool HgProxyHash::looksLikeLegacyProxyHash(folly::ByteRange bytes) {
-  // Legacy proxy hashes are exactly 20 bytes. Modern embedded hashes are always
-  // at least 21 bytes long.
-  return bytes.size() == Hash20::RAW_SIZE;
-}
-
 HgProxyHash::HgProxyHash(
     ObjectId edenBlobHash,
     StoreResult& infoResult,

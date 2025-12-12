@@ -14,13 +14,10 @@
 
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
-#include "eden/common/utils/RefPtr.h"
 #include "eden/fs/inodes/InodeCatalog.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/OverlayCheckerUtil.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/store/BackingStoreType.h"
-#include "eden/fs/telemetry/EdenStats.h"
 
 namespace folly {
 class File;
@@ -30,9 +27,6 @@ namespace facebook::eden {
 
 class InodeCatalog;
 class FsFileContentStore;
-class LocalStore;
-
-using EdenStatsPtr = RefPtr<EdenStats>;
 
 /**
  * OverlayChecker performs "fsck" operations on the on-disk overlay data.
@@ -61,7 +55,7 @@ class OverlayChecker {
   using ProgressCallback = std::function<void(uint16_t)>;
 
   /**
-   * Construct an OverlayChecker object.
+   * Create a new OverlayChecker.
    *
    * The OverlayChecker stores a raw pointer to the InodeCatalog and
    * FsFileContentStore for the duration of the check operation.  The caller is
@@ -73,10 +67,14 @@ class OverlayChecker {
       FsFileContentStore* fcs,
       std::optional<InodeNumber> nextInodeNumber,
       InodeCatalog::LookupCallback& lookupCallback,
-      uint64_t numErrorDiscoveryThreads,
-      std::shared_ptr<LocalStore> localStore = nullptr,
-      EdenStatsPtr stats = nullptr,
-      bool shouldMigrateLegacyProxyHashes = false);
+      std::shared_ptr<const EdenConfig> edenConfig);
+
+  OverlayChecker(
+      InodeCatalog* inodeCatalog,
+      FsFileContentStore* fcs,
+      std::optional<InodeNumber> nextInodeNumber,
+      InodeCatalog::LookupCallback& lookupCallback,
+      uint64_t numErrorDiscoveryThreads);
 
   ~OverlayChecker();
 
@@ -167,7 +165,6 @@ class OverlayChecker {
   class OrphanInode;
   class HardLinkedInode;
   class BadNextInodeNumber;
-  class LegacyProxyHash;
 
   OverlayChecker(OverlayChecker const&) = delete;
   OverlayChecker& operator=(OverlayChecker const&) = delete;

@@ -163,12 +163,6 @@ class HgProxyHash {
    */
   static bool hasValidType(const ObjectId& oid);
 
-  /**
-   * Check if the given byte slice looks like a legacy (non-embedded)
-   * HgProxyHash. Returns true if the data is exactly 20 bytes.
-   */
-  static bool looksLikeLegacyProxyHash(folly::ByteRange bytes);
-
  private:
   HgProxyHash(
       ObjectId edenBlobHash,
