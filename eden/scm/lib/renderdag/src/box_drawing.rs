@@ -147,7 +147,7 @@ where
         let mut message_lines = pad_lines(line.message.lines(), self.options.min_row_height);
         let mut need_extra_pad_line = false;
 
-        // Construct the nodeline
+        // Construct the nodeline, which has the graph node symbol
         let mut node_line = String::new();
         let mut node_column = None;
         for (i, entry) in line.node_line.iter().enumerate() {
@@ -187,7 +187,7 @@ where
 
         let mut next_node_is_other_branch = false;
 
-        // Render the link line
+        // Render the link line, to show branches and merges
         #[allow(clippy::if_same_then_else)]
         if let Some(link_row) = line.link_line {
             let mut link_line = String::new();
@@ -278,7 +278,7 @@ where
             out.push('\n');
         }
 
-        // Render the term line
+        // Render any term line, to indicate terminated branches
         if let Some(term_row) = line.term_line {
             let term_strs = [glyphs[glyph::PARENT], glyphs[glyph::TERMINATION]];
             for term_str in term_strs.iter() {
@@ -305,7 +305,7 @@ where
             base_pad_line.push_str(glyphs[entry.to_glyph()]);
         }
 
-        // Render any pad lines
+        // Render any pad lines, to fit multi-line messages
         for msg in message_lines {
             let mut pad_line = base_pad_line.clone();
             pad_line.push(' ');
