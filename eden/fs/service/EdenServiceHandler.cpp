@@ -4885,15 +4885,15 @@ EdenServiceHandler::co_debugGetBlobImpl(
   }
   auto& context = helper->getFetchContext();
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
-    auto proxyHash = SlOid{id};
+    auto slOid = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
     blobTasks.push_back(
         folly::coro::co_invoke(
-            [edenMount, id, saplingBackingStore, proxyHash, &context]()
+            [edenMount, id, saplingBackingStore, slOid, &context]()
                 -> folly::coro::Task<ScmBlobWithOrigin> {
-              auto blob = saplingBackingStore->getBlobLocal(proxyHash, context);
+              auto blob = saplingBackingStore->getBlobLocal(slOid, context);
               co_return transformToBlobFromOrigin(
                   edenMount,
                   id,
@@ -4902,16 +4902,15 @@ EdenServiceHandler::co_debugGetBlobImpl(
             }));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
-    auto proxyHash = SlOid{id};
+    auto slOid = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
     blobTasks.push_back(
         folly::coro::co_invoke(
-            [edenMount, id, saplingBackingStore, proxyHash, &context]()
+            [edenMount, id, saplingBackingStore, slOid, &context]()
                 -> folly::coro::Task<ScmBlobWithOrigin> {
-              auto blob =
-                  saplingBackingStore->getBlobRemote(proxyHash, context);
+              auto blob = saplingBackingStore->getBlobRemote(slOid, context);
               co_return transformToBlobFromOrigin(
                   edenMount,
                   id,
@@ -5055,7 +5054,7 @@ EdenServiceHandler::debugGetBlobImpl(
   auto& context = helper->getFetchContext();
 
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
-    auto proxyHash = SlOid{id};
+    auto slOid = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
@@ -5063,18 +5062,18 @@ EdenServiceHandler::debugGetBlobImpl(
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        saplingBackingStore->getBlobLocal(proxyHash, context),
+        saplingBackingStore->getBlobLocal(slOid, context),
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
-    auto proxyHash = SlOid{id};
+    auto slOid = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
     blobFutures.emplace_back(transformToBlobFromOrigin(
         edenMount,
         id,
-        saplingBackingStore->getBlobRemote(proxyHash, context),
+        saplingBackingStore->getBlobRemote(slOid, context),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_ANYWHERE)) {
@@ -5132,13 +5131,13 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
         }));
   }
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
-    auto proxyHash = SlOid{id};
+    auto slOid = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
 
     auto auxData =
-        saplingBackingStore->getLocalBlobAuxData(proxyHash).value_or(nullptr);
+        saplingBackingStore->getLocalBlobAuxData(slOid).value_or(nullptr);
 
     blobFutures.emplace_back(transformToBlobMetadataFromOrigin(
         edenMount,
@@ -5147,14 +5146,14 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
-    auto proxyHash = SlOid{id};
+    auto slOid = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
 
     blobFutures.emplace_back(
         ImmediateFuture{
-            saplingBackingStore->getBlobAuxDataEnqueue(proxyHash, fetchContext)}
+            saplingBackingStore->getBlobAuxDataEnqueue(slOid, fetchContext)}
             .thenValue([edenMount, id](BackingStore::GetBlobAuxResult result) {
               return transformToBlobMetadataFromOrigin(
                   edenMount,
@@ -5224,7 +5223,7 @@ EdenServiceHandler::semifuture_debugGetTree(
   auto& context = helper->getFetchContext();
 
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
-    auto proxyHash = SlOid{id};
+    auto slOid = SlOid{id};
 
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
@@ -5234,19 +5233,19 @@ EdenServiceHandler::semifuture_debugGetTree(
         edenMount,
         id,
         folly::Try<std::shared_ptr<const Tree>>{
-            saplingBackingStore->getTreeLocal(proxyHash, context)},
+            saplingBackingStore->getTreeLocal(slOid, context)},
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
 
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
-    auto proxyHash = SlOid{id};
+    auto slOid = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
     treeFutures.emplace_back(transformToTreeFromOrigin(
         edenMount,
         id,
-        saplingBackingStore->getTreeRemote(proxyHash, context),
+        saplingBackingStore->getTreeRemote(slOid, context),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
 
