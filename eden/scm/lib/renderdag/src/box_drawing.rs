@@ -345,19 +345,35 @@ mod tests {
         }
     }
 
-    fn render(fixture: &TestFixture, with_branch_pad: BranchPadding) -> String {
+    /// Type for rendering the graph strings with newlines in asserts.
+    #[derive(PartialEq, Eq)]
+    struct GraphString(String);
+
+    impl std::fmt::Debug for GraphString {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.0.replace("\\n", "\n"))
+        }
+    }
+
+    impl From<&str> for GraphString {
+        fn from(value: &str) -> Self {
+            GraphString(value.to_owned())
+        }
+    }
+
+    fn render(fixture: &TestFixture, with_branch_pad: BranchPadding) -> GraphString {
         let mut renderer = GraphRowRenderer::new().output().build_box_drawing();
         if with_branch_pad == BranchPadding::Yes {
             renderer = renderer.with_branch_padding();
         }
-        render_string(fixture, &mut renderer)
+        GraphString(render_string(fixture, &mut renderer))
     }
 
     /// Filters the expected graph string according to the options
     ///
     /// If a line ends with ` <branch pad>`, it will only be included if
     /// `with_branch_pad` is `Yes`.
-    fn filter(with_branch_pad: BranchPadding, expected: &str) -> String {
+    fn filter(with_branch_pad: BranchPadding, expected: &str) -> GraphString {
         let mut filtered = String::new();
         for mut line in expected.lines() {
             if let Some(pad_pos) = line.find(" <branch pad>") {
@@ -372,7 +388,7 @@ mod tests {
         if !filtered.is_empty() {
             filtered.pop();
         }
-        filtered
+        GraphString(filtered)
     }
 
     #[test]
@@ -696,7 +712,11 @@ mod tests {
             if branch_pad == BranchPadding::Yes {
                 renderer = renderer.with_branch_padding();
             }
-            render_string_with_order(&test_fixtures::ORDERS1, &mut renderer, Some(&order))
+            GraphString(render_string_with_order(
+                &test_fixtures::ORDERS1,
+                &mut renderer,
+                Some(&order),
+            ))
         };
 
         for branch_pad in [BranchPadding::No, BranchPadding::Yes] {
