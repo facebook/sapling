@@ -21,6 +21,7 @@ chrono = { version = "0.4.41", features = ["clock", "serde", "std"], default-fea
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commit_cloud_helpers = { version = "0.1.0", path = "../../features/commit_cloud/helpers" }
 commit_cloud_types = { version = "0.1.0", path = "../../features/commit_cloud/types" }
+commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 connection_security_checker = { version = "0.1.0", path = "../../common/connection_security_checker" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 dedupmap = { version = "0.1.0", path = "../../common/dedupmap" }
@@ -46,6 +47,7 @@ maplit = "1.0"
 megarepo_api = { version = "0.1.0", path = "../../megarepo_api" }
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }
 memory = { version = "0.1.0", path = "../../common/memory" }
+mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 metadata = { version = "0.1.0", path = "../../common/metadata" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }

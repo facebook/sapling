@@ -6,14 +6,19 @@
  */
 
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 
 use bytes::Bytes;
+use chrono::Utc;
+use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use derived_data_manager::DerivableType;
 use futures::stream;
 use futures::stream::FuturesOrdered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use mercurial_mutation::HgMutationEntry;
+use mercurial_mutation::HgMutationStoreRef;
 use metaconfig_types::CommitIdentityScheme;
 use mononoke_api::ChangesetId;
 use mononoke_api::ChangesetSpecifier;
@@ -36,6 +41,7 @@ use mononoke_types::path::MPath;
 use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
 
+use crate::commit_id::map_commit_identities;
 use crate::commit_id::map_commit_identity;
 use crate::from_request::FromRequest;
 use crate::source_control_impl::SourceControlServiceImpl;
@@ -398,16 +404,146 @@ impl SourceControlServiceImpl {
         })
     }
 
+    /// Create a modified commit by amending or folding (squashing) existing commits.
     pub(crate) async fn repo_fold_commits(
         &self,
-        _ctx: CoreContext,
-        _repo: thrift::RepoSpecifier,
-        _params: thrift::RepoFoldCommitsParams,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoFoldCommitsParams,
     ) -> Result<thrift::RepoFoldCommitsResponse, scs_errors::ServiceError> {
-        return Err(scs_errors::ServiceError::Request(
-            scs_errors::not_implemented(String::from(
-                "repo_create_modified_commit is not implemented",
-            )),
-        ));
+        let repo = self
+            .repo_for_service(ctx.clone(), &repo, params.service_identity.clone())
+            .await?;
+
+        let bottom_id = self
+            .changeset_id(&repo, &params.bottom)
+            .await
+            .context("failed to resolve bottom commit")?;
+
+        let create_info = params
+            .info
+            .as_ref()
+            .map(CreateInfo::from_request)
+            .transpose()?;
+
+        let additional_changes = Self::convert_create_commit_changes(&repo, params.changes).await?;
+
+        let top_id = match params.top.as_ref() {
+            Some(top) => Some(
+                self.changeset_id(&repo, &top)
+                    .await
+                    .context("failed to resolve top commit")?,
+            ),
+            None => None,
+        };
+
+        let folded_changeset = repo
+            .fold_commits(
+                bottom_id,
+                top_id,
+                Some(additional_changes),
+                create_info,
+                CreateChangesetChecks::from_request(&params.checks)?,
+            )
+            .await?;
+
+        // Get list of predecessor commit IDs (all commits being folded)
+        let predecessor_ids: Vec<ChangesetId> = repo
+            .repo()
+            .commit_graph()
+            .range_stream(repo.ctx(), bottom_id, top_id.unwrap_or(bottom_id))
+            .await
+            .map_err(scs_errors::internal_error)?
+            .collect()
+            .await;
+
+        // Store mutation info for Mercurial repositories
+        if repo.config().default_commit_identity_scheme == CommitIdentityScheme::HG {
+            // Derive HgChangesetId for successor
+            let successor_hg_id =
+                folded_changeset
+                    .changeset_ctx
+                    .hg_id()
+                    .await?
+                    .ok_or_else(|| {
+                        scs_errors::internal_error(
+                            "failed to derive mercurial id for folded commit",
+                        )
+                    })?;
+
+            // Derive HgChangesetIds for all predecessors
+            let predecessor_hg_ids = repo
+                .many_changeset_hg_ids(predecessor_ids.clone())
+                .await?
+                .into_iter()
+                .map(|(_, hg_id)| hg_id)
+                .collect::<Vec<_>>();
+
+            // Get operation and user from mutation_info or use defaults
+            let (op, user) = match &params.mutation_info {
+                Some(info) => (info.op.clone(), info.user.clone()),
+                None => (
+                    // Default op: "amend" for single predecessor, "fold" for multiple
+                    if predecessor_ids.len() == 1 {
+                        "amend".to_string()
+                    } else {
+                        "fold".to_string()
+                    },
+                    // Use service identity or a default
+                    params
+                        .service_identity
+                        .clone()
+                        .unwrap_or_else(|| "scs".to_string()),
+                ),
+            };
+
+            // Create mutation entry
+            let mutation_entry = HgMutationEntry::new(
+                successor_hg_id,
+                predecessor_hg_ids,
+                vec![], // No split commits for fold
+                op,
+                user,
+                Utc::now().timestamp(),
+                0,      // UTC timezone offset
+                vec![], // No extra info
+            );
+
+            // Store in mutation store
+            let hg_changeset_ids = HashSet::from([successor_hg_id]);
+            repo.repo()
+                .hg_mutation_store()
+                .add_entries(repo.ctx(), hg_changeset_ids, vec![mutation_entry])
+                .await
+                .map_err(scs_errors::internal_error)?;
+        }
+
+        if params
+            .identity_schemes
+            .contains(&thrift::CommitIdentityScheme::GIT)
+        {
+            repo.set_git_mapping_from_changeset(
+                &folded_changeset.changeset_ctx,
+                &folded_changeset.hg_extras,
+            )
+            .await?;
+        }
+        let ids =
+            map_commit_identity(&folded_changeset.changeset_ctx, &params.identity_schemes).await?;
+
+        // Convert predecessor IDs to thrift CommitIds with requested identity schemes
+        let folded_commits_map =
+            map_commit_identities(&repo, predecessor_ids.clone(), &params.identity_schemes).await?;
+        let folded_commits: Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>> =
+            predecessor_ids
+                .iter()
+                .filter_map(|id| folded_commits_map.get(id).cloned())
+                .collect();
+
+        Ok(thrift::RepoFoldCommitsResponse {
+            ids,
+            folded_commits,
+            ..Default::default()
+        })
     }
 }
