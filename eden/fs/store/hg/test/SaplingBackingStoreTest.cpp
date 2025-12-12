@@ -432,8 +432,7 @@ TEST_F(
           .value(),
       RelativePathPiece{});
 
-  HgProxyHash proxyHash =
-      HgProxyHash::load(localStore.get(), treeId, "getTree", *stats);
+  HgProxyHash proxyHash = HgProxyHash{treeId};
 
   auto fsRequestContext = ObjectFetchContext::getNullFsContext();
   auto prefetchRequestContext = ObjectFetchContext::getNullPrefetchContext();
@@ -470,8 +469,7 @@ TEST_F(SaplingBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
           .value(),
       RelativePathPiece{});
 
-  HgProxyHash proxyHash =
-      HgProxyHash::load(localStore.get(), tree1Id, "getTree", *stats);
+  HgProxyHash proxyHash = HgProxyHash{tree1Id};
 
   auto requestContext = ObjectFetchContext::getNullContext();
   auto request = SaplingImportRequest::makeTreeImportRequest(
@@ -506,8 +504,7 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
           .value(),
       RelativePathPiece{});
 
-  HgProxyHash proxyHash =
-      HgProxyHash::load(localStore.get(), tree1Id, "getTree", *stats);
+  HgProxyHash proxyHash = HgProxyHash{tree1Id};
 
   auto requestContext = ObjectFetchContext::getNullContext();
   auto request = SaplingImportRequest::makeTreeImportRequest(
@@ -624,8 +621,7 @@ TEST_F(
 
   ASSERT_NE(firstBlobId.size(), 0);
 
-  auto proxyHash =
-      HgProxyHash::load(localStore.get(), firstBlobId, "getBlob", *stats);
+  auto proxyHash = HgProxyHash{firstBlobId};
 
   std::vector<sapling::SaplingRequest> requests;
   requests.reserve(3);
@@ -667,18 +663,6 @@ TEST_F(
 
 TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
   Hash20 testId{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
-
-  {
-    ObjectId legacy{testId.toByteString()};
-    EXPECT_EQ(
-        "proxy-0123456789abcdef0123456789abcdef01234567",
-        SaplingBackingStore::staticRenderObjectId(legacy));
-
-    EXPECT_EQ(
-        legacy,
-        SaplingBackingStore::staticParseObjectId(
-            SaplingBackingStore::staticRenderObjectId(legacy)));
-  }
 
   {
     ObjectId with_path{HgProxyHash::makeEmbeddedProxyHash1(

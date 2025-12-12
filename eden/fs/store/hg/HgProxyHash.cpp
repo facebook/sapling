@@ -12,9 +12,6 @@
 
 #include "eden/common/utils/Bug.h"
 #include "eden/common/utils/Throw.h"
-#include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/StoreResult.h"
-#include "eden/fs/telemetry/EdenStats.h"
 
 using folly::ByteRange;
 using folly::Endian;
@@ -26,14 +23,8 @@ namespace facebook::eden {
 HgProxyHash::HgProxyHash(RelativePathPiece path, const Hash20& hgRevHash)
     : value_{serialize(path, hgRevHash)} {}
 
-std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
-    const ObjectId& edenObjectId) {
-  if (edenObjectId.size() == 20) {
-    // Legacy proxy hash encoding. Fall back to fetching from LocalStore.
-    return std::nullopt;
-  }
-
-  if (edenObjectId.size() < 20) {
+HgProxyHash::HgProxyHash(const ObjectId& edenObjectId) {
+  if (edenObjectId.size() <= 20) {
     throwf<std::invalid_argument>(
         "unsupported proxy hash format: {}",
         folly::hexlify(edenObjectId.getBytes()));
@@ -48,75 +39,37 @@ std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
             "Invalid proxy hash size for TYPE_HG_ID_WITH_PATH: size {}",
             edenObjectId.size());
       }
-      return HgProxyHash{
+      value_ = serialize(
           RelativePathPiece{folly::StringPiece{bytes.subpiece(21)}},
-          Hash20{bytes.subpiece(1, 20)}};
-
+          Hash20{bytes.subpiece(1, 20)});
+      break;
     case TYPE_HG_ID_NO_PATH:
       if (bytes.size() != 21) {
         throwf<std::invalid_argument>(
             "Invalid proxy hash size for TYPE_HG_ID_NO_PATH: size {}",
             edenObjectId.size());
       }
-      return HgProxyHash{RelativePathPiece{}, Hash20{bytes.subpiece(1)}};
+      value_ = serialize(RelativePathPiece{}, Hash20{bytes.subpiece(1)});
+      break;
+    default:
+      throwf<std::invalid_argument>(
+          "Unknown proxy hash type: size {}, type {}",
+          edenObjectId.size(),
+          type);
   }
-  throwf<std::invalid_argument>(
-      "Unknown proxy hash type: size {}, type {}", edenObjectId.size(), type);
 }
 
 ImmediateFuture<std::vector<HgProxyHash>> HgProxyHash::getBatch(
-    LocalStore* store,
     ObjectIdRange blobHashes,
-    EdenStats& edenStats,
     bool prefetchOptimizations) {
-  auto processBatch = [store, blobHashes, &edenStats]() {
+  auto processBatch = [blobHashes]() {
     std::vector<HgProxyHash> results;
     results.reserve(blobHashes.size());
-    std::vector<size_t> byteRangesIndexes;
     for (size_t index = 0; index < blobHashes.size(); index++) {
-      if (auto embedded = tryParseEmbeddedProxyHash(blobHashes.at(index))) {
-        results.emplace_back(*embedded);
-      } else {
-        byteRangesIndexes.push_back(index);
-        results.emplace_back();
-      }
+      results.emplace_back(blobHashes.at(index));
     }
 
-    // If all hashes are embedded, we can just return them
-    if (byteRangesIndexes.empty()) {
-      return ImmediateFuture<std::vector<HgProxyHash>>{std::move(results)};
-    }
-
-    // Otherwise, we have some non-embedded hashes.
-    std::vector<ByteRange> byteRanges;
-    byteRanges.reserve(byteRangesIndexes.size());
-    for (auto& index : byteRangesIndexes) {
-      byteRanges.emplace_back(blobHashes.at(index).getBytes());
-    }
-
-    edenStats.increment(
-        &SaplingBackingStoreStats::loadProxyHash, byteRanges.size());
-    return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
-        .thenValue([results = std::move(results),
-                    byteRanges, // can't move - see https://fburl.com/585912384
-                    byteRangesIndexes = std::move(byteRangesIndexes)](
-                       std::vector<StoreResult>&& data) mutable {
-          XCHECK_EQ(data.size(), byteRanges.size());
-
-          // Now that we have retrieved the HgProxyHashes from the local store,
-          // we can walk through them and update the results.
-          for (size_t i = 0; i < data.size(); i++) {
-            // Convert ByteRanges to HgProxyHashes - by pairing them with the
-            // store results.
-            auto index = byteRangesIndexes.at(i);
-            results.at(index) = HgProxyHash{
-                ObjectId{byteRanges.at(i)},
-                data.at(i),
-                "prefetchFiles getBatch"};
-          }
-
-          return results;
-        });
+    return ImmediateFuture<std::vector<HgProxyHash>>{std::move(results)};
   };
 
   constexpr size_t kAsyncThreshold = 1000;
@@ -131,29 +84,6 @@ ImmediateFuture<std::vector<HgProxyHash>> HgProxyHash::getBatch(
   } else {
     return processBatch();
   }
-}
-
-HgProxyHash HgProxyHash::load(
-    LocalStore* store,
-    const ObjectId& edenObjectId,
-    StringPiece context,
-    EdenStats& edenStats) {
-  if (auto embedded = tryParseEmbeddedProxyHash(edenObjectId)) {
-    return *embedded;
-  }
-  edenStats.increment(&SaplingBackingStoreStats::loadProxyHash);
-  // Read the path name and file rev hash
-  auto infoResult = store->get(KeySpace::HgProxyHashFamily, edenObjectId);
-  if (!infoResult.isValid()) {
-    XLOGF(
-        ERR,
-        "received unknown mercurial proxy hash {} in {}",
-        edenObjectId,
-        context);
-    // Fall through and let infoResult.extractValue() throw
-  }
-
-  return HgProxyHash{edenObjectId, infoResult.extractValue()};
 }
 
 ObjectId HgProxyHash::store(
@@ -235,23 +165,6 @@ bool HgProxyHash::hasValidType(const ObjectId& oid) {
   return bytes.size() == 20 ||
       (bytes.size() >= 21 &&
        (bytes[0] == TYPE_HG_ID_WITH_PATH || bytes[0] == TYPE_HG_ID_NO_PATH));
-}
-
-HgProxyHash::HgProxyHash(
-    ObjectId edenBlobHash,
-    StoreResult& infoResult,
-    StringPiece context) {
-  if (!infoResult.isValid()) {
-    XLOGF(
-        ERR,
-        "received unknown mercurial proxy hash {} in {}",
-        edenBlobHash,
-        context);
-    // Fall through and let infoResult.extractValue() throw
-  }
-
-  value_ = infoResult.extractValue();
-  validate(edenBlobHash);
 }
 
 std::string HgProxyHash::serialize(

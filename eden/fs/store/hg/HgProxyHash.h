@@ -38,13 +38,16 @@ class EdenStats;
  */
 class HgProxyHash {
  public:
-  static std::optional<HgProxyHash> tryParseEmbeddedProxyHash(
-      const ObjectId& edenObjectId);
-
   /**
    * An uninitialized hash that contains a kZeroHash and an empty path.
    */
   HgProxyHash() = default;
+
+  /**
+   * Construct a proxy hash from ObjectId. Throws an exception if the oid
+   * does not contain a valid embedded HgProxyHash;
+   */
+  explicit HgProxyHash(const ObjectId& edenObjectId);
 
   /**
    * Construct a proxy hash with encoded data. Throws an exception if the string
@@ -104,19 +107,8 @@ class HgProxyHash {
    * duration of the future.
    */
   static ImmediateFuture<std::vector<HgProxyHash>> getBatch(
-      LocalStore* store,
       ObjectIdRange blobHashes,
-      EdenStats& stats,
       bool prefetchOptimizations);
-
-  /**
-   * Load HgProxyHash data for the given eden blob hash from the LocalStore.
-   */
-  static HgProxyHash load(
-      LocalStore* store,
-      const ObjectId& edenObjectId,
-      folly::StringPiece context,
-      EdenStats& stats);
 
   /**
    * Encode an ObjectId from path, manifest ID, and format.
@@ -164,11 +156,6 @@ class HgProxyHash {
   static bool hasValidType(const ObjectId& oid);
 
  private:
-  HgProxyHash(
-      ObjectId edenBlobHash,
-      StoreResult& infoResult,
-      folly::StringPiece context);
-
   /**
    * Serialize the (path, hgRevHash) data into a buffer that will be stored in
    * the LocalStore.

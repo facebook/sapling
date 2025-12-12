@@ -1086,10 +1086,8 @@ ObjectComparison SaplingBackingStore::compareObjectsById(
   }
 
   // Now parse the object IDs and read their rev hashes.
-  auto oneProxy = HgProxyHash::load(
-      localStore_.get(), one, "areObjectIdsEquivalent", *stats_);
-  auto twoProxy = HgProxyHash::load(
-      localStore_.get(), two, "areObjectIdsEquivalent", *stats_);
+  auto oneProxy = HgProxyHash{one};
+  auto twoProxy = HgProxyHash{two};
 
   // If the rev hashes are the same, we know the contents are the same.
   if (oneProxy.revHash() == twoProxy.revHash()) {
@@ -1137,15 +1135,6 @@ std::string SaplingBackingStore::displayRootId(const RootId& rootId) {
 }
 
 ObjectId SaplingBackingStore::staticParseObjectId(folly::StringPiece objectId) {
-  if (objectId.startsWith("proxy-")) {
-    if (objectId.size() != 46) {
-      throwf<std::invalid_argument>(
-          "invalid proxy hash length: {}", objectId.size());
-    }
-
-    return ObjectId{folly::unhexlify<folly::fbstring>(objectId.subpiece(6))};
-  }
-
   if (objectId.size() == 40) {
     return HgProxyHash::makeEmbeddedProxyHash2(Hash20{objectId});
   }
@@ -1166,14 +1155,12 @@ ObjectId SaplingBackingStore::staticParseObjectId(folly::StringPiece objectId) {
 
 std::string SaplingBackingStore::staticRenderObjectId(
     const ObjectId& objectId) {
-  if (auto proxyHash = HgProxyHash::tryParseEmbeddedProxyHash(objectId)) {
-    if (proxyHash->path().empty()) {
-      return folly::hexlify(proxyHash->byteHash());
-    }
-    return fmt::format(
-        "{}:{}", folly::hexlify(proxyHash->byteHash()), proxyHash->path());
+  auto proxyHash = HgProxyHash{objectId};
+  if (proxyHash.path().empty()) {
+    return folly::hexlify(proxyHash.byteHash());
   }
-  return fmt::format("proxy-{}", folly::hexlify(objectId.getBytes()));
+  return fmt::format(
+      "{}:{}", folly::hexlify(proxyHash.byteHash()), proxyHash.path());
 }
 
 folly::SemiFuture<BackingStore::GetTreeAuxResult>
@@ -1185,8 +1172,7 @@ SaplingBackingStore::getTreeAuxData(
 
   HgProxyHash proxyHash;
   try {
-    proxyHash =
-        HgProxyHash::load(localStore_.get(), id, "getTreeAuxData", *stats_);
+    proxyHash = HgProxyHash{id};
   } catch (const std::exception&) {
     logMissingProxyHash();
     throw;
@@ -1304,7 +1290,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
 
   HgProxyHash proxyHash;
   try {
-    proxyHash = HgProxyHash::load(localStore_.get(), id, "getTree", *stats_);
+    proxyHash = HgProxyHash{id};
   } catch (const std::exception&) {
     logMissingProxyHash();
     throw;
@@ -1462,7 +1448,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
 
   HgProxyHash proxyHash;
   try {
-    proxyHash = HgProxyHash::load(localStore_.get(), id, "getBlob", *stats_);
+    proxyHash = HgProxyHash{id};
   } catch (const std::exception&) {
     logMissingProxyHash();
     throw;
@@ -1499,7 +1485,7 @@ folly::coro::Task<BackingStore::GetBlobResult> SaplingBackingStore::co_getBlob(
 
   HgProxyHash proxyHash;
   try {
-    proxyHash = HgProxyHash::load(localStore_.get(), id, "getBlob", *stats_);
+    proxyHash = HgProxyHash{id};
   } catch (const std::exception&) {
     logMissingProxyHash();
     throw;
@@ -1662,8 +1648,7 @@ SaplingBackingStore::getBlobAuxData(
 
   HgProxyHash proxyHash;
   try {
-    proxyHash =
-        HgProxyHash::load(localStore_.get(), id, "getBlobAuxData", *stats_);
+    proxyHash = HgProxyHash{id};
   } catch (const std::exception&) {
     logMissingProxyHash();
     throw;
@@ -1964,8 +1949,7 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
   bool prefetchOptimizations =
       config_->getEdenConfig()->prefetchOptimizations.getValue();
 
-  return HgProxyHash::getBatch(
-             localStore_.get(), ids, *stats_, prefetchOptimizations)
+  return HgProxyHash::getBatch(ids, prefetchOptimizations)
       // The caller guarantees that ids will live at least longer than this
       // future, thus we don't need to deep-copy it.
       .thenTry([context = context.copy(), prefetchOptimizations, this, ids](

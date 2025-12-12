@@ -1,8 +1,8 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
- * This software may be used and distributed according to the terms of the
- * GNU General Public License version 2.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 #include <gtest/gtest.h>
@@ -89,10 +89,7 @@ TEST_F(TreeBuilderTest, AddFileEntry) {
       entry.getContentBlake3().value().getBytes(),
       folly::ByteRange{blake3Hash});
 
-  HgProxyHash parsedOid =
-      facebook::eden::HgProxyHash::tryParseEmbeddedProxyHash(
-          entry.getObjectId())
-          .value();
+  HgProxyHash parsedOid = facebook::eden::HgProxyHash{entry.getObjectId()};
   EXPECT_EQ(parsedOid.revHash().getBytes(), folly::ByteRange{hgNode});
   EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{"test_file.txt"});
 }
@@ -120,10 +117,7 @@ TEST_F(TreeBuilderTest, AddDirectoryEntry) {
 
   EXPECT_EQ(entry.getType(/*windowsRememberExecutableBit=*/true), entryType);
 
-  HgProxyHash parsedOid =
-      facebook::eden::HgProxyHash::tryParseEmbeddedProxyHash(
-          entry.getObjectId())
-          .value();
+  HgProxyHash parsedOid = facebook::eden::HgProxyHash{entry.getObjectId()};
   EXPECT_EQ(parsedOid.revHash().getBytes(), folly::ByteRange{hgNode});
   EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{"test_dir"});
 }
@@ -166,10 +160,7 @@ TEST_F(TreeBuilderTest, AddMultipleEntries) {
         entry.getType(/*windowsRememberExecutableBit=*/true),
         TreeEntryType::REGULAR_FILE);
 
-    HgProxyHash parsedOid =
-        facebook::eden::HgProxyHash::tryParseEmbeddedProxyHash(
-            entry.getObjectId())
-            .value();
+    HgProxyHash parsedOid = facebook::eden::HgProxyHash{entry.getObjectId()};
     EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{fileName});
   }
 
@@ -182,10 +173,7 @@ TEST_F(TreeBuilderTest, AddMultipleEntries) {
         entry.getType(/*windowsRememberExecutableBit=*/true),
         TreeEntryType::TREE);
 
-    HgProxyHash parsedOid =
-        facebook::eden::HgProxyHash::tryParseEmbeddedProxyHash(
-            entry.getObjectId())
-            .value();
+    HgProxyHash parsedOid = facebook::eden::HgProxyHash{entry.getObjectId()};
     EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{dirName});
   }
 }
