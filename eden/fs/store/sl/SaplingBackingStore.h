@@ -38,13 +38,12 @@ using RepoPath = facebook::eden::RelativePathPiece;
 using RootId = facebook::eden::RootId;
 using ObjectId = facebook::eden::ObjectId;
 using ObjectFetchContextPtr = facebook::eden::ObjectFetchContextPtr;
+using SlOid = facebook::eden::SlOid;
 
 struct SaplingRequest {
-  // These two fields are typically borrowed from a
-  // SaplingImportRequest - be cognizant of lifetimes.
-  NodeId node;
-  RepoPath path;
-  const ObjectId& oid;
+  // These field is typically borrowed from a SaplingImportRequest - be
+  // cognizant of lifetimes.
+  const SlOid& oid;
 
   FetchCause cause;
   ObjectFetchContextPtr context;
@@ -52,16 +51,10 @@ struct SaplingRequest {
   // TODO: sapling::ClientRequestInfo cri;
 
   SaplingRequest(
-      NodeId node_,
-      RepoPath path_,
-      const ObjectId& oid_,
+      const SlOid& oid_,
       FetchCause cause_,
       ObjectFetchContextPtr context_)
-      : node(node_),
-        path(path_),
-        oid(oid_),
-        cause(cause_),
-        context(std::move(context_)) {}
+      : oid(oid_), cause(cause_), context(std::move(context_)) {}
 };
 } // namespace sapling
 
@@ -440,7 +433,6 @@ class SaplingBackingStore final : public BackingStore {
    * request at the end of the queue.
    */
   ImmediateFuture<GetTreeResult> getTreeEnqueue(
-      const ObjectId& id,
       const SlOid& slOid,
       const ObjectFetchContextPtr& context);
 
@@ -457,7 +449,6 @@ class SaplingBackingStore final : public BackingStore {
    * the request at the end of the queue.
    */
   ImmediateFuture<GetTreeAuxResult> getTreeAuxDataEnqueue(
-      const ObjectId& id,
       const SlOid& slOid,
       const ObjectFetchContextPtr& context);
 
@@ -511,7 +502,6 @@ class SaplingBackingStore final : public BackingStore {
    * at the end of the queue.
    */
   ImmediateFuture<GetBlobResult> getBlobEnqueue(
-      const ObjectId& id,
       const SlOid& slOid,
       const ObjectFetchContextPtr& context,
       const SaplingImportRequest::FetchType fetch_type);
@@ -524,7 +514,6 @@ class SaplingBackingStore final : public BackingStore {
    * at the end of the queue.
    */
   folly::coro::Task<GetBlobResult> co_getBlobEnqueue(
-      const ObjectId& id,
       const SlOid& slOid,
       const ObjectFetchContextPtr& context,
       const SaplingImportRequest::FetchType fetch_type);
@@ -576,7 +565,6 @@ class SaplingBackingStore final : public BackingStore {
    * the request at the end of the queue.
    */
   ImmediateFuture<GetBlobAuxResult> getBlobAuxDataEnqueue(
-      const ObjectId& id,
       const SlOid& slOid,
       const ObjectFetchContextPtr& context);
 

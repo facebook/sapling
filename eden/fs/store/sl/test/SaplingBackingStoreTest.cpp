@@ -439,10 +439,10 @@ TEST_F(
 
   auto fsRequestContext = ObjectFetchContext::getNullFsContext();
   auto prefetchRequestContext = ObjectFetchContext::getNullPrefetchContext();
-  auto fsRequest = SaplingImportRequest::makeTreeImportRequest(
-      treeId, proxyHash, fsRequestContext);
+  auto fsRequest =
+      SaplingImportRequest::makeTreeImportRequest(proxyHash, fsRequestContext);
   auto prefetchRequest = SaplingImportRequest::makeTreeImportRequest(
-      treeId, proxyHash, prefetchRequestContext);
+      proxyHash, prefetchRequestContext);
 
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto treeFuture = via(executor.get(), [&]() {
@@ -478,8 +478,8 @@ TEST_F(SaplingBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
   SlOid proxyHash = SlOid{tree1Id};
 
   auto requestContext = ObjectFetchContext::getNullContext();
-  auto request = SaplingImportRequest::makeTreeImportRequest(
-      tree1Id, proxyHash, requestContext);
+  auto request =
+      SaplingImportRequest::makeTreeImportRequest(proxyHash, requestContext);
 
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto tree1fut = via(executor.get(), [&]() {
@@ -516,8 +516,8 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
   SlOid proxyHash = SlOid{tree1Id};
 
   auto requestContext = ObjectFetchContext::getNullContext();
-  auto request = SaplingImportRequest::makeTreeImportRequest(
-      tree1Id, proxyHash, requestContext);
+  auto request =
+      SaplingImportRequest::makeTreeImportRequest(proxyHash, requestContext);
 
   auto executor = std::make_shared<folly::CPUThreadPoolExecutor>(1);
   auto tree1fut = via(executor.get(), [&]() {
@@ -636,9 +636,7 @@ TEST_F(
   requests.reserve(3);
   for (size_t i = 0; i < 3; ++i) {
     requests.emplace_back(
-        proxyHash.node(),
-        proxyHash.path(),
-        firstBlobId,
+        proxyHash,
         ObjectFetchContext::Cause::Unknown,
         ObjectFetchContext::getNullContext().copy());
   }

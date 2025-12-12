@@ -33,34 +33,30 @@ std::shared_ptr<SaplingImportRequest> SaplingImportRequest::makeRequest(
 
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeBlobImportRequest(
-    const ObjectId& id,
-    const SlOid& proxyHash,
+    const SlOid& slOid,
     const ObjectFetchContextPtr& context) {
-  return makeRequest<BlobImport>(context, id, proxyHash);
+  return makeRequest<BlobImport>(context, slOid);
 }
 
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeTreeImportRequest(
-    const ObjectId& id,
-    const SlOid& proxyHash,
+    const SlOid& slOid,
     const ObjectFetchContextPtr& context) {
-  return makeRequest<TreeImport>(context, id, proxyHash);
+  return makeRequest<TreeImport>(context, slOid);
 }
 
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeBlobAuxImportRequest(
-    const ObjectId& id,
-    const SlOid& proxyHash,
+    const SlOid& slOid,
     const ObjectFetchContextPtr& context) {
-  return makeRequest<BlobAuxImport>(context, id, proxyHash);
+  return makeRequest<BlobAuxImport>(context, slOid);
 }
 
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeTreeAuxImportRequest(
-    const ObjectId& id,
-    const SlOid& proxyHash,
+    const SlOid& slOid,
     const ObjectFetchContextPtr& context) {
-  return makeRequest<TreeAuxImport>(context, id, proxyHash);
+  return makeRequest<TreeAuxImport>(context, slOid);
 }
 
 } // namespace facebook::eden

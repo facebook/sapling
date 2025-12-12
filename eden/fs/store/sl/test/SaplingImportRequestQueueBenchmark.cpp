@@ -31,7 +31,7 @@ std::shared_ptr<SaplingImportRequest> makeBlobImportRequest(
   folly::fbstring proxyHashString = proxyHash.getValue();
   auto requestContext = ObjectFetchContext::getNullContext();
   auto request = SaplingImportRequest::makeBlobImportRequest(
-      ObjectId{proxyHashString}, std::move(proxyHash), requestContext);
+      std::move(proxyHash), requestContext);
   request->setPriority(priority);
   return request;
 }

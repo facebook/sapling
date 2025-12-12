@@ -5153,8 +5153,8 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
         castToSaplingBackingStore(backingStore, edenMount->getPath());
 
     blobFutures.emplace_back(
-        ImmediateFuture{saplingBackingStore->getBlobAuxDataEnqueue(
-                            id, proxyHash, fetchContext)}
+        ImmediateFuture{
+            saplingBackingStore->getBlobAuxDataEnqueue(proxyHash, fetchContext)}
             .thenValue([edenMount, id](BackingStore::GetBlobAuxResult result) {
               return transformToBlobMetadataFromOrigin(
                   edenMount,

@@ -91,12 +91,8 @@ pub(crate) mod ffi {
     }
 
     pub struct Request<'a> {
-        node: *const u8,
-        cause: FetchCause,
-
-        // Only populated for get_tree_batch
-        path: &'a [u8],
         oid: &'a [u8],
+        cause: FetchCause,
         pid: u32,
         // TODO: mode: FetchMode
         // TODO: cri: ClientRequestInfo
@@ -203,7 +199,6 @@ pub(crate) mod ffi {
             case_sensitive: bool,
             oid_format: HgObjectIdFormat,
             oid: &[u8],
-            path: &[u8],
         ) -> UniquePtr<TreeBuilder>;
 
         fn add_entry(
@@ -577,7 +572,7 @@ pub fn sapling_backingstore_get_tree_batch(
         |idx, result| {
             let req = &requests[idx];
 
-            let mut builder = ffi::new_builder(case_sensitive, oid_format, req.oid, req.path);
+            let mut builder = ffi::new_builder(case_sensitive, oid_format, req.oid);
 
             let error = match result {
                 Ok(Some(sl_tree)) => {
@@ -596,15 +591,18 @@ pub fn sapling_backingstore_get_tree_batch(
 
             let resolver = resolver.clone();
 
-            if req.cause != ffi::FetchCause::Prefetch && !req.path.is_empty() && error.is_null() {
-                sapling_backingstore_witness_dir_read(
-                    store,
-                    req.path,
-                    builder.num_files(),
-                    builder.num_dirs(),
-                    fetch_mode.is_local(),
-                    req.pid,
-                );
+            if req.cause != ffi::FetchCause::Prefetch && error.is_null() {
+                let path = path_from_oid(req.oid);
+                if !path.is_empty() {
+                    sapling_backingstore_witness_dir_read(
+                        store,
+                        path,
+                        builder.num_files(),
+                        builder.num_dirs(),
+                        fetch_mode.is_local(),
+                        req.pid,
+                    );
+                }
             }
 
             unsafe {
@@ -612,6 +610,11 @@ pub fn sapling_backingstore_get_tree_batch(
             };
         },
     );
+}
+
+fn path_from_oid(oid: &[u8]) -> &[u8] {
+    // TODO: don't assume knowledge about the sl ObjectId format.
+    if oid.len() <= 21 { &[] } else { &oid[21..] }
 }
 
 pub fn sapling_backingstore_get_tree_aux(

@@ -26,10 +26,11 @@ class TreeBuilderTest : public ::testing::Test {
     std::array<uint8_t, 20> oid_bytes = {
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
         0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14};
-    oid_ = SlOid{Hash20{oid_bytes}};
 
     // Create a test path
     path_ = RelativePathPiece{"test/path"};
+
+    oid_ = SlOid{Hash20{oid_bytes}, path_};
 
     // Set up case sensitivity and object ID format
     caseSensitive_ = CaseSensitivity::Sensitive;
@@ -43,7 +44,7 @@ class TreeBuilderTest : public ::testing::Test {
 };
 
 TEST_F(TreeBuilderTest, EmptyBuilder) {
-  TreeBuilder builder(oid_, path_, caseSensitive_, objectIdFormat_);
+  TreeBuilder builder(oid_, caseSensitive_, objectIdFormat_);
 
   EXPECT_EQ(builder.num_files(), 0);
   EXPECT_EQ(builder.num_dirs(), 0);
@@ -54,7 +55,7 @@ TEST_F(TreeBuilderTest, EmptyBuilder) {
 }
 
 TEST_F(TreeBuilderTest, AddFileEntry) {
-  TreeBuilder builder(oid_, path_, caseSensitive_, objectIdFormat_);
+  TreeBuilder builder(oid_, caseSensitive_, objectIdFormat_);
 
   // Create test data for a file entry
   Str fileName = "test_file.txt";
@@ -96,7 +97,7 @@ TEST_F(TreeBuilderTest, AddFileEntry) {
 }
 
 TEST_F(TreeBuilderTest, AddDirectoryEntry) {
-  TreeBuilder builder(oid_, path_, caseSensitive_, objectIdFormat_);
+  TreeBuilder builder(oid_, caseSensitive_, objectIdFormat_);
 
   // Create test data for a directory entry
   Str dirName = "test_dir";
@@ -124,7 +125,7 @@ TEST_F(TreeBuilderTest, AddDirectoryEntry) {
 }
 
 TEST_F(TreeBuilderTest, AddMultipleEntries) {
-  TreeBuilder builder(oid_, path_, caseSensitive_, objectIdFormat_);
+  TreeBuilder builder(oid_, caseSensitive_, objectIdFormat_);
 
   // Add multiple file entries
   for (int i = 0; i < 3; ++i) {
@@ -180,7 +181,7 @@ TEST_F(TreeBuilderTest, AddMultipleEntries) {
 }
 
 TEST_F(TreeBuilderTest, SetAuxData) {
-  TreeBuilder builder(oid_, path_, caseSensitive_, objectIdFormat_);
+  TreeBuilder builder(oid_, caseSensitive_, objectIdFormat_);
 
   // Create aux data for the tree itself
   std::array<uint8_t, 32> digest = {
@@ -201,7 +202,7 @@ TEST_F(TreeBuilderTest, SetAuxData) {
 }
 
 TEST_F(TreeBuilderTest, MarkMissing) {
-  TreeBuilder builder(oid_, path_, caseSensitive_, objectIdFormat_);
+  TreeBuilder builder(oid_, caseSensitive_, objectIdFormat_);
 
   builder.mark_missing();
 

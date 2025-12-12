@@ -155,7 +155,7 @@ facebook::eden::ObjectId TreeBuilder::make_entry_oid(
 
   return facebook::eden::SlOid{
       reinterpret_cast<const facebook::eden::Hash20&>(hg_node),
-      path_,
+      oid_.path(),
       // This name comes from Sapling's PathComponent type, which is already
       // validated.
       facebook::eden::PathComponentPiece{
@@ -175,7 +175,7 @@ facebook::eden::TreePtr TreeBuilder::build() {
     return nullptr;
   }
   return std::make_shared<facebook::eden::TreePtr::element_type>(
-      std::move(oid_),
+      std::move(oid_).oid(),
       facebook::eden::Tree::container{std::move(entries_), caseSensitive_},
       std::move(auxData_));
 }
@@ -183,25 +183,13 @@ facebook::eden::TreePtr TreeBuilder::build() {
 std::unique_ptr<TreeBuilder> new_builder(
     bool caseSensitive,
     facebook::eden::HgObjectIdFormat oidFormat,
-    const rust::Slice<const uint8_t> oid,
-    const rust::Slice<const uint8_t> path) {
-  auto pathView =
-      std::string_view{reinterpret_cast<const char*>(path.data()), path.size()};
-
-  // We skip the path sanity check below, but let's check in debug builds,
-  // just in case.
-  XDCHECK_EQ(facebook::eden::RelativePathPiece{pathView}.view(), pathView);
-
+    const rust::Slice<const uint8_t> oid) {
   return std::make_unique<TreeBuilder>(TreeBuilder{
       facebook::eden::SaplingObjectId{
           folly::StringPiece{
               reinterpret_cast<const char*>(oid.data()), oid.size()},
           // Skip validation - this data has already been validated.
           false},
-      // Skip the sanity check since this path came from a validated
-      // RelativePathPiece, but just lost its type going through Rust.
-      facebook::eden::RelativePathPiece{
-          pathView, facebook::eden::detail::SkipPathSanityCheck{}},
       caseSensitive ? facebook::eden::CaseSensitivity::Sensitive
                     : facebook::eden::CaseSensitivity::Insensitive,
       oidFormat,

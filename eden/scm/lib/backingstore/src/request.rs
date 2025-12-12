@@ -18,7 +18,12 @@ const NODE_LENGTH: usize = 20;
 
 impl Request<'_> {
     pub fn key(&self) -> Key {
-        let node: &[u8] = unsafe { slice::from_raw_parts(self.node, NODE_LENGTH) };
-        Key::new(RepoPathBuf::new(), Node::from_slice(node).unwrap())
+        if self.oid.is_empty() {
+            Key::default()
+        } else {
+            let node: &[u8] =
+                unsafe { slice::from_raw_parts(&self.oid[1] as *const u8, NODE_LENGTH) };
+            Key::new(RepoPathBuf::new(), Node::from_slice(node).unwrap())
+        }
     }
 }

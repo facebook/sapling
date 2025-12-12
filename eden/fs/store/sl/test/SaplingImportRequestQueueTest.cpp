@@ -47,51 +47,47 @@ Hash20 uniqueHash() {
   return Hash20{bytes};
 }
 
-std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
-makeBlobImportRequest(ImportPriority priority) {
+std::pair<SlOid, std::shared_ptr<SaplingImportRequest>> makeBlobImportRequest(
+    ImportPriority priority) {
   auto hgRevHash = uniqueHash();
-  auto proxyHash = SlOid{hgRevHash, RelativePath{"some_blob"}};
-  auto id = ObjectId{proxyHash.getValue()};
+  auto slOid = SlOid{hgRevHash, RelativePath{"some_blob"}};
   auto requestContext = ObjectFetchContext::getNullContext();
-  auto request = SaplingImportRequest::makeBlobImportRequest(
-      id, std::move(proxyHash), requestContext);
+  auto request =
+      SaplingImportRequest::makeBlobImportRequest(slOid, requestContext);
   request->setPriority(priority);
-  return std::make_pair(id, request);
+  return std::make_pair(slOid, request);
 }
 
-std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
-makeBlobImportRequestWithHash(ImportPriority priority, SlOid proxyHash) {
-  auto id = ObjectId{proxyHash.getValue()};
+std::pair<SlOid, std::shared_ptr<SaplingImportRequest>>
+makeBlobImportRequestWithHash(ImportPriority priority, const SlOid& slOid) {
   auto requestContext = ObjectFetchContext::getNullContext();
-  auto request = SaplingImportRequest::makeBlobImportRequest(
-      id, std::move(proxyHash), requestContext);
+  auto request =
+      SaplingImportRequest::makeBlobImportRequest(slOid, requestContext);
   request->setPriority(priority);
-  return std::make_pair(id, request);
+  return std::make_pair(slOid, request);
 }
 
-std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
-makeBlobAuxImportRequestWithHash(ImportPriority priority, SlOid proxyHash) {
-  auto id = ObjectId{proxyHash.getValue()};
+std::pair<SlOid, std::shared_ptr<SaplingImportRequest>>
+makeBlobAuxImportRequestWithHash(ImportPriority priority, const SlOid& slOid) {
   auto requestContext = ObjectFetchContext::getNullContext();
-  auto request = SaplingImportRequest::makeBlobAuxImportRequest(
-      id, std::move(proxyHash), requestContext);
+  auto request =
+      SaplingImportRequest::makeBlobAuxImportRequest(slOid, requestContext);
   request->setPriority(priority);
-  return std::make_pair(id, request);
+  return std::make_pair(slOid, request);
 }
 
-std::pair<ObjectId, std::shared_ptr<SaplingImportRequest>>
-makeTreeImportRequest(ImportPriority priority) {
+std::pair<SlOid, std::shared_ptr<SaplingImportRequest>> makeTreeImportRequest(
+    ImportPriority priority) {
   auto hgRevHash = uniqueHash();
-  auto proxyHash = SlOid{hgRevHash, RelativePath{"some_tree"}};
-  auto id = ObjectId{proxyHash.getValue()};
+  auto slOid = SlOid{hgRevHash, RelativePath{"some_tree"}};
   auto requestContext = ObjectFetchContext::getNullContext();
-  auto request = SaplingImportRequest::makeTreeImportRequest(
-      id, std::move(proxyHash), requestContext);
+  auto request =
+      SaplingImportRequest::makeTreeImportRequest(slOid, requestContext);
   request->setPriority(priority);
-  return std::make_pair(id, request);
+  return std::make_pair(slOid, request);
 }
 
-ObjectId insertBlobImportRequest(
+SlOid insertBlobImportRequest(
     SaplingImportRequestQueue& queue,
     ImportPriority priority) {
   auto [id, request] = makeBlobImportRequest(priority);
@@ -100,7 +96,7 @@ ObjectId insertBlobImportRequest(
   return id;
 }
 
-ObjectId insertTreeImportRequest(
+SlOid insertTreeImportRequest(
     SaplingImportRequestQueue& queue,
     ImportPriority priority) {
   auto [id, request] = makeTreeImportRequest(priority);
@@ -113,12 +109,12 @@ TEST_F(SaplingImportRequestQueueTest, sameObjectIdDifferentType) {
   auto queue = SaplingImportRequestQueue{edenConfig};
 
   auto hgRevHash = uniqueHash();
-  auto proxyHash = SlOid{hgRevHash, RelativePath{"some_blob"}};
+  auto slOid = SlOid{hgRevHash, RelativePath{"some_blob"}};
 
   auto [blobHash, blobRequest] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 1), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 1), slOid);
   auto [blobAuxHash, blobAuxRequest] = makeBlobAuxImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 1), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 1), slOid);
 
   queue.enqueueBlob(std::move(blobRequest));
   queue.enqueueBlobAux(std::move(blobAuxRequest));
@@ -132,7 +128,7 @@ TEST_F(SaplingImportRequestQueueTest, sameObjectIdDifferentType) {
 
 TEST_F(SaplingImportRequestQueueTest, getRequestByPriority) {
   auto queue = SaplingImportRequestQueue{edenConfig};
-  std::vector<ObjectId> enqueued;
+  std::vector<SlOid> enqueued;
 
   for (int i = 0; i < 10; i++) {
     auto [id, request] =
@@ -178,7 +174,7 @@ TEST_F(SaplingImportRequestQueueTest, getRequestByPriority) {
 
 TEST_F(SaplingImportRequestQueueTest, getRequestByPriorityReverse) {
   auto queue = SaplingImportRequestQueue{edenConfig};
-  std::deque<ObjectId> enqueued;
+  std::deque<SlOid> enqueued;
 
   for (int i = 0; i < 10; i++) {
     auto [id, request] = makeBlobImportRequest(
@@ -222,8 +218,8 @@ TEST_F(SaplingImportRequestQueueTest, getRequestByPriorityReverse) {
 
 TEST_F(SaplingImportRequestQueueTest, mixedPriority) {
   auto queue = SaplingImportRequestQueue{edenConfig};
-  std::set<ObjectId> enqueued_blob;
-  std::set<ObjectId> enqueued_tree;
+  std::set<SlOid> enqueued_blob;
+  std::set<SlOid> enqueued_tree;
 
   for (int i = 0; i < 10; i++) {
     {
@@ -258,9 +254,10 @@ TEST_F(SaplingImportRequestQueueTest, mixedPriority) {
 
     auto tree = folly::makeTryWith(
         [id = dequeuedRequest->getRequest<SaplingImportRequest::TreeImport>()
-                  ->id]() {
+                  ->id]() mutable {
           return std::make_shared<TreePtr::element_type>(
-              Tree::container{kPathMapDefaultCaseSensitive}, id);
+              Tree::container{kPathMapDefaultCaseSensitive},
+              std::move(id).oid());
         });
     queue.markImportAsFinished<TreePtr::element_type>(
         dequeuedRequest->getRequest<SaplingImportRequest::TreeImport>()->id,
@@ -292,8 +289,8 @@ TEST_F(SaplingImportRequestQueueTest, mixedPriority) {
 
 TEST_F(SaplingImportRequestQueueTest, getMultipleRequests) {
   auto queue = SaplingImportRequestQueue{edenConfig};
-  std::set<ObjectId> enqueued_blob;
-  std::set<ObjectId> enqueued_tree;
+  std::set<SlOid> enqueued_blob;
+  std::set<SlOid> enqueued_tree;
 
   for (int i = 0; i < 10; i++) {
     {
@@ -320,9 +317,10 @@ TEST_F(SaplingImportRequestQueueTest, getMultipleRequests) {
 
     auto tree = folly::makeTryWith(
         [id = dequeuedRequest->getRequest<SaplingImportRequest::TreeImport>()
-                  ->id]() {
+                  ->id]() mutable {
           return std::make_shared<TreePtr::element_type>(
-              Tree::container{kPathMapDefaultCaseSensitive}, id);
+              Tree::container{kPathMapDefaultCaseSensitive},
+              std::move(id).oid());
         });
     queue.markImportAsFinished<TreePtr::element_type>(
         dequeuedRequest->getRequest<SaplingImportRequest::TreeImport>()->id,
@@ -351,16 +349,16 @@ TEST_F(SaplingImportRequestQueueTest, getMultipleRequests) {
 
 TEST_F(SaplingImportRequestQueueTest, duplicateRequestAfterEnqueue) {
   auto queue = SaplingImportRequestQueue{edenConfig};
-  std::vector<ObjectId> enqueued;
+  std::vector<SlOid> enqueued;
 
   auto hgRevHash = uniqueHash();
-  auto proxyHash = SlOid{hgRevHash, RelativePath{"some_blob"}};
+  auto slOid = SlOid{hgRevHash, RelativePath{"some_blob"}};
 
   auto [id, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), slOid);
 
   auto [id2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), slOid);
 
   queue.enqueueBlob(std::move(request));
   enqueued.push_back(id);
@@ -386,16 +384,16 @@ TEST_F(SaplingImportRequestQueueTest, duplicateRequestAfterEnqueue) {
 
 TEST_F(SaplingImportRequestQueueTest, duplicateRequestAfterDequeue) {
   auto queue = SaplingImportRequestQueue{edenConfig};
-  std::vector<ObjectId> enqueued;
+  std::vector<SlOid> enqueued;
 
   auto hgRevHash = uniqueHash();
-  auto proxyHash = SlOid{hgRevHash, RelativePath{"some_blob"}};
+  auto slOid = SlOid{hgRevHash, RelativePath{"some_blob"}};
 
   auto [id, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), slOid);
 
   auto [id2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), slOid);
 
   queue.enqueueBlob(std::move(request));
   enqueued.push_back(id);
@@ -423,16 +421,16 @@ TEST_F(SaplingImportRequestQueueTest, duplicateRequestAfterDequeue) {
 
 TEST_F(SaplingImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
   auto queue = SaplingImportRequestQueue{edenConfig};
-  std::vector<ObjectId> enqueued;
+  std::vector<SlOid> enqueued;
 
   auto hgRevHash = uniqueHash();
-  auto proxyHash = SlOid{hgRevHash, RelativePath{"some_blob"}};
+  auto slOid = SlOid{hgRevHash, RelativePath{"some_blob"}};
 
   auto [id, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), slOid);
 
   auto [id2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), slOid);
 
   queue.enqueueBlob(std::move(request));
   enqueued.push_back(id);
@@ -457,22 +455,22 @@ TEST_F(SaplingImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
 
 TEST_F(SaplingImportRequestQueueTest, multipleDuplicateRequests) {
   auto queue = SaplingImportRequestQueue{edenConfig};
-  std::vector<ObjectId> enqueued;
+  std::vector<SlOid> enqueued;
 
   auto hgRevHash = uniqueHash();
-  auto proxyHash = SlOid{hgRevHash, RelativePath{"some_blob"}};
+  auto slOid = SlOid{hgRevHash, RelativePath{"some_blob"}};
 
   auto [id, request] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), slOid);
 
   auto [id2, request2] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), slOid);
 
   auto [id3, request3] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), slOid);
 
   auto [id4, request4] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 5), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 5), slOid);
 
   queue.enqueueBlob(std::move(request2));
   queue.enqueueBlob(std::move(request));
@@ -502,16 +500,16 @@ TEST_F(SaplingImportRequestQueueTest, multipleDuplicateRequests) {
 
 TEST_F(SaplingImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
   auto queue = SaplingImportRequestQueue{edenConfig};
-  std::vector<ObjectId> enqueued;
+  std::vector<SlOid> enqueued;
 
   auto hgRevHash = uniqueHash();
-  auto proxyHash = SlOid{hgRevHash, RelativePath{"some_blob"}};
+  auto slOid = SlOid{hgRevHash, RelativePath{"some_blob"}};
 
   auto [midPriId, midPriRequest] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 6), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 6), slOid);
 
   auto [lowPriId, lowPriRequest] = makeBlobImportRequestWithHash(
-      ImportPriority(ImportPriority::Class::Normal, 0), proxyHash);
+      ImportPriority(ImportPriority::Class::Normal, 0), slOid);
 
   for (int i = 1; i < 6; i++) {
     auto [id, request] =

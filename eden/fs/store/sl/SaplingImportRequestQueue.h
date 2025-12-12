@@ -95,7 +95,7 @@ class SaplingImportRequestQueue {
 
   template <typename T>
   void markImportAsFinished(
-      const ObjectId& id,
+      const SlOid& id,
       folly::Try<std::shared_ptr<const T>>& importTry);
 
   /**
@@ -126,13 +126,13 @@ class SaplingImportRequestQueue {
     std::vector<std::shared_ptr<SaplingImportRequest>> queue;
 
     /**
-     * Map of a ObjectId to an element in the queue. Any changes to this type
+     * Map of a SlOid to an element in the queue. Any changes to this type
      * can have a significant effect on EdenFS performance and thus changes to
      * it needs to be carefully studied and measured. The
      * store/sl/tests/SaplingImportRequestQueueBenchmark.cpp is a good way to
      * measure the potential performance impact.
      */
-    folly::F14FastMap<ObjectId, std::shared_ptr<SaplingImportRequest>>
+    folly::F14FastMap<SlOid, std::shared_ptr<SaplingImportRequest>>
         requestTracker;
   };
 
@@ -159,7 +159,7 @@ class SaplingImportRequestQueue {
 
 template <typename T>
 void SaplingImportRequestQueue::markImportAsFinished(
-    const ObjectId& id,
+    const SlOid& id,
     folly::Try<std::shared_ptr<const T>>& importTry) {
   std::shared_ptr<SaplingImportRequest> import;
   {

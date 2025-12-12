@@ -116,11 +116,9 @@ class TreeBuilder {
  public:
   explicit TreeBuilder(
       facebook::eden::SaplingObjectId slOid,
-      facebook::eden::RelativePathPiece path,
       facebook::eden::CaseSensitivity caseSensitive,
       facebook::eden::HgObjectIdFormat objectIdFormat)
-      : oid_{std::move(slOid).oid()},
-        path_{path},
+      : oid_{std::move(slOid)},
         caseSensitive_{caseSensitive},
         objectIdFormat_{objectIdFormat} {}
 
@@ -177,8 +175,7 @@ class TreeBuilder {
   folly::fbvector<
       std::pair<facebook::eden::PathComponent, facebook::eden::TreeEntry>>
       entries_;
-  facebook::eden::ObjectId oid_;
-  facebook::eden::RelativePathPiece path_;
+  facebook::eden::SaplingObjectId oid_;
   facebook::eden::TreeAuxDataPtr auxData_;
   facebook::eden::CaseSensitivity caseSensitive_;
   facebook::eden::HgObjectIdFormat objectIdFormat_;
@@ -190,7 +187,6 @@ class TreeBuilder {
 std::unique_ptr<TreeBuilder> new_builder(
     bool caseSensitive,
     facebook::eden::HgObjectIdFormat oidFormat,
-    const rust::Slice<const uint8_t> oid,
-    const rust::Slice<const uint8_t> path);
+    const rust::Slice<const uint8_t> oid);
 
 } // namespace sapling
