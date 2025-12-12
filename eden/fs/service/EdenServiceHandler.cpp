@@ -4885,7 +4885,7 @@ EdenServiceHandler::co_debugGetBlobImpl(
   }
   auto& context = helper->getFetchContext();
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
-    auto proxyHash = HgProxyHash{id};
+    auto proxyHash = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
@@ -4902,7 +4902,7 @@ EdenServiceHandler::co_debugGetBlobImpl(
             }));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
-    auto proxyHash = HgProxyHash{id};
+    auto proxyHash = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
@@ -5055,7 +5055,7 @@ EdenServiceHandler::debugGetBlobImpl(
   auto& context = helper->getFetchContext();
 
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
-    auto proxyHash = HgProxyHash{id};
+    auto proxyHash = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
@@ -5067,7 +5067,7 @@ EdenServiceHandler::debugGetBlobImpl(
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
-    auto proxyHash = HgProxyHash{id};
+    auto proxyHash = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
@@ -5132,7 +5132,7 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
         }));
   }
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
-    auto proxyHash = HgProxyHash{id};
+    auto proxyHash = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
@@ -5147,7 +5147,7 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
-    auto proxyHash = HgProxyHash{id};
+    auto proxyHash = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());
@@ -5224,7 +5224,7 @@ EdenServiceHandler::semifuture_debugGetTree(
   auto& context = helper->getFetchContext();
 
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
-    auto proxyHash = HgProxyHash{id};
+    auto proxyHash = SlOid{id};
 
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
@@ -5239,7 +5239,7 @@ EdenServiceHandler::semifuture_debugGetTree(
   }
 
   if (originFlags.contains(FROMWHERE_REMOTE_BACKING_STORE)) {
-    auto proxyHash = HgProxyHash{id};
+    auto proxyHash = SlOid{id};
     auto backingStore = edenMount->getObjectStore()->getBackingStore();
     std::shared_ptr<SaplingBackingStore> saplingBackingStore =
         castToSaplingBackingStore(backingStore, edenMount->getPath());

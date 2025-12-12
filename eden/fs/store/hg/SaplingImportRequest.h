@@ -21,7 +21,7 @@
 #include "eden/fs/model/TreeAuxDataFwd.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/store/hg/SaplingObjectId.h"
 
 namespace facebook::eden {
 
@@ -36,11 +36,11 @@ class SaplingImportRequest {
   template <typename ResponseT>
   struct BaseImport {
     using Response = ResponseT;
-    BaseImport(ObjectId id, HgProxyHash proxyHash)
+    BaseImport(ObjectId id, SlOid proxyHash)
         : id{std::move(id)}, proxyHash{std::move(proxyHash)} {}
 
     ObjectId id;
-    HgProxyHash proxyHash;
+    SlOid proxyHash;
 
     // In the case where requests de-duplicate to this one, the requests
     // promise will be enqueued to the following vector.
@@ -57,7 +57,7 @@ class SaplingImportRequest {
    */
   static std::shared_ptr<SaplingImportRequest> makeBlobImportRequest(
       const ObjectId& id,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       const ObjectFetchContextPtr& context);
 
   /**
@@ -65,17 +65,17 @@ class SaplingImportRequest {
    */
   static std::shared_ptr<SaplingImportRequest> makeTreeImportRequest(
       const ObjectId& id,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       const ObjectFetchContextPtr& context);
 
   static std::shared_ptr<SaplingImportRequest> makeBlobAuxImportRequest(
       const ObjectId& id,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       const ObjectFetchContextPtr& context);
 
   static std::shared_ptr<SaplingImportRequest> makeTreeAuxImportRequest(
       const ObjectId& id,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       const ObjectFetchContextPtr& context);
 
   /**

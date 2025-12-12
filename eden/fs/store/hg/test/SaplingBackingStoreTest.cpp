@@ -427,12 +427,12 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
 TEST_F(
     SaplingBackingStoreNoFaultInjectorTest,
     sameRequestsDifferentFetchCause) {
-  auto treeId = HgProxyHash::makeEmbeddedProxyHash1(
+  auto treeId = SlOid::makeEmbeddedProxyHash1(
       queuedBackingStore->getManifestNode(ObjectId::fromHex(commit1.value()))
           .value(),
       RelativePathPiece{});
 
-  HgProxyHash proxyHash = HgProxyHash{treeId};
+  SlOid proxyHash = SlOid{treeId};
 
   auto fsRequestContext = ObjectFetchContext::getNullFsContext();
   auto prefetchRequestContext = ObjectFetchContext::getNullPrefetchContext();
@@ -464,12 +464,12 @@ TEST_F(SaplingBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
           {"hg:filtered-paths", "['foo']"},
       });
 
-  auto tree1Id = HgProxyHash::makeEmbeddedProxyHash1(
+  auto tree1Id = SlOid::makeEmbeddedProxyHash1(
       queuedBackingStore->getManifestNode(ObjectId::fromHex(commit1.value()))
           .value(),
       RelativePathPiece{});
 
-  HgProxyHash proxyHash = HgProxyHash{tree1Id};
+  SlOid proxyHash = SlOid{tree1Id};
 
   auto requestContext = ObjectFetchContext::getNullContext();
   auto request = SaplingImportRequest::makeTreeImportRequest(
@@ -499,12 +499,12 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
         });
   }
   faultInjector.injectBlock("SaplingBackingStore::getTreeBatch", ".*");
-  auto tree1Id = HgProxyHash::makeEmbeddedProxyHash1(
+  auto tree1Id = SlOid::makeEmbeddedProxyHash1(
       queuedBackingStore->getManifestNode(ObjectId::fromHex(commit1.value()))
           .value(),
       RelativePathPiece{});
 
-  HgProxyHash proxyHash = HgProxyHash{tree1Id};
+  SlOid proxyHash = SlOid{tree1Id};
 
   auto requestContext = ObjectFetchContext::getNullContext();
   auto request = SaplingImportRequest::makeTreeImportRequest(
@@ -621,7 +621,7 @@ TEST_F(
 
   ASSERT_NE(firstBlobId.size(), 0);
 
-  auto proxyHash = HgProxyHash{firstBlobId};
+  auto proxyHash = SlOid{firstBlobId};
 
   std::vector<sapling::SaplingRequest> requests;
   requests.reserve(3);
@@ -665,7 +665,7 @@ TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
   Hash20 testId{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
 
   {
-    ObjectId with_path{HgProxyHash::makeEmbeddedProxyHash1(
+    ObjectId with_path{SlOid::makeEmbeddedProxyHash1(
         testId, RelativePathPiece{"foo/bar/baz"})};
     EXPECT_EQ(
         "0123456789abcdef0123456789abcdef01234567:foo/bar/baz",
@@ -678,7 +678,7 @@ TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
   }
 
   {
-    ObjectId id_only{HgProxyHash::makeEmbeddedProxyHash2(testId)};
+    ObjectId id_only{SlOid::makeEmbeddedProxyHash2(testId)};
     EXPECT_EQ(
         "0123456789abcdef0123456789abcdef01234567",
         SaplingBackingStore::staticRenderObjectId(id_only));

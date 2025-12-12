@@ -98,7 +98,7 @@ struct HgImportTraceEvent : TraceEventBase {
   static HgImportTraceEvent queue(
       uint64_t unique,
       ResourceType resourceType,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
       OptionalProcessId pid) {
@@ -116,7 +116,7 @@ struct HgImportTraceEvent : TraceEventBase {
   static HgImportTraceEvent start(
       uint64_t unique,
       ResourceType resourceType,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
       OptionalProcessId pid) {
@@ -134,7 +134,7 @@ struct HgImportTraceEvent : TraceEventBase {
   static HgImportTraceEvent finish(
       uint64_t unique,
       ResourceType resourceType,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
       OptionalProcessId pid,
@@ -154,7 +154,7 @@ struct HgImportTraceEvent : TraceEventBase {
       uint64_t unique,
       EventType eventType,
       ResourceType resourceType,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
       OptionalProcessId pid,
@@ -428,7 +428,7 @@ class SaplingBackingStore final : public BackingStore {
   TreePtr getTreeLocal(
       const ObjectId& edenTreeId,
       const ObjectFetchContextPtr& context,
-      const HgProxyHash& proxyHash);
+      const SlOid& proxyHash);
 
   /**
    * Imports the tree identified by the given hash from the remote store.
@@ -461,7 +461,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   ImmediateFuture<GetTreeResult> getTreeEnqueue(
       const ObjectId& id,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       const ObjectFetchContextPtr& context);
 
   folly::SemiFuture<GetTreeAuxResult> getTreeAuxData(
@@ -478,7 +478,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   ImmediateFuture<GetTreeAuxResult> getTreeAuxDataEnqueue(
       const ObjectId& id,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       const ObjectFetchContextPtr& context);
 
   /**
@@ -493,7 +493,7 @@ class SaplingBackingStore final : public BackingStore {
   /**
    * Reads tree aux data from hg cache.
    */
-  folly::Try<TreeAuxDataPtr> getLocalTreeAuxData(const HgProxyHash& id);
+  folly::Try<TreeAuxDataPtr> getLocalTreeAuxData(const SlOid& id);
 
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
@@ -532,7 +532,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   ImmediateFuture<GetBlobResult> getBlobEnqueue(
       const ObjectId& id,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       const ObjectFetchContextPtr& context,
       const SaplingImportRequest::FetchType fetch_type);
 
@@ -545,7 +545,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   folly::coro::Task<GetBlobResult> co_getBlobEnqueue(
       const ObjectId& id,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       const ObjectFetchContextPtr& context,
       const SaplingImportRequest::FetchType fetch_type);
 
@@ -557,7 +557,7 @@ class SaplingBackingStore final : public BackingStore {
    * Returns nullptr if not found.
    */
   folly::Try<BlobPtr> getBlobFromBackingStore(
-      const HgProxyHash& hgInfo,
+      const SlOid& hgInfo,
       const ObjectFetchContextPtr& context,
       sapling::FetchMode fetchMode);
 
@@ -566,7 +566,7 @@ class SaplingBackingStore final : public BackingStore {
    * Returns nullptr if not found.
    */
   folly::Try<BlobPtr> getBlobLocal(
-      const HgProxyHash& hgInfo,
+      const SlOid& hgInfo,
       const ObjectFetchContextPtr& context) {
     return getBlobFromBackingStore(
         hgInfo, context, sapling::FetchMode::LocalOnly);
@@ -577,7 +577,7 @@ class SaplingBackingStore final : public BackingStore {
    * Returns nullptr if not found.
    */
   folly::Try<BlobPtr> getBlobRemote(
-      const HgProxyHash& hgInfo,
+      const SlOid& hgInfo,
       const ObjectFetchContextPtr& context) {
     return getBlobFromBackingStore(
         hgInfo, context, sapling::FetchMode::RemoteOnly);
@@ -597,7 +597,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   ImmediateFuture<GetBlobAuxResult> getBlobAuxDataEnqueue(
       const ObjectId& id,
-      const HgProxyHash& proxyHash,
+      const SlOid& proxyHash,
       const ObjectFetchContextPtr& context);
 
   /**
@@ -612,7 +612,7 @@ class SaplingBackingStore final : public BackingStore {
   /**
    * Reads blob aux data from hg cache.
    */
-  folly::Try<BlobAuxDataPtr> getLocalBlobAuxData(const HgProxyHash& id);
+  folly::Try<BlobAuxDataPtr> getLocalBlobAuxData(const SlOid& id);
 
   [[nodiscard]] virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
@@ -666,7 +666,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   void logBackingStoreFetch(
       const ObjectFetchContext& context,
-      folly::Range<HgProxyHash*> hashes,
+      folly::Range<SlOid*> hashes,
       ObjectFetchContext::ObjectType type);
 
   /**

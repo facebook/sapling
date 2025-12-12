@@ -34,7 +34,7 @@ std::shared_ptr<SaplingImportRequest> SaplingImportRequest::makeRequest(
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeBlobImportRequest(
     const ObjectId& id,
-    const HgProxyHash& proxyHash,
+    const SlOid& proxyHash,
     const ObjectFetchContextPtr& context) {
   return makeRequest<BlobImport>(context, id, proxyHash);
 }
@@ -42,7 +42,7 @@ SaplingImportRequest::makeBlobImportRequest(
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeTreeImportRequest(
     const ObjectId& id,
-    const HgProxyHash& proxyHash,
+    const SlOid& proxyHash,
     const ObjectFetchContextPtr& context) {
   return makeRequest<TreeImport>(context, id, proxyHash);
 }
@@ -50,7 +50,7 @@ SaplingImportRequest::makeTreeImportRequest(
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeBlobAuxImportRequest(
     const ObjectId& id,
-    const HgProxyHash& proxyHash,
+    const SlOid& proxyHash,
     const ObjectFetchContextPtr& context) {
   return makeRequest<BlobAuxImport>(context, id, proxyHash);
 }
@@ -58,7 +58,7 @@ SaplingImportRequest::makeBlobAuxImportRequest(
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeTreeAuxImportRequest(
     const ObjectId& id,
-    const HgProxyHash& proxyHash,
+    const SlOid& proxyHash,
     const ObjectFetchContextPtr& context) {
   return makeRequest<TreeAuxImport>(context, id, proxyHash);
 }

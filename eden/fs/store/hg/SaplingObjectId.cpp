@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/store/hg/SaplingObjectId.h"
 
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
@@ -20,10 +20,12 @@ using std::string;
 
 namespace facebook::eden {
 
-HgProxyHash::HgProxyHash(RelativePathPiece path, const Hash20& hgRevHash)
+SaplingObjectId::SaplingObjectId(
+    RelativePathPiece path,
+    const Hash20& hgRevHash)
     : value_{serialize(path, hgRevHash)} {}
 
-HgProxyHash::HgProxyHash(const ObjectId& edenObjectId) {
+SaplingObjectId::SaplingObjectId(const ObjectId& edenObjectId) {
   if (edenObjectId.size() <= 20) {
     throwf<std::invalid_argument>(
         "unsupported proxy hash format: {}",
@@ -59,22 +61,22 @@ HgProxyHash::HgProxyHash(const ObjectId& edenObjectId) {
   }
 }
 
-ImmediateFuture<std::vector<HgProxyHash>> HgProxyHash::getBatch(
+ImmediateFuture<std::vector<SaplingObjectId>> SaplingObjectId::getBatch(
     ObjectIdRange blobHashes,
     bool prefetchOptimizations) {
   auto processBatch = [blobHashes]() {
-    std::vector<HgProxyHash> results;
+    std::vector<SaplingObjectId> results;
     results.reserve(blobHashes.size());
     for (size_t index = 0; index < blobHashes.size(); index++) {
       results.emplace_back(blobHashes.at(index));
     }
 
-    return ImmediateFuture<std::vector<HgProxyHash>>{std::move(results)};
+    return ImmediateFuture<std::vector<SaplingObjectId>>{std::move(results)};
   };
 
   constexpr size_t kAsyncThreshold = 1000;
 
-  // If over the threshold, force the ObjectId->HgProxyHash conversion to be
+  // If over the threshold, force the ObjectId->SaplingObjectId conversion to be
   // async.
   if (prefetchOptimizations && blobHashes.size() > kAsyncThreshold) {
     return makeNotReadyImmediateFuture().thenValue(
@@ -86,7 +88,7 @@ ImmediateFuture<std::vector<HgProxyHash>> HgProxyHash::getBatch(
   }
 }
 
-ObjectId HgProxyHash::store(
+ObjectId SaplingObjectId::store(
     RelativePathPiece path,
     const Hash20& hgRevHash,
     HgObjectIdFormat hgObjectIdFormat) {
@@ -100,7 +102,7 @@ ObjectId HgProxyHash::store(
              << fmt::underlying(hgObjectIdFormat);
 }
 
-ObjectId HgProxyHash::store(
+ObjectId SaplingObjectId::store(
     RelativePathPiece basePath,
     PathComponentPiece leafName,
     const Hash20& hgRevHash,
@@ -115,7 +117,7 @@ ObjectId HgProxyHash::store(
              << fmt::underlying(hgObjectIdFormat);
 }
 
-ObjectId HgProxyHash::makeEmbeddedProxyHash1(
+ObjectId SaplingObjectId::makeEmbeddedProxyHash1(
     const Hash20& hgRevHash,
     RelativePathPiece path) {
   folly::StringPiece hashPiece{hgRevHash.getBytes()};
@@ -129,7 +131,7 @@ ObjectId HgProxyHash::makeEmbeddedProxyHash1(
   return ObjectId{std::move(str)};
 }
 
-ObjectId HgProxyHash::makeEmbeddedProxyHash1(
+ObjectId SaplingObjectId::makeEmbeddedProxyHash1(
     const Hash20& hgRevHash,
     RelativePathPiece basePath,
     PathComponentPiece leafName) {
@@ -149,7 +151,7 @@ ObjectId HgProxyHash::makeEmbeddedProxyHash1(
   return ObjectId{std::move(str)};
 }
 
-ObjectId HgProxyHash::makeEmbeddedProxyHash2(const Hash20& hgRevHash) {
+ObjectId SaplingObjectId::makeEmbeddedProxyHash2(const Hash20& hgRevHash) {
   folly::fbstring str;
   str.reserve(21);
   str.push_back(TYPE_HG_ID_NO_PATH);
@@ -158,7 +160,7 @@ ObjectId HgProxyHash::makeEmbeddedProxyHash2(const Hash20& hgRevHash) {
   return ObjectId{std::move(str)};
 }
 
-bool HgProxyHash::hasValidType(const ObjectId& oid) {
+bool SaplingObjectId::hasValidType(const ObjectId& oid) {
   folly::ByteRange bytes = oid.getBytes();
   // 20 bytes is a legacy proxy hash (with no type byte).
   // >=21 bytes is a oid with embedded hg info (and a type byte).
@@ -167,7 +169,7 @@ bool HgProxyHash::hasValidType(const ObjectId& oid) {
        (bytes[0] == TYPE_HG_ID_WITH_PATH || bytes[0] == TYPE_HG_ID_NO_PATH));
 }
 
-std::string HgProxyHash::serialize(
+std::string SaplingObjectId::serialize(
     RelativePathPiece path,
     const Hash20& hgRevHash) {
   // We serialize the data as <hash_bytes><path_length><path>
@@ -187,7 +189,7 @@ std::string HgProxyHash::serialize(
   return buf;
 }
 
-RelativePathPiece HgProxyHash::path() const noexcept {
+RelativePathPiece SaplingObjectId::path() const noexcept {
   if (value_.empty()) {
     return RelativePathPiece{};
   } else {
@@ -200,7 +202,7 @@ RelativePathPiece HgProxyHash::path() const noexcept {
   }
 }
 
-ByteRange HgProxyHash::byteHash() const noexcept {
+ByteRange SaplingObjectId::byteHash() const noexcept {
   if (value_.empty()) {
     return kZeroHash.getBytes();
   } else {
@@ -209,19 +211,19 @@ ByteRange HgProxyHash::byteHash() const noexcept {
   }
 }
 
-Hash20 HgProxyHash::revHash() const noexcept {
+Hash20 SaplingObjectId::revHash() const noexcept {
   return Hash20{byteHash()};
 }
 
-bool HgProxyHash::operator==(const HgProxyHash& otherHash) const {
+bool SaplingObjectId::operator==(const SaplingObjectId& otherHash) const {
   return value_ == otherHash.value_;
 }
 
-bool HgProxyHash::operator<(const HgProxyHash& otherHash) const {
+bool SaplingObjectId::operator<(const SaplingObjectId& otherHash) const {
   return value_ < otherHash.value_;
 }
 
-void HgProxyHash::validate(ObjectId edenBlobHash) {
+void SaplingObjectId::validate(ObjectId edenBlobHash) {
   ByteRange infoBytes = StringPiece(value_);
   // Make sure the data is long enough to contain the rev hash and path length
   if (infoBytes.size() < Hash20::RAW_SIZE + sizeof(uint32_t)) {

@@ -89,7 +89,7 @@ TEST_F(TreeBuilderTest, AddFileEntry) {
       entry.getContentBlake3().value().getBytes(),
       folly::ByteRange{blake3Hash});
 
-  HgProxyHash parsedOid = facebook::eden::HgProxyHash{entry.getObjectId()};
+  SlOid parsedOid = facebook::eden::SlOid{entry.getObjectId()};
   EXPECT_EQ(parsedOid.revHash().getBytes(), folly::ByteRange{hgNode});
   EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{"test_file.txt"});
 }
@@ -117,7 +117,7 @@ TEST_F(TreeBuilderTest, AddDirectoryEntry) {
 
   EXPECT_EQ(entry.getType(/*windowsRememberExecutableBit=*/true), entryType);
 
-  HgProxyHash parsedOid = facebook::eden::HgProxyHash{entry.getObjectId()};
+  SlOid parsedOid = facebook::eden::SlOid{entry.getObjectId()};
   EXPECT_EQ(parsedOid.revHash().getBytes(), folly::ByteRange{hgNode});
   EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{"test_dir"});
 }
@@ -160,7 +160,7 @@ TEST_F(TreeBuilderTest, AddMultipleEntries) {
         entry.getType(/*windowsRememberExecutableBit=*/true),
         TreeEntryType::REGULAR_FILE);
 
-    HgProxyHash parsedOid = facebook::eden::HgProxyHash{entry.getObjectId()};
+    SlOid parsedOid = facebook::eden::SlOid{entry.getObjectId()};
     EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{fileName});
   }
 
@@ -173,7 +173,7 @@ TEST_F(TreeBuilderTest, AddMultipleEntries) {
         entry.getType(/*windowsRememberExecutableBit=*/true),
         TreeEntryType::TREE);
 
-    HgProxyHash parsedOid = facebook::eden::HgProxyHash{entry.getObjectId()};
+    SlOid parsedOid = facebook::eden::SlOid{entry.getObjectId()};
     EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{dirName});
   }
 }

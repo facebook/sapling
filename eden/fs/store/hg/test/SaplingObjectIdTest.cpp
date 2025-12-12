@@ -14,50 +14,50 @@
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/TestOps.h"
-#include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/store/hg/SaplingObjectId.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
 using namespace facebook::eden;
 
-TEST(HgProxyHashTest, test_moved_from_and_empty_hash_compare_the_same) {
+TEST(SlOidTest, test_moved_from_and_empty_hash_compare_the_same) {
   EdenStats stats;
-  HgProxyHash from{
+  SlOid from{
       RelativePathPiece{"this is a long enough string to push past SSO"},
       kEmptySha1};
-  HgProxyHash{std::move(from)};
+  SlOid{std::move(from)};
 
   // @lint-ignore CLANGTIDY bugprone-use-after-move
-  EXPECT_EQ(HgProxyHash{}.path(), from.path());
-  EXPECT_EQ(HgProxyHash{}.revHash(), from.revHash());
+  EXPECT_EQ(SlOid{}.path(), from.path());
+  EXPECT_EQ(SlOid{}.revHash(), from.revHash());
 
-  HgProxyHash zero{RelativePathPiece{}, kZeroHash};
-  EXPECT_EQ(HgProxyHash{}.path(), zero.path());
-  EXPECT_EQ(HgProxyHash{}.revHash(), zero.revHash());
+  SlOid zero{RelativePathPiece{}, kZeroHash};
+  EXPECT_EQ(SlOid{}.path(), zero.path());
+  EXPECT_EQ(SlOid{}.revHash(), zero.revHash());
 }
 
-TEST(HgProxyHashTest, round_trip_version_1) {
+TEST(SlOidTest, round_trip_version_1) {
   EdenStats stats;
   Hash20 hash{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
 
   {
-    auto proxy1 = HgProxyHash{
-        HgProxyHash::makeEmbeddedProxyHash1(hash, RelativePathPiece{})};
+    auto proxy1 =
+        SlOid{SlOid::makeEmbeddedProxyHash1(hash, RelativePathPiece{})};
     EXPECT_EQ(hash, proxy1.revHash());
     EXPECT_EQ(RelativePathPiece{}, proxy1.path());
   }
   {
-    auto proxy2 = HgProxyHash{HgProxyHash::makeEmbeddedProxyHash1(
+    auto proxy2 = SlOid{SlOid::makeEmbeddedProxyHash1(
         hash, RelativePathPiece{"some/longish/path"})};
     EXPECT_EQ(hash, proxy2.revHash());
     EXPECT_EQ(RelativePathPiece{"some/longish/path"}, proxy2.path());
   }
 }
 
-TEST(HgProxyHashTest, round_trip_version_2) {
+TEST(SlOidTest, round_trip_version_2) {
   EdenStats stats;
   Hash20 hash{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
 
-  auto proxy = HgProxyHash{HgProxyHash::makeEmbeddedProxyHash2(hash)};
+  auto proxy = SlOid{SlOid::makeEmbeddedProxyHash2(hash)};
   EXPECT_EQ(hash, proxy.revHash());
   EXPECT_EQ(RelativePathPiece{}, proxy.path());
 }

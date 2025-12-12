@@ -19,8 +19,8 @@ namespace facebook::eden {
 class EdenStats;
 
 /**
- * HgProxyHash is a derived index allowing us to map EdenFS's fixed-size hashes
- * onto Mercurial's (revHash, path) pairs.
+ * SaplingObjectId is a derived index allowing us to map EdenFS's fixed-size
+ * hashes onto Mercurial's (revHash, path) pairs.
  *
  * Mercurial doesn't really have a blob hash the same way EdenFS and Git do.
  * Instead, Mercurial file revision hashes are always relative to a specific
@@ -29,34 +29,34 @@ class EdenStats;
  *
  * To do so, we hash the (path, revHash) tuple, and use this hash as the
  * blob hash in EdenFS.  We store the eden_blob_hash --> (path, hgRevHash)
- * mapping in the LocalStore.  The HgProxyHash class helps store and
+ * mapping in the LocalStore.  The SaplingObjectId class helps store and
  * retrieve these mappings.
  *
  * NOTE: This class is deprecated. When support for reading the hgproxyhash
  * table in LocalStore is removed, it should be replaced with a simple
  * (hgRevHash, path) pair.
  */
-class HgProxyHash {
+class SaplingObjectId {
  public:
   /**
    * An uninitialized hash that contains a kZeroHash and an empty path.
    */
-  HgProxyHash() = default;
+  SaplingObjectId() = default;
 
   /**
    * Construct a proxy hash from ObjectId. Throws an exception if the oid
-   * does not contain a valid embedded HgProxyHash;
+   * does not contain a valid embedded SaplingObjectId;
    */
-  explicit HgProxyHash(const ObjectId& edenObjectId);
+  explicit SaplingObjectId(const ObjectId& edenObjectId);
 
   /**
    * Construct a proxy hash with encoded data. Throws an exception if the string
-   * does not contain a valid HgProxyHash encoding.
+   * does not contain a valid SaplingObjectId encoding.
    *
    * edenObjectId is only used in error messages to correlate the proxy hash
    * with Eden's object ID.
    */
-  HgProxyHash(const ObjectId& edenObjectId, std::string value)
+  SaplingObjectId(const ObjectId& edenObjectId, std::string value)
       : value_{std::move(value)} {
     validate(edenObjectId);
   }
@@ -64,17 +64,17 @@ class HgProxyHash {
   /**
    * Create a ProxyHash given the specified values.
    */
-  HgProxyHash(RelativePathPiece path, const Hash20& hgRevHash);
+  SaplingObjectId(RelativePathPiece path, const Hash20& hgRevHash);
 
-  ~HgProxyHash() = default;
+  ~SaplingObjectId() = default;
 
-  HgProxyHash(const HgProxyHash& other) = default;
-  HgProxyHash& operator=(const HgProxyHash& other) = default;
+  SaplingObjectId(const SaplingObjectId& other) = default;
+  SaplingObjectId& operator=(const SaplingObjectId& other) = default;
 
-  HgProxyHash(HgProxyHash&& other) noexcept
+  SaplingObjectId(SaplingObjectId&& other) noexcept
       : value_{std::exchange(other.value_, std::string{})} {}
 
-  HgProxyHash& operator=(HgProxyHash&& other) noexcept {
+  SaplingObjectId& operator=(SaplingObjectId&& other) noexcept {
     value_ = std::exchange(other.value_, std::string{});
     return *this;
   }
@@ -82,19 +82,19 @@ class HgProxyHash {
   RelativePathPiece path() const noexcept;
 
   /**
-   * Extract the hash part of the HgProxyHash and return a slice of it.
+   * Extract the hash part of the SaplingObjectId and return a slice of it.
    *
-   * The returned slice will live as long as this HgProxyHash.
+   * The returned slice will live as long as this SaplingObjectId.
    */
   folly::ByteRange byteHash() const noexcept;
 
   /**
-   * Extract the hash part of the HgProxyHash and return a copy of it.
+   * Extract the hash part of the SaplingObjectId and return a copy of it.
    */
   Hash20 revHash() const noexcept;
 
-  bool operator==(const HgProxyHash&) const;
-  bool operator<(const HgProxyHash&) const;
+  bool operator==(const SaplingObjectId&) const;
+  bool operator<(const SaplingObjectId&) const;
 
   const std::string& getValue() const {
     return value_;
@@ -106,7 +106,7 @@ class HgProxyHash {
    * The caller is responsible for keeping the ObjectIdRange alive for the
    * duration of the future.
    */
-  static ImmediateFuture<std::vector<HgProxyHash>> getBatch(
+  static ImmediateFuture<std::vector<SaplingObjectId>> getBatch(
       ObjectIdRange blobHashes,
       bool prefetchOptimizations);
 
@@ -151,7 +151,7 @@ class HgProxyHash {
   static ObjectId makeEmbeddedProxyHash2(const Hash20& hgRevHash);
 
   /**
-   * Return whether oid starts with a valid HgProxyHash type byte.
+   * Return whether oid starts with a valid SaplingObjectId type byte.
    */
   static bool hasValidType(const ObjectId& oid);
 
@@ -190,12 +190,18 @@ class HgProxyHash {
   std::string value_;
 };
 
+/**
+ * Shorter alias for convenience.
+ */
+using SlOid = SaplingObjectId;
+
 } // namespace facebook::eden
 
 namespace std {
 template <>
-struct hash<facebook::eden::HgProxyHash> {
-  size_t operator()(const facebook::eden::HgProxyHash& hash) const noexcept {
+struct hash<facebook::eden::SaplingObjectId> {
+  size_t operator()(
+      const facebook::eden::SaplingObjectId& hash) const noexcept {
     return std::hash<std::string>{}(hash.getValue());
   }
 };

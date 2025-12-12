@@ -17,8 +17,8 @@ namespace facebook::eden {
 class BackingStore;
 
 // FilteredObjectId types start at 0x10 so that they can be distinguished
-// from HgProxyHash types that start at 0x01 and extend until 0x02. In the
-// future, this could help migrate HgProxyHash-based ObjectIds to
+// from SlOid types that start at 0x01 and extend until 0x02. In the
+// future, this could help migrate SlOid-based ObjectIds to
 // FilteredObjectIds. See comment below for more details on what objects of each
 // type contain.
 enum FilteredObjectIdType : uint8_t {

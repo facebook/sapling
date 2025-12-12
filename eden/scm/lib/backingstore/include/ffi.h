@@ -26,7 +26,7 @@
 #include "eden/fs/model/TreeAuxDataFwd.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/TreeFwd.h"
-#include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/store/hg/SaplingObjectId.h"
 
 namespace sapling {
 

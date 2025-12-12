@@ -153,7 +153,7 @@ facebook::eden::ObjectId TreeBuilder::make_entry_oid(
   // in case.
   XDCHECK_EQ(facebook::eden::RelativePathPiece{nameView}.view(), nameView);
 
-  return facebook::eden::HgProxyHash::store(
+  return facebook::eden::SlOid::store(
       path_,
       // This name comes from Sapling's PathComponent type, which is already
       // validated.

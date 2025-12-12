@@ -85,7 +85,7 @@ bool FilteredBackingStore::isSlOid(const ObjectId& oid) const {
     return false;
   }
 
-  return HgProxyHash::hasValidType(oid);
+  return SlOid::hasValidType(oid);
 }
 
 ObjectComparison FilteredBackingStore::compareObjectsById(
