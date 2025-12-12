@@ -37,7 +37,7 @@ class SaplingObjectId {
    * Construct a SaplingObjectId from a StringPiece. Throws an exception if
    * oid does not contain a valid SaplingObjectId.
    */
-  explicit SaplingObjectId(folly::StringPiece value);
+  explicit SaplingObjectId(folly::StringPiece value, bool validate = true);
 
   /**
    * Construct a SaplingObjectId from constituent hash and path. Encodes type as

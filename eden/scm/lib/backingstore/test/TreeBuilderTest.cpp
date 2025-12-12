@@ -12,6 +12,7 @@
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/config/HgObjectIdFormat.h"
 #include "eden/fs/model/ObjectId.h"
+#include "eden/fs/store/sl/SaplingObjectId.h"
 #include "eden/scm/lib/backingstore/include/ffi.h"
 
 using namespace sapling;
@@ -25,7 +26,7 @@ class TreeBuilderTest : public ::testing::Test {
     std::array<uint8_t, 20> oid_bytes = {
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
         0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14};
-    oid_ = ObjectId{folly::ByteRange{oid_bytes.data(), oid_bytes.size()}};
+    oid_ = SlOid{Hash20{oid_bytes}};
 
     // Create a test path
     path_ = RelativePathPiece{"test/path"};
@@ -35,7 +36,7 @@ class TreeBuilderTest : public ::testing::Test {
     objectIdFormat_ = HgObjectIdFormat::WithPath;
   }
 
-  ObjectId oid_;
+  SlOid oid_;
   RelativePathPiece path_;
   CaseSensitivity caseSensitive_;
   HgObjectIdFormat objectIdFormat_;
@@ -49,7 +50,7 @@ TEST_F(TreeBuilderTest, EmptyBuilder) {
 
   auto tree = builder.build();
   EXPECT_EQ(tree->size(), 0);
-  EXPECT_EQ(tree->getObjectId(), oid_);
+  EXPECT_EQ(SlOid{tree->getObjectId()}, oid_);
 }
 
 TEST_F(TreeBuilderTest, AddFileEntry) {

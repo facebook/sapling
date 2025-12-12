@@ -1278,7 +1278,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
   logBackingStoreFetch(
       *context, folly::Range{&slOid, 1}, ObjectFetchContext::ObjectType::Tree);
 
-  if (auto tree = getTreeLocal(id, context, slOid)) {
+  if (auto tree = getTreeLocal(slOid, context)) {
     XLOGF(
         DBG5,
         "imported tree of '{}', {} from hgcache",
@@ -1349,15 +1349,9 @@ SaplingBackingStore::getTreeEnqueue(
 }
 
 TreePtr SaplingBackingStore::getTreeLocal(
-    const ObjectId& edenTreeId,
-    const ObjectFetchContextPtr& context,
-    const SlOid& slOid) {
-  auto tree = getNativeTree(
-      slOid.node(),
-      slOid.path(),
-      edenTreeId,
-      context,
-      sapling::FetchMode::LocalOnly);
+    const SlOid& slOid,
+    const ObjectFetchContextPtr& context) {
+  auto tree = getNativeTree(slOid, context, sapling::FetchMode::LocalOnly);
 
   if (tree.hasValue()) {
     return std::move(tree).value();
@@ -1367,32 +1361,27 @@ TreePtr SaplingBackingStore::getTreeLocal(
 }
 
 folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
-    const RelativePath& path,
-    const Hash20& manifestId,
-    const ObjectId& edenTreeId,
+    const SlOid& slOid,
     const ObjectFetchContextPtr& context) {
   return getNativeTree(
-      manifestId,
-      path,
-      edenTreeId,
+      slOid,
       context,
       sapling::FetchMode::RemoteOnly /*, sapling::ClientRequestInfo(context)*/);
 }
 
 folly::Try<facebook::eden::TreePtr> SaplingBackingStore::getNativeTree(
-    const Hash20& node,
-    RelativePathPiece path,
-    const ObjectId& oid,
+    const SlOid& slOid,
     const ObjectFetchContextPtr& context,
     sapling::FetchMode fetch_mode) {
+  auto node = slOid.node();
   XLOGF(DBG7, "Importing tree node={} from hgcache", node);
   return folly::makeTryWith([&] {
-    sapling::TreeBuilder tb =
-        sapling::TreeBuilder{oid, path, caseSensitive_, objectIdFormat_};
+    sapling::TreeBuilder tb = sapling::TreeBuilder{
+        slOid, slOid.path(), caseSensitive_, objectIdFormat_};
 
     auto result = sapling_backingstore_get_tree(
         *store_.get(),
-        rust::Slice<const uint8_t>{node.getBytes().data(), node.RAW_SIZE},
+        rust::Slice<const uint8_t>{node.data(), node.RAW_SIZE},
         tb,
         fetch_mode);
 
@@ -1406,8 +1395,8 @@ folly::Try<facebook::eden::TreePtr> SaplingBackingStore::getNativeTree(
       sapling_backingstore_witness_dir_read(
           *store_.get(),
           rust::Slice<const uint8_t>{
-              reinterpret_cast<const uint8_t*>(path.view().data()),
-              path.view().size()},
+              reinterpret_cast<const uint8_t*>(slOid.path().view().data()),
+              slOid.path().view().size()},
           tb.num_files(),
           tb.num_dirs(),
           fetch_mode == sapling::FetchMode::LocalOnly,
@@ -1776,20 +1765,19 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
   RelativePathPiece path{};
   auto hgObjectIdFormat = config_->getEdenConfig()->hgObjectIdFormat.getValue();
 
-  ObjectId objectId;
+  SlOid slOid;
 
   switch (hgObjectIdFormat) {
     case HgObjectIdFormat::WithPath:
-      objectId = SlOid{manifestNode, path}.oid();
+      slOid = SlOid{manifestNode, path};
       break;
 
     case HgObjectIdFormat::HashOnly:
-      objectId = SlOid{manifestNode}.oid();
+      slOid = SlOid{manifestNode};
       break;
   }
 
-  auto tree = getTreeFromBackingStore(
-      path.copy(), manifestNode, objectId, context.copy(), type);
+  auto tree = getTreeFromBackingStore(path.copy(), slOid, context.copy(), type);
   bool success = tree.hasValue();
 
   // record stats
@@ -1835,8 +1823,7 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
 
 folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
     const RelativePath& path,
-    const Hash20& manifestId,
-    const ObjectId& edenTreeId,
+    const SlOid& slOid,
     ObjectFetchContextPtr context,
     const ObjectFetchContext::ObjectType type) {
   using GetTreeResult = folly::Try<TreePtr>;
@@ -1851,21 +1838,20 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
   if (path.empty()) {
     fetch_mode = sapling::FetchMode::LocalOnly;
   }
-  GetTreeResult tree =
-      getNativeTree(manifestId, path, edenTreeId, context, fetch_mode);
+  GetTreeResult tree = getNativeTree(slOid, context, fetch_mode);
   if (tree.hasValue() && !tree.value() &&
       fetch_mode == sapling::FetchMode::LocalOnly) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
     flush();
     fetch_mode = sapling::FetchMode::AllowRemote;
-    tree = getNativeTree(manifestId, path, edenTreeId, context, fetch_mode);
+    tree = getNativeTree(slOid, context, fetch_mode);
   }
 
   if (tree.hasValue()) {
     if (!tree.value()) {
       tree = GetTreeResult{std::runtime_error{
-          fmt::format("no tree found for {} (path={})", manifestId, path)}};
+          fmt::format("no tree found for {} (path={})", slOid.node(), path)}};
     }
 
     switch (fetch_mode) {

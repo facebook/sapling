@@ -112,6 +112,10 @@ class Hash : public boost::totally_ordered<Hash<RAW_SIZE>> {
     return folly::MutableByteRange{bytes_.data(), bytes_.size()};
   }
 
+  const uint8_t* data() const {
+    return bytes_.data();
+  }
+
   /** @return [lowercase] hex representation of this hash. */
   std::string toString() const {
     std::string hexStr(bytes_.size() << 1, '0');

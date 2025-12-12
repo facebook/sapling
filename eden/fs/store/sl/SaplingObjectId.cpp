@@ -49,8 +49,13 @@ SaplingObjectId::SaplingObjectId(const Hash20& slHash) {
   value_.append((const char*)slHash.getBytes().data(), slHash.RAW_SIZE);
 }
 
-SaplingObjectId::SaplingObjectId(folly::StringPiece value) : value_{value} {
-  validateSlOid(value_);
+SaplingObjectId::SaplingObjectId(folly::StringPiece value, bool validate)
+    : value_{value} {
+  if (validate) {
+    validateSlOid(value_);
+  } else {
+    XDCHECK((validateSlOid(value_), true));
+  }
 }
 
 SaplingObjectId::SaplingObjectId(const ObjectId& oid) : value_{oid.getBytes()} {

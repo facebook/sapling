@@ -193,7 +193,11 @@ std::unique_ptr<TreeBuilder> new_builder(
   XDCHECK_EQ(facebook::eden::RelativePathPiece{pathView}.view(), pathView);
 
   return std::make_unique<TreeBuilder>(TreeBuilder{
-      facebook::eden::ObjectId{folly::ByteRange{oid.data(), oid.size()}},
+      facebook::eden::SaplingObjectId{
+          folly::StringPiece{
+              reinterpret_cast<const char*>(oid.data()), oid.size()},
+          // Skip validation - this data has already been validated.
+          false},
       // Skip the sanity check since this path came from a validated
       // RelativePathPiece, but just lost its type going through Rust.
       facebook::eden::RelativePathPiece{

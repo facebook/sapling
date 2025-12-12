@@ -123,5 +123,6 @@ cpp_unittest(
         "//eden/common/utils:path",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
+        "//eden/fs/store/sl:sapling_object_id",
     ],
 )

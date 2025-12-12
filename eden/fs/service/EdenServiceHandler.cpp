@@ -5234,7 +5234,7 @@ EdenServiceHandler::semifuture_debugGetTree(
         edenMount,
         id,
         folly::Try<std::shared_ptr<const Tree>>{
-            saplingBackingStore->getTreeLocal(id, context, proxyHash)},
+            saplingBackingStore->getTreeLocal(proxyHash, context)},
         DataFetchOrigin::LOCAL_BACKING_STORE));
   }
 
@@ -5246,8 +5246,7 @@ EdenServiceHandler::semifuture_debugGetTree(
     treeFutures.emplace_back(transformToTreeFromOrigin(
         edenMount,
         id,
-        saplingBackingStore->getTreeRemote(
-            proxyHash.path().copy(), proxyHash.node(), id, context),
+        saplingBackingStore->getTreeRemote(proxyHash, context),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
 

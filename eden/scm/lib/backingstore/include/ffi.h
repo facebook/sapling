@@ -115,11 +115,11 @@ void sapling_backingstore_get_file_aux_batch_handler(
 class TreeBuilder {
  public:
   explicit TreeBuilder(
-      facebook::eden::ObjectId oid,
+      facebook::eden::SaplingObjectId slOid,
       facebook::eden::RelativePathPiece path,
       facebook::eden::CaseSensitivity caseSensitive,
       facebook::eden::HgObjectIdFormat objectIdFormat)
-      : oid_{std::move(oid)},
+      : oid_{std::move(slOid).oid()},
         path_{path},
         caseSensitive_{caseSensitive},
         objectIdFormat_{objectIdFormat} {}
