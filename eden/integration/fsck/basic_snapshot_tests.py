@@ -275,7 +275,7 @@ def createFsckError(line: str) -> Optional[FsckError]:
 class SnapshotTestBase(
     unittest.TestCase, TemporaryDirectoryMixin, metaclass=abc.ABCMeta
 ):
-    """Tests for fsck that extract the basic-20210712 snapshot, corrupt it in various
+    """Tests for fsck that extract the basic-20251104 snapshot, corrupt it in various
     ways, and then run fsck to try and repair it.
     """
 
@@ -362,9 +362,9 @@ class SnapshotTestBase(
 
 
 @testcase.eden_test
-class Basic20210712Test(SnapshotTestBase):
+class Basic20251104Test(SnapshotTestBase):
     def get_snapshot_path(self) -> Path:
-        return snapshot_mod.get_snapshots_root() / "basic-20210712.tar.xz"
+        return snapshot_mod.get_snapshots_root() / "basic-20251104.tar.xz"
 
     def get_fsck_log_dirs(self) -> List[Path]:
         return list((self._overlay_path().parent / "fsck").iterdir())
@@ -404,7 +404,7 @@ class Basic20210712Test(SnapshotTestBase):
         self._test_file_corrupted(b"OVFL\x00\x00\x00\x01")
 
     def _test_file_corrupted(self, data: Optional[bytes]) -> None:
-        inode_number = 52  # untracked/new/normal2.txt
+        inode_number = 53  # untracked/new/normal2.txt
         path = "untracked/new/normal2.txt"
         self._replace_overlay_inode(inode_number, data)
 
@@ -466,7 +466,7 @@ class Basic20210712Test(SnapshotTestBase):
     def _test_untracked_dir_corrupted(
         self, data: Optional[bytes], auto_fsck: bool
     ) -> None:
-        inode_number = 49  # untracked/
+        inode_number = 50  # untracked/
         self._replace_overlay_inode(inode_number, data)
 
         expected_errors: List[FsckError] = []
@@ -480,13 +480,13 @@ class Basic20210712Test(SnapshotTestBase):
             )
         repaired_files = self.snapshot.get_expected_files()
         orphan_files = [
-            OrphanFile(57, repaired_files.pop("untracked/executable.exe")),
-            OrphanFile(58, repaired_files.pop("untracked/everybody.sock")),
-            OrphanFile(59, repaired_files.pop("untracked/owner_only.sock")),
+            OrphanFile(58, repaired_files.pop("untracked/executable.exe")),
+            OrphanFile(59, repaired_files.pop("untracked/everybody.sock")),
+            OrphanFile(60, repaired_files.pop("untracked/owner_only.sock")),
         ]
         orphan_dirs = [
             OrphanDir(
-                50,
+                51,
                 "untracked/new",
                 [
                     repaired_files.pop("untracked/new/normal.txt"),
@@ -515,13 +515,13 @@ class Basic20210712Test(SnapshotTestBase):
 
         repaired_files = self.snapshot.get_expected_files()
         orphan_files = [
-            OrphanFile(60, repaired_files.pop("main/untracked.txt")),
-            OrphanFile(61, repaired_files.pop("main/ignored.txt")),
+            OrphanFile(61, repaired_files.pop("main/untracked.txt")),
+            OrphanFile(62, repaired_files.pop("main/ignored.txt")),
         ]
         orphan_dirs = [
-            OrphanDir(24, "main/loaded_dir", []),
+            OrphanDir(27, "main/loaded_dir", []),
             OrphanDir(
-                25,
+                28,
                 "main/materialized_subdir",
                 [
                     repaired_files.pop("main/materialized_subdir/script.sh"),
@@ -532,7 +532,7 @@ class Basic20210712Test(SnapshotTestBase):
                 ],
             ),
             OrphanDir(
-                26,
+                29,
                 "main/mode_changes",
                 [
                     repaired_files.pop("main/mode_changes/exe_to_normal.txt"),
@@ -541,7 +541,7 @@ class Basic20210712Test(SnapshotTestBase):
                 ],
             ),
             OrphanDir(
-                62,
+                63,
                 "main/untracked_dir",
                 [repaired_files.pop("main/untracked_dir/foo.txt")],
             ),

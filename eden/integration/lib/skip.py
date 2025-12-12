@@ -48,7 +48,7 @@ if sys.platform == "win32":
         "facebook.buck.buck_test.BuckTestHg": True,
         "fsck_test.FsckTestDefault": True,
         "fsck_test.FsckTestNoEdenfs": True,
-        "fsck.basic_snapshot_tests.Basic20210712Test": True,
+        "fsck.basic_snapshot_tests.Basic20251104Test": True,
         "health_test.HealthOfFakeEdenFSTestAdHoc": True,
         "health_test.HealthOfFakeEdenFSTestManaged": True,
         "info_test.InfoTestHg": True,
@@ -218,7 +218,7 @@ elif sys.platform.startswith("darwin"):
         "test_snapshot",
         "test_verify_directory",
     ]
-    TEST_DISABLED["snapshot.test_snapshots.Testbasic-20210712"] = True
+    TEST_DISABLED["snapshot.test_snapshots.Testbasic-20251104"] = True
 
     TEST_DISABLED["basic_test.PosixTest"] = [
         "test_create_using_mknod",  # PermissionDenied
@@ -303,7 +303,7 @@ elif sys.platform.startswith("darwin"):
     TEST_DISABLED["unixsocket_test.UnixSocketTest"] = True
 
     # fsck doesn't work on macOS?
-    TEST_DISABLED["fsck.basic_snapshot_tests.Basic20210712TestDefault"] = True
+    TEST_DISABLED["fsck.basic_snapshot_tests.Basic20251104TestDefault"] = True
 
     # flakey (actual timing doesn't match expected timing)
     TEST_DISABLED["config_test.ConfigTest"] = True
