@@ -47,7 +47,7 @@ rust_binary(
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/repo_attributes/git_source_of_truth:git_source_of_truth",
         "//eden/mononoke/scs/if:source_control-rust-services",
-        "//eden/mononoke/scs/scs_methods:scs_methods",
+        "//eden/mononoke/servers/scs/scs_methods:scs_methods",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//fb303/thrift:fb303_core-rust",
         "//fb303/thrift:fb303_core-rust-services",

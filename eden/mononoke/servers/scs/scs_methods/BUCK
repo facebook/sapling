@@ -88,7 +88,7 @@ rust_library(
         "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/scs/if:source_control-rust-services",
-        "//eden/mononoke/scs/scs_errors:scs_errors",
+        "//eden/mononoke/servers/scs/scs_errors:scs_errors",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//crypto/crypto_service/if:crypto-rust-srclients",
