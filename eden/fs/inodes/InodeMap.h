@@ -246,6 +246,12 @@ class InodeMap {
   void decFsRefcount(InodeNumber number, uint32_t count = 1);
 
   /**
+   * Clear the FS refcount for an inode number.
+   * This is used when we are deleting an inode and want to clear the refcount
+   */
+  void clearFsRefcount(InodeNumber number);
+
+  /**
    * See EdenMount::forgetStaleInodes
    */
   void forgetStaleInodes();

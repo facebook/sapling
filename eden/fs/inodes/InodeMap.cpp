@@ -688,6 +688,20 @@ void InodeMap::decFsRefcount(InodeNumber number, uint32_t count) {
   }
 }
 
+void InodeMap::clearFsRefcount(InodeNumber number) {
+  InodePtr inodePtr;
+  {
+    auto data = data_.wlock();
+    inodePtr =
+        decFsRefcountHelper(data, number, /*count=*/0, /*clearRefCount=*/true);
+  }
+  // Now release our lock before clearing the inode's FS reference
+  // count and immediately releasing our pointer reference.
+  if (inodePtr) {
+    inodePtr->clearFsRefcount();
+  }
+}
+
 InodePtr InodeMap::decFsRefcountHelper(
     folly::Synchronized<Members>::LockedPtr& data,
     InodeNumber number,
