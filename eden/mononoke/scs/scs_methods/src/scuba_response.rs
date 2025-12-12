@@ -31,6 +31,25 @@ impl AddScubaResponse for thrift::RepoCreateCommitResponse {
     }
 }
 
+impl AddScubaResponse for thrift::RepoFoldCommitsResponse {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        if let Some(id) = self.ids.get(&thrift::CommitIdentityScheme::BONSAI) {
+            scuba.add("commit", id.to_string());
+        }
+        scuba.add("folded_count", self.folded_commits.len());
+        if let Some(first) = self.folded_commits.first() {
+            if let Some(id) = first.get(&thrift::CommitIdentityScheme::BONSAI) {
+                scuba.add("folded_bottom", id.to_string());
+            }
+        }
+        if let Some(last) = self.folded_commits.last() {
+            if let Some(id) = last.get(&thrift::CommitIdentityScheme::BONSAI) {
+                scuba.add("folded_top", id.to_string());
+            }
+        }
+    }
+}
+
 impl AddScubaResponse for thrift::RepoCreateStackResponse {
     fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         if let Some(id) = self

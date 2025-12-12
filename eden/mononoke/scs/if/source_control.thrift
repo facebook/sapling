@@ -2073,6 +2073,60 @@ struct RepoCreateStackResponse {
   1: list<map<CommitIdentityScheme, CommitId>> commit_ids;
 }
 
+struct RepoFoldCommitsMutationInfo {
+  /// The mutation operation name (e.g., "amend", "fold", "rebase").
+  1: string op;
+
+  /// The user performing the mutation.
+  2: string user;
+}
+
+struct RepoFoldCommitsParams {
+  /// The info for the new commit.
+  /// If omitted, the values from the predecessor commit will be used.
+  /// When folding (fold_to is specified), the values from the top
+  /// commit of the stack (predecessor) will be used.
+  1: optional RepoCreateCommitParamsCommitInfo info;
+
+  /// The bottom commit of the stack to fold.
+  2: CommitId bottom;
+
+  /// Optional: The top commit of the stack to fold.
+  /// If omitted, the new commit will be created from bottom commit
+  /// by folding the additional changes.
+  3: optional CommitId top;
+
+  /// Optional changes that can be applied after folding the stack.
+  /// if top is not specified, this method will be equivalent to amend commit
+  4: map<string, RepoCreateCommitParamsChange> changes;
+
+  /// Commit identity schemes to return.
+  5: set<CommitIdentityScheme> identity_schemes;
+
+  /// Service identity to use for this commit creation.
+  6: optional string service_identity;
+
+  /// Optional: Hg mutation information for Mercurial repos.
+  /// If specified, this mutation information will be recorded for provenance tracking.
+  /// The mutation timestamp will be set to the server time.
+  /// if not provided user identity will be used.
+  7: optional RepoFoldCommitsMutationInfo mutation_info;
+
+  /// Optional: Checks to perform on the commit.
+  /// If not provided, all checks are performed in CHECK mode.
+  8: CreateCommitChecks checks;
+}
+
+struct RepoFoldCommitsResponse {
+  /// The commit IDs of the newly created commit.
+  1: map<CommitIdentityScheme, CommitId> ids;
+
+  /// The commit IDs of the commits that were folded, in topological order
+  /// (oldest first, i.e., bottom to top of the stack).
+  /// Each entry maps identity schemes to commit IDs for that commit.
+  2: list<map<CommitIdentityScheme, CommitId>> folded_commits;
+}
+
 struct RepoCreateBookmarkResponse {}
 
 struct RepoMoveBookmarkResponse {}
@@ -2854,6 +2908,24 @@ service SourceControlService extends fb303_core.BaseService {
   RepoCreateStackResponse repo_create_stack(
     1: RepoSpecifier repo,
     2: RepoCreateStackParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Create a new commit by amending or folding (squashing) existing commits.
+  /// This method properly tracks file moves and copies through the stack and
+  /// preserves commit lineage for code provenance tracking.
+  ///
+  /// Use cases:
+  /// - Amend a single commit: Set bottom to the commit to amend, omit top
+  /// - Fold multiple commits: Set bottom to the first commit, top to the last commit
+  ///
+  /// The new commit will have the parent of the bottom commit as its parent.
+  RepoFoldCommitsResponse repo_fold_commits(
+    1: RepoSpecifier repo,
+    2: RepoFoldCommitsParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,

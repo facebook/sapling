@@ -67,6 +67,36 @@ impl AddScubaParams for thrift::RepoCreateCommitParams {
     }
 }
 
+impl AddScubaParams for thrift::RepoFoldCommitsParams {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
+        scuba.add("param_bottom", self.bottom.to_string());
+        if let Some(top) = &self.top {
+            scuba.add("param_top", top.to_string());
+        }
+        if let Some(info) = self.info.as_ref() {
+            if let Some(date) = info.date.as_ref() {
+                scuba.add("param_date", date.timestamp);
+            }
+            scuba.add("param_author", info.author.as_str());
+        }
+        let deletes_count = self
+            .changes
+            .values()
+            .filter(|change| matches!(change, thrift::RepoCreateCommitParamsChange::deleted(_)))
+            .count();
+        scuba.add("param_changes_count", self.changes.len() - deletes_count);
+        scuba.add("param_deletes_count", deletes_count);
+        self.identity_schemes.add_scuba_params(scuba);
+        if let Some(service_identity) = self.service_identity.as_deref() {
+            scuba.add("service_identity", service_identity);
+        }
+        if let Some(mutation_info) = self.mutation_info.as_ref() {
+            scuba.add("param_mutation_op", mutation_info.op.as_str());
+            scuba.add("param_mutation_user", mutation_info.user.as_str());
+        }
+    }
+}
+
 impl AddScubaParams for thrift::RepoCreateStackParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add(

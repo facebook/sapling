@@ -397,4 +397,17 @@ impl SourceControlServiceImpl {
             ..Default::default()
         })
     }
+
+    pub(crate) async fn repo_fold_commits(
+        &self,
+        _ctx: CoreContext,
+        _repo: thrift::RepoSpecifier,
+        _params: thrift::RepoFoldCommitsParams,
+    ) -> Result<thrift::RepoFoldCommitsResponse, scs_errors::ServiceError> {
+        return Err(scs_errors::ServiceError::Request(
+            scs_errors::not_implemented(String::from(
+                "repo_create_modified_commit is not implemented",
+            )),
+        ));
+    }
 }
