@@ -628,37 +628,14 @@ class SaplingBackingStore final : public BackingStore {
 
   /**
    * Logs a backing store fetch to scuba if the path being fetched is in the
-   * configured paths to log. The path is derived from the proxy hash.
+   * configured paths to log. The path is obtained from the ObjectId.
    */
   void logBackingStoreFetch(
       const ObjectFetchContext& context,
-      folly::Range<SlOid*> hashes,
-      ObjectFetchContext::ObjectType type) {
-    logBackingStoreFetchImpl(context, hashes.size(), type, [&hashes](size_t i) {
-      return hashes[i].path();
-    });
-  }
-
-  void logBackingStoreFetch(
-      const ObjectFetchContext& context,
-      folly::Range<SlOidView*> hashes,
-      ObjectFetchContext::ObjectType type) {
-    logBackingStoreFetchImpl(context, hashes.size(), type, [&hashes](size_t i) {
-      return hashes[i].path();
-    });
-  }
+      folly::Range<SlOidView*> slOids,
+      ObjectFetchContext::ObjectType type);
 
  private:
-  /**
-   * Implementation helper for logBackingStoreFetch that extracts paths
-   * using a provided function.
-   */
-  void logBackingStoreFetchImpl(
-      const ObjectFetchContext& context,
-      size_t count,
-      ObjectFetchContext::ObjectType type,
-      folly::FunctionRef<RelativePathPiece(size_t)> pathExtractor);
-
   /**
    * gets the watches timing `object` imports that are `stage`
    *    ex. SaplingBackingStore::getImportWatches(

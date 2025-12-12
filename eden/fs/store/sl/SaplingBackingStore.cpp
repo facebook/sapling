@@ -2053,21 +2053,20 @@ SaplingBackingStore::getGlobFiles(
   return GetGlobFilesResult{BackingStore::GetGlobFilesResult{files, id}};
 }
 
-void SaplingBackingStore::logBackingStoreFetchImpl(
+void SaplingBackingStore::logBackingStoreFetch(
     const ObjectFetchContext& context,
-    size_t count,
-    ObjectFetchContext::ObjectType type,
-    folly::FunctionRef<RelativePathPiece(size_t)> pathExtractor) {
+    folly::Range<SlOidView*> slOids,
+
+    ObjectFetchContext::ObjectType type) {
   const auto& logFetchPathRegex =
       config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
 
   if (logFetchPathRegex) {
-    for (size_t i = 0; i < count; ++i) {
-      auto path = pathExtractor(i);
-      auto pathPiece = path.view();
+    for (auto& slOid : slOids) {
+      auto path = slOid.path();
 
       if (RE2::PartialMatch(
-              re2::StringPiece{pathPiece.data(), pathPiece.size()},
+              re2::StringPiece{path.view().data(), path.view().size()},
               **logFetchPathRegex)) {
         logger_->logImport(context, path, type);
       }
@@ -2078,8 +2077,8 @@ void SaplingBackingStore::logBackingStoreFetchImpl(
       isRecordingFetch_.load(std::memory_order_relaxed) &&
       context.getCause() != ObjectFetchContext::Cause::Prefetch) {
     auto guard = fetchedFilePaths_.wlock();
-    for (size_t i = 0; i < count; ++i) {
-      guard->emplace(pathExtractor(i).view());
+    for (auto& slOid : slOids) {
+      guard->emplace(slOid.path().view());
     }
   }
 }
