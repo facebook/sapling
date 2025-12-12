@@ -27,8 +27,8 @@ Hash20 uniqueHash() {
 std::shared_ptr<SaplingImportRequest> makeBlobImportRequest(
     ImportPriority priority) {
   auto hgRevHash = uniqueHash();
-  auto proxyHash = SlOid{RelativePath{"some_blob"}, hgRevHash};
-  std::string proxyHashString = proxyHash.getValue();
+  auto proxyHash = SlOid{hgRevHash, RelativePath{"some_blob"}};
+  folly::fbstring proxyHashString = proxyHash.getValue();
   auto requestContext = ObjectFetchContext::getNullContext();
   auto request = SaplingImportRequest::makeBlobImportRequest(
       ObjectId{proxyHashString}, std::move(proxyHash), requestContext);

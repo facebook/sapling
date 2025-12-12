@@ -90,7 +90,7 @@ TEST_F(TreeBuilderTest, AddFileEntry) {
       folly::ByteRange{blake3Hash});
 
   SlOid parsedOid = facebook::eden::SlOid{entry.getObjectId()};
-  EXPECT_EQ(parsedOid.revHash().getBytes(), folly::ByteRange{hgNode});
+  EXPECT_EQ(parsedOid.node().getBytes(), folly::ByteRange{hgNode});
   EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{"test_file.txt"});
 }
 
@@ -118,7 +118,7 @@ TEST_F(TreeBuilderTest, AddDirectoryEntry) {
   EXPECT_EQ(entry.getType(/*windowsRememberExecutableBit=*/true), entryType);
 
   SlOid parsedOid = facebook::eden::SlOid{entry.getObjectId()};
-  EXPECT_EQ(parsedOid.revHash().getBytes(), folly::ByteRange{hgNode});
+  EXPECT_EQ(parsedOid.node().getBytes(), folly::ByteRange{hgNode});
   EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{"test_dir"});
 }
 

@@ -32,7 +32,7 @@
 #include "monitoring/obc/OBCPxx.h"
 
 namespace sapling {
-using NodeId = folly::ByteRange;
+using NodeId = facebook::eden::Hash20;
 using FetchCause = facebook::eden::ObjectFetchContext::Cause;
 using RepoPath = facebook::eden::RelativePathPiece;
 using RootId = facebook::eden::RootId;
@@ -98,43 +98,29 @@ struct HgImportTraceEvent : TraceEventBase {
   static HgImportTraceEvent queue(
       uint64_t unique,
       ResourceType resourceType,
-      const SlOid& proxyHash,
+      const SlOid& slOid,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
       OptionalProcessId pid) {
     return HgImportTraceEvent{
-        unique,
-        QUEUE,
-        resourceType,
-        proxyHash,
-        priority,
-        cause,
-        pid,
-        std::nullopt};
+        unique, QUEUE, resourceType, slOid, priority, cause, pid, std::nullopt};
   }
 
   static HgImportTraceEvent start(
       uint64_t unique,
       ResourceType resourceType,
-      const SlOid& proxyHash,
+      const SlOid& slOid,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
       OptionalProcessId pid) {
     return HgImportTraceEvent{
-        unique,
-        START,
-        resourceType,
-        proxyHash,
-        priority,
-        cause,
-        pid,
-        std::nullopt};
+        unique, START, resourceType, slOid, priority, cause, pid, std::nullopt};
   }
 
   static HgImportTraceEvent finish(
       uint64_t unique,
       ResourceType resourceType,
-      const SlOid& proxyHash,
+      const SlOid& slOid,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
       OptionalProcessId pid,
@@ -143,7 +129,7 @@ struct HgImportTraceEvent : TraceEventBase {
         unique,
         FINISH,
         resourceType,
-        proxyHash,
+        slOid,
         priority,
         cause,
         pid,
@@ -154,7 +140,7 @@ struct HgImportTraceEvent : TraceEventBase {
       uint64_t unique,
       EventType eventType,
       ResourceType resourceType,
-      const SlOid& proxyHash,
+      const SlOid& slOid,
       ImportPriority::Class priority,
       ObjectFetchContext::Cause cause,
       OptionalProcessId pid,
@@ -428,7 +414,7 @@ class SaplingBackingStore final : public BackingStore {
   TreePtr getTreeLocal(
       const ObjectId& edenTreeId,
       const ObjectFetchContextPtr& context,
-      const SlOid& proxyHash);
+      const SlOid& slOid);
 
   /**
    * Imports the tree identified by the given hash from the remote store.
@@ -445,7 +431,7 @@ class SaplingBackingStore final : public BackingStore {
    * nullptr to avoid exception overhead.
    */
   folly::Try<facebook::eden::TreePtr> getNativeTree(
-      folly::ByteRange node,
+      const Hash20& node,
       RelativePathPiece path,
       const ObjectId& oid,
       const ObjectFetchContextPtr& context,
@@ -461,7 +447,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   ImmediateFuture<GetTreeResult> getTreeEnqueue(
       const ObjectId& id,
-      const SlOid& proxyHash,
+      const SlOid& slOid,
       const ObjectFetchContextPtr& context);
 
   folly::SemiFuture<GetTreeAuxResult> getTreeAuxData(
@@ -478,7 +464,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   ImmediateFuture<GetTreeAuxResult> getTreeAuxDataEnqueue(
       const ObjectId& id,
-      const SlOid& proxyHash,
+      const SlOid& slOid,
       const ObjectFetchContextPtr& context);
 
   /**
@@ -532,7 +518,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   ImmediateFuture<GetBlobResult> getBlobEnqueue(
       const ObjectId& id,
-      const SlOid& proxyHash,
+      const SlOid& slOid,
       const ObjectFetchContextPtr& context,
       const SaplingImportRequest::FetchType fetch_type);
 
@@ -545,7 +531,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   folly::coro::Task<GetBlobResult> co_getBlobEnqueue(
       const ObjectId& id,
-      const SlOid& proxyHash,
+      const SlOid& slOid,
       const ObjectFetchContextPtr& context,
       const SaplingImportRequest::FetchType fetch_type);
 
@@ -597,7 +583,7 @@ class SaplingBackingStore final : public BackingStore {
    */
   ImmediateFuture<GetBlobAuxResult> getBlobAuxDataEnqueue(
       const ObjectId& id,
-      const SlOid& proxyHash,
+      const SlOid& slOid,
       const ObjectFetchContextPtr& context);
 
   /**
@@ -657,8 +643,6 @@ class SaplingBackingStore final : public BackingStore {
    * The worker runloop function.
    */
   void processRequest();
-
-  void logMissingProxyHash();
 
   /**
    * Logs a backing store fetch to scuba if the path being fetched is in the

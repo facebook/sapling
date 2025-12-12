@@ -88,20 +88,20 @@ HgImportTraceEvent::HgImportTraceEvent(
     uint64_t unique,
     EventType eventType,
     ResourceType resourceType,
-    const SlOid& proxyHash,
+    const SlOid& slOid,
     ImportPriority::Class priority,
     ObjectFetchContext::Cause cause,
     OptionalProcessId pid,
     std::optional<ObjectFetchContext::FetchedSource> fetchedSource)
     : unique{unique},
-      manifestNodeId{proxyHash.revHash()},
+      manifestNodeId{slOid.node()},
       eventType{eventType},
       resourceType{resourceType},
       importPriority{priority},
       importCause{cause},
       pid{pid},
       fetchedSource{fetchedSource} {
-  auto hgPath = proxyHash.path().view();
+  auto hgPath = slOid.path().view();
   // TODO: If SlOid (and correspondingly ObjectId) used an immutable,
   // refcounted string, we wouldn't need to allocate here.
   path.reset(new char[hgPath.size() + 1]);
@@ -451,7 +451,7 @@ void SaplingBackingStore::getBlobBatch(
           XLOGF(
               DBG4,
               "Failed to import node={} from EdenAPI (batch {}/{}): {}",
-              folly::hexlify(requests[index].node),
+              requests[index].node,
               index,
               requests.size(),
               content.exception().what().toStdString());
@@ -469,13 +469,13 @@ void SaplingBackingStore::getBlobBatch(
           XLOGF(
               DBG4,
               "Imported node={} from EdenAPI (batch: {}/{})",
-              folly::hexlify(requests[index].node),
+              requests[index].node,
               index,
               requests.size());
         }
 
         const auto& nodeId = requests[index].node;
-        XLOGF(DBG9, "Imported Blob node={}", folly::hexlify(nodeId));
+        XLOGF(DBG9, "Imported Blob node={}", nodeId);
         auto& [importRequestList, watch] = importRequestsMap[nodeId];
         auto result = content.hasException()
             ? folly::Try<BlobPtr>{content.exception()}
@@ -484,7 +484,7 @@ void SaplingBackingStore::getBlobBatch(
                   *content.value())}
             : folly::Try<BlobPtr>{std::runtime_error{fmt::format(
                   "unexpected getBlobBatch nullptr result for node={}",
-                  folly::hexlify(requests[index].node))}};
+                  requests[index].node)}};
         for (auto& importRequest : importRequestList) {
           importRequest->getPromise<BlobPtr>()->setWith(
               [&]() -> folly::Try<BlobPtr> { return result; });
@@ -507,15 +507,15 @@ folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
     const SlOid& hgInfo,
     const ObjectFetchContextPtr& context,
     sapling::FetchMode fetchMode) {
-  auto node = hgInfo.byteHash();
+  auto node = hgInfo.node();
   auto path = hgInfo.path();
 
   using GetBlobResult = folly::Try<BlobPtr>;
 
-  XLOGF(DBG7, "Importing blob node={} from hgcache", folly::hexlify(node));
+  XLOGF(DBG7, "Importing blob node={} from hgcache", node);
   auto result = sapling_backingstore_get_blob(
       *store_.get(),
-      rust::Slice<const uint8_t>{node.data(), node.size()},
+      rust::Slice<const uint8_t>{node.getBytes().data(), node.RAW_SIZE},
       fetchMode);
 
   if (result.error != nullptr) {
@@ -585,7 +585,7 @@ void SaplingBackingStore::getTreeBatch(
   for (auto& request : requests) {
     raw_requests.emplace_back(
         sapling::Request{
-            request.node.data(),
+            request.node.getBytes().data(),
             request.cause,
             rust::Slice<const uint8_t>{
                 reinterpret_cast<const uint8_t*>(request.path.view().data()),
@@ -602,7 +602,7 @@ void SaplingBackingStore::getTreeBatch(
       XLOGF(
           DBG4,
           "Failed to import node={} from EdenAPI (batch tree {}/{}): {}",
-          folly::hexlify(requests[index].node),
+          requests[index].node,
           index,
           requests.size(),
           content.exception().what().toStdString());
@@ -615,7 +615,7 @@ void SaplingBackingStore::getTreeBatch(
       XLOGF(
           DBG4,
           "Imported node={} from EdenAPI (batch tree: {}/{})",
-          folly::hexlify(requests[index].node),
+          requests[index].node,
           index,
           requests.size());
       stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
@@ -632,7 +632,7 @@ void SaplingBackingStore::getTreeBatch(
         &SaplingBackingStoreStats::fetchTree, batchWatch.elapsed());
 
     const auto& nodeId = requests[index].node;
-    XLOGF(DBG9, "Imported Tree node={}", folly::hexlify(nodeId));
+    XLOGF(DBG9, "Imported Tree node={}", nodeId);
     auto& [importRequestList, watch] = importRequestsMap[nodeId];
     for (auto& importRequest : importRequestList) {
       importRequest->getPromise<TreePtr>()->setValue(content);
@@ -665,19 +665,19 @@ SaplingBackingStore::prepareRequests(
   // sapling::ClientRequestInfo and pass them with the corresponding
   // sapling::NodeId
 
-  // Group requests by proxyHash to ensure no duplicates in fetch requests.
+  // Group requests by slOid to ensure no duplicates in fetch requests.
   ImportRequestsMap importRequestsMap;
   for (const auto& importRequest : importRequests) {
-    auto nodeId = importRequest->getRequest<T>()->proxyHash.byteHash();
+    auto nodeId = importRequest->getRequest<T>()->proxyHash.node();
 
     // Look for and log duplicates.
     const auto& importRequestsEntry = importRequestsMap.find(nodeId);
     if (importRequestsEntry != importRequestsMap.end()) {
       XLOGF(
           DBG9,
-          "Duplicate {} fetch request with proxyHash: {}",
+          "Duplicate {} fetch request with slOid: {}",
           stringOfSaplingImportObject(requestType),
-          folly::StringPiece{nodeId});
+          nodeId);
       auto& importRequestList = importRequestsEntry->second.first;
 
       // Only look for mismatched requests if logging level is high enough.
@@ -691,17 +691,16 @@ SaplingBackingStore::prepareRequests(
               UNLIKELY(
                   priorRequest->template getRequest<T>()->id !=
                   importRequest->getRequest<T>()->id),
-              "{} requests have the same proxyHash (SlOid) but different id (ObjectId). "
-              "This should not happen. Previous request: id='{}', proxyHash='{}', proxyHash.path='{}'; "
-              "current request: id='{}', proxyHash ='{}', proxyHash.path='{}'.",
+              "{} requests have the same sl hash but different id (ObjectId). "
+              "This should not happen. Previous request: id='{}', slOid='{}', slOid.path='{}'; "
+              "current request: id='{}', slOid ='{}', slOid.path='{}'.",
               stringOfSaplingImportObject(requestType),
               priorRequest->template getRequest<T>()->id.asHexString(),
-              folly::hexlify(
-                  priorRequest->template getRequest<T>()->proxyHash.byteHash()),
+
+              priorRequest->template getRequest<T>()->proxyHash.node(),
               priorRequest->template getRequest<T>()->proxyHash.path(),
               importRequest->getRequest<T>()->id.asHexString(),
-              folly::hexlify(
-                  importRequest->getRequest<T>()->proxyHash.byteHash()),
+              importRequest->getRequest<T>()->proxyHash.node(),
               importRequest->getRequest<T>()->proxyHash.path());
         }
       }
@@ -876,7 +875,7 @@ void SaplingBackingStore::getTreeAuxDataBatch(
   for (auto& request : requests) {
     raw_requests.push_back(
         sapling::Request{
-            request.node.data(),
+            request.node.getBytes().data(),
             request.cause,
             rust::Slice<const uint8_t>{
                 reinterpret_cast<const uint8_t*>(request.path.view().data()),
@@ -897,7 +896,7 @@ void SaplingBackingStore::getTreeAuxDataBatch(
       XLOGF(
           DBG6,
           "Failed to import aux data node={} from EdenAPI (batch {}/{}): {}",
-          folly::hexlify(requests[index].node),
+          requests[index].node,
           index,
           requests.size(),
           auxTry.exception().what().toStdString());
@@ -905,7 +904,7 @@ void SaplingBackingStore::getTreeAuxDataBatch(
       XLOGF(
           DBG6,
           "Imported aux data node={} from EdenAPI (batch: {}/{})",
-          folly::hexlify(requests[index].node),
+          requests[index].node,
           index,
           requests.size());
     }
@@ -925,7 +924,7 @@ void SaplingBackingStore::getTreeAuxDataBatch(
     }
 
     const auto& nodeId = requests[index].node;
-    XLOGF(DBG9, "Imported TreeAuxData={}", folly::hexlify(nodeId));
+    XLOGF(DBG9, "Imported TreeAuxData={}", nodeId);
     auto& [importRequestList, watch] = importRequestsMap[nodeId];
     folly::Try<TreeAuxDataPtr> result;
     if (auxTry.hasException()) {
@@ -969,7 +968,7 @@ void SaplingBackingStore::getBlobAuxDataBatch(
   for (auto& request : requests) {
     raw_requests.push_back(
         sapling::Request{
-            request.node.data(),
+            request.node.getBytes().data(),
             request.cause,
             rust::Slice<const uint8_t>{
                 reinterpret_cast<const uint8_t*>(request.path.view().data()),
@@ -989,7 +988,7 @@ void SaplingBackingStore::getBlobAuxDataBatch(
       XLOGF(
           DBG4,
           "Failed to import aux data node={} from EdenAPI (batch {}/{}): {}",
-          folly::hexlify(requests[index].node),
+          requests[index].node,
           index,
           requests.size(),
           auxTry.exception().what().toStdString());
@@ -997,7 +996,7 @@ void SaplingBackingStore::getBlobAuxDataBatch(
       XLOGF(
           DBG4,
           "Imported aux data node={} from EdenAPI (batch: {}/{})",
-          folly::hexlify(requests[index].node),
+          requests[index].node,
           index,
           requests.size());
     }
@@ -1017,7 +1016,7 @@ void SaplingBackingStore::getBlobAuxDataBatch(
     }
 
     const auto& nodeId = requests[index].node;
-    XLOGF(DBG9, "Imported BlobAuxData={}", folly::hexlify(nodeId));
+    XLOGF(DBG9, "Imported BlobAuxData={}", nodeId);
     auto& [importRequestList, watch] = importRequestsMap[nodeId];
     folly::Try<BlobAuxDataPtr> result;
     if (auxTry.hasException()) {
@@ -1090,7 +1089,7 @@ ObjectComparison SaplingBackingStore::compareObjectsById(
   auto twoProxy = SlOid{two};
 
   // If the rev hashes are the same, we know the contents are the same.
-  if (oneProxy.revHash() == twoProxy.revHash()) {
+  if (oneProxy.node() == twoProxy.node()) {
     return ObjectComparison::Identical;
   }
 
@@ -1136,31 +1135,30 @@ std::string SaplingBackingStore::displayRootId(const RootId& rootId) {
 
 ObjectId SaplingBackingStore::staticParseObjectId(folly::StringPiece objectId) {
   if (objectId.size() == 40) {
-    return SlOid::makeEmbeddedProxyHash2(Hash20{objectId});
+    return SlOid{Hash20{objectId}}.oid();
   }
 
   if (objectId.size() < 41) {
-    throwf<std::invalid_argument>("hg object ID too short: {}", objectId);
+    throwf<std::invalid_argument>("sl object ID too short: {}", objectId);
   }
 
   if (objectId[40] != ':') {
     throwf<std::invalid_argument>(
-        "missing separator colon in hg object ID: {}", objectId);
+        "missing separator colon in sl object ID: {}", objectId);
   }
 
-  Hash20 hgRevHash{objectId.subpiece(0, 40)};
+  Hash20 node{objectId.subpiece(0, 40)};
   RelativePathPiece path{objectId.subpiece(41)};
-  return SlOid::makeEmbeddedProxyHash1(hgRevHash, path);
+  return SlOid{node, path}.oid();
 }
 
 std::string SaplingBackingStore::staticRenderObjectId(
     const ObjectId& objectId) {
-  auto proxyHash = SlOid{objectId};
-  if (proxyHash.path().empty()) {
-    return folly::hexlify(proxyHash.byteHash());
+  auto slOid = SlOid{objectId};
+  if (slOid.path().empty()) {
+    return slOid.node().toString();
   }
-  return fmt::format(
-      "{}:{}", folly::hexlify(proxyHash.byteHash()), proxyHash.path());
+  return fmt::format("{}:{}", slOid.node(), slOid.path());
 }
 
 folly::SemiFuture<BackingStore::GetTreeAuxResult>
@@ -1170,20 +1168,14 @@ SaplingBackingStore::getTreeAuxData(
   DurationScope<EdenStats> scope{
       stats_, &SaplingBackingStoreStats::getTreeAuxData};
 
-  SlOid proxyHash;
-  try {
-    proxyHash = SlOid{id};
-  } catch (const std::exception&) {
-    logMissingProxyHash();
-    throw;
-  }
+  SlOid slOid{id};
 
   logBackingStoreFetch(
       *context,
-      folly::Range{&proxyHash, 1},
+      folly::Range{&slOid, 1},
       ObjectFetchContext::ObjectType::TreeAuxData);
 
-  auto auxData = getLocalTreeAuxData(proxyHash);
+  auto auxData = getLocalTreeAuxData(slOid);
   if (auxData.hasValue() && auxData.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchTreeAuxDataSuccess);
     stats_->increment(&SaplingBackingStoreStats::fetchTreeAuxDataLocal);
@@ -1193,7 +1185,7 @@ SaplingBackingStore::getTreeAuxData(
             ObjectFetchContext::Origin::FromDiskCache});
   }
 
-  return getTreeAuxDataEnqueue(id, proxyHash, context)
+  return getTreeAuxDataEnqueue(id, slOid, context)
       .ensure([scope = std::move(scope)] {})
       .semi();
 }
@@ -1201,17 +1193,13 @@ SaplingBackingStore::getTreeAuxData(
 ImmediateFuture<BackingStore::GetTreeAuxResult>
 SaplingBackingStore::getTreeAuxDataEnqueue(
     const ObjectId& id,
-    const SlOid& proxyHash,
+    const SlOid& slOid,
     const ObjectFetchContextPtr& context) {
   auto getTreeAuxFuture = makeImmediateFutureWith([&] {
-    XLOGF(
-        DBG4,
-        "making tree aux data import request for {}",
-        proxyHash.path(),
-        id);
+    XLOGF(DBG4, "making tree aux data import request for {}", slOid.path(), id);
     auto requestContext = context.copy();
     auto request = SaplingImportRequest::makeTreeAuxImportRequest(
-        id, proxyHash, requestContext);
+        id, slOid, requestContext);
     auto unique = request->getUnique();
 
     auto importTracker =
@@ -1220,7 +1208,7 @@ SaplingBackingStore::getTreeAuxDataEnqueue(
         HgImportTraceEvent::queue(
             unique,
             HgImportTraceEvent::TREE_AUX,
-            proxyHash,
+            slOid,
             context->getPriority().getClass(),
             context->getCause(),
             context->getClientPid()));
@@ -1228,14 +1216,14 @@ SaplingBackingStore::getTreeAuxDataEnqueue(
     return queue_.enqueueTreeAux(std::move(request))
         .ensure([this,
                  unique,
-                 proxyHash,
+                 slOid,
                  context = context.copy(),
                  importTracker = std::move(importTracker)]() {
           traceBus_->publish(
               HgImportTraceEvent::finish(
                   unique,
                   HgImportTraceEvent::TREE_AUX,
-                  proxyHash,
+                  slOid,
                   context->getPriority().getClass(),
                   context->getCause(),
                   context->getClientPid(),
@@ -1255,18 +1243,15 @@ SaplingBackingStore::getTreeAuxDataEnqueue(
 
 folly::Try<TreeAuxDataPtr> SaplingBackingStore::getLocalTreeAuxData(
     const SlOid& hgInfo) {
-  auto node = hgInfo.byteHash();
+  auto node = hgInfo.node();
 
-  XLOGF(
-      DBG7,
-      "Importing tree aux data node={} from hgcache",
-      folly::hexlify(node));
+  XLOGF(DBG7, "Importing tree aux data node={} from hgcache", node);
 
   using GetTreeAuxDataResult = folly::Try<TreeAuxDataPtr>;
 
   auto result = sapling_backingstore_get_tree_aux(
       *store_.get(),
-      rust::Slice<const uint8_t>{node.data(), node.size()},
+      rust::Slice<const uint8_t>{node.getBytes().data(), node.RAW_SIZE},
       sapling::FetchMode::LocalOnly);
 
   if (result.error != nullptr) {
@@ -1288,25 +1273,17 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
     const ObjectFetchContextPtr& context) {
   DurationScope<EdenStats> scope{stats_, &SaplingBackingStoreStats::getTree};
 
-  SlOid proxyHash;
-  try {
-    proxyHash = SlOid{id};
-  } catch (const std::exception&) {
-    logMissingProxyHash();
-    throw;
-  }
+  SlOid slOid{id};
 
   logBackingStoreFetch(
-      *context,
-      folly::Range{&proxyHash, 1},
-      ObjectFetchContext::ObjectType::Tree);
+      *context, folly::Range{&slOid, 1}, ObjectFetchContext::ObjectType::Tree);
 
-  if (auto tree = getTreeLocal(id, context, proxyHash)) {
+  if (auto tree = getTreeLocal(id, context, slOid)) {
     XLOGF(
         DBG5,
         "imported tree of '{}', {} from hgcache",
-        proxyHash.path(),
-        proxyHash.revHash().toString());
+        slOid.path(),
+        slOid.node());
     stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccess);
     if (dogfoodingHost()) {
       stats_->increment(&SaplingBackingStoreStats::fetchTreeSuccessDogfooding);
@@ -1317,7 +1294,7 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
             std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
   }
 
-  return getTreeEnqueue(id, proxyHash, context)
+  return getTreeEnqueue(id, slOid, context)
       .ensure([scope = std::move(scope)] {})
       .semi();
 }
@@ -1325,12 +1302,12 @@ folly::SemiFuture<BackingStore::GetTreeResult> SaplingBackingStore::getTree(
 ImmediateFuture<BackingStore::GetTreeResult>
 SaplingBackingStore::getTreeEnqueue(
     const ObjectId& id,
-    const SlOid& proxyHash,
+    const SlOid& slOid,
     const ObjectFetchContextPtr& context) {
   auto getTreeFuture = makeImmediateFutureWith([&] {
     auto requestContext = context.copy();
-    auto request = SaplingImportRequest::makeTreeImportRequest(
-        id, proxyHash, requestContext);
+    auto request =
+        SaplingImportRequest::makeTreeImportRequest(id, slOid, requestContext);
     uint64_t unique = request->getUnique();
 
     auto importTracker =
@@ -1339,7 +1316,7 @@ SaplingBackingStore::getTreeEnqueue(
         HgImportTraceEvent::queue(
             unique,
             HgImportTraceEvent::TREE,
-            proxyHash,
+            slOid,
             context->getPriority().getClass(),
             context->getCause(),
             context->getClientPid()));
@@ -1347,14 +1324,14 @@ SaplingBackingStore::getTreeEnqueue(
     return queue_.enqueueTree(std::move(request))
         .ensure([this,
                  unique,
-                 proxyHash,
+                 slOid,
                  context = context.copy(),
                  importTracker = std::move(importTracker)]() {
           traceBus_->publish(
               HgImportTraceEvent::finish(
                   unique,
                   HgImportTraceEvent::TREE,
-                  proxyHash,
+                  slOid,
                   context->getPriority().getClass(),
                   context->getCause(),
                   context->getClientPid(),
@@ -1374,10 +1351,10 @@ SaplingBackingStore::getTreeEnqueue(
 TreePtr SaplingBackingStore::getTreeLocal(
     const ObjectId& edenTreeId,
     const ObjectFetchContextPtr& context,
-    const SlOid& proxyHash) {
+    const SlOid& slOid) {
   auto tree = getNativeTree(
-      proxyHash.byteHash(),
-      proxyHash.path(),
+      slOid.node(),
+      slOid.path(),
       edenTreeId,
       context,
       sapling::FetchMode::LocalOnly);
@@ -1395,7 +1372,7 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
     const ObjectId& edenTreeId,
     const ObjectFetchContextPtr& context) {
   return getNativeTree(
-      manifestId.getBytes(),
+      manifestId,
       path,
       edenTreeId,
       context,
@@ -1403,19 +1380,19 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeRemote(
 }
 
 folly::Try<facebook::eden::TreePtr> SaplingBackingStore::getNativeTree(
-    folly::ByteRange node,
+    const Hash20& node,
     RelativePathPiece path,
     const ObjectId& oid,
     const ObjectFetchContextPtr& context,
     sapling::FetchMode fetch_mode) {
-  XLOGF(DBG7, "Importing tree node={} from hgcache", folly::hexlify(node));
+  XLOGF(DBG7, "Importing tree node={} from hgcache", node);
   return folly::makeTryWith([&] {
     sapling::TreeBuilder tb =
         sapling::TreeBuilder{oid, path, caseSensitive_, objectIdFormat_};
 
     auto result = sapling_backingstore_get_tree(
         *store_.get(),
-        rust::Slice<const uint8_t>{node.data(), node.size()},
+        rust::Slice<const uint8_t>{node.getBytes().data(), node.RAW_SIZE},
         tb,
         fetch_mode);
 
@@ -1446,20 +1423,12 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
     const ObjectFetchContextPtr& context) {
   DurationScope<EdenStats> scope{stats_, &SaplingBackingStoreStats::getBlob};
 
-  SlOid proxyHash;
-  try {
-    proxyHash = SlOid{id};
-  } catch (const std::exception&) {
-    logMissingProxyHash();
-    throw;
-  }
+  SlOid slOid{id};
 
   logBackingStoreFetch(
-      *context,
-      folly::Range{&proxyHash, 1},
-      ObjectFetchContext::ObjectType::Blob);
+      *context, folly::Range{&slOid, 1}, ObjectFetchContext::ObjectType::Blob);
 
-  auto blob = getBlobLocal(proxyHash, context);
+  auto blob = getBlobLocal(slOid, context);
   if (blob.hasValue() && blob.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
     if (dogfoodingHost()) {
@@ -1473,7 +1442,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
   }
 
   return getBlobEnqueue(
-             id, proxyHash, context, SaplingImportRequest::FetchType::Fetch)
+             id, slOid, context, SaplingImportRequest::FetchType::Fetch)
       .ensure([scope = std::move(scope)] {})
       .semi();
 }
@@ -1483,20 +1452,12 @@ folly::coro::Task<BackingStore::GetBlobResult> SaplingBackingStore::co_getBlob(
     const ObjectFetchContextPtr& context) {
   DurationScope<EdenStats> scope{stats_, &SaplingBackingStoreStats::getBlob};
 
-  SlOid proxyHash;
-  try {
-    proxyHash = SlOid{id};
-  } catch (const std::exception&) {
-    logMissingProxyHash();
-    throw;
-  }
+  SlOid slOid{id};
 
   logBackingStoreFetch(
-      *context,
-      folly::Range{&proxyHash, 1},
-      ObjectFetchContext::ObjectType::Blob);
+      *context, folly::Range{&slOid, 1}, ObjectFetchContext::ObjectType::Blob);
 
-  auto blob = getBlobLocal(proxyHash, context);
+  auto blob = getBlobLocal(slOid, context);
   if (blob.hasValue() && blob.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobSuccess);
     if (dogfoodingHost()) {
@@ -1507,24 +1468,21 @@ folly::coro::Task<BackingStore::GetBlobResult> SaplingBackingStore::co_getBlob(
         std::move(blob.value()), ObjectFetchContext::Origin::FromDiskCache};
   }
   co_return co_await co_getBlobEnqueue(
-      id, proxyHash, context, SaplingImportRequest::FetchType::Fetch);
+      id, slOid, context, SaplingImportRequest::FetchType::Fetch);
 }
 
 ImmediateFuture<BackingStore::GetBlobResult>
 SaplingBackingStore::getBlobEnqueue(
     const ObjectId& id,
-    const SlOid& proxyHash,
+    const SlOid& slOid,
     const ObjectFetchContextPtr& context,
     const SaplingImportRequest::FetchType fetch_type) {
   auto getBlobFuture = makeImmediateFutureWith([&] {
     XLOGF(
-        DBG4,
-        "making blob import request for {}, id is: {}",
-        proxyHash.path(),
-        id);
+        DBG4, "making blob import request for {}, id is: {}", slOid.path(), id);
     auto requestContext = context.copy();
-    auto request = SaplingImportRequest::makeBlobImportRequest(
-        id, proxyHash, requestContext);
+    auto request =
+        SaplingImportRequest::makeBlobImportRequest(id, slOid, requestContext);
     request->setFetchType(fetch_type);
     auto unique = request->getUnique();
     std::unique_ptr<RequestMetricsScope> importTracker;
@@ -1542,7 +1500,7 @@ SaplingBackingStore::getBlobEnqueue(
         HgImportTraceEvent::queue(
             unique,
             HgImportTraceEvent::BLOB,
-            proxyHash,
+            slOid,
             context->getPriority().getClass(),
             context->getCause(),
             context->getClientPid()));
@@ -1550,14 +1508,14 @@ SaplingBackingStore::getBlobEnqueue(
     return queue_.enqueueBlob(std::move(request))
         .ensure([this,
                  unique,
-                 proxyHash,
+                 slOid,
                  context = context.copy(),
                  importTracker = std::move(importTracker)]() {
           traceBus_->publish(
               HgImportTraceEvent::finish(
                   unique,
                   HgImportTraceEvent::BLOB,
-                  proxyHash,
+                  slOid,
                   context->getPriority().getClass(),
                   context->getCause(),
                   context->getClientPid(),
@@ -1577,17 +1535,13 @@ SaplingBackingStore::getBlobEnqueue(
 folly::coro::Task<BackingStore::GetBlobResult>
 SaplingBackingStore::co_getBlobEnqueue(
     const ObjectId& id,
-    const SlOid& proxyHash,
+    const SlOid& slOid,
     const ObjectFetchContextPtr& context,
     const SaplingImportRequest::FetchType fetch_type) {
-  XLOGF(
-      DBG4,
-      "making blob import request for {}, id is: {}",
-      proxyHash.path(),
-      id);
+  XLOGF(DBG4, "making blob import request for {}, id is: {}", slOid.path(), id);
   auto requestContext = context.copy();
-  auto request = SaplingImportRequest::makeBlobImportRequest(
-      id, proxyHash, requestContext);
+  auto request =
+      SaplingImportRequest::makeBlobImportRequest(id, slOid, requestContext);
   request->setFetchType(fetch_type);
   auto unique = request->getUnique();
   std::unique_ptr<RequestMetricsScope> importTracker;
@@ -1606,7 +1560,7 @@ SaplingBackingStore::co_getBlobEnqueue(
       HgImportTraceEvent::queue(
           unique,
           HgImportTraceEvent::BLOB,
-          proxyHash,
+          slOid,
           context->getPriority().getClass(),
           context->getCause(),
           context->getClientPid()));
@@ -1616,7 +1570,7 @@ SaplingBackingStore::co_getBlobEnqueue(
         HgImportTraceEvent::finish(
             unique,
             HgImportTraceEvent::BLOB,
-            proxyHash,
+            slOid,
             context->getPriority().getClass(),
             context->getCause(),
             context->getClientPid(),
@@ -1646,20 +1600,14 @@ SaplingBackingStore::getBlobAuxData(
   DurationScope<EdenStats> scope{
       stats_, &SaplingBackingStoreStats::getBlobAuxData};
 
-  SlOid proxyHash;
-  try {
-    proxyHash = SlOid{id};
-  } catch (const std::exception&) {
-    logMissingProxyHash();
-    throw;
-  }
+  SlOid slOid{id};
 
   logBackingStoreFetch(
       *context,
-      folly::Range{&proxyHash, 1},
+      folly::Range{&slOid, 1},
       ObjectFetchContext::ObjectType::BlobAuxData);
 
-  auto auxData = getLocalBlobAuxData(proxyHash);
+  auto auxData = getLocalBlobAuxData(slOid);
   if (auxData.hasValue() && auxData.value()) {
     stats_->increment(&SaplingBackingStoreStats::fetchBlobAuxDataSuccess);
     stats_->increment(&SaplingBackingStoreStats::fetchBlobAuxDataLocal);
@@ -1669,7 +1617,7 @@ SaplingBackingStore::getBlobAuxData(
             ObjectFetchContext::Origin::FromDiskCache});
   }
 
-  return getBlobAuxDataEnqueue(id, proxyHash, context)
+  return getBlobAuxDataEnqueue(id, slOid, context)
       .ensure([scope = std::move(scope)] {})
       .semi();
 }
@@ -1677,7 +1625,7 @@ SaplingBackingStore::getBlobAuxData(
 ImmediateFuture<BackingStore::GetBlobAuxResult>
 SaplingBackingStore::getBlobAuxDataEnqueue(
     const ObjectId& id,
-    const SlOid& proxyHash,
+    const SlOid& slOid,
     const ObjectFetchContextPtr& context) {
   if (!config_->getEdenConfig()->fetchHgAuxMetadata.getValue()) {
     return BackingStore::GetBlobAuxResult{
@@ -1688,11 +1636,11 @@ SaplingBackingStore::getBlobAuxDataEnqueue(
     XLOGF(
         DBG4,
         "making blob meta import request for {}, id is: {}",
-        proxyHash.path(),
+        slOid.path(),
         id);
     auto requestContext = context.copy();
     auto request = SaplingImportRequest::makeBlobAuxImportRequest(
-        id, proxyHash, requestContext);
+        id, slOid, requestContext);
     auto unique = request->getUnique();
 
     auto importTracker =
@@ -1701,7 +1649,7 @@ SaplingBackingStore::getBlobAuxDataEnqueue(
         HgImportTraceEvent::queue(
             unique,
             HgImportTraceEvent::BLOB_AUX,
-            proxyHash,
+            slOid,
             context->getPriority().getClass(),
             context->getCause(),
             context->getClientPid()));
@@ -1709,14 +1657,14 @@ SaplingBackingStore::getBlobAuxDataEnqueue(
     return queue_.enqueueBlobAux(std::move(request))
         .ensure([this,
                  unique,
-                 proxyHash,
+                 slOid,
                  context = context.copy(),
                  importTracker = std::move(importTracker)]() {
           traceBus_->publish(
               HgImportTraceEvent::finish(
                   unique,
                   HgImportTraceEvent::BLOB_AUX,
-                  proxyHash,
+                  slOid,
                   context->getPriority().getClass(),
                   context->getCause(),
                   context->getClientPid(),
@@ -1736,17 +1684,14 @@ SaplingBackingStore::getBlobAuxDataEnqueue(
 
 folly::Try<BlobAuxDataPtr> SaplingBackingStore::getLocalBlobAuxData(
     const SlOid& hgInfo) {
-  auto node = hgInfo.byteHash();
+  auto node = hgInfo.node();
 
   using GetBlobAuxDataResult = folly::Try<BlobAuxDataPtr>;
 
-  XLOGF(
-      DBG7,
-      "Importing blob aux data node={} from hgcache",
-      folly::hexlify(node));
+  XLOGF(DBG7, "Importing blob aux data node={} from hgcache", node);
   auto result = sapling_backingstore_get_file_aux(
       *store_.get(),
-      rust::Slice<const uint8_t>{node.data(), node.size()},
+      rust::Slice<const uint8_t>{node.getBytes().data(), node.RAW_SIZE},
       sapling::FetchMode::LocalOnly);
 
   if (result.error != nullptr) {
@@ -1835,11 +1780,11 @@ folly::Future<TreePtr> SaplingBackingStore::importTreeManifestImpl(
 
   switch (hgObjectIdFormat) {
     case HgObjectIdFormat::WithPath:
-      objectId = SlOid::makeEmbeddedProxyHash1(manifestNode, path);
+      objectId = SlOid{manifestNode, path}.oid();
       break;
 
     case HgObjectIdFormat::HashOnly:
-      objectId = SlOid::makeEmbeddedProxyHash2(manifestNode);
+      objectId = SlOid{manifestNode}.oid();
       break;
   }
 
@@ -1906,16 +1851,15 @@ folly::Try<TreePtr> SaplingBackingStore::getTreeFromBackingStore(
   if (path.empty()) {
     fetch_mode = sapling::FetchMode::LocalOnly;
   }
-  GetTreeResult tree = getNativeTree(
-      manifestId.getBytes(), path, edenTreeId, context, fetch_mode);
+  GetTreeResult tree =
+      getNativeTree(manifestId, path, edenTreeId, context, fetch_mode);
   if (tree.hasValue() && !tree.value() &&
       fetch_mode == sapling::FetchMode::LocalOnly) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
     flush();
     fetch_mode = sapling::FetchMode::AllowRemote;
-    tree = getNativeTree(
-        manifestId.getBytes(), path, edenTreeId, context, fetch_mode);
+    tree = getNativeTree(manifestId, path, edenTreeId, context, fetch_mode);
   }
 
   if (tree.hasValue()) {
@@ -1954,18 +1898,15 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
       // future, thus we don't need to deep-copy it.
       .thenTry([context = context.copy(), prefetchOptimizations, this, ids](
                    folly::Try<std::vector<SlOid>> tryHashes) {
-        if (tryHashes.hasException()) {
-          logMissingProxyHash();
-        }
-        auto proxyHashes = std::move(tryHashes).value();
+        auto slOides = std::move(tryHashes).value();
 
-        if (proxyHashes.empty()) {
+        if (slOides.empty()) {
           return ImmediateFuture<folly::Unit>{folly::unit}.semi();
         }
 
         logBackingStoreFetch(
             *context,
-            folly::Range{proxyHashes.data(), proxyHashes.size()},
+            folly::Range{slOides.data(), slOides.size()},
             ObjectFetchContext::ObjectType::Blob);
 
         if (prefetchOptimizations &&
@@ -1986,8 +1927,8 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
           requests.reserve(ids.size());
           for (size_t i = 0; i < ids.size(); i++) {
             requests.emplace_back(
-                proxyHashes[i].byteHash(),
-                proxyHashes[i].path(),
+                slOides[i].node(),
+                slOides[i].path(),
                 ids[i],
                 context->getCause(),
                 context.copy());
@@ -1998,7 +1939,7 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
           // the caller.
           return makeNotReadyImmediateFuture()
               .thenValue([this,
-                          proxyHashes = std::move(proxyHashes),
+                          slOides = std::move(slOides),
                           requests = std::move(requests),
                           context = context.copy()](auto&&) {
                 auto importTracker =
@@ -2009,7 +1950,7 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
                     HgImportTraceEvent::start(
                         unique,
                         HgImportTraceEvent::BLOB_BATCH,
-                        proxyHashes[0], // use the first item in batch
+                        slOides[0], // use the first item in batch
                         context->getPriority().getClass(),
                         context->getCause(),
                         context->getClientPid()));
@@ -2035,7 +1976,7 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
                         XLOGF(
                             ERR,
                             "Failed to batch import node={} path={} from Sapling: {}",
-                            folly::hexlify(requests[index].node),
+                            requests[index].node,
                             requests[index].path,
                             content.exception().what().toStdString());
                       }
@@ -2045,7 +1986,7 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
                     HgImportTraceEvent::finish(
                         unique,
                         HgImportTraceEvent::BLOB_BATCH,
-                        proxyHashes[0], // use the first item in batch
+                        slOides[0], // use the first item in batch
                         context->getPriority().getClass(),
                         context->getCause(),
                         context->getClientPid(),
@@ -2072,13 +2013,10 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
 
           for (size_t i = 0; i < ids.size(); i++) {
             const auto& id = ids[i];
-            const auto& proxyHash = proxyHashes[i];
+            const auto& slOid = slOides[i];
 
             futures.emplace_back(getBlobEnqueue(
-                id,
-                proxyHash,
-                context,
-                SaplingImportRequest::FetchType::Prefetch));
+                id, slOid, context, SaplingImportRequest::FetchType::Prefetch));
           }
 
           return collectAllSafe(std::move(futures)).unit().semi();
@@ -2112,7 +2050,7 @@ void SaplingBackingStore::nativeGetBlobBatch(
   for (auto& request : requests) {
     raw_requests.push_back(
         sapling::Request{
-            request.node.data(),
+            request.node.getBytes().data(),
             request.cause,
             rust::Slice<const uint8_t>{
                 reinterpret_cast<const uint8_t*>(request.path.view().data()),
@@ -2182,25 +2120,6 @@ SaplingBackingStore::getGlobFiles(
   stats_->increment(&SaplingBackingStoreStats::fetchGlobFilesSuccess);
 
   return GetGlobFilesResult{BackingStore::GetGlobFilesResult{files, id}};
-}
-
-void SaplingBackingStore::logMissingProxyHash() {
-  auto now = std::chrono::steady_clock::now();
-
-  bool shouldLog = false;
-  {
-    auto last = lastMissingProxyHashLog_.wlock();
-    if (now >= *last +
-            config_->getEdenConfig()
-                ->missingHgProxyHashLogInterval.getValue()) {
-      shouldLog = true;
-      *last = now;
-    }
-  }
-
-  if (shouldLog) {
-    structuredLogger_->logEvent(MissingProxyHash{});
-  }
 }
 
 void SaplingBackingStore::logBackingStoreFetch(

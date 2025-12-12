@@ -29,7 +29,8 @@ cpp_library(
         "//eden/fs/config:config",
         "//eden/fs/model:model",
         "//eden/fs/model:model-fwd",
-        "//eden/fs/store/hg:hg_proxy_hash",
+        "//eden/fs/store:context",  # @manual - used in ffi.rs via CXX bridge
+        "//eden/fs/store/hg:sapling_object_id",
         "//folly:range",
         "//folly/container:fbvector",
         "//folly/futures:core",

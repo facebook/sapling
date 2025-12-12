@@ -427,10 +427,13 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
 TEST_F(
     SaplingBackingStoreNoFaultInjectorTest,
     sameRequestsDifferentFetchCause) {
-  auto treeId = SlOid::makeEmbeddedProxyHash1(
-      queuedBackingStore->getManifestNode(ObjectId::fromHex(commit1.value()))
-          .value(),
-      RelativePathPiece{});
+  auto treeId =
+      SlOid{
+          queuedBackingStore
+              ->getManifestNode(ObjectId::fromHex(commit1.value()))
+              .value(),
+          RelativePathPiece{}}
+          .oid();
 
   SlOid proxyHash = SlOid{treeId};
 
@@ -464,10 +467,13 @@ TEST_F(SaplingBackingStoreWithFaultInjectorIgnoreConfigTest, getTreeBatch) {
           {"hg:filtered-paths", "['foo']"},
       });
 
-  auto tree1Id = SlOid::makeEmbeddedProxyHash1(
-      queuedBackingStore->getManifestNode(ObjectId::fromHex(commit1.value()))
-          .value(),
-      RelativePathPiece{});
+  auto tree1Id =
+      SlOid{
+          queuedBackingStore
+              ->getManifestNode(ObjectId::fromHex(commit1.value()))
+              .value(),
+          RelativePathPiece{}}
+          .oid();
 
   SlOid proxyHash = SlOid{tree1Id};
 
@@ -499,10 +505,13 @@ TEST_F(SaplingBackingStoreWithFaultInjectorTest, getTreeBatch) {
         });
   }
   faultInjector.injectBlock("SaplingBackingStore::getTreeBatch", ".*");
-  auto tree1Id = SlOid::makeEmbeddedProxyHash1(
-      queuedBackingStore->getManifestNode(ObjectId::fromHex(commit1.value()))
-          .value(),
-      RelativePathPiece{});
+  auto tree1Id =
+      SlOid{
+          queuedBackingStore
+              ->getManifestNode(ObjectId::fromHex(commit1.value()))
+              .value(),
+          RelativePathPiece{}}
+          .oid();
 
   SlOid proxyHash = SlOid{tree1Id};
 
@@ -627,7 +636,7 @@ TEST_F(
   requests.reserve(3);
   for (size_t i = 0; i < 3; ++i) {
     requests.emplace_back(
-        proxyHash.byteHash(),
+        proxyHash.node(),
         proxyHash.path(),
         firstBlobId,
         ObjectFetchContext::Cause::Unknown,
@@ -665,8 +674,7 @@ TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
   Hash20 testId{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
 
   {
-    ObjectId with_path{SlOid::makeEmbeddedProxyHash1(
-        testId, RelativePathPiece{"foo/bar/baz"})};
+    ObjectId with_path = SlOid{testId, RelativePathPiece{"foo/bar/baz"}}.oid();
     EXPECT_EQ(
         "0123456789abcdef0123456789abcdef01234567:foo/bar/baz",
         SaplingBackingStore::staticRenderObjectId(with_path));
@@ -678,7 +686,7 @@ TEST(SaplingBackingStoreObjectId, round_trip_object_IDs) {
   }
 
   {
-    ObjectId id_only{SlOid::makeEmbeddedProxyHash2(testId)};
+    ObjectId id_only = SlOid{testId}.oid();
     EXPECT_EQ(
         "0123456789abcdef0123456789abcdef01234567",
         SaplingBackingStore::staticRenderObjectId(id_only));

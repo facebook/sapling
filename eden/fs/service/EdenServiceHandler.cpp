@@ -5247,7 +5247,7 @@ EdenServiceHandler::semifuture_debugGetTree(
         edenMount,
         id,
         saplingBackingStore->getTreeRemote(
-            proxyHash.path().copy(), proxyHash.revHash(), id, context),
+            proxyHash.path().copy(), proxyHash.node(), id, context),
         DataFetchOrigin::REMOTE_BACKING_STORE));
   }
 

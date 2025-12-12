@@ -14,6 +14,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <vector>
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/hg/SaplingImportRequest.h"
 

@@ -10,7 +10,6 @@
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>
 
-#include "eden/common/utils/Bug.h"
 #include "eden/common/utils/Throw.h"
 
 using folly::ByteRange;
@@ -20,45 +19,46 @@ using std::string;
 
 namespace facebook::eden {
 
+// SlOid prefix length (type byte and 20 byte node)
+constexpr size_t slOidLenSansPath = Hash20::RAW_SIZE + 1;
+
+SaplingObjectId::SaplingObjectId(const Hash20& slHash, RelativePathPiece path) {
+  value_.reserve(slOidLenSansPath + path.view().size());
+  value_.push_back(TYPE_HG_ID_WITH_PATH);
+  value_.append((const char*)slHash.getBytes().data(), slHash.RAW_SIZE);
+  value_.append(path.view());
+}
+
 SaplingObjectId::SaplingObjectId(
-    RelativePathPiece path,
-    const Hash20& hgRevHash)
-    : value_{serialize(path, hgRevHash)} {}
-
-SaplingObjectId::SaplingObjectId(const ObjectId& edenObjectId) {
-  if (edenObjectId.size() <= 20) {
-    throwf<std::invalid_argument>(
-        "unsupported proxy hash format: {}",
-        folly::hexlify(edenObjectId.getBytes()));
+    const Hash20& slHash,
+    RelativePathPiece dir,
+    PathComponentPiece name) {
+  value_.reserve(slOidLenSansPath + dir.view().size() + 1 + name.view().size());
+  value_.push_back(TYPE_HG_ID_WITH_PATH);
+  value_.append((const char*)slHash.getBytes().data(), slHash.RAW_SIZE);
+  if (!dir.empty()) {
+    value_.append(dir.view());
+    value_.push_back(kDirSeparator);
   }
+  value_.append(name.view());
+}
 
-  auto bytes = edenObjectId.getBytes();
-  auto type = bytes[0];
-  switch (type) {
-    case TYPE_HG_ID_WITH_PATH:
-      if (bytes.size() < 21) {
-        throwf<std::invalid_argument>(
-            "Invalid proxy hash size for TYPE_HG_ID_WITH_PATH: size {}",
-            edenObjectId.size());
-      }
-      value_ = serialize(
-          RelativePathPiece{folly::StringPiece{bytes.subpiece(21)}},
-          Hash20{bytes.subpiece(1, 20)});
-      break;
-    case TYPE_HG_ID_NO_PATH:
-      if (bytes.size() != 21) {
-        throwf<std::invalid_argument>(
-            "Invalid proxy hash size for TYPE_HG_ID_NO_PATH: size {}",
-            edenObjectId.size());
-      }
-      value_ = serialize(RelativePathPiece{}, Hash20{bytes.subpiece(1)});
-      break;
-    default:
-      throwf<std::invalid_argument>(
-          "Unknown proxy hash type: size {}, type {}",
-          edenObjectId.size(),
-          type);
-  }
+SaplingObjectId::SaplingObjectId(const Hash20& slHash) {
+  value_.reserve(slOidLenSansPath);
+  value_.push_back(TYPE_HG_ID_NO_PATH);
+  value_.append((const char*)slHash.getBytes().data(), slHash.RAW_SIZE);
+}
+
+SaplingObjectId::SaplingObjectId(folly::StringPiece value) : value_{value} {
+  validate();
+}
+
+SaplingObjectId::SaplingObjectId(const ObjectId& oid) : value_{oid.getBytes()} {
+  validate();
+}
+
+ObjectId SaplingObjectId::oid() && {
+  return ObjectId{std::move(value_)};
 }
 
 ImmediateFuture<std::vector<SaplingObjectId>> SaplingObjectId::getBatch(
@@ -88,78 +88,6 @@ ImmediateFuture<std::vector<SaplingObjectId>> SaplingObjectId::getBatch(
   }
 }
 
-ObjectId SaplingObjectId::store(
-    RelativePathPiece path,
-    const Hash20& hgRevHash,
-    HgObjectIdFormat hgObjectIdFormat) {
-  switch (hgObjectIdFormat) {
-    case HgObjectIdFormat::WithPath:
-      return makeEmbeddedProxyHash1(hgRevHash, path);
-    case HgObjectIdFormat::HashOnly:
-      return makeEmbeddedProxyHash2(hgRevHash);
-  }
-  EDEN_BUG() << "Unsupported hgObjectIdFormat: "
-             << fmt::underlying(hgObjectIdFormat);
-}
-
-ObjectId SaplingObjectId::store(
-    RelativePathPiece basePath,
-    PathComponentPiece leafName,
-    const Hash20& hgRevHash,
-    HgObjectIdFormat hgObjectIdFormat) {
-  switch (hgObjectIdFormat) {
-    case HgObjectIdFormat::WithPath:
-      return makeEmbeddedProxyHash1(hgRevHash, basePath, leafName);
-    case HgObjectIdFormat::HashOnly:
-      return makeEmbeddedProxyHash2(hgRevHash);
-  }
-  EDEN_BUG() << "Unsupported hgObjectIdFormat: "
-             << fmt::underlying(hgObjectIdFormat);
-}
-
-ObjectId SaplingObjectId::makeEmbeddedProxyHash1(
-    const Hash20& hgRevHash,
-    RelativePathPiece path) {
-  folly::StringPiece hashPiece{hgRevHash.getBytes()};
-  std::string_view pathPiece{path};
-
-  folly::fbstring str;
-  str.reserve(21 + pathPiece.size());
-  str.push_back(TYPE_HG_ID_WITH_PATH);
-  str.append(hashPiece.data(), hashPiece.size());
-  str.append(pathPiece.data(), pathPiece.size());
-  return ObjectId{std::move(str)};
-}
-
-ObjectId SaplingObjectId::makeEmbeddedProxyHash1(
-    const Hash20& hgRevHash,
-    RelativePathPiece basePath,
-    PathComponentPiece leafName) {
-  folly::StringPiece hashPiece{hgRevHash.getBytes()};
-  std::string_view basePathPiece{basePath};
-  std::string_view leafNamePiece{leafName};
-
-  folly::fbstring str;
-  str.reserve(21 + basePathPiece.size() + 1 + leafNamePiece.size());
-  str.push_back(TYPE_HG_ID_WITH_PATH);
-  str.append(hashPiece.data(), hashPiece.size());
-  str.append(basePathPiece.data(), basePathPiece.size());
-  if (!basePathPiece.empty()) {
-    str.push_back(kDirSeparator);
-  }
-  str.append(leafNamePiece.data(), leafNamePiece.size());
-  return ObjectId{std::move(str)};
-}
-
-ObjectId SaplingObjectId::makeEmbeddedProxyHash2(const Hash20& hgRevHash) {
-  folly::fbstring str;
-  str.reserve(21);
-  str.push_back(TYPE_HG_ID_NO_PATH);
-  auto bytes = folly::StringPiece{hgRevHash.getBytes()};
-  str.append(bytes.data(), bytes.size());
-  return ObjectId{std::move(str)};
-}
-
 bool SaplingObjectId::hasValidType(const ObjectId& oid) {
   folly::ByteRange bytes = oid.getBytes();
   // 20 bytes is a legacy proxy hash (with no type byte).
@@ -169,50 +97,26 @@ bool SaplingObjectId::hasValidType(const ObjectId& oid) {
        (bytes[0] == TYPE_HG_ID_WITH_PATH || bytes[0] == TYPE_HG_ID_NO_PATH));
 }
 
-std::string SaplingObjectId::serialize(
-    RelativePathPiece path,
-    const Hash20& hgRevHash) {
-  // We serialize the data as <hash_bytes><path_length><path>
-  //
-  // The path_length is stored as a big-endian uint32_t.
-  size_t pathLength = path.value().size();
-  XCHECK(pathLength <= std::numeric_limits<uint32_t>::max())
-      << "path too large";
-
-  std::string buf;
-  buf.reserve(sizeof(hgRevHash) + 4 + pathLength);
-  auto hashBytes = hgRevHash.getBytes();
-  buf.append(reinterpret_cast<const char*>(hashBytes.data()), hashBytes.size());
-  const uint32_t size = folly::Endian::big(static_cast<uint32_t>(pathLength));
-  buf.append(reinterpret_cast<const char*>(&size), sizeof(size));
-  buf.append(path.value().begin(), path.value().end());
-  return buf;
-}
-
 RelativePathPiece SaplingObjectId::path() const noexcept {
-  if (value_.empty()) {
+  XDCHECK((validate(), true));
+  if (value_.empty() || value_[0] == TYPE_HG_ID_NO_PATH) {
     return RelativePathPiece{};
   } else {
-    XDCHECK_GE(value_.size(), Hash20::RAW_SIZE + sizeof(uint32_t));
-    StringPiece data{value_.data(), value_.size()};
-    data.advance(Hash20::RAW_SIZE + sizeof(uint32_t));
-    // value_ was built with a known good RelativePath, thus we don't need to
-    // recheck it when deserializing.
-    return RelativePathPiece{data, detail::SkipPathSanityCheck{}};
+    // value_ was built with a known good RelativePath, or validated on
+    // construction. We can skip the sanity check here.
+    return RelativePathPiece{
+        std::string_view{value_}.substr(slOidLenSansPath),
+        detail::SkipPathSanityCheck{}};
   }
 }
 
-ByteRange SaplingObjectId::byteHash() const noexcept {
+Hash20& SaplingObjectId::node() const noexcept {
+  XDCHECK((validate(), true));
   if (value_.empty()) {
-    return kZeroHash.getBytes();
+    return const_cast<Hash20&>(kZeroHash);
   } else {
-    XDCHECK_GE(value_.size(), Hash20::RAW_SIZE);
-    return ByteRange{StringPiece{value_.data(), Hash20::RAW_SIZE}};
+    return *reinterpret_cast<Hash20*>(const_cast<char*>(value_.data() + 1));
   }
-}
-
-Hash20 SaplingObjectId::revHash() const noexcept {
-  return Hash20{byteHash()};
 }
 
 bool SaplingObjectId::operator==(const SaplingObjectId& otherHash) const {
@@ -223,32 +127,36 @@ bool SaplingObjectId::operator<(const SaplingObjectId& otherHash) const {
   return value_ < otherHash.value_;
 }
 
-void SaplingObjectId::validate(ObjectId edenBlobHash) {
-  ByteRange infoBytes = StringPiece(value_);
-  // Make sure the data is long enough to contain the rev hash and path length
-  if (infoBytes.size() < Hash20::RAW_SIZE + sizeof(uint32_t)) {
-    auto msg = fmt::format(
-        "mercurial blob info data for {} is too short ({} bytes)",
-        edenBlobHash,
-        infoBytes.size());
-    XLOG(ERR, msg);
-    throw std::length_error(msg);
+void SaplingObjectId::validate() const {
+  if (value_.empty()) {
+    // Special case - empty value is okay.
+    return;
   }
 
-  infoBytes.advance(Hash20::RAW_SIZE);
-
-  // Extract the path length
-  uint32_t pathLength;
-  memcpy(&pathLength, infoBytes.data(), sizeof(uint32_t));
-  pathLength = Endian::big(pathLength);
-  infoBytes.advance(sizeof(uint32_t));
-  // Make sure the path length agrees with the length of data remaining
-  if (infoBytes.size() != pathLength) {
-    auto msg = fmt::format(
-        "mercurial blob info data for {} has inconsistent path length",
-        edenBlobHash);
-    XLOG(ERR, msg);
-    throw std::length_error(msg);
+  auto type = value_[0];
+  switch (type) {
+    case TYPE_HG_ID_WITH_PATH:
+      if (value_.size() < slOidLenSansPath) {
+        throwf<std::invalid_argument>(
+            "Invalid SaplingObjectId size for TYPE_HG_ID_WITH_PATH: size {}",
+            value_.size());
+      }
+      // Validate the path.
+      (void)RelativePathPiece{
+          std::string_view{value_}.substr(slOidLenSansPath)};
+      break;
+    case TYPE_HG_ID_NO_PATH:
+      if (value_.size() != slOidLenSansPath) {
+        throwf<std::invalid_argument>(
+            "Invalid SaplingObjectId size for TYPE_HG_ID_NO_PATH: size {}",
+            value_.size());
+      }
+      break;
+    default:
+      throwf<std::invalid_argument>(
+          "Unknown SaplingObjectId type: size {}, type {}",
+          value_.size(),
+          type);
   }
 }
 

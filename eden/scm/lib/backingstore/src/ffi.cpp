@@ -153,14 +153,14 @@ facebook::eden::ObjectId TreeBuilder::make_entry_oid(
   // in case.
   XDCHECK_EQ(facebook::eden::RelativePathPiece{nameView}.view(), nameView);
 
-  return facebook::eden::SlOid::store(
+  return facebook::eden::SlOid{
+      reinterpret_cast<const facebook::eden::Hash20&>(hg_node),
       path_,
       // This name comes from Sapling's PathComponent type, which is already
       // validated.
       facebook::eden::PathComponentPiece{
-          nameView, facebook::eden::detail::SkipPathSanityCheck{}},
-      facebook::eden::Hash20{hg_node},
-      objectIdFormat_);
+          nameView, facebook::eden::detail::SkipPathSanityCheck{}}}
+      .oid();
 }
 
 void TreeBuilder::set_aux_data(
@@ -188,8 +188,8 @@ std::unique_ptr<TreeBuilder> new_builder(
   auto pathView =
       std::string_view{reinterpret_cast<const char*>(path.data()), path.size()};
 
-  // We skip the path sanity check below, but let's check in debug builds, just
-  // in case.
+  // We skip the path sanity check below, but let's check in debug builds,
+  // just in case.
   XDCHECK_EQ(facebook::eden::RelativePathPiece{pathView}.view(), pathView);
 
   return std::make_unique<TreeBuilder>(TreeBuilder{
