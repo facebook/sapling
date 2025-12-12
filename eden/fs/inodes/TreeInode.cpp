@@ -4170,7 +4170,7 @@ folly::Try<folly::Unit> TreeInode::nfsInvalidateCacheEntryForGC(
                           ->getNfsLastUsedTime()
                           .toTimespec()
                           .tv_sec);
-                  inodeMap->decFsRefcount(ino);
+                  inodeMap->clearFsRefcount(ino);
                 }
               }
             } else {

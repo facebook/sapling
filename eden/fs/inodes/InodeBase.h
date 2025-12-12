@@ -92,7 +92,7 @@ class InodeBase {
    * This is generally intended for use by FUSE APIs that return an inode
    * number to the kernel: lookup(), create(), mkdir(), symlink(), link(), or
    * by ProjectedFS APIs that write a placeholder to disk.
-   * On Windows and macOS, we treat the fs refcount as a flag to be 0 or 1.
+   * On PrjFS and NFS, we treat the fs refcount as a flag to be 0 or 1.
    * We should revisit this behavior on macOS if we migrate to a FSChannel
    * implementation that sends us FORGET calls
    */
@@ -111,7 +111,7 @@ class InodeBase {
    * This should be used to release inode number references obtained via
    * incFsRefcount().  The primary use case is for FUSE forget() calls, or
    * when a ProjectedFS placeholder is manually invalidated.
-   * On Windows and macOS, we treat the fs refcount as a flag to be 0 or 1.
+   * On PrjFS and NFS, we treat the fs refcount as a flag to be 0 or 1.
    * We should revisit this behavior on macOS if we migrate to a FSChannel
    * implementation that sends us FORGET calls
    */
