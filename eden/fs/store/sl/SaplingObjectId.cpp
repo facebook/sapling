@@ -157,4 +157,31 @@ void validateSlOid(folly::StringPiece value) {
   }
 }
 
+SaplingObjectIdView::SaplingObjectIdView(const ObjectId& oid)
+    : value_{oid.getBytes()} {
+  validateSlOid(folly::StringPiece(value_));
+}
+
+SaplingObjectIdView::SaplingObjectIdView(folly::ByteRange data) : value_{data} {
+  validateSlOid(folly::StringPiece(value_));
+}
+
+RelativePathPiece SaplingObjectIdView::path() const noexcept {
+  if (value_.empty() || value_[0] == SaplingObjectId::TYPE_HG_ID_NO_PATH) {
+    return RelativePathPiece{};
+  } else {
+    // value_ was validated on construction. We can skip the sanity check here.
+    return RelativePathPiece{
+        folly::StringPiece(value_).subpiece(21), detail::SkipPathSanityCheck{}};
+  }
+}
+
+Hash20& SaplingObjectIdView::node() const noexcept {
+  if (value_.empty()) {
+    return const_cast<Hash20&>(kZeroHash);
+  } else {
+    return *reinterpret_cast<Hash20*>(const_cast<uint8_t*>(value_.data() + 1));
+  }
+}
+
 } // namespace facebook::eden

@@ -142,6 +142,33 @@ using SlOid = SaplingObjectId;
  */
 void validateSlOid(folly::StringPiece value);
 
+/**
+ * SaplingObjectIdView provides non-owning access to a SaplingObjectId stored
+ * in an ObjectId, without allocating or copying.
+ */
+class SaplingObjectIdView {
+ public:
+  /**
+   * Construct a view from an ObjectId reference. The ObjectId must outlive
+   * this view and must contain a valid SaplingObjectId.
+   */
+  explicit SaplingObjectIdView(const ObjectId& oid);
+
+  explicit SaplingObjectIdView(folly::ByteRange data);
+
+  RelativePathPiece path() const noexcept;
+
+  Hash20& node() const noexcept;
+
+ private:
+  const folly::ByteRange value_;
+};
+
+/**
+ * Shorter alias for convenience.
+ */
+using SlOidView = SaplingObjectIdView;
+
 } // namespace facebook::eden
 
 namespace std {

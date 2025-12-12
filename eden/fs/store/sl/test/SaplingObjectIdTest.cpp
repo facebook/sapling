@@ -59,3 +59,33 @@ TEST(SlOidTest, round_trip_version_2) {
   EXPECT_EQ(hash, proxy.node());
   EXPECT_EQ(RelativePathPiece{}, proxy.path());
 }
+
+TEST(SlOidViewTest, construct_from_objectid_with_path) {
+  Hash20 hash{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
+  auto slOid = SlOid{hash, RelativePathPiece{"some/path"}};
+  auto oid = std::move(slOid).oid();
+
+  SlOidView view{oid};
+  EXPECT_EQ(hash, view.node());
+  EXPECT_EQ(RelativePathPiece{"some/path"}, view.path());
+}
+
+TEST(SlOidViewTest, construct_from_objectid_no_path) {
+  Hash20 hash{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
+  auto slOid = SlOid{hash};
+  auto oid = std::move(slOid).oid();
+
+  SlOidView view{oid};
+  EXPECT_EQ(hash, view.node());
+  EXPECT_EQ(RelativePathPiece{}, view.path());
+}
+
+TEST(SlOidViewTest, construct_from_byte_range) {
+  Hash20 hash{folly::StringPiece{"0123456789abcdef0123456789abcdef01234567"}};
+  auto slOid = SlOid{hash, RelativePathPiece{"test/path"}};
+  auto oid = std::move(slOid).oid();
+
+  SlOidView view{oid.getBytes()};
+  EXPECT_EQ(hash, view.node());
+  EXPECT_EQ(RelativePathPiece{"test/path"}, view.path());
+}
