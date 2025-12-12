@@ -23,6 +23,7 @@ use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
 use mononoke_types::TrackedFileChange;
 use mononoke_types::path::MPath;
+use phases::PhasesRef;
 use repo_blobstore::RepoBlobstoreRef;
 use scuba_ext::FutureStatsScubaExt;
 use sorted_vector_map::SortedVectorMap;
@@ -159,6 +160,18 @@ impl<R: MononokeRepo> RepoContext<R> {
             ));
         }
 
+        let public = self
+            .repo()
+            .phases()
+            .get_public(self.ctx(), vec![bottom_id], false)
+            .await?;
+
+        if !public.is_empty() {
+            return Err(MononokeError::InvalidRequest(format!(
+                "Cannot fold public commits: {}",
+                bottom_id
+            )));
+        }
         let top_id = top_id.unwrap_or(bottom_id);
         if !self
             .repo()

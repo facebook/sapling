@@ -26,6 +26,7 @@ use mononoke_types::FileChange;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::path::MPath;
+use phases::PhasesRef;
 use tests_utils::drawdag::extend_from_dag_with_actions;
 
 use crate::CoreContext;
@@ -1274,6 +1275,49 @@ async fn test_fold_commits_additional_changes_create_inside_file_with_delete(
         .content_concat()
         .await?;
     assert_eq!(subfile, Bytes::from("subfile content\n"));
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_public_bottom_not_allowed(fb: FacebookInit) -> Result<(), Error> {
+    // Graph: A-B-C
+    // Mark A and B as public, then try to fold B..C
+    // Expected: Should fail because B is public
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B-C
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B b.txt "b content\n"
+            # modify: C c.txt "c content\n"
+        "##,
+    )
+    .await?;
+
+    // Mark commits A and B as public
+    repo.repo()
+        .phases()
+        .add_reachable_as_public(&ctx, vec![commits["A"], commits["B"]])
+        .await?;
+
+    // Try to fold commits B and C - should fail because B is public
+    let result = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["C"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await;
+
+    assert!(
+        result.is_err(),
+        "Folding public commits should fail validation"
+    );
 
     Ok(())
 }
