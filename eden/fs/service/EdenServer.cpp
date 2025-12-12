@@ -89,7 +89,7 @@
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/TreeCache.h"
-#include "eden/fs/store/hg/SaplingBackingStore.h"
+#include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/EdenStructuredLogger.h"

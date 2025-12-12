@@ -19,7 +19,7 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/filter/Filter.h"
 #include "eden/fs/store/filter/FilteredObjectId.h"
-#include "eden/fs/store/hg/SaplingBackingStore.h"
+#include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/utils/FilterUtils.h"
 
 namespace facebook::eden {

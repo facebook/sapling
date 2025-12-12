@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/store/hg/SaplingBackingStore.h"
+#include "eden/fs/store/sl/SaplingBackingStore.h"
 
 #include <algorithm>
 #include <chrono>
@@ -44,8 +44,8 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/StoreResult.h"
-#include "eden/fs/store/hg/SaplingImportRequest.h"
-#include "eden/fs/store/hg/SaplingObjectId.h"
+#include "eden/fs/store/sl/SaplingImportRequest.h"
+#include "eden/fs/store/sl/SaplingObjectId.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/StaticAssert.h"

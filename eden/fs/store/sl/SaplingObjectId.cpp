@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/store/hg/SaplingObjectId.h"
+#include "eden/fs/store/sl/SaplingObjectId.h"
 
 #include <fmt/core.h>
 #include <folly/logging/xlog.h>

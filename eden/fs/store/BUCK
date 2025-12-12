@@ -159,7 +159,7 @@ cpp_library(
         "//eden/common/utils:immediate_future",
         "//eden/fs/config:config",
         "//eden/fs/model:model",
-        "//eden/fs/store/hg:sapling_backing_store",
+        "//eden/fs/store/sl:sapling_backing_store",
         "//eden/fs/utils:filter_utils",
         "//folly:varint",
     ],

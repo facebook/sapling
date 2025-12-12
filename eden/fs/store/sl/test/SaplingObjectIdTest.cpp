@@ -14,7 +14,7 @@
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/TestOps.h"
-#include "eden/fs/store/hg/SaplingObjectId.h"
+#include "eden/fs/store/sl/SaplingObjectId.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
 using namespace facebook::eden;

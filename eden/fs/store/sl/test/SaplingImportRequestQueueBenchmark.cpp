@@ -10,8 +10,8 @@
 #include "eden/common/utils/benchharness/Bench.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/store/ImportPriority.h"
-#include "eden/fs/store/hg/SaplingImportRequest.h"
-#include "eden/fs/store/hg/SaplingImportRequestQueue.h"
+#include "eden/fs/store/sl/SaplingImportRequest.h"
+#include "eden/fs/store/sl/SaplingImportRequestQueue.h"
 
 namespace {
 

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/store/hg/SaplingImportRequestQueue.h"
+#include "eden/fs/store/sl/SaplingImportRequestQueue.h"
 #include <folly/MapUtil.h>
 #include <algorithm>
 

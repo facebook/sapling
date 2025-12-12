@@ -19,9 +19,9 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/store/hg/SaplingImportRequest.h"
-#include "eden/fs/store/hg/SaplingImportRequestQueue.h"
-#include "eden/fs/store/hg/SaplingObjectId.h"
+#include "eden/fs/store/sl/SaplingImportRequest.h"
+#include "eden/fs/store/sl/SaplingImportRequestQueue.h"
+#include "eden/fs/store/sl/SaplingObjectId.h"
 
 using namespace facebook::eden;
 

@@ -16,7 +16,7 @@
 #include <vector>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/store/hg/SaplingImportRequest.h"
+#include "eden/fs/store/sl/SaplingImportRequest.h"
 
 namespace facebook::eden {
 
@@ -129,7 +129,7 @@ class SaplingImportRequestQueue {
      * Map of a ObjectId to an element in the queue. Any changes to this type
      * can have a significant effect on EdenFS performance and thus changes to
      * it needs to be carefully studied and measured. The
-     * store/hg/tests/SaplingImportRequestQueueBenchmark.cpp is a good way to
+     * store/sl/tests/SaplingImportRequestQueueBenchmark.cpp is a good way to
      * measure the potential performance impact.
      */
     folly::F14FastMap<ObjectId, std::shared_ptr<SaplingImportRequest>>

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/store/hg/SaplingImportRequest.h"
+#include "eden/fs/store/sl/SaplingImportRequest.h"
 
 #include <folly/Try.h>
 #include <folly/futures/Promise.h>

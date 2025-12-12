@@ -90,7 +90,7 @@
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/TreeLookupProcessor.h"
 #include "eden/fs/store/filter/GlobFilter.h"
-#include "eden/fs/store/hg/SaplingBackingStore.h"
+#include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/telemetry/TaskTrace.h"
 #include "eden/fs/utils/Clock.h"

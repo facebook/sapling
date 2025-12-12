@@ -52,7 +52,7 @@
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/FilteredBackingStore.h"
 #include "eden/fs/store/filter/HgSparseFilter.h"
-#include "eden/fs/store/hg/SaplingBackingStore.h"
+#include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/telemetry/IScribeLogger.h"
 #include "eden/fs/telemetry/LogEvent.h"
 #include "eden/fs/utils/WinStackTrace.h"

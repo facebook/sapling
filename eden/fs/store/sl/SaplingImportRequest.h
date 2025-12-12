@@ -21,7 +21,7 @@
 #include "eden/fs/model/TreeAuxDataFwd.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/store/hg/SaplingObjectId.h"
+#include "eden/fs/store/sl/SaplingObjectId.h"
 
 namespace facebook::eden {
 

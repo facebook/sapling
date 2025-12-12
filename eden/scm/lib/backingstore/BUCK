@@ -30,7 +30,7 @@ cpp_library(
         "//eden/fs/model:model",
         "//eden/fs/model:model-fwd",
         "//eden/fs/store:context",  # @manual - used in ffi.rs via CXX bridge
-        "//eden/fs/store/hg:sapling_object_id",
+        "//eden/fs/store/sl:sapling_object_id",
         "//folly:range",
         "//folly/container:fbvector",
         "//folly/futures:core",
