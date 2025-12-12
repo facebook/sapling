@@ -180,6 +180,7 @@ pub mod commit_graph;
 pub mod create_bookmark;
 pub mod create_changeset;
 pub mod delete_bookmark;
+pub mod fold_commits;
 pub mod git;
 pub mod land_stack;
 pub mod move_bookmark;

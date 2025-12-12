@@ -187,6 +187,10 @@ impl TrackedFileChange {
         self.inner.size
     }
 
+    pub fn basic_file_change(&self) -> &BasicFileChange {
+        &self.inner
+    }
+
     pub fn copy_from(&self) -> Option<&(NonRootMPath, ChangesetId)> {
         self.copy_from.as_ref()
     }

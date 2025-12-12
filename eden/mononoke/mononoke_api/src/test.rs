@@ -9,6 +9,7 @@ mod test_blame;
 mod test_changeset_diff;
 mod test_changeset_find_files;
 mod test_file_diff;
+mod test_fold_commits;
 mod test_git;
 mod test_history;
 mod test_repo;
