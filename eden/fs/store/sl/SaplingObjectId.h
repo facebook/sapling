@@ -173,6 +173,12 @@ class SaplingObjectIdView {
    */
   explicit SaplingObjectIdView(const ObjectId& oid);
 
+  /**
+   * Construct a view from a SaplingObjectId reference. The SaplingObjectId
+   * must outlive this view.
+   */
+  /* implicit */ SaplingObjectIdView(const SaplingObjectId& slOid);
+
   explicit SaplingObjectIdView(folly::ByteRange data);
 
   RelativePathPiece path() const noexcept;

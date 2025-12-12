@@ -33,28 +33,28 @@ std::shared_ptr<SaplingImportRequest> SaplingImportRequest::makeRequest(
 
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeBlobImportRequest(
-    const SlOid& slOid,
+    SlOidView slOid,
     const ObjectFetchContextPtr& context) {
   return makeRequest<BlobImport>(context, slOid);
 }
 
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeTreeImportRequest(
-    const SlOid& slOid,
+    SlOidView slOid,
     const ObjectFetchContextPtr& context) {
   return makeRequest<TreeImport>(context, slOid);
 }
 
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeBlobAuxImportRequest(
-    const SlOid& slOid,
+    SlOidView slOid,
     const ObjectFetchContextPtr& context) {
   return makeRequest<BlobAuxImport>(context, slOid);
 }
 
 std::shared_ptr<SaplingImportRequest>
 SaplingImportRequest::makeTreeAuxImportRequest(
-    const SlOid& slOid,
+    SlOidView slOid,
     const ObjectFetchContextPtr& context) {
   return makeRequest<TreeAuxImport>(context, slOid);
 }

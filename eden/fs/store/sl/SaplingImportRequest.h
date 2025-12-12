@@ -54,22 +54,22 @@ class SaplingImportRequest {
    * Allocate a blob request.
    */
   static std::shared_ptr<SaplingImportRequest> makeBlobImportRequest(
-      const SlOid& slOid,
+      SlOidView slOid,
       const ObjectFetchContextPtr& context);
 
   /**
    * Allocate a tree request.
    */
   static std::shared_ptr<SaplingImportRequest> makeTreeImportRequest(
-      const SlOid& slOid,
+      SlOidView slOid,
       const ObjectFetchContextPtr& context);
 
   static std::shared_ptr<SaplingImportRequest> makeBlobAuxImportRequest(
-      const SlOid& slOid,
+      SlOidView slOid,
       const ObjectFetchContextPtr& context);
 
   static std::shared_ptr<SaplingImportRequest> makeTreeAuxImportRequest(
-      const SlOid& slOid,
+      SlOidView slOid,
       const ObjectFetchContextPtr& context);
 
   /**

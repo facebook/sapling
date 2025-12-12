@@ -463,7 +463,7 @@ class SaplingBackingStore final : public BackingStore {
   /**
    * Reads tree aux data from hg cache.
    */
-  folly::Try<TreeAuxDataPtr> getLocalTreeAuxData(const SlOid& id);
+  folly::Try<TreeAuxDataPtr> getLocalTreeAuxData(SlOidView id);
 
   folly::SemiFuture<GetBlobResult> getBlob(
       const ObjectId& id,
@@ -525,7 +525,7 @@ class SaplingBackingStore final : public BackingStore {
    * Returns nullptr if not found.
    */
   folly::Try<BlobPtr> getBlobFromBackingStore(
-      const SlOid& hgInfo,
+      SlOidView slOid,
       const ObjectFetchContextPtr& context,
       sapling::FetchMode fetchMode);
 
@@ -534,10 +534,10 @@ class SaplingBackingStore final : public BackingStore {
    * Returns nullptr if not found.
    */
   folly::Try<BlobPtr> getBlobLocal(
-      const SlOid& hgInfo,
+      SlOidView slOid,
       const ObjectFetchContextPtr& context) {
     return getBlobFromBackingStore(
-        hgInfo, context, sapling::FetchMode::LocalOnly);
+        std::move(slOid), context, sapling::FetchMode::LocalOnly);
   }
 
   /**
@@ -545,10 +545,10 @@ class SaplingBackingStore final : public BackingStore {
    * Returns nullptr if not found.
    */
   folly::Try<BlobPtr> getBlobRemote(
-      const SlOid& hgInfo,
+      SlOidView slOid,
       const ObjectFetchContextPtr& context) {
     return getBlobFromBackingStore(
-        hgInfo, context, sapling::FetchMode::RemoteOnly);
+        std::move(slOid), context, sapling::FetchMode::RemoteOnly);
   }
 
   folly::SemiFuture<GetBlobAuxResult> getBlobAuxData(
@@ -579,7 +579,7 @@ class SaplingBackingStore final : public BackingStore {
   /**
    * Reads blob aux data from hg cache.
    */
-  folly::Try<BlobAuxDataPtr> getLocalBlobAuxData(const SlOid& id);
+  folly::Try<BlobAuxDataPtr> getLocalBlobAuxData(SlOidView id);
 
   [[nodiscard]] virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,

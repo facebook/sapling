@@ -504,11 +504,11 @@ void SaplingBackingStore::getBlobBatch(
 }
 
 folly::Try<BlobPtr> SaplingBackingStore::getBlobFromBackingStore(
-    const SlOid& hgInfo,
+    SlOidView slOid,
     const ObjectFetchContextPtr& context,
     sapling::FetchMode fetchMode) {
-  auto node = hgInfo.node();
-  auto path = hgInfo.path();
+  auto node = slOid.node();
+  auto path = slOid.path();
 
   using GetBlobResult = folly::Try<BlobPtr>;
 
@@ -1146,7 +1146,7 @@ SaplingBackingStore::getTreeAuxData(
   DurationScope<EdenStats> scope{
       stats_, &SaplingBackingStoreStats::getTreeAuxData};
 
-  SlOid slOid{id};
+  SlOidView slOid{id};
 
   logBackingStoreFetch(
       *context,
@@ -1219,8 +1219,8 @@ SaplingBackingStore::getTreeAuxDataEnqueue(
 }
 
 folly::Try<TreeAuxDataPtr> SaplingBackingStore::getLocalTreeAuxData(
-    const SlOid& hgInfo) {
-  auto node = hgInfo.node();
+    SlOidView slOid) {
+  auto node = slOid.node();
 
   XLOGF(DBG7, "Importing tree aux data node={} from hgcache", node);
 
@@ -1385,7 +1385,7 @@ folly::SemiFuture<BackingStore::GetBlobResult> SaplingBackingStore::getBlob(
     const ObjectFetchContextPtr& context) {
   DurationScope<EdenStats> scope{stats_, &SaplingBackingStoreStats::getBlob};
 
-  SlOid slOid{id};
+  SlOidView slOid{id};
 
   logBackingStoreFetch(
       *context, folly::Range{&slOid, 1}, ObjectFetchContext::ObjectType::Blob);
@@ -1413,7 +1413,7 @@ folly::coro::Task<BackingStore::GetBlobResult> SaplingBackingStore::co_getBlob(
     const ObjectFetchContextPtr& context) {
   DurationScope<EdenStats> scope{stats_, &SaplingBackingStoreStats::getBlob};
 
-  SlOid slOid{id};
+  SlOidView slOid{id};
 
   logBackingStoreFetch(
       *context, folly::Range{&slOid, 1}, ObjectFetchContext::ObjectType::Blob);
@@ -1558,7 +1558,7 @@ SaplingBackingStore::getBlobAuxData(
   DurationScope<EdenStats> scope{
       stats_, &SaplingBackingStoreStats::getBlobAuxData};
 
-  SlOid slOid{id};
+  SlOidView slOid{id};
 
   logBackingStoreFetch(
       *context,
@@ -1636,8 +1636,8 @@ SaplingBackingStore::getBlobAuxDataEnqueue(
 }
 
 folly::Try<BlobAuxDataPtr> SaplingBackingStore::getLocalBlobAuxData(
-    const SlOid& hgInfo) {
-  auto node = hgInfo.node();
+    SlOidView slOid) {
+  auto node = slOid.node();
 
   using GetBlobAuxDataResult = folly::Try<BlobAuxDataPtr>;
 
@@ -1963,7 +1963,12 @@ folly::SemiFuture<folly::Unit> SaplingBackingStore::prefetchBlobs(
                 slOid, context, SaplingImportRequest::FetchType::Prefetch));
           }
 
-          return collectAllSafe(std::move(futures)).unit().semi();
+          return collectAllSafe(std::move(futures))
+              .unit()
+              .ensure([slOids = std::move(slOids)]() {
+                // Keep slOids alive until all futures complete
+              })
+              .semi();
         }
       })
       .semi();

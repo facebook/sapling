@@ -176,6 +176,9 @@ SaplingObjectIdView::SaplingObjectIdView(const ObjectId& oid)
   validateSlOid(folly::StringPiece(value_));
 }
 
+SaplingObjectIdView::SaplingObjectIdView(const SaplingObjectId& slOid)
+    : value_{slOid.data()} {}
+
 SaplingObjectIdView::SaplingObjectIdView(folly::ByteRange data) : value_{data} {
   validateSlOid(folly::StringPiece(value_));
 }
