@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <rust/cxx.h>
 #include <string>
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -93,6 +94,11 @@ class SaplingObjectId {
     return folly::ByteRange{value_};
   }
 
+  rust::Slice<const uint8_t> rustData() const {
+    return rust::Slice<const uint8_t>{
+        reinterpret_cast<const uint8_t*>(value_.data()), value_.size()};
+  }
+
   bool operator==(const SaplingObjectId&) const;
   bool operator<(const SaplingObjectId&) const;
 
@@ -166,6 +172,10 @@ class SaplingObjectIdView {
 
   folly::ByteRange data() const {
     return value_;
+  }
+
+  rust::Slice<const uint8_t> rustData() const {
+    return rust::Slice<const uint8_t>{value_.data(), value_.size()};
   }
 
  private:
