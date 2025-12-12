@@ -144,10 +144,15 @@ if sys.platform == "win32":
             if not handle:
                 return False
 
-            print(
-                f"Checking handle.exe for processes using '{mount}'. This can take a while..."
-            )
-            print("Press ctrl+c to skip.")
+            print(f"Checking handle.exe for processes using '{mount}'.")
+            print("This can take a few minutes... Press ctrl+c to skip.")
+            print("If you want to find out by yourself, run:")
+            print(f"    handle.exe {mount}\n")
+
+            def handle_interrupt(frs: FileReleaseStatus) -> None:
+                print("Handle check interrupted.\n")
+                frs.keyboard_interrupt = True
+
             try:
                 output = subprocess.check_output(
                     [
@@ -158,13 +163,16 @@ if sys.platform == "win32":
                     ]  # / vs - is importart for accepteula, otherwise it won't find handles (??)
                 )
             except KeyboardInterrupt:
-                print("Handle check interrupted.\n")
-                print(
-                    "If you want to find out which process is still using the repo, run:"
-                )
-                print(f"    handle.exe {mount}\n")
-                frs.keyboard_interrupt = True
+                handle_interrupt(frs)
                 return False
+            except subprocess.CalledProcessError as e:
+                # subprocess may catch Ctrl+C first and return a CalledProcessError
+                # 0xC000013A is STATUS_CONTROL_C_EXIT
+                # See https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55
+                if e.returncode == 0xC000013A:
+                    handle_interrupt(frs)
+                    return False
+                raise
 
             parsed = self.parse_handlerexe_output(output.decode(errors="ignore"))
             try:
