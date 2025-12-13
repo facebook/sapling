@@ -12,3 +12,6 @@ license = "MIT"
 
 [lib]
 name = "python_sysconfig"
+
+[dependencies]
+cc = "1.2.10"

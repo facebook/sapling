@@ -7,53 +7,14 @@
 
 use std::path::Path;
 
-struct PythonSysConfig {
-    cflags: String,
-    ldflags: String,
-    // ex. ~/cpython/Include, or /usr/local/include/python3.10
-    include_dir: String,
-    // ex. /usr/local/include/python3.10, or empty
-    headers: String,
-}
-
-impl PythonSysConfig {
-    fn load() -> Self {
-        let mut sysconfig = python_sysconfig::PythonSysConfig::new();
-        Self {
-            cflags: sysconfig.cflags(),
-            ldflags: sysconfig.ldflags(),
-            include_dir: sysconfig.include(),
-            headers: sysconfig.headers(),
-        }
-    }
-
-    fn add_python_flags(&self, c: &mut cc::Build) {
-        for flag in self.cflags.split_whitespace().filter(|s| pick_flag(s)) {
-            c.flag(flag);
-        }
-        for flag in self.ldflags.split_whitespace().filter(|s| pick_flag(s)) {
-            c.flag(flag);
-        }
-        if !self.headers.is_empty() {
-            c.include(&self.headers);
-        }
-        if !self.include_dir.is_empty() {
-            c.include(&self.include_dir);
-        }
-    }
-}
-
-// Ignore flags that are annoying for our code.
-fn pick_flag(flag: &str) -> bool {
-    return !flag.starts_with("-W");
-}
+use python_sysconfig::PythonSysConfig;
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
 
     let root_dir = Path::new("../../../../../../");
     let cext_dir = Path::new("../../../../sapling/cext/");
-    let config = PythonSysConfig::load();
+    let mut config = PythonSysConfig::new();
 
     let mut c = cc::Build::new();
     c.files([

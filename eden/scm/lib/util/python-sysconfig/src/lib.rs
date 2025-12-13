@@ -100,6 +100,24 @@ impl PythonSysConfig {
         repl.read_next_line()
     }
 
+    /// Add python build flags to [`cc::Build`].
+    pub fn add_python_flags(&mut self, c: &mut cc::Build) {
+        for flag in self.cflags().split_whitespace().filter(|s| pick_flag(s)) {
+            c.flag(flag);
+        }
+        for flag in self.ldflags().split_whitespace().filter(|s| pick_flag(s)) {
+            c.flag(flag);
+        }
+        let headers = self.headers();
+        if !headers.is_empty() {
+            c.include(&headers);
+        }
+        let include_dir = self.include();
+        if !include_dir.is_empty() {
+            c.include(&include_dir);
+        }
+    }
+
     fn repl(&mut self) -> &mut PythonREPL {
         self.repl.get_or_init(|| PythonREPL::new(&self.python));
         self.repl.get_mut().unwrap()
@@ -145,6 +163,11 @@ impl PythonREPL {
         let line = self.read_next_line();
         line.parse().ok().unwrap()
     }
+}
+
+// Ignore flags that are annoying for our code.
+fn pick_flag(flag: &str) -> bool {
+    return !flag.starts_with("-W");
 }
 
 // Not needed for buck test.
