@@ -14,6 +14,7 @@ members = [
   "lib/backingstore",
   "lib/backingstore/benches",
   "lib/backtrace-ext",
+  "lib/backtrace-python",
   "lib/blackbox",
   "lib/blackbox/serde_alt",
   "lib/blob",
