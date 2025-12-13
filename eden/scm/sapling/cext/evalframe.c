@@ -86,28 +86,52 @@ void sapling_cext_evalframe_set_pass_through(unsigned char enabled) {
 }
 
 /**
- * Resolve a PyFrame to a "name at path:line".
- * Intended to be called by a debugger like lldb. Not thread safe.
+ * Extract the code object and line number from a PyFrame.
+ *
+ * Typically, the PyFrame might be dropped later, but the code object is
+ * relatively "stable", until the module gets dropped - rare, but can still
+ * happen.
+ *
+ * Returns a new reference. The callsite must call `Py_XDECREF` on the return
+ * value.
  */
-EXPORT const char* sapling_cext_evalframe_resolve_frame(size_t address) {
-  PyFrame* f = (PyFrame*)address;
-  static char buf[4096] = {0};
+EXPORT PyCodeObject* sapling_cext_evalframe_extract_code_lineno_from_frame(
+    PyFrame* f,
+    int* pline_no) {
   if (!f) {
-    return buf;
+    return NULL;
   }
-  memset(buf, 0, sizeof buf);
   // 3.12: f is _PyInterpreterFrame. Can be accessed via PyUnstable APIs.
   // 3.11: f is _PyInterpreterFrame. Need Py_BUILD_CORE_MODULE to access.
   // See also
   // https://github.com/python/cpython/issues/91006#issuecomment-1093945542
+  PyCodeObject* code = NULL;
 #if PY_VERSION_HEX >= 0x03090000 && PY_VERSION_HEX < 0x030b0000
   // 3.9-3.10: f is PyFrameObject* and can be read by PyFrame APIs.
-  PyCodeObject* code = NULL;
   if (!PyFrame_Check(f)) {
-    goto out;
+    return NULL;
   }
   code = PyFrame_GetCode(f);
   if (code == NULL) {
+    return NULL;
+  }
+  *pline_no = PyFrame_GetLineNumber(f);
+#endif
+  return code;
+}
+
+/**
+ * Resolve a (code object, lineno) to a string that includes filename, function
+ * name, and line number. Not thread-safe.
+ *
+ * Calls `Py_XDECREF(code)`.
+ */
+EXPORT const char* sapling_cext_evalframe_stringify_code_lineno(
+    PyCodeObject* code,
+    int line_no) {
+  static char buf[4096] = {0};
+  memset(buf, 0, sizeof buf);
+  if (!code) {
     goto out;
   }
   PyObject* filename_obj = code->co_filename;
@@ -121,10 +145,26 @@ EXPORT const char* sapling_cext_evalframe_resolve_frame(size_t address) {
   if (filename == NULL || name == NULL) {
     goto out;
   }
-  int line_no = PyFrame_GetLineNumber(f);
   snprintf(buf, (sizeof buf) - 1, "%s at %s:%d", name, filename, line_no);
 out:
   Py_XDECREF(code);
-#endif
   return buf;
+}
+
+/**
+ * Resolve a PyFrame to a "name at path:line".
+ * Intended to be called by a debugger like lldb. Not thread-safe.
+ *
+ * This function uses `size_t` so the lldb script can pass in the `address`
+ * easily without first figuring out the `PyCodeObject*` type (which can be
+ * tricky without debug info), and lldb won't over-smart rejecting the call
+ * if the type mismatches.
+ */
+EXPORT const char* sapling_cext_evalframe_resolve_frame(size_t address) {
+  PyFrame* f = (PyFrame*)address;
+  int line_no = 0;
+  PyCodeObject* code =
+      (PyCodeObject*)sapling_cext_evalframe_extract_code_lineno_from_frame(
+          f, &line_no);
+  return sapling_cext_evalframe_stringify_code_lineno(code, line_no);
 }
