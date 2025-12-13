@@ -28,6 +28,7 @@ namespace facebook::eden {
 constexpr BackingStoreType kSupportedRepositoryTypes[] = {
     BackingStoreType::HG,
     BackingStoreType::GIT,
+    BackingStoreType::RECAS,
     BackingStoreType::EMPTY,
     BackingStoreType::HTTP,
 };
@@ -120,7 +121,8 @@ class CheckoutConfig {
   /**
    * Get the repository type.
    *
-   * Currently supported types include "git", "hg", "filteredhg", and "empty".
+   * Currently supported types include "git", "hg", "filteredhg", "empty", and
+   * "recas".
    */
   const std::string& getRepoType() const {
     return repoType_;
@@ -203,6 +205,10 @@ class CheckoutConfig {
     return useWriteBackCache_;
   }
 
+  const std::string& getReUseCase() const {
+    return reUseCase_;
+  }
+
 #ifdef _WIN32
   /** Guid for that repository */
   Guid getRepoGuid() const {
@@ -233,6 +239,8 @@ class CheckoutConfig {
   bool enableSqliteOverlay_{folly::kIsWindows};
 
   bool useWriteBackCache_{false};
+
+  std::string reUseCase_{"buck2-default"};
 
 #ifdef _WIN32
   Guid repoGuid_;

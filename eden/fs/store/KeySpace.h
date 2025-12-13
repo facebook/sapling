@@ -98,6 +98,10 @@ class KeySpace {
       7,
       "treemeta",
       Ephemeral{&EdenConfig::localStoreTreeAuxSizeLimit}};
+  static constexpr KeySpaceRecord ReCasDigestProxyHashFamily{
+      8,
+      "recasdigestproxyhash",
+      Deprecated{}};
 
   static constexpr const KeySpaceRecord* kAll[] = {
       &BlobFamily,
@@ -107,7 +111,8 @@ class KeySpace {
       &HgCommitToTreeFamily,
       &BlobSizeFamily,
       &ScsProxyHashFamily,
-      &TreeAuxDataFamily};
+      &TreeAuxDataFamily,
+      &ReCasDigestProxyHashFamily};
   static constexpr size_t kTotalCount = std::size(kAll);
 
  private:

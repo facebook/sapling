@@ -85,6 +85,8 @@ enum RepositoryType {
     Git,
     #[strum(serialize = "hg")]
     Hg,
+    #[strum(serialize = "recas")]
+    Recas,
     #[strum(serialize = "filteredhg")]
     FilteredHg,
 }
