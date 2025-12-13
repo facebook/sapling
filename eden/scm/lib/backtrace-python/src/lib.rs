@@ -14,6 +14,8 @@ use backtrace_ext::unwind;
 use unwind::Cursor;
 use unwind::RegNum;
 
+mod libpython_filter;
+
 /// Setup backtrace-ext to resolve Python frames on supported platforms.
 /// Python interpreter must be initialized at this time.
 /// This function is a no-op if the platform is not supported.
@@ -24,6 +26,7 @@ pub fn init() {
         static RESOLVER: PythonSupplementalFrameResolver = PythonSupplementalFrameResolver;
         static RESOLVER_FAT_REF: &dyn SupplementalFrameResolver = &RESOLVER;
         static RESOLVER_THIN_REF: &&dyn SupplementalFrameResolver = &RESOLVER_FAT_REF;
+        libpython_filter::init();
         backtrace_ext::set_supplemental_frame_resolver(RESOLVER_THIN_REF);
         unsafe { sapling_cext_evalframe_set_pass_through(1) }
     }
@@ -56,9 +59,12 @@ impl SupplementalFrameResolver for PythonSupplementalFrameResolver {
             _ => return FrameDecision::Keep,
         };
         if ip as usize != Sapling_PyEvalFrame as usize {
-            // Not the Sapling_PyEvalFrame frame.
-            // TODO: skip libpython frames.
-            return FrameDecision::Keep;
+            // Skip native python frames to reduce noise.
+            return if libpython_filter::is_python_frame(ip as _) {
+                FrameDecision::Skip
+            } else {
+                FrameDecision::Keep
+            };
         }
         match extract_python_supplemental_info(cursor) {
             Some(info) => FrameDecision::Replace(info),
