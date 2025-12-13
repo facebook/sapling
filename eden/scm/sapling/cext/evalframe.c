@@ -168,3 +168,11 @@ EXPORT const char* sapling_cext_evalframe_resolve_frame(size_t address) {
           f, &line_no);
   return sapling_cext_evalframe_stringify_code_lineno(code, line_no);
 }
+
+/**
+ * Report if "sapling_cext_evalframe_resolve_frame" is supported
+ * Currently this mainly checks the Python version.
+ */
+EXPORT int sapling_cext_evalframe_resolve_frame_is_supported() {
+  return (PY_VERSION_HEX >= 0x03090000 && PY_VERSION_HEX < 0x030b0000);
+}
