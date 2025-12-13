@@ -13,6 +13,7 @@ members = [
   "lib/auth",
   "lib/backingstore",
   "lib/backingstore/benches",
+  "lib/backtrace-ext",
   "lib/blackbox",
   "lib/blackbox/serde_alt",
   "lib/blob",

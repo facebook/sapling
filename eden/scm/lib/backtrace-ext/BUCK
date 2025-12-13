@@ -1,0 +1,28 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "backtrace-ext",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "lib": {"name": "backtrace-ext"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "description": "Extended backtrace utilities with custom frame resolution.",
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-backtrace-ext",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    compatible_with = [
+        "ovr_config//os:linux",
+        # "ovr_config//os:macos", # link issues with C libunwind
+    ],
+    crate_root = "src/lib.rs",
+    deps = [
+        "fbsource//third-party/libunwind:unwind-ptrace",  # needed to compile
+        "fbsource//third-party/rust:unwind",
+    ],
+)
