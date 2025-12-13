@@ -2112,7 +2112,9 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
                       edenMount->getOverlay()->hadCleanStartup(),
                       inodeCatalogType.has_value()
                           ? static_cast<int64_t>(inodeCatalogType.value())
-                          : 0});
+                          : 0,
+                      edenMount->getCheckoutConfig()
+                          ->getEnableWindowsSymlinks()});
               return makeFuture(std::move(t));
             });
       });
