@@ -13,5 +13,6 @@
 //! Currently implemented for Linux.
 
 mod osutil;
+mod state;
 
 pub use backtrace_ext; // re-export
