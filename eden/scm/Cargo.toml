@@ -166,6 +166,7 @@ members = [
   "lib/revsets",
   "lib/runlog",
   "lib/sampling",
+  "lib/sampling-profiler",
   "lib/sparse",
   "lib/spawn-ext",
   "lib/status",

@@ -1,0 +1,33 @@
+load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+
+oncall("sapling")
+
+rust_library(
+    name = "sampling-profiler",
+    srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {
+        "features": {
+            "default": [],
+            "nightly": [],
+        },
+        "lib": {"name": "sampling-profiler"},
+        "package": {
+            "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
+            "autoexamples": False,
+            "description": "Sampling profiler based on libunwind.",
+            "homepage": "https://sapling-scm.com/",
+            "license": "MIT",
+            "name": "sapling-sampling-profiler",
+            "repository": "https://github.com/facebook/sapling",
+        },
+    }},
+    compatible_with = [
+        "ovr_config//os:linux",
+    ],
+    crate_root = "src/lib.rs",
+    features = ["nightly"],
+    deps = [
+        "fbsource//third-party/rust:libc",
+        "//eden/scm/lib/backtrace-ext:backtrace-ext",
+    ],
+)
