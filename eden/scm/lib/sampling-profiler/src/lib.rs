@@ -12,6 +12,7 @@
 //!
 //! Currently implemented for Linux.
 
+mod frame_handler;
 mod osutil;
 mod state;
 
