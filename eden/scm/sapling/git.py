@@ -931,7 +931,7 @@ def submodulecheckout(ctx, match=None, force=False, mctx=None):
         def adjust_submodule_node(node, path) -> Optional[bytes]:
             return node
 
-    submodules = parsesubmodules(ctx)
+    submodules = [submod for submod in parsesubmodules(ctx) if submod.active]
     if match is not None:
         submodules = [submod for submod in submodules if match(submod.path)]
     with progress.bar(ui, _("updating"), _("submodules"), len(submodules)) as prog:

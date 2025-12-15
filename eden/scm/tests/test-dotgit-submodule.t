@@ -107,10 +107,9 @@ Cloning a repo with submodules, but without initializing them:
 - Submodules are inactive, and absent from status
   $ sl status
 
-(bad: should skip or create the submodule on demand, not crash)
+- Inactive submodules are skipped by `sl go`: 
   $ sl go '.^'
-  abort: $ENOENT$: $TESTTMP/cloned-without-subm/sub/.git/sl
-  [255]
+  update complete
 
 Cloning a repo with submodules recursively:
 
