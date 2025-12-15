@@ -17,6 +17,10 @@
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 // Structure that holds a commit graph, usually a history of a file
 // or a directory hence the name. Semantically it stores list of

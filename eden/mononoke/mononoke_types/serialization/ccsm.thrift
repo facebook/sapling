@@ -17,6 +17,10 @@
 
 include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 // Case conflict skeleton manifest stores a version of the file tree that's transformed in a way
 // that allows quickly finding case conflicts. The transformation works on file paths by adding

@@ -18,6 +18,10 @@
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 @rust.NewType
 typedef i32 BlameChangeset

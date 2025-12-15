@@ -16,6 +16,10 @@
 //! ------------
 
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 /// A blake2 hash.
 @rust.NewType

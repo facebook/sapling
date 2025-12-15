@@ -18,6 +18,10 @@
 include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 /// Maximum size of a terminal node.
 const i32 MAP_SHARD_SIZE = 2000;

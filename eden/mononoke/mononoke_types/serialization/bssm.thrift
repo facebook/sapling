@@ -17,6 +17,10 @@
 
 include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 // Basename suffix manifest stores file trees in a way that allows fast filtering
 // based on suffix of basenames as well as directory prefix of root.

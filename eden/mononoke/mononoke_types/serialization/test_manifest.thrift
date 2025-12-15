@@ -19,6 +19,10 @@ include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
 include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 // TestManifest is a manifest type intended only to be used in tests. It contains
 // only the file names and the maximum basename length of all files in each directory.

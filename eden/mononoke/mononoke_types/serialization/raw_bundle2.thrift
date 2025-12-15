@@ -15,6 +15,11 @@
 //! IMPORTANT!!!
 //! ------------
 
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
+
 union RawBundle2 {
   1: binary Bytes;
 }

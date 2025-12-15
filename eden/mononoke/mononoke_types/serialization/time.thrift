@@ -23,6 +23,10 @@
 /// Note: DateTime fields do not have a reasonable default value.  They must
 /// always be present or qualified as optional.
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 @rust.Exhaustive
 struct DateTime {

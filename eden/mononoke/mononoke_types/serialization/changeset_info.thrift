@@ -9,6 +9,10 @@ include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "eden/mononoke/mononoke_types/serialization/time.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 // Derived data structure that represents a Bonsai changeset's metadata.
 // It contains the same data as Bonsai itself except of the file changes,

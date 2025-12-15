@@ -18,6 +18,10 @@
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/data.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 @rust.Exhaustive
 struct ContentChunkPointer {
