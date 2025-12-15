@@ -31,6 +31,7 @@ mod provider;
 pub mod text_gen;
 
 pub use dag_populate::populate_dag;
+pub use provider::MAX_FACTOR_BITS;
 pub use provider::VirtualRepoProvider;
 
 pub fn init() {

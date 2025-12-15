@@ -34,6 +34,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<EagerRepo>(py)?;
     m.add_class::<EagerRepoStore>(py)?;
+    m.add(
+        py,
+        "MAX_VIRTUAL_REPO_SIZE_FACTOR_BITS",
+        virtual_repo::MAX_FACTOR_BITS,
+    )?;
     impl_into::register(py);
     Ok(m)
 }

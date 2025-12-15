@@ -229,7 +229,7 @@ fn fold_u64_to_u16(x: u64) -> u16 {
 /// To avoid overflow, limit the factor_bits to 34.
 /// The default virtual repo with factor_bits=34 has about 200+ trillion files,
 /// which should probably be good enough.
-const MAX_FACTOR_BITS: usize = 34;
+pub const MAX_FACTOR_BITS: usize = 34;
 
 pub(crate) fn get_tree_provider(factor_bits: u8) -> &'static Arc<dyn VirtualTreeProvider> {
     let factor_bits = factor_bits as usize;

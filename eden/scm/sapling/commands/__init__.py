@@ -3783,8 +3783,7 @@ def init(ui, dest=".", **opts):
         ui.configbool("format", "use-eager-repo")
         or virtual_repo_size_factor is not None
     ):
-        # Matches MAX_FACTOR_BITS in virtual-repo.
-        MAX_FACTOR_BITS = 34
+        MAX_FACTOR_BITS = bindings.eagerepo.MAX_VIRTUAL_REPO_SIZE_FACTOR_BITS
         if (
             virtual_repo_size_factor is not None
             and not 0 <= virtual_repo_size_factor <= MAX_FACTOR_BITS
