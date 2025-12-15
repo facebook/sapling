@@ -167,7 +167,7 @@ impl PythonREPL {
 
 // Ignore flags that are annoying for our code.
 fn pick_flag(flag: &str) -> bool {
-    return !flag.starts_with("-W");
+    !flag.starts_with("-W")
 }
 
 // Not needed for buck test.
