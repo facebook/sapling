@@ -849,7 +849,7 @@ def parsesubmodules(ctx):
         origin_url = None
     for s in bindings.submodule.parse_gitmodules(data, origin_url, repo.ui._rcfg):
         submodules.append(
-            Submodule(s["name"], s["url"], s["path"], weakref.proxy(repo)),
+            Submodule(s["name"], s["url"], s["path"], s["active"], weakref.proxy(repo)),
         )
 
     return submodules
@@ -974,6 +974,7 @@ class Submodule:
     name: str
     url: str
     path: str
+    active: bool
     parentrepo: object
 
     @util.propertycache
