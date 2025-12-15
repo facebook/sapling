@@ -9,7 +9,15 @@ rust_binary(
     ]),
     crate_root = "src/main.rs",
     deps = [
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/dag:dag",
+        "//eden/scm/lib/dev-logger:dev-logger",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
         "//eden/scm/lib/minibench:minibench",
+        "//eden/scm/lib/nonblocking:nonblocking",
+        "//eden/scm/lib/storemodel:storemodel",
+        "//eden/scm/lib/types:types",
+        "//eden/scm/lib/util/format-util:format-util",
         "//eden/scm/lib/virtual-repo:virtual-repo",
     ],
 )
