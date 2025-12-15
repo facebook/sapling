@@ -240,32 +240,20 @@ impl<R: MononokeRepo> RepoContext<R> {
 
     async fn build_commit_info(
         info: Option<CreateInfo>,
-        bottom_id: ChangesetId,
+        _bottom_id: ChangesetId,
         top_ctx: &ChangesetContext<R>,
     ) -> Result<CreateInfo> {
         match info {
             Some(info) => Ok(info),
             None => {
                 let target_commit_info = top_ctx.changeset_info().await?;
-                let message = if bottom_id == top_ctx.id() {
-                    format!(
-                        "Amended commit {bottom_id}\n\n{}",
-                        target_commit_info.message()
-                    )
-                } else {
-                    format!(
-                        "Folded commits {bottom_id} to {}\n\n{}",
-                        top_ctx.id(),
-                        target_commit_info.message()
-                    )
-                };
 
                 Ok(CreateInfo {
                     author: target_commit_info.author().to_string(),
                     author_date: Utc::now().into(),
                     committer: None,
                     committer_date: None,
-                    message,
+                    message: target_commit_info.message().to_string(),
                     extra: btreemap! {},
                     git_extra_headers: None,
                 })
