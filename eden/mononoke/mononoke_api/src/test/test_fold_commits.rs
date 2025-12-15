@@ -1321,3 +1321,205 @@ async fn test_fold_commits_public_bottom_not_allowed(fb: FacebookInit) -> Result
 
     Ok(())
 }
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_non_linear_stack_fails(fb: FacebookInit) -> Result<(), Error> {
+    // Graph: A-B-C
+    //         \-D
+    // Try to fold C..D (D is not a descendant of C)
+    // Expected: Should fail because stack is not linear
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B-C
+            A-D
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B b.txt "b content\n"
+            # modify: C c.txt "c content\n"
+            # modify: D d.txt "d content\n"
+        "##,
+    )
+    .await?;
+
+    // Try to fold C..D - should fail because D is not a descendant of C
+    let result = repo
+        .fold_commits(
+            commits["C"],
+            Some(commits["D"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await;
+
+    assert!(result.is_err(), "Folding non-linear stack should fail");
+    let err = result.err().expect("expected error");
+    assert!(
+        err.to_string().contains("not linear"),
+        "Error should mention non-linear stack: {err}"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_bottom_is_merge_commit_fails(fb: FacebookInit) -> Result<(), Error> {
+    // Graph: A-B
+    //         \-C
+    //           \-D (merge B and C)
+    //              \-E
+    // Try to fold D..E where D is a merge commit
+    // Expected: Should fail because bottom commit has multiple parents
+    // Note: The implementation may fail with "not linear" or "merged parent" depending
+    // on which check runs first
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B-D-E
+            A-C-D
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B b.txt "b content\n"
+            # modify: C c.txt "c content\n"
+            # modify: D d.txt "d content\n"
+            # modify: E e.txt "e content\n"
+        "##,
+    )
+    .await?;
+
+    // Try to fold D..E - should fail because D is a merge commit
+    let result = repo
+        .fold_commits(
+            commits["D"],
+            Some(commits["E"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await;
+
+    // The exact error may vary - either "not linear" or "merged parent"
+    // Both indicate the fold cannot proceed with a merge commit
+    assert!(
+        result.is_err(),
+        "Folding with merge commit at bottom should fail"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_invalid_bottom_id_fails(fb: FacebookInit) -> Result<(), Error> {
+    // Graph: A-B-C
+    // Try to fold with a non-existent bottom commit ID
+    // Expected: Should fail because bottom commit doesn't exist
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B-C
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B b.txt "b content\n"
+            # modify: C c.txt "c content\n"
+        "##,
+    )
+    .await?;
+
+    // Create a fake changeset ID that doesn't exist
+    let fake_id = ChangesetId::from_bytes([0u8; 32])?;
+
+    // Try to fold with non-existent bottom - should fail
+    let result = repo
+        .fold_commits(
+            fake_id,
+            Some(commits["C"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await;
+
+    assert!(
+        result.is_err(),
+        "Folding with invalid bottom ID should fail"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_invalid_top_id_fails(fb: FacebookInit) -> Result<(), Error> {
+    // Graph: A-B-C
+    // Try to fold with a non-existent top commit ID
+    // Expected: Should fail because top commit doesn't exist
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B-C
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B b.txt "b content\n"
+            # modify: C c.txt "c content\n"
+        "##,
+    )
+    .await?;
+
+    // Create a fake changeset ID that doesn't exist
+    let fake_id = ChangesetId::from_bytes([0u8; 32])?;
+
+    // Try to fold with non-existent top - should fail
+    let result = repo
+        .fold_commits(
+            commits["B"],
+            Some(fake_id),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await;
+
+    assert!(result.is_err(), "Folding with invalid top ID should fail");
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_root_commit_fails(fb: FacebookInit) -> Result<(), Error> {
+    // Graph: A-B
+    // Try to fold A (root commit with no parents)
+    // Expected: Should fail because A has no parent
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A a.txt "base\n"
+            # modify: B b.txt "b content\n"
+        "##,
+    )
+    .await?;
+
+    // Try to fold the root commit A - should fail because it has no parent
+    let result = repo
+        .fold_commits(
+            commits["A"],
+            Some(commits["B"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await;
+
+    assert!(
+        result.is_err(),
+        "Folding with root commit at bottom should fail"
+    );
+
+    Ok(())
+}
