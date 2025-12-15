@@ -596,7 +596,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         // Those files need explicit deletions.
         for replaced_path in &replaced_directory_paths {
             // Check if this path is currently deleted or never existed as a file in working_tree
-            let current_state = working_tree.get((&MPath::from(replaced_path.clone())).into());
+            let current_state = working_tree.get((&MPath::from(replaced_path.clone())));
             let is_deleted_or_absent = match current_state {
                 Some(Some(_)) => false, // File exists in working tree
                 _ => true,              // Deleted (None) or not in tree
