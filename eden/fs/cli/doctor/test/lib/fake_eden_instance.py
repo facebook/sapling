@@ -43,6 +43,24 @@ class FakeCheckout(NamedTuple):
 
 
 class FakeEdenInstance(AbstractEdenInstance):
+    """Mock EdenFS instance for testing EdenFS doctor and CLI functionality.
+
+    This test utility simulates an EdenFS instance with configurable mounts,
+    checkouts, and server state. Use it to test EdenFS doctor checks, mount
+    operations, and configuration without requiring a running EdenFS daemon.
+
+    Key features:
+    - Create test mounts with create_test_mount() to simulate active/inactive checkouts
+    - Configure server status (ALIVE, STARTING, STOPPING) and build info
+    - Manage fake mount tables, backing repos, and HG repositories
+    - Access test state through get_checkouts(), get_mounts(), and health checks
+
+    Example:
+        instance = FakeEdenInstance(tmp_dir)
+        checkout = instance.create_test_mount("my_mount", snapshot="abc123")
+        # Use instance for testing doctor checks or CLI operations
+    """
+
     default_commit_hash: str = "1" * 40
     _build_info: Dict[str, str] = {}
 
