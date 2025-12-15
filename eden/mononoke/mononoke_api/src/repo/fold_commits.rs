@@ -687,9 +687,8 @@ impl<R: MononokeRepo> RepoContext<R> {
                     let copy_from = copy_chain.get(&path).cloned().and_then(|src_path| {
                         // Validate: source must be different path and exist in initial state
                         let src_mpath = MPath::from(src_path.clone());
-                        let src_exists_in_base = initial_entries
-                            .get(&src_mpath)
-                            .map_or(false, |v| v.is_some());
+                        let src_exists_in_base =
+                            initial_entries.get(&src_mpath).is_some_and(|v| v.is_some());
                         if src_path != path && src_exists_in_base {
                             // Use base as the changeset ID since that's the parent of the folded commit
                             Some((src_path, base))
