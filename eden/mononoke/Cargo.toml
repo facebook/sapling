@@ -89,7 +89,6 @@ members = [
   "blobstore/throttledblob",
   "blobstore/virtually_sharded_blobstore",
   "blobstore_sync_queue",
-  "clients/git_pushrebase",
   "cmdlib/base_app",
   "cmdlib/caching",
   "cmdlib/commit_id",
