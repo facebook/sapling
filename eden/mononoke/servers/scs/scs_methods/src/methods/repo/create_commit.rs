@@ -430,7 +430,7 @@ impl SourceControlServiceImpl {
 
         let top_id = match params.top.as_ref() {
             Some(top) => Some(
-                self.changeset_id(&repo, &top)
+                self.changeset_id(&repo, top)
                     .await
                     .context("failed to resolve top commit")?,
             ),
