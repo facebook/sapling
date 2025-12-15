@@ -98,7 +98,7 @@ fn rescue_redacted(res: Result<(Bytes, FileBytes)>) -> Result<(Bytes, FileBytes)
     match res {
         Ok(b) => Ok(b),
         Err(e) => {
-            if has_redaction_root_cause(&e) {
+            if has_redaction_root_cause(&e).is_some() {
                 let ret = (Bytes::new(), FileBytes(REDACTED_CONTENT.as_bytes().into()));
                 Ok(ret)
             } else {

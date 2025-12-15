@@ -26,6 +26,7 @@ use megarepo_error::MegarepoError;
 use mononoke_types::ChangesetId;
 use mononoke_types::path::MPath;
 use pushrebase::PushrebaseError;
+use redactedblobstore::has_redaction_root_cause;
 use repo_authorization::AuthorizationError;
 use thiserror::Error;
 use tokio::task::JoinError;
@@ -104,11 +105,19 @@ pub enum MononokeError {
     AuthorizationError(String),
     #[error("internal error: {0}")]
     InternalError(#[source] InternalError),
+    #[error("The blob {key} was redacted due to {reason}")]
+    RedactionError { key: String, reason: String },
 }
 
 impl From<Error> for MononokeError {
     fn from(e: Error) -> Self {
-        MononokeError::InternalError(InternalError(Arc::new(e)))
+        match has_redaction_root_cause(&e) {
+            Some((key, reason)) => MononokeError::RedactionError {
+                key: key.to_string(),
+                reason: reason.to_string(),
+            },
+            _ => MononokeError::InternalError(InternalError(Arc::new(e))),
+        }
     }
 }
 

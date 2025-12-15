@@ -301,7 +301,7 @@ pub async fn number_of_lines_unless_redacted(
     match number_of_lines(bytes_stream).await {
         Ok(lines) => Ok(lines),
         Err(e) => match e.downcast_ref::<RedactedBlobstoreError>() {
-            Some(RedactedBlobstoreError::Censored(..)) => Ok(0),
+            Some(RedactedBlobstoreError::Redacted(..)) => Ok(0),
             _ => Err(e),
         },
     }

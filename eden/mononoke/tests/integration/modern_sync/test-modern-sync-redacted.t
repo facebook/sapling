@@ -101,25 +101,25 @@ Sync all bookmarks moves
   [ERROR] [sync{repo=orig}] Error processing content: collecting contents entries
   
   Caused by:
-      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
+      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0","request_id":"*"}. Headers: { (glob)
           "x-request-id": "*", (glob)
           "content-type": "application/json",
           "x-load": "*", (glob)
           "server": "edenapi_server",
           "x-mononoke-host": "*", (glob)
-          "content-length": "406",
+          "content-length": "149",
           "date": "*", (glob)
       }
   [ERROR] [sync{repo=orig}] Error processing content: collecting contents entries
   
   Caused by:
-      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"internal error: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0: The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d is censored.\n Task/Sev: T0","request_id":"*"}. Headers: { (glob)
+      server responded 500 Internal Server Error for https://localhost:$LOCAL_PORT/edenapi/dest/upload/file/content_id/896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d?content_size=1: {"message":"The blob content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d was redacted due to T0","request_id":"*"}. Headers: { (glob)
           "x-request-id": "*", (glob)
           "content-type": "application/json",
           "x-load": "*", (glob)
           "server": "edenapi_server",
           "x-mononoke-host": "*", (glob)
-          "content-length": "406",
+          "content-length": "149",
           "date": "*", (glob)
       }
 

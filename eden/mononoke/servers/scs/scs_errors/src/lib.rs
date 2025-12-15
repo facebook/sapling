@@ -280,6 +280,13 @@ impl From<MononokeError> for ServiceError {
                 reason: error.to_string(),
                 ..Default::default()
             }),
+            error @ MononokeError::RedactionError { key: _, reason: _ } => {
+                Self::Request(thrift::RequestError {
+                    kind: thrift::RequestErrorKind::REDACTED,
+                    reason: error.to_string(),
+                    ..Default::default()
+                })
+            }
             MononokeError::InternalError(error) => {
                 let reason = format!("{:#}", error);
                 let backtrace = match error.backtrace().status() {

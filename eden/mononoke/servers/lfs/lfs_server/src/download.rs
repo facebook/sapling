@@ -128,7 +128,7 @@ async fn fetch_by_key(
     )
     .await
     .map_err(|e| {
-        if has_redaction_root_cause(&e) {
+        if has_redaction_root_cause(&e).is_some() {
             HttpError::e410(e)
         } else {
             HttpError::e500(e.context(ErrorKind::FilestoreReadFailure))

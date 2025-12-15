@@ -58,6 +58,7 @@ rust_library(
         "//eden/mononoke/blobrepo:blobrepo_hg",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/blobstore:ephemeral_blobstore",
+        "//eden/mononoke/blobstore:redactedblobstore",
         "//eden/mononoke/common/acl_regions:acl_regions",
         "//eden/mononoke/common/futures_watchdog:futures_watchdog",
         "//eden/mononoke/common/mononoke_repos:mononoke_repos",

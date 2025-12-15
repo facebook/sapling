@@ -158,7 +158,7 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
                             Ok(&self.blobstore)
                         } else {
                             Err(
-                                ErrorKind::Censored(key.to_string(), metadata.task.to_string())
+                                ErrorKind::Redacted(key.to_string(), metadata.task.to_string())
                                     .into(),
                             )
                         }
@@ -293,10 +293,10 @@ impl<B: Blobstore> Blobstore for RedactedBlobstore<B> {
     }
 }
 
-pub fn has_redaction_root_cause(e: &Error) -> bool {
+pub fn has_redaction_root_cause(e: &Error) -> Option<(&str, &str)> {
     match e.root_cause().downcast_ref::<ErrorKind>() {
-        Some(ErrorKind::Censored(_, _)) => true,
-        None => false,
+        Some(ErrorKind::Redacted(key, reason)) => Some((key.as_str(), reason.as_str())),
+        None => None,
     }
 }
 
@@ -351,7 +351,7 @@ mod test {
 
         assert_matches!(
             res.expect_err("the key should be redacted").downcast::<ErrorKind>(),
-            Ok(ErrorKind::Censored(_, ref task)) if task == redacted_task
+            Ok(ErrorKind::Redacted(_, ref task)) if task == redacted_task
         );
 
         //Test key added to the blob
@@ -369,7 +369,7 @@ mod test {
 
         assert_matches!(
             res.expect_err("the key should be redacted").downcast::<ErrorKind>(),
-            Ok(ErrorKind::Censored(_, ref task)) if *task == redacted_task
+            Ok(ErrorKind::Redacted(_, ref task)) if *task == redacted_task
         );
 
         // Test accessing a key which exists and is accessible

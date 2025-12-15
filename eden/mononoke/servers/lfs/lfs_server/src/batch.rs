@@ -271,7 +271,7 @@ async fn resolve_internal_object(
         Ok(None) => {
             return Ok(None);
         }
-        Err(e) if has_redaction_root_cause(&e) => {
+        Err(e) if has_redaction_root_cause(&e).is_some() => {
             // Fallthrough to an existence check.
         }
         Err(e) => {

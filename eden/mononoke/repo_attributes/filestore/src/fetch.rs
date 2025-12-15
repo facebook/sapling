@@ -34,6 +34,8 @@ const BUFFER_MEMORY_BUDGET: u64 = 16 * 1024 * 1024; // 16MB.
 pub enum ErrorKind {
     #[error("Chunk not found: {0:?}")]
     ChunkNotFound(ContentChunkId),
+    #[error("Chunk redacted: {0:?}")]
+    ChunkRedacted(ContentChunkId),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
