@@ -25,7 +25,7 @@ namespace InteractiveSmartlogVSExtension.Helpers
 {
     public class CommonHelper
     {
-        // @fb-only
+        // @fb-only: private static TelemetryLogger telemetryLogger = new TelemetryLogger();
 
         public struct WindowId
         {
@@ -207,7 +207,7 @@ namespace InteractiveSmartlogVSExtension.Helpers
             await LoggingHelper.WriteAsync(errorMessage);
 
             // Send telemetry for the error
-            // @fb-only
+            // @fb-only: telemetryLogger.logError(action, errorCode, message);
 
             // Show a message box to the user
             if (showNotification && package != null)
@@ -236,7 +236,7 @@ namespace InteractiveSmartlogVSExtension.Helpers
         /// <returns></returns>
         public static async Task LogSuccessAsync(ActionType action)
         {
-            // @fb-only
+            // @fb-only: telemetryLogger.logInfo(action);
         }
 
         /// <summary>

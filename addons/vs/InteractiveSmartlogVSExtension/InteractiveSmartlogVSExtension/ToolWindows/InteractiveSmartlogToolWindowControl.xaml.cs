@@ -252,7 +252,7 @@ namespace InteractiveSmartlogVSExtension
                     }
                     else if (message.IndexOf("repository is not mounted", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
-                        // @fb-only
+                        // @fb-only: await DisplayErrorPageAsync(Constants.NoRepoMountedErrorTitle, Constants.NoRepoMountedErrorDetail, Constants.NoRepoMountedErrorRemediation);
                         return;
                     }
                 }
