@@ -46,6 +46,8 @@ export interface JournalPosition {
 export interface GetPositionOptions {
   /** Use case identifier for the command */
   useCase?: string;
+  /** Mount point path (overrides constructor value) */
+  mountPoint?: string;
 }
 
 /**
@@ -101,7 +103,7 @@ export interface SubscriptionOptions {
   /** Excluded file suffixes in output */
   excludedSuffixes?: string[];
   /** States to wait for deassertion */
-  states?: string[];
+  deferredStates?: string[];
   /** Path to eden binary */
   edenBinaryPath?: string;
 }
@@ -114,6 +116,8 @@ export interface EnterStateOptions {
   duration?: number;
   /** Use case identifier */
   useCase?: string;
+  /** Mount point path (overrides constructor value) */
+  mountPoint?: string;
 }
 
 /**
@@ -353,16 +357,4 @@ export type Options = {
   edenBinaryPath?: string;
 };
 
-export type CommandCallback = (error: ?Error, result?: Response) => void;
-
-export type Command = {
-  cb: CommandCallback;
-  cmd: mixed;
-};
-
-export type JournalPosition = {
-  journalPosition: string;
-};
-export class EdenFSError extends Error {
-  edenFSResponse: mixed;
-}
+export type CommandCallback = (error?: Error, result?: Response) => void;

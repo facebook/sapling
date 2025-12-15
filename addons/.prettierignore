@@ -3,8 +3,9 @@
 /isl/build/
 /isl/coverage/
 /isl/public/generated
-/isl-server/dist/
 /isl-server/coverage/
+/isl-server/dist/
+/isl-server/src/__generated__/
 /isl-server/src/facebook/phabricator/generated/
 /isl-server/src/facebook/fullRepoBranch/generated/
 /isl-server/src/github/generated/

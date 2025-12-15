@@ -57,9 +57,11 @@ class EdenFSNotificationsClient extends EventEmitter {
    * Get the current EdenFS journal position
    * @param {Object} options - Options for changes-since command
    * @param {string} options.useCase - Use case for the command
+   * @param {string} options.mountPoint - Path to the mount point (optional if set in constructor)
    * @returns {Promise<JournalPosition|string>} Journal position
    */
   async getPosition(options = {}) {
+    const mountPoint = options?.mountPoint ?? this.mountPoint;
     const args = ['notify', 'get-position'];
 
     if (options.useCase) {
@@ -68,8 +70,8 @@ class EdenFSNotificationsClient extends EventEmitter {
       args.push('--use-case', 'node-client');
     }
 
-    if (this.mountPoint) {
-      args.push(this.mountPoint);
+    if (mountPoint) {
+      args.push(mountPoint);
     }
 
     return new Promise((resolve, reject) => {
@@ -201,7 +203,7 @@ class EdenFSNotificationsClient extends EventEmitter {
    * @param {string[]} options.excludedRoots - Excluded roots in output
    * @param {string[]} options.includedSuffixes - Included suffixes in output
    * @param {string[]} options.excludedSuffixes - Excluded suffixes in output
-   * @param {string[]} options.states - States to wait for deassertion
+   * @param {string[]} options.deferredStates - States to wait for deassertion
    * @param {CommandCallback} callback
    * @returns {EdenFSSubscription} Subscription object
    */
@@ -228,9 +230,11 @@ class EdenFSNotificationsClient extends EventEmitter {
    * @param {Object} options - Options for enterState command
    * @param {number} [options.duration] - Duration in seconds to maintain state
    * @param {string} [options.useCase] - Use case for the command
+   * @param {string} options.mountPoint - Path to the mount point (optional if set in constructor)
    * @returns {Promise<void>}
    */
   async enterState(state, options = {}) {
+    const mountPoint = options?.mountPoint ?? this.mountPoint;
     if (!state || typeof state !== 'string') {
       throw new Error('State name must be a non-empty string');
     }
@@ -246,8 +250,8 @@ class EdenFSNotificationsClient extends EventEmitter {
       args.push('--use-case', 'node-client');
     }
 
-    if (this.mountPoint) {
-      args.push(this.mountPoint);
+    if (mountPoint) {
+      args.push(mountPoint);
     }
 
     return new Promise((resolve, reject) => {
@@ -415,6 +419,7 @@ class EdenFSSubscription extends EventEmitter {
           clearTimeout(this.killTimeout);
           this.killTimeout = null;
         }
+        this.emit('exit');
       });
     });
   }

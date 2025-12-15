@@ -296,7 +296,10 @@ export class WatchForChanges {
           mountPoint: repoRoot,
           throttle: 100,
           relativeRoot,
-          states: [WatchForChanges.WATCHMAN_DEFER, WatchForChanges.WATCHMAN_DEFER_TRANSACTION],
+          deferredStates: [
+            WatchForChanges.WATCHMAN_DEFER,
+            WatchForChanges.WATCHMAN_DEFER_TRANSACTION,
+          ],
           includeVcsRoots: true,
         },
         subscriptionCallback,
@@ -515,7 +518,10 @@ export class WatchForChanges {
           useCase: 'isl-server-node',
           mountPoint: repoRoot,
           throttle: 100,
-          states: [WatchForChanges.WATCHMAN_DEFER, WatchForChanges.WATCHMAN_DEFER_TRANSACTION],
+          deferredStates: [
+            WatchForChanges.WATCHMAN_DEFER,
+            WatchForChanges.WATCHMAN_DEFER_TRANSACTION,
+          ],
           excludedRoots: [outerDotDir, relativeDotdir],
         },
         subscriptionCallback,

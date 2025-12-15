@@ -142,10 +142,14 @@ async function subscriptionExample() {
     console.log('Press Ctrl+C to stop.');
 
     // Keep the process running
-    process.on('SIGINT', () => {
+    process.on('SIGINT', async () => {
       console.log('\nStopping subscription...');
+      // Wait until the subscription has fully exited before terminating
+      subscription.on("exit", () => {
+        console.log("Subscription exited");
+        process.exit(0);
+      });
       subscription.stop();
-      process.exit(0);
     });
 
     // Prevent the script from exiting

@@ -5,13 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {act, fireEvent, render, screen} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import App from '../App';
 import {mostRecentSubscriptionIds} from '../serverAPIState';
 import {
   closeCommitInfoSidebar,
   COMMIT,
   expectMessageSentToServer,
+  getLastMessageOfTypeSentToServer,
   resetTestMessages,
   simulateCommits,
   simulateMessageFromServer,
@@ -158,7 +159,7 @@ describe('CommitTreeList', () => {
       ).toEqual(false);
     });
 
-    it('disables continue button while running', () => {
+    it('disables continue button while running', async () => {
       const resolveButton = screen.getByTestId('file-action-resolve');
       act(() => {
         fireEvent.click(resolveButton);
@@ -168,14 +169,27 @@ describe('CommitTreeList', () => {
         fireEvent.click(continueButton);
       });
 
+      await waitFor(() => {
+        expectMessageSentToServer({
+          type: 'runOperation',
+          operation: expect.objectContaining({args: ['continue']}),
+        });
+      });
+
+      const message = getLastMessageOfTypeSentToServer('runOperation');
+
+      act(() => {
+        simulateMessageFromServer({
+          type: 'operationProgress',
+          id: message!.operation.id,
+          kind: 'spawn',
+          queue: [],
+        });
+      });
+
       expect(
         (screen.queryByTestId('conflict-continue-button') as HTMLButtonElement).disabled,
       ).toEqual(true);
-
-      expectMessageSentToServer({
-        type: 'runOperation',
-        operation: expect.objectContaining({args: ['continue']}),
-      });
 
       // simulate continue finishing
       act(() => {
