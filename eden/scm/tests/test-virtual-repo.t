@@ -80,3 +80,12 @@ Sample check a file content:
   enjoy The pepper when he finds out who I _was_ when I breathe'!
   
   Don't let me hear the name (no-eol)
+
+Maximum factor_size:
+
+  $ cd
+  $ sl init --config format.use-virtual-repo-with-size-factor=34 virtual34
+  $ cd virtual34
+  $ sl
+  abort: unknown revision '72299538135646208'!
+  [255]
