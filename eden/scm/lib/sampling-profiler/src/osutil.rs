@@ -25,7 +25,7 @@ pub fn unblock_signal(sig: libc::c_int) {
 pub fn get_thread_id() -> libc::pid_t {
     #[cfg(target_os = "linux")]
     unsafe {
-        return libc::syscall(libc::SYS_gettid) as libc::pid_t;
+        libc::syscall(libc::SYS_gettid) as libc::pid_t
     }
     #[cfg(not(target_os = "linux"))]
     unimplemented!()
@@ -107,7 +107,7 @@ pub fn setup_signal_timer(
             return Err(io::Error::last_os_error());
         }
 
-        return Ok(timer);
+        Ok(timer)
     }
 
     #[cfg(not(target_os = "linux"))]
@@ -121,7 +121,7 @@ pub fn stop_signal_timer(timer: libc::timer_t) -> io::Result<()> {
         if libc::timer_delete(timer) != 0 {
             return Err(io::Error::last_os_error());
         }
-        return Ok(());
+        Ok(())
     }
 
     #[cfg(not(target_os = "linux"))]
