@@ -1,8 +1,10 @@
 load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule", "buck_sh_binary")
 load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
+load("@fbsource//third-party/python/3.12:defs.bzl", "INSTALL_DIR_MAC")
 load("@fbsource//tools/build_defs:buckconfig.bzl", "read_bool")
 load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@fbsource//tools/build_defs:selects.bzl", "selects")
 load("@fbsource//tools/target_determinator/macros:ci_hint.bzl", "ci_hint")
 
 def _set_default(obj, *keys):
@@ -107,6 +109,9 @@ def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
         link_style = "static",
         linker_flags = select({
             "DEFAULT": [],
+            "ovr_config//os:macos": [
+                selects.fmt("-Wl,-rpath,{}/lib", INSTALL_DIR_MAC),
+            ],
             "ovr_config//os:windows": [
                 "/MANIFEST:EMBED",
                 "/MANIFESTINPUT:$(location :windows-manifest)",
