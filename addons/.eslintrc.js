@@ -51,8 +51,8 @@ module.exports = {
     'isl/start.js',
     'isl-server/codegen.js',
     'isl-server/src/__generated__/**',
-    // @fb-only
-    // @fb-only
+    // @fb-only: 'isl-server/facebook/codegen.js',
+    // @fb-only: 'vscode/facebook/buildInternalExtension.*',
     'node_modules/**',
   ],
   rules: {
