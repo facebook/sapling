@@ -8,6 +8,9 @@ namespace py facebook.network.Address
 include "thrift/annotation/cpp.thrift"
 include "thrift/annotation/thrift.thrift"
 
+@thrift.AllowLegacyMissingUris
+package;
+
 # fbstring uses the small internal buffer to store the data
 # if the data is small enough (< 24 bytes).
 @cpp.Type{name = "::folly::fbstring"}

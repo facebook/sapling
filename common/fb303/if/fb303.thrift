@@ -23,6 +23,9 @@ namespace cpp facebook.fb303
  */
 include "thrift/annotation/thrift.thrift"
 
+@thrift.AllowLegacyMissingUris
+package;
+
 enum fb_status {
   DEAD = 0,
   STARTING = 1,
