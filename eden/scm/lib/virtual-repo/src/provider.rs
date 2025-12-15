@@ -222,11 +222,13 @@ fn calculate_file_length(seed: u64, name_id: u64, blob_id: u64) -> u64 {
         let mut hash = Xxh3Hash64::default();
         hash.write(&seed.to_le_bytes());
         hash.write(&name_id.to_le_bytes());
+        hash.write(&(blob_id >> 8).to_le_bytes());
         hash.finish()
     };
     let len = generate_file_size(x);
-    // blob_id is the "generation number" of the file. It can make the file a bit longer.
-    len + (blob_id << 5)
+    // blob_id is meant to be the "generation number" of the file.
+    // But it can also be very large! So let's just truncate it.
+    len + ((blob_id & 0xff) << 5)
 }
 
 fn fold_u64_to_u16(x: u64) -> u16 {

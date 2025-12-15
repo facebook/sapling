@@ -39,12 +39,13 @@ Total file count and size is reasonable (~80MB):
   ...     for path in paths:
   ...         st = os.lstat(path)
   ...         assert not stat.S_ISDIR(st.st_mode), f'{path} should not be a dir'
-  ...         total_size += st.st_size
+  ...         # skip non-regular files (e.g. symlinks) that have different sizes on Windows
+  ...         if stat.S_ISREG(st.st_mode):
+  ...             total_size += st.st_size
   ...     return len(paths), total_size
 
   >>> check_count_file_size()
-  (6084, 78988056) (no-windows !)
-  (6084, 78988019) (windows !)
+  (6084, 84032419)
 
 Checkout virtual/main with more files (~800MB):
 
@@ -52,7 +53,7 @@ Checkout virtual/main with more files (~800MB):
   $ sl files > $FILES
 
   >>> check_count_file_size()
-  (57364, 793475905)
+  (57364, 769126770)
 
 Virtual repo with size-factor=0 works too:
 
@@ -70,12 +71,12 @@ Virtual repo with size-factor=0 works too:
 
 Sample check a file content:
 
-  $ sl cat -r virtual/main V/red-b/e/IV-IV/j/V
-  She is such a puzzled expression that she had read several nice little
-  histories about children who had been all the arches are gone from this side
-  of the party went back to yesterday, because I was a long tail, certainly,
-  said Alice, a little hot tea upon its forehead (the position in which the
-  words DRINK ME, beautifully printed on it except a little of the trees under
-  which she had known them all her coaxing.
+  $ sl cat -r virtual/main V/red-b/e/IV-IV/j/III-II
+  Rabbit, and had just begun to dream that she was walking by the pope, was
+  soon submitted to by all three to settle the question, and they drew all
+  manner of things-everything that begins with an M, such as mouse-traps, and
+  the blades of grass, but she could not remember the simple rules their
+  friends had taught them: such as, Sure, I don't see how he can thoroughly
+  enjoy The pepper when he finds out who I _was_ when I breathe'!
   
-  Puss, she began, rather timidly, saying to  (no-eol)
+  Don't let me hear the name (no-eol)
