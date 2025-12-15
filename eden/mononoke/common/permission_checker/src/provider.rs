@@ -10,7 +10,7 @@ use async_trait::async_trait;
 
 use crate::BoxMembershipChecker;
 use crate::BoxPermissionChecker;
-use crate::MononokeIdentity;
+use crate::MononokeIdentitySet;
 
 /// A provider of access control lists and groups.
 ///
@@ -35,7 +35,7 @@ pub trait AclProvider: Send + Sync {
     async fn commitcloud_workspace_acl(
         &self,
         name: &str,
-        _create_with_owner: &Option<MononokeIdentity>,
+        _create_with_owner: &Option<MononokeIdentitySet>,
     ) -> Result<Option<BoxPermissionChecker>>;
 
     /// Returns a membership checker for the named group.

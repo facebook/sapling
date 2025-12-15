@@ -20,7 +20,6 @@ use crate::AclProvider;
 use crate::BoxMembershipChecker;
 use crate::BoxPermissionChecker;
 use crate::MembershipChecker;
-use crate::MononokeIdentity;
 use crate::MononokeIdentitySet;
 use crate::PermissionChecker;
 
@@ -122,7 +121,7 @@ impl AclProvider for InternalAclProvider {
     async fn commitcloud_workspace_acl(
         &self,
         name: &str,
-        _create_with_owner: &Option<MononokeIdentity>,
+        _create_with_owner: &Option<MononokeIdentitySet>,
     ) -> Result<Option<BoxPermissionChecker>> {
         Ok(Some(Box::new(AclPermissionChecker {
             acl: self.acls.workspaces.get(name).cloned().unwrap_or_default(),

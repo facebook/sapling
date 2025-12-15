@@ -10,13 +10,13 @@ use commit_cloud_helpers::sanity_check_workspace_name;
 use commit_cloud_types::ChangesetScheme;
 use commit_cloud_types::CommitCloudError;
 use commit_cloud_types::CommitCloudUserError;
-use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
 
 #[derive(Debug, Clone)]
 pub struct CommitCloudContext {
     pub workspace: String,
     pub reponame: String,
-    pub owner: Option<MononokeIdentity>,
+    pub owner: Option<MononokeIdentitySet>,
     pub default_changeset_scheme: ChangesetScheme,
 }
 
@@ -65,7 +65,7 @@ impl CommitCloudContext {
         Ok(())
     }
 
-    pub fn set_owner(&mut self, owner: Option<MononokeIdentity>) {
+    pub fn set_owner(&mut self, owner: Option<MononokeIdentitySet>) {
         self.owner = owner;
     }
 }

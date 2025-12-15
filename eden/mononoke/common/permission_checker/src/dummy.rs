@@ -11,7 +11,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
 
-use crate::MononokeIdentity;
+use crate::MononokeIdentitySet;
 use crate::checker::AlwaysAllow;
 use crate::checker::BoxPermissionChecker;
 use crate::membership::AlwaysMember;
@@ -44,7 +44,7 @@ impl AclProvider for DummyAclProvider {
     async fn commitcloud_workspace_acl(
         &self,
         _name: &str,
-        _create_with_owner: &Option<MononokeIdentity>,
+        _create_with_owner: &Option<MononokeIdentitySet>,
     ) -> Result<Option<BoxPermissionChecker>> {
         Ok(Some(Box::new(AlwaysAllow)))
     }
