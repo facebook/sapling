@@ -17,6 +17,8 @@ use format_util::HgTime;
 use format_util::git_sha1_serialize;
 use minibytes::Bytes;
 use minibytes::Text;
+use tracing::debug;
+use tracing::trace;
 use twox_hash::Xxh3Hash64;
 use types::Id20;
 use types::PathComponentBuf;
@@ -104,6 +106,7 @@ impl VirtualRepoProvider {
         let tree_provider = get_tree_provider(fields.factor_bits);
         let tree_id = TreeId(NonZeroU64::new(fields.id8)?);
         let seed = tree_provider.get_tree_seed(tree_id);
+        debug!(tree_id = tree_id.0, seed = seed.0, "calculating tree");
         let entries: Vec<(PathComponentBuf, Id20, TreeItemFlag)> = tree_provider
             .read_tree(tree_id)
             .map(|(name_id, content_id)| {
@@ -111,6 +114,7 @@ impl VirtualRepoProvider {
                 let (id20, flag) = match TypedContentId::from(content_id) {
                     TypedContentId::Tree(tree_id) => {
                         let new_id = fields.with_kind_id8(ObjectKind::Tree, tree_id.0.get());
+                        trace!(name = &name, sub_tree_id = tree_id.0, "  sub-tree");
                         (Id20::from(new_id), TreeItemFlag::Directory)
                     }
                     TypedContentId::File(blob_id, file_mode) => {
@@ -129,6 +133,15 @@ impl VirtualRepoProvider {
                         // interesting for the (potential) caching layer.
                         let id20 =
                             new_id.into_id20_with_salt(seed.0.wrapping_shl(32) ^ name_id.0.get());
+                        trace!(
+                            name = &name,
+                            len = file_len,
+                            blob_id = blob_id.0,
+                            tree_seed = seed.0,
+                            text_seed = paragraph_seed,
+                            file_id = new_id8,
+                            "  sub-file"
+                        );
                         (id20, TreeItemFlag::File(file_type))
                     }
                     TypedContentId::Absent => unreachable!(),

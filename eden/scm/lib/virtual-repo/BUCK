@@ -22,6 +22,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:twox-hash",
         "//eden/scm/lib/dag:dag",
         "//eden/scm/lib/eagerepo/trait:eagerepo-trait",
