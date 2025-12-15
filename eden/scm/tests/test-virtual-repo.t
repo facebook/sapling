@@ -87,5 +87,8 @@ Maximum factor_size:
   $ sl init --config format.use-virtual-repo-with-size-factor=34 virtual34
   $ cd virtual34
   $ sl
-  abort: unknown revision '72299538135646208'!
-  [255]
+  o  commit:      e2000000000c
+  │  bookmark:    virtual/main
+  ~  user:        test <test@example.com>
+     date:        Wed Dec 29 08:00:00 9999 +0000
+     summary:     synthetic commit 523419074428929

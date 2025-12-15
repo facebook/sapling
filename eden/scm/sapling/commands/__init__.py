@@ -3796,6 +3796,11 @@ def init(ui, dest=".", **opts):
         if virtual_repo_size_factor is not None:
             eager_repo.populate_virtual_commits(virtual_repo_size_factor)
             eager_repo.flush()
+            # Virtual repos could include too many commits that conflict with
+            # the revf64compat feature. Disable revf64compat.
+            ident = bindings.identity.sniffdir(destpath)
+            config_path = os.path.join(destpath, ident.dotdir(), ident.configrepofile())
+            rcutil.editconfig(ui, config_path, "experimental", "revf64compat", "false")
     else:
         if util.url(destpath).scheme == "bundle":
             hg.repository(ui, destpath, create=True)
