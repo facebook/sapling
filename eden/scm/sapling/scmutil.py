@@ -1551,12 +1551,15 @@ def trackrevnumfortests(repo, specs):
                 break
 
 
+_use_f64_compat = True
+
+
 def revf64encode(rev):
     """Convert rev to within f64 "safe" range.
 
     This avoids issues that JSON cannot represent the revs precisely.
     """
-    if rev is not None and rev >= 0x100000000000000:
+    if _use_f64_compat and rev is not None and rev >= 0x100000000000000:
         rev -= 0xFF000000000000
     return rev
 
@@ -1570,18 +1573,19 @@ def revf64decode(rev):
     >>> revs == decoded
     True
     """
-    if rev is not None and 0x1000000000000 <= rev < 0x100000000000000:
+    if (
+        _use_f64_compat
+        and rev is not None
+        and 0x1000000000000 <= rev < 0x100000000000000
+    ):
         rev += 0xFF000000000000
     return rev
 
 
 def setup(ui):
-    if not ui.configbool("experimental", "revf64compat"):
-        # Disable f64 compatibility
-        global revf64encode
-
-        def revf64encode(rev):
-            return rev
+    # Disable f64 compatibility
+    global _use_f64_compat
+    _use_f64_compat = ui.configbool("experimental", "revf64compat")
 
 
 def rootrelpath(ctx, path):
