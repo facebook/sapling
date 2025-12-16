@@ -2,8 +2,8 @@
 abomonation = { git = "https://github.com/markbt/abomonation", rev = "0f43346d2afa2aedc64d61f3f4273e8d1e454642" }
 audio_streams = { git = "https://github.com/google/crosvm", rev = "7d2e877a2a0a772c199fe8b6b51aec7c1b166467" }
 base64urlsafedata = { git = "https://github.com/kanidm/webauthn-rs.git", rev = "d278c56adfa39a0723c79bdcd461644194bc5138" }
-bindgen = { git = "https://github.com/jsgf/rust-bindgen", rev = "c185e3fb83839fb0909e261db783fe81943b000c" }
-bindgen-cli = { git = "https://github.com/jsgf/rust-bindgen", rev = "c185e3fb83839fb0909e261db783fe81943b000c" }
+bindgen = { git = "https://github.com/jsgf/rust-bindgen", rev = "4d385d21c160e6ee1f443aeb7e00528a1dc7fd44" }
+bindgen-cli = { git = "https://github.com/jsgf/rust-bindgen", rev = "4d385d21c160e6ee1f443aeb7e00528a1dc7fd44" }
 bytemuck = { git = "https://github.com/jsgf/bytemuck", rev = "e7ba210910d49dee833773b2a3e0f5e39805ba08" }
 bytemuck_derive = { git = "https://github.com/jsgf/bytemuck", rev = "e7ba210910d49dee833773b2a3e0f5e39805ba08" }
 c2pa = { git = "https://github.com/dhruvmongia/c2pa-rs", rev = "871a0f10d6a3a627229fc769de3d88f85024b64d" }
