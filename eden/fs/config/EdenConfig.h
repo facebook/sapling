@@ -416,9 +416,9 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint64_t> numPrefetchThreads{
       "thrift:prefetch-num-servicing-threads",
-      // 16 is plenty - any more just leads to excess sl batch blob fetches that
-      // use a lot of memory with no throughput increase.
-      std::min(folly::hardware_concurrency(), 16u),
+      // 8 is plenty - any more just leads to excess sl batch blob fetches that
+      // use extra memory with no throughput increase.
+      std::max(std::min(folly::hardware_concurrency() / 2, 8u), 1u),
       this};
 
   /**
