@@ -12,7 +12,6 @@
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/filter/GlobFilter.h"
