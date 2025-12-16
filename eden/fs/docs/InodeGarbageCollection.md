@@ -178,7 +178,7 @@ support.
 ### `getLoadedOrRememberedTreeChildren`
 
 A helper function that is called from `processTreeChildren` to get the list of
-tree's children (both loaded and unloaed).
+tree's children (both loaded and unloaded).
 
 ### `shouldCancelGC`
 
