@@ -15,7 +15,7 @@ jobs:
       - name: Install fb-watchman
         run: curl -fsSL https://github.com/facebook/watchman/releases/download/v2023.09.18.00/watchman_ubuntu20.04_v2023.09.18.00.deb -o watchman.deb && apt -y -f install ./watchman.deb
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Grant Access
         run: git config --global --add safe.directory "$PWD"
       - name: yarn install

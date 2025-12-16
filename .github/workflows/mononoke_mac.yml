@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Show disk space at start
       run: df -h
     - name: Free up disk space
@@ -600,7 +600,7 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --build-type MinSizeRel --src-dir=. mononoke --project-install-prefix mononoke:/usr/local
     - name: Copy artifacts
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fixup-dyn-deps --src-dir=. mononoke _artifacts/mac --project-install-prefix mononoke:/usr/local --final-install-prefix /usr/local
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v6
       with:
         name: mononoke
         path: _artifacts

@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v6
     - name: Run auth tests
       run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/auth/Cargo.toml
     - name: Run backingstore tests
