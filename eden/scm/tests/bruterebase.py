@@ -8,11 +8,6 @@ from sapling import error, registrar, revsetlang
 from sapling.ext import rebase
 
 
-try:
-    xrange
-except NameError:
-    xrange = range
-
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -36,7 +31,7 @@ def debugbruterebase(ui, repo, source, dest):
                 result += "'"
             return result
 
-        for i in xrange(1, 2 ** len(srevs)):
+        for i in range(1, 2 ** len(srevs)):
             subset = [rev for j, rev in enumerate(srevs) if i & (1 << j) != 0]
             spec = revsetlang.formatspec("%ld", subset)
             tr = repo.transaction("rebase")

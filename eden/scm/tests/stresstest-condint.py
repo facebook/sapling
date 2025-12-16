@@ -28,12 +28,6 @@ def importrustthreading():
     return bindings.threading
 
 
-try:
-    xrange
-except NameError:
-    xrange = range
-
-
 class ThreadInterrupt(RuntimeError):
     pass
 
@@ -74,14 +68,14 @@ def lockloop(cond, workaround):
                     # switches.
                     count = 0
                     n = 10 ** random.randint(1, 5)
-                    for i in xrange(n):
+                    for i in range(n):
                         count += i
                     timeout = random.randint(-10, 20)
                     if timeout < 0:
                         cond.wait()
                     else:
                         cond.wait(timeout * 0.01)
-                    for i in xrange(n):
+                    for i in range(n):
                         count -= i
                     assert count == 0
             except ThreadInterrupt:
@@ -111,7 +105,7 @@ def mainloop(cond, workaround):
     count = 1000
     maxthread = 10
     try:
-        for i in xrange(count + 1):
+        for i in range(count + 1):
             global stop
             if stop:
                 break

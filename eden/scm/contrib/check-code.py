@@ -39,10 +39,6 @@ def opentext(f):
 
 
 try:
-    xrange
-except NameError:
-    xrange = range
-try:
     import re2
 except ImportError:
     re2 = None
@@ -87,7 +83,7 @@ def _repquoteencodechr(i):
     return "o"
 
 
-_repquotett = "".join(_repquoteencodechr(i) for i in xrange(256))
+_repquotett = "".join(_repquoteencodechr(i) for i in range(256))
 
 
 def repquote(m):

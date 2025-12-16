@@ -14,12 +14,6 @@ from sapling import mdiff
 from sapling.annotate import annotatepair
 
 
-try:
-    xrange(0)
-except NameError:
-    xrange = range
-
-
 class AnnotateTests(unittest.TestCase):
     """Unit tests for annotate code."""
 
@@ -36,7 +30,7 @@ class AnnotateTests(unittest.TestCase):
 
         def decorate(text, rev):
             return (
-                [(rev, i) for i in xrange(1, text.count(b"\n") + 1)],
+                [(rev, i) for i in range(1, text.count(b"\n") + 1)],
                 text,
             )
 

@@ -11,12 +11,7 @@ f.close()
 print("      hgrc settings    command line options      final result   ")
 print("    quiet verbo debug   quiet verbo debug      quiet verbo debug")
 
-try:
-    xrange(0)
-except NameError:
-    xrange = range
-
-for i in xrange(64):
+for i in range(64):
     hgrc_quiet = bool(i & 1 << 0)
     hgrc_verbose = bool(i & 1 << 1)
     hgrc_debug = bool(i & 1 << 2)

@@ -16,10 +16,6 @@ import sys
 from sapling import mdiff
 
 
-if sys.version_info.major >= 3:
-    xrange = range
-
-
 def reducetest(a, b):
     tries = 0
     reductions = 0
@@ -76,7 +72,7 @@ def test(a, b):
 def rndtest(size, noise):
     a = []
     src = "                aaaaaaaabbbbccd"
-    for x in xrange(size):
+    for x in range(size):
         a.append(src[random.randint(0, len(src) - 1)])
 
     while True:
