@@ -17,9 +17,14 @@ The extension adds five new keywords:
 - *myparentsubscribers* the subscribers of the parent commit
 - *myparenttasks* the tasks of the parent commit
 - *myparenttags* the tags of the parent commit
-- *myparenttitleprefix* the prefix as defined by the list of consecutive [] of
-                        the parent commit.
-                        E.g. '[fbcode][e2e automation] foo bar' -> '[fbcode][e2e automation]'
+- *myparenttitleprefix* the prefix as defined by the parent commit's title.
+                        The style is controlled by the ``myparent.prefix-style``
+                        config option:
+
+                        - ``bracketed`` (default): consecutive [] tags
+                          E.g. '[fbcode][e2e automation] foo bar' -> '[fbcode][e2e automation]'
+                        - ``colon``: text before the first colon
+                          E.g. 'eden/fs: fix bug' -> 'eden/fs:'
 
 After enabling the extension, change the default commit template:
 
@@ -46,6 +51,11 @@ from sapling import registrar
 
 
 templatekeyword = registrar.templatekeyword()
+
+TITLE_PREFIX_PATTERNS = {
+    "bracketed": r"(?:\[.*?\])+",
+    "colon": r"[^:]+:",
+}
 
 
 @templatekeyword("myparentdiff")
@@ -95,9 +105,13 @@ def showmyparenttitleprefix(repo, ctx, templ, **args) -> str:
     """
     if not p1_is_same_user(ctx):
         return ""
+
+    style = repo.ui.config("myparent", "prefix-style", default="bracketed")
+    pattern = TITLE_PREFIX_PATTERNS.get(style, TITLE_PREFIX_PATTERNS["bracketed"])
+
     descr = ctx.p1().description()
     title = descr.splitlines()[0]
-    match = re.match(r"(?:\[.*?\])+", title)
+    match = re.match(pattern, title)
     return match.group(0) if match else ""
 
 

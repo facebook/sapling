@@ -65,6 +65,32 @@ Ensure multiple prefixes tags are supported
   $ hg log -T '{myparenttitleprefix}\n' -r .
   [long tag][ tag2][tag3 ]
 
+Test colon prefix style
+
+  $ touch qux
+  $ hg commit -qAm 'eden/fs: fix something'
+  $ touch quux
+  $ hg commit -qAm 'Child of colon style'
+  $ hg log -T '{myparenttitleprefix}\n' -r .
+
+  $ hg log -T '{myparenttitleprefix}\n' -r . --config myparent.prefix-style=colon
+  eden/fs:
+  $ touch corge
+  $ hg commit -qAm 'prefix/tag1/tag2: nested path style'
+  $ touch grault
+  $ hg commit -qAm 'Another child'
+  $ hg log -T '{myparenttitleprefix}\n' -r . --config myparent.prefix-style=colon
+  prefix/tag1/tag2:
+
+Test colon style with spaces in prefix
+
+  $ touch space1
+  $ hg commit -qAm 'rust/some project: add feature'
+  $ touch space2
+  $ hg commit -qAm 'child of spaced prefix'
+  $ hg log -T '{myparenttitleprefix}\n' -r . --config myparent.prefix-style=colon
+  rust/some project:
+
 Make sure the template keywords are documented correctly
 
   $ hg help templates | grep myparent
