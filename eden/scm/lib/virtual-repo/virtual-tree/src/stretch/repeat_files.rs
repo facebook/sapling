@@ -30,16 +30,17 @@ impl VirtualTreeProvider for RepeatFiles {
                     Box::new(std::iter::once((new_name_id, content_id)))
                         as Box<dyn Iterator<Item = (NameId, ContentId)>>
                 }
-                TypedContentId::File(blob_id, file_mode) => {
+                TypedContentId::File(_blob_id, _file_mode) => {
                     // Duplicate files.
                     Box::new((0..=self.mask()).map(move |offset| {
                         let new_name_id = NameId(self.scale_id_up(name_id.0, offset));
-                        let new_content_id = TypedContentId::File(
-                            BlobId(self.scale_id_up(blob_id.0, offset)),
-                            file_mode,
-                        )
-                        .into();
-                        (new_name_id, new_content_id)
+                        // Reuse the content_id so `blob_id` is not enlarged,
+                        // and still serve as a "generation number" of the file.
+                        // The actual file content is also based on the file
+                        // name (see virtual-repo implementation). So sharing
+                        // the "blob_id" is okay as long as the file names are
+                        // different.
+                        (new_name_id, content_id)
                     }))
                 }
                 TypedContentId::Absent => unreachable!(),
@@ -119,18 +120,18 @@ mod tests {
             Root tree 1:         #3  seed=0
               2/                 #2  seed=1
                 2/               #1  seed=2
-                  2 = 2
-                  3 = 3
-                4 = 2
-                5 = 3
-                6 = 2
-                7 = 3
+                  2 = 1
+                  3 = 1
+                4 = 1
+                5 = 1
+                6 = 1
+                7 = 1
             Root tree 2:         #5  seed=0
               2/                 #4  seed=1
-                4 = 2
-                5 = 3
-                6 = 4
-                7 = 5"#
+                4 = 1
+                5 = 1
+                6 = 2
+                7 = 2"#
         );
 
         // factor_bits = 2. Files are x4.
@@ -141,28 +142,28 @@ mod tests {
             Root tree 1:         #3  seed=0
               4/                 #2  seed=1
                 4/               #1  seed=2
-                  4 = 4
-                  5 = 5
-                  6 = 6
-                  7 = 7
-                8 = 4
-                9 = 5
-                10 = 6
-                11 = 7
-                12 = 4
-                13 = 5
-                14 = 6
-                15 = 7
+                  4 = 1
+                  5 = 1
+                  6 = 1
+                  7 = 1
+                8 = 1
+                9 = 1
+                10 = 1
+                11 = 1
+                12 = 1
+                13 = 1
+                14 = 1
+                15 = 1
             Root tree 2:         #5  seed=0
               4/                 #4  seed=1
-                8 = 4
-                9 = 5
-                10 = 6
-                11 = 7
-                12 = 8
-                13 = 9
-                14 = 10
-                15 = 11"#
+                8 = 1
+                9 = 1
+                10 = 1
+                11 = 1
+                12 = 2
+                13 = 2
+                14 = 2
+                15 = 2"#
         );
     }
 }

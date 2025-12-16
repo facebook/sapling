@@ -45,7 +45,7 @@ Total file count and size is reasonable (~80MB):
   ...     return len(paths), total_size
 
   >>> check_count_file_size()
-  (6084, 84032419)
+  (6084, 83157475)
 
 Checkout virtual/main with more files (~800MB):
 
@@ -53,7 +53,7 @@ Checkout virtual/main with more files (~800MB):
   $ sl files > $FILES
 
   >>> check_count_file_size()
-  (57364, 769126770)
+  (57364, 732721742)
 
 Virtual repo with size-factor=0 works too:
 
