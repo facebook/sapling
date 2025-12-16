@@ -141,6 +141,11 @@ export default class ServerToClientAPI {
     repo.ref();
     this.repoDisposables.push({dispose: () => repo.unref()});
 
+    repo.fetchAndSetRecommendedBookmarks(async bookmarks => {
+      await this.connection.readySignal?.promise;
+      this.postMessage({type: 'fetchedRecommendedBookmarks', bookmarks});
+    });
+
     this.processQueuedMessages();
   }
 
@@ -389,10 +394,7 @@ export default class ServerToClientAPI {
             // send changes as they come from file watcher
             disposables.push(repo.subscribeToSmartlogCommitsChanges(postSmartlogCommits));
 
-            // trigger fetches on startup
-            repo.fetchAndSetRecommendedBookmarks(bookmarks => {
-              this.postMessage({type: 'fetchedRecommendedBookmarks', bookmarks});
-            });
+            // trigger fetch on startup
             repo.fetchSmartlogCommits();
 
             disposables.push(

@@ -1054,7 +1054,7 @@ export class Repository {
       void this.pullRecommendedBookmarks(this.initialConnectionContext);
     } catch (err) {
       this.initialConnectionContext.logger.error('Error fetching recommended bookmarks:', err);
-      void onFetched?.([]);
+      onFetched?.([]);
     }
   }
 
