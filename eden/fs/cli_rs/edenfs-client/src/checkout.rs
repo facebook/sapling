@@ -32,7 +32,6 @@ use atomicfile::atomic_write;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use edenfs_config::EdenFsConfig;
-use edenfs_error::ConnectAndRequestError;
 use edenfs_error::EdenFsError;
 use edenfs_error::Result;
 use edenfs_error::ResultExt;
@@ -52,8 +51,6 @@ use thrift_types::edenfs::MountInfo;
 use thrift_types::edenfs::MountState;
 use thrift_types::edenfs::PredictiveFetch;
 use thrift_types::edenfs::PrefetchParams;
-use thrift_types::edenfs_clients::errors::PrefetchFilesError;
-use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 use toml::value::Value;
 use uuid::Uuid;
 
@@ -1034,40 +1031,20 @@ impl EdenFsCheckout {
                 directoriesOnly: directories_only,
                 revisions: commit_vec.clone(),
                 background,
+                returnPrefetchedFiles: false,
                 ..Default::default()
             };
             let res = client
                 .with_thrift(|thrift| {
                     (
-                        thrift.prefetchFiles(&prefetch_params),
-                        EdenThriftMethod::PrefetchFiles,
+                        thrift.prefetchFilesV2(&prefetch_params),
+                        EdenThriftMethod::PrefetchFilesV2,
                     )
                 })
                 .await;
 
             match res {
                 Ok(_) => Ok(()),
-                Err(ConnectAndRequestError::RequestError(
-                    PrefetchFilesError::ApplicationException(error),
-                )) if error.type_ == ApplicationExceptionErrorCode::UnknownMethod => {
-                    let glob_params = GlobParams {
-                        mountPoint: mnt_pt,
-                        globs: profile_set,
-                        includeDotfiles: false,
-                        prefetchFiles: !directories_only,
-                        suppressFileList: silent,
-                        revisions: commit_vec,
-                        background,
-                        ..Default::default()
-                    };
-                    client
-                        .with_thrift(|thrift| {
-                            (thrift.globFiles(&glob_params), EdenThriftMethod::GlobFiles)
-                        })
-                        .await
-                        .with_context(|| "Failed globFiles() thrift call")?;
-                    Ok(())
-                }
                 Err(err) => Err(EdenFsError::Other(err.into())),
             }
         }
