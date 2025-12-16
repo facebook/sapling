@@ -689,9 +689,10 @@ impl SourceControlServiceImpl {
         let mut size_so_far = 0usize;
         let mut stopped_at_pair = None;
 
+        let remote_diff_config = repo.repo().repo_config.remote_diff_config.clone();
         let path_diffs = stream::iter(items)
             .map(|item| {
-                cloned!(ctx, repo_name);
+                cloned!(ctx, repo_name, remote_diff_config);
                 async move {
                     let element = item
                         .response_element(
@@ -699,7 +700,7 @@ impl SourceControlServiceImpl {
                             params.format,
                             context,
                             repo_name,
-                            &self.diff_router(),
+                            &self.diff_router(remote_diff_config.as_ref()),
                         )
                         .await?;
                     Ok::<_, scs_errors::ServiceError>((item, element))

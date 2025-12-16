@@ -92,7 +92,7 @@ impl SourceControlServiceImpl {
 
         // Use diff router to handle local vs remote routing
         let diff = self
-            .diff_router()
+            .diff_router(repo.repo().repo_config.remote_diff_config.as_ref())
             .headerless_unified_diff(
                 repo.ctx(),
                 repo.repo().repo_identity.name(),

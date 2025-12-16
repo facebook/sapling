@@ -19,6 +19,7 @@ use diff_service_if_clients::errors::MetadataDiffError;
 use environment::RemoteDiffOptions;
 use futures::StreamExt;
 use futures_retry::retry;
+use metaconfig_types::RemoteDiffConfig;
 use mononoke_api::ChangesetPathContentContext;
 use mononoke_api::ChangesetPathDiffContext;
 use mononoke_api::FileContext;
@@ -112,15 +113,74 @@ fn is_transient_diff_error<E: DiffServiceError>(e: &E) -> bool {
 pub struct DiffRouter<'a> {
     pub(crate) fb: fbinit::FacebookInit,
     pub(crate) diff_options: &'a RemoteDiffOptions,
+    pub(crate) remote_diff_config: Option<&'a RemoteDiffConfig>,
 }
 
 impl<'a> DiffRouter<'a> {
+    /// Create a DiffServiceClient based on the remote_diff_config.
+    /// Falls back to Service Manager discovery if no config is provided.
+    fn create_diff_service_client(
+        &self,
+        repo_name: &str,
+    ) -> Result<DiffServiceClient, ServiceError> {
+        let result = match self.remote_diff_config {
+            Some(RemoteDiffConfig::HostPort(host_port)) => {
+                DiffServiceClient::from_host_port(self.fb, host_port.clone()).map_err(|e| {
+                    format!(
+                        "Failed to create diff service client from host:port '{}': {}",
+                        host_port, e
+                    )
+                })
+            }
+            Some(RemoteDiffConfig::SmcTier(smc_tier)) => {
+                DiffServiceClient::from_tier_name(self.fb, smc_tier.clone()).map_err(|e| {
+                    format!(
+                        "Failed to create diff service client from SMC tier '{}': {}",
+                        smc_tier, e
+                    )
+                })
+            }
+            Some(RemoteDiffConfig::ShardManagerTier(sm_tier)) => {
+                DiffServiceClient::from_sm_tier_name(
+                    self.fb,
+                    sm_tier.clone(),
+                    repo_name.to_string(),
+                )
+                .map_err(|e| {
+                    format!(
+                        "Failed to create diff service client from ShardManager tier '{}': {}",
+                        sm_tier, e
+                    )
+                })
+            }
+            None => {
+                // Fallback to default Service Manager discovery
+                DiffServiceClient::new_with_sm(self.fb, repo_name.to_string()).map_err(|e| {
+                    format!(
+                        "Failed to create diff service client for repo '{}': {}",
+                        repo_name, e
+                    )
+                })
+            }
+        };
+        result.map_err(|e| scs_errors::internal_error(e).into())
+    }
+
     /// Check if remote diff should be used for this repo
     fn should_use_remote_diff(&self, repo_name: &str) -> bool {
-        // If remote diffs are enabled we check the JK to make sure the feature is active
-        let jk_enabled =
-            justknobs::eval("scm/mononoke:remote_diff", None, Some(repo_name)).unwrap_or(false);
-        self.diff_options.diff_remotely && jk_enabled
+        // Check if remote diff is enabled by command line flag
+        // Also check JustKnob for additional safety in production
+        if !self.diff_options.diff_remotely {
+            return false;
+        }
+
+        // If config is present (e.g., for local testing), always use remote diff
+        if self.remote_diff_config.is_some() {
+            return true;
+        }
+
+        // Otherwise check JustKnob for production use
+        justknobs::eval("scm/mononoke:remote_diff", None, Some(repo_name)).unwrap_or(false)
     }
 
     /// Generate headerless unified diff between two files.
@@ -193,13 +253,7 @@ impl<'a> DiffRouter<'a> {
             ..Default::default()
         });
 
-        let client =
-            DiffServiceClient::new_with_sm(self.fb, repo_name.to_string()).map_err(|e| {
-                scs_errors::internal_error(format!(
-                    "Failed to create diff service client for repo '{}': {}",
-                    repo_name, e
-                ))
-            })?;
+        let client = self.create_diff_service_client(repo_name)?;
 
         let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
 
@@ -321,13 +375,7 @@ impl<'a> DiffRouter<'a> {
             ..Default::default()
         };
 
-        let client =
-            DiffServiceClient::new_with_sm(self.fb, repo_name.to_string()).map_err(|e| {
-                scs_errors::internal_error(format!(
-                    "Failed to create diff service client for repo '{}': {}",
-                    repo_name, e
-                ))
-            })?;
+        let client = self.create_diff_service_client(repo_name)?;
 
         let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
 
@@ -396,13 +444,7 @@ impl<'a> DiffRouter<'a> {
             .map(|c| Self::input_from_changeset(c, None))
             .transpose()?;
 
-        let client =
-            DiffServiceClient::new_with_sm(self.fb, repo_name.to_string()).map_err(|e| {
-                scs_errors::internal_error(format!(
-                    "Failed to create diff service client for repo '{}': {}",
-                    repo_name, e
-                ))
-            })?;
+        let client = self.create_diff_service_client(repo_name)?;
 
         let repo_client = RepoDiffServiceClient::new(repo_name.to_string(), client);
 

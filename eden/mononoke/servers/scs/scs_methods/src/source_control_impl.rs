@@ -676,10 +676,14 @@ impl SourceControlServiceImpl {
     }
 
     /// Get a diff router for routing between local and remote diff operations
-    pub(crate) fn diff_router(&'_ self) -> crate::diff::DiffRouter<'_> {
+    pub(crate) fn diff_router<'a>(
+        &'a self,
+        remote_diff_config: Option<&'a metaconfig_types::RemoteDiffConfig>,
+    ) -> crate::diff::DiffRouter<'a> {
         crate::diff::DiffRouter {
             fb: self.fb,
             diff_options: &self.remote_diff_options,
+            remote_diff_config,
         }
     }
 }
