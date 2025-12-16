@@ -18,11 +18,6 @@ atomictempfile = util.atomictempfile
 # over the maximum file length
 filename = "A" * 253
 
-try:
-    xrange(0)
-except NameError:
-    xrange = range
-
 
 class testatomictempfile(unittest.TestCase):
     def setUp(self):
@@ -73,7 +68,7 @@ class testatomictempfile(unittest.TestCase):
 
         # try some times, because reproduction of ambiguity depends on
         # "filesystem time"
-        for i in xrange(5):
+        for i in range(5):
             atomicwrite(False)
             oldstat = util.stat(self._filename)
             if oldstat.st_ctime != oldstat.st_mtime:
@@ -84,7 +79,7 @@ class testatomictempfile(unittest.TestCase):
 
             # repeat atomic write with checkambig=True, to examine
             # whether st_mtime is advanced multiple times as expected
-            for j in xrange(repetition):
+            for j in range(repetition):
                 atomicwrite(True)
             newstat = util.stat(self._filename)
             if oldstat.st_ctime != newstat.st_ctime:
