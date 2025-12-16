@@ -652,3 +652,13 @@ python_unittest(
         "//eden/integration/lib:lib",
     ],
 )
+
+python_unittest(
+    name = "use_case",
+    srcs = ["use_case_test.py"],
+    env = full_artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)

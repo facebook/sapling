@@ -26,7 +26,7 @@ use edenfs_client::utils::get_etc_eden_dir;
 use edenfs_client::utils::get_home_dir;
 use hg_util::path::expand_path;
 use tracing::Level;
-use tracing::event;
+use tracing::trace;
 
 mod config;
 mod debug;
@@ -68,8 +68,7 @@ fn init_edenfs_instance(
     home_dir: Option<PathBuf>,
     use_case_id: UseCaseId,
 ) {
-    event!(
-        Level::TRACE,
+    trace!(
         ?config_dir,
         ?etc_eden_dir,
         ?home_dir,
@@ -296,27 +295,24 @@ impl MainCommand {
     /// Execute subcommands. This function returns only a return code since all the error handling
     /// should be taken care of by each sub-command.
     async fn dispatch(self) -> Result<ExitCode> {
-        event!(Level::TRACE, cmd = ?self, "Dispatching");
+        trace!(cmd = ?self, "Dispatching");
 
         let use_case_string = self.use_case.unwrap_or_else(|| "edenfsctl".to_string());
         let use_case_id = UseCaseId::from_str(&use_case_string);
 
-        match use_case_id {
-            Ok(use_case_id) => {
-                init_edenfs_instance(
-                    get_config_dir(&self.config_dir, &self.subcommand.get_mount_path_override())?,
-                    get_etc_eden_dir(&self.etc_eden_dir),
-                    get_home_dir(&self.home_dir),
-                    use_case_id,
-                );
-                // Use get_edenfs_instance() to access the instance from now on
-                self.subcommand.run().await
-            }
-            Err(_) => {
-                eprintln!("Unknown use case: {}", use_case_string);
-                Ok(1)
-            }
-        }
+        let use_case = match use_case_id {
+            Ok(use_case_id) => use_case_id,
+            Err(strum::ParseError::VariantNotFound) => UseCaseId::from_str("unknown")?,
+        };
+        trace!("Creating EdenFsInstance with use case: {:?}", use_case,);
+        init_edenfs_instance(
+            get_config_dir(&self.config_dir, &self.subcommand.get_mount_path_override())?,
+            get_etc_eden_dir(&self.etc_eden_dir),
+            get_home_dir(&self.home_dir),
+            use_case,
+        );
+        // Use get_edenfs_instance() to access the instance from now on
+        self.subcommand.run().await
     }
 }
 

@@ -14,7 +14,6 @@ use async_trait::async_trait;
 use clap::Parser;
 use edenfs_asserted_states::ChangeEvent;
 use edenfs_asserted_states::Changes;
-use edenfs_asserted_states::StreamingChangesClient;
 use edenfs_asserted_states::get_streaming_changes_client;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::types::JournalPosition;

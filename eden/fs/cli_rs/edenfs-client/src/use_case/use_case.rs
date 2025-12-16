@@ -52,6 +52,9 @@ pub enum UseCaseId {
     StarlarkMcp,
     #[strum(serialize = "vscode")]
     VSCode,
+    #[strum(serialize = "vscode_extension")]
+    VSCodeExtension,
+    Unknown,
 }
 
 pub struct UseCase {
