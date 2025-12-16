@@ -64,6 +64,7 @@ describe('EdenFS Notifications Client Types', () => {
           SmallChange: {
             Added: {
               path: [116, 101, 115, 116], // "test"
+              file_type: 'Regular',
             },
           },
         },

@@ -460,6 +460,49 @@ class EdenFSUtils {
   }
 
   /**
+   * Extract file type from change
+   * @param {Object} change - change object
+   * @returns {{string}} File Type
+   */
+  static extractFileType(smallChange) {
+    if (smallChange.Added && smallChange.Added.file_type) {
+      return smallChange.Added.file_type;
+    } else if (smallChange.Modified && smallChange.Modified.file_type) {
+      return smallChange.Modified.file_type;
+    } else if (smallChange.Removed && smallChange.Removed.file_type) {
+      return smallChange.Removed.file_type;
+    } else if (smallChange.Renamed) {
+      return smallChange.Renamed.file_type;
+    } else if (smallChange.Replaced) {
+      return smallChange.Replaced.file_type;
+    }
+  }
+
+  /**
+   * Extract file path(s) from change
+   * @param {Object} change - change object
+   * @returns {{string, string | undefined}} First file path, and possible second file path
+   */
+  static extractPath(smallChange) {
+    if (smallChange.Added && smallChange.Added.path) {
+      return [this.bytesToPath(smallChange.Added.path), undefined];
+    } else if (smallChange.Modified && smallChange.Modified.path) {
+      return [this.bytesToPath(smallChange.Modified.path), undefined];
+    } else if (smallChange.Removed && smallChange.Removed.path) {
+      return [this.bytesToPath(smallChange.Removed.path), undefined];
+    } else if (smallChange.Renamed) {
+      return [this.bytesToPath(smallChange.Renamed.from), this.bytesToPath(smallChange.Renamed.to)];
+    } else if (smallChange.Replaced) {
+      return [
+        this.bytesToPath(smallChange.Replaced.from),
+        this.bytesToPath(smallChange.Replaced.to),
+      ];
+    } else {
+      return ['', undefined];
+    }
+  }
+
+  /**
    * Extract file paths from changes
    * @param {Object[]} changes - Array of change objects
    * @returns {string[]} Array of file paths
@@ -469,19 +512,12 @@ class EdenFSUtils {
 
     changes.forEach(change => {
       if (change.SmallChange) {
-        const smallChange = change.SmallChange;
-        if (smallChange.Added && smallChange.Added.path) {
-          paths.push(this.bytesToPath(smallChange.Added.path));
-        } else if (smallChange.Modified && smallChange.Modified.path) {
-          paths.push(this.bytesToPath(smallChange.Modified.path));
-        } else if (smallChange.Removed && smallChange.Removed.path) {
-          paths.push(this.bytesToPath(smallChange.Removed.path));
-        } else if (smallChange.Renamed) {
-          paths.push(this.bytesToPath(smallChange.Renamed.from));
-          paths.push(this.bytesToPath(smallChange.Renamed.to));
-        } else if (smallChange.Replaced) {
-          paths.push(this.bytesToPath(smallChange.Replaced.from));
-          paths.push(this.bytesToPath(smallChange.Replaced.to));
+        let [path1, path2] = this.extractPath(change.SmallChange);
+        if (path1) {
+          paths.push(path1);
+        }
+        if (path2) {
+          paths.push(path2);
         }
       }
     });

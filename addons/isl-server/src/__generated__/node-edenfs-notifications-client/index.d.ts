@@ -125,24 +125,29 @@ export interface EnterStateOptions {
  */
 export interface AddedChange {
   path: number[];
+  file_type: string;
 }
 
 export interface ModifiedChange {
   path: number[];
+  file_type: string;
 }
 
 export interface RemovedChange {
   path: number[];
+  file_type: string;
 }
 
 export interface RenamedChange {
   from: number[];
   to: number[];
+  file_type: string;
 }
 
 export interface ReplacedChange {
   from: number[];
   to: number[];
+  file_type: string;
 }
 
 export interface SmallChange {
@@ -318,6 +323,16 @@ export class EdenFSUtils {
    * Convert byte array to hex string
    */
   static bytesToHex(bytes: number[]): string;
+
+  /**
+   * Extract file type from change
+   */
+  static extractFileType(smallChange): string;
+
+  /**
+   * Extract file path(s) from single change
+   */
+  static extractPath(changes: SmallChange): string[];
 
   /**
    * Extract file paths from changes

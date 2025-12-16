@@ -145,8 +145,8 @@ async function subscriptionExample() {
     process.on('SIGINT', async () => {
       console.log('\nStopping subscription...');
       // Wait until the subscription has fully exited before terminating
-      subscription.on("exit", () => {
-        console.log("Subscription exited");
+      subscription.on('exit', () => {
+        console.log('Subscription exited');
         process.exit(0);
       });
       subscription.stop();
@@ -316,8 +316,15 @@ async function utilityExample() {
   ];
 
   // Extract paths from changes
+  console.log('Extracting single path');
+  const [path1, path2] = EdenFSUtils.extractPath(exampleChanges[0].SmallChange);
+  console.log('Extracted paths:', path1, path2);
+  console.log('Extracting multiple paths:');
   const paths = EdenFSUtils.extractPaths(exampleChanges);
   console.log('Extracted paths:', paths);
+  console.log('Extracting types:');
+  const type = EdenFSUtils.extractFileType(exampleChanges[0].SmallChange);
+  console.log('Extracted file type:', type);
 
   // Get change types
   exampleChanges.forEach((change, index) => {
@@ -342,7 +349,7 @@ async function runExamples() {
     await utilityExample();
 
     // Uncomment these to run interactive examples:
-    await subscriptionExample();
+    // await subscriptionExample();
     // await stateExample();
     // await advancedSubscriptionExample();
   } catch (error) {
