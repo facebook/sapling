@@ -10,7 +10,7 @@ jobs:
     runs-on: macos-13-xlarge
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v6
     - name: Grant Access
       run: git config --global --add safe.directory "$PWD"
     - name: set-env SAPLING_VERSION
@@ -33,7 +33,7 @@ jobs:
     - name: Rename bottle to some platform specific name
       run: mv sapling*ventura.bottle*.tar.gz sapling-${{ env.SAPLING_VERSION }}.arm64_ventura.bottle.tar.gz
     - name: Upload Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: macos-homebrew-arm64-bottle
         path: sapling*ventura.bottle*.tar.gz
@@ -42,11 +42,11 @@ jobs:
     needs: build
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v6
     - name: Grant Access
       run: git config --global --add safe.directory "$PWD"
     - name: Download Artifact
-      uses: actions/download-artifact@v4.1.7
+      uses: actions/download-artifact@v7
       with:
         name: macos-homebrew-arm64-bottle
     - name: Create pre-release

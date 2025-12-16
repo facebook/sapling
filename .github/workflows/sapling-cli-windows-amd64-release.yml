@@ -10,7 +10,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v6
     - name: Grant Access
       run: git config --global --add safe.directory "$PWD"
     - name: rustup
@@ -39,7 +39,7 @@ jobs:
       working-directory: ./eden/scm/artifacts
       run: ${{ format('Rename-Item sapling_windows_amd64.zip -NewName sapling-{0}-windows-x64.zip', env.SAPLING_VERSION) }}
     - name: Upload Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: windows-amd64
         path: ./eden/scm/artifacts/sapling*.zip
@@ -48,11 +48,11 @@ jobs:
     needs: build
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v6
     - name: Grant Access
       run: git config --global --add safe.directory "$PWD"
     - name: Download Artifact
-      uses: actions/download-artifact@v4.1.7
+      uses: actions/download-artifact@v7
       with:
         name: windows-amd64
     - name: Create pre-release
