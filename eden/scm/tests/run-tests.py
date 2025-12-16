@@ -53,6 +53,7 @@ import multiprocessing
 import os
 import random
 import re
+import shlex
 import shutil
 import signal
 import socket
@@ -75,21 +76,9 @@ try:
 except:
     features = None
 
-try:
-    # pyre-fixme[21]: Could not find module `Queue`.
-    import Queue as queue
-except ImportError:
-    import queue
+import queue
 
-try:
-    import shlex
-
-    shellquote = shlex.quote
-except (ImportError, AttributeError):
-    import pipes
-
-    # pyre-fixme[9]: shellquote has type `(s: str) -> str`; used as `(s: str) -> str`.
-    shellquote = pipes.quote
+shellquote = shlex.quote
 
 RLock = threading.RLock
 
@@ -202,28 +191,18 @@ if pygmentspresent:
     runnerformatter = formatters.Terminal256Formatter(style=TestRunnerStyle)
     runnerlexer = TestRunnerLexer()
 
-if sys.version_info > (3, 5, 0):
-    PYTHON3 = True
-    xrange = range  # we use xrange in one place, and we'd rather not use range
 
-    def _bytespath(p):
-        if p is None:
-            return p
-        return p.encode("utf-8")
+def _bytespath(p):
+    if p is None:
+        return p
+    return p.encode("utf-8")
 
-    def _strpath(p):
-        if p is None:
-            return p
-        return p.decode("utf-8")
 
-elif sys.version_info >= (3, 0, 0):
-    print(
-        "%s is only supported on Python 3.5+ and 2.7, not %s"
-        % (sys.argv[0], ".".join(str(v) for v in sys.version_info[:3]))
-    )
-    sys.exit(70)  # EX_SOFTWARE from `man 3 sysexit`
-else:
-    PYTHON3 = False
+def _strpath(p):
+    if p is None:
+        return p
+    return p.decode("utf-8")
+
 
 # For Windows support
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
@@ -839,15 +818,13 @@ def rename(src, dst):
     os.remove(src)
 
 
-_unified_diff = difflib.unified_diff
-if PYTHON3:
-    import functools
+import functools
 
-    # pyre-fixme[9]: _unified_diff has type `(a: Sequence[str], b: Sequence[str],
-    #  fromfile: str = ..., tofile: str = ..., fromfiledate: str = ..., tofiledate: str
-    #  = ..., n: int = ..., lineterm: str = ...) -> Iterator[str]`; used as
-    #  `partial[Iterator[bytes]]`.
-    _unified_diff = functools.partial(difflib.diff_bytes, difflib.unified_diff)
+# pyre-fixme[9]: _unified_diff has type `(a: Sequence[str], b: Sequence[str],
+#  fromfile: str = ..., tofile: str = ..., fromfiledate: str = ..., tofiledate: str
+#  = ..., n: int = ..., lineterm: str = ...) -> Iterator[str]`; used as
+#  `partial[Iterator[bytes]]`.
+_unified_diff = functools.partial(difflib.diff_bytes, difflib.unified_diff)
 
 
 def getdiff(expected, output, ref, err):
@@ -1584,7 +1561,7 @@ class Test(unittest.TestCase):
         else:
             env["CHGDISABLE"] = "1"
         # This number should match portneeded in _getport
-        for port in xrange(3):
+        for port in range(3):
             # This list should be parallel to _portmap in _getreplacements
             defineport(port)
         env["HGRCPATH"] = self._gethgrcpath()
@@ -1839,10 +1816,8 @@ class PythonTest(Test):
         return result[0], self._processoutput(result[1])
 
 
-bchr = chr
-if PYTHON3:
-    # pyre-fixme[9]: bchr has type `(int) -> str`; used as `(x: Any) -> bytes`.
-    bchr = lambda x: bytes([x])
+# pyre-fixme[9]: bchr has type `(int) -> str`; used as `(x: Any) -> bytes`.
+bchr = lambda x: bytes([x])
 
 
 class TTest(Test):
@@ -2294,13 +2269,10 @@ class TTest(Test):
         if not el:
             return False
         if el.endswith(b" (esc)\n"):
-            if PYTHON3:
-                if repr(el[:-7]) == repr(l[:-1]).replace("\\", "\\\\"):
-                    return True
-                el = el[:-7].decode("unicode_escape") + "\n"
-                el = el.encode("utf-8")
-            else:
-                el = el[:-7].decode("string-escape") + "\n"
+            if repr(el[:-7]) == repr(l[:-1]).replace("\\", "\\\\"):
+                return True
+            el = el[:-7].decode("unicode_escape") + "\n"
+            el = el.encode("utf-8")
         if el == l or os.name == "nt" and el[:-1] + b"\r\n" == l:
             return True
         if el.endswith(b" (re)\n"):
@@ -2657,13 +2629,9 @@ class TestResult(unittest.TextTestResult):
                         ]
                     for line in lines:
                         line = highlightdiff(line, self.color)
-                        if PYTHON3:
-                            self.stream.flush()
-                            self.stream.buffer.write(line)
-                            self.stream.buffer.flush()
-                        else:
-                            self.stream.write(line)
-                            self.stream.flush()
+                        self.stream.flush()
+                        self.stream.buffer.write(line)
+                        self.stream.buffer.flush()
 
             # handle interactive prompt without releasing iolock
             if self._options.interactive:
@@ -2826,7 +2794,7 @@ class TestSuite(unittest.TestSuite):
 
                     if ignored:
                         continue
-            for _ in xrange(self._runs_per_test):
+            for _ in range(self._runs_per_test):
                 tests.append(get())
 
         runtests = list(tests)
@@ -2877,7 +2845,7 @@ class TestSuite(unittest.TestSuite):
                 with iolock:
                     sys.stdout.write(d + "  ")
                     sys.stdout.flush()
-                for x in xrange(10):
+                for x in range(10):
                     if channels:
                         time.sleep(0.1)
                 count += 1
@@ -3849,10 +3817,10 @@ class TestRunner:
         if port is None:
             portneeded = 3
             # above 100 tries we just give up and let test reports failure
-            for tries in xrange(100):
+            for tries in range(100):
                 allfree = True
                 port = self.options.port + self._portoffset
-                for idx in xrange(portneeded):
+                for idx in range(portneeded):
                     if not checkportisavailable(port + idx):
                         allfree = False
                         break
@@ -4040,10 +4008,7 @@ class TestRunner:
         else:
             with open(installerrs, "rb") as f:
                 for line in f:
-                    if PYTHON3:
-                        sys.stdout.buffer.write(line)
-                    else:
-                        sys.stdout.write(line)
+                    sys.stdout.buffer.write(line)
             sys.exit(1)
         os.chdir(self._testdir)
 
