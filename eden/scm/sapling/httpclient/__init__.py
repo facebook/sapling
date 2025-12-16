@@ -85,14 +85,9 @@ _END_HEADERS = EOL * 2
 TIMEOUT_ASSUME_CONTINUE = 1
 TIMEOUT_DEFAULT = None
 
-if sys.version_info > (3, 0):
-    _unicode = str
-else:
-    _unicode = unicode  # noqa: F821
-
 
 def _ensurebytes(data):
-    if not isinstance(data, (_unicode, bytes)):
+    if not isinstance(data, (str, bytes)):
         data = str(data)
     if not isinstance(data, bytes):
         try:

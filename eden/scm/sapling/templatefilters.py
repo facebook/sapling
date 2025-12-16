@@ -13,16 +13,12 @@
 
 import os
 import re
-import sys
 import time
 
 from . import hbisect, json as jsonmod, registrar, templatekw, url, util
 
 urlerr = util.urlerr
 urlreq = util.urlreq
-
-if sys.version_info[0] >= 3:
-    long = int
 
 # filters are callables like:
 #   fn(obj)

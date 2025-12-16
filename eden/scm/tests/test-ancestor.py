@@ -15,9 +15,6 @@ from sapling import ancestor, debugcommands, hg, ui as uimod
 from sapling.node import nullrev
 
 
-long = int
-
-
 def buildgraph(rng, nodes=100, rootprob=0.05, mergeprob=0.2, prevprob=0.7):
     """nodes: total number of nodes in the graph
     rootprob: probability that a new node (not 0) will be a root
@@ -282,13 +279,13 @@ def main():
     opts, args = getopt.getopt(sys.argv[1:], "s:", ["seed="])
     for o, a in opts:
         if o in ("-s", "--seed"):
-            seed = long(a, base=0)  # accepts base 10 or 16 strings
+            seed = int(a, base=0)  # accepts base 10 or 16 strings
 
     if seed is None:
         try:
-            seed = long(binascii.hexlify(os.urandom(16)), 16)
+            seed = int(binascii.hexlify(os.urandom(16)), 16)
         except AttributeError:
-            seed = long(time.time() * 1000)
+            seed = int(time.time() * 1000)
 
     rng = random.Random(seed)
     test_missingancestors(seed, rng)

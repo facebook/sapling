@@ -28,11 +28,6 @@ if getattr(sys, "frozen", None) is not None:
 else:
     module = __file__
 
-try:
-    unicode
-except NameError:
-    unicode = str
-
 _languages = None
 if (
     sysutil.iswindows
@@ -87,13 +82,11 @@ def gettext(message: str) -> str:
 
     cache = _msgcache.setdefault(encoding.encoding, {})
     if message not in cache:
-        if type(message) is unicode:
+        if type(message) is str:
             # goofy unicode docstrings in test
             paragraphs = message.split("\n\n")
         else:
-            if sys.version_info[0] == 3:
-                raise TypeError("expect message to be str: %r" % message)
-            paragraphs = [p.decode("ascii") for p in message.split("\n\n")]
+            raise TypeError("expect message to be str: %r" % message)
         # Be careful not to translate the empty string -- it holds the
         # meta data of the .po file.
         u = "\n\n".join([p and _ugettext(p) or "" for p in paragraphs])

@@ -17,11 +17,6 @@ from sapling import encoding
 
 JSONDecodeError = _sysjson.JSONDecodeError
 
-try:
-    long
-except NameError:
-    long = int
-
 
 def dumps(obj, paranoid=True):
     if obj is None:
@@ -30,7 +25,7 @@ def dumps(obj, paranoid=True):
         return "false"
     elif obj is True:
         return "true"
-    elif isinstance(obj, (int, long, float)):
+    elif isinstance(obj, (int, float)):
         return str(obj)
     elif isinstance(obj, bytes):
         return '"%s"' % encoding.jsonescape(obj, paranoid=paranoid)

@@ -28,14 +28,10 @@ BSER_UTF8STRING = b"\x0d"
 
 
 STRING_TYPES = (str, bytes)
-unicode = str
 
 
 def tobytes(i):
     return str(i).encode("ascii")
-
-
-long = int
 
 
 # Leave room for the serialization header, which includes
@@ -53,7 +49,7 @@ def _int_size(x):
         return 2
     elif -0x80000000 <= x <= 0x7FFFFFFF:
         return 4
-    elif long(-0x8000000000000000) <= x <= long(0x7FFFFFFFFFFFFFFF):
+    elif -0x8000000000000000 <= x <= 0x7FFFFFFFFFFFFFFF:
         return 8
     else:
         raise RuntimeError("Cannot represent value: " + str(x))
@@ -104,7 +100,7 @@ class _bser_buffer:
         self.wpos += to_write
 
     def append_string(self, s):
-        if isinstance(s, unicode):
+        if isinstance(s, str):
             s = s.encode("utf-8")
         s_len = len(s)
         size = _int_size(s_len)
@@ -169,7 +165,7 @@ class _bser_buffer:
             self.ensure_size(needed)
             struct.pack_into(b"=c", self.buf, self.wpos, BSER_NULL)
             self.wpos += needed
-        elif isinstance(val, (int, long)):
+        elif isinstance(val, int):
             self.append_long(val)
         elif isinstance(val, STRING_TYPES):
             self.append_string(val)
@@ -268,7 +264,7 @@ class _BunserDict:
         return self.__getitem__(name)
 
     def __getitem__(self, key):
-        if isinstance(key, (int, long)):
+        if isinstance(key, int):
             return self._values[key]
         elif key.startswith("st_"):
             # hack^Wfeature to allow mercurial to use "st_size" to
