@@ -179,20 +179,7 @@ def trim(s, width, ellipsis="", leftside=False):
     >>> print(trim(t, 4, ellipsis=ellipsis, leftside=True))
     +++
     """
-    try:
-        if sys.version_info.major == 3:
-            u = s
-        else:
-            u = s.decode(encoding)
-    except UnicodeDecodeError:
-        if len(s) <= width:  # trimming is not needed
-            return s
-        width -= len(ellipsis)
-        if width <= 0:  # no enough room even for ellipsis
-            return ellipsis[: width + len(ellipsis)]
-        if leftside:
-            return ellipsis + s[-width:]
-        return s[:width] + ellipsis
+    u = s
 
     if ucolwidth(u) <= width:  # trimming is not needed
         return s
@@ -210,10 +197,7 @@ def trim(s, width, ellipsis="", leftside=False):
     for i in range(1, len(u)):
         usub = uslice(i)
         if ucolwidth(usub) <= width:
-            if sys.version_info[0] == 3:
-                return concat(usub)
-            else:
-                return concat(usub.encode(encoding))
+            return concat(usub)
     return ellipsis  # no enough room for multi-column characters
 
 

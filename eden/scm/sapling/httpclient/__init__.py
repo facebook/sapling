@@ -109,11 +109,10 @@ class _CompatMessage(email.message.Message):
 
     @classmethod
     def from_string(cls, s):
-        if sys.version_info > (3, 0):
-            # Python 3 can't decode headers from bytes, so we have to
-            # trust RFC 2616 and decode the headers as iso-8859-1
-            # bytes.
-            s = s.decode("iso-8859-1")
+        # Python 3 can't decode headers from bytes, so we have to
+        # trust RFC 2616 and decode the headers as iso-8859-1
+        # bytes.
+        s = s.decode("iso-8859-1")
         headers = email.message_from_string(s, _class=_CompatMessage)
         return headers
 
@@ -386,7 +385,7 @@ except AttributeError:
 
         Otherwise, return False
         """
-        spec = inspect.getargspec(func)
+        spec = inspect.getfullargspec(func)
         if arg in spec.args:
             return True
         if spec.keywords:

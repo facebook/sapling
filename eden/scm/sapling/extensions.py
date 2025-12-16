@@ -441,12 +441,9 @@ def _runextsetup(name, ui):
                 with _current_extension(name):
                     extsetup(ui)
             except TypeError:
-                # Try to use getfullargspec (Python 3) first, and fall
-                # back to getargspec only if it doesn't exist so as to
-                # avoid warnings.
-                if getattr(inspect, "getfullargspec", getattr(inspect, "getargspec"))(
-                    extsetup
-                ).args:
+                # Use getfullargspec to check if the extsetup function
+                # accepts arguments.
+                if inspect.getfullargspec(extsetup).args:
                     raise
                 with _current_extension(name):
                     extsetup()  # old extsetup with no ui argument

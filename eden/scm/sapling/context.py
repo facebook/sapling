@@ -478,7 +478,7 @@ class changectx(basectx):
                     # The only valid bytes changeid is a node, and if the node was not
                     # found above, this is now considered an unknown changeid.
                     # let's convert, or go ahead and through.
-                    if sys.version_info[0] >= 3 and isinstance(changeid, bytes):
+                    if isinstance(changeid, bytes):
                         # Hex the node so it prints pretty.
                         changeid = hex(changeid)
                         raise error.RepoLookupError(

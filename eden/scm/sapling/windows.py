@@ -164,8 +164,7 @@ def posixfile(name: str, mode: str = "r", buffering: int = -1) -> "IO":
 
         # PyFile_FromFd() ignores the name, and seems to report fp.name as the
         # underlying file descriptor.
-        if sys.version_info[0] >= 3:
-            fp = fdproxy(name, fp)
+        fp = fdproxy(name, fp)
 
         return _fixseek(fp, mode)
     # pyre-fixme[10]: Name `WindowsError` is used but not defined.
