@@ -43,8 +43,6 @@
 # completes fairly quickly, includes both shell and Python scripts, and
 # includes some scripts that run daemon processes.)
 
-from __future__ import absolute_import, print_function
-
 import argparse
 import collections
 import difflib
