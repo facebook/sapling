@@ -233,6 +233,7 @@ fn parse_with_repo_definition(
         metadata_cache_config,
         directory_branch_cluster_config,
         restricted_paths_config,
+        remote_diff_config,
         ..
     } = named_repo_config;
 
@@ -365,6 +366,9 @@ fn parse_with_repo_definition(
         .map(RawRestrictedPathsConfig::convert)
         .transpose()?
         .unwrap_or_default();
+    let remote_diff_config = remote_diff_config
+        .map(|config| config.convert())
+        .transpose()?;
 
     Ok(RepoConfig {
         enabled,
@@ -420,6 +424,7 @@ fn parse_with_repo_definition(
         enable_git_bundle_uri,
         directory_branch_cluster_config,
         restricted_paths_config,
+        remote_diff_config,
     })
 }
 
@@ -1433,6 +1438,7 @@ mod test {
                     content_refs_update_mode: None,
                 }),
                 restricted_paths_config: RestrictedPathsConfig::default(),
+                remote_diff_config: None,
             },
         );
 
@@ -1519,6 +1525,7 @@ mod test {
                 log_repo_stats: false,
                 metadata_cache_config: None,
                 restricted_paths_config: RestrictedPathsConfig::default(),
+                remote_diff_config: None,
             },
         );
         assert_eq!(

@@ -56,6 +56,7 @@ use metaconfig_types::PushrebaseFlags;
 use metaconfig_types::PushrebaseParams;
 use metaconfig_types::PushrebaseRemoteMode;
 use metaconfig_types::RemoteDerivationConfig;
+use metaconfig_types::RemoteDiffConfig;
 use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::RestrictedPathsConfig;
 use metaconfig_types::ServiceWriteRestrictions;
@@ -117,6 +118,7 @@ use repos::RawPushrebaseParams;
 use repos::RawPushrebaseRemoteMode;
 use repos::RawPushrebaseRemoteModeRemote;
 use repos::RawRemoteDerivationConfig;
+use repos::RawRemoteDiffConfig;
 use repos::RawRepoClientKnobs;
 use repos::RawRestrictedPathsConfig;
 use repos::RawServiceWriteRestrictions;
@@ -689,6 +691,23 @@ impl Convert for RawRemoteDerivationConfig {
             }
             RawRemoteDerivationConfig::UnknownField(e) => {
                 anyhow::bail!("Unknown variant of RawRemoteDerivationConfig: {}", e)
+            }
+        }
+    }
+}
+
+impl Convert for RawRemoteDiffConfig {
+    type Output = RemoteDiffConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        match self {
+            RawRemoteDiffConfig::shard_manager_tier(shard_manager_tier) => {
+                Ok(RemoteDiffConfig::ShardManagerTier(shard_manager_tier))
+            }
+            RawRemoteDiffConfig::smc_tier(smc_tier) => Ok(RemoteDiffConfig::SmcTier(smc_tier)),
+            RawRemoteDiffConfig::host_port(host_port) => Ok(RemoteDiffConfig::HostPort(host_port)),
+            RawRemoteDiffConfig::UnknownField(e) => {
+                anyhow::bail!("Unknown variant of RawRemoteDiffConfig: {}", e)
             }
         }
     }

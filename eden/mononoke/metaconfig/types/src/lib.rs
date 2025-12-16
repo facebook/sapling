@@ -293,6 +293,8 @@ pub struct RepoConfig {
     pub directory_branch_cluster_config: Option<DirectoryBranchClusterConfig>,
     /// Configuration of restricted paths and their ACLs.
     pub restricted_paths_config: RestrictedPathsConfig,
+    /// Configuration for remote diff service
+    pub remote_diff_config: Option<RemoteDiffConfig>,
 }
 
 /// Config determining if the repo is deep sharded in the context of a service.
@@ -563,6 +565,17 @@ pub enum RemoteDerivationConfig {
     /// SMC tier for remote derivation
     SmcTier(String),
     /// host:port string for remote derivation
+    HostPort(String),
+}
+
+/// Config for remote diff service
+#[derive(Eq, Clone, Debug, PartialEq)]
+pub enum RemoteDiffConfig {
+    /// Shardmanager tier for remote diff service
+    ShardManagerTier(String),
+    /// SMC tier for remote diff service
+    SmcTier(String),
+    /// host:port string for remote diff service
     HostPort(String),
 }
 
