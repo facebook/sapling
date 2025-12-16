@@ -17,6 +17,7 @@ use fixtures::Linear;
 use fixtures::TestRepoFixture;
 use maplit::btreemap;
 use mononoke_macros::mononoke;
+use mononoke_types::FileType;
 use mononoke_types::path::MPath;
 
 use crate::ChangesetContext;
@@ -24,6 +25,7 @@ use crate::ChangesetId;
 use crate::CoreContext;
 use crate::CreateChange;
 use crate::CreateChangeFile;
+use crate::CreateChangeFileContents;
 use crate::CreateChangesetCheckMode;
 use crate::CreateChangesetChecks;
 use crate::CreateCopyInfo;
@@ -177,6 +179,15 @@ async fn compare_create_stack<R: MononokeRepo>(
             Ok(Some(stack))
         }
     }
+}
+
+/// Helper to get file type from a changeset
+async fn get_file_type<R: MononokeRepo>(
+    changeset: &ChangesetContext<R>,
+    path: &str,
+) -> Result<Option<FileType>, Error> {
+    let path_ctx = changeset.path_with_content(path).await?;
+    Ok(path_ctx.file_type().await?)
 }
 
 #[mononoke::fbinit_test]
@@ -733,6 +744,324 @@ async fn test_create_commit_stack_copy_from(fb: FacebookInit) -> Result<(), Erro
     let _stack = compare_create_stack(&stack_repo, &seq_repo, changes, initial_parents.clone())
         .await?
         .expect("stack should have been created");
+
+    Ok(())
+}
+
+/// Test that file_type: None inherits from the parent commit
+#[mononoke::fbinit_test]
+async fn test_create_changeset_file_type_inheritance_from_parent(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (test_stack_repo, commits, _) = Linear::get_repo_and_dag(fb).await;
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), test_stack_repo)]).await?;
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists")
+        .build()
+        .await?;
+
+    let parent_id = commits["K"];
+
+    // First, create a parent commit with an executable file
+    let create_exec_changes = vec![btreemap! {
+        MPath::try_from("exec_file")? =>
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("executable content\n"),
+                },
+                file_type: Some(FileType::Executable),
+                git_lfs: None,
+            },
+            None,
+        ),
+    }];
+    let exec_parent = create_changeset_stack(&repo, create_exec_changes, vec![parent_id])
+        .await?
+        .pop()
+        .expect("commit created");
+
+    // Verify parent has executable type
+    assert_eq!(
+        get_file_type(&exec_parent, "exec_file").await?,
+        Some(FileType::Executable)
+    );
+
+    // Now modify the file with file_type: None - should inherit EXEC
+    let modify_changes = vec![btreemap! {
+        MPath::try_from("exec_file")? =>
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("modified executable content\n"),
+                },
+                file_type: None, // Should inherit from parent
+                git_lfs: None,
+            },
+            None,
+        ),
+    }];
+    let child = create_changeset_stack(&repo, modify_changes, vec![exec_parent.id()])
+        .await?
+        .pop()
+        .expect("commit created");
+
+    // Verify inherited executable type
+    assert_eq!(
+        get_file_type(&child, "exec_file").await?,
+        Some(FileType::Executable),
+        "file_type: None should inherit Executable from parent"
+    );
+
+    Ok(())
+}
+
+/// Test that file_type: None defaults to Regular for new files
+#[mononoke::fbinit_test]
+async fn test_create_changeset_file_type_defaults_to_regular(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (test_stack_repo, commits, _) = Linear::get_repo_and_dag(fb).await;
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), test_stack_repo)]).await?;
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists")
+        .build()
+        .await?;
+
+    let parent_id = commits["K"];
+
+    // Create a new file with file_type: None
+    let changes = vec![btreemap! {
+        MPath::try_from("new_file")? =>
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("new file content\n"),
+                },
+                file_type: None, // Should default to Regular
+                git_lfs: None,
+            },
+            None,
+        ),
+    }];
+    let commit = create_changeset_stack(&repo, changes, vec![parent_id])
+        .await?
+        .pop()
+        .expect("commit created");
+
+    // Verify defaults to Regular
+    assert_eq!(
+        get_file_type(&commit, "new_file").await?,
+        Some(FileType::Regular),
+        "file_type: None should default to Regular for new files"
+    );
+
+    Ok(())
+}
+
+/// Test that file_type: None inherits from the copy source
+#[mononoke::fbinit_test]
+async fn test_create_changeset_file_type_copy_chain_inheritance(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (test_stack_repo, commits, _) = Linear::get_repo_and_dag(fb).await;
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), test_stack_repo)]).await?;
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists")
+        .build()
+        .await?;
+
+    let parent_id = commits["K"];
+
+    // First, create a parent with an executable file
+    let create_exec_changes = vec![btreemap! {
+        MPath::try_from("source_exec")? =>
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("executable source\n"),
+                },
+                file_type: Some(FileType::Executable),
+                git_lfs: None,
+            },
+            None,
+        ),
+    }];
+    let exec_parent = create_changeset_stack(&repo, create_exec_changes, vec![parent_id])
+        .await?
+        .pop()
+        .expect("commit created");
+
+    // Copy the file with file_type: None - should inherit EXEC from copy source
+    let copy_changes = vec![btreemap! {
+        MPath::try_from("copied_file")? =>
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("copied content\n"),
+                },
+                file_type: None, // Should inherit from copy source
+                git_lfs: None,
+            },
+            Some(CreateCopyInfo::new(MPath::try_from("source_exec")?, 0)),
+        ),
+    }];
+    let commit = create_changeset_stack(&repo, copy_changes, vec![exec_parent.id()])
+        .await?
+        .pop()
+        .expect("commit created");
+
+    // Verify inherited executable type from copy source
+    assert_eq!(
+        get_file_type(&commit, "copied_file").await?,
+        Some(FileType::Executable),
+        "file_type: None should inherit Executable from copy source"
+    );
+
+    Ok(())
+}
+
+/// Test that file_type: None inherits correctly within a stack
+#[mononoke::fbinit_test]
+async fn test_create_changeset_stack_file_type_inheritance_within_stack(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (test_stack_repo, commits, _) = Linear::get_repo_and_dag(fb).await;
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), test_stack_repo)]).await?;
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists")
+        .build()
+        .await?;
+
+    let parent_id = commits["K"];
+
+    // Create a stack where:
+    // - Commit 1: creates exec file
+    // - Commit 2: modifies with file_type: None (should inherit EXEC)
+    let changes = vec![
+        btreemap! {
+            MPath::try_from("stack_file")? =>
+            CreateChange::Tracked(
+                CreateChangeFile {
+                    contents: CreateChangeFileContents::New {
+                        bytes: Bytes::from("initial exec content\n"),
+                    },
+                    file_type: Some(FileType::Executable),
+                    git_lfs: None,
+                },
+                None,
+            ),
+        },
+        btreemap! {
+            MPath::try_from("stack_file")? =>
+            CreateChange::Tracked(
+                CreateChangeFile {
+                    contents: CreateChangeFileContents::New {
+                        bytes: Bytes::from("modified content\n"),
+                    },
+                    file_type: None, // Should inherit from commit 1
+                    git_lfs: None,
+                },
+                None,
+            ),
+        },
+    ];
+
+    let stack = create_changeset_stack(&repo, changes, vec![parent_id]).await?;
+
+    // Verify first commit has executable type
+    assert_eq!(
+        get_file_type(&stack[0], "stack_file").await?,
+        Some(FileType::Executable)
+    );
+
+    // Verify second commit inherits executable type
+    assert_eq!(
+        get_file_type(&stack[1], "stack_file").await?,
+        Some(FileType::Executable),
+        "file_type: None in stack should inherit from previous commit in stack"
+    );
+
+    Ok(())
+}
+
+/// Test that explicit file_type overrides parent's type
+#[mononoke::fbinit_test]
+async fn test_create_changeset_file_type_explicit_override(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (test_stack_repo, commits, _) = Linear::get_repo_and_dag(fb).await;
+    let mononoke = Mononoke::new_test(vec![("test".to_string(), test_stack_repo)]).await?;
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists")
+        .build()
+        .await?;
+
+    let parent_id = commits["K"];
+
+    // First, create a parent with an executable file
+    let create_exec_changes = vec![btreemap! {
+        MPath::try_from("typed_file")? =>
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("executable content\n"),
+                },
+                file_type: Some(FileType::Executable),
+                git_lfs: None,
+            },
+            None,
+        ),
+    }];
+    let exec_parent = create_changeset_stack(&repo, create_exec_changes, vec![parent_id])
+        .await?
+        .pop()
+        .expect("commit created");
+
+    // Verify parent has executable type
+    assert_eq!(
+        get_file_type(&exec_parent, "typed_file").await?,
+        Some(FileType::Executable)
+    );
+
+    // Modify with explicit Regular type - should override EXEC
+    let modify_changes = vec![btreemap! {
+        MPath::try_from("typed_file")? =>
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("now regular content\n"),
+                },
+                file_type: Some(FileType::Regular), // Explicit override
+                git_lfs: None,
+            },
+            None,
+        ),
+    }];
+    let child = create_changeset_stack(&repo, modify_changes, vec![exec_parent.id()])
+        .await?
+        .pop()
+        .expect("commit created");
+
+    // Verify explicit Regular type overrides parent's Executable
+    assert_eq!(
+        get_file_type(&child, "typed_file").await?,
+        Some(FileType::Regular),
+        "explicit file_type: Regular should override parent's Executable"
+    );
 
     Ok(())
 }

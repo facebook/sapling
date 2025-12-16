@@ -20,6 +20,7 @@ use futures::stream::TryStreamExt;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_mutation::HgMutationStoreRef;
 use metaconfig_types::CommitIdentityScheme;
+use mononoke_api::ChangesetContext;
 use mononoke_api::ChangesetId;
 use mononoke_api::ChangesetSpecifier;
 use mononoke_api::CreateChange;
@@ -47,10 +48,13 @@ use crate::from_request::FromRequest;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {
+    /// Convert thrift parent CommitIds to ChangesetContexts.
+    /// Returns the contexts which can be used for file type inheritance lookup,
+    /// and IDs can be extracted via ctx.id() when needed.
     async fn convert_create_commit_parents(
         repo: &RepoContext<Repo>,
         parents: &[thrift::CommitId],
-    ) -> Result<Vec<ChangesetId>, scs_errors::ServiceError> {
+    ) -> Result<Vec<ChangesetContext<Repo>>, scs_errors::ServiceError> {
         let parents: Vec<_> = parents
             .iter()
             .map(|parent| async move {
@@ -60,7 +64,7 @@ impl SourceControlServiceImpl {
                     .changeset(changeset_specifier)
                     .await?
                     .ok_or_else(|| scs_errors::commit_not_found(parent.to_string()))?;
-                Ok::<_, scs_errors::ServiceError>(changeset.id())
+                Ok::<_, scs_errors::ServiceError>(changeset)
             })
             .collect::<FuturesOrdered<_>>()
             .try_collect()
@@ -147,7 +151,7 @@ impl SourceControlServiceImpl {
     ) -> Result<CreateChange, scs_errors::ServiceError> {
         let change = match change {
             thrift::RepoCreateCommitParamsChange::changed(c) => {
-                if c.r#type == thrift::RepoCreateCommitParamsFileType::GIT_SUBMODULE
+                if c.r#type == Some(thrift::RepoCreateCommitParamsFileType::GIT_SUBMODULE)
                     && repo.config().default_commit_identity_scheme == CommitIdentityScheme::HG
                 {
                     return Err(scs_errors::invalid_request(
@@ -165,7 +169,9 @@ impl SourceControlServiceImpl {
                     .into());
                 }
 
-                let file_type = FileType::from_request(&c.r#type)?;
+                // Convert file type: None means mononoke_api will inherit from parent/copy source
+                let file_type = c.r#type.map(|ft| FileType::from_request(&ft)).transpose()?;
+
                 let git_lfs = match c.git_lfs {
                     // Right now the default is to use full content when client didn't explicitly
                     // request LFS but we can change it in the future to something smarter.
@@ -259,7 +265,8 @@ impl SourceControlServiceImpl {
             .repo_for_service(ctx, &repo, params.service_identity.clone())
             .await?;
 
-        let parents = Self::convert_create_commit_parents(&repo, &params.parents).await?;
+        let parent_ctxs = Self::convert_create_commit_parents(&repo, &params.parents).await?;
+        let parent_ids: Vec<ChangesetId> = parent_ctxs.iter().map(|ctx| ctx.id()).collect();
         let mut info = CreateInfo::from_request(&params.info)?;
         let changes = Self::convert_create_commit_changes(&repo, params.changes).await?;
         let bubble = None;
@@ -277,7 +284,7 @@ impl SourceControlServiceImpl {
 
         let created_changeset = repo
             .create_changeset(
-                parents,
+                parent_ids,
                 info,
                 changes,
                 bubble,
@@ -320,7 +327,8 @@ impl SourceControlServiceImpl {
             .await?;
         let repo = &repo;
 
-        let stack_parents = Self::convert_create_commit_parents(repo, &params.parents).await?;
+        let parent_ctxs = Self::convert_create_commit_parents(repo, &params.parents).await?;
+        let stack_parent_ids: Vec<ChangesetId> = parent_ctxs.iter().map(|ctx| ctx.id()).collect();
         let mut info_stack = params
             .commits
             .iter()
@@ -351,10 +359,11 @@ impl SourceControlServiceImpl {
             .buffered(10)
             .try_collect::<Vec<_>>()
             .await?;
+
         let bubble = None;
         let stack = repo
             .create_changeset_stack(
-                stack_parents,
+                stack_parent_ids,
                 info_stack,
                 changes_stack,
                 bubble,

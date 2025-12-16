@@ -963,7 +963,9 @@ union RepoCreateCommitParamsGitLfs {
 
 struct RepoCreateCommitParamsFileChanged {
   /// The new type of the file.
-  1: RepoCreateCommitParamsFileType type;
+  /// If omitted, the type will be inherited from the existing file in the
+  /// parent commit. If the file is new, it defaults to FILE.
+  1: optional RepoCreateCommitParamsFileType type;
 
   /// The new content of the file.
   2: RepoCreateCommitParamsFileContent content;

@@ -24,6 +24,7 @@ use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::StreamExt;
+use futures::pin_mut;
 use futures::stream;
 use futures::stream::Stream;
 use futures::stream::TryStreamExt;
@@ -71,6 +72,11 @@ pub struct CreateCopyInfo {
 impl CreateCopyInfo {
     pub fn new(path: MPath, parent_index: usize) -> Self {
         CreateCopyInfo { path, parent_index }
+    }
+
+    /// Get the source path for the copy.
+    pub fn path(&self) -> &MPath {
+        &self.path
     }
 
     async fn check_valid<R: MononokeRepo>(
@@ -209,7 +215,8 @@ fn try_into_git_lfs(
 #[derive(Clone, Debug)]
 pub struct CreateChangeFile {
     pub contents: CreateChangeFileContents,
-    pub file_type: FileType,
+    /// File type. If `None`, will be inherited from the copy source or parent.
+    pub file_type: Option<FileType>,
     // If missing then server decides whether to use git lfs or not
     pub git_lfs: Option<CreateChangeGitLfs>,
 }
@@ -277,6 +284,24 @@ impl CreateChangeFileContents {
     }
 }
 
+impl CreateChangeFile {
+    /// Get the content ID if contents are resolved (Existing variant)
+    pub fn content_id(&self) -> Option<FileId> {
+        match &self.contents {
+            CreateChangeFileContents::Existing { file_id, .. } => Some(*file_id),
+            CreateChangeFileContents::New { .. } => None,
+        }
+    }
+
+    /// Get the size if contents are resolved
+    pub fn size(&self) -> Option<u64> {
+        match &self.contents {
+            CreateChangeFileContents::Existing { maybe_size, .. } => *maybe_size,
+            CreateChangeFileContents::New { bytes } => Some(bytes.len() as u64),
+        }
+    }
+}
+
 #[cfg(test)]
 impl CreateChangeFile {
     // constructor that makes tests more ergonomic
@@ -285,7 +310,7 @@ impl CreateChangeFile {
             contents: CreateChangeFileContents::New {
                 bytes: Bytes::from(contents),
             },
-            file_type: FileType::Regular,
+            file_type: Some(FileType::Regular),
             git_lfs: None,
         }
     }
@@ -343,6 +368,142 @@ impl CreateChange {
         Ok(())
     }
 
+    /// Try to resolve file_type from stack_file_types.
+    ///
+    /// Resolution order:
+    /// 1. Copy source path in stack_file_types (files from earlier in the stack)
+    /// 2. Self path in stack_file_types
+    ///
+    /// Returns true if resolved, false if parent lookup is needed.
+    pub(crate) fn resolve_file_type_from_stack(
+        &mut self,
+        path: &NonRootMPath,
+        stack_file_types: &BTreeMap<NonRootMPath, FileType>,
+    ) -> bool {
+        // Early return for deletions - they don't need file_type
+        if matches!(
+            self,
+            CreateChange::Deletion | CreateChange::UntrackedDeletion
+        ) {
+            return true;
+        }
+
+        let lookup_path = self.copy_source_or_path(path);
+
+        let file = match self {
+            CreateChange::Tracked(file, _) | CreateChange::Untracked(file) => file,
+            _ => return true,
+        };
+
+        // Already resolved
+        if file.file_type.is_some() {
+            return true;
+        }
+
+        // Try resolving from earlier stack commit
+        if let Some(ft) = stack_file_types.get(&lookup_path) {
+            file.file_type = Some(*ft);
+            return true;
+        }
+
+        false
+    }
+
+    /// Get the path to look up for file_type resolution.
+    /// Returns copy source path if present, otherwise self path.
+    pub(crate) fn copy_source_or_path(&self, path: &NonRootMPath) -> NonRootMPath {
+        match self {
+            CreateChange::Tracked(_, Some(copy_info)) => copy_info
+                .path()
+                .clone()
+                .into_optional_non_root_path()
+                .unwrap_or_else(|| path.clone()),
+            _ => path.clone(),
+        }
+    }
+
+    /// Get an immutable reference to the file if this is a file change (Tracked or Untracked).
+    pub(crate) fn file(&self) -> Option<&CreateChangeFile> {
+        match self {
+            CreateChange::Tracked(file, _) | CreateChange::Untracked(file) => Some(file),
+            _ => None,
+        }
+    }
+
+    /// Get a mutable reference to the file if this is a file change (Tracked or Untracked).
+    pub(crate) fn file_mut(&mut self) -> Option<&mut CreateChangeFile> {
+        match self {
+            CreateChange::Tracked(file, _) | CreateChange::Untracked(file) => Some(file),
+            _ => None,
+        }
+    }
+
+    /// Check if this change needs file_type resolution.
+    pub(crate) fn needs_file_type_resolution(&self) -> bool {
+        self.file().is_some_and(|f| f.file_type.is_none())
+    }
+
+    /// Set the file_type for this change.
+    pub(crate) fn set_file_type(&mut self, file_type: FileType) {
+        if let Some(f) = self.file_mut() {
+            f.file_type = Some(file_type);
+        }
+    }
+
+    /// Get the current file_type (if any).
+    pub(crate) fn file_type(&self) -> Option<FileType> {
+        self.file().and_then(|f| f.file_type)
+    }
+}
+
+/// Look up file types from parent contexts for the given paths.
+///
+/// This function performs a batched lookup of file types from parent contexts.
+/// It tries each parent in order until all paths are resolved.
+///
+/// Returns a map from path to file type for the paths that were found.
+pub(crate) async fn lookup_file_types_from_parents<R: MononokeRepo>(
+    paths: impl IntoIterator<Item = NonRootMPath>,
+    parent_contexts: &[ChangesetContext<R>],
+) -> Result<BTreeMap<NonRootMPath, FileType>, MononokeError> {
+    let unique_paths: BTreeSet<NonRootMPath> = paths.into_iter().collect();
+    let mut resolved: BTreeMap<NonRootMPath, FileType> = BTreeMap::new();
+
+    if unique_paths.is_empty() {
+        return Ok(resolved);
+    }
+
+    // Try each parent in order, collecting types for unresolved paths
+    for parent_ctx in parent_contexts {
+        if resolved.len() == unique_paths.len() {
+            break;
+        }
+
+        // Query paths not yet resolved
+        let paths_to_query: Vec<MPath> = unique_paths
+            .iter()
+            .filter(|p| !resolved.contains_key(*p))
+            .map(|p| MPath::from(p.clone()))
+            .collect();
+
+        let path_contexts = parent_ctx
+            .paths_with_content(paths_to_query.into_iter())
+            .await?;
+
+        pin_mut!(path_contexts);
+        while let Some(path_ctx) = path_contexts.try_next().await? {
+            if let Some(ft) = path_ctx.file_type().await? {
+                if let Some(non_root) = path_ctx.path().clone().into_optional_non_root_path() {
+                    resolved.insert(non_root, ft);
+                }
+            }
+        }
+    }
+
+    Ok(resolved)
+}
+
+impl CreateChange {
     pub fn into_file_change(self, parent_ids: &[ChangesetId]) -> Result<FileChange, MononokeError> {
         match self {
             CreateChange::Tracked(
@@ -352,7 +513,7 @@ impl CreateChange {
                             file_id,
                             maybe_size: Some(size),
                         },
-                    file_type,
+                    file_type: Some(file_type),
                     git_lfs,
                 },
                 copy_info,
@@ -371,7 +532,7 @@ impl CreateChange {
                         file_id,
                         maybe_size: Some(size),
                     },
-                file_type,
+                file_type: Some(file_type),
                 git_lfs: None,
             }) => Ok(FileChange::untracked(file_id, file_type, size)),
             CreateChange::UntrackedDeletion => Ok(FileChange::UntrackedDeletion),
@@ -1239,6 +1400,50 @@ impl<R: MononokeRepo> RepoContext<R> {
                 .await?;
             }
         };
+
+        // Resolve file types for changes with file_type: None
+        // For each commit in the stack, we need to look at:
+        // 1. Previous commits in the stack (for files created earlier in the stack)
+        // 2. Parent contexts (for files from the parent commits)
+        // This must be sequential per-commit because each commit's file types may depend on
+        // previous commits in the stack. However, parent lookups within a commit are parallel.
+        let mut stack_file_types: BTreeMap<NonRootMPath, FileType> = BTreeMap::new();
+        for file_changes in &mut file_changes_stack {
+            // Phase 1: Sync resolution from stack_file_types
+            let mut needs_parent_lookup: Vec<(NonRootMPath, NonRootMPath)> = Vec::new();
+            for (path, change) in file_changes.iter_mut() {
+                if !change.resolve_file_type_from_stack(path, &stack_file_types) {
+                    let lookup_path = change.copy_source_or_path(path);
+                    needs_parent_lookup.push((path.clone(), lookup_path));
+                }
+            }
+
+            // Phase 2: Batch parent lookups using shared helper
+            let unique_lookup_paths = needs_parent_lookup
+                .iter()
+                .map(|(_, lookup_path)| lookup_path.clone());
+            let parent_file_types =
+                lookup_file_types_from_parents(unique_lookup_paths, &stack_parent_ctxs).await?;
+
+            // Phase 3: Apply resolved types from parents, defaulting to Regular
+            for (path, change) in file_changes.iter_mut() {
+                if change.needs_file_type_resolution() {
+                    let lookup_path = change.copy_source_or_path(path);
+                    let ft = parent_file_types
+                        .get(&lookup_path)
+                        .copied()
+                        .unwrap_or(FileType::Regular);
+                    change.set_file_type(ft);
+                }
+            }
+
+            // Update stack_file_types for next commit
+            for (path, change) in file_changes.iter() {
+                if let Some(ft) = change.file_type() {
+                    stack_file_types.insert(path.clone(), ft);
+                }
+            }
+        }
 
         let mut new_changesets = Vec::new();
         let mut new_changeset_ids = Vec::new();

@@ -133,7 +133,7 @@ async fn create_commit(
                     file_id,
                     maybe_size: None,
                 },
-                file_type: FileType::Regular,
+                file_type: Some(FileType::Regular),
                 git_lfs: None,
             },
             None,

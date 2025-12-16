@@ -211,7 +211,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                     contents: CreateChangeFileContents::New {
                         bytes: git_commit_id.into(),
                     },
-                    file_type: FileType::GitSubmodule,
+                    file_type: Some(FileType::GitSubmodule),
                     git_lfs: None,
                 };
                 CreateChange::Tracked(create_change_file, None)

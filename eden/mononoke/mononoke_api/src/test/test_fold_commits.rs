@@ -34,6 +34,7 @@ use crate::CreateChange;
 use crate::CreateChangeFile;
 use crate::CreateChangeFileContents;
 use crate::CreateChangesetChecks;
+use crate::CreateCopyInfo;
 use crate::CreateInfo;
 use crate::Repo;
 use crate::RepoContext;
@@ -870,7 +871,7 @@ async fn test_fold_commits_with_additional_changes_add_file(fb: FacebookInit) ->
                 contents: CreateChangeFileContents::New {
                     bytes: Bytes::from("additional content\n"),
                 },
-                file_type: FileType::Regular,
+                file_type: Some(FileType::Regular),
                 git_lfs: None,
             },
             None,
@@ -958,7 +959,7 @@ async fn test_fold_commits_with_additional_changes_delete_file_from_stack(
 ) -> Result<(), Error> {
     // Graph: A-B
     // additional_changes: delete a file that was added in the stack
-    // Expected: Should succeed (file exists in stack_changes)
+    // Expected: Should fail (net effect is empty after deletion cancels addition)
     let ctx = CoreContext::test_mock(fb);
     let (repo, commits) = init_repo(
         &ctx,
@@ -1016,7 +1017,7 @@ async fn test_fold_commits_with_additional_changes_modify_existing_file(
                 contents: CreateChangeFileContents::New {
                     bytes: Bytes::from("modified base\n"),
                 },
-                file_type: FileType::Regular,
+                file_type: Some(FileType::Regular),
                 git_lfs: None,
             },
             None,
@@ -1075,7 +1076,7 @@ async fn test_fold_commits_with_additional_changes_noop_fails(
                 contents: CreateChangeFileContents::New {
                     bytes: Bytes::from("file1 content\n"),
                 },
-                file_type: FileType::Regular,
+                file_type: Some(FileType::Regular),
                 git_lfs: None,
             },
             None,
@@ -1121,7 +1122,7 @@ async fn test_fold_commits_with_additional_changes_only(fb: FacebookInit) -> Res
                 contents: CreateChangeFileContents::New {
                     bytes: Bytes::from("additional content\n"),
                 },
-                file_type: FileType::Regular,
+                file_type: Some(FileType::Regular),
                 git_lfs: None,
             },
             None,
@@ -1188,7 +1189,7 @@ async fn test_fold_commits_additional_changes_create_inside_file_without_delete(
                 contents: CreateChangeFileContents::New {
                     bytes: Bytes::from("subfile content\n"),
                 },
-                file_type: FileType::Regular,
+                file_type: Some(FileType::Regular),
                 git_lfs: None,
             },
             None,
@@ -1242,7 +1243,7 @@ async fn test_fold_commits_additional_changes_create_inside_file_with_delete(
                     contents: CreateChangeFileContents::New {
                         bytes: Bytes::from("subfile content\n"),
                     },
-                    file_type: FileType::Regular,
+                    file_type: Some(FileType::Regular),
                     git_lfs: None,
                 },
                 None,
@@ -1519,6 +1520,343 @@ async fn test_fold_commits_root_commit_fails(fb: FacebookInit) -> Result<(), Err
     assert!(
         result.is_err(),
         "Folding with root commit at bottom should fail"
+    );
+
+    Ok(())
+}
+
+/// Helper to get the file type of a file in a changeset
+async fn get_file_type(changeset: &ChangesetContext<Repo>, path: &str) -> Result<Option<FileType>> {
+    let path_ctx = changeset.path_with_content(path).await?;
+    Ok(path_ctx.file_type().await?)
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_file_type_inheritance_from_stack(fb: FacebookInit) -> Result<(), Error> {
+    // Graph: A-B
+    // B adds file `foo` with type EXEC
+    // Additional changes: modify `foo` with file_type: None
+    // Expected: `foo` should still have type EXEC (inherited from stack)
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A base.txt "base\n"
+            # modify: B foo exec "foo content\n"
+        "##,
+    )
+    .await?;
+
+    let b_ctx = repo.changeset(commits["B"]).await?.expect("B exists");
+    let foo_type = get_file_type(&b_ctx, "foo").await?;
+    assert_eq!(
+        foo_type,
+        Some(FileType::Executable),
+        "foo should be EXEC in B"
+    );
+
+    // Additional change: modify foo with file_type: None
+    let additional_changes = BTreeMap::from([(
+        MPath::try_from("foo")?,
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("modified foo content\n"),
+                },
+                file_type: None, // Should inherit EXEC from stack
+                git_lfs: None,
+            },
+            None,
+        ),
+    )]);
+
+    let folded = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await?
+        .changeset_ctx;
+
+    let folded_foo_type = get_file_type(&folded, "foo").await?;
+    assert_eq!(
+        folded_foo_type,
+        Some(FileType::Executable),
+        "foo should inherit EXEC type from stack"
+    );
+
+    let content = folded
+        .path_with_content("foo")
+        .await?
+        .file()
+        .await?
+        .expect("foo should exist")
+        .content_concat()
+        .await?;
+    assert_eq!(content, Bytes::from("modified foo content\n"));
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_file_type_inheritance_through_copy_chain(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Graph: A-B-C
+    // A adds file `foo` with type EXEC
+    // B renames (copies + deletes) `foo` to `bar`
+    // Additional changes: copy `bar` to `baz` with file_type: None
+    // Expected: `baz` should have type EXEC (inherited through copy chain: baz <- bar <- foo)
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A foo exec "foo content\n"
+            # copy: B bar exec "foo content\n" A foo
+            # delete: B foo
+        "##,
+    )
+    .await?;
+
+    let a_ctx = repo.changeset(commits["A"]).await?.expect("A exists");
+    let foo_type = get_file_type(&a_ctx, "foo").await?;
+    assert_eq!(
+        foo_type,
+        Some(FileType::Executable),
+        "foo should be EXEC in A"
+    );
+
+    // Verify bar is EXEC in B (inherited from foo)
+    let b_ctx = repo.changeset(commits["B"]).await?.expect("B exists");
+    let bar_type = get_file_type(&b_ctx, "bar").await?;
+    assert_eq!(
+        bar_type,
+        Some(FileType::Executable),
+        "bar should be EXEC in B"
+    );
+
+    // Additional change: copy bar to baz with file_type: None
+    let additional_changes = BTreeMap::from([(
+        MPath::try_from("baz")?,
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("foo content\n"),
+                },
+                file_type: None, // Should inherit EXEC through copy chain
+                git_lfs: None,
+            },
+            Some(CreateCopyInfo::new(MPath::try_from("bar")?, 0)),
+        ),
+    )]);
+
+    let folded = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await?
+        .changeset_ctx;
+
+    // Verify baz is EXEC after folding (inherited through copy chain)
+    let baz_type = get_file_type(&folded, "baz").await?;
+    assert_eq!(
+        baz_type,
+        Some(FileType::Executable),
+        "baz should inherit EXEC type through copy chain (baz <- bar <- foo)"
+    );
+
+    let bar_type_after = get_file_type(&folded, "bar").await?;
+    assert_eq!(
+        bar_type_after,
+        Some(FileType::Executable),
+        "bar should still be EXEC"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_file_type_inheritance_from_base(fb: FacebookInit) -> Result<(), Error> {
+    // Graph: A-B
+    // A has file `foo` with type EXEC
+    // B modifies `foo` to different content (keeping EXEC)
+    // Additional changes: modify `foo` with file_type: None
+    // Expected: `foo` should still have type EXEC (inherited from stack state based on A)
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A foo exec "foo content\n"
+            # modify: B foo exec "modified in B\n"
+        "##,
+    )
+    .await?;
+
+    let a_ctx = repo.changeset(commits["A"]).await?.expect("A exists");
+    let foo_type = get_file_type(&a_ctx, "foo").await?;
+    assert_eq!(
+        foo_type,
+        Some(FileType::Executable),
+        "foo should be EXEC in A"
+    );
+
+    // Additional change: modify foo with file_type: None
+    let additional_changes = BTreeMap::from([(
+        MPath::try_from("foo")?,
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("additional modification\n"),
+                },
+                file_type: None, // Should inherit EXEC from working tree (which reflects B's state)
+                git_lfs: None,
+            },
+            None,
+        ),
+    )]);
+
+    let folded = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await?
+        .changeset_ctx;
+
+    let folded_foo_type = get_file_type(&folded, "foo").await?;
+    assert_eq!(
+        folded_foo_type,
+        Some(FileType::Executable),
+        "foo should inherit EXEC type from stack"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_file_type_explicit_takes_precedence(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Graph: A-B
+    // B adds file `foo` with type EXEC
+    // Additional changes: modify `foo` with explicit file_type: Regular
+    // Expected: `foo` should have type Regular (explicit takes precedence)
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A base.txt "base\n"
+            # modify: B foo exec "foo content\n"
+        "##,
+    )
+    .await?;
+
+    // Additional change: modify foo with explicit file_type: Regular
+    let additional_changes = BTreeMap::from([(
+        MPath::try_from("foo")?,
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("modified foo content\n"),
+                },
+                file_type: Some(FileType::Regular), // Explicit override
+                git_lfs: None,
+            },
+            None,
+        ),
+    )]);
+
+    let folded = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await?
+        .changeset_ctx;
+
+    // Verify foo is Regular after folding (explicit type takes precedence)
+    let folded_foo_type = get_file_type(&folded, "foo").await?;
+    assert_eq!(
+        folded_foo_type,
+        Some(FileType::Regular),
+        "foo should be Regular when explicitly specified"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_file_type_defaults_to_regular_for_new_file(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Graph: A-B
+    // Additional changes: add new file with file_type: None
+    // Expected: new file should default to Regular
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A base.txt "base\n"
+            # modify: B file.txt "file content\n"
+        "##,
+    )
+    .await?;
+
+    // Additional change: add completely new file with file_type: None
+    let additional_changes = BTreeMap::from([(
+        MPath::try_from("new_file.txt")?,
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("new file content\n"),
+                },
+                file_type: None, // Should default to Regular
+                git_lfs: None,
+            },
+            None,
+        ),
+    )]);
+
+    let folded = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await?
+        .changeset_ctx;
+
+    // Verify new_file.txt is Regular (default)
+    let new_file_type = get_file_type(&folded, "new_file.txt").await?;
+    assert_eq!(
+        new_file_type,
+        Some(FileType::Regular),
+        "new file should default to Regular when file_type is None"
     );
 
     Ok(())

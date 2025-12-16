@@ -124,7 +124,7 @@ pub fn to_create_change(fc: BonsaiFileChange, bubble_id: Option<BubbleId>) -> Re
                             file_id: content_id.into(),
                             maybe_size: extract_size(metadata),
                         },
-                        file_type: file_type.into(),
+                        file_type: Some(file_type.into()),
                         git_lfs: None,
                     },
                     copy_info
@@ -154,7 +154,7 @@ pub fn to_create_change(fc: BonsaiFileChange, bubble_id: Option<BubbleId>) -> Re
                         file_id: content_id.into(),
                         maybe_size: extract_size(metadata),
                     },
-                    file_type: file_type.into(),
+                    file_type: Some(file_type.into()),
                     git_lfs: None,
                 }))
             } else {
