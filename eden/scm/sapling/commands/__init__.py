@@ -5692,7 +5692,11 @@ def status(ui, repo, *pats, **opts):
     if (
         opts.get("all") or opts.get("copies") or ui.configbool("ui", "statuscopies")
     ) and not opts.get("no_status"):
-        copy = copies.pathcopies(repo[node1], repo[node2], m)
+        with repo.ui.configoverride(
+            {("copytrace", "fallback-to-content-similarity"): False},
+            "status",
+        ):
+            copy = copies.pathcopies(repo[node1], repo[node2], m)
 
     ui.pager("status")
     fm = ui.formatter("status", opts)
