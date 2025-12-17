@@ -50,7 +50,7 @@ impl CcsmPath {
 
     #[cfg(test)]
     pub(crate) fn untransform(self) -> anyhow::Result<NonRootMPath> {
-        if self.0.num_components() % 2 != 0 {
+        if !self.0.num_components().is_multiple_of(2) {
             anyhow::bail!("Ccsm transformed path doesn't have even length: {}", self.0);
         }
 

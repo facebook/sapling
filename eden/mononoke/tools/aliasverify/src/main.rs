@@ -293,7 +293,7 @@ impl AliasVerification {
 
     async fn get_file_changes_vector(&self, bcs_id: ChangesetId) -> Result<Vec<FileChange>, Error> {
         let cs_cnt = self.cs_processed.fetch_add(1, Ordering::Relaxed);
-        if cs_cnt % 1000 == 0 {
+        if cs_cnt.is_multiple_of(1000) {
             info!("Commit processed {:?}", cs_cnt);
         }
         let bcs = bcs_id

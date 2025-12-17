@@ -26,9 +26,10 @@ const QUIET: &str = "quiet";
 const SHALLOW_PREFIX: &[u8] = b"shallow";
 
 /// Enum representing the object format for hashes
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub enum ObjectFormat {
     /// Use Sha1 hashes for Git objects
+    #[default]
     Sha1,
     /// Use Sha256 hashes for Git objects
     Sha256,
@@ -41,12 +42,6 @@ impl ObjectFormat {
             "sha256" => Ok(Self::Sha256),
             format => bail!("Invalid object format: {}", format),
         }
-    }
-}
-
-impl Default for ObjectFormat {
-    fn default() -> Self {
-        Self::Sha1
     }
 }
 

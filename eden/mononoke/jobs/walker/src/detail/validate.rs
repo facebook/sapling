@@ -829,7 +829,10 @@ impl ProgressReporterUnprotected for ValidateProgressState {
     }
 
     fn report_throttled(&mut self) {
-        if self.checked_nodes % self.throttle_options.sample_rate == 0 {
+        if self
+            .checked_nodes
+            .is_multiple_of(self.throttle_options.sample_rate)
+        {
             let new_update = Instant::now();
             let delta_time = new_update.duration_since(self.last_update);
             if delta_time >= self.throttle_options.interval {

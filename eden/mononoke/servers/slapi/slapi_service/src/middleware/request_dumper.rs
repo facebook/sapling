@@ -231,7 +231,7 @@ impl Middleware for RequestDumperMiddleware {
                     };
                     let slow_request: bool = dur_ms > SLOW_REQUEST_THRESHOLD_MS;
                     // Always log if slow, otherwise use sampling rate
-                    if !slow_request && (rand::random::<u64>() % SAMPLE_RATIO) != 0 {
+                    if !slow_request && !rand::random::<u64>().is_multiple_of(SAMPLE_RATIO) {
                         trace!("Won't record this request");
                         return;
                     }

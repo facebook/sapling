@@ -106,7 +106,7 @@ pub(crate) fn delta_base(
         // is expensive on client side
         let byte_sum = entry.full_object_oid().first_byte() as u16
             + entry.full_object_oid().as_bytes().last_byte().unwrap_or(0) as u16;
-        if byte_sum % 250 == 0 {
+        if byte_sum.is_multiple_of(250) {
             return None;
         }
     }

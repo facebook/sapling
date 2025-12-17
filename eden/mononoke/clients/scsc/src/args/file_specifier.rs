@@ -129,7 +129,7 @@ impl FileSpecifierArgs {
 /// Decode a hex string to binary, with proper error handling
 fn decode_hex(hex_str: &str) -> Result<Vec<u8>> {
     let hex_str = hex_str.trim();
-    if hex_str.len() % 2 != 0 {
+    if !hex_str.len().is_multiple_of(2) {
         return Err(anyhow::anyhow!(
             "Hex string must have even number of characters, got: {}",
             hex_str

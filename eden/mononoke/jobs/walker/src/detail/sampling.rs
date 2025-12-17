@@ -266,10 +266,10 @@ where
                             || step.target.sampling_fingerprint(),
                             |r| Some(r.sampling_fingerprint()),
                         );
-                        sampling_fingerprint
-                            .map_or(self.options.sample_offset % sample_rate == 0, |fp| {
-                                (fp + self.options.sample_offset) % sample_rate == 0
-                            })
+                        sampling_fingerprint.map_or(
+                            self.options.sample_offset.is_multiple_of(sample_rate),
+                            |fp| (fp + self.options.sample_offset).is_multiple_of(sample_rate),
+                        )
                     }
                 };
 
@@ -387,12 +387,10 @@ where
             let should_sample = match self.options.sample_rate {
                 0 => false,
                 1 => true,
-                sample_rate => step
-                    .target
-                    .sampling_fingerprint()
-                    .map_or(self.options.sample_offset % sample_rate == 0, |fp| {
-                        (fp + self.options.sample_offset) % sample_rate == 0
-                    }),
+                sample_rate => step.target.sampling_fingerprint().map_or(
+                    self.options.sample_offset.is_multiple_of(sample_rate),
+                    |fp| (fp + self.options.sample_offset).is_multiple_of(sample_rate),
+                ),
             };
 
             if should_sample {

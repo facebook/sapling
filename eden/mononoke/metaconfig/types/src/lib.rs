@@ -1988,7 +1988,7 @@ pub struct GitBundleURIConfig {
 }
 
 /// Configuration for git's bundle-uri url-gen component
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub enum UriGeneratorType {
     /// Use CDN as the URI generator
     Cdn {
@@ -2005,13 +2005,8 @@ pub enum UriGeneratorType {
         api_key: String,
     },
     /// Use local FS as the URI generator
+    #[default]
     LocalFS,
-}
-
-impl Default for UriGeneratorType {
-    fn default() -> Self {
-        Self::LocalFS
-    }
 }
 
 /// Information on a loaded config

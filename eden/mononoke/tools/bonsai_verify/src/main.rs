@@ -203,7 +203,7 @@ fn subcommand_round_trip(
                     async move {
                         if !result.is_ignored() {
                             let followed = follow_limit - meta.follow_remaining;
-                            if followed % 10000 == 0 {
+                            if followed.is_multiple_of(10000) {
                                 info!(
                                     "Followed {} changesets, {} remaining",
                                     followed, meta.follow_remaining,

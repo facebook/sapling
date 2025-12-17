@@ -405,11 +405,13 @@ impl From<BookmarkKind> for Value {
     Ord,
     PartialOrd,
     clap::ValueEnum,
-    mysql::OptTryFromRowField
+    mysql::OptTryFromRowField,
+    Default
 )]
 pub enum BookmarkCategory {
     /// A bookmark created in Mononoke or imported from a Git branch (ref living under
     /// `refs/heads` or `refs/remotes/<remote_name>`)
+    #[default]
     Branch,
     /// A bookmark created from importing a Git tag (under `refs/tags`)
     Tag,
@@ -424,12 +426,6 @@ impl BookmarkCategory {
 const BRANCH_CATEGORY: &[u8] = b"branch";
 const TAG_CATEGORY: &[u8] = b"tag";
 const NOTE_CATEGORY: &[u8] = b"note";
-
-impl Default for BookmarkCategory {
-    fn default() -> Self {
-        Self::Branch
-    }
-}
 
 impl From<BookmarkCategory> for Value {
     fn from(category: BookmarkCategory) -> Self {

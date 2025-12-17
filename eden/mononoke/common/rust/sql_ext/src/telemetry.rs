@@ -338,7 +338,7 @@ fn setup_scuba_sample(
         "repo_ids",
         // Scuba only supports NormVector of Strings
         repo_ids
-            .into_iter()
+            .iter()
             .sorted()
             .dedup()
             .map(|id| id.to_string())
@@ -1077,7 +1077,7 @@ mod facebook {
     fn mysql_errno(e: &anyhow::Error) -> Option<i64> {
         e.downcast_ref::<MysqlError>()
             .and_then(|e| e.mysql_errno())
-            .and_then(|errno| errno.try_into().ok())
+            .map(|errno| errno.into())
     }
     fn mysql_error_type(e: &anyhow::Error) -> Option<String> {
         e.downcast_ref::<MysqlError>()

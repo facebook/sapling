@@ -63,9 +63,10 @@ impl Arbitrary for Operation {
     }
 }
 
-#[derive(Clone, Serialize, Debug, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Serialize, Debug, Deserialize, Eq, PartialEq, Hash, Default)]
 pub enum Transfer {
     #[serde(rename = "basic")]
+    #[default]
     Basic,
     #[serde(other)]
     Unknown,
@@ -75,12 +76,6 @@ impl Arbitrary for Transfer {
     fn arbitrary(_g: &mut Gen) -> Self {
         // We don't generate invalid Transfer instances for testing.
         Transfer::Basic
-    }
-}
-
-impl Default for Transfer {
-    fn default() -> Self {
-        Self::Basic
     }
 }
 

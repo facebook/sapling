@@ -174,7 +174,11 @@ where
 
     // Throttle by sample, then time
     pub fn should_log_throttled(&mut self) -> Option<Duration> {
-        if self.work_stats.total_progress % self.params.options.sample_rate == 0 {
+        if self
+            .work_stats
+            .total_progress
+            .is_multiple_of(self.params.options.sample_rate)
+        {
             let new_update = Instant::now();
             let delta_time = new_update.duration_since(self.reporting_stats.last_update);
             if delta_time >= self.params.options.interval {

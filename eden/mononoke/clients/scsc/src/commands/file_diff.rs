@@ -67,7 +67,7 @@ impl Render for FileDiffOutput {
 
 fn decode_file_id(hex_str: &str) -> Result<Vec<u8>> {
     let hex_str = hex_str.trim();
-    if hex_str.len() % 2 != 0 {
+    if !hex_str.len().is_multiple_of(2) {
         return Err(anyhow::anyhow!(
             "File ID must have even number of characters, got: {}",
             hex_str

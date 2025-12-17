@@ -160,7 +160,7 @@ impl UploadCounters {
     }
 
     pub fn maybe_log<'a>(&self, ctx: &'a CoreContext, limit: usize) {
-        if self.sum() % limit == 0 {
+        if self.sum().is_multiple_of(limit) {
             self.log(ctx);
         }
     }

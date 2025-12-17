@@ -457,7 +457,9 @@ where
             if let Some(chunking) = tail_params.chunking.as_ref() {
                 info!("Deferred: {}", visitor.num_deferred());
                 if let Some(clear_state) = chunking.clear_state.as_ref() {
-                    if clear_state.sample_rate != 0 && chunk_num % clear_state.sample_rate == 0 {
+                    if clear_state.sample_rate != 0
+                        && chunk_num.is_multiple_of(clear_state.sample_rate)
+                    {
                         info!("Clearing state after chunk {}", chunk_num);
                         visitor.clear_state(&clear_state.node_types, &clear_state.interned_types);
                     }
@@ -465,7 +467,9 @@ where
 
                 // Record checkpoint and update best_bounds
                 if let Some(checkpoints) = chunking.checkpoints.as_ref() {
-                    if checkpoints.sample_rate != 0 && chunk_num % checkpoints.sample_rate == 0 {
+                    if checkpoints.sample_rate != 0
+                        && chunk_num.is_multiple_of(checkpoints.sample_rate)
+                    {
                         let maybe_new = if let Some(best_bounds) = best_bounds.as_ref() {
                             best_bounds
                                 .checkpoint(

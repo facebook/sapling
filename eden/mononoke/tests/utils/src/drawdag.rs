@@ -414,7 +414,7 @@ fn pad_content(content: Vec<u8>, size: usize) -> Vec<u8> {
     };
 
     let pattern_len = pattern.len();
-    let repeats = (size + pattern_len - 1) / pattern_len;
+    let repeats = size.div_ceil(pattern_len);
     let mut result = pattern.repeat(repeats);
     result.truncate(size);
     result

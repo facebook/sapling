@@ -290,17 +290,12 @@ impl std::fmt::Display for SubmodulePath {
 /// loading these repos, in which case this value will be set to `None`.
 /// When rewriting commits from small to large (i.e. calling `rewrite_commit`),
 /// this map has to be available, or the operation will crash otherwise.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub enum SubmoduleDeps<R> {
     ForSync(HashMap<NonRootMPath, Arc<R>>),
+    #[default]
     NotNeeded,
     NotAvailable,
-}
-
-impl<R> Default for SubmoduleDeps<R> {
-    fn default() -> Self {
-        Self::NotNeeded
-    }
 }
 
 impl<R: RepoIdentityRef> SubmoduleDeps<R> {

@@ -424,7 +424,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                         filestore_config,
                         repo_blobstore.clone(),
                         Some(&stack_changes),
-                        &[base_ctx.clone()],
+                        std::slice::from_ref(&base_ctx),
                     )
                     .await?;
             }
@@ -452,7 +452,7 @@ impl<R: MononokeRepo> RepoContext<R> {
 
             // Verify deleted files existed (in stack_changes or base commit)
             let _deletions_to_remove = verify_deleted_files_existed_in_a_parent(
-                &[base_ctx.clone()],
+                std::slice::from_ref(&base_ctx),
                 Some(&stack_changes),
                 deleted_files,
                 checks.deleted_files_existed_in_a_parent,
@@ -467,7 +467,7 @@ impl<R: MononokeRepo> RepoContext<R> {
 
             // Verify prefix files are deleted when creating files inside a path that is a file
             verify_prefix_files_deleted(
-                &[base_ctx.clone()],
+                std::slice::from_ref(&base_ctx),
                 Some(&stack_changes),
                 prefix_paths,
                 &path_changes,
@@ -525,7 +525,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             // Verify no noop file changes (if check mode is not Skip)
             if checks.noop_file_changes != CreateChangesetCheckMode::Skip {
                 verify_no_noop_file_changes(
-                    &[base_ctx.clone()],
+                    std::slice::from_ref(&base_ctx),
                     Some(stack_content_changes),
                     &file_changes_for_noop_check,
                 )
@@ -566,7 +566,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         // Those files need explicit deletions.
         for replaced_path in &replaced_directory_paths {
             // Check if this path is currently deleted or never existed as a file in working_tree
-            let current_state = working_tree.get((&MPath::from(replaced_path.clone())));
+            let current_state = working_tree.get(&MPath::from(replaced_path.clone()));
             let is_deleted_or_absent = match current_state {
                 Some(Some(CreateChange::Tracked(_, _) | CreateChange::Untracked(_))) => false, // File exists
                 _ => true, // Deleted, UntrackedDeletion, None, or not in tree

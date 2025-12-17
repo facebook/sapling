@@ -310,7 +310,7 @@ fn override_repo_configs(
     Ok(repos)
 }
 
-fn setup_repo_factory<'a>(
+fn setup_repo_factory(
     walk_stats_key: &'static str,
     app: &MononokeApp,
     repo_id_to_name: HashMap<RepositoryId, String>,

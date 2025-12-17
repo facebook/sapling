@@ -53,7 +53,7 @@ impl AsyncWrite for TestAsyncWriter {
         let this = self.project();
         *this.random_counter += 1;
         // Return poll pending for every third write attempt
-        if *this.random_counter % 2 == 0 {
+        if (*this.random_counter).is_multiple_of(2) {
             let sleep = this.sleep_future.as_mut();
             if sleep.poll(cx).is_pending() {
                 return Poll::Pending;
