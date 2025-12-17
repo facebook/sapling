@@ -133,7 +133,20 @@ export function StackEditConfirmButtons(): React.ReactElement {
     if (splitCommitHash == null) {
       return;
     }
-    tracker.track('SmartActionClicked', {extras: {action: 'SplitCommit'}});
+    const numFilesInCommit = startCommit?.files?.size ?? 0;
+
+    // Bump the metric to track clicks for acceptance rate calculation
+    bumpStackEditMetric('clickedAiSplit');
+
+    tracker.track('DevmateSplitWithDevmateButtonClicked', {
+      extras: {
+        action: 'SplitCommit',
+        source: 'splitUI',
+        commitHash: splitCommitHash,
+        numFilesInCommit,
+        stackIntention,
+      },
+    });
     serverAPI.postMessage({
       type: 'platform/splitCommitWithAI',
       diffCommit: splitCommitHash,

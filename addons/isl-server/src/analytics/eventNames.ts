@@ -141,6 +141,7 @@ export type TrackEventName =
   | 'ShowBugButtonNux'
   | 'SmartActionClicked'
   | 'SmartActionsMenuOpened'
+  | 'DevmateSplitWithDevmateButtonClicked'
   | 'StackEditMetrics'
   | 'StackEditChangeTab'
   | 'StackEditInlineSplitButton'

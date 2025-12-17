@@ -527,6 +527,29 @@ class UseStackEditState {
       .filter(s => s.op.name === name).size;
   }
 
+  /**
+   * Count edits made after an AI split operation.
+   * This helps measure the edit rate - how often users modify AI suggestions.
+   * Returns the count of non-AI-split operations that occur after any splitWithAI operation.
+   */
+  countEditsAfterAiSplit(): number {
+    const historySlice = this.history.history.slice(0, this.history.currentIndex + 1);
+    let foundAiSplit = false;
+    let editsAfterAiSplit = 0;
+
+    for (const entry of historySlice) {
+      if (entry.op.name === 'splitWithAI') {
+        foundAiSplit = true;
+      } else if (foundAiSplit && entry.op.name !== 'import') {
+        // Count any non-import operations after an AI split
+        // Exclude 'import' as it's the initial state operation
+        editsAfterAiSplit++;
+      }
+    }
+
+    return editsAfterAiSplit;
+  }
+
   private setHistory(newHistory: History) {
     const {hashes, intention} = this.state;
     this.setState({
@@ -578,6 +601,10 @@ type StackEditMetrics = {
   splitChangeRange?: number;
   splitFromSuggestion?: number;
   clickedAiSplit?: number;
+  // Devmate split specific metrics for acceptance rate tracking
+  clickedDevmateSplit?: number;
+  // Track edits made after an AI split was applied (to measure edit rate)
+  editsAfterAiSplit?: number;
 };
 
 // Not atoms. They do not trigger re-render.
@@ -597,6 +624,13 @@ export function sendStackEditMetrics(stackEdit: UseStackEditState, save = true) 
   const numAiSplits = stackEdit.numHistoryEditsOfType('splitWithAI');
   if (numAiSplits) {
     bumpStackEditMetric('acceptedAiSplits', numAiSplits);
+  }
+
+  // Count edits made after AI splits (to measure edit rate)
+  // This counts any non-AI-split operations that occurred after a splitWithAI
+  const editsAfterAiSplit = stackEdit.countEditsAfterAiSplit();
+  if (editsAfterAiSplit > 0) {
+    bumpStackEditMetric('editsAfterAiSplit', editsAfterAiSplit);
   }
 
   tracker?.track('StackEditMetrics', {
