@@ -33,17 +33,11 @@ riscv = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e085e1
 riscv-pac = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e085e12845944d5bbbc869c290" }
 riscv-rt = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e085e12845944d5bbbc869c290" }
 sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "24317d5eab40fbc33caf1142946e2f39caad73ea" }
-stabby = { git = "https://github.com/fbsource/stabby", rev = "22db1dda19938ff7725a93db64012a5730325c5d" }
+stabby = { git = "https://github.com/nitinsingh-meta/stabby", rev = "304c895c34e502fc635b85df6d4f22f746747ed4" }
 tokenizers-21 = { package = "tokenizers", git = "https://github.com/huggingface/tokenizers", rev = "133db48d4f272070076fbc7a649c9e8aa8cd0646" }
 uefisettings = { git = "https://github.com/linuxboot/uefisettings", rev = "c0599ade83438ae4f050f6c2c169ee946e847f58" }
 vm-allocator = { git = "https://github.com/rust-vmm/vm-allocator", rev = "5fb545cc6e41fdc9f27d48d97ed26274a35bc6c6" }
 warp = { git = "https://github.com/jdthomas/warp.git", rev = "c794232d182abaa3add8184e7d661e084cc516c5" }
-zenoh = { git = "https://github.com/nitinsingh-meta/zenoh", rev = "9b525dceb27582395da945c5af0c46a5d926f078" }
-zenoh-ext = { git = "https://github.com/nitinsingh-meta/zenoh", rev = "9b525dceb27582395da945c5af0c46a5d926f078" }
-zenoh-protocol = { git = "https://github.com/nitinsingh-meta/zenoh", rev = "9b525dceb27582395da945c5af0c46a5d926f078" }
-zenoh-runtime = { git = "https://github.com/nitinsingh-meta/zenoh", rev = "9b525dceb27582395da945c5af0c46a5d926f078" }
-zenoh-util = { git = "https://github.com/nitinsingh-meta/zenoh", rev = "9b525dceb27582395da945c5af0c46a5d926f078" }
-zenohd = { git = "https://github.com/nitinsingh-meta/zenoh", rev = "9b525dceb27582395da945c5af0c46a5d926f078" }
 
 [workspace]
 members = [
