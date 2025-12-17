@@ -24,7 +24,7 @@ const std::shared_ptr<TraceBus<TaskTraceEvent>>& TaskTraceEvent::getTraceBus() {
   // Reserve 8 spots for each thread we can possibly run at the same time.
   static std::shared_ptr<TraceBus<TaskTraceEvent>> traceBus =
       TraceBus<TaskTraceEvent>::create(
-          "task", folly::hardware_concurrency() * 8);
+          "task", folly::available_concurrency() * 8);
   return traceBus;
 }
 

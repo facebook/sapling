@@ -343,7 +343,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<size_t> thriftNumWorkers{
       "thrift:num-workers",
-      folly::hardware_concurrency(),
+      folly::available_concurrency(),
       this};
 
   /**
@@ -397,7 +397,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint64_t> numCheckoutThreads{
       "thrift:checkout-revision-num-servicing-threads",
-      folly::hardware_concurrency(),
+      folly::available_concurrency(),
       this};
 
   /**
@@ -418,7 +418,7 @@ class EdenConfig : private ConfigSettingManager {
       "thrift:prefetch-num-servicing-threads",
       // 8 is plenty - any more just leads to excess sl batch blob fetches that
       // use extra memory with no throughput increase.
-      std::max(std::min(folly::hardware_concurrency() / 2, 8u), 1u),
+      std::max(std::min(folly::available_concurrency() / 2, 8u), 1u),
       this};
 
   /**
@@ -1095,7 +1095,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<uint64_t> numFsChannelThreads{
       "fschannel:num-servicing-threads",
-      folly::hardware_concurrency(),
+      folly::available_concurrency(),
       this};
 
   /**
