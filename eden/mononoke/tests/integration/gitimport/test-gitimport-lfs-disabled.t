@@ -21,7 +21,7 @@ Git Import
   [INFO] Hg: Sha1(c13a0ad234813977286c5827533de22af7f04fc5): HgManifestId(HgNodeHash(Sha1(8c3afe88bfee82fe7eaa26c061875ce6395f9a98)))
   [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(63ca8c6ff5810be0626a3d9d84f08e39ff4236b6e9907cc2aeaaba73d520a0c7)))
   [INFO] Initializing repo: repo
-  [INFO] Initialized repo: repo
+  [INFO] Initialized repo: repo (1/1)
   [INFO] All repos initialized. It took: * seconds (glob)
   [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(63ca8c6ff5810be0626a3d9d84f08e39ff4236b6e9907cc2aeaaba73d520a0c7)) (created)
 

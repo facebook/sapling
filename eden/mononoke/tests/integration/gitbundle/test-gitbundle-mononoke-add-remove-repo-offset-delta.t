@@ -82,7 +82,7 @@
   [INFO] Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(59c6bca772928f6e501b7417e06a21f12c9a685fdef67e565eceb8ad4800fa7f)))
   [INFO] Ref: "refs/tags/first_tag": Some(ChangesetId(Blake2(254b74066b04ddd9d5b235566a4c97c29244c689bc1fd37e8c528e26075383d7)))
   [INFO] Initializing repo: repo
-  [INFO] Initialized repo: repo
+  [INFO] Initialized repo: repo (1/1)
   [INFO] All repos initialized. It took: * seconds (glob)
   [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(46aaf16419210c2dc75eac297cef4024ca5d27bc46a0d5ab3d2daf0d6759eba8)) (created)
   [INFO] Bookmark: "tags/changed_tag": ChangesetId(Blake2(8f1100c7f9508d6a8c43e5694e3ecf7eb847930441d321285d8d219f37492a84)) (created)

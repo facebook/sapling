@@ -45,7 +45,7 @@
   [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(fa44539fc506e5752424e2a05f43bccff5994cb860ac7a94351fb25baf2079ae)))
   [INFO] Ref: "refs/tags/empty_tag": Some(ChangesetId(Blake2(fa44539fc506e5752424e2a05f43bccff5994cb860ac7a94351fb25baf2079ae)))
   [INFO] Initializing repo: repo
-  [INFO] Initialized repo: repo
+  [INFO] Initialized repo: repo (1/1)
   [INFO] All repos initialized. It took: * seconds (glob)
   [INFO] Bookmark: "heads/master_bookmark": ChangesetId(Blake2(fa44539fc506e5752424e2a05f43bccff5994cb860ac7a94351fb25baf2079ae)) (created)
   [INFO] Bookmark: "tags/empty_tag": ChangesetId(Blake2(fa44539fc506e5752424e2a05f43bccff5994cb860ac7a94351fb25baf2079ae)) (created)

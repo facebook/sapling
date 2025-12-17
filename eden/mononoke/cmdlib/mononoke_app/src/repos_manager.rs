@@ -7,6 +7,8 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -22,6 +24,7 @@ use facet::AsyncBuildable;
 use futures::stream;
 use futures::stream::AbortHandle;
 use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use futures_retry::retry;
 use itertools::Itertools;
 use metaconfig_parser::RepoConfigs;
@@ -33,6 +36,7 @@ use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_configs::ConfigUpdateReceiver;
 use mononoke_configs::MononokeConfigs;
+use mononoke_macros::mononoke;
 use mononoke_repos::MononokeRepos;
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
@@ -167,23 +171,37 @@ impl<Repo> MononokeReposManager<Repo> {
     async fn populate_repos<Names>(&self, repo_names: Names) -> Result<()>
     where
         Names: IntoIterator<Item = String>,
-        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+        Repo: for<'builder> AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>
+            + Send
+            + Sync
+            + 'static,
     {
-        let repos_input = stream::iter(repo_names.into_iter().unique())
+        let repo_configs = repo_names
+            .into_iter()
+            .unique()
             .map(|repo_name| {
+                self.repo_config(&repo_name)
+                    .map(|repo_config| (repo_name, repo_config))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let total = repo_configs.len();
+        let completed = Arc::new(AtomicUsize::new(0));
+        let repos_input = stream::iter(repo_configs)
+            .map(|(repo_name, repo_config)| {
                 let repo_factory = self.repo_factory.clone();
                 let name = repo_name.clone();
-                async move {
+                let common_config = self.configs.repo_configs().common.clone();
+                let repo_id = repo_config.repoid.id();
+                let completed = completed.clone();
+                mononoke::spawn_task(async move {
                     let start = Instant::now();
-                    let repo_config = self.repo_config(&repo_name)?;
-                    let common_config = self.configs.repo_configs().common.clone();
-                    let repo_id = repo_config.repoid.id();
                     info!("Initializing repo: {}", &repo_name);
                     let repo = repo_factory
                         .build(name, repo_config, common_config)
                         .await
                         .with_context(|| format!("Failed to initialize repo '{}'", &repo_name))?;
-                    info!("Initialized repo: {}", &repo_name);
+                    let n = completed.fetch_add(1, Ordering::Relaxed) + 1;
+                    info!("Initialized repo: {} ({}/{})", &repo_name, n, total);
                     STATS::initialization_time_millisecs.add_value(
                         start.elapsed().as_millis().try_into().unwrap_or(i64::MAX),
                         (repo_name.to_string(),),
@@ -199,17 +217,13 @@ impl<Repo> MononokeReposManager<Repo> {
                     });
 
                     anyhow::Ok((repo_id, repo_name, repo))
-                }
+                })
             })
-            // Repo construction can be heavy, 30 at a time is sufficient.
-            .buffered(30)
-            .collect::<Vec<_>>();
-        // There are lots of deep FuturesUnordered here that have caused inefficient polling with
-        // Tokio coop in the past.
-        let repos_input = tokio::task::unconstrained(repos_input)
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>>>()?;
+            // Repo construction can be heavy, 50 at a time is sufficient.
+            .buffer_unordered(50)
+            .map(|r| anyhow::Ok(r??))
+            .try_collect::<Vec<_>>()
+            .await?;
         self.repos.populate(repos_input);
         Ok(())
     }
@@ -311,14 +325,17 @@ where
         _: Arc<StorageConfigs>,
     ) -> Result<()> {
         let repos_to_load = self.reloadable_repo(repo_configs.clone());
+        let total = repos_to_load.len();
+        let completed = Arc::new(AtomicUsize::new(0));
 
         let repos_input = stream::iter(repos_to_load)
             .map(|(repo_name, repo_config)| {
                 let repo_factory = self.repo_factory.clone();
                 let name = repo_name.clone();
                 let common_config = repo_configs.common.clone();
-                async move {
-                    let repo_id = repo_config.repoid.id();
+                let repo_id = repo_config.repoid.id();
+                let completed = completed.clone();
+                mononoke::spawn_task(async move {
                     info!("Reloading repo: {}", &repo_name);
                     let repo = retry(
                         |_| {
@@ -335,20 +352,17 @@ where
                     .await
                     .with_context(|| format!("Failed to reload repo '{}'", &repo_name))?
                     .0;
-                    info!("Reloaded repo: {}", &repo_name);
+                    let n = completed.fetch_add(1, Ordering::Relaxed) + 1;
+                    info!("Reloaded repo: {} ({}/{})", &repo_name, n, total);
 
                     anyhow::Ok((repo_id, repo_name, repo))
-                }
+                })
             })
-            // Repo construction can be heavy, 30 at a time is sufficient.
-            .buffered(30)
-            .collect::<Vec<_>>();
-        // There are lots of deep FuturesUnordered here that have caused inefficient polling with
-        // Tokio coop in the past.
-        let repos_input = tokio::task::unconstrained(repos_input)
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>>>()?;
+            // Repo construction can be heavy, 50 at a time is sufficient.
+            .buffer_unordered(50)
+            .map(|r| anyhow::Ok(r??))
+            .try_collect::<Vec<_>>()
+            .await?;
         // Ensure that we only add or replace repos and NEVER remove them
         self.repos.reload(repos_input);
         Ok(())

@@ -69,7 +69,7 @@
   [INFO] Ref: "refs/heads/master_bookmark": Some(ChangesetId(Blake2(cd646b3089570264b64aad059cf0420b0564f9a57e3b243921da560d9e94339c)))
   [INFO] Ref: "refs/heads/root": Some(ChangesetId(Blake2(3127796ac597cbfe000475927080d809512a797d800cb0af0153d37533544ef3)))
   [INFO] Initializing repo: repo
-  [INFO] Initialized repo: repo
+  [INFO] Initialized repo: repo (1/1)
   [INFO] All repos initialized. It took: * seconds (glob)
   [INFO] Bookmark: "heads/branch1": ChangesetId(Blake2(7db05defca4d86fbafe97460d971c74fcb571da08f921252990831d86816ab5f)) (created)
   [INFO] Bookmark: "heads/branch2": ChangesetId(Blake2(3f6085be18c9325ed283c4b4f766737470a243e00f7236db58e48ab918410d45)) (created)
