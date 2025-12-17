@@ -201,6 +201,9 @@ export function startServer({
         case 'visualStudio':
           platformImpl = (await import('../platform/visualStudioServerPlatform')).platform;
           break;
+        case 'obsidian':
+          platformImpl = (await import('../platform/obsidianServerPlatform')).platform;
+          break;
         default:
         case undefined:
           break;

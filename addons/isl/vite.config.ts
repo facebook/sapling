@@ -30,6 +30,7 @@ const platforms = {
   webview: normalizeInputPath('webview.html'),
   chromelikeApp: normalizeInputPath('chromelikeApp.html'),
   visualStudio: normalizeInputPath('visualStudio.html'),
+  obsidian: normalizeInputPath('obsidian.html'),
 };
 
 export default defineConfig({

@@ -30,7 +30,8 @@ export type PlatformName =
   | 'vscode'
   | 'webview'
   | 'chromelike_app'
-  | 'visualStudio';
+  | 'visualStudio'
+  | 'obsidian';
 
 export type AbsolutePath = string;
 /**

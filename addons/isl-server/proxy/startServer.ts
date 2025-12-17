@@ -253,6 +253,7 @@ const validPlatforms: Array<PlatformName> = [
   'webview',
   'chromelike_app',
   'visualStudio',
+  'obsidian',
 ];
 function isValidCustomPlatform(name: string): name is PlatformName {
   return validPlatforms.includes(name as PlatformName);
