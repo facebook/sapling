@@ -417,12 +417,11 @@ pub async fn process_bookmark_update_log_entry(
     let to_vec: Vec<ChangesetId> = vec![to_cs];
     let bookmark_name = entry.bookmark_name.name().to_string();
 
-    let to_generation = repo.commit_graph().changeset_generation(ctx, to_cs).await?;
+    let commit_graph = repo.commit_graph().parents_and_subtree_sources_graph();
+
+    let to_generation = commit_graph.changeset_generation(ctx, to_cs).await?;
     let (approx_count, approx_count_str) = if let Some(from_cs) = from_cs {
-        let from_generation = repo
-            .commit_graph()
-            .changeset_generation(ctx, from_cs)
-            .await?;
+        let from_generation = commit_graph.changeset_generation(ctx, from_cs).await?;
         let diff = to_generation.difference_from(from_generation);
         if let Some(diff) = diff {
             (Some(diff as i64), format!("approx {} commit(s)", diff))
@@ -466,7 +465,7 @@ pub async fn process_bookmark_update_log_entry(
 
         let (commits, latest_checkpoint) = tokio::try_join!(
             async {
-                repo.commit_graph()
+                commit_graph
                     .ancestors_difference_segment_slices(&ctx, to_vec, from_vec, chunk_size)
                     .await
                     .with_context(|| "calculating segments")

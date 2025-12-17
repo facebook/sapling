@@ -7,6 +7,7 @@
 
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 use anyhow::ensure;
 use blobstore::Loadable;
 use cloned::cloned;
@@ -27,6 +28,7 @@ use edenapi_types::commit::BonsaiExtra;
 use edenapi_types::commit::BonsaiParents;
 use edenapi_types::commit::GitExtraHeader;
 use edenapi_types::commit::HgInfo;
+use edenapi_types::commit::SubtreeChange as EdenapiSubtreeChange;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgManifestId;
 use mercurial_types::blobs::HgBlobChangeset;
@@ -36,7 +38,9 @@ use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
+use mononoke_types::SubtreeChange;
 use repo_blobstore::RepoBlobstore;
+use slapi_service::utils::to_hg_path;
 use slapi_service::utils::to_hg_path_nonroot;
 use sorted_vector_map::SortedVectorMap;
 
@@ -142,10 +146,36 @@ pub fn to_identical_changeset(
         git_annotated_tag.is_none(),
         "Unexpected git annotated tag found"
     );
-    ensure!(
-        subtree_changes.is_empty(),
-        "Subtree changes are not supported in modern sync"
-    );
+
+    // Convert subtree changes, but error out if there's a shallow copy (SubtreeCopy)
+    let converted_subtree_changes = if subtree_changes.is_empty() {
+        None
+    } else {
+        let mut changes = Vec::new();
+        for (path, change) in subtree_changes {
+            let repo_path = to_hg_path(&path)?;
+            let edenapi_change = match change {
+                SubtreeChange::SubtreeDeepCopy(deep_copy) => EdenapiSubtreeChange::DeepCopy {
+                    from_path: to_hg_path(&deep_copy.from_path)?,
+                    from_cs_id: deep_copy.from_cs_id.into(),
+                },
+                SubtreeChange::SubtreeMerge(merge) => EdenapiSubtreeChange::Merge {
+                    from_path: to_hg_path(&merge.from_path)?,
+                    from_cs_id: merge.from_cs_id.into(),
+                },
+                SubtreeChange::SubtreeImport(import) => EdenapiSubtreeChange::Import {
+                    from_path: to_hg_path(&import.from_path)?,
+                    from_commit: import.from_commit,
+                    from_repo_url: import.from_repo_url,
+                },
+                SubtreeChange::SubtreeCopy(_) => {
+                    bail!("Shallow subtree copy (SubtreeCopy) is not supported in modern sync")
+                }
+            };
+            changes.push((repo_path, edenapi_change));
+        }
+        Some(changes)
+    };
 
     Ok(IdenticalChangesetContent {
         bcs_id: bcs.get_changeset_id().into(),
@@ -174,7 +204,7 @@ pub fn to_identical_changeset(
         committer_time: committer_date.map(|d| d.timestamp_secs()),
         committer_tz: committer_date.map(|d| d.tz_offset_secs()),
         git_extra_headers: git_extra,
-        subtree_changes: None,
+        subtree_changes: converted_subtree_changes,
     })
 }
 
