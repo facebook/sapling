@@ -34,6 +34,62 @@ import {getWebviewOptions, htmlForWebview} from './htmlForWebview';
 import {locale, t} from './i18n';
 import {extensionVersion} from './utils';
 
+/**
+ * Expands line ranges to individual line numbers.
+ * Input is ALWAYS ranges (from AI agent output), never individual line numbers.
+ *
+ * Supported formats:
+ * 1. Array of ranges: [[0, 100], [150, 200]] -> [0,1,2,...,100,150,151,...,200]
+ * 2. Single range: [0, 100] -> [0,1,2,...,100]
+ *
+ * Ranges are inclusive on both ends: [0, 161] expands to lines 0 through 161.
+ */
+function expandLineRange(
+  lines: ReadonlyArray<number> | ReadonlyArray<[number, number]>,
+): ReadonlyArray<number> {
+  if (lines.length === 0) {
+    return [];
+  }
+
+  const expanded: number[] = [];
+
+  // Check if it's an array of ranges: [[start, end], [start, end], ...]
+  if (Array.isArray(lines[0])) {
+    for (const range of lines as ReadonlyArray<[number, number]>) {
+      if (Array.isArray(range) && range.length === 2) {
+        const [start, end] = range;
+        if (typeof start === 'number' && typeof end === 'number') {
+          // Expand the range inclusively: [start, end] -> [start, start+1, ..., end]
+          for (let i = start; i <= end; i++) {
+            expanded.push(i);
+          }
+        }
+      }
+    }
+    return expanded;
+  }
+
+  // Single range format: [start, end]
+  // This MUST be a 2-element array representing a range
+  if (lines.length === 2) {
+    const [start, end] = lines as [number, number];
+    if (typeof start === 'number' && typeof end === 'number') {
+      // Expand the range inclusively: [start, end] -> [start, start+1, ..., end]
+      for (let i = start; i <= end; i++) {
+        expanded.push(i);
+      }
+      return expanded;
+    }
+  }
+
+  // If we get here with lines.length !== 2, the input format is unexpected.
+  // This shouldn't happen with proper agent output - log a warning.
+  console.warn(
+    `expandLineRange received unexpected format with ${lines.length} elements. Expected a range [start, end] or array of ranges.`,
+  );
+  return lines as ReadonlyArray<number>;
+}
+
 let islPanelOrViewResult: ISLWebviewResult<vscode.WebviewPanel | vscode.WebviewView> | undefined =
   undefined;
 let hasOpenedISLWebviewBeforeState = false;
@@ -239,11 +295,21 @@ export function registerISLCommands(
           const currentPanelOrViewResult = islPanelOrViewResult;
           if (currentPanelOrViewResult) {
             if (commitHash) {
+              // Expand line ranges [start, end] to individual line numbers before sending
+              const expandedCommits = commits.map(commit => ({
+                ...commit,
+                files: commit.files.map(file => ({
+                  ...file,
+                  aLines: expandLineRange(file.aLines),
+                  bLines: expandLineRange(file.bLines),
+                })),
+              }));
+
               // Send a single message that opens the split view and applies commits after loading
               const openSplitMessage: ServerToClientMessage = {
                 type: 'openSplitViewForCommit',
                 commitHash,
-                commits,
+                commits: expandedCommits,
               };
               currentPanelOrViewResult.panel.webview.postMessage(
                 serializeToString(openSplitMessage),
