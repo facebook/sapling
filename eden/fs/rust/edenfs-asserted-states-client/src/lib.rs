@@ -24,9 +24,9 @@ use util::path::create_dir_all_with_mode;
 use util::path::dir_mode;
 use util::path::remove_file;
 
-const ASSERTED_STATE_DIR: &str = ".edenfs-notifications-state";
+pub const ASSERTED_STATE_DIR: &str = ".edenfs-notifications-state";
 
-fn ensure_directory(path: &Path) -> anyhow::Result<()> {
+pub fn ensure_directory(path: &Path) -> anyhow::Result<()> {
     // Create the directory, if it doesn't exist.
     match path.try_exists() {
         Ok(true) => {}
@@ -38,6 +38,7 @@ fn ensure_directory(path: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[derive(Clone, Debug)]
 pub struct AssertedStatesClient {
     states_root: PathBuf,
 }
@@ -139,7 +140,7 @@ impl AssertedStatesClient {
     }
 
     #[allow(dead_code)]
-    fn which_states_asserted(&self, states: &[String]) -> Result<HashSet<String>, StateError> {
+    pub fn which_states_asserted(&self, states: &[String]) -> Result<HashSet<String>, StateError> {
         let mut output = HashSet::new();
         for state in states {
             if self.is_state_asserted(state)? {
@@ -185,7 +186,7 @@ pub fn try_guarded_lock(
 }
 
 #[allow(dead_code)]
-fn try_lock_state(dir: &Path, name: &str) -> Result<ContentLockGuard, ContentLockError> {
+pub fn try_lock_state(dir: &Path, name: &str) -> Result<ContentLockGuard, ContentLockError> {
     let content_lock = ContentLock::new_with_name(dir, name);
     let state_lock = try_guarded_lock(&content_lock, &[])?;
 
@@ -193,7 +194,7 @@ fn try_lock_state(dir: &Path, name: &str) -> Result<ContentLockGuard, ContentLoc
 }
 
 #[allow(dead_code)]
-fn is_state_locked(dir: &Path, name: &str) -> Result<bool, ContentLockError> {
+pub fn is_state_locked(dir: &Path, name: &str) -> Result<bool, ContentLockError> {
     // Check the lock state, without creating the lock file
     // If the lock doesn't exist, return false
     let content_lock = ContentLock::new_with_name(dir, name);

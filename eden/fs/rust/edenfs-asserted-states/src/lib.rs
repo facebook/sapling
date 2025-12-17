@@ -11,6 +11,10 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use edenfs_asserted_states_client::AssertedStatesClient;
+use edenfs_asserted_states_client::ContentLockGuard;
+use edenfs_asserted_states_client::StateChange;
+use edenfs_asserted_states_client::StateError;
 use edenfs_client::changes_since::ChangeNotification;
 use edenfs_client::changes_since::ChangesSinceV2Result;
 use edenfs_client::changes_since::StateChangeNotification;
@@ -22,55 +26,23 @@ use edenfs_telemetry::EdenSample;
 use edenfs_telemetry::QueueingScubaLogger;
 use edenfs_telemetry::SampleLogger;
 use edenfs_telemetry::create_logger;
-use fs_err as fs;
 use futures::StreamExt;
 use futures::stream;
 use futures::stream::BoxStream;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use serde::Serialize;
-use util::file::get_umask;
-use util::lock::ContentLock;
-use util::lock::ContentLockError;
-use util::lock::PathLock;
 use util::lock::unsanitize_lock_name;
-use util::path::create_dir_all_with_mode;
-use util::path::dir_mode;
-use util::path::remove_file;
 
 lazy_static! {
     pub(crate) static ref SCUBA_CLIENT: QueueingScubaLogger =
         QueueingScubaLogger::new(create_logger("edenfs_client".to_string()), 1000);
 }
 
-const ASSERTED_STATE_DIR: &str = ".edenfs-notifications-state";
-
-fn ensure_directory(path: &Path) -> Result<()> {
-    // Create the directory, if it doesn't exist.
-    match path.try_exists() {
-        Ok(true) => {}
-        Ok(false) => {
-            create_dir_all_with_mode(path, dir_mode(get_umask()))?;
-        }
-        Err(err) => return Err(err.into()),
-    }
-    Ok(())
-}
-
 #[derive(Clone, Debug)]
 pub struct StreamingChangesClient {
-    states_root: PathBuf,
     pub session_id: String,
-}
-
-#[derive(thiserror::Error, Debug)]
-pub enum StateError {
-    #[error(transparent)]
-    EdenFsError(#[from] EdenFsError),
-    #[error("State is already asserted {0}")]
-    StateAlreadyAsserted(String),
-    #[error("{0}")]
-    OtherError(#[from] anyhow::Error),
+    states_client: AssertedStatesClient,
 }
 
 pub fn get_streaming_changes_client(
@@ -82,12 +54,10 @@ pub fn get_streaming_changes_client(
 
 impl StreamingChangesClient {
     pub fn new(mount_point: &Path, session_id: String) -> Result<Self> {
-        let states_root = mount_point.join(ASSERTED_STATE_DIR);
-        ensure_directory(&states_root)?;
-
         Ok(StreamingChangesClient {
-            states_root,
             session_id,
+            states_client: AssertedStatesClient::new(mount_point)
+                .map_err(|e| EdenFsError::from(anyhow::Error::from(e)))?,
         })
     }
 
@@ -103,53 +73,25 @@ impl StreamingChangesClient {
 
     #[allow(dead_code)]
     pub fn get_state_path(&self, state: &str) -> Result<PathBuf> {
-        let state_path = self.states_root.join(state);
-        ensure_directory(&state_path)?;
-        Ok(state_path)
+        self.states_client
+            .get_state_path(state)
+            .map_err(|e| EdenFsError::from(anyhow::Error::from(e)))
     }
 
     pub fn enter_state(&self, state: &str) -> Result<ContentLockGuard, StateError> {
-        // Asserts the named state, in the current mount.
-        // Returns () if the state was successfully asserted, or an StateAlreadyAsserted StateError if the state was already asserted.
-        // Returns other errors if an error occurred while asserting the state.
-        // To exit the state, drop the ContentLockGuard returned by this function either explicitly
-        // or implicitly by letting it go out of scope.
-        let state_path: PathBuf = self
-            .get_state_path(state)
-            .map_err(StateError::EdenFsError)?;
-        match try_lock_state(&state_path, state) {
-            Ok(lock) => Ok(lock),
-            Err(ContentLockError::Contended(_)) => {
-                Err(StateError::StateAlreadyAsserted(state.to_string()))
-            }
-            Err(ContentLockError::Io(err)) => Err(StateError::EdenFsError(EdenFsError::from(err))),
-        }
+        self.states_client.enter_state(state)
     }
 
     pub fn get_asserted_states(&self) -> Result<HashSet<String>> {
-        // Gets a set of all asserted states.
-        // For use in debug CLI. Not intended for end user consumption,
-        // use is_state_asserted() with your list of states instead.
-        let mut asserted_states = HashSet::new();
-        for dir_entry in fs::read_dir(&self.states_root)? {
-            let entry = dir_entry?;
-            if entry.path().is_dir() {
-                let state = entry.file_name().to_string_lossy().to_string();
-                if self.is_state_asserted(&state)? {
-                    asserted_states.insert(state);
-                }
-            }
-        }
-        Ok(asserted_states)
+        self.states_client
+            .get_asserted_states()
+            .map_err(|e| EdenFsError::from(anyhow::Error::from(e)))
     }
 
     pub fn is_state_asserted(&self, state: &str) -> Result<bool> {
-        let state_path = self.get_state_path(state)?;
-        match is_state_locked(&state_path, state) {
-            Ok(true) => Ok(true),
-            Ok(false) => Ok(false),
-            Err(err) => Err(err),
-        }
+        self.states_client
+            .is_state_asserted(state)
+            .map_err(|e| EdenFsError::from(anyhow::Error::from(e)))
     }
 
     // Takes a list of known states and filters them based on the currently desired states
@@ -377,13 +319,9 @@ impl StreamingChangesClient {
     }
 
     fn which_states_asserted(&self, states: &[String]) -> Result<HashSet<String>> {
-        let mut output = HashSet::new();
-        for state in states {
-            if self.is_state_asserted(state)? {
-                output.insert(state.clone());
-            }
-        }
-        Ok(output)
+        self.states_client
+            .which_states_asserted(states)
+            .map_err(|e| EdenFsError::from(anyhow::Error::from(e)))
     }
 
     fn to_change_event(
@@ -480,60 +418,6 @@ impl StreamingChangesClient {
     }
 }
 
-// As PathLock, but creates an additional file with the .notify extension
-// to log exit to the journal
-#[derive(Debug)]
-pub struct ContentLockGuard(PathLock);
-
-impl Drop for ContentLockGuard {
-    fn drop(&mut self) {
-        // Done purely to signal the edenfs journal that the lock is no longer held.
-        let file_path = self.0.as_file().path().with_extension("notify");
-        match remove_file(&file_path) {
-            Ok(_) => {}
-            Err(e) => tracing::error!("Notify file {:?} missing: {:?}", file_path, e),
-        };
-        // Release the lock when the internal PathLock is dropped on exit
-    }
-}
-
-pub fn try_guarded_lock(
-    content_lock: &ContentLock,
-    contents: &[u8],
-) -> Result<ContentLockGuard, ContentLockError> {
-    let inner_lock = content_lock.try_lock(contents)?;
-    // Done purely to signal the edenfs journal that the lock has been acquired.
-    let notify_file_path = inner_lock.as_file().path().with_extension("notify");
-    if notify_file_path.exists() {
-        remove_file(&notify_file_path)?;
-    }
-    fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(inner_lock.as_file().path().with_extension("notify"))?;
-    Ok(ContentLockGuard(inner_lock))
-}
-
-#[allow(dead_code)]
-fn try_lock_state(dir: &Path, name: &str) -> Result<ContentLockGuard, ContentLockError> {
-    let content_lock = ContentLock::new_with_name(dir, name);
-    let state_lock = try_guarded_lock(&content_lock, &[])?;
-
-    Ok(state_lock)
-}
-
-#[allow(dead_code)]
-fn is_state_locked(dir: &Path, name: &str) -> Result<bool> {
-    // Check the lock state, without creating the lock file
-    // If the lock doesn't exist, return false
-    let content_lock = ContentLock::new_with_name(dir, name);
-    match content_lock.check_lock() {
-        Ok(()) => Ok(false),
-        Err(ContentLockError::Contended(_)) => Ok(true),
-        Err(ContentLockError::Io(err)) => Err(err.into()),
-    }
-}
-
 pub enum IsStateCurrentlyAsserted {
     NotAsserted,
     StateAsserted,
@@ -544,22 +428,6 @@ struct StreamChangesSinceWithStatesData<'a> {
     state: IsStateCurrentlyAsserted,
     asserted_states: HashSet<String>,
     position: JournalPosition,
-}
-
-#[derive(Debug, PartialEq, Serialize)]
-pub enum StateChange {
-    Entered,
-    Left,
-}
-
-impl fmt::Display for StateChange {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self == &StateChange::Entered {
-            write!(f, "Entered")
-        } else {
-            write!(f, "Left")
-        }
-    }
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -612,8 +480,10 @@ impl ChangeEvents {
 
 #[cfg(test)]
 mod tests {
+    use edenfs_asserted_states_client::*;
     use edenfs_client::changes_since::*;
     use edenfs_client::types::Dtype;
+    use util::lock::ContentLock;
 
     use crate::*;
 

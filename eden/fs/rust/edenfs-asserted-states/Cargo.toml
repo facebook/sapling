@@ -9,15 +9,14 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.98"
+edenfs-asserted-states-client = { version = "0.1.0", path = "../edenfs-asserted-states-client" }
 edenfs-client = { version = "0.1.0", path = "../../cli_rs/edenfs-client" }
 edenfs-error = { version = "0.1.0", path = "../../cli_rs/edenfs-error" }
-fs-err = { version = "3", features = ["tokio"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 itertools = "0.14.0"
 lazy_static = "1.5"
 sapling-util = { version = "0.1.0", path = "../../../scm/lib/util" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 whoami = "1.5"
