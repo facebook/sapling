@@ -164,11 +164,7 @@ py_class!(class ScopedBlockedInterval |py| {
 impl IO {
     fn check_closed(&self, py: Python) -> PyResult<PyNone> {
         if self.closed(py).get() {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "pager was closed",
-            ))
-            .map_pyerr(py)
+            Err(std::io::Error::other("pager was closed")).map_pyerr(py)
         } else {
             Ok(PyNone)
         }
@@ -471,6 +467,6 @@ fn convert_ioerr(mut pyerr: PyErr) -> std::io::Error {
             Ok(s) => s.to_string_lossy(py).into_owned(),
             Err(_) => "PythonError: unknown".to_string(),
         };
-        std::io::Error::new(std::io::ErrorKind::Other, msg)
+        std::io::Error::other(msg)
     }
 }
