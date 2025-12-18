@@ -220,7 +220,7 @@ impl<Repo> MononokeReposManager<Repo> {
                 })
             })
             // Repo construction can be heavy, 50 at a time is sufficient.
-            .buffer_unordered(50)
+            .buffer_unordered(30)
             .map(|r| anyhow::Ok(r??))
             .try_collect::<Vec<_>>()
             .await?;
