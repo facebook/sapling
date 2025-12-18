@@ -328,7 +328,7 @@ mod tests {
     }
 
     fn error(msg: impl ToString) -> std::io::Error {
-        std::io::Error::new(std::io::ErrorKind::Other, msg.to_string())
+        std::io::Error::other(msg.to_string())
     }
 
     fn u(v: Option<Result<(I, O), E>>) -> (I, O) {
