@@ -170,7 +170,7 @@ impl TrigramTextGen {
                 };
             }
             None => {
-                self.words = *self.sample(&*STARTING_WORDS);
+                self.words = *self.sample(&STARTING_WORDS);
                 self.push_word(self.words.0, output);
                 self.push_word(self.words.1, output);
             }
