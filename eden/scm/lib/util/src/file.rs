@@ -12,6 +12,10 @@ use ::metrics::Counter;
 use fs::File;
 use fs::OpenOptions;
 use fs_err as fs;
+#[cfg(unix)]
+use nix::unistd::Uid;
+#[cfg(unix)]
+use nix::unistd::User;
 use once_cell::sync::Lazy;
 
 use crate::errors::IOContext;
@@ -135,6 +139,22 @@ pub fn exists(path: impl AsRef<Path>) -> io::Result<Option<std::fs::Metadata>> {
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
         Err(err) => Err(err),
     }
+}
+
+/// Gets the owner of a file path by looking up the UID.
+/// Returns None if the owner cannot be determined.
+#[cfg(unix)]
+pub fn get_file_owner(path: &Path) -> Option<String> {
+    let meta = std::fs::metadata(path).ok()?;
+    let uid = std::os::unix::fs::MetadataExt::uid(&meta);
+    let user = User::from_uid(Uid::from_raw(uid)).ok()??;
+    Some(user.name)
+}
+
+#[cfg(not(unix))]
+pub fn get_file_owner(_path: &Path) -> Option<String> {
+    // On non-Unix platforms, we cannot easily determine file ownership
+    None
 }
 
 pub fn unlink_if_exists(path: impl AsRef<Path>) -> io::Result<()> {
