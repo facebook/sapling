@@ -68,6 +68,9 @@ thrift_library(
     thrift_srcs = {
         "eden_config.thrift": [],
     },
+    deps = [
+        "//thrift/annotation:thrift",
+    ],
 )
 
 # The Java bindings are only used by Buck, and since Buck is in a separate repo,

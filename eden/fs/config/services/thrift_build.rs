@@ -7,6 +7,8 @@ use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 eden/fs/config/eden_config.thrift crate //eden/fs/config:config_thrift-rust
+thrift/annotation/scope.thrift thrift->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {
