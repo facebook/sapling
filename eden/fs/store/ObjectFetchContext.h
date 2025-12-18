@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/CancellationToken.h>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -126,6 +127,35 @@ class ObjectFetchContext : public RefCounted {
 
   virtual std::optional<std::string_view> getCauseDetail() const {
     return std::nullopt;
+  }
+
+  /**
+   * Get the cancellation token for this context.
+   * Returns an empty cancellation token if no cancellation support.
+   */
+  virtual folly::CancellationToken getCancellationToken() const {
+    return cancellationToken_;
+  }
+
+  /**
+   * Set the cancellation token for this context.
+   */
+  void setCancellationToken(folly::CancellationToken token) {
+    cancellationToken_ = std::move(token);
+  }
+
+  /**
+   * Throws an exception if the cancellation token has been canceled.
+   *
+   * @param throwOnCancel If false, this method returns without checking
+   *                      the cancellation token. If true, checks and throws.
+   * @throws folly::OperationCancelled if the operation has been canceled
+   *         and throwOnCancel is true
+   */
+  void throwIfCanceled(bool throwOnCancel = true) const {
+    if (throwOnCancel && cancellationToken_.isCancellationRequested()) {
+      throw folly::OperationCancelled();
+    }
   }
 
   virtual ImportPriority getPriority() const {
@@ -251,6 +281,9 @@ class ObjectFetchContext : public RefCounted {
   // in exceptional cases (such as the detached inode loading futures).
   folly::Executor::KeepAlive<> detachedExecutor_{
       &folly::QueuedImmediateExecutor::instance()};
+
+  // Cancellation token for this fetch context
+  folly::CancellationToken cancellationToken_;
 
   std::unordered_map<
       std::tuple<FetchedSource, ObjectType>,

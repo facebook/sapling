@@ -838,7 +838,8 @@ ImmediateFuture<SetPathObjectIdResultAndTimes> EdenMount::setPathsToObjectIds(
         context->getClientPid(),
         "setPathObjectId",
         nullptr,
-        context->getRequestInfo());
+        context->getRequestInfo(),
+        context->getCancellationToken());
 
     /**
      * This will update the timestamp for the entire mount,
@@ -1469,7 +1470,8 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         fetchContext->getClientPid(),
         thriftMethodCaller,
         progressTracker,
-        fetchContext->getRequestInfo());
+        fetchContext->getRequestInfo(),
+        fetchContext->getCancellationToken());
 
     // Propagate the detached executor from the incoming fetch context to the
     // CheckoutContext's fetch context so async operations use the same

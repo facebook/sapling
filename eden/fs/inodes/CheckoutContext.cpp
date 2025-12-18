@@ -26,7 +26,8 @@ CheckoutContext::CheckoutContext(
     OptionalProcessId clientPid,
     folly::StringPiece thriftMethodName,
     std::shared_ptr<std::atomic<uint64_t>> checkoutProgress,
-    const std::unordered_map<std::string, std::string>* requestInfo)
+    const std::unordered_map<std::string, std::string>* requestInfo,
+    folly::CancellationToken cancellationToken)
     : checkoutMode_{checkoutMode},
       mount_{mount},
       fetchContext_{makeRefPtr<StatsFetchContext>(
@@ -41,6 +42,7 @@ CheckoutContext::CheckoutContext(
   if (mount_->getEdenConfig()->thriftCheckoutTimeTracing.getValue()) {
     fetchContext_->setTimeTracer(std::make_shared<MiniTracer>());
   }
+  fetchContext_->setCancellationToken(std::move(cancellationToken));
 }
 
 CheckoutContext::~CheckoutContext() = default;

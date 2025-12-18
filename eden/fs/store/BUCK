@@ -110,6 +110,7 @@ cpp_library(
         "//eden/common/utils:ref_ptr",
         "//eden/fs/telemetry:stats",
         "//eden/fs/utils:mini_tracer",
+        "//folly:cancellation_token",
         "//folly:executor",
         "//folly/executors:queued_immediate_executor",
     ],

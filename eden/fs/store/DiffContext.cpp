@@ -41,6 +41,7 @@ DiffContext::DiffContext(
   // operation that checkout runs.
   fetchContext_->setTimeTracer(fetchContext->getTimeTracer());
   fetchContext_->setDetachedExecutor(fetchContext->getDetachedExecutor());
+  fetchContext_->setCancellationToken(fetchContext->getCancellationToken());
 }
 
 DiffContext::~DiffContext() = default;

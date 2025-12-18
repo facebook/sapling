@@ -43,8 +43,8 @@ class CheckoutContext {
       OptionalProcessId clientPid,
       folly::StringPiece thriftMethodName,
       std::shared_ptr<std::atomic<uint64_t>> checkoutProgress = nullptr,
-      const std::unordered_map<std::string, std::string>* requestInfo =
-          nullptr);
+      const std::unordered_map<std::string, std::string>* requestInfo = nullptr,
+      folly::CancellationToken cancellationToken = {});
 
   ~CheckoutContext();
 
@@ -152,6 +152,18 @@ class CheckoutContext {
   }
 
   void increaseCheckoutCounter(int64_t inc) const;
+
+  /**
+   * Throws an exception if cancellation has been requested and throwOnCancel
+   * is enabled in EdenConfig.
+   *
+   * @throws folly::OperationCancelled if the operation has been canceled and
+   * throwOnCancel is true
+   */
+  void throwIfCanceled() const {
+    fetchContext_->throwIfCanceled(
+        mount_->getEdenConfig()->throwOnCancel.getValue());
+  }
 
   /**
    * Create a span for timing instrumentation.
