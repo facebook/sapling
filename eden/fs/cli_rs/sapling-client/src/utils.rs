@@ -96,7 +96,6 @@ pub(crate) fn process_one_status_line(
 #[cfg(test)]
 pub(crate) mod tests {
     use std::io::Error;
-    use std::io::ErrorKind;
 
     use async_process_traits::MockChild;
     use async_process_traits::MockChildHandle;
@@ -222,10 +221,10 @@ pub(crate) mod tests {
                 let (exit_code, stdout_lines) = output.clone().unwrap();
                 Ok(mock_child(exit_code, stdout_lines))
             }
-            program => Err(Error::new(
-                ErrorKind::Other,
-                anyhow::anyhow!("Not expected program: {:?}", program),
-            )),
+            program => Err(Error::other(anyhow::anyhow!(
+                "Not expected program: {:?}",
+                program
+            ))),
         })
     }
 
