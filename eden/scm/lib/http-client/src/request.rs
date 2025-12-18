@@ -39,6 +39,7 @@ use crate::Easy2H;
 use crate::claimer::RequestClaim;
 use crate::claimer::RequestClaimer;
 use crate::errors::HttpClientError;
+use crate::errors::maybe_add_os_error;
 use crate::event_listeners::RequestCreationEventListeners;
 use crate::event_listeners::RequestEventListeners;
 use crate::handler::Buffered;
@@ -167,6 +168,7 @@ pub struct RequestContext {
     pub(crate) info: RequestInfo,
     pub(crate) body: Option<Vec<u8>>,
     pub(crate) event_listeners: RequestEventListeners,
+    pub(crate) unix_socket_path: Option<String>,
 }
 
 /// Identity of a request.
@@ -192,7 +194,6 @@ pub struct Request {
     verify_tls_cert: bool,
     verbose: bool,
     convert_cert: bool,
-    auth_proxy_socket_path: Option<String>,
     limit_response_buffering: bool,
     read_buffer_size: Option<u64>,
     write_buffer_size: Option<u64>,
@@ -224,6 +225,7 @@ impl RequestContext {
             info: RequestInfo { id, url, method },
             body: None,
             event_listeners: Default::default(),
+            unix_socket_path: None,
         }
     }
 
@@ -290,7 +292,6 @@ impl Request {
             verify_tls_cert: true,
             verbose: false,
             convert_cert: false,
-            auth_proxy_socket_path: None,
             limit_response_buffering: false,
             read_buffer_size: None,
             write_buffer_size: None,
@@ -617,7 +618,7 @@ impl Request {
         &mut self,
         auth_proxy_socket_path: Option<String>,
     ) -> &mut Self {
-        self.auth_proxy_socket_path = auth_proxy_socket_path;
+        self.ctx.unix_socket_path = auth_proxy_socket_path;
         self
     }
 
@@ -668,7 +669,7 @@ impl Request {
             }
             Err(e) => {
                 ctx.event_listeners().trigger_failure(&info);
-                return Err(e.into());
+                return Err(maybe_add_os_error(&easy, e).into());
             }
         }
 
@@ -725,7 +726,7 @@ impl Request {
 
         let body_size = self.ctx.body.as_ref().map(|body| body.len() as u64);
         let mut url = self.ctx.url().clone();
-        if self.auth_proxy_socket_path.is_some() {
+        if self.ctx.unix_socket_path.is_some() {
             url.set_scheme("http")
                 .expect("Failed setting url scheme to http");
             self.set_verify_tls_cert(false)
@@ -736,13 +737,16 @@ impl Request {
                 user_agent.push_str("+x2pagentd");
             }
         }
+
+        let uds = self.ctx.unix_socket_path.clone();
+
         let handler = create_handler(self.ctx);
 
         let mut easy = Easy2H::new(handler);
 
         easy.url(url.as_str())?;
         easy.verbose(self.verbose)?;
-        easy.unix_socket_path(self.auth_proxy_socket_path)?;
+        easy.unix_socket_path(uds)?;
         if self.follow_redirects {
             easy.follow_location(true)?;
             easy.post_redirections(PostRedirections::new().redirect_all(true))?;
@@ -933,7 +937,9 @@ impl StreamRequest {
     pub(crate) fn send(self) -> Result<(), HttpClientError> {
         let claim = self.request.claimer.claim_request();
         let mut easy: Easy2H = self.into_easy(claim)?;
-        let res = easy.perform().map_err(Into::into);
+        let res = easy
+            .perform()
+            .map_err(|err| maybe_add_os_error(&easy, err).into());
         let _ = easy
             .get_mut()
             .take_receiver()

@@ -19,6 +19,7 @@ use crate::claimer::RequestClaimer;
 use crate::driver::MultiDriver;
 use crate::errors::Abort;
 use crate::errors::HttpClientError;
+use crate::errors::maybe_add_os_error;
 use crate::event_listeners::HttpClientEventListeners;
 use crate::handler::HandlerExt;
 use crate::pool::Pool;
@@ -206,7 +207,7 @@ impl HttpClient {
                     let info = ctx.info().clone();
                     ctx.event_listeners().trigger_failure(&info);
                     self.event_listeners.trigger_failed_request(ctx);
-                    e.into()
+                    maybe_add_os_error(&easy, e).into()
                 })
                 .and_then(|mut easy| {
                     let ctx = easy.get_mut().request_context_mut();
@@ -412,6 +413,7 @@ impl HttpClient {
                 let info = ctx.info().clone();
                 ctx.event_listeners().trigger_failure(&info);
                 self.event_listeners.trigger_failed_request(ctx);
+                let e = maybe_add_os_error(&easy, e);
                 (easy, Err(e.into()))
             }
         };

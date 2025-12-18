@@ -141,3 +141,26 @@ fn ssl_categorize_recv_error(error: &curl::Error) -> TlsErrorKind {
 
     TlsErrorKind::RecvError
 }
+
+/// Include OS error when we have an error connecting to auth proxy unix socket.
+pub(crate) fn maybe_add_os_error(easy: &crate::Easy2H, mut err: curl::Error) -> curl::Error {
+    // By default the error would show "Failed to connect to <HOST> port 80 after 0 ms: Could
+    // not connect to server", but this is extremely misleading because the error actually was
+    // connecting to a unix domain socket. Curl's os error seems to contain the underlying error
+    // for the unix socket (e.g. "No such file or directory"), so let's tack that on.
+
+    if err.is_couldnt_connect()
+        && let (Some(uds), Ok(errno)) = (
+            &easy.get_ref().request_context().unix_socket_path,
+            easy.os_errno(),
+        )
+    {
+        let os_err = std::io::Error::from_raw_os_error(errno);
+        let extra = match err.extra_description() {
+            Some(existing) => format!("{existing} ({uds}: {os_err})"),
+            None => format!("{uds}: {os_err}"),
+        };
+        err.set_extra(extra);
+    }
+    err
+}
