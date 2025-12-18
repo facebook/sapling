@@ -375,11 +375,12 @@ pub struct UploadBonsaiChangesetRequest {
 /// 1. Creating a completely new bubble with no relationship to previous ones
 /// 2. Creating a new bubble but hinting to the backend to copy data from a previous bubble for performance
 /// 3. Reusing an existing bubble by extending its TTL and reusing its storage
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum BubbleStrategy {
     /// Create a new bubble with no relationship to previous bubbles.
     /// All file data will be uploaded fresh.
+    #[default]
     CreateNew,
     /// Create a new bubble, but hint to the backend to copy data from a previous bubble.
     /// This allows the server to avoid re-uploading identical files by copying from
@@ -395,12 +396,6 @@ pub enum BubbleStrategy {
         #[serde(default)]
         keep_ttl: bool,
     },
-}
-
-impl Default for BubbleStrategy {
-    fn default() -> Self {
-        Self::CreateNew
-    }
 }
 
 /// Properties for ephemeral bubble management during snapshot creation.
