@@ -420,9 +420,6 @@ class EdenServer::ThriftServerEventHandler
             // via default signal handling the next time we get the signal.
             XLOGF(INFO, "unregistering signal handler for signal {}", sig);
             unregisterSignalHandler(sig);
-
-            edenServer_->getHandler()->cancelAllActiveRequests(
-                "SIGINT received");
           } else {
             // Otherwise we are using shutdownTimeout.
 
