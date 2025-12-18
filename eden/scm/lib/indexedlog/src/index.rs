@@ -1553,7 +1553,7 @@ impl MemChecksum {
             // Read the new checksums.
             let start_chunk_index = (previous_offset >> chunk_size_logarithm) as usize;
             for i in start_chunk_index..chunk_needed {
-                let incomplete_chunk = offset % chunk_size > 0 && i == chunk_needed - 1;
+                let incomplete_chunk = !offset.is_multiple_of(chunk_size) && i == chunk_needed - 1;
 
                 // Don't record incomplete chunk hashes for previous checksums
                 // since the "next" checksum (i.e. previous loop iteration) will
