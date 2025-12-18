@@ -82,11 +82,8 @@ pub fn open(path: impl AsRef<Path>, mode: &str) -> io::Result<File> {
             't' => opts.truncate(true),
             'x' => opts.create_new(true),
             _ => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    format!("invalid open() mode {}", opt),
-                ))
-                .path_context("error opening file", path);
+                return Err(io::Error::other(format!("invalid open() mode {}", opt)))
+                    .path_context("error opening file", path);
             }
         };
     }

@@ -173,10 +173,10 @@ pub fn absolute(path: impl AsRef<Path>) -> io::Result<PathBuf> {
     };
 
     if !path.is_absolute() {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("cannot get absolute path from {:?}", path),
-        ));
+        return Err(io::Error::other(format!(
+            "cannot get absolute path from {:?}",
+            path
+        )));
     }
 
     Ok(normalize(&path))
