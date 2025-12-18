@@ -242,7 +242,7 @@ impl Doctor {
             Some(Host::Domain(host)) => {
                 // Let tests stub out host check results.
                 if host == "test_fail" {
-                    return Err(HostError::TCP(io::Error::new(io::ErrorKind::Other, "test")));
+                    return Err(HostError::TCP(io::Error::other("test")));
                 } else if host == "test_succeed" {
                     return Ok(());
                 }
@@ -257,10 +257,10 @@ impl Doctor {
         };
 
         if sock_addrs.is_empty() {
-            return Err(HostError::DNS(io::Error::new(
-                io::ErrorKind::Other,
-                format!("{:?} resolved to 0 IPs", url.host()),
-            )));
+            return Err(HostError::DNS(io::Error::other(format!(
+                "{:?} resolved to 0 IPs",
+                url.host()
+            ))));
         }
 
         for i in 0..sock_addrs.len() {
@@ -517,10 +517,7 @@ mod tests {
         // DNS lookup fails.
         {
             doc.dns_lookup = Box::new(move |_host_port| -> io::Result<vec::IntoIter<SocketAddr>> {
-                Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "some sort of DNS failure!",
-                ))
+                Err(io::Error::other("some sort of DNS failure!"))
             });
 
             let url = Url::parse(&format!("https://localhost:{}", addr.port())).unwrap();
