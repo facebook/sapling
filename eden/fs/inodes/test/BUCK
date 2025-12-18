@@ -37,6 +37,27 @@ cpp_unittest(
 )
 
 cpp_unittest(
+    name = "checkout_cancellation",
+    srcs = ["CheckoutCancellationTest.cpp"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/common/utils:fault_injector",
+        "//eden/common/utils:path",
+        "//eden/common/utils:ref_ptr",
+        "//eden/fs/config:config",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/store:context",
+        "//eden/fs/testharness:fake_backing_store_and_tree_builder",
+        "//eden/fs/testharness:test_mount",
+        "//folly:cancellation_token",
+        "//folly/executors:manual_executor",
+        "//folly/futures:core",
+        "//folly/test:test_utils",
+    ],
+)
+
+cpp_unittest(
     name = "dematerialize",
     srcs = ["DematerializeTest.cpp"],
     supports_static_listing = False,
