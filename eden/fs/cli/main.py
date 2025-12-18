@@ -37,6 +37,8 @@ CHEF_LOG_TIMESTAMP_KEY = "chef.run_success_timestamp"
 # It is very common for users to get chef warnings on Mondays if this
 # time period is shorter than 4 days. So, we report a problem after two weeks.
 CHEF_RUN_AGE_PROBLEM = timedelta(days=14)
+# Coordinate with Eden daemon sigterm shutdown timing. Refer to: sigtermShutdownTimeout
+DEFAULT_STOP_TIMEOUT = 20
 
 
 class ForegroundColor(Enum):
@@ -2385,7 +2387,7 @@ class RestartCmd(Subcmd):
         print("Recovery unsuccessful, forcing a full restart by sending SIGTERM")
         try:
             os.kill(edenfs_pid, signal.SIGTERM)
-            self._wait_for_stop(instance, edenfs_pid, timeout=5)
+            self._wait_for_stop(instance, edenfs_pid, timeout=DEFAULT_STOP_TIMEOUT)
         except Exception:
             # In case we race and the process does not exist by the time we
             # timeout waiting and by the time we call os.kill, just
@@ -2460,7 +2462,7 @@ re-open these files after EdenFS is restarted.
                 print("Not confirmed.")
                 return 1
 
-        self._do_stop(instance, old_pid, timeout=15)
+        self._do_stop(instance, old_pid, timeout=DEFAULT_STOP_TIMEOUT)
         if migrate_to is not None:
             config_mod._do_manual_migration(
                 instance, migrate_to, get_migration_success_message
@@ -2616,7 +2618,7 @@ class StopCmd(Subcmd):
             "-t",
             "--timeout",
             type=float,
-            default=15.0,
+            default=DEFAULT_STOP_TIMEOUT,
             help="Wait up to TIMEOUT seconds for the daemon to exit "
             "(default=%(default)s). If it does not exit within the timeout, "
             "then SIGKILL will be sent. If timeout is 0, then do not wait at "

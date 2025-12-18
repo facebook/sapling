@@ -296,7 +296,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<std::chrono::nanoseconds> sigtermShutdownTimeout{
       "core:sigterm-shutdown-timeout",
-      std::chrono::seconds(15),
+      std::chrono::seconds(20),
       this};
 
   // [config]
