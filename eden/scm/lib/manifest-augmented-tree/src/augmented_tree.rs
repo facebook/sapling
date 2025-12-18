@@ -93,10 +93,9 @@ impl AugmentedTree {
                         FileType::Executable => w.write_all(b"x")?,
                         FileType::Symlink => w.write_all(b"l")?,
                         FileType::GitSubmodule => {
-                            return Err(io::Error::new(
-                                io::ErrorKind::Other,
-                                anyhow!("submodules not supported in augmented manifests"),
-                            ));
+                            return Err(io::Error::other(anyhow!(
+                                "submodules not supported in augmented manifests"
+                            )));
                         }
                     }
                 }
@@ -197,10 +196,9 @@ impl AugmentedTree {
                         FileType::Executable => b"x",
                         FileType::Symlink => b"l",
                         FileType::GitSubmodule => {
-                            return Err(io::Error::new(
-                                io::ErrorKind::Other,
-                                anyhow!("submodules not supported in augmented manifests"),
-                            ));
+                            return Err(io::Error::other(anyhow!(
+                                "submodules not supported in augmented manifests"
+                            )));
                         }
                     })?;
                     w.write_all(b" ")?;
