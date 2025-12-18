@@ -911,8 +911,11 @@ EdenServiceHandler::semifuture_checkOutRevision(
     CheckoutMode checkoutMode,
     std::unique_ptr<CheckOutRevisionParams> params) {
   auto rootIdOptions = params->rootIdOptions().ensure();
-  auto helper = INSTRUMENT_THRIFT_CALL(
+  auto requestContext = getRequestContext();
+  auto helper = INSTRUMENT_THRIFT_CALL_WITH_CANCELLATION(
       DBG1,
+      true,
+      requestContext,
       *mountPoint,
       logHash(*hash),
       apache::thrift::util::enumName(checkoutMode, "(unknown)"),
@@ -920,6 +923,10 @@ EdenServiceHandler::semifuture_checkOutRevision(
                                            : "(unspecified hg root manifest)",
       rootIdOptions.fid().has_value() ? folly::hexlify(*rootIdOptions.fid())
                                       : "no fid provided");
+  auto cancellationToken = getCancellationToken(helper->getRequestId());
+  if (cancellationToken.has_value()) {
+    helper->getThriftFetchContext().setCancellationToken(*cancellationToken);
+  }
   helper->getThriftFetchContext().fillClientRequestInfo(params->cri());
   auto& fetchContext = helper->getFetchContext();
 

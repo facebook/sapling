@@ -1540,6 +1540,8 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
               return treeResults;
             }
 
+            ctx->throwIfCanceled();
+
             auto& fromTree = std::get<0>(treeResults);
             auto trees = std::vector{fromTree.tree};
             if (resumingCheckout) {
@@ -1612,6 +1614,8 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
             .checkAsync("inodeCheckout", getPath().view())
             .thenValue([ctx, treeResults = std::move(treeResults), rootInode](
                            auto&&) mutable {
+              ctx->throwIfCanceled();
+
               auto& [fromTree, toTree] = treeResults;
               return rootInode->checkout(ctx.get(), fromTree.tree, toTree.tree);
             });

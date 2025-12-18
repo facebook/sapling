@@ -3101,6 +3101,8 @@ ImmediateFuture<Unit> TreeInode::computeDiff(
     auto& inodeEntries = contents->entries;
     auto inodeIter = inodeEntries.begin();
     while (true) {
+      context->throwIfCanceled();
+
       const Tree::key_type* earliestPath =
           inodeIter != inodeEntries.end() ? &inodeIter->first : nullptr;
       DirContents::iterator* matchingInodeIter =
@@ -3241,6 +3243,8 @@ ImmediateFuture<Unit> TreeInode::checkout(
       (toTree ? toTree->getObjectId().toLogString() : "<none>"));
 
   auto checkoutSpan = ctx->createSpan("TreeInode::checkout");
+
+  ctx->throwIfCanceled();
 
   std::vector<std::shared_ptr<CheckoutAction>> actions;
   std::vector<IncompleteInodeLoad> pendingLoads;

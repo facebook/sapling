@@ -64,6 +64,8 @@ PathComponentPiece CheckoutAction::getEntryName() const {
 ImmediateFuture<InvalidationRequired> CheckoutAction::run(
     CheckoutContext* ctx,
     ObjectStore* store) {
+  ctx->throwIfCanceled();
+
   std::vector<ImmediateFuture<folly::Unit>> loadFutures;
   try {
     // Load the Blob or Tree for the old TreeEntry.
