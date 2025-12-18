@@ -1687,8 +1687,7 @@ pub fn edenapi_from_config(
                 "attempt to create EagerRepo as SaplingRemoteApi from config {section}.{name}={url}",
             );
             if let Some(path) = EagerRepo::url_to_dir(&url) {
-                let repo =
-                    EagerRepo::open(&path).map_err(|e| edenapi::SaplingRemoteApiError::Other(e))?;
+                let repo = EagerRepo::open(&path).map_err(edenapi::SaplingRemoteApiError::Other)?;
                 return Ok(Some(Arc::new(repo)));
             }
         }
