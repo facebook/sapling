@@ -299,6 +299,17 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::seconds(20),
       this};
 
+  /**
+   * Time offset before shutdown to cancel active requests. This allows
+   * requests to complete gracefully before the shutdown timeout is reached.
+   * The cancellation happens at (shutdownTimeout -
+   * cancellationOffsetBeforeShutdown).
+   */
+  ConfigSetting<std::chrono::nanoseconds> cancellationOffsetBeforeShutdown{
+      "core:cancellation-offset-before-shutdown",
+      std::chrono::seconds(5),
+      this};
+
   // [config]
 
   /**

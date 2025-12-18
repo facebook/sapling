@@ -226,9 +226,6 @@ constexpr StringPiece kNFSStatPrefix{"nfs"};
 #endif
 constexpr StringPiece kStateConfig{"config.toml"};
 
-// seconds offset to call cancellation before sigkill
-constexpr std::chrono::seconds kCancellationOffsetBeforeShutdown{4};
-
 std::optional<std::string> getUnixDomainSocketPath(
     const folly::SocketAddress& address) {
   return AF_UNIX == address.getFamily() ? std::make_optional(address.getPath())
@@ -431,8 +428,11 @@ class EdenServer::ThriftServerEventHandler
 
             // Schedule cancellation of active requests, leave some time for
             // requests to complete.
-            auto cancelDelay =
-                shutdownTimeout - kCancellationOffsetBeforeShutdown;
+            auto cancellationOffset =
+                edenServer_->getServerState()
+                    ->getEdenConfig()
+                    ->cancellationOffsetBeforeShutdown.getValue();
+            auto cancelDelay = shutdownTimeout - cancellationOffset;
             auto delayMs = std::max(
                 std::chrono::milliseconds(0),
                 std::chrono::duration_cast<std::chrono::milliseconds>(
