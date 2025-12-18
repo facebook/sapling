@@ -384,11 +384,12 @@ impl From<thrift_types::edenfs::GetAttributesFromFilesResultV2> for GetAttribute
 /// ));
 /// ```
 #[repr(i32)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum AttributesRequestScope {
     /// Request attributes for files only.
     FilesOnly,
     TreesOnly,
+    #[default]
     TreesAndFiles,
 }
 
@@ -425,12 +426,6 @@ impl FromStr for AttributesRequestScope {
                 s
             ))),
         }
-    }
-}
-
-impl Default for AttributesRequestScope {
-    fn default() -> Self {
-        Self::TreesAndFiles
     }
 }
 
