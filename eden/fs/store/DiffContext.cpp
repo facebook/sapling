@@ -21,7 +21,8 @@ DiffContext::DiffContext(
     CaseSensitivity caseSensitive,
     bool windowsSymlinksEnabled,
     std::shared_ptr<ObjectStore> os,
-    std::unique_ptr<TopLevelIgnores> topLevelIgnores)
+    std::unique_ptr<TopLevelIgnores> topLevelIgnores,
+    bool throwOnCancel)
     : callback{cb},
       store{std::move(os)},
       listIgnored{listIgnored},
@@ -35,7 +36,8 @@ DiffContext::DiffContext(
       fetchContext_{statsContext_.copy()},
       caseSensitive_{caseSensitive},
       windowsSymlinksEnabled_{windowsSymlinksEnabled},
-      windowsRememberExecutableBit_{store->getWindowsRememberExecutableBit()} {
+      windowsRememberExecutableBit_{store->getWindowsRememberExecutableBit()},
+      throwOnCancel_{throwOnCancel} {
   // Propagate certain fields from the caller's fetch context. This is basically
   // so important fields from checkout's context are propagated to the diff
   // operation that checkout runs.
@@ -52,6 +54,10 @@ const GitIgnoreStack* DiffContext::getToplevelIgnore() const {
 
 bool DiffContext::isCancelled() const {
   return cancellation_.isCancellationRequested();
+}
+
+void DiffContext::throwIfCanceled() const {
+  fetchContext_->throwIfCanceled(throwOnCancel_);
 }
 
 } // namespace facebook::eden

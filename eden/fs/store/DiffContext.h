@@ -44,7 +44,8 @@ class DiffContext {
       CaseSensitivity caseSensitive,
       bool windowsSymlinksEnabled,
       std::shared_ptr<ObjectStore> os,
-      std::unique_ptr<TopLevelIgnores> topLevelIgnores);
+      std::unique_ptr<TopLevelIgnores> topLevelIgnores,
+      bool throwOnCancel = false);
 
   DiffContext(const DiffContext&) = delete;
   DiffContext& operator=(const DiffContext&) = delete;
@@ -64,6 +65,11 @@ class DiffContext {
 
   const GitIgnoreStack* getToplevelIgnore() const;
   bool isCancelled() const;
+
+  /**
+   * Throws if the operation has been canceled and throwOnCancel is enabled.
+   */
+  void throwIfCanceled() const;
 
   const StatsFetchContext& getStatsContext() {
     return *statsContext_;
@@ -113,6 +119,9 @@ class DiffContext {
   bool windowsSymlinksEnabled_;
 
   bool windowsRememberExecutableBit_;
+
+  // Whether to throw an exception when the operation is canceled.
+  bool throwOnCancel_;
 };
 
 } // namespace facebook::eden

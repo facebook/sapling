@@ -1948,7 +1948,8 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
       getCheckoutConfig()->getCaseSensitive(),
       getCheckoutConfig()->getEnableWindowsSymlinks(),
       getObjectStore(),
-      serverState_->getTopLevelIgnores());
+      serverState_->getTopLevelIgnores(),
+      getEdenConfig()->throwOnCancel.getValue());
 }
 
 ImmediateFuture<Unit> EdenMount::diff(
