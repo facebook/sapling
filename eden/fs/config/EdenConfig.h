@@ -1658,7 +1658,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> propagateCheckoutErrors{
       "experimental:propagate-checkout-errors",
-      false,
+      true,
       this};
 
   /**
