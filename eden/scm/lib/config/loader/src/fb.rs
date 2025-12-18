@@ -28,5 +28,7 @@ pub(crate) mod thrift_types;
 
 mod mode;
 
+pub use dynamic_system::config_url;
+pub use dynamic_system::get_http_config;
 pub use internalconfig::Domain;
 pub use mode::FbConfigMode;
