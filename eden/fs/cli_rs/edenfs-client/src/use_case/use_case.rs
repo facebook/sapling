@@ -118,7 +118,6 @@ impl UseCase {
             Some(config_url),
             300, // 5 minutes
             http_config,
-            true, // allow_remote_snapshot
             &cache_path,
             REMOTE_CONFIG_SNAPSHOT,
             CONFIG_HASH_INDEX,
@@ -158,7 +157,6 @@ impl UseCase {
         remote_url: Option<String>,
         limit: u64,
         http_config: http_client::Config,
-        allow_remote_snapshot: bool,
         cache_path: &Path,
         remote_config_snapshot: &str,
         config_hash_index: &str,
@@ -182,9 +180,8 @@ impl UseCase {
                     remote_url,
                     limit,
                     http_config,
-                    allow_remote_snapshot,
                     &cache_path,
-                    &remote_config_snapshot,
+                    Some(&remote_config_snapshot),
                     &config_hash_index,
                     &config_up_to_date_index,
                     &config_index,
