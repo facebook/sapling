@@ -522,10 +522,10 @@ impl MultiMeta {
     fn read(&mut self, mut reader: impl io::Read) -> io::Result<()> {
         let format_version: usize = reader.read_vlq()?;
         if format_version != 0 {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                format!("MultiMeta format {} is unsupported", format_version),
-            ));
+            return Err(io::Error::other(format!(
+                "MultiMeta format {} is unsupported",
+                format_version
+            )));
         }
         let count: usize = reader.read_vlq()?;
         for _ in 0..count {
@@ -533,7 +533,7 @@ impl MultiMeta {
             let mut name_buf = vec![0; name_len];
             reader.read_exact(&mut name_buf)?;
             let name = String::from_utf8(name_buf)
-                .map_err(|_| io::Error::new(io::ErrorKind::Other, "Log name is not utf-8"))?;
+                .map_err(|_| io::Error::other("Log name is not utf-8"))?;
             let meta = LogMetadata::read(&mut reader)?;
             self.metas
                 .entry(name.to_string())

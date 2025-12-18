@@ -446,9 +446,6 @@ Caused by 1 errors:
     }
 
     fn io_result() -> std::io::Result<()> {
-        Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "io::Error: something wrong happened",
-        ))
+        Err(std::io::Error::other("io::Error: something wrong happened"))
     }
 }
