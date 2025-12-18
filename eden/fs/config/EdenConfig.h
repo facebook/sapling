@@ -1590,6 +1590,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Enables early exit cancellation by throwing, for cancellation supported
+   * endpoints.
+   */
+  ConfigSetting<bool> throwOnCancel{
+      "experimental:throw-on-cancel",
+      false,
+      this};
+
+  /**
    * Controls whether EdenFS uses coroutines for debugGetBlob thrift endpoint.
    * This allows for gradual rollout of coroutine-based implementation.
    * Default is false for conservative rollout strategy.
