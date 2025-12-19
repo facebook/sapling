@@ -203,27 +203,19 @@ TEST_F(FakeBackingStoreTest, getTree) {
   auto [readonlyName, readonlyTreeEntry] = *tree2->find("readonly"_pc);
   auto [zzzName, zzzTreeEntry] = *tree2->find("zzz"_pc);
   EXPECT_EQ("bar"_pc, barName);
-  EXPECT_EQ(
-      TreeEntryType::REGULAR_FILE,
-      barTreeEntry.getType(/*windowsRememberExecutableBit=*/true));
+  EXPECT_EQ(TreeEntryType::REGULAR_FILE, barTreeEntry.getType());
   EXPECT_EQ(bar_id, barTreeEntry.getObjectId());
   EXPECT_EQ("dir1"_pc, dir1Name);
   EXPECT_EQ(dir1->get().getObjectId(), dir1TreeEntry.getObjectId());
-  EXPECT_EQ(
-      TreeEntryType::TREE,
-      dir1TreeEntry.getType(/*windowsRememberExecutableBit=*/true));
+  EXPECT_EQ(TreeEntryType::TREE, dir1TreeEntry.getType());
   EXPECT_EQ("readonly"_pc, readonlyName);
   EXPECT_EQ(dir2->get().getObjectId(), readonlyTreeEntry.getObjectId());
   // TreeEntry objects only tracking the owner executable bit, so even though we
   // input the permissions as 0500 above this really ends up returning 0755
-  EXPECT_EQ(
-      TreeEntryType::TREE,
-      readonlyTreeEntry.getType(/*windowsRememberExecutableBit=*/true));
+  EXPECT_EQ(TreeEntryType::TREE, readonlyTreeEntry.getType());
   EXPECT_EQ("zzz"_pc, zzzName);
   EXPECT_EQ(foo_id, zzzTreeEntry.getObjectId());
-  EXPECT_EQ(
-      TreeEntryType::REGULAR_FILE,
-      zzzTreeEntry.getType(/*windowsRememberExecutableBit=*/true));
+  EXPECT_EQ(TreeEntryType::REGULAR_FILE, zzzTreeEntry.getType());
 
   EXPECT_EQ(rootId, std::move(future3).get(0ms).tree->getObjectId());
 

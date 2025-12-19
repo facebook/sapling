@@ -120,15 +120,11 @@ void processBothPresent(
   bool isTreeSCM = scmEntry.second.isTree();
   bool isTreeWD = wdEntry.second.isTree();
   bool windowsSymlinksEnabled = context->getWindowsSymlinksEnabled();
-  bool windowsRememberExecutableBit =
-      context->getWindowsRememberExecutableBit();
 
   if (isTreeSCM) {
     if (isTreeWD) {
       // tree-to-tree diff
-      XDCHECK_EQ(
-          scmEntry.second.getType(windowsRememberExecutableBit),
-          wdEntry.second.getType(windowsRememberExecutableBit));
+      XDCHECK_EQ(scmEntry.second.getType(), wdEntry.second.getType());
       if (context->store->areObjectsKnownIdentical(
               scmEntry.second.getObjectId(), wdEntry.second.getObjectId())) {
         return;
@@ -179,11 +175,9 @@ void processBothPresent(
       // On Windows: Filter executable type for comparison.
       if (!compareTreeEntryType(
               filteredEntryType(
-                  scmEntry.second.getType(windowsRememberExecutableBit),
-                  windowsSymlinksEnabled),
+                  scmEntry.second.getType(), windowsSymlinksEnabled),
               filteredEntryType(
-                  wdEntry.second.getType(windowsRememberExecutableBit),
-                  windowsSymlinksEnabled))) {
+                  wdEntry.second.getType(), windowsSymlinksEnabled))) {
         context->callback->modifiedPath(
             entryPath,
             filteredEntryDtype(

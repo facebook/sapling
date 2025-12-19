@@ -272,8 +272,7 @@ ImmediateFuture<bool> CheckoutAction::hasConflict() {
             oldScmEntry_.value().second.getObjectId(),
             oldBlobSha1_.value(),
             filteredEntryType(
-                oldScmEntry_.value().second.getType(
-                    ctx_->getWindowsRememberExecutableBit()),
+                oldScmEntry_.value().second.getType(),
                 ctx_->getWindowsSymlinksEnabled()),
             ctx_->getFetchContext())
         .thenValue([self = shared_from_this()](bool isSame) {

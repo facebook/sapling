@@ -83,7 +83,7 @@ TEST_F(TreeBuilderTest, AddFileEntry) {
 
   auto entry = tree->find(PathComponentPiece{"test_file.txt"})->second;
 
-  EXPECT_EQ(entry.getType(/*windowsRememberExecutableBit=*/true), entryType);
+  EXPECT_EQ(entry.getType(), entryType);
   EXPECT_EQ(entry.getSize(), fileSize);
   EXPECT_EQ(
       entry.getContentSha1().value().getBytes(), folly::ByteRange{sha1Hash});
@@ -117,7 +117,7 @@ TEST_F(TreeBuilderTest, AddDirectoryEntry) {
 
   auto entry = tree->find(PathComponentPiece{"test_dir"})->second;
 
-  EXPECT_EQ(entry.getType(/*windowsRememberExecutableBit=*/true), entryType);
+  EXPECT_EQ(entry.getType(), entryType);
 
   SlOid parsedOid = facebook::eden::SlOid{entry.getObjectId()};
   EXPECT_EQ(parsedOid.node().getBytes(), folly::ByteRange{hgNode});
@@ -158,9 +158,7 @@ TEST_F(TreeBuilderTest, AddMultipleEntries) {
     std::string fileName = "file" + std::to_string(i) + ".txt";
     auto entry = tree->find(PathComponentPiece{fileName})->second;
 
-    EXPECT_EQ(
-        entry.getType(/*windowsRememberExecutableBit=*/true),
-        TreeEntryType::REGULAR_FILE);
+    EXPECT_EQ(entry.getType(), TreeEntryType::REGULAR_FILE);
 
     SlOid parsedOid = facebook::eden::SlOid{entry.getObjectId()};
     EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{fileName});
@@ -171,9 +169,7 @@ TEST_F(TreeBuilderTest, AddMultipleEntries) {
     std::string dirName = "dir" + std::to_string(i);
     auto entry = tree->find(PathComponentPiece{dirName})->second;
 
-    EXPECT_EQ(
-        entry.getType(/*windowsRememberExecutableBit=*/true),
-        TreeEntryType::TREE);
+    EXPECT_EQ(entry.getType(), TreeEntryType::TREE);
 
     SlOid parsedOid = facebook::eden::SlOid{entry.getObjectId()};
     EXPECT_EQ(parsedOid.path(), path_ + PathComponentPiece{dirName});

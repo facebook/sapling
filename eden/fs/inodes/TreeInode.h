@@ -667,8 +667,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const Tree* tree,
       Overlay* overlay,
       CaseSensitivity caseSensitive,
-      bool windowsSymlinksEnabled,
-      bool windowsRememberExecutableBit);
+      bool windowsSymlinksEnabled);
 
   void updateAtime();
 

@@ -173,9 +173,7 @@ TEST(EdenMount, getTreeOrTreeEntry) {
                 "src/test.c"_relpath, ObjectFetchContext::getNullContext())
             .get(0ms);
     auto& treeEntry = std::get<TreeEntry>(variant);
-    EXPECT_EQ(
-        treeEntry.getType(/*windowsRememberExecutableBit=*/true),
-        TreeEntryType::REGULAR_FILE);
+    EXPECT_EQ(treeEntry.getType(), TreeEntryType::REGULAR_FILE);
     auto& storedBlob = builder.getStoredBlob("src/test.c"_relpath)->get();
     EXPECT_EQ("testy tests", storedBlob.getContents().to<std::string>());
   }

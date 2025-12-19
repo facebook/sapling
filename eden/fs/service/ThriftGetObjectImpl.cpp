@@ -64,8 +64,7 @@ ScmTreeWithOrigin transformToTreeFromOrigin(
         treeOrError.treeEntries().ensure().emplace_back();
         auto& out = treeOrError.treeEntries()->back();
         out.name() = name.asString();
-        out.mode() = modeFromTreeEntryType(treeEntry.getType(
-            edenMount->getObjectStore()->getWindowsRememberExecutableBit()));
+        out.mode() = modeFromTreeEntryType(treeEntry.getType());
         out.id() = edenMount->getObjectStore()->renderObjectId(
             treeEntry.getObjectId());
       }

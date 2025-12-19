@@ -81,8 +81,7 @@ TEST(GitTree, testDeserialize) {
   EXPECT_EQ(".babelrc", babelrc.first);
   EXPECT_EQ(false, babelrc.second.isTree());
   EXPECT_EQ(
-      facebook::eden::TreeEntryType::REGULAR_FILE,
-      babelrc.second.getType(/*windowsRememberExecutableBit=*/true));
+      facebook::eden::TreeEntryType::REGULAR_FILE, babelrc.second.getType());
 
   // Executable file.
   auto nuclideStartServer = *tree->find("nuclide-start-server"_pc);
@@ -93,7 +92,7 @@ TEST(GitTree, testDeserialize) {
   EXPECT_EQ(false, nuclideStartServer.second.isTree());
   EXPECT_EQ(
       facebook::eden::TreeEntryType::EXECUTABLE_FILE,
-      nuclideStartServer.second.getType(/*windowsRememberExecutableBit=*/true));
+      nuclideStartServer.second.getType());
 
   // Directory.
   auto lib = *tree->find("lib"_pc);
@@ -102,9 +101,7 @@ TEST(GitTree, testDeserialize) {
       lib.second.getObjectId());
   EXPECT_EQ("lib", lib.first);
   EXPECT_EQ(true, lib.second.isTree());
-  EXPECT_EQ(
-      facebook::eden::TreeEntryType::TREE,
-      lib.second.getType(/*windowsRememberExecutableBit=*/true));
+  EXPECT_EQ(facebook::eden::TreeEntryType::TREE, lib.second.getType());
 
   // lab sorts before lib but is not present in the Tree, so ensure that
   // we don't get an entry back here
@@ -150,8 +147,7 @@ TEST(GitTree, testDeserializeWithSymlink) {
   EXPECT_EQ(false, contributing.second.isTree());
 
   EXPECT_EQ(
-      facebook::eden::TreeEntryType::SYMLINK,
-      contributing.second.getType(/*windowsRememberExecutableBit=*/true));
+      facebook::eden::TreeEntryType::SYMLINK, contributing.second.getType());
 }
 
 TEST(GitTree, deserializeEmpty) {

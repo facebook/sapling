@@ -126,28 +126,10 @@ class TreeEntry {
   }
 
   /**
-   * When windowsRememberExecutableBit is true, executable permissions are
-   * obtained from source control and preserved in the file's initial mode. As a
-   * result, on Windows, getType may return EXECUTABLE_FILE if the file is
-   * marked as executable in source control.
+   * Returns the file type as it is stored in source control.
    */
-  TreeEntryType getType(bool windowsRememberExecutableBit) const {
-    if (windowsRememberExecutableBit) {
-      return type_;
-    }
-#ifdef _WIN32
-    // XXX(T66590035): instead of doing this here, this should be done in the
-    // Windows specific code that interpret these.
-    switch (type_) {
-      case TreeEntryType::REGULAR_FILE:
-      case TreeEntryType::EXECUTABLE_FILE:
-        return TreeEntryType::REGULAR_FILE;
-      default:
-        return type_;
-    }
-#else
+  TreeEntryType getType() const {
     return type_;
-#endif
   }
 
   dtype_t getDtype() const {
