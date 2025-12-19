@@ -31,4 +31,5 @@ mod mode;
 pub use dynamic_system::config_url;
 pub use dynamic_system::get_http_config;
 pub use internalconfig::Domain;
+pub use internalconfig::get_domain;
 pub use mode::FbConfigMode;
