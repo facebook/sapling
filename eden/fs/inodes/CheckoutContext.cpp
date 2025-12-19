@@ -37,8 +37,7 @@ CheckoutContext::CheckoutContext(
           requestInfo)},
       checkoutProgress_{std::move(checkoutProgress)},
       windowsSymlinksEnabled_{
-          mount_->getCheckoutConfig()->getEnableWindowsSymlinks()},
-      windowsRememberExecutableBit_{mount_->getWindowsRememberExecutableBit()} {
+          mount_->getCheckoutConfig()->getEnableWindowsSymlinks()} {
   if (mount_->getEdenConfig()->thriftCheckoutTimeTracing.getValue()) {
     fetchContext_->setTimeTracer(std::make_shared<MiniTracer>());
   }

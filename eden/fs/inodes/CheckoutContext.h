@@ -147,10 +147,6 @@ class CheckoutContext {
     return windowsSymlinksEnabled_;
   }
 
-  bool getWindowsRememberExecutableBit() const {
-    return windowsRememberExecutableBit_;
-  }
-
   void increaseCheckoutCounter(int64_t inc) const;
 
   /**
@@ -188,7 +184,5 @@ class CheckoutContext {
   folly::Synchronized<std::vector<CheckoutConflict>> conflicts_;
 
   bool windowsSymlinksEnabled_;
-
-  bool windowsRememberExecutableBit_;
 };
 } // namespace facebook::eden

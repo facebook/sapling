@@ -89,11 +89,6 @@ class DiffContext {
     return windowsSymlinksEnabled_;
   }
 
-  // Whether executable are remember on Windows or not
-  bool getWindowsRememberExecutableBit() const {
-    return windowsRememberExecutableBit_;
-  }
-
   /**
    * Create a span for timing instrumentation if a time tracer is set.
    * Returns nullopt if no time tracer is set.
@@ -117,8 +112,6 @@ class DiffContext {
   CaseSensitivity caseSensitive_;
 
   bool windowsSymlinksEnabled_;
-
-  bool windowsRememberExecutableBit_;
 
   // Whether to throw an exception when the operation is canceled.
   bool throwOnCancel_;

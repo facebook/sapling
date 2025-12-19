@@ -36,7 +36,6 @@ DiffContext::DiffContext(
       fetchContext_{statsContext_.copy()},
       caseSensitive_{caseSensitive},
       windowsSymlinksEnabled_{windowsSymlinksEnabled},
-      windowsRememberExecutableBit_{store->getWindowsRememberExecutableBit()},
       throwOnCancel_{throwOnCancel} {
   // Propagate certain fields from the caller's fetch context. This is basically
   // so important fields from checkout's context are propagated to the diff
