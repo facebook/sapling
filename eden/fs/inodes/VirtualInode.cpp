@@ -214,35 +214,18 @@ ImmediateFuture<Hash20> VirtualInode::getSHA1(
 ImmediateFuture<std::optional<TreeEntryType>> VirtualInode::getTreeEntryType(
     RelativePathPiece path,
     const ObjectFetchContextPtr& fetchContext,
-    bool windowsSymlinksEnabled,
-    [[maybe_unused]] bool windowsRememberExecutableBit) const {
+    bool windowsSymlinksEnabled) const {
   using R = ImmediateFuture<std::optional<TreeEntryType>>;
   return match(
       variant_,
       [&](const InodePtr& inode) -> R {
 #ifdef _WIN32
         (void)fetchContext;
-        if (windowsRememberExecutableBit) {
-          // On Windows, users cannot modify Unix-style file permissions.
-          // As a result, the file's initial mode remains unchanged.
-          // Therefore, we can reliably use the initial mode to determine the
-          // tree entry type, and use it as the SOURCE_CONTROL_TYPE.
-          return treeEntryTypeFromMode(inode->getInitialMode());
-        }
-        // stat does not have real data for an inode on Windows, so we can not
-        // directly use the mode bits. Further inodes are only tree, regular
-        // files or symlink on windows see treeEntryTypeFromMode.
-        switch (inode->getType()) {
-          case dtype_t::Dir:
-            return TreeEntryType::TREE;
-          case dtype_t::Regular:
-            return TreeEntryType::REGULAR_FILE;
-          case dtype_t::Symlink:
-            return windowsSymlinksEnabled ? TreeEntryType::SYMLINK
-                                          : TreeEntryType::REGULAR_FILE;
-          default:
-            return std::nullopt;
-        }
+        // On Windows, users cannot modify Unix-style file permissions.
+        // As a result, the file's initial mode remains unchanged.
+        // Therefore, we can reliably use the initial mode to determine the
+        // tree entry type, and use it as the SOURCE_CONTROL_TYPE.
+        return treeEntryTypeFromMode(inode->getInitialMode());
 #else
         (void)path;
         return inode->stat(fetchContext).thenValue([](const struct stat&& st) {
@@ -527,8 +510,6 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
     timespec lastCheckoutTime,
     const ObjectFetchContextPtr& fetchContext) const {
   bool windowsSymlinksEnabled = objectStore->getWindowsSymlinksEnabled();
-  bool windowsRememberExecutableBit =
-      objectStore->getWindowsRememberExecutableBit();
   // For non regular files we return errors for hashes and sizes.
   // We intentionally want to refuse to compute the SHA1 of symlinks.
   auto dtype = filteredEntryDtype(getDtype(), windowsSymlinksEnabled);
@@ -576,11 +557,8 @@ ImmediateFuture<EntryAttributes> VirtualInode::getEntryAttributes(
   auto entryTypeFuture =
       ImmediateFuture<std::optional<TreeEntryType>>::makeEmpty();
   if (requestedAttributes.contains(ENTRY_ATTRIBUTE_SOURCE_CONTROL_TYPE)) {
-    entryTypeFuture = getTreeEntryType(
-        path,
-        fetchContext,
-        windowsSymlinksEnabled,
-        windowsRememberExecutableBit);
+    entryTypeFuture =
+        getTreeEntryType(path, fetchContext, windowsSymlinksEnabled);
   }
 
   auto blobAuxdataFuture = ImmediateFuture<BlobAuxData>::makeEmpty();
