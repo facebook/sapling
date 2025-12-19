@@ -170,6 +170,15 @@ function DownloadCommitsTooltip({dismiss}: {dismiss: () => unknown}) {
         ),
       );
     }
+
+    const fullRepoBranchGraftOperation = Internal.getFullRepoBranchGraftOperation?.(
+      dagWithPreviews,
+      latest,
+      rebaseType,
+    );
+    if (fullRepoBranchGraftOperation != null) {
+      runOperation(fullRepoBranchGraftOperation);
+    }
   };
 
   return (

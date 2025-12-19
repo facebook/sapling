@@ -159,6 +159,7 @@ export type TrackEventName =
   | 'ConfSubmitOperation'
   | 'ConfSubmitFallback'
   | 'JfGetOperation'
+  | 'JfUnlinkOperation'
   | 'JumpToInlineComment'
   | 'OptimisticFilesStateForceResolved'
   | 'OptimisticCommitsStateForceResolved'
