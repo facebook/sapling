@@ -219,7 +219,7 @@ impl<Repo> MononokeReposManager<Repo> {
                     anyhow::Ok((repo_id, repo_name, repo))
                 })
             })
-            // Repo construction can be heavy, 50 at a time is sufficient.
+            // Repo construction can be heavy, 30 at a time is sufficient.
             .buffer_unordered(30)
             .map(|r| anyhow::Ok(r??))
             .try_collect::<Vec<_>>()
@@ -358,8 +358,8 @@ where
                     anyhow::Ok((repo_id, repo_name, repo))
                 })
             })
-            // Repo construction can be heavy, 50 at a time is sufficient.
-            .buffer_unordered(50)
+            // Repo construction can be heavy, 30 at a time is sufficient.
+            .buffer_unordered(30)
             .map(|r| anyhow::Ok(r??))
             .try_collect::<Vec<_>>()
             .await?;
