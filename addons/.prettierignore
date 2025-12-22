@@ -9,6 +9,7 @@
 /isl-server/src/facebook/phabricator/generated/
 /isl-server/src/facebook/fullRepoBranch/generated/
 /isl-server/src/github/generated/
+/isl-server/src/__generated__/
 /vscode/coverage/
 /vscode/dist/
 /vscode-build
