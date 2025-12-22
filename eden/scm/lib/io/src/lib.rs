@@ -661,7 +661,7 @@ impl IO {
 
         let mut pager = Pager::new_using_system_terminal()
             .or_else(|_| Pager::new_using_stdio())
-            .map_err(|e| io::Error::other(e))?;
+            .map_err(io::Error::other)?;
 
         // Configure the pager.
         // The Hybrid mode is similar to "-FX" from "less".
@@ -738,7 +738,7 @@ impl IO {
         inner.pre_pager_io = Some((pre_pager_output, pre_pager_error));
 
         let mut pager_term =
-            DumbTerm::new(DumbTty::new(Box::new(prg_write))).map_err(|e| io::Error::other(e))?;
+            DumbTerm::new(DumbTty::new(Box::new(prg_write))).map_err(io::Error::other)?;
         pager_term.set_separator(0x0C);
         inner.pager_progress = Some(Box::new(pager_term));
         pager.set_progress_stream(prg_read);
@@ -785,8 +785,8 @@ impl IO {
         let mut inner = self.inner.locked_with_blocked_interval();
         inner.pager_progress = match progress {
             Some(progress) => {
-                let mut pager_term = DumbTerm::new(DumbTty::new(Box::new(progress)))
-                    .map_err(|e| io::Error::other(e))?;
+                let mut pager_term =
+                    DumbTerm::new(DumbTty::new(Box::new(progress))).map_err(io::Error::other)?;
                 pager_term.set_separator(0x0C);
                 Some(Box::new(pager_term))
             }
@@ -840,7 +840,7 @@ impl IOState {
         if self.progress_has_content && self.pager_progress.is_none() {
             self.progress_has_content = false;
             if let Some(ref mut term) = self.term {
-                write_term_progress(term, &[]).map_err(|e| io::Error::other(e))?;
+                write_term_progress(term, &[]).map_err(io::Error::other)?;
             }
         }
         Ok(())
@@ -888,7 +888,7 @@ impl IOState {
         }
 
         if let Some(ref mut progress) = inner.pager_progress {
-            write_term_progress(progress, changes).map_err(|e| io::Error::other(e))?;
+            write_term_progress(progress, changes).map_err(io::Error::other)?;
         } else {
             if !inner.output_on_new_line || !inner.error_on_new_line {
                 // There is a line that hasn't ended.
@@ -908,7 +908,7 @@ impl IOState {
 
             if let Some(ref mut term) = inner.term {
                 inner.progress_has_content = !changes.is_empty();
-                write_term_progress(term, changes).map_err(|e| io::Error::other(e))?;
+                write_term_progress(term, changes).map_err(io::Error::other)?;
             }
         }
         Ok(())
