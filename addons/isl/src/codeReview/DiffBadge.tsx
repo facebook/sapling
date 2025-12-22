@@ -267,10 +267,11 @@ function DiffNumber({children, url}: {children: string; url?: string}) {
     <Tooltip trigger="manual" shouldShow={showing} title={t(`Copied ${children} to the clipboard`)}>
       <span
         className="diff-number"
-        onClick={() => {
+        onClick={e => {
           url == null ? clipboardCopyText(children) : clipboardCopyLink(children, url);
           setShowing(true);
           setTimeout(() => setShowing(false), 2000);
+          e.stopPropagation();
         }}>
         {children}
       </span>
