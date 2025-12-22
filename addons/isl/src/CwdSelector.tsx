@@ -137,7 +137,6 @@ const styles = stylex.create({
     borderBottomLeftRadius: 0,
   },
   submoduleSelect: {
-    appearance: 'none', // remove default styling of <select/>
     width: 'auto',
     maxWidth: '96px',
     textOverflow: 'ellipsis',
@@ -151,6 +150,7 @@ const styles = stylex.create({
     },
   },
   submoduleDropdownContainer: {
+    minWidth: '200px',
     alignItems: 'flex-start',
     gap: spacing.pad,
   },
@@ -453,38 +453,7 @@ function SubmoduleSelector({
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <Tooltip
-      trigger="click"
-      placement="bottom"
-      title={<SubmoduleHint path={selectedValue} root={root} />}
-      component={dismiss => (
-        <Column xstyle={styles.submoduleDropdownContainer}>
-          <TextField
-            autoFocus
-            width="100%"
-            placeholder={t('search submodule name')}
-            value={query}
-            onInput={e => setQuery(e.currentTarget?.value ?? '')}
-          />
-          <div {...stylex.props(styles.submoduleList)}>
-            <ScrollY maxSize={360}>
-              {toDisplay.map(m => (
-                <div
-                  key={m.path}
-                  {...stylex.props(styles.submoduleOption)}
-                  onClick={() => {
-                    onChangeSelected(m);
-                    setQuery('');
-                    dismiss();
-                  }}
-                  title={m.path}>
-                  {m.name}
-                </div>
-              ))}
-            </ScrollY>
-          </div>
-        </Column>
-      )}>
+    <>
       <Icon
         icon="chevron-right"
         {...stylex.props(
@@ -494,17 +463,49 @@ function SubmoduleSelector({
           styles.hideRightBorder,
         )}
       />
-      <Button
-        {...stylex.props(
-          buttonStyles.button,
-          buttonStyles.icon,
-          styles.submoduleSelect,
-          styles.hideLeftBorder,
-          hideRightBorder && styles.hideRightBorder,
+      <Tooltip
+        trigger="click"
+        placement="bottom"
+        title={<SubmoduleHint path={selectedValue} root={root} />}
+        component={dismiss => (
+          <Column xstyle={styles.submoduleDropdownContainer}>
+            <TextField
+              autoFocus
+              width="100%"
+              placeholder={t('search submodule name')}
+              value={query}
+              onInput={e => setQuery(e.currentTarget?.value ?? '')}
+            />
+            <div {...stylex.props(styles.submoduleList)}>
+              <ScrollY maxSize={360}>
+                {toDisplay.map(m => (
+                  <div
+                    key={m.path}
+                    {...stylex.props(styles.submoduleOption)}
+                    onClick={() => {
+                      onChangeSelected(m);
+                      setQuery('');
+                      dismiss();
+                    }}
+                    title={m.path}>
+                    {m.name}
+                  </div>
+                ))}
+              </ScrollY>
+            </div>
+          </Column>
         )}>
-        {selected ? selected.name : `${t('submodules')}...`}
-      </Button>
-    </Tooltip>
+        <Button
+          kind="icon"
+          {...stylex.props(
+            styles.submoduleSelect,
+            styles.hideLeftBorder,
+            hideRightBorder && styles.hideRightBorder,
+          )}>
+          {selected ? selected.name : `${t('submodules')}...`}
+        </Button>
+      </Tooltip>
+    </>
   );
 }
 
