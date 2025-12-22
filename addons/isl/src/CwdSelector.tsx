@@ -284,14 +284,14 @@ function SubmoduleSelectorGroup({
     // submodule selectors don't make sense
     return null;
   }
-  const submodulesToBeSelected = submoduleOptions.get(directRepoRoot)?.value;
+  const submodulesToBeSelected = submoduleOptions.get(directRepoRoot)?.value?.filter(m => m.active);
 
   const out = [];
 
   for (let i = 1; i < numRoots; i++) {
     const currRoot = repoRoots[i];
     const prevRoot = repoRoots[i - 1];
-    const submodules = submoduleOptions.get(prevRoot)?.value;
+    const submodules = submoduleOptions.get(prevRoot)?.value?.filter(m => m.active);
     if (submodules != null && submodules.length > 0) {
       out.push(
         <SubmoduleSelector
@@ -310,7 +310,7 @@ function SubmoduleSelectorGroup({
     }
   }
 
-  if (submodulesToBeSelected != undefined) {
+  if (submodulesToBeSelected != null && submodulesToBeSelected.length > 0) {
     out.push(
       <SubmoduleSelector
         submodules={submodulesToBeSelected}
@@ -449,7 +449,7 @@ function SubmoduleSelector({
   const selectedValue = submodules.find(m => m.path === selected?.path)?.path;
   const [query, setQuery] = useState('');
   const toDisplay = submodules
-    .filter(m => m.active && m.name.toLowerCase().includes(query.toLowerCase()))
+    .filter(m => m.name.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
