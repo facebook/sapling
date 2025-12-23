@@ -277,6 +277,9 @@ impl EagerRepo {
         if matches!(format, SerializationFormat::Git) {
             store_requires.push("git");
         }
+        if repo.store.ext_name() == Some("virtual-repo") {
+            store_requires.push("invalid-hash");
+        }
         write_requires(&store_dir, &store_requires)?;
 
         // Update metalog to prevent migrating from vfs.
