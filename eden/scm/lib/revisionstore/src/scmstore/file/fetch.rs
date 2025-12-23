@@ -478,7 +478,7 @@ impl FetchState {
                     cache_entry = Some(e);
                 }
 
-                file.content = Some(LazyFile::SaplingRemoteApi(entry, format));
+                file.content = Some(LazyFile::SaplingRemoteApi(entry, format, verify_hash));
             }
         }
 

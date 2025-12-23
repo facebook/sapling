@@ -31,7 +31,7 @@ pub(crate) enum LazyFile {
     Lfs(Blob, LfsPointersEntry, SerializationFormat),
 
     /// An SaplingRemoteApi FileEntry.
-    SaplingRemoteApi(FileEntry, SerializationFormat),
+    SaplingRemoteApi(FileEntry, SerializationFormat, bool),
 
     /// File content (only) read from content store (no hg header).
     Raw(Blob),
@@ -54,10 +54,11 @@ impl std::fmt::Debug for LazyFile {
                 .field(ptr)
                 .field(format)
                 .finish(),
-            LazyFile::SaplingRemoteApi(entry, format) => f
+            LazyFile::SaplingRemoteApi(entry, format, verify_hash) => f
                 .debug_tuple("SaplingRemoteApi")
                 .field(entry)
                 .field(format)
+                .field(verify_hash)
                 .finish(),
             LazyFile::Raw(data) => f.debug_tuple("Raw").field(&data.to_bytes()).finish(),
         }
@@ -71,7 +72,7 @@ impl LazyFile {
         match self {
             IndexedLog(entry, _) => Some(entry.node()),
             Lfs(_, ptr, _) => Some(ptr.hgid()),
-            SaplingRemoteApi(entry, _) => Some(entry.key().hgid),
+            SaplingRemoteApi(entry, ..) => Some(entry.key().hgid),
             Raw(_) => None,
         }
     }
@@ -79,7 +80,7 @@ impl LazyFile {
     /// Compute's the aux data associated with this file from the content.
     pub(crate) fn aux_data(&self) -> Result<FileAuxData> {
         match self {
-            LazyFile::SaplingRemoteApi(entry, _) if entry.aux_data.is_some() => {
+            LazyFile::SaplingRemoteApi(entry, ..) if entry.aux_data.is_some() => {
                 entry.aux_data().cloned().ok_or_else(|| {
                     anyhow::anyhow!("Invalid SaplingRemoteAPI entry in LazyFile. Aux data is empty")
                 })
@@ -113,8 +114,8 @@ impl LazyFile {
                 };
                 (blob.clone(), content_header)
             }
-            SaplingRemoteApi(entry, format) => {
-                let (content, header) = split_file_metadata(&entry.data(true)?, *format);
+            SaplingRemoteApi(entry, format, verify_hash) => {
+                let (content, header) = split_file_metadata(&entry.data(*verify_hash)?, *format);
                 (Blob::Bytes(content), header)
             }
             Raw(data) => (data.clone(), None),
@@ -128,7 +129,7 @@ impl LazyFile {
             IndexedLog(entry, _) => entry.content()?,
             // TODO(muirdm): avoid blob copy
             Lfs(blob, ptr, _) => rebuild_metadata(blob.to_bytes(), ptr),
-            SaplingRemoteApi(entry, _) => entry.data(true)?,
+            SaplingRemoteApi(entry, _, verify_hash) => entry.data(*verify_hash)?,
             Raw(_) => bail!("Raw data has no copy info"),
         })
     }
