@@ -52,6 +52,8 @@ pub struct OnDiskCommits {
     pub(crate) dag_path: PathBuf,
     /// Whether to use Git's SHA1 or Hg's SHA1 format.
     pub(crate) format: SerializationFormat,
+    /// Invalid commit hashes are present. Skip validating commit hashes on write.
+    pub(crate) has_invalid_commit_hash: bool,
 }
 
 impl OnDiskCommits {
@@ -78,8 +80,16 @@ impl OnDiskCommits {
             commits: Arc::new(store),
             commits_path: commits_path.to_path_buf(),
             format,
+            has_invalid_commit_hash: false,
         };
         Ok(result)
+    }
+
+    /// Sets the `has_invalid_commit_hash` field.
+    /// If true, skip commit hash validation during commit writes.
+    pub fn with_invalid_commit_hash(mut self, value: bool) -> Self {
+        self.has_invalid_commit_hash = value;
+        self
     }
 
     /// Import another DAG. `main` specifies the main branch for commit graph
@@ -107,9 +117,14 @@ impl AppendCommits for OnDiskCommits {
         // Write commit data to zstore.
         for commit in commits {
             let text = get_sha1_raw_text(&commit.raw_text, &commit.parents)?;
-            let vertex = Vertex::copy_from(self.commits.add_sha1_blob(&text, &[])?.as_ref());
-            if vertex != commit.vertex {
-                return Err(crate::errors::hash_mismatch(&vertex, &commit.vertex));
+            if self.has_invalid_commit_hash {
+                let id20 = Id20::from_slice(commit.vertex.as_ref())?;
+                self.commits.add_arbitrary_blob(id20, &text)?;
+            } else {
+                let vertex = Vertex::copy_from(self.commits.add_sha1_blob(&text, &[])?.as_ref());
+                if vertex != commit.vertex {
+                    return Err(crate::errors::hash_mismatch(&vertex, &commit.vertex));
+                }
             }
         }
 

@@ -225,6 +225,17 @@ impl HybridCommits {
         })
     }
 
+    /// Sets the `has_invalid_commit_hash` field.
+    /// If true, skip commit hash validation during commit writes.
+    pub fn with_invalid_commit_hash(mut self, value: bool) -> Self {
+        self.commits = self.commits.with_invalid_commit_hash(value);
+        self
+    }
+
+    fn has_invalid_commit_hash(&self) -> bool {
+        self.commits.has_invalid_commit_hash
+    }
+
     /// Enable fetching commit hashes lazily via SaplingRemoteAPI.
     pub fn enable_lazy_commit_hashes(&mut self) {
         let mut disabled_names: HashSet<Vertex> = Default::default();
@@ -271,6 +282,7 @@ impl HybridCommits {
             store: self.commits.commit_data_store(),
             client: self.client.clone(),
             format: self.commits.format(),
+            has_invalid_commit_hash: self.has_invalid_commit_hash(),
         }
     }
 }
@@ -374,6 +386,7 @@ struct HybridCommitTextReader {
     store: Arc<Id20Store>,
     client: Arc<dyn SaplingRemoteApi>,
     format: SerializationFormat,
+    has_invalid_commit_hash: bool,
 }
 
 #[async_trait::async_trait]
@@ -433,6 +446,7 @@ impl StreamCommitText for HybridCommitTextReader {
             client,
             store,
             format,
+            has_invalid_commit_hash: self.has_invalid_commit_hash,
         };
         let buffer_size = 10000;
         let retry_limit = 0;
@@ -457,6 +471,7 @@ struct Resolver {
     client: Arc<dyn SaplingRemoteApi>,
     store: Arc<Id20Store>,
     format: SerializationFormat,
+    has_invalid_commit_hash: bool,
 }
 
 impl Drop for Resolver {
@@ -493,6 +508,7 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
         let response = client.commit_revlog_data(ids).await?;
         let store = self.store.clone();
         let format = self.format;
+        let has_invalid_commit_hash = self.has_invalid_commit_hash;
         let commits = response.entries.map(move |e| {
             let e = e?;
             let text = match format {
@@ -504,15 +520,19 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
                     Bytes::from(git_sha1_serialize(&e.revlog_data, "commit"))
                 }
             };
-            let written_id = store.add_sha1_blob(&text, &[])?;
-            if !written_id.is_null() && written_id != e.hgid {
-                anyhow::bail!(
-                    "server returned commit-text pair ({}, {:?}) has mismatched {:?} SHA1: {}",
-                    e.hgid.to_hex(),
-                    e.revlog_data,
-                    format,
-                    written_id.to_hex(),
-                );
+            if has_invalid_commit_hash {
+                store.add_arbitrary_blob(e.hgid, &text)?;
+            } else {
+                let written_id = store.add_sha1_blob(&text, &[])?;
+                if !written_id.is_null() && written_id != e.hgid {
+                    anyhow::bail!(
+                        "server returned commit-text pair ({}, {:?}) has mismatched {:?} SHA1: {}",
+                        e.hgid.to_hex(),
+                        e.revlog_data,
+                        format,
+                        written_id.to_hex(),
+                    );
+                }
             }
             let commit_text = match format {
                 SerializationFormat::Hg => e
@@ -565,7 +585,7 @@ Feature Providers:
     Zstore (incomplete, draft)
     SaplingRemoteAPI (remaining, public)
     Revlog {}
-Commit Hashes: {}
+Commit Hashes: {}{}
 "#,
             backend,
             self.commits.dag_path.display(),
@@ -573,6 +593,11 @@ Commit Hashes: {}
             revlog_path,
             revlog_usage,
             &self.lazy_hash_desc,
+            if self.has_invalid_commit_hash() {
+                " (skip validation)"
+            } else {
+                ""
+            }
         )
     }
 
