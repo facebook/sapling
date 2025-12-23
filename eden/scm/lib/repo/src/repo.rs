@@ -309,7 +309,7 @@ impl Repo {
         match self.optional_eden_api_with_capabilities()? {
             Some((caps, edenapi)) => {
                 if !self
-                    .config
+                    .config()
                     .must_get::<bool>("edenapi", "ignore-capabilities")
                     .unwrap_or_default()
                     && !capabilities.is_subset(caps.get(edenapi.clone())?)
@@ -337,7 +337,8 @@ impl Repo {
         let (caps, eden_api) = self.eden_api.get_or_try_init(
             || -> Result<(LazyCapabilities, Arc<dyn SaplingRemoteApi>), SaplingRemoteApiError> {
                 tracing::trace!(target: "repo::eden_api", "creating edenapi");
-                let mut builder = Builder::from_config(&self.config)?;
+                let config = self.config();
+                let mut builder = Builder::from_config(config)?;
                 if let Some(path) = maybe_repo_url {
                     if path.is_sapling_git() {
                         if let Ok(url) = path.into_https_url() {
@@ -377,7 +378,7 @@ impl Repo {
             let supports_caps = DEFAULT_CAPABILITIES.iter().all(|&r| caps.contains(r));
             if !supports_caps
                 && !self
-                    .config
+                    .config()
                     .must_get::<bool>("edenapi", "ignore-capabilities")
                     .unwrap_or_default()
             {
@@ -398,13 +399,16 @@ impl Repo {
         &self,
     ) -> Result<Option<(LazyCapabilities, Arc<dyn SaplingRemoteApi>)>, SaplingRemoteApiError> {
         if matches!(
-            self.config.get_opt::<bool>("edenapi", "enable"),
+            self.config().get_opt::<bool>("edenapi", "enable"),
             Ok(Some(false))
         ) {
             tracing::trace!(target: "repo::eden_api", "disabled because edenapi.enable is false");
             return Ok(None);
         }
-        match self.config.get_nonempty_opt::<RepoUrl>("paths", "default") {
+        match self
+            .config()
+            .get_nonempty_opt::<RepoUrl>("paths", "default")
+        {
             Err(err) => {
                 tracing::warn!(target: "repo::eden_api", ?err, "disabled because error parsing paths.default");
                 Ok(None)
@@ -426,7 +430,7 @@ impl Repo {
                     tracing::trace!(target: "repo::eden_api", "disabled because paths.default is not set");
                     return Ok(None);
                 } else if path.scheme() == "ssh" {
-                    if let Some(ssh) = self.config.get("ui", "ssh") {
+                    if let Some(ssh) = self.config().get("ui", "ssh") {
                         if ssh.contains("dummyssh") {
                             tracing::trace!(target: "repo::eden_api", "disabled because paths.default uses ssh scheme and dummyssh is in use");
                             return Ok(None);
@@ -436,9 +440,9 @@ impl Repo {
                 // Explicitly set SaplingRemoteAPI URLs.
                 // Ideally we can make paths.default derive the edenapi URLs. But "push" is not on
                 // SaplingRemoteAPI yet. So we have to wait.
-                if self.config.get_nonempty("edenapi", "url").is_none()
+                if self.config().get_nonempty("edenapi", "url").is_none()
                     || self
-                        .config
+                        .config()
                         .get_nonempty("remotefilelog", "reponame")
                         .is_none()
                 {
@@ -446,7 +450,7 @@ impl Repo {
                     return Ok(None);
                 }
 
-                tracing::trace!(target: "repo::eden_api", "proceeding with path {}, reponame {:?}", path, self.config.get("remotefilelog", "reponame"));
+                tracing::trace!(target: "repo::eden_api", "proceeding with path {}, reponame {:?}", path, self.config().get("remotefilelog", "reponame"));
                 let (supported_capabilities, edenapi) =
                     self.force_construct_eden_api(Some(path))?;
 
@@ -628,7 +632,7 @@ impl Repo {
         let metalog = metalog.read();
         let edenapi = self.optional_eden_api().map_err(|err| err.tag_network())?;
         revset_utils::resolve_single(
-            &self.config,
+            self.config(),
             change_id,
             &dag.id_map_snapshot()?,
             &dag.dag_snapshot()?,
@@ -719,7 +723,7 @@ impl Repo {
 
         let wc = WorkingCopy::new(
             &self.path,
-            &self.config,
+            self.config(),
             tree_resolver,
             file_store,
             self.locker.clone(),
