@@ -3801,6 +3801,12 @@ def init(ui, dest=".", **opts):
             ident = bindings.identity.sniffdir(destpath)
             config_path = os.path.join(destpath, ident.dotdir(), ident.configrepofile())
             rcutil.editconfig(ui, config_path, "experimental", "revf64compat", "false")
+            with open(
+                os.path.join(destpath, ident.dotdir(), "store", "requires"),
+                "a",
+                newline="\n",
+            ) as f:
+                f.write("invalid-hash\n")
     else:
         if util.url(destpath).scheme == "bundle":
             hg.repository(ui, destpath, create=True)
