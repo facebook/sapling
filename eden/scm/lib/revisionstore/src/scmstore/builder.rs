@@ -320,9 +320,12 @@ impl<'a> FileStoreBuilder<'a> {
                 None
             };
 
+        let verify_hash = !self.config.get_or("unsafe", "skip-verify-hash", || false)?;
+
         tracing::trace!(target: "revisionstore::filestore", "constructing FileStore");
         Ok(FileStore {
             lfs_threshold_bytes,
+            verify_hash,
             edenapi_retries,
             allow_write_lfs_ptrs,
 

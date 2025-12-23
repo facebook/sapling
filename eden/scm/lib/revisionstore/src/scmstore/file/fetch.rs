@@ -77,6 +77,7 @@ pub struct FetchState {
     compute_aux_data: bool,
 
     lfs_enabled: bool,
+    verify_hash: bool,
 
     fctx: FetchContext,
 
@@ -93,6 +94,7 @@ impl FetchState {
         file_store: &FileStore,
         found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,
         lfs_enabled: bool,
+        verify_hash: bool,
         fctx: FetchContext,
         bar: Arc<ProgressBar>,
         file_cache: Option<Arc<IndexedLogHgIdDataStore>>,
@@ -110,6 +112,7 @@ impl FetchState {
 
             compute_aux_data: file_store.compute_aux_data,
             lfs_enabled,
+            verify_hash,
             format: file_store.format(),
             fctx,
             file_cache,
@@ -439,6 +442,7 @@ impl FetchState {
         lfs_cache: Option<Arc<LfsStore>>,
         aux_cache: Option<Arc<AuxStore>>,
         format: SerializationFormat,
+        verify_hash: bool,
     ) -> Result<(StoreFile, Option<LfsPointersEntry>, Option<Entry>)> {
         let entry = entry.result?;
 
@@ -464,7 +468,8 @@ impl FetchState {
                 lfsptr = Some(ptr);
             } else {
                 if let Some(cache) = &indexedlog_cache {
-                    let mut e = Entry::new(hgid, entry.data(true)?, entry.metadata()?.clone());
+                    let mut e =
+                        Entry::new(hgid, entry.data(verify_hash)?, entry.metadata()?.clone());
 
                     // Pre-compress content here since we are being called in parallel (and
                     // compression is CPU intensive).
@@ -534,6 +539,7 @@ impl FetchState {
         };
 
         let format = self.format();
+        let verify_hash = self.verify_hash;
         let entries = response
             .entries
             .map(move |res_entry| {
@@ -550,6 +556,7 @@ impl FetchState {
                                 lfs_cache,
                                 aux_cache,
                                 format,
+                                verify_hash,
                             ),
                         )
                     })

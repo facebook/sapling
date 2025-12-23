@@ -74,6 +74,7 @@ pub struct FileStore {
     // TODO(meyer): Move these to a separate config struct with default impl, etc.
     pub(crate) lfs_threshold_bytes: Option<u64>,
     pub(crate) edenapi_retries: i32,
+    pub(crate) verify_hash: bool,
     /// Allow explicitly writing serialized LFS pointers outside of tests
     pub(crate) allow_write_lfs_ptrs: bool,
 
@@ -212,6 +213,7 @@ impl FileStore {
             self,
             found_tx,
             self.lfs_threshold_bytes.is_some(),
+            self.verify_hash,
             fctx.clone(),
             bar.clone(),
             indexedlog_cache.clone(),
@@ -519,6 +521,7 @@ impl FileStore {
     pub fn empty() -> Self {
         FileStore {
             lfs_threshold_bytes: None,
+            verify_hash: true,
             edenapi_retries: 0,
             allow_write_lfs_ptrs: false,
 
@@ -566,6 +569,7 @@ impl FileStore {
 
         Self {
             lfs_threshold_bytes: self.lfs_threshold_bytes.clone(),
+            verify_hash: self.verify_hash,
             edenapi_retries: self.edenapi_retries.clone(),
             allow_write_lfs_ptrs: self.allow_write_lfs_ptrs,
 
