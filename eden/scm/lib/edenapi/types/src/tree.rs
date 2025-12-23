@@ -115,9 +115,19 @@ impl TreeEntry {
 
     /// Get this entry's data. Checks data integrity but allows hash mismatches
     /// if this is a suspected hybrid manifest.
-    pub fn data(&self) -> Result<Bytes, TreeError> {
+    pub fn data(&self, checked: bool) -> Result<Bytes, TreeError> {
         use TreeError::*;
         self.data_checked().or_else(|e| match e {
+            Corrupt(_) => {
+                if checked {
+                    Err(e)
+                } else {
+                    match self.data_unchecked() {
+                        Some(data) => Ok(data),
+                        None => Err(e),
+                    }
+                }
+            }
             MaybeHybridManifest(_) => Ok(e
                 .data()
                 .expect("TreeError::MaybeHybridManifest should always carry underlying data")),

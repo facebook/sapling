@@ -91,10 +91,16 @@ pub struct FileContent {
 impl FileContent {
     /// Get this entry's data. Checks data integrity but allows hash mismatches
     /// if the content is redacted or contains an LFS pointer.
-    pub fn data(&self, key: &Key, parents: Parents) -> Result<Bytes, FileError> {
+    pub fn data(&self, key: &Key, parents: Parents, checked: bool) -> Result<Bytes, FileError> {
         use FileError::*;
         self.data_checked(key, parents).or_else(|e| match e {
-            Corrupt(_) => Err(e),
+            Corrupt(_) => {
+                if checked {
+                    Err(e)
+                } else {
+                    Ok(self.data_unchecked().clone())
+                }
+            }
             Redacted(..) => Ok(e.data()),
             Lfs(..) => Ok(e.data()),
             MissingContent(_) => Err(e),
@@ -206,11 +212,11 @@ impl FileEntry {
         self.content.as_ref()
     }
 
-    pub fn data(&self) -> Result<Bytes, FileError> {
+    pub fn data(&self, checked: bool) -> Result<Bytes, FileError> {
         self.content
             .as_ref()
             .ok_or_else(|| FileError::MissingContent(self.key().clone()))?
-            .data(self.key(), *self.parents())
+            .data(self.key(), *self.parents(), checked)
     }
 
     pub fn metadata(&self) -> Result<&Metadata, FileError> {

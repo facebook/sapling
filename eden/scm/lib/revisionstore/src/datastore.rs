@@ -72,7 +72,7 @@ pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
 
     fn add_file(&self, entry: &FileEntry) -> Result<()> {
         let delta = Delta {
-            data: entry.data()?,
+            data: entry.data(true)?,
             base: None,
             key: entry.key().clone(),
         };
@@ -81,7 +81,7 @@ pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
 
     fn add_tree(&self, entry: &TreeEntry) -> Result<()> {
         let delta = Delta {
-            data: entry.data()?,
+            data: entry.data(true)?,
             base: None,
             key: entry.key().clone(),
         };

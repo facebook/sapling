@@ -60,7 +60,7 @@ impl LazyTree {
         use LazyTree::*;
         Ok(match self {
             IndexedLog(entry_with_aux) => entry_with_aux.content()?,
-            SaplingRemoteApi(entry) => entry.data()?,
+            SaplingRemoteApi(entry) => entry.data(true)?,
             Null => Bytes::default(),
         })
     }
@@ -70,7 +70,9 @@ impl LazyTree {
         use LazyTree::*;
         Ok(match self {
             IndexedLog(entry_with_aux) => Some(entry_with_aux.entry.clone()),
-            SaplingRemoteApi(entry) => Some(Entry::new(node, entry.data()?, Metadata::default())),
+            SaplingRemoteApi(entry) => {
+                Some(Entry::new(node, entry.data(true)?, Metadata::default()))
+            }
             Null => None,
         })
     }

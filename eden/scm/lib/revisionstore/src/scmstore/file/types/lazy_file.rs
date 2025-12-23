@@ -114,7 +114,7 @@ impl LazyFile {
                 (blob.clone(), content_header)
             }
             SaplingRemoteApi(entry, format) => {
-                let (content, header) = split_file_metadata(&entry.data()?, *format);
+                let (content, header) = split_file_metadata(&entry.data(true)?, *format);
                 (Blob::Bytes(content), header)
             }
             Raw(data) => (data.clone(), None),
@@ -128,7 +128,7 @@ impl LazyFile {
             IndexedLog(entry, _) => entry.content()?,
             // TODO(muirdm): avoid blob copy
             Lfs(blob, ptr, _) => rebuild_metadata(blob.to_bytes(), ptr),
-            SaplingRemoteApi(entry, _) => entry.data()?,
+            SaplingRemoteApi(entry, _) => entry.data(true)?,
             Raw(_) => bail!("Raw data has no copy info"),
         })
     }
@@ -151,7 +151,7 @@ impl TryFrom<FileEntry> for LfsPointersEntry {
 
     fn try_from(e: FileEntry) -> Result<Self, Self::Error> {
         if e.metadata()?.is_lfs() {
-            Ok(LfsPointersEntry::from_bytes(e.data()?, e.key().hgid)?)
+            Ok(LfsPointersEntry::from_bytes(e.data(true)?, e.key().hgid)?)
         } else {
             bail!("failed to convert SaplingRemoteApi FileEntry to LFS pointer, is_lfs is false")
         }
