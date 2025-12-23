@@ -117,6 +117,14 @@ pub enum BenchCmd {
             long_help = "Skip the file reading benchmark and only measure directory traversal performance. Useful for testing pure filesystem traversal speed without I/O overhead."
         )]
         skip_read: bool,
+
+        /// Show detailed read statistics including file size distribution and per-directory analysis
+        #[clap(
+            long,
+            help = "Show detailed read performance statistics",
+            long_help = "Enable detailed read statistics showing file size distribution, per-directory I/O performance breakdown, depth analysis, and file category overhead metrics. Only available when file reading is enabled (not compatible with --skip-read)."
+        )]
+        detailed_read_stats: bool,
     },
 }
 
@@ -196,7 +204,18 @@ impl crate::Subcommand for BenchCmd {
                 resource_usage,
                 json,
                 skip_read,
+                detailed_read_stats,
             } => {
+                // Validate flag compatibility
+                if *skip_read && *detailed_read_stats {
+                    return Err(anyhow::anyhow!(
+                        "--skip-read and --detailed-read-stats are mutually exclusive.\n\
+                        Detailed read statistics focus on file I/O performance metrics which are not \
+                        collected when skipping file reads. Use --detailed-read-stats without --skip-read \
+                        to see I/O performance analysis."
+                    ));
+                }
+
                 if !*json {
                     if dir.len() == 1 {
                         println!(
@@ -223,6 +242,7 @@ impl crate::Subcommand for BenchCmd {
                     *resource_usage,
                     *skip_read,
                     thrift_io.as_deref(),
+                    *detailed_read_stats,
                 )
                 .await?;
 

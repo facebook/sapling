@@ -37,9 +37,69 @@ use super::types::Benchmark;
 use super::types::BenchmarkType;
 use crate::get_edenfs_instance;
 
+// File size category boundaries for histo output
+const SMALL_FILE_THRESHOLD: u64 = 10 * 1024; // 10 KB
+const MEDIUM_FILE_THRESHOLD: u64 = 1024 * 1024; // 1 MB
+
+// Maximum number of directory entries to track for detailed statistics
+// This prevents unbounded memory growth when traversing millions of directories
+// Each entry uses ~200-300 bytes, so 10M entries ≈ 2-3GB memory
+const MAX_DIR_STATS_ENTRIES: usize = 10_000_000;
+
 // ============================================================================
 // Type Definitions
 // ============================================================================
+
+/// File size categories for performance analysis
+#[derive(Debug, Clone, Copy)]
+enum FileSizeCategory {
+    Small = 0,
+    Medium = 1,
+    Large = 2,
+}
+
+impl FileSizeCategory {
+    fn from_size(size: u64) -> Self {
+        if size < SMALL_FILE_THRESHOLD {
+            Self::Small
+        } else if size < MEDIUM_FILE_THRESHOLD {
+            Self::Medium
+        } else {
+            Self::Large
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Small => "Small",
+            Self::Medium => "Medium",
+            Self::Large => "Large",
+        }
+    }
+
+    fn description(&self) -> String {
+        match self {
+            Self::Small => format!("<{} KB", SMALL_FILE_THRESHOLD / 1024),
+            Self::Medium => format!(
+                "{} KB - {} MB",
+                SMALL_FILE_THRESHOLD / 1024,
+                MEDIUM_FILE_THRESHOLD / 1024 / 1024
+            ),
+            Self::Large => format!(">{} MB", MEDIUM_FILE_THRESHOLD / 1024 / 1024),
+        }
+    }
+
+    const COUNT: usize = 3;
+}
+
+/// Statistics for a single file size category (under 1k, under 1MB, etc)
+#[derive(Default)]
+struct CategoryStats {
+    count: AtomicUsize,
+    bytes: AtomicU64,
+    open_nanos: AtomicU64,
+    read_nanos: AtomicU64,
+}
 
 #[derive(Clone)]
 enum ReadMode {
@@ -49,6 +109,146 @@ enum ReadMode {
         client: Arc<edenfs_client::client::EdenFsClient>,
         repo_path: PathBuf,
     },
+}
+
+/// Detailed statistics for more comprehensive read performance analysis
+struct AdvancedStats {
+    // File size histogram (buckets: <1KB, 1-10KB, 10-100KB, 100KB-1MB,
+    // 1MB-10MB, 10MB-100MB, >100MB)
+    size_histogram: [AtomicUsize; 7],
+    size_histogram_bytes: [AtomicU64; 7],
+
+    // Per-directory statistics (path -> (file_count, total_bytes, total_duration_nanos))
+    dir_stats: std::sync::Mutex<std::collections::HashMap<String, (usize, u64, u64)>>,
+
+    // Count of directories that couldn't be tracked due to MAX_DIR_STATS_ENTRIES limit
+    dirs_dropped: AtomicUsize,
+
+    // Directory depth statistics (relative to base paths)
+    depth_histogram: [AtomicUsize; 20], // Track depths 0-19+
+    base_paths: Vec<PathBuf>,           // Base paths for relative depth calculation
+
+    // Per-category statistics (indexed by FileSizeCategory)
+    category_stats: [CategoryStats; FileSizeCategory::COUNT],
+
+    // Peak memory usage in bytes
+    peak_memory_bytes: AtomicU64,
+}
+
+impl AdvancedStats {
+    fn new(base_paths: Vec<PathBuf>) -> Arc<Self> {
+        Arc::new(Self {
+            size_histogram: Default::default(),
+            size_histogram_bytes: Default::default(),
+            dir_stats: std::sync::Mutex::new(std::collections::HashMap::new()),
+            dirs_dropped: AtomicUsize::new(0),
+            depth_histogram: Default::default(),
+            base_paths,
+            category_stats: Default::default(),
+            peak_memory_bytes: AtomicU64::new(0),
+        })
+    }
+
+    fn get_size_bucket(size: u64) -> usize {
+        const KB: u64 = 1024;
+        const MB: u64 = 1024 * KB;
+
+        match size {
+            s if s < KB => 0,       // <1KB
+            s if s < 10 * KB => 1,  // 1-10KB
+            s if s < 100 * KB => 2, // 10-100KB
+            s if s < MB => 3,       // 100KB-1MB
+            s if s < 10 * MB => 4,  // 1-10MB
+            s if s < 100 * MB => 5, // 10-100MB
+            _ => 6,                 // >100MB
+        }
+    }
+
+    fn calculate_relative_depth(&self, path: &Path) -> Option<usize> {
+        // Try to find which base path this file is under
+        for base in &self.base_paths {
+            if let Ok(rel_path) = path.strip_prefix(base) {
+                // Count the number of components in the relative path
+                // Subtract 1 because the file itself shouldn't count toward directory depth
+                return Some(rel_path.components().count().saturating_sub(1));
+            }
+        }
+        None
+    }
+
+    /// Convert an absolute path to relative to the traversal base paths
+    fn make_path_relative(&self, path: &str) -> String {
+        let path_buf = PathBuf::from(path);
+
+        // Try to strip each base path and return the first match
+        for base in &self.base_paths {
+            if let Ok(rel_path) = path_buf.strip_prefix(base) {
+                return rel_path.to_string_lossy().to_string();
+            }
+        }
+
+        // If no base path matches, return the original path
+        // (shouldn't happen, but handle gracefully)
+        path.to_string()
+    }
+
+    fn record_file(&self, path: &Path, size: u64, open_nanos: u64, read_nanos: u64) {
+        // Update size histogram
+        let bucket = Self::get_size_bucket(size);
+        self.size_histogram[bucket].fetch_add(1, Ordering::Relaxed);
+        self.size_histogram_bytes[bucket].fetch_add(size, Ordering::Relaxed);
+
+        // Track file category performance using enum indexing
+        let category = FileSizeCategory::from_size(size);
+        let category_idx = category as usize;
+
+        let stats = &self.category_stats[category_idx];
+        stats.count.fetch_add(1, Ordering::Relaxed);
+        stats.bytes.fetch_add(size, Ordering::Relaxed);
+        stats.open_nanos.fetch_add(open_nanos, Ordering::Relaxed);
+        stats.read_nanos.fetch_add(read_nanos, Ordering::Relaxed);
+
+        // Update per-directory stats (with bounded capacity)
+        if let Some(parent) = path.parent() {
+            let parent_str = parent.to_string_lossy().to_string();
+            let total_nanos = open_nanos + read_nanos;
+
+            if let Ok(mut stats) = self.dir_stats.lock() {
+                // Only track up to MAX_DIR_STATS_ENTRIES directories to prevent unbounded growth
+                if stats.len() < MAX_DIR_STATS_ENTRIES || stats.contains_key(&parent_str) {
+                    let entry = stats.entry(parent_str).or_insert((0, 0, 0));
+                    entry.0 += 1;
+                    entry.1 += size;
+                    entry.2 += total_nanos;
+                } else {
+                    // Directory limit reached, count this as dropped
+                    self.dirs_dropped.fetch_add(1, Ordering::Relaxed);
+                }
+            }
+
+            // Track depth relative to base paths
+            if let Some(depth) = self.calculate_relative_depth(path) {
+                let capped_depth = depth.min(19);
+                self.depth_histogram[capped_depth].fetch_add(1, Ordering::Relaxed);
+            }
+        }
+    }
+
+    /// Update peak memory if the current value is higher
+    fn update_peak_memory(&self, current_bytes: u64) {
+        let mut current_peak = self.peak_memory_bytes.load(Ordering::Relaxed);
+        while current_bytes > current_peak {
+            match self.peak_memory_bytes.compare_exchange_weak(
+                current_peak,
+                current_bytes,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => break,
+                Err(actual) => current_peak = actual,
+            }
+        }
+    }
 }
 
 /// Counters for tracking traversal progress.
@@ -68,6 +268,7 @@ struct TraversalCounters {
     file_open_duration_nanos: Arc<AtomicU64>,
     queue_size: Arc<AtomicUsize>,
     start_time: Instant,
+    advanced_stats: Option<Arc<AdvancedStats>>,
 }
 
 struct Traversal {
@@ -91,7 +292,13 @@ struct Traversal {
 // ============================================================================
 
 impl TraversalCounters {
-    fn new() -> Self {
+    fn new(detailed_stats: bool, base_paths: Vec<PathBuf>) -> Self {
+        let advanced_stats = if detailed_stats {
+            Some(AdvancedStats::new(base_paths))
+        } else {
+            None
+        };
+
         Self {
             files: Arc::new(AtomicUsize::new(0)),
             dirs: Arc::new(AtomicUsize::new(0)),
@@ -105,6 +312,7 @@ impl TraversalCounters {
             file_open_duration_nanos: Arc::new(AtomicU64::new(0)),
             queue_size: Arc::new(AtomicUsize::new(0)),
             start_time: Instant::now(),
+            advanced_stats,
         }
     }
 
@@ -341,12 +549,18 @@ impl TraversalCounters {
 }
 
 impl Traversal {
-    fn new(max_files: usize, follow_symlinks: bool, read_mode: ReadMode) -> Self {
+    fn new(
+        max_files: usize,
+        follow_symlinks: bool,
+        read_mode: ReadMode,
+        detailed_stats: bool,
+        base_paths: Vec<PathBuf>,
+    ) -> Self {
         // Create internal components
         let cancellation_token = setup_cancellation();
 
         Self {
-            counters: TraversalCounters::new(),
+            counters: TraversalCounters::new(detailed_stats, base_paths),
             max_files,
             follow_symlinks,
             read_mode,
@@ -391,6 +605,16 @@ impl Traversal {
                                     .total_bytes_read
                                     .fetch_add(bytes_read as u64, Ordering::Relaxed);
                                 counters.files_read.fetch_add(1, Ordering::Relaxed);
+
+                                // Record detailed statistics
+                                if let Some(stats) = &counters.advanced_stats {
+                                    stats.record_file(
+                                        &path,
+                                        bytes_read as u64,
+                                        open_elapsed.as_nanos() as u64,
+                                        read_elapsed.as_nanos() as u64,
+                                    );
+                                }
                             }
                             Err(_) => {
                                 // Silently ignore read errors
@@ -432,10 +656,16 @@ impl Traversal {
 
                 match response.blob {
                     ScmBlobOrError::blob(blob) => {
+                        let bytes_read = blob.len() as u64;
                         counters
                             .total_bytes_read
-                            .fetch_add(blob.len() as u64, Ordering::Relaxed);
+                            .fetch_add(bytes_read, Ordering::Relaxed);
                         counters.files_read.fetch_add(1, Ordering::Relaxed);
+
+                        // Record detailed statistics (no open duration for thrift)
+                        if let Some(stats) = &counters.advanced_stats {
+                            stats.record_file(&path, bytes_read, 0, read_elapsed.as_nanos() as u64);
+                        }
                     }
                     _ => {}
                 }
@@ -612,7 +842,7 @@ impl Traversal {
                     initial_files_display
                 ));
 
-                let (mut system, pid) = if resource_usage {
+                let (mut system, pid) = if resource_usage || counters.advanced_stats.is_some() {
                     let mut sys = System::new_all();
                     let process_id = sysinfo::get_current_pid().ok();
                     sys.refresh_all();
@@ -636,8 +866,15 @@ impl Traversal {
                                 let system_info = if let (Some(sys), Some(pid_val)) = (&mut system, pid) {
                                     sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[pid_val]), false);
                                     sys.process(pid_val).map(|process| {
-                                        let memory_mb = process.memory() as f64 / types::BYTES_IN_MEGABYTE as f64;
+                                        let memory_bytes = process.memory();
+                                        let memory_mb = memory_bytes as f64 / types::BYTES_IN_MEGABYTE as f64;
                                         let cpu_usage = process.cpu_usage() as f64;
+
+                                        // Update peak memory if detailed stats are enabled
+                                        if let Some(stats) = &counters.advanced_stats {
+                                            stats.update_peak_memory(memory_bytes);
+                                        }
+
                                         (memory_mb, cpu_usage)
                                     })
                                 } else {
@@ -687,6 +924,7 @@ pub async fn bench_traversal(
     resource_usage: bool,
     skip_read: bool,
     thrift_io: Option<&str>,
+    detailed_read_stats: bool,
 ) -> Result<Benchmark> {
     // Validate all directories first
     for dir_path in dir_paths {
@@ -706,13 +944,21 @@ pub async fn bench_traversal(
         ReadMode::Fs
     };
 
-    let mut traversal = Traversal::new(max_files, follow_symlinks, read_mode.clone());
+    // Convert to PathBuf and prepare base paths for detailed stats
+    let paths: Vec<PathBuf> = dir_paths.iter().map(PathBuf::from).collect();
+
+    let mut traversal = Traversal::new(
+        max_files,
+        follow_symlinks,
+        read_mode.clone(),
+        detailed_read_stats,
+        paths.clone(),
+    );
 
     // Start reader task, get sender
     let file_sender = traversal.start_reader_task();
 
     // Start traversal task, passing sender
-    let paths: Vec<PathBuf> = dir_paths.iter().map(PathBuf::from).collect();
     traversal.start_traversal_task(paths, file_sender);
 
     // Extract handles
@@ -725,18 +971,209 @@ pub async fn bench_traversal(
         .take()
         .expect("traversal_handle must exist");
 
-    // Start progress task with handles
     traversal.start_progress_task(no_progress, resource_usage, traversal_handle, reader_handle);
 
-    // Wait for everything to complete
     traversal.wait_for_completion().await;
 
-    traversal.counters.report_benchmark(&read_mode)
+    let result = traversal.counters.report_benchmark(&read_mode)?;
+
+    if detailed_read_stats {
+        if let Some(stats) = &traversal.counters.advanced_stats {
+            print_detailed_read_statistics(stats);
+        }
+    }
+
+    Ok(result)
 }
 
 // ============================================================================
 // Private Helper Functions
 // ============================================================================
+
+fn print_detailed_read_statistics(stats: &Arc<AdvancedStats>) {
+    println!("\n=== DETAILED READ STATISTICS ===\n");
+
+    println!("File Size Distribution:");
+    let bucket_names = [
+        "<1 KB",
+        "1-10 KB",
+        "10-100 KB",
+        "100 KB-1 MB",
+        "1-10 MB",
+        "10-100 MB",
+        ">100 MB",
+    ];
+
+    // Calculate totals first to get correct percentages
+    let (total_files, total_bytes): (usize, u64) = (0..7)
+        .map(|i| {
+            (
+                stats.size_histogram[i].load(Ordering::Relaxed),
+                stats.size_histogram_bytes[i].load(Ordering::Relaxed),
+            )
+        })
+        .fold((0, 0), |(tf, tb), (c, b)| (tf + c, tb + b));
+
+    for (bucket_name, (histogram, histogram_bytes)) in bucket_names.iter().zip(
+        stats
+            .size_histogram
+            .iter()
+            .zip(stats.size_histogram_bytes.iter()),
+    ) {
+        let count = histogram.load(Ordering::Relaxed);
+        let bytes = histogram_bytes.load(Ordering::Relaxed);
+
+        if count > 0 {
+            let avg_size = bytes as f64 / count as f64;
+            println!(
+                "  {:>12}: {:>10} files ({:>6.2}%) | {:>10.2} MB total | {:>8.2} KB avg",
+                bucket_name,
+                count.to_formatted_string(&Locale::en),
+                (count as f64 / total_files.max(1) as f64) * 100.0,
+                bytes as f64 / types::BYTES_IN_MEGABYTE as f64,
+                avg_size / 1024.0
+            );
+        }
+    }
+
+    for category in [
+        FileSizeCategory::Small,
+        FileSizeCategory::Medium,
+        FileSizeCategory::Large,
+    ] {
+        let category_stats = &stats.category_stats[category as usize];
+        let count = category_stats.count.load(Ordering::Relaxed);
+        let bytes = category_stats.bytes.load(Ordering::Relaxed);
+        let open_nanos = category_stats.open_nanos.load(Ordering::Relaxed);
+        let read_nanos = category_stats.read_nanos.load(Ordering::Relaxed);
+
+        println!(
+            "\n{} File Performance ({} files):",
+            category.name(),
+            category.description()
+        );
+
+        if count > 0 {
+            let avg_open_us = (open_nanos as f64 / count as f64) / 1000.0;
+            let avg_read_us = (read_nanos as f64 / count as f64) / 1000.0;
+            let avg_read_ms = (read_nanos as f64 / count as f64) / 1_000_000.0;
+            let mb = bytes as f64 / types::BYTES_IN_MEGABYTE as f64;
+            let total_time_s = (open_nanos + read_nanos) as f64 / 1_000_000_000.0;
+            let throughput = if total_time_s > 0.0 {
+                mb / total_time_s
+            } else {
+                0.0
+            };
+
+            println!(
+                "  Files:           {}",
+                count.to_formatted_string(&Locale::en)
+            );
+            println!("  Total Size:      {:.2} MB", mb);
+            println!("  Avg open():      {:.1} µs", avg_open_us);
+
+            // Use microseconds for small/medium, milliseconds for large files
+            match category {
+                FileSizeCategory::Large => println!("  Avg read():      {:.1} ms", avg_read_ms),
+                _ => println!("  Avg read():      {:.1} µs", avg_read_us),
+            }
+
+            println!("  Throughput:      {:.2} MB/s", throughput);
+            println!(
+                "  Overhead:        {:.1}% of time in open()",
+                (open_nanos as f64 / (open_nanos + read_nanos).max(1) as f64) * 100.0
+            );
+        } else {
+            println!("  No {} files found", category.name().to_lowercase());
+        }
+    }
+
+    println!("\nTop 20 Slowest Directories for Reading:");
+    let dirs_tracked = if let Ok(dir_stats) = stats.dir_stats.lock() {
+        let mut dir_vec: Vec<_> = dir_stats.iter().collect();
+        dir_vec.sort_by(|a, b| b.1.2.cmp(&a.1.2)); // Sort by total duration descending
+
+        for (i, (dir, (file_count, bytes, nanos))) in dir_vec.iter().take(20).enumerate() {
+            let time_ms = *nanos as f64 / 1_000_000.0;
+            let mb = *bytes as f64 / types::BYTES_IN_MEGABYTE as f64;
+            let throughput = if time_ms > 0.0 {
+                mb / (time_ms / 1000.0)
+            } else {
+                0.0
+            };
+
+            let relative_dir = stats.make_path_relative(dir);
+
+            println!(
+                "  {:>2}. {} files | {:.2} MB | {:.1} ms ({:.2} MB/s) | {}",
+                i + 1,
+                file_count.to_formatted_string(&Locale::en),
+                mb,
+                time_ms,
+                throughput,
+                relative_dir
+            );
+        }
+        dir_stats.len()
+    } else {
+        0
+    };
+
+    // Show directory tracking info
+    let dirs_dropped = stats.dirs_dropped.load(Ordering::Relaxed);
+    println!(
+        "\n  Directories tracked: {}",
+        dirs_tracked.to_formatted_string(&Locale::en)
+    );
+    if dirs_dropped > 0 {
+        println!(
+            "  WARNING: {} file records from additional directories were not tracked (limit: {})",
+            dirs_dropped.to_formatted_string(&Locale::en),
+            MAX_DIR_STATS_ENTRIES.to_formatted_string(&Locale::en)
+        );
+    }
+
+    // Directory Depth Analysis
+    println!("\nDirectory Depth Distribution (relative to base paths):");
+    let depth_data: Vec<(usize, usize)> = stats
+        .depth_histogram
+        .iter()
+        .enumerate()
+        .map(|(depth, count)| (depth, count.load(Ordering::Relaxed)))
+        .filter(|(_, count)| *count > 0)
+        .collect();
+
+    if !depth_data.is_empty() {
+        for (depth, count) in depth_data.iter() {
+            println!(
+                "  Depth {:>2}: {:>10} files",
+                depth,
+                count.to_formatted_string(&Locale::en)
+            );
+        }
+    }
+
+    // Summary
+    println!("\nSummary:");
+    println!(
+        "  Total Files:       {}",
+        total_files.to_formatted_string(&Locale::en)
+    );
+    println!(
+        "  Total Data Read:   {:.2} MB",
+        total_bytes as f64 / types::BYTES_IN_MEGABYTE as f64
+    );
+
+    let peak_memory = stats.peak_memory_bytes.load(Ordering::Relaxed);
+    if peak_memory > 0 {
+        println!(
+            "  Peak Memory:       {:.2} MB",
+            peak_memory as f64 / types::BYTES_IN_MEGABYTE as f64
+        );
+    }
+
+    println!("\n===========================\n");
+}
 
 fn get_thrift_request(
     repo_path: PathBuf,
