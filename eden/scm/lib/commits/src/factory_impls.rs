@@ -60,7 +60,7 @@ fn get_required_edenapi(info: &dyn StoreInfo) -> anyhow::Result<Arc<dyn SaplingR
 fn maybe_construct_commits(
     info: &dyn StoreInfo,
 ) -> anyhow::Result<Option<Box<dyn DagCommits + Send + 'static>>> {
-    let has_invalid_commit_hash = info.has_requirement("invalid-commit-hash");
+    let has_invalid_hash = info.has_requirement("invalid-hash");
     let format = match info.has_requirement(GIT_FORMAT_REQUIREMENT) {
         true => SerializationFormat::Git,
         false => SerializationFormat::Hg,
@@ -74,7 +74,7 @@ fn maybe_construct_commits(
             true,
             false,
             format,
-            has_invalid_commit_hash,
+            has_invalid_hash,
         )?))
     } else if info.has_requirement(DOUBLE_WRITE_REQUIREMENT) {
         tracing::info!(target: "changelog_info", changelog_backend="doublewrite");
@@ -88,7 +88,7 @@ fn maybe_construct_commits(
             false,
             true,
             format,
-            has_invalid_commit_hash,
+            has_invalid_hash,
         )?))
     } else if info.has_requirement(LAZY_TEXT_REQUIREMENT) {
         let eden_api = get_required_edenapi(info)?;
@@ -99,14 +99,14 @@ fn maybe_construct_commits(
             false,
             false,
             format,
-            has_invalid_commit_hash,
+            has_invalid_hash,
         )?))
     } else if info.has_requirement(SEGMENTS_REQUIREMENT) {
         tracing::info!(target: "changelog_info", changelog_backend="segments");
         Ok(Some(open_segments(
             info.store_path(),
             format,
-            has_invalid_commit_hash,
+            has_invalid_hash,
         )?))
     } else {
         tracing::info!(target: "changelog_info", changelog_backend="rustrevlog");

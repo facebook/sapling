@@ -502,7 +502,7 @@ class changelog:
         if "eagerepo" in repo.storerequirements:
             enabled_exts = repo.svfs.tryread(f"{HGCOMMITS_DIR}/enabled-exts")
             return b"virtual-repo" in enabled_exts
-        return "invalid-commit-hash" in repo.storerequirements
+        return "invalid-hash" in repo.storerequirements
 
     def nodesbetween(self, roots, heads):
         """Calculate (roots::heads, roots & (roots::heads), heads & (roots::heads))"""

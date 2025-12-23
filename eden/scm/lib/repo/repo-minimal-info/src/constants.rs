@@ -62,6 +62,6 @@ pub static SUPPORTED_STORE_REQUIREMENTS: phf::Set<&str> = phf_set! {
     "eagercompat",
     // repo is also a .git/ repo
     "dotgit",
-    // commit hashes can be invalid (does not pass SHA1 validation)
-    "invalid-commit-hash",
+    // (test-only) object hashes can be invalid (should skip SHA1 hash verification)
+    "invalid-hash",
 };
