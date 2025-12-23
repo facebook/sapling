@@ -131,6 +131,30 @@ async fn test_lazy_hash_on_non_master_group() {
 }
 
 #[tokio::test]
+async fn test_lazy_hash_as_server() {
+    // Test a lazy "dag" (not all hashes are known locally) can also serve as a "server"
+    // (RemoteIdConvertProtocol).
+
+    // Setup:
+    // - server1: A non-lazy dag.
+    // - peer1: A lazy dag, pulling from server1.
+    // - client1: A lazy dag, pulling from peer1.
+    let mut server1 = TestDag::new();
+    server1.drawdag("A..H", &["H"]);
+    let peer1 = server1.client_cloned_data().await.with_remote(&server1);
+    let client1 = peer1.client_cloned_data().await.with_remote(&peer1);
+
+    // peer1 as a server can answer client1's requests by asking server1.
+    assert_eq!(client1.dag.vertex_id("C".into()).await.unwrap(), Id(2));
+    assert_eq!(client1.output(), ["resolve names: [C], heads: [H]"]);
+    assert_eq!(peer1.output(), ["resolve names: [C], heads: [H]"]);
+
+    assert_eq!(client1.dag.vertex_name(Id(4)).await.unwrap(), "E".into());
+    assert_eq!(client1.output(), ["resolve paths: [H~3]"]);
+    assert_eq!(peer1.output(), ["resolve paths: [H~3]"]);
+}
+
+#[tokio::test]
 async fn test_negative_cache() {
     let server = TestDag::draw("A-B  # master: B");
 

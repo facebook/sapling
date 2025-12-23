@@ -1804,8 +1804,8 @@ where
         names: Vec<Vertex>,
     ) -> Result<Vec<(AncestorPath, Vec<Vertex>)>> {
         let request = protocol::RequestNameToLocation { names, heads };
-        let response: protocol::ResponseIdNamePair =
-            (self.map(), self.dag()).process(request).await?;
+        let id_map = self.id_map_snapshot()?;
+        let response: protocol::ResponseIdNamePair = (&id_map, self.dag()).process(request).await?;
         Ok(response.path_names)
     }
 
@@ -1814,8 +1814,8 @@ where
         paths: Vec<AncestorPath>,
     ) -> Result<Vec<(AncestorPath, Vec<Vertex>)>> {
         let request = protocol::RequestLocationToName { paths };
-        let response: protocol::ResponseIdNamePair =
-            (self.map(), self.dag()).process(request).await?;
+        let id_map = self.id_map_snapshot()?;
+        let response: protocol::ResponseIdNamePair = (&id_map, self.dag()).process(request).await?;
         Ok(response.path_names)
     }
 }
