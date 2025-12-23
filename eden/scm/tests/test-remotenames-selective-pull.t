@@ -17,6 +17,7 @@ Pull master bookmark
   $ cd ../localrepo
   $ hg pull
   pulling from test:remoterepo
+  imported commit graph for 1 commit (1 segment)
   $ hg bookmarks --list-subscriptions
      default/master            1449e7934ec1
 
@@ -325,6 +326,7 @@ Check the repo.pull API
   $ hg unbundle ../bundle.hg
   pulling missing base commits: 0238718db2b174d2622ae9c4c75d61745eb12b25
   pulling from test:remoterepo
+  imported commit graph for 3 commits (1 segment)
   adding changesets
   adding manifests
   adding file changes

@@ -81,6 +81,7 @@ Pull:
   $ hg debugchangelog --migrate lazy
   $ hg pull -r $C
   pulling from test:e1
+  imported commit graph for 3 commits (1 segment)
   $ hg log -Gr 'all()' -T '{desc} {remotenames}'
   o  C remote/master
   │
@@ -118,6 +119,7 @@ Test fallback to slow path:
   $ hg debugchangelog --migrate lazy
   $ hg pull -r $C
   pulling from test:e1
+  imported commit graph for 3 commits (1 segment)
   $ hg log -Gr 'all()' -T '{desc} {remotenames}'
   o  C remote/master
   │
@@ -159,6 +161,7 @@ Test DAG flushed but not metalog (Emulates Ctrl+C or SIGKILL in between):
   $ hg debugchangelog --migrate lazy
   $ hg pull
   pulling from test:e1
+  imported commit graph for 3 commits (1 segment)
 
   $ setconfig paths.default=test:e2
   $ FAILPOINTS=transaction-metalog-commit=return LOG=pull::fastpath=debug hg pull
@@ -178,6 +181,7 @@ Fast path can still be used with stale remotenames:
   imported commit graph for 5 commits (3 segments)
 
   $ EDENSCM_DISABLE_REMOTE_RESOLVE=0000000000000000000000000000000000000000 LOG=dag::protocol=debug hg log -Gr 'all()' -T '{desc} {remotenames}'
+  DEBUG dag::protocol: resolve ids [1] remotely
   o    H remote/master
   ├─╮
   │ o  I
@@ -197,7 +201,6 @@ Fast path can still be used with stale remotenames:
   o  B
   │
   o  A
-  
 If fast path is broken, use fallback pull path:
 
   $ newremoterepo

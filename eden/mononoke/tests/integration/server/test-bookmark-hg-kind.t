@@ -72,6 +72,7 @@ test publishing
   $ tglogpnr
   $ hg pull
   pulling from mono:repo
+  imported commit graph for 1 commit (1 segment)
   $ hg up 8db75f0f53d84e2684b2368e760cfb3555875a53
   pulling '8db75f0f53d84e2684b2368e760cfb3555875a53' from 'mono:repo'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

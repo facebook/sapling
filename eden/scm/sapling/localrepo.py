@@ -1187,7 +1187,13 @@ class localrepository:
                                     "%s: %s => %s" % (name, hex(oldnode), hexnode),
                                     target="pull::fastpath",
                                 )
-                                fastpath.append((oldnode, newnode))
+                                fastpath.append(([oldnode], [newnode]))
+                            else:
+                                tracing.debug(
+                                    "%s: new %s" % (name, hexnode),
+                                    target="pull::fastpath",
+                                )
+                                fastpath.append(([], [newnode]))
                         heads.add(newnode)
                         remotenamechanges[name] = hexnode  # update it
                     else:
@@ -1223,8 +1229,8 @@ class localrepository:
                     commits, segments = bindings.exchange.fastpull(
                         self.edenapi,
                         self.changelog.inner,
-                        [old],
-                        [new],
+                        old,
+                        new,
                     )
 
                     self.ui.status(
@@ -1238,7 +1244,7 @@ class localrepository:
                             ),
                         )
                     )
-                    fastpathheads.add(new)
+                    fastpathheads.update(new)
                     fastpathcommits += commits
                     fastpathsegments += segments
                 except errormod.NeedSlowPathError as e:

@@ -213,6 +213,8 @@ treemanifest data for the public commits.
 # Pull one infinitepush commit and one normal commit
   $ hg pull -r 02c12aef64ffa8bfc
   pulling from ssh://user@dummy/master
+  imported commit graph for 1 commit (1 segment)
+  searching for changes
 
   $ hg log -G -T '{node|short} {phase} {desc}'
   o  02c12aef64ff draft add subdir/a

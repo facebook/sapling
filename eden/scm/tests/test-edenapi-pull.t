@@ -51,7 +51,8 @@ Pull Bookmark:
   $ hg pull -B master
   pulling from test:e1
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': '178c10ffbc2f92d5407c14478ae9d9dea81f232e'}
-  DEBUG pull::httpgraph: edenapi fetched 2 graph nodes
+  DEBUG pull::fastpath: master: new 178c10ffbc2f92d5407c14478ae9d9dea81f232e
+  imported commit graph for 2 commits (1 segment)
   $ hg book --list-subscriptions
      remote/master             178c10ffbc2f
 

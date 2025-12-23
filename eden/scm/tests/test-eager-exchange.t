@@ -123,15 +123,24 @@ Pull (lazy):
       $ newremoterepo
       $ setconfig paths.default=test:e1
       $ hg debugchangelog --migrate $(py cltype)
-      $ hg pull -B master
-      pulling from test:e1
-      DEBUG eagerepo::api: bookmarks master
-      DEBUG eagerepo::api: bookmarks master
-      DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
-      DEBUG eagerepo::api: bookmarks master
-      DEBUG eagerepo::api: commit_known 
-      DEBUG eagerepo::api: commit_graph 23d30dc6b70380b2d939023947578ae0e0198999 
-      DEBUG eagerepo::api: commit_mutations 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 23d30dc6b70380b2d939023947578ae0e0198999, 748104bd5058bf2c386d074d8dcf2704855380f6
+
+      if cltype == "lazy":
+        # Fast path pull
+        $ hg pull -B master
+        pulling from test:e1
+        DEBUG eagerepo::api: bookmarks master
+        DEBUG eagerepo::api: commit_graph_segments 23d30dc6b70380b2d939023947578ae0e0198999 
+        imported commit graph for 3 commits (1 segment)
+      else:
+        $ hg pull -B master
+        pulling from test:e1
+        DEBUG eagerepo::api: bookmarks master
+        DEBUG eagerepo::api: bookmarks master
+        DEBUG sapling::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict([('master', '23d30dc6b70380b2d939023947578ae0e0198999')])
+        DEBUG eagerepo::api: bookmarks master
+        DEBUG eagerepo::api: commit_known 
+        DEBUG eagerepo::api: commit_graph 23d30dc6b70380b2d939023947578ae0e0198999 
+        DEBUG eagerepo::api: commit_mutations 178c10ffbc2f92d5407c14478ae9d9dea81f232e, 23d30dc6b70380b2d939023947578ae0e0198999, 748104bd5058bf2c386d074d8dcf2704855380f6
 
       $ hg pull -r $B
       pulling from test:e1
@@ -266,6 +275,8 @@ Test that auto pull invalidates public() properly:
     pulling '428b6ef7fec737262ee83ba89e4fab5e3a07db44' from 'test:server-autopull'
     DEBUG dag::protocol: resolve names [a81a182e51718edfeccb2f62846c28c7b83de6f1] remotely
     DEBUG dag::protocol: resolve names [428b6ef7fec737262ee83ba89e4fab5e3a07db44] remotely
+    DEBUG dag::protocol: resolve names [cc12481368813c26c5e6f2bd1f90c20fe3a0b2eb] remotely
+    DEBUG dag::protocol: resolve names [8da2cce93f210d3e0e9a204be929c2b0d144dda2] remotely
     D1
     D2
     D3
