@@ -165,10 +165,12 @@ impl Repo {
             "Don't pass a config and CLI overrides to Repo::build"
         );
 
-        let config = match config {
+        let mut config = match config {
             Some(config) => config,
             None => configloader::hg::load(RepoInfo::Disk(&info), pinned_config)?,
         };
+
+        mirror_requirement_to_config(&info, &mut config);
 
         let repo_name = configloader::hg::read_repo_name_from_disk(&info.shared_dot_hg_path)
             .ok()
@@ -686,6 +688,21 @@ impl Repo {
             }
         }
     }
+}
+
+fn mirror_requirement_to_config(info: &RepoMinimalInfo, config: &mut ConfigSet) {
+    // mirror "invalid-hash" requirement to "unsafe.skip-verify-hash" config
+    // so code paths that can access configs but not requirements can still
+    // learn the setting.
+    config.set(
+        "unsafe",
+        "skip-verify-hash",
+        Some(match info.store_requirements.contains("invalid-hash") {
+            true => "true",
+            false => "false",
+        }),
+        &"repo requirement".into(),
+    );
 }
 
 #[cfg(feature = "wdir")]
