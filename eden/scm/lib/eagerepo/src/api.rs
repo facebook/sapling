@@ -144,6 +144,9 @@ impl SaplingRemoteApi for EagerRepo {
         if matches!(self.format(), SerializationFormat::Git) {
             caps.push("git-format".to_string());
         }
+        if matches!(self.extension_name(), Some("virtual-repo")) {
+            caps.push("invalid-hash".to_string());
+        }
         Ok(caps)
     }
 

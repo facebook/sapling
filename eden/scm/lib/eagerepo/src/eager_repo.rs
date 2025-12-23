@@ -326,6 +326,11 @@ impl EagerRepo {
         Ok(())
     }
 
+    pub(crate) fn extension_name(&self) -> Option<&'static str> {
+        let ext = self.ext.get()?;
+        Some(ext.name())
+    }
+
     /// Convert an URL to a directory path that can be passed to `open`.
     ///
     /// Supported URLs:
