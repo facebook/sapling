@@ -60,6 +60,7 @@ fn get_required_edenapi(info: &dyn StoreInfo) -> anyhow::Result<Arc<dyn SaplingR
 fn maybe_construct_commits(
     info: &dyn StoreInfo,
 ) -> anyhow::Result<Option<Box<dyn DagCommits + Send + 'static>>> {
+    let has_invalid_commit_hash = info.has_requirement("invalid-commit-hash");
     let format = match info.has_requirement(GIT_FORMAT_REQUIREMENT) {
         true => SerializationFormat::Git,
         false => SerializationFormat::Hg,
@@ -73,6 +74,7 @@ fn maybe_construct_commits(
             true,
             false,
             format,
+            has_invalid_commit_hash,
         )?))
     } else if info.has_requirement(DOUBLE_WRITE_REQUIREMENT) {
         tracing::info!(target: "changelog_info", changelog_backend="doublewrite");
@@ -86,6 +88,7 @@ fn maybe_construct_commits(
             false,
             true,
             format,
+            has_invalid_commit_hash,
         )?))
     } else if info.has_requirement(LAZY_TEXT_REQUIREMENT) {
         let eden_api = get_required_edenapi(info)?;
@@ -96,10 +99,15 @@ fn maybe_construct_commits(
             false,
             false,
             format,
+            has_invalid_commit_hash,
         )?))
     } else if info.has_requirement(SEGMENTS_REQUIREMENT) {
         tracing::info!(target: "changelog_info", changelog_backend="segments");
-        Ok(Some(open_segments(info.store_path(), format)?))
+        Ok(Some(open_segments(
+            info.store_path(),
+            format,
+            has_invalid_commit_hash,
+        )?))
     } else {
         tracing::info!(target: "changelog_info", changelog_backend="rustrevlog");
         Ok(Some(Box::new(RevlogCommits::new(
@@ -130,6 +138,7 @@ fn open_hybrid(
     lazy_hash: bool,
     use_revlog: bool,
     format: SerializationFormat,
+    has_invalid_commit_hash: bool,
 ) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
     let segments_path = calculate_segments_path(store_path);
     let hg_commits_path = store_path.join(HG_COMMITS_PATH);
@@ -146,7 +155,8 @@ fn open_hybrid(
     } else if lazy_hash {
         hybrid_commits.enable_lazy_commit_hashes();
     }
-    Ok(Box::new(hybrid_commits))
+    let commits = hybrid_commits.with_invalid_commit_hash(has_invalid_commit_hash);
+    Ok(Box::new(commits))
 }
 
 fn calculate_segments_path(store_path: &Path) -> PathBuf {
@@ -161,11 +171,13 @@ fn get_path_from_file(store_path: &Path, target_file: &str) -> Result<PathBuf, s
 fn open_segments(
     store_path: &Path,
     format: SerializationFormat,
+    has_invalid_commit_hash: bool,
 ) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
     let commits = OnDiskCommits::new(
         &calculate_segments_path(store_path),
         &store_path.join(HG_COMMITS_PATH),
         format,
     )?;
+    let commits = commits.with_invalid_commit_hash(has_invalid_commit_hash);
     Ok(Box::new(commits))
 }
