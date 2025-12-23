@@ -44,6 +44,20 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<repo>(py)?;
     m.add_class::<repolock>(py)?;
+    m.add(
+        py,
+        "SUPPORTED_REQUIREMENTS",
+        rsrepo::constants::SUPPORTED_DEFAULT_REQUIREMENTS
+            .iter()
+            .collect::<Vec<_>>(),
+    )?;
+    m.add(
+        py,
+        "SUPPORTED_STORE_REQUIREMENTS",
+        rsrepo::constants::SUPPORTED_STORE_REQUIREMENTS
+            .iter()
+            .collect::<Vec<_>>(),
+    )?;
 
     Ok(m)
 }

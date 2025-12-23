@@ -9,3 +9,5 @@ pub static REPONAME_FILE: &str = "reponame";
 pub static CHANGELOG_FILE: &str = "00changelog.i";
 pub static REQUIREMENTS_FILE: &str = "requires";
 pub static STORE_PATH: &str = "store";
+
+pub use repo_minimal_info::constants::*;
