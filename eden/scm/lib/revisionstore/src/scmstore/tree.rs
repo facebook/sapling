@@ -150,6 +150,8 @@ pub struct TreeStore {
 
     // Temporary escape hatch to disable bounding of queue.
     pub(crate) unbounded_queue: bool,
+
+    pub(crate) verify_hash: bool,
 }
 
 impl Drop for TreeStore {
@@ -323,6 +325,7 @@ impl TreeStore {
             keys_len
         );
 
+        let verify_hash = self.verify_hash;
         let process_func = move || -> Result<()> {
             // We might be in a different thread than when `bar` was created - set bar as
             // active here as well.
@@ -490,6 +493,7 @@ impl TreeStore {
                         } else {
                             None
                         },
+                        verify_hash,
                     )?;
                 } else {
                     tracing::debug!("no SaplingRemoteApi associated with TreeStore");
@@ -551,6 +555,7 @@ impl TreeStore {
             format: SerializationFormat::Hg,
             progress_bar: AggregatingProgressBar::new("", ""),
             unbounded_queue: false,
+            verify_hash: true,
         }
     }
 
@@ -614,6 +619,7 @@ impl TreeStore {
             format: self.format(),
             progress_bar: self.progress_bar.clone(),
             unbounded_queue: self.unbounded_queue,
+            verify_hash: self.verify_hash,
         }
     }
 
@@ -937,7 +943,7 @@ impl TreeEntry for ScmStoreTreeEntry {
                 .basic_tree_entry()
                 .map(|t| t.size_hint())
                 .unwrap_or_default(),
-            LazyTree::SaplingRemoteApi(slapi) => slapi.children.as_ref().map(|c| c.len()),
+            LazyTree::SaplingRemoteApi(slapi, ..) => slapi.children.as_ref().map(|c| c.len()),
             LazyTree::Null => Some(0),
         }
     }

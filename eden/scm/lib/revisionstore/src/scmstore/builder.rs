@@ -655,6 +655,8 @@ impl<'a> TreeStoreBuilder<'a> {
             );
         }
 
+        let verify_hash = !self.config.get_or("unsafe", "skip-verify-hash", || false)?;
+
         tracing::trace!(target: "revisionstore::treestore", "constructing TreeStore");
         Ok(TreeStore {
             indexedlog_local,
@@ -674,6 +676,7 @@ impl<'a> TreeStoreBuilder<'a> {
             unbounded_queue: self
                 .config
                 .get_or_default("experimental", "unbounded-scmstore-queue")?,
+            verify_hash,
         })
     }
 }

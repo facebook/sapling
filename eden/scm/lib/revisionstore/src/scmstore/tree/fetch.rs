@@ -107,6 +107,7 @@ impl FetchState {
         attributes: edenapi_types::TreeAttributes,
         indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
         historystore_cache: Option<&IndexedLogHgIdHistoryStore>,
+        verify_hash: bool,
     ) -> Result<()> {
         let pending: Vec<_> = self
             .common
@@ -151,7 +152,7 @@ impl FetchState {
 
             let entry = entry?;
             let key = entry.key.clone();
-            let entry = LazyTree::SaplingRemoteApi(entry);
+            let entry = LazyTree::SaplingRemoteApi(entry, verify_hash);
 
             self.cache_child_aux_data(&entry);
 

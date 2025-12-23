@@ -40,6 +40,7 @@ We can fetch tree parents:
                       children: None,
                       tree_aux_data: None,
                   },
+                  true,
               ),
           ),
           parents: Some(

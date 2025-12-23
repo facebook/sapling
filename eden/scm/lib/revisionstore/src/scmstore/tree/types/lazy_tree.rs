@@ -33,7 +33,7 @@ pub(crate) enum LazyTree {
     IndexedLog(TreeEntryWithAux),
 
     /// An SaplingRemoteApi TreeEntry.
-    SaplingRemoteApi(TreeEntry),
+    SaplingRemoteApi(TreeEntry, bool),
 
     // Null tree is a special case with null content.
     Null,
@@ -50,7 +50,7 @@ impl LazyTree {
         use LazyTree::*;
         match self {
             IndexedLog(entry_with_aux) => Some(entry_with_aux.node()),
-            SaplingRemoteApi(entry) => Some(entry.key().hgid),
+            SaplingRemoteApi(entry, ..) => Some(entry.key().hgid),
             Null => Some(NULL_ID),
         }
     }
@@ -60,7 +60,7 @@ impl LazyTree {
         use LazyTree::*;
         Ok(match self {
             IndexedLog(entry_with_aux) => entry_with_aux.content()?,
-            SaplingRemoteApi(entry) => entry.data(true)?,
+            SaplingRemoteApi(entry, verify_hash) => entry.data(*verify_hash)?,
             Null => Bytes::default(),
         })
     }
@@ -70,9 +70,11 @@ impl LazyTree {
         use LazyTree::*;
         Ok(match self {
             IndexedLog(entry_with_aux) => Some(entry_with_aux.entry.clone()),
-            SaplingRemoteApi(entry) => {
-                Some(Entry::new(node, entry.data(true)?, Metadata::default()))
-            }
+            SaplingRemoteApi(entry, verify_hash) => Some(Entry::new(
+                node,
+                entry.data(*verify_hash)?,
+                Metadata::default(),
+            )),
             Null => None,
         })
     }
@@ -87,7 +89,7 @@ impl LazyTree {
 
     pub(crate) fn parents(&self) -> Option<Parents> {
         match &self {
-            Self::SaplingRemoteApi(entry) => entry.parents,
+            Self::SaplingRemoteApi(entry, ..) => entry.parents,
             _ => None,
         }
     }
@@ -95,7 +97,7 @@ impl LazyTree {
     pub(crate) fn aux_data(&self) -> Option<TreeAuxData> {
         match &self {
             Self::IndexedLog(entry_with_aux) => entry_with_aux.tree_aux.clone(),
-            Self::SaplingRemoteApi(entry) => entry.tree_aux_data.clone(),
+            Self::SaplingRemoteApi(entry, ..) => entry.tree_aux_data.clone(),
             _ => None,
         }
     }
@@ -103,31 +105,33 @@ impl LazyTree {
     pub fn children_aux_data(&self) -> Vec<(HgId, AuxData)> {
         use LazyTree::*;
         match self {
-            SaplingRemoteApi(entry) => entry.children.as_ref().map_or_else(Vec::new, |childrens| {
-                childrens
-                    .iter()
-                    .filter_map(|entry| {
-                        let child_entry = entry
-                            .as_ref()
-                            .inspect_err(|err| {
-                                tracing::warn!("Error fetching child entry: {:?}", err);
-                            })
-                            .ok()?;
-                        match child_entry {
-                            TreeChildEntry::File(file_entry) => {
-                                file_entry.file_metadata.clone().map(|file_metadata| {
-                                    (file_entry.key.hgid, AuxData::File(file_metadata.into()))
+            SaplingRemoteApi(entry, ..) => {
+                entry.children.as_ref().map_or_else(Vec::new, |childrens| {
+                    childrens
+                        .iter()
+                        .filter_map(|entry| {
+                            let child_entry = entry
+                                .as_ref()
+                                .inspect_err(|err| {
+                                    tracing::warn!("Error fetching child entry: {:?}", err);
                                 })
+                                .ok()?;
+                            match child_entry {
+                                TreeChildEntry::File(file_entry) => {
+                                    file_entry.file_metadata.clone().map(|file_metadata| {
+                                        (file_entry.key.hgid, AuxData::File(file_metadata.into()))
+                                    })
+                                }
+                                TreeChildEntry::Directory(dir_entry) => {
+                                    dir_entry.tree_aux_data.map(|dir_metadata| {
+                                        (dir_entry.key.hgid, AuxData::Tree(dir_metadata))
+                                    })
+                                }
                             }
-                            TreeChildEntry::Directory(dir_entry) => {
-                                dir_entry.tree_aux_data.map(|dir_metadata| {
-                                    (dir_entry.key.hgid, AuxData::Tree(dir_metadata))
-                                })
-                            }
-                        }
-                    })
-                    .collect::<Vec<_>>()
-            }),
+                        })
+                        .collect::<Vec<_>>()
+                })
+            }
             _ => Vec::new(),
         }
     }
