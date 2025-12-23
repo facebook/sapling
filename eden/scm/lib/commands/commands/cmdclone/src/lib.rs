@@ -632,6 +632,9 @@ fn clone_metadata(
         if has_capability(GIT_FORMAT_CAPABILITY) {
             repo.add_store_requirement("git")?;
         }
+        if has_capability("invalid-hash") {
+            repo.add_store_requirement("invalid-hash")?;
+        }
 
         let commit_graph_segments = has_capability(COMMIT_GRAPH_SEGMENTS_CAPABILITY)
             && repo
