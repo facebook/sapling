@@ -355,57 +355,8 @@ class localrepository:
         # no longer used, but needed to preserve compatibility
         "lz4revlog",
     }
-    _basesupported = supportedformats | {
-        edenfs.requirement,
-        "store",
-        "fncache",
-        "shared",
-        "relshared",
-        "dotencode",
-        "treestate",
-        "storerequirements",
-        "lfs",
-        # enable symlinks on Windows
-        "windowssymlinks",
-        # allows sparse eden (filteredfs) checkouts
-        "edensparse",
-        # live inside a ".git"
-        git.DOTGIT_REQUIREMENT,
-    }
-    _basestoresupported = {
-        "visibleheads",
-        "narrowheads",
-        "zstorecommitdata",
-        "invalidatelinkrev",
-        # python revlog
-        "pythonrevlogchangelog",
-        # rust revlog
-        "rustrevlogchangelog",
-        # pure segmented changelog (full idmap, full hgommits)
-        "segmentedchangelog",
-        # segmented changelog (full idmap, partial hgcommits) + revlog
-        "doublewritechangelog",
-        # hybrid changelog (full idmap, partial hgcommits) + revlog + edenapi
-        "hybridchangelog",
-        # use git format
-        git.GIT_FORMAT_REQUIREMENT,
-        # backed by git bare repo
-        git.GIT_STORE_REQUIREMENT,
-        # live inside a ".git"
-        git.DOTGIT_REQUIREMENT,
-        # lazy commit message (full idmap, partial hgcommits) + edenapi
-        "lazytextchangelog",
-        # lazy commit message (sparse idmap, partial hgcommits) + edenapi
-        "lazychangelog",
-        # commit graph is truncated for emergency use-case. The first commit
-        # has wrong parents.
-        "emergencychangelog",
-        # backed by Rust eagerepo::EagerRepo. Mainly used in tests or
-        # fully local repos.
-        eagerepo.EAGEREPO_REQUIREMENT,
-        # explicit requirement for a revlog repo using eager store (i.e. revlog2.py)
-        "eagercompat",
-    }
+    _basesupported = supportedformats | set(bindings.repo.SUPPORTED_REQUIREMENTS)
+    _basestoresupported = set(bindings.repo.SUPPORTED_STORE_REQUIREMENTS)
     openerreqs = {"revlogv1", "generaldelta", "treemanifest"}
 
     # sets of (ui, featureset) functions for repo and store features.
