@@ -422,6 +422,23 @@ async def create_serial_strategy_params(
     return SerialStrategyParams(refs_to_update, pull_requests_to_create, repository)
 
 
+def get_pull_request_template(commit: CommitData) -> None | str:
+    change_context = commit.ctx
+    for path in [
+        ".github/pull_request_template.md",
+        "docs/pull_request_template.md",
+        "pull_request_template.md",
+    ]:
+        try:
+            file_context = change_context.filectx(path)
+            bytes = file_context.data()
+            return str(bytes, "utf-8")
+        except:
+            pass  # Ignore error when file is not found
+
+    return None
+
+
 async def create_pull_requests_serially(
     commits: List[Tuple[CommitData, str]],
     workflow: SubmitWorkflow,
@@ -450,6 +467,8 @@ async def create_pull_requests_serially(
 
         commit_msg = commit.get_msg()
         title, body = title_and_body(commit_msg)
+        pull_request_template = get_pull_request_template(commit)
+        body = "\n\n".join(filter(None, [body, pull_request_template]))
         result = await gh_submit.create_pull_request(
             hostname=repository.hostname,
             owner=owner,
