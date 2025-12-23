@@ -498,10 +498,6 @@ class changelog:
     @util.propertycache
     def _should_skip_hash_check(self):
         repo = self._reporef()
-        # eagerepo can have extensions like "virtual-repo" that should disable hash checks.
-        if "eagerepo" in repo.storerequirements:
-            enabled_exts = repo.svfs.tryread(f"{HGCOMMITS_DIR}/enabled-exts")
-            return b"virtual-repo" in enabled_exts
         return "invalid-hash" in repo.storerequirements
 
     def nodesbetween(self, roots, heads):
