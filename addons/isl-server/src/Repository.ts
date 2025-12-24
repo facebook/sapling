@@ -203,6 +203,7 @@ export class Repository {
       this.codeReviewProvider = new Internal.PhabricatorCodeReviewProvider(
         remote,
         this.initialConnectionContext,
+        this.info.dotdir,
       );
     }
 
