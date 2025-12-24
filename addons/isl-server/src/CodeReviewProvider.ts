@@ -10,6 +10,7 @@ import type {TypeaheadKind} from 'isl/src/CommitInfoView/types';
 import type {
   ClientToServerMessage,
   CodeReviewProviderSpecificClientToServerMessages,
+  CommandArg,
   DiffComment,
   DiffId,
   DiffSummary,
@@ -33,7 +34,7 @@ export interface CodeReviewProvider {
   /** Run a command not handled within sapling, such as a separate submit handler */
   runExternalCommand?(
     cwd: string,
-    args: Array<string>,
+    args: CommandArg[], // Providers may need specific normalization for args
     onProgress: OperationCommandProgressReporter,
     signal: AbortSignal,
   ): Promise<void>;

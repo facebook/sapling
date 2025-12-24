@@ -266,7 +266,6 @@ export class Repository {
         if (operation.runner === CommandRunner.Sapling) {
           return this.runOperation(ctx, operation, handleCommandProgress, signal);
         } else if (operation.runner === CommandRunner.CodeReviewProvider) {
-          const {args: normalizedArgs} = this.normalizeOperationArgs(cwd, operation);
           if (this.codeReviewProvider?.runExternalCommand == null) {
             return Promise.reject(
               Error('CodeReviewProvider does not support running external commands'),
@@ -277,7 +276,7 @@ export class Repository {
           return (
             this.codeReviewProvider?.runExternalCommand(
               cwd,
-              normalizedArgs,
+              operation.args,
               handleCommandProgress,
               signal,
             ) ?? Promise.resolve()
