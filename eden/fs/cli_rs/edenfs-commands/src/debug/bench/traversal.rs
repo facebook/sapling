@@ -7,6 +7,9 @@
 
 //! Filesystem traversal benchmarking
 
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
+use std::collections::VecDeque;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -20,6 +23,7 @@ use anyhow::Result;
 use edenfs_client::client::Client;
 use edenfs_client::methods::EdenThriftMethod;
 use edenfs_utils::bytes_from_path;
+use hdrhistogram::Histogram;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use num_format::Locale;
@@ -45,6 +49,11 @@ const MEDIUM_FILE_THRESHOLD: u64 = 1024 * 1024; // 1 MB
 // This prevents unbounded memory growth when traversing millions of directories
 // Each entry uses ~200-300 bytes, so 10M entries ≈ 2-3GB memory
 const MAX_DIR_STATS_ENTRIES: usize = 10_000_000;
+
+// Listing statistics configuration
+const TOP_N_SLOWEST_CAPACITY: usize = 100;
+const TOP_N_LARGEST_CAPACITY: usize = 100;
+const SCAN_RATE_SAMPLES_CAPACITY: usize = 1000;
 
 // ============================================================================
 // Type Definitions
@@ -251,6 +260,306 @@ impl AdvancedStats {
     }
 }
 
+// ============================================================================
+// Listing Statistics (Hybrid Approach)
+// ============================================================================
+
+/// Entry representing a slow directory (for top-N tracking by readdir time)
+#[derive(Clone, Eq, PartialEq)]
+struct SlowDirectory {
+    path: String,
+    latency_ns: u64,
+    entry_count: usize,
+}
+
+impl Ord for SlowDirectory {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // Reverse ordering so BinaryHeap becomes a min-heap
+        other.latency_ns.cmp(&self.latency_ns)
+    }
+}
+
+impl PartialOrd for SlowDirectory {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// Entry representing a slow directory by total processing time
+#[derive(Clone, Eq, PartialEq)]
+struct SlowProcessingDir {
+    path: String,
+    processing_time_ns: u64,
+    readdir_latency_ns: u64,
+    entry_count: usize,
+}
+
+impl Ord for SlowProcessingDir {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // Reverse ordering so BinaryHeap becomes a min-heap
+        other.processing_time_ns.cmp(&self.processing_time_ns)
+    }
+}
+
+impl PartialOrd for SlowProcessingDir {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// Scan rate sample for variance analysis
+#[derive(Clone)]
+struct ScanRateSample {
+    #[allow(dead_code)] // Reserved for future timeline/trend analysis
+    timestamp_secs: f64,
+    files_per_second: f64,
+}
+
+/// Inner state for listing statistics, protected by a single mutex.
+/// Consolidates 6 previously separate locks into one to reduce lock contention.
+struct ListingStatsInner {
+    /// HDR histogram for readdir latencies (in microseconds)
+    readdir_latency_hist: Histogram<u64>,
+    /// HDR histogram for directory processing time (in microseconds)
+    dir_processing_hist: Histogram<u64>,
+    /// HDR histogram for directory sizes (entry counts)
+    dir_size_hist: Histogram<u64>,
+    /// Top N slowest directories by readdir() call time (min-heap)
+    slowest_dirs: BinaryHeap<SlowDirectory>,
+    /// Top N slowest directories by total processing time (min-heap)
+    slowest_processing_dirs: BinaryHeap<SlowProcessingDir>,
+    /// Top N largest directories by entry count
+    largest_dirs: BinaryHeap<Reverse<(usize, String)>>,
+}
+
+/// Scan rate state, protected by a single mutex.
+/// Consolidates 3 previously separate locks into one.
+struct ScanRateState {
+    samples: VecDeque<ScanRateSample>,
+    last_sample_time: Option<Instant>,
+    last_sample_files: usize,
+}
+
+/// Statistics focused on directory listing/traversal performance
+/// Uses a hybrid approach:
+/// - HDR histograms for latency distribution (~8 KB for 2 histograms)
+/// - Top-N heaps for slowest directories (~16 KB for 2 heaps of top 100)
+/// - Fixed-size circular buffer for scan rate samples (~8 KB for 1000 samples)
+///
+/// Total memory: ~32 KB regardless of input size
+///
+/// Performance optimization: Uses consolidated locking (1 lock instead of 6)
+/// to reduce lock contention in the hot path (record_readdir).
+struct ListingStats {
+    /// All histogram and heap state under a single lock to reduce contention
+    inner: std::sync::Mutex<ListingStatsInner>,
+
+    /// Scan rate state under a separate lock (accessed less frequently)
+    scan_rate: std::sync::Mutex<ScanRateState>,
+
+    /// Base paths for relative path display (immutable after construction)
+    base_paths: Vec<PathBuf>,
+
+    /// Accumulated total processing time across all directories
+    total_processing_time_ns: AtomicU64,
+}
+
+/// Generic helper for maintaining a top-N min-heap
+/// Efficiently tracks the N largest items by a numeric key without sorting all items
+fn update_topn_heap<T: Ord + Clone>(
+    heap: &mut BinaryHeap<T>,
+    capacity: usize,
+    new_item: T,
+    get_key: impl Fn(&T) -> u64,
+) {
+    if heap.len() < capacity {
+        heap.push(new_item);
+    } else if let Some(min) = heap.peek() {
+        if get_key(&new_item) > get_key(min) {
+            heap.pop();
+            heap.push(new_item);
+        }
+    }
+}
+
+impl ListingStats {
+    fn new(base_paths: Vec<PathBuf>) -> Arc<Self> {
+        Arc::new(Self {
+            inner: std::sync::Mutex::new(ListingStatsInner {
+                // Create histogram for readdir latencies: 1μs to 60s
+                readdir_latency_hist: Histogram::<u64>::new_with_bounds(1, 60_000_000, 3)
+                    .expect("Failed to create readdir latency histogram"),
+
+                // Create histogram for directory processing time: 1μs to 60s
+                dir_processing_hist: Histogram::<u64>::new_with_bounds(1, 60_000_000, 3)
+                    .expect("Failed to create dir processing histogram"),
+
+                // Create histogram for directory sizes: 1 to 100,000 entries
+                dir_size_hist: Histogram::<u64>::new_with_bounds(1, 100_000, 3)
+                    .expect("Failed to create dir size histogram"),
+
+                slowest_dirs: BinaryHeap::new(),
+                slowest_processing_dirs: BinaryHeap::new(),
+                largest_dirs: BinaryHeap::new(),
+            }),
+
+            scan_rate: std::sync::Mutex::new(ScanRateState {
+                samples: VecDeque::with_capacity(SCAN_RATE_SAMPLES_CAPACITY),
+                last_sample_time: None,
+                last_sample_files: 0,
+            }),
+
+            base_paths,
+            total_processing_time_ns: AtomicU64::new(0),
+        })
+    }
+
+    /// Record a readdir() operation
+    /// - `readdir_latency_ns`: Time spent in just the fs::read_dir() system call
+    /// - `processing_time_ns`: Total wall-clock time from opening to finishing processing all entries
+    ///
+    /// Uses a single lock acquisition for all histogram/heap updates to reduce contention.
+    /// Path string allocation is deferred until we confirm the entry qualifies for a top-N heap.
+    fn record_readdir(
+        &self,
+        dir_path: &Path,
+        readdir_latency_ns: u64,
+        processing_time_ns: u64,
+        entry_count: usize,
+    ) {
+        // Verify timing invariant: total processing time must be >= readdir time
+        debug_assert!(
+            processing_time_ns >= readdir_latency_ns,
+            "Processing time ({} ns) must be >= readdir time ({} ns) for {}",
+            processing_time_ns,
+            readdir_latency_ns,
+            dir_path.display()
+        );
+
+        // Accumulate total processing time (atomic, no lock needed)
+        self.total_processing_time_ns
+            .fetch_add(processing_time_ns, Ordering::Relaxed);
+
+        // Single lock acquisition for all inner state updates
+        if let Ok(mut inner) = self.inner.lock() {
+            // Record readdir() latency in histogram (convert to microseconds)
+            let latency_us = readdir_latency_ns / 1000;
+            let _ = inner.readdir_latency_hist.record(latency_us.max(1));
+
+            // Record total processing time in histogram (convert to microseconds)
+            let processing_us = processing_time_ns / 1000;
+            let _ = inner.dir_processing_hist.record(processing_us.max(1));
+
+            // Record directory size (fix: use clamp to handle empty directories and cap at 100k)
+            let _ = inner
+                .dir_size_hist
+                .record(entry_count.clamp(1, 100_000) as u64);
+
+            // Lazy path allocation: only allocate string if entry qualifies for any top-N heap
+            let needs_slowest = inner.slowest_dirs.len() < TOP_N_SLOWEST_CAPACITY
+                || inner
+                    .slowest_dirs
+                    .peek()
+                    .is_none_or(|min| readdir_latency_ns > min.latency_ns);
+
+            let needs_processing = inner.slowest_processing_dirs.len() < TOP_N_SLOWEST_CAPACITY
+                || inner
+                    .slowest_processing_dirs
+                    .peek()
+                    .is_none_or(|min| processing_time_ns > min.processing_time_ns);
+
+            let needs_largest = inner.largest_dirs.len() < TOP_N_LARGEST_CAPACITY
+                || inner
+                    .largest_dirs
+                    .peek()
+                    .is_none_or(|Reverse((min_size, _))| entry_count > *min_size);
+
+            // Only allocate path string if needed for at least one heap
+            if needs_slowest || needs_processing || needs_largest {
+                let path_str = self.make_path_relative(&dir_path.to_string_lossy());
+
+                if needs_slowest {
+                    let new_dir = SlowDirectory {
+                        path: path_str.clone(),
+                        latency_ns: readdir_latency_ns,
+                        entry_count,
+                    };
+                    update_topn_heap(
+                        &mut inner.slowest_dirs,
+                        TOP_N_SLOWEST_CAPACITY,
+                        new_dir,
+                        |d| d.latency_ns,
+                    );
+                }
+
+                if needs_processing {
+                    let new_dir = SlowProcessingDir {
+                        path: path_str.clone(),
+                        processing_time_ns,
+                        readdir_latency_ns,
+                        entry_count,
+                    };
+                    update_topn_heap(
+                        &mut inner.slowest_processing_dirs,
+                        TOP_N_SLOWEST_CAPACITY,
+                        new_dir,
+                        |d| d.processing_time_ns,
+                    );
+                }
+
+                if needs_largest {
+                    update_topn_heap(
+                        &mut inner.largest_dirs,
+                        TOP_N_LARGEST_CAPACITY,
+                        Reverse((entry_count, path_str)),
+                        |Reverse((size, _))| *size as u64,
+                    );
+                }
+            }
+        }
+    }
+
+    /// Sample the current scan rate (called periodically from progress task)
+    fn sample_scan_rate(&self, current_time: Instant, start_time: Instant, total_files: usize) {
+        if let Ok(mut state) = self.scan_rate.lock() {
+            if let Some(prev_time) = state.last_sample_time {
+                let elapsed = (current_time - prev_time).as_secs_f64();
+                if elapsed > 0.0 {
+                    let files_delta = total_files.saturating_sub(state.last_sample_files);
+                    let rate = files_delta as f64 / elapsed;
+
+                    let sample = ScanRateSample {
+                        timestamp_secs: (current_time - start_time).as_secs_f64(),
+                        files_per_second: rate,
+                    };
+
+                    if state.samples.len() >= SCAN_RATE_SAMPLES_CAPACITY {
+                        state.samples.pop_front(); // O(1) removal from front
+                    }
+                    state.samples.push_back(sample);
+                }
+            }
+
+            state.last_sample_time = Some(current_time);
+            state.last_sample_files = total_files;
+        }
+    }
+
+    /// Convert an absolute path to relative to the traversal base paths
+    fn make_path_relative(&self, path: &str) -> String {
+        let path_buf = PathBuf::from(path);
+
+        for base in &self.base_paths {
+            if let Ok(rel_path) = path_buf.strip_prefix(base) {
+                return rel_path.to_string_lossy().to_string();
+            }
+        }
+
+        // Fallback: return original path
+        path.to_string()
+    }
+}
+
 /// Counters for tracking traversal progress.
 /// All atomic counters are wrapped in Arc for efficient sharing across tasks.
 /// Cloning this struct is cheap - it only clones the Arc references, not the underlying data.
@@ -269,6 +578,7 @@ struct TraversalCounters {
     queue_size: Arc<AtomicUsize>,
     start_time: Instant,
     advanced_stats: Option<Arc<AdvancedStats>>,
+    listing_stats: Option<Arc<ListingStats>>,
 }
 
 struct Traversal {
@@ -292,9 +602,15 @@ struct Traversal {
 // ============================================================================
 
 impl TraversalCounters {
-    fn new(detailed_stats: bool, base_paths: Vec<PathBuf>) -> Self {
-        let advanced_stats = if detailed_stats {
-            Some(AdvancedStats::new(base_paths))
+    fn new(detailed_read_stats: bool, detailed_list_stats: bool, base_paths: Vec<PathBuf>) -> Self {
+        let advanced_stats = if detailed_read_stats {
+            Some(AdvancedStats::new(base_paths.clone()))
+        } else {
+            None
+        };
+
+        let listing_stats = if detailed_list_stats {
+            Some(ListingStats::new(base_paths))
         } else {
             None
         };
@@ -313,6 +629,7 @@ impl TraversalCounters {
             queue_size: Arc::new(AtomicUsize::new(0)),
             start_time: Instant::now(),
             advanced_stats,
+            listing_stats,
         }
     }
 
@@ -553,14 +870,15 @@ impl Traversal {
         max_files: usize,
         follow_symlinks: bool,
         read_mode: ReadMode,
-        detailed_stats: bool,
+        detailed_read_stats: bool,
+        detailed_list_stats: bool,
         base_paths: Vec<PathBuf>,
     ) -> Self {
         // Create internal components
         let cancellation_token = setup_cancellation();
 
         Self {
-            counters: TraversalCounters::new(detailed_stats, base_paths),
+            counters: TraversalCounters::new(detailed_read_stats, detailed_list_stats, base_paths),
             max_files,
             follow_symlinks,
             read_mode,
@@ -749,12 +1067,16 @@ impl Traversal {
 
             counters.dirs.fetch_add(1, Ordering::Relaxed);
 
-            let start_time = Instant::now();
+            // Start timing total directory processing (including iteration)
+            let processing_start_time = Instant::now();
+
+            // Time just the readdir() system call
+            let readdir_start_time = Instant::now();
             let entries = fs::read_dir(&current_path)?;
-            let duration = start_time.elapsed();
+            let readdir_duration_ns = readdir_start_time.elapsed().as_nanos() as u64;
             counters
                 .dir_read_duration_nanos
-                .fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
+                .fetch_add(readdir_duration_ns, Ordering::Relaxed);
 
             let mut entry_count = 0;
 
@@ -796,9 +1118,22 @@ impl Traversal {
                 }
             }
 
+            // Calculate total processing time (from opening to finishing iteration)
+            let processing_time_ns = processing_start_time.elapsed().as_nanos() as u64;
+
             counters
                 .total_dir_entries
                 .fetch_add(entry_count, Ordering::Relaxed);
+
+            // Record directory listing statistics if enabled
+            if let Some(stats) = &counters.listing_stats {
+                stats.record_readdir(
+                    &current_path,
+                    readdir_duration_ns,
+                    processing_time_ns,
+                    entry_count,
+                );
+            }
         }
 
         Ok(())
@@ -820,9 +1155,36 @@ impl Traversal {
             tokio::pin!(reader_handle);
 
             if no_progress {
-                // Just wait for completion, no progress bar
-                let _ = traversal_handle.await;
-                let _ = reader_handle.await;
+                // No progress bar, but still sample scan rate for detailed listing stats
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(
+                    types::PROGRESS_BAR_UPDATE_INTERVAL_SECS,
+                ));
+
+                let mut traversal_done = false;
+                let mut reader_done = false;
+
+                loop {
+                    tokio::select! {
+                        _ = interval.tick() => {
+                            // Sample scan rate for listing statistics
+                            if let Some(listing_stats) = &counters.listing_stats {
+                                let current_time = Instant::now();
+                                let total_files = counters.files.load(Ordering::Relaxed);
+                                listing_stats.sample_scan_rate(current_time, counters.start_time, total_files);
+                            }
+
+                            if traversal_done && reader_done {
+                                break;
+                            }
+                        }
+                        _ = &mut traversal_handle, if !traversal_done => {
+                            traversal_done = true;
+                        }
+                        _ = &mut reader_handle, if !reader_done => {
+                            reader_done = true;
+                        }
+                    }
+                }
             } else {
                 // Display progress bar while waiting
                 let pb = ProgressBar::new_spinner();
@@ -883,6 +1245,13 @@ impl Traversal {
 
                                 let message = counters.report_progress(max_files, &read_mode, system_info);
                                 pb.set_message(message);
+
+                                // Sample scan rate for listing statistics
+                                if let Some(listing_stats) = &counters.listing_stats {
+                                    let current_time = Instant::now();
+                                    let total_files = counters.files.load(Ordering::Relaxed);
+                                    listing_stats.sample_scan_rate(current_time, counters.start_time, total_files);
+                                }
                             }
 
                             if traversal_done && reader_done {
@@ -925,6 +1294,7 @@ pub async fn bench_traversal(
     skip_read: bool,
     thrift_io: Option<&str>,
     detailed_read_stats: bool,
+    detailed_list_stats: bool,
 ) -> Result<Benchmark> {
     // Validate all directories first
     for dir_path in dir_paths {
@@ -952,6 +1322,7 @@ pub async fn bench_traversal(
         follow_symlinks,
         read_mode.clone(),
         detailed_read_stats,
+        detailed_list_stats,
         paths.clone(),
     );
 
@@ -980,6 +1351,14 @@ pub async fn bench_traversal(
     if detailed_read_stats {
         if let Some(stats) = &traversal.counters.advanced_stats {
             print_detailed_read_statistics(stats);
+        }
+    }
+
+    // Display detailed listing statistics if enabled
+    if detailed_list_stats {
+        if let Some(stats) = &traversal.counters.listing_stats {
+            let total_runtime_secs = traversal.counters.total_elapsed_time();
+            print_detailed_listing_statistics(stats, total_runtime_secs);
         }
     }
 
@@ -1173,6 +1552,227 @@ fn print_detailed_read_statistics(stats: &Arc<AdvancedStats>) {
     }
 
     println!("\n===========================\n");
+}
+
+/// Print percentiles for a time-based histogram (converts microseconds to milliseconds)
+fn print_time_percentiles(hist: &Histogram<u64>, include_mean: bool) {
+    if include_mean {
+        println!("  mean:   {:.2} ms", hist.mean() / 1000.0);
+    }
+
+    let percentiles = [
+        ("p50:", 0.50),
+        ("p75:", 0.75),
+        ("p90:", 0.90),
+        ("p95:", 0.95),
+        ("p99:", 0.99),
+        ("p99.9:", 0.999),
+    ];
+
+    for (label, quantile) in percentiles {
+        println!(
+            "  {:<7} {:.2} ms",
+            label,
+            hist.value_at_quantile(quantile) as f64 / 1000.0
+        );
+    }
+    println!("  max:    {:.2} ms", hist.max() as f64 / 1000.0);
+}
+
+fn print_detailed_listing_statistics(stats: &Arc<ListingStats>, total_runtime_secs: f64) {
+    println!("\n=== DETAILED LISTING STATISTICS ===\n");
+
+    // Acquire inner lock once for all histogram and heap accesses
+    if let Ok(inner) = stats.inner.lock() {
+        // readdir() Latency Percentiles (just the system call)
+        println!("readdir() Latency Percentiles (system call only):");
+        if !inner.readdir_latency_hist.is_empty() {
+            print_time_percentiles(&inner.readdir_latency_hist, false);
+        } else {
+            println!("  No readdir operations recorded");
+        }
+
+        // Directory Processing Time Percentiles (total wall-clock time)
+        println!("\nDirectory Processing Time Percentiles (includes iteration):");
+        if !inner.dir_processing_hist.is_empty() {
+            print_time_percentiles(&inner.dir_processing_hist, true);
+        } else {
+            println!("  No processing operations recorded");
+        }
+
+        // Directory Size Distribution
+        println!("\nDirectory Size Distribution:");
+        if !inner.dir_size_hist.is_empty() {
+            let percentiles = [
+                ("p50:", 0.50),
+                ("p75:", 0.75),
+                ("p90:", 0.90),
+                ("p95:", 0.95),
+                ("p99:", 0.99),
+                ("p99.9:", 0.999),
+            ];
+
+            for (label, quantile) in percentiles {
+                println!(
+                    "  {:<7} {} entries",
+                    label,
+                    inner.dir_size_hist.value_at_quantile(quantile)
+                );
+            }
+            println!("  max:    {} entries", inner.dir_size_hist.max());
+        } else {
+            println!("  No directories recorded");
+        }
+
+        // Top 20 Slowest Directories by readdir() time
+        println!("\nTop 20 Slowest Directories (by readdir time):");
+        {
+            // Convert heap to sorted vector
+            let mut slowest: Vec<_> = inner.slowest_dirs.iter().cloned().collect();
+            slowest.sort_by(|a, b| b.latency_ns.cmp(&a.latency_ns));
+
+            if slowest.is_empty() {
+                println!("  No directories recorded");
+            } else {
+                for (i, dir) in slowest.iter().take(20).enumerate() {
+                    println!(
+                        "  {:>2}. {:.2} ms | {} entries | {}",
+                        i + 1,
+                        dir.latency_ns as f64 / 1_000_000.0,
+                        dir.entry_count.to_formatted_string(&Locale::en),
+                        dir.path
+                    );
+                }
+            }
+        }
+
+        // Top 20 Slowest Directories by total processing time
+        println!("\nTop 20 Slowest Directories (by total processing time):");
+        {
+            // Convert heap to sorted vector
+            let mut slowest: Vec<_> = inner.slowest_processing_dirs.iter().cloned().collect();
+            slowest.sort_by(|a, b| b.processing_time_ns.cmp(&a.processing_time_ns));
+
+            if slowest.is_empty() {
+                println!("  No directories recorded");
+            } else {
+                for (i, dir) in slowest.iter().take(20).enumerate() {
+                    let proc_time_ms = dir.processing_time_ns as f64 / 1_000_000.0;
+                    let readdir_time_ms = dir.readdir_latency_ns as f64 / 1_000_000.0;
+                    let iteration_time_ms = proc_time_ms - readdir_time_ms;
+                    let readdir_pct = if proc_time_ms > 0.0 {
+                        (readdir_time_ms / proc_time_ms) * 100.0
+                    } else {
+                        0.0
+                    };
+
+                    println!(
+                        "  {:>2}. {:.2} ms total ({:.2} ms readdir + {:.2} ms iter, {:.1}% readdir) | {} entries | {}",
+                        i + 1,
+                        proc_time_ms,
+                        readdir_time_ms,
+                        iteration_time_ms,
+                        readdir_pct,
+                        dir.entry_count.to_formatted_string(&Locale::en),
+                        dir.path
+                    );
+                }
+            }
+        }
+
+        // Top 20 Largest Directories
+        println!("\nTop 20 Largest Directories (by entry count):");
+        {
+            // Convert heap to sorted vector
+            let mut largest: Vec<_> = inner
+                .largest_dirs
+                .iter()
+                .map(|Reverse((size, path))| (*size, path.clone()))
+                .collect();
+            largest.sort_by(|a, b| b.0.cmp(&a.0));
+
+            if largest.is_empty() {
+                println!("  No directories recorded");
+            } else {
+                for (i, (size, path)) in largest.iter().take(20).enumerate() {
+                    println!(
+                        "  {:>2}. {} entries | {}",
+                        i + 1,
+                        size.to_formatted_string(&Locale::en),
+                        path
+                    );
+                }
+            }
+        }
+    }
+
+    // Scan Rate Variance (separate lock)
+    println!("\nScan Rate Variance:");
+    if let Ok(state) = stats.scan_rate.lock() {
+        if state.samples.len() > 1 {
+            let rates: Vec<f64> = state.samples.iter().map(|s| s.files_per_second).collect();
+
+            let min = rates.iter().cloned().fold(f64::INFINITY, f64::min);
+            let max = rates.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let avg = rates.iter().sum::<f64>() / rates.len() as f64;
+
+            // Calculate standard deviation
+            let variance =
+                rates.iter().map(|r| (*r - avg).powi(2)).sum::<f64>() / rates.len() as f64;
+            let stddev = variance.sqrt();
+
+            println!(
+                "  Files/sec: min={:.0} max={:.0} avg={:.0} stddev={:.0}",
+                min, max, avg, stddev
+            );
+
+            if stddev > avg * 0.2 {
+                println!("  High variance detected - may indicate cache effects or contention");
+            }
+        } else {
+            println!("  Insufficient samples for variance analysis");
+        }
+    }
+
+    // Timing Summary
+    println!("\nTiming Summary:");
+    let total_processing_time_ns = stats.total_processing_time_ns.load(Ordering::Relaxed);
+    let total_processing_time_secs = total_processing_time_ns as f64 / 1_000_000_000.0;
+
+    // Format runtime (total wall-clock)
+    let runtime_mins = (total_runtime_secs / 60.0).floor() as u64;
+    let runtime_secs_rem = total_runtime_secs % 60.0;
+
+    // Format accumulated directory processing time
+    let proc_mins = (total_processing_time_secs / 60.0).floor() as u64;
+    let proc_secs_rem = total_processing_time_secs % 60.0;
+
+    println!(
+        "  Total runtime (wall-clock):           {}m {:.2}s",
+        runtime_mins, runtime_secs_rem
+    );
+    println!(
+        "  Sum of directory processing times:    {}m {:.2}s",
+        proc_mins, proc_secs_rem
+    );
+
+    // Calculate efficiency metric
+    let efficiency_pct = if total_runtime_secs > 0.0 {
+        (total_processing_time_secs / total_runtime_secs) * 100.0
+    } else {
+        0.0
+    };
+
+    println!(
+        "  Directory processing efficiency:      {:.1}%",
+        efficiency_pct
+    );
+
+    if efficiency_pct < 50.0 {
+        println!("  Note: Low efficiency may indicate overhead in traversal queue or I/O wait");
+    }
+
+    println!("\n===================================\n");
 }
 
 fn get_thrift_request(

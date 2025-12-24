@@ -25,6 +25,7 @@ edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
 fail = { version = "0.4", features = ["failpoints"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
+hdrhistogram = "7.5"
 hex = { version = "0.4.3", features = ["alloc"] }
 hg_util = { package = "sapling-util", version = "0.1.0", path = "../../../scm/lib/util" }
 indicatif = { version = "0.18.3", features = ["futures", "improved_unicode", "rayon", "tokio"] }
