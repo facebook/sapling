@@ -17,7 +17,8 @@ from sapling import error, extensions, registrar, scmutil
 from sapling.i18n import _
 from sapling.node import hex
 
-from . import commitcloud
+from .commitcloud import upload as ccupload, util as ccutil
+
 
 DIFFERENTIAL_REGEX = re.compile(
     "Differential Revision: http.+?/"  # Line start, URL
@@ -112,14 +113,12 @@ def crdump(ui, repo, *revs, **opts):
     try:
         # notbackedup is a revset
         notbackedup = revs
-        if ui.configbool(
-            "crdump", "commitcloud", False
-        ) and commitcloud.util.is_supported(repo):
+        if ui.configbool("crdump", "commitcloud", False) and ccutil.is_supported(repo):
             try:
                 oldquiet = repo.ui.quiet
                 # Silence any output from commitcloud
                 repo.ui.quiet = True
-                _backedup, notbackedup = commitcloud.upload.upload(repo, revs)
+                _backedup, notbackedup = ccupload.upload(repo, revs)
                 # Convert nodes back to revs for the below check.
                 notbackedup = repo.revs("%ln", notbackedup)
             except Exception as ex:
