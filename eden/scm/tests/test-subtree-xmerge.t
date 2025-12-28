@@ -122,6 +122,18 @@ Subtree merge should fail with conflicts:
   $ hg resolve --mark bar/dir1/beta
   (no more unresolved files)
   $ hg ci -m "merge gitrepo to bar"
+  $ hg subtree inspect -r .
+  {
+    "xmerges": [
+      {
+        "version": 1,
+        "url": "file:/*/$TESTTMP/gitrepo", (glob)
+        "from_commit": "b25d15e29c29a8deb2bf55184109c4fb6913bcea",
+        "from_path": "",
+        "to_path": "bar"
+      }
+    ]
+  }
 
 Subtree merge should succeed without conflicts:
 
@@ -153,3 +165,15 @@ Subtree merge should succeed without conflicts:
   +g1
   +g2
   +g33
+  $ hg subtree inspect -r .
+  {
+    "xmerges": [
+      {
+        "version": 1,
+        "url": "file:/*/$TESTTMP/gitrepo", (glob)
+        "from_commit": "421b13f5014cb2fdb2782fbea8de256066f975c8",
+        "from_path": "",
+        "to_path": "bar"
+      }
+    ]
+  }
