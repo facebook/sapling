@@ -357,6 +357,9 @@ def subtree_merge(ui, repo, **opts):
     if is_crossrepo:
         # skip some from-path checks for external repos
         from_paths = opts.get("from_path")
+        if not from_paths:
+            # merge the whole external repo by default
+            from_paths = [""]
         subtreeutil.validate_path_depth(ui, to_paths)
     else:
         from_paths = scmutil.rootrelpaths(from_ctx, opts.get("from_path"))

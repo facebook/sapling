@@ -96,7 +96,7 @@ Cross-repo subtree merge doesn't support merge-base-strategy option
 
 Subtree merge should fail with conflicts:
 
-  $ hg subtree merge --url $GIT_URL --rev b25d15e29c29a8deb2bf55184109c4fb6913bcea --from-path "" --to-path bar
+  $ hg subtree merge --url $GIT_URL --rev b25d15e29c29a8deb2bf55184109c4fb6913bcea --to-path bar
   using cached git repo at $TESTTMP/default-hgcache/gitrepos/* (glob)
   searching for merge base ...
   found the last subtree import commit * (glob)
