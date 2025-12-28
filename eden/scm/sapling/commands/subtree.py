@@ -43,6 +43,7 @@ from ..utils.subtreeutil import (
     get_subtree_branches,
     get_subtree_imports,
     get_subtree_merges,
+    get_subtree_xmerges,
 )
 from .cmdtable import command
 
@@ -303,6 +304,13 @@ def subtree_graft(ui, repo, **opts):
             _("strategy for searching merge‑base: %s")
             % ", ".join(MERGE_BASE_STRATEGIES),
         ),
+        (
+            "",
+            "url",
+            "",
+            _("external repository url (EXPERIMENTAL)"),
+            _("URL"),
+        ),
     ]
     + mergetoolopts
     + subtree_path_opts,
@@ -331,25 +339,44 @@ def subtree_merge(ui, repo, **opts):
     - only-from: walk only the from-path's history
     - only-to: walk only the to-path's history
     """
+    if url := opts.get("url"):
+        if opts.get("merge_base_strategy"):
+            raise error.Abort(_("cannot specify both url and merge-base-strategy"))
+        giturl = cloneuri.determine_git_uri(None, url)
+        if giturl is None:
+            raise error.Abort(_("unable to determine git url from '%s'") % url)
+        from_repo = get_or_clone_git_repo(ui, giturl)
+    else:
+        from_repo = repo
+    is_crossrepo = not from_repo.is_same_repo(repo)
+
     ctx = repo["."]
-    from_ctx = scmutil.revsingle(repo, opts.get("rev"))
-    from_paths = scmutil.rootrelpaths(ctx, opts.get("from_path"))
+    from_ctx = scmutil.revsingle(from_repo, opts.get("rev"))
     to_paths = scmutil.rootrelpaths(ctx, opts.get("to_path"))
 
-    pathaclutil.validate_path_acl(repo, from_paths, to_paths, ctx, op_name="merge")
+    if is_crossrepo:
+        # skip some from-path checks for external repos
+        from_paths = opts.get("from_path")
+        subtreeutil.validate_path_depth(ui, to_paths)
+    else:
+        from_paths = scmutil.rootrelpaths(from_ctx, opts.get("from_path"))
+        pathaclutil.validate_path_acl(repo, from_paths, to_paths, ctx, op_name="merge")
+        subtreeutil.validate_path_depth(ui, from_paths + to_paths)
+        subtreeutil.validate_source_commit(repo.ui, from_ctx, "merge")
+
     validate_subtree_merge_path_size(from_paths, to_paths)
-    subtreeutil.validate_path_overlap(from_paths, to_paths)
+    subtreeutil.validate_path_overlap(from_paths, to_paths, is_crossrepo=is_crossrepo)
     subtreeutil.validate_path_exist(ui, from_ctx, from_paths, abort_on_missing=True)
     subtreeutil.validate_path_exist(ui, ctx, to_paths, abort_on_missing=True)
-    subtreeutil.validate_path_depth(ui, from_paths + to_paths)
-    subtreeutil.validate_source_commit(repo.ui, from_ctx, "merge")
     subtreeutil.validate_file_count(repo, from_ctx, from_paths)
 
     merge_base_ctx = _subtree_merge_base(
-        repo, ctx, to_paths, from_ctx, from_paths, opts
+        repo, ctx, to_paths, from_ctx, from_paths, opts, from_repo
     )
     ui.status("merge base: %s\n" % merge_base_ctx)
-    cmdutil.registerdiffgrafts(from_paths, to_paths, from_ctx)
+    cmdutil.registerdiffgrafts(
+        from_paths, to_paths, from_ctx, is_crossrepo=is_crossrepo
+    )
 
     with ui.configoverride(
         {
@@ -366,6 +393,7 @@ def subtree_merge(ui, repo, **opts):
             ancestor=merge_base_ctx,
             mergeancestor=False,
             labels=labels,
+            from_repo=from_repo,
         )
         hg.showstats(repo, stats)
         if stats[3]:
@@ -474,7 +502,9 @@ def is_full_repo_branch_merge(from_paths, to_paths):
     return all(a == b for a, b in zip(from_paths, to_paths))
 
 
-def _subtree_merge_base(repo, to_ctx, to_paths, from_ctx, from_paths, opts):
+def _subtree_merge_base(
+    repo, to_ctx, to_paths, from_ctx, from_paths, opts, from_repo=None
+):
     """get the best merge base for subtree merge
 
     There are two major use cases for subtree merge:
@@ -490,16 +520,20 @@ def _subtree_merge_base(repo, to_ctx, to_paths, from_ctx, from_paths, opts):
     path mapping.
     """
 
-    def registerdiffgrafts(merge_base_ctx, heads_index):
+    def registerdiffgrafts(merge_base_ctx, heads_index, is_crossrepo=False):
         # if the head index is 0, then it points to to_paths, which means
         # the merge direction matches the original copy direction, otherwise
         # it is a reverse merge
         if heads_index == 0:
             curr_from_path = paths[1]
-            cmdutil.registerdiffgrafts([curr_from_path], [to_path], merge_base_ctx)
+            cmdutil.registerdiffgrafts(
+                [curr_from_path], [to_path], merge_base_ctx, is_crossrepo=is_crossrepo
+            )
         else:
             curr_to_path = paths[0]
-            cmdutil.registerdiffgrafts([curr_to_path], [to_path], merge_base_ctx)
+            cmdutil.registerdiffgrafts(
+                [curr_to_path], [to_path], merge_base_ctx, is_crossrepo=is_crossrepo
+            )
         return merge_base_ctx
 
     def get_p1(dag, node):
@@ -518,7 +552,13 @@ def _subtree_merge_base(repo, to_ctx, to_paths, from_ctx, from_paths, opts):
             return iter([])
         return pathlog.pathlog(repo, node, path, is_prefetch_commit_text=True)
 
-    strategy = opts.get("merge_base_strategy")
+    from_repo = from_repo or repo
+    is_crossrepo = not from_repo.is_same_repo(repo)
+    if is_crossrepo:
+        # Currently, we don't support searching history of external repos
+        strategy = "only-to"
+    else:
+        strategy = opts.get("merge_base_strategy")
     if strategy and strategy not in MERGE_BASE_STRATEGIES:
         raise error.Abort(
             _("invalid merge base strategy: %s") % strategy,
@@ -527,9 +567,8 @@ def _subtree_merge_base(repo, to_ctx, to_paths, from_ctx, from_paths, opts):
 
     to_path, from_path = to_paths[0], from_paths[0]
     paths = [to_path, from_path]
-
     dag = repo.changelog.dag
-    if is_full_repo_branch_merge(from_paths, to_paths):
+    if not is_crossrepo and is_full_repo_branch_merge(from_paths, to_paths):
         nodes = [from_ctx.node(), to_ctx.node()]
         gca = dag.gcaone(nodes)
         if not gca:
@@ -587,33 +626,60 @@ def _subtree_merge_base(repo, to_ctx, to_paths, from_ctx, from_paths, opts):
             # check merge info
             curr_node = heads[i]
             ui.debug("checking commit %s\n" % node.short(curr_node))
-            for merge in get_subtree_merges(repo, curr_node):
-                if merge.to_path == paths[i] and merge.from_path == paths[1 - i]:
-                    ui.status(
-                        _("found the last subtree merge commit %s\n")
-                        % node.short(curr_node)
-                    )
-                    merge_base_ctx = repo[merge.from_commit]
-                    return registerdiffgrafts(merge_base_ctx, i)
 
-            # check branch info
-            for branch in get_subtree_branches(repo, curr_node):
-                if branch.to_path == paths[i] and branch.from_path == paths[1 - i]:
-                    ui.status(
-                        _("found the last subtree copy commit %s\n")
-                        % node.short(curr_node)
-                    )
-                    merge_base_ctx = repo[branch.from_commit]
-                    return registerdiffgrafts(merge_base_ctx, i)
-                elif branch.to_path == paths[i]:
-                    # subtree copy overwrite, follow the source commit
-                    source_node = node.bin(branch.from_commit)
-                    paths[i] = branch.from_path
-                    hist = pathlog.pathlog(
-                        repo, source_node, paths[i], is_prefetch_commit_text=True
-                    )
-                    # XXX: handle normal merge base
-                    iters[i] = hist
+            if is_crossrepo:
+                # check import info
+                for _import in get_subtree_imports(repo, curr_node):
+                    if (
+                        _import.to_path == paths[i]
+                        and _import.from_path == paths[1 - i]
+                    ):
+                        ui.status(
+                            _("found the last subtree import commit %s\n")
+                            % node.short(curr_node)
+                        )
+                        merge_base_ctx = from_repo[_import.from_commit]
+                        return registerdiffgrafts(merge_base_ctx, i, is_crossrepo=True)
+
+                # check cross-repo merge info
+                for xmerge in get_subtree_xmerges(repo, curr_node):
+                    if xmerge.to_path == paths[i] and xmerge.from_path == paths[1 - i]:
+                        ui.status(
+                            _("found the last subtree cross-repo merge commit %s\n")
+                            % node.short(curr_node)
+                        )
+                        merge_base_ctx = from_repo[xmerge.from_commit]
+                        return registerdiffgrafts(merge_base_ctx, i, is_crossrepo=True)
+
+            else:
+                # check intra-repo merge info
+                for merge in get_subtree_merges(repo, curr_node):
+                    if merge.to_path == paths[i] and merge.from_path == paths[1 - i]:
+                        ui.status(
+                            _("found the last subtree merge commit %s\n")
+                            % node.short(curr_node)
+                        )
+                        merge_base_ctx = repo[merge.from_commit]
+                        return registerdiffgrafts(merge_base_ctx, i)
+
+                # check branch info
+                for branch in get_subtree_branches(repo, curr_node):
+                    if branch.to_path == paths[i] and branch.from_path == paths[1 - i]:
+                        ui.status(
+                            _("found the last subtree copy commit %s\n")
+                            % node.short(curr_node)
+                        )
+                        merge_base_ctx = repo[branch.from_commit]
+                        return registerdiffgrafts(merge_base_ctx, i)
+                    elif branch.to_path == paths[i]:
+                        # subtree copy overwrite, follow the source commit
+                        source_node = node.bin(branch.from_commit)
+                        paths[i] = branch.from_path
+                        hist = pathlog.pathlog(
+                            repo, source_node, paths[i], is_prefetch_commit_text=True
+                        )
+                        # XXX: handle normal merge base
+                        iters[i] = hist
 
             try:
                 # add next node to the list
