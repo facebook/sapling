@@ -107,6 +107,17 @@ def get_deprecated_subtree_metadata_keys(ui) -> Set[str]:
 #       }
 #     ],
 #     "v": 1
+#   },
+#   {
+#     "xmerges": [
+#       {
+#         "from_commit": "1c9ffab8a5868369895cbdd5d42cf2b34361c5ae",
+#         "from_path": "",
+#         "to_path": "foo/sapling",
+#         "url": "https://github.com/facebook/sapling.git"
+#       }
+#     ],
+#     "v": 1
 #   }
 # ]
 
@@ -155,6 +166,21 @@ class SubtreeBranch:
 @dataclass
 class SubtreeMerge:
     version: int
+    from_commit: str
+    from_path: str
+    to_path: str
+
+    def to_minimal_dict(self):
+        return {k: v for k, v in self.__dict__.items() if k != "version"}
+
+    def to_full_dict(self):
+        return asdict(self)
+
+
+@dataclass
+class SubtreeCrossRepoMerge:
+    version: int
+    url: str
     from_commit: str
     from_path: str
     to_path: str
@@ -261,15 +287,43 @@ def _imports_to_dict(imports: List[SubtreeImport], version: int):
 
 
 def gen_merge_info(repo, subtree_merges, version=SUBTREE_METADATA_VERSION):
+    xmerges = [m for m in subtree_merges if m["from_url"]]
+    imerges = [m for m in subtree_merges if not m["from_url"]]
+
+    xmerges_metadata = gen_cross_repo_merge_metadata(repo, xmerges, version)
+    imerges_metadata = gen_intra_repo_merge_metadata(repo, imerges, version)
+
+    metadata = {**xmerges_metadata, **imerges_metadata}
+    if not metadata:
+        return {}
+    return _encode_subtree_metadata_list(repo.ui, [metadata])
+
+
+def gen_cross_repo_merge_metadata(
+    _repo, subtree_xrepo_merges, version=SUBTREE_METADATA_VERSION
+):
     merges = [
+        SubtreeCrossRepoMerge(
+            version=version,
+            from_commit=node.hex(m["from_commit"]),
+            from_path=m["from_path"],
+            to_path=m["to_path"],
+            url=m["from_url"],
+        )
+        for m in subtree_xrepo_merges
+    ]
+    metadata = _merges_to_dict(merges, version, is_crossrepo=True)
+    return metadata
+
+
+def gen_intra_repo_merge_metadata(
+    repo, subtree_merges, version=SUBTREE_METADATA_VERSION
+):
+    filtered_merges = [
         m
         for m in subtree_merges
         if is_source_commit_allowed(repo.ui, repo[m["from_commit"]])
     ]
-    if not merges:
-        return {}
-
-    # XXX: handle cross-repo merge metadata
     merges = [
         SubtreeMerge(
             version=version,
@@ -277,21 +331,19 @@ def gen_merge_info(repo, subtree_merges, version=SUBTREE_METADATA_VERSION):
             from_path=m["from_path"],
             to_path=m["to_path"],
         )
-        for m in subtree_merges
+        for m in filtered_merges
     ]
     metadata = _merges_to_dict(merges, version)
-    return _encode_subtree_metadata_list(repo.ui, [metadata])
+    return metadata
 
 
-def _merges_to_dict(merges: List[SubtreeMerge], version: int):
+def _merges_to_dict(merges: List[SubtreeMerge], version: int, is_crossrepo=False):
     if not merges:
         return {}
-    merge_dict_list = []
     sorted_merges = sorted(merges, key=lambda x: x.to_path)
-    for m in sorted_merges:
-        item = m.to_minimal_dict()
-        merge_dict_list.append(item)
-    return {"v": version, "merges": merge_dict_list}
+    merge_dict_list = [m.to_minimal_dict() for m in sorted_merges]
+    key = "xmerges" if is_crossrepo else "merges"
+    return {"v": version, key: merge_dict_list}
 
 
 def get_subtree_metadata(extra):
@@ -372,6 +424,24 @@ def get_subtree_merges(repo, node) -> List[SubtreeMerge]:
     return result
 
 
+def get_subtree_xmerges(repo, node) -> List[SubtreeCrossRepoMerge]:
+    extra = repo[node].extra()
+    result = []
+    if metadata_list := _get_subtree_metadata_by_subtree_keys(extra):
+        for metadata in metadata_list:
+            for xmerge in metadata.get("xmerges", []):
+                result.append(
+                    SubtreeCrossRepoMerge(
+                        version=metadata["v"],
+                        url=xmerge["url"],
+                        from_commit=xmerge["from_commit"],
+                        from_path=xmerge["from_path"],
+                        to_path=xmerge["to_path"],
+                    )
+                )
+    return result
+
+
 def get_subtree_imports(repo, node) -> List[SubtreeImport]:
     extra = repo[node].extra()
     result = []
@@ -413,24 +483,31 @@ def _get_subtree_metadata_by_subtree_keys(extra):
 
 
 def merge_subtree_metadata(repo, ctxs):
-    branches, merges, imports = [], [], []
+    branches, merges, xmerges, imports = [], [], [], []
 
     # get subtree metadata
     for ctx in ctxs:
         node = ctx.node()
         branches.extend(get_subtree_branches(repo, node))
         merges.extend(get_subtree_merges(repo, node))
+        xmerges.extend(get_subtree_xmerges(repo, node))
         imports.extend(get_subtree_imports(repo, node))
 
-    if not branches and not merges and not imports:
+    if not branches and not merges and not imports and not xmerges:
         return {}
 
     # metadata merge validation
-    if bool(branches) + bool(merges) + bool(imports) > 1:
+
+    if bool(branches) + bool(merges) + bool(imports) + bool(xmerges) > 1:
         # Although we currently reject combining different subtree operations,
         # the logic below supports it. This allows us to enable it later if needed.
+
+        ops = ["copy"] if branches else []
+        ops += ["merge"] if merges else []
+        ops += ["cross-repo merge"] if xmerges else []
+        ops += ["import"] if imports else []
         raise error.Abort(
-            _("cannot combine different subtree operations: copy, merge or import")
+            _("cannot combine different subtree operations: %s") % ", ".join(ops),
         )
 
     from_paths = [b.from_path for b in branches] + [m.from_path for m in merges]
@@ -438,6 +515,7 @@ def merge_subtree_metadata(repo, ctxs):
         [b.to_path for b in branches]
         + [m.to_path for m in merges]
         + [i.to_path for i in imports]
+        + [m.to_path for m in xmerges]
     )
     try:
         validate_path_overlap(from_paths, to_paths)
@@ -446,25 +524,30 @@ def merge_subtree_metadata(repo, ctxs):
             _("cannot combine commits with overlapping subtree paths"),
             hint=str(e),
         )
-    # skip checking the from_paths of imports
+    # skip checking the from_paths of imports and cross-repo merges
     from_paths += [i.from_path for i in imports]
+    from_paths += [i.from_path for i in xmerges]
 
     # group by version
     version_to_branches = defaultdict(list)
     version_to_merges = defaultdict(list)
     version_to_imports = defaultdict(list)
+    version_to_xmerges = defaultdict(list)
     for b in branches:
         version_to_branches[b.version].append(b)
     for m in merges:
         version_to_merges[m.version].append(m)
     for i in imports:
         version_to_imports[i.version].append(i)
+    for m in xmerges:
+        version_to_xmerges[m.version].append(m)
 
     # validate versions
     versions = (
         set(version_to_branches.keys())
         | set(version_to_merges.keys())
         | set(version_to_imports.keys())
+        | set(version_to_xmerges.keys())
     )
     if unsupported_versions := versions - SUPPORTED_SUBTREE_METADATA_VERSIONS:
         raise error.Abort(
@@ -477,6 +560,7 @@ def merge_subtree_metadata(repo, ctxs):
     for v in versions:
         item = _branches_to_dict(version_to_branches[v], v)
         item.update(_merges_to_dict(version_to_merges[v], v))
+        item.update(_merges_to_dict(version_to_xmerges[v], v, is_crossrepo=True))
         item.update(_imports_to_dict(version_to_imports[v], v))
         result.append(item)
 

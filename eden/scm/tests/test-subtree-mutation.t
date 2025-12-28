@@ -162,7 +162,7 @@ test fold subtree copy and subtree merge commits
   +4
   $ hg ci -m 'merge from foo to bar'
   $ hg fold --from .^
-  abort: cannot combine different subtree operations: copy, merge or import
+  abort: cannot combine different subtree operations: copy, merge
   [255]
 
 test split subtree copy commit
