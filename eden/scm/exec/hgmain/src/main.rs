@@ -25,6 +25,23 @@ use windows::is_edenfs_stopped;
 
 #[cfg_attr(fbcode_build, fbinit::main)]
 fn main() {
+    // Meta's Python 3.12 version has the built-in lazy_imports feature,
+    // which can be enabled with `PYTHONLAZYIMPORTSALL=1` env variable.
+    // However, Sapling is not lazy_imports safe. The following disables
+    // the lazy_imports feature by setting the env variable to empty string.
+    // See: https://fburl.com/workplace/xc0v9ql6
+    if let Some(v) = std::env::var_os("PYTHONLAZYIMPORTSALL") {
+        // Note: Python handles various truthy values for env flags.
+        // Checking only for "1" is insufficient as other values (like -2)
+        // trigger the same behavior.
+        // See: https://github.com/python/cpython/blob/b6b0e14b3d4aa9e9b89bef9a516177238883e1a7/Python/preconfig.c#L571
+        if !v.is_empty() && v != "0" {
+            unsafe {
+                std::env::set_var("PYTHONLAZYIMPORTSALL", "");
+            }
+        }
+    }
+
     // Allow dropping root, which is useful when running under DTrace on Mac.
     #[cfg(unix)]
     if let Ok(Some((user, group))) = std::env::var("SL_DEBUG_DROP_ROOT")
