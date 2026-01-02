@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
+use blobstore::Blobstore;
 use blobstore::KeyedBlobstore;
 use clap::Args;
 use cloned::cloned;
@@ -26,6 +27,7 @@ use mononoke_app::MononokeReposManager;
 use mononoke_macros::mononoke;
 use mononoke_types::BlobstoreBytes;
 use mononoke_types::ChangesetId;
+use mutable_blobstore::MutableRepoBlobstoreRef;
 use preloaded_commit_graph_storage::ExtendablePreloadedEdges;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityArc;
@@ -200,6 +202,14 @@ pub(super) async fn update_preloaded(
     println!("Deserialized preloaded edges into {} bytes", bytes.len());
 
     repo.repo_blobstore()
+        .put(
+            ctx,
+            args.blobstore_key.clone(),
+            BlobstoreBytes::from_bytes(bytes.clone()),
+        )
+        .await?;
+
+    repo.mutable_repo_blobstore()
         .put(ctx, args.blobstore_key, BlobstoreBytes::from_bytes(bytes))
         .await?;
 

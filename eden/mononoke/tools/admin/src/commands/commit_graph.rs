@@ -34,6 +34,7 @@ use is_ancestor::IsAncestorArgs;
 use metaconfig_types::RepoConfig;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::OptRepoArgs;
+use mutable_blobstore::MutableRepoBlobstore;
 use range_stream::RangeStreamArgs;
 use repo_blobstore::RepoBlobstore;
 use repo_identity::RepoIdentity;
@@ -108,6 +109,9 @@ pub struct Repo {
 
     #[facet]
     repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    mutable_repo_blobstore: MutableRepoBlobstore,
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
