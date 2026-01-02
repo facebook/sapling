@@ -120,12 +120,25 @@ pub(super) async fn update_preloaded(
         );
 
     let preloaded_edges = match args.rebuild {
-        false => match repo.repo_blobstore().get(ctx, &args.blobstore_key).await? {
-            Some(bytes) => {
-                preloaded_commit_graph_storage::deserialize_preloaded_edges(bytes.into_raw_bytes())?
+        false => {
+            #[cfg(fbcode_build)]
+            let bytes =
+                if justknobs::eval("scm/mononoke:commit_graph_use_mutable_storage", None, None)? {
+                    repo.mutable_repo_blobstore()
+                        .get(ctx, &args.blobstore_key)
+                        .await?
+                } else {
+                    repo.repo_blobstore().get(ctx, &args.blobstore_key).await?
+                };
+            #[cfg(not(fbcode_build))]
+            let bytes = repo.repo_blobstore().get(ctx, &args.blobstore_key).await?;
+            match bytes {
+                Some(bytes) => preloaded_commit_graph_storage::deserialize_preloaded_edges(
+                    bytes.into_raw_bytes(),
+                )?,
+                None => Default::default(),
             }
-            None => Default::default(),
-        },
+        }
         true => Default::default(),
     };
 
