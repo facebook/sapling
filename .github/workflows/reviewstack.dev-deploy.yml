@@ -1,9 +1,15 @@
-name: Publish https://reviewstack.dev
+name: Deploy ReviewStack to Cloudflare Pages
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * 1-5'
+  push:
+    branches:
+      - main
+    paths:
+      - 'eden/contrib/reviewstack/**'
+      - 'eden/contrib/reviewstack.dev/**'
+      - 'eden/contrib/shared/**'
+      - '.github/workflows/reviewstack.dev-deploy.yml'
 
 jobs:
   deploy:
@@ -37,11 +43,10 @@ jobs:
         working-directory: ./eden/contrib/reviewstack.dev
         run: yarn release
 
-      # Push to the release branch.
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v4
-        if: ${{ github.ref == 'refs/heads/main' }}
+      # Deploy to Cloudflare Pages
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: reviewstack.dev-prod
-          publish_dir: ./eden/contrib/reviewstack.dev/build
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy ./eden/contrib/reviewstack.dev/build --project-name=reviewstack
