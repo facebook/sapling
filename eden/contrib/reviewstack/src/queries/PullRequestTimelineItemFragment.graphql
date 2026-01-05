@@ -50,6 +50,7 @@ fragment PullRequestTimelineItemFragment on PullRequestTimelineItems {
     author {
       ...ActorFragment
     }
+    body
     bodyHTML
   }
   ... on RenamedTitleEvent {

@@ -11,15 +11,9 @@ import type {CustomLoginDialogProps} from 'reviewstack/src/LoginDialog';
 import Footer from './Footer';
 import InlineCode from './InlineCode';
 import {Box, Button, Heading, Text, TextInput} from '@primer/react';
-import Authenticator from 'netlify-auth-providers';
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import AppHeader from 'reviewstack/src/AppHeader';
 import Link from 'reviewstack/src/Link';
-
-/**
- * See https://docs.github.com/en/developers/apps/building-oauth-apps/scopes-for-oauth-apps
- */
-const GITHUB_OAUTH_SCOPE = ['user', 'repo'].join(' ');
 
 export default function NetlifyLoginDialog(props: CustomLoginDialogProps): React.ReactElement {
   return (
@@ -58,17 +52,32 @@ function EndUserInstructions(props: CustomLoginDialogProps): React.ReactElement 
   const {setTokenAndHostname} = props;
   const [isButtonDisabled, setButtonDisabled] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const onClick = useCallback(async () => {
-    setButtonDisabled(true);
-    try {
-      const token = await fetchGitHubToken();
+
+  // Check for OAuth token in URL hash on mount (from OAuth callback)
+  useEffect(() => {
+    const hash = window.location.hash;
+    const tokenMatch = hash.match(/token=([^&]+)/);
+    if (tokenMatch) {
+      const token = tokenMatch[1];
+      // Clear the hash from URL
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
       setTokenAndHostname(token, 'github.com');
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'error fetching OAuth token';
-      setErrorMessage(message);
     }
-    setButtonDisabled(false);
-  }, [setButtonDisabled, setErrorMessage, setTokenAndHostname]);
+    // Check for error in URL params (from failed OAuth)
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get('error');
+    if (error) {
+      setErrorMessage(error);
+      // Clear error from URL
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [setTokenAndHostname]);
+
+  const onClick = useCallback(() => {
+    setButtonDisabled(true);
+    // Redirect to OAuth login endpoint
+    window.location.href = '/_oauth/login';
+  }, []);
 
   return (
     <Box>
@@ -222,23 +231,3 @@ function H3({children}: {children: React.ReactNode}): React.ReactElement {
   );
 }
 
-function fetchGitHubToken(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const authenticator = new Authenticator({});
-    authenticator.authenticate(
-      {provider: 'github', scope: GITHUB_OAUTH_SCOPE},
-      (error: Error | null, data: {token: string} | null) => {
-        if (error) {
-          reject(error);
-        } else {
-          const token = data?.token;
-          if (typeof token === 'string') {
-            resolve(token);
-          } else {
-            reject(new Error('token missing in OAuth response'));
-          }
-        }
-      },
-    );
-  });
-}
