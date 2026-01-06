@@ -104,6 +104,7 @@ from facebook.eden.ttypes import (
     GetCurrentSnapshotInfoRequest,
     GetScmStatusParams,
     MountId,
+    MountInfo,
     MountState,
     RootIdOptions,
     SendNotificationRequest,
@@ -1563,6 +1564,133 @@ class MountCmd(Subcmd):
         return exitcode
 
 
+def remove_legacyephemeral_checkouts(
+    instance: config_mod.EdenInstance, out: ui.Output
+) -> int:
+    """
+    Enumerate all configured checkouts and remove any with legacyephemeral
+    inode catalog type.
+
+    The legacyephemeral catalog type has a fundamental design constraint: it only
+    supports fresh overlays. When EdenFS tries to mount a checkout with a
+    pre-existing legacyephemeral overlay, it throws an error and fails to start.
+
+    This function automatically detects and removes such checkouts before daemon
+    start to prevent mount failures, especially after crashes or kills where normal
+    cleanup code wouldn't run.
+
+    Returns: Number of checkouts removed
+    """
+    # Skip this check on Windows - legacyephemeral is not supported on that platform
+    if sys.platform == "win32":
+        return 0
+
+    removed_count = 0
+
+    # 1. Enumerate all configured checkouts
+    try:
+        checkouts = instance.get_checkouts()
+    except Exception as e:
+        out.write(
+            f"Warning: Could not enumerate checkouts: {e}\n"
+            "Continuing with daemon start...\n"
+        )
+        return 0
+
+    # 2. Filter for legacyephemeral catalog type
+    legacyephemeral_checkouts: List[config_mod.EdenCheckout] = []
+    for checkout in checkouts:
+        try:
+            config = checkout.get_config()
+            if config.inode_catalog_type == "legacyephemeral":
+                legacyephemeral_checkouts.append(checkout)
+        except Exception as e:
+            # If we can't read config, skip this checkout
+            out.write(
+                f"Warning: Could not read config for {checkout.path}: {e}\n"
+                "Skipping this checkout.\n"
+            )
+            continue
+
+    # 3. Early return if none found
+    if not legacyephemeral_checkouts:
+        return 0
+
+    # 4. Log warning about auto-removal
+    out.write(
+        f"Found {len(legacyephemeral_checkouts)} checkout(s) with "
+        "legacyephemeral inode catalog type.\n"
+        "These will be automatically removed\n"
+    )
+
+    # 5. Fetch mount info once (daemon may or may not be running). Doing this first introduces a
+    # slightly larger window for a race condition to be hit since the mount status can change by
+    # the time we try to remove the checkout, but in practice it shouldn't be a problem.
+    # It's cheaper to do this once than in every for loop iteration
+    mount_info: List[MountInfo] = []
+    try:
+        with instance.get_thrift_client_legacy() as client:
+            mount_info = client.listMounts()
+    except EdenNotRunningError:
+        # Daemon not running, no mounts active
+        pass
+
+    # 6. Remove each checkout
+    for checkout in legacyephemeral_checkouts:
+        path = checkout.path
+        try:
+            out.write(f"Removing legacyephemeral checkout: {path}\n")
+
+            is_mounted = any(m.mountPoint == bytes(path) for m in mount_info)
+
+            result = remove_checkout_impl(
+                instance=instance,
+                path=str(path),
+                is_mounted=is_mounted,
+                output=out,
+                preserve_mount_point=False,
+                use_force=True,
+                complain_about_redirections=False,
+                skip_destroy=False,
+                debug=False,
+            )
+
+            # Log any errors but continue (don't block daemon start)
+            if result.unmount_error:
+                out.write(
+                    f"  Warning: Unmount failed for {path}: {result.unmount_error}\n"
+                    "  Continuing with config cleanup...\n"
+                )
+
+            if result.destroy_error:
+                out.write(
+                    f"  Error deleting configuration for {path}: {result.destroy_error}\n"
+                    "  This checkout will fail to mount. Manual cleanup recommended.\n"
+                    f"  Run: sudo unmount -f {path} && rm -rf {path}\n"
+                )
+            else:
+                if result.cleanup_error:
+                    out.write(
+                        f"  Warning: Failed to cleanup mount point {path}: {result.cleanup_error}\n"
+                        "  Manual cleanup recommended.\n"
+                        f"  Run: rm -rf {path}\n"
+                    )
+
+                out.write(f"  Removed {path}\n")
+                removed_count += 1
+
+        except Exception as e:
+            # Log error but don't block daemon start
+            out.write(
+                f"  Error removing {path}: {e}\n"
+                "  This checkout may fail to mount. Manual cleanup recommended.\n"
+                f"  Run: sudo unmount -f {path} && rm -rf {path}\n"
+            )
+
+    out.write(f"\nRemoved {removed_count} legacyephemeral checkout(s).\n\n", flush=True)
+    return removed_count
+
+
 @dataclass
 class RemoveCheckoutResult:
     """Result of a checkout removal operation."""
@@ -2088,6 +2216,10 @@ class StartCmd(Subcmd):
             is_takeover: bool = False
 
         instance = get_eden_instance(args)
+
+        # Clean up legacyephemeral checkouts before starting daemon
+        remove_legacyephemeral_checkouts(instance, ui.get_output())
+
         if args.if_necessary and not instance.get_mount_paths():
             print("No EdenFS mount points configured.")
             return 0
@@ -2485,6 +2617,14 @@ class RestartCmd(Subcmd):
 
     def _graceful_restart(self, instance: EdenInstance) -> int:
         print("Performing a graceful restart...")
+
+        # Clean up legacyephemeral checkouts before the takeover attempt. With this decision, there
+        # is a tradeoff for the case of unsuccessful takeover and old daemon recovery: The old
+        # daemon will not be able to recover the legacy ephemeral checkouts. Due to the
+        # nature of these checkouts, the tradeoff is acceptable considering the complexity of
+        # getting the recovery logic right for this edge case.
+        remove_legacyephemeral_checkouts(instance, ui.get_output())
+
         with instance.get_telemetry_logger().new_sample(
             "graceful_restart"
         ) as telemetry_sample:
@@ -2512,6 +2652,10 @@ class RestartCmd(Subcmd):
 
     def _start(self, instance: EdenInstance) -> int:
         print("edenfs daemon is not currently running. Starting...")
+
+        # Clean up legacyephemeral checkouts before starting daemon
+        remove_legacyephemeral_checkouts(instance, ui.get_output())
+
         return daemon.start_edenfs_service(
             instance,
             daemon_binary=self.args.daemon_binary,
@@ -2585,6 +2729,9 @@ re-open these files after EdenFS is restarted.
         self._wait_for_stop(instance, pid, timeout)
 
     def _finish_restart(self, instance: EdenInstance, allow_root: bool = False) -> int:
+        # Clean up legacyephemeral checkouts before starting daemon
+        remove_legacyephemeral_checkouts(instance, ui.get_output())
+
         exit_code = daemon.start_edenfs_service(
             instance,
             daemon_binary=self.args.daemon_binary,

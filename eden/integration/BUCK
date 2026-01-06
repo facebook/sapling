@@ -205,6 +205,21 @@ python_unittest(
 )
 
 python_unittest(
+    name = "legacyephemeral_cleanup",
+    srcs = ["legacyephemeral_cleanup_test.py"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_unittest(
     name = "lock",
     srcs = ["lock_test.py"],
     compatible_with = [
