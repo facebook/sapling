@@ -205,6 +205,14 @@ pub fn eden_clone(
         }
     }
 
+    // Pass additional eden clone args from config if specified
+    if let Ok(Some(eden_clone_args)) = config.get_opt::<String>("edenfs", "eden-clone-args") {
+        // Split the args string and append to clone command
+        for arg in eden_clone_args.split_whitespace() {
+            clone_command.arg(arg);
+        }
+    }
+
     run_eden_clone_command(&mut clone_command).context("error performing eden clone")
 }
 
