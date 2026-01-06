@@ -31,9 +31,25 @@
 use std::sync::atomic::AtomicPtr;
 use std::sync::atomic::Ordering;
 
+#[cfg(target_os = "linux")]
 pub use unwind;
-use unwind::Cursor;
-use unwind::RegNum;
+pub use unwind::Cursor;
+pub use unwind::RegNum;
+
+/// Place holder unwind for non-Linux systems.
+#[cfg(not(target_os = "linux"))]
+pub mod unwind {
+    #[derive(Clone)]
+    pub struct Cursor<'a>(std::marker::PhantomData<&'a ()>);
+    pub enum RegNum {
+        IP = 1,
+    }
+    impl<'a> Cursor<'a> {
+        pub fn step(&mut self) -> Result<bool, ()> {
+            Ok(false)
+        }
+    }
+}
 
 /// Extend the default frame resolver to support resolving non-native
 /// frames. For example, to extract Python frames.
@@ -115,6 +131,7 @@ impl<'a> Frame<'a> {
     }
 
     fn default_resolve(&mut self) -> String {
+        #[cfg(target_os = "linux")]
         match self.cursor.procedure_name() {
             Err(_) => match self.cursor.register(RegNum::IP) {
                 Ok(ip) => format!("{:#x}", ip),
@@ -125,11 +142,18 @@ impl<'a> Frame<'a> {
                 format!("{}+{}", name, s.offset())
             }
         }
+        #[cfg(not(target_os = "linux"))]
+        String::new()
     }
 
     /// Program counter (instruction pointer) for this frame.
     pub fn pc(&mut self) -> Option<usize> {
-        self.cursor.register(RegNum::IP).ok().map(|v| v as usize)
+        #[cfg(target_os = "linux")]
+        {
+            self.cursor.register(RegNum::IP).ok().map(|v| v as usize)
+        }
+        #[cfg(not(target_os = "linux"))]
+        None
     }
 }
 
@@ -149,10 +173,17 @@ pub struct Backtrace<'a> {
 // performance.
 #[macro_export]
 macro_rules! try_backtrace {
-    () => {{
-        $crate::unwind::get_context!(context);
-        $crate::unwind::Cursor::local(context).map($crate::Backtrace::new)
-    }};
+    () => {
+        #[cfg(target_os = "linux")]
+        {
+            $crate::unwind::get_context!(context);
+            $crate::unwind::Cursor::local(context).map($crate::Backtrace::new)
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            None
+        }
+    };
 }
 
 impl<'a> Backtrace<'a> {
