@@ -428,4 +428,98 @@ mod tests {
 
         Ok(())
     }
+
+    #[mononoke::fbinit_test]
+    async fn test_hunks_string_inputs(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with String inputs
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\nline4\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nmodified line2\nline3\nline5\n".to_string(),
+        });
+
+        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input)).await?;
+
+        // Should have 2 hunks: one for line2 modification and one for line4->line5 change
+        assert_eq!(result.len(), 2);
+
+        // First hunk: line2 modification (line index 1)
+        let first_hunk = &result[0];
+        assert_eq!(first_hunk.add_range.start, 1);
+        assert_eq!(first_hunk.add_range.end, 2);
+        assert_eq!(first_hunk.delete_range.start, 1);
+        assert_eq!(first_hunk.delete_range.end, 2);
+
+        // Second hunk: line4->line5 change (line index 3)
+        let second_hunk = &result[1];
+        assert_eq!(second_hunk.add_range.start, 3);
+        assert_eq!(second_hunk.add_range.end, 4);
+        assert_eq!(second_hunk.delete_range.start, 3);
+        assert_eq!(second_hunk.delete_range.end, 4);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_hunks_string_vs_none(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        let string_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+
+        // Test None vs String - Should show file addition
+        let result = hunks(&ctx, &repo, None, Some(string_input.clone())).await?;
+        assert_eq!(result.len(), 1);
+
+        let hunk = &result[0];
+        assert_eq!(hunk.add_range.start, 0);
+        assert_eq!(hunk.add_range.end, 3); // Three lines added
+        assert_eq!(hunk.delete_range.start, 0);
+        assert_eq!(hunk.delete_range.end, 0); // No lines deleted
+
+        // Test String vs None - Should show file deletion
+        let result = hunks(&ctx, &repo, Some(string_input), None).await?;
+        assert_eq!(result.len(), 1);
+
+        let hunk = &result[0];
+        assert_eq!(hunk.add_range.start, 0);
+        assert_eq!(hunk.add_range.end, 0); // No lines added
+        assert_eq!(hunk.delete_range.start, 0);
+        assert_eq!(hunk.delete_range.end, 3); // Three lines deleted
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_hunks_string_identical(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with identical String inputs
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+
+        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input)).await?;
+
+        // Identical strings should produce no hunks
+        assert_eq!(result.len(), 0);
+
+        Ok(())
+    }
 }

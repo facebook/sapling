@@ -217,8 +217,13 @@ pub struct LfsPointer {
 pub enum DiffSingleInput {
     ChangesetPath(DiffInputChangesetPath),
     Content(DiffInputContent),
+    String(DiffInputString),
 }
 
+#[derive(Debug, Clone)]
+pub struct DiffInputString {
+    pub content: String,
+}
 #[derive(Debug, Clone)]
 pub struct DiffInputChangesetPath {
     pub changeset_id: ChangesetId,

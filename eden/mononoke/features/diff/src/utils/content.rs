@@ -48,6 +48,12 @@ pub async fn load_content(
             )
             .await?
         }
+        DiffSingleInput::String(string_input) => {
+            // For string inputs, convert the string directly to Bytes and return early
+            return Ok(Some(Bytes::copy_from_slice(
+                string_input.content.as_bytes(),
+            )));
+        }
     };
 
     if let Some(content_id) = content_id {
@@ -237,6 +243,11 @@ async fn extract_input_data(
                 content_input.lfs_pointer.clone(),
             ))
         }
+        DiffSingleInput::String(_string_input) => {
+            // For string inputs, there's no content ID, changeset ID, or LFS pointer
+            // Use the default path provided
+            Ok((None, None, default_path, None))
+        }
     }
 }
 
@@ -294,6 +305,17 @@ pub async fn load_diff_file(
     default_path: NonRootMPath,
     options: &DiffFileOpts,
 ) -> Result<Option<xdiff::DiffFile<String, Vec<u8>>>, DiffError> {
+    // Handle String input specially since it doesn't have a content_id
+    if let DiffSingleInput::String(string_input) = input {
+        // Validate string input size
+        let bytes = Bytes::copy_from_slice(string_input.content.as_bytes());
+        return Ok(Some(xdiff::DiffFile {
+            path: default_path.to_string(),
+            contents: xdiff::FileContent::Inline(bytes.to_vec()),
+            file_type: options.file_type.into(),
+        }));
+    }
+
     let (content_id, _changeset_id, path, lfs_pointer) =
         extract_input_data(ctx, repo, input, default_path).await?;
 

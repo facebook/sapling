@@ -261,4 +261,80 @@ mod tests {
 
         Ok(())
     }
+
+    #[mononoke::fbinit_test]
+    async fn test_headerless_unified_string_inputs(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with String inputs
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nmodified line2\nline3\n".to_string(),
+        });
+
+        let diff = headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), 3).await?;
+
+        let expected_diff = "@@ -1,3 +1,3 @@\n line1\n-modified line2\n+line2\n line3\n";
+
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert_eq!(diff_str, expected_diff);
+        assert!(!diff.is_binary);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_headerless_unified_string_vs_none(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        let string_input = DiffSingleInput::String(DiffInputString {
+            content: "some content\nline2\n".to_string(),
+        });
+
+        // Test None vs String - Should show deletion
+        let diff = headerless_unified(&ctx, &repo, None, Some(string_input.clone()), 3).await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert!(!diff.is_binary);
+        assert_eq!(diff_str, "@@ -1,2 +0,0 @@\n-some content\n-line2\n");
+
+        // Test String vs None - Should show addition
+        let diff = headerless_unified(&ctx, &repo, Some(string_input), None, 3).await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert!(!diff.is_binary);
+        assert_eq!(diff_str, "@@ -0,0 +1,2 @@\n+some content\n+line2\n");
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_headerless_unified_string_binary(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with binary String inputs (contains null bytes)
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"binary\x00content").to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"different\x00binary").to_string(),
+        });
+
+        let diff = headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), 3).await?;
+
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert_eq!(diff_str, "Binary files differ");
+        assert!(diff.is_binary);
+
+        Ok(())
+    }
 }

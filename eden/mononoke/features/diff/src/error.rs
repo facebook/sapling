@@ -46,4 +46,12 @@ impl DiffError {
     pub fn internal(err: impl Into<anyhow::Error>) -> Self {
         DiffError::Internal(err.into())
     }
+
+    /// Create an error for when string input exceeds size limit
+    pub fn string_input_too_large(size: usize, max_size: usize) -> Self {
+        DiffError::InvalidInput(format!(
+            "String input size {} exceeds maximum allowed size of {} bytes",
+            size, max_size
+        ))
+    }
 }

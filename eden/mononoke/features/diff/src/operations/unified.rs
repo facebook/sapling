@@ -469,4 +469,85 @@ mod tests {
         );
         Ok(())
     }
+
+    #[mononoke::fbinit_test]
+    async fn test_unified_string_inputs(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with String inputs
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nmodified line2\nline3\n".to_string(),
+        });
+
+        let options = UnifiedDiffOpts {
+            context: 3,
+            copy_info: DiffCopyInfo::None,
+            file_type: DiffFileType::Regular,
+            inspect_lfs_pointers: true,
+            omit_content: false,
+        };
+
+        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+
+        // The unified diff should contain the change we made
+        assert!(diff_str.contains("-line2"));
+        assert!(diff_str.contains("+modified line2"));
+        assert!(diff_str.contains("@@ -1,3 +1,3 @@"));
+        assert!(!diff.is_binary);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_unified_string_vs_none(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        let string_input = DiffSingleInput::String(DiffInputString {
+            content: "some content\nline2\nline3\n".to_string(),
+        });
+
+        let options = UnifiedDiffOpts {
+            context: 3,
+            copy_info: DiffCopyInfo::None,
+            file_type: DiffFileType::Regular,
+            inspect_lfs_pointers: true,
+            omit_content: false,
+        };
+
+        // Test None vs String - should show addition
+        let diff = unified(
+            &ctx,
+            &repo,
+            None,
+            Some(string_input.clone()),
+            options.clone(),
+        )
+        .await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert!(diff_str.contains("+some content"));
+        assert!(diff_str.contains("+line2"));
+        assert!(diff_str.contains("+line3"));
+        assert!(!diff.is_binary);
+
+        // Test String vs None - should show deletion
+        let diff = unified(&ctx, &repo, Some(string_input), None, options).await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert!(diff_str.contains("-some content"));
+        assert!(diff_str.contains("-line2"));
+        assert!(diff_str.contains("-line3"));
+        assert!(!diff.is_binary);
+
+        Ok(())
+    }
 }
