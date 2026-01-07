@@ -50,7 +50,7 @@ else:
         pass
 
 
-from facebook.eden.ttypes import (
+from eden.fs.service.eden.thrift_types import (
     FaultDefinition,
     GetBlockedFaultsRequest,
     RemoveFaultArg,
@@ -527,7 +527,7 @@ class EdenTestCase(EdenTestCaseBase):
                 RemoveFaultArg(
                     keyClass=keyClass,
                     keyValueRegex=keyValueRegex,
-                )
+                )._to_py_deprecated()
             )
 
     def unblock_fault(
@@ -540,7 +540,7 @@ class EdenTestCase(EdenTestCaseBase):
                 UnblockFaultArg(
                     keyClass=keyClass,
                     keyValueRegex=keyValueRegex,
-                )
+                )._to_py_deprecated()
             )
 
     def wait_on_fault_unblock(
@@ -555,7 +555,7 @@ class EdenTestCase(EdenTestCaseBase):
                     UnblockFaultArg(
                         keyClass=keyClass,
                         keyValueRegex=keyValueRegex,
-                    )
+                    )._to_py_deprecated()
                 )
             if unblocked == 1:
                 return True
@@ -572,7 +572,7 @@ class EdenTestCase(EdenTestCaseBase):
         def faults_hit() -> Optional[bool]:
             with self.eden.get_thrift_client_legacy() as client:
                 blocked_faults = client.getBlockedFaults(
-                    GetBlockedFaultsRequest(keyclass=key_class)
+                    GetBlockedFaultsRequest(keyclass=key_class)._to_py_deprecated()
                 ).keyValues
             return True if len(blocked_faults) == num_to_hit else None
 
@@ -581,7 +581,7 @@ class EdenTestCase(EdenTestCaseBase):
         except TimeoutError as e:
             with self.eden.get_thrift_client_legacy() as client:
                 # this unblock all faults to avoid tests hang
-                client.unblockFault(UnblockFaultArg())
+                client.unblockFault(UnblockFaultArg()._to_py_deprecated())
             raise e
 
     @contextmanager
@@ -596,7 +596,7 @@ class EdenTestCase(EdenTestCaseBase):
                     keyClass=keyClass,
                     keyValueRegex=keyValueRegex,
                     block=True,
-                )
+                )._to_py_deprecated()
             )
 
             try:
@@ -606,13 +606,13 @@ class EdenTestCase(EdenTestCaseBase):
                     RemoveFaultArg(
                         keyClass=keyClass,
                         keyValueRegex=keyValueRegex,
-                    )
+                    )._to_py_deprecated()
                 )
                 client.unblockFault(
                     UnblockFaultArg(
                         keyClass=keyClass,
                         keyValueRegex=keyValueRegex,
-                    )
+                    )._to_py_deprecated()
                 )
 
 
