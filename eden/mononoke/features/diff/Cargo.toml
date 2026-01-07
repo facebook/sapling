@@ -26,6 +26,7 @@ repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_deri
 sapling-xdiff = { version = "0.1.0", path = "../../../scm/lib/xdiff" }
 thiserror = "2.0.12"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
+unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 
 [dev-dependencies]
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

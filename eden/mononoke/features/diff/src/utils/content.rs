@@ -24,6 +24,7 @@ use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
+use unodes::RootUnodeManifestId;
 
 use crate::error::DiffError;
 use crate::types::DiffFileType;
@@ -125,11 +126,49 @@ async fn get_file_change_from_changeset_path(
         .await
         .map_err(DiffError::internal)?;
 
-    // Find the file change for this specific path
-    Ok(changeset
-        .file_changes()
-        .find(|(p, _)| p == &&path)
-        .map(|(_, file_change)| file_change.clone()))
+    // First, try to find the file change in the current changeset
+    if let Some((_, file_change)) = changeset.file_changes().find(|(p, _)| p == &&path) {
+        return Ok(Some(file_change.clone()));
+    }
+
+    // If not found in current changeset, look back through history
+    let root_unode_manifest_id = repo
+        .repo_derived_data()
+        .derive::<RootUnodeManifestId>(ctx, changeset_id)
+        .await
+        .map_err(DiffError::internal)?;
+
+    let blobstore = repo.repo_blobstore();
+    let mpath = MPath::from(path.clone());
+
+    if let Some(Entry::Leaf(file_unode_id)) = root_unode_manifest_id
+        .manifest_unode_id()
+        .find_entry(ctx.clone(), blobstore.clone(), mpath)
+        .await
+        .map_err(DiffError::internal)?
+    {
+        let file_unode = file_unode_id
+            .load(ctx, blobstore)
+            .await
+            .map_err(DiffError::internal)?;
+
+        let last_modified_cs_id = file_unode.linknode().clone();
+
+        // Load the last modified changeset and check for file changes
+        let last_modified_changeset = last_modified_cs_id
+            .load(ctx, blobstore)
+            .await
+            .map_err(DiffError::internal)?;
+
+        if let Some((_, file_change)) = last_modified_changeset
+            .file_changes()
+            .find(|(p, _)| p == &&path)
+        {
+            return Ok(Some(file_change.clone()));
+        }
+    }
+
+    Ok(None)
 }
 
 /// Extract content ID, changeset ID, default path, and LFS pointer from a DiffSingleInput

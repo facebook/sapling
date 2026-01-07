@@ -8,18 +8,21 @@
 use std::ops::Range;
 
 use anyhow::Context;
-use anyhow::Error;
 use anyhow::anyhow;
 use bytes::Bytes;
 use context::CoreContext;
 use derivative::Derivative;
+use diff::operations::unified::unified;
+use diff::types::DiffCopyInfo;
+use diff::types::DiffFileType;
+use diff::types::DiffInputChangesetPath;
+use diff::types::DiffSingleInput;
+use diff::types::UnifiedDiffOpts;
 use futures::try_join;
-use git_types::git_lfs::format_lfs_pointer;
 use lazy_static::lazy_static;
 use mononoke_types::ContentMetadataV2;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
-use mononoke_types::hash::GitSha1;
 use regex::Regex;
 pub use xdiff::CopyInfo;
 
@@ -488,114 +491,28 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         !self.is_tree
     }
 
-    // Helper for getting file information.
-    async fn get_file_data(
-        _ctx: &CoreContext,
+    /// Converts a ChangesetPathContentContext to DiffSingleInput for use with the diff crate
+    fn convert_changeset_path_to_diff_input(
         path: Option<&ChangesetPathContentContext<R>>,
-        mode: UnifiedDiffMode,
-    ) -> Result<Option<xdiff::DiffFile<String, Bytes>>, MononokeError> {
-        match path {
-            Some(path) => {
-                if let Some(file_type) = path.file_type().await? {
-                    let file = path.file().await?.ok_or_else(|| {
-                        MononokeError::from(Error::msg("assertion error: file should exist"))
-                    })?;
-                    let metadata = file.metadata().await?;
-                    let git_lfs_pointer = if path
-                        .repo_ctx()
-                        .config()
-                        .git_configs
-                        .git_lfs_interpret_pointers
-                    {
-                        Self::get_git_lfs_pointer(path, &metadata).await?
-                    } else {
-                        None
-                    };
-                    let diff_mode =
-                        if mode == UnifiedDiffMode::OmitContent || git_lfs_pointer.is_some() {
-                            UnifiedDiffMode::OmitContent
-                        } else {
-                            mode
-                        };
+        replacement_path: Option<&MPath>,
+    ) -> Option<DiffSingleInput> {
+        path.and_then(|p| {
+            // Use the original path from the context
+            let original_path = p.path();
 
-                    let file_type = match file_type {
-                        FileType::Regular => xdiff::FileType::Regular,
-                        FileType::Executable => xdiff::FileType::Executable,
-                        FileType::Symlink => xdiff::FileType::Symlink,
-                        FileType::GitSubmodule => xdiff::FileType::GitSubmodule,
-                    };
-                    let contents = match (file_type, diff_mode) {
-                        (xdiff::FileType::GitSubmodule, _) => {
-                            let commit_hash_bytes = file.content_concat().await?;
-                            let commit_hash = GitSha1::from_bytes(commit_hash_bytes)
-                                .with_context(|| {
-                                    format!("Invalid commit hash for submodule at {}", path.path())
-                                })?
-                                .to_string();
-                            xdiff::FileContent::Submodule { commit_hash }
-                        }
-                        (_, UnifiedDiffMode::Inline) => {
-                            let contents = file.content_concat().await?;
-                            xdiff::FileContent::Inline(contents)
-                        }
-                        (_, UnifiedDiffMode::OmitContent) => xdiff::FileContent::Omitted {
-                            content_hash: format!("{}", metadata.content_id),
-                            git_lfs_pointer,
-                        },
-                    };
-                    Ok(Some(xdiff::DiffFile {
-                        path: path.path().to_string(),
-                        contents,
-                        file_type,
-                    }))
-                } else {
-                    Ok(None)
-                }
-            }
-            None => Ok(None),
-        }
-    }
+            // Convert the original MPath to NonRootMPath for the path field
+            let non_root_path = NonRootMPath::try_from(original_path.clone()).ok()?;
 
-    async fn get_git_lfs_pointer(
-        path: &ChangesetPathContentContext<R>,
-        metadata: &ContentMetadataV2,
-    ) -> Result<Option<String>, MononokeError> {
-        let file_change = match path.file_change().await? {
-            Some(file_change) => Some(file_change),
-            None => {
-                // If the file is not touched in the current changeset,
-                // try checking the last changeset that touched the file
-                let non_root_mpath = NonRootMPath::try_from(path.path().clone())?;
-                let last_modified_cs = path
-                    .changeset()
-                    .path_with_history(non_root_mpath.clone())
-                    .await?
-                    .last_modified()
-                    .await?;
-                match last_modified_cs {
-                    Some(last_modified_cs) => last_modified_cs
-                        .file_changes()
-                        .await?
-                        .get(&non_root_mpath)
-                        .cloned(),
-                    None => None,
-                }
-            }
-        };
-        let git_lfs_pointer = file_change.and_then(|fc| {
-            fc.git_lfs().and_then(|git_lfs| {
-                if git_lfs.is_lfs_pointer() {
-                    Some(format_lfs_pointer(
-                        metadata.sha256,
-                        fc.size().unwrap_or_default(),
-                    ))
-                } else {
-                    None
-                }
-            })
-        });
+            // Convert replacement_path if provided
+            let replacement_non_root_path =
+                replacement_path.and_then(|rp| NonRootMPath::try_from(rp.clone()).ok());
 
-        Ok(git_lfs_pointer)
+            Some(DiffSingleInput::ChangesetPath(DiffInputChangesetPath {
+                changeset_id: p.changeset().id(),
+                path: non_root_path,
+                replacement_path: replacement_non_root_path,
+            }))
+        })
     }
 
     /// Renders the diff (in the git diff format).
@@ -608,31 +525,59 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         context_lines: usize,
         mode: UnifiedDiffMode,
     ) -> Result<UnifiedDiff, MononokeError> {
-        let (new_file_data, mut old_file_data) = try_join!(
-            Self::get_file_data(ctx, self.get_new_content(), mode),
-            Self::get_file_data(ctx, self.get_old_content(), mode)
-        )?;
-        if let (Some(replacement_path), Some(old_file_data)) =
-            (&self.subtree_copy_dest_path, &mut old_file_data)
-        {
-            // Override the old path with the replacement path after the subtree copy.
-            old_file_data.path = replacement_path.to_string();
-        }
-        let is_binary =
-            xdiff::file_is_binary(&new_file_data) || xdiff::file_is_binary(&old_file_data);
-        let copy_info = self.copy_info();
-        let opts = xdiff::DiffOpts {
+        // Convert changeset path contexts to DiffSingleInput for the diff crate
+        let new_input = Self::convert_changeset_path_to_diff_input(self.get_new_content(), None);
+        let old_input = Self::convert_changeset_path_to_diff_input(
+            self.get_old_content(),
+            self.subtree_copy_dest_path.as_ref(),
+        );
+
+        // Determine file type from the new content
+        let file_type = if let Some(new_content) = self.get_new_content() {
+            if let Ok(Some(ft)) = new_content.file_type().await {
+                match ft {
+                    FileType::Regular => DiffFileType::Regular,
+                    FileType::Executable => DiffFileType::Executable,
+                    FileType::Symlink => DiffFileType::Symlink,
+                    FileType::GitSubmodule => DiffFileType::GitSubmodule,
+                }
+            } else {
+                DiffFileType::Regular
+            }
+        } else {
+            DiffFileType::Regular
+        };
+
+        // Convert copy info from xdiff to diff crate format
+        let copy_info = match self.copy_info() {
+            CopyInfo::None => DiffCopyInfo::None,
+            CopyInfo::Move => DiffCopyInfo::Move,
+            CopyInfo::Copy => DiffCopyInfo::Copy,
+        };
+
+        // Create unified diff options
+        let options = UnifiedDiffOpts {
             context: context_lines,
             copy_info,
+            file_type,
+            inspect_lfs_pointers: false,
+            omit_content: mode == UnifiedDiffMode::OmitContent,
         };
-        // Generate a unified diff from old to new.
-        let raw_diff = tokio::task::spawn_blocking(move || {
-            xdiff::diff_unified(old_file_data, new_file_data, opts)
-        })
-        .await?;
+
+        // Call the unified function from the diff crate
+        let diff_result = unified(
+            ctx,
+            self.changeset.repo_ctx().repo(),
+            old_input,
+            new_input,
+            options,
+        )
+        .await
+        .map_err(|e| MononokeError::from(anyhow::anyhow!("Diff error: {}", e)))?;
+
         Ok(UnifiedDiff {
-            raw_diff,
-            is_binary,
+            raw_diff: diff_result.raw_diff,
+            is_binary: diff_result.is_binary,
         })
     }
 
