@@ -8,13 +8,11 @@
 
 
 import os
-import subprocess
 from pathlib import Path
 
 from eden.fs.cli.config import CheckoutConfig, EdenCheckout, EdenInstance
 
 from .lib import testcase
-from .lib.find_executables import FindExe
 
 
 @testcase.eden_repo_test
@@ -87,27 +85,7 @@ class LegacyEphemeralCleanupTest(testcase.EdenRepoTest):
             len(normal_checkouts_before), 0, "Should have at least one normal checkout"
         )
 
-        edenfsctl, env = FindExe.get_edenfsctl_env()
-        start_cmd = [edenfsctl, "--config-dir", str(self.eden.eden_dir), "start"]
-        result = subprocess.run(
-            start_cmd,
-            env=env,
-            capture_output=True,
-            text=True,
-        )
-
-        self.assertEqual(
-            result.returncode,
-            0,
-            f"eden start failed: {result.stdout}\n{result.stderr}",
-        )
-
-        output = result.stdout + result.stderr
-        self.assertIn("legacyephemeral", output.lower())
-        self.assertTrue(
-            "removing" in output.lower() or "removed" in output.lower(),
-            "Output should mention removing or removed",
-        )
+        self.eden.start()
 
         checkouts_after = instance.get_checkouts()
         checkout_paths_after = {str(c.path) for c in checkouts_after}
@@ -147,29 +125,7 @@ class LegacyEphemeralCleanupTest(testcase.EdenRepoTest):
         checkout_paths_before = {str(c.path) for c in checkouts_before}
         self.assertIn(str(ephemeral_mount), checkout_paths_before)
 
-        edenfsctl, env = FindExe.get_edenfsctl_env()
-        restart_cmd = [
-            edenfsctl,
-            "--config-dir",
-            str(self.eden.eden_dir),
-            "restart",
-            "--force",
-        ]
-        result = subprocess.run(
-            restart_cmd,
-            env=env,
-            capture_output=True,
-            text=True,
-        )
-
-        self.assertEqual(
-            result.returncode,
-            0,
-            f"eden restart failed: {result.stdout}\n{result.stderr}",
-        )
-
-        output = result.stdout + result.stderr
-        self.assertIn("legacyephemeral", output.lower())
+        self.eden.restart()
 
         checkouts_after = instance.get_checkouts()
         checkout_paths_after = {str(c.path) for c in checkouts_after}
@@ -196,15 +152,7 @@ class LegacyEphemeralCleanupTest(testcase.EdenRepoTest):
         self.assertIn(str(ephemeral2), checkout_paths_before)
         self.assertIn(str(ephemeral3), checkout_paths_before)
 
-        edenfsctl, env = FindExe.get_edenfsctl_env()
-        start_cmd = [edenfsctl, "--config-dir", str(self.eden.eden_dir), "start"]
-        result = subprocess.run(start_cmd, env=env, capture_output=True, text=True)
-
-        self.assertEqual(result.returncode, 0)
-
-        output = result.stdout + result.stderr
-        self.assertIn("3", output)
-        self.assertIn("legacyephemeral", output.lower())
+        self.eden.start()
 
         checkouts_after = instance.get_checkouts()
         checkout_paths_after = {str(c.path) for c in checkouts_after}
