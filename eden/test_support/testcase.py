@@ -17,6 +17,10 @@ from unittest import IsolatedAsyncioTestCase
 from . import environment_variable as env_module
 from .temporary_directory import TempFileManager
 
+# Tell Python's unittest traceback handling to hide frames from this module
+# so test failures show the actual test code, not our wrapper methods.
+__unittest = True
+
 
 def _is_forkpty_deprecation_warning(w: warnings.WarningMessage) -> bool:
     """Check if a warning is the forkpty deprecation warning from pty.py.
