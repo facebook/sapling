@@ -109,7 +109,7 @@ from facebook.eden.ttypes import (
     RootIdOptions,
     SendNotificationRequest,
 )
-from fb303_core.ttypes import fb303_status
+from fb303_core.thrift_types import fb303_status
 
 from . import (
     config as config_mod,
