@@ -9,11 +9,13 @@
 
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
+use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
@@ -127,8 +129,8 @@ struct AdvancedStats {
     size_histogram: [AtomicUsize; 7],
     size_histogram_bytes: [AtomicU64; 7],
 
-    // Per-directory statistics (path -> (file_count, total_bytes, total_duration_nanos))
-    dir_stats: std::sync::Mutex<std::collections::HashMap<String, (usize, u64, u64)>>,
+    // Per-directory statistics: (file_count, total_bytes, total_nanos)
+    dir_stats: Mutex<HashMap<String, (usize, u64, u64)>>,
 
     // Count of directories that couldn't be tracked due to MAX_DIR_STATS_ENTRIES limit
     dirs_dropped: AtomicUsize,
@@ -142,19 +144,23 @@ struct AdvancedStats {
 
     // Peak memory usage in bytes
     peak_memory_bytes: AtomicU64,
+
+    // Whether to collect per-directory statistics (expensive due to CPU cache effects)
+    collect_dir_stats: bool,
 }
 
 impl AdvancedStats {
-    fn new(base_paths: Vec<PathBuf>) -> Arc<Self> {
+    fn new(base_paths: Vec<PathBuf>, collect_dir_stats: bool) -> Arc<Self> {
         Arc::new(Self {
             size_histogram: Default::default(),
             size_histogram_bytes: Default::default(),
-            dir_stats: std::sync::Mutex::new(std::collections::HashMap::new()),
+            dir_stats: Mutex::new(HashMap::new()),
             dirs_dropped: AtomicUsize::new(0),
             depth_histogram: Default::default(),
             base_paths,
             category_stats: Default::default(),
             peak_memory_bytes: AtomicU64::new(0),
+            collect_dir_stats,
         })
     }
 
@@ -202,12 +208,12 @@ impl AdvancedStats {
     }
 
     fn record_file(&self, path: &Path, size: u64, open_nanos: u64, read_nanos: u64) {
-        // Update size histogram
+        // Update size histogram (atomic, fast, always runs)
         let bucket = Self::get_size_bucket(size);
         self.size_histogram[bucket].fetch_add(1, Ordering::Relaxed);
         self.size_histogram_bytes[bucket].fetch_add(size, Ordering::Relaxed);
 
-        // Track file category performance using enum indexing
+        // Track file category performance using enum indexing (atomic, fast, always runs)
         let category = FileSizeCategory::from_size(size);
         let category_idx = category as usize;
 
@@ -217,28 +223,31 @@ impl AdvancedStats {
         stats.open_nanos.fetch_add(open_nanos, Ordering::Relaxed);
         stats.read_nanos.fetch_add(read_nanos, Ordering::Relaxed);
 
-        // Update per-directory stats (with bounded capacity)
-        if let Some(parent) = path.parent() {
-            let parent_str = parent.to_string_lossy().to_string();
-            let total_nanos = open_nanos + read_nanos;
+        // Only collect per-directory stats if explicitly requested
+        // (causes ~20% throughput reduction due to CPU cache pollution)
+        if self.collect_dir_stats {
+            if let Some(parent) = path.parent() {
+                let total_nanos = open_nanos + read_nanos;
+                let parent_str = parent.to_string_lossy().to_string();
 
-            if let Ok(mut stats) = self.dir_stats.lock() {
-                // Only track up to MAX_DIR_STATS_ENTRIES directories to prevent unbounded growth
-                if stats.len() < MAX_DIR_STATS_ENTRIES || stats.contains_key(&parent_str) {
-                    let entry = stats.entry(parent_str).or_insert((0, 0, 0));
-                    entry.0 += 1;
-                    entry.1 += size;
-                    entry.2 += total_nanos;
-                } else {
-                    // Directory limit reached, count this as dropped
-                    self.dirs_dropped.fetch_add(1, Ordering::Relaxed);
+                if let Ok(mut dir_stats) = self.dir_stats.lock() {
+                    if dir_stats.len() < MAX_DIR_STATS_ENTRIES
+                        || dir_stats.contains_key(&parent_str)
+                    {
+                        let entry = dir_stats.entry(parent_str).or_insert((0, 0, 0));
+                        entry.0 += 1;
+                        entry.1 += size;
+                        entry.2 += total_nanos;
+                    } else {
+                        self.dirs_dropped.fetch_add(1, Ordering::Relaxed);
+                    }
                 }
-            }
 
-            // Track depth relative to base paths
-            if let Some(depth) = self.calculate_relative_depth(path) {
-                let capped_depth = depth.min(19);
-                self.depth_histogram[capped_depth].fetch_add(1, Ordering::Relaxed);
+                // Track depth relative to base paths
+                if let Some(depth) = self.calculate_relative_depth(path) {
+                    let capped_depth = depth.min(19);
+                    self.depth_histogram[capped_depth].fetch_add(1, Ordering::Relaxed);
+                }
             }
         }
     }
@@ -602,13 +611,17 @@ struct Traversal {
 // ============================================================================
 
 impl TraversalCounters {
-    fn new(detailed_read_stats: bool, detailed_list_stats: bool, base_paths: Vec<PathBuf>) -> Self {
-        let advanced_stats = if detailed_read_stats {
-            Some(AdvancedStats::new(base_paths.clone()))
+    fn new(
+        detailed_stats: bool,
+        detailed_list_stats: bool,
+        include_dir_stats: bool,
+        base_paths: Vec<PathBuf>,
+    ) -> Self {
+        let advanced_stats = if detailed_stats {
+            Some(AdvancedStats::new(base_paths.clone(), include_dir_stats))
         } else {
             None
         };
-
         let listing_stats = if detailed_list_stats {
             Some(ListingStats::new(base_paths))
         } else {
@@ -872,13 +885,19 @@ impl Traversal {
         read_mode: ReadMode,
         detailed_read_stats: bool,
         detailed_list_stats: bool,
+        include_dir_stats: bool,
         base_paths: Vec<PathBuf>,
     ) -> Self {
         // Create internal components
         let cancellation_token = setup_cancellation();
 
         Self {
-            counters: TraversalCounters::new(detailed_read_stats, detailed_list_stats, base_paths),
+            counters: TraversalCounters::new(
+                detailed_read_stats,
+                detailed_list_stats,
+                include_dir_stats,
+                base_paths,
+            ),
             max_files,
             follow_symlinks,
             read_mode,
@@ -1204,7 +1223,7 @@ impl Traversal {
                     initial_files_display
                 ));
 
-                let (mut system, pid) = if resource_usage || counters.advanced_stats.is_some() {
+                let (mut system, pid) = if resource_usage {
                     let mut sys = System::new_all();
                     let process_id = sysinfo::get_current_pid().ok();
                     sys.refresh_all();
@@ -1295,6 +1314,7 @@ pub async fn bench_traversal(
     thrift_io: Option<&str>,
     detailed_read_stats: bool,
     detailed_list_stats: bool,
+    include_dir_stats: bool,
 ) -> Result<Benchmark> {
     // Validate all directories first
     for dir_path in dir_paths {
@@ -1323,6 +1343,7 @@ pub async fn bench_traversal(
         read_mode.clone(),
         detailed_read_stats,
         detailed_list_stats,
+        include_dir_stats,
         paths.clone(),
     );
 
@@ -1468,68 +1489,72 @@ fn print_detailed_read_statistics(stats: &Arc<AdvancedStats>) {
     }
 
     println!("\nTop 20 Slowest Directories for Reading:");
-    let dirs_tracked = if let Ok(dir_stats) = stats.dir_stats.lock() {
-        let mut dir_vec: Vec<_> = dir_stats.iter().collect();
-        dir_vec.sort_by(|a, b| b.1.2.cmp(&a.1.2)); // Sort by total duration descending
+    if stats.collect_dir_stats {
+        let dirs_tracked = if let Ok(dir_stats) = stats.dir_stats.lock() {
+            let mut dir_vec: Vec<_> = dir_stats.iter().collect();
+            dir_vec.sort_by(|a, b| b.1.2.cmp(&a.1.2)); // Sort by total duration descending
 
-        for (i, (dir, (file_count, bytes, nanos))) in dir_vec.iter().take(20).enumerate() {
-            let time_ms = *nanos as f64 / 1_000_000.0;
-            let mb = *bytes as f64 / types::BYTES_IN_MEGABYTE as f64;
-            let throughput = if time_ms > 0.0 {
-                mb / (time_ms / 1000.0)
-            } else {
-                0.0
-            };
+            for (i, (dir, (file_count, bytes, nanos))) in dir_vec.iter().take(20).enumerate() {
+                let time_ms = *nanos as f64 / 1_000_000.0;
+                let mb = *bytes as f64 / types::BYTES_IN_MEGABYTE as f64;
+                let throughput = if time_ms > 0.0 {
+                    mb / (time_ms / 1000.0)
+                } else {
+                    0.0
+                };
 
-            let relative_dir = stats.make_path_relative(dir);
+                let relative_dir = stats.make_path_relative(dir);
 
-            println!(
-                "  {:>2}. {} files | {:.2} MB | {:.1} ms ({:.2} MB/s) | {}",
-                i + 1,
-                file_count.to_formatted_string(&Locale::en),
-                mb,
-                time_ms,
-                throughput,
-                relative_dir
-            );
-        }
-        dir_stats.len()
-    } else {
-        0
-    };
+                println!(
+                    "  {:>2}. {} files | {:.2} MB | {:.1} ms ({:.2} MB/s) | {}",
+                    i + 1,
+                    file_count.to_formatted_string(&Locale::en),
+                    mb,
+                    time_ms,
+                    throughput,
+                    relative_dir
+                );
+            }
+            dir_stats.len()
+        } else {
+            0
+        };
 
-    // Show directory tracking info
-    let dirs_dropped = stats.dirs_dropped.load(Ordering::Relaxed);
-    println!(
-        "\n  Directories tracked: {}",
-        dirs_tracked.to_formatted_string(&Locale::en)
-    );
-    if dirs_dropped > 0 {
+        // Show directory tracking info
+        let dirs_dropped = stats.dirs_dropped.load(Ordering::Relaxed);
         println!(
-            "  WARNING: {} file records from additional directories were not tracked (limit: {})",
-            dirs_dropped.to_formatted_string(&Locale::en),
-            MAX_DIR_STATS_ENTRIES.to_formatted_string(&Locale::en)
+            "\n  Directories tracked: {}",
+            dirs_tracked.to_formatted_string(&Locale::en)
         );
-    }
-
-    // Directory Depth Analysis
-    println!("\nDirectory Depth Distribution (relative to base paths):");
-    let depth_data: Vec<(usize, usize)> = stats
-        .depth_histogram
-        .iter()
-        .enumerate()
-        .map(|(depth, count)| (depth, count.load(Ordering::Relaxed)))
-        .filter(|(_, count)| *count > 0)
-        .collect();
-
-    if !depth_data.is_empty() {
-        for (depth, count) in depth_data.iter() {
+        if dirs_dropped > 0 {
             println!(
-                "  Depth {:>2}: {:>10} files",
-                depth,
-                count.to_formatted_string(&Locale::en)
+                "  WARNING: {} file records from additional directories were not tracked (limit: {})",
+                dirs_dropped.to_formatted_string(&Locale::en),
+                MAX_DIR_STATS_ENTRIES.to_formatted_string(&Locale::en)
             );
         }
+
+        // Directory Depth Analysis
+        println!("\nDirectory Depth Distribution (relative to base paths):");
+        let depth_data: Vec<(usize, usize)> = stats
+            .depth_histogram
+            .iter()
+            .enumerate()
+            .map(|(depth, count)| (depth, count.load(Ordering::Relaxed)))
+            .filter(|(_, count)| *count > 0)
+            .collect();
+
+        if !depth_data.is_empty() {
+            for (depth, count) in depth_data.iter() {
+                println!(
+                    "  Depth {:>2}: {:>10} files",
+                    depth,
+                    count.to_formatted_string(&Locale::en)
+                );
+            }
+        }
+    } else {
+        println!("  (Per-directory stats disabled. Use --include-dir-stats to enable.)");
     }
 
     // Summary
