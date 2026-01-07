@@ -61,7 +61,7 @@ pub async fn headerless_unified(
     let xdiff_opts = xdiff::HeaderlessDiffOpts::from(opts);
 
     let raw_diff = if is_binary {
-        b"Binary files differ\n".to_vec()
+        b"Binary files differ".to_vec()
     } else {
         tokio::task::spawn_blocking(move || {
             xdiff::diff_unified_headerless(&other_content, &base_content, xdiff_opts)
@@ -174,7 +174,7 @@ mod tests {
 
         let diff = headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), 3).await?;
 
-        let expected_diff = "Binary files differ\n";
+        let expected_diff = "Binary files differ";
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert_eq!(diff_str, expected_diff);
         assert!(diff.is_binary);
