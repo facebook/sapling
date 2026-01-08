@@ -466,7 +466,7 @@ impl<'a> DiffRouter<'a> {
                     }
 
                     repo_client
-                        .metadata_diff(ctx, base_input, other_input)
+                        .metadata_diff(ctx, base_input, other_input, false)
                         .await
                 }
             },
