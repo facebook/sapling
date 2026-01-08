@@ -409,13 +409,13 @@ async fn select_mapping(
     )?;
 
     if use_rendezvous {
-        select_mapping_rendevous(ctx, connection, repo_id, objects).await
+        select_mapping_rendezvous(ctx, connection, repo_id, objects).await
     } else {
         select_mapping_non_rendezvous(ctx, &connection.conn, repo_id, objects).await
     }
 }
 
-async fn select_mapping_rendevous(
+async fn select_mapping_rendezvous(
     ctx: &CoreContext,
     connection: &RendezVousConnection,
     repo_id: &RepositoryId,

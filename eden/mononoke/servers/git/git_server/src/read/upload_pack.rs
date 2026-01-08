@@ -82,7 +82,7 @@ const SHALLOW_INFO_HEADER: &[u8] = b"shallow-info";
 const ACK: &str = "ACK";
 /// Acknowledgement that the object sent by the client does not exist on the server
 const NAK: &[u8] = b"NAK";
-/// The default number of bytes to be bufferred at the writer layer
+/// The default number of bytes to be buffered at the writer layer
 const DEFAULT_GIT_WRITER_BUFFER_BYTES: usize = 52_428_800; // 50 MB
 
 #[derive(Debug, Clone)]

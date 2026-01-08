@@ -474,7 +474,7 @@ mod tests {
                 .is_none()
         );
 
-        // Test partial match, differring by on character. Should not match
+        // Test partial match, differing by on character. Should not match
         let partial_path = NonRootMPath::new("restricted/di").unwrap();
         assert!(
             repo_restricted_paths
