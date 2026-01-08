@@ -58,6 +58,9 @@ thrift_library(
     thrift_srcs = {
         "test_competing_defaults.thrift": [],
     },
+    deps = [
+        "//thrift/annotation:thrift",
+    ],
 )
 
 thrift_rust_unittest(
