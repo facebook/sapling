@@ -194,11 +194,14 @@ impl<R: MononokeRepo> FileContext<R> {
 }
 
 /// A diff between two files in headerless unified diff format
-
+///
+/// If `ignore_whitespace` is true, horizontal whitespace (spaces, tabs, carriage returns)
+/// will be stripped before computing the diff.
 pub async fn headerless_unified_diff<R: MononokeRepo>(
     old_file: &FileContext<R>,
     new_file: &FileContext<R>,
     context_lines: usize,
+    ignore_whitespace: bool,
 ) -> Result<HeaderlessUnifiedDiff, MononokeError> {
     // Get content IDs from the file contexts
     let (old_content_id, new_content_id) = try_join!(old_file.id(), new_file.id())?;
@@ -216,16 +219,23 @@ pub async fn headerless_unified_diff<R: MononokeRepo>(
         lfs_pointer: None,
     });
 
+    // Create headerless diff options
+    use diff::types::HeaderlessDiffOpts;
+    let options = HeaderlessDiffOpts {
+        context: context_lines,
+        ignore_whitespace,
+    };
+
     // Call the features/diff crate function
     headerless_unified(
         old_file.ctx(),
         old_file.repo_ctx().repo(),
         Some(new_input),
         Some(old_input),
-        context_lines,
+        options,
     )
     .await
-    .map_err(|e| MononokeError::from(anyhow::anyhow!("Diff error: {}", e)))
+    .map_err(|e| MononokeError::from(anyhow::anyhow!("Diff error: {e:#}")))
 }
 
 /// File contexts should only exist for files that are known to be in the

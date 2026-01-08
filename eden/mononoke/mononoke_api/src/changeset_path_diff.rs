@@ -255,11 +255,15 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
     ///
     /// If `mode` is `Placeholder` then `unified_diff(...)` doesn't fetch content,
     /// but just generates a placeholder diff that says that the files differ.
+    ///
+    /// If `ignore_whitespace` is true, horizontal whitespace (spaces, tabs, carriage returns)
+    /// will be stripped before computing the diff.
     pub async fn unified_diff(
         &self,
         ctx: &CoreContext,
         context_lines: usize,
         mode: UnifiedDiffMode,
+        ignore_whitespace: bool,
     ) -> Result<UnifiedDiff, MononokeError> {
         // Convert changeset path contexts to DiffSingleInput for the diff crate
         let new_input = Self::convert_changeset_path_to_diff_input(self.get_new_content(), None);
@@ -298,6 +302,7 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             file_type,
             inspect_lfs_pointers: false,
             omit_content: mode == UnifiedDiffMode::OmitContent,
+            ignore_whitespace,
         };
 
         // Call the unified function from the diff crate
@@ -317,16 +322,30 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         })
     }
 
-    pub async fn metadata_diff(&self, ctx: &CoreContext) -> Result<MetadataDiff, MononokeError> {
+    /// Computes metadata about the differences between two files.
+    ///
+    /// If `ignore_whitespace` is true, horizontal whitespace (spaces, tabs, carriage returns)
+    /// will be stripped before computing line counts.
+    pub async fn metadata_diff(
+        &self,
+        ctx: &CoreContext,
+        ignore_whitespace: bool,
+    ) -> Result<MetadataDiff, MononokeError> {
         let new_input = Self::convert_changeset_path_to_diff_input(self.get_new_content(), None);
         let old_input = Self::convert_changeset_path_to_diff_input(
             self.get_old_content(),
             self.subtree_copy_dest_path.as_ref(),
         );
 
-        let diff_metadata = metadata(ctx, self.changeset.repo_ctx().repo(), old_input, new_input)
-            .await
-            .map_err(|e| MononokeError::from(anyhow::anyhow!("Metadata diff error: {}", e)))?;
+        let diff_metadata = metadata(
+            ctx,
+            self.changeset.repo_ctx().repo(),
+            old_input,
+            new_input,
+            ignore_whitespace,
+        )
+        .await
+        .map_err(|e| MononokeError::from(anyhow::anyhow!("Metadata diff error: {e:#}")))?;
 
         Ok(MetadataDiff {
             old_file_info: Self::convert_metadata_file_info(&diff_metadata.base_file_info),

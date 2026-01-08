@@ -32,6 +32,7 @@ use crate::types::MetadataFileInfo;
 use crate::types::MetadataLinesCount;
 use crate::utils::content::get_file_info_from_changeset_path;
 use crate::utils::content::load_content;
+use crate::utils::whitespace::strip_horizontal_whitespace;
 
 // This logic comes from `mononoke_api/src/changeset_path_diff.rs`
 
@@ -193,33 +194,39 @@ async fn calculate_lines_count(
     new_parsed_file_content: Option<&ParsedFileContent>,
     old_file_type: Option<&DiffFileType>,
     new_file_type: Option<&DiffFileType>,
-) -> Result<Option<MetadataLinesCount>, DiffError> {
+    ignore_whitespace: bool,
+) -> Option<MetadataLinesCount> {
     if matches!(old_file_type, Some(&DiffFileType::GitSubmodule))
         || matches!(new_file_type, Some(&DiffFileType::GitSubmodule))
     {
-        return Ok(None);
+        return None;
     }
 
     match (old_parsed_file_content, new_parsed_file_content) {
         (
             Some(ParsedFileContent::Text(old_text_file)),
             Some(ParsedFileContent::Text(new_text_file)),
-        ) => Ok(Some(diff_files(old_text_file, new_text_file).await?)),
-        (Some(ParsedFileContent::Text(old_text_file)), _) => Ok(Some(file_deleted(old_text_file))),
-        (_, Some(ParsedFileContent::Text(new_text_file))) => Ok(Some(file_created(new_text_file))),
-        _ => Ok(None),
+        ) => Some(diff_files(old_text_file, new_text_file, ignore_whitespace)),
+        (Some(ParsedFileContent::Text(old_text_file)), _) => Some(file_deleted(old_text_file)),
+        (_, Some(ParsedFileContent::Text(new_text_file))) => Some(file_created(new_text_file)),
+        _ => None,
     }
 }
 
-async fn diff_files(old_text_file: &TextFile, new_text_file: &TextFile) -> Result<MetadataLinesCount, DiffError> {
-    let old_content = old_text_file.file_content.clone();
-    let new_content = new_text_file.file_content.clone();
+fn diff_files(old_text_file: &TextFile, new_text_file: &TextFile, ignore_whitespace: bool) -> MetadataLinesCount {
+    let old_content = if ignore_whitespace {
+        strip_horizontal_whitespace(&old_text_file.file_content)
+    } else {
+        old_text_file.file_content.clone()
+    };
 
-    let hunks = tokio::task::spawn_blocking(move || {
-        xdiff::diff_hunks(old_content, new_content)
-    })
-    .await
-    .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {}", e)))?;
+    let new_content = if ignore_whitespace {
+        strip_horizontal_whitespace(&new_text_file.file_content)
+    } else {
+        new_text_file.file_content.clone()
+    };
+
+    let hunks = xdiff::diff_hunks(old_content, new_content);
 
     let mut added_lines = 0i64;
     let mut deleted_lines = 0i64;
@@ -239,13 +246,13 @@ async fn diff_files(old_text_file: &TextFile, new_text_file: &TextFile) -> Resul
         }
     }
 
-    Ok(MetadataLinesCount {
+    MetadataLinesCount {
         added_lines,
         deleted_lines,
         significant_added_lines,
         significant_deleted_lines,
         first_added_line_number,
-    })
+    }
 }
 
 fn file_created(new_text_file: &TextFile) -> MetadataLinesCount {
@@ -409,6 +416,7 @@ pub async fn metadata(
     repo: &impl Repo,
     base: Option<DiffSingleInput>,
     other: Option<DiffSingleInput>,
+    ignore_whitespace: bool,
 ) -> Result<MetadataDiff, DiffError> {
 
     // Get file information directly from inputs
@@ -437,7 +445,9 @@ pub async fn metadata(
         other_parsed_content.as_ref(),
         base_file_type.as_ref(),
         other_file_type.as_ref(),
-    ).await?;
+        ignore_whitespace,
+    )
+    .await;
 
     let base_file_info = create_file_info(base_file_type, base_parsed_content.as_ref());
     let other_file_info = create_file_info(other_file_type, other_parsed_content.as_ref());
@@ -502,7 +512,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
 
         // Check file info
         assert_eq!(
@@ -569,7 +579,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
 
         // Check that content type is binary
         assert_eq!(
@@ -613,7 +623,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
 
         // Base file doesn't exist
         assert_eq!(metadata_diff.base_file_info.file_type, None);
@@ -661,6 +671,7 @@ mod tests {
             &repo,
             None,
             Some(input.clone()),
+            false,
         )
         .await?;
 
@@ -688,6 +699,7 @@ mod tests {
             &repo,
             Some(input),
             None,
+            false,
         )
         .await?;
 
@@ -710,7 +722,7 @@ mod tests {
         assert_eq!(lines_count.deleted_lines, 2);
 
         // Test None vs None - should show no difference
-        let metadata_diff = metadata(&ctx, &repo, None, None).await?;
+        let metadata_diff = metadata(&ctx, &repo, None, None, false).await?;
 
         // Both files don't exist
         assert_eq!(metadata_diff.base_file_info.file_type, None);
@@ -742,7 +754,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, None, Some(input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, None, Some(input), false).await?;
 
         // Check that generated status is detected
         assert_eq!(
@@ -788,7 +800,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, None, Some(input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, None, Some(input), false).await?;
 
         // Check that partially generated status is detected
         assert_eq!(
@@ -819,7 +831,7 @@ mod tests {
             content: "line1\nmodified line2\nline3\n".to_string(),
         });
 
-        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
 
         assert_eq!(metadata_diff.base_file_info.file_type, Some(DiffFileType::Regular));
         assert_eq!(
@@ -864,7 +876,7 @@ mod tests {
         });
 
         // Test None vs String - should show addition
-        let metadata_diff = metadata(&ctx, &repo, None, Some(string_input.clone())).await?;
+        let metadata_diff = metadata(&ctx, &repo, None, Some(string_input.clone()), false).await?;
 
         // Base file doesn't exist
         assert_eq!(metadata_diff.base_file_info.file_type, None);
@@ -882,7 +894,7 @@ mod tests {
         assert_eq!(lines_count.deleted_lines, 0);
 
         // Test String vs None - should show deletion
-        let metadata_diff = metadata(&ctx, &repo, Some(string_input), None).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(string_input), None, false).await?;
 
         // Base file exists
         assert_eq!(metadata_diff.base_file_info.file_type, Some(DiffFileType::Regular));
@@ -917,7 +929,7 @@ mod tests {
             content: String::from_utf8_lossy(b"different\x00binary").to_string(),
         });
 
-        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
 
         // Check that content type is binary
         assert_eq!(
@@ -950,7 +962,7 @@ mod tests {
             content: "some content\n".to_string(),
         });
 
-        let metadata_diff = metadata(&ctx, &repo, Some(empty_input.clone()), Some(non_empty_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(empty_input.clone()), Some(non_empty_input), false).await?;
 
         // Both should be text files
         assert_eq!(
@@ -968,7 +980,7 @@ mod tests {
         assert_eq!(lines_count.deleted_lines, 0);
 
         // Test two empty strings
-        let metadata_diff = metadata(&ctx, &repo, Some(empty_input.clone()), Some(empty_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(empty_input.clone()), Some(empty_input), false).await?;
         let lines_count = metadata_diff.lines_count.unwrap();
         assert_eq!(lines_count.added_lines, 0);
         assert_eq!(lines_count.deleted_lines, 0);
@@ -991,7 +1003,7 @@ mod tests {
             content: "Plain text\n".to_string(),
         });
 
-        let metadata_diff = metadata(&ctx, &repo, Some(special_input), Some(plain_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(special_input), Some(plain_input), false).await?;
 
         // Should handle special characters as text
         assert_eq!(
@@ -1006,6 +1018,131 @@ mod tests {
         // Lines count should work correctly
         let lines_count = metadata_diff.lines_count.unwrap();
         assert!(lines_count.added_lines > 0 || lines_count.deleted_lines > 0);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_ignore_whitespace_only(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with only whitespace differences
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "hello world\nfoo bar\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "hello  world\nfoo\tbar\n".to_string(),
+        });
+
+        // With ignore_whitespace: false, should show differences
+        let metadata_diff = metadata(
+            &ctx,
+            &repo,
+            Some(base_input.clone()),
+            Some(other_input.clone()),
+            false,
+        )
+        .await?;
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert!(
+            lines_count.added_lines > 0 || lines_count.deleted_lines > 0,
+            "Should show whitespace differences when ignore_whitespace=false"
+        );
+
+        // With ignore_whitespace: true, should show no changes in line counts
+        // (After stripping whitespace, "helloworld\nfoobar\n" should match on both sides)
+        let metadata_diff = metadata(
+            &ctx,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            true,
+        )
+        .await?;
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert_eq!(
+            lines_count.added_lines, 0,
+            "Should show no added lines when ignore_whitespace=true for whitespace-only changes"
+        );
+        assert_eq!(
+            lines_count.deleted_lines, 0,
+            "Should show no deleted lines when ignore_whitespace=true for whitespace-only changes"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_ignore_whitespace_mixed(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with both whitespace and content differences
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nmodified  line2\nline3\n".to_string(),
+        });
+
+        // With ignore_whitespace: true, should still show content change
+        // After stripping whitespace: "line2" vs "modifiedline2" (real difference!)
+        let metadata_diff = metadata(
+            &ctx,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            true,
+        )
+        .await?;
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert_eq!(
+            lines_count.added_lines, 1,
+            "Should show content changes even with ignore_whitespace=true"
+        );
+        assert_eq!(
+            lines_count.deleted_lines, 1,
+            "Should show content changes even with ignore_whitespace=true"
+        );
+        assert_eq!(lines_count.first_added_line_number, Some(2));
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_ignore_whitespace_binary(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test that binary files are not affected by whitespace stripping
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"binary\x00 content").to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"binary\x00  content").to_string(),
+        });
+
+        // Even with ignore_whitespace: true, binary files should not use line counting
+        let metadata_diff = metadata(
+            &ctx,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            true,
+        )
+        .await?;
+
+        // Binary files should not have line counts
+        assert!(metadata_diff.lines_count.is_none(), "Binary files should not have line counts");
+        assert_eq!(metadata_diff.base_file_info.content_type, Some(DiffContentType::Binary));
+        assert_eq!(metadata_diff.other_file_info.content_type, Some(DiffContentType::Binary));
 
         Ok(())
     }

@@ -59,6 +59,7 @@ pub enum DiffFileContent {
 #[derive(Debug, Clone)]
 pub struct HeaderlessDiffOpts {
     pub context: usize,
+    pub ignore_whitespace: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -203,6 +204,7 @@ impl From<HeaderlessDiffOpts> for xdiff::HeaderlessDiffOpts {
     fn from(opts: HeaderlessDiffOpts) -> Self {
         xdiff::HeaderlessDiffOpts {
             context: opts.context,
+            // Note: xdiff doesn't support ignore_whitespace, so we handle it at the content loading level
         }
     }
 }
@@ -245,6 +247,7 @@ pub struct UnifiedDiffOpts {
     pub file_type: DiffFileType,
     pub inspect_lfs_pointers: bool,
     pub omit_content: bool,
+    pub ignore_whitespace: bool,
 }
 
 #[derive(Debug, Clone)]
