@@ -206,10 +206,12 @@ pub fn eden_clone(
     }
 
     // Pass additional eden clone args from config if specified
+    // Use shlex to properly parse args that may contain spaces or quotes
     if let Ok(Some(eden_clone_args)) = config.get_opt::<String>("edenfs", "eden-clone-args") {
-        // Split the args string and append to clone command
-        for arg in eden_clone_args.split_whitespace() {
-            clone_command.arg(arg);
+        if let Some(args) = shlex::split(&eden_clone_args) {
+            for arg in args {
+                clone_command.arg(arg);
+            }
         }
     }
 

@@ -24,6 +24,7 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:shlex",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         "//eden/scm/lib/checkout:checkout",
