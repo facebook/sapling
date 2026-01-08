@@ -107,7 +107,7 @@ impl IdFields {
         Id20::from_byte_array(id20_array)
     }
 
-    /// Check if two (usually commits) are compatbile. This means they share
+    /// Check if two (usually commits) are compatible. This means they share
     /// a same `factor_bits`. If we add more info in `RESERVED` in the future,
     /// check the `RESERVED` too.
     pub fn is_compatible_with(&self, other: &Self) -> bool {

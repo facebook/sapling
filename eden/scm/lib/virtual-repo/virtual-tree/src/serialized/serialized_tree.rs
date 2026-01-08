@@ -144,7 +144,7 @@ mod tests {
     use crate::tests::*;
 
     #[test]
-    fn test_serailized_example() {
+    fn test_serialized_example() {
         // Manually created, similar to the test case in TestTree.
         let buf = b"(\xb5/\xfd$,M\x01\x002\xc2\x07\r`Y\x07\x88\xaaOT\xa9z9\x92m\x02-\x187\xc6\x8a\x06\x95Z\xd0\x8f\xe1:Tn\xce\x9f\x04\x02\x00\x00\x14\x07g\x04\x03\xd8\x99\x80";
         let example = SerializedTree::new(buf);

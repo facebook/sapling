@@ -2394,7 +2394,7 @@ mod tests {
         assert_eq!(dbg(iddag.children_id(vid(2))?), "V3 V5");
         assert_eq!(dbg(iddag.children_set(vid(2).into())?), "V3 V5");
 
-        // descenants() follows into VIRTUAL.
+        // descendants() follows into VIRTUAL.
         assert_eq!(
             dbg(iddag.descendants(nid(2).into())?),
             "N2..=N5 V0..=V3 V5..=V8"

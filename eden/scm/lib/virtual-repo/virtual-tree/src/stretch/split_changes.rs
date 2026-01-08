@@ -57,7 +57,7 @@ enum GeneratedTreeId {
 /// Tracks diff of 2 root trees recursively.
 /// This forms a tree structure of all changed paths regardless of whether the
 /// path is a file or a tree. A path is represented by a list of `NameId`s.
-/// This is used as an intermediate state to calcualte GeneratedTrees.
+/// This is used as an intermediate state to calculate GeneratedTrees.
 #[derive(Debug)]
 struct TreeDiffNode {
     /// Before-split tree diff at this path.
@@ -77,7 +77,7 @@ struct TreeDiffNode {
 #[derive(Debug)]
 struct GeneratedTrees {
     /// After-split trees that have to be generated, cannot be reused in the
-    /// origianl tree provider.
+    /// original tree provider.
     trees: Vec<GeneratedTreeBody>,
 }
 

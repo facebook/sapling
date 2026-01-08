@@ -209,7 +209,7 @@ impl<'a> Tree<'a> {
 
         // Reuse an existing tree? Note: seed might conflict in this case, but
         // that's intentional to make the test case more interesting. For
-        // example, split_changes needs to split the same tree appared multiple
+        // example, split_changes needs to split the same tree appeared multiple
         // times separately.
         match trees_reversed.get(&tree_items) {
             Some(&tree_id) => {

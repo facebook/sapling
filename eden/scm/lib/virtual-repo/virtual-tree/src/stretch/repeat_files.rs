@@ -25,7 +25,7 @@ impl VirtualTreeProvider for RepeatFiles {
             let typed_content_id = TypedContentId::from(content_id);
             match typed_content_id {
                 TypedContentId::Tree(_tree_id) => {
-                    // Do not duplicate trees. It creats too many files exponentially, O(N ** depth).
+                    // Do not duplicate trees. It creates too many files exponentially, O(N ** depth).
                     let new_name_id = NameId(self.scale_id_up(name_id.0, 0));
                     Box::new(std::iter::once((new_name_id, content_id)))
                         as Box<dyn Iterator<Item = (NameId, ContentId)>>

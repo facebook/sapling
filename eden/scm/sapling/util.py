@@ -700,7 +700,7 @@ class sortdict(collections.OrderedDict):
     """
 
     # XXX: this override can be removed once we no longer
-    # support Python versions ealier than 3.12
+    # support Python versions earlier than 3.12
     @_recursive_repr()
     def __repr__(self):
         "od.__repr__() <==> repr(od)"

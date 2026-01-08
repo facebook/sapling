@@ -66,7 +66,7 @@ impl VirtualRepoProvider {
                 Some(len.to_string().into_bytes().into())
             }
             crate::id_fields::ObjectKind::Tree => self.calculate_tree_bytes(fields),
-            crate::id_fields::ObjectKind::Commit => self.calcualte_commit_bytes(fields),
+            crate::id_fields::ObjectKind::Commit => self.calculate_commit_bytes(fields),
         }
     }
 
@@ -153,7 +153,7 @@ impl VirtualRepoProvider {
         storemodel::basic_serialize_tree(entries, self.format).ok()
     }
 
-    fn calcualte_commit_bytes(&self, fields: IdFields) -> Option<Bytes> {
+    fn calculate_commit_bytes(&self, fields: IdFields) -> Option<Bytes> {
         let id8 = fields.id8;
         let tree_id20 = {
             let tree_provider = get_tree_provider(fields.factor_bits);

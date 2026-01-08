@@ -58,7 +58,7 @@ impl RemoteIdConvertProtocol for VirtualIdConvertProtocol {
                             let path = AncestorPath {
                                 x: head.clone(),
                                 n,
-                                // NOTE: Can be smarter by using batch_size > 1 and returnning more
+                                // NOTE: Can be smarter by using batch_size > 1 and returning more
                                 // than 1 vertexes. For now, uses the simpler but correct form.
                                 batch_size: 1,
                             };
