@@ -2164,7 +2164,7 @@ void EdenServer::mountFinished(
   // crash instead of clean exit. We can send a SIGKILL signal or throw an
   // exception here, but both of them has same results.
   stopAllGarbageCollections(
-      3 /*maxRetries*/, std::chrono::seconds(1) /*retryDelay*/);
+      /*maxRetries=*/3, /*retryInterval=*/std::chrono::seconds(1));
 
   // Save the unmount and takeover Promises
   folly::SharedPromise<Unit> unmountPromise;
@@ -2668,7 +2668,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
     // We should confirm that no garbage collection is running during graceful
     // restart.
     if (!stopAllGarbageCollections(
-            3 /*maxRetries*/, std::chrono::seconds(1)) /*retryInterval*/) {
+            /*maxRetries=*/3, /*retryInterval=*/std::chrono::seconds(1))) {
       // We are still waiting for the GC to finish. This is unexpected and
       // should not happen. We should not proceed with the graceful restart.
       return makeFuture<TakeoverData>(std::runtime_error(
