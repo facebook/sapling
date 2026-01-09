@@ -350,7 +350,7 @@ describe('createParsedDiffWithLines', () => {
     });
   });
 
-  it('reutrn for when a line was changed in the middle', () => {
+  it('return for when a line was changed in the middle', () => {
     const aLines = splitLines('a\nb\nc\nd\ne\n');
     const bLines = splitLines('a\nb\nc\nd1\nd2\ne\n');
     expect(parseParsedDiff(aLines, bLines, 1)).toMatchObject({

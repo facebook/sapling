@@ -37,7 +37,7 @@ async function fetchGrammar(
 }
 
 let cachedGrammarStore: {value: Registry; theme: ThemeColor} | null = null;
-export function getGrammerStore(
+export function getGrammarStore(
   theme: ThemeColor,
   base: string,
   onNewColors?: (colorMap: string[]) => void,

@@ -516,7 +516,7 @@ export default class ServerToClientAPI {
       }
       case 'abortRunningOperation': {
         const {operationId} = data;
-        repo.abortRunningOpeation(operationId);
+        repo.abortRunningOperation(operationId);
         this.handleMaybeForgotOperation(operationId, repo);
         break;
       }
@@ -641,7 +641,7 @@ export default class ServerToClientAPI {
             uploadFile(this.logger, {filename, data: payload}),
           )
           .then((result: string) => {
-            this.logger.info('sucessfully uploaded file', filename, result);
+            this.logger.info('successfully uploaded file', filename, result);
             this.postMessage({type: 'uploadFileResult', id, result: {value: result}});
           })
           .catch((error: Error) => {

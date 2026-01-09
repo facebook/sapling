@@ -7,7 +7,7 @@
 
 /*
  * This file is synced between fbcode/eden/addons/vscode/extension/api/types.ts and xplat/vscode.
- * The authoratative copy is the one in addons/.
+ * The authoritative copy is the one in addons/.
  * Use `yarn sync-api` from addons/ to perform the sync.
  *
  * This file is intended to be self contained so it may be copied/referenced from other extensions,

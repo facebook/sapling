@@ -19,7 +19,7 @@ import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import {tokenizeLines} from 'shared/textmate-lib/tokenize';
 import {loadWASM} from 'vscode-oniguruma';
 import {grammars, languages} from '../../generated/textmate/TextMateGrammarManifest';
-import {getGrammar, getGrammerStore} from './grammar';
+import {getGrammar, getGrammarStore} from './grammar';
 
 const URL_TO_ONIG_WASM = './generated/textmate/onig.wasm';
 
@@ -43,7 +43,7 @@ async function loadGrammar(
     return undefined;
   }
 
-  const store = getGrammerStore(theme, globalBaseUri, colorMap => {
+  const store = getGrammarStore(theme, globalBaseUri, colorMap => {
     // tell client the newest colorMap
     postMessage({type: 'cssColorMap', colorMap} as SyntaxWorkerResponse);
   });

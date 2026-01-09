@@ -148,7 +148,7 @@ export function RenderDag(props: RenderDagProps) {
   const fullClassName = ((className ?? '') + ' render-dag').trimStart();
   return (
     <div className={fullClassName} {...restProps}>
-      <SvgPattenList authors={authors} />
+      <SvgPatternList authors={authors} />
       <AnimatedReorderGroup animationDuration={100}>{renderedRows}</AnimatedReorderGroup>
     </div>
   );
@@ -624,7 +624,7 @@ function linkLineToEdges(linkLine: LinkLine, color?: string, colorLine?: LinkLin
 }
 
 // Svg patterns for avatar backgrounds. Those patterns are referred later by `RegularGlyph`.
-function SvgPattenList(props: {authors: Iterable<string>}) {
+function SvgPatternList(props: {authors: Iterable<string>}) {
   return (
     <svg className="render-dag-svg-patterns" viewBox={`-10 -10 20 20`}>
       <defs>

@@ -6,7 +6,7 @@
  */
 
 import App from 'isl/src/App';
-import {getLastestOperationInfo, onOperationExited} from 'isl/src/operationsState';
+import {getLatestOperationInfo, onOperationExited} from 'isl/src/operationsState';
 import {registerDisposable} from 'isl/src/utils';
 import ReactDOM from 'react-dom/client';
 import serverAPI from '../../isl/src/ClientToServerAPI';
@@ -31,7 +31,7 @@ registerDisposable(
     }
 
     // get latest operation
-    const info = getLastestOperationInfo(operation);
+    const info = getLatestOperationInfo(operation);
 
     if (info == null || info.commandOutput == null) {
       return;

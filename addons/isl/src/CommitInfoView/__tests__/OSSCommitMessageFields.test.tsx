@@ -19,7 +19,7 @@ describe('isFieldNonEmpty', () => {
     expect(isFieldNonEmpty('foo')).toBeTruthy();
     expect(isFieldNonEmpty('')).toBeFalsy();
   });
-  it('handles arays', () => {
+  it('handles arrays', () => {
     expect(isFieldNonEmpty(['foo'])).toBeTruthy();
     expect(isFieldNonEmpty([])).toBeFalsy();
     expect(isFieldNonEmpty([''])).toBeFalsy();
@@ -54,7 +54,7 @@ line 2`,
     );
   });
 
-  it('handles empty title when coverting to string', () => {
+  it('handles empty title when converting to string', () => {
     expect(
       commitMessageFieldsToString(OSSCommitMessageFieldSchema, {
         Title: '',

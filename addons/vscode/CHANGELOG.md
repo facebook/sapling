@@ -104,7 +104,7 @@
 
 ### Aug 26 2024
 
-- Horiztonally grow the quick commit title input as you type
+- Horizontally grow the quick commit title input as you type
 - Improve reliability of process exit messages, which could sometimes cause incorrect state
 - Fix VS Code extension host restarts disconnecting ISL. ISL now restarts on extension host restart
 - Add quick button to mount additional workspace folders from the ISL cwd dropdown
@@ -200,7 +200,7 @@
     - This feature will require a new version of Sapling to work
   - Made labels more consistent, now use the terms "Source - being rebased" and "Dest - rebasing onto" consistently
   - Support for external merge tools, if configured. See `sl help config.merge-tools` for more information.
-  - Automatically run merge drivers before continueing a rebase
+  - Automatically run merge drivers before continuing a rebase
   - Make Continue / Abort conflict buttons more prominent
 - Quickly change your cwd via a dropdown button for the Repository Info & cwd dropdown. You can still open the menu for information.
 - Increase the drag target on the right side of commits so you can more easily drag and drop rebase

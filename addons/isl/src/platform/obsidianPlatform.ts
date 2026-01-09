@@ -9,7 +9,7 @@ import type {Platform} from '../platform';
 import type {ThemeColor} from '../theme';
 import type {OneIndexedLineNumber, RepoRelativePath} from '../types';
 
-import {makeBrowserLikePlatformImpl} from './browerPlatformImpl';
+import {makeBrowserLikePlatformImpl} from './browserPlatformImpl';
 
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated when bundling.

@@ -9,7 +9,7 @@ import type {Comparison} from '../../../shared/Comparison';
 import type {Platform} from '../platform';
 import type {OneIndexedLineNumber, RepoRelativePath} from '../types';
 
-import {makeBrowserLikePlatformImpl} from './browerPlatformImpl';
+import {makeBrowserLikePlatformImpl} from './browserPlatformImpl';
 
 declare global {
   interface Window {

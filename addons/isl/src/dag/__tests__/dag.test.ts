@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// @lint-ignore-every SPELL
+
 import type {CommitInfo, CommitPhaseType, Hash, SuccessorInfo} from '../../types';
 import type {SetLike} from '../set';
 

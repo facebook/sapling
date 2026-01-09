@@ -145,7 +145,7 @@ export function htmlForWebview({
   title: string;
   /** className to apply to the root <div> */
   rootClass: string;
-  /** Base directory the webview loads from, where `/` in HTTP requests is realtive to */
+  /** Base directory the webview loads from, where `/` in HTTP requests is relative to */
   extensionRelativeBase: string;
   /** Built entry point .js javascript file name to load, relative to extensionRelativeBase */
   entryPointFile: string;

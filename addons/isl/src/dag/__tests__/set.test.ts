@@ -23,7 +23,7 @@ describe('HashSet', () => {
     expect(set.toHashes().toArray().sort()).toEqual(['a', 'b', 'c']);
   });
 
-  it('substract()', () => {
+  it('subtract()', () => {
     const set = setAb.subtract(setBc);
     expect(set.toHashes().toArray().sort()).toEqual(['a']);
   });

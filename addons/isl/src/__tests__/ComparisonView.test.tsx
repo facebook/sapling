@@ -135,7 +135,7 @@ describe('ComparisonView', () => {
   }
   async function openUncommittedChangesComparison(
     diffContent?: string,
-    genereatedStatuses?: Record<string, GeneratedStatus>,
+    generatedStatuses?: Record<string, GeneratedStatus>,
   ) {
     await clickComparisonViewButton();
     await waitFor(
@@ -151,7 +151,7 @@ describe('ComparisonView', () => {
     act(() => {
       simulateMessageFromServer({
         type: 'fetchedGeneratedStatuses',
-        results: genereatedStatuses ?? {},
+        results: generatedStatuses ?? {},
       });
     });
     await act(async () => {
@@ -526,8 +526,8 @@ ${content}
     });
   });
 
-  describe('genereated files', () => {
-    it('genereated status is fetched for files being compared', async () => {
+  describe('generated files', () => {
+    it('generated status is fetched for files being compared', async () => {
       const NORMAL_FILE = makeFileDiff('normal1', '+normal_contents');
       const PARTIAL_FILE = makeFileDiff('partial1', '+partial_contents');
       const GENERATED_FILE = makeFileDiff('generated1', '+generated_contents');

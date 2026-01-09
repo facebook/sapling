@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// @lint-ignore-every SPELL
+
 import type {ReactNode} from 'react';
 
 import React, {createContext, useContext, useEffect, useState} from 'react';

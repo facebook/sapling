@@ -12,7 +12,7 @@ import type {Comparison} from 'shared/Comparison';
 import type {Json} from 'shared/typeUtils';
 import type {VSCodeAPI} from './vscodeApi';
 
-import {browserClipboardCopy} from 'isl/src/platform/browerPlatformImpl';
+import {browserClipboardCopy} from 'isl/src/platform/browserPlatformImpl';
 import {registerCleanup} from 'isl/src/utils';
 import {lazy} from 'react';
 import {vscodeApi} from './vscodeApi';

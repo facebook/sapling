@@ -265,7 +265,7 @@ class WorkerPool {
       // unavailable, but we request it to publish its availability.
       const client = new DiffServiceClient(workerName);
       this.workers[workerIndex] = {client, available: false};
-      client.sendMessage({method: 'publishAvailabilty', id: -1, params: null});
+      client.sendMessage({method: 'publishAvailability', id: -1, params: null});
     }
 
     return promise;

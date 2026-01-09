@@ -201,7 +201,7 @@ function InternalState() {
           placement="bottom"
           title={t(
             'Capture a snapshot of selected Jotai atom states, log it to the dev tools console.\n\n' +
-              'Hold Ctrl to use serailzied JSON instead of Javascript objects.',
+              'Hold Ctrl to use serialized JSON instead of Javascript objects.',
           )}>
           <Button onClick={generate}>
             {needSerialize ? <T>Take Snapshot (JSON)</T> : <T>Take Snapshot (objects)</T>}

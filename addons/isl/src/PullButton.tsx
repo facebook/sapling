@@ -57,10 +57,10 @@ export function PullButton() {
   const trackedChanges = useAtomValue(uncommittedChangesWithPreviews).filter(
     change => change.status !== '?',
   );
-  const hasUncommittedChnages = trackedChanges.length > 0;
+  const hasUncommittedChanges = trackedChanges.length > 0;
 
   const disabledFromUncommittedChanges =
-    currentChoice.allowWithUncommittedChanges === false && hasUncommittedChnages;
+    currentChoice.allowWithUncommittedChanges === false && hasUncommittedChanges;
 
   let tooltip =
     currentChoice.tooltip +

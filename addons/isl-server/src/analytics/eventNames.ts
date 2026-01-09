@@ -93,6 +93,7 @@ export type TrackEventName =
   | 'PartialAmendOperation'
   | 'PartialDiscardOperation'
   | 'PhabricatorGenAIFunnelEvent'
+  // @lint-ignore SPELL
   | 'PhabricatorCommentOpporunity'
   | 'PhabricatorCommentShown'
   | 'PhabricatorCommentResolve'

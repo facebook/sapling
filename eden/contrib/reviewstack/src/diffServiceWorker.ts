@@ -67,7 +67,7 @@ export type Message =
     }
   | {
       id: -1;
-      method: 'publishAvailabilty';
+      method: 'publishAvailability';
       params: null;
     };
 
@@ -217,7 +217,7 @@ function onMessage(port: MessagePort, {data}: {data: Message}) {
         .finally(() => updateRequestCount(-1));
       break;
     }
-    case 'publishAvailabilty': {
+    case 'publishAvailability': {
       broadcastAvailability();
       break;
     }

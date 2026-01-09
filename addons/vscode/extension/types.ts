@@ -6,7 +6,7 @@
  */
 
 /** Not all features of the VS Code API may be enabled / rolled out, so they are controlled individually.
- * In OSS, they are all enabled. Interally, they may be disabled while transitioning from an older system.
+ * In OSS, they are all enabled. Internally, they may be disabled while transitioning from an older system.
  * blame => inline and toggleable blame
  * sidebar => VS Code SCM API, VS Code Source Control sidebar entry.
  * diffview => diff commands, gutters. Requires 'sidebar'.

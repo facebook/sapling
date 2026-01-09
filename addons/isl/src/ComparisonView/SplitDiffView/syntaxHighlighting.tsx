@@ -22,7 +22,7 @@ import {SynchronousWorker, WorkerApi} from './workerApi';
 
 // Syntax highlighting is done in a WebWorker. This file contains APIs
 // to be called from the main thread, which are delegated to the worker.
-// In some environemtns, WebWorker is not available. In that case,
+// In some environments, WebWorker is not available. In that case,
 // we fall back to a synchronous worker.
 
 // Useful for testing the non-WebWorker implementation
@@ -92,9 +92,9 @@ function getWorker(): Promise<WorkerApi<SyntaxWorkerRequest, SyntaxWorkerRespons
 export function useTokenizedHunks(
   path: string,
   hunks: ParsedDiff['hunks'],
-  useThemeHoook: () => ThemeColor,
+  useThemeHook: () => ThemeColor,
 ): TokenizedDiffHunks | undefined {
-  const theme = useThemeHoook();
+  const theme = useThemeHook();
 
   const [tokenized, setTokenized] = useState<TokenizedDiffHunks | undefined>(undefined);
 
@@ -118,9 +118,9 @@ export function useTokenizedHunks(
 export function useTokenizedContents(
   path: string,
   content: Array<string> | undefined,
-  useThemeHoook: () => ThemeColor,
+  useThemeHook: () => ThemeColor,
 ): TokenizedHunk | undefined {
-  const theme = useThemeHoook();
+  const theme = useThemeHook();
 
   const [tokenized, setTokenized] = useState<TokenizedHunk | undefined>(undefined);
 
@@ -153,9 +153,9 @@ export function useTokenizedContentsOnceVisible(
   contentBefore: Array<string> | undefined,
   contentAfter: Array<string> | undefined,
   parentNode: React.MutableRefObject<HTMLElement | null>,
-  useThemeHoook: () => ThemeColor,
+  useThemeHook: () => ThemeColor,
 ): [TokenizedHunk, TokenizedHunk] | undefined {
-  const theme = useThemeHoook();
+  const theme = useThemeHook();
   const [tokenized, setTokenized] = useState<[TokenizedHunk, TokenizedHunk] | undefined>(undefined);
   const [hasBeenVisible, setHasBeenVisible] = useState(false);
 

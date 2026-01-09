@@ -16,7 +16,7 @@ import {writeAtom} from './jotaiUtils';
 import {GeneratedStatus} from './types';
 import {registerDisposable} from './utils';
 
-export const genereatedFileCache = new LRU<RepoRelativePath, GeneratedStatus>(1500);
+export const generatedFileCache = new LRU<RepoRelativePath, GeneratedStatus>(1500);
 
 /** To avoid sending multiple redundant fetch requests, also save which files are being fetched right now */
 const currentlyFetching = new Set<RepoRelativePath>();
@@ -34,7 +34,7 @@ registerDisposable(
   currentlyFetching,
   serverAPI.onMessageOfType('fetchedGeneratedStatuses', event => {
     for (const [path, status] of Object.entries(event.results)) {
-      genereatedFileCache.set(path, status);
+      generatedFileCache.set(path, status);
       currentlyFetching.delete(path);
     }
     writeAtom(generatedFileGeneration, old => old + 1);
@@ -44,7 +44,7 @@ registerDisposable(
 
 export function useGeneratedFileStatus(path: RepoRelativePath): GeneratedStatus {
   useAtomValue(generatedFileGeneration); // update if we get new statuses
-  const found = genereatedFileCache.get(path);
+  const found = generatedFileCache.get(path);
   if (found == null) {
     fetchMissingGeneratedFileStatuses([path]);
     return GeneratedStatus.Manual;
@@ -54,7 +54,7 @@ export function useGeneratedFileStatus(path: RepoRelativePath): GeneratedStatus 
 
 export function getGeneratedFilesFrom(paths: ReadonlyArray<RepoRelativePath>) {
   return Object.fromEntries(
-    paths.map(path => [path, genereatedFileCache.get(path) ?? GeneratedStatus.Manual]),
+    paths.map(path => [path, generatedFileCache.get(path) ?? GeneratedStatus.Manual]),
   );
 }
 
@@ -74,7 +74,7 @@ export function useGeneratedFileStatuses(
 export function getCachedGeneratedFileStatuses(
   paths: ReadonlyArray<RepoRelativePath>,
 ): Record<RepoRelativePath, GeneratedStatus | undefined> {
-  return Object.fromEntries(paths.map(path => [path, genereatedFileCache.get(path)]));
+  return Object.fromEntries(paths.map(path => [path, generatedFileCache.get(path)]));
 }
 
 /**
@@ -85,12 +85,12 @@ export function getCachedGeneratedFileStatuses(
 export function fetchMissingGeneratedFileStatuses(files: ReadonlyArray<RepoRelativePath>) {
   let changed = false;
   const notCached = files
-    .filter(file => genereatedFileCache.get(file) == null && !currentlyFetching.has(file))
+    .filter(file => generatedFileCache.get(file) == null && !currentlyFetching.has(file))
     .filter(path => {
       const isGeneratedTestedFromPath =
         path.indexOf('__generated__') !== -1 || path.indexOf('/generated/') !== -1;
       if (isGeneratedTestedFromPath) {
-        genereatedFileCache.set(path, GeneratedStatus.Generated);
+        generatedFileCache.set(path, GeneratedStatus.Generated);
         changed = true;
       }
       return !isGeneratedTestedFromPath;

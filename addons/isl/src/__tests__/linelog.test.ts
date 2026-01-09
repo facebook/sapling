@@ -29,6 +29,8 @@ SOFTWARE.
 
 */
 
+// @lint-ignore-every SPELL
+
 import type {LineIdx, Rev} from '../linelog';
 
 import {describe, expect, it} from '@jest/globals';

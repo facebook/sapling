@@ -9,7 +9,7 @@ import type {Platform} from '../platform';
 import type {ThemeColor} from '../theme';
 import type {OneIndexedLineNumber, RepoRelativePath} from '../types';
 
-import {makeBrowserLikePlatformImpl} from './browerPlatformImpl';
+import {makeBrowserLikePlatformImpl} from './browserPlatformImpl';
 
 declare global {
   interface Window {

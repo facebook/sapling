@@ -313,11 +313,11 @@ export function dragAndDropCommits(
       ? draggedCommit
       : within(screen.getByTestId(`commit-${draggedCommit}`)).queryByTestId('draggable-commit');
   expect(draggableCommit).toBeDefined();
-  const dragTargetComit = screen.queryByTestId(`commit-${onto}`)?.querySelector('.commit-details');
-  expect(dragTargetComit).toBeDefined();
+  const dragTargetCommit = screen.queryByTestId(`commit-${onto}`)?.querySelector('.commit-details');
+  expect(dragTargetCommit).toBeDefined();
 
   act(() => {
-    op(draggableCommit as HTMLElement, dragTargetComit as HTMLElement);
+    op(draggableCommit as HTMLElement, dragTargetCommit as HTMLElement);
     jest.advanceTimersByTime(2);
   });
 }

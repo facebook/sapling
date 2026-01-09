@@ -7,7 +7,7 @@
 
 import type {Platform} from './platform';
 
-import {makeBrowserLikePlatformImpl} from './platform/browerPlatformImpl';
+import {makeBrowserLikePlatformImpl} from './platform/browserPlatformImpl';
 
 // important: this file should not try to import other code from 'isl',
 // since it will end up getting duplicated when bundling.

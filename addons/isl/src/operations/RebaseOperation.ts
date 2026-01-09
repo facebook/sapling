@@ -85,7 +85,7 @@ export class RebaseOperation extends Operation {
     const dest = dag.resolve(latestSuccessor(dag, this.destination))?.hash;
     // src already on dest?
     if (src && dest && dag.parentHashes(src).includes(dest)) {
-      // The stack might be partially rebased while the rebase is onging.
+      // The stack might be partially rebased while the rebase is ongoing.
       // For example, graph
       //   a--b--c--d--e  z
       // Rebasing b (and descendants) to z, we might observe:
