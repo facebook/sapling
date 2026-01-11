@@ -9,6 +9,7 @@ const CRATEMAP: &str = "\
 eden/mononoke/megarepo_api/if/megarepo_configs.thrift crate //eden/mononoke/megarepo_api/if:megarepo_configs-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

@@ -31,6 +31,7 @@ eden/mononoke/mononoke_types/serialization/unodes.thrift mononoke_types_serializ
 eden/mononoke/repo_attributes/bonsai_hg_mapping/if/bonsai_hg_mapping.thrift crate //eden/mononoke/repo_attributes/bonsai_hg_mapping/if:bonsai_hg_mapping_entry_thrift-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

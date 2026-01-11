@@ -21,6 +21,8 @@ codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/fac
 derived_data_type_if__types = { package = "derived_data_type_if", version = "0.1.0", path = ".." }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
+thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+thrift_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [build-dependencies]

@@ -25,6 +25,8 @@ mononoke_types_serialization_services = { version = "0.1.0", path = "../../../..
 rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 rust_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 synced_commit_mapping_thrift__types = { package = "synced_commit_mapping_thrift", version = "0.1.0", path = ".." }
+thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+thrift_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [build-dependencies]

@@ -7,6 +7,10 @@
 
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 /// Additional property that can be associated with some data type.
 @rust.Exhaustive

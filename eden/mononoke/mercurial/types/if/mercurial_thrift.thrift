@@ -9,6 +9,10 @@ include "eden/mononoke/mononoke_types/serialization/bonsai.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/sharded_map.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 @rust.NewType
 typedef id.Sha1 HgNodeHash

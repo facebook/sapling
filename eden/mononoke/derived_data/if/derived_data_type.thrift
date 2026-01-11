@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
+
 namespace cpp2 facebook.scm.service
 namespace php DerivedData
 namespace py scm.derived_data.thrift.derived_data_type

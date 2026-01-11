@@ -7,6 +7,8 @@ use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 eden/mononoke/blobstore/if/memcache_lock.thrift crate //eden/mononoke/blobstore/if:memcache-lock-thrift-rust
+thrift/annotation/scope.thrift thrift->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

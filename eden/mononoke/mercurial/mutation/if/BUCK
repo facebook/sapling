@@ -22,5 +22,6 @@ thrift_library(
     deps = [
         "//eden/mononoke/mercurial/types/if:mercurial-thrift",
         "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
     ],
 )

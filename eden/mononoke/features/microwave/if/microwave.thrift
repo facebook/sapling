@@ -9,6 +9,10 @@ include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/path.thrift"
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 // Code version constant -- update to invalidate saved state.
 const i32 CODEVER = 1;

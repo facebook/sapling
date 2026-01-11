@@ -23,5 +23,6 @@ thrift_library(
         "//eden/mononoke/repo_attributes/filenodes/if:filenodes-if",
         "//fb303/thrift:fb303_core",
         "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
     ],
 )

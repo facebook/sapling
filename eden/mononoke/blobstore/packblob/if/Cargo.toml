@@ -23,6 +23,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 ref-cast = "1.0.18"
 rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 thiserror = "2.0.12"
+thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 
 [build-dependencies]
 thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

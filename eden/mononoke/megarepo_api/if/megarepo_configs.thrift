@@ -6,6 +6,10 @@
  */
 
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 namespace cpp2 facebook.scm.service
 namespace py3 scm.service.thrift

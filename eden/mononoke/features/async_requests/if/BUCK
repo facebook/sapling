@@ -14,5 +14,6 @@ thrift_library(
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
         "//eden/mononoke/scs/if:source_control",
         "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
     ],
 )

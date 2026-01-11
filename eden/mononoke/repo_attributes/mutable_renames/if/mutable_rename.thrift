@@ -7,6 +7,10 @@
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 # If you change this, you need to bump CODEVER in caching.rs
 
