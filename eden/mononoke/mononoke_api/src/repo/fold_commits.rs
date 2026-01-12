@@ -347,6 +347,11 @@ impl<R: MononokeRepo> RepoContext<R> {
         // the chain to find the original source that should exist in the base commit.
         let mut copy_chain: HashMap<NonRootMPath, NonRootMPath> = HashMap::new();
 
+        // Track copy sources that should NOT be deleted (they are copied FROM, not renamed)
+        // When a file is copied (not renamed), the source still exists and should not
+        // be marked as deleted in the folded result.
+        let mut copy_sources: BTreeSet<NonRootMPath> = BTreeSet::new();
+
         // Track all paths we've seen (including deletions)
         let mut all_paths: BTreeSet<NonRootMPath> = BTreeSet::new();
 
@@ -389,6 +394,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 &mut all_paths,
                 &mut working_tree,
                 &mut copy_chain,
+                &mut copy_sources,
                 &mut replaced_directory_paths,
             );
         }
@@ -545,6 +551,7 @@ impl<R: MononokeRepo> RepoContext<R> {
                 &mut all_paths,
                 &mut working_tree,
                 &mut copy_chain,
+                &mut copy_sources,
                 &mut replaced_directory_paths,
             );
         }
@@ -673,8 +680,21 @@ impl<R: MononokeRepo> RepoContext<R> {
         // Second, check for paths in initial_entries that are missing from working_entries.
         // These are files that were implicitly deleted (e.g., by a directory becoming a file
         // and then being deleted).
+        // IMPORTANT: Skip copy sources - files that were copied FROM (not renamed).
+        // These files still exist and should not be marked as deleted.
         for (mpath, before) in &initial_entries {
             if before.is_some() && !working_entries.contains_key(mpath) {
+                // Check if this path is a copy source (was copied FROM, not renamed)
+                let is_copy_source = mpath
+                    .clone()
+                    .into_optional_non_root_path()
+                    .is_some_and(|path| copy_sources.contains(&path));
+
+                if is_copy_source {
+                    // This file was copied FROM, not renamed - it should remain unchanged
+                    continue;
+                }
+
                 // This file existed in base but is not in working_tree (was pruned)
                 // It should be deleted
                 if !merged.contains_key(mpath) {
@@ -728,6 +748,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         all_paths: &mut BTreeSet<NonRootMPath>,
         working_tree: &mut PathTree<Option<CreateChange>>,
         copy_chain: &mut HashMap<NonRootMPath, NonRootMPath>,
+        copy_sources: &mut BTreeSet<NonRootMPath>,
         replaced_directory_paths: &mut BTreeSet<NonRootMPath>,
     ) {
         // Convert FileChange to CreateChange using From impl
@@ -741,6 +762,7 @@ impl<R: MononokeRepo> RepoContext<R> {
             all_paths,
             working_tree,
             copy_chain,
+            copy_sources,
             replaced_directory_paths,
         );
     }
@@ -751,6 +773,7 @@ impl<R: MononokeRepo> RepoContext<R> {
         all_paths: &mut BTreeSet<NonRootMPath>,
         working_tree: &mut PathTree<Option<CreateChange>>,
         copy_chain: &mut HashMap<NonRootMPath, NonRootMPath>,
+        copy_sources: &mut BTreeSet<NonRootMPath>,
         replaced_directory_paths: &mut BTreeSet<NonRootMPath>,
     ) {
         // First pass: additions/modifications
@@ -766,6 +789,26 @@ impl<R: MononokeRepo> RepoContext<R> {
                                 copy_info.path().clone().into_optional_non_root_path()
                             {
                                 all_paths.insert(src_path.clone());
+
+                                // Track that this source path is being copied FROM (not renamed).
+                                // This is important because we need to distinguish between:
+                                // - A file that was copied FROM (should remain unchanged)
+                                // - A file that was explicitly deleted
+                                // Without this, the copy source would be incorrectly marked as deleted
+                                // in the final merged output, turning a copy into a rename.
+                                // Only add to copy_sources if the source is NOT explicitly deleted
+                                // in this changeset (if it's deleted, it's a rename, not a copy).
+                                if !create_changes.iter().any(|(p, c)| {
+                                    p.clone().into_optional_non_root_path()
+                                        == Some(src_path.clone())
+                                        && matches!(
+                                            c,
+                                            CreateChange::Deletion
+                                                | CreateChange::UntrackedDeletion
+                                        )
+                                }) {
+                                    copy_sources.insert(src_path.clone());
+                                }
 
                                 // Resolve the copy chain to find the ultimate source
                                 let ultimate_src =
@@ -798,6 +841,8 @@ impl<R: MononokeRepo> RepoContext<R> {
                     CreateChange::Deletion | CreateChange::UntrackedDeletion => {
                         working_tree.insert(mpath.clone(), Some(change.clone()));
                         copy_chain.remove(&path);
+                        // If a copy source is explicitly deleted, remove it from copy_sources
+                        copy_sources.remove(&path);
                     }
                     _ => {}
                 }

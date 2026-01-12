@@ -133,9 +133,6 @@ async fn test_fold_commits_copy_does_not_become_rename(fb: FacebookInit) -> Resu
     // B copies `foo` to `bar` (foo still exists in B)
     // Expected: After folding, `bar` should be a copy of `foo` and `foo` should still exist
     //           (i.e., the copy should NOT become a rename)
-    //
-    // BUG: Currently the copy source `foo` is incorrectly deleted, turning the copy into a rename.
-    // TODO: Fix the bug and update assertions to check correct behavior.
     let ctx = CoreContext::test_mock(fb);
     let (repo, commits) = init_repo(
         &ctx,
@@ -173,12 +170,11 @@ async fn test_fold_commits_copy_does_not_become_rename(fb: FacebookInit) -> Resu
         .await?
         .changeset_ctx;
 
-    // BUG: foo is incorrectly deleted after folding (copy becomes rename)
-    // CORRECT behavior: foo should still exist after folding
+    // Verify: foo should still exist after folding (copy should NOT become a rename)
     let foo_after_fold = folded.path_with_content("foo").await?;
     assert!(
-        !foo_after_fold.is_file().await?,
-        "BUG: foo is incorrectly deleted after folding - copy became a rename"
+        foo_after_fold.is_file().await?,
+        "foo should still exist after folding - copy should not become a rename"
     );
 
     // Verify: bar should still exist after folding
