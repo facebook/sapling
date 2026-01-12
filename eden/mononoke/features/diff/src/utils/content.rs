@@ -86,8 +86,19 @@ async fn get_content_id_from_changeset_path(
     changeset_id: ChangesetId,
     path: NonRootMPath,
 ) -> Result<Option<ContentId>, DiffError> {
-    let content_info = get_file_info_from_changeset_path(ctx, repo, changeset_id, path).await?;
-    Ok(content_info.map(|(content_id, _)| content_id))
+    // If the file was changed in this changeset we already have the content_id
+    let changeset = changeset_id
+        .load(ctx, repo.repo_blobstore())
+        .await
+        .map_err(DiffError::internal)?;
+    let change = &changeset.file_changes_map().get(&path);
+    if let Some(Change(tracked)) = change {
+        Ok(Some(tracked.content_id().clone()))
+    } else {
+        // If the file was not changed here we will have to retrieve it and trigger derivation
+        let content_info = get_file_info_from_changeset_path(ctx, repo, changeset_id, path).await?;
+        Ok(content_info.map(|(content_id, _)| content_id))
+    }
 }
 
 pub async fn get_file_info_from_changeset_path(
