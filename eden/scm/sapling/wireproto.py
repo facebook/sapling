@@ -145,8 +145,7 @@ class remoteiterbatcher(peer.iterbatcher):
                 pass
             else:
                 raise error.ProgrammingError(
-                    "%s @batchable generator emitted "
-                    "unexpected value count" % command
+                    "%s @batchable generator emitted unexpected value count" % command
                 )
 
             yield finalfuture.value

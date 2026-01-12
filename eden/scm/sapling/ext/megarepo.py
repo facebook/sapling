@@ -15,7 +15,6 @@ import re
 from typing import Optional
 
 import bindings
-
 from sapling import (
     autopull,
     commands,

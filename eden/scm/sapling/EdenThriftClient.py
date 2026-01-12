@@ -11,7 +11,6 @@ instead of doing a normal scan of the filesystem.
 """
 
 from . import util
-
 from .node import nullid
 
 

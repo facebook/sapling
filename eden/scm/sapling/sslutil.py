@@ -321,8 +321,7 @@ def protocolsettings(protocol: str) -> Tuple[ssl._SSLMethod, int, str]:
             raise error.Abort(
                 _("current Python does not support protocol setting %s") % protocol,
                 hint=_(
-                    "upgrade Python or disable setting since "
-                    "only TLS 1.0 is supported"
+                    "upgrade Python or disable setting since only TLS 1.0 is supported"
                 ),
             )
 

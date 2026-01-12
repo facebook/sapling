@@ -14,7 +14,6 @@ from typing import Callable, Optional, TypeVar
 
 from eden.fs.cli.config import get_snapshot, SNAPSHOT
 from eden.fs.cli.util import MIGRATION_MARKER, NaiveFaultInjector
-
 from eden.integration.hg.lib.hg_extension_test_base import (
     EdenHgTestCase,
     FilteredHgTestCase,
@@ -136,9 +135,9 @@ adir
         try:
             self.hg("filteredfs", "--help")
         except HgError as e:
-            assert (
-                b"unknown command 'filteredfs'" in e.stderr
-            ), f"unexpected exception: {e}"
+            assert b"unknown command 'filteredfs'" in e.stderr, (
+                f"unexpected exception: {e}"
+            )
             return "sapling does not know about 'filteredfs' command"
 
         # run `eden info` and check the backing store type
@@ -215,13 +214,13 @@ adir
         # checkoutRevision Thrift API.
         marker_file_path = os.path.join(str(mount_path), ".hg", MIGRATION_MARKER)
         if migration_did_happen:
-            assert os.path.exists(
-                marker_file_path
-            ), f"Migration marker file '{marker_file_path}' does not exist"
+            assert os.path.exists(marker_file_path), (
+                f"Migration marker file '{marker_file_path}' does not exist"
+            )
         else:
-            assert not os.path.exists(
-                marker_file_path
-            ), f"Migration marker file '{marker_file_path}' should not exist"
+            assert not os.path.exists(marker_file_path), (
+                f"Migration marker file '{marker_file_path}' should not exist"
+            )
 
         self.hg(
             "config",
@@ -293,9 +292,9 @@ class FilteredFSMigrationFromUnfilteredTest(
 
         def check_status_post_migration() -> None:
             status_output = self.hg("status")
-            assert (
-                status_output == "A newfile-tracked\n? newfile\n"
-            ), f"unexpected status output: {status_output}"
+            assert status_output == "A newfile-tracked\n? newfile\n", (
+                f"unexpected status output: {status_output}"
+            )
 
         await self.edensparse_migration_common(
             check_status_pre_migration,
@@ -309,15 +308,15 @@ class FilteredFSMigrationFromUnfilteredTest(
 
         def check_status_pre_migration() -> None:
             status_output = self.hg("status")
-            assert (
-                status_output == "M hello\n"
-            ), f"unexpected status output: {status_output}"
+            assert status_output == "M hello\n", (
+                f"unexpected status output: {status_output}"
+            )
 
         def check_status_post_migration() -> None:
             status_output = self.hg("status")
-            assert (
-                status_output == "M hello\n"
-            ), f"unexpected status output: {status_output}"
+            assert status_output == "M hello\n", (
+                f"unexpected status output: {status_output}"
+            )
 
         await self.edensparse_migration_common(
             check_status_pre_migration,
@@ -330,9 +329,9 @@ class FilteredFSMigrationFromUnfilteredTest(
 
         def check_status_pre_migration() -> None:
             status_output = self.hg("status")
-            assert (
-                status_output == "M adir/file\n"
-            ), f"unexpected status output: {status_output}"
+            assert status_output == "M adir/file\n", (
+                f"unexpected status output: {status_output}"
+            )
 
         await self.edensparse_migration_common(
             check_status_pre_migration,
@@ -346,15 +345,15 @@ class FilteredFSMigrationFromUnfilteredTest(
 
         def check_status_pre_migration() -> None:
             status_output = self.hg("status")
-            assert (
-                status_output == "! hello\n"
-            ), f"unexpected status output: {status_output}"
+            assert status_output == "! hello\n", (
+                f"unexpected status output: {status_output}"
+            )
 
         def check_status_post_migration() -> None:
             status_output = self.hg("status")
-            assert (
-                status_output == "! hello\n"
-            ), f"unexpected status output: {status_output}"
+            assert status_output == "! hello\n", (
+                f"unexpected status output: {status_output}"
+            )
 
         await self.edensparse_migration_common(
             check_status_pre_migration,
@@ -368,9 +367,9 @@ class FilteredFSMigrationFromUnfilteredTest(
 
         def check_status_pre_migration() -> None:
             status_output = self.hg("status")
-            assert (
-                status_output == "! adir/file\n"
-            ), f"unexpected status output: {status_output}"
+            assert status_output == "! adir/file\n", (
+                f"unexpected status output: {status_output}"
+            )
 
         await self.edensparse_migration_common(
             check_status_pre_migration,
@@ -414,9 +413,9 @@ class FilteredFSMigrationFromUnfilteredTest(
             filter_config_file_path = os.path.join(
                 str(self.mount_path), ".hg", "sparse"
             )
-            assert not os.path.exists(
-                filter_config_file_path
-            ), "sparse file should not exist"
+            assert not os.path.exists(filter_config_file_path), (
+                "sparse file should not exist"
+            )
 
         await self.rollback_common(
             tester=tester,
@@ -429,9 +428,9 @@ class FilteredFSMigrationFromUnfilteredTest(
 
         def tester():
             content = requires_file_path.read_bytes()
-            assert (
-                original_content == content
-            ), f"requires file should not change:\n{original_content}\nvs\n{content}"
+            assert original_content == content, (
+                f"requires file should not change:\n{original_content}\nvs\n{content}"
+            )
 
         await self.rollback_common(
             tester=tester,
@@ -468,7 +467,9 @@ class FilteredFSMigrationFromUnfilteredTest(
                     and config_json[1]["value"] == "!"
                 )
 
-            assert check(), f"sapling config should not change: {original_config_json} vs {config_json}"
+            assert check(), (
+                f"sapling config should not change: {original_config_json} vs {config_json}"
+            )
 
         await self.rollback_common(
             tester=tester,

@@ -12,7 +12,6 @@ import sys
 from pathlib import Path
 
 from eden.fs.service.eden.thrift_clients import EdenService
-
 from eden.fs.service.eden.thrift_types import (
     BlobMetadataOrError,
     BlobMetadataWithOrigin,

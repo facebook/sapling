@@ -34,12 +34,12 @@ if not os.path.exists("git-repo"):
     ps = Popen(git + ["fast-import", "--quiet"], stdin=PIPE)
     progress = 1
     for i in range(1, N + 1):
-        parent = i > 1 and f"from :{i - 1 == N // 2 and 1 or (i-1)}\n" or ""
+        parent = i > 1 and f"from :{i - 1 == N // 2 and 1 or (i - 1)}\n" or ""
         msg = str(i)
         data = (
             f"commit refs/heads/{i - 1 < N // 2 and 'A' or 'B'}\n"
             f"mark :{i}\n"
-            f"committer user <user@example.com> {i-1} +0000\n"
+            f"committer user <user@example.com> {i - 1} +0000\n"
             f"data {len(msg)}\n"
             f"{msg}\n"
             f"{parent}deleteall\n\n"
@@ -72,7 +72,7 @@ if not os.path.exists("hg-repo"):
         for i in range(0, N):
             prev = 0 if i == N // 2 else i - 1
             pnode = nodes[prev + 1]
-            msg = hexlify(nullid) + f"\nuser\n{i+1} 0\n\n{i+1}".encode()
+            msg = hexlify(nullid) + f"\nuser\n{i + 1} 0\n\n{i + 1}".encode()
             node = hashlib.sha1(nullid + pnode + msg).digest()
             ddata = b"u" + msg
             idata = ipack(dlen << 16, len(ddata), len(msg), i, i, prev, -1, node)

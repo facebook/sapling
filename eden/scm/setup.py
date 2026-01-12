@@ -79,7 +79,6 @@ def filter(f, it):
 
 
 from distutils.ccompiler import new_compiler
-
 from distutils.command.build import build
 from distutils.command.build_scripts import build_scripts
 from distutils.command.install import install

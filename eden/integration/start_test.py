@@ -13,7 +13,6 @@ import sys
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import psutil
-
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
 from fb303_core.ttypes import fb303_status

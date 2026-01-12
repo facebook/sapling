@@ -26,7 +26,6 @@ from eden.fs.service.eden.thrift_types import (
     StateEntered,
     StateLeft,
 )
-
 from thrift.python.types import StructMeta
 
 

@@ -152,7 +152,7 @@ def format_sections_display(sections, max_sections=5):
     else:
         return (
             ", ".join(sections[:max_sections])
-            + f" (+{len(sections)-max_sections} more)"
+            + f" (+{len(sections) - max_sections} more)"
         )
 
 

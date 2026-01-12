@@ -134,8 +134,7 @@ class AddTest(EdenHgTestCase):
         self.assert_status(
             {"ignored_directory/two.txt": "A"},
             check_ignored=False,
-            msg="Explicitly adding a file in an ignored directory "
-            "should take effect.",
+            msg="Explicitly adding a file in an ignored directory should take effect.",
         )
 
         self.hg("add", "ignored_directory")
@@ -185,13 +184,13 @@ class AddTest(EdenHgTestCase):
         self.assertEqual(
             self.repo.hg("debugdirstate"),
             "a   0   MERGE_BOTH dir2/c.txt\n",
-            "Removing a file without forgetting it should not " "update the dirstate",
+            "Removing a file without forgetting it should not update the dirstate",
         )
 
         self.hg("forget", "dir1/a.txt")
         self.assertEqual(
             self.repo.hg("debugdirstate"),
-            "r   0              dir1/a.txt\n" "a   0   MERGE_BOTH dir2/c.txt\n",
+            "r   0              dir1/a.txt\na   0   MERGE_BOTH dir2/c.txt\n",
         )
 
     def test_rebuild_dirstate(self) -> None:

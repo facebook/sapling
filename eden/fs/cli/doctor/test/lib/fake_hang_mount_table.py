@@ -13,7 +13,6 @@ from multiprocessing import Process
 from typing import Union
 
 from eden.fs.cli import mtab
-
 from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
 
 

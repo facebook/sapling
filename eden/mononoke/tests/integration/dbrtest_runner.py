@@ -10,13 +10,11 @@ import sys
 from pathlib import Path
 
 import sapling.testing.ext.mononoke as monotest
-
 from sapling.testing.sh.bufio import BufIO
 from sapling.testing.sh.interp import interpcode
 from sapling.testing.sh.osfs import OSFS
 from sapling.testing.sh.types import Env
 from sapling.testing.t.runtime import TestTmp
-
 from sapling.util import shellquote
 
 

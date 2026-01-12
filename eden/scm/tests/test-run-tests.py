@@ -44,9 +44,9 @@ def lm(expected, output):
         single backslash or unknown char
     """
     assert expected.endswith(b"\n") and output.endswith(b"\n"), "missing newline"
-    assert not re.search(
-        rb"[^ \w\\/\r\n()*?]", expected + output
-    ), b"single backslash or unknown char"
+    assert not re.search(rb"[^ \w\\/\r\n()*?]", expected + output), (
+        b"single backslash or unknown char"
+    )
     test = run_tests.TTest("test-run-test.t", ".", ".")
     match = test.linematch(expected, output)
     if isinstance(match, str):

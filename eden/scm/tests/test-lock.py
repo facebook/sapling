@@ -11,7 +11,6 @@ import unittest
 
 import silenttestrunner
 import testutil
-
 from sapling import lock, util, vfs as vfsmod
 
 testlockname = "testlock"
@@ -156,10 +155,12 @@ class testlock(unittest.TestCase):
             return _record
 
         with self.assertRaisesRegex(Exception, "oops"):
-            with state.makelock("one", releasefn=recordunlock("one")), state.makelock(
-                "two", releasefn=recordunlock("two")
-            ), state.makelock(
-                "three", releasefn=recordunlock("three"), acquirefn=raiseexception
+            with (
+                state.makelock("one", releasefn=recordunlock("one")),
+                state.makelock("two", releasefn=recordunlock("two")),
+                state.makelock(
+                    "three", releasefn=recordunlock("three"), acquirefn=raiseexception
+                ),
             ):
                 pass
 

@@ -518,10 +518,7 @@ class vfs(abstractvfs):
         if checkambig:
             if mode in ("r", "rb"):
                 raise error.Abort(
-                    _(
-                        "implementation error: mode %s is not"
-                        " valid for checkambig=True"
-                    )
+                    _("implementation error: mode %s is not valid for checkambig=True")
                     % mode
                 )
             fp = checkambigatclosing(fp)

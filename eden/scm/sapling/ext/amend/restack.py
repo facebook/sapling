@@ -7,7 +7,6 @@
 
 
 from sapling import commands
-
 from sapling.ext import rebase
 from sapling.i18n import _
 

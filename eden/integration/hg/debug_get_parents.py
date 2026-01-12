@@ -12,7 +12,6 @@ from eden.fs.service.eden.thrift_types import (
     ResetParentCommitsParams,
     WorkingDirectoryParents,
 )
-
 from eden.integration.lib import hgrepo
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test

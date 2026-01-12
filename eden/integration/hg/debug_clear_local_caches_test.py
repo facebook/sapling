@@ -68,9 +68,10 @@ class DebugClearLocalCachesTest(EdenHgTestCase):
         # reloaded, but the blob hashes are still known because the file is
         # still open.
         self.repo.update(self.commit2)
-        with open(os.path.join(self.mount, "hello")) as c2_hello_file, open(
-            os.path.join(self.mount, "subdir", "file2")
-        ) as c2_file2_file:
+        with (
+            open(os.path.join(self.mount, "hello")) as c2_hello_file,
+            open(os.path.join(self.mount, "subdir", "file2")) as c2_file2_file,
+        ):
             self.eden.run_cmd("debug", "clear_local_caches")
             self.eden.graceful_restart()
             self.eden.run_cmd("debug", "flush_cache", "hello", cwd=self.mount)

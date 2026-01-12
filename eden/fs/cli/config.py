@@ -40,7 +40,6 @@ from typing import (
 )
 
 import facebook.eden.ttypes as eden_ttypes
-
 import toml
 from eden.thrift import legacy
 from eden.thrift.legacy import EdenNotRunningError
@@ -1673,7 +1672,7 @@ class EdenCheckout:
                 raise CheckoutConfigCorruptedError(
                     f'repository "{config_path}" has unsupported inode catalog (overlay) type '
                     f'"{inode_catalog_type}". Supported inode catalog (overlay) types are: '
-                    f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
+                    f"{', '.join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}."
                 )
             inode_catalog_type = inode_catalog_type.lower()
             if sys.platform == "win32" and inode_catalog_type in [
@@ -2295,7 +2294,7 @@ def create_checkout_config(
             raise Exception(
                 f"Eden config has unsupported overlay (inode catalog) type "
                 f'"{overlay_type}". Supported overlay (inode catalog) types are: '
-                f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
+                f"{', '.join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}."
             )
     overlay_type = overlay_type.lower()
     if sys.platform == "win32" and overlay_type in [

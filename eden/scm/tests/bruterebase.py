@@ -4,7 +4,6 @@
 # GNU General Public License version 2.
 
 from sapling import error, registrar, revsetlang
-
 from sapling.ext import rebase
 
 

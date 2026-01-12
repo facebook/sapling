@@ -30,9 +30,7 @@ from eden.fs.service.eden.thrift_types import (
     SynchronizeWorkingCopyParams,
     UnblockFaultArg,
 )
-
 from eden.integration.lib.hgrepo import HgRepository
-
 from thrift.python.exceptions import ApplicationError
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_cached_status_test
@@ -581,9 +579,9 @@ class StatusTest(EdenHgTestCase):
 
                 # all threads should be blocking
                 for t in threads:
-                    assert (
-                        t.is_alive()
-                    ), f"thread should be blocking. dumping exceptions: {exceptions}"
+                    assert t.is_alive(), (
+                        f"thread should be blocking. dumping exceptions: {exceptions}"
+                    )
             finally:
                 await client.unblockFault(
                     UnblockFaultArg(
@@ -655,7 +653,9 @@ class StatusTest(EdenHgTestCase):
                 )
                 thread_expect_two_entries.start()
 
-                assert thread_expect_one_entry.is_alive(), f"the first thread should be blocked. dumping exceptions: {exceptions}"
+                assert thread_expect_one_entry.is_alive(), (
+                    f"the first thread should be blocked. dumping exceptions: {exceptions}"
+                )
             finally:
                 await client.unblockFault(
                     UnblockFaultArg(

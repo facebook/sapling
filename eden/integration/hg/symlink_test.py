@@ -263,7 +263,7 @@ new mode 120000
             curpath = self.get_path(f"s{i}")
             self.assertFalse(os.path.isfile(curpath))
             self.assertFalse(os.path.isdir(curpath))
-            self.assertEqual(f"s{(i+2)%3}", os.readlink(curpath))
+            self.assertEqual(f"s{(i + 2) % 3}", os.readlink(curpath))
 
     def test_status_on_dir_symlink(self) -> None:
         self.repo.symlink("dirlink", "adir", target_is_directory=True)

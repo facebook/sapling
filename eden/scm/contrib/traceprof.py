@@ -15,7 +15,6 @@ import os
 import sys
 
 from sapling import ui as uimod
-
 from sapling.ext import traceprof
 
 

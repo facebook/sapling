@@ -50,7 +50,6 @@ following advice for resolution will be shown::
 import io
 
 from bindings import checkout as nativecheckout
-
 from sapling import (
     cmdutil,
     commands,

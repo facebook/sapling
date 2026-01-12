@@ -4,7 +4,6 @@
 # GNU General Public License version 2.
 
 from bindings import revisionstore
-
 from sapling.node import hex
 
 from . import shallowutil

@@ -112,8 +112,7 @@ def print_stats(stat_info, out: io.TextIOWrapper) -> None:
             duration = journal.durationSeconds
             if duration is None:
                 journalLine = (
-                    f"- Journal: {entries:,} entries "
-                    f"({stats_print.format_size(mem)})\n"
+                    f"- Journal: {entries:,} entries ({stats_print.format_size(mem)})\n"
                 )
             else:
                 journalLine = (

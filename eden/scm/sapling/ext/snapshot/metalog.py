@@ -7,7 +7,6 @@ import time
 from typing import Dict, Optional, TypedDict
 
 from bindings import serde
-
 from sapling import perftrace
 
 

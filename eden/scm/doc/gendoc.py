@@ -138,15 +138,7 @@ def showdoc(ui):
             "extensions is available in the help system."
         )
     )
-    ui.write(
-        (
-            "\n\n"
-            ".. contents::\n"
-            "   :class: htmlonly\n"
-            "   :local:\n"
-            "   :depth: 1\n\n"
-        )
-    )
+    ui.write(("\n\n.. contents::\n   :class: htmlonly\n   :local:\n   :depth: 1\n\n"))
 
     for extensionname in sorted(allextensionnames()):
         try:

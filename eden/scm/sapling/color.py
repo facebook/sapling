@@ -11,7 +11,8 @@
 # GNU General Public License version 2 or any later version.
 
 
-import os, re
+import os
+import re
 from typing import Dict, List, Optional, Pattern, Union
 
 import bindings
@@ -244,10 +245,7 @@ def configstyles(ui) -> None:
                     good.append(n)
                 else:
                     ui.warn(
-                        _(
-                            "ignoring unknown color/effect %r "
-                            "(configured in color.%s)\n"
-                        )
+                        _("ignoring unknown color/effect %r (configured in color.%s)\n")
                         % (e, status)
                     )
             ui._styles[status] = " ".join(good)

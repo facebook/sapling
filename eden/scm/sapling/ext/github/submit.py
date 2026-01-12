@@ -22,7 +22,6 @@ from .github_repo_util import check_github_repo, GitHubRepo
 from .none_throws import none_throws
 from .pr_parser import get_pull_request_for_context
 from .pull_request_body import create_pull_request_title_and_body, title_and_body
-
 from .pullrequest import PullRequestId
 from .pullrequeststore import PullRequestStore
 from .run_git_command import run_git_command

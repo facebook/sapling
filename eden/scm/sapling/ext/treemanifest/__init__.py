@@ -58,7 +58,6 @@ import struct
 
 import bindings
 from bindings import manifest as rustmanifest
-
 from sapling import (
     bundle2,
     bundlerepo,
@@ -438,9 +437,9 @@ class basetreemanifestlog:
         linkrev=None,
     ):
         """Writes the given tree into the manifestlog."""
-        assert (
-            not self._isgit
-        ), "do not use add() for git tree, use tree.flush() instead"
+        assert not self._isgit, (
+            "do not use add() for git tree, use tree.flush() instead"
+        )
         return self._addtopack(
             ui,
             newtree,

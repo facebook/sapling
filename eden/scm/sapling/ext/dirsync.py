@@ -68,7 +68,6 @@ unless the ``dirsync.allow-in-repo-scripts`` config is enabled.
 from typing import Optional
 
 import bindings
-
 from sapling import (
     context,
     error,

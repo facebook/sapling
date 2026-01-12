@@ -19,7 +19,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from unittest.mock import call, MagicMock, patch
 
 import eden.fs.cli.doctor as doctor
-
 from eden.fs.cli.config import EdenCheckout, EdenInstance, SnapshotState
 from eden.fs.cli.doctor import (
     check_hg,
@@ -54,7 +53,6 @@ from eden.fs.cli.doctor.util import CheckoutInfo
 from eden.fs.cli.prjfs import PRJ_FILE_STATE
 from eden.fs.cli.redirect import Redirection, RedirectionState, RedirectionType
 from eden.fs.cli.test.lib.output import TestOutput
-
 from facebook.eden.ttypes import (
     GetScmStatusResult,
     InternalStats,

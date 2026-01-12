@@ -64,7 +64,6 @@ from typing import (
 )
 
 import bindings
-
 from sapling import tracing
 
 from . import (

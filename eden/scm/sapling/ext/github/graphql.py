@@ -9,7 +9,6 @@ import asyncio
 from typing import Dict, Iterable, List, Optional, Union
 
 from .github_endpoint import GitHubEndpoint
-
 from .github_gh_cli import make_request
 from .pullrequest import GraphQLPullRequest, PullRequestId
 

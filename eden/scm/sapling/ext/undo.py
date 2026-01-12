@@ -8,7 +8,6 @@
 
 import bindings
 from bindings import cliparser
-
 from sapling import (
     cmdutil,
     commands,

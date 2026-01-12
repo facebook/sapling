@@ -11,7 +11,6 @@ from sapling.i18n import _
 
 from . import github_repo_util
 from .pullrequest import PullRequestId
-
 from .pullrequeststore import PullRequestStore
 
 

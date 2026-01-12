@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import unittest
 
 import silenttestrunner
-
 from sapling import error, scmutil
 
 

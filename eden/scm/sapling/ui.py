@@ -27,7 +27,6 @@ from enum import IntEnum
 from typing import Any, Dict, List, Tuple, Union
 
 import bindings
-
 from sapling import tracing
 
 from . import (

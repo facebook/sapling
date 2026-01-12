@@ -27,7 +27,6 @@ from eden.fs.service.eden.thrift_clients import EdenService
 from eden.fs.service.eden.thrift_types import MountState
 from eden.thrift import client, legacy
 from eden.thrift.legacy import EdenClient
-
 from fb303_core.thrift_types import fb303_status
 
 from .find_executables import FindExe

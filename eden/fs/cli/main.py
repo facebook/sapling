@@ -30,7 +30,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type
 
 from eden.fs.cli.doctor.check_filesystems import check_disk_usage
-
 from eden.fs.cli.util import get_chef_log_path
 
 # Constants
@@ -97,7 +96,6 @@ from eden.fs.cli.util import (
     wait_for_instance_healthy,
 )
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
-
 from facebook.eden import EdenService
 from facebook.eden.ttypes import (
     ChangeOwnershipRequest,
@@ -2561,8 +2559,7 @@ class RestartCmd(Subcmd):
         if edenfs_pid is None:
             # The daemon is not running
             print(
-                "The daemon is not running after failed graceful restart, "
-                "starting it"
+                "The daemon is not running after failed graceful restart, starting it"
             )
             telemetry_sample.fail("EdenFS was not running after graceful restart")
             return self._start(instance)

@@ -6,7 +6,6 @@
 from typing import Optional
 
 import bindings
-
 from sapling import tracing
 
 from . import error, peer, repository, util

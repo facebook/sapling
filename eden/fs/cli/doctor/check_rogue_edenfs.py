@@ -69,8 +69,7 @@ def find_rogue_processes(
             continue
         except ValueError:
             log.warning(
-                f"lock file contains data that cannot be parsed for PID: "
-                f"{lockfile}",
+                f"lock file contains data that cannot be parsed for PID: {lockfile}",
                 exc_info=True,
             )
             continue

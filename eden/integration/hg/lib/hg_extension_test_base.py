@@ -23,7 +23,6 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Type, Union
 
 import eden.config
 from eden.integration.lib import hgrepo, testcase
-
 from eden.integration.lib.find_executables import FindExe
 
 
@@ -146,7 +145,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         raise NotImplementedError(
-            "individual test classes must implement " "populate_backing_repo()"
+            "individual test classes must implement populate_backing_repo()"
         )
 
     def hg(

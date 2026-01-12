@@ -13,7 +13,6 @@ import sys
 from pathlib import Path
 
 from eden.fs.cli.util import mkscratch_bin
-
 from eden.fs.service.eden.thrift_types import (
     ListRedirectionsRequest,
     MountId,

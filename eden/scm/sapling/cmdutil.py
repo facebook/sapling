@@ -26,7 +26,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import bindings
 from bindings import renderdag
-
 from sapling import tracing
 
 from . import (
@@ -1178,8 +1177,7 @@ def openrevlog(repo, cmd, file_, opts):
             msg = _("cannot specify filename with --changelog or --manifest")
         elif not repo:
             msg = _(
-                "cannot specify --changelog or --manifest or --dir "
-                "without a repository"
+                "cannot specify --changelog or --manifest or --dir without a repository"
             )
     if msg:
         raise error.Abort(msg)
@@ -4164,10 +4162,7 @@ def remove(ui, repo, m, mark, force, warnings=None):
             for f in modified:
                 prog.value += 1
                 warnings.append(
-                    _(
-                        "not removing %s: file is modified (use -f"
-                        " to force removal)\n"
-                    )
+                    _("not removing %s: file is modified (use -f to force removal)\n")
                     % m.rel(f)
                 )
                 ret = 1

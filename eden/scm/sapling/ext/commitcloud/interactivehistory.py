@@ -156,8 +156,9 @@ def showhistory(ui, repo, reponame, workspacename, templatealias, **opts) -> Non
 
         def loadoldversion(self, versionindex):
             versionnumber = self.versions[versionindex]["version_number"]
-            with self.servlock, progress.spinner(
-                self.ui, _("fetching version %s") % versionnumber
+            with (
+                self.servlock,
+                progress.spinner(self.ui, _("fetching version %s") % versionnumber),
             ):
                 limit = self.limit
                 if limit > 0:

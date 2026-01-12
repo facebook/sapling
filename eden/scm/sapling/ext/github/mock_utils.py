@@ -8,14 +8,12 @@ from abc import abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from sapling import error
-
 from sapling.ext.github.consts import query
 from sapling.ext.github.gh_submit import PullRequestState
 from sapling.ext.github.pull_request_body import title_and_body
 from sapling.result import Ok, Result
 
 from .consts import GITHUB_HOSTNAME
-
 from .github_gh_cli import JsonDict
 
 """utils for mocking GitHub requests.
@@ -90,9 +88,9 @@ class MockGitHubServer:
 
         It reads mock data from `self.requests` instead of sending network requests.
         """
-        assert (
-            real_make_request.__name__ == "_make_request"
-        ), f"expected '_make_request', but got '{real_make_request.__name__}'"
+        assert real_make_request.__name__ == "_make_request", (
+            f"expected '_make_request', but got '{real_make_request.__name__}'"
+        )
 
         key = create_request_key(params, hostname, endpoint, method)
 

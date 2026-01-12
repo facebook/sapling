@@ -1138,10 +1138,7 @@ the sparse profile from the known %s changeset %s\n"
                 node = state["current"][0]
             except LookupError:
                 raise error.Abort(
-                    _(
-                        "current bisect revision is unknown - "
-                        "start a new bisect to fix"
-                    )
+                    _("current bisect revision is unknown - start a new bisect to fix")
                 )
         else:
             node, p2 = repo.dirstate.parents()
@@ -1667,10 +1664,7 @@ def cat(ui, repo, file1, *pats, **opts):
             "U",
             "noupdate",
             None,
-            _(
-                "the clone will include an empty working "
-                "directory (only a repository)"
-            ),
+            _("the clone will include an empty working directory (only a repository)"),
         ),
         ("u", "updaterev", "", _("revision or branch to check out"), _("REV")),
         (
@@ -5311,10 +5305,7 @@ def resolve(ui, repo, *pats, **opts):
         cmdutil.checkafterresolved(repo)
     elif not unresolvedf:
         ui.status(
-            _(
-                "(no more unresolved files -- "
-                'run "@prog@ resolve --all" to conclude)\n'
-            )
+            _('(no more unresolved files -- run "@prog@ resolve --all" to conclude)\n')
         )
 
     return ret

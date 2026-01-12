@@ -135,7 +135,8 @@ def basename(args: List[str]) -> str:
 def base64(
     args: List[str], stdout: BinaryIO, stdin: BinaryIO, stderr: BinaryIO, fs: ShellFS
 ) -> int:
-    import base64, binascii
+    import base64
+    import binascii
 
     exitcode = 0
 

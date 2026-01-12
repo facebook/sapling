@@ -159,7 +159,7 @@ def restore_state_script(metalog) -> str:
         f.write(
             f"""#!/bin/bash
 ORIG_PATH="$PATH"
-{''.join(f"export {name}={shlex.quote(value)}{eol}" for name, value in env.items())}
+{"".join(f"export {name}={shlex.quote(value)}{eol}" for name, value in env.items())}
 cd {shlex.quote(os.path.join(testtmp, cwd))}
 if [[ $- != *i* ]] && [[ -n "$TESTTMP" ]]; then
     if [[ $TERM = fake-term ]]; then

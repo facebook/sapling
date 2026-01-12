@@ -20,7 +20,6 @@ from threading import Thread
 from typing import AsyncGenerator, Dict, List, Optional, Set
 
 from eden.fs.cli import util
-
 from eden.fs.service.eden.thrift_types import (
     CheckoutMode,
     CheckOutRevisionParams,
@@ -32,7 +31,6 @@ from eden.fs.service.eden.thrift_types import (
     SyncBehavior,
     UnblockFaultArg,
 )
-
 from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from eden.integration.lib import hgrepo
 
@@ -255,14 +253,13 @@ class UpdateTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.repo.update(new_commit)
         self.assertIn(
-            b"abort: 1 conflicting file changes:\n" b" bar/some_new_file.txt\n",
+            b"abort: 1 conflicting file changes:\n bar/some_new_file.txt\n",
             context.exception.stderr,
         )
         self.assertEqual(
             base_commit,
             self.repo.get_head_hash(),
-            msg="We should still be on the base commit because "
-            "the merge was aborted.",
+            msg="We should still be on the base commit because the merge was aborted.",
         )
         self.assert_dirstate({"bar/some_new_file.txt": ("a", 0, "MERGE_BOTH")})
         self.assert_status({"bar/some_new_file.txt": "A"})
@@ -310,14 +307,13 @@ class UpdateTest(EdenHgTestCase):
         with self.assertRaises(hgrepo.HgError) as context:
             self.repo.update(new_commit)
         self.assertIn(
-            b"1 conflicting file changes:\n" b" bar/some_new_file.txt",
+            b"1 conflicting file changes:\n bar/some_new_file.txt",
             context.exception.stderr,
         )
         self.assertEqual(
             base_commit,
             self.repo.get_head_hash(),
-            msg="We should still be on the base commit because "
-            "the merge was aborted.",
+            msg="We should still be on the base commit because the merge was aborted.",
         )
         self.assert_dirstate({})
         self.assert_status({"bar/some_new_file.txt": "?"})
@@ -477,7 +473,7 @@ class UpdateTest(EdenHgTestCase):
         self.assertRegex(
             result.stderr.decode("utf-8"),
             re.compile(
-                "abort: 1 conflicting file changes:\n" " foo/new_file.txt",
+                "abort: 1 conflicting file changes:\n foo/new_file.txt",
                 re.MULTILINE,
             ),
         )

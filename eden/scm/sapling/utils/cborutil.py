@@ -776,8 +776,7 @@ class sansiodecoder:
 
                 else:
                     raise CBORDecodeError(
-                        "unhandled special item when "
-                        "expecting map value: %d" % special
+                        "unhandled special item when expecting map value: %d" % special
                     )
 
                 self._currentmapkey = None
@@ -804,8 +803,7 @@ class sansiodecoder:
                 # We don't allow non-trivial types to exist as set values.
                 else:
                     raise CBORDecodeError(
-                        "unhandled special item when "
-                        "expecting set value: %d" % special
+                        "unhandled special item when expecting set value: %d" % special
                     )
 
             # This value represents the first chunk in an indefinite length

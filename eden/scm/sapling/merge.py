@@ -25,7 +25,6 @@ from bindings import (
     worker as rustworker,
     workingcopy as rustworkingcopy,
 )
-
 from sapling import tracing
 
 from . import (
@@ -1454,10 +1453,7 @@ def batchremove(repo, wctx, actions):
         # cwd was removed in the course of removing files; print a helpful
         # warning.
         repo.ui.warn(
-            _(
-                "current directory was removed\n"
-                "(consider changing to repo root: %s)\n"
-            )
+            _("current directory was removed\n(consider changing to repo root: %s)\n")
             % repo.root
         )
 
@@ -2771,10 +2767,7 @@ def donativecheckout(repo, p1, p2, force, wc):
         # cwd was removed in the course of removing files; print a helpful
         # warning.
         repo.ui.warn(
-            _(
-                "current directory was removed\n"
-                "(consider changing to repo root: %s)\n"
-            )
+            _("current directory was removed\n(consider changing to repo root: %s)\n")
             % repo.root
         )
 

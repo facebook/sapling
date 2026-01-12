@@ -130,7 +130,7 @@ class StaleMountsFound(FixableProblem):
         if failed_to_unmount:
             message = (
                 f"Failed to unmount {len(failed_to_unmount)} mount "
-                f'point{"s" if len(failed_to_unmount) != 1 else ""}:\n  '
+                f"point{'s' if len(failed_to_unmount) != 1 else ''}:\n  "
             )
             message += "\n  ".join(printable_bytes(mp) for mp in failed_to_unmount)
             raise RemediationError(message)

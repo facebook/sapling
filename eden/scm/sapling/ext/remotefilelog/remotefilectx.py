@@ -125,11 +125,12 @@ class remotefilectx(context.filectx):
         cl = repo.changelog
         mfl = repo.manifestlog
 
-        with repo.ui.timesection("scanlinkrev"), repo.ui.configoverride(
-            {("treemanifest", "fetchdepth"): 1}
-        ), perftrace.trace("Scanning for Linkrev"), progress.bar(
-            repo.ui, _("scanning for linkrev of %s") % path
-        ) as prog:
+        with (
+            repo.ui.timesection("scanlinkrev"),
+            repo.ui.configoverride({("treemanifest", "fetchdepth"): 1}),
+            perftrace.trace("Scanning for Linkrev"),
+            progress.bar(repo.ui, _("scanning for linkrev of %s") % path) as prog,
+        ):
             perftrace.tracevalue("Path", path)
             allrevs = repo.revs("_all()")
             allrevs.sort(reverse=True)
@@ -291,11 +292,12 @@ class remotefilectx(context.filectx):
         # Adjustlinknodes accesses the file node in the manifest for a variety
         # of manifests. Let's prevent us from downloading large numbers of trees
         # by temporarily limiting the fetch depth to 1.
-        with repo.ui.timesection("adjustlinknode"), repo.ui.configoverride(
-            {("treemanifest", "fetchdepth"): 1}
-        ), perftrace.trace("Adjust Linknode"), progress.bar(
-            repo.ui, _("adjusting linknode for %s") % self._path
-        ) as prog:
+        with (
+            repo.ui.timesection("adjustlinknode"),
+            repo.ui.configoverride({("treemanifest", "fetchdepth"): 1}),
+            perftrace.trace("Adjust Linknode"),
+            progress.bar(repo.ui, _("adjusting linknode for %s") % self._path) as prog,
+        ):
             perftrace.tracevalue("Path", self._path)
             perftrace.tracevalue("Source Nodes", [hex(cl.node(rev)) for rev in revs])
             pc = repo._phasecache

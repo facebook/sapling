@@ -11,16 +11,13 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from eden.fs.cli.hg_util import parse_config_output
-
 from eden.fs.service.eden.thrift_types import GetCurrentSnapshotInfoRequest, MountId
-
 from eden.integration.hg.lib.hg_extension_test_base import (
     EdenHgTestCase,
     filteredhg_test,
     FilteredHgTestCase,
     hg_test,
 )
-
 from eden.integration.lib import hgrepo
 
 

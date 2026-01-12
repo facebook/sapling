@@ -1419,8 +1419,7 @@ def getsparsepatterns(
         )
     elif not isinstance(rawconfig, RawSparseConfig):
         raise error.ProgrammingError(
-            "getsparsepatterns.rawconfig must "
-            "be a RawSparseConfig, not: %s" % rawconfig
+            "getsparsepatterns.rawconfig must be a RawSparseConfig, not: %s" % rawconfig
         )
 
     profileconfigs = _getcachedprofileconfigs(repo)

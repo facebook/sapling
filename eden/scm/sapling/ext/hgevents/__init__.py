@@ -23,7 +23,6 @@ https://facebook.github.io/watchman/docs/scm-query.html.
 import contextlib
 
 from bindings import edenfsassertedstates
-
 from sapling import extensions, filemerge, merge, node as nodemod, perftrace, util
 from sapling.i18n import _
 

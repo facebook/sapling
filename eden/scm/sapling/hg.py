@@ -697,10 +697,7 @@ def showstats(repo, stats: Iterable[object], quietempty: bool = False) -> None:
     if quietempty and not any(stats):
         return
     repo.ui.status(
-        _(
-            "%d files updated, %d files merged, "
-            "%d files removed, %d files unresolved\n"
-        )
+        _("%d files updated, %d files merged, %d files removed, %d files unresolved\n")
         % stats
     )
 

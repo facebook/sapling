@@ -5,7 +5,6 @@ import sys
 import time
 
 from hghave import require
-
 from sapling import commands, fscap, hg, ui as uimod, util
 
 

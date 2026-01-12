@@ -25,7 +25,6 @@ from collections.abc import MutableMapping, MutableSet
 
 import bindings
 from bindings import checkout as nativecheckout
-
 from sapling import (
     bookmarks,
     cmdutil,
@@ -1688,10 +1687,7 @@ def externalparent(repo, state, destancestors):
     if len(parents) == 1:
         return parents.pop()
     raise error.Abort(
-        _(
-            "unable to collapse on top of %s, there is more "
-            "than one external parent: %s"
-        )
+        _("unable to collapse on top of %s, there is more than one external parent: %s")
         % (repo[max(destancestors)], ", ".join(str(repo[p]) for p in sorted(parents)))
     )
 
@@ -1974,8 +1970,7 @@ def _checkobsrebase(repo, ui, rebaseobsrevs, rebaseobsskipped) -> None:
         divhashes = (str(repo[r]) for r in divergencebasecandidates)
         msg = _("this rebase will cause divergences from: %s")
         h = _(
-            "to force the rebase please set "
-            "experimental.evolution.allowdivergence=True"
+            "to force the rebase please set experimental.evolution.allowdivergence=True"
         )
         raise error.Abort(msg % (",".join(divhashes),), hint=h)
 

@@ -7,7 +7,6 @@
 
 from .. import localrepo, ui
 from ..node import hex
-
 from .cmdtable import command
 
 

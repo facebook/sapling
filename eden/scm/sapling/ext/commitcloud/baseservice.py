@@ -9,7 +9,6 @@ import abc
 import collections
 
 import bindings
-
 from sapling import node as nodemod
 from sapling.graphmod import CHANGESET, GRANDPARENT, PARENT
 

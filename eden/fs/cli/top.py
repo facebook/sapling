@@ -768,7 +768,7 @@ class Top:
             # set the maximum number of digits, will remove decimals if
             # not enough space & adds unit
             longest_request_display = (
-                f"{longest_request_display:.{request_time_size-3}s}s"
+                f"{longest_request_display:.{request_time_size - 3}s}s"
             )
             # wrap time in parens
             longest_request_display = f"({longest_request_display})"
@@ -861,8 +861,7 @@ class Top:
         window.end_scrollable_section()
 
         instruction_line = (
-            "use up and down arrow keys to scroll, press ESC to return to the "
-            "main page"
+            "use up and down arrow keys to scroll, press ESC to return to the main page"
         )
         window.write_line(instruction_line)
 

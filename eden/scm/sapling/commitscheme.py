@@ -7,7 +7,6 @@ import re
 from typing import List, Optional
 
 from sapling import git, util
-
 from sapling.i18n import _
 
 
