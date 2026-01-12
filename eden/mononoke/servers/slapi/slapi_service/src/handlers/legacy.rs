@@ -32,11 +32,9 @@ use super::SaplingRemoteApiHandler;
 use super::SaplingRemoteApiMethod;
 use super::handler::SaplingRemoteApiContext;
 
-#[allow(dead_code)]
 const TIMEOUT_SECS: Duration = Duration::from_hours(4);
 
 /// Legacy streaming changelog handler from wireproto.
-#[allow(dead_code)]
 pub struct StreamingCloneHandler;
 
 #[async_trait]
@@ -45,7 +43,7 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
     type Response = StreamingChangelogResponse;
 
     const HTTP_METHOD: hyper::Method = hyper::Method::POST;
-    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Files2;
+    const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::StreamingClone;
     const ENDPOINT: &'static str = "/streaming_clone";
 
     async fn handler(
@@ -59,11 +57,11 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
             .fetch_changelog(ctx.clone(), request.tag.as_deref())
             .await?;
 
-        let data_blob_chunk_count = 0;
         let data_blobs: Vec<_> = changelog
             .data_blobs
             .into_iter()
-            .map(|fut| {
+            .enumerate()
+            .map(|(chunk_id, fut)| {
                 cloned!(ctx);
                 async move {
                     let (stats, res) = fut.timed().await;
@@ -79,7 +77,7 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
                     let data = res.map(|res| {
                         StreamingChangelogData::DataBlobChunk(StreamingChangelogBlob {
                             chunk: res.into(),
-                            chunk_id: data_blob_chunk_count,
+                            chunk_id: chunk_id as u64,
                         })
                     });
 
@@ -91,11 +89,11 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
             })
             .collect();
 
-        let index_blob_chunk_count = 0;
         let index_blobs: Vec<_> = changelog
             .index_blobs
             .into_iter()
-            .map(|fut| {
+            .enumerate()
+            .map(|(chunk_id, fut)| {
                 cloned!(ctx);
                 async move {
                     let (stats, res) = fut.timed().await;
@@ -111,7 +109,7 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
                     let data = res.map(|res| {
                         StreamingChangelogData::IndexBlobChunk(StreamingChangelogBlob {
                             chunk: res.into(),
-                            chunk_id: index_blob_chunk_count,
+                            chunk_id: chunk_id as u64,
                         })
                     });
 
