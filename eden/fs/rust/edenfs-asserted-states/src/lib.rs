@@ -458,6 +458,15 @@ impl AsRef<JournalPosition> for Changes {
     }
 }
 
+impl fmt::Display for Changes {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Changes::ChangeEvent(event) => write!(f, "{}", event),
+            Changes::ChangesSince(changes) => write!(f, "{}", changes),
+        }
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct ChangeEvents {
     events: Vec<ChangeEvent>,
