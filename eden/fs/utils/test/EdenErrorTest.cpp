@@ -9,6 +9,8 @@
 
 #include <gtest/gtest.h>
 
+// @lint-ignore-every SPELL
+
 using namespace facebook::eden;
 
 TEST(EdenError, recognizeNetworkError) {

@@ -6612,7 +6612,7 @@ bool EdenServiceHandler::removeCancellationSource(uint64_t requestId) {
             requestId,
             elapsed.count(),
             CANCELLATION_VERIFICATION_THRESHOLD_SECONDS);
-        server_->getStats()->increment(&ThriftStats::cancelRequesLongRunning);
+        server_->getStats()->increment(&ThriftStats::cancelRequestLongRunning);
       }
     }
 

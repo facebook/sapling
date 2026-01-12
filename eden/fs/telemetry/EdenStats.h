@@ -630,7 +630,7 @@ struct ThriftStats : StatsGroup<ThriftStats> {
 
   Counter cancelRequestSuccess{
       "thrift.EdenServiceHandler.cancel_request.success"};
-  Counter cancelRequesLongRunning{
+  Counter cancelRequestLongRunning{
       "thrift.EdenServiceHandler.cancel_request.long_running"};
 };
 
