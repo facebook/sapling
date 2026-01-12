@@ -127,6 +127,79 @@ async fn test_fold_commits_different_lines_same_file(fb: FacebookInit) -> Result
 }
 
 #[mononoke::fbinit_test]
+async fn test_fold_commits_copy_does_not_become_rename(fb: FacebookInit) -> Result<(), Error> {
+    // Graph: A-B
+    // A adds file `foo`
+    // B copies `foo` to `bar` (foo still exists in B)
+    // Expected: After folding, `bar` should be a copy of `foo` and `foo` should still exist
+    //           (i.e., the copy should NOT become a rename)
+    //
+    // BUG: Currently the copy source `foo` is incorrectly deleted, turning the copy into a rename.
+    // TODO: Fix the bug and update assertions to check correct behavior.
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A foo "foo content\n"
+            # copy: B bar "foo content\n" A foo
+        "##,
+    )
+    .await?;
+
+    // Verify precondition: foo exists in B
+    let b_ctx = repo.changeset(commits["B"]).await?.expect("B exists");
+    let foo_in_b = b_ctx.path_with_content("foo").await?;
+    assert!(foo_in_b.is_file().await?, "foo should exist as file in B");
+
+    // Verify precondition: bar has copy info from foo in B
+    let bar_copy_from = get_copy_from_path(&b_ctx, "bar").await?;
+    assert_eq!(
+        bar_copy_from,
+        Some(NonRootMPath::try_from("foo")?),
+        "bar should have copy_from foo in B"
+    );
+
+    // Now fold B onto itself (no actual merge, just testing the folding logic)
+    let folded = repo
+        .fold_commits(
+            commits["B"],
+            Some(commits["B"]),
+            None,
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await?
+        .changeset_ctx;
+
+    // BUG: foo is incorrectly deleted after folding (copy becomes rename)
+    // CORRECT behavior: foo should still exist after folding
+    let foo_after_fold = folded.path_with_content("foo").await?;
+    assert!(
+        !foo_after_fold.is_file().await?,
+        "BUG: foo is incorrectly deleted after folding - copy became a rename"
+    );
+
+    // Verify: bar should still exist after folding
+    let bar_after_fold = folded.path_with_content("bar").await?;
+    assert!(
+        bar_after_fold.is_file().await?,
+        "bar should exist after folding"
+    );
+
+    // Verify: bar should still have copy info from foo
+    let bar_copy_from_after = get_copy_from_path(&folded, "bar").await?;
+    assert_eq!(
+        bar_copy_from_after,
+        Some(NonRootMPath::try_from("foo")?),
+        "bar should have copy_from foo in folded commit"
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
 async fn test_fold_commits_multiple_files_across_directories(
     fb: FacebookInit,
 ) -> Result<(), Error> {
