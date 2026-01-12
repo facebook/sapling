@@ -34,6 +34,9 @@ pub struct NoExecutableBinariesConfig {
     /// Allow-list specific files that might be present in multiple paths
     /// by adding their Sha256 digest and size to this list.
     allow_list_files: Option<Vec<(String, u64)>>,
+    /// If true, block ALL executables (including text-based scripts).
+    /// If false or None (default), only block binary executables.
+    block_all_executables: Option<bool>,
 }
 
 /// Hook to block commits containing files with illegal name patterns
@@ -104,16 +107,15 @@ impl FileHook for NoExecutableBinariesHook {
             return Ok(HookExecution::Accepted);
         }
 
-        if content_metadata.is_binary {
+        if content_metadata.is_binary || self.config.block_all_executables.unwrap_or(false) {
             return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                 "Illegal executable file",
                 self.config
                     .illegal_executable_binary_message
                     .replace("${filename}", &path.to_string()),
             )));
-        } else {
-            Ok(HookExecution::Accepted)
         }
+        Ok(HookExecution::Accepted)
     }
 }
 
@@ -146,6 +148,7 @@ mod test {
                 "560a153deec1d4cda8481e96756e53c466f3c8eb2dabaf93f9e167c986bb77c4".to_string(),
                 3,
             )]),
+            block_all_executables: None,
         }
     }
 
@@ -392,6 +395,49 @@ mod test {
             hashset! {"random_dir/always_allowed_file", "foo bar/baz", "bar/baz/hoo.txt" };
 
         let illegal_files: HashMap<&str, &str> = hashmap! {};
+
+        assert_hook_execution(ctx, hook_repo, bcs, hook, valid_files, illegal_files).await
+    }
+
+    /// Test that the hook rejects executable scripts when block_all_executables is true
+    #[mononoke::fbinit_test]
+    async fn test_reject_executable_scripts_when_block_all_enabled(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: HookTestRepo = test_repo_factory::build_empty(ctx.fb)
+            .await
+            .expect("Failed to create test repo");
+        let hook_repo = HookRepo::build_from(&repo);
+
+        // Create config with block_all_executables enabled
+        let config = NoExecutableBinariesConfig {
+            illegal_executable_binary_message: "Executable file '${filename}' can't be committed."
+                .to_string(),
+            allow_list_paths: None,
+            allow_list_files: None,
+            block_all_executables: Some(true),
+        };
+        let hook = NoExecutableBinariesHook::with_config(config);
+
+        borrowed!(ctx, repo);
+
+        // Create a commit with an executable text file (script)
+        let cs_id = CreateCommitContext::new_root(ctx, repo)
+            .add_file_with_type(
+                "scripts/my_script.sh",
+                "#!/bin/bash\necho hello",
+                FileType::Executable,
+            )
+            .add_file("regular_file.txt", "just text")
+            .commit()
+            .await?;
+
+        let bcs = cs_id.load(ctx, &repo.repo_blobstore).await?;
+
+        let valid_files: HashSet<&str> = hashset! {"regular_file.txt"};
+
+        let illegal_files: HashMap<&str, &str> = hashmap! {
+            "scripts/my_script.sh" => "Executable file 'scripts/my_script.sh' can't be committed."
+        };
 
         assert_hook_execution(ctx, hook_repo, bcs, hook, valid_files, illegal_files).await
     }
