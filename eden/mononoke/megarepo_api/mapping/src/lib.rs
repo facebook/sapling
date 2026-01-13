@@ -26,6 +26,10 @@ pub use megarepo_configs::SourceRevision;
 pub use megarepo_configs::SyncConfigVersion;
 pub use megarepo_configs::SyncTargetConfig;
 pub use megarepo_configs::Target;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
 use mononoke_types::ContentId;
@@ -470,7 +474,18 @@ impl SqlConstruct for MegarepoMapping {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for MegarepoMapping {}
+impl SqlConstructFromMetadataDatabaseConfig for MegarepoMapping {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+}
 
 #[cfg(test)]
 mod test {

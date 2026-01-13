@@ -138,19 +138,14 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
         .await
     }
 
-    /// Get the remote database config for this type.  Override this to use a database other than
-    /// the primary database.
+    /// Get the remote database config for this type.
     fn remote_database_config(
         remote: &RemoteMetadataDatabaseConfig,
-    ) -> Option<&RemoteDatabaseConfig> {
-        Some(&remote.primary)
-    }
+    ) -> Option<&RemoteDatabaseConfig>;
 
     fn oss_remote_database_config(
         remote: &OssRemoteMetadataDatabaseConfig,
-    ) -> Option<&OssRemoteDatabaseConfig> {
-        Some(&remote.primary)
-    }
+    ) -> Option<&OssRemoteDatabaseConfig>;
 }
 
 /// Trait that allows construction of shardable databases from the metadata database config.
@@ -224,7 +219,5 @@ pub trait SqlShardableConstructFromMetadataDatabaseConfig:
 
     fn oss_remote_database_config(
         remote: &OssRemoteMetadataDatabaseConfig,
-    ) -> Option<&OssRemoteDatabaseConfig> {
-        Some(&remote.primary)
-    }
+    ) -> Option<&OssRemoteDatabaseConfig>;
 }

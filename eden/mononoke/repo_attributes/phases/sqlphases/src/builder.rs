@@ -10,6 +10,10 @@ use std::sync::Arc;
 use caching_ext::CacheHandlerFactory;
 use commit_graph::ArcCommitGraph;
 use memcache::KeyGen;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
 use phases::ArcPhases;
 use sql_construct::SqlConstruct;
@@ -85,7 +89,18 @@ impl SqlConstruct for SqlPhasesBuilder {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlPhasesBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlPhasesBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+}
 
 #[cfg(test)]
 mod tests {

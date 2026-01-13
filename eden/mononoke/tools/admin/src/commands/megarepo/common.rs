@@ -169,7 +169,7 @@ pub(crate) async fn process_stream_and_wait_for_replication<R: cross_repo_sync::
     let db_address = match small_storage_config_metadata {
         MetadataDatabaseConfig::Local(_) | MetadataDatabaseConfig::OssRemote(_) => None,
         MetadataDatabaseConfig::Remote(remote_config) => {
-            Some(remote_config.primary.db_address.clone())
+            Some(remote_config.production.db_address.clone())
         }
     };
 

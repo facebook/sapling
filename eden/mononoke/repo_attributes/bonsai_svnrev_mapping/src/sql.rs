@@ -13,6 +13,10 @@ use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
 use context::PerfCounterType;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
@@ -77,7 +81,18 @@ impl SqlConstruct for SqlBonsaiSvnrevMappingBuilder {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiSvnrevMappingBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiSvnrevMappingBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.bookmarks)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.bookmarks)
+    }
+}
 
 impl SqlBonsaiSvnrevMappingBuilder {
     pub fn build(self, repo_id: RepositoryId) -> SqlBonsaiSvnrevMapping {

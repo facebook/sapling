@@ -20,6 +20,10 @@ use futures_stats::TimedTryFutureExt;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgChangesetIdPrefix;
 use mercurial_types::HgChangesetIdsResolvedFromPrefix;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
@@ -400,7 +404,18 @@ impl SqlBonsaiHgMappingBuilder {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiHgMappingBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiHgMappingBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.bonsai_hg_mapping)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.bonsai_hg_mapping)
+    }
+}
 
 impl SqlBonsaiHgMapping {
     async fn verify_consistency(

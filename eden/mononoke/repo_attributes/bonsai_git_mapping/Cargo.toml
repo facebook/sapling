@@ -25,6 +25,7 @@ fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbth
 gix-hash = "0.18.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 rendezvous = { version = "0.1.0", path = "../../common/rendezvous" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }

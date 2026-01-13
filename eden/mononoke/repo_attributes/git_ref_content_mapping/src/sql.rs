@@ -10,6 +10,10 @@ use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
 use sql_construct::SqlConstruct;
@@ -75,7 +79,18 @@ impl SqlConstruct for SqlGitRefContentMappingBuilder {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlGitRefContentMappingBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlGitRefContentMappingBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.bookmarks)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.bookmarks)
+    }
+}
 
 impl SqlGitRefContentMappingBuilder {
     pub fn build(self, repo_id: RepositoryId) -> SqlGitRefContentMapping {

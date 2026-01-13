@@ -343,7 +343,13 @@ impl Convert for RawMetadataConfig {
             RawMetadataConfig::local(raw) => Ok(MetadataDatabaseConfig::Local(raw.convert()?)),
             RawMetadataConfig::remote(raw) => Ok(MetadataDatabaseConfig::Remote(
                 RemoteMetadataDatabaseConfig {
-                    primary: raw.primary.convert()?,
+                    production: raw.production.unwrap_or(raw.primary.clone()).convert()?,
+                    commit_graph: raw.commit_graph.unwrap_or(raw.primary.clone()).convert()?,
+                    bookmarks: raw.bookmarks.unwrap_or(raw.primary.clone()).convert()?,
+                    bonsai_hg_mapping: raw
+                        .bonsai_hg_mapping
+                        .unwrap_or(raw.primary.clone())
+                        .convert()?,
                     filenodes: raw.filenodes.convert()?,
                     mutation: raw.mutation.convert()?,
                     sparse_profiles: raw.sparse_profiles.convert()?,
@@ -357,7 +363,13 @@ impl Convert for RawMetadataConfig {
             )),
             RawMetadataConfig::oss_remote(raw) => Ok(MetadataDatabaseConfig::OssRemote(
                 OssRemoteMetadataDatabaseConfig {
-                    primary: raw.primary.convert()?,
+                    production: raw.production.unwrap_or(raw.primary.clone()).convert()?,
+                    commit_graph: raw.commit_graph.unwrap_or(raw.primary.clone()).convert()?,
+                    bookmarks: raw.bookmarks.unwrap_or(raw.primary.clone()).convert()?,
+                    bonsai_hg_mapping: raw
+                        .bonsai_hg_mapping
+                        .unwrap_or(raw.primary.clone())
+                        .convert()?,
                     filenodes: raw.filenodes.convert()?,
                     mutation: raw.mutation.convert()?,
                     sparse_profiles: raw.sparse_profiles.convert()?,

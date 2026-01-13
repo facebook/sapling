@@ -38,6 +38,10 @@ use context::CoreContext;
 use context::PerfCounterType;
 use futures_retry::retry;
 use itertools::Itertools;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::ChangesetIdPrefix;
 use mononoke_types::ChangesetIdsResolvedFromPrefix;
@@ -108,7 +112,18 @@ impl SqlConstruct for SqlCommitGraphStorageBuilder {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlCommitGraphStorageBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlCommitGraphStorageBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.commit_graph)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.commit_graph)
+    }
+}
 
 impl SqlCommitGraphStorageBuilder {
     pub fn build(

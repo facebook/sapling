@@ -9,6 +9,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use caching_ext::CacheHandlerFactory;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
 use mononoke_types::RepositoryId;
@@ -50,6 +52,11 @@ impl SqlShardableConstructFromMetadataDatabaseConfig for NewFilenodesBuilder {
         remote: &RemoteMetadataDatabaseConfig,
     ) -> Option<&ShardableRemoteDatabaseConfig> {
         Some(&remote.filenodes)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
     }
 }
 

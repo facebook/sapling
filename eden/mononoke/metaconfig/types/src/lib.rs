@@ -581,8 +581,8 @@ pub enum RemoteDiffConfig {
 
 impl RepoConfig {
     /// Returns the address of the primary metadata database, or None if there is none.
-    pub fn primary_metadata_db_address(&self) -> Option<&str> {
-        self.storage_config.metadata.primary_address()
+    pub fn production_metadata_db_address(&self) -> Option<&str> {
+        self.storage_config.metadata.production_address()
     }
 }
 
@@ -1248,8 +1248,14 @@ pub enum ShardedDatabaseConfig {
 /// Configuration for the Metadata database when it is remote.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RemoteMetadataDatabaseConfig {
-    /// Database for the primary metadata.
-    pub primary: RemoteDatabaseConfig,
+    /// Database for the production metadata.
+    pub production: RemoteDatabaseConfig,
+    /// Database for the commit_graph metadata.
+    pub commit_graph: RemoteDatabaseConfig,
+    /// Database for the bookmarks metadata.
+    pub bookmarks: RemoteDatabaseConfig,
+    /// Database for the bonsai_hg_mapping metadata.
+    pub bonsai_hg_mapping: RemoteDatabaseConfig,
     /// Database for possibly sharded filenodes.
     pub filenodes: ShardableRemoteDatabaseConfig,
     /// Database for commit mutation metadata.
@@ -1273,8 +1279,14 @@ pub struct RemoteMetadataDatabaseConfig {
 /// Configuration for the Metadata database when it is remote.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct OssRemoteMetadataDatabaseConfig {
-    /// Database for the primary metadata.
-    pub primary: OssRemoteDatabaseConfig,
+    /// Database for the production metadata.
+    pub production: OssRemoteDatabaseConfig,
+    /// Database for the commit_graph metadata.
+    pub commit_graph: OssRemoteDatabaseConfig,
+    /// Database for the bookmarks metadata.
+    pub bookmarks: OssRemoteDatabaseConfig,
+    /// Database for the bonsai_hg_mapping metadata.
+    pub bonsai_hg_mapping: OssRemoteDatabaseConfig,
     /// Database for possibly sharded filenodes.
     pub filenodes: OssRemoteDatabaseConfig,
     /// Database for commit mutation metadata.
@@ -1316,10 +1328,10 @@ impl MetadataDatabaseConfig {
         }
     }
 
-    /// The address of the primary metadata database, if this is a remote metadata database.
-    pub fn primary_address(&self) -> Option<&str> {
+    /// The address of the production metadata database, if this is a remote metadata database.
+    pub fn production_address(&self) -> Option<&str> {
         match self {
-            MetadataDatabaseConfig::Remote(remote) => Some(&remote.primary.db_address),
+            MetadataDatabaseConfig::Remote(remote) => Some(&remote.production.db_address),
             MetadataDatabaseConfig::OssRemote(_) => None,
             MetadataDatabaseConfig::Local(_) => None,
         }

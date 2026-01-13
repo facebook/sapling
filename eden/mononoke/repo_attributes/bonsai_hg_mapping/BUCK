@@ -29,6 +29,7 @@ rust_library(
         "//eden/mononoke/common/scuba_ext:scuba_ext",
         "//eden/mononoke/common/sql_construct:sql_construct",
         "//eden/mononoke/mercurial:mercurial_types",
+        "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/bonsai_hg_mapping/if:bonsai_hg_mapping_entry_thrift-rust",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",

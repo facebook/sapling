@@ -10,6 +10,10 @@ use anyhow::Result;
 use anyhow::bail;
 use async_trait::async_trait;
 use context::CoreContext;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use sql_construct::SqlConstruct;
@@ -1064,7 +1068,18 @@ impl SqlConstruct for SqlLongRunningRequestsQueue {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlLongRunningRequestsQueue {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlLongRunningRequestsQueue {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+}
 
 #[cfg(test)]
 mod test {

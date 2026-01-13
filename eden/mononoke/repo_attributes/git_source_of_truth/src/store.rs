@@ -8,6 +8,10 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -199,7 +203,18 @@ impl SqlGitSourceOfTruthConfigBuilder {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlGitSourceOfTruthConfigBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlGitSourceOfTruthConfigBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+}
 
 #[async_trait]
 impl GitSourceOfTruthConfig for SqlGitSourceOfTruthConfig {

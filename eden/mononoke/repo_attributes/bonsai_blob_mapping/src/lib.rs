@@ -14,6 +14,8 @@ use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use itertools::Itertools;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use metaconfig_types::ShardableRemoteDatabaseConfig;
 use mononoke_types::ChangesetId;
@@ -228,6 +230,11 @@ impl SqlShardableConstructFromMetadataDatabaseConfig for SqlBonsaiBlobMapping {
         remote: &RemoteMetadataDatabaseConfig,
     ) -> Option<&ShardableRemoteDatabaseConfig> {
         remote.bonsai_blob_mapping.as_ref()
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
     }
 }
 

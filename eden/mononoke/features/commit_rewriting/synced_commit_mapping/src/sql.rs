@@ -16,6 +16,10 @@ use context::PerfCounterType;
 use dashmap::DashMap;
 use itertools::Itertools;
 use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use rendezvous::ConfigurableRendezVousController;
@@ -66,7 +70,18 @@ impl SqlConstruct for SqlSyncedCommitMappingBuilder {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlSyncedCommitMappingBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlSyncedCommitMappingBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.bookmarks)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.bookmarks)
+    }
+}
 
 impl SqlSyncedCommitMappingBuilder {
     pub fn build(self, opts: RendezVousOptions) -> SqlSyncedCommitMapping {

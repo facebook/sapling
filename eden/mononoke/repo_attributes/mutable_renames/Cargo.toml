@@ -22,6 +22,7 @@ justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_rename_thrift = { version = "0.1.0", path = "if" }
 path_hash = { version = "0.1.0", path = "../../common/path_hash" }
