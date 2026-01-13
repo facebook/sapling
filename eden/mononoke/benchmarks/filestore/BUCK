@@ -12,7 +12,7 @@ rust_binary(
         "fbsource//third-party/rust:bytes",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tokio-util",
         "//common/rust/shed/cached_config:cached_config",

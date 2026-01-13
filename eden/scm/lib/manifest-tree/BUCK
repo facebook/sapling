@@ -24,10 +24,10 @@ rust_library(
         "extra_buck_dependencies": {
             "dependencies": [
                 "fbsource//third-party/rust:quickcheck",
-                "fbsource//third-party/rust:rand",
+                "fbsource//third-party/rust:rand_08",
             ],
             "dev-dependencies": [
-                "fbsource//third-party/rust:rand",
+                "fbsource//third-party/rust:rand_08",
                 "fbsource//third-party/rust:rand_chacha",
                 "//eden/scm/lib/manifest:manifest",
                 "//eden/scm/lib/minibench:minibench",

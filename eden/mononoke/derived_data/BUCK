@@ -266,7 +266,7 @@ rust_library(
     autocargo = {"cargo_toml_dir": "fastlog"},
     test_deps = [
         "fbsource//third-party/rust:pretty_assertions",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:rand_xorshift",
         "//common/rust/shed/borrowed:borrowed",
         "//common/rust/shed/facet:facet",

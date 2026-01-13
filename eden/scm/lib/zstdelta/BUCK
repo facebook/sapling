@@ -24,7 +24,7 @@ rust_library(
     crate_root = "src/lib.rs",
     test_deps = [
         "fbsource//third-party/rust:quickcheck",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:rand_chacha",
     ],
     deps = [

@@ -28,7 +28,7 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:quickcheck",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:serde_cbor",
         "fbsource//third-party/rust:serde_json",
         "//common/rust/shed/quickcheck_arbitrary_derive:quickcheck_arbitrary_derive",
@@ -45,7 +45,7 @@ rust_library(
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:quickcheck",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:ref-cast",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_bytes",

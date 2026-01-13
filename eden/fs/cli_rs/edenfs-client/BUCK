@@ -24,7 +24,7 @@ rust_library(
     ],
     test_deps = [
         "fbsource//third-party/rust:mockall",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:serde_test",
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:tokio",
@@ -44,7 +44,7 @@ rust_library(
         "fbsource//third-party/rust:libc",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:pathdiff",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:rayon",
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:serde",

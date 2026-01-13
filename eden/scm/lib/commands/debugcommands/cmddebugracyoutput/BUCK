@@ -17,7 +17,7 @@ rust_library(
     }},
     crate_root = "src/lib.rs",
     deps = [
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "//eden/scm/lib/async-runtime:async-runtime",
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/cliparser:cliparser",

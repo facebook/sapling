@@ -6,6 +6,6 @@ rust_library(
     name = "session_id",
     srcs = ["src/lib.rs"],
     deps = [
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
     ],
 )

@@ -20,7 +20,7 @@ rust_library(
         "fbsource//third-party/rust:itertools",
         "fbsource//third-party/rust:pretty_assertions",
         "fbsource//third-party/rust:quickcheck",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:rand_chacha",
         "fbsource//third-party/rust:tempfile",
     ],

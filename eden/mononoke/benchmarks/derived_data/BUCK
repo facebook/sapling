@@ -8,7 +8,7 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "//common/rust/shed/facet:facet",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",

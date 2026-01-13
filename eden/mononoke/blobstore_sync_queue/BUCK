@@ -14,7 +14,7 @@ rust_library(
         "fbsource//third-party/rust:async-trait",
         "fbsource//third-party/rust:auto_impl",
         "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:uuid",
         "fbsource//third-party/rust:vec1",
         "//common/rust/shed/shared_error:shared_error",

@@ -44,7 +44,7 @@ rust_library(
         "fbsource//third-party/rust:indicatif",
         "fbsource//third-party/rust:num-format",
         "fbsource//third-party/rust:once_cell",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:rusqlite",
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:serde_json",

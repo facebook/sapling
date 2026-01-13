@@ -29,7 +29,7 @@ rust_binary(
     ],
     deps = [
         "fbsource//third-party/rust:criterion",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
     ],
 )
 
