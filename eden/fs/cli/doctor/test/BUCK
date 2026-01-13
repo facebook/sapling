@@ -17,7 +17,7 @@ python_unittest(
         "//eden/fs/cli/doctor/test/lib:lib",
         "//eden/fs/cli/test/lib:lib",
         "//eden/fs/service:thrift-py-deprecated",
-        "//fb303/thrift:fb303_core-py-deprecated",
+        "//fb303/thrift:fb303_core-python-types",
     ],
 )
 

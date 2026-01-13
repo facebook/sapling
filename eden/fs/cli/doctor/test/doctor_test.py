@@ -64,7 +64,7 @@ from facebook.eden.ttypes import (
     TreeInodeDebugInfo,
     TreeInodeEntryDebugInfo,
 )
-from fb303_core.ttypes import fb303_status
+from fb303_core.thrift_types import fb303_status
 
 
 # Invalid decoration [56]: Pyre was not able to infer the type of argument `b"�eC!".__mul__(5)` to decorator factory `unittest.mock.patch`.
