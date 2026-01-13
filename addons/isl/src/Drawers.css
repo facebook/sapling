@@ -103,6 +103,15 @@
   cursor: ew-resize;
 }
 
+.drawer .resizable-drag-handle:hover,
+.drawer .resizable-drag-handle.resizing {
+  background-color: var(--focus-border);
+  border-color: var(--focus-border);
+  transition:
+    background-color 0s 300ms,
+    border-color 0s 300ms;
+}
+
 .drawer-label {
   font-weight: bold;
   display: flex;
