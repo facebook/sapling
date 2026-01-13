@@ -127,9 +127,25 @@ impl GitServerContext {
                     inner.repos.repo_configs(),
                 ),
                 None => {
-                    return Err(GitServerContextErrorKind::RepositoryDoesNotExist(
-                        method_info.repo.to_string(),
-                    ));
+                    // Check if the repo exists in the global configuration
+                    let repo_exists_in_config = inner
+                        .repos
+                        .repo_mgr
+                        .configs()
+                        .repo_configs()
+                        .repos
+                        .contains_key(&method_info.repo);
+                    return if repo_exists_in_config {
+                        // Repo exists but is not loaded on this shard
+                        Err(GitServerContextErrorKind::RepositoryNotLoaded(
+                            method_info.repo.to_string(),
+                        ))
+                    } else {
+                        // Repo does not exist at all
+                        Err(GitServerContextErrorKind::RepositoryDoesNotExist(
+                            method_info.repo.to_string(),
+                        ))
+                    };
                 }
             }
         };

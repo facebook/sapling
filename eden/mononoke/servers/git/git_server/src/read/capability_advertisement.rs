@@ -151,9 +151,7 @@ pub async fn capability_advertisement(state: &mut State) -> Result<Response<Body
             GitMethodInfo::standard(repo_name.clone(), GitMethod::AdvertiseWrite)
         }
     };
-    let request_context = RepositoryRequestContext::instantiate(state, git_method_info)
-        .await
-        .map_err(HttpError::e403)?;
+    let request_context = RepositoryRequestContext::instantiate(state, git_method_info).await?;
 
     let headers = HeaderMap::borrow_from(state);
     let force_bundle_uri = headers
