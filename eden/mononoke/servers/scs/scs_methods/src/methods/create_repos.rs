@@ -328,6 +328,81 @@ fn make_top_level_acl_name_from_repo_name(repo_name: &str) -> String {
     format!("repos/git/{}", top_level)
 }
 
+#[cfg(fbcode_build)]
+async fn validate_and_process_custom_acl(
+    ctx: CoreContext,
+    repo_creation_request: &thrift::RepoCreationRequest,
+    custom_acl: &thrift::CustomAclParams,
+    valid_oncall_names_cache: &mut HashSet<String>,
+    valid_hipster_groups_cache: &mut HashSet<String>,
+    dry_run: bool,
+) -> Result<(), scs_errors::ServiceError> {
+    let acl_name = make_full_acl_name_from_repo_name(&repo_creation_request.repo_name);
+
+    if !is_valid_oncall_name(
+        ctx.clone(),
+        &repo_creation_request.oncall_name,
+        valid_oncall_names_cache,
+    )
+    .await?
+    {
+        return Err(scs_errors::invalid_request(format!(
+            "Invalid oncall name: {}",
+            repo_creation_request.oncall_name
+        ))
+        .into());
+    }
+
+    if !is_valid_hipster_group(
+        ctx.clone(),
+        &custom_acl.hipster_group,
+        valid_hipster_groups_cache,
+    )
+    .await?
+    {
+        return Err(scs_errors::invalid_request(format!(
+            "Invalid hipster group: {}",
+            custom_acl.hipster_group
+        ))
+        .into());
+    }
+
+    if let Some(acl) = try_fetching_repo_acl(ctx.clone(), &acl_name).await? {
+        validate_repo_acl(
+            acl,
+            &acl_name,
+            &repo_creation_request.oncall_name,
+            &custom_acl.hipster_group,
+        )
+        .await?;
+    } else if !dry_run {
+        create_repo_acl(
+            ctx,
+            &acl_name,
+            &repo_creation_request.oncall_name,
+            &custom_acl.hipster_group,
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+#[cfg(fbcode_build)]
+async fn validate_top_level_acl_exists(
+    ctx: CoreContext,
+    repo_name: &str,
+) -> Result<(), scs_errors::ServiceError> {
+    let acl_name = make_top_level_acl_name_from_repo_name(repo_name);
+    if try_fetching_repo_acl(ctx, &acl_name).await?.is_none() {
+        return Err(scs_errors::invalid_request(format!(
+            "Top level acl {acl_name} does not exist!"
+        ))
+        .into());
+    }
+    Ok(())
+}
+
 /// Ensure all repos have the necessary ACLs set-up.
 /// Note: Currently, this duplicates the logic that happens when creating the repositories in
 /// Metagit by forking to `scmadmin` in `create_repos_in_metagit`, but this will go away
@@ -339,66 +414,20 @@ async fn update_repos_acls(
 ) -> Result<(), scs_errors::ServiceError> {
     let mut valid_oncall_names_cache = HashSet::new();
     let mut valid_hipster_groups_cache = HashSet::new();
+
     for repo_creation_request in &params.repos {
-        // If a custom acl is provided, we need to ensure it exists and is valid or create it
         if let Some(custom_acl) = &repo_creation_request.custom_acl {
-            let acl_name = make_full_acl_name_from_repo_name(&repo_creation_request.repo_name);
-            if !is_valid_oncall_name(
+            validate_and_process_custom_acl(
                 ctx.clone(),
-                &repo_creation_request.oncall_name,
+                repo_creation_request,
+                custom_acl,
                 &mut valid_oncall_names_cache,
-            )
-            .await?
-            {
-                return Err(scs_errors::invalid_request(format!(
-                    "Invalid oncall name: {}",
-                    repo_creation_request.oncall_name
-                ))
-                .into());
-            };
-            if !is_valid_hipster_group(
-                ctx.clone(),
-                &custom_acl.hipster_group,
                 &mut valid_hipster_groups_cache,
+                params.dry_run,
             )
-            .await?
-            {
-                return Err(scs_errors::invalid_request(format!(
-                    "Invalid hipster group: {}",
-                    custom_acl.hipster_group
-                ))
-                .into());
-            }
-            if let Some(acl) = try_fetching_repo_acl(ctx.clone(), &acl_name).await? {
-                validate_repo_acl(
-                    acl,
-                    &acl_name,
-                    &repo_creation_request.oncall_name,
-                    &custom_acl.hipster_group,
-                )
-                .await?;
-            } else if !params.dry_run {
-                create_repo_acl(
-                    ctx.clone(),
-                    &acl_name,
-                    &repo_creation_request.oncall_name,
-                    &custom_acl.hipster_group,
-                )
-                .await?;
-            }
-        }
-        // If no custom acl is provided, we need to ensure the top level acl exists
-        else {
-            let acl_name = make_top_level_acl_name_from_repo_name(&repo_creation_request.repo_name);
-            if try_fetching_repo_acl(ctx.clone(), &acl_name)
-                .await?
-                .is_none()
-            {
-                return Err(scs_errors::invalid_request(format!(
-                    "Top level acl {acl_name} does not exist!"
-                ))
-                .into());
-            }
+            .await?;
+        } else {
+            validate_top_level_acl_exists(ctx.clone(), &repo_creation_request.repo_name).await?;
         }
     }
     Ok(())
@@ -882,6 +911,84 @@ async fn poll_mutation_id(
     }
 }
 
+async fn handle_landed_state(
+    ctx: CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    mutation_id: i64,
+) -> Result<(), scs_errors::ServiceError> {
+    retry(
+        |_| {
+            update_source_of_truth_to_mononoke_for_mutation_id(
+                ctx.clone(),
+                git_source_of_truth_config,
+                mutation_id,
+            )
+        },
+        Duration::from_millis(1_000),
+    )
+    .binary_exponential_backoff()
+    .max_attempts(5)
+    .await?;
+    Ok(())
+}
+
+async fn handle_prepared_state(
+    ctx: CoreContext,
+    configo_client: ConfigoServiceClient,
+    mutation_id: i64,
+    is_signed: bool,
+    retry_count: i64,
+    error_message: String,
+) -> Result<(), scs_errors::ServiceError> {
+    if !is_signed {
+        if let Err(e) = initiate_land_for_mutation(ctx, configo_client, mutation_id).await {
+            if retry_count == 0 {
+                return Err(scs_errors::poll_error(format!(
+                    "Configo mutation error: {}",
+                    error_message
+                ))
+                .into());
+            } else {
+                return Err(e);
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn handle_mutation_state(
+    ctx: CoreContext,
+    git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
+    configo_client: ConfigoServiceClient,
+    state: MutationState,
+    mutation_id: i64,
+    is_signed: bool,
+    retry_count: i64,
+    error_message: String,
+) -> Result<(), scs_errors::ServiceError> {
+    match state {
+        MutationState::LANDED => {
+            handle_landed_state(ctx, git_source_of_truth_config, mutation_id).await?;
+        }
+        MutationState::FAILED | MutationState::ABORTED => {
+            cleanup_repos(ctx, git_source_of_truth_config, mutation_id).await?;
+        }
+        MutationState::PREPARED => {
+            handle_prepared_state(
+                ctx,
+                configo_client,
+                mutation_id,
+                is_signed,
+                retry_count,
+                error_message,
+            )
+            .await?;
+        }
+        _ => (),
+    }
+    Ok(())
+}
+
 async fn poll_mutation_id_impl(
     ctx: CoreContext,
     git_source_of_truth_config: &dyn GitSourceOfTruthConfig,
@@ -897,8 +1004,6 @@ async fn poll_mutation_id_impl(
         .map_err(|e| scs_errors::internal_error(format!("{e:#}")))?;
 
     if resp.error {
-        // We failed to land the mutation, so it is safe to "release the lock" on these repo
-        // ids and names, which will allow a future attempt to succeed.
         cleanup_repos(ctx.clone(), git_source_of_truth_config, mutation_id).await?;
         return Err(scs_errors::internal_error(format!(
             "Configo mutation error: {}",
@@ -923,49 +1028,17 @@ async fn poll_mutation_id_impl(
     }
 
     let state = mutation.stateInfo.state;
-    match state {
-        MutationState::LANDED => {
-            retry(
-                |_| {
-                    update_source_of_truth_to_mononoke_for_mutation_id(
-                        ctx.clone(),
-                        git_source_of_truth_config,
-                        mutation_id,
-                    )
-                },
-                Duration::from_millis(1_000),
-            )
-            .binary_exponential_backoff()
-            .max_attempts(5)
-            .await?;
-        }
-        MutationState::FAILED => {
-            cleanup_repos(ctx.clone(), git_source_of_truth_config, mutation_id).await?;
-        }
-        MutationState::ABORTED => {
-            cleanup_repos(ctx.clone(), git_source_of_truth_config, mutation_id).await?;
-        }
-        MutationState::PREPARED => {
-            if !mutation.stateInfo.isSigned {
-                // Initiate land if not signed
-                match initiate_land_for_mutation(ctx.clone(), configo_client, mutation_id).await {
-                    Ok(_) => (),
-                    Err(e) => {
-                        if retry_count == 0 {
-                            return Err(scs_errors::poll_error(format!(
-                                "Configo mutation error: {}",
-                                mutation.stateInfo.errorMessage
-                            ))
-                            .into());
-                        } else {
-                            return Err(e);
-                        }
-                    }
-                }
-            }
-        }
-        _ => (),
-    };
+    handle_mutation_state(
+        ctx,
+        git_source_of_truth_config,
+        configo_client,
+        state,
+        mutation_id,
+        mutation.stateInfo.isSigned,
+        retry_count,
+        mutation.stateInfo.errorMessage,
+    )
+    .await?;
 
     Ok(state)
 }
