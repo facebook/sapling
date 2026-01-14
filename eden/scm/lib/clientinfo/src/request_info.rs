@@ -104,6 +104,7 @@ pub enum ClientEntryPoint {
     Fbclone,
     ScsServer,
     ScmQuery,
+    ScmQueryClientLib,
     #[serde(rename = "EdenApi", alias = "SaplingRemoteApi")]
     SaplingRemoteApi,
     LandService,
@@ -197,6 +198,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::Fbclone => "fbclone",
             ClientEntryPoint::ScsServer => "scs",
             ClientEntryPoint::ScmQuery => "scm_query",
+            ClientEntryPoint::ScmQueryClientLib => "scm_query_client_lib",
             ClientEntryPoint::SaplingRemoteApi => "eden_api",
             ClientEntryPoint::LandService => "landservice",
             ClientEntryPoint::LfsServer => "lfs",
@@ -242,6 +244,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "fbclone" => Ok(ClientEntryPoint::Fbclone),
             "scs" => Ok(ClientEntryPoint::ScsServer),
             "scm_query" => Ok(ClientEntryPoint::ScmQuery),
+            "scm_query_client_lib" => Ok(ClientEntryPoint::ScmQueryClientLib),
             "eden_api" => Ok(ClientEntryPoint::SaplingRemoteApi),
             "landservice" => Ok(ClientEntryPoint::LandService),
             "lfs" => Ok(ClientEntryPoint::LfsServer),
