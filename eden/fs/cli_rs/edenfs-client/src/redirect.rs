@@ -2032,8 +2032,8 @@ mod tests {
 
     #[cfg(target_os = "windows")]
     use mkscratch::zzencode;
-    use rand::distributions::Alphanumeric;
-    use rand::distributions::DistString;
+    use rand::distr::Alphanumeric;
+    use rand::distr::SampleString;
     use serde_test::Token;
     use serde_test::assert_ser_tokens;
     use tempfile::tempdir;
@@ -2051,7 +2051,7 @@ mod tests {
         // TODO(@Cuev): Is there a better way to do this?
         let rand_file = format!(
             "test_path_{}",
-            Alphanumeric.sample_string(&mut rand::thread_rng(), 16)
+            Alphanumeric.sample_string(&mut rand::rng(), 16)
         );
         let redir = Redirection {
             repo_path: PathBuf::from(rand_file),
@@ -2078,7 +2078,7 @@ mod tests {
         // file. So let's try to prevent collisions by making unique working directory.
         let rand_path = format!(
             "test_path_{}",
-            Alphanumeric.sample_string(&mut rand::thread_rng(), 16)
+            Alphanumeric.sample_string(&mut rand::rng(), 16)
         );
         let redir = Redirection {
             repo_path: PathBuf::from(rand_path),
@@ -2146,7 +2146,7 @@ mod tests {
         let dne_dir = tempdir().expect("couldn't create temporary directory for testing");
         let dne_path = dne_dir
             .path()
-            .join(Alphanumeric.sample_string(&mut rand::thread_rng(), 16));
+            .join(Alphanumeric.sample_string(&mut rand::rng(), 16));
         #[allow(clippy::if_same_then_else)]
         if !dne_path.exists() {
             assert_eq!(
@@ -2168,7 +2168,7 @@ mod tests {
         let tmp_dir = tempdir().expect("couldn't create temp directory for testing");
         let dir_path = tmp_dir
             .path()
-            .join(Alphanumeric.sample_string(&mut rand::thread_rng(), 16));
+            .join(Alphanumeric.sample_string(&mut rand::rng(), 16));
         #[allow(clippy::if_same_then_else)]
         if !dir_path.exists() {
             check_empty_dir_and_non_empty_dir_and_file(&dir_path);
@@ -2180,7 +2180,7 @@ mod tests {
         let symlink_dir = tempdir().expect("couldn't create temp directory for testing");
         let symlink_path = symlink_dir
             .path()
-            .join(Alphanumeric.sample_string(&mut rand::thread_rng(), 16));
+            .join(Alphanumeric.sample_string(&mut rand::rng(), 16));
         #[cfg(windows)]
         std::os::windows::fs::symlink_file(&dir_path, &symlink_path).ok();
         #[cfg(not(windows))]

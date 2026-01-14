@@ -31,7 +31,7 @@ memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 prefixblob = { version = "0.1.0", path = "../../blobstore/prefixblob" }
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }
 throttledblob = { version = "0.1.0", path = "../../blobstore/throttledblob" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.15", features = ["full"] }

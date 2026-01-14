@@ -17,7 +17,7 @@ use futures::stream::FuturesUnordered;
 use futures::stream::TryStreamExt;
 use rand::Rng;
 use rand::RngCore;
-use rand::thread_rng;
+use rand::rng;
 use tokio::runtime::Handle;
 
 use crate::KB;
@@ -41,7 +41,7 @@ pub fn benchmark(
                     let blocks: Vec<_> = std::iter::repeat_n((), concurrency)
                         .map(|()| {
                             let mut block = vec![0; size];
-                            thread_rng().fill(&mut block as &mut [u8]);
+                            rng().fill(&mut block as &mut [u8]);
 
                             BlobstoreBytes::from_bytes(block)
                         })
@@ -52,7 +52,7 @@ pub fn benchmark(
                             let futs: FuturesUnordered<_> = blocks
                                 .into_iter()
                                 .map(|block| {
-                                    let key = format!("benchmark.{:x}", thread_rng().next_u64());
+                                    let key = format!("benchmark.{:x}", rng().next_u64());
                                     blobstore.put(&ctx, key, block)
                                 })
                                 .collect();

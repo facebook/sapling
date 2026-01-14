@@ -108,7 +108,7 @@ pub struct RandomData {
 
 impl RandomData {
     pub fn new(number_of_files: usize, chunk_size: usize) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut chunks = Vec::with_capacity(number_of_files);
         let mut hashes = Vec::with_capacity(number_of_files);
         for _ in 0..number_of_files {
