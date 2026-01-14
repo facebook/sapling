@@ -22,7 +22,7 @@ memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_serialization = { version = "0.1.0", path = "../../mononoke_types/serialization" }
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }
 requests_table = { version = "0.1.0", path = "requests_table" }
 source_control = { version = "0.1.0", path = "../../scs/if" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }

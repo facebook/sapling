@@ -8,4 +8,4 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }

@@ -861,7 +861,7 @@ impl<R: Repo> RepoClient<R> {
                 None => {
                     // Randomize in case source hostname is not set to avoid
                     // sudden jumps in traffic
-                    rand::thread_rng().gen_ratio(percentage, 100)
+                    rand::rng().random_ratio(percentage, 100)
                 }
             };
 

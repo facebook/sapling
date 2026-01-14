@@ -33,7 +33,7 @@ use mononoke_types::BlobstoreBytes;
 use mononoke_types::DateTime;
 use mononoke_types::Timestamp;
 use rand::Rng;
-use rand::thread_rng;
+use rand::rng;
 use tracing::info;
 use tracing::warn;
 
@@ -132,7 +132,7 @@ impl WalHealer {
 
                     fetch_size = new_fetch_size;
                     let delay =
-                        thread_rng().gen_range(MIN_FETCH_FAILURE_DELAY..MAX_FETCH_FAILURE_DELAY);
+                        rng().random_range(MIN_FETCH_FAILURE_DELAY..MAX_FETCH_FAILURE_DELAY);
                     tokio::time::sleep(delay).await;
                 }
             }

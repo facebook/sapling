@@ -53,7 +53,7 @@ impl CommitGraphStorage for ShufflingCommitGraphStorage {
         ctx: &CoreContext,
         mut many_edges: Vec1<ChangesetEdges>,
     ) -> Result<usize> {
-        many_edges.shuffle(&mut rand::thread_rng());
+        many_edges.shuffle(&mut rand::rng());
         self.inner.add_many(ctx, many_edges).await
     }
 

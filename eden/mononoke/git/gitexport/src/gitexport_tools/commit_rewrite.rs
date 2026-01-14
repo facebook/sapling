@@ -52,8 +52,8 @@ use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileChange;
 use mononoke_types::NonRootMPath;
-use rand::distributions::Alphanumeric;
-use rand::distributions::DistString;
+use rand::distr::Alphanumeric;
+use rand::distr::SampleString;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
 use scuba_ext::FutureStatsScubaExt;
@@ -519,7 +519,7 @@ impl<'a> MultiMover for GitExportMultiMover<'a> {
 /// to the Mononoke instance provided to the tool (e.g. production Mononoke).
 async fn create_temp_repo(fb: FacebookInit, ctx: &CoreContext) -> Result<RepoContext<Repo>, Error> {
     let system_tmp = env::temp_dir();
-    let temp_dir_suffix = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
+    let temp_dir_suffix = Alphanumeric.sample_string(&mut rand::rng(), 16);
 
     let mk_temp_path = |prefix| system_tmp.join(format!("{}_{}", prefix, temp_dir_suffix));
 
