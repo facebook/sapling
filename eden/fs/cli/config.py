@@ -1760,6 +1760,21 @@ class EdenCheckout:
 
         self.save_config(new_config)
 
+    def wait_until_mounted(self, timeout_sec: int = 5) -> bool:
+        """
+        Wait until the checkout is mounted.
+        Returns True if the checkout is mounted
+        False if the timeout is reached.
+        """
+        start_time = time.time()
+        while time.time() - start_time < timeout_sec:
+            mounts = self.instance.get_mounts()
+            for path, mount_info in mounts.items():
+                if path == self.path and mount_info.state == MountState.RUNNING:
+                    return True
+            time.sleep(0.5)
+        return False
+
 
 def get_snapshot(snapshot_path: Path, scm_type: str) -> SnapshotState:
     """Return the hex version of the parent hash in the SNAPSHOT file."""
