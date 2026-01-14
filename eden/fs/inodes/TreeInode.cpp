@@ -4794,7 +4794,7 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
         return std::make_pair(numInvalidated, isThisTreeInvalidated);
       })
       .thenTry(
-          [this,
+          [self = inodePtrFromThis(),
            cancellationToken](folly::Try<std::pair<uint64_t, bool>>&& result)
               -> ImmediateFuture<std::pair<uint64_t, bool>> {
             // Check for cancellation before waiting for invalidation to
@@ -4802,7 +4802,7 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
             if (shouldCancelGC(cancellationToken)) {
               return std::make_pair(uint64_t{0}, false);
             }
-            auto* nfsdChannel = getMount()->getNfsdChannel();
+            auto* nfsdChannel = self->getMount()->getNfsdChannel();
             if (nfsdChannel) {
               return nfsdChannel->completeInvalidations().thenTry(
                   [result = std::move(result)](auto&&) mutable {
