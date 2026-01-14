@@ -1389,7 +1389,7 @@ impl MemKey {
 
     #[inline]
     fn is_unused(&self) -> bool {
-        self.key.len() == 0
+        self.key.is_empty()
     }
 }
 
