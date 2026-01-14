@@ -10,7 +10,7 @@
     "@types/node": "^16.11.25",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
-    "diff": "^5.0.0",
+    "diff": "^8.0.3",
     "monaco-editor": "^0.28.1",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
