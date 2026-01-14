@@ -151,6 +151,7 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         f"{test_tmp}/mononoke-config",
         "--no-default-scuba-dataset",
         "--tracing-test-format",
+        "--with-dynamic-observability=true",
         *cache_args,
         *common_args,
     ]

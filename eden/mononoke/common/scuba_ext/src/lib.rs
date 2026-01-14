@@ -499,6 +499,11 @@ impl MononokeScubaSampleBuilder {
     }
 
     pub fn log(&mut self) -> bool {
+        if self.fallback_sampled_out_to_verbose
+            && self.should_log_with_level(ScubaVerbosityLevel::Verbose)
+        {
+            self.inner.unsampled();
+        }
         self.inner.log()
     }
 
