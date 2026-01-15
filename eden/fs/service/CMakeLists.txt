@@ -12,7 +12,7 @@ add_fbthrift_library(
     EdenService
   DEPENDS
     eden_config_thrift
-    fb303::fb303_thrift
+    fb303::fb303_core
 )
 add_fbthrift_library(
   streamingeden_thrift
@@ -33,13 +33,14 @@ file(GLOB SERVICE_SRCS "*.cpp")
 # eden/fs/thrift/ subdirectory, perhaps along with eden.thrift too.
 list(
   REMOVE_ITEM SERVICE_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/PrettyPrinters.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/PrivHelperMain.cpp
 )
+
 add_library(
   eden_service_thrift_util STATIC
-  PrettyPrinters.cpp
+  PrettyPrinters.h
 )
+set_target_properties(eden_service_thrift_util PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(
   eden_service_thrift_util
   PUBLIC
@@ -57,6 +58,11 @@ add_library(
   eden_service STATIC
   ${SERVICE_SRCS}
 )
+target_link_options(
+  eden_service
+  PUBLIC
+    -Wl,--allow-multiple-definition
+)
 target_link_libraries(
   eden_service
   PUBLIC
@@ -71,6 +77,7 @@ target_link_libraries(
     eden_store
     eden_takeover
     eden_telemetry
+    redirect_ffi
     ${EDEN_STORE_IMPLEMENTATIONS}
     ${YARPL_LIBRARIES}
     Folly::folly

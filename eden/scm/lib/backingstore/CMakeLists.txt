@@ -51,6 +51,7 @@ target_link_libraries(
   backingstore
   PUBLIC
   edencommon::edencommon_os
+  eden_config
   rust_backingstore
   fmt::fmt
   Folly::folly

@@ -13,7 +13,7 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
-use hg_util::path::expand_path;
+use util::path::expand_path;
 
 use crate::instance::DEFAULT_CONFIG_DIR;
 use crate::instance::DEFAULT_ETC_EDEN_DIR;

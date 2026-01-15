@@ -18,6 +18,7 @@ target_link_libraries(
     eden_model
     eden_sqlite
     eden_utils
+    edenfs_ffi
     Folly::folly
     ${LIBGMOCK_LIBRARIES}
 )

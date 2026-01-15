@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-file(GLOB PRIVHELPER_SRCS "*.cpp")
+file(GLOB PRIVHELPER_SRCS "*.cpp" "priority/*.cpp")
 
 add_library(
   eden_fuse_privhelper STATIC
