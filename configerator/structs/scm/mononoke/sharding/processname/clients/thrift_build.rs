@@ -6,9 +6,7 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
-configerator/structs/scm/mononoke/sharding/sharding.thrift crate //configerator/structs/scm/mononoke/sharding:sharding-rust
-thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
-thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
+configerator/structs/scm/mononoke/sharding/processname.thrift crate //configerator/structs/scm/mononoke/sharding:processname-rust
 ";
 #[rustfmt::skip]
 fn main() {
@@ -18,10 +16,10 @@ fn main() {
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
     Config::from_env(GenContext::Clients)
         .expect("Failed to instantiate thrift_compiler::Config")
-        .base_path("../../../../../..")
-        .types_crate("sharding__types")
-        .clients_crate("sharding__clients")
+        .base_path("../../../../../../..")
+        .types_crate("processname__types")
+        .clients_crate("processname__clients")
         .options("serde")
-        .run(["../sharding.thrift"])
+        .run(["../../processname.thrift"])
         .expect("Failed while running thrift compilation");
 }

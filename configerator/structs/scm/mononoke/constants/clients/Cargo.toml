@@ -21,8 +21,8 @@ codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/fac
 constants__types = { package = "constants", version = "0.1.0", path = ".." }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-sharding = { version = "0.1.0", path = "../../sharding" }
-sharding_clients = { version = "0.1.0", path = "../../sharding/clients" }
+sharding = { version = "0.1.0", path = "../../sharding/sharding" }
+sharding_clients = { version = "0.1.0", path = "../../sharding/sharding/clients" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [build-dependencies]

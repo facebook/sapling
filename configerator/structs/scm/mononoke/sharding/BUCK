@@ -11,6 +11,7 @@ thrift_library(
     ],
     py3_namespace = "mononoke.sharding.processname",
     py_base_module = "configerator.mononoke",
+    rust_autocargo = {"cargo_toml_dir": "processname"},
     thrift_py_options = "json",
     thrift_rust_options = "serde",
     thrift_srcs = {
@@ -27,6 +28,7 @@ thrift_library(
     ],
     py3_namespace = "mononoke.sharding.regions",
     py_base_module = "configerator.mononoke",
+    rust_autocargo = {"cargo_toml_dir": "regions"},
     thrift_py_options = "json",
     thrift_rust_options = "serde",
     thrift_srcs = {
@@ -43,6 +45,7 @@ thrift_library(
     ],
     py3_namespace = "mononoke.sharding",
     py_base_module = "configerator.mononoke",
+    rust_autocargo = {"cargo_toml_dir": "sharding"},
     thrift_py_options = "json",
     thrift_rust_options = "serde",
     thrift_srcs = {

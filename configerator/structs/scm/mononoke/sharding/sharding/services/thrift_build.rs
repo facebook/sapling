@@ -6,6 +6,8 @@ use std::path::Path;
 use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
+configerator/structs/scm/mononoke/sharding/processname.thrift processname //configerator/structs/scm/mononoke/sharding:processname-rust
+configerator/structs/scm/mononoke/sharding/regions.thrift regions //configerator/structs/scm/mononoke/sharding:regions-rust
 configerator/structs/scm/mononoke/sharding/sharding.thrift crate //configerator/structs/scm/mononoke/sharding:sharding-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
@@ -16,12 +18,12 @@ fn main() {
     let out_dir = env::var_os("OUT_DIR").expect("OUT_DIR env not provided");
     let cratemap_path = Path::new(&out_dir).join("cratemap");
     fs::write(cratemap_path, CRATEMAP).expect("Failed to write cratemap");
-    Config::from_env(GenContext::Mocks)
+    Config::from_env(GenContext::Services)
         .expect("Failed to instantiate thrift_compiler::Config")
-        .base_path("../../../../../..")
+        .base_path("../../../../../../..")
         .types_crate("sharding__types")
         .clients_crate("sharding__clients")
         .options("serde")
-        .run(["../sharding.thrift"])
+        .run(["../../sharding.thrift"])
         .expect("Failed while running thrift compilation");
 }
