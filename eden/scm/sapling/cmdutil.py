@@ -3903,15 +3903,33 @@ def grep(ui, repo, table, matcher, pattern, **opts):
     cmd.append("--")
 
     if biggrep:
-        ui.debug(f"big grep command: {biggrepcmd}\n")
+        ui.debug(f"biggrep command: {biggrepcmd}\n")
         p = subprocess.Popen(
             biggrepcmd,
             bufsize=-1,
             close_fds=util.closefds,
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             cwd=reporoot,
         )
         out, err = p.communicate()
+
+        # bigrep returns 1 for:
+        #   - (a) no results
+        #   - (b) some error cases, e.g.: limit imposed by the --max-bytes option
+        # Since no reliable way to differentiate these cases, the following
+        # logic implementas best-effort error handling.
+        if p.returncode not in (0, 1):
+            errmsg = (
+                err.decode(errors="replace").strip()
+                or out.decode(errors="replace").strip()
+            )
+            raise error.Abort(
+                _("biggrep_client failed with exit code %d: %s")
+                % (p.returncode, errmsg),
+                hint=_("pass `--config grep.usebiggrep=False` to bypass biggrep"),
+            )
+
         lines = out.rstrip().decode().split("\n")
 
         revisionline = lines[0][1:]
