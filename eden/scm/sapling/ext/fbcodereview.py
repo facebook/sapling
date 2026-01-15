@@ -115,7 +115,7 @@ def showtasks(**args) -> _hybrid:
     """String. Return the tasks associated with given @prog@ rev."""
     tasks = []
     descr = args["ctx"].description()
-    match = re.search(r"Tasks?([\s-]?ID)?:\s*?[tT\d ,]+", descr)
+    match = re.search(r"^Tasks?([\s-]?ID)?:\s*?[tT\d ,]+", descr, flags=re.MULTILINE)
     if match:
         tasks = re.findall(r"\d+", match.group(0))
     return templatekw.showlist("task", tasks, args)
