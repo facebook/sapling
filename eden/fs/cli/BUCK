@@ -188,6 +188,7 @@ python_library(
         "//eden/fs/py/eden:dirstate",
         "//eden/fs/py/eden/thrift:legacy",
         "//eden/fs/service:thrift-py-deprecated",
+        "//eden/fs/service:thrift-python-types",
         "//eden/scm:redact",
         "//fb303/thrift:fb303_core-py-deprecated",
         "//thrift/lib/py:base",

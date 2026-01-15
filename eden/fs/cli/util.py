@@ -42,8 +42,8 @@ from typing import (
 )
 
 import thrift.transport
+from eden.fs.service.eden.thrift_types import TreeInodeDebugInfo
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
-from facebook.eden.ttypes import TreeInodeDebugInfo
 from fb303_core.ttypes import fb303_status
 from thrift import Thrift
 

@@ -10,7 +10,10 @@ import os
 import stat
 import unittest
 
-from facebook.eden.ttypes import TreeInodeDebugInfo, TreeInodeEntryDebugInfo
+from eden.fs.service.eden.thrift_types import (
+    TreeInodeDebugInfo,
+    TreeInodeEntryDebugInfo,
+)
 
 from .. import util
 

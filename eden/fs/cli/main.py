@@ -394,12 +394,14 @@ class ListCmd(Subcmd):
 
             if mount_info.state is None:
                 state_str = " (not mounted)"
-            elif mount_info.state == MountState.RUNNING:
+            elif mount_info.state._to_py_deprecated() == MountState.RUNNING:
                 # For normally running mount points don't print any state information.
                 # We only show the state if the mount is in an unusual state.
                 state_str = ""
             else:
-                state_name = MountState._VALUES_TO_NAMES[mount_info.state]
+                state_name = MountState._VALUES_TO_NAMES[
+                    mount_info.state._to_py_deprecated()
+                ]
                 state_str = f" ({state_name})"
 
             out.writeln(f"{path.as_posix()}{state_str}{suffix}")

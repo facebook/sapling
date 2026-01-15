@@ -1129,7 +1129,7 @@ class FileStatsCMD(Subcmd):
             inode_results = client.debugInodeStatus(
                 bytes(checkout.path), bytes(rel_path), flags=0, sync=SyncBehavior()
             )
-
+            inode_results = [x._to_python() for x in inode_results]
         read_files, written_files = split_inodes_by_operation_type(inode_results)
         operations = {
             "summary": {

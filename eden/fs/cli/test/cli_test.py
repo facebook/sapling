@@ -16,7 +16,7 @@ from eden.fs.cli.config import (
     EdenCheckout,
     EdenInstance,
 )
-from facebook.eden.ttypes import MountInfo, MountState
+from eden.fs.service.eden.thrift_types import MountInfo, MountState
 
 from .lib.output import TestOutput
 
@@ -406,9 +406,9 @@ class ListTest(unittest.TestCase):
         main_mod.ListCmd.print_mounts(normal_out, mounts)
         self.assertEqual(
             """\
-/data/users/johndoe/configs (unconfigured)
-/data/users/johndoe/git
-/data/users/johndoe/mercurial
+/data/users/johndoe/configs (UNINITIALIZED) (unconfigured)
+/data/users/johndoe/git (UNINITIALIZED)
+/data/users/johndoe/mercurial (UNINITIALIZED)
 /data/users/johndoe/www (not mounted)
 """,
             normal_out.getvalue(),
@@ -423,19 +423,19 @@ class ListTest(unittest.TestCase):
     "backing_repo": null,
     "configured": false,
     "data_dir": "/home/johndoe/.eden/clients/configs",
-    "state": "RUNNING"
+    "state": "UNINITIALIZED"
   },
   "/data/users/johndoe/git": {
     "backing_repo": "/home/johndoe/.eden-backing-repos/git",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/git",
-    "state": "RUNNING"
+    "state": "UNINITIALIZED"
   },
   "/data/users/johndoe/mercurial": {
     "backing_repo": "/home/johndoe/.eden-backing-repos/mercurial",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/mercurial",
-    "state": "RUNNING"
+    "state": "UNINITIALIZED"
   },
   "/data/users/johndoe/www": {
     "backing_repo": "/home/johndoe/.eden-backing-repos/www",
