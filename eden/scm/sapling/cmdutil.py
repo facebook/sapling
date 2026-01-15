@@ -3827,13 +3827,13 @@ def grep(ui, repo, table, matcher, pattern, **opts):
     # the corpus revision on the first line.
     biggrepcmd = [
         biggrepclient,
+        biggreptier,
+        biggrepcorpus,
+        "re2",
         "--stripdir",
         "-r",
         "--expression",
         pattern.replace("-", r"\-"),
-        biggreptier,
-        biggrepcorpus,
-        "re2",
     ]
 
     args = []
@@ -3859,7 +3859,7 @@ def grep(ui, repo, table, matcher, pattern, **opts):
         cmd.append("-v")
     if opts.get("word_regexp"):
         cmd.append("-w")
-        biggrepcmd[4] = "\\b%s\\b" % pattern
+        biggrepcmd[7] = "\\b%s\\b" % pattern
     if opts.get("extended_regexp"):
         cmd.append("-E")
         # re2 is already mostly compatible by default, so there are no options
