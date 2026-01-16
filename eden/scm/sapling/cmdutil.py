@@ -3823,19 +3823,6 @@ def grep(ui, repo, table, matcher, pattern, **opts):
         ):
             biggrep = True
 
-    # Ask big grep to strip out the corpus dir (stripdir) and to include
-    # the corpus revision on the first line.
-    biggrepcmd = [
-        biggrepclient,
-        biggreptier,
-        biggrepcorpus,
-        "re2",
-        "--stripdir",
-        "-r",
-        "--expression",
-        pattern.replace("-", r"\-"),
-    ]
-
     args = []
 
     if opts.get("after_context"):
@@ -3859,7 +3846,9 @@ def grep(ui, repo, table, matcher, pattern, **opts):
         cmd.append("-v")
     if opts.get("word_regexp"):
         cmd.append("-w")
-        biggrepcmd[7] = "\\b%s\\b" % pattern
+        biggreppattern = rf"\b{pattern}\b"
+    else:
+        biggreppattern = pattern.replace("-", r"\-")
     if opts.get("extended_regexp"):
         cmd.append("-E")
         # re2 is already mostly compatible by default, so there are no options
@@ -3867,11 +3856,24 @@ def grep(ui, repo, table, matcher, pattern, **opts):
     if opts.get("fixed_strings"):
         cmd.append("-F")
         # using bgs rather than bgr switches the engine to fixed string matches
-        biggrepcmd[0] = "bgs"
+        biggrepclient = "bgs"
     if opts.get("perl_regexp"):
         cmd.append("-P")
         # re2 is already mostly pcre compatible, so there are no options
         # to apply for this.
+
+    # Ask big grep to strip out the corpus dir (stripdir) and to include
+    # the corpus revision on the first line.
+    biggrepcmd = [
+        biggrepclient,
+        biggreptier,
+        biggrepcorpus,
+        "re2",
+        "--stripdir",
+        "-r",
+        "--expression",
+        biggreppattern,
+    ]
 
     biggrepcmd += args
     cmd += args
