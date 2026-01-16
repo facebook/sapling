@@ -135,8 +135,8 @@ impl VariantKey {
 mod tests {
     use rand::Rng;
     use rand::RngCore;
-    use rand::distributions::Alphanumeric;
-    use rand::thread_rng;
+    use rand::distr::Alphanumeric;
+    use rand::rng;
 
     use super::*;
 
@@ -145,7 +145,7 @@ mod tests {
         let mut buf = Vec::<u8>::new();
         let keys: Vec<Vec<u8>> = (0..1000usize)
             .map(|i| {
-                let rng = thread_rng();
+                let rng = rng();
                 rng.sample_iter(&Alphanumeric).take(i % 40).collect()
             })
             .collect();
@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn test_fixed_key_round_trip() {
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let mut buf = Vec::<u8>::new();
         let keys: Vec<[u8; 20]> = (0..1000usize)
             .map(|_| {

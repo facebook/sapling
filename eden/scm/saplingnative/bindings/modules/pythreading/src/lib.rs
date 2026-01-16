@@ -516,9 +516,9 @@ pub fn trigger_rng_reseed(_py: Python) -> PyResult<PyNone> {
     //
     // So, let's just burn some values to trigger the reseed.
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     for _ in 0..16 {
-        let _ = rng.r#gen::<u32>();
+        let _ = rng.random::<u32>();
     }
     Ok(PyNone)
 }

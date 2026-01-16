@@ -2126,7 +2126,7 @@ Reset latest to 2"#
 
             // Rotate triggered.
             let mut random_bytes = vec![0u8; 100];
-            rand::thread_rng().fill_bytes(&mut random_bytes);
+            rand::rng().fill_bytes(&mut random_bytes);
             random_bytes[0] = b'b';
             rotate.append(&random_bytes).unwrap();
             assert_eq!(rotate.sync().unwrap(), 1);

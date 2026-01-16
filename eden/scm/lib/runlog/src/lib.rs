@@ -19,8 +19,8 @@ use configmodel::ConfigExt;
 pub use filestore::FileStore;
 use parking_lot::Mutex;
 use rand::Rng;
-use rand::distributions::Alphanumeric;
-use rand::thread_rng;
+use rand::distr::Alphanumeric;
+use rand::rng;
 use repo::repo::Repo;
 use serde::Deserialize;
 use serde::Serialize;
@@ -58,7 +58,7 @@ impl Logger {
 
         // Probabilistically clean up old entries to avoid doing the work every time.
         let cleanup_chance = config.get_or("runlog", "cleanup-chance", || 0.01)?;
-        if cleanup_chance > rand::thread_rng().r#gen::<f64>() {
+        if cleanup_chance > rand::rng().random::<f64>() {
             let threshold = config.get_or("runlog", "cleanup-threshold", || 3600.0)?;
             FileStore::cleanup(shared_path, Duration::from_secs_f64(threshold))?;
         }
@@ -163,7 +163,7 @@ pub struct Progress {
 
 impl Entry {
     fn new(command: Vec<String>) -> Self {
-        let rng_id: String = thread_rng()
+        let rng_id: String = rng()
             .sample_iter(Alphanumeric)
             .take(16)
             .map(char::from)

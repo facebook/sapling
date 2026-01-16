@@ -11,7 +11,7 @@ license = "GPL-2.0-only"
 
 [dependencies]
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }
 sapling-async-runtime = { version = "0.1.0", path = "../../../async-runtime" }
 sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 sapling-cliparser = { version = "0.1.0", path = "../../../cliparser" }

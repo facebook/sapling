@@ -27,7 +27,7 @@ rust_library(
     features = ["nobench"],
     test_deps = [
         "fbsource//third-party/rust:quickcheck",
-        "fbsource//third-party/rust:rand_08",
+        "fbsource//third-party/rust:rand",
     ],
     deps = [
         "fbsource//third-party/rust:thiserror",

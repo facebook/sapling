@@ -12,8 +12,8 @@ use anyhow::Result;
 use anyhow::anyhow;
 use once_cell::sync::Lazy;
 use rand::Rng;
-use rand::distributions::Alphanumeric;
-use rand::thread_rng;
+use rand::distr::Alphanumeric;
+use rand::rng;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -180,7 +180,7 @@ impl ClientRequestInfo {
         if std::env::var_os("TESTTMP").is_some() {
             "test-correlator".to_string()
         } else {
-            thread_rng()
+            rng()
                 .sample_iter(Alphanumeric)
                 .take(8)
                 .map(char::from)
