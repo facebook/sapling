@@ -27,9 +27,9 @@
   $ git commit -qam "Add file1"
   $ old_head=$(git rev-parse HEAD)
   $ git tag -a -m "new tag" first_tag
-  $ echo "this is file2asdflkjaslkdjfnwbaemrnkjnzk;jsncv;kljn;akjlsdnf;lkjwqlkerj;lkwejrlkjal;ksjdfl;kjawle;krjljlwekrnlkjwner" > file2
-  $ git add file2
-  $ git commit -qam "Add file2"
+  $ quiet dd if=/dev/urandom of=440_KB_file bs=1K count=440
+  $ git add 440_KB_file
+  $ git commit -qam "Commit with large file"
   $ git tag -a empty_tag -m ""
 
 # Push Git repository to Mononoke
@@ -51,9 +51,7 @@
   $ echo "this is file3" > file3
   $ git add file3
   $ git commit -qam "Add file3"
-  $ git_client push origin master_bookmark
-  To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-     2425bab..de416e6  master_bookmark -> master_bookmark
+  $ quiet git_client push origin master_bookmark
 
 # Wait for the warm bookmark cache to catch up with the latest changes
   $ wait_for_git_bookmark_move refs/heads/master_bookmark $current_head
@@ -65,10 +63,14 @@
   Switched to a new branch 'new_branch'
 # Let's push this branch to the server. The commit that the branch points to is already known to the server.
 # So essentially this should be a no-op push. However, due to an implementation bug we still end up sending data
-# to the server for that commit that the server already has
-  $ git_client push origin new_branch --verbose
+# to the server for that commit that the server already has.
+
+# Git has a work around for this with the use of a custom header called "push.negotiate" which when set to true
+# forces git to negotiate with the server to find the common base so it doesn't have to send the extra data. In the
+# below case without the header, git would have sent 440 KB+ of data. With the header, it just sends 183 bytes.
+  $ git_client -c push.negotiate=true  push origin new_branch --verbose
   Pushing to https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
-  POST git-receive-pack (644 bytes)
+  POST git-receive-pack (183 bytes)
   To https://localhost:$LOCAL_PORT/repos/git/ro/repo.git
    * [new branch]      new_branch -> new_branch
   updating local tracking ref 'refs/remotes/origin/new_branch'
