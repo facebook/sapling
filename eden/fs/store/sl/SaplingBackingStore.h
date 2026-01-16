@@ -24,7 +24,6 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/ImportPriority.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/sl/SaplingBackingStoreOptions.h"
 #include "eden/fs/store/sl/SaplingImportRequestQueue.h"
@@ -64,7 +63,6 @@ namespace facebook::eden {
 
 class BackingStoreLogger;
 class ReloadableConfig;
-class LocalStore;
 class UnboundedQueueExecutor;
 class EdenStats;
 class SaplingImportRequest;
@@ -179,7 +177,6 @@ class SaplingBackingStore final : public BackingStore {
       AbsolutePathPiece repository,
       AbsolutePathPiece mount,
       CaseSensitivity caseSensitive,
-      std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
       UnboundedQueueExecutor* serverThreadPool,
       std::shared_ptr<ReloadableConfig> config,
@@ -197,7 +194,6 @@ class SaplingBackingStore final : public BackingStore {
       AbsolutePathPiece repository,
       AbsolutePathPiece mount,
       CaseSensitivity caseSensitive,
-      std::shared_ptr<LocalStore> localStore,
       EdenStatsPtr stats,
       folly::InlineExecutor* inlineExecutor,
       std::shared_ptr<ReloadableConfig> config,
@@ -305,10 +301,6 @@ class SaplingBackingStore final : public BackingStore {
     return repoName_;
   }
 
-  LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
-    return localStoreCachingPolicy_;
-  }
-
   std::vector<HgImportTraceEvent> getOutstandingHgEvents() const {
     auto lockedEventsMap = outstandingHgEvents_.rlock();
     std::vector<HgImportTraceEvent> events;
@@ -355,13 +347,6 @@ class SaplingBackingStore final : public BackingStore {
   // Forbidden copy constructor and assignment operator
   SaplingBackingStore(const SaplingBackingStore&) = delete;
   SaplingBackingStore& operator=(const SaplingBackingStore&) = delete;
-
-  /**
-   * Meant to be called by the constructor to determine the local store caching
-   * policy based on configurable options. To inspect the caching policy, call
-   * BackingStore::getLocalStoreCachingPolicy()
-   */
-  LocalStoreCachingPolicy constructLocalStoreCachingPolicy();
 
   /**
    * Import the manifest for the specified revision using mercurial
@@ -699,7 +684,6 @@ class SaplingBackingStore final : public BackingStore {
   std::atomic<bool> isRecordingFetch_{false};
   folly::Synchronized<std::unordered_set<std::string>> fetchedFilePaths_;
 
-  std::shared_ptr<LocalStore> localStore_;
   EdenStatsPtr stats_;
 
   // This is used to avoid reading config in hot path of get request
@@ -744,8 +728,6 @@ class SaplingBackingStore final : public BackingStore {
   std::unique_ptr<BackingStoreLogger> logger_;
 
   FaultInjector& faultInjector_;
-
-  LocalStoreCachingPolicy localStoreCachingPolicy_;
 
   // The last time we logged a missing proxy hash so the minimum interval is
   // limited to EdenConfig::missingHgProxyHashLogInterval.

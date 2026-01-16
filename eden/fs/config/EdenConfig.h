@@ -589,48 +589,6 @@ class EdenConfig : private ConfigSettingManager {
   // [store]
 
   /**
-   * How often to compute stats and perform garbage collection management
-   * for the LocalStore.
-   */
-  ConfigSetting<std::chrono::nanoseconds> localStoreManagementInterval{
-      "store:stats-interval",
-      std::chrono::minutes(1),
-      this};
-
-  /*
-   * The following settings control the maximum sizes of the local store's
-   * caches, per object type.
-   *
-   * Automatic garbage collection will be triggered when the size exceeds the
-   * thresholds.
-   */
-
-  ConfigSetting<uint64_t> localStoreBlobSizeLimit{
-      "store:blob-size-limit",
-      15'000'000'000,
-      this};
-
-  ConfigSetting<uint64_t> localStoreBlobMetaSizeLimit{
-      "store:blobmeta-size-limit",
-      1'000'000'000,
-      this};
-
-  ConfigSetting<uint64_t> localStoreTreeSizeLimit{
-      "store:tree-size-limit",
-      3'000'000'000,
-      this};
-
-  ConfigSetting<uint64_t> localStoreTreeAuxSizeLimit{
-      "store:treeaux-size-limit",
-      1'000'000'000,
-      this};
-
-  ConfigSetting<uint64_t> localStoreHgCommit2TreeSizeLimit{
-      "store:hgcommit2tree-size-limit",
-      20'000'000,
-      this};
-
-  /**
    * The minimum duration between logging occurrences of failed HgProxyHash
    * loads.
    */
@@ -676,37 +634,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<uint64_t> metadataCacheShards{
       "store:metadata-cache-shards",
       32,
-      this};
-
-  /**
-   * Controls if RocksDbLocalStore operations should run asynchronously or
-   * synchronously.
-   *
-   * This is a temporary option to help us mitigate S433447.
-   */
-  ConfigSetting<bool> asyncRocksDbLocalStore{
-      "store:async-rocksdb-local-store",
-      false,
-      this};
-
-  /**
-   * Controls the number of threads to use when processing RocksDbLocalStore
-   * operations. At the time of writing, this is also used to drive the
-   * RocksDbLocalStore's periodic GC.
-   */
-  ConfigSetting<uint8_t> rocksDbIoPoolNumThreads{
-      "store:rocksdb-io-pool-num-threads",
-      12,
-      this};
-
-  ConfigSetting<bool> warmTreeAuxCacheIfTreeFromLocalStore{
-      "store:warm-aux-cache-tree-local-store",
-      false,
-      this};
-
-  ConfigSetting<bool> warmTreeAuxLocalCacheIfTreeFromBackingStore{
-      "store:warm-aux-local-cache-tree-backing-store",
-      false,
       this};
 
   ConfigSetting<bool> warmTreeAuxMemCacheIfTreeFromBackingStore{
@@ -1205,31 +1132,6 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<uint32_t> hgActivityBufferSize{
       "hg:activity-buffer-size",
       100,
-      this};
-
-  ConfigSetting<bool> hgForceDisableLocalStoreCaching{
-      "hg:force-disable-localstore",
-      false,
-      this};
-
-  ConfigSetting<bool> hgEnableBlobMetaLocalStoreCaching{
-      "hg:cache-blob-metadata-in-localstore",
-      true,
-      this};
-
-  ConfigSetting<bool> hgEnableTreeMetaLocalStoreCaching{
-      "hg:cache-tree-metadata-in-localstore",
-      true,
-      this};
-
-  ConfigSetting<bool> hgEnableTreeLocalStoreCaching{
-      "hg:cache-trees-in-localstore",
-      true,
-      this};
-
-  ConfigSetting<bool> hgEnableBlobLocalStoreCaching{
-      "hg:cache-blobs-in-localstore",
-      false,
       this};
 
   /**

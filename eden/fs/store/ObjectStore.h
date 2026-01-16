@@ -37,7 +37,6 @@ class EdenStats;
 class ProcessInfoCache;
 class StructuredLogger;
 class TreeCache;
-class LocalStore;
 enum class ObjectComparison : uint8_t;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
@@ -113,7 +112,6 @@ class ObjectStore : public IObjectStore,
  public:
   static std::shared_ptr<ObjectStore> create(
       std::shared_ptr<BackingStore> backingStore,
-      std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -420,7 +418,6 @@ class ObjectStore : public IObjectStore,
   // Forbidden constructor. Use create().
   ObjectStore(
       std::shared_ptr<BackingStore> backingStore,
-      std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<TreeCache> treeCache,
       EdenStatsPtr stats,
       std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -434,29 +431,11 @@ class ObjectStore : public IObjectStore,
 
   Hash32 computeBlake3(const Blob& blob) const;
 
-  /**
-   * Check if the object should be cached in the LocalStore. If
-   * localStoreCachingPolicy_ is set to NoCaching, this will always return
-   * false.
-   */
-  bool shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy object) const;
-
-  /*
-   * This method should only be used for testing purposes.
-   */
-  void setLocalStoreCachingPolicy(
-      BackingStore::LocalStoreCachingPolicy policy) {
-    localStoreCachingPolicy_ = policy;
-  }
-
   folly::SemiFuture<BackingStore::GetTreeResult> getTreeImpl(
       const ObjectId& id,
       const ObjectFetchContextPtr& context,
       folly::stop_watch<std::chrono::milliseconds> watch) const;
 
-  void maybeCacheTreeAndAuxInLocalStore(
-      const ObjectId& id,
-      const BackingStore::GetTreeResult& treeResult) const;
   void maybeCacheTreeAuxInMemCache(
       const ObjectId& id,
       const BackingStore::GetTreeResult& treeResult) const;
@@ -523,21 +502,6 @@ class ObjectStore : public IObjectStore,
    * Multiple ObjectStores may share the same BackingStore.
    */
   std::shared_ptr<BackingStore> backingStore_;
-
-  /*
-   * The on-disk cache which is used with most of the BackingStore
-   */
-  std::shared_ptr<LocalStore> localStore_;
-
-  /*
-   * BackingStore can turn off on-disk cache by setting this to
-   * LocalStoreCachingPolicy::NoCaching
-   *
-   * TODO: This might be better suited to either live in the BackingStore, or
-   * be determined by querying the BackingStore, as opposed to being a
-   * constructor argument, since this is strongly tied to that class.
-   */
-  BackingStore::LocalStoreCachingPolicy localStoreCachingPolicy_;
 
   EdenStatsPtr const stats_;
 

@@ -388,8 +388,6 @@ cpp_library(
         "//eden/fs/service/facebook:server_observer",  # @manual
         "//eden/fs/store:context",
         "//eden/fs/store:filtered_backing_store",
-        "//eden/fs/store:rocksdb",
-        "//eden/fs/store:sqlite",
         "//eden/fs/store:store",
         "//eden/fs/store/filter:glob_filter",
         "//eden/fs/store/sl:sapling_backing_store",

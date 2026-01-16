@@ -75,11 +75,6 @@ impl TestDir {
         self.path.join(types::COMBINED_DATA_FILE_NAME)
     }
 
-    /// Returns the path to the RocksDB file.
-    pub fn rocksdb_path(&self) -> PathBuf {
-        self.path.join(types::ROCKSDB_FILE_NAME)
-    }
-
     /// Returns the path to the LMDB file.
     pub fn lmdb_path(&self) -> PathBuf {
         self.path.join(types::LMDB_FILE_NAME)

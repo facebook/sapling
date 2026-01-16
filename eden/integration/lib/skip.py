@@ -107,10 +107,6 @@ if sys.platform == "win32":
         #
         # Test classes from the hg integration test binary
         #
-        "hg.debug_clear_local_caches_test.DebugClearLocalCachesTest": [
-            # Graceful restart is not implemented on Windows
-            "test_contents_are_the_same_if_handle_is_held_open",
-        ],
         "hg.debug_get_parents.DebugGetParentsTest": True,
         "hg.debug_hg_dirstate_test.DebugHgDirstateTest": True,
         "hg.diff_test.DiffTest": True,
@@ -143,14 +139,6 @@ if sys.platform == "win32":
             "test_mount_state_during_unmount_with_in_progress_checkout",
             # Windows doesn't support executable files; mode changes are no-op
             "test_mode_change_with_no_content_change",
-        ],
-        "hg.storage_engine_test.FailsToOpenLocalStoreTest": [
-            # takeover unsupported on Windows
-            "test_restart_eden_with_local_store_that_fails_to_open"
-        ],
-        "hg.storage_engine_test.FailsToOpenLocalStoreTestWithMounts": [
-            # takeover unsupported on Windows
-            "test_restart_eden_with_local_store_that_fails_to_open"
         ],
         "stale_inode_test.StaleInodeTestHgNFS": True,
         "windows_fsck_test.WindowsFsckTestHg": [
@@ -312,15 +300,6 @@ elif sys.platform.startswith("darwin"):
         # S362020: Redirect tests leave behind garbage on macOS Sandcastle hosts
         TEST_DISABLED["redirect_test.RedirectTest"] = True
 
-    # Requires sudo. We don't have access to passwordless `sudo` on macOS
-    # Sandcastle hosts, so we should disable this test.
-    TEST_DISABLED["hg.storage_engine_test.FailsToOpenLocalStoreTestWithMounts"] = [
-        "test_restart_eden_with_local_store_that_fails_to_open"
-    ]
-    TEST_DISABLED["hg.storage_engine_test.FailsToOpenLocalStoreTest"] = [
-        "test_restart_eden_with_local_store_that_fails_to_open"
-    ]
-
 
 # Windows specific tests
 # we keep them in the build graph on linux so pyre will run and disable them
@@ -428,9 +407,6 @@ if sys.platform.startswith("linux"):
                 "test_fsck_multiple_mounts",
             ],
             "stale_test.StaleTestNFS": True,  # T89442539
-            "hg.debug_clear_local_caches_test.DebugClearLocalCachesTestTreeOnlyNFS": [
-                "test_contents_are_the_same_if_handle_is_held_open"  # T89344844
-            ],
             "hg.update_test.UpdateTestTreeOnlyNFS": [
                 "test_mount_state_during_unmount_with_in_progress_checkout"  # T90881795
             ],

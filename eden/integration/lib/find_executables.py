@@ -154,14 +154,6 @@ class FindExeClass:
         )
 
     @cached_property
-    def ZERO_BLOB(self) -> str:
-        return self._find_exe(
-            "zero_blob",
-            env="EDENFS_ZERO_BLOB",
-            buck_path="eden/integration/helpers/zero_blob",
-        )
-
-    @cached_property
     def BLAKE3_SUM(self) -> str:
         return self._find_exe(
             "blake3_sum",

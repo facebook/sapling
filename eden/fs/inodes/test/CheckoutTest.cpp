@@ -503,7 +503,7 @@ TEST(Checkout, modifyFileEnd) {
 }
 
 // Test performing a checkout with a modified file where the ObjectStore data is
-// not immediately ready in the LocalStore even though the inode is loaded.
+// not immediately ready even though the inode is loaded.
 TEST(Checkout, modifyLoadedButNotReadyFileWithConflict) {
   TestMount mount;
   auto backingStore = mount.getBackingStore();

@@ -428,17 +428,6 @@ python_integration_test(
 )
 
 python_integration_test(
-    name = "rocksdb_store",
-    srcs = ["rocksdb_store_test.py"],
-    env = artifacts["env"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/cli:lib",
-        "//eden/integration/lib:lib",
-    ],
-)
-
-python_integration_test(
     name = "sed",
     srcs = ["sed_test.py"],
     env = artifacts["env"],

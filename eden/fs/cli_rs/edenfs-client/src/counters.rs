@@ -314,29 +314,6 @@ impl Sub for CASCLocalCacheTelemetryCounters {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct LocalStoreCacheTelemetryCounters {
-    // Blobs
-    pub blobs_hits: u64,
-    pub blobs_misses: u64,
-    // Trees
-    pub trees_hits: u64,
-    pub trees_misses: u64,
-}
-
-impl Sub for LocalStoreCacheTelemetryCounters {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Self {
-            blobs_hits: self.blobs_hits - rhs.blobs_hits,
-            blobs_misses: self.blobs_misses - rhs.blobs_misses,
-            trees_hits: self.trees_hits - rhs.trees_hits,
-            trees_misses: self.trees_misses - rhs.trees_misses,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InMemoryCacheTelemetryCounters {
     // Blobs
     pub blobs_hits: u64,
@@ -367,8 +344,6 @@ pub struct LocalCacheFetchTelemetryCounters {
     pub sapling_lfs_cache: Option<SaplingLFSCacheTelemetryCounters>,
     /// CASd local cache counters
     pub casc_local_cache: Option<CASCLocalCacheTelemetryCounters>,
-    /// Local store cache counters (eden rocksdb cache)
-    pub local_store_cache: Option<LocalStoreCacheTelemetryCounters>,
     /// In memory (eden) cache counters
     pub in_memory_local_cache: Option<InMemoryCacheTelemetryCounters>,
 }
@@ -389,11 +364,6 @@ impl Sub for LocalCacheFetchTelemetryCounters {
                 (None, _) => None,
             },
             casc_local_cache: match (self.casc_local_cache, rhs.casc_local_cache) {
-                (Some(lhs), Some(rhs)) => Some(lhs - rhs),
-                (lhs, None) => lhs,
-                (None, _) => None,
-            },
-            local_store_cache: match (self.local_store_cache, rhs.local_store_cache) {
                 (Some(lhs), Some(rhs)) => Some(lhs - rhs),
                 (lhs, None) => lhs,
                 (None, _) => None,
@@ -464,8 +434,6 @@ impl Sub for LocalCacheTelemetryCounters {
 pub struct FileMetadataFetchTelemetry {
     // The number of times the file metadata was successfully fetched from the in-memory cache
     pub fetched_from_inmemory_cache: u64,
-    // The number of times the file metadata was successfully fetched from the local store cache
-    pub fetched_from_local_store_cache: u64,
     // The number of times the file metadata was successfully fetched from the backing store
     // This can come from both local backing store aux cache or remote if not found.
     pub fetched_from_backing_store: u64,
@@ -484,8 +452,6 @@ impl Sub for FileMetadataFetchTelemetry {
         Self {
             fetched_from_inmemory_cache: self.fetched_from_inmemory_cache
                 - rhs.fetched_from_inmemory_cache,
-            fetched_from_local_store_cache: self.fetched_from_local_store_cache
-                - rhs.fetched_from_local_store_cache,
             fetched_from_backing_store: self.fetched_from_backing_store
                 - rhs.fetched_from_backing_store,
             fetched_from_backing_store_cached: self.fetched_from_backing_store_cached
@@ -545,8 +511,6 @@ impl Sub for FileMetadataTelemetry {
 pub struct TreeMetadataTelemetry {
     // The number of times the tree metadata was successfully fetched from the in-memory cache
     pub fetched_from_inmemory_cache: u64,
-    // The number of times the tree metadata was successfully fetched from the local store cache
-    pub fetched_from_local_store_cache: u64,
     // The number of times the tree metadata was successfully fetched from the backing store
     pub fetched_from_backing_store: u64,
 }
@@ -558,8 +522,6 @@ impl Sub for TreeMetadataTelemetry {
         Self {
             fetched_from_inmemory_cache: self.fetched_from_inmemory_cache
                 - rhs.fetched_from_inmemory_cache,
-            fetched_from_local_store_cache: self.fetched_from_local_store_cache
-                - rhs.fetched_from_local_store_cache,
             fetched_from_backing_store: self.fetched_from_backing_store
                 - rhs.fetched_from_backing_store,
         }
@@ -731,10 +693,6 @@ impl CrawlingScore {
         if let Some(casc_local) = &counters.local_cache_stats.fetch.casc_local_cache {
             local_cache_blob_fetch_hits += casc_local.blobs_hits;
             local_cache_tree_fetch_hits += casc_local.trees_hits;
-        }
-        if let Some(local_store) = &counters.local_cache_stats.fetch.local_store_cache {
-            local_cache_blob_fetch_hits += local_store.blobs_hits;
-            local_cache_tree_fetch_hits += local_store.trees_hits;
         }
         if let Some(in_memory) = &counters.local_cache_stats.fetch.in_memory_local_cache {
             local_cache_blob_fetch_hits += in_memory.blobs_hits;
@@ -1011,13 +969,6 @@ impl EdenFsClient {
             COUNTER_LFS_CACHE_PREFETCH_BLOBS_REQUESTS,
         ];
 
-        let local_store_cache_counters = [
-            COUNTER_LOCAL_STORE_BLOBS_HITS,
-            COUNTER_LOCAL_STORE_BLOBS_MISSES,
-            COUNTER_LOCAL_STORE_TREES_HITS,
-            COUNTER_LOCAL_STORE_TREES_MISSES,
-        ];
-
         let in_memory_cache_counters = [
             COUNTER_IN_MEMORY_BLOBS_HITS,
             COUNTER_IN_MEMORY_BLOBS_MISSES,
@@ -1078,7 +1029,6 @@ impl EdenFsClient {
         );
         keys.extend(lfs_cache_counters.iter().map(|&s| s.to_string()));
         keys.extend(lfs_prefetch_cache_counters.iter().map(|&s| s.to_string()));
-        keys.extend(local_store_cache_counters.iter().map(|&s| s.to_string()));
         keys.extend(in_memory_cache_counters.iter().map(|&s| s.to_string()));
         keys.extend(file_metadata_counters.iter().map(|&s| s.to_string()));
         keys.extend(
@@ -1253,16 +1203,6 @@ impl EdenFsClient {
                             .get(COUNTER_CAS_LOCAL_CACHE_TREES_MISSES)
                             .unwrap_or(&0) as u64,
                     }),
-                    local_store_cache: Some(LocalStoreCacheTelemetryCounters {
-                        blobs_hits: *counters.get(COUNTER_LOCAL_STORE_BLOBS_HITS).unwrap_or(&0)
-                            as u64,
-                        blobs_misses: *counters.get(COUNTER_LOCAL_STORE_BLOBS_MISSES).unwrap_or(&0)
-                            as u64,
-                        trees_hits: *counters.get(COUNTER_LOCAL_STORE_TREES_HITS).unwrap_or(&0)
-                            as u64,
-                        trees_misses: *counters.get(COUNTER_LOCAL_STORE_TREES_MISSES).unwrap_or(&0)
-                            as u64,
-                    }),
                     in_memory_local_cache: Some(InMemoryCacheTelemetryCounters {
                         blobs_hits: *counters.get(COUNTER_IN_MEMORY_BLOBS_HITS).unwrap_or(&0)
                             as u64,
@@ -1339,9 +1279,6 @@ impl EdenFsClient {
                     fetched_from_inmemory_cache: *counters
                         .get(COUNTER_METADATA_MEMORY)
                         .unwrap_or(&0) as u64,
-                    fetched_from_local_store_cache: *counters
-                        .get(COUNTER_METADATA_LOCAL_STORE)
-                        .unwrap_or(&0) as u64,
                     fetched_from_backing_store: *counters
                         .get(COUNTER_METADATA_BACKING_STORE)
                         .unwrap_or(&0) as u64,
@@ -1371,9 +1308,6 @@ impl EdenFsClient {
             tree_metadata_stats: Some(TreeMetadataTelemetry {
                 fetched_from_inmemory_cache: *counters
                     .get(COUNTER_TREE_METADATA_MEMORY)
-                    .unwrap_or(&0) as u64,
-                fetched_from_local_store_cache: *counters
-                    .get(COUNTER_TREE_METADATA_LOCAL_STORE)
                     .unwrap_or(&0) as u64,
                 fetched_from_backing_store: *counters
                     .get(COUNTER_TREE_METADATA_BACKING_STORE)

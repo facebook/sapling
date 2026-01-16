@@ -1412,7 +1412,6 @@ class GcCmd(Subcmd):
         with instance.get_thrift_client_legacy() as client:
             # TODO: unload
             print("Clearing and compacting local caches...", end="", flush=True)
-            client.clearAndCompactLocalStore()
             print()
             # TODO: clear kernel caches
 

@@ -26,7 +26,6 @@ The list of all the EdenStats Counter/Duration are as follows:
 
 - [SaplingBackingStoreStats](./SaplingBackingStoreStats.md)
 - [ObjectStoreStats](./ObjectStoreStats.md)
-- [LocalStoreStats](./LocalStoreStats.md)
 - [OverlayStats](./OverlayStats.md)
 - JournalStats
   1. `Counter truncatedReads{"journal.truncated_reads"}` : Number of times a

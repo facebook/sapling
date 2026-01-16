@@ -143,7 +143,6 @@ std::shared_ptr<SaplingBackingStore> createSaplingBackingStore(
       repoPath,
       config.getMountPath(),
       config.getCaseSensitive(),
-      params.localStore,
       params.sharedStats.copy(),
       params.serverState->getThreadPool().get(),
       reloadableConfig,
@@ -457,49 +456,27 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   }
 
   std::move(prepareFuture)
-      .thenTry([startupLogger,
-                structuredLogger =
-                    server->getServerState()->getStructuredLogger(),
-                daemonStart](folly::Try<folly::Unit>&& result) {
-        // If an error occurred this means that we failed to mount all of
-        // the mount points or there was an issue opening the LocalStore.
-        //
-        // LocalStore errors mean that Eden can't operate correctly, so we
-        // need to exit.
-        //
-        // Mount errors are fine. We have still started and will
-        // continue running, so we can report successful startup.
-        if (result.hasException()) {
-          if (auto* err = result.tryGetExceptionObject<
-                          EdenServer::LocalStoreOpenError>()) {
+      .thenTry(
+          [startupLogger,
+           structuredLogger = server->getServerState()->getStructuredLogger(),
+           daemonStart](folly::Try<folly::Unit>&& result) {
+            // If an error occurred this means that we failed to mount all of
+            // the mount points.
+            //
+            // Mount errors are fine. We have still started and will
+            // continue running, so we can report successful startup.
+            if (result.hasException()) {
+              // Log an overall error message here.
+              // We will have already logged more detailed messages for each
+              // mount failure when it occurred.
+              startupLogger->warn(
+                  "did not successfully remount all repositories: ",
+                  result.exception().what());
+            }
             auto startTimeInSeconds =
                 std::chrono::duration<double>{daemonStart.elapsed()}.count();
-            structuredLogger->logEvent(
-                DaemonStart{
-                    startTimeInSeconds, FLAGS_takeover, false /*success*/});
-            // Note: this will cause EdenFs to exit abruptly. We are not using
-            // normal shutdown procedures. This is consistent with other
-            // pre-mount startup errors. Admittedly this will leave hung mounts
-            // during graceful restarts:
-            // TODO(T164077169): attempt to cleanup mounts left behind by a
-            // graceful restart when EdenFS fails to startup after receiving
-            // takeover data.
-            startupLogger->exitUnsuccessfully(
-                kExitCodeError,
-                "error starting EdenFS: ",
-                folly::exceptionStr(*err));
-          }
-          // Log an overall error message here.
-          // We will have already logged more detailed messages for each
-          // mount failure when it occurred.
-          startupLogger->warn(
-              "did not successfully remount all repositories: ",
-              result.exception().what());
-        }
-        auto startTimeInSeconds =
-            std::chrono::duration<double>{daemonStart.elapsed()}.count();
-        startupLogger->success(startTimeInSeconds);
-      })
+            startupLogger->success(startTimeInSeconds);
+          })
       .ensure(
           [daemonStart,
            structuredLogger = server->getServerState()->getStructuredLogger(),

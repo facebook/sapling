@@ -716,62 +716,6 @@ def check_blob_and_size_match(
             return None
 
 
-def check_size_corruption(
-    client: EdenClient,
-    instance: EdenInstance,
-    checkout: Path,
-    loaded_tree_inodes: List[TreeInodeDebugInfo],
-) -> int:
-    # list of files whose size is wrongly cached in the local store
-    local_store_corruption: List[Tuple[bytes, MismatchedBlobSize]] = []
-
-    for loaded_dir in tqdm(loaded_tree_inodes):
-        for dirent in loaded_dir.entries:
-            if not stat.S_ISREG(dirent.mode) or dirent.materialized:
-                continue
-            result = check_blob_and_size_match(client, checkout, dirent.hash)
-            if result is not None:
-                local_store_corruption.append((dirent.name, result))
-
-    if local_store_corruption:
-        print(f"{len(local_store_corruption)} corrupted sizes in the local store")
-        for filename, mismatch in local_store_corruption[:10]:
-            print(
-                f"{filename} --"
-                f"actual size: {mismatch.actual_blobsize} -- "
-                f"local store blob size: {mismatch.cached_blobsize}"
-            )
-        if len(local_store_corruption) > 10:
-            print("...")
-        return 1
-    return 0
-
-
-@debug_cmd(
-    "sizecorruption", "Check if the metadata blob size match the actual blob size"
-)
-class SizeCorruptionCmd(Subcmd):
-    def run(self, args: argparse.Namespace) -> int:
-        instance = get_eden_instance(args)
-        checkouts = instance.get_mounts()
-
-        number_effected_mounts = 0
-        with instance.get_thrift_client_legacy() as client:
-            for path in sorted(checkouts.keys()):
-                print(f"Checking {path}")
-                inodes = client.debugInodeStatus(
-                    bytes(path),
-                    b"",
-                    flags=DIS_REQUIRE_LOADED,
-                    sync=SyncBehavior(),
-                )
-
-                number_effected_mounts += check_size_corruption(
-                    client, instance, path, inodes
-                )
-        return number_effected_mounts
-
-
 _FILE_TYPE_FLAGS: Dict[int, str] = {
     stat.S_IFREG: "f",
     stat.S_IFDIR: "d",
@@ -835,18 +779,14 @@ class GcProcessFetchCmd(Subcmd):
 @debug_cmd("clear_local_caches", "Clears local caches of objects stored in RocksDB")
 class ClearLocalCachesCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        with instance.get_thrift_client_legacy() as client:
-            client.debugClearLocalStoreCaches()
+        # noop
         return 0
 
 
 @debug_cmd("compact_local_storage", "Asks RocksDB to compact its storage")
 class CompactLocalStorageCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        with instance.get_thrift_client_legacy() as client:
-            client.debugCompactLocalStorage()
+        # noop
         return 0
 
 

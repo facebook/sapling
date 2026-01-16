@@ -55,23 +55,6 @@ cpp_binary(
 )
 
 cpp_binary(
-    name = "zero_blob",
-    srcs = ["ZeroBlob.cpp"],
-    deps = [
-        "//eden/common/telemetry:structured_logger",
-        "//eden/common/utils:fault_injector",
-        "//eden/fs/config:config",
-        "//eden/fs/model:model",
-        "//eden/fs/store:rocksdb",
-        "//eden/fs/telemetry:stats",
-        "//folly/init:init",
-        "//folly/logging:init",
-        "//folly/logging:logging",
-        "//folly/portability:gflags",
-    ],
-)
-
-cpp_binary(
     name = "check_windows_rename",
     srcs = ["CheckWindowsRename.cpp"],
     compatible_with = [

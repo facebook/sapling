@@ -58,7 +58,6 @@ rust_library(
         "fbsource//third-party/rust:toml",
         "fbsource//third-party/rust:tracing",
         "//common/rust/lmdb:lmdb",
-        "//common/rust/rocksdb:rocksdb",
         "//eden/fs/cli_rs/edenfs-client:edenfs-client",
         "//eden/fs/cli_rs/edenfs-error:edenfs-error",
         "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",

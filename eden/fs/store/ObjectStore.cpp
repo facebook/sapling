@@ -18,12 +18,12 @@
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/common/utils/Throw.h"
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeAuxData.h"
 #include "eden/fs/store/BackingStore.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -44,7 +44,6 @@ constexpr uint64_t kImportPriorityDeprioritizeAmount = 1;
 
 std::shared_ptr<ObjectStore> ObjectStore::create(
     shared_ptr<BackingStore> backingStore,
-    shared_ptr<LocalStore> localStore,
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -54,7 +53,6 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     CaseSensitivity caseSensitive) {
   return std::shared_ptr<ObjectStore>{new ObjectStore{
       std::move(backingStore),
-      std::move(localStore),
       std::move(treeCache),
       std::move(stats),
       processInfoCache,
@@ -66,7 +64,6 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
 
 ObjectStore::ObjectStore(
     shared_ptr<BackingStore> backingStore,
-    shared_ptr<LocalStore> localStore,
     shared_ptr<TreeCache> treeCache,
     EdenStatsPtr stats,
     std::shared_ptr<ProcessInfoCache> processInfoCache,
@@ -82,8 +79,6 @@ ObjectStore::ObjectStore(
           edenConfig->getEdenConfig()->metadataCacheSize.getValue()},
       treeCache_{std::move(treeCache)},
       backingStore_{std::move(backingStore)},
-      localStore_{std::move(localStore)},
-      localStoreCachingPolicy_{backingStore_->getLocalStoreCachingPolicy()},
       stats_{std::move(stats)},
       pidFetchCounts_{std::make_unique<PidFetchCounts>()},
       processInfoCache_(processInfoCache),
@@ -179,7 +174,7 @@ namespace {
  * created with the default case sensitivity.
  *
  * TODO(xavierd): Is this ugly? Yes, but this will allow incrementally
- * converting the BackingStore+LocalStore+TreeCache to care about case
+ * converting the BackingStore+TreeCache to care about case
  * sensitivity separately.
  */
 std::shared_ptr<const Tree> changeCaseSensitivity(
@@ -207,18 +202,9 @@ ImmediateFuture<ObjectStore::GetRootTreeResult> ObjectStore::getRootTree(
   // it up This should be investigated and either changed or the reasoning
   // should be documented
   return backingStore_->getRootTree(rootId, context)
-      .thenValue([self = shared_from_this(), localStore = localStore_, rootId](
-                     BackingStore::GetRootTreeResult result) {
+      .thenValue([self = shared_from_this(),
+                  rootId](BackingStore::GetRootTreeResult result) {
         self->stats_->increment(&ObjectStoreStats::getRootTreeFromBackingStore);
-        if (self->shouldCacheOnDisk(
-                BackingStore::LocalStoreCachingPolicy::Anything)) {
-          // TODO: perhaps this callback should use
-          // via(&InlineExecutor::instance()) to ensure the tree is cached
-          // whether or not the caller consumes the future. See comments on
-          // D39475223. Also, before changing, see eden/fs/docs/Futures.md
-          // for more details on possible pitfalls of InlineExecutor.
-          localStore->putTree(*result.tree);
-        }
         return result;
       })
       .thenValue(
@@ -263,17 +249,6 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
   DurationScope<EdenStats> statScope{stats_, &ObjectStoreStats::getTree};
   folly::stop_watch<std::chrono::milliseconds> watch;
 
-  // TODO: We should consider checking if we have in flight BackingStore
-  // requests on this layer instead of only in the BackingStore. Consider the
-  // case in which thread A and thread B both request a Tree at the same time.
-  // Let's say thread A checks the LocalStore, then thread B checks the
-  // LocalStore, gets the file from the BackingStore (making a request to the
-  // server), then writes the Tree to the LocalStore. Now when thread A checks
-  // for in flight requests in the BackingStore, it will not see any since
-  // thread B has completely finished, so thread A will make a duplicate
-  // request. If we we're to mark here that we got a request on this layer, then
-  // we could avoid that case.
-
   if (auto maybeTree = treeCache_->get(id)) {
     stats_->increment(&ObjectStoreStats::getTreeFromMemory);
     fetchContext->didFetch(
@@ -302,52 +277,6 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
       });
 }
 
-void ObjectStore::maybeCacheTreeAndAuxInLocalStore(
-    const ObjectId& id,
-    const BackingStore::GetTreeResult& treeResult) const {
-  auto shouldCacheTree =
-      shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Trees);
-  auto shouldCacheBlobAuxData =
-      shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::BlobAuxData);
-  auto shouldCacheTreeAuxData =
-      shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::TreeAuxData);
-
-  if (!shouldCacheTree && !shouldCacheBlobAuxData && !shouldCacheTreeAuxData) {
-    return;
-  }
-
-  auto batch = localStore_->beginWrite();
-  if (shouldCacheTree) {
-    batch->putTree(*treeResult.tree);
-  }
-
-  if (shouldCacheBlobAuxData) {
-    // Let's cache all the entries in the LocalStore.
-    for (const auto& [name, treeEntry] : *treeResult.tree) {
-      const auto& size = treeEntry.getSize();
-      const auto& sha1 = treeEntry.getContentSha1();
-      const auto& blake3 = treeEntry.getContentBlake3();
-      if (treeEntry.getType() == TreeEntryType::REGULAR_FILE && size && sha1) {
-        batch->putBlobAuxData(
-            treeEntry.getObjectId(), BlobAuxData{*sha1, blake3, *size});
-      }
-    }
-  }
-
-  // Pre-warm the cache if there is tree aux data available
-  if (treeResult.tree && treeResult.tree->getAuxData()) {
-    if (shouldCacheTreeAuxData &&
-        edenConfig_->getEdenConfig()
-            ->warmTreeAuxLocalCacheIfTreeFromBackingStore.getValue()) {
-      stats_->increment(
-          &ObjectStoreStats::prewarmTreeAuxLocalCacheForTreeFromBackingStore);
-      localStore_->putTreeAuxData(id, *treeResult.tree->getAuxData());
-    }
-  }
-
-  batch->flush();
-}
-
 void ObjectStore::maybeCacheTreeAuxInMemCache(
     const ObjectId& id,
     const BackingStore::GetTreeResult& treeResult) const {
@@ -364,89 +293,21 @@ folly::SemiFuture<BackingStore::GetTreeResult> ObjectStore::getTreeImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context,
     folly::stop_watch<std::chrono::milliseconds> watch) const {
-  auto localStoreGetTree = ImmediateFuture<TreePtr>{std::in_place, nullptr};
-  if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Trees)) {
-    // Check Local Store first
-    localStoreGetTree = localStore_->getTree(id);
-  }
-  return std::move(localStoreGetTree)
-      .thenValue(
-          [self = shared_from_this(), id = id, context = context.copy(), watch](
-              TreePtr tree) mutable
+  return ImmediateFuture{backingStore_->getTree(id, context)}
+      .thenValue([self = shared_from_this(), id, watch](
+                     BackingStore::GetTreeResult result) {
+        self->maybeCacheTreeAuxInMemCache(id, result);
+        self->stats_->increment(&ObjectStoreStats::getTreeFromBackingStore);
+        self->stats_->addDuration(
+            &ObjectStoreStats::getTreeBackingstoreDuration, watch.elapsed());
+        return result;
+      })
+      .thenError(
+          [self = shared_from_this(), id](const folly::exception_wrapper& ew)
               -> ImmediateFuture<BackingStore::GetTreeResult> {
-            if (tree) {
-              self->stats_->increment(&ObjectStoreStats::getTreeFromLocalStore);
-              self->stats_->addDuration(
-                  &ObjectStoreStats::getTreeLocalstoreDuration,
-                  watch.elapsed());
-              if (tree->getAuxData() == nullptr &&
-                  self->edenConfig_->getEdenConfig()
-                      ->warmTreeAuxCacheIfTreeFromLocalStore.getValue()) {
-                // The tree stored locally does not have Tree Aux Data attached.
-                // This means the Tree was fetched before Tree serialization V2
-                // and before we support TreeAuxData included in Tree response
-                // from SaplingBackingStore. Otherwise, we would have the Tree
-                // Aux Data pre-cached already.
-                // So, it's very likely that we don't have Tree Aux Data cached.
-                // Triggering a getTreeAuxData request to warm the cache
-                self->stats_->increment(
-                    &ObjectStoreStats::
-                        prewarmTreeAuxCacheForTreeFetchedFromLocalStore);
-                return self->getTreeAuxData(id, context)
-                    .thenTry([self, tree = tree, id = id](
-                                 folly::Try<std::optional<TreeAuxData>>&&
-                                     auxResult) {
-                      if (auxResult.hasException() ||
-                          !auxResult.value().has_value()) {
-                        self->stats_->increment(
-                            &ObjectStoreStats::
-                                prewarmTreeAuxCacheForTreeFetchedFromLocalStoreFailed);
-                        XLOGF(
-                            DBG5,
-                            "Failed to fetch Tree Aux Data for Tree {}: {}",
-                            id,
-                            auxResult.hasException()
-                                ? auxResult.exception().what()
-                                : "no tree aux data");
-                      }
-                      return BackingStore::GetTreeResult{
-                          tree, ObjectFetchContext::FromDiskCache};
-                    });
-              }
-              // Maybe there is Tree Aux Data attached to this Tree?
-              // If that' the case, we should've already populated
-              // Tree aux data into the local cache when the tree was
-              // fetched from sapling backing store.
-              // So we should not bother warming it into the in-memory
-              // cache since that requires a write lock.
-              return BackingStore::GetTreeResult{
-                  std::move(tree), ObjectFetchContext::FromDiskCache};
-            }
-
-            return ImmediateFuture{self->backingStore_->getTree(id, context)}
-                // TODO: This is a good use for via(&InlineExecutor::instance())
-                // to ensure the tree is cached even if the resulting future is
-                // never consumed. Before changing, see eden/fs/docs/Futures.md
-                // for more details on possible pitfalls of InlineExecutor.
-                .thenValue(
-                    [self, id, watch](BackingStore::GetTreeResult result) {
-                      self->maybeCacheTreeAndAuxInLocalStore(id, result);
-                      self->maybeCacheTreeAuxInMemCache(id, result);
-                      self->stats_->increment(
-                          &ObjectStoreStats::getTreeFromBackingStore);
-                      self->stats_->addDuration(
-                          &ObjectStoreStats::getTreeBackingstoreDuration,
-                          watch.elapsed());
-                      return result;
-                    })
-                .thenError(
-                    [self, id](const folly::exception_wrapper& ew)
-                        -> ImmediateFuture<BackingStore::GetTreeResult> {
-                      self->stats_->increment(&ObjectStoreStats::getTreeFailed);
-                      XLOGF(DBG4, "unable to find tree {}", id);
-                      return makeImmediateFuture<BackingStore::GetTreeResult>(
-                          ew);
-                    });
+            self->stats_->increment(&ObjectStoreStats::getTreeFailed);
+            XLOGF(DBG4, "unable to find tree {}", id);
+            return makeImmediateFuture<BackingStore::GetTreeResult>(ew);
           })
       .semi();
 }
@@ -497,64 +358,29 @@ ObjectStore::getTreeAuxDataImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context,
     folly::stop_watch<std::chrono::milliseconds> watch) const {
-  auto localStoreGetTreeAuxData =
-      ImmediateFuture<TreeAuxDataPtr>{std::in_place, nullptr};
-  if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::TreeAuxData)) {
-    localStoreGetTreeAuxData = localStore_->getTreeAuxData(id);
-  }
-
-  return std::move(localStoreGetTreeAuxData)
+  return ImmediateFuture{backingStore_->getTreeAuxData(id, context)}
       .thenValue(
-          [self = shared_from_this(), id = id, context = context.copy(), watch](
-              TreeAuxDataPtr auxData) mutable
+          [self = shared_from_this(), id, context = context.copy(), watch](
+              BackingStore::GetTreeAuxResult result)
               -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
-            if (auxData) {
+            if (result.treeAux) {
               self->stats_->increment(
-                  &ObjectStoreStats::getTreeAuxDataFromLocalStore);
+                  &ObjectStoreStats::getTreeAuxDataFromBackingStore);
               self->stats_->addDuration(
-                  &ObjectStoreStats::getTreeAuxDataLocalstoreDuration,
+                  &ObjectStoreStats::getTreeAuxDataBackingstoreDuration,
                   watch.elapsed());
-              return BackingStore::GetTreeAuxResult{
-                  std::move(auxData), ObjectFetchContext::FromDiskCache};
+              return result;
             }
-
-            return ImmediateFuture{
-                self->backingStore_->getTreeAuxData(id, context)}
-                .thenValue(
-                    [self, id, context = context.copy(), watch](
-                        BackingStore::GetTreeAuxResult result)
-                        -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
-                      if (result.treeAux) {
-                        self->stats_->increment(
-                            &ObjectStoreStats::getTreeAuxDataFromBackingStore);
-                        self->stats_->addDuration(
-                            &ObjectStoreStats::
-                                getTreeAuxDataBackingstoreDuration,
-                            watch.elapsed());
-                        return result;
-                      }
-                      self->stats_->increment(
-                          &ObjectStoreStats::getTreeAuxDataFailed);
-                      return BackingStore::GetTreeAuxResult{
-                          nullptr, ObjectFetchContext::Origin::NotFetched};
-                    })
-                .thenValue([self, id](BackingStore::GetTreeAuxResult result) {
-                  if (result.treeAux &&
-                      self->shouldCacheOnDisk(
-                          BackingStore::LocalStoreCachingPolicy::TreeAuxData)) {
-                    self->localStore_->putTreeAuxData(id, *result.treeAux);
-                  }
-                  return result;
-                })
-                .thenError(
-                    [self, id](const folly::exception_wrapper& ew)
-                        -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
-                      self->stats_->increment(
-                          &ObjectStoreStats::getTreeAuxDataFailed);
-                      XLOGF(DBG4, "unable to find aux data for {}", id);
-                      return makeImmediateFuture<
-                          BackingStore::GetTreeAuxResult>(ew);
-                    });
+            self->stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
+            return BackingStore::GetTreeAuxResult{
+                nullptr, ObjectFetchContext::Origin::NotFetched};
+          })
+      .thenError(
+          [self = shared_from_this(), id](const folly::exception_wrapper& ew)
+              -> ImmediateFuture<BackingStore::GetTreeAuxResult> {
+            self->stats_->increment(&ObjectStoreStats::getTreeAuxDataFailed);
+            XLOGF(DBG4, "unable to find aux data for {}", id);
+            return makeImmediateFuture<BackingStore::GetTreeAuxResult>(ew);
           })
       .semi();
 }
@@ -585,14 +411,6 @@ ImmediateFuture<std::optional<uint64_t>> ObjectStore::getTreeDigestSize(
 ImmediateFuture<folly::Unit> ObjectStore::prefetchBlobs(
     ObjectIdRange ids,
     const ObjectFetchContextPtr& fetchContext) const {
-  // In theory we could/should ask the localStore_ to filter the list
-  // of ids down to just the set that we need to load, but there is no
-  // bulk key existence check in rocksdb, so we would need to cause it
-  // to load all the blocks of those keys into memory.
-  // So for the moment we are committing a layering violation in the
-  // interest of making things faster in practice by just asking the
-  // sapling backing store to ensure that its local cache storage
-  // has entries for all of the requested keys.
   if (ids.empty()) {
     return folly::unit;
   }
@@ -643,46 +461,18 @@ folly::coro::Task<std::shared_ptr<const Blob>> ObjectStore::co_getBlob(
 folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
-  auto localStoreGetBlob = ImmediateFuture<BlobPtr>{std::in_place, nullptr};
-  if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Blobs)) {
-    // Check in the LocalStore first
-    localStoreGetBlob = localStore_->getBlob(id);
-  }
-  return std::move(localStoreGetBlob)
+  return ImmediateFuture{backingStore_->getBlob(id, context)}
       .thenValue(
-          [self = shared_from_this(), id = id, context = context.copy()](
-              BlobPtr blob) mutable
+          [self = shared_from_this(), id](BackingStore::GetBlobResult result) {
+            self->stats_->increment(&ObjectStoreStats::getBlobFromBackingStore);
+            return result;
+          })
+      .thenError(
+          [self = shared_from_this(), id](const folly::exception_wrapper& ew)
               -> ImmediateFuture<BackingStore::GetBlobResult> {
-            if (blob) {
-              self->stats_->increment(&ObjectStoreStats::getBlobFromLocalStore);
-              return BackingStore::GetBlobResult{
-                  std::move(blob), ObjectFetchContext::FromDiskCache};
-            }
-
-            // If we didn't find the blob in the LocalStore, then fetch it
-            // from the BackingStore.
-            return ImmediateFuture{self->backingStore_->getBlob(id, context)}
-                // TODO: This is a good use for via(&InlineExecutor::instance())
-                // to ensure the blob is cached even if the resulting future is
-                // never consumed. Before changing, see eden/fs/docs/Futures.md
-                // for more details on possible pitfalls of InlineExecutor.
-                .thenValue([self, id](BackingStore::GetBlobResult result) {
-                  if (self->shouldCacheOnDisk(
-                          BackingStore::LocalStoreCachingPolicy::Blobs)) {
-                    self->localStore_->putBlob(id, result.blob.get());
-                  }
-                  self->stats_->increment(
-                      &ObjectStoreStats::getBlobFromBackingStore);
-                  return result;
-                })
-                .thenError(
-                    [self, id](const folly::exception_wrapper& ew)
-                        -> ImmediateFuture<BackingStore::GetBlobResult> {
-                      self->stats_->increment(&ObjectStoreStats::getBlobFailed);
-                      XLOGF(DBG4, "unable to find blob {}", id);
-                      return makeImmediateFuture<BackingStore::GetBlobResult>(
-                          ew);
-                    });
+            self->stats_->increment(&ObjectStoreStats::getBlobFailed);
+            XLOGF(DBG4, "unable to find blob {}", id);
+            return makeImmediateFuture<BackingStore::GetBlobResult>(ew);
           })
       .semi();
 }
@@ -690,24 +480,8 @@ folly::SemiFuture<BackingStore::GetBlobResult> ObjectStore::getBlobImpl(
 folly::coro::Task<BackingStore::GetBlobResult> ObjectStore::co_getBlobImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context) const {
-  BlobPtr blob = nullptr;
-  if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Blobs)) {
-    // Check in the LocalStore first
-    blob = co_await localStore_->co_getBlob(id);
-  }
-  if (blob) {
-    stats_->increment(&ObjectStoreStats::getBlobFromLocalStore);
-    co_return BackingStore::GetBlobResult{
-        std::move(blob), ObjectFetchContext::FromDiskCache};
-  }
-
-  // If we didn't find the blob in the LocalStore, then fetch it
-  // from the BackingStore.
   try {
     auto result = co_await backingStore_->co_getBlob(id, context);
-    if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::Blobs)) {
-      localStore_->putBlob(id, result.blob.get());
-    }
     stats_->increment(&ObjectStoreStats::getBlobFromBackingStore);
     co_return result;
   } catch (const std::exception&) {
@@ -837,98 +611,58 @@ ObjectStore::getBlobAuxDataImpl(
     const ObjectId& id,
     const ObjectFetchContextPtr& context,
     folly::stop_watch<std::chrono::milliseconds> watch) const {
-  auto localStoreGetBlobAuxData =
-      ImmediateFuture<BlobAuxDataPtr>{std::in_place, nullptr};
-  if (shouldCacheOnDisk(BackingStore::LocalStoreCachingPolicy::BlobAuxData)) {
-    localStoreGetBlobAuxData = localStore_->getBlobAuxData(id);
-  }
-
-  return std::move(localStoreGetBlobAuxData)
+  return ImmediateFuture{backingStore_->getBlobAuxData(id, context)}
       .thenValue(
-          [self = shared_from_this(), id = id, context = context.copy(), watch](
-              BlobAuxDataPtr auxData) mutable
+          [self = shared_from_this(), id, context = context.copy(), watch](
+              BackingStore::GetBlobAuxResult result)
               -> ImmediateFuture<BackingStore::GetBlobAuxResult> {
-            if (auxData) {
+            if (result.blobAux &&
+                result.blobAux->sha1 !=
+                    kZeroHash) { // from eden/fs/model/Hash.cpp
               self->stats_->increment(
-                  &ObjectStoreStats::getBlobAuxDataFromLocalStore);
+                  &ObjectStoreStats::getBlobAuxDataFromBackingStore);
               self->stats_->addDuration(
-                  &ObjectStoreStats::getBlobAuxDataLocalstoreDuration,
+                  &ObjectStoreStats::getBlobAuxDataBackingstoreDuration,
                   watch.elapsed());
-              return BackingStore::GetBlobAuxResult{
-                  std::move(auxData), ObjectFetchContext::FromDiskCache};
+              return result;
             }
 
-            return ImmediateFuture{
-                self->backingStore_->getBlobAuxData(id, context)}
-                .thenValue(
-                    [self, id, context = context.copy(), watch](
-                        BackingStore::GetBlobAuxResult result)
-                        -> ImmediateFuture<BackingStore::GetBlobAuxResult> {
-                      if (result.blobAux &&
-                          result.blobAux->sha1 !=
-                              kZeroHash) { // from eden/fs/model/Hash.cpp
-                        self->stats_->increment(
-                            &ObjectStoreStats::getBlobAuxDataFromBackingStore);
-                        self->stats_->addDuration(
-                            &ObjectStoreStats::
-                                getBlobAuxDataBackingstoreDuration,
-                            watch.elapsed());
-                        return result;
-                      }
+            return ImmediateFuture{self->getBlobImpl(id, context)}.thenValue(
+                [self, backingStoreResult = std::move(result), watch](
+                    BackingStore::GetBlobResult result) {
+                  if (result.blob) {
+                    self->stats_->increment(
+                        &ObjectStoreStats::getBlobAuxDataFromBlob);
 
-                      return ImmediateFuture{self->getBlobImpl(id, context)}
-                          .thenValue([self,
-                                      backingStoreResult = std::move(result),
-                                      watch](
-                                         BackingStore::GetBlobResult result) {
-                            if (result.blob) {
-                              self->stats_->increment(
-                                  &ObjectStoreStats::getBlobAuxDataFromBlob);
+                    std::optional<Hash32> blake3;
+                    if (backingStoreResult.blobAux &&
+                        backingStoreResult.blobAux->blake3.has_value()) {
+                      blake3 = backingStoreResult.blobAux->blake3.value();
+                    }
 
-                              std::optional<Hash32> blake3;
-                              if (backingStoreResult.blobAux &&
-                                  backingStoreResult.blobAux->blake3
-                                      .has_value()) {
-                                blake3 =
-                                    backingStoreResult.blobAux->blake3.value();
-                              }
+                    self->stats_->addDuration(
+                        &ObjectStoreStats::getBlobAuxDataFromBlobDuration,
+                        watch.elapsed());
 
-                              self->stats_->addDuration(
-                                  &ObjectStoreStats::
-                                      getBlobAuxDataFromBlobDuration,
-                                  watch.elapsed());
-
-                              return BackingStore::GetBlobAuxResult{
-                                  std::make_shared<BlobAuxData>(
-                                      Hash20::sha1(result.blob->getContents()),
-                                      std::move(blake3),
-                                      result.blob->getSize()),
-                                  result.origin};
-                            }
-                            self->stats_->increment(
-                                &ObjectStoreStats::getBlobAuxDataFailed);
-                            return BackingStore::GetBlobAuxResult{
-                                nullptr,
-                                ObjectFetchContext::Origin::NotFetched};
-                          });
-                    })
-                .thenValue([self, id](BackingStore::GetBlobAuxResult result) {
-                  if (result.blobAux &&
-                      self->shouldCacheOnDisk(
-                          BackingStore::LocalStoreCachingPolicy::BlobAuxData)) {
-                    self->localStore_->putBlobAuxData(id, *result.blobAux);
+                    return BackingStore::GetBlobAuxResult{
+                        std::make_shared<BlobAuxData>(
+                            Hash20::sha1(result.blob->getContents()),
+                            std::move(blake3),
+                            result.blob->getSize()),
+                        result.origin};
                   }
-                  return result;
-                })
-                .thenError(
-                    [self, id](const folly::exception_wrapper& ew)
-                        -> ImmediateFuture<BackingStore::GetBlobAuxResult> {
-                      self->stats_->increment(
-                          &ObjectStoreStats::getBlobAuxDataFailed);
-                      XLOGF(DBG4, "unable to find aux data for {}", id);
-                      return makeImmediateFuture<
-                          BackingStore::GetBlobAuxResult>(ew);
-                    });
+                  self->stats_->increment(
+                      &ObjectStoreStats::getBlobAuxDataFailed);
+                  return BackingStore::GetBlobAuxResult{
+                      nullptr, ObjectFetchContext::Origin::NotFetched};
+                });
+          })
+      .thenError(
+          [self = shared_from_this(), id](const folly::exception_wrapper& ew)
+              -> ImmediateFuture<BackingStore::GetBlobAuxResult> {
+            self->stats_->increment(&ObjectStoreStats::getBlobAuxDataFailed);
+            XLOGF(DBG4, "unable to find aux data for {}", id);
+            return makeImmediateFuture<BackingStore::GetBlobAuxResult>(ew);
           })
       .semi();
 }
@@ -1031,13 +765,6 @@ bool ObjectStore::areObjectsKnownIdentical(
     const ObjectId& two) const {
   return backingStore_->compareObjectsById(one, two) ==
       ObjectComparison::Identical;
-}
-
-bool ObjectStore::shouldCacheOnDisk(
-    BackingStore::LocalStoreCachingPolicy object) const {
-  return (
-      folly::to_underlying(localStoreCachingPolicy_) &
-      folly::to_underlying(object));
 }
 
 } // namespace facebook::eden

@@ -31,7 +31,6 @@ impl crate::Subcommand for GcCmd {
 
         eprint!("Clearing and compacting local caches...");
         stderr().flush()?;
-        client.clear_and_compact_local_store().await?;
         eprintln!();
 
         // TODO: clear kernel caches here

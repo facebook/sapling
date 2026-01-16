@@ -32,12 +32,9 @@ using std::unique_ptr;
 
 namespace facebook::eden {
 FakeBackingStore::FakeBackingStore(
-    LocalStoreCachingPolicy localStoreCachingPolicy,
     std::shared_ptr<ServerState> serverState,
     std::optional<std::string> blake3Key)
-    : localStoreCachingPolicy_{localStoreCachingPolicy},
-      serverState_{std::move(serverState)},
-      blake3Key_(std::move(blake3Key)) {}
+    : serverState_{std::move(serverState)}, blake3Key_(std::move(blake3Key)) {}
 
 FakeBackingStore::~FakeBackingStore() = default;
 
