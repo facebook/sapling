@@ -27,6 +27,7 @@ use mononoke_macros::mononoke;
 use mononoke_types::hash::GitSha1;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
+use rendezvous::RendezVousOptions;
 use repo_update_logger::PlainBookmarkInfo;
 use sql_construct::SqlConstruct;
 use tokio::sync::broadcast;
@@ -38,7 +39,8 @@ const ONE_GIT_HASH: &str = "1111111111111111111111111111111111111111";
 #[mononoke::fbinit_test]
 async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
     let tag_name = "JustATag";
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
@@ -79,7 +81,8 @@ async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
 #[mononoke::fbinit_test]
 async fn test_update_and_get(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
     let tag_name = "JustATag";
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
@@ -127,7 +130,8 @@ async fn test_update_and_get(fb: FacebookInit) -> Result<(), Error> {
 #[mononoke::fbinit_test]
 async fn test_get_without_add(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
     let result = mapping
         .get_entry_by_tag_name(&ctx, "JustATag".to_string(), Freshness::MaybeStale)
         .await?;
@@ -143,7 +147,8 @@ async fn test_get_without_add(fb: FacebookInit) -> Result<(), Error> {
 #[mononoke::fbinit_test]
 async fn test_get_multiple_tags(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
         tag_name: "JustATag".to_string(),
@@ -176,7 +181,8 @@ async fn test_get_multiple_tags(fb: FacebookInit) -> Result<(), Error> {
 #[mononoke::fbinit_test]
 async fn test_get_tags_by_multiple_changesets(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
         tag_name: "JustATag".to_string(),
@@ -208,7 +214,8 @@ async fn test_get_tags_by_multiple_changesets(fb: FacebookInit) -> Result<(), Er
 #[mononoke::fbinit_test]
 async fn test_get_all_tags(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
         tag_name: "JustATag".to_string(),
@@ -240,7 +247,8 @@ async fn test_get_all_tags(fb: FacebookInit) -> Result<(), Error> {
 #[mononoke::fbinit_test]
 async fn test_get_tag_by_tag_hashes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
         tag_name: "JustATag".to_string(),
@@ -278,7 +286,8 @@ async fn test_get_tag_by_tag_hashes(fb: FacebookInit) -> Result<(), Error> {
 #[mononoke::fbinit_test]
 async fn test_delete_mappings_by_name(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO);
+    let mapping = SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, RendezVousOptions::for_test());
     let entry = BonsaiTagMappingEntry {
         changeset_id: bonsai::ONES_CSID,
         tag_name: "JustATag".to_string(),
@@ -320,8 +329,10 @@ async fn test_cached_bonsai_tag_mappings(fb: FacebookInit) -> Result<(), Error> 
             "scm/mononoke:enable_bonsai_tag_mapping_caching".to_string() => KnobVal::Bool(true),
         ]),
         async {
-            let mapping =
-                Arc::new(SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?.build(REPO_ZERO));
+            let mapping = Arc::new(
+                SqlBonsaiTagMappingBuilder::with_sqlite_in_memory()?
+                    .build(REPO_ZERO, RendezVousOptions::for_test()),
+            );
             let ctx = CoreContext::test_mock(fb);
             let (sender, receiver) = broadcast::channel(10);
             let mapping = CachedBonsaiTagMapping::new(&ctx, mapping, receiver).await?;

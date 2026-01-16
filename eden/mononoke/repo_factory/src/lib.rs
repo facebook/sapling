@@ -1016,7 +1016,7 @@ impl RepoFactory {
             .open_sql::<SqlBonsaiTagMappingBuilder>(repo_config)
             .await
             .context(RepoFactoryError::BonsaiTagMapping)?
-            .build(repo_identity.id());
+            .build(repo_identity.id(), self.env.rendezvous_options);
         let repo_name = repo_identity.name();
         if justknobs::eval(
             "scm/mononoke:enable_bonsai_tag_mapping_caching",

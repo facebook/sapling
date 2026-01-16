@@ -207,6 +207,11 @@ impl MononokeScubaSampleBuilder {
                 switch_values: vec![],
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
+            ExperimentJKData {
+                jk_name: "scm/mononoke:rendezvous_bonsai_tag_mapping",
+                switch_values: vec![],
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
         ];
         let enabled_experiments_jk: Vec<String> = jk_and_switches
             .into_iter()
