@@ -261,12 +261,6 @@ subtree_path_opts = [
     ),
 ]
 
-# special string such that everything below this line will be ignored in the
-# editor text
-_linebelow = (
-    f"^{identity.tmplprefix()}: ------------------------ >8 ------------------------$"
-)
-
 
 def ishunk(x):
     hunkclasses = (crecordmod.uihunk, patch.recordhunk)
@@ -4771,15 +4765,20 @@ def commitforceeditor(
     )
     text = editortext
 
-    # strip away anything below this special string (used for editors that want
-    # to display the diff)
-    stripbelow = re.search(_linebelow, text, flags=re.MULTILINE)
-    if stripbelow:
-        text = text[: stripbelow.start()]
-
     all_prefixes = "|".join(
         ident.cliname().upper() for ident in bindings.identity.all()
     )
+
+    # strip away anything below this special string (used for editors that want
+    # to display the diff)
+    linebelow = (
+        f"^(?:{all_prefixes}): ------------------------ >8 ------------------------$"
+    )
+
+    stripbelow = re.search(linebelow, text, flags=re.MULTILINE)
+    if stripbelow:
+        text = text[: stripbelow.start()]
+
     text = re.sub(f"(?m)^({all_prefixes}):.*(\n|$)", "", text)
     os.chdir(olddir)
 
