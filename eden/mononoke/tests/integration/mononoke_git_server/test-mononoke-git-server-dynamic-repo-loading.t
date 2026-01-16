@@ -87,6 +87,17 @@
 # because the server dynamically loads it
   $ git_client clone $MONONOKE_GIT_SERVICE_BASE_URL/second_repo.git second_repo_clone
   Cloning into 'second_repo_clone'...
-  remote: Repository not available on this server: second_repo
-  fatal: unable to access 'https://localhost:$LOCAL_PORT/repos/git/ro/second_repo.git/': The requested URL returned error: 503
-  [128]
+  remote: Client correlator: * (glob)
+  remote: Converting HAVE Git commits to Bonsais        
+  remote: Converting WANT Git commits to Bonsais        
+  remote: Collecting Bonsai commits to send to client        
+  remote: Counting number of objects to be sent in packfile        
+  remote: Generating trees and blobs stream        
+  remote: Generating commits stream        
+  remote: Generating tags stream        
+  remote: Sending packfile stream        
+
+# Verify that the cloned second repo has the expected content
+  $ cd second_repo_clone
+  $ cat file1
+  this is second repo file1

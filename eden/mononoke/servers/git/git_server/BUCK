@@ -41,6 +41,7 @@ rust_binary(
         "//common/rust/shed/futures_stats:futures_stats",
         "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/secure_utils:secure_utils",
+        "//common/rust/shed/stats:stats",
         "//eden/mononoke/cmdlib:environment",
         "//eden/mononoke/cmdlib/caching:cmdlib_caching",
         "//eden/mononoke/cmdlib/mononoke_app:mononoke_app",
