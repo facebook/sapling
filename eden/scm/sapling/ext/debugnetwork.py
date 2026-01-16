@@ -22,7 +22,6 @@ from sapling import error, httpclient, httpconnection, registrar, sslutil, util
 from sapling.ext import schemes
 from sapling.i18n import _
 
-
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -110,26 +109,35 @@ def checkmononokehost(ui, url, opts) -> bool:
 
 def checkspeedhttp(ui, url, opts) -> bool:
     ui.status(_("Testing connection speed to the server\n"), component="debugnetwork")
-    download = ui.configbytes("debugnetwork", "speed-test-download-size", 10000000)
-    upload = ui.configbytes("debugnetwork", "speed-test-upload-size", 1000000)
-    unixsocketpath = ui.config("auth_proxy", "unix_socket_path")
 
     conn = openhttpconn(ui, url, opts)
 
-    def downloadtest(_description, bytecount):
+    def downloadtest(_description, multiplier=1):
+        bytecount = ui.configbytes("debugnetwork", "speed-test-download-size", 10000000)
+        bytecount *= multiplier
         headers = {HEADER_NETSPEEDTEST_NBYTES: bytecount}
         conn.request(b"GET", b"/netspeedtest", body=None, headers=headers)
         starttime = util.timer()
         res = conn.getresponse()
+        readcount = 0
         while not res.complete():
-            res.read(length=BLOCK_SIZE)
+            readcount += len(res.read(length=BLOCK_SIZE))
         endtime = util.timer()
         if not httpstatussuccess(res.status):
             raise error.Abort("downloadtest: HTTP response status code: %s", res.status)
 
-        return endtime - starttime
+        if readcount < bytecount:
+            ui.warn(
+                _("Server limited download size to %s (requested %s)\n")
+                % (util.inttosize(readcount), util.inttosize(bytecount)),
+                component="debugnetwork",
+            )
 
-    def uploadtest(_description, bytecount):
+        return endtime - starttime, readcount
+
+    def uploadtest(_description, multiplier=1):
+        bytecount = ui.configbytes("debugnetwork", "speed-test-upload-size", 1000000)
+        bytecount *= multiplier
         body = bytecount * b"A"
         starttime = util.timer()
         conn.request(b"POST", b"/netspeedtest", body=body)
@@ -140,7 +148,7 @@ def checkspeedhttp(ui, url, opts) -> bool:
 
         if not httpstatussuccess(res.status):
             raise error.Abort("uploadtest: HTTP response status code: %s" % res.status)
-        return endtime - starttime
+        return endtime - starttime, bytecount
 
     def latencytest(n):
         latencies = []
@@ -162,8 +170,8 @@ def checkspeedhttp(ui, url, opts) -> bool:
     res = drivespeedtests(
         ui,
         (latencytest, 5),
-        (downloadtest, "download", download),
-        (uploadtest, "upload", upload),
+        (downloadtest, "download"),
+        (uploadtest, "upload"),
         opts.get("stable"),
     )
 
@@ -203,12 +211,7 @@ def openhttpconn(ui, url, opts) -> httpclient.HTTPConnection:
         )
 
 
-def drivespeedtests(ui, latency: float, upload, download, stable: bool = False) -> bool:
-    # pyre-fixme[23]: Unable to unpack `float` into 2 values.
-    latencytest, latency_ntests = latency
-    uploadtest, testname, bytecount = upload
-    downloadtest, testname, bytecount = download
-
+def drivespeedtests(ui, latency, download, upload, stable: bool = False) -> bool:
     def printspeedresult(testname, bytecount, testtime):
         byterate = bytecount / testtime
         ui.status(
@@ -224,6 +227,7 @@ def drivespeedtests(ui, latency: float, upload, download, stable: bool = False) 
         )
 
     try:
+        latencytest, latency_ntests = latency
         latencies = latencytest(latency_ntests)
         latency = sum(latencies, 0) / len(latencies)
         ui.status(
@@ -232,20 +236,23 @@ def drivespeedtests(ui, latency: float, upload, download, stable: bool = False) 
             component="debugnetwork",
         )
 
-        for testfunc, testname, bytecount in [upload, download]:
-            warmuptime = testfunc("warming up for %s test" % testname, bytecount)
+        for testfunc, testname in [upload, download]:
+            multiplier = 1
+            warmuptime, bytecount = testfunc(
+                "warming up for %s test" % testname, multiplier=multiplier
+            )
             if not stable and warmuptime < 0.2:
                 # The network is sufficiently fast that we warmed up in <200ms.
                 # To make the test more meaningful, increase the size of data
                 # 25x (which should give a maximum test time of 5s).
                 # This is very inconsistent behavior so use the stable flag
                 # when strict timing requirements are needed.
-                bytecount *= 25
-                warmuptime = testfunc(
-                    "warming up for large %s test" % testname, bytecount
+                multiplier = 25
+                warmuptime, bytecount = testfunc(
+                    "warming up for large %s test" % testname, multiplier=multiplier
                 )
             printspeedresult("(round 1) %sed" % testname, bytecount, warmuptime)
-            testtime = testfunc(testname, bytecount)
+            testtime, bytecount = testfunc(testname, multiplier=multiplier)
             printspeedresult("(round 2) %sed" % testname, bytecount, testtime)
         return True
     except Exception as e:
