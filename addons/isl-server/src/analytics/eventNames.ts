@@ -109,6 +109,7 @@ export type TrackEventName =
   | 'PrSubmitOperation'
   | 'PullOperation'
   | 'PullRevOperation'
+  | 'PullStackOperation'
   | 'PurgeOperation'
   | 'RebaseWarningTimeout'
   | 'RebaseKeepOperation'

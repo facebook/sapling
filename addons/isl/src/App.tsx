@@ -22,6 +22,7 @@ import {availableCwds, CwdSelections} from './CwdSelector';
 import {Drawers} from './Drawers';
 import {EmptyState} from './EmptyState';
 import {useCommand} from './ISLShortcuts';
+import {PRDashboard} from './PRDashboard';
 import {Internal} from './Internal';
 import {TopBar} from './TopBar';
 import {TopLevelAlerts} from './TopLevelAlert';
@@ -95,9 +96,22 @@ function ISLDrawers() {
       right: {...state.right, collapsed: !state.right.collapsed},
     }));
   });
+  useCommand('ToggleLeftSidebar', () => {
+    setDrawerState(state => ({
+      ...state,
+      left: {...state.left, collapsed: !state.left.collapsed},
+    }));
+  });
 
   return (
     <Drawers
+      leftLabel={
+        <>
+          <Icon icon="git-pull-request" />
+          <T>PR Stacks</T>
+        </>
+      }
+      left={<PRDashboard />}
       rightLabel={
         <>
           <Icon icon="edit" />

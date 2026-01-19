@@ -41,6 +41,7 @@ import {
   YourPullRequestsQuery,
   YourPullRequestsWithoutMergeQueueQuery,
 } from './generated/graphql';
+import {parseStackInfo, type StackEntry} from './parseStackInfo';
 import queryGraphQL from './queryGraphQL';
 
 export type GitHubDiffSummary = {
@@ -60,6 +61,8 @@ export type GitHubDiffSummary = {
   head: Hash;
   /** Name of the branch on GitHub, which should match the local bookmark */
   branchName?: string;
+  /** Stack info parsed from PR body Sapling footer. Top-to-bottom order (first = top of stack). */
+  stackInfo?: StackEntry[];
 };
 
 const DEFAULT_GH_FETCH_TIMEOUT = 60_000; // 1 minute
@@ -111,11 +114,14 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   private fetchYourPullRequestsGraphQL(
     includeMergeQueue: boolean,
   ): Promise<YourPullRequestsQueryData | undefined> {
+    // Calculate date 30 days ago for the updated filter
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
+
     const variables = {
-      // TODO: somehow base this query on the list of DiffIds
-      // This is not very easy with github's graphql API, which doesn't allow more than 5 "OR"s in a search query.
-      // But if we used one-query-per-diff we would reach rate limiting too quickly.
-      searchQuery: `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr author:@me`,
+      // Fetch all open PRs in the repo updated in the last 30 days
+      searchQuery: `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr is:open updated:>=${dateFilter}`,
       numToFetch: 50,
     };
     if (includeMergeQueue) {
@@ -151,6 +157,9 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               this.logger.warn(`PR #${id} is missing base or head ref, skipping.`);
               continue;
             }
+            // Parse stack info from the PR body (Sapling footer format)
+            const stackInfo = parseStackInfo(summary.body) ?? undefined;
+
             map.set(id, {
               type: 'github',
               title: summary.title,
@@ -174,6 +183,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               base: summary.baseRef.target.oid,
               head: summary.headRef.target.oid,
               branchName: summary.headRef.name,
+              stackInfo,
             });
           }
         }

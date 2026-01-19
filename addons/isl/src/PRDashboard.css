@@ -1,0 +1,145 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.pr-dashboard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.pr-dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--pad);
+  border-bottom: 1px solid var(--subtle-hover-darken);
+  flex-shrink: 0;
+}
+
+.pr-dashboard-title {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.pr-dashboard-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--pad);
+}
+
+.pr-dashboard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pad);
+  padding: calc(var(--pad) * 2);
+  color: var(--foreground-sub);
+  text-align: center;
+}
+
+.pr-dashboard-empty .codicon {
+  font-size: 24px;
+  opacity: 0.5;
+}
+
+/* Stack Card */
+.stack-card {
+  border: 1px solid var(--subtle-hover-darken);
+  border-radius: 4px;
+  margin-bottom: var(--pad);
+  background: var(--background);
+}
+
+.stack-card-header {
+  display: flex;
+  align-items: center;
+  padding: var(--halfpad) var(--pad);
+  gap: var(--halfpad);
+  background: var(--subtle-hover-darken);
+  border-radius: 4px 4px 0 0;
+}
+
+.stack-card-expand-button {
+  padding: 2px;
+  min-width: auto;
+}
+
+.stack-card-title {
+  flex: 1;
+  font-weight: 500;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stack-card-pull-button {
+  gap: 4px;
+}
+
+.stack-card-prs {
+  padding: var(--halfpad);
+}
+
+/* PR Row */
+.pr-row {
+  display: flex;
+  align-items: center;
+  padding: var(--halfpad);
+  gap: var(--halfpad);
+  border-radius: 2px;
+}
+
+.pr-row:hover {
+  background: var(--subtle-hover-darken);
+}
+
+.pr-row-status {
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.pr-row-number {
+  color: var(--foreground-sub);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.pr-row-number:hover {
+  text-decoration: underline;
+}
+
+.pr-row-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* PR State Colors */
+.pr-state-open {
+  color: var(--signal-good);
+}
+
+.pr-state-merged {
+  color: var(--scm-modified-foreground);
+}
+
+.pr-state-closed {
+  color: var(--signal-bad);
+}
+
+.pr-state-draft {
+  color: var(--foreground-sub);
+}
+
+.pr-state-queued {
+  color: var(--signal-warning);
+}
