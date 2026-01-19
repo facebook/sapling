@@ -16,6 +16,7 @@ from sapling.node import hex
 
 from . import (
     follow,
+    get_stack,
     github_repo_util,
     import_pull_request,
     link,
@@ -75,8 +76,8 @@ def pull_request_command(ui, repo, *args, **opts):
 subcmd = pull_request_command.subcommand(
     categories=[
         (
-            "Create or update pull requests, using `pull` to import a PR, if necessary",
-            ["submit", "pull"],
+            "Create or update pull requests, using `pull` or `get` to import PRs",
+            ["submit", "pull", "get"],
         ),
         (
             "Manually manage associations with pull requests",
@@ -137,6 +138,42 @@ def pull_cmd(ui, repo, *args, **opts):
     """
     ui.note(_("experimental command: this functionality may be folded into pull/goto"))
     return import_pull_request.get_pr(ui, repo, *args, **opts)
+
+
+@subcmd(
+    "get",
+    [
+        (
+            "g",
+            "goto",
+            False,
+            _("goto the target pull request after importing the stack"),
+        ),
+        (
+            "",
+            "downstack",
+            False,
+            _("only fetch PRs from target towards trunk (skip upstack)"),
+        ),
+    ],
+    _("PULL_REQUEST"),
+)
+def get_cmd(ui, repo, *args, **opts):
+    """import an entire PR stack into your working copy
+
+    The PULL_REQUEST can be specified as either a URL:
+    `https://github.com/facebook/sapling/pull/321`
+    or just the PR number within the GitHub repository identified by
+    `sl config paths.default`.
+
+    Unlike `sl pr pull` which imports only a single PR, this command
+    discovers and imports the entire stack of PRs based on the stack
+    information in the PR body.
+
+    Use --downstack to fetch only PRs from the target towards trunk,
+    skipping any upstack (descendant) PRs.
+    """
+    return get_stack.get(ui, repo, *args, **opts)
 
 
 @subcmd(
