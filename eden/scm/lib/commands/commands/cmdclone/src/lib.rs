@@ -771,12 +771,18 @@ fn slapi_streaming_clone(
     let changelog_len_path = store_path.join("00changelog.len");
     let _ = std::fs::remove_file(&changelog_len_path);
 
+    let start = std::time::Instant::now();
     let result = clone::streaming_clone_to_files(edenapi.as_ref(), store_path, tag)?;
+    let elapsed = start.elapsed().as_secs_f64();
 
     let total_bytes = result.index_bytes_written + result.data_bytes_written;
+    let elapsed_safe = if elapsed <= 0.0 { 0.001 } else { elapsed };
+    let bytes_per_sec = (total_bytes as f64) / elapsed_safe;
     logger.info(format!(
-        "transferred {} in changelog",
-        human_bytes(total_bytes)
+        "transferred {} in {:.1} seconds ({}/sec)",
+        human_bytes(total_bytes),
+        elapsed,
+        human_bytes(bytes_per_sec as u64)
     ));
 
     Ok(())

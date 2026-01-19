@@ -18,6 +18,7 @@ dott_test(
         "//eden/mononoke/git/gitimport:gitimport",
         "//eden/mononoke/servers/git/git_server:git_server",
         "//eden/mononoke/tools/admin:admin",
+        "//eden/mononoke/tools/streaming_clone:new_streaming_clone",
         "//eden/mononoke/tools/testtool:testtool",
     ],
 )

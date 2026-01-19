@@ -19,13 +19,20 @@ def _slapi_streaming_clone(repo, source) -> None:
     store_path = repo.store_path
     repo.ui.status(_("streaming changelog via SLAPI\n"))
 
+    start = util.timer()
     result = bindings.exchange.streaming_clone(repo.edenapi, store_path, tag)
 
     index_bytes = result.get("index_bytes_written", 0)
     data_bytes = result.get("data_bytes_written", 0)
     total_bytes = index_bytes + data_bytes
 
-    repo.ui.status(_("transferred %s in changelog\n") % util.bytecount(total_bytes))
+    elapsed = util.timer() - start
+    if elapsed <= 0:
+        elapsed = 0.001
+    repo.ui.status(
+        _("transferred %s in %.1f seconds (%s/sec)\n")
+        % (util.bytecount(total_bytes), elapsed, util.bytecount(total_bytes / elapsed))
+    )
 
     # repo.changelog needs to be reloaded.
     repo.invalidate()
