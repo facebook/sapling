@@ -93,6 +93,8 @@ use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::ServerError;
 use edenapi_types::SetBookmarkRequest;
 use edenapi_types::SetBookmarkResponse;
+use edenapi_types::StreamingChangelogRequest;
+use edenapi_types::StreamingChangelogResponse;
 use edenapi_types::SuffixQueryRequest;
 use edenapi_types::SuffixQueryResponse;
 use edenapi_types::ToApi;
@@ -203,6 +205,7 @@ pub mod paths {
     pub const LAND_STACK: &str = "land";
     pub const LOOKUP: &str = "lookup";
     pub const SET_BOOKMARK: &str = "bookmarks/set";
+    pub const STREAMING_CLONE: &str = "streaming_clone";
     pub const SUFFIXQUERY: &str = "suffix_query";
     pub const TREES: &str = "trees";
     pub const UPLOAD_BONSAI_CHANGESET: &str = "upload/changeset/bonsai";
@@ -1053,6 +1056,24 @@ impl Client {
             .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
 
         self.fetch::<SuffixQueryResponse>(vec![requests])
+    }
+
+    async fn streaming_clone_attempt(
+        &self,
+        tag: Option<String>,
+    ) -> Result<Response<StreamingChangelogResponse>, SaplingRemoteApiError> {
+        tracing::info!("Requesting streaming clone");
+        let url = self.build_url(paths::STREAMING_CLONE)?;
+        let req = StreamingChangelogRequest { tag };
+        self.log_request(&req, "streaming_clone");
+
+        let request = self
+            .configure_request(paths::STREAMING_CLONE, self.inner.client.post(url))?
+            .min_transfer_speed(None)
+            .cbor(&req.to_wire())
+            .map_err(SaplingRemoteApiError::RequestSerializationFailed)?;
+
+        self.fetch::<StreamingChangelogResponse>(vec![request])
     }
 
     async fn commit_translate_id_attempt(
@@ -2145,6 +2166,14 @@ impl SaplingRemoteApi for Client {
                 .boxed()
         })
         .await
+    }
+
+    async fn streaming_clone(
+        &self,
+        tag: Option<String>,
+    ) -> Result<Response<StreamingChangelogResponse>, SaplingRemoteApiError> {
+        self.with_retry(|this| this.streaming_clone_attempt(tag.clone()).boxed())
+            .await
     }
 }
 

@@ -15,10 +15,17 @@ use std::process::Command;
 
 use anyhow::Context;
 use anyhow::Result;
+use anyhow::bail;
+use async_runtime::block_on;
+use async_runtime::stream_to_iter;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use configmodel::Text;
 use context::CoreContext;
+use edenapi::SaplingRemoteApi;
+use edenapi_types::legacy::StreamingChangelogData;
+use fs_err as fs;
+use progress_model::ProgressBar;
 use repo::repo::Repo;
 use tracing::instrument;
 use types::HgId;
@@ -216,6 +223,121 @@ pub fn eden_clone(
     }
 
     run_eden_clone_command(&mut clone_command).context("error performing eden clone")
+}
+
+#[derive(Debug, Clone)]
+pub struct StreamingCloneResult {
+    /// Total bytes written to the index file (00changelog.i).
+    pub index_bytes_written: u64,
+    /// Total bytes written to the data file (00changelog.d).
+    pub data_bytes_written: u64,
+}
+
+/// Perform streaming clone, writing changelog files to the given store path.
+#[instrument(skip(api), err)]
+pub fn streaming_clone_to_files(
+    api: &(impl SaplingRemoteApi + ?Sized),
+    store_path: &Path,
+    tag: Option<String>,
+) -> Result<StreamingCloneResult> {
+    let response = block_on(api.streaming_clone(tag))?;
+
+    let index_path = store_path.join("00changelog.i");
+    let data_path = store_path.join("00changelog.d");
+
+    let result = streaming_clone_inner(&index_path, &data_path, response);
+    if result.is_err() {
+        // Clean up partial files on error
+        let _ = std::fs::remove_file(&index_path);
+        let _ = std::fs::remove_file(&data_path);
+    }
+    result
+}
+
+fn streaming_clone_inner(
+    index_path: &Path,
+    data_path: &Path,
+    response: edenapi::Response<edenapi_types::StreamingChangelogResponse>,
+) -> Result<StreamingCloneResult> {
+    let mut entries = stream_to_iter(response.entries);
+
+    // First entry must be metadata
+    let first_entry = entries
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Empty streaming clone response"))??;
+    let (expected_index_size, expected_data_size) = match first_entry.data {
+        Ok(StreamingChangelogData::Metadata(metadata)) => {
+            tracing::info!(
+                "Streaming clone: expecting {} bytes index, {} bytes data",
+                metadata.index_size,
+                metadata.data_size
+            );
+            (metadata.index_size, metadata.data_size)
+        }
+        Ok(_) => bail!("First streaming clone entry was not metadata"),
+        Err(e) => return Err(e).context("Server error in streaming clone metadata"),
+    };
+
+    let total = expected_index_size + expected_data_size;
+    let progress_bar = ProgressBar::new_adhoc("streaming changelog", total, "bytes");
+
+    let mut index_file = fs::File::create(index_path)?;
+    let mut data_file = fs::File::create(data_path)?;
+
+    let mut index_bytes_written: u64 = 0;
+    let mut data_bytes_written: u64 = 0;
+
+    for entry in entries {
+        let entry = entry?;
+        match entry.data {
+            Ok(StreamingChangelogData::Metadata(_)) => {
+                bail!("Unexpected metadata entry in streaming clone stream");
+            }
+            Ok(StreamingChangelogData::IndexBlobChunk(blob)) => {
+                let bytes = blob.chunk.as_ref();
+                index_file
+                    .write_all(bytes)
+                    .context("Failed to write index chunk")?;
+                index_bytes_written += bytes.len() as u64;
+                progress_bar.increase_position(bytes.len() as u64);
+            }
+            Ok(StreamingChangelogData::DataBlobChunk(blob)) => {
+                let bytes = blob.chunk.as_ref();
+                data_file
+                    .write_all(bytes)
+                    .context("Failed to write data chunk")?;
+                data_bytes_written += bytes.len() as u64;
+                progress_bar.increase_position(bytes.len() as u64);
+            }
+            Err(e) => {
+                return Err(e).context("Server error during streaming clone");
+            }
+        }
+    }
+
+    index_file.sync_all().context("Failed to sync index file")?;
+    data_file.sync_all().context("Failed to sync data file")?;
+
+    // Validate that the actual bytes written match the expected sizes from metadata
+    if index_bytes_written != expected_index_size {
+        bail!(
+            "Streaming clone index size mismatch: expected {} bytes, but wrote {} bytes",
+            expected_index_size,
+            index_bytes_written
+        );
+    }
+    if data_bytes_written != expected_data_size {
+        bail!(
+            "Streaming clone data size mismatch: expected {} bytes, but wrote {} bytes",
+            expected_data_size,
+            data_bytes_written
+        );
+    }
+
+    Ok(StreamingCloneResult {
+        index_bytes_written,
+        data_bytes_written,
+    })
 }
 
 #[cfg(test)]

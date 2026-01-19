@@ -57,6 +57,7 @@ use edenapi_types::RollbackWorkspaceRequest;
 use edenapi_types::RollbackWorkspaceResponse;
 use edenapi_types::SaplingRemoteApiServerError;
 use edenapi_types::SetBookmarkResponse;
+use edenapi_types::StreamingChangelogResponse;
 use edenapi_types::SuffixQueryResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
@@ -523,6 +524,14 @@ pub trait SaplingRemoteApi: Send + Sync + 'static {
         prefixes: Option<Vec<String>>,
     ) -> Result<Response<SuffixQueryResponse>, SaplingRemoteApiError> {
         let _ = (commit, suffixes, prefixes);
+        Err(SaplingRemoteApiError::NotSupported)
+    }
+
+    async fn streaming_clone(
+        &self,
+        tag: Option<String>,
+    ) -> Result<Response<StreamingChangelogResponse>, SaplingRemoteApiError> {
+        let _ = tag;
         Err(SaplingRemoteApiError::NotSupported)
     }
 }
