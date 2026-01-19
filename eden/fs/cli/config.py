@@ -41,9 +41,9 @@ from typing import (
 
 import facebook.eden.ttypes as eden_ttypes
 import toml
-from eden.fs.service.eden.thrift_types import MountInfo as ThriftMountInfo, MountState
 from eden.thrift import legacy
 from eden.thrift.legacy import EdenNotRunningError
+from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
 from filelock import BaseFileLock, FileLock
 from thrift.Thrift import TApplicationException
 
@@ -237,7 +237,11 @@ class ListMountInfo(typing.NamedTuple):
     def to_json_dict(self) -> Dict[str, Any]:
         return {
             "data_dir": self.data_dir.as_posix(),
-            "state": (self.state.name if self.state is not None else "NOT_RUNNING"),
+            "state": (
+                MountState._VALUES_TO_NAMES.get(self.state)
+                if self.state is not None
+                else "NOT_RUNNING"
+            ),
             "configured": self.configured,
             "backing_repo": (
                 self.backing_repo.as_posix() if self.backing_repo is not None else None
@@ -591,8 +595,7 @@ class EdenInstance(AbstractEdenInstance):
     def get_mounts(self) -> Dict[Path, ListMountInfo]:
         try:
             with self.get_thrift_client_legacy() as client:
-                # TODO: remove _to_python when thrift client is no longer legacy
-                thrift_mounts = [mount._to_python() for mount in client.listMounts()]
+                thrift_mounts = client.listMounts()
         except EdenNotRunningError:
             thrift_mounts = []
 
