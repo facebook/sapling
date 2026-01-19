@@ -14,12 +14,12 @@ import {Button} from 'isl-components/Button';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtomValue} from 'jotai';
-import {Commit, InlineProgressSpan} from './Commit';
+import {Commit, InlineProgressSpan, isExternalCommitByDiffId} from './Commit';
 import {Center, LargeSpinner} from './ComponentUtils';
 import {FetchingAdditionalCommitsRow} from './FetchAdditionalCommitsButton';
 import {isHighlightedCommit} from './HighlightedCommits';
 import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
-import {StackActions} from './StackActions';
+import {StackActions, collapsedStacksAtom} from './StackActions';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {atomFamilyWeak, localStorageBackedAtom} from './jotaiUtils';
@@ -72,6 +72,27 @@ const renderSubsetUnionSelection = atom(get => {
     subset = dag.filter(commit => commit.isDot || !isIrrelevantToCwd(commit, cwd), subset);
   }
 
+  // Filter out commits in collapsed stacks (but keep the stack root)
+  const collapsedStacks = get(collapsedStacksAtom);
+  if (collapsedStacks.length > 0) {
+    const collapsedSet = new Set(collapsedStacks);
+    subset = dag.filter(commit => {
+      // Always show the commit if it's the stack root (in collapsedStacks)
+      if (collapsedSet.has(commit.hash)) {
+        return true;
+      }
+      // Hide commits whose ancestors include a collapsed stack root
+      for (const rootHash of collapsedStacks) {
+        const rootCommit = dag.get(rootHash);
+        if (rootCommit && dag.isAncestor(rootHash, commit.hash)) {
+          // This commit is a descendant of a collapsed stack root, hide it
+          return false;
+        }
+      }
+      return true;
+    }, subset);
+  }
+
   return subset.union(selection);
 });
 
@@ -91,6 +112,7 @@ function DagCommitList(props: DagCommitListProps) {
       renderCommitExtras={renderCommitExtras}
       renderGlyph={renderGlyph}
       useExtraCommitRowProps={useExtraCommitRowProps}
+      useLineColor={useLineColor}
     />
   );
 }
@@ -126,6 +148,19 @@ function useExtraCommitRowProps(info: DagCommitInfo): React.HTMLAttributes<HTMLD
     onDoubleClick: onDoubleClickToShowDrawer,
     className: isSelected ? 'commit-row-selected' : '',
   };
+}
+
+const EXTERNAL_COMMIT_COLOR = 'var(--external-commit-line-color, #6b7280)';
+
+function useLineColor(info: DagCommitInfo): string | undefined {
+  const diffId = info.diffId;
+  // Use empty string as sentinel for "no diffId" - atom will return false for it
+  const isExternal = useAtomValue(isExternalCommitByDiffId(diffId ?? ''));
+  // Only return external color if there's actually a diffId
+  if (diffId == null) {
+    return undefined;
+  }
+  return isExternal ? EXTERNAL_COMMIT_COLOR : undefined;
 }
 
 function YouAreHereGlyphWithProgress({info}: {info: DagCommitInfo}) {

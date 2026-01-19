@@ -70,6 +70,15 @@ type RenderFunctionProps = {
    * it can use hooks to fetch extra state.
    */
   useExtraCommitRowProps?: (info: DagCommitInfo) => React.HTMLAttributes<HTMLDivElement> | void;
+
+  /**
+   * Get a custom color for the tree line connecting this commit.
+   * This can be used to visually distinguish certain commits (e.g., external stacks).
+   * Return undefined to use the default color.
+   * This should be a static-ish function to avoid re-rendering. Inside the function,
+   * it can use hooks to fetch extra state.
+   */
+  useLineColor?: (info: DagCommitInfo) => string | undefined;
 };
 
 /**
@@ -122,6 +131,7 @@ export function RenderDag(props: RenderDagProps) {
     renderCommitExtras,
     renderGlyph = defaultRenderGlyph,
     useExtraCommitRowProps,
+    useLineColor,
     className,
     ...restProps
   } = props;
@@ -141,6 +151,7 @@ export function RenderDag(props: RenderDagProps) {
         renderCommitExtras={renderCommitExtras}
         renderGlyph={renderGlyph}
         useExtraCommitRowProps={useExtraCommitRowProps}
+        useLineColor={useLineColor}
       />
     );
   });
@@ -178,9 +189,11 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
     renderCommit,
     renderCommitExtras,
     useExtraCommitRowProps,
+    useLineColor,
   } = props;
 
   const {className = '', ...commitRowProps} = useExtraCommitRowProps?.(info) ?? {};
+  const customLineColor = useLineColor?.(info);
 
   // Layout per commit:
   //
@@ -260,7 +273,8 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
   // isYouAreHere practically matches isIrregular but we treat them as
   // separate concepts. isYouAreHere affects colors, and isIrregular
   // affects layout.
-  const color = info.isYouAreHere ? YOU_ARE_HERE_COLOR : undefined;
+  // Priority: isYouAreHere color > custom line color > default
+  const color = info.isYouAreHere ? YOU_ARE_HERE_COLOR : customLineColor;
   const nodeLinePart = (
     <div className="render-dag-row-left-side-line node-line">
       {nodeLine.map((l, i) => {

@@ -11,7 +11,8 @@ import type {Hash} from './types';
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
-import {useAtom, useAtomValue} from 'jotai';
+import {atom, useAtom, useAtomValue} from 'jotai';
+import {atomWithStorage} from 'jotai/utils';
 import {type ContextMenuItem, useContextMenu} from 'shared/ContextMenu';
 import {CleanupButton, isStackEligibleForCleanup} from './Cleanup';
 import {Row} from './ComponentUtils';
@@ -35,6 +36,23 @@ import {succeedableRevset} from './types';
 import './StackActions.css';
 
 /**
+ * Set of stack root hashes that are collapsed in the commit tree.
+ * Stored in localStorage for persistence.
+ */
+export const collapsedStacksAtom = atomWithStorage<string[]>(
+  'isl.collapsedStacks',
+  [],
+);
+
+/**
+ * Atom to check if a specific stack is collapsed.
+ */
+export const isStackCollapsedAtom = atom(get => {
+  const collapsed = get(collapsedStacksAtom);
+  return (hash: string) => collapsed.includes(hash);
+});
+
+/**
  * Actions at the bottom of a stack of commits that acts on the whole stack,
  * like submitting, hiding, editing the stack.
  */
@@ -47,6 +65,14 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
   const dag = useAtomValue(dagWithPreviews);
   const runOperation = useRunOperation();
   const syncStatusMap = useAtomValue(syncStatusAtom);
+  const [collapsedStacks, setCollapsedStacks] = useAtom(collapsedStacksAtom);
+
+  const isCollapsed = collapsedStacks.includes(hash);
+  const toggleCollapsed = () => {
+    setCollapsedStacks(prev =>
+      prev.includes(hash) ? prev.filter(h => h !== hash) : [...prev, hash],
+    );
+  };
 
   // buttons at the bottom of the stack
   const actions = [];
@@ -223,6 +249,17 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
 
   const hasChildren = dag.childHashes(hash).size > 0;
   if (hasChildren) {
+    // Add collapse/expand button for stacks with children
+    actions.push(
+      <Tooltip
+        key="collapse-stack"
+        title={isCollapsed ? t('Expand stack') : t('Collapse stack')}
+        placement="bottom">
+        <Button icon onClick={toggleCollapsed}>
+          <Icon icon={isCollapsed ? 'chevron-right' : 'chevron-down'} />
+        </Button>
+      </Tooltip>,
+    );
     actions.push(<StackEditButton key="edit-stack" info={info} />);
   }
 
