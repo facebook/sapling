@@ -109,7 +109,11 @@ def submit_cmd(ui, repo, *args, **opts):
 
     Pull request(s) will be created against ``default``. If
     ``default`` is a fork, they will be created against default's
-    upstream repository.
+    upstream repository by default. To create PRs on your fork instead,
+    set::
+
+        [github]
+        submit-to-upstream = false
 
     Returns 0 on success.
     """

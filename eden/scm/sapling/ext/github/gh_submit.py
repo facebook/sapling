@@ -46,16 +46,21 @@ class Repository:
     # then we only traverse one link in the chain, so this could still be None.
     upstream: Optional["Repository"] = None
 
-    def get_base_branch(self) -> str:
-        """If this is a fork, returns the default_branch of the upstream repo."""
-        if self.upstream:
+    def get_base_branch(self, use_upstream: bool = True) -> str:
+        """If this is a fork and use_upstream is True, returns the default_branch
+        of the upstream repo; otherwise returns this repo's default_branch."""
+        if use_upstream and self.upstream:
             return self.upstream.default_branch
         else:
             return self.default_branch
 
-    def get_upstream_owner_and_name(self) -> Tuple[str, str]:
-        """owner and name to use when creating a pull request"""
-        if self.upstream:
+    def get_upstream_owner_and_name(self, use_upstream: bool = True) -> Tuple[str, str]:
+        """owner and name to use when creating a pull request.
+
+        If use_upstream is True and this is a fork, returns the upstream's
+        owner and name. Otherwise returns this repo's owner and name.
+        """
+        if use_upstream and self.upstream:
             return (self.upstream.owner, self.upstream.name)
         else:
             return (self.owner, self.name)
