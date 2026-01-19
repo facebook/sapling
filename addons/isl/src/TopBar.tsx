@@ -14,6 +14,7 @@ import {clearTrackedCache} from 'shared/LRU';
 import {BookmarksManagerMenu} from './BookmarksManager';
 import {BugButton} from './BugButton';
 import {BulkActionsMenu} from './BulkActionsMenu';
+import {CollapseAllStacksButton} from './CollapseAllStacksButton';
 import serverAPI from './ClientToServerAPI';
 import {CwdSelector} from './CwdSelector';
 import {DownloadCommitsTooltipButton} from './DownloadCommitsMenu';
@@ -46,6 +47,7 @@ export function TopBar() {
         <DownloadCommitsTooltipButton />
         <ShelvedChangesMenu />
         <BulkActionsMenu />
+        <CollapseAllStacksButton />
         <BookmarksManagerMenu />
         {Internal.FullRepoBranchButton && <Internal.FullRepoBranchButton />}
         <FetchingDataIndicator />
