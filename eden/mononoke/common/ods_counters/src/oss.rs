@@ -25,9 +25,22 @@ impl OdsCounterManager {
 
 #[async_trait]
 impl CounterManager for OdsCounterManager {
-    fn add_counter(&mut self, _entity: String, _key: String, _reduce: Option<String>) {}
+    fn add_counter(
+        &mut self,
+        _entity: String,
+        _key: String,
+        _reduce: Option<String>,
+        _transform: Option<String>,
+    ) {
+    }
 
-    fn get_counter_value(&self, _entity: &str, _key: &str, _reduce: Option<&str>) -> Option<f64> {
+    fn get_counter_value(
+        &self,
+        _entity: &str,
+        _key: &str,
+        _reduce: Option<&str>,
+        _transform: Option<&str>,
+    ) -> Option<f64> {
         None
     }
 }
