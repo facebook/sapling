@@ -18,6 +18,19 @@ from . import error, phases, progress, store, util
 from .i18n import _
 
 
+def get_streaming_clone_tag(ui):
+    """Get the tag to use for streaming clone from config.
+
+    This is shared between wireproto and SLAPI streaming clone implementations.
+    """
+    tag = ui.config("stream_out_shallow", "tag")
+    if not tag and ui.configbool("stream_out_shallow", "auto"):
+        names = ui.configlist("remotenames", "selectivepulldefault")
+        if names:
+            tag = names[0]
+    return tag
+
+
 def canperformstreamclone(
     pullop: "Any", bailifbundle2supported: bool = False
 ) -> "Tuple[bool, Optional[Set[str]]]":

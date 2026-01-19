@@ -11,7 +11,7 @@ mod config;
 pub mod nodeipc;
 pub mod simple;
 pub mod structured;
-mod unit;
+pub mod unit;
 
 use std::fmt::Display;
 

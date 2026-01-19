@@ -23,11 +23,13 @@ sapling-clone = { version = "0.1.0", path = "../../../clone" }
 sapling-configloader = { version = "0.1.0", path = "../../../config/loader" }
 sapling-configmodel = { version = "0.1.0", path = "../../../config/model", features = ["convert-path", "convert-regex"] }
 sapling-eagerepo = { version = "0.1.0", path = "../../../eagerepo" }
+sapling-edenapi = { version = "0.1.0", path = "../../../edenapi" }
 sapling-exchange = { version = "0.1.0", path = "../../../exchange" }
 sapling-filters = { version = "0.1.0", path = "../../../filters" }
 sapling-hgplain = { version = "0.1.0", path = "../../../util/hgplain" }
 sapling-identity = { version = "0.1.0", path = "../../../identity" }
 sapling-migration = { version = "0.1.0", path = "../../../migration" }
+sapling-progress-render = { version = "0.1.0", path = "../../../progress/render" }
 sapling-repo = { version = "0.1.0", path = "../../../repo" }
 sapling-repourl = { version = "0.1.0", path = "../../../repo/url" }
 sapling-types = { version = "0.1.0", path = "../../../types" }

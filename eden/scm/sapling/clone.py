@@ -7,9 +7,53 @@
 
 import bindings
 
-from . import bookmarks as bookmod, changelog2, error, streamclone
+from . import bookmarks as bookmod, changelog2, error, streamclone, util
 from .i18n import _
 from .node import hex
+
+
+def _slapi_streaming_clone(repo, source) -> None:
+    """Perform streaming clone using SLAPI/EdenAPI."""
+    tag = streamclone.get_streaming_clone_tag(repo.ui)
+
+    store_path = repo.store_path
+    repo.ui.status(_("streaming changelog via SLAPI\n"))
+
+    result = bindings.exchange.streaming_clone(repo.edenapi, store_path, tag)
+
+    index_bytes = result.get("index_bytes_written", 0)
+    data_bytes = result.get("data_bytes_written", 0)
+    total_bytes = index_bytes + data_bytes
+
+    repo.ui.status(_("transferred %s in changelog\n") % util.bytecount(total_bytes))
+
+    # repo.changelog needs to be reloaded.
+    repo.invalidate()
+    repo.invalidatechangelog()
+
+
+def _wireproto_streaming_clone(repo, source) -> None:
+    """Perform streaming clone using legacy wireproto."""
+    with repo.conn(source) as conn:
+        # Assume the remote server supports streamclone.
+        peer = conn.peer
+        fp = peer.stream_out(shallow=True)
+
+        l = fp.readline()
+        if l.strip() != b"0":
+            raise error.ResponseError(_("unexpected response from remote server:"), l)
+
+        l = fp.readline()
+        try:
+            filecount, bytecount = list(map(int, l.split(b" ", 1)))
+        except (ValueError, TypeError):
+            raise error.ResponseError(_("unexpected response from remote server:"), l)
+
+        # Get 00changelog.{i,d}. This does not write bookmarks or remotenames.
+        streamclone.consumev1(repo, fp, filecount, bytecount)
+        # repo.changelog needs to be reloaded.
+        repo.invalidate()
+        repo.invalidatechangelog()
 
 
 def revlogclone(source, repo) -> None:
@@ -29,30 +73,13 @@ def revlogclone(source, repo) -> None:
         repo.svfs.tryunlink("00changelog.len")
 
         repo.ui.status(_("fetching changelog\n"))
-        with repo.conn(source) as conn:
-            # Assume the remote server supports streamclone.
-            peer = conn.peer
-            fp = peer.stream_out(shallow=True)
 
-            l = fp.readline()
-            if l.strip() != b"0":
-                raise error.ResponseError(
-                    _("unexpected response from remote server:"), l
-                )
-
-            l = fp.readline()
-            try:
-                filecount, bytecount = list(map(int, l.split(b" ", 1)))
-            except (ValueError, TypeError):
-                raise error.ResponseError(
-                    _("unexpected response from remote server:"), l
-                )
-
-            # Get 00changelog.{i,d}. This does not write bookmarks or remotenames.
-            streamclone.consumev1(repo, fp, filecount, bytecount)
-            # repo.changelog needs to be reloaded.
-            repo.invalidate()
-            repo.invalidatechangelog()
+        # Use SLAPI streaming clone if enabled and edenapi is available
+        use_slapi = repo.ui.configbool("experimental", "use-slapi-streaming-clone")
+        if use_slapi and repo.nullableedenapi:
+            _slapi_streaming_clone(repo, source)
+        else:
+            _wireproto_streaming_clone(repo, source)
 
         # Fetch selected remote bookmarks.
         repo.ui.status(_("fetching selected remote bookmarks\n"))

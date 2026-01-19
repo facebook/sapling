@@ -27,6 +27,8 @@ use edenapi_types::legacy::StreamingChangelogData;
 use fs_err as fs;
 use progress_model::ProgressBar;
 use repo::repo::Repo;
+use serde::Deserialize;
+use serde::Serialize;
 use tracing::instrument;
 use types::HgId;
 use util::errors::IOContext;
@@ -225,7 +227,29 @@ pub fn eden_clone(
     run_eden_clone_command(&mut clone_command).context("error performing eden clone")
 }
 
-#[derive(Debug, Clone)]
+/// Get the tag to use for streaming clone from config.
+///
+/// This is shared between wireproto and SLAPI streaming clone implementations.
+pub fn get_streaming_clone_tag(config: &dyn Config) -> Option<String> {
+    if let Some(tag) = config.get("stream_out_shallow", "tag") {
+        return Some(tag.to_string());
+    }
+    if config
+        .get_or_default::<bool>("stream_out_shallow", "auto")
+        .unwrap_or(false)
+    {
+        if let Ok(names) =
+            config.get_or::<Vec<String>>("remotenames", "selectivepulldefault", Vec::new)
+        {
+            if let Some(first) = names.first() {
+                return Some(first.clone());
+            }
+        }
+    }
+    None
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamingCloneResult {
     /// Total bytes written to the index file (00changelog.i).
     pub index_bytes_written: u64,

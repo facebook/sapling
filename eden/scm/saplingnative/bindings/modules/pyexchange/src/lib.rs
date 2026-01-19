@@ -10,7 +10,9 @@ use std::sync::Arc;
 use configmodel::Config;
 use cpython::*;
 use cpython_ext::ExtractInner;
+use cpython_ext::ExtractInnerRef;
 use cpython_ext::PyNone;
+use cpython_ext::PyPathBuf;
 use cpython_ext::convert::ImplInto;
 use cpython_ext::convert::Serde;
 use cpython_ext::error::ResultPyErrExt;
@@ -49,6 +51,18 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             )
         ),
     )?;
+    m.add(
+        py,
+        "streaming_clone",
+        py_fn!(
+            py,
+            streaming_clone(
+                client: &PyClient,
+                store_path: PyPathBuf,
+                tag: Option<String> = None
+            )
+        ),
+    )?;
 
     Ok(m)
 }
@@ -81,4 +95,22 @@ fn fast_pull(
     let commits = commits.get_inner(py);
     let mut commits = commits.write();
     exchange::fast_pull(client, &mut commits, common.0, missing.0).map_pyerr(py)
+}
+
+/// Perform streaming clone using the given EdenAPI client.
+///
+/// Writes the changelog data to the given store path.
+/// Returns a dict with 'index_bytes_written' and 'data_bytes_written'.
+fn streaming_clone(
+    py: Python,
+    client: &PyClient,
+    store_path: PyPathBuf,
+    tag: Option<String>,
+) -> PyResult<Serde<clone::StreamingCloneResult>> {
+    let api = client.extract_inner_ref(py).clone();
+    let store_path = store_path.to_path_buf();
+    let result = py
+        .allow_threads(|| clone::streaming_clone_to_files(api.as_ref(), &store_path, tag))
+        .map_pyerr(py)?;
+    Ok(Serde(result))
 }

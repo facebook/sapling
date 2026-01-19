@@ -33,6 +33,7 @@ use configmodel::ValueSource;
 use eagerepo::EagerRepo;
 use filters::util::filter_paths_from_config;
 use migration::feature::deprecate;
+use progress_render::unit::human_bytes;
 use regex::Regex;
 use repo::repo::Repo;
 use repourl::RepoUrl;
@@ -669,8 +670,21 @@ fn clone_metadata(
                 repo_needs_reload = true;
             }
         } else {
-            revlog_clone(repo.config(), logger, ctx, destination)?;
-            // reload the repo to pick up any changes written out by the revlog clone
+            // Use SLAPI streaming clone if enabled, otherwise fall back to Python
+            let use_slapi = repo
+                .config()
+                .get_or_default::<bool>("experimental", "use-slapi-streaming-clone")?;
+
+            if use_slapi {
+                // Direct Rust streaming clone (avoids Python roundtrip)
+                slapi_streaming_clone(logger, &repo, &edenapi)?;
+                // Fetch bookmarks via Python pull
+                fetch_bookmarks_via_python(ctx, repo.config(), destination)?;
+            } else {
+                // Python path: debugrevlogclone -> revlogclone -> Python bindings
+                revlog_clone(repo.config(), logger, ctx, destination)?;
+            }
+            // reload the repo to pick up any changes written out
             // such as metalog remotenames writes
             repo_needs_reload = true;
         }
@@ -700,7 +714,8 @@ fn clone_metadata(
     Ok(repo)
 }
 
-pub fn revlog_clone(
+/// Clone using Python's debugrevlogclone command (legacy path).
+fn revlog_clone(
     config: &Arc<dyn Config>,
     logger: &TermLogger,
     ctx: &ReqCtx<CloneOpts>,
@@ -736,6 +751,76 @@ pub fn revlog_clone(
         hg_python.run_hg(args, ctx.io(), config, false) != 0,
         "Cloning revlog failed"
     );
+    Ok(())
+}
+
+/// Perform SLAPI streaming clone using Rust implementation.
+fn slapi_streaming_clone(
+    logger: &TermLogger,
+    repo: &Repo,
+    edenapi: &Arc<dyn edenapi::SaplingRemoteApi>,
+) -> Result<()> {
+    let config = repo.config();
+    let tag = clone::get_streaming_clone_tag(config.as_ref());
+
+    let store_path = repo.store_path();
+
+    logger.info("streaming changelog via SLAPI".to_string());
+
+    // Delete any existing changelog.len file
+    let changelog_len_path = store_path.join("00changelog.len");
+    let _ = std::fs::remove_file(&changelog_len_path);
+
+    let result = clone::streaming_clone_to_files(edenapi.as_ref(), store_path, tag)?;
+
+    let total_bytes = result.index_bytes_written + result.data_bytes_written;
+    logger.info(format!(
+        "transferred {} in changelog",
+        human_bytes(total_bytes)
+    ));
+
+    Ok(())
+}
+
+/// Fetch remote bookmarks using Python after SLAPI streaming clone.
+fn fetch_bookmarks_via_python(
+    ctx: &ReqCtx<CloneOpts>,
+    config: &Arc<dyn Config>,
+    root: &Path,
+) -> Result<()> {
+    let source = ctx.opts.source(config)?.clean_str().to_string();
+    let mut args = vec![
+        identity::cli_name().to_string(),
+        "pull".to_string(),
+        source,
+        "-R".to_string(),
+        root.to_string_lossy().to_string(),
+        "--bookmark".to_string(),
+    ];
+
+    // Add the selective pull default bookmarks
+    if let Ok(bookmarks) =
+        config.get_or::<Vec<String>>("remotenames", "selectivepulldefault", Vec::new)
+    {
+        for bookmark in bookmarks {
+            args.push(bookmark);
+        }
+    }
+
+    for cfg in ctx.global_opts().config.iter() {
+        args.push("--config".into());
+        args.push(cfg.into());
+    }
+    if ctx.global_opts().quiet {
+        args.push("-q".into());
+    }
+
+    let hg_python = HgPython::new(&args);
+    abort_if!(
+        hg_python.run_hg(args, ctx.io(), config, false) != 0,
+        "Fetching bookmarks failed"
+    );
+
     Ok(())
 }
 

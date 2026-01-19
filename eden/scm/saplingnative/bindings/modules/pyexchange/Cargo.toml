@@ -10,6 +10,7 @@ cpython = { version = "0.7.2", features = ["python3-sys"], default-features = fa
 pydag = { version = "0.1.0", path = "../pydag" }
 pyedenapi = { version = "0.1.0", path = "../pyedenapi" }
 pymetalog = { version = "0.1.0", path = "../pymetalog" }
+sapling-clone = { version = "0.1.0", path = "../../../../lib/clone" }
 sapling-configmodel = { version = "0.1.0", path = "../../../../lib/config/model" }
 sapling-cpython-ext = { version = "0.1.0", path = "../../../../lib/cpython-ext" }
 sapling-exchange = { version = "0.1.0", path = "../../../../lib/exchange" }

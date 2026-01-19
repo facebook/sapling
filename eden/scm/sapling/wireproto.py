@@ -386,10 +386,7 @@ class wirepeer(repository.legacypeer):
         if shallow and self.capable("remotefilelog"):
             opts = {}
             opts["noflatmanifest"] = "True"
-            tag = self.ui.config("stream_out_shallow", "tag")
-            if not tag and self.ui.configbool("stream_out_shallow", "auto"):
-                if names := self.ui.configlist("remotenames", "selectivepulldefault"):
-                    tag = names[0]
+            tag = streamclone.get_streaming_clone_tag(self.ui)
             if tag:
                 opts["tag"] = tag
             return self._callstream("stream_out_shallow", **opts)
