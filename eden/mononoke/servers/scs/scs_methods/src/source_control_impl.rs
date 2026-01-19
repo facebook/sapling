@@ -303,13 +303,43 @@ impl SourceControlServiceImpl {
     ) -> Result<Metadata, scs_errors::ServiceError> {
         let header = |h: &str| req_ctxt.header(h).map_err(scs_errors::invalid_request);
 
-        let tls_identities: MononokeIdentitySet = req_ctxt
-            .identities()
-            .map_err(scs_errors::internal_error)?
-            .entries()
-            .into_iter()
-            .map(MononokeIdentity::from_identity_ref)
-            .collect();
+        let tls_identities: MononokeIdentitySet = if justknobs::eval(
+            "scm/mononoke:scs_use_authenticated_identities_struct",
+            None,
+            None,
+        )
+        .unwrap_or(false)
+        {
+            // Use authenticated_identities_struct to get full AuthenticatedIdentity thrift structs
+            let auth_idents_vec = req_ctxt
+                .authenticated_identities_struct()
+                .map_err(scs_errors::internal_error)?;
+
+            if auth_idents_vec.is_empty() {
+                // Fall back to legacy identities() method
+                req_ctxt
+                    .identities()
+                    .map_err(scs_errors::internal_error)?
+                    .entries()
+                    .into_iter()
+                    .map(MononokeIdentity::from_identity_ref)
+                    .collect()
+            } else {
+                auth_idents_vec
+                    .into_iter()
+                    .map(MononokeIdentity::Authenticated)
+                    .collect()
+            }
+        } else {
+            // Fall back to legacy identities() method
+            req_ctxt
+                .identities()
+                .map_err(scs_errors::internal_error)?
+                .entries()
+                .into_iter()
+                .map(MononokeIdentity::from_identity_ref)
+                .collect()
+        };
 
         // Get any valid CAT identieies.
         let cats_identities: MononokeIdentitySet = req_ctxt
