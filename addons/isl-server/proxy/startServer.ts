@@ -497,7 +497,7 @@ export async function runProxyMain(args: Args) {
       killAndSpawnAgain = true;
     } else if (existingServerInfo.slVersion !== slVersion) {
       info(
-        `warning: sl version has changed since last server was started. Starting a fresh server to use lastest version '${slVersion}'.`,
+        `warning: sl version has changed since last server was started. Starting a fresh server to use latest version '${slVersion}'.`,
       );
       killAndSpawnAgain = true;
     }

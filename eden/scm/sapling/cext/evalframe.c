@@ -101,7 +101,6 @@ EXPORT PyCodeObject* sapling_cext_evalframe_extract_code_lineno_from_frame(
   if (!f) {
     return NULL;
   }
-  // 3.12: f is _PyInterpreterFrame. Can be accessed via PyUnstable APIs.
   // 3.11: f is _PyInterpreterFrame. Need Py_BUILD_CORE_MODULE to access.
   // See also
   // https://github.com/python/cpython/issues/91006#issuecomment-1093945542
@@ -116,6 +115,13 @@ EXPORT PyCodeObject* sapling_cext_evalframe_extract_code_lineno_from_frame(
     return NULL;
   }
   *pline_no = PyFrame_GetLineNumber(f);
+#elif PY_VERSION_HEX >= 0x030c0000
+  // >=3.12: f is _PyInterpreterFrame. Can be accessed via PyUnstable APIs.
+  code = (PyCodeObject*)PyUnstable_InterpreterFrame_GetCode(f);
+  if (code == NULL) {
+    return NULL;
+  }
+  *pline_no = PyUnstable_InterpreterFrame_GetLine(f);
 #endif
   return code;
 }
@@ -174,5 +180,6 @@ EXPORT const char* sapling_cext_evalframe_resolve_frame(size_t address) {
  * Currently this mainly checks the Python version.
  */
 EXPORT int sapling_cext_evalframe_resolve_frame_is_supported() {
-  return (PY_VERSION_HEX >= 0x03090000 && PY_VERSION_HEX < 0x030b0000);
+  return (PY_VERSION_HEX >= 0x03090000 && PY_VERSION_HEX < 0x030b0000) ||
+      (PY_VERSION_HEX >= 0x030c0000);
 }

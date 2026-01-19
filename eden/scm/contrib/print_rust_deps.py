@@ -12,7 +12,12 @@ Naive implementation. Might produce inaccurate results.
 Related: to remove unused deps, try: arc lint -e extra --take RUSTUNUSEDDEPS
 """
 
-import glob, itertools, os, pprint, re, sys
+import glob
+import itertools
+import os
+import pprint
+import re
+import sys
 from typing import Dict, List, NoReturn, Pattern, Set
 
 crate_re = re.compile(r"[ (](?:::)?([a-z0-9_]+)::\w")

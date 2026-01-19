@@ -19,7 +19,6 @@ import time
 from typing import Any, Dict, List, Optional
 
 import bindings
-
 import sapling
 from sapling import error, ext, hgdemandimport, registrar, traceimport, util
 from sapling.ext import commitcloud as cc

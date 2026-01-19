@@ -24,6 +24,7 @@ rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
 thiserror = "2.0.12"
+thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 
 [build-dependencies]
 thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

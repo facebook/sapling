@@ -66,4 +66,4 @@ class EdenServerInspector:
             parent_dir = tree_inode_debug_info.path.decode("utf-8")
             for entry in tree_inode_debug_info.entries:
                 if entry.loaded:
-                    yield f'{parent_dir}/{entry.name.decode("utf-8")}'
+                    yield f"{parent_dir}/{entry.name.decode('utf-8')}"

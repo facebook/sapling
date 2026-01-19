@@ -13,7 +13,6 @@ import math
 import os
 
 from bindings import workingcopy as wc
-
 from sapling import (
     commands,
     hbisect,

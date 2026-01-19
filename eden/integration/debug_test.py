@@ -12,7 +12,6 @@ import sys
 from pathlib import Path
 
 from eden.fs.service.eden.thrift_clients import EdenService
-
 from eden.fs.service.eden.thrift_types import (
     BlobMetadataOrError,
     BlobMetadataWithOrigin,
@@ -123,7 +122,6 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             # not present in the local storage yet
             for origin in [
                 DataFetchOrigin.MEMORY_CACHE,
-                DataFetchOrigin.DISK_CACHE,
             ]:
                 print(origin)
                 print(file.hash)
@@ -143,8 +141,6 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
 
             # now its available locally.
             for fromWhere in [
-                # Blobs aren't cached to the LocalStore.
-                # DataFetchOrigin.DISK_CACHE,
                 DataFetchOrigin.LOCAL_BACKING_STORE,
                 # reading a blob is actually insufficient to put it in
                 # DataFetchFromWhere.MEMORY_CACHE,
@@ -160,7 +156,6 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                     mountId=MountId(mountPoint=self.mount.encode()),
                     id=file.hash,
                     origins=DataFetchOrigin.MEMORY_CACHE
-                    | DataFetchOrigin.DISK_CACHE
                     | DataFetchOrigin.LOCAL_BACKING_STORE
                     | DataFetchOrigin.REMOTE_BACKING_STORE
                     | DataFetchOrigin.ANYWHERE,
@@ -168,7 +163,7 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             )
             print(response)
 
-            self.assertEqual(5, len(response.blobs))
+            self.assertEqual(4, len(response.blobs))
             for blob in response.blobs:
                 if blob.origin == DataFetchOrigin.MEMORY_CACHE:
                     blob.blob.error
@@ -266,7 +261,6 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             # not present in the local storage yet
             for origin in [
                 DataFetchOrigin.MEMORY_CACHE,
-                DataFetchOrigin.DISK_CACHE,
             ]:
                 print(origin)
                 print(file.hash)
@@ -288,7 +282,6 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             # now its available locally.
             for fromWhere in [
                 DataFetchOrigin.MEMORY_CACHE,
-                DataFetchOrigin.DISK_CACHE,
                 DataFetchOrigin.LOCAL_BACKING_STORE,
             ]:
                 print(fromWhere)
@@ -306,7 +299,6 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                     mountId=MountId(mountPoint=self.mount.encode()),
                     id=file.hash,
                     origins=DataFetchOrigin.MEMORY_CACHE
-                    | DataFetchOrigin.DISK_CACHE
                     | DataFetchOrigin.LOCAL_BACKING_STORE
                     | DataFetchOrigin.REMOTE_BACKING_STORE
                     | DataFetchOrigin.ANYWHERE,
@@ -314,7 +306,7 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             )
             print(response)
 
-            self.assertEqual(5, len(response.metadatas))
+            self.assertEqual(4, len(response.metadatas))
             for metadata in response.metadatas:
                 self.assertEqual(
                     4,
@@ -419,7 +411,7 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
 
         async with self.eden.get_thrift_client() as client:
             # not present in the local storage yet
-            for origin in [DataFetchOrigin.MEMORY_CACHE, DataFetchOrigin.DISK_CACHE]:
+            for origin in [DataFetchOrigin.MEMORY_CACHE]:
                 await self.assert_tree_not_available(client, treeInfo.treeHash, origin)
 
             debugInfo = await client.debugInodeStatus(
@@ -442,7 +434,6 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             # now its available locally.
             for fromWhere in [
                 DataFetchOrigin.MEMORY_CACHE,
-                DataFetchOrigin.DISK_CACHE,
                 DataFetchOrigin.LOCAL_BACKING_STORE,
             ]:
                 await self.assert_tree_available(
@@ -460,13 +451,12 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
                     mountId=MountId(mountPoint=self.mount.encode()),
                     id=treeInfo.treeHash,
                     origins=DataFetchOrigin.MEMORY_CACHE
-                    | DataFetchOrigin.DISK_CACHE
                     | DataFetchOrigin.LOCAL_BACKING_STORE
                     | DataFetchOrigin.REMOTE_BACKING_STORE
                     | DataFetchOrigin.ANYWHERE,
                 )
             )
-            self.assertEqual(5, len(response.trees))
+            self.assertEqual(4, len(response.trees))
 
             for tree in response.trees:
                 # It seems from a unit test, we can't get the tree from remote backing store.

@@ -16,7 +16,6 @@ from typing import Optional, Set
 
 from eden.fs.cli import mtab
 from eden.fs.cli.doctor import check_stale_mounts
-
 from eden.fs.cli.util import poll_until_async
 from eden.fs.service.eden.thrift_clients import EdenService
 from eden.fs.service.eden.thrift_types import (

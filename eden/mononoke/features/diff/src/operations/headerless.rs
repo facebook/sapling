@@ -15,14 +15,17 @@ use crate::types::HeaderlessDiffOpts;
 use crate::types::HeaderlessUnifiedDiff;
 use crate::types::Repo;
 use crate::utils::content::load_content;
+use crate::utils::whitespace::strip_horizontal_whitespace;
 
 pub async fn headerless_unified(
     ctx: &CoreContext,
     repo: &impl Repo,
     base: Option<DiffSingleInput>,
     other: Option<DiffSingleInput>,
-    context: usize,
+    options: HeaderlessDiffOpts,
 ) -> Result<HeaderlessUnifiedDiff, DiffError> {
+    let ignore_whitespace = options.ignore_whitespace;
+
     let (base_bytes, other_bytes) = try_join!(
         async {
             if let Some(base_input) = &base {
@@ -40,7 +43,7 @@ pub async fn headerless_unified(
         }
     )?;
 
-    let (base_content, other_content) = match (base_bytes, other_bytes) {
+    let (mut base_content, mut other_content) = match (base_bytes, other_bytes) {
         (None, None) => return Err(DiffError::empty_inputs()),
         (Some(base), None) => (base, Bytes::new()),
         (None, Some(other)) => (Bytes::new(), other),
@@ -57,11 +60,16 @@ pub async fn headerless_unified(
         file_type: xdiff::FileType::Regular,
     }));
 
-    let opts = HeaderlessDiffOpts { context };
-    let xdiff_opts = xdiff::HeaderlessDiffOpts::from(opts);
+    // Only strip whitespace if NOT binary and ignore_whitespace is enabled
+    if !is_binary && ignore_whitespace {
+        base_content = strip_horizontal_whitespace(&base_content);
+        other_content = strip_horizontal_whitespace(&other_content);
+    }
+
+    let xdiff_opts = xdiff::HeaderlessDiffOpts::from(options);
 
     let raw_diff = if is_binary {
-        b"Binary files differ\n".to_vec()
+        b"Binary files differ".to_vec()
     } else {
         tokio::task::spawn_blocking(move || {
             xdiff::diff_unified_headerless(&other_content, &base_content, xdiff_opts)
@@ -132,7 +140,12 @@ mod tests {
             replacement_path: None,
         });
 
-        let diff = headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), 3).await?;
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: false,
+        };
+        let diff =
+            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
 
         let expected_diff = "@@ -1,3 +1,3 @@\n line1\n-modified line2\n+line2\n line3\n";
 
@@ -172,9 +185,14 @@ mod tests {
             replacement_path: None,
         });
 
-        let diff = headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), 3).await?;
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: false,
+        };
+        let diff =
+            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
 
-        let expected_diff = "Binary files differ\n";
+        let expected_diff = "Binary files differ";
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert_eq!(diff_str, expected_diff);
         assert!(diff.is_binary);
@@ -210,7 +228,12 @@ mod tests {
             replacement_path: None,
         });
 
-        let diff = headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), 3).await?;
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: false,
+        };
+        let diff =
+            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
 
         let expected_diff = "@@ -1,2 +0,0 @@\n-new content\n-line2\n";
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
@@ -239,24 +262,250 @@ mod tests {
         });
 
         // Test None vs Some - Should show deletion
-        let diff = headerless_unified(&ctx, &repo, None, Some(input.clone()), 3).await?;
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: false,
+        };
+        let diff =
+            headerless_unified(&ctx, &repo, None, Some(input.clone()), options.clone()).await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert!(!diff.is_binary);
         assert_eq!(diff_str, "@@ -1,2 +0,0 @@\n-some content\n-line2\n");
 
         // Test Some vs None - Should show addition
-        let diff = headerless_unified(&ctx, &repo, Some(input), None, 3).await?;
+        let diff = headerless_unified(&ctx, &repo, Some(input), None, options.clone()).await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert!(!diff.is_binary);
         assert_eq!(diff_str, "@@ -0,0 +1,2 @@\n+some content\n+line2\n");
 
         // Test None vs None - should return an error
-        let result = headerless_unified(&ctx, &repo, None, None, 3).await;
+        let result = headerless_unified(&ctx, &repo, None, None, options).await;
         assert!(result.is_err());
         let error_message = result.unwrap_err().to_string();
         assert_eq!(
             error_message,
             "All inputs to the headerless diff were empty"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_headerless_unified_string_inputs(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with String inputs
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nmodified line2\nline3\n".to_string(),
+        });
+
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: false,
+        };
+        let diff =
+            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+
+        let expected_diff = "@@ -1,3 +1,3 @@\n line1\n-modified line2\n+line2\n line3\n";
+
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert_eq!(diff_str, expected_diff);
+        assert!(!diff.is_binary);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_headerless_unified_string_vs_none(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        let string_input = DiffSingleInput::String(DiffInputString {
+            content: "some content\nline2\n".to_string(),
+        });
+
+        // Test None vs String - Should show deletion
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: false,
+        };
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            None,
+            Some(string_input.clone()),
+            options.clone(),
+        )
+        .await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert!(!diff.is_binary);
+        assert_eq!(diff_str, "@@ -1,2 +0,0 @@\n-some content\n-line2\n");
+
+        // Test String vs None - Should show addition
+        let diff = headerless_unified(&ctx, &repo, Some(string_input), None, options).await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert!(!diff.is_binary);
+        assert_eq!(diff_str, "@@ -0,0 +1,2 @@\n+some content\n+line2\n");
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_headerless_unified_string_binary(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with binary String inputs (contains null bytes)
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"binary\x00content").to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"different\x00binary").to_string(),
+        });
+
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: false,
+        };
+        let diff =
+            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert_eq!(diff_str, "Binary files differ");
+        assert!(diff.is_binary);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_headerless_unified_ignore_whitespace_only(
+        fb: FacebookInit,
+    ) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with only whitespace differences
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "hello world\nfoo bar\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "hello  world\nfoo\tbar\n".to_string(),
+        });
+
+        // With ignore_whitespace: false, should show differences
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: false,
+        };
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            Some(base_input.clone()),
+            Some(other_input.clone()),
+            options,
+        )
+        .await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        // Should show some differences (either + or - lines)
+        assert!(
+            !diff_str.is_empty(),
+            "Diff should show whitespace differences when ignore_whitespace=false"
+        );
+
+        // With ignore_whitespace: true, should show no/minimal differences
+        // (After stripping whitespace, "helloworld\nfoobar\n" should match on both sides)
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: true,
+        };
+        let diff =
+            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        // After stripping whitespace, content should be identical
+        assert!(
+            diff_str.is_empty(),
+            "Diff should show no changes when ignore_whitespace=true for whitespace-only changes"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_headerless_unified_ignore_whitespace_mixed(
+        fb: FacebookInit,
+    ) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with both whitespace and content differences
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nmodified  line2\nline3\n".to_string(),
+        });
+
+        // With ignore_whitespace: true, should still show content change
+        // After stripping whitespace: "line2" vs "modifiedline2" (real difference!)
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: true,
+        };
+        let diff =
+            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        // Should show a diff because there's actual content difference beyond whitespace
+        assert!(
+            !diff_str.is_empty() && diff_str.contains("@@"),
+            "Diff should show content changes even with ignore_whitespace=true"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_headerless_unified_ignore_whitespace_binary(
+        fb: FacebookInit,
+    ) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test that binary files are not affected by whitespace stripping
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"binary\x00 content").to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"binary\x00  content").to_string(),
+        });
+
+        let options = HeaderlessDiffOpts {
+            context: 3,
+            ignore_whitespace: true,
+        };
+        let diff =
+            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+
+        // Should be detected as binary
+        assert!(diff.is_binary);
+        assert_eq!(
+            String::from_utf8_lossy(&diff.raw_diff),
+            "Binary files differ"
         );
 
         Ok(())

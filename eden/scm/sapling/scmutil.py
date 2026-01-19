@@ -626,9 +626,10 @@ def revrange(repo, specs, localalias=None):
             spec = revsetlang.formatspec("%d", spec)
         allspecs.append(spec)
     legacyrevnum = repo.ui.config("devel", "legacy.revnum")
-    with repo.ui.configoverride(
-        {("devel", "legacy.revnum:real"): legacyrevnum}
-    ), repo.names.included_user():
+    with (
+        repo.ui.configoverride({("devel", "legacy.revnum:real"): legacyrevnum}),
+        repo.names.included_user(),
+    ):
         return repo.anyrevs(allspecs, user=True, localalias=localalias)
 
 

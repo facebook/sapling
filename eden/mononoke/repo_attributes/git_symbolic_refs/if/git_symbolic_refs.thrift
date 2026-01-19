@@ -6,6 +6,10 @@
  */
 
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 /// Code version used in memcache keys.  This should be changed whenever
 /// the layout of memcache entries is changed in an incompatible way.

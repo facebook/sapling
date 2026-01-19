@@ -7,6 +7,8 @@ use thrift_compiler::Config;
 use thrift_compiler::GenContext;
 const CRATEMAP: &str = "\
 eden/mononoke/derived_data/if/derived_data_type.thrift crate //eden/mononoke/derived_data/if:derived_data_type_if-rust
+thrift/annotation/scope.thrift thrift->scope //thrift/annotation:scope-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

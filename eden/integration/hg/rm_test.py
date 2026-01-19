@@ -32,9 +32,7 @@ class RmTest(EdenHgTestCase):
 
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("rm", "apple")
-        expected_msg = (
-            "not removing apple: " "file is modified (use -f to force removal)"
-        )
+        expected_msg = "not removing apple: file is modified (use -f to force removal)"
         self.assertIn(expected_msg, str(context.exception))
         self.assert_status({"apple": "M"})
 
@@ -48,9 +46,7 @@ class RmTest(EdenHgTestCase):
 
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("rm", "apple")
-        expected_msg = (
-            "not removing apple: " "file is modified (use -f to force removal)"
-        )
+        expected_msg = "not removing apple: file is modified (use -f to force removal)"
         self.assertIn(expected_msg, str(context.exception))
         self.assert_status({"apple": "M"})
 
@@ -84,9 +80,7 @@ class RmTest(EdenHgTestCase):
 
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg("rm", "dir")
-        expected_msg = (
-            "not removing dir/2: " "file is modified (use -f to force removal)"
-        )
+        expected_msg = "not removing dir/2: file is modified (use -f to force removal)"
         self.assertIn(expected_msg, str(context.exception))
         self.assert_status({"dir/1": "R", "dir/2": "M", "dir/3": "R"})
         self.assertFalse(os.path.exists(self.get_path("dir/1")))

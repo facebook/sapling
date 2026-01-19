@@ -49,7 +49,7 @@ class HisteditTest(EdenHgTestCase):
             histedit.run(self)
         head = self.repo.log(revset=".")[0]
         expected_msg = (
-            "Changes committed as %s. " "You may amend the changeset now." % head[:12]
+            "Changes committed as %s. You may amend the changeset now." % head[:12]
         )
         self.assertIn(expected_msg, str(context.exception))
 

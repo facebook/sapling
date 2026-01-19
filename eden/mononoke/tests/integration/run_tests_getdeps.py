@@ -231,7 +231,9 @@ def get_test_groups():
     }
 
     not_existing = manual_groups - all_tests
-    assert not not_existing, f"The test groups contain not existing tests: {sorted(not_existing)} in {search_from}"
+    assert not not_existing, (
+        f"The test groups contain not existing tests: {sorted(not_existing)} in {search_from}"
+    )
 
     rest_groups = all_tests - manual_groups
     # The test-scs* tests use the scs_server which is not buildable in OSS yet

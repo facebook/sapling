@@ -127,8 +127,7 @@ def update_ownership(metadata_path: Path, uid: int, gid: int) -> None:
 
         if header.magic != MdvHeader.MAGIC:
             raise Exception(
-                "unsupported inode metadata table file format: "
-                f"magic={header.magic!r}"
+                f"unsupported inode metadata table file format: magic={header.magic!r}"
             )
         if header.version != MdvHeader.VERSION_1:
             raise Exception(

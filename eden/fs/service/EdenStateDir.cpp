@@ -30,7 +30,7 @@ EdenStateDir::EdenStateDir(AbsolutePathPiece path)
 EdenStateDir::~EdenStateDir() = default;
 
 std::pair<
-    bool /* is_lock_aquired */,
+    bool /* is_lock_acquired */,
     std::optional<std::string> /* old_daemon_pid */>
 EdenStateDir::acquireLock() {
   auto lockFile =

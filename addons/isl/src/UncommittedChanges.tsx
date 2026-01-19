@@ -370,7 +370,7 @@ function LinearFileList(props: {
   const {files, generatedStatuses, ...rest} = props;
 
   const groupedByGenerated = group(files, file => generatedStatuses[file.path]);
-  const [initiallyExpanded, setInitallyExpanded] = useAtom(generatedFilesInitiallyExpanded);
+  const [initiallyExpanded, setInitiallyExpanded] = useAtom(generatedFilesInitiallyExpanded);
 
   function GeneratedFilesCollapsableSection(status: GeneratedStatus) {
     const group = groupedByGenerated[status] ?? [];
@@ -390,7 +390,7 @@ function LinearFileList(props: {
           </T>
         }
         startExpanded={status === GeneratedStatus.PartiallyGenerated || initiallyExpanded}
-        onToggle={expanded => setInitallyExpanded(expanded)}>
+        onToggle={expanded => setInitiallyExpanded(expanded)}>
         {group.map(file => (
           <File key={file.path} {...rest} file={file} generatedStatus={status} />
         ))}

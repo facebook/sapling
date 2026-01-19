@@ -7,6 +7,8 @@
 
 use anyhow::Result;
 use context::CoreContext;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
@@ -110,6 +112,11 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlGitBundleMetadataStorageBuild
         remote: &RemoteMetadataDatabaseConfig,
     ) -> Option<&RemoteDatabaseConfig> {
         remote.git_bundle_metadata.as_ref()
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
     }
 }
 

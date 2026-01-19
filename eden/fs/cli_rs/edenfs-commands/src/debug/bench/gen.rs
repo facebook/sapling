@@ -75,11 +75,6 @@ impl TestDir {
         self.path.join(types::COMBINED_DATA_FILE_NAME)
     }
 
-    /// Returns the path to the RocksDB file.
-    pub fn rocksdb_path(&self) -> PathBuf {
-        self.path.join(types::ROCKSDB_FILE_NAME)
-    }
-
     /// Returns the path to the LMDB file.
     pub fn lmdb_path(&self) -> PathBuf {
         self.path.join(types::LMDB_FILE_NAME)
@@ -108,7 +103,7 @@ pub struct RandomData {
 
 impl RandomData {
     pub fn new(number_of_files: usize, chunk_size: usize) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut chunks = Vec::with_capacity(number_of_files);
         let mut hashes = Vec::with_capacity(number_of_files);
         for _ in 0..number_of_files {

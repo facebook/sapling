@@ -13,7 +13,7 @@ path = "benchmarks.rs"
 
 [dependencies]
 criterion = { version = "0.5.1", features = ["async_tokio", "csv_output"] }
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2.139"

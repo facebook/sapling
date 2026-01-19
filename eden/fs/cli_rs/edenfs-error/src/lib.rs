@@ -15,9 +15,6 @@ use thrift_streaming_clients::errors::StreamJournalChangedError;
 use thrift_streaming_clients::errors::StreamStartStatusError;
 use thrift_thriftclients::thrift::errors::AddBindMountError;
 use thrift_thriftclients::thrift::errors::ChangesSinceV2Error;
-use thrift_thriftclients::thrift::errors::ClearAndCompactLocalStoreError;
-use thrift_thriftclients::thrift::errors::DebugClearLocalStoreCachesError;
-use thrift_thriftclients::thrift::errors::DebugCompactLocalStorageError;
 use thrift_thriftclients::thrift::errors::EnsureMaterializedError;
 use thrift_thriftclients::thrift::errors::FlushStatsNowError;
 use thrift_thriftclients::thrift::errors::GetAccessCountsError;
@@ -232,9 +229,6 @@ macro_rules! impl_has_error_handling_strategy {
 
 impl_has_error_handling_strategy!(AddBindMountError);
 impl_has_error_handling_strategy!(ChangesSinceV2Error);
-impl_has_error_handling_strategy!(ClearAndCompactLocalStoreError);
-impl_has_error_handling_strategy!(DebugClearLocalStoreCachesError);
-impl_has_error_handling_strategy!(DebugCompactLocalStorageError);
 impl_has_error_handling_strategy!(EnsureMaterializedError);
 impl_has_error_handling_strategy!(FlushStatsNowError);
 impl_has_error_handling_strategy!(GetAccessCountsError);

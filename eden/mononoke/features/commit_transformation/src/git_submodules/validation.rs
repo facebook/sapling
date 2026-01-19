@@ -884,7 +884,7 @@ async fn validate_expansion_directory_against_submodule_manifest_entry<'a, R: Re
             ),
         )?;
 
-    // Get the git hash from the metata file , which represents
+    // Get the git hash from the metadata file , which represents
     // a pointer to the recursive submodule's commit being expanded.
     let exp_metadata_git_hash = git_hash_from_submodule_metadata_file(
         ctx,

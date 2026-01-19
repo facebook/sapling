@@ -77,7 +77,7 @@ impl SqlBookmarksSubscription {
             .flatten()
             .unwrap_or(0);
 
-        let tok: i32 = rand::thread_rng().r#gen();
+        let tok: i32 = rand::rng().random();
         let (txn, bookmarks) = SelectAllUnordered::query_with_transaction(
             txn,
             &sql_bookmarks.repo_id,

@@ -27,8 +27,7 @@ from eden.fs.service.eden.thrift_clients import EdenService
 from eden.fs.service.eden.thrift_types import MountState
 from eden.thrift import client, legacy
 from eden.thrift.legacy import EdenClient
-from facebook.eden.ttypes import MountState as LegacyMountState
-from fb303_core.ttypes import fb303_status
+from fb303_core.thrift_types import fb303_status
 
 from .find_executables import FindExe
 
@@ -718,7 +717,7 @@ class EdenFS:
 
     def get_mount_state(
         self, mount: pathlib.Path, client: Optional[EdenClient] = None
-    ) -> Optional[LegacyMountState]:
+    ) -> Optional[MountState]:
         """
         Query edenfs over thrift for the state of the specified mount.
 
@@ -732,7 +731,7 @@ class EdenFS:
             for entry in client.listMounts():
                 entry_path = pathlib.Path(os.fsdecode(entry.mountPoint))
                 if entry_path == mount:
-                    return entry.state
+                    return MountState(entry.state)
             return None
 
     async def get_mount_state_async(

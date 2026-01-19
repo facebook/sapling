@@ -27,8 +27,8 @@ use futures_stats::TimedTryFutureExt;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use rand::Rng;
-use rand::distributions::Alphanumeric;
-use rand::thread_rng;
+use rand::distr::Alphanumeric;
+use rand::rng;
 use tokio::sync::Semaphore;
 
 use crate::client::Client;
@@ -210,7 +210,7 @@ impl Client for ThriftClient {
 }
 
 fn generate_id() -> String {
-    thread_rng()
+    rng()
         .sample_iter(Alphanumeric)
         .take(8)
         .map(char::from)

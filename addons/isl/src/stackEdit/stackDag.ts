@@ -77,7 +77,7 @@ function calculateDagFromStackImpl(stack: CommitStackState): Dag {
 }
 
 /**
- * Provies a `Dag` that just contains the `stack`.
+ * Provides a `Dag` that just contains the `stack`.
  * If `dotRev` is set, add a "YouAreHere" virtual commit as a child of the rev.
  */
 export const calculateDagFromStack = cached(calculateDagFromStackImpl);

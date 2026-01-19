@@ -15,7 +15,7 @@ use criterion::Criterion;
 use criterion::Throughput;
 use rand::Rng;
 use rand::RngCore;
-use rand::thread_rng;
+use rand::rng;
 use tokio::runtime::Handle;
 
 use crate::KB;
@@ -33,13 +33,13 @@ pub fn benchmark(
         group.throughput(Throughput::Bytes(size as u64));
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
             let mut block = vec![0; size];
-            thread_rng().fill(&mut block as &mut [u8]);
+            rng().fill(&mut block as &mut [u8]);
 
             let block = BlobstoreBytes::from_bytes(block);
             let test = |ctx, blobstore: Arc<dyn Blobstore>| {
                 let block = block.clone();
                 async move {
-                    let key = format!("benchmark.{:x}", thread_rng().next_u64());
+                    let key = format!("benchmark.{:x}", rng().next_u64());
                     blobstore.put(&ctx, key, block).await.expect("Put failed");
                 }
             };

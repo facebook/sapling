@@ -43,7 +43,6 @@ from typing import (
 
 import thrift.transport
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
-
 from facebook.eden.ttypes import TreeInodeDebugInfo
 from fb303_core.ttypes import fb303_status
 from thrift import Thrift
@@ -1422,6 +1421,26 @@ def maybe_edensparse_migration(
                         f"snapshot_file not updated: migration skipped for {checkout.path.name}"
                     )
                     continue
+
+                # The following steps require the checkout to be mounted so we can access the
+                # files under .hg folder
+                # We wait for some time if the checkout is not mounted yet and claim a failure
+                # if we hit the timeout waiting
+                try:
+                    mnt_timeout = int(
+                        os.environ.get("EDENSPARSE_MIGRATION_MOUNT_TIMEOUT", 5)
+                    )
+                except ValueError:
+                    mnt_timeout = 5
+
+                log(
+                    f"waiting for {mnt_timeout} seconds before {checkout.path.name} is mounted..."
+                )
+
+                if not checkout.wait_until_mounted(mnt_timeout):
+                    raise TimeoutError(
+                        f"failed to mount {checkout.path.name} after {mnt_timeout} seconds"
+                    )
 
                 if any(
                     [

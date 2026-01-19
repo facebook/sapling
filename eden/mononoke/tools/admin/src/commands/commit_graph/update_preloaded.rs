@@ -12,7 +12,6 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use blobstore::Blobstore;
-use blobstore::KeyedBlobstore;
 use clap::Args;
 use cloned::cloned;
 use commit_graph_types::edges::ChangesetEdges;
@@ -29,7 +28,6 @@ use mononoke_types::BlobstoreBytes;
 use mononoke_types::ChangesetId;
 use mutable_blobstore::MutableRepoBlobstoreRef;
 use preloaded_commit_graph_storage::ExtendablePreloadedEdges;
-use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityArc;
 use sql_commit_graph_storage::SqlCommitGraphStorage;
 use sql_commit_graph_storage::SqlCommitGraphStorageBuilder;
@@ -120,25 +118,16 @@ pub(super) async fn update_preloaded(
         );
 
     let preloaded_edges = match args.rebuild {
-        false => {
-            #[cfg(fbcode_build)]
-            let bytes =
-                if justknobs::eval("scm/mononoke:commit_graph_use_mutable_storage", None, None)? {
-                    repo.mutable_repo_blobstore()
-                        .get(ctx, &args.blobstore_key)
-                        .await?
-                } else {
-                    repo.repo_blobstore().get(ctx, &args.blobstore_key).await?
-                };
-            #[cfg(not(fbcode_build))]
-            let bytes = repo.repo_blobstore().get(ctx, &args.blobstore_key).await?;
-            match bytes {
-                Some(bytes) => preloaded_commit_graph_storage::deserialize_preloaded_edges(
-                    bytes.into_raw_bytes(),
-                )?,
-                None => Default::default(),
+        false => match repo
+            .mutable_repo_blobstore()
+            .get(ctx, &args.blobstore_key)
+            .await?
+        {
+            Some(bytes) => {
+                preloaded_commit_graph_storage::deserialize_preloaded_edges(bytes.into_raw_bytes())?
             }
-        }
+            None => Default::default(),
+        },
         true => Default::default(),
     };
 
@@ -213,14 +202,6 @@ pub(super) async fn update_preloaded(
     );
 
     println!("Deserialized preloaded edges into {} bytes", bytes.len());
-
-    repo.repo_blobstore()
-        .put(
-            ctx,
-            args.blobstore_key.clone(),
-            BlobstoreBytes::from_bytes(bytes.clone()),
-        )
-        .await?;
 
     repo.mutable_repo_blobstore()
         .put(ctx, args.blobstore_key, BlobstoreBytes::from_bytes(bytes))

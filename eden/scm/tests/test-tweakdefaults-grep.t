@@ -155,6 +155,14 @@ Test biggrep command debug info
   $ hg grep --config grep.biggrepclient=$TESTDIR/fake-biggrep-client.py \
   > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
   > foobar -n --debug
-  big grep command: ['*/fake-biggrep-client.py', '--stripdir', '-r', '--expression', 'foobar', 'biggrep.master', 'fake', 're2', '-f', '(grepdir/subdir1)'] (glob)
+  biggrep command: ['*/fake-biggrep-client.py', 'biggrep.master', 'fake', 're2', '--stripdir', '-r', '--expression', 'foobar', '-f', '(grepdir/subdir1)'] (glob)
   subfile1:1:foobar_subdir_bg
   $ cd ..
+
+Test biggrep command error handling
+  $ hg grep --config grep.biggrepclient=$TESTDIR/broken-biggrep-client.py \
+  > --config grep.usebiggrep=True --config grep.biggrepcorpus=fake \
+  > foobar
+  abort: biggrep_client failed with exit code 2: broken biggrepclient
+  (pass `--config grep.usebiggrep=False` to bypass biggrep)
+  [255]

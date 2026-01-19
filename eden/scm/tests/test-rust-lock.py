@@ -9,7 +9,6 @@ import unittest
 
 import silenttestrunner
 import testutil
-
 from sapling import error, lock, ui, util, vfs
 
 

@@ -58,7 +58,7 @@ class AutomergeSummary:
     def summary(self) -> Optional[str]:
         def span_str(span):
             s, e = span
-            return str(e) if s + 1 == e else f"{s+1}-{e}"
+            return str(e) if s + 1 == e else f"{s + 1}-{e}"
 
         if not self.spans:
             return None

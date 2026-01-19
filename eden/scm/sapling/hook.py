@@ -15,7 +15,6 @@ import os
 import sys
 
 import bindings
-
 from sapling import hgdemandimport as demandimport
 
 from . import error, extensions, perftrace, util

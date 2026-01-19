@@ -88,8 +88,7 @@ class realconnectionpool:
 
         if opts.get("ssh") or opts.get("remotecmd"):
             self._repo.ui.debug(
-                "not using connection pool due to ssh or "
-                "remotecmd option being set\n"
+                "not using connection pool due to ssh or remotecmd option being set\n"
             )
             peer = hg.peer(self._repo.ui, opts, path)
             self.recordreason(reason, path, peer)

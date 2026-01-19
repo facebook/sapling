@@ -7,6 +7,10 @@
 
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 # Memcache constants. Should be change when we want to invalidate memcache
 # entries

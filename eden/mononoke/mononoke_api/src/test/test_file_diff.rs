@@ -69,7 +69,7 @@ async fn file_diff(fb: FacebookInit) -> Result<(), Error> {
         .file()
         .await?
         .expect("should be a file");
-    let diff = headerless_unified_diff(&b_file, &c_file, 3).await?;
+    let diff = headerless_unified_diff(&b_file, &c_file, 3, false).await?;
     assert_eq!(
         std::str::from_utf8(&diff.raw_diff)?,
         concat!(
@@ -95,7 +95,7 @@ async fn file_diff(fb: FacebookInit) -> Result<(), Error> {
         .file()
         .await?
         .expect("should be a file");
-    let diff = headerless_unified_diff(&b_bin, &c_bin, 3).await?;
+    let diff = headerless_unified_diff(&b_bin, &c_bin, 3, false).await?;
     assert_eq!(std::str::from_utf8(&diff.raw_diff)?, "Binary files differ");
     assert!(diff.is_binary);
     Ok(())

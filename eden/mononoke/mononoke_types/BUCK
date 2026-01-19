@@ -12,7 +12,7 @@ rust_library(
         "fbsource//third-party/rust:crossbeam",
         "fbsource//third-party/rust:paste",
         "fbsource//third-party/rust:pretty_assertions",
-        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/fbinit:fbinit",

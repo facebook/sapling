@@ -18,7 +18,6 @@ from sapling.i18n import _
 from sapling.result import Err, Ok, Result
 
 from . import github_gh_cli as gh_cli
-
 from .consts import query
 from .github_gh_cli import JsonDict
 from .pullrequest import PullRequestId

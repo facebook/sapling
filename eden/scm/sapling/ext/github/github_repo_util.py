@@ -18,7 +18,6 @@ from sapling.node import bin
 from sapling.result import Err, Ok, Result
 
 from . import github_gh_cli as gh_cli
-
 from .pullrequeststore import PullRequestStore
 
 _PULL_REQUEST_ID_RE: Pattern[str] = re.compile(r"^PR(\d+)$", re.IGNORECASE)

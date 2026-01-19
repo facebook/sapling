@@ -50,7 +50,7 @@ export function computeLinesForFileStackEditor(
   rangeInfos: Array<RangeInfo>,
   readOnly: boolean,
   textEdit: boolean,
-  aTextIsOverriden?: boolean,
+  aTextIsOverridden?: boolean,
 ): ComputedFileStackLines {
   const leftGutter: JSX.Element[] = [];
   const leftButtons: JSX.Element[] = [];
@@ -59,9 +59,9 @@ export function computeLinesForFileStackEditor(
   const rightButtons: JSX.Element[] = [];
   const lineKind: Array<string> = [];
 
-  // Can move left? If `leftIsOverriden` is set (because copyFrom),
+  // Can move left? If `leftIsOverridden` is set (because copyFrom),
   // disabling moving left by setting leftMost to true.
-  const leftMost = rev <= 1 || aTextIsOverriden === true;
+  const leftMost = rev <= 1 || aTextIsOverridden === true;
   const rightMost = rev + 1 >= stack.revLength;
 
   // Utility to get the "different" block containing the given b-side line number.
@@ -145,14 +145,14 @@ export function computeLinesForFileStackEditor(
       let currentBIdx = 0;
       let mutStack = stack;
 
-      // When `aTextIsOverriden` is set (usually because "copyFrom"), the `aLines`
+      // When `aTextIsOverridden` is set (usually because "copyFrom"), the `aLines`
       // does not match `stack.getRev(aRev)`. The lines in `aIdxToMove` might not
       // exist in `stack`. To move `aIdxToMove` properly, patch `stack` to use the
       // `aLines` content temporarily.
       //
       // Practically, this is needed for moving deleted lines right for renamed
       // files. "moving left" is disabled for renamed files so it is ignored now.
-      const needPatchARev = aTextIsOverriden && revOffset > 0 && aIdxToMove.size > 0;
+      const needPatchARev = aTextIsOverridden && revOffset > 0 && aIdxToMove.size > 0;
       if (needPatchARev) {
         mutStack = mutStack.editText(aRev, aLines.join(''), false);
       }

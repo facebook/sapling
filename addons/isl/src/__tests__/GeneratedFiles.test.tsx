@@ -7,7 +7,7 @@
 
 import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import App from '../App';
-import {genereatedFileCache} from '../GeneratedFile';
+import {generatedFileCache} from '../GeneratedFile';
 import {__TEST__} from '../UncommittedChanges';
 import {readAtom, writeAtom} from '../jotaiUtils';
 import platform from '../platform';
@@ -67,7 +67,7 @@ describe('Generated Files', () => {
   beforeEach(() => {
     resetTestMessages();
     render(<App />);
-    genereatedFileCache.clear();
+    generatedFileCache.clear();
     act(() => {
       simulateRepoConnected();
       closeCommitInfoSidebar();

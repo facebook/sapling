@@ -17,7 +17,6 @@ import hashlib
 from typing import List, Tuple
 
 import bindings
-
 from sapling import tracing
 
 from . import (
@@ -582,9 +581,9 @@ def findblobs(repo, nodes):
                 if not is_git:
                     p1, p2 = fctx.filelog().parents(newnode)
                     parents = (p1, p2)
-                    assert (
-                        not fctx.rawflags()
-                    ), f"findblobs does not support LFS content {path}"
+                    assert not fctx.rawflags(), (
+                        f"findblobs does not support LFS content {path}"
+                    )
                 yield "blob", path, newnode, parents, fctx.rawdata()
 
         # changed trees
@@ -2179,10 +2178,7 @@ def _maybeapplyclonebundle(pullop):
     entries = parseclonebundlesmanifest(repo, res)
     if not entries:
         repo.ui.note(
-            _(
-                "no clone bundles available on remote; "
-                "falling back to regular clone\n"
-            )
+            _("no clone bundles available on remote; falling back to regular clone\n")
         )
         return
 

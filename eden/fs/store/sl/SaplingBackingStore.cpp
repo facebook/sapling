@@ -41,9 +41,7 @@
 #include "eden/fs/model/TreeAuxData.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/BackingStoreLogger.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
-#include "eden/fs/store/StoreResult.h"
 #include "eden/fs/store/sl/SaplingImportRequest.h"
 #include "eden/fs/store/sl/SaplingObjectId.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -113,7 +111,6 @@ SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
     AbsolutePathPiece mount,
     CaseSensitivity caseSensitive,
-    std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
     UnboundedQueueExecutor* serverThreadPool,
     std::shared_ptr<ReloadableConfig> config,
@@ -121,15 +118,13 @@ SaplingBackingStore::SaplingBackingStore(
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::unique_ptr<BackingStoreLogger> logger,
     FaultInjector* FOLLY_NONNULL faultInjector)
-    : localStore_(std::move(localStore)),
-      stats_(stats.copy()),
+    : stats_(stats.copy()),
       config_(config),
       serverThreadPool_(serverThreadPool),
       queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
       faultInjector_{*faultInjector},
-      localStoreCachingPolicy_{constructLocalStoreCachingPolicy()},
       runtimeOptions_(computeRuntimeOptions(std::move(runtimeOptions))),
       activityBuffer_{
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
@@ -187,7 +182,6 @@ SaplingBackingStore::SaplingBackingStore(
     AbsolutePathPiece repository,
     AbsolutePathPiece mount,
     CaseSensitivity caseSensitive,
-    std::shared_ptr<LocalStore> localStore,
     EdenStatsPtr stats,
     folly::InlineExecutor* inlineExecutor,
     std::shared_ptr<ReloadableConfig> config,
@@ -195,15 +189,13 @@ SaplingBackingStore::SaplingBackingStore(
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::unique_ptr<BackingStoreLogger> logger,
     FaultInjector* FOLLY_NONNULL faultInjector)
-    : localStore_(std::move(localStore)),
-      stats_(std::move(stats)),
+    : stats_(std::move(stats)),
       config_(config),
       serverThreadPool_(inlineExecutor),
       queue_(std::move(config)),
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
       faultInjector_{*faultInjector},
-      localStoreCachingPolicy_{constructLocalStoreCachingPolicy()},
       runtimeOptions_(std::move(runtimeOptions)),
       activityBuffer_{
           config_->getEdenConfig()->hgActivityBufferSize.getValue()},
@@ -271,50 +263,6 @@ void SaplingBackingStore::initializeOBCCounters() {
       fmt::format("eden.store.sapling.fetch_tree_{}_us", repoName_),
       {hostname});
   isOBCEnabled_ = true;
-}
-
-BackingStore::LocalStoreCachingPolicy
-SaplingBackingStore::constructLocalStoreCachingPolicy() {
-  using PolicyType =
-      std::underlying_type_t<BackingStore::LocalStoreCachingPolicy>;
-  PolicyType result =
-      static_cast<PolicyType>(BackingStore::LocalStoreCachingPolicy::NoCaching);
-
-  if (config_->getEdenConfig()->hgForceDisableLocalStoreCaching.getValue()) {
-    // TODO: Instead of returning a NoCaching policy, we should just avoid
-    // creating the LocalStore object if this config is set
-    return static_cast<BackingStore::LocalStoreCachingPolicy>(result);
-  }
-
-  bool shouldCacheTrees =
-      config_->getEdenConfig()->hgEnableTreeLocalStoreCaching.getValue();
-  bool shouldCacheBlobs =
-      config_->getEdenConfig()->hgEnableBlobLocalStoreCaching.getValue();
-  bool shouldCacheBlobAuxData =
-      config_->getEdenConfig()->hgEnableBlobMetaLocalStoreCaching.getValue();
-  bool shouldCacheTreeAuxData =
-      config_->getEdenConfig()->hgEnableTreeMetaLocalStoreCaching.getValue();
-
-  if (shouldCacheTrees) {
-    result |=
-        static_cast<PolicyType>(BackingStore::LocalStoreCachingPolicy::Trees);
-  }
-
-  if (shouldCacheBlobs) {
-    result |=
-        static_cast<PolicyType>(BackingStore::LocalStoreCachingPolicy::Blobs);
-  }
-
-  if (shouldCacheBlobAuxData) {
-    result |= static_cast<PolicyType>(
-        BackingStore::LocalStoreCachingPolicy::BlobAuxData);
-  }
-
-  if (shouldCacheTreeAuxData) {
-    result |= static_cast<PolicyType>(
-        BackingStore::LocalStoreCachingPolicy::TreeAuxData);
-  }
-  return static_cast<BackingStore::LocalStoreCachingPolicy>(result);
 }
 
 void SaplingBackingStore::processHgEvent(const HgImportTraceEvent& event) {
@@ -2206,37 +2154,20 @@ ImmediateFuture<folly::Unit> SaplingBackingStore::importManifestForRoot(
    */
   folly::stop_watch<std::chrono::milliseconds> watch;
   auto commitId = hashFromRootId(rootId);
-  return localStore_
-      ->getImmediateFuture(KeySpace::HgCommitToTreeFamily, commitId)
-      .thenValue(
-          [this, commitId, manifestId, context = context.copy(), watch](
-              StoreResult result) -> folly::Future<folly::Unit> {
-            if (result.isValid()) {
-              // We have already imported this commit, nothing to do.
-              return folly::unit;
-            }
-
-            return importTreeManifestImpl(
-                       manifestId,
-                       context,
-                       ObjectFetchContext::ObjectType::ManifestForRoot)
-                .thenValue([this, commitId, manifestId, watch](
-                               TreePtr rootTree) {
-                  XLOGF(
-                      DBG3,
-                      "imported mercurial commit {} with manifest {} as tree {}",
-                      commitId,
-                      manifestId,
-                      rootTree->getObjectId());
-                  stats_->addDuration(
-                      &SaplingBackingStoreStats::importManifestForRoot,
-                      watch.elapsed());
-                  localStore_->put(
-                      KeySpace::HgCommitToTreeFamily,
-                      commitId,
-                      rootTree->getObjectId().getBytes());
-                });
-          });
+  return importTreeManifestImpl(
+             manifestId,
+             context,
+             ObjectFetchContext::ObjectType::ManifestForRoot)
+      .thenValue([this, commitId, manifestId, watch](TreePtr rootTree) {
+        XLOGF(
+            DBG3,
+            "imported mercurial commit {} with manifest {} as tree {}",
+            commitId,
+            manifestId,
+            rootTree->getObjectId());
+        stats_->addDuration(
+            &SaplingBackingStoreStats::importManifestForRoot, watch.elapsed());
+      });
 }
 
 void SaplingBackingStore::periodicManagementTask() {

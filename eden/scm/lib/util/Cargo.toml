@@ -20,7 +20,7 @@ fn-error-context = "0.2"
 fs-err = { version = "3", features = ["tokio"] }
 fs2 = "0.4"
 once_cell = "1.21"
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }
 sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-lazystr = { version = "0.1.0", path = "../lazystr" }
 sapling-metrics = { version = "0.1.0", path = "../metrics" }

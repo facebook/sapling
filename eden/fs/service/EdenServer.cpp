@@ -83,11 +83,7 @@
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/BlobCache.h"
-#include "eden/fs/store/LocalStore.h"
-#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/store/RocksDbLocalStore.h"
-#include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/takeover/TakeoverData.h"
@@ -140,19 +136,7 @@ DEFINE_bool(
     false,
     "Enable the fault injection framework.");
 
-#define DEFAULT_STORAGE_ENGINE "rocksdb"
-#define SUPPORTED_STORAGE_ENGINES "rocksdb|sqlite|memory"
-
-DEFINE_string(
-    local_storage_engine_unsafe,
-    "",
-    "Select storage engine. " DEFAULT_STORAGE_ENGINE
-    " is the default. "
-    "possible choices are (" SUPPORTED_STORAGE_ENGINES
-    "). "
-    "memory is currently very dangerous as you will "
-    "lose state across restarts and graceful restarts! "
-    "This flag will only be used on the first invocation");
+DEFINE_string(local_storage_engine_unsafe, "", "DEPRECATED - has no effect.");
 
 DEFINE_int64(
     start_delay_minutes,
@@ -215,8 +199,6 @@ std::shared_ptr<Notifier> getPlatformNotifier(
 #endif // _WIN32
 }
 
-constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
-constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
 constexpr StringPiece kSlStorePrefix{"store.sapling"};
 #ifndef _WIN32
 constexpr StringPiece kFuseRequestPrefix{"fuse"};
@@ -1088,9 +1070,6 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.overlayMaintenanceInterval.getValue()));
 
-  localStoreTask_.updateInterval(
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          config.localStoreManagementInterval.getValue()));
   /**
    * For now, periodic GC only makes sense on Windows and macOS, with unknown
    * behavior on Linux.
@@ -1406,15 +1385,6 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
 #endif
   }
 
-  // TODO: The "state config" only has one configuration knob now. When
-  // another is required, introduce an EdenStateConfig class to manage
-  // defaults and save on update.
-  auto config = parseConfig();
-  bool shouldSaveConfig = createStorageEngine(*config);
-  if (shouldSaveConfig) {
-    saveConfig(*config);
-  }
-
 #ifndef _WIN32
   // Start listening for graceful takeover requests
   takeoverServer_.reset(new TakeoverServer(
@@ -1434,15 +1404,6 @@ Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
        takeoverData = std::move(takeoverData),
 #endif
        thriftRunningFuture = std::move(thriftRunningFuture)]() mutable {
-        try {
-          // it's important that this be the first thing that happens in this
-          // future. The local store needs to be setup before mounts can be
-          // accessed but also errors here may cause eden to bail out early. We
-          // don't want eden to bail out with partially setup mounts.
-          openStorageEngine(*logger);
-        } catch (const std::exception& ex) {
-          throw LocalStoreOpenError(ex.what());
-        }
         std::vector<ImmediateFuture<Unit>> mountFutures;
         if (doingTakeover) {
 #ifndef _WIN32
@@ -1484,69 +1445,6 @@ void EdenServer::saveConfig(const cpptoml::table& root) {
   stream << root;
 
   writeFileAtomic(configPath, folly::StringPiece(stream.str())).value();
-}
-
-bool EdenServer::createStorageEngine(cpptoml::table& config) {
-  std::string defaultStorageEngine = FLAGS_local_storage_engine_unsafe.empty()
-      ? DEFAULT_STORAGE_ENGINE
-      : FLAGS_local_storage_engine_unsafe;
-  auto [storageEngine, configUpdated] =
-      setDefault(config, {"local-store", "engine"}, defaultStorageEngine);
-
-  if (!FLAGS_local_storage_engine_unsafe.empty() &&
-      FLAGS_local_storage_engine_unsafe != storageEngine) {
-    throw std::runtime_error(
-        folly::to<string>(
-            "--local_storage_engine_unsafe flag ",
-            FLAGS_local_storage_engine_unsafe,
-            "does not match last recorded flag ",
-            storageEngine));
-  }
-
-  if (storageEngine == "memory") {
-    XLOG(DBG2, "Creating new memory store.");
-    localStore_ = make_shared<MemoryLocalStore>(getStats().copy());
-  } else if (storageEngine == "sqlite") {
-    const auto path = edenDir_.getPath() + RelativePathPiece{kSqlitePath};
-    const auto parentDir = path.dirname();
-    ensureDirectoryExists(parentDir);
-    XLOGF(DBG2, "Creating local SQLite store {}...", path);
-    folly::stop_watch<std::chrono::milliseconds> watch;
-    localStore_ = make_shared<SqliteLocalStore>(path, getStats().copy());
-    XLOGF(
-        DBG2,
-        "Opened SQLite store in {:.1f} seconds.",
-        watch.elapsed().count() / 1000.0);
-  } else if (storageEngine == "rocksdb") {
-    XLOG(DBG2, "Creating local RocksDB store...");
-    folly::stop_watch<std::chrono::milliseconds> watch;
-    const auto rocksPath = edenDir_.getPath() + RelativePathPiece{kRocksDBPath};
-    ensureDirectoryExists(rocksPath);
-    localStore_ = make_shared<RocksDbLocalStore>(
-        rocksPath,
-        getStats().copy(),
-        serverState_->getStructuredLogger(),
-        &serverState_->getFaultInjector(),
-        config_);
-    XLOGF(
-        DBG2,
-        "Created RocksDB store in {} seconds.",
-        watch.elapsed().count() / 1000.0);
-  } else {
-    throw std::runtime_error(
-        folly::to<string>("invalid storage engine: ", storageEngine));
-  }
-
-  return configUpdated;
-}
-
-void EdenServer::openStorageEngine(StartupLogger& logger) {
-  logger.log("Opening local store...");
-  folly::stop_watch<std::chrono::milliseconds> watch;
-  serverState_->getFaultInjector().check("open_local_store");
-  localStore_->open();
-  logger.log(
-      "Opened local store in ", watch.elapsed().count() / 1000.0, " seconds.");
 }
 
 std::vector<ImmediateFuture<Unit>> EdenServer::prepareMountsTakeover(
@@ -1669,19 +1567,8 @@ void EdenServer::incrementStartupMountFailures() {
 }
 
 void EdenServer::closeStorage() {
-  // Destroy the local store and backing stores.
-  // We shouldn't access the local store any more after giving up our
-  // lock, and we need to close it to release its lock before the new
-  // edenfs process tries to open it.
+  // Destroy the backing stores.
   backingStores_.wlock()->clear();
-
-  // Explicitly close the LocalStore
-  // Since we have a shared_ptr to it, other parts of the code can
-  // theoretically still maintain a reference to it after the EdenServer is
-  // destroyed. We want to ensure that it is really closed and no subsequent
-  // I/O can happen to it after the EdenServer is shut down and the main Eden
-  // lock is released.
-  localStore_->close();
 }
 
 bool EdenServer::performCleanup() {
@@ -1997,7 +1884,6 @@ ImmediateFuture<std::shared_ptr<EdenMount>> EdenServer::mount(
 
   auto objectStore = ObjectStore::create(
       backingStore,
-      localStore_,
       treeCache_,
       getStats().copy(),
       serverState_->getProcessInfoCache(),
@@ -2164,7 +2050,7 @@ void EdenServer::mountFinished(
   // crash instead of clean exit. We can send a SIGKILL signal or throw an
   // exception here, but both of them has same results.
   stopAllGarbageCollections(
-      3 /*maxRetries*/, std::chrono::seconds(1) /*retryDelay*/);
+      /*maxRetries=*/3, /*retryInterval=*/std::chrono::seconds(1));
 
   // Save the unmount and takeover Promises
   folly::SharedPromise<Unit> unmountPromise;
@@ -2422,7 +2308,7 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
   const auto store = backingStoreFactory_->createBackingStore(
       type,
       BackingStoreFactory::CreateParams{
-          name, serverState_.get(), localStore_, getStats(), config});
+          name, serverState_.get(), getStats(), config});
   lockedStores->emplace(key, store);
   return store;
 }
@@ -2668,7 +2554,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
     // We should confirm that no garbage collection is running during graceful
     // restart.
     if (!stopAllGarbageCollections(
-            3 /*maxRetries*/, std::chrono::seconds(1)) /*retryInterval*/) {
+            /*maxRetries=*/3, /*retryInterval=*/std::chrono::seconds(1))) {
       // We are still waiting for the GC to finish. This is unexpected and
       // should not happen. We should not proceed with the graceful restart.
       return makeFuture<TakeoverData>(std::runtime_error(
@@ -2703,23 +2589,6 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
       .semi()
       .via(getMainEventBase())
       .thenValue([this](auto&&) {
-        // Compact storage for all key spaces in order to speed up the
-        // takeover start of the new process. We could potentially test this
-        // more and change it in the future to simply flush instead of
-        // compact if this proves to be too expensive.
-
-        // Catch errors from compaction because we do not want this failure
-        // to be blocking graceful restart. This can fail if there is no
-        // space to write to RocksDB log files.
-        try {
-          localStore_->compactStorage();
-        } catch (const std::exception& e) {
-          XLOGF(
-              ERR,
-              "Failed to compact local store with error: {}. Continuing takeover server shutdown anyway.",
-              e.what());
-        }
-
         shutdownSubscribers();
 
         // Stop the thrift server. In the future, we'd like to
@@ -2804,11 +2673,6 @@ void EdenServer::reportMemoryStats() {
     // Bump the OBC counters for the current memory usage
     memory_vm_rss_bytes_ += memoryStats->resident;
   }
-}
-
-void EdenServer::manageLocalStore() {
-  auto config = serverState_->getReloadableConfig()->getEdenConfig();
-  localStore_->periodicManagementTask(*config);
 }
 
 void EdenServer::refreshBackingStore() {

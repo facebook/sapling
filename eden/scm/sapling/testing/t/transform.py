@@ -43,7 +43,6 @@ from __future__ import annotations
 
 import textwrap
 from dataclasses import dataclass
-
 from itertools import product
 from typing import Callable, List, Optional, Tuple, Union
 
@@ -471,9 +470,9 @@ def rewriteblocks(
 
             appendline(info.line)
         elif info.line.strip():
-            assert (
-                info.indent < 2
-            ), f"invalid indentation at line {i} (2-space for $ or >>> blocks, 4-space for Python blocks): {info.line.strip()}"
+            assert info.indent < 2, (
+                f"invalid indentation at line {i} (2-space for $ or >>> blocks, 4-space for Python blocks): {info.line.strip()}"
+            )
             # Otherwise, it's a comment.
             maybeseparate("comment")
             appendline(f"# {info.line}")

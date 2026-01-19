@@ -13,7 +13,7 @@ rust_library(
         "fbsource//third-party/rust:futures-util",
         "fbsource//third-party/rust:indoc",
         "fbsource//third-party/rust:maplit",
-        "fbsource//third-party/rust:rand_distr",
+        "fbsource//third-party/rust:rand_distr_04",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",
         "//eden/mononoke/blobstore:delayblob",

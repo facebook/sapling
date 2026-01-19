@@ -51,7 +51,6 @@ import time
 from typing import BinaryIO, Callable, Dict, List, Optional
 
 from bindings import commands, hgtime
-
 from sapling import prefork, tracing
 
 from . import commandserver, encoding, error, ui as uimod, util

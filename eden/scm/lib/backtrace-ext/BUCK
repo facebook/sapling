@@ -16,13 +16,16 @@ rust_library(
             "repository": "https://github.com/facebook/sapling",
         },
     }},
-    compatible_with = [
-        "ovr_config//os:linux",
-        # "ovr_config//os:macos", # link issues with C libunwind
-    ],
     crate_root = "src/lib.rs",
+    os_deps = [
+        (
+            "linux",
+            [
+                "fbsource//third-party/libunwind:unwind-ptrace",  # needed to compile
+                "fbsource//third-party/rust:unwind",
+            ],
+        ),
+    ],
     deps = [
-        "fbsource//third-party/libunwind:unwind-ptrace",  # needed to compile
-        "fbsource//third-party/rust:unwind",
     ],
 )

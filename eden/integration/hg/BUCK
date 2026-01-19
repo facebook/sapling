@@ -50,17 +50,6 @@ python_unittest(
 )
 
 python_unittest(
-    name = "debug_clear_local_caches",
-    srcs = ["debug_clear_local_caches_test.py"],
-    env = artifacts["env"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/integration/hg/lib:testutil",
-        "//eden/integration/lib:lib",
-    ],
-)
-
-python_unittest(
     name = "debug_get_parents",
     srcs = ["debug_get_parents.py"],
     env = artifacts["env"],
@@ -379,17 +368,6 @@ python_unittest(
         "//eden/integration/lib:lib",
         "//thrift/lib/py:server_base",
         "//thrift/lib/python:types",
-    ],
-)
-
-python_unittest(
-    name = "storage_engine",
-    srcs = ["storage_engine_test.py"],
-    env = artifacts["env"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/integration/hg/lib:testutil",
-        "//eden/integration/lib:lib",
     ],
 )
 

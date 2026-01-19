@@ -36,7 +36,7 @@ thrift/annotation/cpp.thrift source_control->fb303_core->cpp //thrift/annotation
 thrift/annotation/hack.thrift source_control->hack //thrift/annotation:hack-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust
 thrift/annotation/scope.thrift rust->scope //thrift/annotation:scope-rust
-thrift/annotation/thrift.thrift source_control->thrift //thrift/annotation:thrift-rust
+thrift/annotation/thrift.thrift thrift //thrift/annotation:thrift-rust
 ";
 #[rustfmt::skip]
 fn main() {

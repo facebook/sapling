@@ -24,7 +24,6 @@ from typing import Dict, Iterable, Optional, Set
 from thrift.Thrift import TApplicationException
 
 from . import cmd_util, configutil, mtab, subcmd as subcmd_mod, tabulate
-
 from .buck import stop_buckd_for_repo
 from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
 from .prompt import prompt_confirmation
@@ -1209,8 +1208,7 @@ class AddCmd(Subcmd):
         parser.add_argument(
             "--strict",
             help=(
-                "force bind mount to fail if it would overwrite an "
-                "existing directory"
+                "force bind mount to fail if it would overwrite an existing directory"
             ),
             action="store_true",
         )

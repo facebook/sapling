@@ -53,7 +53,7 @@ nonzero_ext = "0.2"
 once_cell = "1.21"
 permission_checker = { version = "0.1.0", path = "../../../common/permission_checker" }
 pin-project = "1.1.10"
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../../../common/rate_limiting" }
 rayon = "1.11.0"
 repo_blobstore = { version = "0.1.0", path = "../../../repo_attributes/repo_blobstore" }

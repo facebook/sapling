@@ -62,7 +62,7 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
   const lastLine = useRef<SelectLine | null>(null);
 
   // Toggle selection of a line or a region.
-  const toogleLineOrRegion = (line: SelectLine, region: LineRegion | null) => {
+  const toggleLineOrRegion = (line: SelectLine, region: LineRegion | null) => {
     const selected = !line.selected;
     const lineSelects: Array<[number, boolean]> = [];
     if (region) {
@@ -83,7 +83,7 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
     e: React.PointerEvent,
   ) => {
     if (e.isPrimary && line.selected !== null) {
-      toogleLineOrRegion(line, region);
+      toggleLineOrRegion(line, region);
     }
   };
 
@@ -136,7 +136,7 @@ function PartialFileSelectionWithCheckbox(props: Props & {unified?: boolean}) {
                 checked={checked}
                 indeterminate={indeterminate}
                 onChange={() => {
-                  toogleLineOrRegion(region.lines[0], region);
+                  toggleLineOrRegion(region.lines[0], region);
                 }}
               />
             </div>

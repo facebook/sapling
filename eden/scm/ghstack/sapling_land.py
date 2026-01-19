@@ -4,7 +4,6 @@ import re
 import ghstack.github
 import ghstack.github_utils
 import ghstack.sapling_shell
-
 from sapling import error
 from sapling.i18n import _
 

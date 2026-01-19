@@ -16,7 +16,6 @@ from textwrap import dedent
 from typing import Optional, Sequence, Set
 
 from eden.fs.service.eden.thrift_types import FaultDefinition
-
 from eden.integration.lib.hgrepo import HgRepository
 
 from .lib import edenclient, testcase

@@ -9,6 +9,8 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use context::CoreContext;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
@@ -97,6 +99,11 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlSparseProfilesSizes {
         remote: &RemoteMetadataDatabaseConfig,
     ) -> Option<&RemoteDatabaseConfig> {
         Some(&remote.sparse_profiles)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
     }
 }
 

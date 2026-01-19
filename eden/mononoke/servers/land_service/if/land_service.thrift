@@ -9,6 +9,9 @@ include "fb303/thrift/fb303_core.thrift"
 include "thrift/annotation/thrift.thrift"
 include "thrift/annotation/rust.thrift"
 
+@thrift.AllowLegacyMissingUris
+package;
+
 typedef binary ChangesetId
 /// The UTF-8 path of the file or directory.
 typedef string Path

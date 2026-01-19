@@ -506,19 +506,25 @@ class CountersTest(testcase.EdenRepoTest):
         self.repo.write_file("hello", "hola\n")
         self.repo.commit("Initial commit.")
 
-    # We get rid of the thrift and scribe counters since they sporadically
-    # appear and can cause this test to fail (since they can appear between
-    # counters and counters2)
+    # We filter out counters that sporadically appear due to background
+    # infrastructure activity, since they can appear between counters and
+    # counters2 and cause test flakiness:
+    # - scribe.*: Scribe logging counters
+    # - thrift.*: Thrift RPC counters
+    # - keystore.*: from Sapling keystore operations
+    # - memory_vm_rss_bytes: reported sporadically in background
+    # - obc.*: OBC monitoring system counters, added in D84351520
+    #          to track counter growth across services
     @staticmethod
     def get_nonthrift_set(s):
-        # and memory_vm_rss_bytes is reported sporadically in the background
         return {
             item
             for item in s
             if not item.startswith("scribe.")
             and not item.startswith("thrift.")
-            and not item.startswith("keystore.")  # from Sapling
+            and not item.startswith("keystore.")
             and not item.startswith("memory_vm_rss_bytes")
+            and not item.startswith("obc.")
         }
 
     def test_mount_unmount_counters(self) -> None:

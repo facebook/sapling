@@ -17,6 +17,7 @@ thrift_library(
     },
     deps = [
         ":get_struct_name",
+        "//thrift/annotation:thrift",
     ],
 )
 
@@ -37,6 +38,7 @@ thrift_library(
     deps = [
         "//thrift/annotation:rust",
         "//thrift/annotation:scope",
+        "//thrift/annotation:thrift",
     ],
 )
 

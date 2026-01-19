@@ -508,8 +508,8 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
             .get("/proxygen/health_check")
             .to(proxygen_health_handler);
         Handlers::setup::<blame::BlameHandler>(route);
-        Handlers::setup::<bookmarks::SetBookmarkHandler>(route);
         Handlers::setup::<bookmarks::Bookmarks2Handler>(route);
+        Handlers::setup::<bookmarks::SetBookmarkHandler>(route);
         Handlers::setup::<commit_cloud::CommitCloudHistoricalVersions>(route);
         Handlers::setup::<commit_cloud::CommitCloudOtherRepoWorkspaces>(route);
         Handlers::setup::<commit_cloud::CommitCloudReferences>(route);
@@ -541,9 +541,10 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<files::UploadHgFilenodesHandler>(route);
         Handlers::setup::<git_objects::GitObjectsHandler>(route);
         Handlers::setup::<history::HistoryHandler>(route);
-        Handlers::setup::<path_history::PathHistoryHandler>(route);
         Handlers::setup::<land::LandStackHandler>(route);
+        Handlers::setup::<legacy::StreamingCloneHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);
+        Handlers::setup::<path_history::PathHistoryHandler>(route);
         Handlers::setup::<suffix_query::SuffixQueryHandler>(route);
         Handlers::setup::<trees::UploadTreesHandler>(route);
         route.get("/:repo/health_check").to(health_handler);

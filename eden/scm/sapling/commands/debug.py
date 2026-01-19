@@ -2759,10 +2759,7 @@ def debugpvec(ui, repo, a, b=None) -> None:
             "",
             "minimal",
             None,
-            _(
-                "only rebuild files that are inconsistent with "
-                "the working copy parent"
-            ),
+            _("only rebuild files that are inconsistent with the working copy parent"),
         ),
     ],
     _("[-r REV]"),

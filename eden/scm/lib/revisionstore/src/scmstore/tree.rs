@@ -500,7 +500,7 @@ impl TreeStore {
                 }
             }
 
-            // We made it to the end with no overall errors - report_mising=true so we report errors
+            // We made it to the end with no overall errors - report_missing=true so we report errors
             // for any items we unexpectedly didn't get results for.
             state
                 .common

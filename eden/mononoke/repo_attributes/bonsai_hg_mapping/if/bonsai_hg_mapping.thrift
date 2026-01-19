@@ -8,6 +8,10 @@
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 /// Code version used in memcache keys.  This should be changed whenever
 /// the layout of memcache entries is changed in an incompatible way.

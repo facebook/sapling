@@ -15,7 +15,6 @@ import weakref
 from typing import Dict
 
 from bindings import journal as rsjournal
-
 from sapling import (
     bookmarks,
     cmdutil,

@@ -19,7 +19,6 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/BackingStoreLogger.h"
-#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/store/sl/SaplingBackingStoreOptions.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -71,8 +70,6 @@ struct SaplingBackingStoreTestBase : TestRepo, ::testing::Test {
   std::shared_ptr<ReloadableConfig> edenConfig{
       std::make_shared<ReloadableConfig>(testEdenConfig)};
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
-  std::shared_ptr<MemoryLocalStore> localStore{
-      std::make_shared<MemoryLocalStore>(stats.copy())};
 };
 
 struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
@@ -84,7 +81,6 @@ struct SaplingBackingStoreNoFaultInjectorTest : SaplingBackingStoreTestBase {
           repo.path(),
           repo.path(),
           kPathMapDefaultCaseSensitive,
-          localStore,
           stats.copy(),
           &executor,
           edenConfig,
@@ -105,7 +101,6 @@ struct SaplingBackingStoreWithFaultInjectorTest : SaplingBackingStoreTestBase {
           repo.path(),
           repo.path(),
           kPathMapDefaultCaseSensitive,
-          localStore,
           stats.copy(),
           &executor,
           edenConfig,
@@ -127,7 +122,6 @@ struct SaplingBackingStoreWithFaultInjectorIgnoreConfigTest
           repo.path(),
           repo.path(),
           kPathMapDefaultCaseSensitive,
-          localStore,
           stats.copy(),
           &executor,
           edenConfig,
@@ -298,125 +292,6 @@ TEST_F(SaplingBackingStoreNoFaultInjectorTest, getGlobFilesNested) {
   for (int i = 0; i < 2; i++) {
     EXPECT_EQ(paths[i], expected_result[i]);
   }
-}
-
-TEST_F(SaplingBackingStoreNoFaultInjectorTest, cachingPolicyConstruction) {
-  // No caching
-  testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  EXPECT_EQ(
-      queuedBackingStore->constructLocalStoreCachingPolicy(),
-      BackingStore::LocalStoreCachingPolicy::NoCaching);
-
-  // Trees
-  testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  EXPECT_EQ(
-      queuedBackingStore->constructLocalStoreCachingPolicy(),
-      BackingStore::LocalStoreCachingPolicy::Trees);
-
-  // TreeAuxData
-  testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  EXPECT_EQ(
-      queuedBackingStore->constructLocalStoreCachingPolicy(),
-      BackingStore::LocalStoreCachingPolicy::TreeAuxData);
-
-  // Blobs
-  testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  EXPECT_EQ(
-      queuedBackingStore->constructLocalStoreCachingPolicy(),
-      BackingStore::LocalStoreCachingPolicy::Blobs);
-
-  // BlobAuxData
-  testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  EXPECT_EQ(
-      queuedBackingStore->constructLocalStoreCachingPolicy(),
-      BackingStore::LocalStoreCachingPolicy::BlobAuxData);
-
-  // TreesAndBlobs
-  testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  EXPECT_EQ(
-      queuedBackingStore->constructLocalStoreCachingPolicy(),
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobs);
-
-  // TreesAndBlobAuxData
-  testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  EXPECT_EQ(
-      queuedBackingStore->constructLocalStoreCachingPolicy(),
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData);
-
-  // BlobsAndBlobAuxData
-  testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
-      false, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  EXPECT_EQ(
-      queuedBackingStore->constructLocalStoreCachingPolicy(),
-      BackingStore::LocalStoreCachingPolicy::BlobsAndBlobAuxData);
-
-  // Anything
-  testEdenConfig->hgEnableTreeLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableTreeMetaLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  testEdenConfig->hgEnableBlobMetaLocalStoreCaching.setValue(
-      true, ConfigSourceType::UserConfig);
-  EXPECT_EQ(
-      queuedBackingStore->constructLocalStoreCachingPolicy(),
-      BackingStore::LocalStoreCachingPolicy::Anything);
 }
 
 // Duplicate requests with same nodeID in one request batch will crash Eden with

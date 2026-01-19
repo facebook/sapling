@@ -23,7 +23,6 @@
 #include "eden/fs/model/TestOps.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/FilteredBackingStore.h"
-#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/filter/HgSparseFilter.h"
 #include "eden/fs/store/sl/SaplingBackingStore.h"
 #include "eden/fs/store/sl/SaplingBackingStoreOptions.h"
@@ -93,8 +92,7 @@ class FakeSubstringFilteredBackingStoreTest
     : public FilteredBackingStoreTestBase {
  protected:
   void SetUp() override {
-    wrappedStore_ = std::make_shared<FakeBackingStore>(
-        BackingStore::LocalStoreCachingPolicy::Anything);
+    wrappedStore_ = std::make_shared<FakeBackingStore>();
     auto fakeFilter = std::make_unique<FakeSubstringFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
         wrappedStore_, std::move(fakeFilter), edenConfig, true);
@@ -111,8 +109,7 @@ class FakeSubstringFilteredBackingStoreTest
 class FakePrefixFilteredBackingStoreTest : public FilteredBackingStoreTestBase {
  protected:
   void SetUp() override {
-    wrappedStore_ = std::make_shared<FakeBackingStore>(
-        BackingStore::LocalStoreCachingPolicy::Anything);
+    wrappedStore_ = std::make_shared<FakeBackingStore>();
     auto fakeFilter = std::make_unique<FakePrefixFilter>();
     filteredStore_ = std::make_shared<FilteredBackingStore>(
         wrappedStore_, std::move(fakeFilter), edenConfig, true);
@@ -140,8 +137,6 @@ struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
   }
 
   EdenStatsPtr stats{makeRefPtr<EdenStats>()};
-  std::shared_ptr<MemoryLocalStore> localStore{
-      std::make_shared<MemoryLocalStore>(stats.copy())};
 
   std::shared_ptr<FilteredBackingStore> filteredStoreFFI_;
 
@@ -157,7 +152,6 @@ struct SaplingFilteredBackingStoreTest : FilteredBackingStoreTestBase {
           repo.path(),
           repo.path(),
           kPathMapDefaultCaseSensitive,
-          localStore,
           stats.copy(),
           &executor_,
           edenConfig,

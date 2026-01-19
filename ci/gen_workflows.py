@@ -119,7 +119,7 @@ RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesourc
 
 # Now we can install the bulk of the packages:
 RUN apt-get -y update
-RUN apt-get -y install {' '.join(full_deps)}
+RUN apt-get -y install {" ".join(full_deps)}
 RUN locale-gen en_US.UTF-8
 
 # Unfortunately, we cannot `apt install cargo` because at the time of this

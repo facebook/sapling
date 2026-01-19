@@ -658,7 +658,7 @@ impl AuthorizationContext {
                     match &cc_ctx.owner {
                         Some(owner_identities) => {
                             // Check if any requesting identity matches any owner identity
-                            // TODO(T248657108): Look into abstracting this in a better way and making authenticated identities be consistant with type data ones
+                            // TODO(T248657108): Look into abstracting this in a better way and making authenticated identities be consistent with type data ones
                             for identity in ctx.metadata().identities().iter() {
                                 for owner in owner_identities.iter() {
                                     match identity {

@@ -16,7 +16,6 @@ import textwrap
 from typing import List, Set
 
 import bindings
-
 from bindings import cliparser
 
 from . import (

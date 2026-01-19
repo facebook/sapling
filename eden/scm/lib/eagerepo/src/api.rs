@@ -138,7 +138,7 @@ impl SaplingRemoteApi for EagerRepo {
             "commit-graph-segments".to_string(),
             // Inform client that we only support sha1 content addressing.
             "sha1-only".to_string(),
-            // Inform the client that we suppot most common sapling operations like files, trees, blame etc. but not commit graph segments or commit cloud
+            // Inform the client that we support most common sapling operations like files, trees, blame etc. but not commit graph segments or commit cloud
             "sapling-common".to_string(),
         ];
         if matches!(self.format(), SerializationFormat::Git) {

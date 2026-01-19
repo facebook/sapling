@@ -95,7 +95,7 @@ impl LsRefsArgs {
             requested_symrefs,
             tag_inclusion,
             requested_refs,
-            // Use WBC since this request is for read path, unless explicily asked not to
+            // Use WBC since this request is for read path, unless explicitly asked not to
             refs_source: match bypass_cache {
                 false => RefsSource::WarmBookmarksCache,
                 true => RefsSource::DatabaseFollower,

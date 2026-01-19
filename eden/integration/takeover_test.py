@@ -118,9 +118,11 @@ class TakeoverTestBase(testcase.EdenRepoTest):
         # deleted file descriptor later.
         subprocess.run(["rm", str(deleted_dir)])
 
-        with open(hello, "r") as f, open(deleted, "r") as d, open(
-            deleted_local, "r"
-        ) as dl:
+        with (
+            open(hello, "r") as f,
+            open(deleted, "r") as d,
+            open(deleted_local, "r") as dl,
+        ):
             # Read the first page only (rather than the whole file)
             # before we restart the process.
             # This is so that we can check that the kernel really
@@ -295,9 +297,10 @@ class TakeoverTest(TakeoverTestBase):
             os.close(fd)
 
     def test_contents_are_the_same_if_handle_is_held_open(self) -> None:
-        with open(os.path.join(self.mount, "tree", "hello")) as c2_hello_file, open(
-            os.path.join(self.mount, "src", "main.c")
-        ) as c2_mainc_file:
+        with (
+            open(os.path.join(self.mount, "tree", "hello")) as c2_hello_file,
+            open(os.path.join(self.mount, "src", "main.c")) as c2_mainc_file,
+        ):
             self.eden.graceful_restart()
             self.eden.run_cmd(
                 "debug", "flush_cache", os.path.join("tree", "hello"), cwd=self.mount

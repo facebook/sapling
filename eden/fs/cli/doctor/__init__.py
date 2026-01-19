@@ -33,7 +33,6 @@ from eden.fs.cli.doctor.util import (
     get_dependent_repos,
     hg_doctor_in_backing_repo,
 )
-
 from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
 from filelock import FileLock, Timeout
@@ -540,7 +539,7 @@ class EdenDoctor(EdenDoctorChecker):
 
         if fixer.num_advisory_fixes:
             out.writeln(
-                f"{fixer.num_advisory_fixes} issue{'' if fixer.num_advisory_fixes==1 else 's'} with recommended fixes.",
+                f"{fixer.num_advisory_fixes} issue{'' if fixer.num_advisory_fixes == 1 else 's'} with recommended fixes.",
                 fg=out.YELLOW,
             )
 
@@ -1317,7 +1316,7 @@ This version is known to have issue:
     {reasons_string}
 """
 
-        remediation_string = f'Run `edenfsctl restart{"" if sys.platform == "win32" else " --graceful"}` to migrate to the newer version to avoid these issues.'
+        remediation_string = f"Run `edenfsctl restart{'' if sys.platform == 'win32' else ' --graceful'}` to migrate to the newer version to avoid these issues."
         super().__init__(
             dedent(help_string), remediation_string, severity=ProblemSeverity.ADVICE
         )
@@ -1332,7 +1331,7 @@ but the version of EdenFS that is currently running is:
     {running_version}
 """
 
-        remediation_string = f"""Consider running `edenfsctl restart{' --graceful' if sys.platform != 'win32' else ''}` to migrate to the newer version,
+        remediation_string = f"""Consider running `edenfsctl restart{" --graceful" if sys.platform != "win32" else ""}` to migrate to the newer version,
 which may have important bug fixes or performance improvements.
 """
         super().__init__(

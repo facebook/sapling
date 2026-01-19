@@ -71,7 +71,6 @@ class HeartbeatManager;
 class SaplingBackingStore;
 class IScribeLogger;
 class Journal;
-class LocalStore;
 class MountInfo;
 class ObjectStore;
 class PrivHelper;
@@ -105,7 +104,6 @@ class BackingStoreFactory {
   struct CreateParams {
     folly::StringPiece name;
     ServerState* serverState;
-    const std::shared_ptr<LocalStore>& localStore;
     const EdenStatsPtr& sharedStats;
     const CheckoutConfig& config;
   };
@@ -173,19 +171,6 @@ class EdenServer : private TakeoverHandler {
   RunState getStatus() const {
     return runningState_.rlock()->state;
   }
-
-  class LocalStoreOpenError : public std::exception {
-   public:
-    explicit LocalStoreOpenError(std::string&& str)
-        : message_(std::move(str)) {}
-
-    const char* what() const noexcept override {
-      return message_.c_str();
-    }
-
-   private:
-    std::string message_;
-  };
 
   /**
    * Prepare to run the EdenServer.
@@ -368,10 +353,6 @@ class EdenServer : private TakeoverHandler {
       std::chrono::seconds retryInterval);
 
   bool isWorkingCopyGCRunningForAnyMount() const;
-
-  std::shared_ptr<LocalStore> getLocalStore() const {
-    return localStore_;
-  }
 
   const std::shared_ptr<BlobCache>& getBlobCache() const {
     return blobCache_;
@@ -689,10 +670,6 @@ class EdenServer : private TakeoverHandler {
   // Report memory usage statistics to ServiceData.
   void reportMemoryStats();
 
-  // Compute stats for the local store and perform garbage collection if
-  // necessary
-  void manageLocalStore();
-
   // some backing store may require periodic maintenance, specifically rust
   // datapack store needs to release file descriptor it holds every once in a
   // while.
@@ -730,7 +707,7 @@ class EdenServer : private TakeoverHandler {
    * and cleanup order.  edenDir_ is near the top so it will be destroyed
    * last, as it holds the process-wide lock for our on-disk state.
    * mountPoints_ are near the bottom, so they get destroyed before the
-   * backingStores_ and localStore_.
+   * backingStores_.
    */
 
   const std::vector<std::string> originalCommandLine_;
@@ -747,7 +724,6 @@ class EdenServer : private TakeoverHandler {
   ActivityRecorderFactory activityRecorderFactory_;
   BackingStoreFactory* const backingStoreFactory_;
 
-  std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<BackingStoreMap> backingStores_;
   std::shared_ptr<ReloadableConfig> config_;
 
@@ -838,9 +814,7 @@ class EdenServer : private TakeoverHandler {
   const std::shared_ptr<ServerState> serverState_;
 
   // TODO: We should not be sharing in-memory BlobCache and TreeCache across
-  // multiple BackingStores. The IDs inhabit different spaces. But we share
-  // LocalStore across BackingStores already, so fixing this properly is a
-  // bigger issue.
+  // multiple BackingStores. The IDs inhabit different spaces.
   const std::shared_ptr<BlobCache> blobCache_;
   const std::shared_ptr<TreeCache> treeCache_;
 
@@ -966,9 +940,6 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::reportMemoryStats> memoryStatsTask_{
       this,
       "mem_stats"};
-  PeriodicFnTask<&EdenServer::manageLocalStore> localStoreTask_{
-      this,
-      "local_store"};
   PeriodicFnTask<&EdenServer::refreshBackingStore> backingStoreTask_{
       this,
       "backing_store"};

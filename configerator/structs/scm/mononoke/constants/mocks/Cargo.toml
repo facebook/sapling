@@ -22,9 +22,9 @@ constants__clients = { package = "constants_clients", version = "0.1.0", path = 
 constants__types = { package = "constants", version = "0.1.0", path = ".." }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-sharding = { version = "0.1.0", path = "../../sharding" }
-sharding_clients = { version = "0.1.0", path = "../../sharding/clients" }
-sharding_mocks = { version = "0.1.0", path = "../../sharding/mocks" }
+sharding = { version = "0.1.0", path = "../../sharding/sharding" }
+sharding_clients = { version = "0.1.0", path = "../../sharding/sharding/clients" }
+sharding_mocks = { version = "0.1.0", path = "../../sharding/sharding/mocks" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [build-dependencies]

@@ -761,15 +761,6 @@ impl crate::Subcommand for DiskUsageCmd {
             })?;
         aggregated_usage_counts.shared += logs_dir_usage;
         shared_failed_file_checks.extend(failed_logs_dir_file_checks);
-        let (storage_dir_usage, failed_storage_dir_file_checks) =
-            usage_for_dir(&instance.storage_dir(), None).with_context(|| {
-                format!(
-                    "Failed to measure disk space usage for EdenFS LocalStore {}",
-                    instance.storage_dir().display()
-                )
-            })?;
-        aggregated_usage_counts.shared += storage_dir_usage;
-        shared_failed_file_checks.extend(failed_storage_dir_file_checks);
 
         // Make immutable
         let shared_failed_file_checks = shared_failed_file_checks;

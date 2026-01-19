@@ -57,6 +57,7 @@ impl Middleware for UploadPackRateLimitingMiddleware {
                 .and_then(|uri| uri.path().strip_suffix(GIT_UPLOAD_PACK))
                 .and_then(|path| path.strip_prefix(SERVER_PATH_PREFIX))
                 .and_then(|path| path.split_once('/').map(|(_, repo_name)| repo_name))
+                .map(|path| path.strip_suffix(".git").unwrap_or(path))
                 .unwrap_or("");
             let metadata = if let Some(metadata_state) = MetadataState::try_borrow_from(state) {
                 metadata_state.metadata().clone()

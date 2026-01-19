@@ -1,11 +1,11 @@
 load("@fbcode//eden:defs.bzl", "get_integration_test_env_and_deps", "get_oss_suffix", "get_test_env_and_deps")
-load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbcode_macros//build_defs:python_integration_test.bzl", "python_integration_test")
 
 oncall("scm_client_infra")
 
 artifacts = get_integration_test_env_and_deps()
 
-python_unittest(
+python_integration_test(
     name = "basic" + get_oss_suffix(),
     srcs = ["basic_test.py"],
     env = artifacts["env"],
@@ -15,7 +15,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "cancellation",
     srcs = ["cancellation_test.py"],
     env = artifacts["env"],
@@ -25,7 +25,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "casing",
     srcs = ["casing_test.py"],
     env = artifacts["env"],
@@ -35,7 +35,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "changes",
     srcs = ["changes_test.py"],
     env = artifacts["env"],
@@ -46,7 +46,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "chown",
     srcs = ["chown_test.py"],
     env = artifacts["env"],
@@ -56,7 +56,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "clone",
     srcs = ["clone_test.py"],
     env = artifacts["env"],
@@ -66,7 +66,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "config",
     srcs = ["config_test.py"],
     env = artifacts["env"],
@@ -76,7 +76,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "corrupt_overlay",
     srcs = ["corrupt_overlay_test.py"],
     env = artifacts["env"],
@@ -87,7 +87,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "debug_getpath",
     srcs = ["debug_getpath_test.py"],
     env = artifacts["env"],
@@ -97,7 +97,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "debug_subscribe",
     srcs = ["debug_subscribe_test.py"],
     env = artifacts["env"],
@@ -107,7 +107,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "debug",
     srcs = ["debug_test.py"],
     env = artifacts["env"],
@@ -117,7 +117,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "doteden",
     srcs = ["doteden_test.py"],
     env = artifacts["env"],
@@ -127,7 +127,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "edenclient_test",
     srcs = ["edenclient_test.py"],
     env = artifacts["env"],
@@ -137,7 +137,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "fsck",
     srcs = ["fsck_test.py"],
     compatible_with = [
@@ -152,7 +152,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "glob",
     srcs = ["glob_test.py"],
     env = artifacts["env"],
@@ -162,7 +162,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "health",
     srcs = ["health_test.py"],
     env = artifacts["env"],
@@ -173,7 +173,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "help",
     srcs = ["help_test.py"],
     env = artifacts["env"],
@@ -183,7 +183,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "info",
     srcs = ["info_test.py"],
     env = artifacts["env"],
@@ -194,7 +194,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "invalidate",
     srcs = ["invalidate_test.py"],
     env = artifacts["env"],
@@ -204,7 +204,22 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
+    name = "legacyephemeral_cleanup",
+    srcs = ["legacyephemeral_cleanup_test.py"],
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/fs/cli:lib",
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
     name = "lock",
     srcs = ["lock_test.py"],
     compatible_with = [
@@ -218,7 +233,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "eden_lock",
     srcs = ["eden_lock_test.py"],
     compatible_with = [
@@ -232,7 +247,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "long_path",
     srcs = ["long_path_test.py"],
     env = artifacts["env"],
@@ -242,7 +257,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "materialized_query",
     srcs = ["materialized_query_test.py"],
     env = artifacts["env"],
@@ -253,7 +268,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "mmap_test",
     srcs = ["mmap_test.py"],
     env = artifacts["env"],
@@ -263,7 +278,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "mount",
     srcs = ["mount_test.py"],
     env = artifacts["env"],
@@ -277,7 +292,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "notify",
     srcs = ["notify_test.py"],
     env = artifacts["env"],
@@ -287,7 +302,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "oexcl",
     srcs = ["oexcl_test.py"],
     env = artifacts["env"],
@@ -297,7 +312,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "patch",
     srcs = ["patch_test.py"],
     env = artifacts["env"],
@@ -307,7 +322,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "persistence",
     srcs = ["persistence_test.py"],
     env = artifacts["env"],
@@ -317,7 +332,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "prjfs_stress",
     srcs = ["prjfs_stress.py"],
     env = artifacts["env"],
@@ -327,7 +342,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "prjfs_match_fs",
     srcs = ["prjfs_match_fs.py"],
     env = artifacts["env"],
@@ -337,7 +352,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "rage",
     srcs = ["rage_test.py"],
     env = artifacts["env"],
@@ -347,7 +362,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "rc",
     srcs = ["rc_test.py"],
     env = artifacts["env"],
@@ -357,7 +372,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "readdir",
     srcs = ["readdir_test.py"],
     env = artifacts["env"],
@@ -369,7 +384,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "redirect",
     srcs = ["redirect_test.py"],
     env = artifacts["env"],
@@ -380,7 +395,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "remount",
     srcs = ["remount_test.py"],
     env = artifacts["env"],
@@ -390,7 +405,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "rename",
     srcs = ["rename_test.py"],
     env = artifacts["env"],
@@ -400,7 +415,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "restart",
     srcs = ["restart_test.py"],
     env = artifacts["env"],
@@ -412,18 +427,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
-    name = "rocksdb_store",
-    srcs = ["rocksdb_store_test.py"],
-    env = artifacts["env"],
-    supports_static_listing = False,
-    deps = [
-        "//eden/fs/cli:lib",
-        "//eden/integration/lib:lib",
-    ],
-)
-
-python_unittest(
+python_integration_test(
     name = "sed",
     srcs = ["sed_test.py"],
     env = artifacts["env"],
@@ -433,7 +437,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "setattr",
     srcs = ["setattr_test.py"],
     env = artifacts["env"],
@@ -443,7 +447,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "service_log",
     srcs = ["service_log_test.py"],
     env = artifacts["env"],
@@ -453,7 +457,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "stale",
     srcs = ["stale_test.py"],
     env = artifacts["env"],
@@ -464,7 +468,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "stale_inode",
     srcs = ["stale_inode_test.py"],
     env = artifacts["env"],
@@ -475,7 +479,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "start",
     srcs = ["start_test.py"],
     env = artifacts["env"],
@@ -488,7 +492,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "stats",
     srcs = ["stats_test.py"],
     env = artifacts["env"],
@@ -498,7 +502,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "stop",
     srcs = ["stop_test.py"],
     env = artifacts["env"],
@@ -510,7 +514,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "takeover",
     srcs = ["takeover_test.py"],
     env = artifacts["env"],
@@ -523,7 +527,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "thrift",
     srcs = ["thrift_test.py"],
     env = artifacts["env"],
@@ -535,7 +539,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "unicode",
     srcs = ["unicode_test.py"],
     env = artifacts["env"],
@@ -545,7 +549,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "unixsocket",
     srcs = ["unixsocket_test.py"],
     env = artifacts["env"],
@@ -555,7 +559,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "unlink",
     srcs = ["unlink_test.py"],
     env = artifacts["env"],
@@ -565,7 +569,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "userinfo",
     srcs = ["userinfo_test.py"],
     env = artifacts["env"],
@@ -575,7 +579,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "windows_fsck",
     srcs = ["windows_fsck_test.py"],
     compatible_with = [
@@ -589,7 +593,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "xattr",
     srcs = ["xattr_test.py"],
     compatible_with = [
@@ -602,7 +606,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "projfs_buffer",
     srcs = ["projfs_buffer.py"],
     compatible_with = [
@@ -616,7 +620,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "projfs_enumeration",
     srcs = ["projfs_enumeration.py"],
     compatible_with = [
@@ -641,7 +645,7 @@ python_unittest(
 # the initialization code.
 full_artifacts = get_test_env_and_deps("")
 
-python_unittest(
+python_integration_test(
     name = "basic",
     srcs = [
         "basic_test.py",
@@ -653,7 +657,7 @@ python_unittest(
     ],
 )
 
-python_unittest(
+python_integration_test(
     name = "use_case",
     srcs = ["use_case_test.py"],
     env = full_artifacts["env"],

@@ -10,7 +10,6 @@
 
 
 import os
-
 from typing import Optional
 
 from sapling import encoding, error, json, util

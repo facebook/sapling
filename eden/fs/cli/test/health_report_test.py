@@ -10,7 +10,6 @@ import argparse
 import json
 import os
 import sys
-
 import tempfile
 import time
 import typing
@@ -19,7 +18,6 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 from eden.fs.cli.version import VersionInfo
-
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 from ..main import HealthReportCmd

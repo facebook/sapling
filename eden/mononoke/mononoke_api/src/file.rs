@@ -12,6 +12,10 @@ use bytes::Bytes;
 use bytes::BytesMut;
 use cloned::cloned;
 use context::CoreContext;
+use diff::operations::headerless::headerless_unified;
+use diff::types::DiffInputContent;
+use diff::types::DiffSingleInput;
+pub use diff::types::HeaderlessUnifiedDiff;
 use filestore::FetchKey;
 use filestore::get_metadata;
 use futures::stream::TryStreamExt;
@@ -190,33 +194,48 @@ impl<R: MononokeRepo> FileContext<R> {
 }
 
 /// A diff between two files in headerless unified diff format
-pub struct HeaderlessUnifiedDiff {
-    /// Raw diff as bytes.
-    pub raw_diff: Vec<u8>,
-    /// One of the diffed files is binary, raw diff contains just a placeholder.
-    pub is_binary: bool,
-}
-
+///
+/// If `ignore_whitespace` is true, horizontal whitespace (spaces, tabs, carriage returns)
+/// will be stripped before computing the diff.
 pub async fn headerless_unified_diff<R: MononokeRepo>(
     old_file: &FileContext<R>,
     new_file: &FileContext<R>,
     context_lines: usize,
+    ignore_whitespace: bool,
 ) -> Result<HeaderlessUnifiedDiff, MononokeError> {
-    let (old_diff_file, new_diff_file) =
-        try_join!(old_file.content_concat(), new_file.content_concat(),)?;
-    let is_binary = old_diff_file.contains(&0) || new_diff_file.contains(&0);
-    let raw_diff = if is_binary {
-        b"Binary files differ".to_vec()
-    } else {
-        let opts = xdiff::HeaderlessDiffOpts {
-            context: context_lines,
-        };
-        xdiff::diff_unified_headerless(&old_diff_file, &new_diff_file, opts)
+    // Get content IDs from the file contexts
+    let (old_content_id, new_content_id) = try_join!(old_file.id(), new_file.id())?;
+
+    // Create DiffSingleInput from content IDs
+    let old_input = DiffSingleInput::Content(DiffInputContent {
+        content_id: old_content_id,
+        path: None, // FileContext doesn't have path info as files are content-addressed
+        lfs_pointer: None, // No LFS info available at this level
+    });
+
+    let new_input = DiffSingleInput::Content(DiffInputContent {
+        content_id: new_content_id,
+        path: None,
+        lfs_pointer: None,
+    });
+
+    // Create headerless diff options
+    use diff::types::HeaderlessDiffOpts;
+    let options = HeaderlessDiffOpts {
+        context: context_lines,
+        ignore_whitespace,
     };
-    Ok(HeaderlessUnifiedDiff {
-        raw_diff,
-        is_binary,
-    })
+
+    // Call the features/diff crate function
+    headerless_unified(
+        old_file.ctx(),
+        old_file.repo_ctx().repo(),
+        Some(new_input),
+        Some(old_input),
+        options,
+    )
+    .await
+    .map_err(|e| MononokeError::from(anyhow::anyhow!("Diff error: {e:#}")))
 }
 
 /// File contexts should only exist for files that are known to be in the

@@ -12,6 +12,9 @@ include "eden/mononoke/derived_data/if/derived_data_type.thrift"
 include "thrift/annotation/rust.thrift"
 include "thrift/annotation/hack.thrift"
 
+@thrift.AllowLegacyMissingUris
+package;
+
 namespace cpp2 facebook.scm.service
 namespace php SourceControlService
 namespace py scm.service.thrift.source_control

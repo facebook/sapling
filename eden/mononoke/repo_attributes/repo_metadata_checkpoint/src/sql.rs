@@ -8,6 +8,8 @@
 use anyhow::Context;
 use anyhow::Result;
 use async_trait::async_trait;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
@@ -21,6 +23,7 @@ use sql_query_telemetry::SqlQueryTelemetry;
 
 use super::RepoMetadataCheckpoint;
 use super::RepoMetadataCheckpointEntry;
+use super::RepoMetadataFullRunInfo;
 
 mononoke_queries! {
     write AddOrUpdateRepoMetadataCheckpoint(values: (
@@ -48,6 +51,23 @@ mononoke_queries! {
         "SELECT bookmark_name, changeset_id, last_updated_timestamp
          FROM repo_metadata_info
          WHERE repo_id = {repo_id} AND bookmark_name = {bookmark_name}"
+    }
+
+    // Full run info queries
+    write SetFullRunTimestamp(
+        repo_id: RepositoryId,
+        last_full_run_timestamp: Timestamp,
+    ) {
+        none,
+        "REPLACE INTO repo_metadata_full_run_info (repo_id, last_full_run_timestamp) VALUES ({repo_id}, {last_full_run_timestamp})"
+    }
+
+    read GetFullRunTimestamp(
+        repo_id: RepositoryId,
+    ) -> (Timestamp,) {
+        "SELECT last_full_run_timestamp
+         FROM repo_metadata_full_run_info
+         WHERE repo_id = {repo_id}"
     }
 }
 
@@ -77,6 +97,11 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlRepoMetadataCheckpointBuilder
         remote: &RemoteMetadataDatabaseConfig,
     ) -> Option<&RemoteDatabaseConfig> {
         remote.repo_metadata.as_ref()
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
     }
 }
 
@@ -185,6 +210,98 @@ impl RepoMetadataCheckpoint for SqlRepoMetadataCheckpoint {
             format!(
                 "Failed to add mappings in repo {} for entries {:?}",
                 self.repo_id, entries,
+            )
+        })?;
+        Ok(())
+    }
+}
+
+// Full run info implementation
+
+pub struct SqlRepoMetadataFullRunInfo {
+    connections: SqlConnections,
+    repo_id: RepositoryId,
+    sql_query_tel: SqlQueryTelemetry,
+}
+
+#[derive(Clone)]
+pub struct SqlRepoMetadataFullRunInfoBuilder {
+    connections: SqlConnections,
+}
+
+impl SqlConstruct for SqlRepoMetadataFullRunInfoBuilder {
+    const LABEL: &'static str = "repo_metadata_full_run_info";
+
+    const CREATION_QUERY: &'static str =
+        include_str!("../schemas/sqlite-repo-metadata-full-run-info.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
+        Self { connections }
+    }
+}
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlRepoMetadataFullRunInfoBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        remote.repo_metadata.as_ref()
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+}
+
+impl SqlRepoMetadataFullRunInfoBuilder {
+    pub fn build(
+        self,
+        repo_id: RepositoryId,
+        sql_query_tel: SqlQueryTelemetry,
+    ) -> SqlRepoMetadataFullRunInfo {
+        SqlRepoMetadataFullRunInfo {
+            connections: self.connections,
+            repo_id,
+            sql_query_tel,
+        }
+    }
+}
+
+#[async_trait]
+impl RepoMetadataFullRunInfo for SqlRepoMetadataFullRunInfo {
+    fn repo_id(&self) -> RepositoryId {
+        self.repo_id
+    }
+
+    async fn get_last_full_run_timestamp(&self) -> Result<Option<Timestamp>> {
+        let results = GetFullRunTimestamp::query(
+            &self.connections.read_connection,
+            self.sql_query_tel.clone(),
+            &self.repo_id,
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failure in fetching full run timestamp for repo {}",
+                self.repo_id
+            )
+        })?;
+
+        Ok(results.into_iter().next().map(|(ts,)| ts))
+    }
+
+    async fn set_last_full_run_timestamp(&self, timestamp: Timestamp) -> Result<()> {
+        SetFullRunTimestamp::query(
+            &self.connections.write_connection,
+            self.sql_query_tel.clone(),
+            &self.repo_id,
+            &timestamp,
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to set full run timestamp for repo {} to {:?}",
+                self.repo_id, timestamp,
             )
         })?;
         Ok(())

@@ -66,10 +66,6 @@ class FilteredBackingStore
 
   std::optional<folly::StringPiece> getRepoName() override;
 
-  LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
-    return backingStore_->getLocalStoreCachingPolicy();
-  }
-
   void workingCopyParentHint(const RootId& parent) override;
 
   /**

@@ -40,7 +40,6 @@ from typing import (
 )
 
 import facebook.eden.ttypes as eden_ttypes
-
 import toml
 from eden.thrift import legacy
 from eden.thrift.legacy import EdenNotRunningError
@@ -1673,7 +1672,7 @@ class EdenCheckout:
                 raise CheckoutConfigCorruptedError(
                     f'repository "{config_path}" has unsupported inode catalog (overlay) type '
                     f'"{inode_catalog_type}". Supported inode catalog (overlay) types are: '
-                    f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
+                    f"{', '.join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}."
                 )
             inode_catalog_type = inode_catalog_type.lower()
             if sys.platform == "win32" and inode_catalog_type in [
@@ -1760,6 +1759,21 @@ class EdenCheckout:
         new_config = old_config._replace(inode_catalog_type=new_inode_catalog_type)
 
         self.save_config(new_config)
+
+    def wait_until_mounted(self, timeout_sec: int = 5) -> bool:
+        """
+        Wait until the checkout is mounted.
+        Returns True if the checkout is mounted
+        False if the timeout is reached.
+        """
+        start_time = time.time()
+        while time.time() - start_time < timeout_sec:
+            mounts = self.instance.get_mounts()
+            for path, mount_info in mounts.items():
+                if path == self.path and mount_info.state == MountState.RUNNING:
+                    return True
+            time.sleep(0.5)
+        return False
 
 
 def get_snapshot(snapshot_path: Path, scm_type: str) -> SnapshotState:
@@ -2295,7 +2309,7 @@ def create_checkout_config(
             raise Exception(
                 f"Eden config has unsupported overlay (inode catalog) type "
                 f'"{overlay_type}". Supported overlay (inode catalog) types are: '
-                f'{", ".join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}.'
+                f"{', '.join(sorted(SUPPORTED_INODE_CATALOG_TYPES))}."
             )
     overlay_type = overlay_type.lower()
     if sys.platform == "win32" and overlay_type in [

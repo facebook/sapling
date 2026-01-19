@@ -126,12 +126,12 @@ def _check_json_output(args: List[str], timeout: float = 30) -> Dict[str, Any]:
         return {"error": str(e)}
     except subprocess.TimeoutExpired as e:
         errstr = getattr(e, "strerror", str(e))
-        log.warning(f'Command `{" ".join(args)}` timed out after {timeout} seconds')
+        log.warning(f"Command `{' '.join(args)}` timed out after {timeout} seconds")
         return {"error": str(e)}
     except Exception as e:
         # FileNotFoundError if the command is not found.
         # CalledProcessError if the command exits unsuccessfully.
         # ValueError if `output` is not valid JSON.
         errstr = getattr(e, "strerror", str(e))
-        log.warning(f'Calling `{" ".join(args)}` failed with: {errstr}')
+        log.warning(f"Calling `{' '.join(args)}` failed with: {errstr}")
         return {"error": str(e)}

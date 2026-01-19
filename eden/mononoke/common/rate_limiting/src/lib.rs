@@ -109,6 +109,7 @@ impl RateLimitEnvironment {
                         counter.entity.clone(),
                         counter.key.clone(),
                         counter.reduce.clone(),
+                        counter.transform.clone(),
                     )
                 }
                 _ => {}
@@ -142,6 +143,7 @@ impl RateLimitEnvironment {
                         counter.entity.clone(),
                         counter.key.clone(),
                         counter.reduce.clone(),
+                        counter.transform.clone(),
                     )
                 }
                 _ => {}
@@ -277,14 +279,18 @@ impl LoadShedLimit {
                 entity,
                 key,
                 reduce,
+                transform,
             }) => {
                 let value = ods_counters
                     .read()
                     .expect("Poisoned lock")
-                    .get_counter_value(&entity, &key, reduce.as_deref())
+                    .get_counter_value(&entity, &key, reduce.as_deref(), transform.as_deref())
                     .map(|v| v as i64);
                 (
-                    format!("Ods key:{} entity:{} reduce:{:?}", entity, key, reduce),
+                    format!(
+                        "Ods key:{} entity:{} reduce:{:?} transform:{:?}",
+                        entity, key, reduce, transform
+                    ),
                     value,
                 )
             }

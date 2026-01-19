@@ -43,7 +43,7 @@ filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mutable_counters = { version = "0.1.0", path = "../../repo_attributes/mutable_counters" }
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
@@ -63,6 +65,11 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlHgMutationStoreBuilder {
         remote: &RemoteMetadataDatabaseConfig,
     ) -> Option<&RemoteDatabaseConfig> {
         Some(&remote.mutation)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
     }
 }
 

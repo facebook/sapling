@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
 use metaconfig_types::RemoteDatabaseConfig;
 use metaconfig_types::RemoteMetadataDatabaseConfig;
 use sql_construct::SqlConstruct;
@@ -32,6 +34,11 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlCommitCloudBuilder {
         remote: &RemoteMetadataDatabaseConfig,
     ) -> Option<&RemoteDatabaseConfig> {
         remote.commit_cloud.as_ref()
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
     }
 }
 

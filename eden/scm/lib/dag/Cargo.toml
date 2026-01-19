@@ -22,7 +22,7 @@ fail = { version = "0.4", features = ["failpoints"] }
 fs2 = { version = "0.4", optional = true }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 indexmap = { version = "2.9.0", features = ["arbitrary", "rayon", "serde"] }
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }
 sapling-dag-types = { version = "0.1.0", path = "dag-types", default-features = false }
 sapling-drawdag = { version = "0.1.0", path = "../drawdag" }
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog", optional = true }

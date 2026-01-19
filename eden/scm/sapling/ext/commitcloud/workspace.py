@@ -7,7 +7,6 @@ import socket
 from typing import List, Optional, Tuple
 
 from bindings import configloader
-
 from sapling import error, util
 from sapling.i18n import _
 

@@ -632,10 +632,7 @@ def _ismergeable(repo, mynode, orig, fcd, fco, fca, toolconf, warn=True):
     if fcd.isabsent() or fco.isabsent():
         if warn:
             repo.ui.warn(
-                _(
-                    "warning: internal %s cannot merge change/delete "
-                    "conflict for %s\n"
-                )
+                _("warning: internal %s cannot merge change/delete conflict for %s\n")
                 % (tool, fcd.path())
             )
         return False
@@ -1196,8 +1193,7 @@ def _onfilemergefailure(ui):
     action = ui.config("merge", "on-failure")
     if action == "prompt":
         msg = _(
-            "continue merge operation [(y)es/(n)o/(a)lways]?"
-            "$$ &Yes $$ &No $$ &Always"
+            "continue merge operation [(y)es/(n)o/(a)lways]?$$ &Yes $$ &No $$ &Always"
         )
         choice = ui.promptchoice(msg, 0)
         if choice == 1:  # "no"

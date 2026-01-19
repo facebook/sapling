@@ -18,6 +18,7 @@ from . import (
     git,
     hbisect,
     i18n,
+    identity,
     mutation,
     patch,
     registrar,
@@ -995,6 +996,12 @@ def showverbosity(ui, **args) -> str:
     elif ui.verbose:
         return "verbose"
     return ""
+
+
+@templatekeyword("slprefix")
+def slprefix(ui, **args) -> str:
+    """String. "HG" or "SL", depending on identity"""
+    return identity.tmplprefix()
 
 
 @templatekeyword("remotenames")

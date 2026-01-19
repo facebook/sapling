@@ -572,8 +572,3 @@ def has_ipython():
     except Exception:
         return False
     return True
-
-
-@check("py3.10", "Python is 3.10")
-def has_python310():
-    return sys.version_info[:2] == (3, 10)

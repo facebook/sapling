@@ -193,7 +193,7 @@ describe('RepositoryCache', () => {
     expect(cache.numberOfActiveServers()).toBe(0);
   });
 
-  it('does not reuse diposed repos', async () => {
+  it('does not reuse disposed repos', async () => {
     const cache = new RepositoryCache(SimpleMockRepository);
     const ref1 = cache.getOrCreate({...ctx, cwd: '/path/to/repo/cwd1'});
 

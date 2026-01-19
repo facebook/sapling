@@ -20,22 +20,19 @@ A_SHORT_MANIFEST = (
 ) % {b"hash1": HASH_1, b"flag1": b"", b"hash2": HASH_2, b"flag2": b"l"}
 
 A_STEM_COMPRESSED_MANIFEST = (
-    (
-        b"\0\n"
-        b"\x00bar/baz/qux.py\0%(flag2)s\n%(hash2)s\n"
-        b"\x04qux/foo.py\0%(flag1)s\n%(hash1)s\n"  # simple case of 4 stem chars
-        b"\x0az.py\0%(flag1)s\n%(hash1)s\n"  # tricky newline = 10 stem characters
-        b"\x00%(verylongdir)sx/x\0\n%(hash1)s\n"
-        b"\xffx/y\0\n%(hash2)s\n"  # more than 255 stem chars
-    )
-    % {
-        b"hash1": BIN_HASH_1,
-        b"flag1": b"",
-        b"hash2": BIN_HASH_2,
-        b"flag2": b"l",
-        b"verylongdir": 255 * b"x",
-    }
-)
+    b"\0\n"
+    b"\x00bar/baz/qux.py\0%(flag2)s\n%(hash2)s\n"
+    b"\x04qux/foo.py\0%(flag1)s\n%(hash1)s\n"  # simple case of 4 stem chars
+    b"\x0az.py\0%(flag1)s\n%(hash1)s\n"  # tricky newline = 10 stem characters
+    b"\x00%(verylongdir)sx/x\0\n%(hash1)s\n"
+    b"\xffx/y\0\n%(hash2)s\n"  # more than 255 stem chars
+) % {
+    b"hash1": BIN_HASH_1,
+    b"flag1": b"",
+    b"hash2": BIN_HASH_2,
+    b"flag2": b"l",
+    b"verylongdir": 255 * b"x",
+}
 
 A_DEEPER_MANIFEST = (
     b"a/b/c/bar.py\0%(hash3)s%(flag1)s\n"

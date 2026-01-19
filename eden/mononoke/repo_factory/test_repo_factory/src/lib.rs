@@ -534,7 +534,7 @@ impl TestRepoFactory {
     ) -> Result<ArcBonsaiTagMapping> {
         Ok(Arc::new(
             SqlBonsaiTagMappingBuilder::from_sql_connections(self.metadata_db.clone())
-                .build(repo_identity.id()),
+                .build(repo_identity.id(), RendezVousOptions::for_test()),
         ))
     }
 

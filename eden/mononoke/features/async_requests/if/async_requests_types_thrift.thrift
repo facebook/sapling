@@ -13,6 +13,10 @@
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/scs/if/source_control.thrift"
 include "thrift/annotation/rust.thrift"
+include "thrift/annotation/thrift.thrift"
+
+@thrift.AllowLegacyMissingUris
+package;
 
 // Id types for async service methods params and responses.
 // Param and response types themselves are defined in the source_control.trift

@@ -8,14 +8,14 @@
 use std::fmt;
 
 use rand::Rng;
-use rand::distributions::Alphanumeric;
-use rand::thread_rng;
+use rand::distr::Alphanumeric;
+use rand::rng;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct SessionId(String);
 
 pub fn generate_session_id() -> SessionId {
-    let s: String = thread_rng()
+    let s: String = rng()
         .sample_iter(&Alphanumeric)
         .map(char::from)
         .take(16)

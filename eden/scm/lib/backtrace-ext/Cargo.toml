@@ -13,5 +13,5 @@ license = "MIT"
 [lib]
 name = "backtrace_ext"
 
-[dependencies]
+[target.'cfg(target_os = "linux")'.dependencies]
 unwind = { version = "0.4", features = ["ptrace"] }

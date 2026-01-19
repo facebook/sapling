@@ -1585,8 +1585,7 @@ def verifyactions(actions, state, ctxs):
         raise error.ParseError(
             _("missing rules for changeset %s") % node.short(missing[0]),
             hint=_(
-                'use "drop %s" to discard, see also: '
-                "'@prog@ help -e histedit.config'"
+                "use \"drop %s\" to discard, see also: '@prog@ help -e histedit.config'"
             )
             % node.short(missing[0]),
         )

@@ -26,7 +26,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import bindings
 from bindings import renderdag
-
 from sapling import tracing
 
 from . import (
@@ -261,12 +260,6 @@ subtree_path_opts = [
         _("PATH"),
     ),
 ]
-
-# special string such that everything below this line will be ignored in the
-# editor text
-_linebelow = (
-    f"^{identity.tmplprefix()}: ------------------------ >8 ------------------------$"
-)
 
 
 def ishunk(x):
@@ -1178,8 +1171,7 @@ def openrevlog(repo, cmd, file_, opts):
             msg = _("cannot specify filename with --changelog or --manifest")
         elif not repo:
             msg = _(
-                "cannot specify --changelog or --manifest or --dir "
-                "without a repository"
+                "cannot specify --changelog or --manifest or --dir without a repository"
             )
     if msg:
         raise error.Abort(msg)
@@ -3825,19 +3817,6 @@ def grep(ui, repo, table, matcher, pattern, **opts):
         ):
             biggrep = True
 
-    # Ask big grep to strip out the corpus dir (stripdir) and to include
-    # the corpus revision on the first line.
-    biggrepcmd = [
-        biggrepclient,
-        "--stripdir",
-        "-r",
-        "--expression",
-        pattern.replace("-", r"\-"),
-        biggreptier,
-        biggrepcorpus,
-        "re2",
-    ]
-
     args = []
 
     if opts.get("after_context"):
@@ -3861,7 +3840,9 @@ def grep(ui, repo, table, matcher, pattern, **opts):
         cmd.append("-v")
     if opts.get("word_regexp"):
         cmd.append("-w")
-        biggrepcmd[4] = "\\b%s\\b" % pattern
+        biggreppattern = rf"\b{pattern}\b"
+    else:
+        biggreppattern = pattern.replace("-", r"\-")
     if opts.get("extended_regexp"):
         cmd.append("-E")
         # re2 is already mostly compatible by default, so there are no options
@@ -3869,11 +3850,24 @@ def grep(ui, repo, table, matcher, pattern, **opts):
     if opts.get("fixed_strings"):
         cmd.append("-F")
         # using bgs rather than bgr switches the engine to fixed string matches
-        biggrepcmd[0] = "bgs"
+        biggrepclient = "bgs"
     if opts.get("perl_regexp"):
         cmd.append("-P")
         # re2 is already mostly pcre compatible, so there are no options
         # to apply for this.
+
+    # Ask big grep to strip out the corpus dir (stripdir) and to include
+    # the corpus revision on the first line.
+    biggrepcmd = [
+        biggrepclient,
+        biggreptier,
+        biggrepcorpus,
+        "re2",
+        "--stripdir",
+        "-r",
+        "--expression",
+        biggreppattern,
+    ]
 
     biggrepcmd += args
     cmd += args
@@ -3905,15 +3899,33 @@ def grep(ui, repo, table, matcher, pattern, **opts):
     cmd.append("--")
 
     if biggrep:
-        ui.debug(f"big grep command: {biggrepcmd}\n")
+        ui.debug(f"biggrep command: {biggrepcmd}\n")
         p = subprocess.Popen(
             biggrepcmd,
             bufsize=-1,
             close_fds=util.closefds,
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             cwd=reporoot,
         )
         out, err = p.communicate()
+
+        # bigrep returns 1 for:
+        #   - (a) no results
+        #   - (b) some error cases, e.g.: limit imposed by the --max-bytes option
+        # Since no reliable way to differentiate these cases, the following
+        # logic implementas best-effort error handling.
+        if p.returncode not in (0, 1):
+            errmsg = (
+                err.decode(errors="replace").strip()
+                or out.decode(errors="replace").strip()
+            )
+            raise error.Abort(
+                _("biggrep_client failed with exit code %d: %s")
+                % (p.returncode, errmsg),
+                hint=_("pass `--config grep.usebiggrep=False` to bypass biggrep"),
+            )
+
         lines = out.rstrip().decode().split("\n")
 
         revisionline = lines[0][1:]
@@ -4164,10 +4176,7 @@ def remove(ui, repo, m, mark, force, warnings=None):
             for f in modified:
                 prog.value += 1
                 warnings.append(
-                    _(
-                        "not removing %s: file is modified (use -f"
-                        " to force removal)\n"
-                    )
+                    _("not removing %s: file is modified (use -f to force removal)\n")
                     % m.rel(f)
                 )
                 ret = 1
@@ -4756,15 +4765,20 @@ def commitforceeditor(
     )
     text = editortext
 
-    # strip away anything below this special string (used for editors that want
-    # to display the diff)
-    stripbelow = re.search(_linebelow, text, flags=re.MULTILINE)
-    if stripbelow:
-        text = text[: stripbelow.start()]
-
     all_prefixes = "|".join(
         ident.cliname().upper() for ident in bindings.identity.all()
     )
+
+    # strip away anything below this special string (used for editors that want
+    # to display the diff)
+    linebelow = (
+        f"^(?:{all_prefixes}): ------------------------ >8 ------------------------$"
+    )
+
+    stripbelow = re.search(linebelow, text, flags=re.MULTILINE)
+    if stripbelow:
+        text = text[: stripbelow.start()]
+
     text = re.sub(f"(?m)^({all_prefixes}):.*(\n|$)", "", text)
     os.chdir(olddir)
 

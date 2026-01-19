@@ -82,7 +82,6 @@
 #include "eden/fs/store/Diff.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/FilteredBackingStore.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/PathLoader.h"
@@ -3004,7 +3003,6 @@ EdenServiceHandler::streamSelectedChangesSince(
     // pass filtered backing store to object store
     auto objectStore = ObjectStore::create(
         backingStore,
-        server_->getLocalStore(),
         server_->getTreeCache(),
         server_->getServerState()->getStats().copy(),
         server_->getServerState()->getProcessInfoCache(),
@@ -4778,19 +4776,14 @@ void EdenServiceHandler::debugGetScmTree(
     vector<ScmTreeEntry>& entries,
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
-    bool localStoreOnly) {
+    [[maybe_unused]] bool localStoreOnly) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, logHash(*idStr));
   auto mountHandle = lookupMount(mountPoint);
   auto& store = mountHandle.getObjectStore();
   auto id = store.parseObjectId(*idStr);
 
-  std::shared_ptr<const Tree> tree;
-  if (localStoreOnly) {
-    auto localStore = server_->getLocalStore();
-    tree = localStore->getTree(id).get();
-  } else {
-    tree = store.getTree(id, helper->getFetchContext()).get();
-  }
+  std::shared_ptr<const Tree> tree =
+      store.getTree(id, helper->getFetchContext()).get();
 
   if (!tree) {
     throw newEdenError(
@@ -4871,21 +4864,6 @@ EdenServiceHandler::co_debugGetBlobImpl(
                   folly::Try<std::shared_ptr<const Blob>>{
                       edenMount->getBlobCache()->get(id).object},
                   DataFetchOrigin::MEMORY_CACHE);
-            }));
-  }
-  if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
-    auto localStore = server_->getLocalStore();
-    blobTasks.push_back(
-        folly::coro::co_invoke(
-            [edenMount,
-             id,
-             localStore]() -> folly::coro::Task<ScmBlobWithOrigin> {
-              auto blob = co_await localStore->co_getBlob(id);
-              co_return transformToBlobFromOrigin(
-                  edenMount,
-                  id,
-                  folly::Try<std::shared_ptr<const Blob>>{blob},
-                  DataFetchOrigin::DISK_CACHE);
             }));
   }
   auto& context = helper->getFetchContext();
@@ -5047,14 +5025,6 @@ EdenServiceHandler::debugGetBlobImpl(
             edenMount->getBlobCache()->get(id).object},
         DataFetchOrigin::MEMORY_CACHE));
   }
-  if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
-    auto localStore = server_->getLocalStore();
-    blobFutures.emplace_back(
-        localStore->getBlob(id).thenTry([edenMount, id](auto&& blob) {
-          return transformToBlobFromOrigin(
-              edenMount, id, std::move(blob), DataFetchOrigin::DISK_CACHE);
-        }));
-  }
 
   auto& context = helper->getFetchContext();
 
@@ -5123,17 +5093,6 @@ EdenServiceHandler::semifuture_debugGetBlobMetadata(
     auto auxData = store->getBlobAuxDataFromInMemoryCache(id, fetchContext);
     blobFutures.emplace_back(transformToBlobMetadataFromOrigin(
         edenMount, id, auxData, DataFetchOrigin::MEMORY_CACHE));
-  }
-  if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
-    auto localStore = server_->getLocalStore();
-    blobFutures.emplace_back(
-        localStore->getBlobAuxData(id).thenTry([edenMount, id](auto&& auxData) {
-          return transformToBlobMetadataFromOrigin(
-              edenMount,
-              id,
-              std::move(auxData.value()),
-              DataFetchOrigin::DISK_CACHE);
-        }));
   }
   if (originFlags.contains(FROMWHERE_LOCAL_BACKING_STORE)) {
     auto slOid = SlOid{id};
@@ -5211,18 +5170,6 @@ EdenServiceHandler::semifuture_debugGetTree(
         id,
         folly::Try<std::shared_ptr<const Tree>>{store->getTreeCache()->get(id)},
         DataFetchOrigin::MEMORY_CACHE));
-  }
-
-  if (originFlags.contains(FROMWHERE_DISK_CACHE)) {
-    auto localStore = server_->getLocalStore();
-    treeFutures.emplace_back(localStore->getTree(id).thenTry(
-        [edenMount, id, store](auto&& tree) mutable {
-          return transformToTreeFromOrigin(
-              std::move(edenMount),
-              id,
-              std::move(tree),
-              DataFetchOrigin::DISK_CACHE);
-        }));
   }
 
   auto& context = helper->getFetchContext();
@@ -5714,17 +5661,14 @@ void EdenServiceHandler::getAccessCounts(
 
 void EdenServiceHandler::clearAndCompactLocalStore() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
-  server_->getLocalStore()->clearCachesAndCompactAll();
 }
 
 void EdenServiceHandler::debugClearLocalStoreCaches() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
-  server_->getLocalStore()->clearCaches();
 }
 
 void EdenServiceHandler::debugCompactLocalStorage() {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
-  server_->getLocalStore()->compactStorage();
 }
 
 // TODO(T119221752): add more BackingStore subclasses to this command. We
@@ -6612,7 +6556,7 @@ bool EdenServiceHandler::removeCancellationSource(uint64_t requestId) {
             requestId,
             elapsed.count(),
             CANCELLATION_VERIFICATION_THRESHOLD_SECONDS);
-        server_->getStats()->increment(&ThriftStats::cancelRequesLongRunning);
+        server_->getStats()->increment(&ThriftStats::cancelRequestLongRunning);
       }
     }
 

@@ -965,9 +965,9 @@ Since we cannot proceed, ghstack will abort now.
             for rewritten_commit in rewritten_stack:
                 old_oid = self.stack[stack_index].oid
                 new_oid = mappings[old_oid]
-                assert (
-                    new_oid == rewritten_commit.oid
-                ), f"commit {old_oid} should be mapped to {new_oid} === {rewritten_commit.oid}"
+                assert new_oid == rewritten_commit.oid, (
+                    f"commit {old_oid} should be mapped to {new_oid} === {rewritten_commit.oid}"
+                )
                 self.stack[stack_index] = rewritten_commit
                 stack_index += 1
 

@@ -38,7 +38,7 @@ use openssl::ssl::SslConnector;
 use openssl::ssl::SslFiletype;
 use openssl::ssl::SslMethod;
 use rand::Rng;
-use rand::thread_rng;
+use rand::rng;
 use tls::TLSArgs;
 use tokio::sync::Semaphore;
 use tokio::time::Duration;
@@ -231,8 +231,7 @@ impl GitImportLfs {
 
                     attempt += 1;
                     // Sleep on average time_ms_between_attempts between attempts.
-                    let sleep_time_ms =
-                        thread_rng().gen_range(0..inner.time_ms_between_attempts * 2);
+                    let sleep_time_ms = rng().random_range(0..inner.time_ms_between_attempts * 2);
                     error!(
                         "{}. Attempt {} of {} - Retrying in {} ms",
                         err, attempt, inner.max_attempts, sleep_time_ms,

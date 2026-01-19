@@ -12,6 +12,10 @@ use context::CoreContext;
 use context::PerfCounterType;
 use futures::future::BoxFuture;
 use futures::future::FutureExt;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
 use mutable_blobstore::ArcMutableRepoBlobstore;
 use sql_construct::SqlConstruct;
@@ -121,7 +125,18 @@ impl SqlConstruct for StreamingCloneBuilder {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for StreamingCloneBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for StreamingCloneBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+}
 
 impl StreamingCloneBuilder {
     pub fn build(

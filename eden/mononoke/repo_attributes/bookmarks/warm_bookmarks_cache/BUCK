@@ -12,7 +12,7 @@ rust_library(
     }),
     test_deps = [
         "fbsource//third-party/rust:maplit",
-        "fbsource//third-party/rust:rand_distr",
+        "fbsource//third-party/rust:rand_distr_04",
         "fbsource//third-party/rust:tokio",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/fbinit:fbinit-tokio",

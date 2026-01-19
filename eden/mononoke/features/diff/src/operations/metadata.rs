@@ -8,6 +8,7 @@
 use std::ops::Range;
 
 use anyhow::Context;
+use anyhow::anyhow;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::try_join;
@@ -30,6 +31,8 @@ use crate::types::MetadataDiff;
 use crate::types::MetadataFileInfo;
 use crate::types::MetadataLinesCount;
 use crate::utils::content::get_file_info_from_changeset_path;
+use crate::utils::content::load_content;
+use crate::utils::whitespace::strip_horizontal_whitespace;
 
 // This logic comes from `mononoke_api/src/changeset_path_diff.rs`
 
@@ -191,33 +194,39 @@ async fn calculate_lines_count(
     new_parsed_file_content: Option<&ParsedFileContent>,
     old_file_type: Option<&DiffFileType>,
     new_file_type: Option<&DiffFileType>,
-) -> Result<Option<MetadataLinesCount>, DiffError> {
+    ignore_whitespace: bool,
+) -> Option<MetadataLinesCount> {
     if matches!(old_file_type, Some(&DiffFileType::GitSubmodule))
         || matches!(new_file_type, Some(&DiffFileType::GitSubmodule))
     {
-        return Ok(None);
+        return None;
     }
 
     match (old_parsed_file_content, new_parsed_file_content) {
         (
             Some(ParsedFileContent::Text(old_text_file)),
             Some(ParsedFileContent::Text(new_text_file)),
-        ) => Ok(Some(diff_files(old_text_file, new_text_file).await?)),
-        (Some(ParsedFileContent::Text(old_text_file)), _) => Ok(Some(file_deleted(old_text_file))),
-        (_, Some(ParsedFileContent::Text(new_text_file))) => Ok(Some(file_created(new_text_file))),
-        _ => Ok(None),
+        ) => Some(diff_files(old_text_file, new_text_file, ignore_whitespace)),
+        (Some(ParsedFileContent::Text(old_text_file)), _) => Some(file_deleted(old_text_file)),
+        (_, Some(ParsedFileContent::Text(new_text_file))) => Some(file_created(new_text_file)),
+        _ => None,
     }
 }
 
-async fn diff_files(old_text_file: &TextFile, new_text_file: &TextFile) -> Result<MetadataLinesCount, DiffError> {
-    let old_content = old_text_file.file_content.clone();
-    let new_content = new_text_file.file_content.clone();
+fn diff_files(old_text_file: &TextFile, new_text_file: &TextFile, ignore_whitespace: bool) -> MetadataLinesCount {
+    let old_content = if ignore_whitespace {
+        strip_horizontal_whitespace(&old_text_file.file_content)
+    } else {
+        old_text_file.file_content.clone()
+    };
 
-    let hunks = tokio::task::spawn_blocking(move || {
-        xdiff::diff_hunks(old_content, new_content)
-    })
-    .await
-    .map_err(|e| DiffError::internal(anyhow::anyhow!("spawn_blocking failed: {}", e)))?;
+    let new_content = if ignore_whitespace {
+        strip_horizontal_whitespace(&new_text_file.file_content)
+    } else {
+        new_text_file.file_content.clone()
+    };
+
+    let hunks = xdiff::diff_hunks(old_content, new_content);
 
     let mut added_lines = 0i64;
     let mut deleted_lines = 0i64;
@@ -237,13 +246,13 @@ async fn diff_files(old_text_file: &TextFile, new_text_file: &TextFile) -> Resul
         }
     }
 
-    Ok(MetadataLinesCount {
+    MetadataLinesCount {
         added_lines,
         deleted_lines,
         significant_added_lines,
         significant_deleted_lines,
         first_added_line_number,
-    })
+    }
 }
 
 fn file_created(new_text_file: &TextFile) -> MetadataLinesCount {
@@ -352,6 +361,53 @@ async fn get_file_details_from_input(
             // For content-only inputs, we don't have file type information
             Ok((None, parsed_file_content))
         }
+        DiffSingleInput::String(_string_input) => {
+            let file_content = load_content(ctx, repo, input)
+                .await?
+                // For string inputs we will never get None here
+                .ok_or_else(|| DiffError::internal(anyhow!("Failed to load content from String input")))?;
+
+            let is_binary = file_content.contains(&0u8);
+            let is_utf8 = std::str::from_utf8(&file_content).is_ok();
+
+            // Create a lightweight metadata struct for string content analysis
+            // We can't create a full ContentMetadataV2 without a content_id
+            let newline_count = file_content.iter().filter(|&&b| b == b'\n').count() as u64;
+            let ends_in_newline = file_content.last() == Some(&b'\n');
+
+            // Build a minimal metadata for TextFile creation
+            let metadata = ContentMetadataV2 {
+                content_id: ContentId::from_bytes([0; 32]).unwrap(), // Placeholder - not used for string inputs
+                total_size: file_content.len() as u64,
+                sha1: mononoke_types::hash::Sha1::from_byte_array([0; 20]),
+                sha256: mononoke_types::hash::Sha256::from_byte_array([0; 32]),
+                git_sha1: mononoke_types::hash::RichGitSha1::from_sha1(
+                    mononoke_types::hash::GitSha1::from_byte_array([0; 20]),
+                    "blob",
+                    file_content.len() as u64,
+                ),
+                seeded_blake3: mononoke_types::hash::Blake3::from_byte_array([0; 32]),
+                is_binary,
+                is_utf8,
+                is_ascii: file_content.is_ascii(),
+                ends_in_newline,
+                newline_count,
+                first_line: None,
+                is_generated: false,
+                is_partially_generated: false,
+            };
+
+            let parsed_file_content = if is_binary {
+                Some(ParsedFileContent::Binary)
+            } else if is_utf8 {
+                Some(ParsedFileContent::Text(TextFile::new(file_content, metadata)?))
+            } else {
+                Some(ParsedFileContent::NonUtf8)
+            };
+
+            // String inputs would be a regular file by definition
+            Ok((Some(DiffFileType::Regular), parsed_file_content))
+        }
     }
 }
 
@@ -360,6 +416,7 @@ pub async fn metadata(
     repo: &impl Repo,
     base: Option<DiffSingleInput>,
     other: Option<DiffSingleInput>,
+    ignore_whitespace: bool,
 ) -> Result<MetadataDiff, DiffError> {
 
     // Get file information directly from inputs
@@ -388,7 +445,9 @@ pub async fn metadata(
         other_parsed_content.as_ref(),
         base_file_type.as_ref(),
         other_file_type.as_ref(),
-    ).await?;
+        ignore_whitespace,
+    )
+    .await;
 
     let base_file_info = create_file_info(base_file_type, base_parsed_content.as_ref());
     let other_file_info = create_file_info(other_file_type, other_parsed_content.as_ref());
@@ -453,7 +512,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
 
         // Check file info
         assert_eq!(
@@ -520,7 +579,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
 
         // Check that content type is binary
         assert_eq!(
@@ -564,7 +623,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
 
         // Base file doesn't exist
         assert_eq!(metadata_diff.base_file_info.file_type, None);
@@ -612,6 +671,7 @@ mod tests {
             &repo,
             None,
             Some(input.clone()),
+            false,
         )
         .await?;
 
@@ -639,6 +699,7 @@ mod tests {
             &repo,
             Some(input),
             None,
+            false,
         )
         .await?;
 
@@ -661,7 +722,7 @@ mod tests {
         assert_eq!(lines_count.deleted_lines, 2);
 
         // Test None vs None - should show no difference
-        let metadata_diff = metadata(&ctx, &repo, None, None).await?;
+        let metadata_diff = metadata(&ctx, &repo, None, None, false).await?;
 
         // Both files don't exist
         assert_eq!(metadata_diff.base_file_info.file_type, None);
@@ -693,7 +754,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, None, Some(input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, None, Some(input), false).await?;
 
         // Check that generated status is detected
         assert_eq!(
@@ -739,7 +800,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, None, Some(input)).await?;
+        let metadata_diff = metadata(&ctx, &repo, None, Some(input), false).await?;
 
         // Check that partially generated status is detected
         assert_eq!(
@@ -751,6 +812,337 @@ mod tests {
         let lines_count = metadata_diff.lines_count.unwrap();
         assert_eq!(lines_count.added_lines, 7); // Total lines
         assert_eq!(lines_count.significant_added_lines, 2); // Only manual lines (lines 3-4, 0-indexed)
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_string_inputs(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with String inputs
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nmodified line2\nline3\n".to_string(),
+        });
+
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
+
+        assert_eq!(metadata_diff.base_file_info.file_type, Some(DiffFileType::Regular));
+        assert_eq!(
+            metadata_diff.base_file_info.content_type,
+            Some(DiffContentType::Text)
+        );
+        assert_eq!(
+            metadata_diff.base_file_info.generated_status,
+            Some(DiffGeneratedStatus::NonGenerated)
+        );
+
+        assert_eq!(metadata_diff.other_file_info.file_type, Some(DiffFileType::Regular));
+        assert_eq!(
+            metadata_diff.other_file_info.content_type,
+            Some(DiffContentType::Text)
+        );
+        assert_eq!(
+            metadata_diff.other_file_info.generated_status,
+            Some(DiffGeneratedStatus::NonGenerated)
+        );
+
+        // Check lines count
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert_eq!(lines_count.added_lines, 1);
+        assert_eq!(lines_count.deleted_lines, 1);
+        assert_eq!(lines_count.significant_added_lines, 1);
+        assert_eq!(lines_count.significant_deleted_lines, 1);
+        assert_eq!(lines_count.first_added_line_number, Some(2));
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_string_vs_none(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        let string_input = DiffSingleInput::String(DiffInputString {
+            content: "some content\nline2\n".to_string(),
+        });
+
+        // Test None vs String - should show addition
+        let metadata_diff = metadata(&ctx, &repo, None, Some(string_input.clone()), false).await?;
+
+        // Base file doesn't exist
+        assert_eq!(metadata_diff.base_file_info.file_type, None);
+        assert_eq!(metadata_diff.base_file_info.content_type, None);
+
+        // Other file exists
+        assert_eq!(metadata_diff.other_file_info.file_type, Some(DiffFileType::Regular));
+        assert_eq!(
+            metadata_diff.other_file_info.content_type,
+            Some(DiffContentType::Text)
+        );
+
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert_eq!(lines_count.added_lines, 2);
+        assert_eq!(lines_count.deleted_lines, 0);
+
+        // Test String vs None - should show deletion
+        let metadata_diff = metadata(&ctx, &repo, Some(string_input), None, false).await?;
+
+        // Base file exists
+        assert_eq!(metadata_diff.base_file_info.file_type, Some(DiffFileType::Regular));
+        assert_eq!(
+            metadata_diff.base_file_info.content_type,
+            Some(DiffContentType::Text)
+        );
+
+        // Other file doesn't exist
+        assert_eq!(metadata_diff.other_file_info.file_type, None);
+        assert_eq!(metadata_diff.other_file_info.content_type, None);
+
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert_eq!(lines_count.added_lines, 0);
+        assert_eq!(lines_count.deleted_lines, 2);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_string_binary(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with binary String inputs (contains null bytes)
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"binary\x00content").to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"different\x00binary").to_string(),
+        });
+
+        let metadata_diff = metadata(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
+
+        // Check that content type is binary
+        assert_eq!(
+            metadata_diff.base_file_info.content_type,
+            Some(DiffContentType::Binary)
+        );
+        assert_eq!(
+            metadata_diff.other_file_info.content_type,
+            Some(DiffContentType::Binary)
+        );
+
+        // Lines count should be None for binary files
+        assert!(metadata_diff.lines_count.is_none());
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_string_empty(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with empty string inputs
+        let empty_input = DiffSingleInput::String(DiffInputString {
+            content: String::new(),
+        });
+        let non_empty_input = DiffSingleInput::String(DiffInputString {
+            content: "some content\n".to_string(),
+        });
+
+        let metadata_diff = metadata(&ctx, &repo, Some(empty_input.clone()), Some(non_empty_input), false).await?;
+
+        // Both should be text files
+        assert_eq!(
+            metadata_diff.base_file_info.content_type,
+            Some(DiffContentType::Text)
+        );
+        assert_eq!(
+            metadata_diff.other_file_info.content_type,
+            Some(DiffContentType::Text)
+        );
+
+        // Check lines count
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert_eq!(lines_count.added_lines, 1);
+        assert_eq!(lines_count.deleted_lines, 0);
+
+        // Test two empty strings
+        let metadata_diff = metadata(&ctx, &repo, Some(empty_input.clone()), Some(empty_input), false).await?;
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert_eq!(lines_count.added_lines, 0);
+        assert_eq!(lines_count.deleted_lines, 0);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_string_special_chars(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with various special characters and Unicode
+        let special_input = DiffSingleInput::String(DiffInputString {
+            content: "Hello 世界\nTab:\t\nEmoji: 🚀\nQuotes: \"test\" 'test'\n".to_string(),
+        });
+        let plain_input = DiffSingleInput::String(DiffInputString {
+            content: "Plain text\n".to_string(),
+        });
+
+        let metadata_diff = metadata(&ctx, &repo, Some(special_input), Some(plain_input), false).await?;
+
+        // Should handle special characters as text
+        assert_eq!(
+            metadata_diff.base_file_info.content_type,
+            Some(DiffContentType::Text)
+        );
+        assert_eq!(
+            metadata_diff.other_file_info.content_type,
+            Some(DiffContentType::Text)
+        );
+
+        // Lines count should work correctly
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert!(lines_count.added_lines > 0 || lines_count.deleted_lines > 0);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_ignore_whitespace_only(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with only whitespace differences
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "hello world\nfoo bar\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "hello  world\nfoo\tbar\n".to_string(),
+        });
+
+        // With ignore_whitespace: false, should show differences
+        let metadata_diff = metadata(
+            &ctx,
+            &repo,
+            Some(base_input.clone()),
+            Some(other_input.clone()),
+            false,
+        )
+        .await?;
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert!(
+            lines_count.added_lines > 0 || lines_count.deleted_lines > 0,
+            "Should show whitespace differences when ignore_whitespace=false"
+        );
+
+        // With ignore_whitespace: true, should show no changes in line counts
+        // (After stripping whitespace, "helloworld\nfoobar\n" should match on both sides)
+        let metadata_diff = metadata(
+            &ctx,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            true,
+        )
+        .await?;
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert_eq!(
+            lines_count.added_lines, 0,
+            "Should show no added lines when ignore_whitespace=true for whitespace-only changes"
+        );
+        assert_eq!(
+            lines_count.deleted_lines, 0,
+            "Should show no deleted lines when ignore_whitespace=true for whitespace-only changes"
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_ignore_whitespace_mixed(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with both whitespace and content differences
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nmodified  line2\nline3\n".to_string(),
+        });
+
+        // With ignore_whitespace: true, should still show content change
+        // After stripping whitespace: "line2" vs "modifiedline2" (real difference!)
+        let metadata_diff = metadata(
+            &ctx,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            true,
+        )
+        .await?;
+        let lines_count = metadata_diff.lines_count.unwrap();
+        assert_eq!(
+            lines_count.added_lines, 1,
+            "Should show content changes even with ignore_whitespace=true"
+        );
+        assert_eq!(
+            lines_count.deleted_lines, 1,
+            "Should show content changes even with ignore_whitespace=true"
+        );
+        assert_eq!(lines_count.first_added_line_number, Some(2));
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_metadata_ignore_whitespace_binary(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test that binary files are not affected by whitespace stripping
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"binary\x00 content").to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"binary\x00  content").to_string(),
+        });
+
+        // Even with ignore_whitespace: true, binary files should not use line counting
+        let metadata_diff = metadata(
+            &ctx,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            true,
+        )
+        .await?;
+
+        // Binary files should not have line counts
+        assert!(metadata_diff.lines_count.is_none(), "Binary files should not have line counts");
+        assert_eq!(metadata_diff.base_file_info.content_type, Some(DiffContentType::Binary));
+        assert_eq!(metadata_diff.other_file_info.content_type, Some(DiffContentType::Binary));
 
         Ok(())
     }

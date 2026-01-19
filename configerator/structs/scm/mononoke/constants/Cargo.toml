@@ -22,7 +22,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 ref-cast = "1.0.18"
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
-sharding = { version = "0.1.0", path = "../sharding" }
+sharding = { version = "0.1.0", path = "../sharding/sharding" }
 thiserror = "2.0.12"
 
 [build-dependencies]

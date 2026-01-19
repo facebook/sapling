@@ -17,6 +17,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
 use context::PerfCounterType;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::RepositoryId;
 use mononoke_types::hash::GitSha1;
@@ -350,7 +354,18 @@ impl SqlConstruct for SqlBonsaiGitMappingBuilder {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiGitMappingBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiGitMappingBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.bookmarks)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.bookmarks)
+    }
+}
 
 fn filter_fetched_ids(
     cs: BonsaisOrGitShas,
@@ -409,13 +424,13 @@ async fn select_mapping(
     )?;
 
     if use_rendezvous {
-        select_mapping_rendevous(ctx, connection, repo_id, objects).await
+        select_mapping_rendezvous(ctx, connection, repo_id, objects).await
     } else {
         select_mapping_non_rendezvous(ctx, &connection.conn, repo_id, objects).await
     }
 }
 
-async fn select_mapping_rendevous(
+async fn select_mapping_rendezvous(
     ctx: &CoreContext,
     connection: &RendezVousConnection,
     repo_id: &RepositoryId,

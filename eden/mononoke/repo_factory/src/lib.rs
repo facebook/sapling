@@ -1016,7 +1016,7 @@ impl RepoFactory {
             .open_sql::<SqlBonsaiTagMappingBuilder>(repo_config)
             .await
             .context(RepoFactoryError::BonsaiTagMapping)?
-            .build(repo_identity.id());
+            .build(repo_identity.id(), self.env.rendezvous_options);
         let repo_name = repo_identity.name();
         if justknobs::eval(
             "scm/mononoke:enable_bonsai_tag_mapping_caching",
@@ -1923,18 +1923,12 @@ impl RepoFactory {
             Some(preloaded_commit_graph_key)
                 if !self.env.commit_graph_options.skip_preloading_commit_graph =>
             {
-                let blobstore = match justknobs::eval(
-                    "scm/mononoke:commit_graph_use_mutable_storage",
-                    None,
-                    None,
-                )? {
-                    true => &repo_config.storage_config.mutable_blobstore,
-                    false => &repo_config.storage_config.blobstore,
-                };
                 let blobstore_without_cache = self
                     .mutable_repo_blobstore_from_blobstore(
                         repo_identity,
-                        &self.blobstore_no_cache(blobstore).await?,
+                        &self
+                            .blobstore_no_cache(&repo_config.storage_config.mutable_blobstore)
+                            .await?,
                     )
                     .await?;
 

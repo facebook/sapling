@@ -151,6 +151,7 @@ def mononoke(args: List[str], stderr: BinaryIO, fs: ShellFS, env: Env) -> int:
         f"{test_tmp}/mononoke-config",
         "--no-default-scuba-dataset",
         "--tracing-test-format",
+        "--with-dynamic-observability=true",
         *cache_args,
         *common_args,
     ]
@@ -488,7 +489,7 @@ def setup_common_hg_configs(
 
     config_content = f"""
 [ui]
-ssh="{env.getenv('DUMMYSSH')}"
+ssh="{env.getenv("DUMMYSSH")}"
 
 [devel]
 segmented-changelog-rev-compat=True
@@ -760,11 +761,11 @@ everstore_local_path="{everstore_local_path}"
 
     append_def_config(
         f"""
-repo_id={env.getenv('REPOID')}
+repo_id={env.getenv("REPOID")}
 repo_name="{reponame}"
 repo_config="{reponame}"
-enabled={env.getenv('ENABLED', 'true')}
-hipster_acl="{env.getenv('ACL_NAME', 'default')}"
+enabled={env.getenv("ENABLED", "true")}
+hipster_acl="{env.getenv("ACL_NAME", "default")}"
 """,
         "w",
     )
@@ -781,11 +782,11 @@ hipster_acl="{env.getenv('ACL_NAME', 'default')}"
         append_def_config("\ndefault_commit_identity_scheme=3\n")
 
     if env.getenv("SCUBA_LOGGING_PATH"):
-        append_config(f"\nscuba_local_path=\"{env.getenv('SCUBA_LOGGING_PATH')}\"\n")
+        append_config(f'\nscuba_local_path="{env.getenv("SCUBA_LOGGING_PATH")}"\n')
 
     if env.getenv("HOOKS_SCUBA_LOGGING_PATH"):
         append_config(
-            f"\nscuba_table_hooks=\"file://{env.getenv('HOOKS_SCUBA_LOGGING_PATH')}\"\n"
+            f'\nscuba_table_hooks="file://{env.getenv("HOOKS_SCUBA_LOGGING_PATH")}"\n'
         )
 
     if env.getenv("ENFORCE_LFS_ACL_CHECK"):
@@ -1024,9 +1025,9 @@ types = {other_derived_data}
     append_config(
         f"""
 [source_control_service]
-permit_writes = {env.getenv('SCS_PERMIT_WRITES', 'true')}
-permit_service_writes = {env.getenv('SCS_PERMIT_SERVICE_WRITES', 'true')}
-permit_commits_without_parents = {env.getenv('SCS_PERMIT_COMMITS_WITHOUT_PARENTS', 'true')}
+permit_writes = {env.getenv("SCS_PERMIT_WRITES", "true")}
+permit_service_writes = {env.getenv("SCS_PERMIT_SERVICE_WRITES", "true")}
+permit_commits_without_parents = {env.getenv("SCS_PERMIT_COMMITS_WITHOUT_PARENTS", "true")}
 """
     )
 

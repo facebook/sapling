@@ -19,7 +19,7 @@ rust_library(
         "//eden/mononoke/blobstore:fileblob",
         "//common/rust/shed/fbinit:fbinit",
     ] + ([] if rust_oss.is_oss_build() else [
-        "//remote_execution/cas/client_lib/wrappers/rust:cas_client_lib",
+        "//cas/client_lib/wrappers/rust:cas_client_lib",
         "//common/rust/shed/futures_ext:futures_ext",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tokio",

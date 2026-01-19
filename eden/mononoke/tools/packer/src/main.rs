@@ -29,8 +29,8 @@ use metaconfig_types::BlobstoreId;
 use mononoke_app::MononokeApp;
 use mononoke_app::MononokeAppBuilder;
 use mononoke_app::monitoring::MonitoringAppExtension;
+use rand::rng;
 use rand::seq::SliceRandom;
-use rand::thread_rng;
 use regex::Regex;
 use scuba_ext::MononokeScubaSampleBuilder;
 use tracing::info;
@@ -156,7 +156,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let mut keys_file_entries = fs::read_dir(keys_dir)?
         .map(|res| res.map(|e| e.path()))
         .collect::<Result<Vec<_>, io::Error>>()?;
-    keys_file_entries.shuffle(&mut thread_rng());
+    keys_file_entries.shuffle(&mut rng());
 
     let mut tuning_info_scuba_builder = match args.tuning_info_scuba_table {
         Some(table) => MononokeScubaSampleBuilder::new(fb, &table)?,

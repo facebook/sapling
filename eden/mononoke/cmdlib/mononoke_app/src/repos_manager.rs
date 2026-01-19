@@ -43,6 +43,11 @@ use repo_factory::RepoFactoryBuilder;
 use stats::prelude::*;
 use tracing::info;
 
+fn repos_manager_concurrency() -> Result<usize> {
+    justknobs::get_as::<usize>("scm/mononoke:repos_manager_concurrency", None)
+        .context("Failed to read scm/mononoke:repos_manager_concurrency JustKnob")
+}
+
 define_stats! {
     prefix = "mononoke.app";
     initialization_time_millisecs: dynamic_timeseries(
@@ -219,8 +224,8 @@ impl<Repo> MononokeReposManager<Repo> {
                     anyhow::Ok((repo_id, repo_name, repo))
                 })
             })
-            // Repo construction can be heavy, 10 at a time is sufficient.
-            .buffer_unordered(10)
+            // Repo construction can be heavy, limit concurrency via JK.
+            .buffer_unordered(repos_manager_concurrency()?)
             .map(|r| anyhow::Ok(r??))
             .try_collect::<Vec<_>>()
             .await?;
@@ -358,8 +363,8 @@ where
                     anyhow::Ok((repo_id, repo_name, repo))
                 })
             })
-            // Repo construction can be heavy, 10 at a time is sufficient.
-            .buffer_unordered(10)
+            // Repo construction can be heavy, limit concurrency via JK.
+            .buffer_unordered(repos_manager_concurrency()?)
             .map(|r| anyhow::Ok(r??))
             .try_collect::<Vec<_>>()
             .await?;

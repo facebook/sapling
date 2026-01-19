@@ -45,7 +45,6 @@ class FakePrivHelper;
 class FakeTreeBuilder;
 class FileInode;
 class FuseDispatcher;
-class LocalStore;
 class TestConfigSource;
 class TreeInode;
 class MockInodeAccessLogger;
@@ -216,13 +215,6 @@ class TestMount {
    * must be parseable by the ConfigSetting.
    */
   void updateEdenConfig(const std::map<std::string, std::string>& values);
-
-  /**
-   * Callers can use this to populate the LocalStore before calling build().
-   */
-  const std::shared_ptr<LocalStore>& getLocalStore() const {
-    return localStore_;
-  }
 
   /**
    * Callers can use this to populate the BackingStore before calling build().
@@ -424,7 +416,6 @@ class TestMount {
 #ifndef _WIN32
   std::unique_ptr<FuseDispatcher> dispatcher_;
 #endif
-  std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<FakeBackingStore> backingStore_;
   EdenStatsPtr stats_;
   std::shared_ptr<BlobCache> blobCache_;

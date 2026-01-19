@@ -12,9 +12,7 @@
 #include "eden/common/utils/ProcessInfoCache.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
-#include "eden/fs/store/StoreResult.h"
 #include "eden/fs/store/TreeCache.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -38,47 +36,8 @@ const auto blob6 = std::make_shared<Blob>("666666"_sp);
 constexpr size_t kTreeCacheMaximumSize = 1000; // bytes
 constexpr size_t kTreeCacheMinimumEntries = 0;
 
-/**
- * These tests attempt to measure the number of hits to the backing store, so
- * prevent anything from getting cached in the local store.
- */
-class NullLocalStore final : public LocalStore {
- public:
-  class NullWriteBatch final : public LocalStore::WriteBatch {
-   public:
-    void put(KeySpace, folly::ByteRange, folly::ByteRange) override {}
-    void put(KeySpace, folly::ByteRange, const std::vector<folly::ByteRange>&)
-        override {}
-    void flush() override {}
-  };
-
-  NullLocalStore() : LocalStore{makeRefPtr<EdenStats>()} {}
-
-  void close() override {}
-  void open() override {}
-  void clearKeySpace(KeySpace) override {}
-  void compactKeySpace(KeySpace) override {}
-
-  StoreResult get(KeySpace keySpace, folly::ByteRange key) const override {
-    return StoreResult::missing(keySpace, key);
-  }
-
-  bool hasKey(KeySpace, folly::ByteRange) const override {
-    return false;
-  }
-
-  void put(KeySpace, folly::ByteRange, folly::ByteRange) override {}
-
-  std::unique_ptr<WriteBatch> beginWrite(size_t) override {
-    return std::make_unique<NullWriteBatch>();
-  }
-};
-
 struct BlobAccessTest : ::testing::Test {
-  BlobAccessTest()
-      : localStore{std::make_shared<NullLocalStore>()},
-        backingStore{std::make_shared<FakeBackingStore>(
-            BackingStore::LocalStoreCachingPolicy::NoCaching)} {
+  BlobAccessTest() : backingStore{std::make_shared<FakeBackingStore>()} {
     std::shared_ptr<EdenConfig> rawEdenConfig{
         EdenConfig::createTestEdenConfig()};
     rawEdenConfig->inMemoryTreeCacheSize.setValue(
@@ -90,10 +49,8 @@ struct BlobAccessTest : ::testing::Test {
         BlobCache::create(10, 0, edenConfig, makeRefPtr<EdenStats>());
     auto treeCache = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
 
-    localStore->open();
     objectStore = ObjectStore::create(
         backingStore,
-        localStore,
         treeCache,
         makeRefPtr<EdenStats>(),
         std::make_shared<ProcessInfoCache>(),
@@ -117,7 +74,6 @@ struct BlobAccessTest : ::testing::Test {
   }
 
   LoggingFetchContext context;
-  std::shared_ptr<LocalStore> localStore;
   std::shared_ptr<FakeBackingStore> backingStore;
   std::shared_ptr<ObjectStore> objectStore;
   std::shared_ptr<BlobAccess> blobAccess;

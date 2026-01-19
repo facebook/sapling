@@ -427,26 +427,26 @@ specific template keywords work well
 
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
-  > changeset.commit.normal = 'HG: this is "commit.normal" template
-  >     HG: Leave message empty to abort commit.
+  > changeset.commit.normal = '{slprefix}: this is "commit.normal" template
+  >     {slprefix}: Leave message empty to abort commit.
   >     {if(activebookmark,
-  >    "HG: bookmark '{activebookmark}' is activated\n",
-  >    "HG: no bookmark is activated\n")}{subrepos %
-  >    "HG: subrepo '{subrepo}' is changed\n"}'
+  >    "{slprefix}: bookmark '{activebookmark}' is activated\n",
+  >    "{slprefix}: no bookmark is activated\n")}{subrepos %
+  >    "{slprefix}: subrepo '{subrepo}' is changed\n"}'
   > 
-  > changeset.commit = HG: this is "commit" template
-  >     HG: Leave message empty to abort commit.
+  > changeset.commit = {slprefix}: this is "commit" template
+  >     {slprefix}: Leave message empty to abort commit.
   >     {if(activebookmark,
-  >    "HG: bookmark '{activebookmark}' is activated\n",
-  >    "HG: no bookmark is activated\n")}{subrepos %
-  >    "HG: subrepo '{subrepo}' is changed\n"}
+  >    "{slprefix}: bookmark '{activebookmark}' is activated\n",
+  >    "{slprefix}: no bookmark is activated\n")}{subrepos %
+  >    "{slprefix}: subrepo '{subrepo}' is changed\n"}
   > 
-  > changeset = HG: this is customized commit template
-  >     HG: Leave message empty to abort commit.
+  > changeset = {slprefix}: this is customized commit template
+  >     {slprefix}: Leave message empty to abort commit.
   >     {if(activebookmark,
-  >    "HG: bookmark '{activebookmark}' is activated\n",
-  >    "HG: no bookmark is activated\n")}{subrepos %
-  >    "HG: subrepo '{subrepo}' is changed\n"}
+  >    "{slprefix}: bookmark '{activebookmark}' is activated\n",
+  >    "{slprefix}: no bookmark is activated\n")}{subrepos %
+  >    "{slprefix}: subrepo '{subrepo}' is changed\n"}
   > EOF
 
   $ hg init sub2
@@ -492,17 +492,17 @@ specific template keywords work well
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
   > changeset = {desc}
-  >     HG: mods={file_mods}
-  >     HG: adds={file_adds}
-  >     HG: dels={file_dels}
-  >     HG: files={files}
-  >     HG:
-  >     {splitlines(diff()) % 'HG: {line}\n'
-  >    }HG:
-  >     HG: mods={file_mods}
-  >     HG: adds={file_adds}
-  >     HG: dels={file_dels}
-  >     HG: files={files}\n
+  >     {slprefix}: mods={file_mods}
+  >     {slprefix}: adds={file_adds}
+  >     {slprefix}: dels={file_dels}
+  >     {slprefix}: files={files}
+  >     {slprefix}:
+  >     {splitlines(diff()) % '{slprefix}: {line}\n'
+  >    }{slprefix}:
+  >     {slprefix}: mods={file_mods}
+  >     {slprefix}: adds={file_adds}
+  >     {slprefix}: dels={file_dels}
+  >     {slprefix}: files={files}\n
   > EOF
   $ hg status -amr
   M changed
@@ -540,31 +540,31 @@ specific template keywords work well
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
   > changeset = {desc}
-  >     HG: mods={file_mods}
-  >     HG: adds={file_adds}
-  >     HG: dels={file_dels}
-  >     HG: files={files}
-  >     HG:
-  >     {splitlines(diff("changed")) % 'HG: {line}\n'
-  >    }HG:
-  >     HG: mods={file_mods}
-  >     HG: adds={file_adds}
-  >     HG: dels={file_dels}
-  >     HG: files={files}
-  >     HG:
-  >     {splitlines(diff("added")) % 'HG: {line}\n'
-  >    }HG:
-  >     HG: mods={file_mods}
-  >     HG: adds={file_adds}
-  >     HG: dels={file_dels}
-  >     HG: files={files}
-  >     HG:
-  >     {splitlines(diff("removed")) % 'HG: {line}\n'
-  >    }HG:
-  >     HG: mods={file_mods}
-  >     HG: adds={file_adds}
-  >     HG: dels={file_dels}
-  >     HG: files={files}\n
+  >     {slprefix}: mods={file_mods}
+  >     {slprefix}: adds={file_adds}
+  >     {slprefix}: dels={file_dels}
+  >     {slprefix}: files={files}
+  >     {slprefix}:
+  >     {splitlines(diff("changed")) % '{slprefix}: {line}\n'
+  >    }{slprefix}:
+  >     {slprefix}: mods={file_mods}
+  >     {slprefix}: adds={file_adds}
+  >     {slprefix}: dels={file_dels}
+  >     {slprefix}: files={files}
+  >     {slprefix}:
+  >     {splitlines(diff("added")) % '{slprefix}: {line}\n'
+  >    }{slprefix}:
+  >     {slprefix}: mods={file_mods}
+  >     {slprefix}: adds={file_adds}
+  >     {slprefix}: dels={file_dels}
+  >     {slprefix}: files={files}
+  >     {slprefix}:
+  >     {splitlines(diff("removed")) % '{slprefix}: {line}\n'
+  >    }{slprefix}:
+  >     {slprefix}: mods={file_mods}
+  >     {slprefix}: adds={file_adds}
+  >     {slprefix}: dels={file_dels}
+  >     {slprefix}: files={files}\n
   > EOF
   $ HGEDITOR=cat hg commit -q -e -m "foo bar" added removed
   foo bar
@@ -723,11 +723,11 @@ verify pathauditor blocks evil filepaths
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
   > changeset.commit = HI THIS IS NOT STRIPPED
-  >     HG: this is customized commit template
-  >     HG: Leave message empty to abort commit.
+  >     {slprefix}: this is customized commit template
+  >     {slprefix}: Leave message empty to abort commit.
   >     {if(activebookmark,
-  >    "HG: bookmark '{activebookmark}' is activated\n",
-  >    "HG: no bookmark is activated\n")}
+  >    "{slprefix}: bookmark '{activebookmark}' is activated\n",
+  >    "{slprefix}: no bookmark is activated\n")}
   > EOF
   $ cat > $TESTTMP/notouching.sh <<EOF
   > true
@@ -753,9 +753,9 @@ test that text below the --- >8 --- special string is ignored
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
   > changeset.commit = first LINE
-  >     HG: this is customized commit template
-  >     HG: Leave message empty to abort commit.
-  >     HG: ------------------------ >8 ------------------------
+  >     {slprefix}: this is customized commit template
+  >     {slprefix}: Leave message empty to abort commit.
+  >     {slprefix}: ------------------------ >8 ------------------------
   >     {diff()}
   > EOF
   $ echo foo2 > foo2
@@ -782,10 +782,10 @@ a line
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
   > changeset.commit = first LINE2
-  >     another line HG: ------------------------ >8 ------------------------
-  >     HG: this is customized commit template
-  >     HG: Leave message empty to abort commit.
-  >     HG: ------------------------ >8 ------------------------
+  >     another line {slprefix}: ------------------------ >8 ------------------------
+  >     {slprefix}: this is customized commit template
+  >     {slprefix}: Leave message empty to abort commit.
+  >     {slprefix}: ------------------------ >8 ------------------------
   >     {diff()}
   > EOF
   $ echo foo >> foo
@@ -811,11 +811,11 @@ at the end
   $ cat >> .hg/hgrc <<EOF
   > [committemplate]
   > changeset.commit = first LINE3
-  >     HG: ------------------------ >8 ------------------------foobar
+  >     {slprefix}: ------------------------ >8 ------------------------foobar
   >     second line
-  >     HG: this is customized commit template
-  >     HG: Leave message empty to abort commit.
-  >     HG: ------------------------ >8 ------------------------
+  >     {slprefix}: this is customized commit template
+  >     {slprefix}: Leave message empty to abort commit.
+  >     {slprefix}: ------------------------ >8 ------------------------
   >     {diff()}
   > EOF
   $ echo foo >> foo

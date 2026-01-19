@@ -15,5 +15,6 @@ thrift_library(
     ],
     deps = [
         "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
     ],
 )

@@ -12,7 +12,6 @@ import unittest
 
 import silenttestrunner
 import testutil
-
 from sapling import error, util, vfs
 from sapling.ext import extutil
 

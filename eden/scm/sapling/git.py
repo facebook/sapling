@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import bindings
-
 from sapling import tracing
 
 from . import bookmarks as bookmod, error, identity, progress, rcutil, util

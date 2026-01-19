@@ -54,9 +54,7 @@ EdenError newEdenError(const folly::exception_wrapper& ew) {
           [&err](const std::system_error& ex) { err = newEdenError(ex); }) &&
       !ew.with_exception([&err](const sapling::SaplingBackingStoreError& ex) {
         err = newEdenError(ex);
-      }) &&
-      !ew.with_exception(
-          [&err](const RocksException& ex) { err = newEdenError(ex); })) {
+      })) {
     err = newEdenError(
         EdenErrorType::GENERIC_ERROR, folly::exceptionStr(ew).toStdString());
   }
@@ -73,14 +71,6 @@ EdenError newEdenNetworkError(
   } else {
     return newEdenError(EdenErrorType::NETWORK_ERROR, msg);
   }
-}
-
-EdenError newEdenNoSpaceError(std::string_view msg) {
-#ifdef _WIN32
-  return newEdenError(ERROR_DISK_FULL, EdenErrorType::WIN32_ERROR, msg);
-#else
-  return newEdenError(ENOSPC, EdenErrorType::POSIX_ERROR, msg);
-#endif
 }
 
 EdenError newEdenDataCorruptionError(std::string_view msg) {
@@ -103,18 +93,6 @@ EdenError newEdenError(const sapling::SaplingBackingStoreError& ex) {
     return newEdenDataCorruptionError(folly::exceptionStr(ex).toStdString());
   }
 
-  return newEdenError(static_cast<const std::exception&>(ex));
-}
-
-EdenError newEdenError(const RocksException& ex) {
-  const rocksdb::Status& status = ex.getStatus();
-  if (status.IsNoSpace()) {
-    return newEdenNoSpaceError(folly::exceptionStr(ex).toStdString());
-  } else if (status.IsCorruption() || status.IsNotFound()) {
-    // From Eden's perspective, vanilla NotFound error from the RocksDB
-    // localstore is considered as data corruption error
-    return newEdenDataCorruptionError(folly::exceptionStr(ex).toStdString());
-  }
   return newEdenError(static_cast<const std::exception&>(ex));
 }
 

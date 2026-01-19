@@ -18,6 +18,7 @@ use crate::types::UnifiedDiff;
 use crate::types::UnifiedDiffOpts;
 use crate::utils::content::DiffFileOpts;
 use crate::utils::content::load_diff_file;
+use crate::utils::whitespace::strip_horizontal_whitespace;
 
 pub async fn unified(
     ctx: &CoreContext,
@@ -59,6 +60,15 @@ pub async fn unified(
 
     let is_binary = xdiff::file_is_binary(&base_file) || xdiff::file_is_binary(&other_file);
 
+    let (base_file, other_file) = if !is_binary && options.ignore_whitespace {
+        (
+            base_file.map(strip_whitespace_from_diff_file),
+            other_file.map(strip_whitespace_from_diff_file),
+        )
+    } else {
+        (base_file, other_file)
+    };
+
     let xdiff_opts = xdiff::DiffOpts::from(options);
     let raw_diff =
         tokio::task::spawn_blocking(move || xdiff::diff_unified(base_file, other_file, xdiff_opts))
@@ -75,6 +85,27 @@ fn to_non_root_path(path: &str) -> Result<NonRootMPath, DiffError> {
     let mpath = MPath::new(path)?;
     let non_root_mpath = NonRootMPath::try_from(mpath)?;
     Ok(non_root_mpath)
+}
+
+/// Strip horizontal whitespace from inline content in a DiffFile
+fn strip_whitespace_from_diff_file(
+    file: xdiff::DiffFile<String, Vec<u8>>,
+) -> xdiff::DiffFile<String, Vec<u8>> {
+    let contents = match file.contents {
+        xdiff::FileContent::Inline(bytes) => {
+            let bytes_ref = bytes::Bytes::from(bytes);
+            let stripped = strip_horizontal_whitespace(&bytes_ref);
+            xdiff::FileContent::Inline(stripped.to_vec())
+        }
+        // For Omitted and Submodule, no whitespace stripping needed
+        other => other,
+    };
+
+    xdiff::DiffFile {
+        path: file.path,
+        contents,
+        file_type: file.file_type,
+    }
 }
 
 #[cfg(test)]
@@ -145,6 +176,7 @@ mod tests {
             file_type: DiffFileType::Regular,
             inspect_lfs_pointers: true,
             omit_content: false,
+            ignore_whitespace: false,
         };
 
         let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
@@ -195,6 +227,7 @@ mod tests {
             file_type: DiffFileType::Regular,
             inspect_lfs_pointers: true,
             omit_content: false,
+            ignore_whitespace: false,
         };
 
         let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
@@ -243,6 +276,7 @@ mod tests {
             file_type: DiffFileType::Regular,
             inspect_lfs_pointers: true,
             omit_content: false,
+            ignore_whitespace: false,
         };
 
         let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
@@ -290,6 +324,7 @@ mod tests {
             file_type: DiffFileType::Regular,
             inspect_lfs_pointers: true,
             omit_content: true,
+            ignore_whitespace: false,
         };
 
         let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
@@ -327,6 +362,7 @@ mod tests {
             file_type: DiffFileType::Regular,
             inspect_lfs_pointers: true,
             omit_content: false,
+            ignore_whitespace: false,
         };
 
         // Test None vs Some - should show addition
@@ -406,6 +442,7 @@ mod tests {
             file_type: DiffFileType::Regular,
             inspect_lfs_pointers: true,
             omit_content: false,
+            ignore_whitespace: false,
         };
 
         let diff = unified(
@@ -440,6 +477,7 @@ mod tests {
             file_type: DiffFileType::Regular,
             inspect_lfs_pointers: false,
             omit_content: false,
+            ignore_whitespace: false,
         };
 
         let diff = unified(
@@ -467,6 +505,233 @@ mod tests {
 +size 88
 "#
         );
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_unified_string_inputs(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with String inputs
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nmodified line2\nline3\n".to_string(),
+        });
+
+        let options = UnifiedDiffOpts {
+            context: 3,
+            copy_info: DiffCopyInfo::None,
+            file_type: DiffFileType::Regular,
+            inspect_lfs_pointers: true,
+            omit_content: false,
+            ignore_whitespace: false,
+        };
+
+        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+
+        // The unified diff should contain the change we made
+        assert!(diff_str.contains("-line2"));
+        assert!(diff_str.contains("+modified line2"));
+        assert!(diff_str.contains("@@ -1,3 +1,3 @@"));
+        assert!(!diff.is_binary);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_unified_string_vs_none(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        let string_input = DiffSingleInput::String(DiffInputString {
+            content: "some content\nline2\nline3\n".to_string(),
+        });
+
+        let options = UnifiedDiffOpts {
+            context: 3,
+            copy_info: DiffCopyInfo::None,
+            file_type: DiffFileType::Regular,
+            inspect_lfs_pointers: true,
+            omit_content: false,
+            ignore_whitespace: false,
+        };
+
+        // Test None vs String - should show addition
+        let diff = unified(
+            &ctx,
+            &repo,
+            None,
+            Some(string_input.clone()),
+            options.clone(),
+        )
+        .await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert!(diff_str.contains("+some content"));
+        assert!(diff_str.contains("+line2"));
+        assert!(diff_str.contains("+line3"));
+        assert!(!diff.is_binary);
+
+        // Test String vs None - should show deletion
+        let diff = unified(&ctx, &repo, Some(string_input), None, options).await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert!(diff_str.contains("-some content"));
+        assert!(diff_str.contains("-line2"));
+        assert!(diff_str.contains("-line3"));
+        assert!(!diff.is_binary);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_unified_ignore_whitespace_only(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with only whitespace differences
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "hello world\nfoo bar\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "hello  world\nfoo\tbar\n".to_string(),
+        });
+
+        // With ignore_whitespace: false, should show differences
+        let options = UnifiedDiffOpts {
+            context: 3,
+            copy_info: DiffCopyInfo::None,
+            file_type: DiffFileType::Regular,
+            inspect_lfs_pointers: true,
+            omit_content: false,
+            ignore_whitespace: false,
+        };
+        let diff = unified(
+            &ctx,
+            &repo,
+            Some(base_input.clone()),
+            Some(other_input.clone()),
+            options,
+        )
+        .await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        assert_eq!(
+            diff_str,
+            r#"diff --git a/base_path b/other_path
+--- a/base_path
++++ b/other_path
+@@ -1,2 +1,2 @@
+-hello world
+-foo bar
++hello  world
++foo	bar
+"#
+        );
+
+        // With ignore_whitespace: true, should show no differences
+        // (After stripping whitespace, "helloworld\nfoobar\n" should match on both sides)
+        let options = UnifiedDiffOpts {
+            context: 3,
+            copy_info: DiffCopyInfo::None,
+            file_type: DiffFileType::Regular,
+            inspect_lfs_pointers: true,
+            omit_content: false,
+            ignore_whitespace: true,
+        };
+        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        // After stripping whitespace, content should be identical - no changes
+        assert_eq!(diff_str, "");
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_unified_ignore_whitespace_mixed(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test with both whitespace and content differences
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nline2\nline3\n".to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: "line1\nmodified  line2\nline3\n".to_string(),
+        });
+
+        // With ignore_whitespace: true, should still show content change
+        // After stripping whitespace: "line2" vs "modifiedline2" (real difference!)
+        let options = UnifiedDiffOpts {
+            context: 3,
+            copy_info: DiffCopyInfo::None,
+            file_type: DiffFileType::Regular,
+            inspect_lfs_pointers: true,
+            omit_content: false,
+            ignore_whitespace: true,
+        };
+        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff_str = String::from_utf8_lossy(&diff.raw_diff);
+        // Should show a diff because there's actual content difference beyond whitespace
+        assert_eq!(
+            diff_str,
+            r#"diff --git a/base_path b/other_path
+--- a/base_path
++++ b/other_path
+@@ -1,3 +1,3 @@
+ line1
+-line2
++modifiedline2
+ line3
+"#
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_unified_ignore_whitespace_binary(fb: FacebookInit) -> Result<(), DiffError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = init_test_repo(&ctx).await?;
+
+        use crate::types::DiffInputString;
+
+        // Test that binary files are not affected by whitespace stripping
+        let base_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"binary\x00 content").to_string(),
+        });
+        let other_input = DiffSingleInput::String(DiffInputString {
+            content: String::from_utf8_lossy(b"binary\x00  content").to_string(),
+        });
+
+        // Even with ignore_whitespace: true, binary files should be detected as binary
+        let options = UnifiedDiffOpts {
+            context: 3,
+            copy_info: DiffCopyInfo::None,
+            file_type: DiffFileType::Regular,
+            inspect_lfs_pointers: true,
+            omit_content: false,
+            ignore_whitespace: true,
+        };
+        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+
+        // Should be detected as binary
+        assert!(diff.is_binary);
+        assert_eq!(
+            String::from_utf8_lossy(&diff.raw_diff),
+            "diff --git a/base_path b/other_path\nBinary files a/base_path and b/other_path differ\n"
+        );
+
         Ok(())
     }
 }

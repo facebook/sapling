@@ -375,7 +375,7 @@ impl SqlBookmarks {
                         // Sorting is only useful for pagination. If the query returns all bookmark
                         // names, then skip the sorting.
                         if limit == u64::MAX {
-                            let tok: i32 = rand::thread_rng().r#gen();
+                            let tok: i32 = rand::rng().random();
                             SelectAllUnordered::query(
                                 &conn,
                                 ctx.sql_query_telemetry(),
@@ -650,7 +650,7 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let repo_id = self.repo_id;
 
         async move {
-            let tok: i32 = rand::thread_rng().r#gen();
+            let tok: i32 = rand::rng().random();
 
             let rows = match offset {
                 Some(offset) => {

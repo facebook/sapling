@@ -7,13 +7,11 @@
 
 import hashlib
 import pickle
-
 from dataclasses import dataclass
 from typing import Dict, Union
 
 from . import error, mdiff, revlog, util
 from .i18n import _
-
 from .node import bbin, nullid, nullrev, wdirid
 from .revlog import revlog as orig_revlog, textwithheader
 

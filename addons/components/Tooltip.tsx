@@ -320,7 +320,7 @@ function RenderTooltipOnto({
   );
   effectivePlacement = position.autoPlacement ?? placement;
   // The tooltip may end up overflowing off the screen, since it's rendered absolutely.
-  // We can push it back as needed with an additional offet.
+  // We can push it back as needed with an additional offset.
   const viewportAdjust = getViewportAdjustedDelta(effectivePlacement, position, renderedDimensions);
 
   const style: React.CSSProperties = {

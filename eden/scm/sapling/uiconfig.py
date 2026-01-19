@@ -431,10 +431,7 @@ class uiconfig:
                 self.setconfig(section, name, value, "--config")
             except (IndexError, ValueError):
                 raise error.Abort(
-                    _(
-                        "malformed --config option: %r "
-                        "(use --config section.name=value)"
-                    )
+                    _("malformed --config option: %r (use --config section.name=value)")
                     % cfg
                 )
 

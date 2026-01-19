@@ -532,7 +532,7 @@ function PartialSelectionAction({file}: {file: UIChangedFile}) {
   );
 }
 
-// Left margin to "indendent" by roughly a checkbox width.
+// Left margin to "indented" by roughly a checkbox width.
 const leftMarginStyle: React.CSSProperties = {marginLeft: 'calc(2.5 * var(--pad))'};
 
 function MaybePartialSelection({file}: {file: UIChangedFile}) {

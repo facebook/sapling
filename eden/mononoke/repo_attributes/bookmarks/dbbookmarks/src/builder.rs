@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -27,7 +31,18 @@ impl SqlConstruct for SqlBookmarksBuilder {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlBookmarksBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlBookmarksBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.bookmarks)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.bookmarks)
+    }
+}
 
 impl SqlBookmarksBuilder {
     pub fn with_repo_id(self, repo_id: RepositoryId) -> SqlBookmarks {

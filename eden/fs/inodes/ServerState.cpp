@@ -122,12 +122,6 @@ ServerState::ServerState(
   if (FLAGS_fault_injection_block_mounts) {
     faultInjector_->injectBlock("mount", ".*");
   }
-  if (FLAGS_fault_injection_fail_opening_local_store) {
-    faultInjector_->injectError(
-        "open_local_store",
-        ".*",
-        std::runtime_error{"Some random error opening LocalStore"});
-  }
 }
 
 ServerState::~ServerState() = default;

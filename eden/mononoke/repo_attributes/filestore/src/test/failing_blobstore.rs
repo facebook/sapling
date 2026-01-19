@@ -13,7 +13,7 @@ use blobstore::KeyedBlobstore;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use rand::Rng;
-use rand::thread_rng;
+use rand::rng;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -50,7 +50,7 @@ impl<B: KeyedBlobstore> KeyedBlobstore for FailingBlobstore<B> {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        if thread_rng().gen_bool(self.read_success_probability) {
+        if rng().random_bool(self.read_success_probability) {
             self.inner.get(ctx, key).await
         } else {
             Err(FailingBlobstoreError.into())
@@ -63,7 +63,7 @@ impl<B: KeyedBlobstore> KeyedBlobstore for FailingBlobstore<B> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        if thread_rng().gen_bool(self.write_success_probability) {
+        if rng().random_bool(self.write_success_probability) {
             self.inner.put(ctx, key, value).await
         } else {
             Err(FailingBlobstoreError.into())
@@ -75,7 +75,7 @@ impl<B: KeyedBlobstore> KeyedBlobstore for FailingBlobstore<B> {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
-        if thread_rng().gen_bool(self.read_success_probability) {
+        if rng().random_bool(self.read_success_probability) {
             self.inner.is_present(ctx, key).await
         } else {
             Err(FailingBlobstoreError.into())
@@ -88,7 +88,7 @@ impl<B: KeyedBlobstore> KeyedBlobstore for FailingBlobstore<B> {
         old_key: &'a str,
         new_key: String,
     ) -> Result<()> {
-        if thread_rng().gen_bool(self.write_success_probability) {
+        if rng().random_bool(self.write_success_probability) {
             self.inner.copy(ctx, old_key, new_key).await
         } else {
             Err(FailingBlobstoreError.into())
@@ -96,7 +96,7 @@ impl<B: KeyedBlobstore> KeyedBlobstore for FailingBlobstore<B> {
     }
 
     async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
-        if thread_rng().gen_bool(self.read_success_probability) {
+        if rng().random_bool(self.read_success_probability) {
             self.inner.unlink(ctx, key).await
         } else {
             Err(FailingBlobstoreError.into())

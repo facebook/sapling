@@ -222,7 +222,7 @@ registerDisposable(
             currentOperation.exitCode != null ||
             currentOperation.operation.id !== progress.id
           ) {
-            // We've seen casees where we somehow got this exit out of order.
+            // We've seen cases where we somehow got this exit out of order.
             // Instead of updating the currentOperation, we need to find the matching historical operation.
             // (which has the matching ID, and as long as it hasn't already been marked as exited)
 
@@ -422,7 +422,7 @@ function saveQueuedOperationsOnError(operationIdThatErrored: string, error: Erro
   }
 }
 
-export function getLastestOperationInfo(operation: Operation): OperationInfo | undefined {
+export function getLatestOperationInfo(operation: Operation): OperationInfo | undefined {
   const list = readAtom(operationList);
   const info =
     list.currentOperation?.operation === operation

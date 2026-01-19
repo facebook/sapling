@@ -16,7 +16,9 @@ use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use repo_metadata_checkpoint::RepoMetadataCheckpoint;
 use repo_metadata_checkpoint::RepoMetadataCheckpointEntry;
+use repo_metadata_checkpoint::RepoMetadataFullRunInfo;
 use repo_metadata_checkpoint::SqlRepoMetadataCheckpointBuilder;
+use repo_metadata_checkpoint::SqlRepoMetadataFullRunInfoBuilder;
 use sql_construct::SqlConstruct;
 
 #[mononoke::fbinit_test]
@@ -130,5 +132,80 @@ async fn test_get_multiple(fb: FacebookInit) -> Result<(), Error> {
         HashSet::from_iter(result),
         HashSet::from(["master".to_string(), "release".to_string()])
     );
+    Ok(())
+}
+
+// Tests for RepoMetadataFullRunInfo
+
+#[mononoke::fbinit_test]
+async fn test_full_run_info_get_without_set(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let full_run_info = SqlRepoMetadataFullRunInfoBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, ctx.sql_query_telemetry());
+
+    // Should return None when no timestamp has been set
+    let result = full_run_info.get_last_full_run_timestamp().await?;
+    assert_eq!(result, None);
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_full_run_info_set_and_get(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let full_run_info = SqlRepoMetadataFullRunInfoBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, ctx.sql_query_telemetry());
+
+    let timestamp = Timestamp::from_timestamp_secs(1000000);
+
+    // Set the timestamp
+    full_run_info.set_last_full_run_timestamp(timestamp).await?;
+
+    // Should return the timestamp we set
+    let result = full_run_info.get_last_full_run_timestamp().await?;
+    assert_eq!(result, Some(timestamp));
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_full_run_info_update(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let full_run_info = SqlRepoMetadataFullRunInfoBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, ctx.sql_query_telemetry());
+
+    let timestamp1 = Timestamp::from_timestamp_secs(1000000);
+    let timestamp2 = Timestamp::from_timestamp_secs(2000000);
+
+    // Set initial timestamp
+    full_run_info
+        .set_last_full_run_timestamp(timestamp1)
+        .await?;
+    assert_eq!(
+        full_run_info.get_last_full_run_timestamp().await?,
+        Some(timestamp1)
+    );
+
+    // Update to new timestamp
+    full_run_info
+        .set_last_full_run_timestamp(timestamp2)
+        .await?;
+    assert_eq!(
+        full_run_info.get_last_full_run_timestamp().await?,
+        Some(timestamp2)
+    );
+
+    Ok(())
+}
+
+#[mononoke::fbinit_test]
+async fn test_full_run_info_repo_id(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let full_run_info = SqlRepoMetadataFullRunInfoBuilder::with_sqlite_in_memory()?
+        .build(REPO_ZERO, ctx.sql_query_telemetry());
+
+    // Verify repo_id is correctly stored
+    assert_eq!(full_run_info.repo_id(), REPO_ZERO);
+
     Ok(())
 }

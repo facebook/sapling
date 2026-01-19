@@ -26,7 +26,19 @@ pub use oss::periodic_fetch_counter;
 
 #[async_trait]
 pub trait CounterManager {
-    fn add_counter(&mut self, entity: String, key: String, reduce: Option<String>);
+    fn add_counter(
+        &mut self,
+        entity: String,
+        key: String,
+        reduce: Option<String>,
+        transform: Option<String>,
+    );
 
-    fn get_counter_value(&self, entity: &str, key: &str, reduce: Option<&str>) -> Option<f64>;
+    fn get_counter_value(
+        &self,
+        entity: &str,
+        key: &str,
+        reduce: Option<&str>,
+        transform: Option<&str>,
+    ) -> Option<f64>;
 }

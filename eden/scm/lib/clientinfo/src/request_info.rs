@@ -12,8 +12,8 @@ use anyhow::Result;
 use anyhow::anyhow;
 use once_cell::sync::Lazy;
 use rand::Rng;
-use rand::distributions::Alphanumeric;
-use rand::thread_rng;
+use rand::distr::Alphanumeric;
+use rand::rng;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -104,6 +104,7 @@ pub enum ClientEntryPoint {
     Fbclone,
     ScsServer,
     ScmQuery,
+    ScmQueryClientLib,
     #[serde(rename = "EdenApi", alias = "SaplingRemoteApi")]
     SaplingRemoteApi,
     LandService,
@@ -179,7 +180,7 @@ impl ClientRequestInfo {
         if std::env::var_os("TESTTMP").is_some() {
             "test-correlator".to_string()
         } else {
-            thread_rng()
+            rng()
                 .sample_iter(Alphanumeric)
                 .take(8)
                 .map(char::from)
@@ -197,6 +198,7 @@ impl Display for ClientEntryPoint {
             ClientEntryPoint::Fbclone => "fbclone",
             ClientEntryPoint::ScsServer => "scs",
             ClientEntryPoint::ScmQuery => "scm_query",
+            ClientEntryPoint::ScmQueryClientLib => "scm_query_client_lib",
             ClientEntryPoint::SaplingRemoteApi => "eden_api",
             ClientEntryPoint::LandService => "landservice",
             ClientEntryPoint::LfsServer => "lfs",
@@ -242,6 +244,7 @@ impl TryFrom<&str> for ClientEntryPoint {
             "fbclone" => Ok(ClientEntryPoint::Fbclone),
             "scs" => Ok(ClientEntryPoint::ScsServer),
             "scm_query" => Ok(ClientEntryPoint::ScmQuery),
+            "scm_query_client_lib" => Ok(ClientEntryPoint::ScmQueryClientLib),
             "eden_api" => Ok(ClientEntryPoint::SaplingRemoteApi),
             "landservice" => Ok(ClientEntryPoint::LandService),
             "lfs" => Ok(ClientEntryPoint::LfsServer),

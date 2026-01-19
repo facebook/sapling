@@ -25,5 +25,6 @@ thrift_library(
         "//eden/mononoke/mercurial/types/if:mercurial-thrift",
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
         "//thrift/annotation:rust",
+        "//thrift/annotation:thrift",
     ],
 )

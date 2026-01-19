@@ -1019,7 +1019,10 @@ mod test {
 
         let storage = r#"
         [main.metadata.remote]
-        primary = { db_address = "db_address" }
+        production = { db_address = "db_address" }
+        commit_graph = { db_address = "db_address" }
+        bookmarks = { db_address = "db_address" }
+        bonsai_hg_mapping = { db_address = "db_address" }
         filenodes = { sharded = { shard_map = "db_address_shards", shard_num = 123 } }
         mutation = { db_address = "mutation_db_address" }
         sparse_profiles = { db_address = "sparse_profiles_db_address" }
@@ -1131,7 +1134,16 @@ mod test {
         let main_storage_config = StorageConfig {
             blobstore: multiplex.clone(),
             metadata: MetadataDatabaseConfig::Remote(RemoteMetadataDatabaseConfig {
-                primary: RemoteDatabaseConfig {
+                production: RemoteDatabaseConfig {
+                    db_address: "db_address".into(),
+                },
+                commit_graph: RemoteDatabaseConfig {
+                    db_address: "db_address".into(),
+                },
+                bookmarks: RemoteDatabaseConfig {
+                    db_address: "db_address".into(),
+                },
+                bonsai_hg_mapping: RemoteDatabaseConfig {
                     db_address: "db_address".into(),
                 },
                 filenodes: ShardableRemoteDatabaseConfig::Sharded(ShardedRemoteDatabaseConfig {
@@ -1687,7 +1699,10 @@ mod test {
     fn test_common_storage() {
         const STORAGE: &str = r#"
         [multiplex_store.metadata.remote]
-        primary = { db_address = "some_db" }
+        production = { db_address = "some_db" }
+        commit_graph = { db_address = "some_db" }
+        bookmarks = { db_address = "some_db" }
+        bonsai_hg_mapping = { db_address = "some_db" }
         filenodes = { sharded = { shard_map = "some-shards", shard_num = 123 } }
         mutation = { db_address = "some_db" }
         sparse_profiles = { db_address = "some_db" }
@@ -1718,7 +1733,10 @@ mod test {
 
         # Not overriding common store
         [storage.some_other_store.metadata.remote]
-        primary = { db_address = "other_db" }
+        production = { db_address = "other_db" }
+        commit_graph = { db_address = "other_db" }
+        bookmarks = { db_address = "other_db" }
+        bonsai_hg_mapping = { db_address = "other_db" }
         filenodes = { sharded = { shard_map = "other-shards", shard_num = 20 } }
 
         [storage.some_other_store.blobstore]
@@ -1777,7 +1795,16 @@ mod test {
                         ),
                     },
                     metadata: MetadataDatabaseConfig::Remote(RemoteMetadataDatabaseConfig {
-                        primary: RemoteDatabaseConfig {
+                        production: RemoteDatabaseConfig {
+                            db_address: "some_db".into(),
+                        },
+                        commit_graph: RemoteDatabaseConfig {
+                            db_address: "some_db".into(),
+                        },
+                        bookmarks: RemoteDatabaseConfig {
+                            db_address: "some_db".into(),
+                        },
+                        bonsai_hg_mapping: RemoteDatabaseConfig {
                             db_address: "some_db".into(),
                         },
                         filenodes: ShardableRemoteDatabaseConfig::Sharded(ShardedRemoteDatabaseConfig {
@@ -1843,7 +1870,10 @@ mod test {
     fn test_common_blobstores_local_override() {
         const STORAGE: &str = r#"
         [multiplex_store.metadata.remote]
-        primary = { db_address = "some_db" }
+        production = { db_address = "some_db" }
+        commit_graph = { db_address = "some_db" }
+        bookmarks = { db_address = "some_db" }
+        bonsai_hg_mapping = { db_address = "some_db" }
         filenodes = { sharded = { shard_map = "some-shards", shard_num = 123 } }
 
         [multiplex_store.blobstore.multiplexed_wal]
@@ -1865,7 +1895,10 @@ mod test {
 
 
         [manifold_store.metadata.remote]
-        primary = { db_address = "other_db" }
+        production = { db_address = "other_db" }
+        commit_graph = { db_address = "other_db" }
+        bookmarks = { db_address = "other_db" }
+        bonsai_hg_mapping = { db_address = "other_db" }
         filenodes = { sharded = { shard_map = "other-shards", shard_num = 456 } }
         mutation = { db_address = "other_mutation_db" }
 
@@ -1881,7 +1914,10 @@ mod test {
 
         # Override common store
         [storage.multiplex_store.metadata.remote]
-        primary = { db_address = "other_other_db" }
+        production = { db_address = "other_other_db" }
+        commit_graph = { db_address = "other_other_db" }
+        bookmarks = { db_address = "other_other_db" }
+        bonsai_hg_mapping = { db_address = "other_other_db" }
         filenodes = { sharded = { shard_map = "other-other-shards", shard_num = 789 } }
         mutation = { db_address = "other_other_mutation_db" }
         sparse_profiles = { db_address = "test_db" }
@@ -1932,7 +1968,10 @@ mod test {
                 storage_config: StorageConfig {
                     blobstore: BlobConfig::Disabled,
                     metadata: MetadataDatabaseConfig::Remote( RemoteMetadataDatabaseConfig {
-                        primary: RemoteDatabaseConfig { db_address: "other_other_db".into(), },
+                        production: RemoteDatabaseConfig { db_address: "other_other_db".into(), },
+                        commit_graph: RemoteDatabaseConfig { db_address: "other_other_db".into(), },
+                        bookmarks: RemoteDatabaseConfig { db_address: "other_other_db".into(), },
+                        bonsai_hg_mapping: RemoteDatabaseConfig { db_address: "other_other_db".into(), },
                         filenodes: ShardableRemoteDatabaseConfig::Sharded(ShardedRemoteDatabaseConfig { shard_map: "other-other-shards".into(), shard_num: NonZeroUsize::new(789).unwrap() }),
                         mutation: RemoteDatabaseConfig { db_address: "other_other_mutation_db".into(), },
                         sparse_profiles: RemoteDatabaseConfig { db_address: "test_db".into(), },
@@ -1967,7 +2006,10 @@ mod test {
     fn test_multiplexed_store_types() {
         const STORAGE: &str = r#"
         [multiplex_store.metadata.remote]
-        primary = { db_address = "some_db" }
+        production = { db_address = "some_db" }
+        commit_graph = { db_address = "some_db" }
+        bookmarks = { db_address = "some_db" }
+        bonsai_hg_mapping = { db_address = "some_db" }
         filenodes = { sharded = { shard_map = "some-shards", shard_num = 123 } }
 
         [multiplex_store.blobstore.multiplexed_wal]

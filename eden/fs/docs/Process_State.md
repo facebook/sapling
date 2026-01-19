@@ -93,11 +93,10 @@ repository, each providing a different working directory view of the repository
 data, potentially with different commits checked out in each.
 
 The `ObjectStore` class provides the internal API that EdenFS uses to fetch data
-from a source control repository. The `ObjectStore` is split into three
-components internally: an in-memory cache that locally caches fetched data, and
-a `LocalStore` to provide on-disk cache RocksDB, a `BackingStore` that is
-responsible for actually fetching data from the repository. They are in a chain
-of responsibility structure - if one of them fails, it will send the request to
+from a source control repository. The `ObjectStore` is split into two components
+internally: an in-memory cache that locally caches fetched data, and a `BackingStore`
+that is responsible for actually fetching data from the repository. They are in a
+chain of responsibility structure - if one of them fails, it will send the request to
 the next layer. The primary `BackingStore` implementation used by EdenFS is the
 `SaplingBackingStore` class, which fetches data from an Sapling repository. (The
 name `SaplingBackingStore` dates back to before Sapling was differentiated from

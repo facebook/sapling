@@ -43,7 +43,7 @@ export class ImportStackOperation extends Operation {
     const commits = importStack.flatMap(a => (a[0] === 'commit' ? [a[1]] : []));
     commits.forEach(commit => {
       if (firstParent == null) {
-        firstParent = commit.parents.at(0) ?? 'unexpect_parents';
+        firstParent = commit.parents.at(0) ?? 'unexpected_parents';
       }
       (commit.predecessors ?? []).forEach(pred => {
         origHashes.add(pred);

@@ -25,6 +25,7 @@ Test phabdiff template mapping
 
   $ echo b > b
   $ hg commit -Aqm "Differential Revision: https://phabricator.fb.com/D5678
+  > Don't be fooled - Remaining Tasks: 15
   > Tasks:32, 44    55"
   $ hg log -r . --template "{phabdiff}: {tasks}\n"
   D5678: 32 44 55
@@ -85,10 +86,10 @@ Check singlepublicbase
   $ hg log -r . --template "{singlepublicbase}\n"
   
 
-  $ hg debugmakepublic -r ::2480b7b497e0af879a40a0d4d960ceb748d27085
+  $ hg debugmakepublic -r ::0528335601bcec6b27caa75e1091bd32151ca916
 
   $ hg log -r . --template "{singlepublicbase}\n"
-  2480b7b497e0af879a40a0d4d960ceb748d27085
+  0528335601bcec6b27caa75e1091bd32151ca916
 
 Check hg backout template listing the diff properly
   $ echo h > h

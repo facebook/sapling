@@ -3,6 +3,40 @@ load("@fbcode_macros//build_defs:thrift_library.bzl", "thrift_library")
 oncall("source_control")
 
 thrift_library(
+    name = "processname",
+    languages = [
+        "python",
+        "rust",
+        "py-deprecated",
+    ],
+    py3_namespace = "mononoke.sharding.processname",
+    py_base_module = "configerator.mononoke",
+    rust_autocargo = {"cargo_toml_dir": "processname"},
+    thrift_py_options = "json",
+    thrift_rust_options = "serde",
+    thrift_srcs = {
+        "processname.thrift": None,
+    },
+)
+
+thrift_library(
+    name = "regions",
+    languages = [
+        "python",
+        "rust",
+        "py-deprecated",
+    ],
+    py3_namespace = "mononoke.sharding.regions",
+    py_base_module = "configerator.mononoke",
+    rust_autocargo = {"cargo_toml_dir": "regions"},
+    thrift_py_options = "json",
+    thrift_rust_options = "serde",
+    thrift_srcs = {
+        "regions.thrift": None,
+    },
+)
+
+thrift_library(
     name = "sharding",
     languages = [
         "python",
@@ -11,10 +45,15 @@ thrift_library(
     ],
     py3_namespace = "mononoke.sharding",
     py_base_module = "configerator.mononoke",
+    rust_autocargo = {"cargo_toml_dir": "sharding"},
     thrift_py_options = "json",
     thrift_rust_options = "serde",
-    thrift_srcs = {"sharding.thrift": None},
+    thrift_srcs = {
+        "sharding.thrift": None,
+    },
     deps = [
+        ":processname",
+        ":regions",
         "//thrift/annotation:rust",
     ],
 )

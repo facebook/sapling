@@ -20,6 +20,7 @@ use mononoke_app::args::TLSArgs;
 use mononoke_repos::MononokeRepos;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
+use stats::prelude::*;
 
 use super::GitMethodInfo;
 use super::Pushvars;
@@ -27,6 +28,12 @@ use super::method::GitMethod;
 use crate::GitRepos;
 use crate::Repo;
 use crate::errors::GitServerContextErrorKind;
+
+define_stats! {
+    prefix = "mononoke.git.server";
+    repo_added_on_demand: timeseries(Rate, Sum),
+    repo_added_on_demand_failed: timeseries(Rate, Sum),
+}
 
 #[derive(Clone)]
 pub struct RepositoryRequestContext {
@@ -114,25 +121,89 @@ impl GitServerContext {
         method_info: GitMethodInfo,
         pushvars: Pushvars,
     ) -> Result<RepositoryRequestContext, GitServerContextErrorKind> {
-        let (repo, mononoke_repos, enforce_authorization, repo_configs) = {
+        // First, try to get the repo from the already loaded repos
+        let initial_lookup = {
             let inner = self
                 .inner
                 .read()
                 .expect("poisoned lock in git server context");
             match inner.repos.get(&method_info.repo) {
-                Some(repo) => (
+                Some(repo) => Ok((
                     repo,
                     inner.repos.repo_mgr.repos().clone(),
                     inner.enforce_auth,
                     inner.repos.repo_configs(),
-                ),
+                )),
                 None => {
-                    return Err(GitServerContextErrorKind::RepositoryDoesNotExist(
-                        method_info.repo.to_string(),
-                    ));
+                    // Check if the repo exists in the global configuration
+                    let repo_exists_in_config = inner
+                        .repos
+                        .repo_mgr
+                        .configs()
+                        .repo_configs()
+                        .repos
+                        .contains_key(&method_info.repo);
+                    if repo_exists_in_config {
+                        // Repo exists but is not loaded, we'll need to add it
+                        Err(Some(inner.repos.repo_mgr.clone()))
+                    } else {
+                        // Repo does not exist at all
+                        Err(None)
+                    }
                 }
             }
         };
+
+        let (repo, mononoke_repos, enforce_authorization, repo_configs) = match initial_lookup {
+            Ok(result) => result,
+            Err(Some(repo_mgr)) => {
+                // Repo exists in config but not loaded
+                // Check if dynamic repo loading is enabled via JustKnobs
+                let dynamic_loading_enabled =
+                    justknobs::eval("scm/mononoke:git_server_dynamic_repo_loading", None, None)
+                        .unwrap_or(false);
+
+                if !dynamic_loading_enabled {
+                    // Dynamic loading is disabled, return the old behavior
+                    return Err(GitServerContextErrorKind::RepositoryNotLoaded(
+                        method_info.repo.to_string(),
+                    ));
+                }
+
+                // Add it dynamically - this is done outside the lock since add_repo is async
+                let repo_name = method_info.repo.clone();
+                let repo = match repo_mgr.add_repo(&repo_name).await {
+                    Ok(repo) => {
+                        STATS::repo_added_on_demand.add_value(1);
+                        repo
+                    }
+                    Err(e) => {
+                        STATS::repo_added_on_demand_failed.add_value(1);
+                        return Err(GitServerContextErrorKind::RepoSetupError {
+                            repo_name,
+                            error: e.to_string(),
+                        });
+                    }
+                };
+                let inner = self
+                    .inner
+                    .read()
+                    .expect("poisoned lock in git server context");
+                (
+                    repo,
+                    inner.repos.repo_mgr.repos().clone(),
+                    inner.enforce_auth,
+                    inner.repos.repo_configs(),
+                )
+            }
+            Err(None) => {
+                // Repo does not exist at all
+                return Err(GitServerContextErrorKind::RepositoryDoesNotExist(
+                    method_info.repo.to_string(),
+                ));
+            }
+        };
+
         acl_check(&ctx, &repo, enforce_authorization, method_info.method).await?;
         Ok(RepositoryRequestContext {
             ctx,

@@ -25,10 +25,6 @@ class GitBackingStore final : public BijectiveBackingStore {
  public:
   /**
    * Create a new GitBackingStore.
-   *
-   * The LocalStore object is owned by the EdenServer (which also owns this
-   * GitBackingStore object).  It is guaranteed to be valid for the lifetime of
-   * the GitBackingStore object.
    */
   explicit GitBackingStore(AbsolutePathPiece repository);
   ~GitBackingStore() override;
@@ -44,10 +40,6 @@ class GitBackingStore final : public BijectiveBackingStore {
   std::string renderRootId(const RootId& rootId) override;
   ObjectId parseObjectId(folly::StringPiece objectId) override;
   std::string renderObjectId(const ObjectId& objectId) override;
-
-  LocalStoreCachingPolicy getLocalStoreCachingPolicy() const override {
-    return localStoreCachingPolicy_;
-  }
 
   // TODO(T119221752): Implement for all BackingStore subclasses
   int64_t dropAllPendingRequestsFromQueue() override {
@@ -99,9 +91,6 @@ class GitBackingStore final : public BijectiveBackingStore {
   static ObjectId oid2Hash(const git_oid* oid);
 
   git_repository* repo_{nullptr};
-
-  LocalStoreCachingPolicy localStoreCachingPolicy_ =
-      LocalStoreCachingPolicy::TreesAndBlobAuxData;
 };
 
 } // namespace facebook::eden

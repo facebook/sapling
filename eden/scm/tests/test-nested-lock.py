@@ -5,7 +5,8 @@
 
 
 def test_nested_lock():
-    import os, tempfile
+    import os
+    import tempfile
 
     from sapling import hg, ui as uimod
 

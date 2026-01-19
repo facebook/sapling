@@ -197,7 +197,7 @@ impl<'a> DiffRouter<'a> {
             self.remote_headerless_diff(ctx, repo_name, other_file, base_file, context_lines)
                 .await
         } else {
-            headerless_unified_diff(other_file, base_file, context_lines)
+            headerless_unified_diff(other_file, base_file, context_lines, false)
                 .await
                 .map_err(ServiceError::from)
         }
@@ -215,7 +215,9 @@ impl<'a> DiffRouter<'a> {
             self.remote_unified_diff(ctx, repo_name, path_context, mode, context_lines)
                 .await
         } else {
-            Ok(path_context.unified_diff(ctx, context_lines, mode).await?)
+            Ok(path_context
+                .unified_diff(ctx, context_lines, mode, false)
+                .await?)
         }
     }
 
@@ -229,7 +231,7 @@ impl<'a> DiffRouter<'a> {
             self.remote_metadata_diff(ctx, repo_name, path_context)
                 .await
         } else {
-            Ok(path_context.metadata_diff(ctx).await?)
+            Ok(path_context.metadata_diff(ctx, false).await?)
         }
     }
 
@@ -464,7 +466,7 @@ impl<'a> DiffRouter<'a> {
                     }
 
                     repo_client
-                        .metadata_diff(ctx, base_input, other_input)
+                        .metadata_diff(ctx, base_input, other_input, false)
                         .await
                 }
             },

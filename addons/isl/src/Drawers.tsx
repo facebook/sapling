@@ -9,7 +9,7 @@ import type {ComponentClass} from 'react';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
 import {useAtom} from 'jotai';
-import {createElement, useCallback, useRef} from 'react';
+import {createElement, useCallback, useRef, useState} from 'react';
 import {debounce} from 'shared/debounce';
 import {islDrawerState} from './drawerState';
 
@@ -96,6 +96,7 @@ export function Drawer({
 }) {
   const isVertical = side === 'top' || side === 'bottom';
   const dragHandleElement = useRef<HTMLDivElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
 
   const [drawerState, setDrawerState] = useAtom(islDrawerState);
   const state = drawerState[side];
@@ -110,6 +111,7 @@ export function Drawer({
     (e: React.MouseEvent, initialWidth: number) => {
       e.preventDefault();
       const start = isVertical ? e.clientY : e.clientX;
+      setIsResizing(true);
 
       const moveHandler = debounce(
         (newE: MouseEvent) => {
@@ -133,6 +135,7 @@ export function Drawer({
       window.addEventListener('mousemove', moveHandler);
 
       const onMouseUp = () => {
+        setIsResizing(false);
         dispose?.();
         dispose = undefined;
       };
@@ -172,7 +175,7 @@ export function Drawer({
         <>
           <div
             ref={dragHandleElement}
-            className="resizable-drag-handle"
+            className={`resizable-drag-handle${isResizing ? ' resizing' : ''}`}
             onMouseDown={(e: React.MouseEvent) => startResizing(e, state.size)}
           />
           {createElement(errorBoundary, null, children)}

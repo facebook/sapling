@@ -11,6 +11,10 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use anyhow::bail;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
 use sql_construct::SqlConstruct;
@@ -412,7 +416,18 @@ impl SqlCheckpoints {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlCheckpointsBuilder {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlCheckpointsBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+}
 
 mononoke_queries! {
     read SelectCheckpoint(

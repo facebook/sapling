@@ -20,7 +20,7 @@ futures_retry = { version = "0.1.0", git = "https://github.com/facebookexperimen
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
 packblob = { version = "0.1.0", path = "../../blobstore/packblob" }
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }
 regex = "1.12.2"
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

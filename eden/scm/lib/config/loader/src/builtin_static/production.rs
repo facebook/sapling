@@ -507,19 +507,19 @@ verify=False
 
 [committemplate]
 changeset = {if(desc, desc, emptymsg)}\n
-    HG: Enter commit message.  Lines beginning with 'HG:' are removed.
-    HG: Leave message empty to abort commit.
-    HG: --
-    HG: user: {author}\n{ifgt(parents|count, 1,
-   "HG: merging:\n{parents % 'HG:   {node|short}: {desc|firstline}\n'}")
+    {slprefix}: Enter commit message.  Lines beginning with '{slprefix}:' are removed.
+    {slprefix}: Leave message empty to abort commit.
+    {slprefix}: --
+    {slprefix}: user: {author}\n{ifgt(parents|count, 1,
+   "{slprefix}: merging:\n{parents % '{slprefix}:   {node|short}: {desc|firstline}\n'}")
    }{if(currentbookmark,
-   "HG: bookmark '{currentbookmark}'\n")}{
+   "{slprefix}: bookmark '{currentbookmark}'\n")}{
     filechanges}{
     if(advice, advice, defaultadvice)}
 
-defaultadvice = HG: --
-    HG: Consider onboarding Jellyfish in this repo to speed up your workflow.
-    HG: Learn how at https://fburl.com/jf-onboard\n
+defaultadvice = {slprefix}: --
+    {slprefix}: Consider onboarding Jellyfish in this repo to speed up your workflow.
+    {slprefix}: Learn how at https://fburl.com/jf-onboard\n
 
 defaulttitle=<Replace this line with a title. Use 1 line only, 67 chars or less>
 
@@ -528,10 +528,10 @@ filechanges={ifgt(parents|count, 1, filechangesmerge,
 filechangesmerge=
 filechangethreshold=100
 filechangesplain = {
-    file_adds % "HG: added {file}\n"}{
-    file_mods % "HG: changed {file}\n"}{
-    file_dels % "HG: removed {file}\n"}{
-    if(files, "", "HG: no files changed\n")}
+    file_adds % "{slprefix}: added {file}\n"}{
+    file_mods % "{slprefix}: changed {file}\n"}{
+    file_dels % "{slprefix}: removed {file}\n"}{
+    if(files, "", "{slprefix}: no files changed\n")}
 filechangesdetailed={ifeq(verbosity,"verbose",diff()|hgprefix,stat("status")|hgprefix)}\n
 
 [copytrace]

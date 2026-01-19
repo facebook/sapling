@@ -228,7 +228,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
   private subsetForRenderingImpl(set?: SetLike, condenseObsoleteStacks: boolean = true): HashSet {
     const all = set === undefined ? this.all() : HashSet.fromHashes(set);
     const draft = this.draft(all);
-    const unamedPublic = this.filter(
+    const unnamedPublic = this.filter(
       i =>
         i.phase === 'public' &&
         i.remoteBookmarks.length === 0 &&
@@ -237,7 +237,7 @@ export class Dag extends SelfUpdate<CommitDagRecord> {
         !i.isDot,
       all,
     );
-    const toHidePublic = unamedPublic.subtract(this.parents(draft));
+    const toHidePublic = unnamedPublic.subtract(this.parents(draft));
     let toHide = toHidePublic;
     if (condenseObsoleteStacks) {
       const obsolete = this.obsolete(all);

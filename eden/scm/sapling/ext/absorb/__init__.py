@@ -29,7 +29,6 @@ import collections
 import io
 
 import bindings
-
 from sapling import (
     cmdutil,
     commands,
@@ -962,10 +961,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
             "e",
             "edit-lines",
             None,
-            _(
-                "edit what lines belong to which commits before commit "
-                "(EXPERIMENTAL)"
-            ),
+            _("edit what lines belong to which commits before commit (EXPERIMENTAL)"),
         ),
         ("d", "date", "", _("record the specified date as commit date"), _("DATE")),
     ]

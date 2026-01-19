@@ -60,23 +60,6 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   virtual ~BackingStore() = default;
 
   /**
-   * Policy describing the kind of data cached in the LocalStore.
-   */
-  enum class LocalStoreCachingPolicy {
-    NoCaching = 0,
-    Trees = 1 << 0,
-    Blobs = 1 << 1,
-    BlobAuxData = 1 << 2,
-    TreeAuxData = 1 << 3,
-    TreesAndBlobs = Trees | Blobs,
-    TreesAndBlobAuxData = Trees | BlobAuxData,
-    BlobsAndBlobAuxData = Blobs | BlobAuxData,
-    Anything = Trees | Blobs | BlobAuxData | TreeAuxData,
-  };
-
-  virtual LocalStoreCachingPolicy getLocalStoreCachingPolicy() const = 0;
-
-  /**
    * A BackingStore may support multiple object ID encodings. To help EdenFS
    * short-circuit recursive comparisons when IDs aren't identical but identify
    * the same contents, this function allows querying whether two IDs refer to
@@ -150,12 +133,8 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
     /**
      * The retrieved blob aux data.
      *
-     * If either BackingStore::LocalStoreCachingPolicy::BlobAuxData is not set
-     * or the blob aux data was not found in the LocalStore, setting this to a
-     * nullptr will make ObjectStore::getBlobAuxData fallback to fetching
-     * the blob, either from the LocalStore or from the BackingStore, to compute
-     * the blob aux data. It also may store the fetched blob and calculated blob
-     * aux data in the LocalStore, depending on the current caching policy.
+     * Setting this to nullptr will make ObjectStore::getBlobAuxData fallback to
+     * fetching the blob from the BackingStore to compute the blob aux data.
      */
     BlobAuxDataPtr blobAux;
     /** The fetch origin of the blob aux data. */
@@ -242,8 +221,7 @@ class BackingStore : public RootIdCodec, public ObjectIdCodec {
   BackingStore& operator=(BackingStore const&) = delete;
 
   /**
-   * ObjectStore should be the only public place to access BackingStore and
-   * LocalStore.
+   * ObjectStore should be the only public place to access BackingStore.
    */
   friend class ObjectStore;
 

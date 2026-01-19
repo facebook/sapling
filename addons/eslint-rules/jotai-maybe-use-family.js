@@ -66,7 +66,7 @@ function analyzeUseRecoilValue(node, context) {
   let method = null;
   // Find references of this variable.
   const references = scope.variables.find(({name}) => name === varName)?.references ?? [];
-  // Check the references. The first one is the declaraction and should be skipped.
+  // Check the references. The first one is the declaration and should be skipped.
   for (const reference of references.slice(1)) {
     // Inside a loop for potentially legit usecase. Allow.
     const innerScope = reference.from;

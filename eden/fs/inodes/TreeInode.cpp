@@ -4593,9 +4593,10 @@ ImmediateFuture<std::vector<TreeInodePtr>> getLoadedOrRememberedTreeChildren(
  * Check for early termination conditions for garbage collection.
  */
 bool shouldCancelGC(
-    const EdenMount* mount,
-    const folly::CancellationToken& cancellationToken) {
-  if (mount->getState() == EdenMount::State::SHUTTING_DOWN) {
+    const folly::CancellationToken& cancellationToken,
+    const EdenMount* mount = nullptr) {
+  if (mount != nullptr &&
+      mount->getState() == EdenMount::State::SHUTTING_DOWN) {
     return true;
   }
   if (cancellationToken.isCancellationRequested()) {
@@ -4618,15 +4619,14 @@ processTreeChildren(
     const folly::CancellationToken& cancellationToken,
     Func&& childProcessor) {
   return getLoadedOrRememberedTreeChildren(self, inodeMap, context)
-      .thenValue([self,
-                  childProcessor = std::forward<Func>(childProcessor),
+      .thenValue([childProcessor = std::forward<Func>(childProcessor),
                   cancellationToken](
                      const std::vector<TreeInodePtr>& treeChildren) mutable {
         using ResultType =
             typename std::invoke_result_t<Func, TreeInodePtr>::value_type;
 
         // Check for cancellation before processing children
-        if (shouldCancelGC(self->getMount(), cancellationToken)) {
+        if (shouldCancelGC(cancellationToken)) {
           return ImmediateFuture<std::vector<ResultType>>(
               std::vector<ResultType>());
         }
@@ -4638,7 +4638,7 @@ processTreeChildren(
         }
 
         // Check for cancellation after processing children
-        if (shouldCancelGC(self->getMount(), cancellationToken)) {
+        if (shouldCancelGC(cancellationToken)) {
           return ImmediateFuture<std::vector<ResultType>>(
               std::vector<ResultType>());
         }
@@ -4690,7 +4690,7 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
     folly::CancellationToken cancellationToken) {
-  if (shouldCancelGC(getMount(), cancellationToken)) {
+  if (shouldCancelGC(cancellationToken, getMount())) {
     return std::make_pair(0u, false);
   }
 
@@ -4708,7 +4708,7 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
                      const std::vector<std::pair<uint64_t, bool>>&
                          invalidations) {
         // Check for cancellation before processing results
-        if (shouldCancelGC(self->getMount(), cancellationToken)) {
+        if (shouldCancelGC(cancellationToken)) {
           return std::make_pair(uint64_t{0}, false);
         }
 
@@ -4777,7 +4777,7 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
               // invalidation.
 
               // Check for cancellation before invalidation
-              if (shouldCancelGC(self->getMount(), cancellationToken)) {
+              if (shouldCancelGC(cancellationToken)) {
                 return std::make_pair(uint64_t{0}, false);
               }
 #ifndef _WIN32
@@ -4794,15 +4794,15 @@ TreeInode::invalidateChildrenNotMaterializedNFS(
         return std::make_pair(numInvalidated, isThisTreeInvalidated);
       })
       .thenTry(
-          [this,
+          [self = inodePtrFromThis(),
            cancellationToken](folly::Try<std::pair<uint64_t, bool>>&& result)
               -> ImmediateFuture<std::pair<uint64_t, bool>> {
             // Check for cancellation before waiting for invalidation to
             // complete
-            if (shouldCancelGC(getMount(), cancellationToken)) {
+            if (shouldCancelGC(cancellationToken)) {
               return std::make_pair(uint64_t{0}, false);
             }
-            auto* nfsdChannel = getMount()->getNfsdChannel();
+            auto* nfsdChannel = self->getMount()->getNfsdChannel();
             if (nfsdChannel) {
               return nfsdChannel->completeInvalidations().thenTry(
                   [result = std::move(result)](auto&&) mutable {
@@ -4819,7 +4819,7 @@ TreeInode::invalidateChildrenNotMaterializedPrjFS(
     std::chrono::system_clock::time_point cutoff,
     const ObjectFetchContextPtr& context,
     folly::CancellationToken cancellationToken) {
-  if (shouldCancelGC(getMount(), cancellationToken)) {
+  if (shouldCancelGC(cancellationToken, getMount())) {
     return 0ULL;
   }
 
@@ -4837,7 +4837,7 @@ TreeInode::invalidateChildrenNotMaterializedPrjFS(
           [self = inodePtrFromThis(), cutoff, cancellationToken](
               const std::vector<uint64_t>& invalidations) -> uint64_t {
             // Check for cancellation before processing results
-            if (shouldCancelGC(self->getMount(), cancellationToken)) {
+            if (shouldCancelGC(cancellationToken)) {
               return 0ULL;
             }
 

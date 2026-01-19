@@ -20,6 +20,7 @@ sapling-context = { version = "0.1.0", path = "../context" }
 sapling-repo = { version = "0.1.0", path = "../repo" }
 sapling-types = { version = "0.1.0", path = "../types" }
 sapling-util = { version = "0.1.0", path = "../util" }
+shlex = "1.3"
 thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 

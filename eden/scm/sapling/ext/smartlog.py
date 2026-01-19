@@ -31,7 +31,6 @@ import sys
 import time
 
 import bindings
-
 from sapling import (
     bookmarks,
     cmdutil,

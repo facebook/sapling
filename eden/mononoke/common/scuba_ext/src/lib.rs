@@ -180,7 +180,11 @@ impl MononokeScubaSampleBuilder {
             },
             ExperimentJKData {
                 jk_name: "scm/mononoke:retry_query_from_replica_with_consistency_check",
-                switch_values: vec!["newfilenodes::reader", "bonsai_hg_mapping"],
+                switch_values: vec![
+                    "newfilenodes::reader",
+                    "bonsai_hg_mapping",
+                    "synced_commit_mapping.get_equivalent_working_copy",
+                ],
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
             ExperimentJKData {
@@ -200,6 +204,11 @@ impl MononokeScubaSampleBuilder {
             },
             ExperimentJKData {
                 jk_name: "scm/mononoke:rendezvous_bonsai_git_mapping",
+                switch_values: vec![],
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
+            ExperimentJKData {
+                jk_name: "scm/mononoke:rendezvous_bonsai_tag_mapping",
                 switch_values: vec![],
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
@@ -499,6 +508,11 @@ impl MononokeScubaSampleBuilder {
     }
 
     pub fn log(&mut self) -> bool {
+        if self.fallback_sampled_out_to_verbose
+            && self.should_log_with_level(ScubaVerbosityLevel::Verbose)
+        {
+            self.inner.unsampled();
+        }
         self.inner.log()
     }
 

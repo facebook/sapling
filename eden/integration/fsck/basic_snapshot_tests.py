@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import List, Optional
 
 from eden.fs.cli import cmd_util
-
 from eden.integration.lib import edenclient, testcase
 from eden.integration.snapshot import snapshot as snapshot_mod, verify as verify_mod
 from eden.integration.snapshot.types.basic import BasicSnapshot

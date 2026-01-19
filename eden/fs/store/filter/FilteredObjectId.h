@@ -236,7 +236,7 @@ class FilteredObjectId {
 
   /**
    * Serialize the tree path, filter, and object data into a buffer that
-   * will be stored in the LocalStore.
+   * will be stored in the Overlay.
    */
   static std::string serializeTree(
       RelativePathPiece path,
@@ -245,13 +245,13 @@ class FilteredObjectId {
 
   /**
    * Serialize the blob object data into a buffer that will be stored in the
-   * LocalStore.
+   * Overlay.
    */
   static std::string serializeBlob(const ObjectId& object);
 
   /**
    * Serialize the unfiltered tree object data into a buffer that will be
-   * stored in the LocalStore.
+   * stored in the Overlay.
    */
   static std::string serializeUnfilteredTree(const ObjectId& object);
 
@@ -266,7 +266,7 @@ class FilteredObjectId {
   void validate();
 
   /**
-   * The serialized data as written in the LocalStore.
+   * The serialized data as written in the Overlay.
    */
   std::string value_;
 };

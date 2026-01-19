@@ -16,6 +16,10 @@ pub enum GitServerContextErrorKind {
     NotAuthenticated,
     #[error("Repository does not exist: {0}")]
     RepositoryDoesNotExist(String),
+    #[error("Repository not available on this server: {0}")]
+    RepositoryNotLoaded(String),
+    #[error("Failed to setup repository '{repo_name}': {error}")]
+    RepoSetupError { repo_name: String, error: String },
 }
 
 impl From<GitServerContextErrorKind> for HttpError {
@@ -25,6 +29,8 @@ impl From<GitServerContextErrorKind> for HttpError {
             Forbidden => HttpError::e403(e),
             RepositoryDoesNotExist(_) => HttpError::e404(e),
             NotAuthenticated => HttpError::e403(e),
+            RepositoryNotLoaded(_) => HttpError::e503(e),
+            RepoSetupError { .. } => HttpError::e500(e),
         }
     }
 }

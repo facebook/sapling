@@ -6,7 +6,6 @@
 file(GLOB STORE_SRCS "*.cpp")
 list(
   REMOVE_ITEM STORE_SRCS
-  "${CMAKE_CURRENT_SOURCE_DIR}/eden_store_util.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/BackingStoreType.cpp"
 )
 
@@ -41,12 +40,6 @@ target_link_libraries(
     eden_utils
     fb303::fb303
     edencommon::edencommon_utils
-)
-
-target_link_libraries(
-  eden_store
-  PUBLIC
-    eden_rocksdb
 )
 
 add_subdirectory(hg)

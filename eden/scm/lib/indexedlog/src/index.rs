@@ -1389,7 +1389,7 @@ impl MemKey {
 
     #[inline]
     fn is_unused(&self) -> bool {
-        self.key.len() == 0
+        self.key.is_empty()
     }
 }
 
@@ -4806,7 +4806,7 @@ Disk[410]: Root { radix: Disk[402] }
         // Modify index1 so it has pending in-memory changes.
         index1.insert(b"z1", 3).unwrap();
 
-        // Attempt to modify index1 by replacing its underlying file. This won't actaully break
+        // Attempt to modify index1 by replacing its underlying file. This won't actually break
         // index1, because Index operates at the file descriptor level, not the path level (unlike
         // Log), Index will not reload the file from the same path on flush.
         fs::rename(&path1, path1.with_extension("bak")).unwrap();

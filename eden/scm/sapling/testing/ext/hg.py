@@ -153,7 +153,6 @@ def testsetup(t: TestTmp):
     run = None
     try:
         import bindings
-
         from sapling import util
 
         run = bindings.commands.run
@@ -235,7 +234,6 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
         return python(args, stdin, stdout, stderr, env)
 
     import bindings
-
     from sapling import encoding, extensions, util
 
     # emulate ui.system via sheval
@@ -254,11 +252,11 @@ def hg(stdin: BinaryIO, stdout: BinaryIO, stderr: BinaryIO, env: Env) -> int:
             stderr = BufIO()
 
     try:
-        with shellenv(
-            env, stdin=stdin, stdout=stdout, stderr=stderr
-        ), extensions.wrappedfunction(
-            util, "rawsystem", rawsystem
-        ), extensions.wrappedfunction(subprocess, "run", _patchedsubprun):
+        with (
+            shellenv(env, stdin=stdin, stdout=stdout, stderr=stderr),
+            extensions.wrappedfunction(util, "rawsystem", rawsystem),
+            extensions.wrappedfunction(subprocess, "run", _patchedsubprun),
+        ):
             bindings.identity.resetdefault()
             bindings.hgmetrics.reset()
 

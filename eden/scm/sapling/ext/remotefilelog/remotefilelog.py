@@ -11,7 +11,6 @@ import collections
 import os
 
 from bindings import revisionstore
-
 from sapling import ancestor, error, filelog, mdiff, revlog, util
 from sapling.i18n import _
 from sapling.node import bin, hex, nullid

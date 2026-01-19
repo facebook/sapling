@@ -2433,7 +2433,7 @@ mod tests {
             _ctx: &CoreContext,
             _old_bookmark_value: Option<ChangesetId>,
         ) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
-            let us = rand::thread_rng().gen_range(0..100);
+            let us = rand::rng().random_range(0..100);
             tokio::time::sleep(Duration::from_micros(us)).await;
             Ok(Box::new(*self) as Box<dyn PushrebaseCommitHook>)
         }

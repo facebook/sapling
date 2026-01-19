@@ -23,7 +23,6 @@ from .metalog import (
     storelatest,
     storesnapshotmetadata,
 )
-
 from .update import fetchsnapshot
 
 # Binary conversion constant
@@ -318,8 +317,11 @@ def createremote(ui, repo, *pats, **opts) -> None:
     overrides = {}
     if ui.plain() or opts.get("template"):
         overrides[("ui", "quiet")] = True
-    with repo.wlock(), repo.lock(), repo.transaction("snapshot"), ui.configoverride(
-        overrides
+    with (
+        repo.wlock(),
+        repo.lock(),
+        repo.transaction("snapshot"),
+        ui.configoverride(overrides),
     ):
         # Current working context
         wctx = repo[None]

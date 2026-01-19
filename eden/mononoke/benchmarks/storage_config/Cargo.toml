@@ -23,6 +23,6 @@ environment = { version = "0.1.0", path = "../../cmdlib/environment" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 mononoke_app = { version = "0.1.0", path = "../../cmdlib/mononoke_app" }
-rand = { version = "0.8", features = ["small_rng"] }
+rand = { version = "0.9", features = ["small_rng"] }
 repo_factory = { version = "0.1.0", path = "../../repo_factory" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

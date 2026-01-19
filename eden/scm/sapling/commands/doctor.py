@@ -37,7 +37,6 @@ from .. import (
 )
 from ..i18n import _
 from ..node import bin, hex, nullhex, nullid, short
-
 from .cmdtable import command
 
 

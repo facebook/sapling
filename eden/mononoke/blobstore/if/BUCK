@@ -10,4 +10,7 @@ thrift_library(
         "//eden/mononoke/blobstore:cacheblob",
         "//eden/mononoke/blobstore:cacheblob-unittest",
     ],
+    deps = [
+        "//thrift/annotation:thrift",
+    ],
 )

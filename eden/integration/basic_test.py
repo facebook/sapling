@@ -297,7 +297,7 @@ class PosixTest(BasicTestBase):
         self.assertEqual(
             errno.EACCES,
             context.exception.errno,
-            msg="attempting to run noexec.sh should fail with " "EACCES",
+            msg="attempting to run noexec.sh should fail with EACCES",
         )
 
     def test_create_using_mknod(self) -> None:

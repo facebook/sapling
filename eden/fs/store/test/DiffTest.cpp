@@ -20,7 +20,6 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/store/DiffContext.h"
-#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/store/TreeCache.h"
@@ -72,12 +71,9 @@ class DiffTest : public ::testing::Test {
         kTreeCacheMinimumEntries, ConfigSourceType::Default, true);
     auto edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
     auto treeCache = TreeCache::create(edenConfig, makeRefPtr<EdenStats>());
-    localStore_ = make_shared<MemoryLocalStore>(makeRefPtr<EdenStats>());
-    backingStore_ = make_shared<FakeBackingStore>(
-        BackingStore::LocalStoreCachingPolicy::NoCaching);
+    backingStore_ = make_shared<FakeBackingStore>();
     store_ = ObjectStore::create(
         backingStore_,
-        localStore_,
         treeCache,
         makeRefPtr<EdenStats>(),
         std::make_shared<ProcessInfoCache>(),
@@ -161,7 +157,6 @@ class DiffTest : public ::testing::Test {
         .get(100ms);
   }
 
-  std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<FakeBackingStore> backingStore_;
   std::shared_ptr<ObjectStore> store_;
 };

@@ -27,7 +27,6 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import bindings
-
 from sapling import (
     bookmarks,
     color,

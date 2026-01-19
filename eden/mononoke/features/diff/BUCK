@@ -22,6 +22,7 @@ rust_library(
         "fbsource//third-party/rust:tokio",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/derived_data:fsnodes",
+        "//eden/mononoke/derived_data:unodes",
         "//eden/mononoke/git/git_types:git_types",
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/metaconfig:metaconfig_types",

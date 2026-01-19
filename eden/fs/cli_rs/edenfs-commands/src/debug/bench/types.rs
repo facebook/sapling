@@ -13,7 +13,6 @@ use serde::Serialize;
 
 // Constants
 pub const BENCH_DIR_NAME: &str = "__fsiomicrobench__";
-pub const ROCKSDB_FILE_NAME: &str = "__rocksdb__";
 pub const LMDB_FILE_NAME: &str = "__lmdb__";
 pub const SQLITE_FILE_NAME: &str = "__sqlite__";
 pub const COMBINED_DATA_FILE_NAME: &str = "__combined_data__";

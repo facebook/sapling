@@ -6,7 +6,6 @@ import ghstack.github
 import ghstack.query
 import ghstack.shell
 from ghstack.ghs_types import GhNumber, GitCommitHash, GitHubRepositoryId, GitTreeHash
-
 from sapling import error
 from sapling.i18n import _
 

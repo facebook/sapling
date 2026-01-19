@@ -15,7 +15,6 @@ from sapling import (
     lock as lockmod,
     mutation,
 )
-
 from sapling.ext import rebase
 from sapling.i18n import _
 from sapling.utils import subtreeutil

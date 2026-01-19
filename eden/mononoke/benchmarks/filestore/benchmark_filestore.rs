@@ -165,7 +165,7 @@ async fn run_benchmark_filestore<'a>(
     let len = metadata.len();
 
     let (len, data) = if args.randomize {
-        let bytes = rand::thread_rng().r#gen::<[u8; 32]>();
+        let bytes = rand::rng().random::<[u8; 32]>();
         let bytes = Bytes::copy_from_slice(&bytes[..]);
         (
             len + (bytes.len() as u64),

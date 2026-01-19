@@ -13,9 +13,9 @@
 #include "eden/common/telemetry/NullStructuredLogger.h"
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/ProcessInfoCache.h"
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/TestOps.h"
-#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/TreeCache.h"
@@ -45,12 +45,9 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
     auto edenConfig = std::make_shared<ReloadableConfig>(rawEdenConfig);
     stats = makeRefPtr<EdenStats>();
     treeCache = TreeCache::create(edenConfig, stats.copy());
-    localStore = std::make_shared<MemoryLocalStore>(stats.copy());
-    fakeBackingStore = std::make_shared<FakeBackingStore>(
-        BackingStore::LocalStoreCachingPolicy::Anything);
+    fakeBackingStore = std::make_shared<FakeBackingStore>();
     objectStore = ObjectStore::create(
         fakeBackingStore,
-        localStore,
         treeCache,
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
@@ -62,13 +59,10 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
     auto configWithBlake3Key = EdenConfig::createTestEdenConfig();
     configWithBlake3Key->blake3Key.setStringValue(
         kBlake3Key, ConfigVariables(), ConfigSourceType::UserConfig);
-    fakeBackingStoreWithKeyedBlake3 = std::make_shared<FakeBackingStore>(
-        BackingStore::LocalStoreCachingPolicy::Anything,
-        nullptr,
-        std::string(kBlake3Key));
+    fakeBackingStoreWithKeyedBlake3 =
+        std::make_shared<FakeBackingStore>(nullptr, std::string(kBlake3Key));
     objectStoreWithBlake3Key = ObjectStore::create(
         fakeBackingStoreWithKeyedBlake3,
-        localStore,
         treeCache,
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
@@ -78,14 +72,10 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
         GetParam());
 
     auto configWithTreeAuxPrefetching = EdenConfig::createTestEdenConfig();
-    ;
-    configWithTreeAuxPrefetching->warmTreeAuxCacheIfTreeFromLocalStore.setValue(
-        true, ConfigSourceType::UserConfig);
-    fakeBackingStoreWithTreeAuxPrefetching = std::make_shared<FakeBackingStore>(
-        BackingStore::LocalStoreCachingPolicy::Anything);
+    fakeBackingStoreWithTreeAuxPrefetching =
+        std::make_shared<FakeBackingStore>();
     objectStoreWithTreeAuxPrefetching = ObjectStore::create(
         fakeBackingStoreWithTreeAuxPrefetching,
-        localStore,
         treeCache,
         stats.copy(),
         std::make_shared<ProcessInfoCache>(),
@@ -168,7 +158,6 @@ struct ObjectStoreTest : public ::testing::TestWithParam<CaseSensitivity> {
       makeRefPtr<LoggingFetchContext>();
   const ObjectFetchContextPtr& context =
       loggingContext.as<ObjectFetchContext>();
-  std::shared_ptr<LocalStore> localStore;
   std::shared_ptr<FakeBackingStore> fakeBackingStore;
   std::shared_ptr<FakeBackingStore> fakeBackingStoreWithKeyedBlake3;
   std::shared_ptr<FakeBackingStore> fakeBackingStoreWithTreeAuxPrefetching;
@@ -193,116 +182,6 @@ TEST_P(ObjectStoreTest, getBlob_tracks_backing_store_read) {
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
 
-TEST_P(ObjectStoreTest, caching_policies_anything) {
-  objectStore->setLocalStoreCachingPolicy(
-      BackingStore::LocalStoreCachingPolicy::Anything);
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Trees));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Blobs));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Anything));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::NoCaching));
-}
-
-TEST_P(ObjectStoreTest, caching_policies_no_caching) {
-  objectStore->setLocalStoreCachingPolicy(
-      BackingStore::LocalStoreCachingPolicy::NoCaching);
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Trees));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Blobs));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Anything));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::NoCaching));
-}
-TEST_P(ObjectStoreTest, caching_policies_blob) {
-  objectStore->setLocalStoreCachingPolicy(
-      BackingStore::LocalStoreCachingPolicy::Blobs);
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Trees));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Blobs));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Anything));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::NoCaching));
-}
-
-TEST_P(ObjectStoreTest, caching_policies_trees) {
-  objectStore->setLocalStoreCachingPolicy(
-      BackingStore::LocalStoreCachingPolicy::Trees);
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Trees));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Blobs));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Anything));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::NoCaching));
-}
-
-TEST_P(ObjectStoreTest, caching_policies_blob_aux_data) {
-  objectStore->setLocalStoreCachingPolicy(
-      BackingStore::LocalStoreCachingPolicy::BlobAuxData);
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Trees));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Blobs));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Anything));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::NoCaching));
-}
-
-TEST_P(ObjectStoreTest, caching_policies_trees_and_blob_aux_data) {
-  objectStore->setLocalStoreCachingPolicy(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData);
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Trees));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Blobs));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::BlobAuxData));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::TreesAndBlobAuxData));
-  EXPECT_TRUE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::Anything));
-  EXPECT_FALSE(objectStore->shouldCacheOnDisk(
-      BackingStore::LocalStoreCachingPolicy::NoCaching));
-}
-TEST_P(ObjectStoreTest, getBlob_tracks_second_read_from_cache) {
-  objectStore->getBlob(readyBlobId, context).get(0ms);
-  objectStore->getBlob(readyBlobId, context).get(0ms);
-  ASSERT_EQ(2, loggingContext->requests.size());
-  auto& request = loggingContext->requests[1];
-  EXPECT_EQ(ObjectFetchContext::Blob, request.type);
-  EXPECT_EQ(readyBlobId, request.id);
-  EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
-}
-
 TEST_P(ObjectStoreTest, getTree_tracks_backing_store_read) {
   objectStore->getTree(readyTreeId, context).get(0ms);
   ASSERT_EQ(1, loggingContext->requests.size());
@@ -322,33 +201,17 @@ TEST_P(ObjectStoreTest, getTree_tracks_second_read_from_cache) {
   EXPECT_EQ(ObjectFetchContext::FromMemoryCache, request.origin);
 }
 
-TEST_P(ObjectStoreTest, getTree_tracks_second_read_from_local_store) {
-  objectStore->getTree(readyTreeId, context).get(0ms);
-
-  // clear the in memory cache so the tree can not be found here
-  treeCache->clear();
-
-  objectStore->getTree(readyTreeId, context).get(0ms);
-  ASSERT_EQ(2, loggingContext->requests.size());
-  auto& request = loggingContext->requests[1];
-  EXPECT_EQ(ObjectFetchContext::Tree, request.type);
-  EXPECT_EQ(readyTreeId, request.id);
-  EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
-}
-
 TEST_P(ObjectStoreTest, getTree_prefetch_missing_aux_data) {
-  // FakeBackingStore provides a tree with no aux data; this simulates storing a
-  // tree that lacks aux data in LocalStore
+  // FakeBackingStore provides a tree with no aux data
   auto tree1 =
       objectStoreWithTreeAuxPrefetching->getTree(readyTreeId, context).get(0ms);
   EXPECT_EQ(tree1->getAuxData(), nullptr);
 
-  // Clear in-memory cache so that we are guaranteed to hit LocalStore caches
+  // Clear in-memory cache so that we are guaranteed to hit local caches
   treeCache->clear();
 
-  // Issue a getTree that triggers tree aux prefetching. Since tree aux is
-  // missing from the LocalStore tree, we will attempt to fall back to
-  // BackingStore->getTreeAux() which will also fail.
+  // Issue a getTree that triggers tree aux prefetching. We will attempt to fall
+  // back to BackingStore->getTreeAux() which will fail.
   auto tree2 =
       objectStoreWithTreeAuxPrefetching->getTree(readyTreeId, context).get(0ms);
 
@@ -372,29 +235,6 @@ TEST_P(ObjectStoreTest, getBlobSize_tracks_second_read_from_cache) {
   EXPECT_EQ(ObjectFetchContext::BlobAuxData, request.type);
   EXPECT_EQ(readyBlobId, request.id);
   EXPECT_EQ(ObjectFetchContext::FromMemoryCache, request.origin);
-}
-
-TEST_P(ObjectStoreTest, getBlobSizeFromLocalStore) {
-  auto data = "A"_sp;
-  ObjectId id = putReadyBlob(data);
-
-  // Get blob size from backing store, caches in local store
-  objectStore->getBlobSize(id, context);
-  // Clear backing store
-  objectStore = ObjectStore::create(
-      fakeBackingStore,
-      localStore,
-      treeCache,
-      stats.copy(),
-      std::make_shared<ProcessInfoCache>(),
-      std::make_shared<NullStructuredLogger>(),
-      std::make_shared<ReloadableConfig>(EdenConfig::createTestEdenConfig()),
-      true,
-      GetParam());
-
-  size_t expectedSize = data.size();
-  size_t size = objectStore->getBlobSize(id, context).get();
-  EXPECT_EQ(expectedSize, size);
 }
 
 TEST_P(ObjectStoreTest, getBlobSizeFromBackingStore) {
@@ -431,20 +271,6 @@ TEST_P(ObjectStoreTest, getBlobBlake3) {
   Hash32 expectedBlake3 = Hash32::blake3(data);
   Hash32 blake3 = objectStore->getBlobBlake3(id, context).get();
   EXPECT_EQ(expectedBlake3.toString(), blake3.toString());
-}
-
-TEST_P(ObjectStoreTest, getBlobBlake3IsMissingInLocalStore) {
-  auto data = "A"_sp;
-  ObjectId id = putReadyBlob(data);
-  BlobAuxData blobAuxdata(Hash20::sha1(data), std::nullopt, data.size());
-  localStore->putBlobAuxData(id, blobAuxdata);
-
-  const auto blake3Try =
-      objectStoreWithBlake3Key->getBlobBlake3(id, context).getTry();
-  ASSERT_TRUE(blake3Try.hasValue());
-  Hash32 expectedBlake3 =
-      Hash32::keyedBlake3(folly::ByteRange{kBlake3Key}, data);
-  EXPECT_EQ(blake3Try->toString(), expectedBlake3.toString());
 }
 
 TEST_P(ObjectStoreTest, getBlobKeyedBlake3) {
@@ -627,7 +453,6 @@ TEST_P(ObjectStoreTest, get_tree_with_different_sensitivities) {
   // the same treecache
   auto oppositeSensitivityObjectStore = ObjectStore::create(
       fakeBackingStore,
-      localStore,
       treeCache,
       stats.copy(),
       std::make_shared<ProcessInfoCache>(),
@@ -715,16 +540,6 @@ CO_TEST_P(ObjectStoreTest, co_getBlob_tracks_backing_store_read) {
   EXPECT_EQ(ObjectFetchContext::Blob, request.type);
   EXPECT_EQ(readyBlobId, request.id);
   EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
-}
-
-CO_TEST_P(ObjectStoreTest, co_getBlob_tracks_second_read_from_cache) {
-  co_await objectStore->co_getBlob(readyBlobId, context);
-  co_await objectStore->co_getBlob(readyBlobId, context);
-  EXPECT_EQ(2, loggingContext->requests.size());
-  auto& request = loggingContext->requests[1];
-  EXPECT_EQ(ObjectFetchContext::Blob, request.type);
-  EXPECT_EQ(readyBlobId, request.id);
-  EXPECT_EQ(ObjectFetchContext::FromDiskCache, request.origin);
 }
 
 CO_TEST_P(ObjectStoreTest, co_test_process_access_counts) {

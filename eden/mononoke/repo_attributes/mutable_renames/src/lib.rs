@@ -17,6 +17,10 @@ use context::PerfCounterType;
 use futures::try_join;
 use manifest::Entry;
 use maplit::hashset;
+use metaconfig_types::OssRemoteDatabaseConfig;
+use metaconfig_types::OssRemoteMetadataDatabaseConfig;
+use metaconfig_types::RemoteDatabaseConfig;
+use metaconfig_types::RemoteMetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
 use mononoke_types::FileUnodeId;
 use mononoke_types::ManifestUnodeId;
@@ -57,7 +61,18 @@ impl SqlConstruct for SqlMutableRenamesStore {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlMutableRenamesStore {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlMutableRenamesStore {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&RemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+    fn oss_remote_database_config(
+        remote: &OssRemoteMetadataDatabaseConfig,
+    ) -> Option<&OssRemoteDatabaseConfig> {
+        Some(&remote.production)
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MutableRenameEntry {

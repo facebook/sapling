@@ -59,7 +59,8 @@
     "scm/mononoke:rendezvous_bonsai_git_mapping" : true,
     "scm/mononoke:create_changeset_stack_noop_file_changes_check": true,
     "scm/mononoke:spawn_mutation_polling_task": true,
-    "scm/mononoke:create_changeset_stack_empty_changeset_check": true
+    "scm/mononoke:create_changeset_stack_empty_changeset_check": true,
+    "scm/mononoke:rendezvous_bonsai_tag_mapping": true
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
@@ -108,6 +109,7 @@
     "scm/mononoke:retry_query_from_replica_with_consistency_check_interval_ms": 200,
     "scm/mononoke:retry_query_from_replica_with_consistency_check_hlc_drift_tolerance_ns": 0,
     "scm/mononoke:cgdm_reloading_interval_secs": 5,
-    "scm/mononoke:shardmanager_shutdown_timeout_secs": 10
+    "scm/mononoke:shardmanager_shutdown_timeout_secs": 10,
+    "scm/mononoke:repos_manager_concurrency": 30
   }
 }

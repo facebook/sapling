@@ -133,6 +133,14 @@ pub enum BenchCmd {
             long_help = "Enable detailed statistics about directory traversal including readdir() latency distribution, directory size analysis, scan rate variance, and slowest directories. Compatible with --skip-read for analyzing pure traversal performance."
         )]
         detailed_list_stats: bool,
+
+        /// Include per-directory statistics (causes ~20% throughput reduction)
+        #[clap(
+            long,
+            help = "Include per-directory stats (slower)",
+            long_help = "Enable per-directory I/O statistics tracking. This feature causes significant overhead (~20% throughput reduction) due to CPU cache effects from HashMap operations. Only effective when used with --detailed-read-stats."
+        )]
+        include_dir_stats: bool,
     },
 }
 
@@ -184,14 +192,6 @@ impl crate::Subcommand for BenchCmd {
                         random_data.chunk_size as f64 / types::BYTES_IN_KILOBYTE as f64,
                         random_data.total_size() as f64 / types::BYTES_IN_GIGABYTE as f64
                     );
-                    println!(
-                        "{}",
-                        dbio::bench_rocksdb_write_mfmd(&test_dir, &random_data)?
-                    );
-                    println!(
-                        "{}",
-                        dbio::bench_rocksdb_read_mfmd(&test_dir, &random_data)?
-                    );
                     println!("{}", dbio::bench_lmdb_write_mfmd(&test_dir, &random_data)?);
                     println!("{}", dbio::bench_lmdb_read_mfmd(&test_dir, &random_data)?);
                     println!(
@@ -214,6 +214,7 @@ impl crate::Subcommand for BenchCmd {
                 skip_read,
                 detailed_read_stats,
                 detailed_list_stats,
+                include_dir_stats,
             } => {
                 // Validate flag compatibility
                 if *skip_read && *detailed_read_stats {
@@ -253,6 +254,7 @@ impl crate::Subcommand for BenchCmd {
                     thrift_io.as_deref(),
                     *detailed_read_stats,
                     *detailed_list_stats,
+                    *include_dir_stats,
                 )
                 .await?;
 

@@ -723,10 +723,7 @@ class changectx(basectx):
                         % (short(anc), short(self._node), short(n2))
                     )
                     + "".join(
-                        _(
-                            "      alternatively, use --config "
-                            "merge.preferancestor=%s\n"
-                        )
+                        _("      alternatively, use --config merge.preferancestor=%s\n")
                         % short(n)
                         for n in sorted(cahs)
                         if n != anc

@@ -52,7 +52,7 @@ class EdenStateDir {
    */
   [[nodiscard]]
   std::pair<
-      bool /* is_lock_aquired */,
+      bool /* is_lock_acquired */,
       std::optional<std::string> /* old_daemon_pid */> acquireLock();
 
   /**

@@ -406,7 +406,7 @@ pub struct ConsistentReadOptions {
     #[derivative(Default(value = "3"))]
     pub max_attempts: usize,
 
-    /// Interval between retry attemps (in milliseconds)
+    /// Interval between retry attempts (in milliseconds)
     #[derivative(Default(value = "Duration::from_millis(50)"))]
     pub interval: Duration,
 

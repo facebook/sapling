@@ -313,13 +313,13 @@ Important detail here: if an operation references a commit hash, the queued vers
 of that operation will not yet know the new hash after the previous operation finishes.
 For example, `sl amend` in the middle of a stack, then `sl goto` the top of the stack.
 Thus, when telling the server to run an Operation we tag which args are revsets,
-so they are replaced with `max(sucessors(${revset}))` so the hash is replaced
+so they are replaced with `max(successors(${revset}))` so the hash is replaced
 with the latest successor hash. If you intentionally target an obsolete commit, then the hash is used directly.
 
 ## Internationalization
 
 ISL has a built-in i18n system, however the only language currently implemented is `en-US` English.
-`t()` and `<T>` functions convert English strings or keys into values for other languages in the `isl/i18n/${languageCode}` folders. To add support for a new langauage, add a new `isl/i18n/${languageCode}/common.js`
+`t()` and `<T>` functions convert English strings or keys into values for other languages in the `isl/i18n/${languageCode}` folders. To add support for a new language, add a new `isl/i18n/${languageCode}/common.js`
 and provide translations for all the strings found by grepping for `t()` and `<T>` in `isl`.
 This system can be improved later as new languages are supported.
 

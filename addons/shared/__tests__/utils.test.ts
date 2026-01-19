@@ -16,7 +16,7 @@ describe('basename', () => {
     expect(basename('/path/to/')).toEqual('');
   });
 
-  it('customizable delimeters', () => {
+  it('customizable delimiters', () => {
     expect(basename('/path/to/foo.txt', '.')).toEqual('txt');
   });
 
@@ -24,7 +24,7 @@ describe('basename', () => {
     expect(basename('')).toEqual('');
   });
 
-  it('delimeter not in string', () => {
+  it('delimiter not in string', () => {
     expect(basename('hello world')).toEqual('hello world');
   });
 });

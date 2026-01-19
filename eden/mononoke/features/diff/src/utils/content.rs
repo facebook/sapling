@@ -24,6 +24,7 @@ use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
+use unodes::RootUnodeManifestId;
 
 use crate::error::DiffError;
 use crate::types::DiffFileType;
@@ -46,6 +47,12 @@ pub async fn load_content(
                 changeset_input.path.clone(),
             )
             .await?
+        }
+        DiffSingleInput::String(string_input) => {
+            // For string inputs, convert the string directly to Bytes and return early
+            return Ok(Some(Bytes::copy_from_slice(
+                string_input.content.as_bytes(),
+            )));
         }
     };
 
@@ -79,8 +86,19 @@ async fn get_content_id_from_changeset_path(
     changeset_id: ChangesetId,
     path: NonRootMPath,
 ) -> Result<Option<ContentId>, DiffError> {
-    let content_info = get_file_info_from_changeset_path(ctx, repo, changeset_id, path).await?;
-    Ok(content_info.map(|(content_id, _)| content_id))
+    // If the file was changed in this changeset we already have the content_id
+    let changeset = changeset_id
+        .load(ctx, repo.repo_blobstore())
+        .await
+        .map_err(DiffError::internal)?;
+    let change = &changeset.file_changes_map().get(&path);
+    if let Some(Change(tracked)) = change {
+        Ok(Some(tracked.content_id().clone()))
+    } else {
+        // If the file was not changed here we will have to retrieve it and trigger derivation
+        let content_info = get_file_info_from_changeset_path(ctx, repo, changeset_id, path).await?;
+        Ok(content_info.map(|(content_id, _)| content_id))
+    }
 }
 
 pub async fn get_file_info_from_changeset_path(
@@ -125,11 +143,49 @@ async fn get_file_change_from_changeset_path(
         .await
         .map_err(DiffError::internal)?;
 
-    // Find the file change for this specific path
-    Ok(changeset
-        .file_changes()
-        .find(|(p, _)| p == &&path)
-        .map(|(_, file_change)| file_change.clone()))
+    // First, try to find the file change in the current changeset
+    if let Some((_, file_change)) = changeset.file_changes().find(|(p, _)| p == &&path) {
+        return Ok(Some(file_change.clone()));
+    }
+
+    // If not found in current changeset, look back through history
+    let root_unode_manifest_id = repo
+        .repo_derived_data()
+        .derive::<RootUnodeManifestId>(ctx, changeset_id)
+        .await
+        .map_err(DiffError::internal)?;
+
+    let blobstore = repo.repo_blobstore();
+    let mpath = MPath::from(path.clone());
+
+    if let Some(Entry::Leaf(file_unode_id)) = root_unode_manifest_id
+        .manifest_unode_id()
+        .find_entry(ctx.clone(), blobstore.clone(), mpath)
+        .await
+        .map_err(DiffError::internal)?
+    {
+        let file_unode = file_unode_id
+            .load(ctx, blobstore)
+            .await
+            .map_err(DiffError::internal)?;
+
+        let last_modified_cs_id = file_unode.linknode().clone();
+
+        // Load the last modified changeset and check for file changes
+        let last_modified_changeset = last_modified_cs_id
+            .load(ctx, blobstore)
+            .await
+            .map_err(DiffError::internal)?;
+
+        if let Some((_, file_change)) = last_modified_changeset
+            .file_changes()
+            .find(|(p, _)| p == &&path)
+        {
+            return Ok(Some(file_change.clone()));
+        }
+    }
+
+    Ok(None)
 }
 
 /// Extract content ID, changeset ID, default path, and LFS pointer from a DiffSingleInput
@@ -198,6 +254,11 @@ async fn extract_input_data(
                 content_input.lfs_pointer.clone(),
             ))
         }
+        DiffSingleInput::String(_string_input) => {
+            // For string inputs, there's no content ID, changeset ID, or LFS pointer
+            // Use the default path provided
+            Ok((None, None, default_path, None))
+        }
     }
 }
 
@@ -255,6 +316,17 @@ pub async fn load_diff_file(
     default_path: NonRootMPath,
     options: &DiffFileOpts,
 ) -> Result<Option<xdiff::DiffFile<String, Vec<u8>>>, DiffError> {
+    // Handle String input specially since it doesn't have a content_id
+    if let DiffSingleInput::String(string_input) = input {
+        // Validate string input size
+        let bytes = Bytes::copy_from_slice(string_input.content.as_bytes());
+        return Ok(Some(xdiff::DiffFile {
+            path: default_path.to_string(),
+            contents: xdiff::FileContent::Inline(bytes.to_vec()),
+            file_type: options.file_type.into(),
+        }));
+    }
+
     let (content_id, _changeset_id, path, lfs_pointer) =
         extract_input_data(ctx, repo, input, default_path).await?;
 

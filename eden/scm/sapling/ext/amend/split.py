@@ -26,7 +26,6 @@ from sapling import (
     scmutil,
     visibility,
 )
-
 from sapling.ext import rebase
 from sapling.i18n import _
 from sapling.node import hex

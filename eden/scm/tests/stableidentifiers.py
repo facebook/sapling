@@ -8,7 +8,6 @@
 import os
 
 from sapling import extensions, util
-
 from sapling.ext import extutil
 
 

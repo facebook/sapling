@@ -27,6 +27,8 @@ rust = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift
 rust_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 source_control = { version = "0.1.0", path = "../../../../scs/if" }
 source_control_services = { version = "0.1.0", path = "../../../../scs/if/services" }
+thrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+thrift_services = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [build-dependencies]

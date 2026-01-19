@@ -388,34 +388,6 @@ struct FinishedMount : public EdenFSEvent {
   }
 };
 
-struct RocksDbAutomaticGc : public EdenFSEvent {
-  double duration = 0.0;
-  bool success = false;
-  int64_t size_before = 0;
-  int64_t size_after = 0;
-
-  RocksDbAutomaticGc(
-      double duration,
-      bool success,
-      int64_t size_before,
-      int64_t size_after)
-      : duration(duration),
-        success(success),
-        size_before(size_before),
-        size_after(size_after) {}
-
-  void populate(DynamicEvent& event) const override {
-    event.addDouble("duration", duration);
-    event.addBool("success", success);
-    event.addInt("size_before", size_before);
-    event.addInt("size_after", size_after);
-  }
-
-  const char* getType() const override {
-    return "rocksdb_autogc";
-  }
-};
-
 struct ServerDataFetch : public EdenFSEvent {
   std::string cause;
   OptionalProcessId client_pid;

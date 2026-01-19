@@ -59,8 +59,7 @@ def _commit(orig, ui, repo, *pats, **opts):
                         raise error.Abort(msg % raw)
                     if re.search(r"[^\w-]", k):
                         msg = _(
-                            "keys can only contain ascii letters, digits,"
-                            " '_' and '-'"
+                            "keys can only contain ascii letters, digits, '_' and '-'"
                         )
                         raise error.Abort(msg)
                     if k in usedinternally:

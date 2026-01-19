@@ -11,7 +11,6 @@ import socket
 import time
 
 import bindings
-
 from sapling import (
     blackbox,
     bookmarks,
@@ -865,10 +864,7 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate, omittedheads, maxag
                 newnames.add(forkname)
                 changes.append((forkname, nodemod.bin(localnode)))
                 repo.ui.warn(
-                    _(
-                        "%s changed locally and remotely, "
-                        "local bookmark renamed to %s\n"
-                    )
+                    _("%s changed locally and remotely, local bookmark renamed to %s\n")
                     % (name, forkname)
                 )
 

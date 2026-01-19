@@ -90,8 +90,7 @@ rebasemsg: str = _(
     "or manually specify a destination for the rebase"
 )
 bmnodesthint = _(
-    "set up tracking with `@prog@ book -t <destination>` "
-    "or manually supply --dest / -d"
+    "set up tracking with `@prog@ book -t <destination>` or manually supply --dest / -d"
 )
 nodesthint = _(
     "set up tracking with `@prog@ book <name> -t <destination>` "

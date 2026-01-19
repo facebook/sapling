@@ -9,7 +9,6 @@
 from typing import List, Tuple
 
 from eden.fs.cli import doctor
-
 from eden.fs.cli.doctor import check_stale_mounts
 from eden.fs.cli.doctor.test.lib.fake_hang_mount_table import FakeHangMountTable
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase

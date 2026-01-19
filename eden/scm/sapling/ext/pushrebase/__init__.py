@@ -45,7 +45,6 @@ import os
 import tempfile
 
 from bindings import revisionstore
-
 from sapling import (
     bundle2,
     changegroup,
@@ -404,9 +403,13 @@ def _push(orig, ui, repo, *args, **opts):
     else:
         tracker = util.nullcontextmanager()
 
-    with ui.configoverride(
-        overrides, "pushrebase"
-    ), tracker, repo.wlock(), repo.lock(), repo.transaction("push") as tr:
+    with (
+        ui.configoverride(overrides, "pushrebase"),
+        tracker,
+        repo.wlock(),
+        repo.lock(),
+        repo.transaction("push") as tr,
+    ):
         result = orig(ui, repo, *args, **opts)
 
         if onto and tracker.replacementsreceived:

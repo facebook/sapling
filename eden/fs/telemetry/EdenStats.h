@@ -31,7 +31,6 @@ struct FuseStats;
 struct NfsStats;
 struct PrjfsStats;
 struct ObjectStoreStats;
-struct LocalStoreStats;
 struct SaplingBackingStoreStats;
 struct JournalStats;
 struct ThriftStats;
@@ -86,7 +85,6 @@ class EdenStats : public RefCounted {
   ThreadLocal<NfsStats> nfsStats_;
   ThreadLocal<PrjfsStats> prjfsStats_;
   ThreadLocal<ObjectStoreStats> objectStoreStats_;
-  ThreadLocal<LocalStoreStats> localStoreStats_;
   ThreadLocal<SaplingBackingStoreStats> saplingBackingStoreStats_;
   ThreadLocal<JournalStats> journalStats_;
   ThreadLocal<ThriftStats> thriftStats_;
@@ -121,11 +119,6 @@ template <>
 inline ObjectStoreStats&
 EdenStats::getStatsForCurrentThread<ObjectStoreStats>() {
   return *objectStoreStats_.get();
-}
-
-template <>
-inline LocalStoreStats& EdenStats::getStatsForCurrentThread<LocalStoreStats>() {
-  return *localStoreStats_.get();
 }
 
 template <>
@@ -464,19 +457,14 @@ struct PrjfsStats : StatsGroup<PrjfsStats> {
 struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Duration getTree{"store.get_tree_us"};
   Duration getTreeMemoryDuration{"store.get_tree.memory_us"};
-  Duration getTreeLocalstoreDuration{"store.get_tree.localstore_us"};
   Duration getTreeBackingstoreDuration{"store.get_tree.backingstore_us"};
   Duration getTreeAuxData{"store.get_tree_metadata_us"};
   Duration getTreeAuxDataMemoryDuration{"store.get_tree_metadata.memory_us"};
-  Duration getTreeAuxDataLocalstoreDuration{
-      "store.get_tree_metadata.localstore_us"};
   Duration getTreeAuxDataBackingstoreDuration{
       "store.get_tree_metadata.backingstore_us"};
   Duration getBlob{"store.get_blob_us"};
   Duration getBlobAuxData{"store.get_blob_metadata_us"};
   Duration getBlobAuxDataMemoryDuration{"store.get_blob_metadata.memory_us"};
-  Duration getBlobAuxDataLocalstoreDuration{
-      "store.get_blob_metadata.localstore_us"};
   Duration getBlobAuxDataBackingstoreDuration{
       "store.get_blob_metadata.backingstore_us"};
   Duration getBlobAuxDataFromBlobDuration{
@@ -484,27 +472,19 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Duration getRootTree{"store.get_root_tree_us"};
 
   Counter getBlobFromMemory{"object_store.get_blob.memory"};
-  Counter getBlobFromLocalStore{"object_store.get_blob.local_store"};
   Counter getBlobFromBackingStore{"object_store.get_blob.backing_store"};
   Counter getBlobFailed{"object_store.get_blob_failed"};
 
-  Counter prewarmTreeAuxCacheForTreeFetchedFromLocalStore{
-      "object_store.prewarm_tree_aux.local_store_tree"};
-  Counter prewarmTreeAuxCacheForTreeFetchedFromLocalStoreFailed{
-      "object_store.prewarm_tree_aux.local_store_tree_failed"};
   Counter prewarmTreeAuxMemCacheForTreeFromBackingStore{
       "object_store.prewarm_tree_aux.mem.backing_store_tree"};
   Counter prewarmTreeAuxLocalCacheForTreeFromBackingStore{
       "object_store.prewarm_tree_aux.local.backing_store_tree"};
 
   Counter getTreeFromMemory{"object_store.get_tree.memory"};
-  Counter getTreeFromLocalStore{"object_store.get_tree.local_store"};
   Counter getTreeFromBackingStore{"object_store.get_tree.backing_store"};
   Counter getTreeFailed{"object_store.get_tree_failed"};
 
   Counter getTreeAuxDataFromMemory{"object_store.get_tree_metadata.memory"};
-  Counter getTreeAuxDataFromLocalStore{
-      "object_store.get_tree_metadata.local_store"};
   Counter getTreeAuxDataFromBackingStore{
       "object_store.get_tree_metadata.backing_store"};
   Counter getTreeAuxDataFailed{"object_store.get_tree_metadata_failed"};
@@ -514,31 +494,10 @@ struct ObjectStoreStats : StatsGroup<ObjectStoreStats> {
   Counter getRootTreeFailed{"object_store.get_root_tree_failed"};
 
   Counter getBlobAuxDataFromMemory{"object_store.get_blob_metadata.memory"};
-  Counter getBlobAuxDataFromLocalStore{
-      "object_store.get_blob_metadata.local_store"};
   Counter getBlobAuxDataFromBackingStore{
       "object_store.get_blob_metadata.backing_store"};
   Counter getBlobAuxDataFromBlob{"object_store.get_blob_metadata.blob"};
   Counter getBlobAuxDataFailed{"object_store.get_blob_metadata_failed"};
-};
-
-struct LocalStoreStats : StatsGroup<LocalStoreStats> {
-  Duration getTree{"local_store.get_tree_us"};
-  Duration getBlob{"local_store.get_blob_us"};
-  Duration getBlobAuxData{"local_store.get_blob_metadata_us"};
-  Duration getTreeAuxData{"local_store.get_tree_metadata_us"};
-  Counter getTreeSuccess{"local_store.get_tree_success"};
-  Counter getTreeAuxDataSuccess{"local_store.get_tree_metadata_success"};
-  Counter getBlobSuccess{"local_store.get_blob_success"};
-  Counter getBlobAuxDataSuccess{"local_store.get_blob_metadata_success"};
-  Counter getTreeFailure{"local_store.get_tree_failure"};
-  Counter getTreeAuxDataFailure{"local_store.get_tree_metadata_failure"};
-  Counter getBlobFailure{"local_store.get_blob_failure"};
-  Counter getBlobAuxDataFailure{"local_store.get_blob_metadata_failure"};
-  Counter getTreeError{"local_store.get_tree_error"};
-  Counter getTreeAuxDataError{"local_store.get_tree_metadata_error"};
-  Counter getBlobError{"local_store.get_blob_error"};
-  Counter getBlobAuxDataError{"local_store.get_blob_metadata_error"};
 };
 
 /**
@@ -630,7 +589,7 @@ struct ThriftStats : StatsGroup<ThriftStats> {
 
   Counter cancelRequestSuccess{
       "thrift.EdenServiceHandler.cancel_request.success"};
-  Counter cancelRequesLongRunning{
+  Counter cancelRequestLongRunning{
       "thrift.EdenServiceHandler.cancel_request.long_running"};
 };
 

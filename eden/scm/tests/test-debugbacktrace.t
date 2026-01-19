@@ -1,11 +1,17 @@
 #inprocess-hg-incompatible
 #chg-incompatible
-#require lldb py3.10
+#require lldb
 
 This test requires:
 - real processes (therefore inprocess-hg-incompatible)
-- python 3.10 (sapling_cext_evalframe_resolve_frame in cext/evalframe.c is currently only implemented for 3.10)
+- python 3.10 or 3.12+ (sapling_cext_evalframe_resolve_frame in cext/evalframe.c is currently only implemented for these versions)
 - lldb (used by the debugbacktrace command)
+
+Check python version:
+
+    py_version = sys.version_info[:2]
+    if not (py_version == (3, 10) or py_version >= (3, 12)):
+        $ exit 80
 
 Run debugshell Python logic:
 

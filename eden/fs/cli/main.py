@@ -23,13 +23,13 @@ import subprocess
 import sys
 import traceback
 import typing
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Type
 
 from eden.fs.cli.doctor.check_filesystems import check_disk_usage
-
 from eden.fs.cli.util import get_chef_log_path
 
 # Constants
@@ -96,13 +96,13 @@ from eden.fs.cli.util import (
     wait_for_instance_healthy,
 )
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
-
 from facebook.eden import EdenService
 from facebook.eden.ttypes import (
     ChangeOwnershipRequest,
     GetCurrentSnapshotInfoRequest,
     GetScmStatusParams,
     MountId,
+    MountInfo,
     MountState,
     RootIdOptions,
     SendNotificationRequest,
@@ -1410,7 +1410,6 @@ class GcCmd(Subcmd):
         with instance.get_thrift_client_legacy() as client:
             # TODO: unload
             print("Clearing and compacting local caches...", end="", flush=True)
-            client.clearAndCompactLocalStore()
             print()
             # TODO: clear kernel caches
 
@@ -1560,6 +1559,228 @@ class MountCmd(Subcmd):
                     )
                     exitcode = 1
         return exitcode
+
+
+def remove_legacyephemeral_checkouts(
+    instance: config_mod.EdenInstance, out: ui.Output
+) -> int:
+    """
+    Enumerate all configured checkouts and remove any with legacyephemeral
+    inode catalog type.
+
+    The legacyephemeral catalog type has a fundamental design constraint: it only
+    supports fresh overlays. When EdenFS tries to mount a checkout with a
+    pre-existing legacyephemeral overlay, it throws an error and fails to start.
+
+    This function automatically detects and removes such checkouts before daemon
+    start to prevent mount failures, especially after crashes or kills where normal
+    cleanup code wouldn't run.
+
+    Returns: Number of checkouts removed
+    """
+    # Skip this check on Windows - legacyephemeral is not supported on that platform
+    if sys.platform == "win32":
+        return 0
+
+    removed_count = 0
+
+    # 1. Enumerate all configured checkouts
+    try:
+        checkouts = instance.get_checkouts()
+    except Exception as e:
+        out.write(
+            f"Warning: Could not enumerate checkouts: {e}\n"
+            "Continuing with daemon start...\n"
+        )
+        return 0
+
+    # 2. Filter for legacyephemeral catalog type
+    legacyephemeral_checkouts: List[config_mod.EdenCheckout] = []
+    for checkout in checkouts:
+        try:
+            config = checkout.get_config()
+            if config.inode_catalog_type == "legacyephemeral":
+                legacyephemeral_checkouts.append(checkout)
+        except Exception as e:
+            # If we can't read config, skip this checkout
+            out.write(
+                f"Warning: Could not read config for {checkout.path}: {e}\n"
+                "Skipping this checkout.\n"
+            )
+            continue
+
+    # 3. Early return if none found
+    if not legacyephemeral_checkouts:
+        return 0
+
+    # 4. Log warning about auto-removal
+    out.write(
+        f"Found {len(legacyephemeral_checkouts)} checkout(s) with "
+        "legacyephemeral inode catalog type.\n"
+        "These will be automatically removed\n"
+    )
+
+    # 5. Fetch mount info once (daemon may or may not be running). Doing this first introduces a
+    # slightly larger window for a race condition to be hit since the mount status can change by
+    # the time we try to remove the checkout, but in practice it shouldn't be a problem.
+    # It's cheaper to do this once than in every for loop iteration
+    mount_info: List[MountInfo] = []
+    try:
+        with instance.get_thrift_client_legacy() as client:
+            mount_info = client.listMounts()
+    except EdenNotRunningError:
+        # Daemon not running, no mounts active
+        pass
+
+    # 6. Remove each checkout
+    for checkout in legacyephemeral_checkouts:
+        path = checkout.path
+        try:
+            out.write(f"Removing legacyephemeral checkout: {path}\n")
+
+            is_mounted = any(m.mountPoint == bytes(path) for m in mount_info)
+
+            result = remove_checkout_impl(
+                instance=instance,
+                path=str(path),
+                is_mounted=is_mounted,
+                output=out,
+                preserve_mount_point=False,
+                use_force=True,
+                complain_about_redirections=False,
+                skip_destroy=False,
+                debug=False,
+            )
+
+            # Log any errors but continue (don't block daemon start)
+            if result.unmount_error:
+                out.write(
+                    f"  Warning: Unmount failed for {path}: {result.unmount_error}\n"
+                    "  Continuing with config cleanup...\n"
+                )
+
+            if result.destroy_error:
+                out.write(
+                    f"  Error deleting configuration for {path}: {result.destroy_error}\n"
+                    "  This checkout will fail to mount. Manual cleanup recommended.\n"
+                    f"  Run: sudo unmount -f {path} && rm -rf {path}\n"
+                )
+            else:
+                if result.cleanup_error:
+                    out.write(
+                        f"  Warning: Failed to cleanup mount point {path}: {result.cleanup_error}\n"
+                        "  Manual cleanup recommended.\n"
+                        f"  Run: rm -rf {path}\n"
+                    )
+
+                out.write(f"  Removed {path}\n")
+                removed_count += 1
+
+        except Exception as e:
+            # Log error but don't block daemon start
+            out.write(
+                f"  Error removing {path}: {e}\n"
+                "  This checkout may fail to mount. Manual cleanup recommended.\n"
+                f"  Run: sudo unmount -f {path} && rm -rf {path}\n"
+            )
+
+    out.write(f"\nRemoved {removed_count} legacyephemeral checkout(s).\n\n", flush=True)
+    return removed_count
+
+
+@dataclass
+class RemoveCheckoutResult:
+    """Result of a checkout removal operation."""
+
+    aux_process_error: Optional[Exception] = None
+    unmount_error: Optional[Exception] = None
+    destroy_error: Optional[Exception] = None
+    cleanup_error: Optional[Exception] = None
+
+
+def remove_checkout_impl(
+    instance: config_mod.EdenInstance,
+    path: str,
+    is_mounted: bool,
+    output: ui.Output,
+    *,
+    preserve_mount_point: bool = False,
+    use_force: bool = True,
+    complain_about_redirections: bool = True,
+    skip_destroy: bool = False,
+    debug: bool = False,
+    proceed_on_unmount_failure: bool = True,
+) -> RemoveCheckoutResult:
+    """
+    Core checkout removal logic shared by remove commands.
+
+    Returns a result object with success status and any errors encountered.
+    Errors are captured, not raised, allowing callers to decide how to handle them.
+
+    Args:
+        instance: The EdenInstance to operate on
+        path: Path to the checkout to remove
+        is_mounted: Whether the checkout is currently mounted
+        output: Output stream for status messages
+        preserve_mount_point: If True, don't delete the mount point directory
+        use_force: If True, use force unmount
+        complain_about_redirections: If True, log warnings about failing to unmount redirections
+        skip_destroy: If True, skip the destroy_mount step (for CLEANUP_ONLY case)
+        debug: If True, include debug info in cleanup_mount
+        proceed_on_unmount_failure: If True, continue with destroy/cleanup even if unmount fails.
+            If False, return early with unmount_error set.
+    """
+    result = RemoveCheckoutResult()
+
+    # Step 1: Unmount if currently mounted
+    if is_mounted:
+        # Step 1a: Stop aux processes (redirections, internal processes)
+        try:
+            output.write(f"Stopping aux processes for {path}...\n")
+            stop_aux_processes_for_path(
+                path,
+                complain_about_failing_to_unmount_redirs=complain_about_redirections,
+            )
+        except Exception as e:
+            result.aux_process_error = e
+            # Continue to unmount even if aux process stopping failed
+
+        # Step 1b: Unmount via thrift
+        try:
+            output.write(
+                f"Unmounting `{path}`. Please be patient: this can take up to 1 minute!\n"
+            )
+            instance.unmount(path, use_force=use_force)
+        except EdenNotRunningError:
+            # Daemon not running is fine - nothing to unmount
+            pass
+        except Exception as e:
+            result.unmount_error = e
+            if not proceed_on_unmount_failure:
+                # Caller wants to abort on unmount failure
+                return result
+            # Otherwise continue to destroy/cleanup
+
+    # Step 2: Destroy mount config and overlay
+    if not skip_destroy:
+        try:
+            output.write(f"Deleting mount {path}...\n")
+            instance.destroy_mount(path, preserve_mount_point)
+        except Exception as e:
+            result.destroy_error = e
+            # Don't attempt cleanup if destroy failed
+            return result
+
+    # Step 3: Cleanup mount point directory
+    # Note: This runs even when skip_destroy=True (e.g., CLEANUP_ONLY case)
+    try:
+        output.write(f"Cleaning up mount {path}...\n")
+        instance.cleanup_mount(Path(path), preserve_mount_point, debug)
+    except Exception as e:
+        result.cleanup_error = e
+        # Cleanup failure is less severe - don't mark as total failure
+
+    return result
 
 
 # Types of removal
@@ -1750,78 +1971,59 @@ Do you still want to delete {path}?"""
                 )
                 checkout.save_config(config)
 
-                if remove_type == RemoveType.ACTIVE_MOUNT:
-                    try:
-                        # We don't bother complaining about removing redirections on Windows
-                        # since redirections are symlinks on Windows anyway, so the removal
-                        # of the repo will remove them. This would usually happen because
-                        # the daemon is not running, so this is oftenjust extra spam for users.
-                        print(f"Stopping aux processes for {mount}...")
-                        stop_aux_processes_for_path(
-                            mount,
-                            complain_about_failing_to_unmount_redirs=(
-                                sys.platform != "win32"
-                            ),
-                        )
-                    except Exception as ex:
-                        msg = f"error stopping auxiliary processes {mount}: {ex}"
-                        telemetry_sample.add_string("problem_fixable", msg)
-                        print_stderr(msg)
-                        exit_code = 1
-                        # We intentionally fall through here and remove the mount point
-                        # so that the eden daemon will attempt to unmount it.
-                        # unmounting could still timeout, though we unmount with -f,
-                        # so theoretically this should not happen.
-                    try:
-                        print(
-                            f"Unmounting `{mount}`. Please be patient: this can take up to 1 minute!"
-                        )
-                        instance.unmount(mount, use_force=not args.no_force)
-                    except EdenNotRunningError:
-                        # Its fine if we could not tell the daemon to unmount
-                        # because the daemon is not running. There is just no
-                        # daemon we need to tell. Let's just perform the rest of
-                        # the clean up and this will remove the mount as expected.
-                        pass
-                    except Exception as ex:
-                        # We used to intentionally fall through here and remove the
-                        # mount point from the config file. The most likely cause
-                        # of failure is if edenfs times out performing the unmount.
-                        # In this case, we don't want to start modifying state and
-                        # configs underneath a running EdenFS mount, so let's return
-                        # early and give possible mitigations for unmount timeouts.
-                        msg = f"error unmounting {mount}: {ex}"
-                        telemetry_sample.fail(msg)
-                        print_stderr(f"\n{msg}\n\n")
-                        print_stderr(
-                            f"For unmount timeouts, you can try:\n{_get_unmount_timeout_suggestions(mount)}"
-                        )
-                        return 1
+                result = remove_checkout_impl(
+                    instance=instance,
+                    path=mount,
+                    is_mounted=(remove_type == RemoveType.ACTIVE_MOUNT),
+                    output=ui.get_output(),
+                    preserve_mount_point=args.preserve_mount_point,
+                    use_force=not args.no_force,
+                    complain_about_redirections=(sys.platform != "win32"),
+                    skip_destroy=(remove_type == RemoveType.CLEANUP_ONLY),
+                    debug=args.debug,
+                    proceed_on_unmount_failure=False,
+                )
 
-                try:
-                    if remove_type != RemoveType.CLEANUP_ONLY:
-                        print(f"Deleting mount {mount}")
-                        instance.destroy_mount(mount, args.preserve_mount_point)
-                except Exception as ex:
-                    msg = f"error deleting configuration for {mount}: {ex}"
+                # Handle aux process error (log but continue)
+                if result.aux_process_error:
+                    msg = f"error stopping auxiliary processes {mount}: {result.aux_process_error}"
+                    telemetry_sample.add_string("problem_fixable", msg)
+                    print_stderr(msg)
+                    exit_code = 1
+                    # We intentionally fall through here - unmount may still work
+
+                # Handle unmount error (return early with suggestions)
+                if result.unmount_error:
+                    msg = f"error unmounting {mount}: {result.unmount_error}"
+                    telemetry_sample.fail(msg)
+                    print_stderr(f"\n{msg}\n\n")
+                    print_stderr(
+                        f"For unmount timeouts, you can try:\n{_get_unmount_timeout_suggestions(mount)}"
+                    )
+                    return 1
+
+                # Handle destroy error
+                if result.destroy_error:
+                    msg = f"error deleting configuration for {mount}: {result.destroy_error}"
                     telemetry_sample.fail(msg)
                     print_stderr(msg)
                     exit_code = 1
-                    self.optional_traceback(ex, args.debug)
+                    # pyre-fixme[6]: Pyre doesn't narrow Optional type after if guard
+                    self.optional_traceback(result.destroy_error, args.debug)
                 else:
-                    try:
-                        print(f"Cleaning up mount {mount}")
-                        instance.cleanup_mount(
-                            Path(mount), args.preserve_mount_point, args.debug
-                        )
-                    except Exception as ex:
-                        msg = f"error cleaning up mount {mount}: {ex}"
+                    # Handle cleanup errors if destroy succeeded
+                    if result.cleanup_error:
+                        msg = f"error cleaning up mount {mount}: {result.cleanup_error}"
                         telemetry_sample.fail(msg)
-                        if isinstance(ex, OSError) and ex.errno == errno.ENOTEMPTY:
+                        if (
+                            isinstance(result.cleanup_error, OSError)
+                            and result.cleanup_error.errno == errno.ENOTEMPTY
+                        ):
                             msg += "\nPlease remove the entries and re-run eden rm."
                         print_stderr(msg)
                         exit_code = 1
-                        self.optional_traceback(ex, args.debug)
+                        # pyre-fixme[6]: Pyre doesn't narrow Optional type after if guard
+                        self.optional_traceback(result.cleanup_error, args.debug)
 
                     # Continue around the loop removing any other mount points
 
@@ -2011,6 +2213,10 @@ class StartCmd(Subcmd):
             is_takeover: bool = False
 
         instance = get_eden_instance(args)
+
+        # Clean up legacyephemeral checkouts before starting daemon
+        remove_legacyephemeral_checkouts(instance, ui.get_output())
+
         if args.if_necessary and not instance.get_mount_paths():
             print("No EdenFS mount points configured.")
             return 0
@@ -2352,8 +2558,7 @@ class RestartCmd(Subcmd):
         if edenfs_pid is None:
             # The daemon is not running
             print(
-                "The daemon is not running after failed graceful restart, "
-                "starting it"
+                "The daemon is not running after failed graceful restart, starting it"
             )
             telemetry_sample.fail("EdenFS was not running after graceful restart")
             return self._start(instance)
@@ -2408,6 +2613,14 @@ class RestartCmd(Subcmd):
 
     def _graceful_restart(self, instance: EdenInstance) -> int:
         print("Performing a graceful restart...")
+
+        # Clean up legacyephemeral checkouts before the takeover attempt. With this decision, there
+        # is a tradeoff for the case of unsuccessful takeover and old daemon recovery: The old
+        # daemon will not be able to recover the legacy ephemeral checkouts. Due to the
+        # nature of these checkouts, the tradeoff is acceptable considering the complexity of
+        # getting the recovery logic right for this edge case.
+        remove_legacyephemeral_checkouts(instance, ui.get_output())
+
         with instance.get_telemetry_logger().new_sample(
             "graceful_restart"
         ) as telemetry_sample:
@@ -2435,6 +2648,10 @@ class RestartCmd(Subcmd):
 
     def _start(self, instance: EdenInstance) -> int:
         print("edenfs daemon is not currently running. Starting...")
+
+        # Clean up legacyephemeral checkouts before starting daemon
+        remove_legacyephemeral_checkouts(instance, ui.get_output())
+
         return daemon.start_edenfs_service(
             instance,
             daemon_binary=self.args.daemon_binary,
@@ -2508,6 +2725,9 @@ re-open these files after EdenFS is restarted.
         self._wait_for_stop(instance, pid, timeout)
 
     def _finish_restart(self, instance: EdenInstance, allow_root: bool = False) -> int:
+        # Clean up legacyephemeral checkouts before starting daemon
+        remove_legacyephemeral_checkouts(instance, ui.get_output())
+
         exit_code = daemon.start_edenfs_service(
             instance,
             daemon_binary=self.args.daemon_binary,

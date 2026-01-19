@@ -23,7 +23,6 @@ EDENFS_TARGETS = {
     "//eden/fs/monitor:edenfs_monitor": "/usr/local/libexec/eden/edenfs_monitor",
     "//eden/fs/service:edenfs": "/usr/local/libexec/eden/edenfs",
     "//eden/fs/service:edenfs_privhelper": "/usr/local/libexec/eden/edenfs_privhelper",
-    "//eden/fs/store:eden_store_util": "/usr/local/libexec/eden/eden_store_util",
 }
 
 SYMLINKS = {

@@ -28,7 +28,7 @@ use criterion::criterion_group;
 use criterion::criterion_main;
 use rand::Rng;
 use rand::prelude::SliceRandom;
-use rand::thread_rng;
+use rand::rng;
 
 const PAGE_SIZE: usize = 4096;
 const DEFAULT_FILE_SIZE: u64 = 16 * 1024 * 1024;
@@ -138,7 +138,7 @@ fn get_tempfile_path<T: AsRef<Path>>(name: T) -> PathBuf {
 }
 
 fn random_4k_reads_direct(b: &mut Bencher) {
-    let mut rng = thread_rng();
+    let mut rng = rng();
     let mut page = [0u8; PAGE_SIZE];
 
     let path = get_tempfile_path("random_reads.tmp");
@@ -185,7 +185,7 @@ fn random_4k_reads_direct(b: &mut Bencher) {
 }
 
 fn random_4k_writes(b: &mut Bencher) {
-    let mut rng = thread_rng();
+    let mut rng = rng();
     let mut page = [0; PAGE_SIZE];
     rng.fill(&mut page);
 
