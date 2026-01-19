@@ -34,9 +34,10 @@ def submit(ui, repo, *args, **opts) -> int:
     github_repo = check_github_repo(repo)
     is_draft = opts.get("draft")
     is_open = opts.get("open")
+    submit_to_upstream = ui.configbool("github", "submit-to-upstream", True)
     return asyncio.run(
         update_commits_in_stack(
-            ui, repo, github_repo, is_draft=is_draft, is_open=is_open
+            ui, repo, github_repo, is_draft=is_draft, is_open=is_open, submit_to_upstream=submit_to_upstream
         )
     )
 
@@ -151,7 +152,7 @@ async def get_partitions(ui, repo, store, filter) -> List[List[CommitData]]:
 
 
 async def update_commits_in_stack(
-    ui, repo, github_repo: GitHubRepo, is_draft: bool, is_open: bool = False
+    ui, repo, github_repo: GitHubRepo, is_draft: bool, is_open: bool = False, submit_to_upstream: bool = True
 ) -> int:
     parents = repo.dirstate.parents()
     if parents[0] == nullid:
@@ -170,11 +171,11 @@ async def update_commits_in_stack(
     use_placeholder_strategy = ui.configbool("github", "placeholder-strategy")
     if use_placeholder_strategy:
         params = await create_placeholder_strategy_params(
-            ui, partitions, github_repo, origin
+            ui, partitions, github_repo, origin, submit_to_upstream
         )
     else:
         params = await create_serial_strategy_params(
-            ui, partitions, github_repo, origin
+            ui, partitions, github_repo, origin, submit_to_upstream
         )
 
     max_pull_requests_to_create = ui.configint("github", "max-prs-to-create", "5")
@@ -227,6 +228,7 @@ async def update_commits_in_stack(
                 store,
                 ui,
                 is_draft,
+                submit_to_upstream,
             )
         else:
             assert isinstance(params, SerialStrategyParams)
@@ -237,6 +239,7 @@ async def update_commits_in_stack(
                 store,
                 ui,
                 is_draft,
+                submit_to_upstream,
             )
 
     # Now that each pull request has a named branch pushed to GitHub, we can
@@ -252,7 +255,8 @@ async def update_commits_in_stack(
         repository = await get_repository_for_origin(origin, github_repo.hostname)
     rewrite_and_archive_requests = [
         rewrite_pull_request_body(
-            partitions, index, workflow, pr_numbers_and_num_commits, repository, ui
+            partitions, index, workflow, pr_numbers_and_num_commits, repository, ui,
+            submit_to_upstream
         )
         for index in range(len(partitions))
     ] + [
@@ -283,12 +287,13 @@ async def rewrite_pull_request_body(
     pr_numbers_and_num_commits: List[Tuple[int, int]],
     repository: Repository,
     ui,
+    submit_to_upstream: bool = True,
 ) -> None:
     # If available, use the head branch of the previous partition as the base
     # of this branch. Recall that partitions is ordered from the top of the
     # stack to the bottom.
     partition = partitions[index]
-    base = repository.get_base_branch()
+    base = repository.get_base_branch(submit_to_upstream)
     if workflow == SubmitWorkflow.SINGLE and index < len(partitions) - 1:
         base = none_throws(partitions[index + 1][0].head_branch_name)
 
@@ -375,6 +380,7 @@ async def create_serial_strategy_params(
     partitions: List[List[CommitData]],
     github_repo: GitHubRepo,
     origin: str,
+    submit_to_upstream: bool = True,
 ) -> SerialStrategyParams:
     # git push --force any heads that need updating, creating new branch names,
     # if necessary.
@@ -405,7 +411,9 @@ async def create_serial_strategy_params(
                 repository = await get_repository_for_origin(
                     origin, github_repo.hostname
                 )
-                upstream_owner, upstream_name = repository.get_upstream_owner_and_name()
+                upstream_owner, upstream_name = repository.get_upstream_owner_and_name(
+                    submit_to_upstream
+                )
                 result = await gh_submit.guess_next_pull_request_number(
                     github_repo.hostname, upstream_owner, upstream_name
                 )
@@ -455,14 +463,15 @@ async def create_pull_requests_serially(
     store: PullRequestStore,
     ui,
     is_draft: bool,
+    submit_to_upstream: bool = True,
 ) -> None:
     """Creates a new pull request for each entry in the `commits` list.
 
     Each CommitData in `commits` will be updated such that its `.pr` field is
     set appropriately.
     """
-    head_ref_prefix = f"{repository.owner}:" if repository.is_fork else ""
-    owner, name = repository.get_upstream_owner_and_name()
+    head_ref_prefix = f"{repository.owner}:" if repository.is_fork and submit_to_upstream else ""
+    owner, name = repository.get_upstream_owner_and_name(submit_to_upstream)
     hostname = repository.hostname
 
     # Create the pull requests in order serially to give us the best chance of
@@ -470,7 +479,7 @@ async def create_pull_requests_serially(
     commits_to_update = []
     parent = None
     for commit, branch_name in commits:
-        base = repository.get_base_branch()
+        base = repository.get_base_branch(submit_to_upstream)
         if workflow == SubmitWorkflow.SINGLE and parent:
             base = none_throws(parent.head_branch_name)
 
@@ -533,6 +542,7 @@ async def create_placeholder_strategy_params(
     partitions: List[List[CommitData]],
     github_repo: GitHubRepo,
     origin: str,
+    submit_to_upstream: bool = True,
 ) -> PlaceholderStrategyParams:
     refs_to_update: List[str] = []
     commits_that_need_pull_requests: List[CommitNeedsPullRequest] = []
@@ -571,7 +581,7 @@ async def create_placeholder_strategy_params(
     if commits_that_need_pull_requests:
         repository = await get_repository_for_origin(origin, github_repo.hostname)
         issue_numbers = await _create_placeholder_issues(
-            repository, len(commits_that_need_pull_requests)
+            repository, len(commits_that_need_pull_requests), submit_to_upstream
         )
         for commit_needs_pr, number in zip(
             commits_that_need_pull_requests, issue_numbers
@@ -602,15 +612,16 @@ async def create_pull_requests_from_placeholder_issues(
     store: PullRequestStore,
     ui,
     is_draft: bool,
+    submit_to_upstream: bool = True,
 ) -> None:
     """Creates a new pull request for each entry in the `commits` list.
 
     Each entry in `commits` is a (CommitData, branch_name, issue_number). Each
     CommitData will be updated such that its `.pr` field is set appropriately.
     """
-    head_ref_prefix = f"{repository.owner}:" if repository.is_fork else ""
-    owner, name = repository.get_upstream_owner_and_name()
-    base_branch_for_repo = repository.get_base_branch()
+    head_ref_prefix = f"{repository.owner}:" if repository.is_fork and submit_to_upstream else ""
+    owner, name = repository.get_upstream_owner_and_name(submit_to_upstream)
+    base_branch_for_repo = repository.get_base_branch(submit_to_upstream)
     hostname = repository.hostname
 
     async def create_pull_request(params: PullRequestParams):
@@ -671,9 +682,13 @@ async def create_pull_requests_from_placeholder_issues(
     await asyncio.gather(*[create_pull_request(c) for c in commits])
 
 
-async def _create_placeholder_issues(repository: Repository, num: int) -> List[int]:
+async def _create_placeholder_issues(
+    repository: Repository, num: int, submit_to_upstream: bool = True
+) -> List[int]:
     """create the specified number of placeholder issues in parallel"""
-    upstream_owner, upstream_name = repository.get_upstream_owner_and_name()
+    upstream_owner, upstream_name = repository.get_upstream_owner_and_name(
+        submit_to_upstream
+    )
     issue_number_results = await asyncio.gather(
         *[
             gh_submit.create_pull_request_placeholder_issue(
