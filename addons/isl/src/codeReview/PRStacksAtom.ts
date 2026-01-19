@@ -8,7 +8,26 @@
 import type {DiffSummary} from '../types';
 
 import {atom} from 'jotai';
+import {atomWithStorage} from 'jotai/utils';
 import {allDiffSummaries} from './CodeReviewInfo';
+
+/**
+ * Stack labels stored in localStorage.
+ * Maps stack ID to custom label.
+ */
+export const stackLabelsAtom = atomWithStorage<Record<string, string>>(
+  'isl.prStackLabels',
+  {},
+);
+
+/**
+ * Hidden stacks stored in localStorage.
+ * Set of stack IDs that are hidden.
+ */
+export const hiddenStacksAtom = atomWithStorage<string[]>(
+  'isl.hiddenPrStacks',
+  [],
+);
 
 /**
  * Represents a stack of PRs grouped together.
@@ -22,6 +41,10 @@ export type PRStack = {
   prs: DiffSummary[];
   /** Whether this stack has multiple PRs or is just a single PR */
   isStack: boolean;
+  /** Main contributor (author) for this stack */
+  mainAuthor?: string;
+  /** Avatar URL of the main contributor */
+  mainAuthorAvatarUrl?: string;
 };
 
 /**
@@ -74,11 +97,20 @@ export const prStacksAtom = atom<PRStack[]>(get => {
       }
 
       if (stackPrs.length > 0 && topPrNumber !== null) {
+        // Get main author from the first PR (top of stack)
+        const firstPr = stackPrs[0];
+        const mainAuthor =
+          firstPr.type === 'github' ? firstPr.author : undefined;
+        const mainAuthorAvatarUrl =
+          firstPr.type === 'github' ? firstPr.authorAvatarUrl : undefined;
+
         stacks.push({
           id: `stack-${topPrNumber}`,
           topPrNumber,
           prs: stackPrs,
           isStack: stackPrs.length > 1,
+          mainAuthor,
+          mainAuthorAvatarUrl,
         });
       }
     } else {
@@ -86,11 +118,18 @@ export const prStacksAtom = atom<PRStack[]>(get => {
       const prNumber = parseInt(diffId, 10);
       processedPrNumbers.add(diffId);
 
+      // Get author from the PR
+      const mainAuthor = summary.type === 'github' ? summary.author : undefined;
+      const mainAuthorAvatarUrl =
+        summary.type === 'github' ? summary.authorAvatarUrl : undefined;
+
       stacks.push({
         id: `single-${diffId}`,
         topPrNumber: prNumber,
         prs: [summary],
         isStack: false,
+        mainAuthor,
+        mainAuthorAvatarUrl,
       });
     }
   }

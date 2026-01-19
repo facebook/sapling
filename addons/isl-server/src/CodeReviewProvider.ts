@@ -29,7 +29,7 @@ export type DiffSummaries = Map<DiffId, DiffSummary>;
 export interface CodeReviewProvider {
   triggerDiffSummariesFetch(diffs: Array<DiffId>): unknown;
 
-  onChangeDiffSummaries(callback: (result: Result<DiffSummaries>) => unknown): Disposable;
+  onChangeDiffSummaries(callback: (result: Result<DiffSummaries>, currentUser?: string) => unknown): Disposable;
 
   /** Run a command not handled within sapling, such as a separate submit handler */
   runExternalCommand?(

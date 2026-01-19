@@ -90,10 +90,20 @@ export const branchingDiffInfos = atomFamilyWeak((branchName: string) =>
 
 export const allDiffSummaries = atom<Result<Map<DiffId, DiffSummary> | null>>({value: null});
 export const diffIdsByBranchName = atom<Map<string, DiffId>>(new Map());
+/**
+ * Current GitHub user login (username) from the authenticated user.
+ * Used to determine if a PR/stack is "external" (authored by someone else).
+ */
+export const currentGitHubUser = atom<string | undefined>(undefined);
 
 registerDisposable(
   allDiffSummaries,
   serverAPI.onMessageOfType('fetchedDiffSummaries', event => {
+    // Store the current GitHub user if provided
+    if (event.currentUser) {
+      writeAtom(currentGitHubUser, event.currentUser);
+    }
+
     writeAtom(diffIdsByBranchName, existing => {
       if (event.summaries.error) {
         return existing;
