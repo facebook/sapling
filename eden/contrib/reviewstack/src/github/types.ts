@@ -173,3 +173,42 @@ export type PaginationParams =
       last: number;
       before?: PageInfo['startCursor'];
     };
+
+/**
+ * Status indicating whether a file is generated (machine-created) or manual (human-written).
+ * Used for calculating "significant lines of code" by excluding generated files.
+ */
+export enum GeneratedStatus {
+  /** File is manually written by humans */
+  Manual = 0,
+  /** File contains both generated and manual sections (has @partially-generated tag) */
+  PartiallyGenerated = 1,
+  /** File is fully generated (has @generated tag or matches linguist-generated pattern) */
+  Generated = 2,
+}
+
+/**
+ * A pattern from .gitattributes that marks files as generated.
+ * See: https://github.com/github/linguist/blob/master/docs/overrides.md
+ */
+export interface GitAttributePattern {
+  /** Glob pattern (e.g., "*.generated.ts", "libs/graphql/**") */
+  pattern: string;
+  /** Whether files matching this pattern are generated */
+  isGenerated: boolean;
+}
+
+/**
+ * Significant Lines of Code information for a pull request.
+ * Excludes generated files from the count to show meaningful diff statistics.
+ */
+export interface SLOCInfo {
+  /** Lines changed in non-generated files (additions + deletions) */
+  significantLines: number;
+  /** Total lines changed across all files */
+  totalLines: number;
+  /** Number of files detected as generated */
+  generatedFileCount: number;
+  /** Paths of files detected as generated */
+  generatedFiles: string[];
+}
