@@ -63,9 +63,18 @@ export type GitHubDiffSummary = {
   branchName?: string;
   /** Stack info parsed from PR body Sapling footer. Top-to-bottom order (first = top of stack). */
   stackInfo?: StackEntry[];
+  /** Author login (GitHub username) */
+  author?: string;
+  /** Author avatar URL */
+  authorAvatarUrl?: string;
 };
 
 const DEFAULT_GH_FETCH_TIMEOUT = 60_000; // 1 minute
+
+export type DiffSummariesData = {
+  summaries: Map<DiffId, GitHubDiffSummary>;
+  currentUser?: string;
+};
 
 type GitHubCodeReviewSystem = CodeReviewSystem & {type: 'github'};
 export class GitHubCodeReviewProvider implements CodeReviewProvider {
@@ -73,13 +82,14 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     private codeReviewSystem: GitHubCodeReviewSystem,
     private logger: Logger,
   ) {}
-  private diffSummaries = new TypedEventEmitter<'data', Map<DiffId, GitHubDiffSummary>>();
+  private diffSummaries = new TypedEventEmitter<'data', DiffSummariesData>();
   private hasMergeQueueSupport: Promise<boolean> | null = null;
 
   onChangeDiffSummaries(
-    callback: (result: Result<Map<DiffId, GitHubDiffSummary>>) => unknown,
+    callback: (result: Result<Map<DiffId, GitHubDiffSummary>>, currentUser?: string) => unknown,
   ): Disposable {
-    const handleData = (data: Map<DiffId, GitHubDiffSummary>) => callback({value: data});
+    const handleData = (data: DiffSummariesData) =>
+      callback({value: data.summaries}, data.currentUser);
     const handleError = (error: Error) => callback({error});
     this.diffSummaries.on('data', handleData);
     this.diffSummaries.on('error', handleError);
@@ -144,9 +154,10 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         this.logger.info('fetching github PR summaries');
         const allSummaries = await this.fetchYourPullRequestsGraphQL(hasMergeQueueSupport);
         if (allSummaries?.search.nodes == null) {
-          this.diffSummaries.emit('data', new Map());
+          this.diffSummaries.emit('data', {summaries: new Map()});
           return;
         }
+        const currentUser = allSummaries.viewer?.login;
 
         const map = new Map<DiffId, GitHubDiffSummary>();
         for (const summary of allSummaries.search.nodes) {
@@ -184,11 +195,13 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               head: summary.headRef.target.oid,
               branchName: summary.headRef.name,
               stackInfo,
+              author: summary.author?.login ?? undefined,
+              authorAvatarUrl: summary.author?.avatarUrl ?? undefined,
             });
           }
         }
         this.logger.info(`fetched ${map.size} github PR summaries`);
-        this.diffSummaries.emit('data', map);
+        this.diffSummaries.emit('data', {summaries: map, currentUser});
       } catch (error) {
         this.logger.info('error fetching github PR summaries: ', error);
         this.diffSummaries.emit('error', error as Error);

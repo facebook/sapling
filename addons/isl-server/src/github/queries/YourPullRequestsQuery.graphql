@@ -1,4 +1,7 @@
 query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
+  viewer {
+    login
+  }
   search(query: $searchQuery, type: ISSUE, first: $numToFetch) {
     nodes {
       ... on PullRequest {
@@ -8,6 +11,10 @@ query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
         body
         state
         isDraft
+        author {
+          login
+          avatarUrl
+        }
         url
         reviewDecision
         comments {
