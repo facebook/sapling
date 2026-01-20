@@ -49,19 +49,24 @@ pub fn human_bytes(bytes: u64) -> String {
 }
 
 /// Return short, human readable representation of duration.
-/// We try to keep a relatively fixed width of 3 or 4 characters.
+/// We try to keep a relatively fixed width of 3 to 5 characters.
 pub fn human_duration(d: Duration) -> String {
-    let sec = d.as_secs_f64();
-    let (unit_size, unit) = match sec {
-        v if v >= 3600_f64 => (3600_f64, "h"),
-        v if v >= 60_f64 => (60_f64, "m"),
-        _ => (1_f64, "s"),
-    };
-
-    if sec / unit_size < 10_f64 {
-        format!("{:.1}{}", sec / unit_size, unit)
+    let total_secs = d.as_secs();
+    if total_secs >= 3600 {
+        let hours = total_secs / 3600;
+        let mins = (total_secs % 3600) / 60;
+        format!("{}h{}m", hours, mins)
+    } else if total_secs >= 60 {
+        let mins = total_secs / 60;
+        let secs = total_secs % 60;
+        format!("{}m{}s", mins, secs)
     } else {
-        format!("{}{}", (sec / unit_size).round(), unit)
+        let sec = d.as_secs_f64();
+        if sec < 10_f64 {
+            format!("{:.1}s", sec)
+        } else {
+            format!("{}s", sec.round())
+        }
     }
 }
 
@@ -77,9 +82,11 @@ mod test {
         assert_eq!(human_duration(Duration::from_millis(9500)), "9.5s");
         assert_eq!(human_duration(Duration::from_secs(12)), "12s");
         assert_eq!(human_duration(Duration::from_millis(12999)), "13s");
-        assert_eq!(human_duration(Duration::from_mins(1)), "1.0m");
-        assert_eq!(human_duration(Duration::from_secs(330)), "5.5m");
-        assert_eq!(human_duration(Duration::from_hours(1)), "1.0h");
-        assert_eq!(human_duration(Duration::from_hours(10)), "10h");
+        assert_eq!(human_duration(Duration::from_mins(1)), "1m0s");
+        assert_eq!(human_duration(Duration::from_secs(80)), "1m20s");
+        assert_eq!(human_duration(Duration::from_secs(330)), "5m30s");
+        assert_eq!(human_duration(Duration::from_hours(1)), "1h0m");
+        assert_eq!(human_duration(Duration::from_secs(3660)), "1h1m");
+        assert_eq!(human_duration(Duration::from_hours(10)), "10h0m");
     }
 }
