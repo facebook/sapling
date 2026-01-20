@@ -151,13 +151,9 @@ rust_binary(
         "//thrift/lib/rust:fbthrift",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:serde",
-        "//common/rust/shed/justknobs_stub:justknobs",
-        "//common/rust/mysql:mysql_client",
         "//eden/mononoke/blobstore:blobstore_factory",
         "//eden/mononoke/blobstore:fileblob",
         "//eden/mononoke/blobstore:redactedblobstore",
-        "//eden/mononoke/facebook/git_server/push_poller/lib/command:command",
-        "//eden/mononoke/common/facebook/sql_storage:sql_storage",
         "//eden/mononoke/repo_attributes/bonsai_blob_mapping:bonsai_blob_mapping",
         "//eden/mononoke/repo_attributes/deletion_log:deletion_log",
     ]),
