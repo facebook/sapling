@@ -360,7 +360,7 @@ pub fn loop_over_log_entries<'a>(
                                 ctx.clone(),
                                 current_id,
                                 batch_size,
-                                Freshness::MostRecent,
+                                Freshness::MaybeStale,
                             )
                             .try_collect::<Vec<_>>()
                             .watched()
