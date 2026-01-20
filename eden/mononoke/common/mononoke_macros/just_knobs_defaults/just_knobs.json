@@ -60,7 +60,8 @@
     "scm/mononoke:create_changeset_stack_noop_file_changes_check": true,
     "scm/mononoke:spawn_mutation_polling_task": true,
     "scm/mononoke:create_changeset_stack_empty_changeset_check": true,
-    "scm/mononoke:rendezvous_bonsai_tag_mapping": true
+    "scm/mononoke:rendezvous_bonsai_tag_mapping": true,
+    "scm/mononoke:pushrebase_disable_commit_validation": false
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,

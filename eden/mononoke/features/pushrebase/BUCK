@@ -31,6 +31,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
         ":pushrebase_hook",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//common/rust/shed/stats:stats",
         "//eden/mononoke/blobrepo_utils:blobrepo_utils",
         "//eden/mononoke/blobstore:blobstore",

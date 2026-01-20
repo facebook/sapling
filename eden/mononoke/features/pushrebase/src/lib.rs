@@ -507,6 +507,14 @@ async fn maybe_validate_commit(
     bcs_id: &ChangesetId,
     retry_num: PushrebaseRetryNum,
 ) -> Result<(), PushrebaseError> {
+    if justknobs::eval(
+        "scm/mononoke:pushrebase_disable_commit_validation",
+        None,
+        Some(repo.repo_identity().name()),
+    )? {
+        return Ok(());
+    }
+
     // Validation is expensive, so do it only once
     if !retry_num.is_first() {
         return Ok(());
