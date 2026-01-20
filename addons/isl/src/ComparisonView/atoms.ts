@@ -12,7 +12,12 @@ import {ComparisonType} from 'shared/Comparison';
 import {writeAtom} from '../jotaiUtils';
 import platform from '../platform';
 
-export type ComparisonMode = {comparison: Comparison; visible: boolean};
+export type ComparisonMode = {
+  comparison: Comparison;
+  visible: boolean;
+  /** Optional file path to scroll to when the comparison view opens */
+  scrollToFile?: string;
+};
 export const currentComparisonMode = atom<ComparisonMode>(
   window.islAppMode?.mode === 'comparison'
     ? {
@@ -25,12 +30,12 @@ export const currentComparisonMode = atom<ComparisonMode>(
       },
 );
 
-/** Open Comparison View for a given comparison type */
-export async function showComparison(comparison: Comparison) {
+/** Open Comparison View for a given comparison type, optionally scrolling to a specific file */
+export async function showComparison(comparison: Comparison, scrollToFile?: string) {
   if (await platform.openDedicatedComparison?.(comparison)) {
     return;
   }
-  writeAtom(currentComparisonMode, {comparison, visible: true});
+  writeAtom(currentComparisonMode, {comparison, visible: true, scrollToFile});
 }
 
 export function dismissComparison() {

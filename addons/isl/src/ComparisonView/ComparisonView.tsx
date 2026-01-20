@@ -19,7 +19,7 @@ import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   ComparisonType,
   comparisonIsAgainstHead,
@@ -74,9 +74,11 @@ const comparisonDisplayMode = localStorageBackedAtom<ComparisonDisplayMode | 're
 export default function ComparisonView({
   comparison,
   dismiss,
+  scrollToFile,
 }: {
   comparison: Comparison;
   dismiss?: () => void;
+  scrollToFile?: string;
 }) {
   const compared = useAtomValue(currentComparisonData(comparison));
 
@@ -93,6 +95,34 @@ export default function ComparisonView({
     isLoading: compared.state === 'loading',
     data,
   });
+
+  // Refs for scrolling to specific files
+  const fileRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const setFileRef = useCallback((path: string, element: HTMLDivElement | null) => {
+    if (element) {
+      fileRefs.current.set(path, element);
+    } else {
+      fileRefs.current.delete(path);
+    }
+  }, []);
+
+  // Scroll to file when scrollToFile is set and data is loaded
+  useEffect(() => {
+    if (scrollToFile && data?.value) {
+      // Small delay to ensure the DOM has rendered
+      const timer = setTimeout(() => {
+        const element = fileRefs.current.get(scrollToFile);
+        if (element) {
+          element.scrollIntoView({behavior: 'smooth', block: 'start'});
+          // Expand the file if it's collapsed
+          if (collapsedFiles.get(scrollToFile)) {
+            setCollapsedFile(scrollToFile, false);
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [scrollToFile, data?.value, collapsedFiles, setCollapsedFile]);
 
   let content;
   if (data == null) {
@@ -132,6 +162,7 @@ export default function ComparisonView({
             }
             generatedStatus={GeneratedStatus.Manual}
             displayMode={displayMode}
+            setRef={setFileRef}
           />
         ))}
         {fileGroups[GeneratedStatus.PartiallyGenerated]?.map((parsed, i) => (
@@ -145,6 +176,7 @@ export default function ComparisonView({
             }
             generatedStatus={GeneratedStatus.PartiallyGenerated}
             displayMode={displayMode}
+            setRef={setFileRef}
           />
         ))}
         {fileGroups[GeneratedStatus.Generated]?.map((parsed, i) => (
@@ -158,6 +190,7 @@ export default function ComparisonView({
             }
             generatedStatus={GeneratedStatus.Generated}
             displayMode={displayMode}
+            setRef={setFileRef}
           />
         ))}
       </>
@@ -402,6 +435,7 @@ function ComparisonViewFile({
   setCollapsed,
   generatedStatus,
   displayMode,
+  setRef,
 }: {
   diff: ParsedDiff;
   comparison: Comparison;
@@ -409,6 +443,7 @@ function ComparisonViewFile({
   setCollapsed: (isCollapsed: boolean) => void;
   generatedStatus: GeneratedStatus;
   displayMode: ComparisonDisplayMode;
+  setRef?: (path: string, element: HTMLDivElement | null) => void;
 }) {
   const path = diff.newFileName ?? diff.oldFileName ?? '';
   const context: Context = {
@@ -455,7 +490,10 @@ function ComparisonViewFile({
     display: displayMode,
   };
   return (
-    <div className="comparison-view-file" key={path}>
+    <div
+      className="comparison-view-file"
+      key={path}
+      ref={element => setRef?.(path, element)}>
       <ErrorBoundary>
         <SplitDiffView ctx={context} patch={diff} path={path} generatedStatus={generatedStatus} />
       </ErrorBoundary>

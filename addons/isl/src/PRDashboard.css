@@ -143,3 +143,81 @@
 .pr-state-queued {
   color: var(--signal-warning);
 }
+
+/* Header buttons */
+.pr-dashboard-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+}
+
+.hidden-count {
+  font-size: 11px;
+  margin-left: 2px;
+}
+
+/* Stack card hidden state */
+.stack-card-hidden {
+  opacity: 0.6;
+}
+
+/* External stack styling (stacks from other users) */
+.stack-card-external {
+  border-left: 3px solid var(--external-stack-accent, #6b7280);
+  background-color: var(--external-stack-bg, rgba(107, 114, 128, 0.08));
+}
+
+.stack-card-external .stack-card-header {
+  background: var(--external-stack-header-bg, rgba(107, 114, 128, 0.15));
+}
+
+/* Stack card author */
+.stack-card-author {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  margin-right: var(--halfpad);
+}
+
+.stack-card-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+/* Stack card actions */
+.stack-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Label editor */
+.stack-card-label-input {
+  flex: 1;
+  min-width: 100px;
+}
+
+.stack-card-label-input input {
+  padding: 2px 6px;
+  font-size: 13px;
+}
+
+/* PR row author */
+.pr-row-author {
+  color: var(--foreground-sub);
+  font-size: 12px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* PR row view changes button */
+.pr-row-view-changes {
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.pr-row:hover .pr-row-view-changes {
+  opacity: 1;
+}
