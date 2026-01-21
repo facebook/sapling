@@ -30,7 +30,7 @@ pub fn init() {
         static RESOLVER_FAT_REF: &dyn SupplementalFrameResolver = &RESOLVER;
         static RESOLVER_THIN_REF: &&dyn SupplementalFrameResolver = &RESOLVER_FAT_REF;
         libpython_filter::init();
-        backtrace_ext::set_supplemental_frame_resolver(RESOLVER_THIN_REF);
+        backtrace_ext::set_supplemental_frame_resolver(Some(RESOLVER_THIN_REF));
         unsafe { sapling_cext_evalframe_set_pass_through(1) }
     }
 }

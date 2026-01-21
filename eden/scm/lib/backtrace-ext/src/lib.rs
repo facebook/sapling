@@ -69,11 +69,17 @@ pub type SupplementalInfo = [usize; 2];
 static SUPPLEMENTAL_FRAME_RESOLVER: AtomicPtr<()> = AtomicPtr::new(std::ptr::null_mut());
 
 /// Set the [`SupplementalFrameResolver`] used by this process.
-pub fn set_supplemental_frame_resolver(resolver: &'static &'static dyn SupplementalFrameResolver) {
-    SUPPLEMENTAL_FRAME_RESOLVER.store(
-        resolver as *const &dyn SupplementalFrameResolver as *const () as *mut (),
-        Ordering::Release,
-    );
+///
+/// Setting this takes effect immediately. The next frame will (or will not) be
+/// using the provided `resolver`.
+pub fn set_supplemental_frame_resolver(
+    resolver: Option<&'static &'static dyn SupplementalFrameResolver>,
+) {
+    let ptr = match resolver {
+        Some(resolver) => resolver as *const &dyn SupplementalFrameResolver as *const () as *mut (),
+        None => std::ptr::null_mut(),
+    };
+    SUPPLEMENTAL_FRAME_RESOLVER.store(ptr, Ordering::Release);
 }
 
 pub fn get_supplemental_frame_resolver() -> Option<&'static &'static dyn SupplementalFrameResolver>
