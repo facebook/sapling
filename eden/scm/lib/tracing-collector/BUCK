@@ -37,5 +37,6 @@ rust_library(
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tracing",
         "fbsource//third-party/rust:tracing-subscriber",
+        "//eden/scm/lib/util/ascii-tree:ascii-tree",
     ],
 )

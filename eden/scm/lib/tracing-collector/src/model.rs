@@ -16,6 +16,10 @@ use std::rc::Rc;
 use std::sync::atomic;
 use std::sync::atomic::AtomicU64;
 
+pub use ascii_tree::AsciiOptions;
+use ascii_tree::DescribeTreeSpan;
+use ascii_tree::Tree;
+use ascii_tree::TreeSpan as RawTreeSpan;
 pub use indexmap::IndexMap;
 pub use indexmap::IndexSet;
 use serde::Deserialize;
@@ -910,150 +914,118 @@ where
 
 // -------- ASCII output --------
 
-/// Options used to control behavior of writing ASCII graph.
-#[derive(Default)]
-#[non_exhaustive]
-pub struct AsciiOptions {
-    /// Hide a "Duration Span" if a span takes less than the specified
-    /// microseconds.
-    pub min_duration_micros_to_hide: u64,
-
-    /// Hide a "Duration Span" if it is less than the specified
-    /// percentage of the parent's duration.
-    pub min_duration_parent_percentage_to_hide: u8,
-
-    /// Show a "Duration Span" if it was hidden by the above rules
-    /// but it is more than the specified percentage of the parent's
-    /// duration. Not effective if it's 0.
-    pub min_duration_parent_percentage_to_show: u8,
-}
-
-/// Spans that form a Tree. Internal used by write_ascii functions.
-#[derive(Default)]
-struct RawTreeSpan {
-    // None: Root Span. Otherwise non-root span.
-    espan_id: Option<EspanId>,
-    start_time: u64,
-    duration: u64,
-    children: Vec<RawTreeSpanId>,
-    call_count: usize,
+/// Extra data for TreeSpan when building the ASCII tree.
+struct TreeSpanExtra {
+    espan_id: EspanId,
     is_event: bool,
-}
-type RawTreeSpanId = usize;
-
-impl RawTreeSpan {
-    /// Whether the current [`RawTreeSpan`] covers another [`RawTreeSpan`] timestamp-wise.
-    fn covers(&self, other: &RawTreeSpan) -> bool {
-        if self.is_incomplete() {
-            self.start_time <= other.start_time
-        } else {
-            self.end_time() >= other.end_time() && self.start_time <= other.start_time
-        }
-    }
-
-    /// End time (inaccurate if this is a merged span, i.e. call_count > 1).
-    fn end_time(&self) -> u64 {
-        self.start_time + self.duration
-    }
-
-    /// Is this span considered interesting (should it be printed)?
-    fn is_interesting(&self, opts: &AsciiOptions, parent: Option<&RawTreeSpan>) -> bool {
-        if self.call_count == 0 {
-            return false;
-        }
-
-        if let Some(parent) = parent {
-            // Special case: Parent is root (which does not have a duration). Show the span.
-            if parent.espan_id.is_none() {
-                return true;
-            }
-
-            // "to_show" conditions
-            if opts.min_duration_parent_percentage_to_show != 0 && parent.is_interesting(opts, None)
-            {
-                if self.duration
-                    >= (parent.duration * opts.min_duration_parent_percentage_to_show as u64) / 100
-                {
-                    return true;
-                }
-            }
-
-            // "to_hide" conditions
-            if self.duration
-                < (parent.duration * opts.min_duration_parent_percentage_to_hide as u64) / 100
-            {
-                return false;
-            }
-        }
-
-        // "to_hide" conditions
-        self.duration >= opts.min_duration_micros_to_hide
-    }
-
-    /// A very long, impractical `duration` that indicates an incomplete span
-    /// that has started but not ended.
-    const fn incomplete_duration() -> u64 {
-        1 << 63
-    }
-
-    fn is_incomplete(&self) -> bool {
-        self.duration >= Self::incomplete_duration()
-    }
+    /// Whether this span is truncated due to ref_count exceeding max_span_ref_count.
+    truncated: bool,
 }
 
-struct Row {
-    columns: Vec<String>,
+/// Implements rendering of TreeSpan for tracing data.
+struct TracingTreeDescriptor<'a> {
+    data: &'a TracingData,
 }
 
-struct Rows {
-    rows: Vec<Row>,
-    column_alignments: Vec<Alignment>,
-    column_min_widths: Vec<usize>,
-    column_max_widths: Vec<usize>,
-}
+impl<'a> TracingTreeDescriptor<'a> {
+    fn get_espan(&self, span: &RawTreeSpan<TreeSpanExtra>) -> Option<&'a Espan> {
+        span.extra
+            .as_ref()
+            .and_then(|extra| self.data.get_espan(extra.espan_id))
+    }
 
-enum Alignment {
-    Left,
-    Right,
-}
-
-impl fmt::Display for Rows {
-    /// Render rows with aligned columns.
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let column_count = self.rows.iter().map(|r| r.columns.len()).max().unwrap_or(0);
-        let column_widths: Vec<usize> = (0..column_count)
-            .map(|i| {
-                self.rows
-                    .iter()
-                    .map(|r| r.columns.get(i).map_or(0, |s| s.len()))
-                    .max()
-                    .unwrap_or(0)
-                    .max(self.column_min_widths.get(i).cloned().unwrap_or(0))
-                    .min(self.column_max_widths.get(i).cloned().unwrap_or(usize::MAX))
-            })
-            .collect();
-        for row in self.rows.iter() {
-            for (i, cell) in row.columns.iter().enumerate() {
-                let width = column_widths[i];
-                let pad = " ".repeat(width.max(cell.len()) - cell.len());
-                let mut content = match self.column_alignments.get(i).unwrap_or(&Alignment::Left) {
-                    Alignment::Left => cell.clone() + &pad,
-                    Alignment::Right => pad + cell,
-                };
-                if i + 1 == row.columns.len() {
-                    content = content.trim_end().to_string();
-                };
-                if !content.is_empty() {
-                    if i != 0 {
-                        // Separator
-                        write!(f, " ")?;
+    fn extract(&self, span: &RawTreeSpan<TreeSpanExtra>, name: &str) -> &str {
+        self.get_espan(span)
+            .and_then(|espan| {
+                let strings = &self.data.strings;
+                let meta = &espan.meta;
+                if let Some((key_id, _)) = strings.0.get_full(name) {
+                    let key_id = StringId(key_id as u64);
+                    if let Some(value_id) = meta.get(&key_id) {
+                        return Some(strings.get(*value_id));
                     }
-                    write!(f, "{}", content)?;
                 }
+                None
+            })
+            .unwrap_or("")
+    }
+}
+
+impl<'a> DescribeTreeSpan<TreeSpanExtra> for TracingTreeDescriptor<'a> {
+    fn name(&self, span: &RawTreeSpan<TreeSpanExtra>) -> String {
+        self.extract(span, "name").to_string()
+    }
+
+    fn source(&self, span: &RawTreeSpan<TreeSpanExtra>) -> String {
+        let module_path = self.extract(span, "module_path");
+        let line = self.extract(span, "line");
+        if module_path.is_empty() {
+            let cat = self.extract(span, "cat");
+            if cat.is_empty() {
+                String::new()
+            } else {
+                format!("({})", cat)
             }
-            write!(f, "\n")?;
+        } else if line.is_empty() {
+            module_path.to_string()
+        } else {
+            format!("{} line {}", module_path, line)
         }
-        Ok(())
+    }
+
+    fn start(&self, span: &RawTreeSpan<TreeSpanExtra>) -> String {
+        // Use milliseconds.
+        (span.start_time / 1000).to_string()
+    }
+
+    fn duration(&self, span: &RawTreeSpan<TreeSpanExtra>) -> String {
+        let is_event = span.extra.as_ref().is_some_and(|e| e.is_event);
+        if is_event {
+            "0".to_string()
+        } else if span.is_incomplete() {
+            format!("?{}", (self.data.now_micros().0 - span.start_time) / 1000)
+        } else {
+            // Use milliseconds. This is consistent with traceprof.
+            format!("+{}", span.duration / 1000)
+        }
+    }
+
+    fn call_count(&self, span: &RawTreeSpan<TreeSpanExtra>) -> String {
+        let mut result = if span.call_count > 1 {
+            format!(" ({} times)", span.call_count)
+        } else {
+            assert!(span.call_count > 0);
+            String::new()
+        };
+        if span.extra.as_ref().is_some_and(|e| e.truncated) {
+            result += " (truncated)";
+        }
+        result
+    }
+
+    fn extra_metadata_lines(&self, span: &RawTreeSpan<TreeSpanExtra>) -> Vec<String> {
+        let Some(espan) = self.get_espan(span) else {
+            return Vec::new();
+        };
+        let strings = &self.data.strings;
+        espan
+            .meta
+            .iter()
+            .filter(|item| {
+                let k = strings.get(*item.0);
+                k != "name" && k != "module_path" && k != "line" && k != "cat"
+            })
+            .map(|item| {
+                let k = strings.get(*item.0);
+                let v = strings.get(*item.1);
+                let v = if v.len() > 32 {
+                    format!("{}...", &v[..30])
+                } else {
+                    v.to_string()
+                };
+                format!("- {} = {}", k, v)
+            })
+            .collect()
     }
 }
 
@@ -1098,14 +1070,21 @@ impl TracingData {
 
     /// Generate ASCII call graph for a single thread.
     fn ascii_single_thread(&self, eventus_list: &[&Eventus], opts: &AsciiOptions) -> String {
-        let tree_spans = self.build_tree_spans(eventus_list);
-        let tree_spans = self.merge_tree_spans(tree_spans, opts);
-        let rows = self.render_tree_spans(tree_spans, opts);
+        let mut tree = self.build_tree_spans(eventus_list);
+        // Merge similar spans using the Espan's metadata as the key.
+        tree.merge_children(opts, &|span: &RawTreeSpan<TreeSpanExtra>| {
+            span.extra
+                .as_ref()
+                .and_then(|extra| self.get_espan(extra.espan_id))
+                .map(|espan| espan.meta.iter().map(|(&k, &v)| (k, v)).collect::<Vec<_>>())
+        });
+        let desc = TracingTreeDescriptor { data: self };
+        let rows = tree.render_ascii_rows(opts, &desc);
         rows.to_string()
     }
 
     /// Scan `Eventus` list to reconstruct the call graph.
-    fn build_tree_spans(&self, eventus_list: &[&Eventus]) -> Vec<RawTreeSpan> {
+    fn build_tree_spans(&self, eventus_list: &[&Eventus]) -> Tree<TreeSpanExtra> {
         // For example, eventus_list like:
         // (`+`: Enter, `-`: Exit, Number: SpanId)
         //
@@ -1175,13 +1154,19 @@ impl TracingData {
         // and refer to other TreeSpans using Vec indexes.
         // A dummy root is created, so the root is unique. That makes it a bit
         // easier to handle.
-        let mut tree_spans = vec![RawTreeSpan::default()];
+        let mut tree_spans: Vec<RawTreeSpan<TreeSpanExtra>> = vec![RawTreeSpan {
+            children: Vec::new(),
+            start_time: 0,
+            duration: 0,
+            call_count: 1,
+            extra: None, // Root tree has no extra data.
+        }];
 
-        // Keep a stack of TreeSpans to figure out parents.
-        let mut stack: Vec<RawTreeSpanId> = vec![0];
+        // Keep a stack of tree span ids to figure out parents.
+        let mut stack: Vec<usize> = vec![0];
 
         // Append a span to the list. Attach it to the "correct" parent span.
-        let mut append = |tree_span| {
+        let mut append = |tree: RawTreeSpan<TreeSpanExtra>| {
             // Find a suitable parent span. Pop parent spans
             // if this span does not fit in it.
             //
@@ -1189,7 +1174,7 @@ impl TracingData {
             let parent_id = loop {
                 let parent_id = *stack.last().unwrap();
                 let parent = &tree_spans[parent_id];
-                if parent.covers(&tree_span) {
+                if parent.covers(&tree) {
                     break parent_id;
                 } else if stack.len() == 1 {
                     // Use the root span as parent.
@@ -1199,10 +1184,9 @@ impl TracingData {
                 }
             };
 
-            // Record the new RawTreeSpan and record parent-child
-            // relationship.
+            // Record the new TreeSpan and record parent-child relationship.
             let id = tree_spans.len();
-            tree_spans.push(tree_span);
+            tree_spans.push(tree);
             stack.push(id);
             tree_spans[parent_id].children.push(id);
         };
@@ -1212,6 +1196,10 @@ impl TracingData {
         // proper parent.
         for (eid, e) in eventus_list.iter().enumerate() {
             let span_id = e.espan_id;
+            let truncated = self
+                .get_espan(span_id)
+                .map(|es| es.ref_count >= self.max_span_ref_count)
+                .unwrap_or(false);
             match e.action {
                 Action::EnterSpan => {
                     // Find the matching ExitSpan.
@@ -1226,23 +1214,29 @@ impl TracingData {
                         assert!(end.timestamp >= e.timestamp);
 
                         RawTreeSpan {
-                            espan_id: Some(span_id),
                             start_time: e.timestamp.0,
                             duration: end.timestamp.0 - e.timestamp.0,
                             children: Vec::new(),
                             call_count: 1,
-                            is_event: false,
+                            extra: Some(TreeSpanExtra {
+                                espan_id: span_id,
+                                is_event: false,
+                                truncated,
+                            }),
                         }
                     } else {
-                        // No matched ExitSpan. Still create a RawTreeSpan
+                        // No matched ExitSpan. Still create a TreeSpan
                         // so it shows up.
                         RawTreeSpan {
-                            espan_id: Some(span_id),
                             start_time: e.timestamp.0,
-                            duration: RawTreeSpan::incomplete_duration(),
+                            duration: RawTreeSpan::<TreeSpanExtra>::incomplete_duration(),
                             children: Vec::new(),
                             call_count: 1,
-                            is_event: false,
+                            extra: Some(TreeSpanExtra {
+                                espan_id: span_id,
+                                is_event: false,
+                                truncated,
+                            }),
                         }
                     };
 
@@ -1254,298 +1248,22 @@ impl TracingData {
                 Action::Event => {
                     // This is similar to EnterSpan + ExitSpan immediately.
                     let tree_span = RawTreeSpan {
-                        espan_id: Some(span_id),
                         start_time: e.timestamp.0,
                         duration: 0,
                         children: Vec::new(),
                         call_count: 1,
-                        is_event: true,
+                        extra: Some(TreeSpanExtra {
+                            espan_id: span_id,
+                            is_event: true,
+                            truncated,
+                        }),
                     };
                     append(tree_span);
                 }
             }
         }
 
-        tree_spans
-    }
-
-    /// Merge multiple similar spans into one larger span.
-    fn merge_tree_spans(
-        &self,
-        tree_spans: Vec<RawTreeSpan>,
-        opts: &AsciiOptions,
-    ) -> Vec<RawTreeSpan> {
-        // For example,
-        //
-        //   <root>
-        //    |- span 1
-        //    |   |- span 2
-        //    |   |- span 3
-        //    |   |- span 2
-        //    |   |- span 3
-        //    |   |- span 2
-        //    |- span 2
-        //
-        // might be rewritten into:
-        //
-        //   <root>
-        //    |- span 1
-        //    |   |- span 2 (x 3)
-        //    |   |- span 3 (x 2)
-        //    |- span 2
-
-        struct Context<'a> {
-            this: &'a TracingData,
-            opts: &'a AsciiOptions,
-            tree_spans: Vec<RawTreeSpan>,
-        }
-
-        /// Check children of tree_spans[id] recursively.
-        fn visit(ctx: &mut Context, id: usize) {
-            type RawTreeSpanId = usize;
-            // Treat spans with the same metadata as same spans.
-            // So different EspanIds can still be merged.
-            let mut meta_to_id = IndexMap::<Vec<(StringId, StringId)>, RawTreeSpanId>::new();
-            let child_ids: Vec<RawTreeSpanId> = ctx.tree_spans[id].children.to_vec();
-            for child_id in child_ids {
-                // Do not try to merge this child span if itself, or any of the
-                // grand children is interesting. But some of the grand children
-                // might be merged. So go visit them.
-                if ctx.tree_spans[child_id].is_interesting(ctx.opts, Some(&ctx.tree_spans[id])) || {
-                    ctx.tree_spans[child_id].children.iter().any(|&id| {
-                        ctx.tree_spans[id].is_interesting(ctx.opts, Some(&ctx.tree_spans[child_id]))
-                    })
-                } {
-                    visit(ctx, child_id);
-                    continue;
-                }
-
-                // Otherwise, attempt to merge the child span.
-                if let Some(espan_id) = ctx.tree_spans[child_id].espan_id {
-                    if let Some(espan) = ctx.this.get_espan(espan_id) {
-                        let meta: Vec<(StringId, StringId)> =
-                            espan.meta.iter().map(|(&k, &v)| (k, v)).collect();
-                        let existing_child_id: RawTreeSpanId =
-                            *meta_to_id.entry(meta).or_insert(child_id);
-                        if existing_child_id != child_id {
-                            let duration = ctx.tree_spans[child_id].duration;
-                            assert_eq!(ctx.tree_spans[child_id].call_count, 1);
-                            ctx.tree_spans[child_id].call_count -= 1;
-                            let merged = &mut ctx.tree_spans[existing_child_id];
-                            merged.call_count += 1;
-                            merged.duration += duration;
-                        }
-                    }
-                }
-            }
-        }
-
-        let mut context = Context {
-            this: self,
-            opts,
-            tree_spans,
-        };
-
-        visit(&mut context, 0);
-
-        context.tree_spans
-    }
-
-    /// Render one `RawTreeSpan` into `Rows`.
-    fn render_tree_spans(&self, tree_spans: Vec<RawTreeSpan>, opts: &AsciiOptions) -> Rows {
-        struct Context<'a> {
-            this: &'a TracingData,
-            opts: &'a AsciiOptions,
-            tree_spans: Vec<RawTreeSpan>,
-            rows: Vec<Row>,
-        }
-
-        /// Extract value from espan.meta.
-        fn extract<'a>(ctx: &'a Context, espan: &'a Espan, name: &'a str) -> &'a str {
-            let meta = &espan.meta;
-            if let Some((key_id, _)) = ctx.this.strings.0.get_full(name) {
-                let key_id = StringId(key_id as u64);
-                if let Some(value_id) = meta.get(&key_id) {
-                    return ctx.this.strings.get(*value_id);
-                }
-            }
-            ""
-        }
-
-        /// Render RawTreeSpan to rows.
-        fn render_span(ctx: &mut Context, id: usize, mut indent: usize, first_row_ch: char) {
-            let tree_span = &ctx.tree_spans[id];
-            if let Some(espan_id) = tree_span.espan_id {
-                let this = ctx.this;
-                let strings = &this.strings;
-                let espan = match ctx.this.get_espan(espan_id) {
-                    Some(espan) => espan,
-                    None => return,
-                };
-                let name = extract(ctx, espan, "name");
-                let source_location = {
-                    let module_path = extract(ctx, espan, "module_path");
-                    let line = extract(ctx, espan, "line");
-                    if module_path.is_empty() {
-                        let cat = extract(ctx, espan, "cat");
-                        if cat.is_empty() {
-                            String::new()
-                        } else {
-                            format!("({})", cat)
-                        }
-                    } else if line.is_empty() {
-                        module_path.to_string()
-                    } else {
-                        format!("{} line {}", module_path, line)
-                    }
-                };
-                let start = tree_span.start_time / 1000;
-                let duration = if tree_span.is_event {
-                    "0".to_string()
-                } else if tree_span.is_incomplete() {
-                    format!(
-                        "?{}",
-                        (ctx.this.now_micros().0 - tree_span.start_time) / 1000,
-                    )
-                } else {
-                    // Use milliseconds. This is consistent with traceprof.
-                    format!("+{}", tree_span.duration / 1000)
-                };
-                let mut call_count = if tree_span.call_count > 1 {
-                    format!(" ({} times)", tree_span.call_count)
-                } else {
-                    assert!(tree_span.call_count > 0);
-                    String::new()
-                };
-                if espan.ref_count >= ctx.this.max_span_ref_count {
-                    call_count += " (truncated)"
-                }
-
-                let first_row = Row {
-                    columns: vec![
-                        start.to_string(),
-                        duration,
-                        format!(
-                            "{}{} {}{}",
-                            " ".repeat(indent),
-                            first_row_ch,
-                            name,
-                            call_count
-                        ),
-                        source_location,
-                    ],
-                };
-                ctx.rows.push(first_row);
-
-                // Extra metadata (other than name, module_path and line)
-                let extra_meta: Vec<(&str, &str)> = espan
-                    .meta
-                    .iter()
-                    .map(|(&key, &value)| (strings.get(key), strings.get(value)))
-                    .filter(|(key, value)| {
-                        *key != "name" && *key != "module_path" && *key != "line" && *key != "cat"
-                    })
-                    .collect();
-                if first_row_ch == '\\' {
-                    indent += 1;
-                }
-                for (i, (key, value)) in extra_meta.iter().enumerate() {
-                    let value = if value.len() > 32 {
-                        format!("{}...", &value[..30])
-                    } else {
-                        value.to_string()
-                    };
-                    let row = Row {
-                        columns: vec![
-                            String::new(),
-                            String::new(),
-                            format!("{}| - {} = {}", " ".repeat(indent), key, value),
-                            format!(":"),
-                        ],
-                    };
-                    ctx.rows.push(row);
-                }
-            }
-        }
-
-        /// Visit a span and its children recursively.
-        fn visit(ctx: &mut Context, id: usize, indent: usize, ch: char) {
-            // Print out this span.
-            render_span(ctx, id, indent, ch);
-
-            // Figure out children to visit.
-            let child_ids: Vec<usize> = ctx.tree_spans[id]
-                .children
-                .iter()
-                .cloned()
-                .filter(|&id| {
-                    ctx.tree_spans[id].is_interesting(ctx.opts, Some(&ctx.tree_spans[id]))
-                })
-                .collect();
-
-            // Preserve a straight line if there is only one child:
-            //
-            //   | foo ('bar' is the only child)
-            //   | bar  <- case 1
-            //
-            // Increase indent if there are multi-children (case 2),
-            // or it's already not a straight line (case 3):
-            //
-            //   | foo ('bar1' and 'bar2' are children)
-            //    \ bar1     <- case 2
-            //     | bar1.1  <- case 3
-            //     | bar1.2  <- case 1
-            //    \ bar2     <- case 2
-            //     \ bar2.1  <- case 2
-            //     \ bar2.2  <- case 2
-            //
-            let (indent, ch) = if child_ids.len() >= 2 {
-                // case 2
-                (indent + 1, '\\')
-            } else if ch == '\\' {
-                // case 3
-                (indent + 1, '|')
-            } else {
-                // case 1
-                (indent, '|')
-            };
-
-            for id in child_ids {
-                visit(ctx, id, indent, ch)
-            }
-        }
-
-        let mut context = Context {
-            this: self,
-            opts,
-            tree_spans,
-            rows: vec![Row {
-                columns: ["Start", "Dur.ms", "| Name", "Source"]
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect(),
-            }],
-        };
-
-        // Visit the root RawTreeSpan.
-        visit(&mut context, 0, 0, '|');
-
-        let column_alignments = vec![
-            Alignment::Right, // start time
-            Alignment::Right, // duration
-            Alignment::Left,  // graph, name
-            Alignment::Left,  // module, line number
-        ];
-
-        let column_min_widths = vec![4, 4, 20, 0];
-        let column_max_widths = vec![20, 20, 80, 80];
-
-        Rows {
-            rows: context.rows,
-            column_alignments,
-            column_min_widths,
-            column_max_widths,
-        }
+        Tree(tree_spans)
     }
 }
 
@@ -1557,16 +1275,19 @@ pub struct TreeSpan<S: Eq + Hash> {
     pub meta: IndexMap<S, S>,
     pub start: u64,
     pub duration: Option<u64>,
-    pub children: Vec<RawTreeSpanId>,
+    pub children: Vec<usize>,
     pub is_event: bool,
 }
 
 impl<'a, S: From<&'a str> + Eq + Hash + 'a> TreeSpan<S> {
-    fn from_tree_span(data: &'a TracingData, span: RawTreeSpan) -> TreeSpan<S> {
-        let meta = match span.espan_id {
-            None => Default::default(),
-            Some(espan_id) => {
-                if let Some(espan) = data.get_espan(espan_id) {
+    fn from_ascii_tree(
+        data: &'a TracingData,
+        tree_span: RawTreeSpan<TreeSpanExtra>,
+    ) -> TreeSpan<S> {
+        let (meta, is_event) = match &tree_span.extra {
+            None => (Default::default(), false),
+            Some(extra) => {
+                let meta = if let Some(espan) = data.get_espan(extra.espan_id) {
                     espan
                         .meta
                         .iter()
@@ -1576,19 +1297,20 @@ impl<'a, S: From<&'a str> + Eq + Hash + 'a> TreeSpan<S> {
                         .collect()
                 } else {
                     Default::default()
-                }
+                };
+                (meta, extra.is_event)
             }
         };
         TreeSpan {
             meta,
-            start: span.start_time,
-            duration: if span.is_incomplete() {
+            start: tree_span.start_time,
+            duration: if tree_span.is_incomplete() {
                 None
             } else {
-                Some(span.duration)
+                Some(tree_span.duration)
             },
-            children: span.children,
-            is_event: span.is_event,
+            children: tree_span.children,
+            is_event,
         }
     }
 }
@@ -1609,7 +1331,7 @@ impl<S: Eq + Hash> Deref for TreeSpans<S> {
 }
 
 impl TracingData {
-    /// Calculate `RawTreeSpan`s for each `(pid, tid)` pair.
+    /// Calculate `TreeSpan`s for each `(pid, tid)` pair.
     /// The result is serializable and can be useful for assertions in tests.
     pub fn tree_spans<'a, S: From<&'a str> + Eq + Hash + 'a>(
         &'a self,
@@ -1619,10 +1341,11 @@ impl TracingData {
         eventus_by_pid_tid
             .iter()
             .map(|(&pid_tid, eventus_list)| {
-                let tree_spans = self.build_tree_spans(eventus_list);
-                let tree_spans_with_meta = tree_spans
+                let tree = self.build_tree_spans(eventus_list);
+                let tree_spans_with_meta = tree
+                    .0
                     .into_iter()
-                    .map(|t| TreeSpan::from_tree_span(self, t))
+                    .map(|span| TreeSpan::from_ascii_tree(self, span))
                     .collect();
                 (
                     pid_tid,
@@ -1897,7 +1620,7 @@ Start Dur.ms | Name               Source
         );
 
         let opts = AsciiOptions {
-            min_duration_micros_to_hide: 4000,
+            min_duration_to_hide: 4000,
             ..Default::default()
         };
         assert_eq!(
@@ -1947,7 +1670,7 @@ Start Dur.ms | Name               Source
         let span_id1 = data.add_espan(&meta("foo", "a.py", "10"), None);
         let span_id2 = data.add_espan(&meta("bar", "a.py", "20"), None);
         let opts = AsciiOptions {
-            min_duration_micros_to_hide: 3000,
+            min_duration_to_hide: 3000,
             ..Default::default()
         };
 
@@ -1993,7 +1716,7 @@ Start Dur.ms | Name                          Source
         data.add_action(span_id1, Action::ExitSpan);
 
         let opts = AsciiOptions {
-            min_duration_micros_to_hide: 3000,
+            min_duration_to_hide: 3000,
             ..Default::default()
         };
         assert_eq!(

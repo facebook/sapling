@@ -187,6 +187,7 @@ members = [
   "lib/types",
   "lib/types/bench",
   "lib/util",
+  "lib/util/ascii-tree",
   "lib/util/atexit",
   "lib/util/btrfs",
   "lib/util/factory",
