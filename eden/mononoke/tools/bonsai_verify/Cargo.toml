@@ -35,5 +35,5 @@ restricted_paths = { version = "0.1.0", path = "../../repo_attributes/restricted
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
-toml = { version = "0.9.8", features = ["preserve_order"] }
+toml = { version = "0.9.11", features = ["preserve_order"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

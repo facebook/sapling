@@ -12,5 +12,5 @@ anyhow = "1.0.98"
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 stack-config = { version = "0.1.0", path = "../stack-config" }
-toml = { version = "0.9.8", features = ["preserve_order"] }
+toml = { version = "0.9.11", features = ["preserve_order"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
