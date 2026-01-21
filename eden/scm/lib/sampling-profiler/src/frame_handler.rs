@@ -20,19 +20,19 @@ pub type ResolvedBacktraceProcessFunc = Box<dyn Fn(&[String]) + Send + Sync + 's
 /// `Frame` payload being written to pipes.
 #[repr(C)]
 #[derive(Clone)]
-pub struct FramePayload<'a> {
+pub struct FramePayload {
     /// Identity of a backtrace. Used to detect incomplete backtraces.
     pub backtrace_id: usize,
     /// Auto-incremental in a signal backtrace. Used to detect incomplete backtraces.
     pub depth: usize,
-    pub frame: MaybeFrame<'a>,
+    pub frame: MaybeFrame,
 }
 
 #[repr(C)]
 #[derive(Clone)]
-pub enum MaybeFrame<'a> {
+pub enum MaybeFrame {
     /// A frame is present.
-    Present(Frame<'a>),
+    Present(Frame),
     /// No more frames for this backtrace.
     EndOfBacktrace,
 }
@@ -83,7 +83,7 @@ pub fn frame_reader_loop(read_fd: OwnedFd, process_func: ResolvedBacktraceProces
             expected_depth += 1;
         }
         match frame.frame {
-            MaybeFrame::Present(mut frame) => {
+            MaybeFrame::Present(frame) => {
                 let name = frame.resolve();
                 frames.push(name);
             }

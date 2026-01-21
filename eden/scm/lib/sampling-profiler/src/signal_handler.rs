@@ -89,11 +89,8 @@ fn write_frame(frame: &FramePayload, fd: libc::c_int) -> libc::c_int {
     let size = std::mem::size_of::<FramePayload>();
     let pos = frame as *const FramePayload as *const libc::c_void;
     loop {
-        // SAFETY: This effectively copies the `unwind::Cursor`,
-        // aka `unw_cursor_t`. From `man libunwind`, this seems okay.
-        // > While  it is not possible to directly move the unwind cursor in
-        // > the ``down'' direction (towards newer stack frames), this effect
-        // > can be achieved by making copies of an unwind cursor.
+        // safety: FramePayload is `repr(C)` and contains only `usize` fields.
+        // It is okay to write its raw bytes to "serialize" within the same process.
         let written_bytes = unsafe { libc::write(fd, pos, size) };
         if written_bytes < 0 {
             let errno = unsafe { *libc::__errno_location() };

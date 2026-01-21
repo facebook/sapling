@@ -17,9 +17,6 @@ use std::sync::LazyLock;
 use backtrace_ext::FrameDecision;
 use backtrace_ext::SupplementalFrameResolver;
 use backtrace_ext::SupplementalInfo;
-use backtrace_ext::unwind;
-use unwind::Cursor;
-use unwind::RegNum;
 
 mod libpython_filter;
 
@@ -85,30 +82,43 @@ unsafe extern "C" {
 struct PythonSupplementalFrameResolver;
 
 impl SupplementalFrameResolver for PythonSupplementalFrameResolver {
-    fn maybe_extract_supplemental_info(&self, cursor: &mut Cursor) -> FrameDecision {
-        let ip = match cursor.procedure_info() {
-            Ok(info) => info.start_ip(),
-            _ => return FrameDecision::Keep,
+    fn maybe_extract_supplemental_info(&self, ip: usize, sp: usize) -> FrameDecision {
+        let offset: usize = if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+            // (lldb) disassemble -n Sapling_PyEvalFrame
+            // example`Sapling_PyEvalFrame:
+            // example[0x4be510] <+0>:  pushq  %rbp
+            // example[0x4be511] <+1>:  movq   %rsp, %rbp
+            // example[0x4be514] <+4>:  subq   $0x20, %rsp
+            // example[0x4be518] <+8>:  movq   %rdi, -0x18(%rbp)
+            // example[0x4be51c] <+12>: movq   %rsi, -0x10(%rbp)
+            // example[0x4be520] <+16>: movl   %edx, -0x4(%rbp)
+            // example[0x4be523] <+19>: movq   -0x18(%rbp), %rdi
+            // example[0x4be527] <+23>: movq   -0x10(%rbp), %rsi
+            // example[0x4be52b] <+27>: movl   -0x4(%rbp), %edx
+            // example[0x4be52e] <+30>: callq  0x8d4eb0       ; symbol stub for: _PyEval_EvalFrameDefault
+            // example[0x4be533] <+35>: addq   $0x20, %rsp
+            // example[0x4be537] <+39>: popq   %rbp
+            // example[0x4be538] <+40>: retq
+            35
+        } else {
+            // Unsupported OS or arch.
+            return FrameDecision::Keep;
         };
-        if ip as usize != Sapling_PyEvalFrame as usize {
+        if ip != (Sapling_PyEvalFrame as usize + offset) {
             // Skip native python frames to reduce noise.
-            return if libpython_filter::is_python_frame(ip as _) {
+            return if libpython_filter::is_python_frame(ip) {
                 FrameDecision::Skip
             } else {
                 FrameDecision::Keep
             };
         }
-        match extract_python_supplemental_info(cursor) {
+        match extract_python_supplemental_info(sp) {
             Some(info) => FrameDecision::Replace(info),
             None => FrameDecision::Keep,
         }
     }
 
-    fn resolve_supplemental_info(
-        &self,
-        _frame: &mut Cursor,
-        info: &SupplementalInfo,
-    ) -> Option<String> {
+    fn resolve_supplemental_info(&self, info: &SupplementalInfo) -> Option<String> {
         let [code, line_no] = *info;
         unsafe {
             let desc = sapling_cext_evalframe_stringify_code_lineno(
@@ -124,7 +134,10 @@ impl SupplementalFrameResolver for PythonSupplementalFrameResolver {
     }
 }
 
-fn extract_python_supplemental_info(cursor: &mut Cursor) -> Option<SupplementalInfo> {
+fn extract_python_supplemental_info(sp: usize) -> Option<SupplementalInfo> {
+    if sp == 0 {
+        return None;
+    }
     // Read the `f` variable on stack. See sapling/dbgutil.py, D55728746
     // Sapling_PyEvalFrame(PyThreadState* tstate, PyFrameObject* f, int exc)
     //
@@ -143,7 +156,6 @@ fn extract_python_supplemental_info(cursor: &mut Cursor) -> Option<SupplementalI
     //   popq   %rbp
     //   retq
     if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-        let sp = cursor.register(RegNum::SP).ok()?;
         let addr = sp.checked_add(0x10)?;
         unsafe {
             let frame_ptr: *const *mut libc::c_void = addr as *const _;

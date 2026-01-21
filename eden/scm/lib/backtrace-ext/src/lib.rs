@@ -28,10 +28,10 @@
 //! - Python support is optional. This crate does not directly depend on Python
 //!   crates. The Python support is a separate crate.
 
+use std::ffi::c_void;
 use std::sync::atomic::AtomicPtr;
 use std::sync::atomic::Ordering;
 
-use rustc_demangle::demangle;
 #[cfg(target_os = "linux")]
 pub use unwind;
 pub use unwind::Cursor;
@@ -44,10 +44,14 @@ pub mod unwind {
     pub struct Cursor<'a>(std::marker::PhantomData<&'a ()>);
     pub enum RegNum {
         IP = 1,
+        SP = 2,
     }
     impl<'a> Cursor<'a> {
         pub fn step(&mut self) -> Result<bool, ()> {
             Ok(false)
+        }
+        pub fn register(&self, _reg: RegNum) -> Result<usize, ()> {
+            Err(())
         }
     }
 }
@@ -58,15 +62,11 @@ pub trait SupplementalFrameResolver: Send + Sync + 'static {
     /// Extract [`SupplementalInfo`] from a frame.
     /// The current thread (with the frame) is paused.
     /// Must be async-signal-safe.
-    fn maybe_extract_supplemental_info(&self, cursor: &mut Cursor) -> FrameDecision;
+    fn maybe_extract_supplemental_info(&self, ip: usize, sp: usize) -> FrameDecision;
 
     /// Resolve a [`SupplementalInfo`] previously reported by `maybe_replace`.
     /// Can be non-async-signal-safe. The thread is not paused.
-    fn resolve_supplemental_info(
-        &self,
-        cursor: &mut Cursor,
-        info: &SupplementalInfo,
-    ) -> Option<String>;
+    fn resolve_supplemental_info(&self, info: &SupplementalInfo) -> Option<String>;
 }
 
 /// Return value of `extract_supplemental_info`.
@@ -111,51 +111,39 @@ fn get_supplemental_frame_resolver() -> Option<&'static &'static dyn Supplementa
 /// A captured stack frame.
 /// This struct is designed to be "serialized" by memcpy.
 #[repr(C)]
-#[derive(Clone)]
-pub struct Frame<'a> {
-    /// Unwind cursor. Can be used to get PC, registers, and symbols.
-    pub cursor: Cursor<'a>,
+#[derive(Clone, Copy)]
+pub struct Frame {
+    pub ip: usize,
+    pub sp: usize,
     /// Optional data extracted by `extract_supplemental_info`.
     pub info: Option<SupplementalInfo>,
 }
 
-impl<'a> Frame<'a> {
+impl Frame {
     /// Resolve this frame to a human-readable name.
     /// Uses the custom resolver if provided, otherwise falls back to default symbolization.
-    pub fn resolve(&mut self) -> String {
+    pub fn resolve(&self) -> String {
         if let (Some(resolver), Some(data)) = (get_supplemental_frame_resolver(), &self.info) {
-            if let Some(name) = resolver.resolve_supplemental_info(&mut self.cursor, data) {
+            if let Some(name) = resolver.resolve_supplemental_info(data) {
                 return name;
             }
         }
         self.default_resolve()
     }
 
-    fn default_resolve(&mut self) -> String {
-        #[cfg(target_os = "linux")]
-        match self.cursor.procedure_name() {
-            Err(_) => match self.cursor.register(RegNum::IP) {
-                Ok(ip) => format!("{:#x}", ip),
-                Err(e) => format!("Error={}", e),
-            },
-            Ok(s) => {
-                let name = s.name();
-                let demangled = demangle(name);
-                format!("{}+{}", demangled, s.offset())
+    fn default_resolve(&self) -> String {
+        let mut resolved = None;
+        // NOTE: `backtrace::resolve` might call its callback multiple times (e.g. inlined
+        // functions). For simplicity, we assume callback is only once and use the last `symbol`.
+        backtrace::resolve(self.ip as *mut c_void, |symbol| {
+            if let Some(name) = symbol.name() {
+                resolved = Some(name.to_string());
             }
+        });
+        match resolved {
+            Some(s) => s,
+            None => format!("{:#x}", self.ip),
         }
-        #[cfg(not(target_os = "linux"))]
-        String::new()
-    }
-
-    /// Program counter (instruction pointer) for this frame.
-    pub fn pc(&mut self) -> Option<usize> {
-        #[cfg(target_os = "linux")]
-        {
-            self.cursor.register(RegNum::IP).ok().map(|v| v as usize)
-        }
-        #[cfg(not(target_os = "linux"))]
-        None
     }
 }
 
@@ -197,15 +185,17 @@ impl<'a> Backtrace<'a> {
 }
 
 impl<'a> Iterator for Backtrace<'a> {
-    type Item = Frame<'a>;
+    type Item = Frame;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.ended {
             return None;
         }
         loop {
+            let ip = self.cursor.register(RegNum::IP).unwrap_or_default() as usize;
+            let sp = self.cursor.register(RegNum::SP).unwrap_or_default() as usize;
             let decision = match get_supplemental_frame_resolver() {
-                Some(resolver) => resolver.maybe_extract_supplemental_info(&mut self.cursor),
+                Some(resolver) => resolver.maybe_extract_supplemental_info(ip, sp),
                 None => FrameDecision::Keep,
             };
 
@@ -215,10 +205,7 @@ impl<'a> Iterator for Backtrace<'a> {
                 FrameDecision::Replace(info) => (Some(info), false),
             };
 
-            let frame = Frame {
-                cursor: self.cursor.clone(),
-                info,
-            };
+            let frame = Frame { ip, sp, info };
 
             self.ended = match self.cursor.step() {
                 Err(_) | Ok(false) => true,
