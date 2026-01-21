@@ -20,9 +20,14 @@ use crate::utils::content::DiffFileOpts;
 use crate::utils::content::load_diff_file;
 use crate::utils::whitespace::strip_horizontal_whitespace;
 
+/// Compute unified diff between two inputs.
+///
+/// Accepts separate repos for base and other inputs to support cross-bubble diffs.
+/// Each repo should be bound to the bubble that contains its changeset (if any).
 pub async fn unified(
     ctx: &CoreContext,
-    repo: &impl Repo,
+    base_repo: &impl Repo,
+    other_repo: &impl Repo,
     base: Option<DiffSingleInput>,
     other: Option<DiffSingleInput>,
     options: UnifiedDiffOpts,
@@ -38,7 +43,7 @@ pub async fn unified(
             if let Some(base_input) = &base {
                 let default_path =
                     to_non_root_path("base_path").context("The hardcoded path was not valid")?;
-                load_diff_file(ctx, repo, base_input, default_path, &diff_file_opts).await
+                load_diff_file(ctx, base_repo, base_input, default_path, &diff_file_opts).await
             } else {
                 Ok(None)
             }
@@ -47,7 +52,7 @@ pub async fn unified(
             if let Some(other_input) = &other {
                 let default_path =
                     to_non_root_path("other_path").expect("The hardcoded path was not valid");
-                load_diff_file(ctx, repo, other_input, default_path, &diff_file_opts).await
+                load_diff_file(ctx, other_repo, other_input, default_path, &diff_file_opts).await
             } else {
                 Ok(None)
             }
@@ -179,7 +184,15 @@ mod tests {
             ignore_whitespace: false,
         };
 
-        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
 
@@ -230,7 +243,15 @@ mod tests {
             ignore_whitespace: false,
         };
 
-        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert_eq!(
@@ -279,7 +300,15 @@ mod tests {
             ignore_whitespace: false,
         };
 
-        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert!(diff_str.contains("+new content"));
@@ -327,7 +356,15 @@ mod tests {
             ignore_whitespace: false,
         };
 
-        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         // When omit = true, xdiff assumes that we don't want to display the content because they
         // are binaries.
@@ -366,21 +403,29 @@ mod tests {
         };
 
         // Test None vs Some - should show addition
-        let diff = unified(&ctx, &repo, None, Some(input.clone()), options.clone()).await?;
+        let diff = unified(
+            &ctx,
+            &repo,
+            &repo,
+            None,
+            Some(input.clone()),
+            options.clone(),
+        )
+        .await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert!(diff_str.contains("+some content"));
         assert!(diff_str.contains("+line2"));
         assert!(!diff.is_binary);
 
         // Test Some vs None - should show deletion
-        let diff = unified(&ctx, &repo, Some(input), None, options.clone()).await?;
+        let diff = unified(&ctx, &repo, &repo, Some(input), None, options.clone()).await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert!(diff_str.contains("-some content"));
         assert!(diff_str.contains("-line2"));
         assert!(!diff.is_binary);
 
         // Test None vs None - should return an error
-        let result = unified(&ctx, &repo, None, None, options).await;
+        let result = unified(&ctx, &repo, &repo, None, None, options).await;
         assert!(result.is_err());
         let error_message = result.unwrap_err().to_string();
         assert_eq!(
@@ -448,6 +493,7 @@ mod tests {
         let diff = unified(
             &ctx,
             &repo,
+            &repo,
             Some(base_input.clone()),
             Some(other_input.clone()),
             options_inspect_true,
@@ -482,6 +528,7 @@ mod tests {
 
         let diff = unified(
             &ctx,
+            &repo,
             &repo,
             Some(base_input),
             Some(other_input),
@@ -532,7 +579,15 @@ mod tests {
             ignore_whitespace: false,
         };
 
-        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
 
@@ -569,6 +624,7 @@ mod tests {
         let diff = unified(
             &ctx,
             &repo,
+            &repo,
             None,
             Some(string_input.clone()),
             options.clone(),
@@ -581,7 +637,7 @@ mod tests {
         assert!(!diff.is_binary);
 
         // Test String vs None - should show deletion
-        let diff = unified(&ctx, &repo, Some(string_input), None, options).await?;
+        let diff = unified(&ctx, &repo, &repo, Some(string_input), None, options).await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert!(diff_str.contains("-some content"));
         assert!(diff_str.contains("-line2"));
@@ -618,6 +674,7 @@ mod tests {
         let diff = unified(
             &ctx,
             &repo,
+            &repo,
             Some(base_input.clone()),
             Some(other_input.clone()),
             options,
@@ -647,7 +704,15 @@ mod tests {
             omit_content: false,
             ignore_whitespace: true,
         };
-        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         // After stripping whitespace, content should be identical - no changes
         assert_eq!(diff_str, "");
@@ -680,7 +745,15 @@ mod tests {
             omit_content: false,
             ignore_whitespace: true,
         };
-        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         // Should show a diff because there's actual content difference beyond whitespace
         assert_eq!(
@@ -723,7 +796,15 @@ mod tests {
             omit_content: false,
             ignore_whitespace: true,
         };
-        let diff = unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         // Should be detected as binary
         assert!(diff.is_binary);

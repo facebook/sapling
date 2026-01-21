@@ -306,8 +306,10 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         };
 
         // Call the unified function from the diff crate
+        // Both inputs are from the same repo context since this is a within-repo diff
         let diff_result = unified(
             ctx,
+            self.changeset.repo_ctx().repo(),
             self.changeset.repo_ctx().repo(),
             old_input,
             new_input,
@@ -337,8 +339,10 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             self.subtree_copy_dest_path.as_ref(),
         );
 
+        // Both inputs are from the same repo context since this is a within-repo diff
         let diff_metadata = metadata(
             ctx,
+            self.changeset.repo_ctx().repo(),
             self.changeset.repo_ctx().repo(),
             old_input,
             new_input,

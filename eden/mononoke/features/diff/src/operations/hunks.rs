@@ -16,9 +16,14 @@ use crate::types::Repo;
 use crate::utils::content::load_content;
 use crate::utils::whitespace::strip_horizontal_whitespace;
 
+/// Compute diff hunks between two inputs.
+///
+/// Accepts separate repos for base and other inputs to support cross-bubble diffs.
+/// Each repo should be bound to the bubble that contains its changeset (if any).
 pub async fn hunks(
     ctx: &CoreContext,
-    repo: &impl Repo,
+    base_repo: &impl Repo,
+    other_repo: &impl Repo,
     base: Option<DiffSingleInput>,
     other: Option<DiffSingleInput>,
     ignore_whitespace: bool,
@@ -26,14 +31,14 @@ pub async fn hunks(
     let (base_bytes, other_bytes) = try_join!(
         async {
             if let Some(base_input) = &base {
-                load_content(ctx, repo, base_input).await
+                load_content(ctx, base_repo, base_input).await
             } else {
                 Ok(None)
             }
         },
         async {
             if let Some(other_input) = &other {
-                load_content(ctx, repo, other_input).await
+                load_content(ctx, other_repo, other_input).await
             } else {
                 Ok(None)
             }
@@ -122,7 +127,15 @@ mod tests {
             replacement_path: None,
         });
 
-        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
+        let result = hunks(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            false,
+        )
+        .await?;
 
         // Should have 2 hunks: one for line2 modification and one for line4->line5 change
         assert_eq!(result.len(), 2);
@@ -173,7 +186,15 @@ mod tests {
             replacement_path: None,
         });
 
-        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
+        let result = hunks(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            false,
+        )
+        .await?;
 
         // Binary files should produce hunks (xdiff operates on byte level)
         assert!(!result.is_empty());
@@ -210,7 +231,15 @@ mod tests {
             replacement_path: None,
         });
 
-        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
+        let result = hunks(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            false,
+        )
+        .await?;
 
         // Should have exactly one hunk representing the entire file addition
         assert_eq!(result.len(), 1);
@@ -245,7 +274,7 @@ mod tests {
         });
 
         // Test Some vs None - should show file deletion
-        let result = hunks(&ctx, &repo, Some(input), None, false).await?;
+        let result = hunks(&ctx, &repo, &repo, Some(input), None, false).await?;
 
         // Should have exactly one hunk representing the entire file deletion
         assert_eq!(result.len(), 1);
@@ -290,7 +319,15 @@ mod tests {
             replacement_path: None,
         });
 
-        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
+        let result = hunks(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            false,
+        )
+        .await?;
 
         // Identical files should produce no hunks
         assert_eq!(result.len(), 0);
@@ -317,7 +354,7 @@ mod tests {
         });
 
         // Test None vs Some - Should show file addition
-        let result = hunks(&ctx, &repo, None, Some(input.clone()), false).await?;
+        let result = hunks(&ctx, &repo, &repo, None, Some(input.clone()), false).await?;
         assert_eq!(result.len(), 1);
 
         let hunk = &result[0];
@@ -327,7 +364,7 @@ mod tests {
         assert_eq!(hunk.delete_range.end, 0); // No lines deleted
 
         // Test Some vs None - Should show file deletion
-        let result = hunks(&ctx, &repo, Some(input), None, false).await?;
+        let result = hunks(&ctx, &repo, &repo, Some(input), None, false).await?;
         assert_eq!(result.len(), 1);
 
         let hunk = &result[0];
@@ -337,7 +374,7 @@ mod tests {
         assert_eq!(hunk.delete_range.end, 2); // Two lines deleted
 
         // Test None vs None - should return an error
-        let result = hunks(&ctx, &repo, None, None, false).await;
+        let result = hunks(&ctx, &repo, &repo, None, None, false).await;
         assert!(result.is_err());
         let error_message = result.unwrap_err().to_string();
         assert_eq!(
@@ -380,7 +417,15 @@ mod tests {
             replacement_path: None,
         });
 
-        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
+        let result = hunks(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            false,
+        )
+        .await?;
 
         // Should have 2 hunks: one for lines 2-3 modification and one for line 6 modification
         assert_eq!(result.len(), 2);
@@ -431,7 +476,15 @@ mod tests {
             replacement_path: None,
         });
 
-        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
+        let result = hunks(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            false,
+        )
+        .await?;
 
         // Empty files with no changes should produce no hunks
         assert_eq!(result.len(), 0);
@@ -454,7 +507,15 @@ mod tests {
             content: "line1\nmodified line2\nline3\nline5\n".to_string(),
         });
 
-        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
+        let result = hunks(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            false,
+        )
+        .await?;
 
         // Should have 2 hunks: one for line2 modification and one for line4->line5 change
         assert_eq!(result.len(), 2);
@@ -488,7 +549,7 @@ mod tests {
         });
 
         // Test None vs String - Should show file addition
-        let result = hunks(&ctx, &repo, None, Some(string_input.clone()), false).await?;
+        let result = hunks(&ctx, &repo, &repo, None, Some(string_input.clone()), false).await?;
         assert_eq!(result.len(), 1);
 
         let hunk = &result[0];
@@ -498,7 +559,7 @@ mod tests {
         assert_eq!(hunk.delete_range.end, 0); // No lines deleted
 
         // Test String vs None - Should show file deletion
-        let result = hunks(&ctx, &repo, Some(string_input), None, false).await?;
+        let result = hunks(&ctx, &repo, &repo, Some(string_input), None, false).await?;
         assert_eq!(result.len(), 1);
 
         let hunk = &result[0];
@@ -525,7 +586,15 @@ mod tests {
             content: "line1\nline2\nline3\n".to_string(),
         });
 
-        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input), false).await?;
+        let result = hunks(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            false,
+        )
+        .await?;
 
         // Identical strings should produce no hunks
         assert_eq!(result.len(), 0);
@@ -552,6 +621,7 @@ mod tests {
         let result = hunks(
             &ctx,
             &repo,
+            &repo,
             Some(base_input.clone()),
             Some(other_input.clone()),
             false,
@@ -564,7 +634,15 @@ mod tests {
 
         // With ignore_whitespace: true, should show no hunks
         // (After stripping whitespace, "helloworld\nfoobar\n" should match on both sides)
-        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input), true).await?;
+        let result = hunks(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            true,
+        )
+        .await?;
         assert_eq!(
             result.len(),
             0,
@@ -591,7 +669,15 @@ mod tests {
 
         // With ignore_whitespace: true, should still show content change
         // After stripping whitespace: "line2" vs "modifiedline2" (real difference!)
-        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input), true).await?;
+        let result = hunks(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            true,
+        )
+        .await?;
         assert!(
             !result.is_empty(),
             "Hunks should show content changes even with ignore_whitespace=true"
@@ -625,7 +711,15 @@ mod tests {
 
         // Even with ignore_whitespace: true, binary files should still show differences
         // because whitespace stripping is not applied to binary files
-        let result = hunks(&ctx, &repo, Some(base_input), Some(other_input), true).await?;
+        let result = hunks(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            true,
+        )
+        .await?;
 
         // Binary files should produce hunks
         assert!(

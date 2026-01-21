@@ -227,8 +227,10 @@ pub async fn headerless_unified_diff<R: MononokeRepo>(
     };
 
     // Call the features/diff crate function
+    // Both inputs are from the same repo context since this is a within-repo diff
     headerless_unified(
         old_file.ctx(),
+        old_file.repo_ctx().repo(),
         old_file.repo_ctx().repo(),
         Some(new_input),
         Some(old_input),

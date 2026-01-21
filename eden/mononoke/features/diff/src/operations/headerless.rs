@@ -17,9 +17,14 @@ use crate::types::Repo;
 use crate::utils::content::load_content;
 use crate::utils::whitespace::strip_horizontal_whitespace;
 
+/// Compute headerless unified diff between two inputs.
+///
+/// Accepts separate repos for base and other inputs to support cross-bubble diffs.
+/// Each repo should be bound to the bubble that contains its changeset (if any).
 pub async fn headerless_unified(
     ctx: &CoreContext,
-    repo: &impl Repo,
+    base_repo: &impl Repo,
+    other_repo: &impl Repo,
     base: Option<DiffSingleInput>,
     other: Option<DiffSingleInput>,
     options: HeaderlessDiffOpts,
@@ -29,14 +34,14 @@ pub async fn headerless_unified(
     let (base_bytes, other_bytes) = try_join!(
         async {
             if let Some(base_input) = &base {
-                load_content(ctx, repo, base_input).await
+                load_content(ctx, base_repo, base_input).await
             } else {
                 Ok(None)
             }
         },
         async {
             if let Some(other_input) = &other {
-                load_content(ctx, repo, other_input).await
+                load_content(ctx, other_repo, other_input).await
             } else {
                 Ok(None)
             }
@@ -144,8 +149,15 @@ mod tests {
             context: 3,
             ignore_whitespace: false,
         };
-        let diff =
-            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         let expected_diff = "@@ -1,3 +1,3 @@\n line1\n-modified line2\n+line2\n line3\n";
 
@@ -189,8 +201,15 @@ mod tests {
             context: 3,
             ignore_whitespace: false,
         };
-        let diff =
-            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         let expected_diff = "Binary files differ";
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
@@ -232,8 +251,15 @@ mod tests {
             context: 3,
             ignore_whitespace: false,
         };
-        let diff =
-            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         let expected_diff = "@@ -1,2 +0,0 @@\n-new content\n-line2\n";
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
@@ -266,20 +292,28 @@ mod tests {
             context: 3,
             ignore_whitespace: false,
         };
-        let diff =
-            headerless_unified(&ctx, &repo, None, Some(input.clone()), options.clone()).await?;
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            &repo,
+            None,
+            Some(input.clone()),
+            options.clone(),
+        )
+        .await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert!(!diff.is_binary);
         assert_eq!(diff_str, "@@ -1,2 +0,0 @@\n-some content\n-line2\n");
 
         // Test Some vs None - Should show addition
-        let diff = headerless_unified(&ctx, &repo, Some(input), None, options.clone()).await?;
+        let diff =
+            headerless_unified(&ctx, &repo, &repo, Some(input), None, options.clone()).await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert!(!diff.is_binary);
         assert_eq!(diff_str, "@@ -0,0 +1,2 @@\n+some content\n+line2\n");
 
         // Test None vs None - should return an error
-        let result = headerless_unified(&ctx, &repo, None, None, options).await;
+        let result = headerless_unified(&ctx, &repo, &repo, None, None, options).await;
         assert!(result.is_err());
         let error_message = result.unwrap_err().to_string();
         assert_eq!(
@@ -309,8 +343,15 @@ mod tests {
             context: 3,
             ignore_whitespace: false,
         };
-        let diff =
-            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         let expected_diff = "@@ -1,3 +1,3 @@\n line1\n-modified line2\n+line2\n line3\n";
 
@@ -340,6 +381,7 @@ mod tests {
         let diff = headerless_unified(
             &ctx,
             &repo,
+            &repo,
             None,
             Some(string_input.clone()),
             options.clone(),
@@ -350,7 +392,8 @@ mod tests {
         assert_eq!(diff_str, "@@ -1,2 +0,0 @@\n-some content\n-line2\n");
 
         // Test String vs None - Should show addition
-        let diff = headerless_unified(&ctx, &repo, Some(string_input), None, options).await?;
+        let diff =
+            headerless_unified(&ctx, &repo, &repo, Some(string_input), None, options).await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert!(!diff.is_binary);
         assert_eq!(diff_str, "@@ -0,0 +1,2 @@\n+some content\n+line2\n");
@@ -377,8 +420,15 @@ mod tests {
             context: 3,
             ignore_whitespace: false,
         };
-        let diff =
-            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         assert_eq!(diff_str, "Binary files differ");
@@ -412,6 +462,7 @@ mod tests {
         let diff = headerless_unified(
             &ctx,
             &repo,
+            &repo,
             Some(base_input.clone()),
             Some(other_input.clone()),
             options,
@@ -430,8 +481,15 @@ mod tests {
             context: 3,
             ignore_whitespace: true,
         };
-        let diff =
-            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         // After stripping whitespace, content should be identical
         assert!(
@@ -465,8 +523,15 @@ mod tests {
             context: 3,
             ignore_whitespace: true,
         };
-        let diff =
-            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
         let diff_str = String::from_utf8_lossy(&diff.raw_diff);
         // Should show a diff because there's actual content difference beyond whitespace
         assert!(
@@ -498,8 +563,15 @@ mod tests {
             context: 3,
             ignore_whitespace: true,
         };
-        let diff =
-            headerless_unified(&ctx, &repo, Some(base_input), Some(other_input), options).await?;
+        let diff = headerless_unified(
+            &ctx,
+            &repo,
+            &repo,
+            Some(base_input),
+            Some(other_input),
+            options,
+        )
+        .await?;
 
         // Should be detected as binary
         assert!(diff.is_binary);

@@ -940,12 +940,13 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             let other_root_fsnode_id = other.root_fsnode_id().await?;
 
             // Prefetch fsnode entries for all "from paths" so that we don't need
-            // to refetch them later
+            // to refetch them later.  Use other's blobstore since we're accessing
+            // other's manifest data.
             let from_path_to_mf_entry = other_root_fsnode_id
                 .fsnode_id()
                 .find_entries(
                     self.ctx().clone(),
-                    self.repo_ctx().repo().repo_blobstore().clone(),
+                    other.repo_ctx().repo().repo_blobstore().clone(),
                     copy_path_map.keys().cloned(),
                 )
                 .try_collect::<HashMap<_, _>>();
@@ -1008,7 +1009,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                         .into_fsnode_id()
                         .find_entry(
                             self.ctx().clone(),
-                            self.repo_ctx().repo_blobstore(),
+                            from_cs.repo_ctx().repo().repo_blobstore().clone(),
                             from_path.clone(),
                         )
                         .await?
@@ -1057,12 +1058,14 @@ impl<R: MononokeRepo> ChangesetContext<R> {
 
         let diff = match ordering {
             ChangesetFileOrdering::Unordered => {
-                // We start from "other" as manifest.diff() is backwards
+                // We start from "other" as manifest.diff() is backwards.
+                // Use other's blobstore for other_manifest_root data,
+                // and self's blobstore for self_manifest_root data.
                 other_manifest_root
                     .fsnode_id()
                     .filtered_diff(
                         self.ctx().clone(),
-                        self.repo_ctx().repo().repo_blobstore().clone(),
+                        other.repo_ctx().repo().repo_blobstore().clone(),
                         self_manifest_root.fsnode_id().clone(),
                         self.repo_ctx().repo().repo_blobstore().clone(),
                         Some,
@@ -1096,12 +1099,14 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                     .try_buffered(10)
                     .try_collect()
                     .await?;
-                // We start from "other" as manifest.diff() is backwards
+                // We start from "other" as manifest.diff() is backwards.
+                // Use other's blobstore for other_manifest_root data,
+                // and self's blobstore for self_manifest_root data.
                 other_manifest_root
                     .fsnode_id()
                     .filtered_diff_ordered(
                         self.ctx().clone(),
-                        self.repo_ctx().repo().repo_blobstore().clone(),
+                        other.repo_ctx().repo().repo_blobstore().clone(),
                         self_manifest_root.fsnode_id().clone(),
                         self.repo_ctx().repo().repo_blobstore().clone(),
                         after,
