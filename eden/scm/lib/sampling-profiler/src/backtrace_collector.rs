@@ -81,4 +81,78 @@ impl BacktraceCollector {
             self.last_backtrace.push(idx);
         }
     }
+
+    /// Iterate through all collected backtraces. Most recent call last.
+    pub fn iter(&self) -> BacktraceIter<'_> {
+        BacktraceIter {
+            collector: self,
+            pos: 0,
+            current_backtrace: Vec::new(),
+        }
+    }
+}
+
+/// Iterator over collected backtraces.
+pub struct BacktraceIter<'a> {
+    collector: &'a BacktraceCollector,
+    /// Current position in traces.
+    pos: usize,
+    /// Current backtrace (indices into names). Most recent call last.
+    current_backtrace: Vec<usize>,
+}
+
+impl<'a> Iterator for BacktraceIter<'a> {
+    type Item = Vec<&'a str>;
+
+    /// Get the next backtrace. Most recent call last.
+    fn next(&mut self) -> Option<Self::Item> {
+        let first_id: TypedId = (*self.collector.traces.get(self.pos)?).into();
+        self.pos += 1;
+
+        let reuse_count = match first_id {
+            TypedId::Reuse(n) => n,
+            TypedId::Frame(_) => return None,
+        };
+
+        self.current_backtrace.truncate(reuse_count);
+        while let Some(&id) = self.collector.traces.get(self.pos) {
+            let id: TypedId = id.into();
+            match id {
+                TypedId::Reuse(_) => break,
+                TypedId::Frame(idx) => {
+                    self.current_backtrace.push(idx);
+                    self.pos += 1;
+                }
+            }
+        }
+
+        let names = self
+            .current_backtrace
+            .iter()
+            .filter_map(|&idx| self.collector.names.get_index(idx).map(|s| s.as_str()))
+            .collect();
+        Some(names)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use quickcheck::quickcheck;
+
+    use super::*;
+
+    fn check_round_trip(backtraces: Vec<Vec<String>>) -> bool {
+        let mut collector = BacktraceCollector::default();
+        for backtrace in &backtraces {
+            collector.push_backtrace(backtrace.clone());
+        }
+        let backtraces2: Vec<_> = collector.iter().collect();
+        backtraces == backtraces2
+    }
+
+    quickcheck! {
+        fn test_round_trip(backtraces: Vec<Vec<String>>) -> bool {
+            check_round_trip(backtraces)
+        }
+    }
 }
