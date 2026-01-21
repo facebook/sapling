@@ -6,6 +6,7 @@
  */
 
 use std::fs;
+use std::io;
 use std::io::Read as _;
 use std::os::fd::FromRawFd;
 
@@ -50,10 +51,18 @@ pub fn frame_reader_loop(read_fd: OwnedFd, process_func: ResolvedBacktraceProces
     let mut current_backtrace_id = 0;
     let mut expected_depth = 0;
     'main_loop: loop {
-        let mut buf: [u8; std::mem::size_of::<FramePayload>()] = [0; _];
-        if read_file.read_exact(&mut buf).is_err() {
-            // The pipe might be closed. `read_file` will be closed on drop.
-            break 'main_loop;
+        const SIZE: usize = std::mem::size_of::<FramePayload>();
+        let mut buf: [u8; SIZE] = [0; _];
+        match read_file.read_exact(&mut buf) {
+            Ok(()) => {}
+            Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => {
+                // The pipe was closed. `read_file` will be closed on drop.
+                break 'main_loop;
+            }
+            Err(_) => {
+                // Incomplete packet? Ignore.
+                continue;
+            }
         }
         // safety: FramePayload is `repr(C)` and contains only `usize` fields.
         // It is okay to use `transmute` to "deserialize" within the same process.
