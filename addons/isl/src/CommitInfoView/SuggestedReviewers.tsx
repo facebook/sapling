@@ -25,19 +25,53 @@ import './SuggestedReviewers.css';
 const MAX_VISIBLE_RECENT_REVIEWERS = 3;
 const RECENT_REVIEWERS_STORAGE_KEY = 'ISL_RECENT_REVIEWERS';
 /**
- * Simple counter for most used recent reviewers, persisted to localstorage if possible.
- * TODO: use "frecency": combined heuristic for least-recently-used plus most-often-used.
+ * Half-life for frecency decay in days. After this many days,
+ * the recency multiplier is halved.
+ */
+const FRECENCY_HALF_LIFE_DAYS = 14;
+/**
+ * Maximum age in days before a reviewer is pruned from storage.
+ * Reviewers not used within this period are removed to prevent
+ * unbounded localStorage growth.
+ */
+const MAX_REVIEWER_AGE_DAYS = 90;
+
+type ReviewerData = {count: number; lastUsed: number};
+
+/**
+ * Frecency-based recent reviewers, persisted to localStorage.
+ * Combines frequency (how often used) with recency (how recently used)
+ * using exponential decay. More recent usage has higher weight.
  */
 class RecentReviewers {
-  private recent: Map<string, number>;
+  private recent: Map<string, ReviewerData>;
 
   constructor() {
     try {
-      this.recent = new Map(
-        (tryJsonParse(localStorage.getItem(RECENT_REVIEWERS_STORAGE_KEY) ?? '[]') as Array<
-          [string, number]
-        >) ?? [],
-      );
+      const stored = tryJsonParse(
+        localStorage.getItem(RECENT_REVIEWERS_STORAGE_KEY) ?? '[]',
+      ) as Array<[string, number | ReviewerData]> | null;
+      this.recent = new Map();
+      const maxAge = MAX_REVIEWER_AGE_DAYS * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      let needsPersist = false;
+      if (stored) {
+        for (const [key, value] of stored) {
+          if (typeof value === 'number') {
+            // Migrate from old format (count only) to new format
+            this.recent.set(key, {count: value, lastUsed: now});
+            needsPersist = true;
+          } else if (now - value.lastUsed <= maxAge) {
+            // Only keep reviewers used within MAX_REVIEWER_AGE_DAYS
+            this.recent.set(key, value);
+          } else {
+            needsPersist = true;
+          }
+        }
+      }
+      if (needsPersist) {
+        this.persist();
+      }
     } catch {
       this.recent = new Map();
     }
@@ -52,17 +86,32 @@ class RecentReviewers {
     } catch {}
   }
 
+  /**
+   * Calculate frecency score for a reviewer.
+   * Score = count * recencyMultiplier, where recencyMultiplier
+   * decays exponentially based on time since last use.
+   */
+  private getFrecencyScore(data: ReviewerData): number {
+    const daysSinceLastUse = (Date.now() - data.lastUsed) / (1000 * 60 * 60 * 24);
+    const recencyMultiplier = Math.pow(0.5, daysSinceLastUse / FRECENCY_HALF_LIFE_DAYS);
+    return data.count * recencyMultiplier;
+  }
+
   public useReviewer(reviewer: string) {
-    const existing = this.recent.get(reviewer) ?? 0;
-    this.recent.set(reviewer, existing + 1);
+    const existing = this.recent.get(reviewer);
+    this.recent.set(reviewer, {
+      count: (existing?.count ?? 0) + 1,
+      lastUsed: Date.now(),
+    });
     this.persist();
   }
 
   public getRecent(): Array<string> {
     return [...this.recent.entries()]
-      .sort((a, b) => b[1] - a[1])
+      .map(([name, data]) => ({name, score: this.getFrecencyScore(data)}))
+      .sort((a, b) => b.score - a.score)
       .slice(0, MAX_VISIBLE_RECENT_REVIEWERS)
-      .map(([k]) => k);
+      .map(({name}) => name);
   }
 }
 
