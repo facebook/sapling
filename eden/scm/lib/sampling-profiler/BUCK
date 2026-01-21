@@ -21,9 +21,6 @@ rust_library(
             "repository": "https://github.com/facebook/sapling",
         },
     }},
-    compatible_with = [
-        "ovr_config//os:linux",
-    ],
     crate_root = "src/lib.rs",
     features = ["nightly"],
     deps = [

@@ -12,10 +12,8 @@ use std::os::fd::FromRawFd;
 
 use backtrace_ext::Frame;
 
+use crate::ResolvedBacktraceProcessFunc;
 use crate::osutil::OwnedFd;
-
-/// Function to process backtraces.
-pub type ResolvedBacktraceProcessFunc = Box<dyn Fn(&[String]) + Send + Sync + 'static>;
 
 /// `Frame` payload being written to pipes.
 #[repr(C)]

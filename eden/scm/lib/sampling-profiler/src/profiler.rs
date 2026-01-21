@@ -10,6 +10,7 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
+use crate::ResolvedBacktraceProcessFunc;
 use crate::frame_handler;
 use crate::osutil;
 use crate::osutil::OwnedFd;
@@ -47,7 +48,7 @@ impl Profiler {
     /// `backtrace_process_func` is a callback to receive resolved frames.
     pub fn new(
         interval: Duration,
-        backtrace_process_func: frame_handler::ResolvedBacktraceProcessFunc,
+        backtrace_process_func: ResolvedBacktraceProcessFunc,
     ) -> anyhow::Result<Self> {
         // Prepare the pipe fds.
         // - read_fd: used and owned by the frame_reader_loop thread.

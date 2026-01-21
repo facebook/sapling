@@ -91,7 +91,20 @@ fn write_frame(frame: &FramePayload, fd: libc::c_int) -> libc::c_int {
         // It is okay to write its raw bytes to "serialize" within the same process.
         let written_bytes = unsafe { libc::write(fd, pos, size) };
         if written_bytes < 0 {
-            let errno = unsafe { *libc::__errno_location() };
+            let errno = {
+                #[cfg(target_os = "macos")]
+                unsafe {
+                    *libc::__error()
+                }
+
+                #[cfg(target_os = "linux")]
+                unsafe {
+                    *libc::__errno_location()
+                }
+
+                #[cfg(all(not(target_os = "linux"), not(target_os = "macos")))]
+                libc::EINVAL
+            };
             if errno == libc::EINTR {
                 // Retry
                 continue;

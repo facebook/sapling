@@ -70,6 +70,7 @@ impl Drop for OwnedFd {
 ///   platforms like Linux).
 /// Returns `[read_fd, write_fd]`.
 pub fn setup_pipe() -> io::Result<[OwnedFd; 2]> {
+    #[cfg(target_os = "linux")]
     unsafe {
         let mut pipe_fds: [libc::c_int; 2] = [0; 2];
 
@@ -102,6 +103,9 @@ pub fn setup_pipe() -> io::Result<[OwnedFd; 2]> {
 
         Ok([rfd, wfd])
     }
+
+    #[cfg(not(target_os = "linux"))]
+    Err(io::ErrorKind::Unsupported.into())
 }
 
 /// Setup the signal handler. This is POSIX-only.
@@ -139,6 +143,12 @@ impl OwnedTimer {
         }
     }
 }
+#[cfg(target_os = "linux")]
+pub(crate) use libc::timer_t;
+
+#[cfg(not(target_os = "linux"))]
+#[allow(non_camel_case_types)]
+pub(crate) type timer_t = *mut libc::c_void;
 
 /// Send `sig` to `tid` at the specified interval. This is a Linux-only feature.
 /// Returns the timer handle that can be used to stop the timer later.
@@ -181,11 +191,14 @@ pub fn setup_signal_timer(
     }
 
     #[cfg(not(target_os = "linux"))]
-    Err(io::ErrorKind::Unsupported.into())
+    {
+        let _ = (sig, tid, interval_secs, interval_nsecs, sigev_value);
+        Err(io::ErrorKind::Unsupported.into())
+    }
 }
 
 /// Stop and delete a signal timer created by `setup_signal_timer`.
-pub fn stop_signal_timer(timer: libc::timer_t) -> io::Result<()> {
+pub fn stop_signal_timer(timer: timer_t) -> io::Result<()> {
     #[cfg(target_os = "linux")]
     unsafe {
         if libc::timer_delete(timer) != 0 {
@@ -195,7 +208,10 @@ pub fn stop_signal_timer(timer: libc::timer_t) -> io::Result<()> {
     }
 
     #[cfg(not(target_os = "linux"))]
-    Err(io::ErrorKind::Unsupported.into())
+    {
+        let _ = timer;
+        Err(io::ErrorKind::Unsupported.into())
+    }
 }
 
 fn sigmask_sigprof(sig: libc::c_int, block: bool) {

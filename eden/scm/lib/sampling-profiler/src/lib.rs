@@ -12,10 +12,18 @@
 //!
 //! Currently implemented for Linux.
 
+#[cfg(target_os = "linux")]
 mod frame_handler;
+#[cfg(target_os = "linux")]
 mod osutil;
+#[cfg_attr(not(target_os = "linux"), path = "profiler_dummy.rs")]
 mod profiler;
+#[cfg(target_os = "linux")]
 mod signal_handler;
 
 pub use backtrace_ext; // re-export
+pub use libc;
 pub use profiler::Profiler;
+
+/// Function to process backtraces.
+pub type ResolvedBacktraceProcessFunc = Box<dyn Fn(&[String]) + Send + Sync + 'static>;
