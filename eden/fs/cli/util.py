@@ -1095,6 +1095,10 @@ def maybe_edensparse_migration(
     }:
         raise RuntimeError(f"Invalid edensparse migration step {step}")
 
+    # Backup file names for cross-step rollback during edensparse migration
+    SNAPSHOT_BACKUP: str = "SNAPSHOT.edensparse_backup"
+    CONFIG_TOML_BACKUP: str = "config.toml.edensparse_backup"
+
     def log(msg: str) -> None:
         """
         Logs a migration message if verbose logging is enabled via the
@@ -1231,14 +1235,22 @@ def maybe_edensparse_migration(
                 return False
 
             snapshot_file = checkout.state_dir / SNAPSHOT
+            snapshot_backup = checkout.state_dir / SNAPSHOT_BACKUP
 
-            with open(snapshot_file, "rb") as f:
-                original_snapshot_bytes = f.read()
-                rollbacks.append(
-                    lambda: write_file_atomically(
-                        snapshot_file, original_snapshot_bytes
-                    )
-                )
+            if snapshot_file.exists():
+                with open(snapshot_file, "rb") as f:
+                    write_file_atomically(snapshot_backup, f.read())
+
+            def restore_snapshot(
+                snapshot_file: Path = snapshot_file,
+                snapshot_backup: Path = snapshot_backup,
+            ) -> None:
+                if snapshot_backup.exists():
+                    with open(snapshot_backup, "rb") as f:
+                        write_file_atomically(snapshot_file, f.read())
+                    snapshot_backup.unlink()
+
+            rollbacks.append(restore_snapshot)
 
             if snapshot_state.working_copy_parent is None:
                 # case 1
@@ -1376,16 +1388,25 @@ def maybe_edensparse_migration(
             rollbacks: List[Any] = rollbacks,
             fault_injector: NaiveFaultInjector = fault_injector,
         ) -> None:
-            config = checkout.get_config()  # config.toml
+            config_file = checkout.state_dir / MOUNT_CONFIG
+            config_backup = checkout.state_dir / CONFIG_TOML_BACKUP
+
+            if config_file.exists():
+                with open(config_file, "rb") as f:
+                    write_file_atomically(config_backup, f.read())
 
             def restore_config_toml(
-                checkout: "EdenCheckout" = checkout,
-                original_config: Any = config,
+                config_file: Path = config_file,
+                config_backup: Path = config_backup,
             ) -> None:
-                checkout.save_config(original_config)
+                if config_backup.exists():
+                    with open(config_backup, "rb") as f:
+                        write_file_atomically(config_file, f.read())
+                    config_backup.unlink()
 
             rollbacks.append(restore_config_toml)
 
+            config = checkout.get_config()  # config.toml
             if config.scm_type == "filteredhg":
                 log(f"no need to update config toml file for {checkout.name}")
                 return
@@ -1453,6 +1474,12 @@ def maybe_edensparse_migration(
                     open(marker_file, "a").close()
                     log(f"migration complete for {checkout.path.name}")
                     num_successful_migration += 1
+
+                    # Clean up Step 1 backups after successful migration
+                    for backup_name in [SNAPSHOT_BACKUP, CONFIG_TOML_BACKUP]:
+                        backup_path = checkout.state_dir / backup_name
+                        if backup_path.exists():
+                            backup_path.unlink()
                 else:
                     log(f"no changes made, migration skipped for {checkout.path.name}")
         except Exception as e:
@@ -1464,6 +1491,49 @@ def maybe_edensparse_migration(
                 f"Migration exception: {checkout.path}\n{traceback.format_exc()}"
             )
             print("rollbacking changes...", file=sys.stderr)
+
+            if step == EdensparseMigrationStep.POST_EDEN_START:
+                # Restore Step 1 backups if they exist (for cross-step rollback)
+                # This handles the case where POST_EDEN_START fails and we need to
+                # rollback changes made in PRE_EDEN_START (whose rollback functions
+                # are no longer available since they were in a different function call)
+                snapshot_backup = checkout.state_dir / SNAPSHOT_BACKUP
+                config_backup = checkout.state_dir / CONFIG_TOML_BACKUP
+                if snapshot_backup.exists() or config_backup.exists():
+                    log(f"restoring step 1 backups for {checkout.path.name}")
+                    try:
+                        if snapshot_backup.exists():
+                            with open(snapshot_backup, "rb") as f:
+                                write_file_atomically(
+                                    checkout.state_dir / SNAPSHOT, f.read()
+                                )
+                            snapshot_backup.unlink()
+                        if config_backup.exists():
+                            with open(config_backup, "rb") as f:
+                                write_file_atomically(
+                                    checkout.state_dir / MOUNT_CONFIG, f.read()
+                                )
+                            config_backup.unlink()
+                        # Unmount and remount the checkout to apply the restored files
+                        try:
+                            log(f"unmounting {checkout.path} to apply restored config")
+                            instance.unmount(str(checkout.path))
+                            log(f"remounting {checkout.path}")
+                            instance.mount(checkout.path, read_only=False)
+                        except Exception as mount_err:
+                            print(
+                                f"failed to unmount/remount {checkout.path}: {mount_err}. "
+                                "The restored files will take effect on next edenfs restart.",
+                                file=sys.stderr,
+                            )
+                    except Exception as restore_err:
+                        print(
+                            f"failed to restore step 1 backups: {restore_err}",
+                            file=sys.stderr,
+                        )
+
+            # If step == EdensparseMigrationStep.PRE_EDEN_START, the operations above are included
+            # in the rollback functions, so we just go through the rollback functions
             for rollback in rollbacks[::-1]:
                 try:
                     rollback()

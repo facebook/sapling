@@ -476,6 +476,134 @@ class FilteredFSMigrationFromUnfilteredTest(
             fault_key="unexpected_exception_after_sapling_config",
         )
 
+    async def cross_step_rollback_common(
+        self, tester: Callable, fault_key: str
+    ) -> None:
+        """
+        Test that step 1 changes (SNAPSHOT, config.toml) are rolled back
+        when step 2 fails. This verifies the cross-step rollback mechanism.
+        """
+        state_dir = Path(self.eden.client_dir_for_mount(self.mount_path))
+
+        with NaiveFaultInjector(state_dir) as fault_injector:
+            fault_injector.register_test_only_fault(fault_key)
+            try:
+                self.restart_edenfs_manually()
+                self.fail("Expected EdenFS to fail to restart")
+            except Exception:
+                tester()
+
+        await self.edensparse_migration_common(lambda: None, lambda: None)
+
+    async def test_cross_step_rollback_snapshot_on_sparse_file_failure(self) -> None:
+        """
+        Test that SNAPSHOT file changes from step 1 are rolled back when
+        step 2 fails (after creating sparse file).
+        """
+
+        def tester():
+            client_dir = Path(self.eden.client_dir_for_mount(self.mount_path))
+            snapshot = get_snapshot(client_dir / SNAPSHOT, "hg")
+            assert snapshot.last_filter_id is None, (
+                "SNAPSHOT should be rolled back: filter_id should be None"
+            )
+
+        await self.cross_step_rollback_common(
+            tester=tester,
+            fault_key="unexpected_exception_after_sparse_file",
+        )
+
+    async def test_cross_step_rollback_config_toml_on_sparse_file_failure(self) -> None:
+        """
+        Test that config.toml changes from step 1 are rolled back when
+        step 2 fails (after creating sparse file).
+        """
+
+        def tester():
+            scm_type = self.get_scm_type()
+            assert scm_type == "hg", (
+                f"config.toml should be rolled back: scm_type should be 'hg', got '{scm_type}'"
+            )
+
+        await self.cross_step_rollback_common(
+            tester=tester,
+            fault_key="unexpected_exception_after_sparse_file",
+        )
+
+    async def test_cross_step_rollback_snapshot_on_requires_file_failure(self) -> None:
+        """
+        Test that SNAPSHOT file changes from step 1 are rolled back when
+        step 2 fails (after updating requires file).
+        """
+
+        def tester():
+            client_dir = Path(self.eden.client_dir_for_mount(self.mount_path))
+            snapshot = get_snapshot(client_dir / SNAPSHOT, "hg")
+            assert snapshot.last_filter_id is None, (
+                "SNAPSHOT should be rolled back: filter_id should be None"
+            )
+
+        await self.cross_step_rollback_common(
+            tester=tester,
+            fault_key="unexpected_exception_after_requires_file",
+        )
+
+    async def test_cross_step_rollback_config_toml_on_requires_file_failure(
+        self,
+    ) -> None:
+        """
+        Test that config.toml changes from step 1 are rolled back when
+        step 2 fails (after updating requires file).
+        """
+
+        def tester():
+            scm_type = self.get_scm_type()
+            assert scm_type == "hg", (
+                f"config.toml should be rolled back: scm_type should be 'hg', got '{scm_type}'"
+            )
+
+        await self.cross_step_rollback_common(
+            tester=tester,
+            fault_key="unexpected_exception_after_requires_file",
+        )
+
+    async def test_cross_step_rollback_snapshot_on_sapling_config_failure(self) -> None:
+        """
+        Test that SNAPSHOT file changes from step 1 are rolled back when
+        step 2 fails (after configuring sapling).
+        """
+
+        def tester():
+            client_dir = Path(self.eden.client_dir_for_mount(self.mount_path))
+            snapshot = get_snapshot(client_dir / SNAPSHOT, "hg")
+            assert snapshot.last_filter_id is None, (
+                "SNAPSHOT should be rolled back: filter_id should be None"
+            )
+
+        await self.cross_step_rollback_common(
+            tester=tester,
+            fault_key="unexpected_exception_after_sapling_config",
+        )
+
+    async def test_cross_step_rollback_config_toml_on_sapling_config_failure(
+        self,
+    ) -> None:
+        """
+        Test that config.toml changes from step 1 are rolled back when
+        step 2 fails (after configuring sapling).
+        """
+
+        def tester():
+            scm_type = self.get_scm_type()
+            assert scm_type == "hg", (
+                f"config.toml should be rolled back: scm_type should be 'hg', got '{scm_type}'"
+            )
+
+        await self.cross_step_rollback_common(
+            tester=tester,
+            fault_key="unexpected_exception_after_sapling_config",
+        )
+
 
 # This test suite is intended for test cases which try to run edensparse
 # migration on a repo which is already FilteredFS.
