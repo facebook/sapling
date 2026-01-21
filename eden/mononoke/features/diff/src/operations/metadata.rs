@@ -417,25 +417,23 @@ async fn get_file_details_from_input(
 /// Each repo should be bound to the bubble that contains its changeset (if any).
 pub async fn metadata(
     ctx: &CoreContext,
-    base_repo: &impl Repo,
-    other_repo: &impl Repo,
-    base: Option<DiffSingleInput>,
-    other: Option<DiffSingleInput>,
+    base_pair: Option<(DiffSingleInput, &impl Repo)>,
+    other_pair: Option<(DiffSingleInput, &impl Repo)>,
     ignore_whitespace: bool,
 ) -> Result<MetadataDiff, DiffError> {
 
     // Get file information directly from inputs
     let (base_file_details, other_file_details) = try_join!(
         async {
-            if let Some(base_input) = &base {
-                get_file_details_from_input(ctx, base_repo, base_input).await.map(Some)
+            if let Some((base_input, base_repo)) = &base_pair {
+                get_file_details_from_input(ctx, *base_repo, base_input).await.map(Some)
             } else {
                 Ok(Some((None, None)))
             }
         },
         async {
-            if let Some(other_input) = &other {
-                get_file_details_from_input(ctx, other_repo, other_input).await.map(Some)
+            if let Some((other_input, other_repo)) = &other_pair {
+                get_file_details_from_input(ctx, *other_repo, other_input).await.map(Some)
             } else {
                 Ok(Some((None, None)))
             }
@@ -518,7 +516,7 @@ mod tests {
         });
 
         let metadata_diff =
-            metadata(&ctx, &repo, &repo, Some(base_input), Some(other_input), false).await?;
+            metadata(&ctx, Some((base_input, &repo)), Some((other_input, &repo)), false).await?;
 
         // Check file info
         assert_eq!(
@@ -586,7 +584,7 @@ mod tests {
         });
 
         let metadata_diff =
-            metadata(&ctx, &repo, &repo, Some(base_input), Some(other_input), false).await?;
+            metadata(&ctx, Some((base_input, &repo)), Some((other_input, &repo)), false).await?;
 
         // Check that content type is binary
         assert_eq!(
@@ -631,7 +629,7 @@ mod tests {
         });
 
         let metadata_diff =
-            metadata(&ctx, &repo, &repo, Some(base_input), Some(other_input), false).await?;
+            metadata(&ctx, Some((base_input, &repo)), Some((other_input, &repo)), false).await?;
 
         // Base file doesn't exist
         assert_eq!(metadata_diff.base_file_info.file_type, None);
@@ -676,10 +674,8 @@ mod tests {
         // Test None vs Some - should show addition
         let metadata_diff = metadata(
             &ctx,
-            &repo,
-            &repo,
-            None,
-            Some(input.clone()),
+            None::<(DiffSingleInput, &BasicTestRepo)>,
+            Some((input.clone(), &repo)),
             false,
         )
         .await?;
@@ -705,10 +701,8 @@ mod tests {
         // Test Some vs None - should show deletion
         let metadata_diff = metadata(
             &ctx,
-            &repo,
-            &repo,
-            Some(input),
-            None,
+            Some((input, &repo)),
+            None::<(DiffSingleInput, &BasicTestRepo)>,
             false,
         )
         .await?;
@@ -732,7 +726,12 @@ mod tests {
         assert_eq!(lines_count.deleted_lines, 2);
 
         // Test None vs None - should show no difference
-        let metadata_diff = metadata(&ctx, &repo, &repo, None, None, false).await?;
+        let metadata_diff = metadata(
+            &ctx,
+            None::<(DiffSingleInput, &BasicTestRepo)>,
+            None::<(DiffSingleInput, &BasicTestRepo)>,
+            false,
+        ).await?;
 
         // Both files don't exist
         assert_eq!(metadata_diff.base_file_info.file_type, None);
@@ -764,7 +763,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, &repo, None, Some(input), false).await?;
+        let metadata_diff = metadata(&ctx, None::<(DiffSingleInput, &BasicTestRepo)>, Some((input, &repo)), false).await?;
 
         // Check that generated status is detected
         assert_eq!(
@@ -810,7 +809,7 @@ mod tests {
             replacement_path: None,
         });
 
-        let metadata_diff = metadata(&ctx, &repo, &repo, None, Some(input), false).await?;
+        let metadata_diff = metadata(&ctx, None::<(DiffSingleInput, &BasicTestRepo)>, Some((input, &repo)), false).await?;
 
         // Check that partially generated status is detected
         assert_eq!(
@@ -842,7 +841,7 @@ mod tests {
         });
 
         let metadata_diff =
-            metadata(&ctx, &repo, &repo, Some(base_input), Some(other_input), false).await?;
+            metadata(&ctx, Some((base_input, &repo)), Some((other_input, &repo)), false).await?;
 
         assert_eq!(metadata_diff.base_file_info.file_type, Some(DiffFileType::Regular));
         assert_eq!(
@@ -888,7 +887,7 @@ mod tests {
 
         // Test None vs String - should show addition
         let metadata_diff =
-            metadata(&ctx, &repo, &repo, None, Some(string_input.clone()), false).await?;
+            metadata(&ctx, None::<(DiffSingleInput, &BasicTestRepo)>, Some((string_input.clone(), &repo)), false).await?;
 
         // Base file doesn't exist
         assert_eq!(metadata_diff.base_file_info.file_type, None);
@@ -906,7 +905,7 @@ mod tests {
         assert_eq!(lines_count.deleted_lines, 0);
 
         // Test String vs None - should show deletion
-        let metadata_diff = metadata(&ctx, &repo, &repo, Some(string_input), None, false).await?;
+        let metadata_diff = metadata(&ctx, Some((string_input, &repo)), None::<(DiffSingleInput, &BasicTestRepo)>, false).await?;
 
         // Base file exists
         assert_eq!(metadata_diff.base_file_info.file_type, Some(DiffFileType::Regular));
@@ -942,7 +941,7 @@ mod tests {
         });
 
         let metadata_diff =
-            metadata(&ctx, &repo, &repo, Some(base_input), Some(other_input), false).await?;
+            metadata(&ctx, Some((base_input, &repo)), Some((other_input, &repo)), false).await?;
 
         // Check that content type is binary
         assert_eq!(
@@ -976,7 +975,7 @@ mod tests {
         });
 
         let metadata_diff =
-            metadata(&ctx, &repo, &repo, Some(empty_input.clone()), Some(non_empty_input), false)
+            metadata(&ctx, Some((empty_input.clone(), &repo)), Some((non_empty_input, &repo)), false)
                 .await?;
 
         // Both should be text files
@@ -996,7 +995,7 @@ mod tests {
 
         // Test two empty strings
         let metadata_diff =
-            metadata(&ctx, &repo, &repo, Some(empty_input.clone()), Some(empty_input), false)
+            metadata(&ctx, Some((empty_input.clone(), &repo)), Some((empty_input, &repo)), false)
                 .await?;
         let lines_count = metadata_diff.lines_count.unwrap();
         assert_eq!(lines_count.added_lines, 0);
@@ -1021,7 +1020,7 @@ mod tests {
         });
 
         let metadata_diff =
-            metadata(&ctx, &repo, &repo, Some(special_input), Some(plain_input), false).await?;
+            metadata(&ctx, Some((special_input, &repo)), Some((plain_input, &repo)), false).await?;
 
         // Should handle special characters as text
         assert_eq!(
@@ -1058,10 +1057,8 @@ mod tests {
         // With ignore_whitespace: false, should show differences
         let metadata_diff = metadata(
             &ctx,
-            &repo,
-            &repo,
-            Some(base_input.clone()),
-            Some(other_input.clone()),
+            Some((base_input.clone(), &repo)),
+            Some((other_input.clone(), &repo)),
             false,
         )
         .await?;
@@ -1075,10 +1072,8 @@ mod tests {
         // (After stripping whitespace, "helloworld\nfoobar\n" should match on both sides)
         let metadata_diff = metadata(
             &ctx,
-            &repo,
-            &repo,
-            Some(base_input),
-            Some(other_input),
+            Some((base_input, &repo)),
+            Some((other_input, &repo)),
             true,
         )
         .await?;
@@ -1114,10 +1109,8 @@ mod tests {
         // After stripping whitespace: "line2" vs "modifiedline2" (real difference!)
         let metadata_diff = metadata(
             &ctx,
-            &repo,
-            &repo,
-            Some(base_input),
-            Some(other_input),
+            Some((base_input, &repo)),
+            Some((other_input, &repo)),
             true,
         )
         .await?;
@@ -1153,10 +1146,8 @@ mod tests {
         // Even with ignore_whitespace: true, binary files should not use line counting
         let metadata_diff = metadata(
             &ctx,
-            &repo,
-            &repo,
-            Some(base_input),
-            Some(other_input),
+            Some((base_input, &repo)),
+            Some((other_input, &repo)),
             true,
         )
         .await?;

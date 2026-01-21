@@ -306,13 +306,22 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         };
 
         // Call the unified function from the diff crate
-        // Both inputs are from the same repo context since this is a within-repo diff
+        // Use the repo context from each content's changeset to support cross-bubble diffs.
+        // When comparing snapshots from different bubbles, old_content and new_content
+        // may have different repo contexts with different bubble-specific blobstores.
+        let old_repo = self
+            .old_content
+            .as_ref()
+            .map(|c| c.changeset().repo_ctx().repo());
+        let new_repo = self
+            .new_content
+            .as_ref()
+            .map(|c| c.changeset().repo_ctx().repo());
+
         let diff_result = unified(
             ctx,
-            self.changeset.repo_ctx().repo(),
-            self.changeset.repo_ctx().repo(),
-            old_input,
-            new_input,
+            old_input.zip(old_repo),
+            new_input.zip(new_repo),
             options,
         )
         .await
@@ -339,13 +348,22 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             self.subtree_copy_dest_path.as_ref(),
         );
 
-        // Both inputs are from the same repo context since this is a within-repo diff
+        // Use the repo context from each content's changeset to support cross-bubble diffs.
+        // When comparing snapshots from different bubbles, old_content and new_content
+        // may have different repo contexts with different bubble-specific blobstores.
+        let old_repo = self
+            .old_content
+            .as_ref()
+            .map(|c| c.changeset().repo_ctx().repo());
+        let new_repo = self
+            .new_content
+            .as_ref()
+            .map(|c| c.changeset().repo_ctx().repo());
+
         let diff_metadata = metadata(
             ctx,
-            self.changeset.repo_ctx().repo(),
-            self.changeset.repo_ctx().repo(),
-            old_input,
-            new_input,
+            old_input.zip(old_repo),
+            new_input.zip(new_repo),
             ignore_whitespace,
         )
         .await

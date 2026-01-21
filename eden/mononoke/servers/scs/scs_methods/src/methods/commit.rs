@@ -326,7 +326,7 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitCommonBaseWithParams,
     ) -> Result<thrift::CommitLookupResponse, scs_errors::ServiceError> {
-        let (_repo, changeset, other_changeset) = self
+        let (changeset, other_changeset) = self
             .repo_changeset_pair(ctx.clone(), &commit, &params.other_commit_id)
             .watched()
             .await?;
@@ -475,10 +475,14 @@ impl SourceControlServiceImpl {
         // Resolve the CommitSpecfier into ChangesetContext
         let (repo, base_commit, other_commit) = match params.other_commit_id {
             Some(other_commit_id) => {
-                let (repo, base_commit, other_commit) = self
+                let (base_commit, other_commit) = self
                     .repo_changeset_pair(ctx.clone(), &commit, &other_commit_id)
                     .await?;
-                (repo, base_commit, Some(other_commit))
+                (
+                    base_commit.repo_ctx().clone(),
+                    base_commit,
+                    Some(other_commit),
+                )
             }
             None => {
                 let (repo, base_commit) = self.repo_changeset(ctx.clone(), &commit).await?;
@@ -759,7 +763,7 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitIsAncestorOfParams,
     ) -> Result<bool, scs_errors::ServiceError> {
-        let (_repo, changeset, other_changeset) = self
+        let (changeset, other_changeset) = self
             .repo_changeset_pair(ctx, &commit, &params.descendant_commit_id)
             .await?;
         let is_ancestor_of = changeset.is_ancestor_of(other_changeset.id()).await?;
@@ -840,7 +844,7 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitCompareResponse, scs_errors::ServiceError> {
         let (base_changeset, other_changeset) = match &params.other_commit_id {
             Some(id) => {
-                let (_repo, mut base_changeset, other_changeset) = self
+                let (mut base_changeset, other_changeset) = self
                     .repo_changeset_pair(ctx.clone(), &commit, id)
                     .watched()
                     .await?;
@@ -929,7 +933,10 @@ impl SourceControlServiceImpl {
                 };
                 stream::iter(diff)
                     .map(|diff| CommitComparePath::from_path_diff(diff, &params.identity_schemes))
-                    .buffer_unordered(CONCURRENCY_LIMIT)
+                    // Use `buffered` instead of `buffer_unordered` to maintain deterministic
+                    // ordering of results. While `buffer_unordered` can yield results sooner,
+                    // it produces non-deterministic ordering based on which futures complete first.
+                    .buffered(CONCURRENCY_LIMIT)
                     .try_collect::<Vec<_>>()
                     .watched()
                     .await?
@@ -1004,11 +1011,21 @@ impl SourceControlServiceImpl {
 
         let other_commit_ids = match other_changeset {
             None => None,
-            Some(other_changeset) => Some(
-                map_commit_identity(&other_changeset, &params.identity_schemes)
-                    .watched()
-                    .await?,
-            ),
+            Some(other_changeset) => {
+                // Snapshots currently only support Bonsai, so missing the remaining ones
+                // is not an error.
+                let is_snaptshot = other_changeset.bonsai_changeset().await?.is_snapshot();
+                let schemes = if is_snaptshot {
+                    BTreeSet::from([thrift::CommitIdentityScheme::BONSAI])
+                } else {
+                    params.identity_schemes
+                };
+                Some(
+                    map_commit_identity(&other_changeset, &schemes)
+                        .watched()
+                        .await?,
+                )
+            }
         };
         Ok(thrift::CommitCompareResponse {
             diff_files,

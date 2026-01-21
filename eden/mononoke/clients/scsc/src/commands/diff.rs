@@ -312,15 +312,13 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
             .await;
     }
 
-    let other_commit_id = match response.other_commit_ids {
-        None => None,
-        Some(other_commit_ids) => {
-            let (_scheme, other_commit_id) = other_commit_ids
-                .into_iter()
-                .next()
-                .expect("expected commit id");
-            Some(other_commit_id)
-        }
+    // Use original ephemeral_bonsai commit IDs to preserve bubble info for snapshots.
+    // For other cases (including subtree operations), use response.other_commit_ids.
+    let other_commit_id = match other_commit {
+        Some(c) if matches!(c.id, thrift::CommitId::ephemeral_bonsai(_)) => Some(c.id.clone()),
+        _ => response
+            .other_commit_ids
+            .and_then(|ids| ids.into_iter().next().map(|(_scheme, id)| id)),
     };
 
     let placeholder_only = args.placeholders_only;

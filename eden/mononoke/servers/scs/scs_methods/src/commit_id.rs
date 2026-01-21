@@ -33,7 +33,6 @@ pub(crate) async fn map_commit_identity(
         thrift::CommitIdentityScheme::BONSAI,
         thrift::CommitId::bonsai(changeset_ctx.id().as_ref().into()),
     );
-
     let schemes = fall_back_to_default_identity_scheme(changeset_ctx.repo_ctx(), schemes);
 
     let mut scheme_identities = vec![];

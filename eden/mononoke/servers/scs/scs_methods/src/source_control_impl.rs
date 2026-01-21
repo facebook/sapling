@@ -547,39 +547,44 @@ impl SourceControlServiceImpl {
 
     /// Get the repo and pair of changesets specified by a `thrift::CommitSpecifier`
     /// and `thrift::CommitId` pair.
+    ///
+    /// Returns two separate repo contexts, one for each changeset. This is necessary
+    /// for cross-bubble snapshot comparisons, where each snapshot may be in a different
+    /// bubble with isolated storage.
     pub(crate) async fn repo_changeset_pair(
         &self,
         ctx: CoreContext,
         commit: &thrift::CommitSpecifier,
         other_commit: &thrift::CommitId,
-    ) -> Result<
-        (
-            RepoContext<Repo>,
-            ChangesetContext<Repo>,
-            ChangesetContext<Repo>,
-        ),
-        scs_errors::ServiceError,
-    > {
+    ) -> Result<(ChangesetContext<Repo>, ChangesetContext<Repo>), scs_errors::ServiceError> {
         let changeset_specifier =
             ChangesetSpecifier::from_request(&commit.id).context("invalid target commit id")?;
         let other_changeset_specifier = ChangesetSpecifier::from_request(other_commit)
             .context("invalid or missing other commit id")?;
-        if other_changeset_specifier.in_bubble() {
-            Err(scs_errors::invalid_request(format!(
-                "Can't compare against a snapshot: {}",
-                other_changeset_specifier
-            )))?
-        }
+
         let authz = AuthorizationContext::new(&ctx);
-        let bubble_fetcher =
-            self.bubble_fetcher_for_changeset(ctx.clone(), changeset_specifier.clone());
-        let repo = self
-            .repo_impl(ctx, &commit.repo, authz, bubble_fetcher)
-            .await?;
+        // Create separate repo contexts for each changeset to support cross-bubble diffs.
+        // Each repo context is opened with its own bubble, allowing access to snapshot
+        // data regardless of which bubble it's in.
+        let (base_repo, other_repo) = try_join!(
+            self.repo_impl(
+                ctx.clone(),
+                &commit.repo,
+                authz.clone(),
+                self.bubble_fetcher_for_changeset(ctx.clone(), changeset_specifier.clone())
+            ),
+            self.repo_impl(
+                ctx.clone(),
+                &commit.repo,
+                authz,
+                self.bubble_fetcher_for_changeset(ctx.clone(), other_changeset_specifier.clone())
+            ),
+        )?;
         let (changeset, other_changeset) = try_join!(
             async {
                 Ok::<_, scs_errors::ServiceError>(
-                    repo.changeset(changeset_specifier)
+                    base_repo
+                        .changeset(changeset_specifier)
                         .await
                         .context("failed to resolve target commit")?
                         .ok_or_else(|| scs_errors::commit_not_found(commit.description()))?,
@@ -587,7 +592,8 @@ impl SourceControlServiceImpl {
             },
             async {
                 Ok::<_, scs_errors::ServiceError>(
-                    repo.changeset(other_changeset_specifier)
+                    other_repo
+                        .changeset(other_changeset_specifier)
                         .await
                         .context("failed to resolve other commit")?
                         .ok_or_else(|| {
@@ -599,7 +605,7 @@ impl SourceControlServiceImpl {
                 )
             },
         )?;
-        Ok((repo, changeset, other_changeset))
+        Ok((changeset, other_changeset))
     }
 
     /// Get the changeset id specified by a `thrift::CommitId`.
