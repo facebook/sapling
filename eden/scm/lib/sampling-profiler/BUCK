@@ -25,6 +25,7 @@ rust_library(
     features = ["nightly"],
     deps = [
         "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:indexmap",
         "fbsource//third-party/rust:libc",
         "//eden/scm/lib/backtrace-ext:backtrace-ext",
     ],

@@ -12,6 +12,7 @@
 //!
 //! Currently implemented for Linux.
 
+mod backtrace_collector;
 #[cfg(target_os = "linux")]
 mod frame_handler;
 #[cfg(target_os = "linux")]
@@ -21,6 +22,7 @@ mod profiler;
 #[cfg(target_os = "linux")]
 mod signal_handler;
 
+pub use backtrace_collector::BacktraceCollector;
 pub use backtrace_ext; // re-export
 pub use libc;
 pub use profiler::Profiler;
