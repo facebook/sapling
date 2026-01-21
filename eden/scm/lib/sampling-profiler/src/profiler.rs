@@ -14,6 +14,7 @@ use crate::frame_handler;
 use crate::osutil;
 use crate::osutil::OwnedFd;
 use crate::osutil::OwnedTimer;
+use crate::signal_handler;
 
 /// Represents a profiling configuration for the owning thread.
 /// Contains resources (fd, timer) allocated.
@@ -55,7 +56,7 @@ impl Profiler {
         //   will be closed when dropping `Profiler`.
         let [read_fd, write_fd] = osutil::setup_pipe()?;
 
-        // TODO: osutil::setup_signal_handler(SIG, signal_handler)
+        osutil::setup_signal_handler(SIG, signal_handler::signal_handler)?;
         osutil::unblock_signal(SIG);
 
         // Spawn a thread to read the pipe. The thread exits on pipe EOF.
