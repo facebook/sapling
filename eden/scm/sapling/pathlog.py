@@ -11,8 +11,9 @@ from typing import Iterable, List
 from . import error, extensions
 from .ext.extlib.phabricator import graphql
 from .i18n import _
-from .node import bin, hex
+from .node import bin, hex, nullrev
 from .util import timer
+from .utils import pathutil
 
 
 BATCH_SIZE = 500
@@ -30,7 +31,7 @@ class PathlogStats:
 
 
 def pathlog(repo, node, path, is_prefetch_commit_text=False) -> Iterable[bytes]:
-    if repo[node].ispublic() and is_fastlog_enabled(repo):
+    if is_fastlog_enabled(repo):
         return strategy_fastlog(
             repo,
             node,
@@ -51,6 +52,7 @@ def pathlog(repo, node, path, is_prefetch_commit_text=False) -> Iterable[bytes]:
 def strategy_pathhisotry(
     repo, node, path, is_prefetch_commit_text=False, stats=None
 ) -> List[bytes]:
+    repo.ui.debug(f"using strategy_pathhisotry for '{path}'\n")
     dag = repo.changelog.dag
     start_time = int(timer())
     hist = repo.pathhistory([path], dag.ancestors([node]))
@@ -97,12 +99,38 @@ def strategy_fastlog(
     stats=None,
     scm_type: str = "hg",
 ) -> List[bytes]:
-    """Fetches the history of a path from SCMQuery.
+    """Fetches the history of a path using SCMQuery service.
 
-    We page results in windows of up to 'batch_size' to avoid generating
-    too many results; this has been optimized on the server to cache
-    fast continuations but this assumes service stickiness.
+    This strategy supports both public and draft commits:
+    - For draft commits: walks the local DAG from the starting node to find
+      public ancestors, yielding draft commits that modified the given path.
+    - For public commits: queries SCMQuery fastlog service in batches.
     """
+
+    def parents(rev, path):
+        for p in repo.changelog.parentrevs(rev):
+            if p != nullrev:
+                yield p, path
+
+    repo.ui.debug(f"using strategy_fastlog for '{path}'\n")
+    if not repo[node].ispublic():
+        start_rev = repo[node].rev()
+        public = findpublic(repo, start_rev, path, parents)
+        matched_nodes = []
+        for parent, path in lazyparents(start_rev, path, public, parents):
+            if any(pathutil.path_starts_with(f, path) for f in repo[parent].files()):
+                matched_nodes.append(repo[parent].node())
+
+        if not public:
+            yield from matched_nodes
+            return
+        else:
+            node = repo[parent].node()
+            # avoid duplicates, as `scmquery_log` below will include it as well.
+            if matched_nodes and matched_nodes[-1] == node:
+                matched_nodes.pop()
+            yield from matched_nodes
+
     reponame = repo.ui.config("fbscmquery", "reponame")
     client = graphql.Client(repo=repo)
     start_hex = hex(node)
