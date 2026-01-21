@@ -217,7 +217,7 @@ class EdenFSNotificationsClient extends EventEmitter {
       callback(error, null);
     });
     sub.on('close', () => {
-      // Recieved when the underlying gets killed, pass double null to indicate
+      // Received when the underlying gets killed, pass double null to indicate
       // this since no error or message is available
       callback(null, null);
     });

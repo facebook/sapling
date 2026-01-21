@@ -220,7 +220,7 @@ export interface ChangesSinceResponse {
  * Event emitted by subscription
  */
 export interface SubscriptionEvent extends ChangesSinceResponse {
-  /** Position a state change occured at */
+  /** Position a state change occurred at */
   position?: string | JournalPosition;
   /** Event type for state changes */
   event_type?: 'Entered' | 'Left';
