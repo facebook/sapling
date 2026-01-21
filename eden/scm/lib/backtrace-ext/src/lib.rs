@@ -32,29 +32,7 @@ use std::ffi::c_void;
 use std::sync::atomic::AtomicPtr;
 use std::sync::atomic::Ordering;
 
-#[cfg(target_os = "linux")]
-pub use unwind;
-pub use unwind::Cursor;
-pub use unwind::RegNum;
-
-/// Place holder unwind for non-Linux systems.
-#[cfg(not(target_os = "linux"))]
-pub mod unwind {
-    #[derive(Clone)]
-    pub struct Cursor<'a>(std::marker::PhantomData<&'a ()>);
-    pub enum RegNum {
-        IP = 1,
-        SP = 2,
-    }
-    impl<'a> Cursor<'a> {
-        pub fn step(&mut self) -> Result<bool, ()> {
-            Ok(false)
-        }
-        pub fn register(&self, _reg: RegNum) -> Result<usize, ()> {
-            Err(())
-        }
-    }
-}
+pub use backtrace;
 
 /// Extend the default frame resolver to support resolving non-native
 /// frames. For example, to extract Python frames.
@@ -98,7 +76,8 @@ pub fn set_supplemental_frame_resolver(resolver: &'static &'static dyn Supplemen
     );
 }
 
-fn get_supplemental_frame_resolver() -> Option<&'static &'static dyn SupplementalFrameResolver> {
+pub fn get_supplemental_frame_resolver() -> Option<&'static &'static dyn SupplementalFrameResolver>
+{
     let ptr = SUPPLEMENTAL_FRAME_RESOLVER.load(Ordering::Acquire);
     if ptr.is_null() {
         None
@@ -147,74 +126,40 @@ impl Frame {
     }
 }
 
-/// Iterator over frames in a stack trace.
-pub struct Backtrace<'a> {
-    cursor: Cursor<'a>,
-    ended: bool,
-}
-
 // This is defined as a macro, not a function intentionally.
 // Shall this be a function, calling from the signal handler might
 // use the "altstack" and lose the original stack information.
-//
-// PERF: `man libunwind` suggests defining `UNW_LOCAL_ONLY` for better
-// performance if remote unwind is not needed. However the Rust `unwind`
-// binding does not do it. Consider bypassing the binding to maximize
-// performance.
-#[cfg(target_os = "linux")]
+/// Similar to [`backtrace::trace_unsynchronized`], but callback uses [`Frame`],
+/// and respects [`SupplementalFrameResolver`] set by
+/// [`set_supplemental_frame_resolver`].
 #[macro_export]
-macro_rules! try_backtrace {
-    () => {{
-        $crate::unwind::get_context!(context);
-        $crate::unwind::Cursor::local(context).map($crate::Backtrace::new)
+macro_rules! trace_unsynchronized {
+    ($cb: expr) => {{
+        unsafe {
+            use $crate::Frame;
+            use $crate::FrameDecision;
+            $crate::backtrace::trace_unsynchronized(|f| {
+                let ip = f.ip() as usize;
+                if ip == 0 {
+                    return false;
+                }
+                let sp = f.sp() as usize;
+                let decision = match $crate::get_supplemental_frame_resolver() {
+                    Some(resolver) => resolver.maybe_extract_supplemental_info(ip, sp),
+                    None => FrameDecision::Keep,
+                };
+                let (info, skip_one) = match decision {
+                    FrameDecision::Keep => (None, false),
+                    FrameDecision::Skip => (None, true),
+                    FrameDecision::Replace(info) => (Some(info), false),
+                };
+                if skip_one {
+                    true
+                } else {
+                    let frame = Frame { ip, sp, info };
+                    ($cb)(frame)
+                }
+            })
+        }
     }};
-}
-
-#[cfg(not(target_os = "linux"))]
-#[macro_export]
-macro_rules! try_backtrace {
-    () => {{ None }};
-}
-
-impl<'a> Backtrace<'a> {
-    /// Create a new frame iterator for the libunwind cursor.
-    pub fn new(cursor: Cursor<'a>) -> Self {
-        let ended = false;
-        Self { cursor, ended }
-    }
-}
-
-impl<'a> Iterator for Backtrace<'a> {
-    type Item = Frame;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.ended {
-            return None;
-        }
-        loop {
-            let ip = self.cursor.register(RegNum::IP).unwrap_or_default() as usize;
-            let sp = self.cursor.register(RegNum::SP).unwrap_or_default() as usize;
-            let decision = match get_supplemental_frame_resolver() {
-                Some(resolver) => resolver.maybe_extract_supplemental_info(ip, sp),
-                None => FrameDecision::Keep,
-            };
-
-            let (info, skip) = match decision {
-                FrameDecision::Keep => (None, false),
-                FrameDecision::Skip => (None, true),
-                FrameDecision::Replace(info) => (Some(info), false),
-            };
-
-            let frame = Frame { ip, sp, info };
-
-            self.ended = match self.cursor.step() {
-                Err(_) | Ok(false) => true,
-                Ok(true) => false,
-            };
-
-            if !skip {
-                return Some(frame);
-            }
-        }
-    }
 }

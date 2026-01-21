@@ -8,7 +8,7 @@
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
-use backtrace_ext::try_backtrace;
+use backtrace_ext::trace_unsynchronized;
 
 use crate::frame_handler::FramePayload;
 use crate::frame_handler::MaybeFrame;
@@ -39,11 +39,6 @@ pub extern "C" fn signal_handler(
         write_fd as i32
     };
 
-    let bt = match try_backtrace!() {
-        Ok(bt) => bt,
-        Err(_) => return,
-    };
-
     let backtrace_id: usize = {
         static BACKTRACE_ID: AtomicUsize = AtomicUsize::new(0);
         BACKTRACE_ID.fetch_add(1, Ordering::AcqRel)
@@ -54,26 +49,29 @@ pub extern "C" fn signal_handler(
     // - This signal handler frame.
     // - __sigaction
     const SKIP_FRAMES: usize = 2;
-    for frame in bt.skip(SKIP_FRAMES) {
-        let maybe_frame = MaybeFrame::Present(frame);
-        let payload = FramePayload {
-            backtrace_id,
-            depth,
-            frame: maybe_frame,
-        };
-        if write_frame(&payload, write_fd) != 0 {
-            // Poison `depth` so this "incomplete" backtrace gets dropped.
-            depth += 2;
-            break;
+    trace_unsynchronized!(|frame| {
+        if depth >= SKIP_FRAMES {
+            let maybe_frame = MaybeFrame::Present(frame);
+            let payload = FramePayload {
+                backtrace_id,
+                depth: depth.saturating_sub(SKIP_FRAMES),
+                frame: maybe_frame,
+            };
+            if write_frame(&payload, write_fd) != 0 {
+                // Poison `depth` so this "incomplete" backtrace gets dropped.
+                depth += 2;
+                return false;
+            }
         }
         depth += 1;
-    }
+        true
+    });
 
     // Write a placeholder frame to mark an end of the current backtrace.
     let end_frame = MaybeFrame::EndOfBacktrace;
     let payload = FramePayload {
         backtrace_id,
-        depth,
+        depth: depth.saturating_sub(SKIP_FRAMES),
         frame: end_frame,
     };
     let _ = write_frame(&payload, write_fd);
