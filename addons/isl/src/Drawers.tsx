@@ -8,10 +8,11 @@
 import type {ComponentClass} from 'react';
 import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 
-import {useAtom} from 'jotai';
-import {createElement, useCallback, useRef, useState} from 'react';
+import {useAtom, useAtomValue} from 'jotai';
+import {createElement, useCallback, useEffect, useRef, useState} from 'react';
 import {debounce} from 'shared/debounce';
-import {islDrawerState} from './drawerState';
+import {autoCollapsedState, islDrawerState} from './drawerState';
+import {shouldAutoCollapseDrawers} from './responsive';
 
 import './Drawers.css';
 
@@ -32,6 +33,54 @@ export type ErrorBoundaryComponent = ComponentClass<
   {error: Error | null}
 >;
 
+/**
+ * Hook to auto-collapse/expand drawers based on window width.
+ * - Auto-collapses drawers when window is narrower than breakpoint
+ * - Auto-expands drawers when window widens (only if they were auto-collapsed, not manually collapsed)
+ * - Respects user's manual collapse preference
+ */
+export function useAutoCollapseDrawers() {
+  const shouldAutoCollapse = useAtomValue(shouldAutoCollapseDrawers);
+  const [drawerState, setDrawerState] = useAtom(islDrawerState);
+  const [autoCollapsed, setAutoCollapsed] = useAtom(autoCollapsedState);
+
+  useEffect(() => {
+    // Handle right drawer
+    if (shouldAutoCollapse.right && !drawerState.right.collapsed) {
+      // Window became narrow - auto-collapse right drawer
+      setDrawerState(prev => ({
+        ...prev,
+        right: {...prev.right, collapsed: true},
+      }));
+      setAutoCollapsed(prev => ({...prev, right: true}));
+    } else if (!shouldAutoCollapse.right && drawerState.right.collapsed && autoCollapsed.right) {
+      // Window became wide and drawer was auto-collapsed - auto-expand
+      setDrawerState(prev => ({
+        ...prev,
+        right: {...prev.right, collapsed: false},
+      }));
+      setAutoCollapsed(prev => ({...prev, right: false}));
+    }
+
+    // Handle left drawer
+    if (shouldAutoCollapse.left && !drawerState.left.collapsed) {
+      // Window became narrow - auto-collapse left drawer
+      setDrawerState(prev => ({
+        ...prev,
+        left: {...prev.left, collapsed: true},
+      }));
+      setAutoCollapsed(prev => ({...prev, left: true}));
+    } else if (!shouldAutoCollapse.left && drawerState.left.collapsed && autoCollapsed.left) {
+      // Window became wide and drawer was auto-collapsed - auto-expand
+      setDrawerState(prev => ({
+        ...prev,
+        left: {...prev.left, collapsed: false},
+      }));
+      setAutoCollapsed(prev => ({...prev, left: false}));
+    }
+  }, [shouldAutoCollapse, drawerState.right.collapsed, drawerState.left.collapsed, autoCollapsed, setDrawerState, setAutoCollapsed]);
+}
+
 export function Drawers({
   right,
   rightLabel,
@@ -50,6 +99,9 @@ export function Drawers({
   EnsureAssignedTogether<{right: NonNullReactElement; rightLabel: NonNullReactElement}> &
   EnsureAssignedTogether<{top: NonNullReactElement; topLabel: NonNullReactElement}> &
   EnsureAssignedTogether<{bottom: NonNullReactElement; bottomLabel: NonNullReactElement}>) {
+  // Enable responsive auto-collapse behavior
+  useAutoCollapseDrawers();
+
   return (
     <div className="drawers">
       {top ? (
@@ -99,6 +151,7 @@ export function Drawer({
   const [isResizing, setIsResizing] = useState(false);
 
   const [drawerState, setDrawerState] = useAtom(islDrawerState);
+  const [, setAutoCollapsed] = useAtom(autoCollapsedState);
   const state = drawerState[side];
   const isExpanded = !state.collapsed;
 
@@ -168,6 +221,10 @@ export function Drawer({
               collapsed: !prev[side].collapsed,
             },
           }));
+          // Manual toggle clears auto-collapsed state so drawer won't auto-expand
+          if (side === 'left' || side === 'right') {
+            setAutoCollapsed(prev => ({...prev, [side]: false}));
+          }
         }}>
         {label}
       </div>
