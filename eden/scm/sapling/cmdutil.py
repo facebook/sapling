@@ -3910,11 +3910,7 @@ def grep(ui, repo, table, matcher, pattern, **opts):
         )
         out, err = p.communicate()
 
-        # bigrep returns 1 for:
-        #   - (a) no results
-        #   - (b) some error cases, e.g.: limit imposed by the --max-bytes option
-        # Since no reliable way to differentiate these cases, the following
-        # logic implementas best-effort error handling.
+        # biggrep's exit status is 0 if a line is selected, 1 if no lines were selected
         if p.returncode not in (0, 1):
             errmsg = (
                 err.decode(errors="replace").strip()
