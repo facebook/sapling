@@ -171,19 +171,19 @@ pub struct Backtrace<'a> {
 // performance if remote unwind is not needed. However the Rust `unwind`
 // binding does not do it. Consider bypassing the binding to maximize
 // performance.
+#[cfg(target_os = "linux")]
 #[macro_export]
 macro_rules! try_backtrace {
-    () => {
-        #[cfg(target_os = "linux")]
-        {
-            $crate::unwind::get_context!(context);
-            $crate::unwind::Cursor::local(context).map($crate::Backtrace::new)
-        }
-        #[cfg(not(target_os = "linux"))]
-        {
-            None
-        }
-    };
+    () => {{
+        $crate::unwind::get_context!(context);
+        $crate::unwind::Cursor::local(context).map($crate::Backtrace::new)
+    }};
+}
+
+#[cfg(not(target_os = "linux"))]
+#[macro_export]
+macro_rules! try_backtrace {
+    () => {{ None }};
 }
 
 impl<'a> Backtrace<'a> {
