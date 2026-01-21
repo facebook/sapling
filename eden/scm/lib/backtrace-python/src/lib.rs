@@ -64,9 +64,10 @@ pub static SUPPORTED_INFO: LazyLock<SupportedInfo> = LazyLock::new(SupportedInfo
 // for evalframe.c
 unsafe extern "C" {
     fn sapling_cext_evalframe_set_pass_through(enabled: u8);
-    fn sapling_cext_evalframe_stringify_code_lineno(
+
+    unsafe fn sapling_cext_evalframe_resolve_code_object(
         code: *mut libc::c_void, /* PyCodeObject */
-        line_no: libc::c_int,
+        pfilename: *mut *const libc::c_char,
     ) -> *const libc::c_char;
     fn sapling_cext_evalframe_extract_code_lineno_from_frame(
         frame: *mut libc::c_void, /* PyFrame */
@@ -121,13 +122,21 @@ impl SupplementalFrameResolver for PythonSupplementalFrameResolver {
     fn resolve_supplemental_info(&self, info: &SupplementalInfo) -> Option<String> {
         let [code, line_no] = *info;
         unsafe {
-            let desc = sapling_cext_evalframe_stringify_code_lineno(
+            let mut filename_ptr: *const libc::c_char = std::ptr::null();
+            let name_ptr = sapling_cext_evalframe_resolve_code_object(
                 code as *mut libc::c_void,
-                line_no as libc::c_int,
+                &mut filename_ptr,
             );
-            if !desc.is_null() {
-                let c_str = CStr::from_ptr(desc);
-                return Some(c_str.to_string_lossy().into_owned());
+            if !name_ptr.is_null() && !filename_ptr.is_null() {
+                let name_cstr = CStr::from_ptr(name_ptr);
+                let filename_cstr = CStr::from_ptr(filename_ptr);
+                let desc = format!(
+                    "{} at {}:{}",
+                    name_cstr.to_string_lossy(),
+                    filename_cstr.to_string_lossy(),
+                    line_no
+                );
+                return Some(desc);
             }
         }
         None
