@@ -139,6 +139,36 @@ EXPORT PyCodeObject* sapling_cext_evalframe_extract_code_lineno_from_frame(
 }
 
 /**
+ * Resolve a Python code object to function name.
+ * Also report the filename to `pfilename`.
+ *
+ * See also `sapling_cext_evalframe_stringify_code_lineno`.
+ * This function does not DECREF the code object.
+ */
+EXPORT const char* sapling_cext_evalframe_resolve_code_object(
+    PyCodeObject* code,
+    const char** pfilename) {
+  if (!code) {
+    goto out;
+  }
+  PyObject* filename_obj = code->co_filename;
+  PyObject* name_obj = code->co_name;
+  if (!filename_obj || !name_obj || !PyUnicode_Check(filename_obj) ||
+      !PyUnicode_Check(name_obj)) {
+    goto out;
+  }
+  const char* name = PyUnicode_AsUTF8(name_obj);
+  const char* filename = PyUnicode_AsUTF8(filename_obj);
+  if (filename == NULL || name == NULL) {
+    goto out;
+  }
+  *pfilename = filename;
+  return name;
+out:
+  return NULL;
+}
+
+/**
  * Resolve a (code object, lineno) to a string that includes filename, function
  * name, and line number. Not thread-safe.
  *
@@ -153,18 +183,10 @@ EXPORT const char* sapling_cext_evalframe_stringify_code_lineno(
     int line_no) {
   static char buf[4096] = {0};
   memset(buf, 0, sizeof buf);
-  if (!code) {
-    goto out;
-  }
-  PyObject* filename_obj = code->co_filename;
-  PyObject* name_obj = code->co_name;
-  if (!filename_obj || !name_obj || !PyUnicode_Check(filename_obj) ||
-      !PyUnicode_Check(name_obj)) {
-    goto out;
-  }
-  const char* filename = PyUnicode_AsUTF8(filename_obj);
-  const char* name = PyUnicode_AsUTF8(name_obj);
-  if (filename == NULL || name == NULL) {
+  const char* filename = NULL;
+  const char* name =
+      sapling_cext_evalframe_resolve_code_object(code, &filename);
+  if (!filename || !name) {
     goto out;
   }
   snprintf(buf, (sizeof buf) - 1, "%s at %s:%d", name, filename, line_no);
