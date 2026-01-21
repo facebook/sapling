@@ -27,5 +27,6 @@ rust_library(
         ),
     ],
     deps = [
+        "fbsource//third-party/rust:rustc-demangle",
     ],
 )

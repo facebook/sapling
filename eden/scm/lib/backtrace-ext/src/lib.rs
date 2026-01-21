@@ -31,6 +31,7 @@
 use std::sync::atomic::AtomicPtr;
 use std::sync::atomic::Ordering;
 
+use rustc_demangle::demangle;
 #[cfg(target_os = "linux")]
 pub use unwind;
 pub use unwind::Cursor;
@@ -139,7 +140,8 @@ impl<'a> Frame<'a> {
             },
             Ok(s) => {
                 let name = s.name();
-                format!("{}+{}", name, s.offset())
+                let demangled = demangle(name);
+                format!("{}+{}", demangled, s.offset())
             }
         }
         #[cfg(not(target_os = "linux"))]
