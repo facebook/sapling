@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import heapq
+from collections import deque
 from dataclasses import dataclass
 from typing import Iterable, List
 
@@ -188,3 +190,108 @@ def is_fastlog_enabled(repo) -> bool:
         return False
 
     return True
+
+
+def lazyparents(rev, path, public, parentfunc):
+    """lazyparents(rev, path, public, parentfunc)
+    Lazily yield parents of rev in reverse order until all nodes
+    in public have been reached or all revs have been exhausted
+
+    10
+     | \
+     9  8
+     |  | \
+     7  6  5
+     |  | /
+     4 *3   First move, 4 -3
+     | /
+     2 *2   Second move, 4 -1
+     | *
+     1
+
+    For example:
+    >>> path = "a"
+    >>> parents = { 10:[9, 8], 9:[7], 8:[6,5], 7:[4], 6:[3], 5:[3], 4:[2] }
+    >>> parents.update({ 3:[2], 2:[1], 1:[] })
+    >>> def parentfunc(rev, curr_path):
+    ...   for p in parents[rev]:
+    ...     yield (p, curr_path)
+    ...
+    >>> public = {1}
+    >>> list(lazyparents(10, path, public, parentfunc))
+    [(10, 'a'), (9, 'a'), (8, 'a'), (7, 'a'), (6, 'a'), (5, 'a'), (4, 'a'), (3, 'a'), (2, 'a'), (1, 'a')]
+    >>> public = {2, 3}
+    >>> list(lazyparents(10, path, public, parentfunc))
+    [(10, 'a'), (9, 'a'), (8, 'a'), (7, 'a'), (6, 'a'), (5, 'a'), (4, 'a'), (3, 'a'), (2, 'a')]
+    >>> parents[4] = [3]
+    >>> public = {3, 4, 5}
+    >>> list(lazyparents(10, path, public, parentfunc))
+    [(10, 'a'), (9, 'a'), (8, 'a'), (7, 'a'), (6, 'a'), (5, 'a'), (4, 'a'), (3, 'a')]
+    >>> parents[4] = [1]
+    >>> public = {3, 5, 7}
+    >>> list(lazyparents(10, path, public, parentfunc))
+    [(10, 'a'), (9, 'a'), (8, 'a'), (7, 'a'), (6, 'a'), (5, 'a'), (4, 'a'), (3, 'a'), (2, 'a'), (1, 'a')]
+
+    5
+    | \
+    4  3  # 3: mv a -> b
+    | /
+    2
+    |
+    1
+    >>> path = "b"
+    >>> parents = {(5, "b"): [(3, "b"), (4, "a")], (4, "a"): [(2, "a")], (3, "b"): [(2, "a")], (2, "a"): [(1, "a")]}
+    >>> def parentfunc(rev, curr_path):
+    ...   for p, parent_path in parents[(rev, curr_path)]:
+    ...     yield (p, parent_path)
+    ...
+    >>> public = {1}
+    >>> list(lazyparents(5, path, public, parentfunc))
+    [(5, 'b'), (4, 'a'), (3, 'b'), (2, 'a'), (1, 'a')]
+    """
+    seen = set()
+    heap = [(-rev, path)]
+
+    while heap:
+        cur, cur_path = heapq.heappop(heap)
+        cur = -cur
+        if (cur, cur_path) not in seen:
+            seen.add((cur, cur_path))
+            yield (cur, cur_path)
+
+            published = cur in public
+            if published:
+                # Down to one public ancestor; end generation
+                if len(public) == 1:
+                    return
+                public.remove(cur)
+
+            for p_rev, p_path in parentfunc(cur, cur_path):
+                heapq.heappush(heap, (-p_rev, p_path))
+                if published:
+                    public.add(p_rev)
+
+
+def findpublic(repo, rev, path, parentfunc):
+    public = set()
+    # Our criterion for invoking fastlog is finding a single
+    # common public ancestor from the current head. First we
+    # have to walk back through drafts to find all interesting
+    # public parents. Typically this will just be one, but if
+    # there are merged drafts, we may have multiple parents.
+    if repo[rev].ispublic():
+        public.add(rev)
+    else:
+        queue = deque()
+        queue.append((rev, path))
+        seen = set((rev, path))
+        while queue:
+            cur, cur_path = queue.popleft()
+            if (cur, cur_path) not in seen:
+                seen.add((cur, cur_path))
+                if repo[cur].mutable():
+                    for p_rev, p_path in parentfunc(cur, cur_path):
+                        queue.append((p_rev, p_path))
+                else:
+                    public.add(cur)
+    return public

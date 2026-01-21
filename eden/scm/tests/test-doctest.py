@@ -30,7 +30,7 @@ def testmod(name, optionflags=0, testtarget=None):
     runner.summarize()
 
 
-testmod("sapling.ext.fastlog")
+testmod("sapling.pathlog")
 testmod("sapling.ext.github.archive_commit")
 testmod("sapling.ext.github.github_repo_util")
 testmod("sapling.ext.github.pr_parser")
