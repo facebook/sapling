@@ -5,6 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use ascii_tree::AsciiOptions;
+use ascii_tree::DescribeTreeSpan;
+use ascii_tree::Tree;
+use ascii_tree::TreeSpan;
 use indexmap::IndexSet;
 
 #[derive(Default)]
@@ -90,6 +94,78 @@ impl BacktraceCollector {
             current_backtrace: Vec::new(),
         }
     }
+
+    /// Convert backtraces into a tree structure.
+    pub fn tree(&self) -> Tree<&str> {
+        let mut tree = Tree::default();
+        let mut current_path: Vec<usize> = Vec::new(); // Tree indexes for the current backtrace path
+        let mut start_time = 0;
+        for &id in &self.traces {
+            match id.into() {
+                TypedId::Reuse(n) => {
+                    current_path.truncate(n);
+                    for &node_id in &current_path {
+                        tree.0[node_id].duration += 1;
+                    }
+                    start_time += 1;
+                }
+                TypedId::Frame(idx) => {
+                    let frame_name = self.names.get_index(idx).map(|s| s.as_str()).unwrap();
+                    let parent_id = current_path.last().copied().unwrap_or(0);
+                    let tree_span = TreeSpan {
+                        start_time,
+                        duration: 1,
+                        extra: Some(frame_name),
+                        ..Default::default()
+                    };
+                    let tree_span_id = tree.push(parent_id, tree_span);
+                    current_path.push(tree_span_id);
+                }
+            }
+        }
+        tree
+    }
+
+    /// Render backtraces as an ASCII summary.
+    pub fn ascii_summary(&self) -> String {
+        let mut tree = self.tree();
+        let opts = AsciiOptions {
+            min_duration_to_hide: 1,
+            ..Default::default()
+        };
+        tree.merge_children(&opts, &|t| t.extra);
+
+        struct Desc;
+        impl DescribeTreeSpan<&str> for Desc {
+            fn name(&self, span: &TreeSpan<&str>) -> String {
+                let name = span.extra.unwrap_or_default();
+                match name.rsplit_once(" at ") {
+                    Some(v) => v.0.to_string(),
+                    None => name.to_string(),
+                }
+            }
+            fn source(&self, span: &TreeSpan<&str>) -> String {
+                let name = span.extra.unwrap_or_default();
+                match name.rsplit_once(" at ") {
+                    Some(v) => v.1.to_string(),
+                    None => String::new(),
+                }
+            }
+            fn duration_title(&self) -> String {
+                "Dur".to_string()
+            }
+            fn call_count(&self, span: &TreeSpan<&str>) -> String {
+                if span.call_count > 1 {
+                    format!(" ({})", span.call_count)
+                } else {
+                    String::new()
+                }
+            }
+        }
+
+        let rows = tree.render_ascii_rows(&opts, &Desc);
+        rows.to_string()
+    }
 }
 
 /// Iterator over collected backtraces.
@@ -154,5 +230,32 @@ mod tests {
         fn test_round_trip(backtraces: Vec<Vec<String>>) -> bool {
             check_round_trip(backtraces)
         }
+    }
+
+    #[test]
+    fn test_basic_ascii_summary() {
+        let mut collector = BacktraceCollector::default();
+        for names in [
+            &["_start", "main", "fib"][..],
+            &["_start", "main", "fib", "fib1 at a.py:12"],
+            &["_start", "main", "fib", "fib2 at a.py:22"],
+            &["_start", "main", "output"],
+        ] {
+            let names = names.iter().map(ToString::to_string).collect::<Vec<_>>();
+            collector.push_backtrace(names);
+        }
+        let out = format!("\n{}", collector.ascii_summary());
+        assert_eq!(
+            out,
+            r#"
+Start  Dur | Name               Source
+    1   +4 | _start            
+    1   +4 | main              
+    1   +3  \ fib              
+    2   +1   \ fib1             a.py:12
+    3   +1   \ fib2             a.py:22
+    4   +1  \ output           
+"#
+        );
     }
 }
