@@ -59,23 +59,44 @@ def lazyparents(rev, path, public, parentfunc):
      1
 
     For example:
+    >>> path = "a"
     >>> parents = { 10:[9, 8], 9:[7], 8:[6,5], 7:[4], 6:[3], 5:[3], 4:[2] }
     >>> parents.update({ 3:[2], 2:[1], 1:[] })
-    >>> parentfunc = lambda k: parents[k]
-    >>> public = set([1])
-    >>> for p in lazyparents(10, public, parentfunc): print p,
-    10 9 8 7 6 5 4 3 2 1
-    >>> public = set([2,3])
-    >>> for p in lazyparents(10, public, parentfunc): print p,
-    10 9 8 7 6 5 4 3 2
+    >>> def parentfunc(rev, curr_path):
+    ...   for p in parents[rev]:
+    ...     yield (p, curr_path)
+    ...
+    >>> public = {1}
+    >>> list(lazyparents(10, path, public, parentfunc))
+    [(10, 'a'), (9, 'a'), (8, 'a'), (7, 'a'), (6, 'a'), (5, 'a'), (4, 'a'), (3, 'a'), (2, 'a'), (1, 'a')]
+    >>> public = {2, 3}
+    >>> list(lazyparents(10, path, public, parentfunc))
+    [(10, 'a'), (9, 'a'), (8, 'a'), (7, 'a'), (6, 'a'), (5, 'a'), (4, 'a'), (3, 'a'), (2, 'a')]
     >>> parents[4] = [3]
-    >>> public = set([3,4,5])
-    >>> for p in lazyparents(10, public, parentfunc): print p,
-    10 9 8 7 6 5 4 3
+    >>> public = {3, 4, 5}
+    >>> list(lazyparents(10, path, public, parentfunc))
+    [(10, 'a'), (9, 'a'), (8, 'a'), (7, 'a'), (6, 'a'), (5, 'a'), (4, 'a'), (3, 'a')]
     >>> parents[4] = [1]
-    >>> public = set([3,5,7])
-    >>> for p in lazyparents(10, public, parentfunc): print p,
-    10 9 8 7 6 5 4 3 2 1
+    >>> public = {3, 5, 7}
+    >>> list(lazyparents(10, path, public, parentfunc))
+    [(10, 'a'), (9, 'a'), (8, 'a'), (7, 'a'), (6, 'a'), (5, 'a'), (4, 'a'), (3, 'a'), (2, 'a'), (1, 'a')]
+
+    5
+    | \
+    4  3  # 3: mv a -> b
+    | /
+    2
+    |
+    1
+    >>> path = "b"
+    >>> parents = {(5, "b"): [(3, "b"), (4, "a")], (4, "a"): [(2, "a")], (3, "b"): [(2, "a")], (2, "a"): [(1, "a")]}
+    >>> def parentfunc(rev, curr_path):
+    ...   for p, parent_path in parents[(rev, curr_path)]:
+    ...     yield (p, parent_path)
+    ...
+    >>> public = {1}
+    >>> list(lazyparents(5, path, public, parentfunc))
+    [(5, 'b'), (4, 'a'), (3, 'b'), (2, 'a'), (1, 'a')]
     """
     seen = set()
     heap = [(-rev, path)]
@@ -92,12 +113,12 @@ def lazyparents(rev, path, public, parentfunc):
                 # Down to one public ancestor; end generation
                 if len(public) == 1:
                     return
-                del public[cur]
+                public.remove(cur)
 
             for p_rev, p_path in parentfunc(cur, cur_path):
                 heapq.heappush(heap, (-p_rev, p_path))
                 if published:
-                    public[p_rev] = p_path
+                    public.add(p_rev)
 
 
 def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
@@ -215,14 +236,14 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
             break
 
     def findpublic(rev, path, parentfunc):
-        public = dict()
+        public = set()
         # Our criterion for invoking fastlog is finding a single
         # common public ancestor from the current head.  First we
         # have to walk back through drafts to find all interesting
         # public parents.  Typically this will just be one, but if
         # there are merged drafts, we may have multiple parents.
         if repo[rev].ispublic():
-            public[rev] = path
+            public.add(rev)
         else:
             queue = deque()
             queue.append((rev, path))
@@ -235,7 +256,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
                         for p_rev, p_path in parentfunc(cur, cur_path):
                             queue.append((p_rev, p_path))
                     else:
-                        public[cur] = cur_path
+                        public.add(cur)
         return public
 
     def parents(rev, path):
