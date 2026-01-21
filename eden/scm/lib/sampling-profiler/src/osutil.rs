@@ -63,7 +63,11 @@ impl Drop for OwnedFd {
 /// Create a pipe for SIGPROF signal handler use.
 /// The SIGPROF handler sends raw stack trace info to the pipe.
 /// The other end of the pipe consumes the data and might resolve symbols.
-/// The pipe is configured to have a larger buffer, so it's less likely to block.
+/// The pipe is configured with:
+/// - O_DIRECT: Enables "packet-mode". No need to deal with payload boundaries.
+/// - O_NONBLOCK on write: Slow reader won't block writers.
+/// - have a larger buffer to reduce changes data gets dropped (on supported
+///   platforms like Linux).
 /// Returns `[read_fd, write_fd]`.
 pub fn setup_pipe() -> io::Result<[OwnedFd; 2]> {
     unsafe {
@@ -74,12 +78,26 @@ pub fn setup_pipe() -> io::Result<[OwnedFd; 2]> {
         }
         let (rfd, wfd) = (OwnedFd(pipe_fds[0]), OwnedFd(pipe_fds[1]));
 
-        // F_SETPIPE_SZ is linux specific.
-        #[cfg(target_os = "linux")]
-        {
-            let buffer_size = 1 << 6;
-            // Failing to set buffer size is not fatal.
-            let _ = libc::fcntl(pipe_fds[1], libc::F_SETPIPE_SZ, buffer_size);
+        // The default pipe buffer is 4KB. It only fits 4 frames, too small for
+        // a backtrace. Increase it to 1MB, which might fit 900 frames.
+        let buffer_size = 1 << 20;
+        let ret = libc::fcntl(pipe_fds[1], libc::F_SETPIPE_SZ, buffer_size);
+        if ret == -1 {
+            return Err(io::Error::last_os_error());
+        } else if ret < buffer_size {
+            return Err(io::Error::other(format!(
+                "pipe buffer {} is too small",
+                ret
+            )));
+        }
+
+        // Set the write end as non-blocking.
+        let flags = libc::fcntl(pipe_fds[1], libc::F_GETFL, 0);
+        if flags == -1 {
+            return Err(io::Error::last_os_error());
+        }
+        if libc::fcntl(pipe_fds[1], libc::F_SETFL, flags | libc::O_NONBLOCK) == -1 {
+            return Err(io::Error::last_os_error());
         }
 
         Ok([rfd, wfd])
