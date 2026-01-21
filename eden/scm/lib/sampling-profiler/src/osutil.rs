@@ -82,6 +82,7 @@ pub fn setup_signal_timer(
     tid: libc::pid_t,
     interval_secs: i64,
     interval_nsecs: i64,
+    sigev_value: isize,
 ) -> io::Result<libc::timer_t> {
     #[cfg(target_os = "linux")]
     unsafe {
@@ -89,6 +90,9 @@ pub fn setup_signal_timer(
         sev.sigev_notify = libc::SIGEV_THREAD_ID;
         sev.sigev_signo = sig;
         sev.sigev_notify_thread_id = tid;
+        // In C, sigev is a union of int and `void*`.
+        // So it's okay to treat it as an int, not a pointer.
+        sev.sigev_value = mem::transmute_copy(&sigev_value);
 
         let mut timer: libc::timer_t = mem::zeroed();
 
