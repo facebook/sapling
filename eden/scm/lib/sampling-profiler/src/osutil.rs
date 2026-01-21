@@ -111,7 +111,7 @@ pub fn setup_signal_timer(
     }
 
     #[cfg(not(target_os = "linux"))]
-    unimplemented!();
+    Err(io::ErrorKind::Unsupported.into())
 }
 
 /// Stop and delete a signal timer created by `setup_signal_timer`.
@@ -125,7 +125,7 @@ pub fn stop_signal_timer(timer: libc::timer_t) -> io::Result<()> {
     }
 
     #[cfg(not(target_os = "linux"))]
-    unimplemented!();
+    Err(io::ErrorKind::Unsupported.into())
 }
 
 fn sigmask_sigprof(sig: libc::c_int, block: bool) {
