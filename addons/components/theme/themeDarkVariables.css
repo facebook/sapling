@@ -49,4 +49,22 @@
   --panel-tab-foreground: #e7e7e799;
   --panel-view-background: #1e1e1e;
   --panel-view-border: #80808059;
+
+  /* Graphite-inspired color palette */
+  --graphite-bg: #1a1f36;
+  --graphite-bg-subtle: #1e2440;
+
+  --graphite-text-primary: #e8eaed;
+  --graphite-text-secondary: #9aa0a6;
+
+  --graphite-accent: #4a90e2;
+  --graphite-accent-hover: #5fa3f5;
+
+  --graphite-border: rgba(255, 255, 255, 0.1);
+  --graphite-border-subtle: rgba(255, 255, 255, 0.05);
+
+  --graphite-hover-bg: rgba(255, 255, 255, 0.03);
+  --graphite-selected-bg: rgba(74, 144, 226, 0.15);
+
+  --graphite-glow: rgba(74, 144, 226, 0.15);
 }
