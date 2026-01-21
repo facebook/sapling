@@ -5,11 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use cpython_ext::cpython::*;
+use sampling_profiler::BacktraceCollector;
 use sampling_profiler::Profiler;
 
 fn native_fib(py: Python, n: u64) -> PyResult<u64> {
@@ -54,6 +57,10 @@ fn print_traceback(bt: &[String]) {
     }
 }
 
+fn is_boring(name: &str) -> bool {
+    name.contains("cpython[") || name == "__rust_try"
+}
+
 fn main() {
     let gil = Python::acquire_gil();
     let py = gil.python();
@@ -65,7 +72,23 @@ fn main() {
 
     backtrace_python::init();
 
-    let profiler = Profiler::new(Duration::from_millis(500), Box::new(print_traceback)).unwrap();
+    let collector = Arc::new(Mutex::new(BacktraceCollector::default()));
+    let profiler = Profiler::new(
+        Duration::from_millis(500),
+        Box::new({
+            let collector = collector.clone();
+            move |bt| {
+                print_traceback(bt);
+                let mut bt: Vec<String> = bt.iter().filter(|n| !is_boring(n)).cloned().collect();
+                bt.reverse();
+                collector.lock().unwrap().push_backtrace(bt);
+            }
+        }),
+    )
+    .unwrap();
     do_some_work(py);
     drop(profiler);
+
+    let summary = collector.lock().unwrap().ascii_summary();
+    println!("\nASCII tree summary:\n{}", summary)
 }
