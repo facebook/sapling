@@ -5,7 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+//! `backtrace-ext` extension to support resolving Python frames.
+//!
+//! Call `init()` after Python initialization to attempt to enable Python frame
+//! resolution. Not all platforms are supported. Check `SUPPORTED_INFO` for
+//! whether it's supported or not.
+
 use std::ffi::CStr;
+use std::sync::LazyLock;
 
 use backtrace_ext::FrameDecision;
 use backtrace_ext::SupplementalFrameResolver;
@@ -20,8 +27,7 @@ mod libpython_filter;
 /// Python interpreter must be initialized at this time.
 /// This function is a no-op if the platform is not supported.
 pub fn init() {
-    let is_supported = cfg!(all(target_os = "linux", target_arch = "x86_64"))
-        && (unsafe { sapling_cext_evalframe_resolve_frame_is_supported() } != 0);
+    let is_supported = SUPPORTED_INFO.is_supported();
     if is_supported {
         static RESOLVER: PythonSupplementalFrameResolver = PythonSupplementalFrameResolver;
         static RESOLVER_FAT_REF: &dyn SupplementalFrameResolver = &RESOLVER;
@@ -31,6 +37,32 @@ pub fn init() {
         unsafe { sapling_cext_evalframe_set_pass_through(1) }
     }
 }
+
+/// Information about whether the Python frame resolution is supported or not.
+/// All fields must be `true` to indicate support.
+#[derive(Clone, Copy, Debug)]
+pub struct SupportedInfo {
+    /// Whether the (OS, architecture) combination is supported.
+    pub os_arch: bool,
+    /// Whether the C evalframe logic supports frame resolution.
+    /// This is usually affected by the cpython version.
+    pub c_evalframe: bool,
+}
+
+impl SupportedInfo {
+    pub fn is_supported(&self) -> bool {
+        self.os_arch && self.c_evalframe
+    }
+
+    fn new() -> Self {
+        Self {
+            os_arch: cfg!(all(target_os = "linux", target_arch = "x86_64")),
+            c_evalframe: unsafe { sapling_cext_evalframe_resolve_frame_is_supported() } != 0,
+        }
+    }
+}
+
+pub static SUPPORTED_INFO: LazyLock<SupportedInfo> = LazyLock::new(SupportedInfo::new);
 
 // for evalframe.c
 unsafe extern "C" {
