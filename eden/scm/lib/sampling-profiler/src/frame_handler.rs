@@ -40,7 +40,7 @@ pub enum MaybeFrame {
 /// specific `process_func`.
 ///
 /// This function is intended to run in a separate thread.
-pub fn frame_reader_loop(read_fd: OwnedFd, process_func: ResolvedBacktraceProcessFunc) {
+pub fn frame_reader_loop(read_fd: OwnedFd, mut process_func: ResolvedBacktraceProcessFunc) {
     let mut read_file = match read_fd.into_raw_fd() {
         Some(fd) => unsafe { fs::File::from_raw_fd(fd) },
         None => return,

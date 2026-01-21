@@ -28,4 +28,4 @@ pub use libc;
 pub use profiler::Profiler;
 
 /// Function to process backtraces.
-pub type ResolvedBacktraceProcessFunc = Box<dyn Fn(&[String]) + Send + Sync + 'static>;
+pub type ResolvedBacktraceProcessFunc = Box<dyn FnMut(&[String]) + Send + Sync + 'static>;
