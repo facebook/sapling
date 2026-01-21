@@ -129,8 +129,8 @@
 
 .drawer .resizable-drag-handle:hover,
 .drawer .resizable-drag-handle.resizing {
-  background-color: var(--focus-border);
-  border-color: var(--focus-border);
+  background-color: var(--graphite-accent);
+  border-color: var(--graphite-accent);
   transition:
     background-color 0s 300ms,
     border-color 0s 300ms;
@@ -141,13 +141,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 0px solid var(--panel-view-border);
+  border: 0px solid var(--graphite-border);
   cursor: pointer;
   padding: var(--item-padding);
   gap: var(--halfpad);
 }
 .drawer-label:hover {
-  background-color: var(--list-hover-background);
+  background-color: var(--graphite-hover-bg);
+  box-shadow: 0 0 4px var(--graphite-glow);
 }
 
 .drawer-left .drawer-label {
