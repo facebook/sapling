@@ -9,6 +9,7 @@
 
 use std::io;
 use std::mem;
+use std::ptr;
 
 // Block `sig` signals. Explicitly opt-out profiling for the current thread
 // and new threads spawned from the current thread.
@@ -31,18 +32,47 @@ pub fn get_thread_id() -> libc::pid_t {
     unimplemented!()
 }
 
+/// Similar to stdlib `OwnedFd`.
+/// But also allows a "null" state, and supports `close` early.
+pub struct OwnedFd(pub i32);
+
+impl OwnedFd {
+    pub fn close(&mut self) {
+        if self.0 >= 0 {
+            let _ = unsafe { libc::close(self.0) };
+            self.0 = -1;
+        }
+    }
+
+    pub fn into_raw_fd(mut self) -> Option<i32> {
+        let mut ret = None;
+        if self.0 >= 0 {
+            ret = Some(self.0);
+            self.0 = -1;
+        }
+        ret
+    }
+}
+
+impl Drop for OwnedFd {
+    fn drop(&mut self) {
+        self.close();
+    }
+}
+
 /// Create a pipe for SIGPROF signal handler use.
 /// The SIGPROF handler sends raw stack trace info to the pipe.
 /// The other end of the pipe consumes the data and might resolve symbols.
 /// The pipe is configured to have a larger buffer, so it's less likely to block.
 /// Returns `[read_fd, write_fd]`.
-pub fn setup_pipe() -> io::Result<[libc::c_int; 2]> {
+pub fn setup_pipe() -> io::Result<[OwnedFd; 2]> {
     unsafe {
         let mut pipe_fds: [libc::c_int; 2] = [0; 2];
 
         if libc::pipe2(pipe_fds.as_mut_ptr(), libc::O_DIRECT) != 0 {
             return Err(io::Error::last_os_error());
         }
+        let (rfd, wfd) = (OwnedFd(pipe_fds[0]), OwnedFd(pipe_fds[1]));
 
         // F_SETPIPE_SZ is linux specific.
         #[cfg(target_os = "linux")]
@@ -52,7 +82,7 @@ pub fn setup_pipe() -> io::Result<[libc::c_int; 2]> {
             let _ = libc::fcntl(pipe_fds[1], libc::F_SETPIPE_SZ, buffer_size);
         }
 
-        Ok(pipe_fds)
+        Ok([rfd, wfd])
     }
 }
 
@@ -75,6 +105,23 @@ pub fn setup_signal_handler(
     Ok(())
 }
 
+pub struct OwnedTimer(*mut libc::c_void);
+
+impl Drop for OwnedTimer {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}
+
+impl OwnedTimer {
+    pub fn stop(&mut self) {
+        if !self.0.is_null() {
+            let _ = stop_signal_timer(self.0);
+            self.0 = ptr::null_mut();
+        }
+    }
+}
+
 /// Send `sig` to `tid` at the specified interval. This is a Linux-only feature.
 /// Returns the timer handle that can be used to stop the timer later.
 pub fn setup_signal_timer(
@@ -83,7 +130,7 @@ pub fn setup_signal_timer(
     interval_secs: i64,
     interval_nsecs: i64,
     sigev_value: isize,
-) -> io::Result<libc::timer_t> {
+) -> io::Result<OwnedTimer> {
     #[cfg(target_os = "linux")]
     unsafe {
         let mut sev: libc::sigevent = mem::zeroed();
@@ -100,6 +147,7 @@ pub fn setup_signal_timer(
         if libc::timer_create(libc::CLOCK_MONOTONIC, &mut sev, &mut timer) != 0 {
             return Err(io::Error::last_os_error());
         }
+        let timer = OwnedTimer(timer);
 
         let mut spec: libc::itimerspec = mem::zeroed();
         spec.it_interval.tv_sec = interval_secs;
@@ -107,7 +155,7 @@ pub fn setup_signal_timer(
         spec.it_value.tv_sec = interval_secs;
         spec.it_value.tv_nsec = interval_nsecs;
 
-        if libc::timer_settime(timer, 0, &spec, std::ptr::null_mut()) != 0 {
+        if libc::timer_settime(timer.0, 0, &spec, std::ptr::null_mut()) != 0 {
             return Err(io::Error::last_os_error());
         }
 

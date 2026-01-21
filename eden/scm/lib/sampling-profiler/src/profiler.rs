@@ -6,13 +6,14 @@
  */
 
 use std::marker::PhantomData;
-use std::ptr;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
 use crate::frame_handler;
 use crate::osutil;
+use crate::osutil::OwnedFd;
+use crate::osutil::OwnedTimer;
 
 /// Represents a profiling configuration for the owning thread.
 /// Contains resources (fd, timer) allocated.
@@ -38,40 +39,6 @@ pub struct Profiler {
     _marker: PhantomData<*const ()>,
 }
 
-pub(crate) struct OwnedTimer(*mut libc::c_void);
-
-impl Drop for OwnedTimer {
-    fn drop(&mut self) {
-        self.stop();
-    }
-}
-
-impl OwnedTimer {
-    fn stop(&mut self) {
-        if !self.0.is_null() {
-            let _ = osutil::stop_signal_timer(self.0);
-            self.0 = ptr::null_mut();
-        }
-    }
-}
-
-pub(crate) struct OwnedFd(pub i32);
-
-impl OwnedFd {
-    fn close(&mut self) {
-        if self.0 >= 0 {
-            let _ = unsafe { libc::close(self.0) };
-            self.0 = -1;
-        }
-    }
-}
-
-impl Drop for OwnedFd {
-    fn drop(&mut self) {
-        self.close();
-    }
-}
-
 const SIG: i32 = libc::SIGPROF;
 
 impl Profiler {
@@ -87,8 +54,6 @@ impl Profiler {
         // - write_fd: used by the signal handler. owned by `Profiler`.
         //   will be closed when dropping `Profiler`.
         let [read_fd, write_fd] = osutil::setup_pipe()?;
-        assert!(write_fd >= 0);
-        let pipe_write_fd = OwnedFd(write_fd);
 
         // TODO: osutil::setup_signal_handler(SIG, signal_handler)
         osutil::unblock_signal(SIG);
@@ -110,13 +75,12 @@ impl Profiler {
             thread_id,
             secs.try_into()?,
             nsecs.try_into()?,
-            write_fd as isize,
+            write_fd.0 as isize,
         )?;
-        let timer_id = OwnedTimer(timer_id);
 
         Ok(Self {
             timer_id,
-            pipe_write_fd,
+            pipe_write_fd: write_fd,
             handle: Some(handle),
             _marker: PhantomData,
         })

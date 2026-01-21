@@ -11,6 +11,8 @@ use std::os::fd::FromRawFd;
 
 use backtrace_ext::Frame;
 
+use crate::osutil::OwnedFd;
+
 /// Function to process backtraces.
 pub type ResolvedBacktraceProcessFunc = Box<dyn Fn(&[String]) + Send + Sync + 'static>;
 
@@ -29,8 +31,11 @@ pub enum MaybeFrame<'a> {
 /// specific `process_func`.
 ///
 /// This function is intended to run in a separate thread.
-pub fn frame_reader_loop(read_fd: libc::c_int, process_func: ResolvedBacktraceProcessFunc) {
-    let mut read_file = unsafe { fs::File::from_raw_fd(read_fd) };
+pub fn frame_reader_loop(read_fd: OwnedFd, process_func: ResolvedBacktraceProcessFunc) {
+    let mut read_file = match read_fd.into_raw_fd() {
+        Some(fd) => unsafe { fs::File::from_raw_fd(fd) },
+        None => return,
+    };
     let mut frames = Vec::new();
     'main_loop: loop {
         let mut buf: [u8; std::mem::size_of::<MaybeFrame>()] = [0; _];
