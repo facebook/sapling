@@ -92,8 +92,20 @@ void sapling_cext_evalframe_set_pass_through(unsigned char enabled) {
  * relatively "stable", until the module gets dropped - rare, but can still
  * happen.
  *
- * Returns a new reference. The callsite must call `Py_XDECREF` on the return
- * value.
+ * Returns a new reference. The callsite might call `Py_XDECREF` on
+ * the return value.
+ *
+ * This fucnction might be called without the GIL (see backtrace-python),
+ * in a signal handler (see sampling-profiler).
+ *
+ * It should not allocate, deallocate anything, or mutate Python objects.
+ * PyFrame_GetCode might do INCREF intentally, which is probably okay.
+ *
+ * SAFETY: The Python thread that keeps the frame objects alive should be
+ * paused at the time of calling this function (e.g. running a signal handler
+ * that calls this function, or paused by a debugger). So the frame and its
+ * referred Python objects should not have refcount drop to 0 even if the
+ * Python intepreter is running in another thread.
  */
 EXPORT PyCodeObject* sapling_cext_evalframe_extract_code_lineno_from_frame(
     PyFrame* f,
@@ -130,7 +142,11 @@ EXPORT PyCodeObject* sapling_cext_evalframe_extract_code_lineno_from_frame(
  * Resolve a (code object, lineno) to a string that includes filename, function
  * name, and line number. Not thread-safe.
  *
- * Calls `Py_XDECREF(code)`.
+ * This fucnction might be called without the GIL (see backtrace-python).
+ * It should not allocate, deallocate, or mutate Python objects.
+ *
+ * Therefore, while `Py_XDECREF(code)` would ideally be called, it's skipped
+ * here for safety.
  */
 EXPORT const char* sapling_cext_evalframe_stringify_code_lineno(
     PyCodeObject* code,
@@ -153,7 +169,24 @@ EXPORT const char* sapling_cext_evalframe_stringify_code_lineno(
   }
   snprintf(buf, (sizeof buf) - 1, "%s at %s:%d", name, filename, line_no);
 out:
-  Py_XDECREF(code);
+  // Intentionally leak the reference. We don't have GIL and DECREF is risky.
+  // Py_XDECREF(code);
+  //
+  // Note: code objects are rarely de-allocated. They are usually kept by
+  // the module objects. The modules usually have a lifetime similar to the
+  // interpreter, unless with `reload` or dropping modules manually.
+  // If the refcnt reaches INTMAX, the object becomes "immortal" and the
+  // refcnt won't overflow.
+  //
+  // Note: leaking code objects is (mostly [2]) limited to memory overhead
+  // and is resource-safe. In standard Python usage, code objects are
+  // immutable blueprints: their references (ex. `co_consts`) only contain
+  // immutable values (tuples, frozensets, strings, etc.) and do not hold
+  // mutable containers like lists or dict [1]. Thus, they cannot accumulate
+  // runtime resources (like file handles) that require `__del__`.
+  // [1]: This is a cpython implementation detail.
+  // [2]: Advanced logic, like `code.replace(co_consts=...)` could produce
+  // a code object that refers anything.
   return buf;
 }
 
