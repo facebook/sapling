@@ -12,8 +12,19 @@
   width: 100%;
   height: 100%;
 
+  /* Graphite color scheme - deep navy background */
+  background-color: var(--graphite-bg);
+  color: var(--graphite-text-primary);
+
+  /* Layout spacing tokens for breathing room */
+  --drawer-padding: 16px;
+  --section-gap: 12px;
+  --item-padding: 8px;
+  --prominent-padding: 20px;
+
+  /* Sizing tokens */
   --drag-handle-size: 7px;
-  --drawer-label-size: calc(2 * var(--halfpad) + 1ch);
+  --drawer-label-size: calc(2 * var(--item-padding) + 1ch);
   --min-pane-width: 50px;
 }
 .drawers-horizontal {
@@ -28,10 +39,14 @@
 .drawer-left > div:nth-child(3),
 .drawer-right > div:nth-child(3) {
   width: calc(100% - var(--drawer-label-size) - var(--drag-handle-size) - var(--pad) - 2px);
+  /* Consistent padding for drawer content areas */
+  padding: var(--drawer-padding);
 }
 .drawer-top > div:nth-child(3),
 .drawer-bottom > div:nth-child(3) {
   height: calc(100% - var(--drawer-label-size) - var(--drag-handle-size) - var(--pad) - 2px);
+  /* Consistent padding for drawer content areas */
+  padding: var(--drawer-padding);
 }
 
 .drawer-main-content {
@@ -40,6 +55,13 @@
   flex-direction: column;
   flex-grow: 1;
   width: 100%;
+  /* Extra breathing room for the prominent middle column */
+  padding: var(--prominent-padding);
+  /* Unified Graphite background */
+  background-color: var(--graphite-bg);
+  /* Subtle borders for section separation */
+  border-left: 1px solid var(--graphite-border);
+  border-right: 1px solid var(--graphite-border);
 }
 
 .drawer {
@@ -47,6 +69,8 @@
   flex: none;
   overflow-y: auto;
   justify-content: flex-end;
+  /* Unified Graphite background across all columns */
+  background-color: var(--graphite-bg);
 }
 
 .drawer.drawer-top {
@@ -81,7 +105,7 @@
 }
 
 .drawer .resizable-drag-handle {
-  border: 1px solid var(--panel-view-border);
+  border: 1px solid var(--graphite-border);
   user-select: none;
 }
 
@@ -119,7 +143,7 @@
   justify-content: center;
   border: 0px solid var(--panel-view-border);
   cursor: pointer;
-  padding: var(--halfpad);
+  padding: var(--item-padding);
   gap: var(--halfpad);
 }
 .drawer-label:hover {
