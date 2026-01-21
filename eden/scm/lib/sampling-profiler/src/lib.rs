@@ -14,6 +14,7 @@
 
 mod frame_handler;
 mod osutil;
-mod state;
+mod profiler;
 
 pub use backtrace_ext; // re-export
+pub use profiler::Profiler;
