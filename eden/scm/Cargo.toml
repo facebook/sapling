@@ -222,6 +222,7 @@ members = [
   "saplingnative/bindings",
   "saplingnative/bindings/modules/pyatexit",
   "saplingnative/bindings/modules/pyauth",
+  "saplingnative/bindings/modules/pybacktrace",
   "saplingnative/bindings/modules/pyblackbox",
   "saplingnative/bindings/modules/pybytes",
   "saplingnative/bindings/modules/pycats",

@@ -39,6 +39,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             // ]]]
             atexit,
             auth,
+            backtrace,
             blackbox,
             bytes,
             cats,

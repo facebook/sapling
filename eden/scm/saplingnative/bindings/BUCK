@@ -17,6 +17,7 @@ rust_python_library(
         # ]]]
         "//eden/scm/saplingnative/bindings/modules/pyatexit:pyatexit",
         "//eden/scm/saplingnative/bindings/modules/pyauth:pyauth",
+        "//eden/scm/saplingnative/bindings/modules/pybacktrace:pybacktrace",
         "//eden/scm/saplingnative/bindings/modules/pyblackbox:pyblackbox",
         "//eden/scm/saplingnative/bindings/modules/pybytes:pybytes",
         "//eden/scm/saplingnative/bindings/modules/pycats:pycats",

@@ -10,6 +10,7 @@ cpython = { version = "0.7.2", features = ["python3-sys"], default-features = fa
 paste = "1.0.14"
 pyatexit = { version = "0.1.0", path = "modules/pyatexit" }
 pyauth = { version = "0.1.0", path = "modules/pyauth" }
+pybacktrace = { version = "0.1.0", path = "modules/pybacktrace" }
 pyblackbox = { version = "0.1.0", path = "modules/pyblackbox" }
 pybytes = { version = "0.1.0", path = "modules/pybytes" }
 pycats = { version = "0.1.0", path = "modules/pycats" }
