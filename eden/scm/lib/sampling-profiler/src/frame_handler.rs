@@ -57,3 +57,16 @@ pub fn frame_reader_loop(read_fd: OwnedFd, process_func: ResolvedBacktraceProces
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_frame_size() {
+        // See `man pipe2`. We use `O_DIRECT` for "packet-mode" pipes.
+        // The packet has size limit: `PIPE_BUF`. The payload (MaybeFrame)
+        // must fit in.
+        assert!(std::mem::size_of::<MaybeFrame>() <= libc::PIPE_BUF);
+    }
+}
