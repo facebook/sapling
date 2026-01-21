@@ -43,18 +43,18 @@ def pathlog(repo, node, path, is_prefetch_commit_text=False) -> Iterable[bytes]:
             repo,
             node,
             path,
-            batch_size=BATCH_SIZE,
             is_prefetch_commit_text=is_prefetch_commit_text,
             stats=PathlogStats(),
         )
 
 
 def strategy_pathhisotry(
-    repo, node, path, batch_size, is_prefetch_commit_text=False, stats=None
+    repo, node, path, is_prefetch_commit_text=False, stats=None
 ) -> List[bytes]:
     dag = repo.changelog.dag
     start_time = int(timer())
     hist = repo.pathhistory([path], dag.ancestors([node]))
+    batch_size = BATCH_SIZE
     while True:
         nodes = []
 
@@ -93,7 +93,6 @@ def strategy_fastlog(
     repo,
     node,
     path,
-    batch_size=None,
     is_prefetch_commit_text=False,
     stats=None,
     scm_type: str = "hg",
@@ -109,9 +108,7 @@ def strategy_fastlog(
     start_hex = hex(node)
     skip = 0
     use_mutable_history = repo.ui.configbool("fastlog", "followmutablehistory")
-    batch_size = batch_size or repo.ui.configint(
-        "fastlog", "batchsize", FASTLOG_BATCH_SIZE
-    )
+    batch_size = repo.ui.configint("fastlog", "batchsize", FASTLOG_BATCH_SIZE)
     start_time = int(timer())
 
     while True:
