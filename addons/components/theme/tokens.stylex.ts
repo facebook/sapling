@@ -116,3 +116,47 @@ export const font = stylex.defineVars({
   big: '110%',
   bigger: '120%',
 });
+
+// Graphite-inspired color palette for deep navy UI
+export const graphiteColors = stylex.defineVars({
+  // Deep navy background (Graphite-style)
+  bg: 'var(--graphite-bg)',
+  bgSubtle: 'var(--graphite-bg-subtle)',
+
+  // Text colors for readability on navy
+  textPrimary: 'var(--graphite-text-primary)',
+  textSecondary: 'var(--graphite-text-secondary)',
+
+  // Soft blue accent for interactive elements
+  accent: 'var(--graphite-accent)',
+  accentHover: 'var(--graphite-accent-hover)',
+
+  // Borders and dividers
+  border: 'var(--graphite-border)',
+  borderSubtle: 'var(--graphite-border-subtle)',
+
+  // Hover states
+  hoverBg: 'var(--graphite-hover-bg)',
+  selectedBg: 'var(--graphite-selected-bg)',
+
+  // Subtle glow for hover effects
+  glowColor: 'var(--graphite-glow)',
+});
+
+// Layout-specific spacing tokens for breathing room
+export const layoutSpacing = stylex.defineVars({
+  // Drawer and panel internal padding
+  drawerPadding: '16px',
+
+  // Content section spacing
+  sectionGap: '12px',
+
+  // Compact internal padding for list items
+  itemPadding: '8px',
+
+  // Extra breathing room for prominent sections (middle column)
+  prominentPadding: '20px',
+
+  // Gap between columns/sections
+  columnGap: '1px',
+});
