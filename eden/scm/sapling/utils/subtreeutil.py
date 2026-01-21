@@ -16,6 +16,7 @@ import bindings
 
 from .. import error, match as matchmod, node, pathutil, util
 from ..i18n import _
+from .pathutil import path_starts_with
 
 # this config is for testing purpose only
 CFG_ALLOW_ANY_SOURCE_COMMIT = "allow-any-source-commit"
@@ -814,23 +815,6 @@ def find_subtree_import(repo, node, path):
             source_path = source_path.lstrip("/")
             return (im.url, im.from_commit, source_path)
     return None
-
-
-def path_starts_with(path, prefix):
-    """Return True if 'path' is the same as 'prefix' or lives underneath it.
-
-    Examples
-    --------
-    >>> path_starts_with("/var/log/nginx/error.log", "/var/log")
-    True
-    >>> path_starts_with("/var/logs", "/var/log")   # subtle typo
-    False
-    >>> path_starts_with("src/module/util.py", "src")  # relative paths fine
-    True
-    """
-    if path == prefix:
-        return True
-    return path.startswith(prefix + "/")
 
 
 def xrepo_link(

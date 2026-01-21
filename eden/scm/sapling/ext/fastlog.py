@@ -30,7 +30,7 @@ from sapling.pathlog import (
     lazyparents,
     strategy_fastlog,
 )
-from sapling.utils import subtreeutil
+from sapling.utils import pathutil, subtreeutil
 
 
 class MultiPathError(ValueError):
@@ -122,7 +122,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst: bool = False):
         public = findpublic(repo, startrev, path, parents)
         matched_revs = []
         for parent, path in lazyparents(startrev, path, public, parents):
-            if any(subtreeutil.path_starts_with(f, path) for f in repo[parent].files()):
+            if any(pathutil.path_starts_with(f, path) for f in repo[parent].files()):
                 matched_revs.append(parent)
 
         repo.ui.debug(
