@@ -167,6 +167,7 @@ members = [
   "lib/runlog",
   "lib/sampling",
   "lib/sampling-profiler",
+  "lib/sampling-profiler/examples",
   "lib/sparse",
   "lib/spawn-ext",
   "lib/status",

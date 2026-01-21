@@ -1,0 +1,24 @@
+load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+
+oncall("sapling")
+
+rust_binary(
+    name = "sampling-profiler-example",
+    srcs = ["main.rs"],
+    autocargo = {
+        "cargo_toml_config": {
+            "package": {
+                "description": "Example for the sampling-profiler library.",
+                "homepage": "https://sapling-scm.com/",
+                "license": "MIT",
+                "name": "sapling-sampling-profiler-example",
+                "repository": "https://github.com/facebook/sapling",
+            },
+        },
+    },
+    deps = [
+        "//eden/scm/lib/backtrace-python:backtrace-python",
+        "//eden/scm/lib/cpython-ext:cpython-ext",
+        "//eden/scm/lib/sampling-profiler:sampling-profiler",
+    ],
+)
