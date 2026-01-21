@@ -14,6 +14,7 @@ use async_trait::async_trait;
 use context::CoreContext;
 use context::PerfCounterType;
 use dashmap::DashMap;
+use futures_stats::TimedTryFutureExt;
 use itertools::Itertools;
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::OssRemoteDatabaseConfig;
@@ -26,6 +27,7 @@ use rendezvous::ConfigurableRendezVousController;
 use rendezvous::RendezVous;
 use rendezvous::RendezVousOptions;
 use rendezvous::RendezVousStats;
+use scuba_ext::FutureStatsScubaExt;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::Connection;
@@ -54,6 +56,10 @@ define_stats! {
     add_bulks: timeseries(Rate, Sum),
     insert_working_copy_eqivalence: timeseries(Rate, Sum),
     get_equivalent_working_copy: timeseries(Rate, Sum),
+    // Duration of fetches
+    get_equivalent_working_copy_duration_us: timeseries(Average, Count),
+    // Duration of fetches using consistent read queries
+    cons_read_get_equivalent_working_copy_duration_us: timeseries(Average, Count),
 }
 
 #[derive(Clone)]
@@ -604,68 +610,96 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                 .map(|cri| cri.correlator.as_str()),
             Some("synced_commit_mapping.get_equivalent_working_copy"),
         );
+        let used_consistent_reads = cons_read_opts.is_some();
 
-        let maybe_row = if let Some(cons_read_opts) = cons_read_opts {
-            // Use query_with_consistency with return_early_if to short-circuit
-            // when rows are found (avoiding unnecessary HLC checks). If no rows
-            // are found, HLC is used to verify the replica was up-to-date before
-            // trusting the empty result. Falls back to primary only if HLC is missing.
-            type WcEquivRow = (
-                RepositoryId,
-                ChangesetId,
-                RepositoryId,
-                Option<ChangesetId>,
-                Option<CommitSyncConfigVersion>,
-            );
-            let return_early_if: Arc<Box<dyn Fn(&Vec<WcEquivRow>) -> bool + Send + Sync>> =
-                Arc::new(Box::new(|rows: &Vec<WcEquivRow>| !rows.is_empty()));
+        let timed_res = async {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsReplica);
 
-            let connections = SqlConnections {
-                write_connection: self.write_connection.clone(),
-                read_connection: self.read_connection.conn.clone(),
-                read_master_connection: self.read_master_connection.conn.clone(),
-            };
+            let maybe_row = if let Some(cons_read_opts) = cons_read_opts {
+                // Use query_with_consistency with return_early_if to short-circuit
+                // when rows are found (avoiding unnecessary HLC checks). If no rows
+                // are found, HLC is used to verify the replica was up-to-date before
+                // trusting the empty result. Falls back to primary only if HLC is missing.
+                type WcEquivRow = (
+                    RepositoryId,
+                    ChangesetId,
+                    RepositoryId,
+                    Option<ChangesetId>,
+                    Option<CommitSyncConfigVersion>,
+                );
+                let return_early_if: Arc<Box<dyn Fn(&Vec<WcEquivRow>) -> bool + Send + Sync>> =
+                    Arc::new(Box::new(|rows: &Vec<WcEquivRow>| !rows.is_empty()));
 
-            let rows = SelectWorkingCopyEquivalence::query_with_consistency(
-                &connections,
-                ctx.sql_query_telemetry(),
-                None, // target_lower_bound_hlc - defaults to now
-                Some(return_early_if),
-                cons_read_opts,
-                &source_repo_id,
-                &source_bcs_id,
-                &target_repo_id,
-            )
-            .await?;
+                let connections = SqlConnections {
+                    write_connection: self.write_connection.clone(),
+                    read_connection: self.read_connection.conn.clone(),
+                    read_master_connection: self.read_master_connection.conn.clone(),
+                };
 
-            rows.first().cloned()
-        } else {
-            // Fall back to original behavior: query replica, then primary if empty
-            let rows = SelectWorkingCopyEquivalence::query(
-                &self.read_connection.conn,
-                ctx.sql_query_telemetry(),
-                &source_repo_id,
-                &source_bcs_id,
-                &target_repo_id,
-            )
-            .await?;
+                let rows = SelectWorkingCopyEquivalence::query_with_consistency(
+                    &connections,
+                    ctx.sql_query_telemetry(),
+                    None, // target_lower_bound_hlc - defaults to now
+                    Some(return_early_if),
+                    cons_read_opts,
+                    &source_repo_id,
+                    &source_bcs_id,
+                    &target_repo_id,
+                )
+                .await?;
 
-            if !rows.is_empty() {
                 rows.first().cloned()
             } else {
-                ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlReadsMaster);
-                SelectWorkingCopyEquivalence::query(
-                    &self.read_master_connection.conn,
+                // Fall back to original behavior: query replica, then primary if empty
+                let rows = SelectWorkingCopyEquivalence::query(
+                    &self.read_connection.conn,
                     ctx.sql_query_telemetry(),
                     &source_repo_id,
                     &source_bcs_id,
                     &target_repo_id,
                 )
-                .await
-                .map(|rows| rows.first().cloned())?
-            }
+                .await?;
+
+                if !rows.is_empty() {
+                    rows.first().cloned()
+                } else {
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::SqlReadsMaster);
+                    SelectWorkingCopyEquivalence::query(
+                        &self.read_master_connection.conn,
+                        ctx.sql_query_telemetry(),
+                        &source_repo_id,
+                        &source_bcs_id,
+                        &target_repo_id,
+                    )
+                    .await
+                    .map(|rows| rows.first().cloned())?
+                }
+            };
+
+            anyhow::Ok::<
+                Option<(
+                    RepositoryId,
+                    ChangesetId,
+                    RepositoryId,
+                    Option<ChangesetId>,
+                    Option<CommitSyncConfigVersion>,
+                )>,
+            >(maybe_row)
+        }
+        .try_timed()
+        .await?;
+
+        let completion_time_us = timed_res.0.completion_time.as_micros() as i64;
+        if used_consistent_reads {
+            STATS::cons_read_get_equivalent_working_copy_duration_us.add_value(completion_time_us);
+        } else {
+            STATS::get_equivalent_working_copy_duration_us.add_value(completion_time_us);
         };
+
+        let maybe_row =
+            timed_res.log_future_stats(ctx.scuba().clone(), "Get SyncedCommitMapping", None);
 
         Ok(match maybe_row {
             Some(row) => {

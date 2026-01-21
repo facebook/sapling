@@ -22,6 +22,7 @@ context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/conte
 dashmap = { version = "5.5.3", features = ["rayon", "serde"] }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -29,6 +30,7 @@ metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 quickcheck = "1.0"
 rendezvous = { version = "0.1.0", path = "../../../common/rendezvous" }
+scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../../common/rust/sql_ext" }
