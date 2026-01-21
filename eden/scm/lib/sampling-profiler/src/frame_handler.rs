@@ -16,7 +16,17 @@ use crate::osutil::OwnedFd;
 /// Function to process backtraces.
 pub type ResolvedBacktraceProcessFunc = Box<dyn Fn(&[String]) + Send + Sync + 'static>;
 
-/// Wraps `Frame` so
+/// `Frame` payload being written to pipes.
+#[repr(C)]
+#[derive(Clone)]
+pub struct FramePayload<'a> {
+    /// Identity of a backtrace. Used to detect incomplete backtraces.
+    pub backtrace_id: usize,
+    /// Auto-incremental in a signal backtrace. Used to detect incomplete backtraces.
+    pub depth: usize,
+    pub frame: MaybeFrame<'a>,
+}
+
 #[repr(C)]
 #[derive(Clone)]
 pub enum MaybeFrame<'a> {
@@ -37,22 +47,44 @@ pub fn frame_reader_loop(read_fd: OwnedFd, process_func: ResolvedBacktraceProces
         None => return,
     };
     let mut frames = Vec::new();
+    let mut current_backtrace_id = 0;
+    let mut expected_depth = 0;
     'main_loop: loop {
-        let mut buf: [u8; std::mem::size_of::<MaybeFrame>()] = [0; _];
+        let mut buf: [u8; std::mem::size_of::<FramePayload>()] = [0; _];
         if read_file.read_exact(&mut buf).is_err() {
             // The pipe might be closed. `read_file` will be closed on drop.
             break 'main_loop;
         }
-        let frame: MaybeFrame = unsafe { std::mem::transmute(buf) };
-        match frame {
+        // safety: FramePayload is `repr(C)` and contains only `usize` fields.
+        // It is okay to use `transmute` to "deserialize" within the same process.
+        let frame: FramePayload = unsafe { std::mem::transmute(buf) };
+        if frame.backtrace_id != current_backtrace_id {
+            // A different backtrace (implies a missing EndOfBacktrace).
+            frames.clear();
+            current_backtrace_id = frame.backtrace_id;
+            expected_depth = 0;
+        }
+        if frame.depth as isize != expected_depth {
+            // This backtrace is bad (out of sync).
+            // Ignore the rest of the frames of the same backtrace.
+            frames.clear();
+            expected_depth = -1;
+            continue;
+        } else {
+            expected_depth += 1;
+        }
+        match frame.frame {
             MaybeFrame::Present(mut frame) => {
                 let name = frame.resolve();
                 frames.push(name);
             }
             MaybeFrame::EndOfBacktrace => {
-                // "None" means the end of the backtrace.
-                process_func(&frames);
+                // The end of a backtrace.
+                if !frames.is_empty() {
+                    process_func(&frames);
+                }
                 frames.clear();
+                expected_depth = 0;
             }
         }
     }
@@ -67,6 +99,6 @@ mod tests {
         // See `man pipe2`. We use `O_DIRECT` for "packet-mode" pipes.
         // The packet has size limit: `PIPE_BUF`. The payload (MaybeFrame)
         // must fit in.
-        assert!(std::mem::size_of::<MaybeFrame>() <= libc::PIPE_BUF);
+        assert!(std::mem::size_of::<FramePayload>() <= libc::PIPE_BUF);
     }
 }
