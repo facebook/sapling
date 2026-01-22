@@ -322,15 +322,37 @@ function PRRow({pr}: {pr: DiffSummary}) {
   const author = pr.type === 'github' ? pr.author : undefined;
   const headHash = pr.type === 'github' ? pr.head : undefined;
 
-  const handleViewChanges = () => {
+  const runOperation = useRunOperation();
+  const dag = useAtomValue(dagWithPreviews);
+  const isCurrentCommit = headHash ? dag.resolve('.')?.hash === headHash : false;
+  const inlineProgress = useAtomValue(inlineProgressByHash(headHash ?? ''));
+
+  const handleCheckout = useCallback(() => {
+    if (!headHash || isCurrentCommit) return;
+    runOperation(new GotoOperation(succeedableRevset(headHash)));
+  }, [headHash, isCurrentCommit, runOperation]);
+
+  const handleViewChanges = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (headHash) {
       showComparison({type: ComparisonType.Committed, hash: headHash});
     }
   };
 
+  const prRowClass = [
+    'pr-row',
+    headHash && !isCurrentCommit ? 'pr-row-clickable' : '',
+    isCurrentCommit ? 'pr-row-current' : '',
+    inlineProgress ? 'pr-row-loading' : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className="pr-row">
-      <span className={`pr-row-status ${stateClass}`}>{stateIcon}</span>
+    <div className={prRowClass} onClick={handleCheckout}>
+      {inlineProgress ? (
+        <Icon icon="loading" className="pr-row-status" />
+      ) : (
+        <span className={`pr-row-status ${stateClass}`}>{stateIcon}</span>
+      )}
       <a
         className="pr-row-number"
         href={pr.url}
