@@ -24,10 +24,75 @@ import {
   hiddenStacksAtom,
 } from './codeReview/PRStacksAtom';
 import {T} from './i18n';
-import {useRunOperation} from './operationsState';
+import {inlineProgressByHash, useRunOperation} from './operationsState';
+import {PullOperation} from './operations/PullOperation';
+import {GotoOperation} from './operations/GotoOperation';
 import {PullStackOperation} from './operations/PullStackOperation';
+import {dagWithPreviews} from './previews';
+import {succeedableRevset} from './types';
 
 import './PRDashboard.css';
+
+function MainBranchSection() {
+  const runOperation = useRunOperation();
+  const dag = useAtomValue(dagWithPreviews);
+
+  // Find main/master bookmark in the dag
+  const mainCommit = dag.resolve('main') ?? dag.resolve('master');
+  const remoteName = mainCommit?.remoteBookmarks.find(b =>
+    b === 'origin/main' || b === 'origin/master' || b === 'remote/main' || b === 'remote/master'
+  ) ?? 'main';
+
+  // Check if we're currently on main
+  const currentCommit = dag.resolve('.');
+  const isOnMain = currentCommit?.hash === mainCommit?.hash;
+
+  // Get inline progress for feedback
+  const inlineProgress = useAtomValue(inlineProgressByHash(mainCommit?.hash ?? ''));
+
+  // Calculate sync status (how far behind remote main we are)
+  // This is a simplified version - we check if local main differs from remote main
+  const remoteMain = dag.resolve('origin/main') ?? dag.resolve('origin/master');
+  const isBehind = remoteMain && mainCommit && remoteMain.hash !== mainCommit.hash;
+
+  const handleGoToMain = useCallback(async () => {
+    if (isOnMain && !isBehind) return;
+
+    // Pull first to get latest, then goto
+    await runOperation(new PullOperation());
+    runOperation(new GotoOperation(succeedableRevset(remoteName)));
+  }, [isOnMain, isBehind, runOperation, remoteName]);
+
+  const syncStatusText = isBehind
+    ? 'Updates available'
+    : isOnMain
+      ? 'You are here'
+      : 'Up to date';
+
+  return (
+    <div className="main-branch-section">
+      <div className="main-branch-info">
+        <Icon icon="git-branch" />
+        <span className="main-branch-name">{remoteName.replace('origin/', '')}</span>
+        <span className="main-branch-status">{syncStatusText}</span>
+      </div>
+      <Tooltip title={isOnMain && !isBehind ? 'Already on main' : 'Pull latest and checkout main'}>
+        <Button
+          className="main-branch-goto-button"
+          onClick={handleGoToMain}
+          disabled={isOnMain && !isBehind || inlineProgress != null}
+        >
+          {inlineProgress ? (
+            <Icon icon="loading" />
+          ) : (
+            <Icon icon="arrow-down" />
+          )}
+          <T>Go to main</T>
+        </Button>
+      </Tooltip>
+    </div>
+  );
+}
 
 export function PRDashboard() {
   const stacks = useAtomValue(prStacksAtom);
@@ -69,6 +134,7 @@ export function PRDashboard() {
           </Tooltip>
         </div>
       </div>
+      <MainBranchSection />
       <div className="pr-dashboard-content">
         {visibleStacks.length === 0 ? (
           <div className="pr-dashboard-empty">
