@@ -36,19 +36,19 @@ html .vscode-dark {
   --diffEditor-foreground: rgb(201, 209, 217);
   --diffEditor-insertedLineHighlightBackground: var(
     --vscode-diffEditor-insertedTextBackground,
-    rgba(156, 204, 44, 0.2)
+    rgba(88, 166, 255, 0.30)
   );
   --diffEditor-removedLineHighlightBackground: var(
     --vscode-diffEditor-removedTextBackground,
-    rgba(255, 0, 0, 0.2)
+    rgba(248, 150, 130, 0.35)
   );
   --diffEditor-insertedLineBackground: var(
     --vscode-diffEditor-insertedLineBackground,
-    rgba(155, 185, 85, 0.2)
+    rgba(88, 166, 255, 0.15)
   );
   --diffEditor-removedLineBackground: var(
     --vscode-diffEditor-removedLineBackground,
-    rgba(255, 0, 0, 0.2)
+    rgba(248, 150, 130, 0.18)
   );
 
   --diffEditor-modifiedLineBackground: #deb94033;
