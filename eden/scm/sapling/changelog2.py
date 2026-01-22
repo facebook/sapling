@@ -24,12 +24,7 @@ from . import (
     vfs as vfsmod,
     visibility,
 )
-from .changelog import (
-    changelogrevision,
-    changelogrevision2,
-    gitcommittext,
-    hgcommittext,
-)
+from .changelog import changelogrevision2, gitcommittext, hgcommittext
 from .i18n import _
 from .node import bin, hex, nullid, nullrev, wdirid, wdirrev
 
@@ -59,13 +54,8 @@ class changelog:
         # Number of commit texts to buffer. Useful for bounding memory usage.
         self._groupbuffersize = uiconfig.configint("pull", "buffer-commit-count")
         self._reporef = weakref.ref(repo)
-        if self._isgit or uiconfig.configbool(
-            "experimental", "use-rust-hg-parse", True
-        ):
-            format = self._isgit and "git" or "hg"
-            self._changelogrevision_ctor = partial(changelogrevision2, format=format)
-        else:
-            self._changelogrevision_ctor = changelogrevision
+        format = self._isgit and "git" or "hg"
+        self._changelogrevision_ctor = partial(changelogrevision2, format=format)
 
         # Cache for node->changeset
         self._cs_cache = util.lrucachedict(100)
