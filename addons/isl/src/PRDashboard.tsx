@@ -56,7 +56,9 @@ function MainBranchSection() {
   const isBehind = remoteMain && mainCommit && remoteMain.hash !== mainCommit.hash;
 
   const handleGoToMain = useCallback(async () => {
-    if (isOnMain && !isBehind) return;
+    if (isOnMain && !isBehind) {
+      return;
+    }
 
     // Pull first to get latest, then goto
     await runOperation(new PullOperation());
@@ -195,6 +197,7 @@ function StackCard({
     (newLabel: string) => {
       setStackLabels(prev => {
         if (newLabel.trim() === '') {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const {[stack.id]: _, ...rest} = prev;
           return rest;
         }
