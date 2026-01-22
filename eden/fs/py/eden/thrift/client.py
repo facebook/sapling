@@ -14,7 +14,7 @@ from thrift.python.client import ClientType, get_client
 SOCKET_PATH = "socket"
 
 
-def create_thrift_client(
+def create_async_thrift_client(
     eden_dir: Optional[str] = None,
     socket_path: Optional[str] = None,
     timeout: float = 0,

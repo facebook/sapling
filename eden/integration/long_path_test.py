@@ -31,7 +31,7 @@ class LongPathsTest(testcase.EdenRepoTest):
     async def _eden_status(
         self, listIgnored: bool = False
     ) -> Dict[bytes, ScmFileStatus]:
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             status = await client.getScmStatusV2(
                 GetScmStatusParams(
                     mountPoint=self.mount.encode(),

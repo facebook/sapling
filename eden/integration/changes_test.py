@@ -51,7 +51,7 @@ else:
 class ChangesTestCommon(testBase):
     async def test_wrong_mount_generation(self):
         # The input mount generation should equal the current mount generation
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             oldPosition = await client.getCurrentJournalPosition(self.mount_path_bytes)
             self.eden.unmount(self.mount_path)
             self.eden.mount(self.mount_path)
@@ -66,7 +66,7 @@ class ChangesTestCommon(testBase):
 
     async def test_exclude_directory(self):
         expected_changes = []
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             oldPosition = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.add_folder_expect("ignored_dir")
             await self.add_folder_expect("ignored_dir2/nested_ignored_dir")
@@ -91,7 +91,7 @@ class ChangesTestCommon(testBase):
 
     async def test_include_directory(self):
         expected_changes = []
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             oldPosition = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.mkdir_async("ignored_dir")
             await self.mkdir_async("ignored_dir2/nested_ignored_dir")
@@ -115,7 +115,7 @@ class ChangesTestCommon(testBase):
 
     async def test_include_exclude_directory(self):
         # if directory is both included and excluded, it should be ignored
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             oldPosition = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.mkdir_async("include_exclude_dir")
             await self.mkdir_async("ignored_dir")
@@ -134,7 +134,7 @@ class ChangesTestCommon(testBase):
         # use removed files for cross-os compatibility
         await self.repo_write_file("test_file.ext1", "", add=False)
         await self.repo_write_file("test_file.ext2", "", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rm_async("test_file.ext1")
             await self.rm_async("test_file.ext2")
@@ -153,7 +153,7 @@ class ChangesTestCommon(testBase):
     async def test_exclude_file_suffix(self):
         await self.repo_write_file("test_file.ext1", "", add=False)
         await self.repo_write_file("test_file.ext2", "", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rm_async("test_file.ext1")
             await self.rm_async("test_file.ext2")
@@ -172,7 +172,7 @@ class ChangesTestCommon(testBase):
     async def test_incude_exclude_file_same_suffix(self):
         await self.repo_write_file("test_file.ext1", "", add=False)
         await self.repo_write_file("test_file.ext2", "", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rm_async("test_file.ext1")
             await self.rm_async("test_file.ext2")
@@ -186,7 +186,7 @@ class ChangesTestCommon(testBase):
     async def test_incude_exclude_file_suffix(self):
         await self.repo_write_file("test_file.ext1", "", add=False)
         await self.repo_write_file("test_file.ext2", "", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rm_async("test_file.ext1")
             await self.rm_async("test_file.ext2")
@@ -206,7 +206,7 @@ class ChangesTestCommon(testBase):
 
     async def test_modify_file(self):
         await self.repo_write_file("test_file", "", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.repo_write_file("test_file", "contents", add=False)
             changes = await self.getChangesSinceV2(position=position)
@@ -217,7 +217,7 @@ class ChangesTestCommon(testBase):
 
     async def test_modify_file_root(self):
         await self.repo_write_file("root/test_file", "", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.repo_write_file("root/test_file", "contents", add=False)
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -228,7 +228,7 @@ class ChangesTestCommon(testBase):
 
     async def test_remove_file(self):
         await self.repo_write_file("test_file", "", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rm_async("test_file")
             changes = await self.getChangesSinceV2(position=position)
@@ -243,7 +243,7 @@ class ChangesTestCommon(testBase):
 
     async def test_remove_file_root(self):
         await self.repo_write_file("root/test_file", "", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rm_async("root/test_file")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -257,7 +257,7 @@ class ChangesTestCommon(testBase):
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     async def test_add_folder(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.mkdir_async("test_folder")
             changes = await self.getChangesSinceV2(position=position)
@@ -271,7 +271,7 @@ class ChangesTestCommon(testBase):
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     async def test_add_folder_root(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.mkdir_async("root/test_folder")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -286,7 +286,7 @@ class ChangesTestCommon(testBase):
 
     async def test_remove_folder(self):
         await self.mkdir_async("test_folder")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.repo_rmdir("test_folder")
             changes = await self.getChangesSinceV2(position=position)
@@ -301,7 +301,7 @@ class ChangesTestCommon(testBase):
 
     async def test_remove_folder_root(self):
         await self.mkdir_async("root/test_folder/")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.repo_rmdir("root/test_folder")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -315,7 +315,7 @@ class ChangesTestCommon(testBase):
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     async def test_commit_transition(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.mkdir_async("test_folder")
             await self.repo_write_file("test_folder/test_file", "contents", add=True)
@@ -367,7 +367,7 @@ class ChangesTestCommon(testBase):
         #   we only report that there has been a truncated journal. Neither changes before and
         #   within the window are reported.
         # Changes after the truncation are reported when the start position is after the truncation
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.mkdir_async("not_seen_folder")
             await self.repo_write_file(
@@ -427,7 +427,7 @@ class ChangesTestCommon(testBase):
             self.assertTrue(self.check_changes(changes3.changes, expected_changes3))
 
     async def test_root_does_not_exist(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             with self.assertRaises(EdenError) as ctx:
                 await self.getChangesSinceV2(
@@ -447,7 +447,7 @@ class ChangesTestCommon(testBase):
             )
 
     async def test_root_exists(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.mkdir_async("test_folder")
             await self.repo_write_file("test_folder/test_file", "contents", add=True)
@@ -520,7 +520,7 @@ class ChangesTestCommon(testBase):
 
     async def test_root_is_file(self):
         await self.repo_write_file("this_path_is_a_file", "contents", add=True)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             with self.assertRaises(EdenError) as ctx:
                 await self.getChangesSinceV2(
@@ -542,7 +542,7 @@ class ChangesTestCommon(testBase):
     async def test_rename_file_root_in_to_out(self):
         await self.repo_write_file("root/test_file", "A")
         self.mkdir("out/")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("root/test_file", "out/test_file")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -558,7 +558,7 @@ class ChangesTestCommon(testBase):
     async def test_rename_file_root_out_to_in(self):
         await self.repo_write_file("out/test_file", "A")
         self.mkdir("root/")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("out/test_file", "root/test_file")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -572,7 +572,7 @@ class ChangesTestCommon(testBase):
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     async def test_root_not_included_in_result(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.mkdir_async("root/")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -580,7 +580,7 @@ class ChangesTestCommon(testBase):
             self.assertEqual(changes.changes, expected_changes)
 
     async def test_sequence_race(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             fault = FaultDefinition(
                 keyClass="changesSince",
                 keyValueRegex="sequence",
@@ -625,7 +625,7 @@ class ChangesTestCommon(testBase):
 
     async def test_sequence_race_dirs(self):
         self.mkdir("test_folder")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             fault = FaultDefinition(
                 keyClass="changesSince",
                 keyValueRegex="sequence",
@@ -672,7 +672,7 @@ class ChangesTestCommon(testBase):
             )
 
     async def test_sequence_race_commits(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             fault = FaultDefinition(
                 keyClass="changesSince",
                 keyValueRegex="sequence",
@@ -753,7 +753,7 @@ class ChangesTestNix(JournalTestBase):
 
     async def test_rename_file_root(self):
         await self.repo_write_file("root/test_file", "", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("root/test_file", "root/best_file")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -771,7 +771,7 @@ class ChangesTestNix(JournalTestBase):
     async def test_replace_file(self):
         self.eden_repo.write_file("test_file", "test_contents", add=False)
         self.eden_repo.write_file("gone_file", "replaced_contents", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("test_file", "gone_file")
             changes = await self.getChangesSinceV2(position=position)
@@ -788,7 +788,7 @@ class ChangesTestNix(JournalTestBase):
     async def test_replace_file_root(self):
         self.eden_repo.write_file("root/test_file", "test_contents", add=False)
         self.eden_repo.write_file("root/gone_file", "replaced_contents", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("root/test_file", "root/gone_file")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -805,7 +805,7 @@ class ChangesTestNix(JournalTestBase):
     async def test_replace_file_root_in_to_out(self):
         self.eden_repo.write_file("root/test_file", "test_contents", add=False)
         self.eden_repo.write_file("out/gone_file", "replaced_contents", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("root/test_file", "out/gone_file")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -821,7 +821,7 @@ class ChangesTestNix(JournalTestBase):
     async def test_replace_file_root_out_to_in(self):
         self.eden_repo.write_file("out/test_file", "test_contents", add=False)
         self.eden_repo.write_file("root/gone_file", "replaced_contents", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("out/test_file", "root/gone_file")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -837,7 +837,7 @@ class ChangesTestNix(JournalTestBase):
     async def test_replace_file_different_folder(self):
         self.eden_repo.write_file("source_folder/test_file", "test_contents", add=False)
         self.eden_repo.write_file("gone_file", "replaced_contents", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("source_folder/test_file", "gone_file")
             changes = await self.getChangesSinceV2(position=position)
@@ -854,7 +854,7 @@ class ChangesTestNix(JournalTestBase):
 
     async def test_rename_folder(self):
         self.mkdir("test_folder")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("test_folder", "best_folder")
             changes = await self.getChangesSinceV2(position=position)
@@ -869,7 +869,7 @@ class ChangesTestNix(JournalTestBase):
 
     async def test_rename_folder_root(self):
         self.mkdir("root/test_folder")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("root/test_folder", "root/best_folder")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -885,7 +885,7 @@ class ChangesTestNix(JournalTestBase):
     async def test_rename_folder_root_in_to_out(self):
         self.mkdir("root/test_folder")
         self.mkdir("out/")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("root/test_folder", "out/test_folder")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -901,7 +901,7 @@ class ChangesTestNix(JournalTestBase):
     async def test_rename_folder_root_out_to_in(self):
         self.mkdir("out/test_folder")
         self.mkdir("root/")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("out/test_folder", "root/test_folder")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -917,7 +917,7 @@ class ChangesTestNix(JournalTestBase):
     async def test_rename_folder_with_suffixes(self):
         # Suffixes should not apply to directory renames
         self.mkdir("test_folder")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("test_folder", "best_folder")
             changes = await self.getChangesSinceV2(
@@ -938,7 +938,7 @@ class ChangesTestNix(JournalTestBase):
         # Included roots should apply to directory renames
         self.mkdir("a/test_folder")
         self.mkdir("b/test_folder")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("a/test_folder", "a/best_folder")
             await self.rename_async("b/test_folder", "b/best_folder")
@@ -959,7 +959,7 @@ class ChangesTestNix(JournalTestBase):
         # Excluded roots should apply to directory renames
         self.mkdir("a/test_folder")
         self.mkdir("b/test_folder")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("a/test_folder", "a/best_folder")
             await self.rename_async("b/test_folder", "b/best_folder")
@@ -979,7 +979,7 @@ class ChangesTestNix(JournalTestBase):
     async def test_replace_folder(self):
         self.eden_repo.mkdir("test_folder")
         self.eden_repo.mkdir("gone_folder")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("test_folder", "gone_folder")
             changes = await self.getChangesSinceV2(position=position)
@@ -997,7 +997,7 @@ class ChangesTestNix(JournalTestBase):
         # Copying a file over a different file shows up as a "Modify"
         self.eden_repo.write_file("source_folder/test_file", "test_contents", add=False)
         self.eden_repo.write_file("gone_file", "replaced_contents", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             self.copy("source_folder/test_file", "gone_file")
             changes = await self.getChangesSinceV2(position=position)
@@ -1014,7 +1014,7 @@ class ChangesTestNix(JournalTestBase):
     # Python's chmod/chown only work on nix systems
     async def test_modify_folder_chmod(self):
         self.mkdir("test_folder_chmod")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.repo_chmod("test_folder_chmod", 0o777)
             changes = await self.getChangesSinceV2(position=position)
@@ -1031,7 +1031,7 @@ class ChangesTestNix(JournalTestBase):
         # Due to platform differences and root permission requirements,
         # this test doesn't run on Sandcastle or on Mac
         self.eden_repo.mkdir("test_folder_chown")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.repo_chown("test_folder_chown")
             changes = await self.getChangesSinceV2(position=position)
@@ -1057,7 +1057,7 @@ class ChangesTestNix(JournalTestBase):
         await self.repo_write_file(
             "not_included_folder/test_file3", "contents", add=False
         )
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async(
                 "included_folder/test_file", "not_included_folder/test_file"
@@ -1104,7 +1104,7 @@ class ChangesTestNix(JournalTestBase):
             "not_excluded_folder/test_file3", "contents", add=False
         )
         await self.repo_write_file("excluded_folder/test_file4", "contents", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async(
                 "not_excluded_folder/test_file", "excluded_folder/test_file"
@@ -1148,7 +1148,7 @@ class ChangesTestNix(JournalTestBase):
     async def test_too_many_changes(self):
         self.mkdir("test_folder")
         expected_changes1 = []
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             # usually the max changes is 10k but for test speed reasons we set it to 100
             # Each file add creates 2 changes, one for the add and one for the modify
@@ -1178,7 +1178,7 @@ class ChangesTestNix(JournalTestBase):
         expected_changes2 = []
         expected_changes3 = []
         expected_changes4 = []
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
             # usually the max changes is 10k but for test speed reasons we set it to 100
@@ -1250,7 +1250,7 @@ class ChangesTestNix(JournalTestBase):
             )
 
     async def test_include_vcs_roots_false(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             # .git and .hg are symlinked so test with .sl
             self.mkdir(".sl")
@@ -1277,7 +1277,7 @@ class ChangesTestNix(JournalTestBase):
             self.assertTrue(self.check_changes_exact(changes.changes, expected_changes))
 
     async def test_include_vcs_roots_without_root(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             # .git and .hg are symlinked so test with .sl
             self.mkdir(".sl")
@@ -1314,7 +1314,7 @@ class ChangesTestNix(JournalTestBase):
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     async def test_include_vcs_roots_with_root(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             # .git and .hg are symlinked so test with .sl
             self.mkdir(".sl")
@@ -1351,7 +1351,7 @@ class ChangesTestNix(JournalTestBase):
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     async def test_include_state_changes_false(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             self.mkdir(".edenfs-notifications-state/state")
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
@@ -1379,7 +1379,7 @@ class ChangesTestNix(JournalTestBase):
             self.assertTrue(self.check_changes_exact(changes.changes, expected_changes))
 
     async def test_include_states_without_root(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             self.mkdir(".edenfs-notifications-state")
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
@@ -1411,7 +1411,7 @@ class ChangesTestNix(JournalTestBase):
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     async def test_include_states_with_root(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             self.mkdir(".edenfs-notifications-state")
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
@@ -1469,7 +1469,7 @@ class ChangesTestWin(WindowsJournalTestBase):
 
     async def test_rename_file_root(self):
         await self.repo_write_file("root/test_file", "", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             self.rename("root/test_file", "root/best_file")
             changes = await self.getChangesSinceV2(position=position, root=b"root")
@@ -1489,7 +1489,7 @@ class ChangesTestWin(WindowsJournalTestBase):
     # Renaming uncommitted folders in windows is an add and delete
     async def test_rename_folder(self):
         self.mkdir("test_folder")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             # ensure that the file change is synced to the new folder
             await self.syncProjFS(position)
@@ -1505,7 +1505,7 @@ class ChangesTestWin(WindowsJournalTestBase):
 
     async def test_rename_folder_root(self):
         self.mkdir("root/test_folder")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             # ensure that the file change is synced to the new folder
             await self.syncProjFS(position)
@@ -1522,7 +1522,7 @@ class ChangesTestWin(WindowsJournalTestBase):
     async def test_rename_folder_root_in_to_out(self):
         self.mkdir("root/test_folder")
         self.mkdir("out/")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             # ensure that the file change is synced to the new folder
             await self.syncProjFS(position)
@@ -1542,7 +1542,7 @@ class ChangesTestWin(WindowsJournalTestBase):
     async def test_rename_folder_root_out_to_in(self):
         self.mkdir("out/test_folder")
         self.mkdir("root/")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             # ensure that the file change is synced to the new folder
             await self.syncProjFS(position)
@@ -1564,7 +1564,7 @@ class ChangesTestWin(WindowsJournalTestBase):
     async def test_rename_folder_uncommitted_file(self):
         self.mkdir("test_folder")
         await self.repo_write_file("test_folder/test_file", "contents", add=True)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             self.rename("test_folder", "best_folder")
             position2 = await client.getCurrentJournalPosition(self.mount_path_bytes)
@@ -1602,7 +1602,7 @@ class ChangesTestWin(WindowsJournalTestBase):
             self.rename(self.get_path("test_folder"), self.get_path("best_folder"))
 
     async def test_include_vcs_roots_false(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             # .git and .hg are symlinked so test with .sl
             self.mkdir(".sl")
@@ -1629,7 +1629,7 @@ class ChangesTestWin(WindowsJournalTestBase):
             self.assertTrue(self.check_changes_exact(changes.changes, expected_changes))
 
     async def test_include_vcs_roots_without_root(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             # .git and .hg are symlinked so test with .sl
             self.mkdir(".sl")
@@ -1656,7 +1656,7 @@ class ChangesTestWin(WindowsJournalTestBase):
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     async def test_include_vcs_roots_with_root(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             # .git and .hg are symlinked so test with .sl
             self.mkdir(".sl")
@@ -1683,7 +1683,7 @@ class ChangesTestWin(WindowsJournalTestBase):
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     async def test_include_state_changes_false(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             self.mkdir(".edenfs-notifications-state/state")
             start_position = await client.getCurrentJournalPosition(
@@ -1710,7 +1710,7 @@ class ChangesTestWin(WindowsJournalTestBase):
             self.assertTrue(self.check_changes_exact(changes.changes, expected_changes))
 
     async def test_include_states_without_root(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             self.mkdir(".edenfs-notifications-state")
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
@@ -1737,7 +1737,7 @@ class ChangesTestWin(WindowsJournalTestBase):
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
     async def test_include_states_with_root(self):
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.mkdir("root")
             self.mkdir(".edenfs-notifications-state")
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)

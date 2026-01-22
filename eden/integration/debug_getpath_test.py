@@ -102,7 +102,7 @@ class DebugGetPathTest(testcase.EdenRepoTest):
         remaining_attempts = 5
         while True:
             age = TimeSpec()  # zero
-            async with self.eden.get_thrift_client() as client:
+            async with self.eden.get_async_thrift_client() as client:
                 count = await client.unloadInodeForPath(
                     os.fsencode(self.mount), os.fsencode(path), age
                 )

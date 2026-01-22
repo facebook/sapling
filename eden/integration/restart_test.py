@@ -93,8 +93,8 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         p.wait()
         self.assertEqual(p.exitstatus, 0)
 
-    def _get_thrift_client(self) -> EdenService.Async:
-        return client.create_thrift_client(str(self.eden_dir))
+    def _get_async_thrift_client(self) -> EdenService.Async:
+        return client.create_async_thrift_client(str(self.eden_dir))
 
     def test_restart(self) -> None:
         self._start_fake_edenfs()
@@ -144,7 +144,7 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         self._start_fake_edenfs()
 
         # Tell the fake edenfs binary to ignore attempts to stop it
-        async with self._get_thrift_client() as client:
+        async with self._get_async_thrift_client() as client:
             await client.setOption("honor_stop", "false")
 
         # Run "eden restart".  It should have to kill eden with SIGKILL during the
@@ -197,7 +197,7 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         orig_pid = self._start_fake_edenfs()
 
         # Tell the fake edenfs daemon to report its status as "starting"
-        async with self._get_thrift_client() as client:
+        async with self._get_async_thrift_client() as client:
             await client.setOption("status", "starting")
 
         # "eden restart" should not restart if edenfs is still starting

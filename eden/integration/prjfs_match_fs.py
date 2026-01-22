@@ -42,7 +42,7 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
         return self.initial_commit
 
     async def match_fs(self, files: List[bytes]) -> None:
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             errors = await client.matchFilesystem(
                 MatchFileSystemRequest(
                     mountPoint=MountId(mountPoint=self.mount.encode()), paths=files
@@ -131,7 +131,7 @@ class PrjfsMatchFsTest(prjfs_test.PrjFSTestBase):
 
         await self.assertNotInStatus(b"adir/file")
 
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             await client.injectFault(
                 FaultDefinition(
                     keyClass="PrjfsDispatcherImpl::fileNotification",

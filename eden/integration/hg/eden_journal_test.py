@@ -39,12 +39,12 @@ class EdenJournalTest(EdenHgTestCase):
         """
         Verify that the journal is updated when writing to the working copy.
         """
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             before = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
         self.repo.write_file("hello.txt", "hola\n")
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             after = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
         self.assertNotEqual(before, after)

@@ -134,7 +134,7 @@ class MountTest(testcase.EdenRepoTest):
         self.eden.run_cmd("unmount", self.mount)
         self.assertEqual({self.mount: "NOT_RUNNING"}, self.eden.list_cmd_simple())
 
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             fault = FaultDefinition(keyClass="mount", keyValueRegex=".*", block=True)
             await client.injectFault(fault)
 
@@ -215,7 +215,7 @@ class MountTest(testcase.EdenRepoTest):
 
         async def is_initializing() -> Optional[bool]:
             try:
-                async with self.eden.get_thrift_client() as client:
+                async with self.eden.get_async_thrift_client() as client:
                     # Return successfully when listMounts() reports the number of
                     # mounts that we expect.
                     mounts = await client.listMounts()
@@ -240,7 +240,7 @@ class MountTest(testcase.EdenRepoTest):
         # Wait for eden to report the mount point in the listMounts() output
         await self._wait_until_initializing()
 
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             # Since we blocked mount initialization the mount should still
             # report as INITIALIZING, and edenfs should report itself STARTING
             self.assertEqual(
@@ -264,7 +264,7 @@ class MountTest(testcase.EdenRepoTest):
     async def test_remount_after_initialization_failure(self) -> None:
         # Unmount and inject a fault that blocks subsequent mount attempts
         self.eden.run_cmd("unmount", self.mount)
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             fault = FaultDefinition(
                 keyClass="failMountInitialization",
                 keyValueRegex=".*",
@@ -279,7 +279,7 @@ class MountTest(testcase.EdenRepoTest):
             self.eden.run_cmd("mount", self.mount)
 
         # Remove the previously added fault
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             await client.removeFault(
                 RemoveFaultArg(keyClass="failMountInitialization", keyValueRegex=".*")
             )
@@ -388,7 +388,7 @@ class MountTest(testcase.EdenRepoTest):
         # Wait for eden to have started mount point initialization
         await self._wait_until_initializing(num_mounts=3)
 
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             # Since we blocked mount initialization the mount should still
             # report as INITIALIZING, and edenfs should report itself STARTING
             self.assertEqual(
@@ -424,7 +424,7 @@ class MountTest(testcase.EdenRepoTest):
         )
         # The startup_mount_failures counter should indicate that 2 mounts failed to
         # remount.
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             mount_failures = await client.getCounter("startup_mount_failures")
             self.assertEqual(2, mount_failures)
 

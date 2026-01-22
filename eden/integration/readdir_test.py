@@ -100,7 +100,7 @@ class ReaddirTest(testcase.EdenRepoTest):
 
     async def blake3_hash(self, file_path: str) -> bytes:
         key: Optional[str] = None
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             config = await client.getConfig(GetConfigParams())
             maybe_key = config.values.get("hash:blake3-key")
             key = (
@@ -323,7 +323,7 @@ class ReaddirTest(testcase.EdenRepoTest):
     async def get_attributes_v2(
         self, files: List[bytes], req_attr: int
     ) -> GetAttributesFromFilesResultV2:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             thrift_params = GetAttributesFromFilesParams(
                 mountPoint=self.mount_path_bytes,
                 paths=files,
@@ -1033,7 +1033,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         # but integration tests are expensive, so we will do it all in one.
 
         # non empty directories
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             adir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
                     b"file": self.constructReaddirResult(
@@ -1153,7 +1153,7 @@ class ReaddirTest(testcase.EdenRepoTest):
             self.assertIn(b"cdir", actual.dirLists[0].dirListAttributeData)
 
     async def readdir_single_attr_only(self, req_attr: int) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             adir_result = DirListAttributeDataOrError(
                 dirListAttributeData={
                     b"file": self.constructReaddirResult(
@@ -1215,7 +1215,7 @@ class ReaddirTest(testcase.EdenRepoTest):
         mtime_result=MtimeOrError,
         mode_result=ModeOrError,
     ) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             expected = FileAttributeDataOrErrorV2(
                 fileAttributeData=FileAttributeDataV2(
                     sha1=sha1_result,

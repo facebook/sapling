@@ -101,7 +101,7 @@ class GlobFilesTestBase(GlobTestBase):
             listOnlyFiles=list_only_files,
             background=background,
         )
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             result = await client.globFiles(params)
             if not result:
                 self.assertEqual(expected_matches, [], msg=msg)
@@ -128,7 +128,7 @@ class GlobFilesTestBase(GlobTestBase):
             includeDotfiles=include_dotfiles,
             wantDtype=True,
         )
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             result = await client.globFiles(params)
             actual_results = zip(
                 result.matchingFiles,
@@ -161,7 +161,7 @@ class PrefetchTestBase(GlobTestBase):
             background=background,
             returnPrefetchedFiles=True,
         )
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             prefetchResult = await client.prefetchFilesV2(params)
             result = prefetchResult.prefetchedFiles
             if not result:
@@ -420,7 +420,7 @@ class GlobTest(GlobFilesTestBase, GlobTestCasesBase):
         )
 
     async def test_malformed_query(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             with self.assertRaises(EdenError) as ctx:
                 await client.globFiles(
                     GlobParams(mountPoint=self.mount_path_bytes, globs=["adir["])
@@ -440,7 +440,7 @@ class GlobTest(GlobFilesTestBase, GlobTestCasesBase):
             self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
     async def test_globs_may_not_include_dotdot(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             with self.assertRaises(EdenError) as ctx:
                 await client.globFiles(
                     GlobParams(
@@ -501,7 +501,7 @@ class PrefetchTest(PrefetchTestBase, GlobTestCasesBase):
         )
 
     async def test_malformed_query(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             with self.assertRaises(EdenError) as ctx:
                 await client.prefetchFilesV2(
                     PrefetchParams(mountPoint=self.mount_path_bytes, globs=["adir["])
@@ -521,7 +521,7 @@ class PrefetchTest(PrefetchTestBase, GlobTestCasesBase):
             self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
     async def test_globs_may_not_include_dotdot(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             with self.assertRaises(EdenError) as ctx:
                 await client.prefetchFilesV2(
                     PrefetchParams(

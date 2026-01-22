@@ -39,7 +39,7 @@ class InvalidateTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
     async def get_loaded_count(self) -> int:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             stats = await client.getStatInfo(
                 GetStatInfoParams(statsMask=STATS_MOUNTS_STATS)
             )
@@ -91,7 +91,7 @@ class InvalidateTest(testcase.EdenRepoTest):
     async def invalidate(
         self, path: str, seconds: int = 0, background: bool = False
     ) -> int:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             result = await client.debugInvalidateNonMaterialized(
                 DebugInvalidateRequest(
                     mount=MountId(mountPoint=self.mount_path_bytes),

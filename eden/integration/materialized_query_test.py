@@ -38,7 +38,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         return {"eden.fs.fuse.RequestData": "DBG5"}
 
     async def test_noEntries(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             pos = await client.getCurrentJournalPosition(self.mount_path_bytes)
             self.assertNotEqual(0, pos.mountGeneration)
 
@@ -62,7 +62,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
             b"slink",
         ]
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             sync_behavior = SyncBehavior()
             info_list_pre = await client.getFileInformation(
                 self.mount_path_bytes, paths, sync_behavior
@@ -95,7 +95,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
 
             # Don't bother checking against the info_list_pre elements, as we assert their equality with
             # info_list_post below, and they are checked against the stat information.
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             sync_behavior = SyncBehavior()
             info_list_post = await client.getFileInformation(
                 self.mount_path_bytes, paths, sync_behavior
@@ -244,7 +244,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
                 )
 
     async def test_invalidProcessGeneration(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             # Get a candidate position
             pos = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
@@ -264,7 +264,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
             )
 
     async def test_removeFile(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             initial_pos = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
             os.unlink(os.path.join(self.mount, "adir", "file"))
@@ -276,7 +276,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
             self.assertEqual(set(), set(changed.removedPaths))
 
     async def test_renameFile(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             initial_pos = await client.getCurrentJournalPosition(self.mount_path_bytes)
 
             os.rename(
@@ -290,7 +290,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
             self.assertEqual(set(), set(changed.removedPaths))
 
     async def test_addFile(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             initial_pos = await client.getCurrentJournalPosition(self.mount_path_bytes)
             # Record the initial journal position after we finish setting up the checkout.
             initial_seq = initial_pos.sequenceNumber

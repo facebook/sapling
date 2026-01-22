@@ -258,7 +258,7 @@ class JournalTestBase(testcase.EdenRepoTest):
         if root is not None and isinstance(root, str):
             root = root.encode()
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             if sys.platform == "win32":
                 # On Windows, we need to wait for the file system to settle before
                 # calling getChangesSinceV2. Otherwise, we may get missing results.
@@ -283,13 +283,13 @@ class JournalTestBase(testcase.EdenRepoTest):
         self.eden_repo.write_file(path, contents, mode, add)
 
     async def setup_test_add_file(self) -> ChangesSinceV2Result:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.repo_write_file("test_file", "", add=False)
             return await self.getChangesSinceV2(position=position)
 
     async def setup_test_add_file_root(self, root) -> ChangesSinceV2Result:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             # Handle both string and bytes root parameter
             root_str = root.decode() if isinstance(root, bytes) else root
@@ -298,7 +298,7 @@ class JournalTestBase(testcase.EdenRepoTest):
 
     async def setup_test_rename_file(self) -> ChangesSinceV2Result:
         await self.repo_write_file("test_file", "", add=False)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             await self.rename_async("test_file", "best_file")
             return await self.getChangesSinceV2(position=position)
@@ -353,7 +353,7 @@ class WindowsJournalTestBase(JournalTestBase):
         # Wait for eden to get the PrjFS notification
         pollTime = 0.1
         waitTime = 0
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             newPosition = await client.getCurrentJournalPosition(self.mount_path_bytes)
             while position == newPosition and waitTime < self.SYNC_MAX:
                 time.sleep(pollTime)
@@ -363,43 +363,43 @@ class WindowsJournalTestBase(JournalTestBase):
                 )
 
     async def repo_write_file(self, path, contents, mode=None, add=True) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             self.eden_repo.write_file(path, contents, mode, add)
             await self.syncProjFS(position)
 
     async def rm_async(self, path) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             testcase.EdenTestCase.rm(self, path)
             await self.syncProjFS(position)
 
     async def rename_async(self, from_path, to_path) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             testcase.EdenTestCase.rename(self, from_path, to_path)
             await self.syncProjFS(position)
 
     async def mkdir_async(self, path) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             testcase.EdenTestCase.mkdir(self, path)
             await self.syncProjFS(position)
 
     async def repo_rmdir(self, path) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             self.rmdir(path)
             await self.syncProjFS(position)
 
     async def repo_chmod(self, fd, mode) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             self.chmod(fd, mode)
             await self.syncProjFS(position)
 
     async def repo_chown(self, fd) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             position = await client.getCurrentJournalPosition(self.mount_path_bytes)
             fullpath = self.eden_repo.get_path(fd)
             cmd = ["sudo", "chown", "nobody:nobody", fullpath]

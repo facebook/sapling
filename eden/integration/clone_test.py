@@ -58,7 +58,7 @@ class CloneTest(testcase.EdenRepoTest):
             msg="clone should succeed in empty directory",
         )
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             active_mount_points: Set[Optional[str]] = {
                 os.fsdecode(mount.mountPoint) for mount in await client.listMounts()
             }
@@ -157,7 +157,7 @@ class CloneTest(testcase.EdenRepoTest):
             ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
             return ansi_escape.sub("", s)
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             await client.injectFault(
                 FaultDefinition(
                     keyClass="TreeInode::symlink",

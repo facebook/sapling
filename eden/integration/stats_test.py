@@ -202,7 +202,7 @@ class ObjectCacheStatsTest(testcase.EdenRepoTest):
         # To exercise the in-memory tree cache we have to first unload the
         # corresponding inodes (which contains its own cache of directory
         # entries) and OS kernel caches.
-        async with self.get_thrift_client() as thrift_client:
+        async with self.get_async_thrift_client() as thrift_client:
             await thrift_client.unloadInodeForPath(
                 self.mount.encode("utf-8"), b"", TimeSpec(seconds=0, nanoSeconds=0)
             )
@@ -475,7 +475,7 @@ class JournalInfoTest(testcase.EdenRepoTest):
         )
 
     async def journal_stats(self) -> JournalInfo:
-        async with self.get_thrift_client() as thrift_client:
+        async with self.get_async_thrift_client() as thrift_client:
             await thrift_client.synchronizeWorkingCopy(
                 self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
             )

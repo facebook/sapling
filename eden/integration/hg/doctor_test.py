@@ -74,7 +74,7 @@ class DoctorTest(EdenHgTestCase):
         # second commit
         parents = WorkingDirectoryParents(parent1=self.commit1.encode("utf-8"))
         params = ResetParentCommitsParams()
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             await client.resetParentCommits(
                 mountPoint=bytes(mount_path), parents=parents, params=params
             )

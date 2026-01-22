@@ -178,7 +178,7 @@ class AutoStopTest(EdenTestCase):
 check-validity-interval = "{interval}"
 """
         self.eden.user_rc_path.write_text(config_text)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             await client.reloadConfig()
 
     async def _run_test(

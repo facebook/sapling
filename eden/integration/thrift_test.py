@@ -69,7 +69,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
     async def blake3_hash(self, blob: bytes) -> bytes:
         key: Optional[str] = None
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             config = await client.getConfig(
                 GetConfigParams(reload=ConfigReloadBehavior.ForceReload)
             )
@@ -143,7 +143,7 @@ class ThriftTest(testcase.EdenRepoTest):
         self._blake3_computed = False
 
     async def get_loaded_inodes_count(self, path: str) -> int:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             result = await client.debugInodeStatus(
                 self.mount_path_bytes, os.fsencode(path), flags=0, sync=SyncBehavior()
             )
@@ -159,7 +159,7 @@ class ThriftTest(testcase.EdenRepoTest):
         thrift_mount = MountId(mountPoint=self.mount.encode("utf-8"))
 
         # Unmaterialized file
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             thrift_req = GetFileContentRequest(
                 mount=thrift_mount, filePath=b"hello", sync=SyncBehavior()
             )
@@ -173,7 +173,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
         # Materialized file
         self.write_file("tmpdir/file", "hola\n")
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             thrift_req = GetFileContentRequest(
                 mount=thrift_mount, filePath=b"tmpdir/file", sync=SyncBehavior()
             )
@@ -187,7 +187,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
         # Invalid paths
         self.rm("tmpdir/file")
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             thrift_req = GetFileContentRequest(
                 mount=thrift_mount, filePath=b"tmpdir/file", sync=SyncBehavior()
             )
@@ -232,13 +232,13 @@ class ThriftTest(testcase.EdenRepoTest):
         )
         touch_p.communicate()
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             counts = await client.getAccessCounts(1)
             accesses = counts.accessesByMount[self.mount_path_bytes]
             self.assertLessEqual(2, accesses.fetchCountsByPid[touch_p.pid])
 
     async def test_list_mounts(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             mounts = await client.listMounts()
         self.assertEqual(1, len(mounts))
 
@@ -257,7 +257,7 @@ class ThriftTest(testcase.EdenRepoTest):
         expected_sha1_for_adir_file = hashlib.sha1(b"foo!\n").digest()
         result_for_adir_file = SHA1Result(sha1=expected_sha1_for_adir_file)
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.assertEqual(
                 [result_for_hello, result_for_adir_file],
                 await client.getSHA1(
@@ -272,7 +272,7 @@ class ThriftTest(testcase.EdenRepoTest):
         result_for_hello = Blake3Result(blake3=self.expected_hello_blake3)
         result_for_adir_file = Blake3Result(blake3=self.expected_adir_file_blake3)
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.assertEqual(
                 [result_for_hello, result_for_adir_file],
                 await client.getBlake3(
@@ -284,7 +284,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
     async def test_get_digest_hash_for_file(self) -> None:
         await self._ensure_blake3_computed()
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getDigestHash(
                 self.mount_path_bytes,
                 [b"hello", b"adir/file"],
@@ -301,7 +301,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     async def test_get_digest_hash_for_directory(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getDigestHash(
                 self.mount_path_bytes,
                 [b"adir"],
@@ -321,7 +321,7 @@ class ThriftTest(testcase.EdenRepoTest):
             )
 
     async def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getSHA1(
                 self.mount_path_bytes, [b"./hello"], sync=SyncBehavior()
             )
@@ -335,7 +335,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     async def test_get_blake3_throws_for_path_with_dot_components(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getBlake3(
                 self.mount_path_bytes, [b"./hello"], sync=SyncBehavior()
             )
@@ -349,7 +349,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     async def test_get_digest_hash_throws_for_path_with_dot_components(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getDigestHash(
                 self.mount_path_bytes, [b"./hello"], sync=SyncBehavior()
             )
@@ -363,7 +363,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     async def test_get_sha1_throws_for_empty_string(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getSHA1(
                 self.mount_path_bytes, [b""], sync=SyncBehavior()
             )
@@ -373,7 +373,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     async def test_get_blake3_throws_for_empty_string(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getBlake3(
                 self.mount_path_bytes, [b""], sync=SyncBehavior()
             )
@@ -383,7 +383,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     async def test_get_digest_hash_throws_for_empty_string(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getDigestHash(
                 self.mount_path_bytes, [b""], sync=SyncBehavior()
             )
@@ -396,7 +396,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     async def test_get_sha1_throws_for_directory(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getSHA1(
                 self.mount_path_bytes,
                 [b"adir"],
@@ -408,7 +408,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     async def test_get_blake3_throws_for_directory(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getBlake3(
                 self.mount_path_bytes,
                 [b"adir"],
@@ -420,7 +420,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     async def test_get_sha1_throws_for_non_existent_file(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getSHA1(
                 self.mount_path_bytes, [b"i_do_not_exist"], sync=SyncBehavior()
             )
@@ -433,7 +433,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     async def test_get_blake3_throws_for_non_existent_file(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getBlake3(
                 self.mount_path_bytes, [b"i_do_not_exist"], sync=SyncBehavior()
             )
@@ -446,7 +446,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
     async def test_get_digest_hash_throws_for_non_existent_file(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getDigestHash(
                 self.mount_path_bytes, [b"i_do_not_exist"], sync=SyncBehavior()
             )
@@ -460,7 +460,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
     async def test_get_sha1_throws_for_symlink(self) -> None:
         """Fails because caller should resolve the symlink themselves."""
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getSHA1(
                 self.mount_path_bytes, [b"slink"], sync=SyncBehavior()
             )
@@ -474,7 +474,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
     async def test_get_blake3_throws_for_symlink(self) -> None:
         """Fails because caller should resolve the symlink themselves."""
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getBlake3(
                 self.mount_path_bytes, [b"slink"], sync=SyncBehavior()
             )
@@ -493,7 +493,7 @@ class ThriftTest(testcase.EdenRepoTest):
         # Resuse contents of "hello" file so we don't need to calculate another blake3
         self.write_file("adir2/file", "hola\n")
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getDigestHash(
                 self.mount_path_bytes, [b"adir2", b"adir2/file"], sync=SyncBehavior()
             )
@@ -519,7 +519,7 @@ class ThriftTest(testcase.EdenRepoTest):
             "clone", "--rev", self.local_commit, self.repo.path, str(new_clone)
         )
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             results = await client.getDigestHash(
                 bytes(new_clone),
                 [b"local_dir", b"local_dir/file"],
@@ -622,7 +622,7 @@ class ThriftTest(testcase.EdenRepoTest):
         )
 
         age = TimeSpec(seconds=0, nanoSeconds=0)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             unload_count = await client.unloadInodeForPath(
                 self.mount_path_bytes, b"", age
             )
@@ -635,7 +635,7 @@ class ThriftTest(testcase.EdenRepoTest):
         self.write_file("testfile.txt", "unload test case")
 
         age = TimeSpec(seconds=0, nanoSeconds=0)
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             unload_count = await client.unloadInodeForPath(
                 self.mount_path_bytes, b".", age
             )
@@ -649,7 +649,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
     async def test_diff_revisions(self) -> None:
         # Convert the commit hashes to binary for the thrift call
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             diff = await client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 binascii.unhexlify(self.commit1),
@@ -669,7 +669,7 @@ class ThriftTest(testcase.EdenRepoTest):
     async def test_diff_revisions_hex(self) -> None:
         # Watchman currently calls getScmStatusBetweenRevisions()
         # with 40-byte hexadecimal commit IDs, so make sure that works.
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             diff = await client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 self.commit1.encode("utf-8"),
@@ -688,7 +688,7 @@ class ThriftTest(testcase.EdenRepoTest):
 
     async def test_diff_revisions_with_reverted_file(self) -> None:
         # Convert the commit hashes to binary for the thrift call
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             diff = await client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 binascii.unhexlify(self.commit1),

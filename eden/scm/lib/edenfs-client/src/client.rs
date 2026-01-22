@@ -123,7 +123,7 @@ impl EdenFsClient {
     }
 
     /// Construct a raw Thrift client from the given repo root.
-    pub(crate) async fn get_thrift_client(&self) -> anyhow::Result<Arc<dyn EdenService>> {
+    pub(crate) async fn get_async_thrift_client(&self) -> anyhow::Result<Arc<dyn EdenService>> {
         let transport = get_socket_transport(&self.eden_config.socket).await?;
         let client = <dyn EdenService>::new(BinaryProtocol, transport);
         Ok(client)
@@ -159,7 +159,7 @@ impl EdenFsClient {
         commit: HgId,
         list_ignored: bool,
     ) -> anyhow::Result<BTreeMap<RepoPathBuf, FileStatus>> {
-        let thrift_client = block_on(self.get_thrift_client())?;
+        let thrift_client = block_on(self.get_async_thrift_client())?;
 
         let start_time = Instant::now();
         let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(commit)?);
@@ -204,7 +204,7 @@ impl EdenFsClient {
     /// Get the raw journal position. Useful to check whether there are file changes.
     #[tracing::instrument(skip(self))]
     pub fn get_journal_position(&self) -> anyhow::Result<(i64, i64)> {
-        let thrift_client = block_on(self.get_thrift_client())?;
+        let thrift_client = block_on(self.get_async_thrift_client())?;
         let position = extract_error(block_on(
             thrift_client.getCurrentJournalPosition(&self.root_vec()),
         ))?;
@@ -216,7 +216,7 @@ impl EdenFsClient {
     /// Set the working copy (dirstate) parents.
     #[tracing::instrument(skip(self))]
     pub fn set_parents(&self, p1: HgId, p2: Option<HgId>, p1_tree: HgId) -> anyhow::Result<()> {
-        let thrift_client = block_on(self.get_thrift_client())?;
+        let thrift_client = block_on(self.get_async_thrift_client())?;
         let parents = edenfs::WorkingDirectoryParents {
             parent1: p1.into_byte_array().into(),
             parent2: p2.map(|n| n.into_byte_array().into()),
@@ -241,7 +241,7 @@ impl EdenFsClient {
     /// When a checkout is not ongoing it returns None.
     #[tracing::instrument(skip(self))]
     pub fn checkout_progress(&self) -> anyhow::Result<Option<ProgressInfo>> {
-        let thrift_client = block_on(self.get_thrift_client())?;
+        let thrift_client = block_on(self.get_async_thrift_client())?;
         let root_vec = self.root_vec();
         let thrift_params = CheckoutProgressInfoRequest {
             mountPoint: root_vec,
@@ -275,7 +275,7 @@ impl EdenFsClient {
     ) -> anyhow::Result<Vec<CheckoutConflict>> {
         Self::pre_checkout_routine(mode, &self.dot_dir, &self.sl_config)?;
         let tree_vec = tree.into_byte_array().into();
-        let thrift_client = block_on(self.get_thrift_client())?;
+        let thrift_client = block_on(self.get_async_thrift_client())?;
 
         let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(node)?);
         let params = edenfs::CheckOutRevisionParams {

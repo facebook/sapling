@@ -89,7 +89,7 @@ via-profile = "bind"
 
         mount_point_bytes = mount_point.encode("utf-8")
         dir_to_mount_bytes = dir_to_mount.encode("utf-8")
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             with self.assertRaises(Exception) as ctx:
                 await client.addBindMount(
                     mount_point_bytes, mount_point_bytes, dir_to_mount_bytes
@@ -297,7 +297,7 @@ via-profile = "bind"
         thrift_req = ListRedirectionsRequest(mount=thrift_mount)
 
         # List via thrift
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             thrift_output = await client.listRedirections(thrift_req)
             self.assertListEqual(
                 list(thrift_output.redirections),
@@ -319,7 +319,7 @@ via-profile = "bind"
         self.assertEqual(output, "", msg="we believe we set up a new bind mount")
 
         # List via thrift
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             thrift_output = await client.listRedirections(thrift_req)
             self.assertListEqual(
                 list(thrift_output.redirections),
@@ -358,7 +358,7 @@ via-profile = "bind"
         self.assertEqual(output, "", msg="we believe we switched to a symlink")
 
         # List via thrift
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             thrift_output = await client.listRedirections(thrift_req)
             self.assertListEqual(
                 list(thrift_output.redirections),
@@ -386,7 +386,7 @@ via-profile = "bind"
         self.assertEqual(output, "", msg="we believe we removed the symlink")
 
         # List via thrift
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             thrift_output = await client.listRedirections(thrift_req)
             self.assertListEqual(
                 list(thrift_output.redirections),

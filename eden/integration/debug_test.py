@@ -43,7 +43,7 @@ class DebugBlobTest(testcase.EdenRepoTest):
 
     # TODO: enable when using the modern Python 3 Thrift API
     async def xtest_debug_blob_prints_binary_data(self) -> None:
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             debugInfo = await client.debugInodeStatus(
                 os.fsencode(self.mount), b".", flags=0, sync=SyncBehavior()
             )
@@ -103,7 +103,7 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         )
 
     async def test_debug_blob_locations(self) -> None:
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             debugInfo = await client.debugInodeStatus(
                 os.fsencode(self.mount), b".", flags=0, sync=SyncBehavior()
             )
@@ -118,7 +118,7 @@ class DebugBlobHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
 
         self.eden.run_cmd("gc", cwd=self.mount)
 
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             # not present in the local storage yet
             for origin in [
                 DataFetchOrigin.MEMORY_CACHE,
@@ -241,7 +241,7 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         )
 
     async def test_debug_blob_metadata_locations(self) -> None:
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             debugInfo = await client.debugInodeStatus(
                 os.fsencode(self.mount), b".", flags=0, sync=SyncBehavior()
             )
@@ -257,7 +257,7 @@ class DebugBlobMetadataHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         self.eden.run_cmd("gc", cwd=self.mount)
         self.eden.restart()
 
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             # not present in the local storage yet
             for origin in [
                 DataFetchOrigin.MEMORY_CACHE,
@@ -374,7 +374,7 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         )
 
     async def test_debug_tree_locations(self) -> None:
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             debugInfo = await client.debugInodeStatus(
                 os.fsencode(self.mount),
                 b"testDir/testTree",
@@ -409,7 +409,7 @@ class DebugTreeHgTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         self.eden.run_cmd("gc", cwd=self.mount)  # this clears cache in disk
         self.eden.restart()  # this clears cache in memory
 
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             # not present in the local storage yet
             for origin in [DataFetchOrigin.MEMORY_CACHE]:
                 await self.assert_tree_not_available(client, treeInfo.treeHash, origin)

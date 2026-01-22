@@ -129,7 +129,7 @@ baz
     async def assert_fid_matches(
         self, path: Path, commit: str, filter_paths: List[str]
     ) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             result = await client.getCurrentSnapshotInfo(
                 GetCurrentSnapshotInfoRequest(
                     mountId=MountId(mountPoint=os.fsencode(path))
@@ -348,7 +348,7 @@ baz
     async def test_eden_get_filter_empty(self) -> None:
         path = self.eden_clone_filteredhg_repo(backing_store="filteredhg")
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             result = await client.getCurrentSnapshotInfo(
                 GetCurrentSnapshotInfoRequest(
                     mountId=MountId(mountPoint=os.fsencode(path))
@@ -397,7 +397,7 @@ class NonFilteredTestCase(EdenHgTestCase):
     async def test_eden_get_filter_nonfiltered(self) -> None:
         path = self.eden_clone_filteredhg_repo(backing_store="hg")
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             result = await client.getCurrentSnapshotInfo(
                 GetCurrentSnapshotInfoRequest(
                     mountId=MountId(mountPoint=os.fsencode(path))

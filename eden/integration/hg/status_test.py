@@ -111,7 +111,7 @@ class StatusTest(EdenHgTestCase):
 
         enable_status_cache = self.enable_status_cache
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             # Test with a clean status.
             await self.verify_status(client, initial_commit, False, {})
 
@@ -161,7 +161,7 @@ class StatusTest(EdenHgTestCase):
         initial_commit_hex = self.repo.get_head_hash()
         initial_commit = binascii.unhexlify(initial_commit_hex)
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             # Add file to commit
             self.touch("new_tracked.txt")
             self.hg("add", "new_tracked.txt")
@@ -277,7 +277,7 @@ class StatusTest(EdenHgTestCase):
         commit_with_ignored_removed = self.repo.commit("Commit with removed file")
         self.repo.update(commit_with_ignored)
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             status_from_get_scm_status = await client.getScmStatusBetweenRevisions(
                 mountPoint=self.mount_path_bytes,
                 oldHash=commit_with_ignored_removed.encode(),
@@ -340,7 +340,7 @@ class StatusTest(EdenHgTestCase):
             # no need to test the cache if it is not enabled
             return
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             # disable enforce parent check
             await self.use_customized_config(
                 client,
@@ -421,8 +421,8 @@ class StatusTest(EdenHgTestCase):
             # no need to test the cache if it is not enabled
             return
 
-        async with self.get_thrift_client() as client:
-            async with self.get_thrift_client() as client2:
+        async with self.get_async_thrift_client() as client:
+            async with self.get_async_thrift_client() as client2:
                 # disable enforce parent check
                 await self.use_customized_config(
                     client,
@@ -539,7 +539,7 @@ class StatusTest(EdenHgTestCase):
             # no need to test the cache if it is not enabled
             return
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.touch("world.txt")
             await client.synchronizeWorkingCopy(
                 self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
@@ -622,7 +622,7 @@ class StatusTest(EdenHgTestCase):
 
         block_key_value = "blocking " + check_point
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             self.touch("world.txt")
             await client.injectFault(
                 FaultDefinition(
@@ -687,7 +687,7 @@ class StatusTest(EdenHgTestCase):
         self.repo.write_file("parent/child/file_1.txt", "what")
         self.repo.write_file("parent/child/file_2.txt", "what")
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             await client.injectFault(
                 FaultDefinition(
                     keyClass="TreeInode::computeDiff",

@@ -35,7 +35,7 @@ class PrjFSTestBase(testcase.EdenRepoTest):
     async def eden_status(
         self, listIgnored: bool = False
     ) -> Mapping[bytes, ScmFileStatus]:
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             status = await client.getScmStatusV2(
                 GetScmStatusParams(
                     mountPoint=self.mount.encode(),
@@ -63,7 +63,7 @@ class PrjFSTestBase(testcase.EdenRepoTest):
         keyClass: str = "PrjfsDispatcherImpl::fileNotification",
         keyValueRegex: str = ".*",
     ) -> None:
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             await client.injectFault(
                 FaultDefinition(
                     keyClass=keyClass,
@@ -78,7 +78,7 @@ class PrjFSTestBase(testcase.EdenRepoTest):
         keyClass: str = "PrjfsDispatcherImpl::fileNotification",
         keyValueRegex: str = ".*",
     ) -> None:
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             await client.removeFault(
                 RemoveFaultArg(keyClass=keyClass, keyValueRegex=keyValueRegex)
             )
@@ -95,7 +95,7 @@ class PrjFSTestBase(testcase.EdenRepoTest):
         """Return all the materialized files/directories minus .hg and .eden"""
         res = set()
 
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             inodes = await client.debugInodeStatus(
                 self.mount_path_bytes,
                 b"",

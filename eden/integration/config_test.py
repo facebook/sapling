@@ -40,7 +40,7 @@ class ConfigTest(testcase.EdenTestCase):
     async def test_get_config(self) -> None:
         self.maxDiff = None
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             # Check the initial config values
             config = await client.getConfig(GetConfigParams())
 
@@ -104,7 +104,7 @@ ignoreFile = "{new_ignore_path}"
             )
 
     async def test_periodic_reload(self) -> None:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             await self._test_periodic_reload(client)
 
     async def _test_periodic_reload(self, client) -> None:

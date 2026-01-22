@@ -564,7 +564,7 @@ class WindowsFsckTest(prjfs_test.PrjFSTestBase):
         )
 
     async def _update_clean(self) -> Sequence[CheckoutConflict]:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             conflicts = await client.checkOutRevision(
                 mountPoint=self.mount.encode(),
                 snapshotHash=self.initial_commit.encode(),
@@ -600,7 +600,7 @@ class WindowsFsckTest(prjfs_test.PrjFSTestBase):
         """
 
         async def get_all_loaded_under(path: str) -> List[Tuple[Path, int]]:
-            async with self.get_thrift_client() as client:
+            async with self.get_async_thrift_client() as client:
                 all_loaded = await client.debugInodeStatus(
                     self.mount_path_bytes,
                     path.encode(),
@@ -653,7 +653,7 @@ class WindowsRebuildOverlayTest(testcase.EdenRepoTest):
         return "sqlite"
 
     async def _eden_inode_info(self) -> Sequence[TreeInodeDebugInfo]:
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             return await client.debugInodeStatus(
                 mountPoint=self.mount.encode(),
                 path=b"",

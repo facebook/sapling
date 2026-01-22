@@ -500,7 +500,7 @@ class UpdateTest(EdenHgTestCase):
 
         async def checkout_in_progress() -> Optional[bool]:
             try:
-                async with self.eden.get_thrift_client() as client:
+                async with self.eden.get_async_thrift_client() as client:
                     await client.getScmStatusV2(
                         GetScmStatusParams(
                             mountPoint=bytes(self.mount, encoding="utf-8"),
@@ -523,7 +523,7 @@ class UpdateTest(EdenHgTestCase):
 
     @asynccontextmanager
     async def block_checkout(self) -> AsyncGenerator[None, None]:
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             await client.injectFault(
                 FaultDefinition(
                     keyClass="inodeCheckout", keyValueRegex=".*", block=True
@@ -533,7 +533,7 @@ class UpdateTest(EdenHgTestCase):
         try:
             yield
         finally:
-            async with self.eden.get_thrift_client() as client:
+            async with self.eden.get_async_thrift_client() as client:
                 await client.unblockFault(
                     UnblockFaultArg(keyClass="inodeCheckout", keyValueRegex=".*")
                 )
@@ -816,7 +816,7 @@ class UpdateTest(EdenHgTestCase):
     async def kill_eden_during_checkout_and_restart(
         self, commit: str, keyValue: str
     ) -> None:
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             await client.injectFault(
                 FaultDefinition(
                     keyClass="TreeInode::checkout",
@@ -880,7 +880,7 @@ class UpdateTest(EdenHgTestCase):
         output = self.repo.update(bottom, clean=True)
         self.assertEqual("update complete\n", output)
 
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             inode_status = await client.debugInodeStatus(
                 self.repo.path.encode("utf8"),
                 b"",
@@ -899,7 +899,7 @@ class UpdateTest(EdenHgTestCase):
         await self.kill_eden_during_checkout_and_restart(self.commit1, "foo, false")
 
         async def start_force_checkout(commit: str) -> None:
-            async with self.eden.get_thrift_client() as client:
+            async with self.eden.get_async_thrift_client() as client:
                 await client.checkOutRevision(
                     mountPoint=self.mount_path_bytes,
                     snapshotHash=commit.encode(),
@@ -1118,7 +1118,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
                 raise ValueError("Unsupported initial state: {}".format(initial_state))
 
             # Simulate failed invalidation of file2.
-            async with self.eden.get_thrift_client() as client:
+            async with self.eden.get_async_thrift_client() as client:
                 await client.injectFault(
                     FaultDefinition(
                         keyClass="invalidateChannelEntryCache",
@@ -1133,7 +1133,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
             self.assert_unfinished_operation("update")
 
             # Try to update again, this time without failure.
-            async with self.eden.get_thrift_client() as client:
+            async with self.eden.get_async_thrift_client() as client:
                 await client.unblockFault(
                     UnblockFaultArg(
                         keyClass="invalidateChannelEntryCache", keyValueRegex="file2"
@@ -1440,7 +1440,7 @@ class PrjFSStressTornReads(EdenHgTestCase):
         except Exception:
             pass
 
-        async with self.eden.get_thrift_client() as client:
+        async with self.eden.get_async_thrift_client() as client:
             await client.injectFault(
                 FaultDefinition(
                     keyClass="PrjFSChannelInner::getFileData-invalidation",

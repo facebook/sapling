@@ -267,11 +267,11 @@ class EdenTestCase(EdenTestCaseBase):
         """
         return self.eden.get_thrift_client_legacy()
 
-    def get_thrift_client(self) -> EdenService.Async:
+    def get_async_thrift_client(self) -> EdenService.Async:
         """
         Get a thrift client to the edenfs daemon.
         """
-        return self.eden.get_thrift_client()
+        return self.eden.get_async_thrift_client()
 
     def get_counters(self) -> typing.Mapping[str, float]:
         with self.get_thrift_client_legacy() as thrift_client:

@@ -204,8 +204,8 @@ class EdenFS:
     ) -> legacy.EdenClient:
         return legacy.create_thrift_client(str(self._eden_dir), timeout=timeout)
 
-    def get_thrift_client(self, timeout: float = 0) -> EdenService.Async:
-        return client.create_thrift_client(str(self._eden_dir), timeout=timeout)
+    def get_async_thrift_client(self, timeout: float = 0) -> EdenService.Async:
+        return client.create_async_thrift_client(str(self._eden_dir), timeout=timeout)
 
     def run_cmd(
         self,
@@ -744,7 +744,7 @@ class EdenFS:
         this mount path.
         """
         if client is None:
-            async with self.get_thrift_client() as client:
+            async with self.get_async_thrift_client() as client:
                 return await self.get_mount_state_async(mount, client)
         else:
             mounts = await client.listMounts()

@@ -36,7 +36,7 @@ class CancellationTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
 
     async def test_cancel_nonexistent_request(self) -> None:
         """Test cancelling a request that doesn't exist."""
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             params = CancelRequestsParams(requestIds=[99999])
             response = await client.cancelRequests(params)
 
@@ -46,7 +46,7 @@ class CancellationTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
 
     async def test_concurrent_cancel_requests(self) -> None:
         """Test making concurrent cancel requests."""
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             request_id = 54321
 
             tasks = []
@@ -75,7 +75,7 @@ class CancellationTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         6. Make getActiveRequests thrift request
         7. See that the debugGetBlob request is no longer active
         """
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             fault = FaultDefinition(
                 keyClass="debugGetBlob",
                 keyValueRegex=".*",
@@ -158,7 +158,7 @@ class CancellationTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         3. Stop the Eden server
         4. See that original debugGetBlob returns with cancellation message (not timeout)
         """
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             fault = FaultDefinition(
                 keyClass="debugGetBlob",
                 keyValueRegex=".*",
@@ -207,7 +207,7 @@ class CancellationTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
 
     async def test_bulk_cancel_nonexistent_requests(self) -> None:
         """Test cancelling multiple non-existent requests in a single bulk operation."""
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             nonexistent_request_ids = [10001, 10002, 10003, 10004, 10005]
             params = CancelRequestsParams(requestIds=nonexistent_request_ids)
             response = await client.cancelRequests(params)
@@ -220,7 +220,7 @@ class CancellationTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
 
     async def test_simultaneous_cancel_multiple_requests(self) -> None:
         """Test injecting fault, starting 2 debugGetBlob calls, and cancelling both simultaneously."""
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             fault = FaultDefinition(
                 keyClass="debugGetBlob",
                 keyValueRegex=".*",

@@ -186,7 +186,7 @@ class TakeoverTest(TakeoverTestBase):
         # Previously this thrift call caused Eden to create temporary inode
         # objects outside of the normal root inode tree, and this would cause
         # Eden to crash when shutting down afterwards.
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             await client.getScmStatusBetweenRevisions(
                 os.fsencode(self.mount),
                 self.commit1.encode("utf-8"),
@@ -418,7 +418,7 @@ class TakeoverTest(TakeoverTestBase):
 
     async def test_stop_during_takeover(self) -> None:
         # block graceful restart
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             await client.injectFault(
                 FaultDefinition(
                     keyClass="takeover", keyValueRegex="server_shutdown", block=True
@@ -470,7 +470,7 @@ class TakeoverTest(TakeoverTestBase):
     async def test_takeover_during_mount(self) -> None:
         self.eden.unmount(self.mount_path)
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             await client.injectFault(
                 FaultDefinition(keyClass="mount", keyValueRegex=".*", block=True)
             )
@@ -485,7 +485,7 @@ class TakeoverTest(TakeoverTestBase):
             )
 
             async def mount_initializing() -> Optional[bool]:
-                async with self.get_thrift_client() as client:
+                async with self.get_async_thrift_client() as client:
                     mount_list = await client.listMounts()
                     for mount_info in mount_list:
                         if mount_info.mountPoint == self.mount_path_bytes:
@@ -501,7 +501,7 @@ class TakeoverTest(TakeoverTestBase):
             ):
                 self.eden.graceful_restart()
         finally:
-            async with self.get_thrift_client() as client:
+            async with self.get_async_thrift_client() as client:
                 await client.unblockFault(
                     UnblockFaultArg(keyClass="mount", keyValueRegex=".*")
                 )
@@ -559,7 +559,7 @@ class TakeoverRocksDBStressTest(testcase.EdenRepoTest):
 
         graceful_restart_startup_time = 5.0
 
-        async with self.get_thrift_client() as client:
+        async with self.get_async_thrift_client() as client:
             for key_class in ["local store get single", "local store get batch"]:
                 await client.injectFault(
                     FaultDefinition(

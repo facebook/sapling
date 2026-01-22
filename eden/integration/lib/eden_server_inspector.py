@@ -28,7 +28,7 @@ class EdenServerInspector:
 
     async def unload_inode_for_path(self, path: str = "") -> None:
         """path: relative path to a directory under the mount."""
-        async with self._eden.get_thrift_client() as client:
+        async with self._eden.get_async_thrift_client() as client:
             await client.unloadInodeForPath(
                 os.fsencode(self._mount_point),
                 os.fsencode(path),
@@ -41,7 +41,7 @@ class EdenServerInspector:
         Use '' for the root. Note that this will include the inode count for
         the root .hg and .eden entries.
         """
-        async with self._eden.get_thrift_client() as client:
+        async with self._eden.get_async_thrift_client() as client:
             debug_info = await client.debugInodeStatus(
                 os.fsencode(self._mount_point),
                 os.fsencode(path),
@@ -55,7 +55,7 @@ class EdenServerInspector:
 
     async def get_paths_for_inodes(self, path: str = "") -> AsyncGenerator:
         """path: relative path to a directory under the mount."""
-        async with self._eden.get_thrift_client() as client:
+        async with self._eden.get_async_thrift_client() as client:
             debug_info = await client.debugInodeStatus(
                 os.fsencode(self._mount_point),
                 os.fsencode(path),
