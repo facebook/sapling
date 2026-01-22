@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "updated": 1769068927850,
+  "naming": {
+    "exports": {
+      "dominant": "PascalCase",
+      "count": 2828,
+      "percentage": 75
+    }
+  },
+  "directories": {
+    "components": {
+      "purpose": "UI components",
+      "files": 52
+    },
+    "__tests__": {
+      "purpose": "Test files",
+      "files": 120
+    },
+    "utils": {
+      "purpose": "Utility functions",
+      "files": 10
+    },
+    "types": {
+      "purpose": "TypeScript types",
+      "files": 4
+    },
+    "api": {
+      "purpose": "API endpoints",
+      "files": 2
+    },
+    "lib": {
+      "purpose": "Utility functions",
+      "files": 1
+    },
+    "pages": {
+      "purpose": "Page components",
+      "files": 1
+    }
+  },
+  "suffixes": {
+    ".test.tsx": {
+      "purpose": "Test files",
+      "count": 60
+    },
+    ".d.ts": {
+      "purpose": "Unknown",
+      "count": 5
+    },
+    ".test.ts": {
+      "purpose": "Test files",
+      "count": 74
+    },
+    ".config.js": {
+      "purpose": "Configuration",
+      "count": 6
+    }
+  }
+}

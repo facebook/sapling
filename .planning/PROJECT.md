@@ -2,33 +2,45 @@
 
 ## What This Is
 
-A fork of Sapling's Interactive Smartlog (ISL) web UI, focused on improving the developer experience for stacked PR workflows. Built for a small team (3-5 devs) who switched from Graphite and want that level of polish in their daily code review tool.
+A fork of Sapling's Interactive Smartlog (ISL) web UI with Graphite-inspired polish for stacked PR workflows. Built for a small team (3-5 devs) who switched from Graphite and wanted that level of refinement in their daily code review tool.
 
 ## Core Value
 
 The UI should feel polished and effortless — you focus on the code, not fighting the interface.
 
+## Current State
+
+**Version:** v1.0 (shipped 2026-01-22)
+**Tech:** React, TypeScript, Vite, CSS custom properties
+**LOC:** +630 lines added across 18 files
+
+Shipped features:
+- Graphite-inspired color scheme (deep navy, soft blue accents)
+- Click-to-checkout navigation (single-click on any PR/commit)
+- Origin/main visual prominence (badge highlighting)
+- Auto-scroll sync with VS Code-style selection borders
+- Author avatars with deterministic colors
+- Soft diff colors (cyan-blue additions, salmon deletions)
+
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+- Responsive three-column layout with graceful collapse — v1.0
+- Proper spacing and padding throughout — v1.0
+- Click commits/PRs to checkout (not just pull button) — v1.0
+- "main" at top with pull/checkout button — v1.0
+- Better highlighting of origin/main — v1.0
+- Auto-scroll to selected commit when selecting from left — v1.0
+- Show author name + avatar on commits — v1.0
+- De-emphasize "changes to amend" (collapsible) — v1.0
+- Promote files changed section — v1.0
+- Diff view: Graphite-style color scheme — v1.0
+- Overall visual polish matching Graphite's aesthetic — v1.0
 
 ### Active
 
-- [ ] Responsive three-column layout with graceful collapse on narrow screens
-- [ ] Proper spacing and padding throughout — no cramped feeling
-- [ ] Left column: click commits/PRs to checkout (not just pull button)
-- [ ] Left column: "main" at top with pull/checkout button
-- [ ] Left column: better highlighting of origin/main
-- [ ] Middle column: auto-scroll to selected commit when selecting from left
-- [ ] Middle column: show author name + avatar on commits
-- [ ] Middle column: highlight origin/main more prominently
-- [ ] Right column: de-emphasize "changes to amend" (collapsible, or move below files)
-- [ ] Right column: promote files changed section
-- [ ] Right column: +/- line counts in GitHub/Graphite style
-- [ ] Diff view: Graphite-style color scheme (soft blue additions, salmon deletions)
-- [ ] Overall visual polish matching Graphite's aesthetic
+(None yet — discover through usage)
 
 ### Out of Scope
 
@@ -38,13 +50,11 @@ The UI should feel polished and effortless — you focus on the code, not fighti
 
 ## Context
 
-The team previously used Graphite and is accustomed to its polished review UI. The current ISL works but has friction:
-- Three-column layout cramps on smaller screens
-- Navigation requires hunting for small buttons
-- Diff colors feel off compared to Graphite's softer palette
-- Information density is high without enough breathing room
-
-Reference screenshot of Graphite's diff view provided — soft navy background, blue-tinted additions, salmon deletions, muted syntax highlighting.
+The team previously used Graphite and is accustomed to its polished review UI. v1.0 addresses the initial friction points:
+- Three-column layout cramping on smaller screens
+- Navigation requiring hunting for small buttons
+- Diff colors feeling off compared to Graphite's softer palette
+- Information density high without enough breathing room
 
 ## Constraints
 
@@ -56,9 +66,12 @@ Reference screenshot of Graphite's diff view provided — soft navy background, 
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Fork ISL rather than upstream PR | Internal team needs, faster iteration, opinionated changes | — Pending |
-| Match Graphite's diff color scheme | Team is used to it, softer on eyes for long sessions | — Pending |
-| Work within existing stack | Minimize learning curve, leverage existing patterns | — Pending |
+| Fork ISL rather than upstream PR | Internal team needs, faster iteration, opinionated changes | Good |
+| Match Graphite's diff color scheme | Team is used to it, softer on eyes for long sessions | Good |
+| Work within existing stack | Minimize learning curve, leverage existing patterns | Good |
+| Deep navy #1a1f36 as primary background | Graphite-style, professional, easy on eyes | Good |
+| Single-click checkout on entire PR row | Matches Graphite UX pattern — most common action easiest | Good |
+| 12-color avatar palette with deterministic hash | Same author always gets same color for consistency | Good |
 
 ---
-*Last updated: 2025-01-21 after initialization*
+*Last updated: 2026-01-22 after v1.0 milestone*
