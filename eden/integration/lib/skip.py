@@ -483,6 +483,43 @@ for testModule, disabled in FILTEREDFS_TEST_DISABLED.items():
             if isinstance(prev_disabled, list):
                 TEST_DISABLED[new_class_name] = prev_disabled + disabled
 
+# TODO(T233006794) The following tests have an issue on NFS runners where they
+# will prevent the edenfs daemon from shutting down.
+# We are disabling them for now to unblock the conveyors but should fix them
+EDEN_CRASH_NFS_DISABLED = {
+    "takeover_test.TakeoverTestNFS": [
+        "test_takeover",
+        "test_takeover_failure",
+        "test_takeover_after_diff_revisions",
+        "test_readdir_after_graceful_restart",
+        "test_readdir_before_and_after_graceful_restart",
+        "test_takeover_with_io",
+        "test_takeover_updates_process_id_in_lock_file",
+        "test_takeover_preserves_inode_numbers_for_open_nonmaterialized_files",
+        "test_contents_are_the_same_if_handle_is_held_open",
+    ],
+    "takeover_test.TakeoverRocksDBStressTestNFS": [
+        "test_takeover_with_tree_inode_loading_from_local_store",
+    ],
+}
+
+for testModule, disabled in EDEN_CRASH_NFS_DISABLED.items():
+    other_mixins = ["Hg", "Git", "FilteredHg"]
+    for mixin in other_mixins:
+        # We need to be careful that we don't overwrite any pre-existing lists
+        # or bulk disables that were disabled by other criteria.
+        new_class_name = testModule + mixin
+        prev_disabled = TEST_DISABLED.get(new_class_name)
+        if prev_disabled is None:
+            # There are no previously disabled tests, we're free to bulk add
+            TEST_DISABLED[new_class_name] = disabled
+        else:
+            # If there's a list of previously disabled tests, we need to append
+            # our list. Otherwise, we can no-op since all tests (including the
+            # ones we specified) are already disabled.
+            if isinstance(prev_disabled, list):
+                TEST_DISABLED[new_class_name] = prev_disabled + disabled
+
 
 def is_class_disabled(class_name: str) -> bool:
     class_skipped = TEST_DISABLED.get(class_name)
