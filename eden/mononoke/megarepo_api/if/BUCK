@@ -24,9 +24,6 @@ thrift_library(
     py_base_module = "scm.service.thrift",
     py_remote_service_router = True,
     rust_autocargo = {"cargo_toml_dir": "megarepo_configs"},
-    thrift_cpp2_options = [
-        "reflection",
-    ],
     thrift_py_options = "utf8strings",
     thrift_rust_options = "serde",
     thrift_srcs = {
