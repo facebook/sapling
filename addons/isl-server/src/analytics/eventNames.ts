@@ -67,6 +67,8 @@ export type TrackEventName =
   | 'GettingStartedInteraction'
   | 'GetSuggestedReviewers'
   | 'GetAlertsCommand'
+  | 'GetCurrentStack'
+  | 'GetFullFocusedBranch'
   | 'AcceptSuggestedReviewer'
   | 'GhStackSubmitOperation'
   | 'GotoOperation'

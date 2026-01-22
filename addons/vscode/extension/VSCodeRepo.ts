@@ -26,6 +26,7 @@ import type {EnabledSCMApiFeature} from './types';
 import {generatedFilesDetector} from 'isl-server/src/GeneratedFiles';
 import {Repository} from 'isl-server/src/Repository';
 import {repositoryCache} from 'isl-server/src/RepositoryCache';
+import type {TrackEventName} from 'isl-server/src/analytics/eventNames';
 import {getMainFetchTemplate, parseCommitInfoOutput} from 'isl-server/src/templates';
 import {ResolveOperation, ResolveTool} from 'isl/src/operations/ResolveOperation';
 import {diffCurrentCommit} from 'isl/src/stackEdit/diffSplit';
@@ -421,19 +422,19 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
     });
   }
 
-  runSlCommand(args: Array<string>): Promise<SaplingCommandOutput> {
-    return this.repo.runCommand(args, undefined, this.repo.initialConnectionContext);
+  runSlCommand(
+    args: Array<string>,
+    eventName: TrackEventName | undefined = undefined,
+  ): Promise<SaplingCommandOutput> {
+    return this.repo.runCommand(args, eventName, this.repo.initialConnectionContext);
   }
 
   async getCurrentStack(): Promise<ReadonlyArray<SaplingCommitInfo>> {
     const revset = 'sort(draft() and ancestors(.), topo)';
-    const result = await this.runSlCommand([
-      'log',
-      '--rev',
-      revset,
-      '--template',
-      getMainFetchTemplate(this.info.codeReviewSystem),
-    ]);
+    const result = await this.runSlCommand(
+      ['log', '--rev', revset, '--template', getMainFetchTemplate(this.info.codeReviewSystem)],
+      'GetCurrentStack',
+    );
     if (result.exitCode === 0) {
       return parseCommitInfoOutput(this.logger, result.stdout, this.repo.info.codeReviewSystem);
     } else {
@@ -443,13 +444,10 @@ export class VSCodeRepo implements vscode.QuickDiffProvider, SaplingRepository {
 
   async getFullFocusedBranch(): Promise<ReadonlyArray<SaplingCommitInfo>> {
     const revset = 'sort(focusedbranch(.), topo)';
-    const result = await this.runSlCommand([
-      'log',
-      '--rev',
-      revset,
-      '--template',
-      getMainFetchTemplate(this.info.codeReviewSystem),
-    ]);
+    const result = await this.runSlCommand(
+      ['log', '--rev', revset, '--template', getMainFetchTemplate(this.info.codeReviewSystem)],
+      'GetFullFocusedBranch',
+    );
     if (result.exitCode === 0) {
       return parseCommitInfoOutput(this.logger, result.stdout, this.repo.info.codeReviewSystem);
     } else {
