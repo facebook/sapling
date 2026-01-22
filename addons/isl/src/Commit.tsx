@@ -26,6 +26,7 @@ import {useAutofocusRef} from 'shared/hooks';
 import {notEmpty, nullthrows} from 'shared/utils';
 import {spacing} from '../../components/theme/tokens.stylex';
 import {AllBookmarksTruncated, Bookmark, Bookmarks, createBookmarkAtCommit} from './Bookmark';
+import {CommitAvatar} from './Avatar';
 import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {showComparison} from './ComparisonView/atoms';
@@ -515,11 +516,14 @@ export const Commit = memo(
               </Tooltip>
             )}
             {isPublic ? null : (
-              <span className="commit-title">
-                {commitLabel && <CommitLabel>{commitLabel}</CommitLabel>}
-                <span>{title}</span>
-                <CommitDate date={commit.date} />
-              </span>
+              <>
+                <CommitAvatar username={commit.author} size={20} />
+                <span className="commit-title">
+                  {commitLabel && <CommitLabel>{commitLabel}</CommitLabel>}
+                  <span>{title}</span>
+                  <CommitDate date={commit.date} />
+                </span>
+              </>
             )}
             <UnsavedEditedMessageIndicator commit={commit} />
             {isOriginMain && (

@@ -332,3 +332,15 @@
 .commit.origin-main-commit.head-commit {
   border-left-color: var(--graphite-accent, #4a90e2);
 }
+
+/* Commit author avatar */
+.commit-author-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.avatar-initials {
+  flex-shrink: 0;
+}
