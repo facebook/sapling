@@ -40,6 +40,20 @@ import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 
 import './CommitTreeList.css';
 
+/**
+ * Check if a commit has origin/main or origin/master bookmark.
+ * Used to apply special highlighting to the main branch marker.
+ */
+function isOriginMain(commit: DagCommitInfo): boolean {
+  return commit.remoteBookmarks.some(
+    bookmark =>
+      bookmark === 'origin/main' ||
+      bookmark === 'origin/master' ||
+      bookmark === 'remote/main' ||
+      bookmark === 'remote/master',
+  );
+}
+
 type DagCommitListProps = {
   isNarrow: boolean;
 };
@@ -181,12 +195,14 @@ const dagHasChildren = atomFamilyWeak((key: string) => {
 
 function DagCommitBody({info}: {info: DagCommitInfo}) {
   const hasChildren = useAtomValue(dagHasChildren(info.hash));
+  const isMainBranch = isOriginMain(info);
   return (
     <Commit
       commit={info}
       key={info.hash}
       previewType={info.previewType}
       hasChildren={hasChildren}
+      isOriginMain={isMainBranch}
     />
   );
 }
