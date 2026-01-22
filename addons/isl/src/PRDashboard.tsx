@@ -180,14 +180,29 @@ function StackCard({
   const [stackLabels, setStackLabels] = useAtom(stackLabelsAtom);
   const runOperation = useRunOperation();
   const currentUser = useAtomValue(currentGitHubUser);
+  const dag = useAtomValue(dagWithPreviews);
 
   const customLabel = stackLabels[stack.id];
   // Check if this stack is from an external author (someone other than the current user)
   const isExternal = currentUser != null && stack.mainAuthor != null && stack.mainAuthor !== currentUser;
 
+  // Get the top PR's head hash for checkout
+  const topHeadHash = stack.prs[0]?.type === 'github' ? stack.prs[0].head : undefined;
+  const isCurrentStack = topHeadHash ? dag.resolve('.')?.hash === topHeadHash : false;
+  const inlineProgress = useAtomValue(inlineProgressByHash(topHeadHash ?? ''));
+
   const handlePullStack = () => {
     runOperation(new PullStackOperation(stack.topPrNumber, /* goto */ true));
   };
+
+  const handleStackCheckout = useCallback((e: React.MouseEvent) => {
+    // Don't interfere with child element clicks
+    if ((e.target as HTMLElement).closest('button, input, .stack-card-title')) {
+      return;
+    }
+    if (!topHeadHash || isCurrentStack) return;
+    runOperation(new GotoOperation(succeedableRevset(topHeadHash)));
+  }, [topHeadHash, isCurrentStack, runOperation]);
 
   const toggleExpanded = () => {
     setIsExpanded(prev => !prev);
@@ -218,11 +233,18 @@ function StackCard({
     'stack-card',
     isHidden ? 'stack-card-hidden' : '',
     isExternal ? 'stack-card-external' : '',
+    isCurrentStack ? 'stack-card-current' : '',
+    inlineProgress ? 'stack-card-loading' : '',
+  ].filter(Boolean).join(' ');
+
+  const headerClass = [
+    'stack-card-header',
+    topHeadHash && !isCurrentStack ? 'stack-card-header-clickable' : '',
   ].filter(Boolean).join(' ');
 
   return (
     <div className={stackCardClass}>
-      <div className="stack-card-header">
+      <div className={headerClass} onClick={handleStackCheckout}>
         <Button className="stack-card-expand-button" onClick={toggleExpanded}>
           <Icon icon={isExpanded ? 'chevron-down' : 'chevron-right'} />
         </Button>
