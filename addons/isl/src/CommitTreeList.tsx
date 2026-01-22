@@ -35,6 +35,7 @@ import {
   useCommitCallbacks,
   useShortcutToRebaseSelected,
 } from './selection';
+import {useEffect} from 'react';
 import {commitFetchError, latestUncommittedChangesData} from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 
@@ -246,6 +247,34 @@ function HighlightedGlyph({info}: {info: DagCommitInfo}) {
   );
 }
 
+/**
+ * Hook to scroll the commit tree to show the selected commit centered in view.
+ * Uses a timeout to ensure DOM has rendered before scrolling.
+ */
+function useScrollToSelectedCommit() {
+  const selected = useAtomValue(selectedCommits);
+
+  useEffect(() => {
+    if (selected.size !== 1) {
+      return;
+    }
+
+    const hash = Array.from(selected)[0];
+    const timer = setTimeout(() => {
+      const element = document.querySelector(`[data-commit-hash="${hash}"]`);
+      if (element) {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest',
+        });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [selected]);
+}
+
 export function CommitTreeList() {
   // Make sure we trigger subscription to changes to uncommitted changes *before* we have a tree to render,
   // so we don't miss the first returned uncommitted changes message.
@@ -257,6 +286,7 @@ export function CommitTreeList() {
   useArrowKeysToChangeSelection();
   useBackspaceToHideSelected();
   useShortcutToRebaseSelected();
+  useScrollToSelectedCommit();
 
   const isNarrow = useAtomValue(isNarrowCommitTree);
 
