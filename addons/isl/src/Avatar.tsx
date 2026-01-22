@@ -14,7 +14,7 @@ import serverAPI from './ClientToServerAPI';
 import {t} from './i18n';
 import {atomFamilyWeak, lazyAtom} from './jotaiUtils';
 
-const avatarUrl = atomFamilyWeak((author: string) => {
+export const avatarUrl = atomFamilyWeak((author: string) => {
   // Rate limitor for the same author is by lazyAtom and atomFamilyWeak caching.
   return lazyAtom(async () => {
     serverAPI.postMessage({
@@ -103,4 +103,79 @@ export function AvatarPattern({
       <image href={img} width={size} height={size} />
     </pattern>
   );
+}
+
+// Color palette for initials avatars (12 colors for good distribution)
+const AVATAR_COLORS = [
+  '#e91e63',
+  '#9c27b0',
+  '#673ab7',
+  '#3f51b5',
+  '#2196f3',
+  '#00bcd4',
+  '#009688',
+  '#4caf50',
+  '#ff9800',
+  '#ff5722',
+  '#795548',
+  '#607d8b',
+];
+
+function hashStringToColor(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    // eslint-disable-next-line no-bitwise
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function getInitials(username: string): string {
+  // Extract username from email if present
+  const name = username.split('@')[0];
+  return name.slice(0, 2).toUpperCase();
+}
+
+export function InitialsAvatar({username, size = 20}: {username: string; size?: number}) {
+  const initials = getInitials(username);
+  const bgColor = hashStringToColor(username);
+
+  return (
+    <div
+      className="avatar-initials"
+      style={{
+        backgroundColor: bgColor,
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: size * 0.5,
+        fontWeight: 600,
+        color: 'white',
+        flexShrink: 0,
+      }}
+      title={username}>
+      {initials}
+    </div>
+  );
+}
+
+export function CommitAvatar({username, size = 20}: {username: string; size?: number}) {
+  const url = useAtomValue(avatarUrl(username));
+
+  if (url) {
+    return (
+      <AvatarImg
+        url={url}
+        username={username}
+        width={size}
+        height={size}
+        className="commit-author-avatar"
+      />
+    );
+  }
+
+  return <InitialsAvatar username={username} size={size} />;
 }
