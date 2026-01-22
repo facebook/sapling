@@ -286,3 +286,42 @@
   position: relative;
   min-height: var(--vscode-icon-button-height);
 }
+
+/* Origin/main commit highlighting */
+.commit.origin-main-commit {
+  /* Subtle left border to indicate main branch */
+  border-left: 2px solid var(--graphite-accent, #4a90e2);
+  margin-left: -2px;
+}
+
+.commit.origin-main-commit .commit-details {
+  /* Very subtle background tint */
+  background: linear-gradient(
+    90deg,
+    rgba(74, 144, 226, 0.08) 0%,
+    transparent 50%
+  );
+}
+
+.origin-main-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  margin-left: var(--halfpad);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--graphite-accent, #4a90e2);
+  background: rgba(74, 144, 226, 0.12);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.origin-main-badge .codicon {
+  font-size: 12px;
+}
+
+/* Origin/main when also head commit */
+.commit.origin-main-commit.head-commit {
+  border-left-color: var(--graphite-accent, #4a90e2);
+}
