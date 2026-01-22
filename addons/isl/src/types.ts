@@ -1137,6 +1137,7 @@ export type ServerToClientMessage =
       title: string;
       description: string;
       mode?: 'commit' | 'amend';
+      hash?: string;
     }
   | {type: 'uploadFileResult'; id: string; result: Result<string>}
   | {type: 'gotRepoUrlAtHash'; url: Result<string>}
