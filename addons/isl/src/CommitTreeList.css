@@ -120,6 +120,13 @@
 
 .commit-row-selected {
   background-color: var(--selected-commit-background);
+  /* VS Code-style left border accent */
+  border-left: 3px solid var(--graphite-accent, #4a90e2);
+  margin-left: -3px; /* Prevent layout shift */
+}
+
+.commit-rows:hover:not(.commit-row-selected) {
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .commit-tree-root {
