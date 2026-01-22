@@ -225,6 +225,22 @@ export const CommitInfoTestUtils = {
     ) as HTMLTextAreaElement;
     expect(descriptionEditor).not.toBeInTheDocument();
   },
+
+  /** Expand the Changes to Amend collapsable section (collapsed by default) */
+  expandChangesToAmend() {
+    const commitInfo = screen.getByTestId('commit-info-view');
+    // Find the collapsable title that contains "Changes to Amend" or "Changes to Commit"
+    const collapsableTitle = within(commitInfo).queryByText(/Changes to (Amend|Commit)/);
+    if (collapsableTitle) {
+      // Click the collapsable-title container to expand
+      const collapsableContainer = collapsableTitle.closest('.collapsable-title');
+      if (collapsableContainer) {
+        act(() => {
+          fireEvent.click(collapsableContainer);
+        });
+      }
+    }
+  },
 };
 
 export const MergeConflictTestUtils = {
