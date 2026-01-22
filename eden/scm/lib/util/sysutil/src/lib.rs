@@ -28,12 +28,23 @@ pub fn hostname() -> String {
 
 pub fn username() -> Result<String> {
     if std::env::var_os("TESTTMP").is_some() || cfg!(test) {
-        Ok("test".to_owned())
-    } else {
-        std::env::var_os(if cfg!(windows) { "USERNAME" } else { "USER" })
-            .context("to get username")
-            .map(|k| k.to_string_lossy().to_string())
+        return Ok("test".to_owned());
     }
+
+    if cfg!(unix) {
+        // This replicates Python's use of getpass.getuser().
+        // Basically, prefer env vars if set.
+        for var_name in ["LOGNAME", "USER", "LNAME", "USERNAME"] {
+            if let Ok(name) = std::env::var(var_name)
+                && !name.is_empty()
+            {
+                return Ok(name);
+            }
+        }
+    }
+
+    // For windows and unix-missing-env-vars, use system library calls.
+    whoami::fallible::username().context("fetching username")
 }
 
 pub fn shell_escape(args: &[impl AsRef<str>]) -> String {
