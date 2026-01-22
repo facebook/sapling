@@ -28,6 +28,10 @@ const styles = stylex.create({
     opacity: 0.9,
     gap: 'var(--halfpad)',
   },
+  lineCount: {
+    color: 'var(--highlight-foreground)',
+    fontVariantNumeric: 'tabular-nums',
+  },
 });
 export function LoadingDiffStatsView() {
   return (
@@ -69,6 +73,11 @@ export function PendingDiffStatsView() {
   return <ResolvedDiffStatsView significantLinesOfCode={significantLinesOfCode} />;
 }
 
+// TODO: When backend provides separate added/deleted line counts,
+// update to show "+X/-Y" format with green/red coloring:
+// <span style={{color: 'var(--signal-success)'}}>+{added}</span>
+// <span>/</span>
+// <span style={{color: 'var(--signal-error)'}}>-{deleted}</span>
 function ResolvedDiffStatsView({
   significantLinesOfCode,
 }: {
@@ -80,7 +89,9 @@ function ResolvedDiffStatsView({
 
   return (
     <DiffStatsView>
-      <T replace={{$num: significantLinesOfCode}}>$num lines</T>
+      <span {...stylex.props(styles.lineCount)}>
+        <T replace={{$num: significantLinesOfCode}}>$num lines</T>
+      </span>
     </DiffStatsView>
   );
 }
