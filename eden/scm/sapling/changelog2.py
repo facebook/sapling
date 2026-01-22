@@ -59,10 +59,6 @@ class changelog:
         # Number of commit texts to buffer. Useful for bounding memory usage.
         self._groupbuffersize = uiconfig.configint("pull", "buffer-commit-count")
         self._reporef = weakref.ref(repo)
-        # Rollout control
-        self._use_rust_hg_unparse = uiconfig.configbool(
-            "experimental", "use-rust-hg-unparse", True
-        )
         if self._isgit or uiconfig.configbool(
             "experimental", "use-rust-hg-parse", True
         ):
@@ -385,7 +381,6 @@ class changelog:
                 user,
                 date,
                 extra,
-                use_rust=self._use_rust_hg_unparse,
             )
             node = revlog.hash(text, p1, p2)
 

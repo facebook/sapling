@@ -19,7 +19,7 @@ import bindings
 
 from . import error, revlog, util
 from .i18n import _
-from .node import bbin, hex, nullid
+from .node import bbin, nullid
 from .thirdparty import attr
 
 _defaultextra = {"branch": "default"}
@@ -253,7 +253,7 @@ class changelogrevision2:
         return self._inner.description()
 
 
-def hgcommittext(manifest, files, desc, user, date, extra, use_rust=True):
+def hgcommittext(manifest, files, desc, user, date, extra):
     """Generate the 'text' of a commit"""
 
     user = user.strip()
@@ -279,24 +279,16 @@ def hgcommittext(manifest, files, desc, user, date, extra, use_rust=True):
         elif branch in (".", "null", "tip"):
             raise error.RevlogError(_("the name '%s' is reserved") % branch)
 
-    if use_rust:
-        # see Rust format-util HgCommitFields for available fields
-        fields = {
-            "tree": manifest,
-            "author": user,
-            "date": (int(timestamp), tz),
-            "extras": extra,
-            "files": sorted(files),
-            "message": desc,
-        }
-        text = bindings.formatutil.hg_commit_fields_to_text(fields).encode()
-    else:
-        parseddate = "%d %d" % (timestamp, tz)
-        if extra:
-            extra = encodeextra(extra)
-            parseddate = "%s %s" % (parseddate, extra)
-        l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
-        text = "\n".join(l).encode(errors="surrogateescape")
+    # see Rust format-util HgCommitFields for available fields
+    fields = {
+        "tree": manifest,
+        "author": user,
+        "date": (int(timestamp), tz),
+        "extras": extra,
+        "files": sorted(files),
+        "message": desc,
+    }
+    text = bindings.formatutil.hg_commit_fields_to_text(fields).encode()
     return text
 
 
