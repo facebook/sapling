@@ -104,6 +104,14 @@
   border-radius: 4px 4px 0 0;
 }
 
+.stack-card-header-clickable {
+  cursor: pointer;
+}
+
+.stack-card-header-clickable:hover {
+  background: var(--hover-darken);
+}
+
 .stack-card-expand-button {
   padding: 2px;
   min-width: auto;
@@ -122,6 +130,19 @@
   gap: 4px;
 }
 
+.stack-card-current {
+  border-left: 3px solid var(--graphite-accent, #4a90e2);
+}
+
+.stack-card-current .stack-card-header {
+  background: var(--selected-commit-background, rgba(74, 144, 226, 0.15));
+}
+
+.stack-card-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
 .stack-card-prs {
   padding: var(--halfpad);
 }
@@ -137,6 +158,29 @@
 
 .pr-row:hover {
   background: var(--subtle-hover-darken);
+}
+
+.pr-row-clickable {
+  cursor: pointer;
+}
+
+.pr-row-clickable:hover {
+  background: var(--hover-darken);
+}
+
+.pr-row-current {
+  background: var(--selected-commit-background, rgba(74, 144, 226, 0.15));
+  border-left: 2px solid var(--graphite-accent, #4a90e2);
+}
+
+.pr-row-current:hover {
+  background: var(--selected-commit-background, rgba(74, 144, 226, 0.15));
+  cursor: default;
+}
+
+.pr-row-loading {
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .pr-row-status {
