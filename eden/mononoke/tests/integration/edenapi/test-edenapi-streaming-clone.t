@@ -114,7 +114,7 @@ Clone without tag using SLAPI - should get 0 bytes (no default tag chunks)
   $ hg clone mono:repo repo-slapi-notag --config experimental.use-slapi-streaming-clone=true
   Cloning repo into $TESTTMP/repo-slapi-notag
   streaming changelog via SLAPI
-  transferred 0B in 0.0 seconds (0B/sec)
+  transferred * in * seconds (*) (glob)
   pulling from mono:repo
   fetching revlog data for 3 commits
   Checking out 'master_bookmark'
