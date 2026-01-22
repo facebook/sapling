@@ -200,7 +200,9 @@ function StackCard({
     if ((e.target as HTMLElement).closest('button, input, .stack-card-title')) {
       return;
     }
-    if (!topHeadHash || isCurrentStack) return;
+    if (!topHeadHash || isCurrentStack) {
+      return;
+    }
     runOperation(new GotoOperation(succeedableRevset(topHeadHash)));
   }, [topHeadHash, isCurrentStack, runOperation]);
 
@@ -350,7 +352,9 @@ function PRRow({pr}: {pr: DiffSummary}) {
   const inlineProgress = useAtomValue(inlineProgressByHash(headHash ?? ''));
 
   const handleCheckout = useCallback(() => {
-    if (!headHash || isCurrentCommit) return;
+    if (!headHash || isCurrentCommit) {
+      return;
+    }
     runOperation(new GotoOperation(succeedableRevset(headHash)));
   }, [headHash, isCurrentCommit, runOperation]);
 
