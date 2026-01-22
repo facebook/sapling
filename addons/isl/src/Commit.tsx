@@ -162,10 +162,12 @@ export const Commit = memo(
     commit,
     previewType,
     hasChildren,
+    isOriginMain,
   }: {
     commit: DagCommitInfo | CommitInfo;
     previewType?: CommitPreview;
     hasChildren: boolean;
+    isOriginMain?: boolean;
   }) => {
     const isPublic = commit.phase === 'public';
     const isObsoleted = commit.successorInfo != null;
@@ -502,7 +504,8 @@ export const Commit = memo(
           'commit' +
           (commit.isDot ? ' head-commit' : '') +
           (commit.successorInfo != null ? ' obsolete' : '') +
-          (isIrrelevantToCwd ? ' irrelevant' : '')
+          (isIrrelevantToCwd ? ' irrelevant' : '') +
+          (isOriginMain ? ' origin-main-commit' : '')
         }
         onContextMenu={e => {
           writeAtom(actioningCommit, commit.hash);
@@ -545,6 +548,12 @@ export const Commit = memo(
               </span>
             )}
             <UnsavedEditedMessageIndicator commit={commit} />
+            {isOriginMain && (
+              <span className="origin-main-badge">
+                <Icon icon="git-branch" />
+                <span>main</span>
+              </span>
+            )}
             {!isPublic && <BranchingPrs bookmarks={commit.remoteBookmarks} />}
             <AllBookmarksTruncated
               local={commit.bookmarks}
@@ -582,7 +591,8 @@ export const Commit = memo(
     return (
       commitEqual &&
       nextProps.previewType === prevProps.previewType &&
-      nextProps.hasChildren === prevProps.hasChildren
+      nextProps.hasChildren === prevProps.hasChildren &&
+      nextProps.isOriginMain === prevProps.isOriginMain
     );
   },
 );
