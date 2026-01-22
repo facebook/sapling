@@ -67,19 +67,3 @@ export const isNarrowCommitTree = atom(
     get(mainContentWidthState) <
     (get(renderCompactAtom) ? NARROW_COMMIT_TREE_WIDTH_WHEN_COMPACT : NARROW_COMMIT_TREE_WIDTH),
 );
-
-// Breakpoints for responsive drawer auto-collapse
-export const DETAILS_PANEL_BREAKPOINT = 1200; // Right drawer hides below this
-export const STACK_PANEL_BREAKPOINT = 800; // Left drawer hides below this
-
-/**
- * Derived atom that determines whether drawers should be auto-collapsed based on window width.
- * Uses mainContentWidthState which is updated via ResizeObserver in useMainContentWidth.
- */
-export const shouldAutoCollapseDrawers = atom(get => {
-  const width = get(mainContentWidthState);
-  return {
-    right: width < DETAILS_PANEL_BREAKPOINT,
-    left: width < STACK_PANEL_BREAKPOINT,
-  };
-});
