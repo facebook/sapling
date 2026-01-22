@@ -428,3 +428,16 @@
 .commit-info-view-main-content > .tooltip-creator {
   width: 100%;
 }
+
+/* Visual hierarchy for collapsable Changes to Amend section */
+.commit-info-view-main-content > .collapsable {
+  margin-top: var(--pad);
+}
+
+.commit-info-view-main-content > .collapsable .collapsable-title {
+  opacity: 0.8;
+}
+
+.commit-info-view-main-content > .collapsable .collapsable-title:hover {
+  opacity: 1;
+}
