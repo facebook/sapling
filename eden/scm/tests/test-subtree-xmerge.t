@@ -153,8 +153,8 @@ Subtree merge should succeed without conflicts:
   description:
   merge gitrepo to bar again
   
-  Subtree merge from 421b13f5014cb2fdb2782fbea8de256066f975c8
-  - Merged path  to bar
+  Subtree merge from file:/*/$TESTTMP/gitrepo at 421b13f5014cb2fdb2782fbea8de256066f975c8 (glob)
+  - Merged path root directory to bar
   
   
   diff --git a/bar/dir2/gamma b/bar/dir2/gamma

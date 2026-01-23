@@ -222,7 +222,7 @@ def gen_copy_commit_msg(from_ctx, from_paths, to_paths):
 def gen_import_commit_msg(url, from_commit, from_paths, to_paths):
     msgs = [f"Subtree import from {url} at {from_commit} "]
     for from_path, to_path in zip(from_paths, to_paths):
-        from_path = os.path.join("/", from_path)
+        from_path = normalize_cross_repo_path(from_path)
         msgs.append(f"- Imported path {from_path} to {to_path}")
     return "\n".join(msgs)
 
@@ -230,15 +230,26 @@ def gen_import_commit_msg(url, from_commit, from_paths, to_paths):
 def gen_merge_commit_msg(subtree_merges):
     groups = defaultdict(list)
     for m in subtree_merges:
-        groups[m["from_commit"]].append((m["from_path"], m["to_path"]))
-
+        # see merge_state.rs:SubtreeMerge for the data structure
+        groups[(m["from_url"], m["from_commit"])].append((m["from_path"], m["to_path"]))
     msgs = []
-    for from_node, paths in groups.items():
+    for (from_url, from_node), paths in groups.items():
         from_commit = node.hex(from_node)
-        msgs.append(f"Subtree merge from {from_commit}")
-        for from_path, to_path in paths:
-            msgs.append(f"- Merged path {from_path} to {to_path}")
+        if from_url:
+            msgs.append(f"Subtree merge from {from_url} at {from_commit}")
+            for from_path, to_path in paths:
+                from_path = normalize_cross_repo_path(from_path)
+                msgs.append(f"- Merged path {from_path} to {to_path}")
+        else:
+            msgs.append(f"Subtree merge from {from_commit}")
+            for from_path, to_path in paths:
+                msgs.append(f"- Merged path {from_path} to {to_path}")
     return "\n".join(msgs)
+
+
+def normalize_cross_repo_path(path: str) -> str:
+    """Normalize cross-repo paths in subtree commit messages."""
+    return path or "root directory"
 
 
 ### Generating metadata for branches (copies)

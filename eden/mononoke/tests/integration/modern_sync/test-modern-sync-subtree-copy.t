@@ -124,7 +124,7 @@ Create a graph with a subtree copy
   │ @  * import gitrepo to bar (glob)
   │ │
   │ │  Subtree import from git+file://$TESTTMP/gitrepo at 4c67869f7948534db7e9f5ff08d35569569849d9
-  │ │  - Imported path / to bar
+  │ │  - Imported path root directory to bar
   │ o  fd1e9fb190a897eb437bf949afd77baed7657847 subtree merge
   │ │
   │ │  Subtree merge from 27d3ae184ccb321e9fc87eb2cace5c8e5370d22a
@@ -154,7 +154,7 @@ Clone and verify the destination repo
   @  * import gitrepo to bar (glob)
   │
   │  Subtree import from git+file://$TESTTMP/gitrepo at 4c67869f7948534db7e9f5ff08d35569569849d9
-  │  - Imported path / to bar
+  │  - Imported path root directory to bar
   o  fd1e9fb190a897eb437bf949afd77baed7657847 subtree merge
   │
   │  Subtree merge from 27d3ae184ccb321e9fc87eb2cace5c8e5370d22a
@@ -198,7 +198,7 @@ Commit G got synced due to being a subtree source, and so is avablable even thou
   │ @  * import gitrepo to bar (glob)
   │ │
   │ │  Subtree import from git+file://$TESTTMP/gitrepo at 4c67869f7948534db7e9f5ff08d35569569849d9
-  │ │  - Imported path / to bar
+  │ │  - Imported path root directory to bar
   │ o  fd1e9fb190a897eb437bf949afd77baed7657847 subtree merge
   │ │
   │ │  Subtree merge from 27d3ae184ccb321e9fc87eb2cace5c8e5370d22a

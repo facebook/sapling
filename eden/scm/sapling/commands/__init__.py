@@ -2858,7 +2858,8 @@ def _makegraftmessage(to_repo, ctx, opts, from_paths, to_paths, from_repo):
             else:
                 message.append("Grafted %s" % ctx.hex())
             for f, t in zip(from_paths, to_paths):
-                message.append("- Grafted %s to %s" % (f or "root directory", t))
+                f = subtreeutil.normalize_cross_repo_path(f)
+                message.append("- Grafted %s to %s" % (f, t))
 
             # don't update the user provided title
             if not is_from_user:

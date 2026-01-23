@@ -98,7 +98,7 @@ Test subtree import the root path of the external repo
   @  * import gitrepo to bar (glob)
   │
   │  Subtree import from git+file:/*/$TESTTMP/gitrepo at d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 (glob)
-  │  - Imported path / to bar
+  │  - Imported path root directory to bar
   o  9998a5c40732 B
   │
   o  d908813f0f7c A
@@ -120,11 +120,11 @@ Test subtree import a sub directory of the external repo
   @  * import gitrepo/dir2 to mydir2 (glob)
   │
   │  Subtree import from git+file:/*/$TESTTMP/gitrepo at 4487c56011495a40ce2f6c632c24ae57a210747d (glob)
-  │  - Imported path /dir2 to mydir2
+  │  - Imported path dir2 to mydir2
   o  * import gitrepo to bar (glob)
   │
   │  Subtree import from git+file:/*/$TESTTMP/gitrepo at d2a8b3fa3dfa345ea64e02ea014d21b5cabd03e0 (glob)
-  │  - Imported path / to bar
+  │  - Imported path root directory to bar
   o  9998a5c40732 B
   │
   o  d908813f0f7c A
