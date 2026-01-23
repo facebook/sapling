@@ -11,9 +11,6 @@ use std::thread::JoinHandle;
 use anyhow::Error;
 use anyhow::Result;
 use blob::Blob;
-use crossbeam::channel;
-use crossbeam::channel::Receiver;
-use crossbeam::channel::Sender;
 use tokio::sync::oneshot;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -22,7 +19,7 @@ use crate::UpdateFlag;
 use crate::VFS;
 
 pub struct AsyncVfsWriter {
-    sender: Option<Sender<WorkItem>>,
+    sender: Option<flume::Sender<WorkItem>>,
     handles: Vec<JoinHandle<()>>,
 }
 
@@ -56,7 +53,7 @@ impl Work {
 /// Drop handler for `AsyncVfsWriter` blocks until underlyning threads terminate.
 impl AsyncVfsWriter {
     pub fn spawn_new(vfs: VFS, workers: usize) -> Self {
-        let (sender, receiver) = channel::unbounded();
+        let (sender, receiver) = flume::unbounded();
         let sender = Some(sender);
         let mut handles = Vec::with_capacity(workers);
         for _ in 0..workers {
@@ -117,7 +114,7 @@ struct ActionResult {
     remove_errors: Vec<(RepoPathBuf, Error)>,
 }
 
-fn async_vfs_worker(vfs: VFS, receiver: Receiver<WorkItem>) {
+fn async_vfs_worker(vfs: VFS, receiver: flume::Receiver<WorkItem>) {
     for item in receiver {
         // Quickcheck - if caller future dropped while item was in queue, no reason to execute
         // One use case for this - if calling stream in checkout encounters an error, the stream is dropped

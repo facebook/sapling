@@ -35,7 +35,6 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:crossbeam",
         "fbsource//third-party/rust:dashmap",
         "fbsource//third-party/rust:flume",
         "fbsource//third-party/rust:fs-err",
