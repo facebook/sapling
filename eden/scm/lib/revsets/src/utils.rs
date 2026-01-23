@@ -124,8 +124,11 @@ fn resolve_hash_prefix(args: &LookupArgs) -> Result<Option<HgId>> {
                 return Ok(Some(id));
             }
 
-            match remote_hash_prefix_lookup(args)? {
-                Some(id) => id,
+            match args
+                .edenapi
+                .and_then(|api| remote_hash_prefix_lookup(api, args.change_id).transpose())
+            {
+                Some(id) => id?,
                 None => return Ok(None),
             }
         }
@@ -159,17 +162,8 @@ fn local_hash_prefix_lookup(args: &LookupArgs) -> Result<Option<HgId>> {
     error_if_ambiguous(args.change_id, hgids)
 }
 
-fn remote_hash_prefix_lookup(args: &LookupArgs) -> Result<Option<HgId>> {
-    let edenapi = match args.edenapi {
-        Some(edenapi) => edenapi,
-        None => return Ok(None),
-    };
-
-    let mut response = block_on(async {
-        edenapi
-            .hash_prefixes_lookup(vec![args.change_id.to_string()])
-            .await
-    })?;
+pub fn remote_hash_prefix_lookup(slapi: &dyn SaplingRemoteApi, id: &str) -> Result<Option<HgId>> {
+    let mut response = block_on(async { slapi.hash_prefixes_lookup(vec![id.to_string()]).await })?;
 
     let hgids = response.pop().map(|r| r.hgids).unwrap_or_default();
 
@@ -177,7 +171,7 @@ fn remote_hash_prefix_lookup(args: &LookupArgs) -> Result<Option<HgId>> {
         bail!("unexpected hash_prefixes_lookup response");
     }
 
-    error_if_ambiguous(args.change_id, hgids)
+    error_if_ambiguous(id, hgids)
 }
 
 fn error_if_ambiguous(input: &str, hgids: Vec<HgId>) -> Result<Option<HgId>> {
