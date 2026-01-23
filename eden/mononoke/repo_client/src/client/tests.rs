@@ -6,25 +6,17 @@
  */
 
 #![cfg(test)]
-use std::pin::pin;
 
 use blobstore::Loadable;
 use fbinit::FacebookInit;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::compat::Future01CompatExt;
-use justknobs::test_helpers::JustKnobsInMemory;
-use justknobs::test_helpers::KnobVal;
-use justknobs::test_helpers::with_just_knobs_async;
-use manifest::Entry;
-use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_derivation::DeriveHgChangeset;
-use metaconfig_types::LfsParams;
 use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use repo_blobstore::RepoBlobstoreRef;
-use scuba_ext::MononokeScubaSampleBuilder;
 use serde_json::json;
 use tests_utils::CreateCommitContext;
 
@@ -232,49 +224,6 @@ async fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result
 }
 
 #[mononoke::fbinit_test]
-async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
-    with_just_knobs_async(
-        JustKnobsInMemory::new(hashmap! {
-            "scm/mononoke_timeouts:repo_client_getpack_timeout_secs".to_string() => KnobVal::Int(18000),
-        }),
-        pin!{
-
-            async move {
-
-                let ctx = CoreContext::test_mock(fb);
-
-                assert!(!run_and_check_if_lfs(&ctx, LfsParams::default()).await?);
-
-                // Rollout percentage is 100 and threshold is set - enable lfs
-                let lfs_params = LfsParams {
-                    threshold: Some(5),
-                    rollout_percentage: 100,
-                    ..Default::default()
-                };
-                assert!(run_and_check_if_lfs(&ctx, lfs_params).await?);
-
-                // Rollout percentage is 0 - no lfs is enabled
-                let lfs_params = LfsParams {
-                    threshold: Some(5),
-                    rollout_percentage: 0,
-                    ..Default::default()
-                };
-                assert!(!run_and_check_if_lfs(&ctx, lfs_params).await?);
-
-                // Rollout percentage is 100, but threshold is too high
-                let lfs_params = LfsParams {
-                    threshold: Some(500),
-                    rollout_percentage: 100,
-                    ..Default::default()
-                };
-                assert!(!run_and_check_if_lfs(&ctx, lfs_params).await?);
-                Ok(())
-        }
-    },
-    ).await
-}
-
-#[mononoke::fbinit_test]
 async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: RepoClientRepo = test_repo_factory::build_empty(ctx.fb).await?;
@@ -357,69 +306,6 @@ async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Erro
         .is_err()
     );
     Ok(())
-}
-
-async fn run_and_check_if_lfs(ctx: &CoreContext, lfs_params: LfsParams) -> Result<bool, Error> {
-    let repo: Arc<RepoClientRepo> = Arc::new(
-        test_repo_factory::TestRepoFactory::new(ctx.fb)?
-            .with_config_override(|config| config.lfs = lfs_params)
-            .build()
-            .await?,
-    );
-    let commit = CreateCommitContext::new_root(ctx, &repo)
-        .add_file("largefile", "11111_11111")
-        .commit()
-        .await?;
-
-    let hg_cs_id = repo.derive_hg_changeset(ctx, commit).await?;
-
-    let hg_cs = hg_cs_id.load(ctx, &repo.repo_blobstore().clone()).await?;
-
-    let path = NonRootMPath::new("largefile")?;
-    let maybe_entry = hg_cs
-        .manifestid()
-        .find_entry(
-            ctx.clone(),
-            repo.repo_blobstore().clone(),
-            path.clone().into(),
-        )
-        .await?
-        .unwrap();
-
-    let filenode_id = match maybe_entry {
-        Entry::Leaf((_, filenode_id)) => filenode_id,
-        Entry::Tree(_) => {
-            panic!("should be a leaf");
-        }
-    };
-
-    let logging = LoggingContainer::new(ctx.fb, MononokeScubaSampleBuilder::with_discard());
-
-    let repo_client = RepoClient::new(
-        repo,
-        ctx.session().clone(),
-        logging,
-        None, // No PushRedirectorArgs
-        Default::default(),
-    );
-
-    let bytes = repo_client
-        .getpackv2(
-            futures::stream::iter(vec![(path.clone(), vec![filenode_id])])
-                .map(anyhow::Ok)
-                .boxed(),
-        )
-        .try_fold(BytesMut::new(), |mut buf, b| async move {
-            buf.extend_from_slice(&b);
-            anyhow::Ok(buf)
-        })
-        .await?;
-
-    let lfs_url: &[u8] = b"version https://git-lfs.github.com/spec/v1";
-
-    let found = bytes.windows(lfs_url.len()).any(|w| w == lfs_url);
-
-    Ok(found)
 }
 
 async fn fetch_mfs(

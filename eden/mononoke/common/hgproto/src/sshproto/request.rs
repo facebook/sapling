@@ -636,8 +636,7 @@ fn parse_with_params(
                 tag: parseval_option(&kv, "tag", utf8_string_complete)?
             })
         }),
-        command_star!("getpackv1", GetpackV1, parse_params, {}),
-        command_star!("getpackv2", GetpackV2, parse_params, {}),
+
     )).parse(input)
 }
 

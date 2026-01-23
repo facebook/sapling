@@ -212,29 +212,3 @@ pub fn log_gettreepack_params_verbose(ctx: &CoreContext, args: &GettreepackArgs)
             .log_with_msg_verbose(FULL_ARGS_LOG_TAG, msg.clone());
     }
 }
-
-pub fn log_getpack_params_verbose(ctx: &CoreContext, encoded_params: &[(String, Vec<String>)]) {
-    if !ctx
-        .scuba()
-        .should_log_with_level(ScubaVerbosityLevel::Verbose)
-    {
-        return;
-    }
-
-    for (mpath, filenodes) in encoded_params {
-        let filenode_chunks = chunk_by_accumulation(
-            filenodes.iter().cloned(),
-            0,
-            |acc, s| acc + s.len(),
-            greater_than_column_size,
-        );
-        for (i, filenode_chunk) in filenode_chunks.into_iter().enumerate() {
-            ctx.scuba()
-                .clone()
-                .add("getpack_mpath", mpath.clone())
-                .add("getpack_filenode_chunk_idx", i)
-                .add("getpack_filenode_chunk", filenode_chunk)
-                .log_with_msg_verbose(FULL_ARGS_LOG_TAG, None);
-        }
-    }
-}

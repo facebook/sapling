@@ -15,7 +15,6 @@ use std::hash::Hasher;
 use std::num::NonZeroU64;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -60,7 +59,6 @@ use futures_01_ext::BoxStream as OldBoxStream;
 use futures_01_ext::FutureExt as OldFutureExt;
 use futures_01_ext::StreamExt as OldStreamExt;
 use futures_01_ext::try_boxstream;
-use futures_ext::BufferedParams;
 use futures_ext::FbFutureExt;
 use futures_ext::FbStreamExt;
 use futures_ext::FbTryFutureExt;
@@ -89,9 +87,7 @@ use maplit::hashmap;
 use mercurial_bundles::Bundle2Item;
 use mercurial_bundles::create_bundle_stream_new;
 use mercurial_bundles::parts;
-use mercurial_bundles::wirepack;
 use mercurial_derivation::DeriveHgChangeset;
-use mercurial_types::Delta;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgChangesetIdPrefix;
 use mercurial_types::HgChangesetIdsResolvedFromPrefix;
@@ -104,12 +100,10 @@ use mercurial_types::NULL_HASH;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
 use mercurial_types::calculate_hg_node_id;
-use mercurial_types::convert_parents_to_remotefilelog_format;
 use mercurial_types::fetch_manifest_envelope;
 use mercurial_types::percent_encode;
 use metaconfig_types::RepoClientKnobs;
 use metaconfig_types::RepoConfigRef;
-use mononoke_macros::mononoke;
 use mononoke_types::ChangesetId;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
@@ -118,15 +112,10 @@ use phases::PhasesArc;
 use rand::Rng;
 use rate_limiting::Metric;
 use rate_limiting::Scope;
-use remotefilelog::GetpackBlobInfo;
-use remotefilelog::create_getpack_v1_blob;
-use remotefilelog::create_getpack_v2_blob;
-use remotefilelog::get_unordered_file_history_for_multiple_nodes;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_cross_repo::RepoCrossRepoRef;
 use repo_identity::RepoIdentityRef;
-use revisionstore_types::Metadata;
 use scuba_ext::MononokeScubaSampleBuilder;
 use serde::Deserialize;
 use serde_json::json;
@@ -153,7 +142,6 @@ mod tests;
 use logging::CommandLogger;
 use logging::debug_format_manifest;
 use logging::debug_format_path;
-use logging::log_getpack_params_verbose;
 use logging::log_gettreepack_params_verbose;
 use session_bookmarks_cache::SessionBookmarkCache;
 
@@ -196,8 +184,7 @@ mod ops {
     pub static KNOWN: &str = "known";
     pub static GETBUNDLE: &str = "getbundle";
     pub static GETTREEPACK: &str = "gettreepack";
-    pub static GETPACKV1: &str = "getpackv1";
-    pub static GETPACKV2: &str = "getpackv2";
+
     pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
 }
 
@@ -281,18 +268,6 @@ fn getbundle_timeout() -> Duration {
     Duration::from_secs(timeout)
 }
 
-fn getpack_timeout() -> Duration {
-    const FALLBACK_TIMEOUT_SECS: u64 = 5 * 60 * 60;
-
-    let timeout: u64 = justknobs::get_as::<u64>(
-        "scm/mononoke_timeouts:repo_client_getpack_timeout_secs",
-        None,
-    )
-    .unwrap_or(FALLBACK_TIMEOUT_SECS);
-
-    Duration::from_secs(timeout)
-}
-
 fn wireprotocaps() -> Vec<String> {
     vec![
         "clienttelemetry".to_string(),
@@ -360,7 +335,7 @@ pub struct RepoClient<R: Repo> {
     session_bookmarks_cache: Arc<SessionBookmarkCache<Arc<R>>>,
     maybe_push_redirector_args: Option<PushRedirectorArgs<R>>,
     force_lfs: Arc<AtomicBool>,
-    knobs: RepoClientKnobs,
+
     request_perf_counters: Arc<PerfCounters>,
 }
 
@@ -370,7 +345,7 @@ impl<R: Repo> RepoClient<R> {
         session: SessionContainer,
         logging: LoggingContainer,
         maybe_push_redirector_args: Option<PushRedirectorArgs<R>>,
-        knobs: RepoClientKnobs,
+        _knobs: RepoClientKnobs,
     ) -> Self {
         let session_bookmarks_cache = Arc::new(SessionBookmarkCache::new(repo.clone()));
 
@@ -381,7 +356,6 @@ impl<R: Repo> RepoClient<R> {
             session_bookmarks_cache,
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),
-            knobs,
             request_perf_counters: Arc::new(PerfCounters::default()),
         }
     }
@@ -572,260 +546,6 @@ impl<R: Repo> RepoClient<R> {
         async move { Ok(create_bundle_stream_new(vec![part?])) }
             .try_flatten_stream()
             .boxed()
-    }
-
-    fn getpack<WeightedContent, Content, GetpackHandler>(
-        &self,
-        params: BoxStream<'static, Result<(NonRootMPath, Vec<HgFileNodeId>), Error>>,
-        handler: GetpackHandler,
-        name: &'static str,
-    ) -> BoxStream<'static, Result<Bytes, Error>>
-    where
-        WeightedContent:
-            Future<Output = Result<(GetpackBlobInfo, Content), Error>> + Send + 'static,
-        Content: Future<Output = Result<(HgFileNodeId, Bytes, Option<Metadata>), Error>>
-            + Send
-            + 'static,
-        GetpackHandler: Fn(CoreContext, Arc<R>, HgFileNodeId, SessionLfsParams, bool) -> WeightedContent
-            + Send
-            + 'static,
-    {
-        let allow_short_getpack_history = self.knobs.allow_short_getpack_history;
-        self.command_stream(name, UNSAMPLED, |ctx, command_logger| {
-            // We buffer all parameters in memory so that we can log them.
-            // That shouldn't be a problem because requests are quite small
-            let getpack_params = Arc::new(Mutex::new(vec![]));
-            let repo = self.repo.clone();
-
-            let lfs_params = self.lfs_params();
-
-            let getpack_buffer_size = 500;
-
-            let scuba = ctx.scuba().clone();
-
-            let request_stream = move || {
-                let content_stream = {
-                    cloned!(ctx, getpack_params, lfs_params);
-                    async move {
-                        let buffered_params = BufferedParams {
-                            weight_limit: 100_000_000,
-                            buffer_size: getpack_buffer_size,
-                        };
-
-                        // Let's fetch the whole request before responding.
-                        // That's prevents deadlocks, because hg client doesn't start reading the response
-                        // before all the arguments were sent.
-                        let params = params.try_collect::<Vec<_>>().await?;
-
-                        ctx.scuba()
-                            .clone()
-                            .add("getpack_paths", params.len())
-                            .log_with_msg("Getpack Params", None);
-
-                        let res = stream::iter(params)
-                            .map({
-                                cloned!(ctx, getpack_params, repo, lfs_params);
-                                move |(path, filenodes)| {
-                                    {
-                                        let mut getpack_params = getpack_params.lock().unwrap();
-                                        getpack_params.push((path.clone(), filenodes.clone()));
-                                    }
-
-                                    ctx.session().bump_load(
-                                        Metric::GetpackFiles,
-                                        Scope::Regional,
-                                        1.0,
-                                    );
-
-                                    let blob_futs: Vec<_> = filenodes
-                                        .iter()
-                                        .map(|filenode| {
-                                            handler(
-                                                ctx.clone(),
-                                                repo.clone(),
-                                                *filenode,
-                                                lfs_params.clone(),
-                                                true,
-                                            )
-                                        })
-                                        .collect();
-
-                                    // NOTE: We don't otherwise await history_fut until we have the results
-                                    // from blob_futs, so we need to spawn this to start fetching history
-                                    // before we have resolved hg filenodes.
-                                    let history_fut = mononoke::spawn_task(
-                                        get_unordered_file_history_for_multiple_nodes(
-                                            &ctx,
-                                            &repo,
-                                            filenodes.into_iter().collect(),
-                                            &path,
-                                            allow_short_getpack_history,
-                                        )
-                                        .try_collect::<Vec<_>>(),
-                                    )
-                                    .flatten_err();
-
-                                    async move {
-                                        let blobs =
-                                            future::try_join_all(blob_futs.into_iter()).await?;
-                                        let total_weight = blobs
-                                            .iter()
-                                            .map(|(blob_info, _)| blob_info.weight)
-                                            .sum();
-                                        let content_futs = blobs.into_iter().map(|(_, fut)| fut);
-                                        let contents_and_history = future::try_join(
-                                            future::try_join_all(content_futs),
-                                            history_fut,
-                                        )
-                                        .map_ok(move |(contents, history)| {
-                                            (path, contents, history)
-                                        });
-
-                                        Result::<_, Error>::Ok((contents_and_history, total_weight))
-                                    }
-                                }
-                            })
-                            .buffered(getpack_buffer_size)
-                            .try_buffered_weight_limited(buffered_params);
-
-                        Result::<_, Error>::Ok(res)
-                    }
-                }
-                .try_flatten_stream();
-
-                let serialized_stream = content_stream
-                    .whole_stream_timeout(getpack_timeout())
-                    .yield_periodically()
-                    .flatten_err()
-                    .map_ok({
-                        cloned!(ctx);
-                        move |(path, contents, history)| {
-                            let mut res = vec![wirepack::Part::HistoryMeta {
-                                path: RepoPath::FilePath(path.clone()),
-                                entry_count: history.len() as u32,
-                            }];
-
-                            let history = history.into_iter().map(|history_entry| {
-                                let (p1, p2, copy_from) = convert_parents_to_remotefilelog_format(
-                                    history_entry.parents(),
-                                    history_entry.copyfrom().as_ref(),
-                                );
-                                let linknode = history_entry.linknode().into_nodehash();
-                                if linknode == NULL_HASH {
-                                    ctx.perf_counters()
-                                        .increment_counter(PerfCounterType::NullLinknode);
-                                    STATS::null_linknode_getpack.add_value(1);
-                                }
-
-                                wirepack::Part::History(wirepack::HistoryEntry {
-                                    node: history_entry.filenode().into_nodehash(),
-                                    p1: p1.into_nodehash(),
-                                    p2: p2.into_nodehash(),
-                                    linknode,
-                                    copy_from: copy_from.cloned().map(RepoPath::FilePath),
-                                })
-                            });
-                            res.extend(history);
-
-                            res.push(wirepack::Part::DataMeta {
-                                path: RepoPath::FilePath(path),
-                                entry_count: contents.len() as u32,
-                            });
-                            for (filenode, content, metadata) in contents {
-                                let content = content.to_vec();
-                                let length = content.len() as u64;
-
-                                ctx.perf_counters().set_max_counter(
-                                    PerfCounterType::GetpackMaxFileSize,
-                                    length as i64,
-                                );
-
-                                if let Some(lfs_threshold) = lfs_params.threshold {
-                                    if length >= lfs_threshold {
-                                        ctx.perf_counters().add_to_counter(
-                                            PerfCounterType::GetpackPossibleLFSFilesSumSize,
-                                            length as i64,
-                                        );
-
-                                        ctx.perf_counters().increment_counter(
-                                            PerfCounterType::GetpackNumPossibleLFSFiles,
-                                        );
-                                    }
-                                }
-
-                                res.push(wirepack::Part::Data(wirepack::DataEntry {
-                                    node: filenode.into_nodehash(),
-                                    delta_base: NULL_HASH,
-                                    delta: Delta::new_fulltext(content),
-                                    metadata,
-                                }));
-                            }
-                            stream::iter(res).map(anyhow::Ok)
-                        }
-                    })
-                    .try_flatten()
-                    .chain(stream::once(future::ok(wirepack::Part::End)));
-
-                wirepack::packer::pack_wirepack(serialized_stream, wirepack::Kind::File)
-                    .and_then(|chunk| async move { chunk.into_bytes() })
-                    .inspect_ok({
-                        cloned!(ctx);
-                        move |bytes| {
-                            let len = bytes.len() as i64;
-                            ctx.perf_counters()
-                                .add_to_counter(PerfCounterType::GetpackResponseSize, len);
-
-                            STATS::total_fetched_file_size.add_value(len);
-                            if ctx.session().is_quicksand() {
-                                STATS::quicksand_fetched_file_size.add_value(len);
-                            }
-                        }
-                    })
-                    .timed({
-                        cloned!(ctx);
-                        move |stats| {
-                            if stats.completed {
-                                if let Some(completion_time) = stats.completion_time {
-                                    STATS::getpack_ms
-                                        .add_value(completion_time.as_millis_unchecked() as i64);
-                                }
-                                let encoded_params = {
-                                    let getpack_params = getpack_params.lock().unwrap();
-                                    let mut encoded_params: Vec<(String, Vec<String>)> = vec![];
-                                    for (path, filenodes) in getpack_params.iter() {
-                                        let mut encoded_filenodes = vec![];
-                                        for filenode in filenodes {
-                                            encoded_filenodes.push(format!("{}", filenode));
-                                        }
-                                        encoded_params.push((
-                                            String::from_utf8_lossy(&path.to_vec()).to_string(),
-                                            encoded_filenodes,
-                                        ));
-                                    }
-                                    encoded_params
-                                };
-
-                                ctx.perf_counters().add_to_counter(
-                                    PerfCounterType::GetpackNumFiles,
-                                    encoded_params.len() as i64,
-                                );
-
-                                log_getpack_params_verbose(&ctx, &encoded_params);
-                                command_logger.finalize_command(&stats);
-                            }
-                        }
-                    })
-            };
-
-            throttle_stream(
-                &self.session,
-                Metric::GetpackFiles,
-                name,
-                request_stream,
-                scuba,
-            )
-            .boxed()
-        })
     }
 
     fn lfs_params(&self) -> SessionLfsParams {
@@ -1760,54 +1480,6 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                     }
                 })
         })
-    }
-
-    // @wireprotocommand('getpackv1')
-    fn getpackv1(
-        &self,
-        params: BoxStream<'static, Result<(NonRootMPath, Vec<HgFileNodeId>), Error>>,
-    ) -> BoxStream<'static, Result<Bytes, Error>> {
-        self.getpack(
-            params,
-            |ctx, repo, node, _lfs_threshold, validate_hash| {
-                async move {
-                    let (size, fut) =
-                        create_getpack_v1_blob(&ctx, &repo, node, validate_hash).await?;
-                    // GetpackV1 has no metadata.
-                    let fut = async move {
-                        let (id, bytes) = fut.await?;
-                        anyhow::Ok((id, bytes, None))
-                    };
-                    anyhow::Ok((size, fut))
-                }
-            },
-            ops::GETPACKV1,
-        )
-    }
-
-    // @wireprotocommand('getpackv2')
-    fn getpackv2(
-        &self,
-        params: BoxStream<'static, Result<(NonRootMPath, Vec<HgFileNodeId>), Error>>,
-    ) -> BoxStream<'static, Result<Bytes, Error>> {
-        self.getpack(
-            params,
-            |ctx, repo, node, lfs_threshold, validate_hash| {
-                async move {
-                    let (size, fut) =
-                        create_getpack_v2_blob(&ctx, &repo, node, lfs_threshold, validate_hash)
-                            .await?;
-                    // GetpackV2 always has metadata.
-                    let fut = async move {
-                        let (id, bytes, metadata) = fut.await?;
-
-                        anyhow::Ok((id, bytes, Some(metadata)))
-                    };
-                    anyhow::Ok((size, fut))
-                }
-            },
-            ops::GETPACKV2,
-        )
     }
 }
 
