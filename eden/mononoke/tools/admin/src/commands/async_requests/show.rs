@@ -60,7 +60,7 @@ impl<'a, R: MononokeRepo> std::fmt::Debug for ParamsWrapper<'a, R> {
                 .field("message", &params.message)
                 .finish()?,
             ThriftAsynchronousRequestParams::megarepo_change_target_params(params) => f
-                .debug_struct("MegarepoAddTargetParams")
+                .debug_struct("MegarepoChangeTargetConfigParams")
                 .field("target", &params.target)
                 .field("new_version", &params.new_version)
                 .field(
@@ -103,6 +103,12 @@ impl std::fmt::Debug for ResultsWrapper {
                     thrift::MegarepoSyncChangesetResult::success(result),
                 ) => f
                     .debug_struct("MegarepoSyncChangesetResponse")
+                    .field("cs_id", &ChangesetId::from_bytes(&result.cs_id))
+                    .finish()?,
+                ThriftAsynchronousRequestResult::megarepo_change_target_result(
+                    thrift::MegarepoChangeTargetConfigResult::success(result),
+                ) => f
+                    .debug_struct("MegarepoChangeTargetConfigResponse")
                     .field("cs_id", &ChangesetId::from_bytes(&result.cs_id))
                     .finish()?,
                 other => f.write_str(format!("{:?}", other).as_str())?,
