@@ -29,7 +29,11 @@ rust_library(
         "fb",
         "wdir",
     ],
-    test_deps = ["fbsource//third-party/rust:tempfile"],
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+        "//eden/scm/lib/manifest-tree:manifest-tree",
+        "//eden/scm/lib/util/format-util:format-util",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:fail",

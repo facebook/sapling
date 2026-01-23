@@ -13,6 +13,7 @@ mod init;
 pub mod repo;
 pub mod scmstore;
 pub mod slapi_client;
+pub mod slapi_repo;
 mod trait_impls;
 pub mod trees;
 
