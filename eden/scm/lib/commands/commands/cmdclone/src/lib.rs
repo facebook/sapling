@@ -208,7 +208,7 @@ fn run_eden(
     let config_filter = if let Ok((_, ref backing_repo)) = backing_clone_result {
         filter_paths_from_config(backing_repo.config())
     } else {
-        filter_paths_from_config(config)
+        filter_paths_from_config(&config)
     };
 
     // We should consider both filters from the command line options and from config settings

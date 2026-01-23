@@ -189,3 +189,34 @@ Test cat handles identical files with different paths:
   content
   $ cat output/two
   content
+
+Test code tenting (sparse profile filtering):
+
+  $ newserver server3
+  $ drawdag <<'EOS'
+  > A  # A/allowed/file1 = allowed file 1\n
+  >    # A/allowed/file2 = allowed file 2\n
+  >    # A/blocked/secret = secret content\n
+  >    # A/other = other content\n
+  >    # A/sparse/profile = [metadata]\ntitle: frontend sparse profile\n[include]\nallowed\n
+  > EOS
+
+Cat without sparse profile shows all files:
+
+  $ hg cat -R test:server3 -r $A allowed/file1 blocked/secret | sort
+  allowed file 1
+  secret content
+
+Cat with sparse profile filters to allowed paths:
+
+  $ hg cat -R test:server3 -r $A --config clone.eden-sparse-filter.foo=sparse/profile allowed/file1
+  allowed file 1
+
+  $ hg cat -R test:server3 -r $A --config clone.eden-sparse-filter.foo=sparse/profile blocked/secret
+  [1]
+
+  $ rm -rf output
+  $ hg cat -R test:server3 -r $A --config clone.eden-sparse-filter.foo=sparse/profile --output 'output/%p' 'glob:**'
+  $ find output -type f | sort
+  output/allowed/file1
+  output/allowed/file2

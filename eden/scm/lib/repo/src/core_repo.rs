@@ -10,6 +10,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use configloader::Config;
 use manifest_tree::ReadTreeManifest;
+use manifest_tree::TreeManifest;
+use pathmatcher::DynMatcher;
 use storemodel::FileStore;
 use storemodel::TreeStore;
 use types::HgId;
@@ -96,6 +98,25 @@ impl CoreRepo {
                 }
             }
             CoreRepo::Slapi(repo) => repo.resolve_commit(change_id),
+        }
+    }
+
+    /// Get the sparse matcher if sparse is enabled.
+    ///
+    /// For `Repo`, this delegates to the working copy's sparse_matcher.
+    /// For `SlapiRepo`, this checks for a code-tenting sparse profile in the config
+    /// (clone.additional-sparse-profile) and builds a matcher from it.
+    pub fn sparse_matcher(&self, manifest: &TreeManifest) -> Result<Option<DynMatcher>> {
+        match self {
+            #[cfg(feature = "wdir")]
+            CoreRepo::Disk(repo) => {
+                let wc = repo.working_copy()?;
+                let wc = wc.read();
+                wc.sparse_matcher()
+            }
+            #[cfg(not(feature = "wdir"))]
+            CoreRepo::Disk(_) => Ok(None),
+            CoreRepo::Slapi(repo) => repo.sparse_matcher(manifest),
         }
     }
 }

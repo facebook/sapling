@@ -26,16 +26,20 @@ sapling-constructors = { version = "0.1.0", path = "../constructors", default-fe
 sapling-eagerepo = { version = "0.1.0", path = "../eagerepo" }
 sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
+sapling-filters = { version = "0.1.0", path = "../filters" }
 sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
+sapling-manifest = { version = "0.1.0", path = "../manifest" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
+sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-repo-minimal-info = { version = "0.1.0", path = "repo-minimal-info" }
 sapling-repolock = { version = "0.1.0", path = "../repolock" }
 sapling-repourl = { version = "0.1.0", path = "url" }
 sapling-revisionstore = { version = "0.1.0", path = "../revisionstore" }
 sapling-revsets = { version = "0.1.0", path = "../revsets" }
 sapling-rewrite-macros = { version = "0.1.0", path = "../util/rewrite-macros" }
+sapling-sparse = { version = "0.1.0", path = "../sparse" }
 sapling-storemodel = { version = "0.1.0", path = "../storemodel" }
 sapling-treestate = { version = "0.1.0", path = "../treestate" }
 sapling-types = { version = "0.1.0", path = "../types" }
@@ -45,7 +49,6 @@ thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 tempfile = "3.22"
 
 [features]

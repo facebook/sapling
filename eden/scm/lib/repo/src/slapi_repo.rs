@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -14,20 +15,26 @@ use async_runtime::block_on;
 use configloader::Config;
 use configloader::config::Options;
 use configloader::hg::RepoInfo;
+use configmodel::ConfigExt;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
+use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
+use manifest_tree::TreeManifest;
 use metalog::MetaLog;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
+use pathmatcher::DynMatcher;
 use repourl::RepoUrl;
 use revisionstore::trait_impls::ArcFileStore;
 use revsets::errors::RevsetLookupError;
 use revsets::utils::remote_hash_prefix_lookup;
+use sparse::Root;
 use storemodel::FileStore;
 use storemodel::StoreInfo;
 use storemodel::TreeStore;
 use types::HgId;
+use workingcopy::sparse::build_matcher;
 
 use crate::scmstore::build_scm_file_store;
 use crate::scmstore::build_scm_tree_store;
@@ -157,6 +164,30 @@ impl SlapiRepo {
         match bms.pop().and_then(|bm| bm.hgid) {
             None => Err(RevsetLookupError::RevsetNotFound(id.to_owned()).into()),
             Some(hgid) => Ok(hgid),
+        }
+    }
+
+    /// Get sparse matcher for code tenting.
+    ///
+    /// Checks for a code-tenting sparse profile in the config and builds a matcher from
+    /// it if present.
+    pub fn sparse_matcher(&self, manifest: &TreeManifest) -> Result<Option<DynMatcher>> {
+        match filters::util::filter_paths_from_config(self.config()) {
+            Some(paths) => {
+                let sparse_root = Root::from_bytes(
+                    paths
+                        .into_iter()
+                        .map(|p| format!("%include {p}\n"))
+                        .collect::<Vec<_>>()
+                        .join(""),
+                    "SlapiRepo".to_string(),
+                )?;
+                let (sparse_matcher, _) =
+                    build_matcher(&sparse_root, manifest, self.file_store()?, &HashMap::new())?;
+
+                Ok(Some(Arc::new(sparse_matcher)))
+            }
+            None => Ok(None),
         }
     }
 }

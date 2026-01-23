@@ -33,6 +33,8 @@ use manifest::FileType;
 use manifest::FsNodeMetadata;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
+use pathmatcher::DynMatcher;
+use pathmatcher::IntersectMatcher;
 use repo::CoreRepo;
 use storemodel::FileStore;
 use types::FetchContext;
@@ -103,7 +105,7 @@ impl FirstError {
         let _ = self.tx.try_send(err);
     }
 
-    /// Return whether an error has been stored. Useful for cancelation.
+    /// Return whether an error has been stored. Useful for cancellation.
     fn has_error(&self) -> bool {
         self.has_error.load(Ordering::Relaxed)
     }
@@ -241,14 +243,18 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
         &mut ctx.io().input(),
     )?;
 
-    // TODO: support tenting
+    let mut matcher: DynMatcher = Arc::new(matcher);
 
     let commit_id = repo.resolve_commit(&ctx.opts.rev)?;
 
     let tree_resolver = repo.tree_resolver()?;
     let manifest = tree_resolver.get(&commit_id)?;
-
     let file_store = repo.file_store()?;
+
+    // Check for sparse profile and intersect with existing matcher if set.
+    if let Some(sparse_matcher) = repo.sparse_matcher(&manifest)? {
+        matcher = Arc::new(IntersectMatcher::new(vec![matcher, sparse_matcher]));
+    }
 
     let outputter = if let Some(output_template) = output_template {
         let repo_name = repo.repo_name().map(|s| s.to_string());
