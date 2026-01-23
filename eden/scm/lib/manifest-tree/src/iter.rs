@@ -65,11 +65,13 @@ impl BfsIterPool {
 
 static BFS_POOL: Lazy<BfsIterPool> = Lazy::new(|| BfsIterPool::new(num_cpus::get().min(20)));
 
+/// Returns a channel that receives batches of manifest entries.
+/// This is useful when you need timeout-based batching on the receiving end.
 pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
     store: InnerStore,
     roots: &[impl Borrow<Link>],
     matcher: M,
-) -> Box<dyn Iterator<Item = Result<(RepoPathBuf, FsNodeMetadata)>>> {
+) -> Receiver<Vec<Result<(RepoPathBuf, FsNodeMetadata)>>> {
     // Pick a sizeable number since each result datum is not very large and we want to keep pipelines full.
     // The important thing is it is less than infinity.
     const RESULT_QUEUE_SIZE: usize = 10_000;
@@ -96,7 +98,7 @@ pub fn bfs_iter<M: 'static + Matcher + Sync + Send>(
         })
         .unwrap();
 
-    Box::new(result_recv.into_iter().flatten())
+    result_recv
 }
 
 struct BfsWork {

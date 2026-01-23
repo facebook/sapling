@@ -24,7 +24,6 @@ use anyhow::Result;
 use anyhow::bail;
 use format_util::git_sha1_digest;
 use format_util::hg_sha1_digest;
-use iter::bfs_iter;
 use manifest::DiffEntry;
 use manifest::DirDiffEntry;
 use manifest::Directory;
@@ -123,6 +122,15 @@ impl TreeManifest {
 
     fn root_cursor<'a>(&'a self) -> DfsCursor<'a> {
         DfsCursor::new(&self.store, RepoPathBuf::new(), &self.root)
+    }
+
+    /// Returns a channel that receives batches of manifest entries.
+    /// This is useful when you need timeout-based batching on the receiving end.
+    pub fn iter<M: 'static + Matcher + Sync + Send>(
+        &self,
+        matcher: M,
+    ) -> flume::Receiver<Vec<Result<(RepoPathBuf, FsNodeMetadata)>>> {
+        iter::bfs_iter(self.store.clone(), &[&self.root], matcher)
     }
 }
 
@@ -324,30 +332,32 @@ impl Manifest for TreeManifest {
         &'a self,
         matcher: M,
     ) -> Box<dyn Iterator<Item = Result<File>> + 'a> {
-        let files =
-            bfs_iter(self.store.clone(), &[&self.root], matcher).filter_map(
-                |result| match result {
-                    Ok((path, FsNodeMetadata::File(metadata))) => {
-                        Some(Ok(File::new(path, metadata)))
-                    }
-                    Ok(_) => None,
-                    Err(e) => Some(Err(e)),
-                },
-            );
+        let iter = iter::bfs_iter(self.store.clone(), &[&self.root], matcher);
+        let files = iter
+            .into_iter()
+            .flatten()
+            .filter_map(|result| match result {
+                Ok((path, FsNodeMetadata::File(metadata))) => Some(Ok(File::new(path, metadata))),
+                Ok(_) => None,
+                Err(err) => Some(Err(err)),
+            });
         Box::new(files)
     }
 
     #[tracing::instrument(skip_all)]
     fn count_files<'a, M: 'static + Matcher + Sync + Send>(&'a self, matcher: M) -> Result<u64> {
         // PERF: the `bfs_iter()` can be optimized to avoid file path construction.
-        bfs_iter(self.store.clone(), &[&self.root], matcher).try_fold(0, |acc, result| {
-            let (_, metadata) = result?;
-            if let FsNodeMetadata::File(_) = metadata {
-                Ok(acc + 1)
-            } else {
-                Ok(acc)
-            }
-        })
+        iter::bfs_iter(self.store.clone(), &[&self.root], matcher)
+            .into_iter()
+            .flatten()
+            .try_fold(0, |acc, result| {
+                let (_, metadata) = result?;
+                if let FsNodeMetadata::File(_) = metadata {
+                    Ok(acc + 1)
+                } else {
+                    Ok(acc)
+                }
+            })
     }
 
     /// Returns an iterator over all the directories that are present in the
@@ -360,16 +370,16 @@ impl Manifest for TreeManifest {
         &'a self,
         matcher: M,
     ) -> Box<dyn Iterator<Item = Result<Directory>> + 'a> {
-        let dirs =
-            bfs_iter(self.store.clone(), &[&self.root], matcher).filter_map(
-                |result| match result {
-                    Ok((path, FsNodeMetadata::Directory(metadata))) => {
-                        Some(Ok(Directory::new(path, metadata)))
-                    }
-                    Ok(_) => None,
-                    Err(e) => Some(Err(e)),
-                },
-            );
+        let dirs = iter::bfs_iter(self.store.clone(), &[&self.root], matcher)
+            .into_iter()
+            .flatten()
+            .filter_map(|result| match result {
+                Ok((path, FsNodeMetadata::Directory(metadata))) => {
+                    Some(Ok(Directory::new(path, metadata)))
+                }
+                Ok(_) => None,
+                Err(e) => Some(Err(e)),
+            });
         Box::new(dirs)
     }
 
@@ -920,8 +930,10 @@ pub fn prefetch(
     matcher: impl 'static + Matcher + Sync + Send,
 ) -> Result<()> {
     let links: Vec<Link> = mf_nodes.iter().map(|id| Link::durable(*id)).collect();
-    for node in bfs_iter(InnerStore::new(store), &links, matcher) {
-        node?;
+    for batch in iter::bfs_iter(InnerStore::new(store), &links, matcher) {
+        for node in batch {
+            node?;
+        }
     }
     Ok(())
 }
