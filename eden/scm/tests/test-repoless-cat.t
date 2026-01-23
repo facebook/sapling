@@ -220,3 +220,21 @@ Cat with sparse profile filters to allowed paths:
   $ find output -type f | sort
   output/allowed/file1
   output/allowed/file2
+
+#if no-windows
+
+Test pager is used for stdout output:
+
+  $ cat >> $TESTTMP/fakepager.py <<EOF
+  > import sys
+  > # Write to a file to work around pager output going to "real" stdout.
+  > with open("paged", "w") as f:
+  >   for line in sys.stdin.buffer:
+  >       f.write('paged! %r\n' % line.decode())
+  > EOF
+
+  $ hg cat -R test:server -r $B foo --pager=true --config 'pager.pager=hg debugpython $TESTTMP/fakepager.py'
+  $ cat paged
+  paged! 'foo content\n'
+
+#endif

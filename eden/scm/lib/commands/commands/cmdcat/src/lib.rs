@@ -268,6 +268,7 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
 
         Outputter::new_disk(&vfs, relative_template, commit_id, repo_name)
     } else {
+        ctx.maybe_start_pager(repo.config())?;
         Outputter::new_io(ctx.io().clone())
     };
 
