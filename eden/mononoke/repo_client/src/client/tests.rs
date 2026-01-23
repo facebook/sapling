@@ -12,7 +12,6 @@ use fbinit::FacebookInit;
 use fixtures::ManyFilesDirs;
 use fixtures::TestRepoFixture;
 use futures::compat::Future01CompatExt;
-use maplit::hashset;
 use mercurial_derivation::DeriveHgChangeset;
 use mononoke_macros::mononoke;
 use mononoke_types_mocks::changesetid::ONES_CSID;
@@ -22,58 +21,6 @@ use tests_utils::CreateCommitContext;
 
 use super::*;
 use crate::repo::RepoClientRepo;
-
-#[mononoke::test]
-fn test_parsing_caps_simple() {
-    assert_eq!(
-        parse_utf8_getbundle_caps(b"cap"),
-        Some((String::from("cap"), HashMap::new())),
-    );
-
-    let caps = b"bundle2=HG20";
-
-    assert_eq!(
-        parse_utf8_getbundle_caps(caps),
-        Some((
-            String::from("bundle2"),
-            hashmap! { "HG20".to_string() => hashset!{} }
-        )),
-    );
-
-    let caps = b"bundle2=HG20%0Ab2x%253Ainfinitepush%0Ab2x%253Ainfinitepushscratchbookmarks\
-        %0Ab2x%253Arebase%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0A\
-        error%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0A\
-        pushkey%0Aremote-changegroup%3Dhttp%2Chttps%0Aremotefilelog%3DTrue%0Atreemanifest%3DTrue%0Atreeonly%3DTrue";
-
-    assert_eq!(
-        parse_utf8_getbundle_caps(caps),
-        Some((
-            String::from("bundle2"),
-            hashmap! {
-                "HG20".to_string() => hashset!{},
-                "b2x:rebase".to_string() => hashset!{},
-                "digests".to_string() => hashset!{"md5".to_string(), "sha512".to_string(), "sha1".to_string()},
-                "listkeys".to_string() => hashset!{},
-                "remotefilelog".to_string() => hashset!{"True".to_string()},
-                "hgtagsfnodes".to_string() => hashset!{},
-                "bookmarks".to_string() => hashset!{},
-                "b2x:infinitepushscratchbookmarks".to_string() => hashset!{},
-                "treeonly".to_string() => hashset!{"True".to_string()},
-                "pushkey".to_string() => hashset!{},
-                "error".to_string() => hashset!{
-                    "pushraced".to_string(),
-                    "pushkey".to_string(),
-                    "unsupportedcontent".to_string(),
-                    "abort".to_string(),
-                },
-                "b2x:infinitepush".to_string() => hashset!{},
-                "changegroup".to_string() => hashset!{"01".to_string(), "02".to_string()},
-                "remote-changegroup".to_string() => hashset!{"http".to_string(), "https".to_string()},
-                "treemanifest".to_string() => hashset!{"True".to_string()},
-            }
-        )),
-    );
-}
 
 #[mononoke::fbinit_test]
 async fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {

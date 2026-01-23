@@ -44,7 +44,6 @@ use nom::multi::many0;
 use nom::multi::separated_list0;
 use nom::sequence::terminated;
 
-use crate::GetbundleArgs;
 use crate::GettreepackArgs;
 use crate::Request;
 use crate::SingleRequest;
@@ -304,24 +303,6 @@ fn hex_stringlist(input: &[u8]) -> IResult<&[u8], Vec<String>, Error> {
     .parse(input)
 }
 
-/// A comma-separated list of arbitrary values. The input is assumed to be
-/// complete and exact.
-fn commavalues(input: &[u8]) -> IResult<&[u8], Vec<Vec<u8>>, Error> {
-    if input.is_empty() {
-        // Need to handle this separately because the below will return
-        // vec![vec![]] on an empty input.
-        Ok((b"", vec![]))
-    } else {
-        Ok((
-            b"",
-            input
-                .split(|c| *c == b',')
-                .map(|val| val.to_vec())
-                .collect(),
-        ))
-    }
-}
-
 fn notsemi(b: u8) -> bool {
     b != b';'
 }
@@ -351,33 +332,6 @@ where
             Ok((rest, v)) => match rest {
                 [] => Ok(v),
                 [..] => bail!("Unconsumed characters remain after parsing param"),
-            },
-            Err(Err::Incomplete(err)) => bail!("param parse incomplete: {:?}", err),
-            Err(Err::Error(err) | Err::Failure(err)) => bail!("param parse failed: {:?}", err),
-        },
-    }
-}
-
-/// Given a hash of parameters, look up a parameter by name, and if it exists,
-/// apply a parser to its value. If it doesn't, return the default value.
-fn parseval_default<'a, F, T>(
-    params: &'a HashMap<Vec<u8>, Vec<u8>>,
-    key: &str,
-    parser: F,
-) -> Result<T>
-where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], T, Error>,
-    T: Default,
-{
-    match params.get(key.as_bytes()) {
-        None => Ok(T::default()),
-        Some(v) => match parser(v.as_ref()) {
-            Ok((unparsed, v)) => match unparsed {
-                [] => Ok(v),
-                [..] => bail!(
-                    "Unconsumed characters remain after parsing param: {:?}",
-                    unparsed
-                ),
             },
             Err(Err::Incomplete(err)) => bail!("param parse incomplete: {:?}", err),
             Err(Err::Error(err) | Err::Failure(err)) => bail!("param parse failed: {:?}", err),
@@ -581,20 +535,6 @@ fn parse_with_params(
             Ok(ClientTelemetry{
                 args: kv,
             })
-        }),
-        parse_command("getbundle", parse_params, 1, |kv| {
-            Ok(Getbundle(GetbundleArgs {
-                // Some params are currently ignored, like:
-                // - obsmarkers
-                // - cg
-                // - cbattempted
-                // If those params are needed, they should be parsed here.
-                heads: parseval_default(&kv, "heads", hashlist)?,
-                common: parseval_default(&kv, "common", hashlist)?,
-                bundlecaps: parseval_default(&kv, "bundlecaps", commavalues)?.into_iter().collect(),
-                listkeys: parseval_default(&kv, "listkeys", commavalues)?,
-                phases: parseval_default(&kv, "phases", boolean)?,
-            }))
         }),
         command!("heads", Heads, parse_params, {}),
         command!("hello", Hello, parse_params, {}),
@@ -971,20 +911,6 @@ mod test {
     }
 
     #[mononoke::test]
-    fn test_parseval_default_extra_characters() {
-        let kv = hashmap! {
-        b"foo".to_vec() => b"0000000000000000000000000000000000000000extra".to_vec(),
-        };
-        match parseval_default(&kv, "foo", hashlist) {
-            Err(_) => {}
-            _ => panic!(
-                "paramval_default parse failed: Did not raise an error for param\
-                 with trailing characters."
-            ),
-        }
-    }
-
-    #[mononoke::test]
     fn test_hashlist() {
         let p =
             b"0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 \
@@ -1016,32 +942,6 @@ mod test {
         assert_eq!(
             hashlist(p),
             Ok((&b"00000000000000000000000000000"[..], vec![])),
-        );
-    }
-
-    #[mononoke::test]
-    fn test_commavalues() {
-        // Empty list
-        let p = b"";
-        assert_eq!(commavalues(p), Ok((&b""[..], vec![])));
-
-        // Single entry
-        let p = b"abc";
-        assert_eq!(commavalues(p), Ok((&b""[..], vec![b"abc".to_vec()])));
-
-        // Multiple entries
-        let p = b"123,abc,test,456";
-        assert_eq!(
-            commavalues(p),
-            Ok((
-                &b""[..],
-                vec![
-                    b"123".to_vec(),
-                    b"abc".to_vec(),
-                    b"test".to_vec(),
-                    b"456".to_vec(),
-                ]
-            )),
         );
     }
 
@@ -1086,7 +986,6 @@ mod test_parse {
 
     use maplit::btreeset;
     use maplit::hashmap;
-    use maplit::hashset;
     use mononoke_macros::mononoke;
     use mononoke_types::path::MPath;
 
@@ -1098,10 +997,6 @@ mod test_parse {
 
     fn hash_twos() -> HgChangesetId {
         HgChangesetId::new("2222222222222222222222222222222222222222".parse().unwrap())
-    }
-
-    fn hash_threes() -> HgChangesetId {
-        HgChangesetId::new("3333333333333333333333333333333333333333".parse().unwrap())
     }
 
     fn hash_ones_manifest() -> HgManifestId {
@@ -1248,50 +1143,6 @@ mod test_parse {
                     b"empty".to_vec() => vec![],
                 },
             }),
-        );
-    }
-
-    #[mononoke::test]
-    fn test_parse_getbundle() {
-        // with no arguments
-        let inp = "getbundle\n\
-                   * 0\n";
-
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::Getbundle(GetbundleArgs {
-                heads: vec![],
-                common: vec![],
-                bundlecaps: hashset![],
-                listkeys: vec![],
-                phases: false,
-            })),
-        );
-
-        // with arguments
-        let inp = "getbundle\n\
-             * 6\n\
-             heads 40\n\
-             1111111111111111111111111111111111111111\
-             common 81\n\
-             2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\
-             bundlecaps 14\n\
-             cap1,CAP2,cap3\
-             listkeys 9\n\
-             key1,key2\
-             phases 1\n\
-             1\
-             extra 5\n\
-             extra";
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::Getbundle(GetbundleArgs {
-                heads: vec![hash_ones()],
-                common: vec![hash_twos(), hash_threes()],
-                bundlecaps: hashset![b"cap1".to_vec(), b"CAP2".to_vec(), b"cap3".to_vec()],
-                listkeys: vec![b"key1".to_vec(), b"key2".to_vec()],
-                phases: true,
-            })),
         );
     }
 

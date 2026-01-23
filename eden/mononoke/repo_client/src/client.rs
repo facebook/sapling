@@ -69,10 +69,7 @@ use futures_old::future as future_old;
 use futures_old::stream as stream_old;
 use futures_stats::TimedFutureExt;
 use futures_stats::TimedStreamExt;
-use getbundle_response::PhasesPart;
 use getbundle_response::SessionLfsParams;
-use getbundle_response::create_getbundle_response;
-use hgproto::GetbundleArgs;
 use hgproto::GettreepackArgs;
 use hgproto::HgCommandRes;
 use hgproto::HgCommands;
@@ -147,8 +144,6 @@ use session_bookmarks_cache::SessionBookmarkCache;
 
 define_stats! {
     prefix = "mononoke.repo_client";
-    getbundle_ms:
-        histogram(10, 0, 1_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     gettreepack_ms:
         histogram(2, 0, 200, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getpack_ms:
@@ -182,7 +177,6 @@ mod ops {
     pub static LISTKEYS: &str = "listkeys";
     pub static LISTKEYSPATTERNS: &str = "listkeyspatterns";
     pub static KNOWN: &str = "known";
-    pub static GETBUNDLE: &str = "getbundle";
     pub static GETTREEPACK: &str = "gettreepack";
 
     pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
@@ -256,24 +250,12 @@ fn default_timeout() -> Duration {
 
     Duration::from_secs(timeout)
 }
-fn getbundle_timeout() -> Duration {
-    const FALLBACK_TIMEOUT_SECS: u64 = 30 * 60;
-
-    let timeout: u64 = justknobs::get_as::<u64>(
-        "scm/mononoke_timeouts:repo_client_getbundle_timeout_secs",
-        None,
-    )
-    .unwrap_or(FALLBACK_TIMEOUT_SECS);
-
-    Duration::from_secs(timeout)
-}
 
 fn wireprotocaps() -> Vec<String> {
     vec![
         "clienttelemetry".to_string(),
         "lookup".to_string(),
         "known".to_string(),
-        "getbundle".to_string(),
         "unbundle=HG10GZ,HG10BZ,HG10UN".to_string(),
         "unbundlereplay".to_string(),
         "gettreepack".to_string(),
@@ -442,72 +424,6 @@ impl<R: Repo> RepoClient<R> {
                 })
                 .collect())
         }
-    }
-
-    fn create_bundle(
-        &self,
-        ctx: CoreContext,
-        args: GetbundleArgs,
-    ) -> BoxStream<'static, Result<Bytes, Error>> {
-        let lfs_params = self.lfs_params();
-        let repo = self.repo.clone();
-
-        let GetbundleArgs {
-            bundlecaps,
-            common,
-            heads,
-            phases,
-            listkeys,
-        } = args;
-
-        let mut use_phases = phases;
-        if use_phases {
-            for cap in &bundlecaps {
-                if let Some((cap_name, caps)) = parse_utf8_getbundle_caps(cap) {
-                    if cap_name != "bundle2" {
-                        continue;
-                    }
-                    if let Some(phases) = caps.get("phases") {
-                        use_phases = phases.contains("heads");
-                        break;
-                    }
-                }
-            }
-        }
-
-        let pull_default_bookmarks = self.get_pull_default_bookmarks_maybe_stale(ctx.clone());
-
-        async move {
-            let mut getbundle_response = create_getbundle_response(
-                &ctx,
-                &repo,
-                common,
-                &heads,
-                if use_phases {
-                    PhasesPart::Yes
-                } else {
-                    PhasesPart::No
-                },
-                &lfs_params,
-            )
-            .await?;
-
-            let mut bundle2_parts = vec![];
-            bundle2_parts.append(&mut getbundle_response);
-
-            // listkeys bookmarks part is added separately.
-
-            // TODO: generalize this to other listkey types
-            // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
-            if listkeys.contains(&b"bookmarks".to_vec()) {
-                let items = stream::iter(pull_default_bookmarks.await?).map(anyhow::Ok);
-                bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
-            }
-
-            Ok(create_bundle_stream_new(bundle2_parts))
-        }
-        .try_flatten_stream()
-        .boxed()
     }
 
     fn gettreepack_untimed(
@@ -983,36 +899,6 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                 Ok(res)
             },
         )
-    }
-
-    // @wireprotocommand('getbundle', '*')
-    fn getbundle(&self, args: GetbundleArgs) -> BoxStream<'static, Result<Bytes, Error>> {
-        self.command_stream(ops::GETBUNDLE, UNSAMPLED, |ctx, command_logger| {
-            let s = self
-                .create_bundle(ctx.clone(), args)
-                .whole_stream_timeout(getbundle_timeout())
-                .yield_periodically()
-                .flatten_err()
-                .timed({
-                    move |stats| {
-                        if stats.completed {
-                            if let Some(completion_time) = stats.completion_time {
-                                STATS::getbundle_ms
-                                    .add_value(completion_time.as_millis_unchecked() as i64);
-                            }
-                            command_logger.finalize_command(&stats);
-                        }
-                    }
-                });
-
-            throttle_stream(
-                &self.session,
-                Metric::Commits,
-                ops::GETBUNDLE,
-                move || s,
-                ctx.scuba().clone(),
-            )
-        })
     }
 
     // @wireprotocommand('hello')
@@ -1738,49 +1624,6 @@ fn validate_manifest_content(
             actual,
         }
         .into())
-    }
-}
-
-/// getbundle capabilities have tricky format.
-/// It has a few layers of encoding. Upper layer is a key value pair in format `key=value`,
-/// value can be empty and '=' may not be there. If it's not empty then it's urlencoded list
-/// of chunks separated with '\n'. Each chunk is in a format 'key=value1,value2...' where both
-/// `key` and `value#` are url encoded. Again, values can be empty, '=' might not be there
-fn parse_utf8_getbundle_caps(caps: &[u8]) -> Option<(String, HashMap<String, HashSet<String>>)> {
-    match caps.iter().position(|&x| x == b'=') {
-        Some(pos) => {
-            let (name, urlencodedcap) = caps.split_at(pos);
-            // Skip the '='
-            let urlencodedcap = &urlencodedcap[1..];
-            let name = String::from_utf8(name.to_vec()).ok()?;
-
-            let mut ans = HashMap::new();
-            let caps = percent_encoding::percent_decode(urlencodedcap)
-                .decode_utf8()
-                .ok()?;
-            for cap in caps.split('\n') {
-                let split = cap.splitn(2, '=').collect::<Vec<_>>();
-                let urlencoded_cap_name = split.first()?;
-                let cap_name = percent_encoding::percent_decode(urlencoded_cap_name.as_bytes())
-                    .decode_utf8()
-                    .ok()?;
-                let mut values = HashSet::new();
-
-                if let Some(urlencoded_values) = split.get(1) {
-                    for urlencoded_value in urlencoded_values.split(',') {
-                        let value = percent_encoding::percent_decode(urlencoded_value.as_bytes());
-                        let value = value.decode_utf8().ok()?;
-                        values.insert(value.to_string());
-                    }
-                }
-                ans.insert(cap_name.to_string(), values);
-            }
-
-            Some((name, ans))
-        }
-        None => String::from_utf8(caps.to_vec())
-            .map(|cap| (cap, HashMap::new()))
-            .ok(),
     }
 }
 

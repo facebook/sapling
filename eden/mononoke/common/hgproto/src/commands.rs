@@ -42,7 +42,6 @@ use tokio::io::AsyncBufRead;
 use tokio::io::AsyncBufReadExt;
 use tokio_util::io::StreamReader;
 
-use crate::GetbundleArgs;
 use crate::GettreepackArgs;
 use crate::SingleRequest;
 use crate::SingleResponse;
@@ -113,13 +112,6 @@ impl<H: HgCommands + Send + Sync + 'static> HgCommandHandler<H> {
                 self.debugwireargs(one, two, all_args)
                     .map_ok(SingleResponse::Debugwireargs)
                     .into_stream()
-                    .boxed(),
-                ok(instream).boxed(),
-            ),
-            SingleRequest::Getbundle(args) => (
-                hgcmds
-                    .getbundle(args)
-                    .map_ok(SingleResponse::Getbundle)
                     .boxed(),
                 ok(instream).boxed(),
             ),
@@ -356,12 +348,6 @@ pub trait HgCommands {
     // @wireprotocommand('clienttelemetry')
     fn clienttelemetry(&self, _args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
         unimplemented("clienttelemetry")
-    }
-
-    // @wireprotocommand('getbundle', '*')
-    // TODO: make this streaming
-    fn getbundle(&self, _args: GetbundleArgs) -> BoxStream<'static, Result<Bytes, Error>> {
-        once(async { Err(ErrorKind::Unimplemented("getbundle".into()).into()) }).boxed()
     }
 
     // @wireprotocommand('heads')

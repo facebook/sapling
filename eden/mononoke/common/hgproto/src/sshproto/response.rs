@@ -117,8 +117,6 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
         // TODO(luk, T25574469) The response for Unbundle should be chunked stream of bundle2
         Unbundle(res) => res,
 
-        Getbundle(res) => res,
-
         Gettreepack(res) => res,
 
         Lookup(res) => res,

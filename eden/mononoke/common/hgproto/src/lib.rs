@@ -15,7 +15,6 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fmt;
 use std::fmt::Debug;
 use std::sync::Mutex;
 
@@ -29,8 +28,6 @@ mod dechunker;
 mod errors;
 mod handler;
 pub mod sshproto;
-
-const MAX_NODES_TO_LOG: usize = 5;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Request {
@@ -60,7 +57,6 @@ pub enum SingleRequest {
         two: Vec<u8>,
         all_args: HashMap<Vec<u8>, Vec<u8>>,
     },
-    Getbundle(GetbundleArgs),
     Heads,
     Hello,
     Listkeys {
@@ -97,7 +93,6 @@ impl SingleRequest {
             SingleRequest::Capabilities => "capabilities",
             SingleRequest::ClientTelemetry { .. } => "clienttelemetry",
             SingleRequest::Debugwireargs { .. } => "debugwireargs",
-            SingleRequest::Getbundle(_) => "getbundle",
             SingleRequest::Heads => "heads",
             SingleRequest::Hello => "hello",
             SingleRequest::Listkeys { .. } => "listkeys",
@@ -109,48 +104,6 @@ impl SingleRequest {
             SingleRequest::StreamOutShallow { .. } => "stream_out_shallow",
             SingleRequest::ListKeysPatterns { .. } => "listkeyspatterns",
         }
-    }
-}
-
-/// The arguments that `getbundle` accepts, in a separate struct for
-/// the convenience of callers.
-#[derive(Eq, PartialEq)]
-pub struct GetbundleArgs {
-    /// List of space-delimited hex nodes of heads to retrieve
-    pub heads: Vec<HgChangesetId>,
-    /// List of space-delimited hex nodes that the client has in common with the server
-    pub common: Vec<HgChangesetId>,
-    /// Comma-delimited set of strings defining client bundle capabilities.
-    pub bundlecaps: HashSet<Vec<u8>>,
-    /// Comma-delimited list of strings of ``pushkey`` namespaces. For each namespace listed, a bundle2 part will be included with the content of that namespace.
-    pub listkeys: Vec<Vec<u8>>,
-    /// phases: Boolean indicating whether phases data is requested
-    pub phases: bool,
-}
-
-impl Debug for GetbundleArgs {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let bcaps: HashSet<_> = self
-            .bundlecaps
-            .iter()
-            .map(|s| String::from_utf8_lossy(s))
-            .collect();
-        let listkeys: Vec<_> = self
-            .listkeys
-            .iter()
-            .map(|s| String::from_utf8_lossy(s))
-            .collect();
-        let heads: Vec<_> = self.heads.iter().take(MAX_NODES_TO_LOG).collect();
-        let common: Vec<_> = self.common.iter().take(MAX_NODES_TO_LOG).collect();
-        fmt.debug_struct("GetbundleArgs")
-            .field("heads_len", &self.heads.len())
-            .field("heads", &heads)
-            .field("common_len", &self.common.len())
-            .field("common", &common)
-            .field("bundlecaps", &bcaps)
-            .field("listkeys", &listkeys)
-            .field("phases", &self.phases)
-            .finish()
     }
 }
 
@@ -183,7 +136,6 @@ pub enum SingleResponse {
     Capabilities(Vec<String>),
     ClientTelemetry(String),
     Debugwireargs(Bytes),
-    Getbundle(Bytes),
     Heads(HashSet<HgChangesetId>),
     Hello(HashMap<String, Vec<String>>),
     Listkeys(HashMap<Vec<u8>, Vec<u8>>),
@@ -202,8 +154,7 @@ impl SingleResponse {
         use SingleResponse::*;
 
         match self {
-            &Getbundle(_) | &ReadyForStream | &Unbundle(_) | &Gettreepack(_)
-            | &StreamOutShallow(_) => true,
+            &ReadyForStream | &Unbundle(_) | &Gettreepack(_) | &StreamOutShallow(_) => true,
             _ => false,
         }
     }

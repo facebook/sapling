@@ -49,7 +49,6 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../repo_attributes/mutable_counters" }
 nonzero_ext = "0.2"
-percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../repo_attributes/phases" }
 pushrebase_mutation_mapping = { version = "0.1.0", path = "../repo_attributes/pushrebase_mutation_mapping" }
 rand = { version = "0.9", features = ["small_rng"] }
