@@ -339,7 +339,7 @@ impl<'a, R: MononokeRepo> SyncChangeset<'a, R> {
             .map_err(MegarepoError::request)?;
         let moved_commits = stream::iter(side_parents)
             .map(|parent| {
-                self.create_single_move_commit(
+                self.create_move_and_linkfiles_commits(
                     ctx,
                     target_repo.repo(),
                     parent.clone(),

@@ -393,7 +393,16 @@ pub trait MegarepoOp<R> {
         Ok(())
     }
 
-    async fn create_single_move_commit(
+    /// Creates commits to move files from source to target location and add linkfiles.
+    ///
+    /// When linkfiles are present, this creates a two-commit chain:
+    /// 1. Move commit: moves files from source paths to prefixed target paths
+    /// 2. Linkfiles commit: creates symlinks at linkfile destinations
+    ///
+    /// This separation is necessary to avoid path conflicts when a linkfile destination
+    /// is a prefix of a file being moved (e.g., linkfile at `.llms/rules` when moving
+    /// `.llms/rules/default.md`).
+    async fn create_move_and_linkfiles_commits(
         &self,
         ctx: &CoreContext,
         repo: &R,
@@ -453,20 +462,41 @@ pub trait MegarepoOp<R> {
                 (target, fc)
             }));
         }
-        file_changes.extend(linkfiles);
+        // Note: linkfiles are NOT added here. They go in a separate commit to avoid
+        // path conflicts when a linkfile destination is a prefix of a file being moved.
 
-        let moved_bcs = new_megarepo_automation_commit(
+        // Create first commit: moves only
+        let move_bcs = new_megarepo_automation_commit(
             vec![cs_id],
             format!("move commit for source {}", source_name.0),
             file_changes.into_iter().collect(),
         )
         .freeze()?;
 
-        let source_and_moved_changeset = SourceAndMovedChangesets {
+        // If no linkfiles, return the move commit directly
+        if linkfiles.is_empty() {
+            return Ok(SourceAndMovedChangesets {
+                source: cs_id,
+                moved: move_bcs,
+            });
+        }
+
+        // Save the move commit first (it must exist before we can use it as parent)
+        let move_cs_id = move_bcs.get_changeset_id();
+        save_changesets(ctx, repo, vec![move_bcs]).await?;
+
+        // Create second commit: linkfiles only (parent is the move commit)
+        let linkfiles_bcs = new_megarepo_automation_commit(
+            vec![move_cs_id],
+            format!("linkfiles commit for source {}", source_name.0),
+            linkfiles.into_iter().collect(),
+        )
+        .freeze()?;
+
+        Ok(SourceAndMovedChangesets {
             source: cs_id,
-            moved: moved_bcs,
-        };
-        Ok(source_and_moved_changeset)
+            moved: linkfiles_bcs,
+        })
     }
 
     // Return all paths from the given source as seen in target.
@@ -550,7 +580,7 @@ pub trait MegarepoOp<R> {
                     let linkfiles = self.upload_linkfiles(ctx, linkfiles, repo).await?;
                     // NOTE: it assumes that commit is present in target
                     let moved = self
-                        .create_single_move_commit(
+                        .create_move_and_linkfiles_commits(
                             ctx,
                             repo,
                             changeset_id,
