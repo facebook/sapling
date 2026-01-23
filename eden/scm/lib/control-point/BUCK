@@ -21,7 +21,6 @@ rust_library(
     ],
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tracing",

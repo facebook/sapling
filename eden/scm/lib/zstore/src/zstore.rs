@@ -13,11 +13,11 @@ use std::borrow::Cow;
 use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use indexedlog::DefaultOpenOptions;
 use indexedlog::OpenWithRepair;
 use indexedlog::log as ilog;
-use lazy_static::lazy_static;
 use lru_cache::LruCache;
 use minibytes::Bytes;
 use parking_lot::Mutex;
@@ -564,9 +564,7 @@ impl Default for DeltaOptions {
     }
 }
 
-lazy_static! {
-    static ref EMPTY_ID20: Id20 = sha1(b"");
-}
+static EMPTY_ID20: LazyLock<Id20> = LazyLock::new(|| sha1(b""));
 
 // -------- Serde Structures --------
 

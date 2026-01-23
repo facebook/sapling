@@ -22,7 +22,6 @@ rust_library(
         "fbsource//third-party/rust:tempfile",
     ],
     deps = [
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:lru-cache",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:serde",

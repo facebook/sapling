@@ -10,18 +10,16 @@
 //! Useful for cases where it's inconvenient to pass [`Blackbox`] around.
 
 use std::ops::DerefMut;
+use std::sync::LazyLock;
 
-use lazy_static::lazy_static;
 use parking_lot::Mutex;
 
 use crate::Blackbox;
 use crate::BlackboxOptions;
 use crate::event::Event;
 
-lazy_static! {
-    pub static ref SINGLETON: Mutex<Blackbox> =
-        Mutex::new(BlackboxOptions::new().create_in_memory().unwrap());
-}
+pub static SINGLETON: LazyLock<Mutex<Blackbox>> =
+    LazyLock::new(|| Mutex::new(BlackboxOptions::new().create_in_memory().unwrap()));
 
 /// Replace the global [`Blackbox`] instance.
 ///

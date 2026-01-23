@@ -9,11 +9,11 @@ use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use anyhow::Result;
 use anyhow::bail;
-use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use serde_json::Map;
 use serde_json::Value;
@@ -22,9 +22,7 @@ use util::file::atomic_write;
 
 const FILE_NAME_ENV: &str = "CONTROL_POINT_FILE";
 
-lazy_static! {
-    static ref STATE: Mutex<Value> = Mutex::new(Value::Object(Map::new()));
-}
+static STATE: LazyLock<Mutex<Value>> = LazyLock::new(|| Mutex::new(Value::Object(Map::new())));
 
 pub fn control_point(name: &str) {
     if env::var(FILE_NAME_ENV).is_ok() {

@@ -7,18 +7,17 @@
 
 #![no_main]
 
+use std::sync::LazyLock;
+
 use bindag::TestContext;
-use lazy_static::lazy_static;
 use libfuzzer_sys::fuzz_target;
 
 mod tests;
 
-lazy_static! {
-    static ref CONTEXT: TestContext = {
-        let start = 60146;
-        TestContext::from_bin_sliced(bindag::MOZILLA, start..start + 256)
-    };
-}
+static CONTEXT: LazyLock<TestContext> = LazyLock::new(|| {
+    let start = 60146;
+    TestContext::from_bin_sliced(bindag::MOZILLA, start..start + 256)
+});
 
 fuzz_target!(|input: (Vec<u8>, Vec<u8>)| {
     let roots = CONTEXT.clamp_revs(&input.0);

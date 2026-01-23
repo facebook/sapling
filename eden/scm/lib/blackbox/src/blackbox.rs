@@ -11,6 +11,7 @@ use std::fs;
 use std::io::Cursor;
 use std::io::Write;
 use std::path::Path;
+use std::sync::LazyLock;
 use std::time::SystemTime;
 
 use anyhow::Result;
@@ -21,7 +22,6 @@ use indexedlog::log::IndexOutput;
 use indexedlog::rotate::OpenOptions;
 use indexedlog::rotate::RotateLog;
 use indexedlog::rotate::RotateLowLevelExt;
-use lazy_static::lazy_static;
 use serde_json::Value;
 
 use super::capture_pattern;
@@ -191,43 +191,51 @@ const INDEX_EVENT_FINISH_TIME: u8 = 2;
 const INDEX_EVENT_FINISH_DURATION: u8 = 3;
 const INDEX_EVENT_TAG_NAME: u8 = 4;
 
-lazy_static! {
-    static ref START_TIME_PATTERN: Value = json!(
+static START_TIME_PATTERN: LazyLock<Value> = LazyLock::new(|| {
+    json!(
         ["or",
          {"start": {"timestamp_ms": ["prefix", "range", ["capture", "START", "_"], ["capture", "END", "_"]]}},
          ["and",
           ["prefix", "and"],
           ["contain",
-           {"start": {"timestamp_ms": ["prefix", "range", ["capture", "START", "_"], ["capture", "END", "_"]]}}]]]);
-    static ref START_PID_PATTERN: Value = json!(
+           {"start": {"timestamp_ms": ["prefix", "range", ["capture", "START", "_"], ["capture", "END", "_"]]}}]]])
+});
+static START_PID_PATTERN: LazyLock<Value> = LazyLock::new(|| {
+    json!(
         ["or",
          {"start": {"pid": ["capture", "PID", "_"]}},
          ["and",
           ["prefix", "and"],
           ["contain",
-           {"start": {"pid": ["capture", "PID", "_"]}}]]]);
-    static ref FINISH_TIME_PATTERN: Value = json!(
+           {"start": {"pid": ["capture", "PID", "_"]}}]]])
+});
+static FINISH_TIME_PATTERN: LazyLock<Value> = LazyLock::new(|| {
+    json!(
         ["or",
          {"finish": {"timestamp_ms": ["prefix", "range", ["capture", "START", "_"], ["capture", "END", "_"]]}},
          ["and",
           ["prefix", "and"],
           ["contain",
-           {"finish": {"timestamp_ms": ["prefix", "range", ["capture", "START", "_"], ["capture", "END", "_"]]}}]]]);
-    static ref FINISH_DURATION_PATTERN: Value = json!(
+           {"finish": {"timestamp_ms": ["prefix", "range", ["capture", "START", "_"], ["capture", "END", "_"]]}}]]])
+});
+static FINISH_DURATION_PATTERN: LazyLock<Value> = LazyLock::new(|| {
+    json!(
         ["or",
          {"finish": {"duration_ms": ["prefix", "range", ["capture", "MIN", "_"], ["capture", "MAX", "_"]]}},
          ["and",
           ["prefix", "and"],
           ["contain",
-           {"finish": {"duration_ms": ["prefix", "range", ["capture", "MIN", "_"], ["capture", "MAX", "_"]]}}]]]);
-    static ref TAG_NAME_PATTERN: Value = json!(
+           {"finish": {"duration_ms": ["prefix", "range", ["capture", "MIN", "_"], ["capture", "MAX", "_"]]}}]]])
+});
+static TAG_NAME_PATTERN: LazyLock<Value> = LazyLock::new(|| {
+    json!(
         ["or",
          {"tags": {"names": ["prefix", "contain", ["capture", "NAME", "_"]]}},
          ["and",
           ["prefix", "and"],
           ["contain",
-           {"tags": {"names": ["prefix", "contain", ["capture", "NAME", "_"]]}}]]]);
-}
+           {"tags": {"names": ["prefix", "contain", ["capture", "NAME", "_"]]}}]]])
+});
 
 impl Blackbox {
     /// Assign a likely unused "Session ID".

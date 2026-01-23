@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
+
 use mime::Mime;
 use regex::Regex;
 use reqwest::StatusCode;
@@ -37,6 +38,4 @@ pub enum ErrorKind {
     PollingUpdatesPayloadError,
 }
 
-lazy_static! {
-    static ref RE: Regex = Regex::new(r"[\&\?]?access_token=\b\w+\b").unwrap();
-}
+static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[\&\?]?access_token=\b\w+\b").unwrap());

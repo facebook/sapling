@@ -11,7 +11,6 @@ rust_library(
             "for-tests": [
                 "rand",
                 "quickcheck",
-                "lazy_static",
             ],
         },
         "lib": {"name": "types"},
@@ -26,7 +25,6 @@ rust_library(
     crate_root = "src/lib.rs",
     features = ["for-tests"],
     test_deps = [
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:serde_cbor",
@@ -43,7 +41,6 @@ rust_library(
         "fbsource//third-party/rust:bitflags",
         "fbsource//third-party/rust:bytecount",
         "fbsource//third-party/rust:byteorder",
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:quickcheck",
         "fbsource//third-party/rust:rand_08",
         "fbsource//third-party/rust:ref-cast",

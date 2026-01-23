@@ -10,9 +10,11 @@ use std::env;
 use std::fmt;
 use std::fs;
 use std::io::Write;
+use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::LazyLock;
 
 use anyhow::Context;
 use hgtime::HgTime;
@@ -20,7 +22,6 @@ use indexedlog::OpenWithRepair;
 use indexedlog::Repair;
 use indexedlog::lock::ScopedDirLock;
 use indexedlog::log as ilog;
-use lazy_static::lazy_static;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 use serde::Deserialize;
@@ -576,12 +577,12 @@ pub(crate) fn load_root(blobs: &Zstore, id: Id20) -> Result<Root> {
 const INDEX_REVERSE: usize = 0;
 const INDEX_REVERSE_KEY: &[u8] = b"r";
 
-lazy_static! {
-    static ref EMPTY_ROOT: Root = Root::default();
-    static ref EMPTY_ROOT_ID: Id20 = zstore::sha1(
-        &mincode::serialize(EMPTY_ROOT.deref()).expect("serialize EMPTY_ROOT should not fail")
-    );
-}
+static EMPTY_ROOT: LazyLock<Root> = LazyLock::new(Root::default);
+static EMPTY_ROOT_ID: LazyLock<Id20> = LazyLock::new(|| {
+    zstore::sha1(
+        &mincode::serialize(EMPTY_ROOT.deref()).expect("serialize EMPTY_ROOT should not fail"),
+    )
+});
 
 /// A root defines a snapshot of key-value pairs.
 ///

@@ -7,16 +7,15 @@
 
 #![no_main]
 
+use std::sync::LazyLock;
+
 use bindag::TestContext;
-use lazy_static::lazy_static;
 use libfuzzer_sys::fuzz_target;
 
 mod tests;
 
-lazy_static! {
-    static ref CONTEXT: TestContext =
-        TestContext::from_bin(bindag::MOZILLA).truncate(u16::max_value() as usize);
-}
+static CONTEXT: LazyLock<TestContext> =
+    LazyLock::new(|| TestContext::from_bin(bindag::MOZILLA).truncate(u16::max_value() as usize));
 
 fuzz_target!(|input: Vec<u16>| {
     // gca with > 3 revs is less interesting to this test.

@@ -7,17 +7,16 @@
 
 #![no_main]
 
+use std::sync::LazyLock;
+
 use bindag::OctopusTestContext;
 use bindag::octopus;
-use lazy_static::lazy_static;
 use libfuzzer_sys::fuzz_target;
 
 mod tests;
 
-lazy_static! {
-    static ref CONTEXT: OctopusTestContext =
-        OctopusTestContext::from_parents(octopus::cross_octopus());
-}
+static CONTEXT: LazyLock<OctopusTestContext> =
+    LazyLock::new(|| OctopusTestContext::from_parents(octopus::cross_octopus()));
 
 fuzz_target!(|input: (Vec<u8>, Vec<u8>)| {
     let roots = CONTEXT.clamp_revs(&input.0);

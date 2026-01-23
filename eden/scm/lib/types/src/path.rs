@@ -1105,18 +1105,16 @@ impl quickcheck::Arbitrary for PathComponentBuf {
 
 #[cfg(any(test, feature = "for-tests"))]
 pub mod mocks {
-    use lazy_static::lazy_static;
+    use std::sync::LazyLock;
 
     use super::*;
 
-    lazy_static! {
-        pub static ref FOO_PATH: RepoPathBuf =
-            RepoPathBuf::from_string(String::from("foo")).unwrap();
-        pub static ref BAR_PATH: RepoPathBuf =
-            RepoPathBuf::from_string(String::from("bar")).unwrap();
-        pub static ref BAZ_PATH: RepoPathBuf =
-            RepoPathBuf::from_string(String::from("baz")).unwrap();
-    }
+    pub static FOO_PATH: LazyLock<RepoPathBuf> =
+        LazyLock::new(|| RepoPathBuf::from_string(String::from("foo")).unwrap());
+    pub static BAR_PATH: LazyLock<RepoPathBuf> =
+        LazyLock::new(|| RepoPathBuf::from_string(String::from("bar")).unwrap());
+    pub static BAZ_PATH: LazyLock<RepoPathBuf> =
+        LazyLock::new(|| RepoPathBuf::from_string(String::from("baz")).unwrap());
 }
 
 #[cfg(test)]

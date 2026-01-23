@@ -52,7 +52,7 @@ impl fmt::Display for Key {
 
 #[cfg(any(test, feature = "for-tests"))]
 pub mod mocks {
-    use lazy_static::lazy_static;
+    use std::sync::LazyLock;
 
     use super::Key;
     use crate::hgid::mocks::ONES;
@@ -60,11 +60,9 @@ pub mod mocks {
     use crate::hgid::mocks::TWOS;
     use crate::testutil::*;
 
-    lazy_static! {
-        pub static ref FOO_KEY: Key = Key::new(repo_path_buf("foo"), ONES);
-        pub static ref BAR_KEY: Key = Key::new(repo_path_buf("bar"), TWOS);
-        pub static ref BAZ_KEY: Key = Key::new(repo_path_buf("baz"), THREES);
-    }
+    pub static FOO_KEY: LazyLock<Key> = LazyLock::new(|| Key::new(repo_path_buf("foo"), ONES));
+    pub static BAR_KEY: LazyLock<Key> = LazyLock::new(|| Key::new(repo_path_buf("bar"), TWOS));
+    pub static BAZ_KEY: LazyLock<Key> = LazyLock::new(|| Key::new(repo_path_buf("baz"), THREES));
 }
 
 #[cfg(test)]

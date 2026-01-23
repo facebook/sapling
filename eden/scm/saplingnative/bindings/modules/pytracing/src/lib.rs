@@ -13,12 +13,12 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::Arc;
+use std::sync::LazyLock;
 
 use cpython::*;
 use cpython_ext::Bytes;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
-use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use python3_sys as ffi;
 use tracing::Level;
@@ -68,10 +68,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-lazy_static! {
-    // This is public so other libraries can replace it.
-    pub static ref DATA: Arc<Mutex<TracingData>> = Arc::new(Mutex::new(TracingData::new()));
-}
+// This is public so other libraries can replace it.
+pub static DATA: LazyLock<Arc<Mutex<TracingData>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(TracingData::new())));
 
 py_class!(class tracingdata |py| {
     data data: Arc<Mutex<TracingData>>;

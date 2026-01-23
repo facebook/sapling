@@ -25,7 +25,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:byteorder",
-        "fbsource//third-party/rust:lazy_static",
         "fbsource//third-party/rust:libc",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:serde",
