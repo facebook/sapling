@@ -173,3 +173,69 @@ impl Drop for AsyncVfsWriter {
         }
     }
 }
+
+impl VFS {
+    /// Open a batch writing session with bounded channels.
+    ///
+    /// Returns:
+    /// - `work_sender`: Send `Work` items to be processed by worker threads
+    /// - `result_receiver`: Receive results from worker threads. `Ok(work)` for success,
+    ///   `Err((work, error))` for failure.
+    ///
+    /// The work channel is bounded to `queue_size` to limit memory usage.
+    ///
+    /// Workers exit when the work sender is dropped (channel closes).
+    /// The result receiver closes when all workers have exited.
+    pub fn batch(
+        &self,
+        workers: usize,
+        queue_size: usize,
+    ) -> (
+        flume::Sender<Work>,
+        flume::Receiver<Result<Work, (Work, Error)>>,
+    ) {
+        let (work_tx, work_rx) = flume::bounded::<Work>(queue_size);
+        let (result_tx, result_rx) = flume::unbounded();
+
+        for _ in 0..workers {
+            let vfs = self.clone();
+            let work_rx = work_rx.clone();
+            let result_tx = result_tx.clone();
+            thread::spawn(move || {
+                batch_worker(&vfs, work_rx, result_tx);
+            });
+        }
+
+        (work_tx, result_rx)
+    }
+}
+
+fn batch_worker(
+    vfs: &VFS,
+    work_rx: flume::Receiver<Work>,
+    result_tx: flume::Sender<Result<Work, (Work, Error)>>,
+) {
+    while let Ok(work) = work_rx.recv() {
+        let result = match &work {
+            Work::Write(path, data, flag, from_flag) => {
+                if matches!(from_flag, Some(UpdateFlag::Symlink)) {
+                    vfs.rewrite_symlink(path, data.clone(), *flag).map(|_| ())
+                } else {
+                    vfs.write(path, data.clone(), *flag).map(|_| ())
+                }
+            }
+            Work::SetExecutable(path, exec) => vfs.set_executable(path, *exec).map(|_| ()),
+            Work::Remove(path) => vfs.remove(path),
+            // Don't support batch for now - doesn't really make sense anyway since it precludes
+            // parallelism.
+            Work::Batch(_) => Err(anyhow::anyhow!("Work::Batch not supported")),
+        };
+        let batch_result = match result {
+            Ok(()) => Ok(work),
+            Err(e) => Err((work, e)),
+        };
+        if result_tx.send(batch_result).is_err() {
+            break;
+        }
+    }
+}

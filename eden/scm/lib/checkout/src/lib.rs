@@ -271,171 +271,128 @@ impl CheckoutPlan {
             .collect();
         let fetch_data_iter = store.get_content_iter(FetchContext::default(), keys)?;
 
-        let stats = thread::scope(|s| -> Result<CheckoutStats> {
-            const WORK_QUEUE_SIZE: usize = 10_000;
+        const WORK_QUEUE_SIZE: usize = 10_000;
 
-            // Use bounded queue so we don't slurp all file contents into memory waiting
-            // to write stuff out to disk.
-            let (tx, rx) = flume::bounded::<Work>(WORK_QUEUE_SIZE);
+        // On Ctrl+C or error, write the "progress" file to help resume.
+        let progress = self.progress.clone();
+        let support_resume = progress.is_some();
+        tracing::debug!(support_resume = support_resume, "apply_store");
 
-            let (err_tx, err_rx) = flume::unbounded();
-            let (progress_tx, progress_rx) = flume::unbounded();
+        let (progress_tx, progress_rx) = flume::unbounded();
 
-            // On Ctrl+C or error, write the "progress" file to help resume.
-            let progress = self.progress.clone();
-            let support_resume = progress.is_some();
-            tracing::debug!(support_resume = support_resume, "apply_store");
-
-            let on_abort = AtExit::new(Box::new(move || {
-                if let Some(progress) = progress {
-                    tracing::debug!("writing progress (on abort)");
-                    let id_paths: Vec<_> = progress_rx.into_iter().collect();
-                    progress.lock().record_writes(&id_paths);
-                }
-            }));
-
-            // Spawn writer threads. Thread count is 1 for simple changes.
-            let n = self.vfs_worker_count(total);
-            assert!(n >= 1);
-            for i in 1..=n {
-                let vfs = vfs.clone();
-                let rx = rx.clone();
-                let err_tx = err_tx.clone();
-                let progress_tx = progress_tx.clone();
-                let b = thread::Builder::new().name(format!("checkout-{}/{}", i, n));
-                let actions = &actions;
-                b.spawn_scoped(s, move || {
-                    let mut bar_count = 0;
-                    while let Ok(work) = rx.recv() {
-                        let result = match &work {
-                            Work::Write(path, data, flag, from_flag) => {
-                                if matches!(from_flag, Some(UpdateFlag::Symlink)) {
-                                    vfs.rewrite_symlink(path, data.clone(), *flag).map(|_| ())
-                                } else {
-                                    vfs.write(path, data.clone(), *flag).map(|_| ())
-                                }
-                            }
-                            Work::SetExecutable(path, exec) => {
-                                vfs.set_executable(path, *exec).map(|_| ())
-                            }
-                            Work::Remove(path) => vfs.remove(path),
-                            Work::Batch(_) => unreachable!(),
-                        };
-                        bar_count += 1;
-                        if bar_count >= VFS_BATCH_SIZE {
-                            bar.increase_position(bar_count as _);
-                            bar.set_message(work.path().to_string());
-                            bar_count = 0;
-                        }
-                        if let Err(e) = result {
-                            if err_tx.send((Some(work), e)).is_err() {
-                                break;
-                            }
-                            // Keep going.
-                            continue;
-                        }
-                        if support_resume {
-                            if let Work::Write(path, ..) = &work {
-                                if let Some(action) = actions.get(path) {
-                                    let _ = progress_tx.send((action.content_hgid, path.clone()));
-                                }
-                            }
-                        }
-                    }
-                    bar.increase_position(bar_count as _);
-                })?;
+        let on_abort = AtExit::new(Box::new(move || {
+            if let Some(progress) = progress {
+                tracing::debug!("writing progress (on abort)");
+                let id_paths: Vec<_> = progress_rx.into_iter().collect();
+                progress.lock().record_writes(&id_paths);
             }
+        }));
 
-            drop(rx);
-            drop(progress_tx);
+        // Use vfs.batch() for parallel VFS writes.
+        let n = self.vfs_worker_count(total);
+        let (work_tx, result_rx) = vfs.batch(n, WORK_QUEUE_SIZE);
 
-            // Read loop for writer threads.
-            for path in &self.remove {
-                tx.send(Work::Remove(path.to_owned()))
-                    .map_err(|_| anyhow!("remove send failed"))?;
-            }
-            for action in &self.update_meta {
-                tx.send(Work::SetExecutable(
+        // Send work items to the batch.
+        for path in &self.remove {
+            work_tx
+                .send(Work::Remove(path.to_owned()))
+                .map_err(|_| anyhow!("remove send failed"))?;
+        }
+        for action in &self.update_meta {
+            work_tx
+                .send(Work::SetExecutable(
                     action.path.to_owned(),
                     action.set_x_flag,
                 ))
                 .map_err(|_| anyhow!("update_meta send failed"))?;
-            }
-            for entry in fetch_data_iter {
-                let (key, data) = match entry {
-                    Err(e) => {
-                        let _ = err_tx.send((None, e));
-                        // Keep going.
-                        continue;
-                    }
-                    Ok(v) => v,
-                };
+        }
+        for entry in fetch_data_iter {
+            let (key, data) = match entry {
+                Err(e) => {
+                    stats.fetch_failed.push((
+                        e.chain()
+                            .filter_map(|err| err.downcast_ref::<KeyedError>())
+                            .next()
+                            .map(|ke| ke.0.path.clone())
+                            .unwrap_or_default(),
+                        e,
+                    ));
+                    // Keep going.
+                    continue;
+                }
+                Ok(v) => v,
+            };
 
-                let data = redact_if_needed(data);
+            let data = redact_if_needed(data);
 
-                let action = actions
-                    .get(&key.path)
-                    .ok_or_else(|| format_err!("Storage returned unknown key {}", key))?;
-                let flag = type_to_flag(&action.file_type);
-                tx.send(Work::Write(
-                    key.path,
+            let action = actions
+                .get(&key.path)
+                .ok_or_else(|| format_err!("Storage returned unknown key {}", key))?;
+            let flag = type_to_flag(&action.file_type);
+
+            work_tx
+                .send(Work::Write(
+                    key.path.clone(),
                     data,
                     flag,
                     action.from_file_type.as_ref().map(type_to_flag),
                 ))
                 .map_err(|_| anyhow!("write send failed"))?;
-            }
-            drop(tx);
+        }
+        // Close work channel - workers will exit when they finish processing.
+        drop(work_tx);
 
-            // Error.
-            if fail::eval("checkout-post-progress", |_| ()).is_some() {
-                let _ = err_tx.send((
-                    None,
-                    anyhow::format_err!("Error set by checkout-post-progress FAILPOINTS"),
-                ));
-            }
-            drop(err_tx);
+        // Error.
+        if fail::eval("checkout-post-progress", |_| ()).is_some() {
+            stats.other_failed.push(anyhow::format_err!(
+                "Error set by checkout-post-progress FAILPOINTS"
+            ));
+        }
 
-            // Turn errors into CheckoutStats.
-            while let Ok((maybe_work, err)) = err_rx.recv() {
-                match maybe_work {
-                    None => {
-                        if let Some(KeyedError(key, _)) =
-                            err.chain().filter_map(|err| err.downcast_ref()).next()
-                        {
-                            stats.fetch_failed.push((key.path.clone(), err));
-                        } else {
-                            stats.other_failed.push(err)
+        // Collect results. The result channel closes when all workers exit.
+        while let Ok(result) = result_rx.recv() {
+            match result {
+                Ok(work) => {
+                    // Only record successful writes to progress.
+                    if let Work::Write(path, ..) = work {
+                        if let Some(action) = actions.get(&path) {
+                            let _ = progress_tx.send((action.content_hgid, path));
                         }
                     }
-                    Some(Work::Remove(path)) => stats.remove_failed.push((path, err)),
-                    Some(Work::SetExecutable(path, _)) => stats.set_exec_failed.push((path, err)),
-                    Some(Work::Write(path, ..)) => stats.write_failed.push((path, err)),
-                    Some(Work::Batch(_)) => unreachable!(),
                 }
+                Err((work, err)) => match work {
+                    Work::Remove(path) => stats.remove_failed.push((path, err)),
+                    Work::SetExecutable(path, _) => stats.set_exec_failed.push((path, err)),
+                    Work::Write(path, ..) => stats.write_failed.push((path, err)),
+                    Work::Batch(_) => unreachable!(),
+                },
             }
+        }
+        drop(progress_tx);
 
-            // Sort errors for stable output order.
-            for errs in [
-                &mut stats.write_failed,
-                &mut stats.set_exec_failed,
-                &mut stats.remove_failed,
-                &mut stats.fetch_failed,
-            ] {
-                errs.sort_by(|(path_a, _), (path_b, _)| path_a.cmp(path_b));
-            }
+        // Update progress bar with total count
+        bar.increase_position(total as u64);
 
-            let is_fatal = stats.is_fatal();
-            tracing::debug!(is_fatal = is_fatal, "apply_store");
-            if is_fatal {
-                return Err(stats.into());
-            } else {
-                // No need to write progress file on success.
-                on_abort.cancel();
-            }
+        // Sort errors for stable output order.
+        for errs in [
+            &mut stats.write_failed,
+            &mut stats.set_exec_failed,
+            &mut stats.remove_failed,
+            &mut stats.fetch_failed,
+        ] {
+            errs.sort_by(|(path_a, _), (path_b, _)| path_a.cmp(path_b));
+        }
 
-            Ok(stats)
-        });
+        let is_fatal = stats.is_fatal();
+        tracing::debug!(is_fatal = is_fatal, "apply_store");
+        if is_fatal {
+            return Err(stats.into());
+        } else {
+            // No need to write progress file on success.
+            on_abort.cancel();
+        }
+
+        let stats = Ok(stats);
 
         // Windows symlink fixes. This should happen after vfs writes.
         // The symlink fixes might generate new errors.
