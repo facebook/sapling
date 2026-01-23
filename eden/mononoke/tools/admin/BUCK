@@ -107,6 +107,7 @@ rust_binary(
         "//eden/mononoke/git/packfile:packfile",
         "//eden/mononoke/git/protocol:protocol",
         "//eden/mononoke/manifest:manifest",
+        "//eden/mononoke/megarepo_api:megarepo_config",
         "//eden/mononoke/megarepo_api:megarepo_error",
         "//eden/mononoke/megarepo_api:pushredirect",
         "//eden/mononoke/mercurial:mercurial_mutation",

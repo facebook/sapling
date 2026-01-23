@@ -9,6 +9,7 @@ mod abort;
 mod list;
 mod requeue;
 mod show;
+mod show_megarepo_sync_target_config;
 mod submit;
 
 use std::sync::Arc;
@@ -18,6 +19,7 @@ use anyhow::Result;
 use clap::Parser;
 use clap::Subcommand;
 use context::SessionContainer;
+use metaconfig_types::RepoConfigArc;
 use mononoke_api::Repo;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
@@ -27,6 +29,7 @@ use crate::commands::async_requests::abort::AsyncRequestsAbortArgs;
 use crate::commands::async_requests::list::AsyncRequestsListArgs;
 use crate::commands::async_requests::requeue::AsyncRequestsRequeueArgs;
 use crate::commands::async_requests::show::AsyncRequestsShowArgs;
+use crate::commands::async_requests::show_megarepo_sync_target_config::AsyncRequestsShowMegarepoSyncTargetConfigArgs;
 
 /// View and manage the SCS async requests
 #[derive(Parser)]
@@ -54,6 +57,8 @@ pub enum AsyncRequestsSubcommand {
     Abort(AsyncRequestsAbortArgs),
     /// Submits an async request. Intended only for development and testing.
     Submit(AsyncRequestsSubmitArgs),
+    /// Shows the contents of a megarepo SyncTargetConfig by version string.
+    ShowMegarepoSyncTargetConfig(AsyncRequestsShowMegarepoSyncTargetConfigArgs),
 }
 
 pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
@@ -87,6 +92,19 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         AsyncRequestsSubcommand::Submit(abort_args) => {
             let repo = app.open_repo(&args.repo).await?;
             submit::submit_request(abort_args, ctx, queue, repo).await?
+        }
+        AsyncRequestsSubcommand::ShowMegarepoSyncTargetConfig(config_args) => {
+            let repo: Repo = app.open_repo(&args.repo).await?;
+            let repo_id = repo.repo_identity.id();
+            let repo_config = repo.repo_config_arc();
+            show_megarepo_sync_target_config::show_megarepo_sync_target_config(
+                config_args,
+                ctx,
+                &app,
+                repo_id,
+                repo_config,
+            )
+            .await?
         }
     }
     Ok(())

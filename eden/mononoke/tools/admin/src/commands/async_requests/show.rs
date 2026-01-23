@@ -23,6 +23,7 @@ use context::CoreContext;
 use mononoke_api::Mononoke;
 use mononoke_api::MononokeRepo;
 use mononoke_types::ChangesetId;
+use mononoke_types::RepositoryId;
 use source_control as thrift;
 
 #[derive(Args)]
@@ -135,9 +136,26 @@ pub async fn show_request<R: MononokeRepo>(
         println!(
             "Entry: {:#?}\nParams: {:#?}\nResult: {:#?}",
             entry,
-            ParamsWrapper(&mononoke, params),
+            ParamsWrapper(&mononoke, params.clone()),
             ResultsWrapper(maybe_result),
         );
+
+        // Print hint for looking up config details
+        if let ThriftAsynchronousRequestParams::megarepo_change_target_params(p) = params.thrift() {
+            let target = &p.target;
+            if let Some(repo_id) = target.repo_id {
+                let repo_name = mononoke
+                    .repo_name_from_id(RepositoryId::new(repo_id as i32))
+                    .unwrap_or_else(|| format!("--repo-id {}", repo_id));
+                println!(
+                    "\nHint: To see the full config for new_version, run:\n  \
+                     mononoke_admin async-requests -R {} show-megarepo-sync-target-config \
+                     --bookmark \"{}\" --version \"{}\"",
+                    repo_name, target.bookmark, p.new_version
+                );
+            }
+        }
+
         Ok(())
     } else {
         Err(anyhow!("Request not found."))
