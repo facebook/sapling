@@ -69,10 +69,11 @@ Plans:
   1. When user clicks commit in left column, middle column scrolls to show "you are here" commit at viewport top
   2. Auto-scroll works regardless of current scroll position in either column
   3. Scroll animation is smooth and doesn't cause jarring jumps
-**Plans**: 1 plan
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Fix scroll alignment (block: start) and add CSS scroll-margin-top
+- [x] 06-01-PLAN.md — Fix scroll alignment (block: start) and add CSS scroll-margin-top
+- [ ] 06-02-PLAN.md — Gap closure: move scroll-margin-top to correct CSS element
 
 #### Phase 7: UI Polish & Configuration
 **Goal**: Reduce visual clutter, fix scroll issues, add line counts, and enable editor configuration
@@ -116,6 +117,6 @@ Plans:
 | 3. Commit Tree | v1.0 | 2/2 | Complete | 2026-01-22 |
 | 4. Details Panel | v1.0 | 2/2 | Complete | 2026-01-22 |
 | 5. Diff Polish | v1.0 | 1/1 | Complete | 2026-01-22 |
-| 6. Navigation Fixes | v1.1 | 0/1 | Planned | - |
+| 6. Navigation Fixes | v1.1 | 1/2 | Gap closure | - |
 | 7. UI Polish & Configuration | v1.1 | 0/? | Not started | - |
 | 8. Design Refinement | v1.1 | 0/? | Not started | - |
