@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use configloader::Config;
 use manifest_tree::ReadTreeManifest;
 use storemodel::FileStore;
 use storemodel::TreeStore;
@@ -26,6 +27,22 @@ pub enum CoreRepo {
 }
 
 impl CoreRepo {
+    /// Get the config.
+    pub fn config(&self) -> &Arc<dyn Config> {
+        match self {
+            CoreRepo::Disk(repo) => repo.config(),
+            CoreRepo::Slapi(repo) => repo.config(),
+        }
+    }
+
+    /// Set the config.
+    pub fn set_config(&mut self, config: Arc<dyn Config>) {
+        match self {
+            CoreRepo::Disk(repo) => repo.set_config(config),
+            CoreRepo::Slapi(repo) => repo.set_config(config),
+        }
+    }
+
     /// Get the tree resolver.
     pub fn tree_resolver(&self) -> Result<Arc<dyn ReadTreeManifest + Send + Sync>> {
         match self {

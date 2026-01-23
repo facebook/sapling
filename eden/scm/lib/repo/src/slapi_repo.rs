@@ -79,6 +79,10 @@ impl SlapiRepo {
         &self.config
     }
 
+    pub fn set_config(&mut self, config: Arc<dyn Config>) {
+        self.config = config;
+    }
+
     pub fn repo_name(&self) -> &str {
         &self.repo_name
     }
