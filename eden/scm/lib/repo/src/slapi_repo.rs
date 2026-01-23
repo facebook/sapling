@@ -50,7 +50,7 @@ pub struct SlapiRepo {
 impl SlapiRepo {
     /// Load a SlapiRepo from a RepoUrl.
     /// Uses RepoInfo::Ephemeral to load config without requiring local disk presence.
-    pub fn load(url: RepoUrl) -> Result<Self> {
+    pub fn load(url: &RepoUrl) -> Result<Self> {
         constructors::init();
 
         let repo_name = url
@@ -221,7 +221,7 @@ mod tests {
 
         let config = BTreeMap::<&str, &str>::new();
         let url = RepoUrl::from_str(&config, &format!("eager:{}", dir.path().display())).unwrap();
-        let slapi_repo = SlapiRepo::load(url).unwrap();
+        let slapi_repo = SlapiRepo::load(&url).unwrap();
 
         let eden_api = slapi_repo.eden_api().unwrap();
         let caps = block_on(eden_api.capabilities()).unwrap();
@@ -240,7 +240,7 @@ mod tests {
 
         let config = BTreeMap::<&str, &str>::new();
         let url = RepoUrl::from_str(&config, &format!("eager:{}", dir.path().display())).unwrap();
-        let slapi_repo = SlapiRepo::load(url).unwrap();
+        let slapi_repo = SlapiRepo::load(&url).unwrap();
 
         let file_store = slapi_repo.file_store().unwrap();
         let key = Key::new(
@@ -270,7 +270,7 @@ mod tests {
 
         let config = BTreeMap::<&str, &str>::new();
         let url = RepoUrl::from_str(&config, &format!("eager:{}", dir.path().display())).unwrap();
-        let slapi_repo = SlapiRepo::load(url).unwrap();
+        let slapi_repo = SlapiRepo::load(&url).unwrap();
 
         let tree_store = slapi_repo.tree_store().unwrap();
         let key = Key::new(RepoPathBuf::from_string("".to_string()).unwrap(), tree_id);
@@ -304,7 +304,7 @@ mod tests {
 
         let config = BTreeMap::<&str, &str>::new();
         let url = RepoUrl::from_str(&config, &format!("eager:{}", dir.path().display())).unwrap();
-        let slapi_repo = SlapiRepo::load(url).unwrap();
+        let slapi_repo = SlapiRepo::load(&url).unwrap();
 
         // Use tree_resolver to get root tree id from commit.
         let tree_resolver = slapi_repo.tree_resolver().unwrap();
@@ -345,7 +345,7 @@ mod tests {
 
         let config = BTreeMap::<&str, &str>::new();
         let url = RepoUrl::from_str(&config, &format!("eager:{}", dir.path().display())).unwrap();
-        let slapi_repo = SlapiRepo::load(url).unwrap();
+        let slapi_repo = SlapiRepo::load(&url).unwrap();
 
         // Test 1: Resolve by full commit hash.
         let resolved = slapi_repo.resolve_commit(&commit_id.to_hex()).unwrap();

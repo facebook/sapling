@@ -50,6 +50,7 @@ rust_library(
         "//eden/scm/lib/io:io",
         "//eden/scm/lib/io/term/logger:termlogger",
         "//eden/scm/lib/repo:repo",
+        "//eden/scm/lib/repo/url:repourl",
         "//eden/scm/lib/sampling:sampling",
         "//eden/scm/lib/thrift-types:thrift-types",
         "//eden/scm/lib/types:types",

@@ -149,6 +149,10 @@ impl RepoUrl {
             _ => Err(anyhow::anyhow!("Repo URL is not a Mononoke or HTTPS URL")),
         }
     }
+
+    pub fn supports_slapi(&self) -> bool {
+        matches!(self.scheme(), "mononoke" | "eager" | "test")
+    }
 }
 
 fn looks_like_windows_path(s: &str) -> bool {

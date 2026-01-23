@@ -14,6 +14,7 @@ use cliparser::parser::Flag;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configmodel::Config;
+use repo::CoreRepo;
 use repo::repo::Repo;
 use workingcopy::workingcopy::WorkingCopy;
 
@@ -25,6 +26,7 @@ pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &IO, &Arc<dyn Config>) -> Result<u8>>),
     OptionalRepo(Box<dyn Fn(ParseOutput, &IO, &OptionalRepo) -> Result<u8>>),
     Repo(Box<dyn Fn(ParseOutput, &IO, &Repo) -> Result<u8>>),
+    CoreRepo(Box<dyn Fn(ParseOutput, &IO, &CoreRepo) -> Result<u8>>),
     WorkingCopy(Box<dyn Fn(ParseOutput, &IO, &Repo, &WorkingCopy) -> Result<u8>>),
 }
 
@@ -202,6 +204,26 @@ where
             )
         };
         let func = CommandFunc::WorkingCopy(Box::new(func));
+        let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
+        self.commands.insert(aliases.to_string(), def);
+    }
+}
+
+// CoreRepo commands - can work with either Repo or SlapiRepo.
+impl<S, FN> Register<FN, ((), (), (), (), (), S)> for CommandTable
+where
+    S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
+    FN: Fn(ReqCtx<S>, &CoreRepo) -> Result<u8> + 'static,
+{
+    fn register(&mut self, f: FN, aliases: &str, doc: &str, synopsis: Option<&str>) {
+        self.insert_aliases(aliases);
+        let func = move |opts: ParseOutput, io: &IO, core_repo: &CoreRepo| {
+            f(
+                ReqCtx::new(core_repo.config().clone(), opts, io.clone())?,
+                core_repo,
+            )
+        };
+        let func = CommandFunc::CoreRepo(Box::new(func));
         let def = CommandDefinition::new(aliases, doc, S::flags, func, synopsis);
         self.commands.insert(aliases.to_string(), def);
     }

@@ -24,6 +24,7 @@ use configloader::hg::set_pinned;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use hgtime::HgTime;
+use repo::CoreRepo;
 use repo::repo::Repo;
 
 use crate::OptionalRepo;
@@ -114,7 +115,7 @@ fn parse(definition: &CommandDefinition, args: &[String]) -> Result<ParseOutput,
 }
 
 fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
-    if let OptionalRepo::Some(repo) = optional_repo {
+    if let OptionalRepo::CoreRepo(CoreRepo::Disk(repo)) = optional_repo {
         let config = repo.config();
         let max_size = config
             .get_or("blackbox", "maxsize", || {
@@ -249,15 +250,18 @@ impl Dispatcher {
 
     pub fn repo(&self) -> Option<&Repo> {
         match &self.optional_repo {
-            OptionalRepo::Some(repo) => Some(repo),
+            OptionalRepo::CoreRepo(CoreRepo::Disk(repo)) => Some(repo),
             _ => None,
         }
     }
 
-    /// Replace OptionalRepo::Some with OptionalRepo::None(config)
+    /// Replace OptionalRepo::CoreRepo with OptionalRepo::None(config)
     /// where config is not influenced by the current repo.
     pub fn convert_to_repoless_config(&mut self) -> Result<()> {
-        if matches!(self.optional_repo, OptionalRepo::Some(_)) {
+        if matches!(
+            self.optional_repo,
+            OptionalRepo::CoreRepo(CoreRepo::Disk(_))
+        ) {
             self.optional_repo = OptionalRepo::None(Arc::new(self.load_repoless_config()?));
         }
 
@@ -455,8 +459,12 @@ impl Dispatcher {
 
             let res = match handler.func() {
                 CommandFunc::Repo(f) => f(parsed, io, self.repo_mut()?),
-                CommandFunc::OptionalRepo(f) => f(parsed, io, &mut self.optional_repo),
+                CommandFunc::OptionalRepo(f) => f(parsed, io, &self.optional_repo),
                 CommandFunc::NoRepo(f) => f(parsed, io, self.optional_repo.config()),
+                CommandFunc::CoreRepo(f) => {
+                    let core_repo = self.core_repo()?;
+                    f(parsed, io, core_repo)
+                }
                 CommandFunc::WorkingCopy(f) => {
                     let repo = self.repo_mut()?;
                     let wc = repo.working_copy()?;
@@ -477,9 +485,9 @@ impl Dispatcher {
     }
 
     fn repo_mut(&mut self) -> Result<&mut Repo> {
-        match self.optional_repo {
-            OptionalRepo::Some(ref mut repo) => Ok(repo),
-            OptionalRepo::None(_) => {
+        match &mut self.optional_repo {
+            OptionalRepo::CoreRepo(CoreRepo::Disk(repo)) => Ok(repo),
+            OptionalRepo::CoreRepo(CoreRepo::Slapi(_)) | OptionalRepo::None(_) => {
                 // FIXME: Try to "infer repo" here.
                 Err(errors::RepoRequired(
                     env::current_dir()
@@ -494,8 +502,21 @@ impl Dispatcher {
 
     fn set_config(&mut self, new: Arc<dyn Config>) {
         match &mut self.optional_repo {
-            OptionalRepo::Some(repo) => repo.set_config(new),
+            OptionalRepo::CoreRepo(core_repo) => core_repo.set_config(new),
             OptionalRepo::None(old) => *old = new,
+        }
+    }
+
+    fn core_repo(&self) -> Result<&CoreRepo> {
+        match &self.optional_repo {
+            OptionalRepo::CoreRepo(core_repo) => Ok(core_repo),
+            OptionalRepo::None(_) => Err(errors::RepoRequired(
+                env::current_dir()
+                    .ok()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_default(),
+            )
+            .into()),
         }
     }
 }

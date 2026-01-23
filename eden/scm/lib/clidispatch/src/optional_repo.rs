@@ -12,16 +12,21 @@ use anyhow::Result;
 use configloader::hg::RepoInfo;
 use configmodel::Config;
 use gitcompat::init::maybe_init_inside_dotgit;
+use repo::CoreRepo;
+use repo::SlapiRepo;
 use repo::errors;
 use repo::repo::Repo;
+use repourl::RepoUrl;
 
 use crate::global_flags::HgGlobalOpts;
 use crate::util::pinned_configs;
 
-/// Either an optional [`Repo`] which owns a [`Arc<dyn Config>`], or a [`Arc<dyn Config>`]
+/// Either an optional [`CoreRepo`] which owns a [`Arc<dyn Config>`], or a [`Arc<dyn Config>`]
 /// without a repo.
 pub enum OptionalRepo {
-    Some(Repo),
+    /// A CoreRepo (either disk-based Repo or SlapiRepo).
+    CoreRepo(CoreRepo),
+    /// No repo, just config.
     None(Arc<dyn Config>),
 }
 
@@ -34,7 +39,7 @@ impl OptionalRepo {
         if let Some((path, ident)) = identity::sniff_root(&util::path::absolute(cwd)?)? {
             maybe_init_inside_dotgit(&path, ident)?;
             let repo = Repo::load(path, &pinned_configs(opts))?;
-            Ok(OptionalRepo::Some(repo))
+            Ok(OptionalRepo::CoreRepo(repo.into()))
         } else {
             Ok(OptionalRepo::None(Arc::new(configloader::hg::load(
                 RepoInfo::NoRepo,
@@ -64,30 +69,44 @@ impl OptionalRepo {
             if let Some(ident) = identity::sniff_dir(&path)? {
                 maybe_init_inside_dotgit(&path, ident)?;
                 let repo = Repo::load(path, &pinned_configs(opts))?;
-                return Ok(OptionalRepo::Some(repo));
+                return Ok(OptionalRepo::CoreRepo(repo.into()));
             } else if path.is_file() {
                 // 'path' is a bundle path
                 return Self::from_cwd(opts, cwd);
             }
         }
+
+        // Check if --repository is a SLAPI-capable URL
+        let config = configloader::hg::load(RepoInfo::NoRepo, &pinned_configs(opts))?;
+        if let Ok(url) = RepoUrl::from_str(&config, &opts.repository) {
+            if url.supports_slapi() {
+                let slapi_repo = SlapiRepo::load(&url)?;
+                tracing::info!("Loaded SlapiRepo");
+                return Ok(OptionalRepo::CoreRepo(slapi_repo.into()));
+            } else {
+                tracing::warn!(?url, "--repository URL doesn't support SLAPI");
+            }
+        }
+
         Err(errors::RepoNotFound(repository_path.display().to_string()).into())
     }
 
     pub fn config(&self) -> &Arc<dyn Config> {
         match self {
-            OptionalRepo::Some(repo) => repo.config(),
+            OptionalRepo::CoreRepo(core_repo) => core_repo.config(),
             OptionalRepo::None(config) => config,
         }
     }
 
     pub fn repo_opt(&self) -> Option<&Repo> {
         match self {
-            OptionalRepo::Some(repo) => Some(repo),
+            OptionalRepo::CoreRepo(CoreRepo::Disk(repo)) => Some(repo),
+            OptionalRepo::CoreRepo(CoreRepo::Slapi(_)) => None,
             OptionalRepo::None(_) => None,
         }
     }
 
     pub fn has_repo(&self) -> bool {
-        matches!(self, OptionalRepo::Some(_))
+        matches!(self, OptionalRepo::CoreRepo(CoreRepo::Disk(_)))
     }
 }
