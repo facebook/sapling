@@ -221,13 +221,6 @@ impl<H: HgCommands + Send + Sync + 'static> HgCommandHandler<H> {
                     instream,
                 )
             }
-            SingleRequest::GetCommitData { nodes } => (
-                hgcmds
-                    .getcommitdata(nodes)
-                    .map_ok(SingleResponse::GetCommitData)
-                    .boxed(),
-                ok(instream).boxed(),
-            ),
         }
     }
 
@@ -598,14 +591,6 @@ pub trait HgCommands {
         _params: BoxStream<'static, Result<(NonRootMPath, Vec<HgFileNodeId>), Error>>,
     ) -> BoxStream<'static, Result<Bytes, Error>> {
         once(async { Err(ErrorKind::Unimplemented("getpackv2".into()).into()) }).boxed()
-    }
-
-    // @wireprotocommand('getcommitdata', 'nodes *')
-    fn getcommitdata(
-        &self,
-        _nodes: Vec<HgChangesetId>,
-    ) -> BoxStream<'static, Result<Bytes, Error>> {
-        once(async { Err(ErrorKind::Unimplemented("getcommitdata".into()).into()) }).boxed()
     }
 }
 

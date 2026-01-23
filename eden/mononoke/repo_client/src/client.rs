@@ -9,7 +9,6 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
-use std::fmt::Write;
 use std::future::Future;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -92,7 +91,6 @@ use mercurial_bundles::create_bundle_stream_new;
 use mercurial_bundles::parts;
 use mercurial_bundles::wirepack;
 use mercurial_derivation::DeriveHgChangeset;
-use mercurial_revlog::RevlogChangeset;
 use mercurial_types::Delta;
 use mercurial_types::HgChangesetId;
 use mercurial_types::HgChangesetIdPrefix;
@@ -167,8 +165,6 @@ define_stats! {
         histogram(2, 0, 200, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getpack_ms:
         histogram(20, 0, 2_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-    getcommitdata_ms:
-        histogram(2, 0, 200, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     total_tree_count: timeseries(Rate, Sum),
     quicksand_tree_count: timeseries(Rate, Sum),
     total_tree_size: timeseries(Rate, Sum),
@@ -177,7 +173,6 @@ define_stats! {
     quicksand_fetched_file_size: timeseries(Rate, Sum),
     null_linknode_gettreepack: timeseries(Rate, Sum),
     null_linknode_getpack: timeseries(Rate, Sum),
-    getcommitdata_commit_count: timeseries(Rate, Sum),
 
     push_success: dynamic_timeseries("push_success.{}", (reponame: String); Rate, Sum),
     push_hook_failure: dynamic_timeseries("push_hook_failure.{}.{}", (reponame: String, hook_failure: String); Rate, Sum),
@@ -204,7 +199,6 @@ mod ops {
     pub static GETPACKV1: &str = "getpackv1";
     pub static GETPACKV2: &str = "getpackv2";
     pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
-    pub static GETCOMMITDATA: &str = "getcommitdata";
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -315,7 +309,6 @@ fn wireprotocaps() -> Vec<String> {
         "streamreqs=generaldelta,lz4revlog,revlogv1".to_string(),
         "treeonly".to_string(),
         "designatednodes".to_string(),
-        "getcommitdata".to_string(),
     ]
 }
 
@@ -1816,68 +1809,6 @@ impl<R: Repo> HgCommands for RepoClient<R> {
             ops::GETPACKV2,
         )
     }
-
-    // @wireprotocommand('getcommitdata', 'nodes *'), but the * is ignored
-    fn getcommitdata(&self, nodes: Vec<HgChangesetId>) -> BoxStream<'static, Result<Bytes, Error>> {
-        self.command_stream(ops::GETCOMMITDATA, UNSAMPLED, |ctx, mut command_logger| {
-            let args = json!(nodes);
-            let repo = self.repo.clone();
-            ctx.scuba()
-                .clone()
-                .add("getcommitdata_nodes", nodes.len())
-                .log_with_msg("GetCommitData Params", None);
-
-            let s = stream::iter(nodes)
-                .map({
-                    cloned!(ctx, repo);
-                    move |hg_cs_id| {
-                        cloned!(ctx, repo, hg_cs_id);
-                        async move {
-                            let revlog_cs =
-                                RevlogChangeset::load(&ctx, repo.repo_blobstore(), hg_cs_id)
-                                    .await?;
-                            let bytes = serialize_getcommitdata(hg_cs_id, revlog_cs)?;
-                            anyhow::Ok(bytes)
-                        }
-                    }
-                })
-                .buffered(100)
-                .inspect_ok({
-                    cloned!(ctx);
-                    move |bytes| {
-                        ctx.perf_counters().add_to_counter(
-                            PerfCounterType::GetcommitdataResponseSize,
-                            bytes.len() as i64,
-                        );
-                        ctx.perf_counters()
-                            .increment_counter(PerfCounterType::GetcommitdataNumCommits);
-                        STATS::getcommitdata_commit_count.add_value(1);
-                    }
-                })
-                .whole_stream_timeout(default_timeout())
-                .yield_periodically()
-                .flatten_err()
-                .timed(move |stats| {
-                    if stats.completed {
-                        if let Some(completion_time) = stats.completion_time {
-                            if completion_time > *SLOW_REQUEST_THRESHOLD {
-                                command_logger.add_trimmed_scuba_extra("command_args", &args);
-                            }
-                            STATS::getcommitdata_ms
-                                .add_value(completion_time.as_millis_unchecked() as i64);
-                        }
-                        command_logger.finalize_command(&stats);
-                    }
-                });
-            throttle_stream(
-                &self.session,
-                Metric::Commits,
-                ops::GETCOMMITDATA,
-                move || s,
-                ctx.scuba().clone(),
-            )
-        })
-    }
 }
 
 pub fn gettreepack_entries(
@@ -2179,33 +2110,6 @@ fn parse_utf8_getbundle_caps(caps: &[u8]) -> Option<(String, HashMap<String, Has
             .map(|cap| (cap, HashMap::new()))
             .ok(),
     }
-}
-
-fn serialize_getcommitdata(
-    hg_cs_id: HgChangesetId,
-    revlog_changeset: Option<RevlogChangeset>,
-) -> Result<Bytes> {
-    // For each changeset, write:
-    //
-    //   HEX(HASH) + ' ' + STR(LEN(SERIALIZED)) + '\n' + SERIALIZED + '\n'
-    //
-    // For known changesets, SERIALIZED is the payload that SHA1(SERIALIZED)
-    // matches HASH. The client relies on this for data integrity check.
-    //
-    // For unknown and NULL changesets, SERIALIZED is empty and the client
-    // should check that to know that commits are missing on the server.
-    let mut revlog_commit = Vec::new();
-    if hg_cs_id != NULL_CSID {
-        if let Some(real_changeset) = revlog_changeset {
-            real_changeset.generate_for_hash_verification(&mut revlog_commit)?;
-        }
-    }
-    // capacity = hash + " " + length + "\n" + content + "\n"
-    let mut buffer = BytesMut::with_capacity(40 + 1 + 10 + 1 + revlog_commit.len() + 1);
-    write!(buffer, "{} {}\n", hg_cs_id, revlog_commit.len())?;
-    buffer.extend_from_slice(&revlog_commit);
-    buffer.put_u8(b'\n');
-    Ok(buffer.freeze())
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

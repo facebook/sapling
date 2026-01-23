@@ -271,20 +271,6 @@ fn hashlist(input: &[u8]) -> IResult<&[u8], Vec<HgChangesetId>, Error> {
     separated_list_complete(" ", nodehash).parse(input)
 }
 
-// A changeset is simply 40 hex digits.
-fn hg_changeset_id(input: &[u8]) -> IResult<&[u8], HgChangesetId, Error> {
-    map_res(
-        map_res(take(40usize), str::from_utf8),
-        HgChangesetId::from_str,
-    )
-    .parse(input)
-}
-
-// A space-separated list of hg changesets
-fn hg_changeset_list(input: &[u8]) -> IResult<&[u8], Vec<HgChangesetId>, Error> {
-    separated_list_complete(" ", hg_changeset_id).parse(input)
-}
-
 // A space-separated list of manifest IDs
 fn manifestlist(input: &[u8]) -> IResult<&[u8], Vec<HgManifestId>, Error> {
     separated_list_complete(" ", manifestid).parse(input)
@@ -652,9 +638,6 @@ fn parse_with_params(
         }),
         command_star!("getpackv1", GetpackV1, parse_params, {}),
         command_star!("getpackv2", GetpackV2, parse_params, {}),
-        command!("getcommitdata", GetCommitData, parse_params, {
-            nodes => hg_changeset_list,
-        }),
     )).parse(input)
 }
 
@@ -1571,19 +1554,6 @@ mod test_parse {
             Request::Single(SingleRequest::ListKeysPatterns {
                 namespace: "bookmarks".to_string(),
                 patterns: vec!["test/*".to_string(), "nuclide".to_string()],
-            }),
-        );
-    }
-
-    #[mononoke::test]
-    fn test_parse_getcommitdata() {
-        let input = "getcommitdata\n\
-                     nodes 81\n\
-                     1111111111111111111111111111111111111111 2222222222222222222222222222222222222222";
-        test_parse(
-            input,
-            Request::Single(SingleRequest::GetCommitData {
-                nodes: vec![hash_ones(), hash_twos()],
             }),
         );
     }

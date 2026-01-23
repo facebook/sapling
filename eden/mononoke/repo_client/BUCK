@@ -62,7 +62,6 @@ rust_library(
         "//eden/mononoke/manifest:manifest",
         "//eden/mononoke/mercurial:mercurial_bundles",
         "//eden/mononoke/mercurial:mercurial_mutation",
-        "//eden/mononoke/mercurial:mercurial_revlog",
         "//eden/mononoke/mercurial:mercurial_types",
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_types:mononoke_types",
