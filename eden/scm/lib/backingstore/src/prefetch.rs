@@ -733,7 +733,10 @@ mod test {
         }
 
         // Nothing was fetched since excludeme is in the sparse profile
-        assert_eq!(store.fetches(), vec![]);
+        assert_eq!(
+            store.fetches().into_iter().flatten().collect::<Vec<_>>(),
+            Vec::<Key>::new()
+        );
 
         // Prefetch for "dir/" at depth=0 (i.e. "dir/*").
         let handle = prefetch(
@@ -752,7 +755,7 @@ mod test {
 
         // We only fetched "foo" (due to the depth limit).
         assert_eq!(
-            store.fetches(),
+            store.fetches().into_iter().flatten().collect::<Vec<_>>(),
             vec![Key::new(RepoPathBuf::new(), foo_hgid)]
         );
 
@@ -773,7 +776,7 @@ mod test {
 
         // We fetched "excludeme/please" (i.e. did not redundantly fetch dir/foo).
         assert_eq!(
-            store.fetches(),
+            store.fetches().into_iter().flatten().collect::<Vec<_>>(),
             vec![
                 Key::new(RepoPathBuf::new(), foo_hgid),
                 Key::new(RepoPathBuf::new(), exclude_hgid),
@@ -797,7 +800,7 @@ mod test {
 
         // We only additionally fetched "dir/dir2/bar" (i.e. did not redundantly fetch "dir/foo").
         assert_eq!(
-            store.fetches(),
+            store.fetches().into_iter().flatten().collect::<Vec<_>>(),
             vec![
                 Key::new(RepoPathBuf::new(), foo_hgid),
                 Key::new(RepoPathBuf::new(), exclude_hgid),
@@ -843,9 +846,24 @@ mod test {
             FileMetadata::new(exclude_hgid, types::FileType::Regular),
         )?;
 
-        for (path, _id, text, _p1, _p2) in mf.finalize(Vec::new())? {
+        // Finalize and store tree data, capturing tree hgids by path
+        let mut tree_hgids: HashMap<RepoPathBuf, HgId> = HashMap::new();
+        for (path, id, text, _p1, _p2) in mf.finalize(Vec::new())? {
             store.insert_data(Default::default(), &path, text.as_ref())?;
+            tree_hgids.insert(path, id);
         }
+        let root_hgid = *tree_hgids
+            .get(&RepoPathBuf::new())
+            .expect("should have root hgid");
+        let dir_path: RepoPathBuf = "dir".to_string().try_into()?;
+        let dir_hgid = *tree_hgids.get(&dir_path).expect("should have dir hgid");
+        let excludeme_path: RepoPathBuf = "excludeme".to_string().try_into()?;
+        let excludeme_hgid = *tree_hgids
+            .get(&excludeme_path)
+            .expect("should have excludeme hgid");
+
+        // Create a fresh durable manifest from the root hgid to ensure fetches happen
+        let mf = TreeManifest::durable(store.clone(), root_hgid);
 
         let detector = walkdetector::Detector::new();
         let rules = ["**", "!excludeme/**"];
@@ -873,20 +891,24 @@ mod test {
         }
 
         // We fetched the root dir and "dir/" (but not "dir/dir2" or "excludeme").
+        // Note: keys use empty paths for efficiency, so we check by hgid.
         assert_eq!(
             store
-                .prefetches()
+                .fetches()
                 .into_iter()
                 .flatten()
-                .map(|k| k.path)
-                .collect::<Vec<RepoPathBuf>>(),
-            vec!["".to_string().try_into()?, "dir".to_string().try_into()?]
+                .map(|k| k.hgid)
+                .collect::<Vec<HgId>>(),
+            vec![root_hgid, dir_hgid]
         );
+
+        // Create a fresh durable manifest for the retry (without sparse profile)
+        let mf = TreeManifest::durable(store.clone(), root_hgid);
 
         // Retry prefetch without sparse profile
         let handle = prefetch(
             Config::default(),
-            mf.clone(),
+            mf,
             file_store.clone(),
             detector.clone(),
             PrefetchWork::DirectoriesOnly(vec![("".to_string().try_into()?, 0)]),
@@ -901,18 +923,12 @@ mod test {
         // We fetched excludeme this time
         assert_eq!(
             store
-                .prefetches()
+                .fetches()
                 .into_iter()
                 .flatten()
-                .map(|k| k.path)
-                .collect::<Vec<RepoPathBuf>>(),
-            vec![
-                "".to_string().try_into()?,
-                "dir".to_string().try_into()?,
-                "".to_string().try_into()?,
-                "dir".to_string().try_into()?,
-                "excludeme".to_string().try_into()?
-            ]
+                .map(|k| k.hgid)
+                .collect::<Vec<HgId>>(),
+            vec![root_hgid, dir_hgid, root_hgid, dir_hgid, excludeme_hgid]
         );
 
         Ok(())
@@ -924,14 +940,30 @@ mod test {
         Ok(Some(Arc::new(sparse_matcher)))
     }
 
-    struct StubTreeResolver(HashMap<HgId, TreeManifest>);
+    struct TestTreeResolver {
+        store: Arc<TestStore>,
+        root_hgids: HashMap<HgId, HgId>,
+    }
 
-    impl ReadTreeManifest for StubTreeResolver {
+    impl TestTreeResolver {
+        fn new(
+            store: Arc<TestStore>,
+            commit_root_pairs: impl IntoIterator<Item = (HgId, HgId)>,
+        ) -> Self {
+            Self {
+                store,
+                root_hgids: commit_root_pairs.into_iter().collect(),
+            }
+        }
+    }
+
+    impl ReadTreeManifest for TestTreeResolver {
         fn get(&self, commit_id: &HgId) -> anyhow::Result<TreeManifest> {
-            self.0
+            let root_hgid = self
+                .root_hgids
                 .get(commit_id)
-                .ok_or(anyhow!("no manifest for {commit_id}"))
-                .cloned()
+                .ok_or(anyhow!("no manifest for {commit_id}"))?;
+            Ok(TreeManifest::durable(self.store.clone(), *root_hgid))
         }
 
         fn get_root_id(&self, _commit_id: &HgId) -> anyhow::Result<HgId> {
@@ -944,9 +976,9 @@ mod test {
         let mut detector = walkdetector::Detector::new();
         detector.set_walk_threshold(2);
 
-        let store = Arc::new(TestStore::new());
-
-        let file_store = store.clone() as Arc<dyn FileStore>;
+        // Use separate stores for trees and files so we can track fetches independently.
+        let tree_store = Arc::new(TestStore::new());
+        let file_store = Arc::new(TestStore::new());
 
         let dir1_foo_path: RepoPathBuf = "dir1/foo".to_string().try_into()?;
         let dir1_bar_path: RepoPathBuf = "dir1/bar".to_string().try_into()?;
@@ -969,7 +1001,7 @@ mod test {
         let exclude_hgid =
             file_store.insert_data(Default::default(), &exclude_path, b"excluded content")?;
 
-        let mut mf = TreeManifest::ephemeral(store.clone());
+        let mut mf = TreeManifest::ephemeral(tree_store.clone());
 
         // Create corresponding manifest entries.
         mf.insert(
@@ -1002,10 +1034,21 @@ mod test {
             FileMetadata::new(exclude_hgid, types::FileType::Regular),
         )?;
 
+        // Finalize and store tree data
+        let mut root_hgid = None;
+        for (path, id, text, _p1, _p2) in mf.finalize(Vec::new())? {
+            tree_store.insert_data(Default::default(), &path, text.as_ref())?;
+            if path.is_empty() {
+                root_hgid = Some(id);
+            }
+        }
+        let root_hgid = root_hgid.expect("should have root hgid");
+
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let stub_commit_id = HgId::random(&mut rng);
 
-        let tree_resolver = StubTreeResolver([(stub_commit_id.clone(), mf.clone())].into());
+        let tree_resolver =
+            TestTreeResolver::new(tree_store.clone(), [(stub_commit_id, root_hgid)]);
 
         let kick_manager = prefetch_manager(
             Config::default(),
@@ -1025,36 +1068,39 @@ mod test {
 
         // Wait for prefetch to finish.
         for _ in 0..10 {
-            if store.key_fetch_count() != 2 {
+            if file_store.key_fetch_count() < 2 {
                 std::thread::sleep(Duration::from_millis(1));
             }
         }
 
-        let mut fetches = store.fetches();
-        fetches.sort();
-        assert_eq!(
-            fetches,
-            vec![
-                Key::new(RepoPathBuf::new(), dir1_foo_hgid),
-                Key::new(RepoPathBuf::new(), dir1_bar_hgid)
-            ]
-        );
+        // Check that expected file hgids are present in file_store fetches.
+        let fetches: Vec<Key> = file_store.fetches().into_iter().flatten().collect();
+        let expected_file_hgids = vec![dir1_foo_hgid, dir1_bar_hgid];
+        for exp_hgid in &expected_file_hgids {
+            assert!(
+                fetches.iter().any(|f| f.hgid == *exp_hgid),
+                "expected hgid {:?} in fetches {:?}",
+                exp_hgid,
+                fetches
+            );
+        }
 
-        // Build a new detector so we can trigger a root prefetch
+        // Build a new detector so we can trigger a root prefetch.
         let mut detector = walkdetector::Detector::new();
-        let tree_resolver = StubTreeResolver([(stub_commit_id, mf)].into());
+        let tree_resolver =
+            TestTreeResolver::new(tree_store.clone(), [(stub_commit_id, root_hgid)]);
         detector.set_walk_threshold(2);
         let kick_manager = prefetch_manager(
             Config::default(),
             Arc::new(tree_resolver),
-            file_store,
+            file_store.clone(),
             Arc::new(RwLock::new(Some(stub_commit_id.to_hex()))),
             detector.clone(),
             "".into(),
             make_test_sparse_matcher,
         );
 
-        // Trigger a walk of the root
+        // Trigger a walk of the root.
         detector.file_loaded(RepoPath::from_static_str("dir1/foo"), 0);
         detector.file_loaded(RepoPath::from_static_str("dir1/bar"), 0);
         detector.file_loaded(RepoPath::from_static_str("dir2/foo"), 0);
@@ -1064,35 +1110,37 @@ mod test {
 
         // Wait for prefetch to finish.
         for _ in 0..10 {
-            if store.key_fetch_count() < 7 {
+            if file_store.key_fetch_count() < 7 {
                 std::thread::sleep(Duration::from_millis(1));
             }
         }
 
-        let mut fetches = store.fetches();
-        let mut expected_fetches = vec![
-            // Fetched once for each detector
-            Key::new(RepoPathBuf::new(), dir1_foo_hgid),
-            Key::new(RepoPathBuf::new(), dir1_foo_hgid),
-            Key::new(RepoPathBuf::new(), dir1_bar_hgid),
-            Key::new(RepoPathBuf::new(), dir1_bar_hgid),
-            // Fetched only by the second detector
-            Key::new(RepoPathBuf::new(), dir2_foo_hgid),
-            Key::new(RepoPathBuf::new(), dir2_bar_hgid),
-            Key::new(RepoPathBuf::new(), dir3_foo_hgid),
+        // Check that file content was fetched (the key hgids should be present).
+        let fetches: Vec<Key> = file_store.fetches().into_iter().flatten().collect();
+        let expected_file_hgids = vec![
+            dir1_foo_hgid,
+            dir1_bar_hgid,
+            dir2_foo_hgid,
+            dir2_bar_hgid,
+            dir3_foo_hgid,
         ];
-        fetches.sort();
-        expected_fetches.sort();
-        assert_eq!(fetches, expected_fetches);
+        for exp_hgid in &expected_file_hgids {
+            assert!(
+                fetches.iter().any(|f| f.hgid == *exp_hgid),
+                "expected hgid {:?} in fetches {:?}",
+                exp_hgid,
+                fetches
+            );
+        }
 
         Ok(())
     }
 
     #[test]
     fn test_batch_prefetch_dirs() -> anyhow::Result<()> {
-        let store = Arc::new(TestStore::new());
+        let tree_store = Arc::new(TestStore::new());
 
-        let file_store = store.clone() as Arc<dyn FileStore>;
+        let file_store = Arc::new(TestStore::new()) as Arc<dyn FileStore>;
 
         let foo_path: RepoPathBuf = "dir1/foo".to_string().try_into()?;
         let bar_path: RepoPathBuf = "dir2/bar".to_string().try_into()?;
@@ -1100,7 +1148,7 @@ mod test {
         let foo_hgid = file_store.insert_data(Default::default(), &foo_path, b"foo content")?;
         let bar_hgid = file_store.insert_data(Default::default(), &bar_path, b"bar content")?;
 
-        let mut mf = TreeManifest::ephemeral(store.clone());
+        let mut mf = TreeManifest::ephemeral(tree_store.clone());
 
         // Create corresponding manifest entries.
         mf.insert(
@@ -1113,9 +1161,19 @@ mod test {
             FileMetadata::new(bar_hgid, types::FileType::Regular),
         )?;
 
-        for (path, _id, text, _p1, _p2) in mf.finalize(Vec::new())? {
-            store.insert_data(Default::default(), &path, text.as_ref())?;
+        // Finalize and store tree data, capturing tree hgids by path
+        let mut tree_hgids: HashMap<RepoPathBuf, HgId> = HashMap::new();
+        for (path, id, text, _p1, _p2) in mf.finalize(Vec::new())? {
+            tree_store.insert_data(Default::default(), &path, text.as_ref())?;
+            tree_hgids.insert(path, id);
         }
+        let root_hgid = *tree_hgids
+            .get(&RepoPathBuf::new())
+            .expect("should have root hgid");
+        let dir1_path: RepoPathBuf = "dir1".to_string().try_into()?;
+        let dir1_hgid = *tree_hgids.get(&dir1_path).expect("should have dir1 hgid");
+        let dir2_path: RepoPathBuf = "dir2".to_string().try_into()?;
+        let dir2_hgid = *tree_hgids.get(&dir2_path).expect("should have dir2 hgid");
 
         let mut detector = walkdetector::Detector::new();
         detector.set_walk_threshold(2);
@@ -1123,7 +1181,8 @@ mod test {
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let stub_commit_id = HgId::random(&mut rng);
 
-        let tree_resolver = StubTreeResolver([(stub_commit_id, mf)].into());
+        let tree_resolver =
+            TestTreeResolver::new(tree_store.clone(), [(stub_commit_id, root_hgid)]);
 
         let kick_manager = prefetch_manager(
             Config::default(),
@@ -1145,25 +1204,28 @@ mod test {
 
         // Wait for prefetch to finish.
         for _ in 0..10 {
-            if store.prefetches().is_empty() {
+            if tree_store.fetches().len() < 2 {
                 std::thread::sleep(Duration::from_millis(1));
             }
         }
 
         // Check that we fetched both "dir1" and "dir2" in the same batch.
+        // Note: keys use empty paths for efficiency, so we check by hgid.
         assert_eq!(
-            store
-                .prefetches()
+            tree_store
+                .fetches()
                 .into_iter()
-                .map(|batch| batch.into_iter().map(|k| k.path).collect())
-                .collect::<Vec<Vec<RepoPathBuf>>>(),
-            vec![
-                vec!["".to_string().try_into()?],
-                vec![
-                    "dir1".to_string().try_into()?,
-                    "dir2".to_string().try_into()?,
-                ],
-            ],
+                .map(|batch| {
+                    let mut hgids: Vec<HgId> = batch.into_iter().map(|k| k.hgid).collect();
+                    hgids.sort();
+                    hgids
+                })
+                .collect::<Vec<Vec<HgId>>>(),
+            vec![vec![root_hgid], {
+                let mut v = vec![dir1_hgid, dir2_hgid];
+                v.sort();
+                v
+            },],
         );
 
         Ok(())

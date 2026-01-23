@@ -10,16 +10,17 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
-use anyhow::Result;
 use blob::Blob;
 use manifest::Manifest;
 use manifest::testutil::*;
 use minibytes::Bytes;
 use parking_lot::RwLock;
+use storemodel::BoxIterator;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
 use storemodel::SerializationFormat;
+use types::FetchContext;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -62,10 +63,8 @@ pub struct TestStore {
 #[derive(Default)]
 pub struct TestStoreInner {
     entries: HashMap<HgId, Bytes>,
-    // Calls to prefetch().
-    pub prefetched: Vec<Vec<Key>>,
-    // Calls to get_local_content().
-    fetched: Vec<Key>,
+    // Calls to get_content_iter().
+    fetched: Vec<Vec<Key>>,
     format: SerializationFormat,
     key_fetch_count: AtomicU64,
     insert_count: AtomicU64,
@@ -82,12 +81,7 @@ impl TestStore {
     }
 
     #[allow(unused)]
-    pub fn prefetches(&self) -> Vec<Vec<Key>> {
-        self.inner.read().prefetched.clone()
-    }
-
-    #[allow(unused)]
-    pub fn fetches(&self) -> Vec<Key> {
+    pub fn fetches(&self) -> Vec<Vec<Key>> {
         self.inner.read().fetched.clone()
     }
 
@@ -105,12 +99,34 @@ fn compute_sha1(content: &[u8]) -> HgId {
 }
 
 impl KeyStore for TestStore {
-    fn get_local_content(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {
+    fn get_content_iter(
+        &self,
+        _fctx: FetchContext,
+        keys: Vec<Key>,
+    ) -> anyhow::Result<BoxIterator<anyhow::Result<(Key, Blob)>>> {
         let mut inner = self.inner.write();
-        inner.key_fetch_count.fetch_add(1, Ordering::Relaxed);
-        inner.fetched.push(Key::new(path.to_owned(), hgid));
-        let underlying = &mut inner.entries;
-        let result = underlying.get(&hgid).cloned();
+        inner
+            .key_fetch_count
+            .fetch_add(keys.len() as u64, Ordering::Relaxed);
+        inner.fetched.push(keys.clone());
+        let entries = inner.entries.clone();
+        drop(inner);
+        let iter = keys
+            .into_iter()
+            .map(move |k| match entries.get(&k.hgid).cloned() {
+                Some(data) => Ok((k, Blob::Bytes(data))),
+                None => Err(anyhow::format_err!(
+                    "{}@{}: not found locally",
+                    k.path,
+                    k.hgid
+                )),
+            });
+        Ok(Box::new(iter))
+    }
+
+    fn get_local_content(&self, _path: &RepoPath, hgid: HgId) -> anyhow::Result<Option<Blob>> {
+        let inner = self.inner.read();
+        let result = inner.entries.get(&hgid).cloned();
         Ok(result.map(Blob::Bytes))
     }
 
@@ -124,15 +140,6 @@ impl KeyStore for TestStore {
         };
         underlying.insert(hgid, Bytes::copy_from_slice(data));
         Ok(hgid)
-    }
-
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
-        let mut inner = self.inner.write();
-        inner
-            .key_fetch_count
-            .fetch_add(keys.len() as u64, Ordering::Relaxed);
-        inner.prefetched.push(keys);
-        Ok(())
     }
 
     fn format(&self) -> SerializationFormat {

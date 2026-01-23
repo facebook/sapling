@@ -151,7 +151,7 @@ impl Manifest for TreeManifest {
             Some(l) => match l.as_ref() {
                 Leaf(_) => return Ok(List::File),
                 Ephemeral(content) => content,
-                Durable(entry) => entry.materialize_links(&self.store, path)?,
+                Durable(entry) => entry.materialize_links(&self.store, path, None)?,
             },
         };
 
@@ -175,7 +175,7 @@ impl Manifest for TreeManifest {
                 ))?,
                 Ephemeral(links) => links.get(component),
                 Durable(entry) => {
-                    let links = entry.materialize_links(&self.store, parent)?;
+                    let links = entry.materialize_links(&self.store, parent, None)?;
                     links.get(component)
                 }
             };
@@ -805,7 +805,7 @@ impl TreeManifest {
                 Leaf(_) => return Ok(None),
                 Ephemeral(links) => links.get(component),
                 Durable(entry) => {
-                    let links = entry.materialize_links(&self.store, parent)?;
+                    let links = entry.materialize_links(&self.store, parent, None)?;
                     links.get(component)
                 }
             };

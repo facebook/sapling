@@ -6,6 +6,7 @@
  */
 
 use std::borrow::Borrow;
+use std::collections::HashMap;
 use std::collections::btree_map;
 use std::mem;
 use std::sync::Arc;
@@ -18,9 +19,12 @@ use flume::Receiver;
 use flume::Sender;
 use flume::WeakSender;
 use manifest::FsNodeMetadata;
+use minibytes::Bytes;
 use once_cell::sync::Lazy;
 use pathmatcher::Matcher;
 use threadpool::ThreadPool;
+use types::FetchContext;
+use types::HgId;
 use types::Key;
 use types::PathComponentBuf;
 use types::RepoPath;
@@ -128,18 +132,45 @@ impl BfsIterPool {
                 continue;
             }
 
+            // Collect keys for durable entries that don't already have links initialized.
+            // Use empty path for efficiency since we only need the content by hgid.
             let keys: Vec<_> = work
                 .iter()
-                .filter_map(|(path, link)| {
+                .filter_map(|(_, link)| {
                     if let Durable(entry) = link.as_ref() {
-                        Some(Key::new(path.clone(), entry.hgid.clone()))
-                    } else {
-                        None
+                        if !entry.links_initialized() {
+                            return Some(Key::new(RepoPathBuf::new(), entry.hgid.clone()));
+                        }
                     }
+                    None
                 })
                 .collect();
 
-            let _ = ctx.store.prefetch(keys);
+            // Batch fetch tree content and collect into a HashMap by HgId. We ignore errors for
+            // convenience - the queries will be retried (and errors propagated) below in
+            // materialize_links.
+            let prefetched: HashMap<HgId, Bytes> = {
+                // Reproduce previous prefetch() trace, which some tests look for.
+                let span = tracing::debug_span!(
+                    "tree::store::prefetch",
+                    ids = keys
+                        .iter()
+                        .map(|k| k.hgid.to_hex())
+                        .collect::<Vec<String>>()
+                        .join(" ")
+                );
+                let _entered = span.enter();
+
+                ctx.store
+                    .get_content_iter(FetchContext::default(), keys)
+                    .ok()
+                    .map(|iter| {
+                        iter.filter_map(|r| r.ok())
+                            .map(|(key, blob)| (key.hgid, blob.into_bytes()))
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            };
 
             let mut work_to_send = Vec::<(RepoPathBuf, Link)>::new();
             let mut results_to_send = Vec::<Result<(RepoPathBuf, FsNodeMetadata)>>::new();
@@ -150,13 +181,17 @@ impl BfsIterPool {
                         continue;
                     }
                     Ephemeral(children) => (children, None),
-                    Durable(entry) => match entry.materialize_links(&ctx.store, &path) {
-                        Ok(children) => (children, Some(entry.hgid)),
-                        Err(e) => {
-                            results_to_send.push(Err(e).context("materialize_links in bfs_iter"));
-                            continue;
+                    Durable(entry) => {
+                        let data = prefetched.get(&entry.hgid);
+                        match entry.materialize_links(&ctx.store, &path, data) {
+                            Ok(children) => (children, Some(entry.hgid)),
+                            Err(e) => {
+                                results_to_send
+                                    .push(Err(e).context("materialize_links in bfs_iter"));
+                                continue;
+                            }
                         }
-                    },
+                    }
                 };
 
                 for (component, link) in children.iter() {
@@ -350,7 +385,7 @@ impl<'a> DfsCursor<'a> {
                             self.state = State::Next;
                         }
                         Durable(durable_entry) => {
-                            match durable_entry.materialize_links(self.store, &self.path) {
+                            match durable_entry.materialize_links(self.store, &self.path, None) {
                                 Err(err) => {
                                     self.state = State::Done;
                                     return Step::Err(err);
@@ -591,19 +626,39 @@ mod tests {
         )
         .unwrap();
 
-        let get_tree_key = |t: &TreeManifest, path: &str| -> Key {
+        let get_tree_hgid = |t: &TreeManifest, path: &str| -> HgId {
             let path = repo_path_buf(path);
-            let hgid = match t.get(&path).unwrap().unwrap() {
+            match t.get(&path).unwrap().unwrap() {
                 FsNodeMetadata::File(_) => panic!("{path} is a file"),
                 FsNodeMetadata::Directory(hgid) => hgid.unwrap(),
-            };
-            Key::new(path, hgid)
+            }
         };
 
-        let fetches = store.prefetches();
+        // The iter.rs uses empty paths when collecting keys for get_content_iter,
+        // so we compare by hgid only.
+        let fetches: Vec<Vec<HgId>> = store
+            .fetches()
+            .into_iter()
+            .map(|batch| {
+                let mut hgids: Vec<HgId> = batch.into_iter().map(|k| k.hgid).collect();
+                hgids.sort();
+                hgids
+            })
+            .collect();
 
-        assert!(fetches.contains(&vec![get_tree_key(&tree1, ""), get_tree_key(&tree2, "")]));
-        assert!(fetches.contains(&vec![get_tree_key(&tree1, "a"), get_tree_key(&tree2, "c")]));
+        let check_batch_contains = |expected: Vec<HgId>| {
+            let mut expected_sorted = expected;
+            expected_sorted.sort();
+            assert!(
+                fetches.contains(&expected_sorted),
+                "expected batch {:?} not found in fetches {:?}",
+                expected_sorted,
+                fetches
+            );
+        };
+
+        check_batch_contains(vec![get_tree_hgid(&tree1, ""), get_tree_hgid(&tree2, "")]);
+        check_batch_contains(vec![get_tree_hgid(&tree1, "a"), get_tree_hgid(&tree2, "c")]);
     }
 
     #[test]

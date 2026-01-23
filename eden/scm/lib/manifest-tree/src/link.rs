@@ -185,7 +185,7 @@ impl LinkData {
                 Leaf(_) => bail!("Path {} is a file but a directory was expected.", parent),
                 Ephemeral(links) => return Ok(links),
                 &mut Durable(ref entry) => {
-                    let durable_links = entry.materialize_links(store, parent)?;
+                    let durable_links = entry.materialize_links(store, parent, None)?;
                     *self = Ephemeral(durable_links.clone());
                 }
             };
@@ -201,15 +201,25 @@ impl DurableEntry {
         }
     }
 
+    /// Returns true if links have already been materialized.
+    pub fn links_initialized(&self) -> bool {
+        self.links.get().is_some()
+    }
+
     pub fn materialize_links(
         &self,
         store: &InnerStore,
         path: &RepoPath,
+        prefetched_data: Option<&minibytes::Bytes>,
     ) -> Result<&BTreeMap<PathComponentBuf, Link>> {
         self.links.get_or_try_init(|| {
-            let entry = store
-                .get_entry(path, self.hgid)
-                .with_context(|| format!("failed fetching from store ({}, {})", path, self.hgid))?;
+            let entry = match prefetched_data {
+                Some(data) => store::Entry(data.clone(), store.format()),
+                None => store.get_entry(path, self.hgid).with_context(|| {
+                    format!("failed fetching from store ({}, {})", path, self.hgid)
+                })?,
+            };
+
             let mut links = BTreeMap::new();
             for element_result in entry.elements() {
                 let element = element_result.with_context(|| {
@@ -329,7 +339,7 @@ impl DirLink {
         let links = match self.link.as_ref() {
             Leaf(_) => panic!("programming error: directory cannot be a leaf node"),
             Ephemeral(links) => links,
-            Durable(entry) => entry.materialize_links(store, &self.path)?,
+            Durable(entry) => entry.materialize_links(store, &self.path, None)?,
         };
         Ok(links.iter())
     }
