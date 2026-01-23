@@ -102,6 +102,7 @@ rust_library(
         #     name = os.path.basename(os.path.dirname(path))
         #     cog.outl(f'"//eden/scm/lib/commands/debugcommands/{name}:{name}",')
         # ]]]
+        "//eden/scm/lib/commands/commands/cmdcat:cmdcat",
         "//eden/scm/lib/commands/commands/cmdclone:cmdclone",
         "//eden/scm/lib/commands/commands/cmdconfig:cmdconfig",
         "//eden/scm/lib/commands/commands/cmdconfigfile:cmdconfigfile",

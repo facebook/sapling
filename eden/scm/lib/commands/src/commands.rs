@@ -29,6 +29,7 @@ external_commands![
     //     name = os.path.basename(os.path.dirname(path))
     //     cog.outl(f'{name},')
     // ]]]
+    cmdcat,
     cmdclone,
     cmdconfig,
     cmdconfigfile,

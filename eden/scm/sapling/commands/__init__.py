@@ -1616,31 +1616,10 @@ def bundle(ui, repo, fname, dest=None, **opts):
     ]
     + walkopts
     + formatteropts,
-    _("[OPTION]... FILE..."),
     inferrepo=True,
     cmdtype=readonly,
 )
 def cat(ui, repo, file1, *pats, **opts):
-    """output the current or given revision of files
-
-    Print the specified files as they were at the given revision. If
-    no revision is given, the parent of the working directory is used.
-
-    Output may be to a file, in which case the name of the file is
-    given using a format string. The formatting rules as follows:
-
-    :``%%``: literal "%" character
-    :``%s``: basename of file being printed
-    :``%d``: dirname of file being printed, or '.' if in repository root
-    :``%p``: root-relative path name of file being printed
-    :``%H``: changeset hash (40 hexadecimal digits)
-    :``%R``: changeset revision number
-    :``%h``: short-form changeset hash (12 hexadecimal digits)
-    :``%r``: zero-padded changeset revision number
-    :``%b``: basename of the exporting repository
-
-    Returns 0 on success.
-    """
     ctx = scmutil.revsingle(repo, opts.get("rev"))
     m = scmutil.match(ctx, (file1,) + pats, opts)
     fntemplate = opts.pop("output", "")

@@ -27,6 +27,7 @@ members = [
   "lib/commands",
   "lib/commands/cmdpy",
   "lib/commands/cmdutil",
+  "lib/commands/commands/cmdcat",
   "lib/commands/commands/cmdclone",
   "lib/commands/commands/cmdconfig",
   "lib/commands/commands/cmdconfigfile",
