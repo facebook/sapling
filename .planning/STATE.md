@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-22)
+See: .planning/PROJECT.md (updated 2026-01-23)
 
 **Core value:** The UI should feel polished and effortless — you focus on the code, not fighting the interface.
-**Current focus:** v1.0 complete — planning next milestone
+**Current focus:** v1.1 Refinement & Fixes
 
 ## Current Position
 
-Phase: v1.0 milestone complete
-Plan: N/A
-Status: Ready for next milestone
-Last activity: 2026-01-22 — v1.0 milestone shipped
+Phase: 6 of 8 (Navigation Fixes)
+Plan: 1 of 1 complete
+Status: Phase 6 complete
+Last activity: 2026-01-23 — Completed 06-01-PLAN.md
 
-Progress: [██████████] 100% (v1.0)
+Progress: [█████████░] 75% (6 of 8 phases complete)
 
 ## Performance Metrics
 
@@ -34,6 +34,11 @@ Progress: [██████████] 100% (v1.0)
 | 04-details-panel | 2 | ~5.5 min | ~2.75 min |
 | 05-diff-polish | 1 | ~1.2 min | ~1.2 min |
 
+**v1.1 Milestone:**
+- Plans completed: 1
+- Total execution time: ~1 min
+- In progress
+
 ## Accumulated Context
 
 ### Decisions
@@ -45,9 +50,12 @@ Key decisions from v1.0 are logged in PROJECT.md. Summary:
 - 12-color avatar palette with deterministic hash
 - Soft cyan-blue additions, salmon deletions for diffs
 
+**v1.1 decisions:**
+- Navigation: block: 'start' for top-aligned scroll, 30px scroll-margin-top for padding (06-01)
+
 ### Pending Todos
 
-None — v1.0 complete.
+None — v1.1 roadmap just created.
 
 ### Blockers/Concerns
 
@@ -55,13 +63,19 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-01-22
-Stopped at: v1.0 milestone shipped
+Last session: 2026-01-23
+Stopped at: Completed 06-01-PLAN.md (Navigation Fixes complete)
 Resume file: None
 
-## Archives
+## v1.1 Roadmap
 
-v1.0 milestone artifacts archived to `.planning/milestones/`:
-- v1.0-ROADMAP.md
-- v1.0-REQUIREMENTS.md
-- v1.0-MILESTONE-AUDIT.md
+**Phases:** 3 (6-8)
+**Coverage:** 17/17 requirements mapped ✓
+
+| Phase | Goal | Requirements |
+|-------|------|--------------|
+| 6 - Navigation Fixes | Auto-scroll sync properly positions selected commit | NAV-01, NAV-02, NAV-03 |
+| 7 - UI Polish & Configuration | Reduce visual clutter, fix scroll issues, enable editor config | UI-01-05, CFG-01-04 |
+| 8 - Design Refinement | Color scheme matches Graphite's darker, muted palette | DES-01-05 |
+
+**Next:** Plan Phase 6 (Navigation Fixes)
