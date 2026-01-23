@@ -303,7 +303,6 @@ Test extension help:
        amend         extends the existing commit amend functionality
        arcdiff       (no help text available)
        blackbox      log repository events to a blackbox for debugging
-       catnotate     (no help text available)
        checkserverbookmark
                      (no help text available)
        chistedit
