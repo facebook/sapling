@@ -9,14 +9,18 @@ use std::collections::HashSet;
 use std::fmt;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
 use std::time::Duration;
+use std::vec::Vec;
 
+use anyhow::Context;
 use edenfs_asserted_states_client::AssertedStatesClient;
 use edenfs_asserted_states_client::ContentLockGuard;
 use edenfs_asserted_states_client::StateChange;
 use edenfs_asserted_states_client::StateError;
 use edenfs_client::changes_since::ChangeNotification;
 use edenfs_client::changes_since::ChangesSinceV2Result;
+use edenfs_client::changes_since::CommitTransition;
 use edenfs_client::changes_since::StateChangeNotification;
 use edenfs_client::client::EdenFsClient;
 use edenfs_client::types::JournalPosition;
@@ -32,11 +36,17 @@ use futures::stream::BoxStream;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use serde::Serialize;
+use spawn_ext::CommandExt;
 use util::lock::unsanitize_lock_name;
 
 lazy_static! {
     pub(crate) static ref SCUBA_CLIENT: QueueingScubaLogger =
         QueueingScubaLogger::new(create_logger("edenfs_client".to_string()), 1000);
+}
+
+fn get_sl_exe_path() -> String {
+    // TODO: Standardize envvar SL
+    std::env::var("EDEN_HG_BINARY").unwrap_or_else(|_| "sl".to_owned())
 }
 
 #[derive(Clone, Debug)]
@@ -485,6 +495,149 @@ impl ChangeEvents {
     pub fn new() -> Self {
         ChangeEvents { events: Vec::new() }
     }
+}
+
+/// Represents a file change between two commits
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+struct FileChange {
+    path: String,
+    status: String,
+}
+
+impl TryFrom<FileChange> for ChangeNotification {
+    type Error = EdenFsError;
+
+    fn try_from(fc: FileChange) -> std::result::Result<Self, Self::Error> {
+        use edenfs_client::changes_since::SmallChangeNotification::*;
+        use edenfs_client::types::Dtype;
+
+        // Convert path string into bytes as expected by SmallChangeNotification variants.
+        let path_bytes = fc.path.into_bytes();
+
+        // Map status strings from sl status JSON into SmallChangeNotification.
+        // We assume regular files for simplicity since sl status does not provide dtype here.
+        // Unknown or unsupported statuses result in an error to avoid silent misclassification.
+        let scn = match fc.status.as_str() {
+            // Common Sapling/Hg status codes and words
+            "M" => Modified(edenfs_client::changes_since::Modified {
+                file_type: Dtype::Regular,
+                path: path_bytes,
+            }),
+            "A" => Added(edenfs_client::changes_since::Added {
+                file_type: Dtype::Regular,
+                path: path_bytes,
+            }),
+            "R" => Removed(edenfs_client::changes_since::Removed {
+                file_type: Dtype::Regular,
+                path: path_bytes,
+            }),
+            // D
+            "!" => {
+                // Deleted = removed, but not by sl
+                Removed(edenfs_client::changes_since::Removed {
+                    file_type: Dtype::Regular,
+                    path: path_bytes,
+                })
+            }
+            // U
+            "?" => {
+                // Untracked/unknown files appear as Added compared to parent
+                Added(edenfs_client::changes_since::Added {
+                    file_type: Dtype::Regular,
+                    path: path_bytes,
+                })
+            }
+            // We don't expect other codes since we pass the -mardu argument, so
+            // we error out on anything unexpected.
+            other => {
+                return Err(EdenFsError::from(anyhow::anyhow!(
+                    "unhandled file change status: {}",
+                    other
+                )));
+            }
+        };
+
+        Ok(ChangeNotification::SmallChange(scn))
+    }
+}
+
+pub async fn get_changes_between_commit_transition(
+    root: &Path,
+    commit_transition: CommitTransition,
+) -> Result<Vec<ChangeNotification>> {
+    get_changes_between_commits(
+        root,
+        hex::encode(&commit_transition.from).as_str(),
+        Some(hex::encode(&commit_transition.to).as_str()),
+    )
+    .await
+}
+
+/// Get the list of files changed between two commits using sl status
+///
+/// # Arguments
+/// * `root` - The root of the repository
+/// * `first` - The starting commit hash
+/// * `second` - The ending commit hash. If not provided, uses the working copy
+///
+/// # Returns
+/// A vector of FileChange structs representing files that changed between the commits
+pub async fn get_changes_between_commits(
+    root: &Path,
+    first: &str,
+    second: Option<&str>,
+) -> Result<Vec<ChangeNotification>> {
+    let mut args = vec![
+        "status",
+        "--traceback",
+        "-mardu",
+        "-Tjson",
+        "--root-relative=true",
+        "--rev",
+        first,
+    ];
+    if let Some(second) = second {
+        args.push("--rev");
+        args.push(second);
+    }
+
+    let mut command: std::process::Command = Command::new(get_sl_exe_path());
+    command
+        .current_dir(root)
+        .env("SL_AUTOMATION", "1")
+        .args(args.as_slice())
+        .detached()
+        .piped_io();
+    let mut async_command: tokio::process::Command = command.into();
+    let child = async_command
+        .spawn()
+        .context("error spawning Sapling process")
+        .map_err(EdenFsError::from)?;
+
+    // Read all output before waiting on the child to avoid borrow issues and enable JSON parsing.
+    // Wait for command to finish
+    let output = child.wait_with_output().await?;
+    let exit_status = output.status;
+
+    let stdout_buf = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr_buf = String::from_utf8_lossy(&output.stderr).into_owned();
+
+    if !exit_status.success() {
+        return Err(EdenFsError::from(anyhow::anyhow!(
+            "sl status failed with status {exit_status}: stdout: {}, stderr: {}",
+            stdout_buf,
+            stderr_buf
+        )));
+    }
+
+    // Parse JSON output from the collected stdout string
+    let changes: Vec<FileChange> =
+        serde_json::from_str(&stdout_buf).map_err(|e| EdenFsError::from(anyhow::Error::from(e)))?;
+
+    changes
+        .into_iter()
+        .map(ChangeNotification::try_from)
+        .collect()
 }
 
 #[cfg(test)]

@@ -31,6 +31,15 @@ pub trait CommandExt {
     /// Call this after `avoid_inherit_handles`!
     fn new_session(&mut self) -> &mut Self;
 
+    /// Setup this command to be detached from the parent process.
+    fn detached(&mut self) -> &mut Self;
+
+    // Setup this command to capture stderr/out.
+    fn piped_io(&mut self) -> &mut Self;
+
+    // Setup this command to drop stderr/out.
+    fn closed_io(&mut self) -> &mut Self;
+
     /// Spawn a process with stdio redirected to null and forget about it.
     /// Return the process id.
     fn spawn_detached(&mut self) -> io::Result<Child>;
@@ -182,12 +191,26 @@ impl CommandExt for Command {
     }
 
     fn spawn_detached(&mut self) -> io::Result<Child> {
-        self.avoid_inherit_handles()
-            .new_session()
-            .stdin(Stdio::null())
+        self.detached().closed_io().spawn()
+    }
+
+    fn detached(&mut self) -> &mut Self {
+        self.avoid_inherit_handles().new_session();
+        self
+    }
+
+    fn piped_io(&mut self) -> &mut Self {
+        self.stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        self
+    }
+
+    fn closed_io(&mut self) -> &mut Self {
+        self.stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
+            .stderr(Stdio::null());
+        self
     }
 
     fn checked_output(&mut self) -> io::Result<Output> {
@@ -242,6 +265,7 @@ mod windows {
     use std::os::windows::ffi::OsStringExt;
     use std::os::windows::process::CommandExt;
 
+    use winapi::ctypes::c_void;
     use winapi::shared::minwindef::DWORD;
     use winapi::shared::minwindef::MAX_PATH;
     use winapi::um::handleapi::SetHandleInformation;
@@ -273,7 +297,7 @@ mod windows {
         for handle in 1..=MAX_HANDLE {
             // According to https://devblogs.microsoft.com/oldnewthing/20050121-00/?p=36633
             // kernel handles are always a multiple of 4
-            let handle = unsafe { std::mem::transmute(handle * 4) };
+            let handle = std::ptr::with_exposed_provenance_mut::<c_void>(handle * 4);
             unsafe { SetHandleInformation(handle, HANDLE_FLAG_INHERIT, 0) };
         }
         // A cleaner way might be setting bInheritHandles to FALSE at
