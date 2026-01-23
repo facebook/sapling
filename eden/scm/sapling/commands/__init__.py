@@ -1827,7 +1827,7 @@ def _docommit(ui, repo, *pats, **opts):
             ms = mergemod.mergestate.read(repo)
             subtree_merges = ms.subtree_merges
             extra.update(subtreeutil.gen_merge_info(repo, subtree_merges))
-            summaryfooter = subtree.gen_merge_commit_msg(subtree_merges)
+            summaryfooter = subtreeutil.gen_merge_commit_msg(subtree_merges)
             if subtree_merges:
                 parents = repo.working_parent_nodes()
                 repo.setparents(parents[0])

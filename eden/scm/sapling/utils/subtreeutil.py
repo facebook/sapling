@@ -208,6 +208,39 @@ class SubtreeImport:
         return asdict(self)
 
 
+### Generating commit message for subtree operations
+
+
+def gen_copy_commit_msg(from_ctx, from_paths, to_paths):
+    full_commit = from_ctx.hex()
+    msgs = [f"Subtree copy from {full_commit}"]
+    for from_path, to_path in zip(from_paths, to_paths):
+        msgs.append(f"- Copied path {from_path} to {to_path}")
+    return "\n".join(msgs)
+
+
+def gen_import_commit_msg(url, from_commit, from_paths, to_paths):
+    msgs = [f"Subtree import from {url} at {from_commit} "]
+    for from_path, to_path in zip(from_paths, to_paths):
+        from_path = os.path.join("/", from_path)
+        msgs.append(f"- Imported path {from_path} to {to_path}")
+    return "\n".join(msgs)
+
+
+def gen_merge_commit_msg(subtree_merges):
+    groups = defaultdict(list)
+    for m in subtree_merges:
+        groups[m["from_commit"]].append((m["from_path"], m["to_path"]))
+
+    msgs = []
+    for from_node, paths in groups.items():
+        from_commit = node.hex(from_node)
+        msgs.append(f"Subtree merge from {from_commit}")
+        for from_path, to_path in paths:
+            msgs.append(f"- Merged path {from_path} to {to_path}")
+    return "\n".join(msgs)
+
+
 ### Generating metadata for branches (copies)
 
 
