@@ -27,6 +27,13 @@ pub enum CoreRepo {
 }
 
 impl CoreRepo {
+    pub fn repo_name(&self) -> Option<&str> {
+        match self {
+            CoreRepo::Disk(repo) => repo.repo_name(),
+            CoreRepo::Slapi(repo) => Some(repo.repo_name()),
+        }
+    }
+
     /// Get the config.
     pub fn config(&self) -> &Arc<dyn Config> {
         match self {

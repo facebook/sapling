@@ -45,7 +45,8 @@ Test cat with short commit hash prefix:
 
   $ echo $B
   38c22ebcb15088febc0bceaf2da8f0f6dd7bbc52
-  $ hg cat -R test:server -r 38c22ebcb1 foo
+  $ SHORT_B=38c22ebcb150
+  $ hg cat -R test:server -r $SHORT_B foo
   foo content
 
 Test cat with bookmark:
@@ -69,3 +70,47 @@ Test cat with nonexistent bookmark:
   $ hg cat -R test:server -r nonexistent foo
   abort: unknown revision 'nonexistent'
   [255]
+
+Test cat --output with format specifiers:
+
+  $ mkdir output
+  $ hg cat -R test:server -r $B --output 'output/%s' foo dir/file
+  $ cat output/foo
+  foo content
+  $ cat output/file
+  dir content
+
+Test --output with %p (full path):
+
+  $ rm -rf output
+  $ hg cat -R test:server -r $B --output 'output/%p' dir/file
+  $ cat output/dir/file
+  dir content
+
+Test --output with %d (dirname):
+
+  $ rm -rf output
+  $ hg cat -R test:server -r $B --output 'output/%d_file' dir/file
+  $ cat output/dir_file
+  dir content
+
+Test --output with %H (full hash):
+
+  $ rm -rf output
+  $ hg cat -R test:server -r $B --output 'output/%H' foo
+  $ ls output
+  38c22ebcb15088febc0bceaf2da8f0f6dd7bbc52
+
+Test --output with %h (short hash):
+
+  $ rm -rf output
+  $ hg cat -R test:server -r $SHORT_B --output 'output/%h_%s' foo
+  $ cat output/${SHORT_B}_foo
+  foo content
+
+Test --output with %% (literal percent):
+
+  $ rm -rf output
+  $ hg cat -R test:server -r $B --output 'output/%%test' foo
+  $ cat 'output/%test'
+  foo content
