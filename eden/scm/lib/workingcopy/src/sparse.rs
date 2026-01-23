@@ -306,7 +306,7 @@ inca
     #[test]
     fn test_build_matcher() -> anyhow::Result<()> {
         let root_dir = tempfile::tempdir()?;
-        let vfs = VFS::new(root_dir.path().to_path_buf())?;
+        let vfs = VFS::new_destructive(root_dir.path().to_path_buf())?;
 
         let mut config = BTreeMap::new();
 

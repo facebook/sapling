@@ -39,6 +39,47 @@ use util::path::remove_file;
 
 use crate::pathauditor::PathAuditor;
 
+/// The type of conflict encountered when `clear_conflicts` is disabled.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConflictType {
+    File,
+    Symlink,
+    Directory,
+}
+
+impl std::fmt::Display for ConflictType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConflictType::File => write!(f, "file"),
+            ConflictType::Symlink => write!(f, "symlink"),
+            ConflictType::Directory => write!(f, "directory"),
+        }
+    }
+}
+
+/// Error returned when `clear_conflicts` is disabled and a conflict is detected.
+#[derive(Debug)]
+pub struct ClearConflictError {
+    /// The path that we were trying to write to.
+    pub target_path: PathBuf,
+    /// The conflicting path that is blocking the write.
+    pub conflict_path: PathBuf,
+    /// The type of conflict.
+    pub conflict_type: ConflictType,
+}
+
+impl std::fmt::Display for ClearConflictError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "cannot write to {:?}: conflicting {} exists at {:?}",
+            self.target_path, self.conflict_type, self.conflict_path
+        )
+    }
+}
+
+impl std::error::Error for ClearConflictError {}
+
 #[derive(Clone)]
 pub struct VFS {
     inner: Arc<Inner>,
@@ -50,6 +91,9 @@ struct Inner {
     supports_symlinks: AtomicBool,
     supports_executables: bool,
     case_sensitive: bool,
+    /// Whether to automatically blow away conflicting paths/directories in order to successfully
+    /// write a file.
+    overwrite_path_conflicts: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -60,7 +104,23 @@ pub enum UpdateFlag {
 }
 
 impl VFS {
+    /// Create a new VFS instance with non-destructive conflict handling.
+    ///
+    /// When conflicts are encountered (e.g., a file exists where a directory is needed),
+    /// operations will return an error instead of removing the conflicting files.
     pub fn new(root: PathBuf) -> Result<Self> {
+        Self::new_inner(root, false)
+    }
+
+    /// Create a new VFS instance with destructive conflict handling.
+    ///
+    /// When conflicts are encountered (e.g., a file exists where a directory is needed),
+    /// conflicting files/symlinks/directories will be automatically removed.
+    pub fn new_destructive(root: PathBuf) -> Result<Self> {
+        Self::new_inner(root, true)
+    }
+
+    fn new_inner(root: PathBuf, overwrite_path_conflicts: bool) -> Result<Self> {
         let auditor = PathAuditor::new(&root);
         let fs_type =
             fstype(&root).with_context(|| format!("can't construct a VFS for {:?}", root))?;
@@ -75,6 +135,7 @@ impl VFS {
                 supports_symlinks,
                 supports_executables,
                 case_sensitive,
+                overwrite_path_conflicts,
             }),
         })
     }
@@ -125,8 +186,12 @@ impl VFS {
     /// be created.
     ///
     /// This is a slow operation, and should not be called before attempting to create `path`.
+    ///
+    /// If `clear_conflicts` is disabled via `overwrite_path_conflicts=false`, this will return an error
+    /// with information about the conflict instead of removing the conflicting files.
     fn clear_conflicts(&self, repo_path: &RepoPath) -> Result<()> {
         let full_path = self.join(repo_path);
+        let clear_conflicts_enabled = self.inner.overwrite_path_conflicts;
 
         // Walk down our ancestors, removing the first regular file or symlink
         // we find. We have the invariant that path_buf contains no symlinks
@@ -143,12 +208,33 @@ impl VFS {
 
             let file_type = metadata.file_type();
             if file_type.is_file() || file_type.is_symlink() {
+                if !clear_conflicts_enabled {
+                    let conflict_type = if file_type.is_symlink() {
+                        ConflictType::Symlink
+                    } else {
+                        ConflictType::File
+                    };
+                    return Err(ClearConflictError {
+                        target_path: full_path,
+                        conflict_path: path_buf,
+                        conflict_type,
+                    }
+                    .into());
+                }
                 remove_file(&path_buf)?;
                 break;
             }
 
             // If the full destination is a directory, clear it out.
             if file_type.is_dir() && path_buf == full_path {
+                if !clear_conflicts_enabled {
+                    return Err(ClearConflictError {
+                        target_path: full_path,
+                        conflict_path: path_buf,
+                        conflict_type: ConflictType::Directory,
+                    }
+                    .into());
+                }
                 remove_dir_all(&path_buf)?;
                 break;
             }
@@ -465,7 +551,7 @@ mod unix_tests {
     #[test]
     fn test_symlink_overwrite() {
         let tmp = tempfile::tempdir().unwrap();
-        let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a").unwrap();
         vfs.write(path, Blob::from_static(b"abc"), UpdateFlag::Symlink)
             .unwrap();
@@ -478,7 +564,7 @@ mod unix_tests {
     #[test]
     fn test_ancestor_symlink_overwrite() {
         let tmp = tempfile::tempdir().unwrap();
-        let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
 
         let dir = RepoPath::from_str("a").unwrap();
         let file = RepoPath::from_str("a/b").unwrap();
@@ -494,7 +580,7 @@ mod unix_tests {
     #[test]
     fn test_symlink_read() {
         let tmp = tempfile::tempdir().unwrap();
-        let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a").unwrap();
         vfs.write(path, Blob::from_static(b"abc"), UpdateFlag::Symlink)
             .unwrap();
@@ -507,7 +593,7 @@ mod unix_tests {
         use std::os::unix::fs::PermissionsExt;
 
         let tmp = tempfile::tempdir().unwrap();
-        let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a").unwrap();
         vfs.write(path, Blob::from_static(b"abc"), UpdateFlag::Executable)
             .unwrap();
@@ -583,6 +669,10 @@ fn metadata_eq(m1: &Metadata, m2: &Metadata) -> Result<bool> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
+    use blob::Blob;
+
     use super::*;
 
     #[test]
@@ -595,5 +685,71 @@ mod tests {
         assert!(!case_sensitive);
         #[cfg(target_os = "macos")]
         assert!(!case_sensitive);
+    }
+
+    #[test]
+    fn test_conflicting_file_non_destructive() {
+        let tmp = tempfile::tempdir().unwrap();
+
+        // Use VFS::new_destructive to set up the file at "a"
+        let vfs_destructive = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+        let path_a = RepoPath::from_str("a").unwrap();
+        vfs_destructive
+            .write(path_a, Blob::from_static(b"content"), UpdateFlag::Regular)
+            .unwrap();
+
+        // Use VFS::new (non-destructive) to try to write "a/b"
+        let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
+
+        // Now try to write "a/b" which requires "a" to be a directory, not a file
+        let path_ab = RepoPath::from_str("a/b").unwrap();
+        let result = vfs.write(path_ab, Blob::from_static(b"new"), UpdateFlag::Regular);
+
+        // Should fail with ClearConflictError
+        let err = result.unwrap_err();
+        let conflict_err = err.downcast_ref::<ClearConflictError>().unwrap();
+        assert_eq!(conflict_err.conflict_type, ConflictType::File);
+        assert!(conflict_err.conflict_path.ends_with("a"));
+    }
+
+    #[test]
+    fn test_conflicting_directory_non_destructive() {
+        let tmp = tempfile::tempdir().unwrap();
+
+        // Create a directory at "a" with a file inside
+        fs::create_dir(tmp.path().join("a")).unwrap();
+        fs::write(tmp.path().join("a/file"), b"content").unwrap();
+
+        // Use VFS::new (non-destructive)
+        let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
+
+        // Now try to write a file at "a" which requires the directory to be removed
+        let path_a = RepoPath::from_str("a").unwrap();
+        let result = vfs.write(path_a, Blob::from_static(b"new"), UpdateFlag::Regular);
+
+        // Should fail with ClearConflictError
+        let err = result.unwrap_err();
+        let conflict_err = err.downcast_ref::<ClearConflictError>().unwrap();
+        assert_eq!(conflict_err.conflict_type, ConflictType::Directory);
+    }
+
+    #[test]
+    fn test_conflicting_file_destructive() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new_destructive(tmp.path().to_path_buf()).unwrap();
+
+        // Create a file at "a"
+        let path_a = RepoPath::from_str("a").unwrap();
+        vfs.write(path_a, Blob::from_static(b"content"), UpdateFlag::Regular)
+            .unwrap();
+
+        // Now write "a/b" - the file at "a" should be removed
+        let path_ab = RepoPath::from_str("a/b").unwrap();
+        vfs.write(path_ab, Blob::from_static(b"nested"), UpdateFlag::Regular)
+            .unwrap();
+
+        // Verify the file was written
+        let content = vfs.read(path_ab).unwrap();
+        assert_eq!(content.as_ref(), b"nested");
     }
 }

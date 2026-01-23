@@ -62,7 +62,7 @@ fn fix_symlinks(py: Python, paths: Vec<String>, root: PyPathBuf) -> PyResult<PyN
     #[cfg(windows)]
     {
         use storemodel::types::RepoPath;
-        let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
+        let vfs = VFS::new_destructive(root.to_path_buf()).map_pyerr(py)?;
         let paths: Vec<&RepoPath> = paths
             .iter()
             .map(|p| RepoPath::from_str(p.as_str()).map_err(anyhow::Error::from))
@@ -112,7 +112,7 @@ py_class!(class checkoutplan |py| {
                 actions.with_sparse_profile_change(old_matcher, new_matcher, &*current, &*target)
             }).map_pyerr(py)?;
         }
-        let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
+        let vfs = VFS::new_destructive(root.to_path_buf()).map_pyerr(py)?;
         let checkout = Checkout::from_config(vfs, &config).map_pyerr(py)?;
         let mut plan = checkout.plan_action_map(actions);
         if let Some(progress_path) = progress_path {

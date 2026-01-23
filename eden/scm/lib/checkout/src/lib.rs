@@ -1692,7 +1692,7 @@ mod test {
         let tempdir = tempfile::tempdir()?;
         let working_path = tempdir.path().to_path_buf().join("workingdir");
         create_dir(working_path.as_path()).unwrap();
-        let vfs = VFS::new(working_path)?;
+        let vfs = VFS::new_destructive(working_path)?;
         let path = tempdir.path().to_path_buf().join("updateprogress");
         let mut progress = CheckoutProgress::new(&path, vfs.clone())?;
         let file_path = RepoPathBuf::from_string("file".to_string())?;
@@ -1781,7 +1781,7 @@ mod test {
         let left_tree = make_tree_manifest_from_meta(store.clone(), from.iter().cloned());
         let right_tree = make_tree_manifest_from_meta(store, to.iter().cloned());
         let diff = left_tree.diff(&right_tree, matcher).unwrap();
-        let vfs = VFS::new(working_path.clone())?;
+        let vfs = VFS::new_destructive(working_path.clone())?;
         let checkout = Checkout::default_config(vfs);
         let plan = checkout
             .plan_action_map(ActionMap::from_diff(diff).context("Plan construction failed")?);

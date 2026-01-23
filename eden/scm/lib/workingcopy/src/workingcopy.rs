@@ -120,7 +120,7 @@ impl WorkingCopy {
         has_requirement: &dyn Fn(&str) -> bool,
     ) -> Result<Self> {
         tracing::trace!("initializing vfs at {path:?}");
-        let vfs = VFS::new(path.to_path_buf())?;
+        let vfs = VFS::new_destructive(path.to_path_buf())?;
 
         let is_eden = has_requirement("eden");
 

@@ -71,7 +71,7 @@ py_class!(pub class treestate |py| {
         let treestate = TreeState::open(
             path.as_path(),
             BlockId(root_id),
-            VFS::new(path.as_path().to_path_buf()).map_pyerr(py)?.case_sensitive(),
+            VFS::new_destructive(path.as_path().to_path_buf()).map_pyerr(py)?.case_sensitive(),
         ).map_pyerr(py)?;
         Self::create_instance(py, Arc::new(Mutex::new(treestate)))
     }
@@ -81,7 +81,7 @@ py_class!(pub class treestate |py| {
     def new(directory: PyPathBuf) -> PyResult<treestate> {
         let treestate = TreeState::new(
             directory.as_path(),
-            VFS::new(directory.as_path().to_path_buf()).map_pyerr(py)?.case_sensitive(),
+            VFS::new_destructive(directory.as_path().to_path_buf()).map_pyerr(py)?.case_sensitive(),
         ).map_pyerr(py)?.0;
         Self::create_instance(py, Arc::new(Mutex::new(treestate)))
     }

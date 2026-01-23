@@ -189,7 +189,7 @@ pub async fn download_files_with_cache(
     files: impl IntoIterator<Item = (RepoPathBuf, UploadToken, FileType)>,
     cache: Option<SharedSnapshotFileCache>,
 ) -> Result<DownloadFileStatsSnapshot> {
-    let vfs = VFS::new(std::path::PathBuf::from(root.as_str()))?;
+    let vfs = VFS::new_destructive(std::path::PathBuf::from(root.as_str()))?;
     let writer = AsyncVfsWriter::spawn_new(vfs, WORKERS);
     let writer = &writer;
 

@@ -190,7 +190,7 @@ struct WriterState {
 
 impl WriterState {
     pub fn new(root: PathBuf, store: Arc<FileStore>) -> Result<Self> {
-        let working_copy = VFS::new(root)?;
+        let working_copy = VFS::new_destructive(root)?;
         Ok(Self {
             store: ArcFileStore(store),
             working_copy,
