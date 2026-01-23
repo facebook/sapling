@@ -116,6 +116,7 @@
   position: relative;
   align-items: center;
   z-index: 1;
+  scroll-margin-top: 30px;
 }
 
 .commit-row-selected {
