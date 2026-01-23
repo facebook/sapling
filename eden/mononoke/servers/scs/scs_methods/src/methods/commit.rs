@@ -330,10 +330,17 @@ impl SourceControlServiceImpl {
             .repo_changeset_pair(ctx.clone(), &commit, &params.other_commit_id)
             .watched()
             .await?;
-        let lca = changeset
-            .common_base_with(other_changeset.id())
-            .watched()
-            .await?;
+        let lca = if params.linear_history_only {
+            changeset
+                .linear_common_base_with(other_changeset.id())
+                .watched()
+                .await?
+        } else {
+            changeset
+                .common_base_with(other_changeset.id())
+                .watched()
+                .await?
+        };
         Ok(thrift::CommitLookupResponse {
             exists: lca.is_some(),
             ids: if let Some(lca) = lca {

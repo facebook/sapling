@@ -1293,6 +1293,9 @@ struct CommitIsPublicParams {}
 struct CommitCommonBaseWithParams {
   1: CommitId other_commit_id;
   2: set<CommitIdentityScheme> identity_schemes;
+  /// if true then the common base is calculated using linear history only i.e.
+  /// ignoring merge parents.
+  3: bool linear_history_only;
 }
 
 const i64 COMMIT_COMPARE_ORDERED_MAX_LIMIT = 10000;

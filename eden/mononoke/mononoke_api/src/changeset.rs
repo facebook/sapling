@@ -808,6 +808,22 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         Ok(lca.first().map(|id| Self::new(self.repo_ctx.clone(), *id)))
     }
 
+    /// Returns the lowest common ancestor of two commits in the p1 linear graph, ignoring merge parents.
+    pub async fn linear_common_base_with(
+        &self,
+        other_commit: ChangesetId,
+    ) -> Result<Option<ChangesetContext<R>>, MononokeError> {
+        let lca = self
+            .repo_ctx()
+            .repo()
+            .commit_graph()
+            .p1_linear_graph()
+            .skip_tree_lowest_common_ancestor(self.ctx(), self.id, other_commit)
+            .watched()
+            .await?;
+        Ok(lca.map(|node| Self::new(self.repo_ctx.clone(), node.cs_id)))
+    }
+
     pub async fn diff_unordered(
         &self,
         other: &ChangesetContext<R>,
