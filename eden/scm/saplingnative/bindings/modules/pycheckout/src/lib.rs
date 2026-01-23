@@ -68,7 +68,7 @@ fn fix_symlinks(py: Python, paths: Vec<String>, root: PyPathBuf) -> PyResult<PyN
             .map(|p| RepoPath::from_str(p.as_str()).map_err(anyhow::Error::from))
             .collect::<Result<_>>()
             .map_pyerr(py)?;
-        checkout::update_symlinks(&paths, &vfs).map_pyerr(py)?;
+        vfs.reconcile_symlinks(&paths).map_pyerr(py)?;
     }
     #[cfg(not(windows))]
     let _ = (py, paths, root);

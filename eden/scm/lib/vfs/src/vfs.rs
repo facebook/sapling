@@ -385,6 +385,25 @@ impl VFS {
         Ok(())
     }
 
+    /// Converts a list of file symlinks into potentially directory symlinks by
+    /// checking the final target of that symlink, and converting it into a
+    /// directory one if the final target is a directory.
+    #[cfg(windows)]
+    pub fn reconcile_symlinks(&self, paths: &[&types::RepoPath]) -> Result<()> {
+        for p in paths {
+            let path = RepoPath::from_str(p.as_str())?;
+            if is_final_symlink_target_dir(self.join(path))? {
+                let (contents, _) = self.read_with_metadata(&path)?;
+                let target = PathBuf::from(String::from_utf8(contents.into_vec())?);
+                let target = util::path::replace_slash_with_backslash(&target);
+                let path = self.join(path);
+                util::path::remove_file(&path).context("Unable to remove symlink")?;
+                util::path::symlink_dir(&target, &path)?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn supports_symlinks(&self) -> bool {
         self.inner.supports_symlinks.load(Ordering::Acquire)
     }
@@ -396,6 +415,42 @@ impl VFS {
     pub fn supports_executables(&self) -> bool {
         self.inner.supports_executables
     }
+}
+
+#[cfg(windows)]
+fn is_final_symlink_target_dir(mut path: std::path::PathBuf) -> Result<bool> {
+    use std::fs;
+
+    use anyhow::Context;
+    // On Linux the usual limit for symlinks depth is 40, and symlinks stop
+    // being followed after that point:
+    // https://elixir.bootlin.com/linux/v6.5-rc7/source/include/linux/namei.h#L13
+    // Let's keep a similar limit for Windows
+    let mut rem_links = 40;
+    let mut metadata = match fs::symlink_metadata(path.clone()) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            // The symlink file does not exist. This can happen when writes
+            // failed earlier. There should be errors about those writes
+            // already. Don't report a different (less readable) error.
+            return Ok(false);
+        }
+        v => v?,
+    };
+    while metadata.is_symlink() && rem_links > 0 {
+        rem_links -= 1;
+        let target = fs::read_link(path.clone())?;
+        path = path
+            .parent()
+            .context("unable to determine parent directory for path when resolving symlink")?
+            .to_owned();
+        path.push(target);
+        if !path.exists() {
+            // If final target doesn't exist report it as a regular file
+            return Ok(false);
+        }
+        metadata = fs::symlink_metadata(path.clone())?;
+    }
+    Ok(metadata.is_dir())
 }
 
 #[cfg(unix)]

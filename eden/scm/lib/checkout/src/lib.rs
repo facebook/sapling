@@ -361,10 +361,11 @@ impl CheckoutPlan {
                     }
                 }
                 Err((work, err)) => match work {
-                    Work::Remove(path) => stats.remove_failed.push((path, err)),
-                    Work::SetExecutable(path, _) => stats.set_exec_failed.push((path, err)),
-                    Work::Write(path, ..) => stats.write_failed.push((path, err)),
-                    Work::Batch(_) => unreachable!(),
+                    Some(Work::Remove(path)) => stats.remove_failed.push((path, err)),
+                    Some(Work::SetExecutable(path, _)) => stats.set_exec_failed.push((path, err)),
+                    Some(Work::Write(path, ..)) => stats.write_failed.push((path, err)),
+                    Some(Work::Batch(_)) => unreachable!(),
+                    None => stats.other_failed.push(err),
                 },
             }
         }
@@ -393,32 +394,6 @@ impl CheckoutPlan {
         }
 
         let stats = Ok(stats);
-
-        // Windows symlink fixes. This should happen after vfs writes.
-        // The symlink fixes might generate new errors.
-        #[cfg(windows)]
-        let mut stats = stats;
-        #[cfg(windows)]
-        {
-            if vfs.supports_symlinks() {
-                let symlinks = self
-                    .update_content
-                    .iter()
-                    .filter_map(|(p, a)| {
-                        if a.as_ref().is_some_and(|a| a.file_type == FileType::Symlink) {
-                            Some(p.as_ref())
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<_>>();
-                if let Err(e) = update_symlinks(&symlinks, vfs) {
-                    if let Ok(stats) = stats.as_mut() {
-                        stats.other_failed.push(e);
-                    }
-                }
-            }
-        }
 
         stats
     }
@@ -1637,60 +1612,6 @@ fn record_updates(
         treestate.invalidate_mtime(max_mtime)?;
     }
 
-    Ok(())
-}
-
-#[cfg(windows)]
-fn is_final_symlink_target_dir(mut path: PathBuf) -> Result<bool> {
-    use anyhow::Context;
-    // On Linux the usual limit for symlinks depth is 40, and symlinks stop
-    // being followed after that point:
-    // https://elixir.bootlin.com/linux/v6.5-rc7/source/include/linux/namei.h#L13
-    // Let's keep a similar limit for Windows
-    let mut rem_links = 40;
-    let mut metadata = match fs::symlink_metadata(path.clone()) {
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            // The symlink file does not exist. This can happen when writes
-            // failed earlier. There should be errors about those writes
-            // already. Don't report a different (less readable) error.
-            return Ok(false);
-        }
-        v => v?,
-    };
-    while metadata.is_symlink() && rem_links > 0 {
-        rem_links -= 1;
-        let target = fs::read_link(path.clone())?;
-        path = path
-            .parent()
-            .context("unable to determine parent directory for path when resolving symlink")?
-            .to_owned();
-        path.push(target);
-        if !path.exists() {
-            // If final target doesn't exist report it as a regular file
-            return Ok(false);
-        }
-        metadata = fs::symlink_metadata(path.clone())?;
-    }
-    Ok(metadata.is_dir())
-}
-
-#[cfg(windows)]
-/// Converts a list of file symlinks into potentially directory symlinks by
-/// checking the final target of that symlink, and converting it into a
-/// directory one if the final target is a directory.
-pub fn update_symlinks(paths: &[&RepoPath], vfs: &VFS) -> Result<()> {
-    use anyhow::Context;
-    for p in paths {
-        let path = RepoPath::from_str(p.as_str())?;
-        if is_final_symlink_target_dir(vfs.join(path))? {
-            let (contents, _) = vfs.read_with_metadata(&path)?;
-            let target = PathBuf::from(String::from_utf8(contents.into_vec())?);
-            let target = util::path::replace_slash_with_backslash(&target);
-            let path = vfs.join(path);
-            util::path::remove_file(&path).context("Unable to remove symlink")?;
-            util::path::symlink_dir(&target, &path)?;
-        }
-    }
     Ok(())
 }
 
