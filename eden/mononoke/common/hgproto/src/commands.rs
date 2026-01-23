@@ -189,14 +189,6 @@ impl<H: HgCommands + Send + Sync + 'static> HgCommandHandler<H> {
                     .boxed(),
                 ok(instream).boxed(),
             ),
-            SingleRequest::Knownnodes { nodes } => (
-                hgcmds
-                    .knownnodes(nodes)
-                    .map_ok(SingleResponse::Known)
-                    .into_stream()
-                    .boxed(),
-                ok(instream).boxed(),
-            ),
             SingleRequest::Unbundle { heads } => self.handle_unbundle(instream, heads, None, None),
             SingleRequest::UnbundleReplay {
                 heads,
@@ -586,11 +578,6 @@ pub trait HgCommands {
     // @wireprotocommand('known', 'nodes *')
     fn known(&self, _nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
         unimplemented("known")
-    }
-
-    // @wireprotocommand('known', 'nodes *')
-    fn knownnodes(&self, _nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
-        unimplemented("knownnodes")
     }
 
     // @wireprotocommand('unbundle', 'heads')

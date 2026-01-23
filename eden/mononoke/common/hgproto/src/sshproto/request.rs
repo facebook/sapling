@@ -639,9 +639,6 @@ fn parse_with_params(
         command_star!("known", Known, parse_params, {
             nodes => hashlist,
         }),
-        command_star!("knownnodes", Knownnodes, parse_params, {
-            nodes => hg_changeset_list,
-        }),
         command!("unbundle", Unbundle, parse_params, {
             heads => stringlist,
         }),

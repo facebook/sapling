@@ -204,7 +204,6 @@ mod ops {
     pub static LISTKEYS: &str = "listkeys";
     pub static LISTKEYSPATTERNS: &str = "listkeyspatterns";
     pub static KNOWN: &str = "known";
-    pub static KNOWNNODES: &str = "knownnodes";
     pub static BETWEEN: &str = "between";
     pub static GETBUNDLE: &str = "getbundle";
     pub static GETTREEPACK: &str = "gettreepack";
@@ -321,7 +320,6 @@ fn wireprotocaps() -> Vec<String> {
         "stream_option".to_string(),
         "streamreqs=generaldelta,lz4revlog,revlogv1".to_string(),
         "treeonly".to_string(),
-        "knownnodes".to_string(),
         "designatednodes".to_string(),
         "getcommitdata".to_string(),
     ]
@@ -1369,22 +1367,6 @@ impl<R: Repo> HgCommands for RepoClient<R> {
                 let res = nodes
                     .into_iter()
                     .map(move |node| found_hg_changesets.contains(&node))
-                    .collect::<Vec<_>>();
-
-                Ok(res)
-            },
-        )
-    }
-
-    fn knownnodes(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
-        self.known_impl(
-            nodes,
-            ops::KNOWNNODES,
-            move |_ctx, nodes, hg_bcs_mapping| async move {
-                let hg_bcs_mapping = hg_bcs_mapping.into_iter().collect::<HashMap<_, _>>();
-                let res = nodes
-                    .into_iter()
-                    .map(move |node| hg_bcs_mapping.contains_key(&node))
                     .collect::<Vec<_>>();
 
                 Ok(res)

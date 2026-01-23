@@ -79,9 +79,6 @@ pub enum SingleRequest {
     Known {
         nodes: Vec<HgChangesetId>,
     },
-    Knownnodes {
-        nodes: Vec<HgChangesetId>,
-    },
     Unbundle {
         heads: Vec<String>,
     },
@@ -115,7 +112,6 @@ impl SingleRequest {
             SingleRequest::Listkeys { .. } => "listkeys",
             SingleRequest::Lookup { .. } => "lookup",
             SingleRequest::Known { .. } => "known",
-            SingleRequest::Knownnodes { .. } => "knownnodes",
             SingleRequest::Unbundle { .. } => "unbundle",
             SingleRequest::UnbundleReplay { .. } => "unbundlereplay",
             SingleRequest::Gettreepack(_) => "gettreepack",
@@ -207,7 +203,6 @@ pub enum SingleResponse {
     ListKeysPatterns(BTreeMap<String, HgChangesetId>),
     Lookup(Bytes),
     Known(Vec<bool>),
-    Knownnodes(Vec<bool>),
     ReadyForStream,
     Unbundle(Bytes),
     Gettreepack(Bytes),
