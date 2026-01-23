@@ -12,6 +12,7 @@ pub mod errors;
 mod init;
 pub mod repo;
 pub mod scmstore;
+pub mod slapi_client;
 mod trait_impls;
 pub mod trees;
 
