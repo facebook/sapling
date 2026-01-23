@@ -14,7 +14,6 @@ name = "checkout"
 
 [dependencies]
 anyhow = "1.0.98"
-blob = { version = "0.1.0", path = "../blob" }
 edenfs-asserted-states-client = { version = "0.1.0", path = "../../../fs/rust/edenfs-asserted-states-client" }
 fail = { version = "0.4", features = ["failpoints"] }
 flume = "0.11.1"
@@ -51,6 +50,7 @@ watchman_client = { version = "0.9.0", git = "https://github.com/facebook/watchm
 
 [dev-dependencies]
 async-trait = "0.1.86"
+blob = { version = "0.1.0", path = "../blob" }
 quickcheck = "1.0"
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree", features = ["for-tests"] }
 tempfile = "3.22"

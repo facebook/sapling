@@ -10,11 +10,12 @@ use std::thread::JoinHandle;
 
 use anyhow::Error;
 use anyhow::Result;
+use blob::Blob;
 use crossbeam::channel;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
-use minibytes::Bytes;
 use tokio::sync::oneshot;
+use types::RepoPath;
 use types::RepoPathBuf;
 
 use crate::UpdateFlag;
@@ -27,14 +28,26 @@ pub struct AsyncVfsWriter {
 
 struct WorkItem {
     res: oneshot::Sender<Result<ActionResult>>,
-    action: Action,
+    action: Work,
 }
+
 #[derive(Debug)]
-enum Action {
-    Write(RepoPathBuf, Bytes, UpdateFlag),
+pub enum Work {
+    Write(RepoPathBuf, Blob, UpdateFlag, Option<UpdateFlag>),
     Remove(RepoPathBuf),
     SetExecutable(RepoPathBuf, bool),
-    Batch(Vec<Action>),
+    Batch(Vec<Work>),
+}
+
+impl Work {
+    pub fn path(&self) -> &RepoPath {
+        match self {
+            Self::Write(path, ..) => path,
+            Self::Remove(path) => path,
+            Self::SetExecutable(path, ..) => path,
+            Self::Batch(_) => panic!("Work::Batch has no single path"),
+        }
+    }
 }
 
 /// Async write interface to `VFS`.
@@ -54,44 +67,44 @@ impl AsyncVfsWriter {
         Self { sender, handles }
     }
 
-    pub async fn write<B: Into<Bytes>>(
+    pub async fn write<B: Into<Blob>>(
         &self,
         path: RepoPathBuf,
         data: B,
         flag: UpdateFlag,
     ) -> Result<usize> {
-        self.submit_action(Action::Write(path, data.into(), flag))
+        self.submit_action(Work::Write(path, data.into(), flag, None))
             .await
             .map(|r| r.bytes_written)
     }
 
-    pub async fn write_batch<B: Into<Bytes>>(
+    pub async fn write_batch<B: Into<Blob>>(
         &self,
         batch: impl IntoIterator<Item = (RepoPathBuf, B, UpdateFlag)>,
     ) -> Result<usize> {
         let batch = batch
             .into_iter()
-            .map(|(path, data, flag)| Action::Write(path, data.into(), flag))
+            .map(|(path, data, flag)| Work::Write(path, data.into(), flag, None))
             .collect();
-        self.submit_action(Action::Batch(batch))
+        self.submit_action(Work::Batch(batch))
             .await
             .map(|r| r.bytes_written)
     }
 
     pub async fn remove_batch(&self, batch: Vec<RepoPathBuf>) -> Result<Vec<(RepoPathBuf, Error)>> {
-        let batch = batch.into_iter().map(Action::Remove).collect();
-        self.submit_action(Action::Batch(batch))
+        let batch = batch.into_iter().map(Work::Remove).collect();
+        self.submit_action(Work::Batch(batch))
             .await
             .map(|r| r.remove_errors)
     }
 
     pub async fn set_executable(&self, path: RepoPathBuf, flag: bool) -> Result<()> {
-        self.submit_action(Action::SetExecutable(path, flag))
+        self.submit_action(Work::SetExecutable(path, flag))
             .await
             .map(|_| ())
     }
 
-    async fn submit_action(&self, action: Action) -> Result<ActionResult> {
+    async fn submit_action(&self, action: Work) -> Result<ActionResult> {
         let (tx, rx) = oneshot::channel();
         let wi = WorkItem { action, res: tx };
         let _ = self.sender.as_ref().unwrap().send(wi);
@@ -117,19 +130,25 @@ fn async_vfs_worker(vfs: VFS, receiver: Receiver<WorkItem>) {
     }
 }
 
-fn execute_action(vfs: &VFS, action: Action) -> Result<ActionResult> {
+fn execute_action(vfs: &VFS, action: Work) -> Result<ActionResult> {
     let mut bytes_written = 0;
     let mut remove_errors = Vec::new();
 
     match action {
-        Action::Write(path, data, flag) => bytes_written += vfs.write(&path, data.into(), flag)?,
-        Action::Remove(path) => {
+        Work::Write(path, data, flag, from_flag) => {
+            if matches!(from_flag, Some(UpdateFlag::Symlink)) {
+                vfs.rewrite_symlink(&path, data, flag)?;
+            } else {
+                bytes_written += vfs.write(&path, data, flag)?;
+            }
+        }
+        Work::Remove(path) => {
             if let Err(err) = vfs.remove(&path) {
                 remove_errors.push((path, err));
             }
         }
-        Action::SetExecutable(path, flag) => vfs.set_executable(&path, flag)?,
-        Action::Batch(batch) => {
+        Work::SetExecutable(path, flag) => vfs.set_executable(&path, flag)?,
+        Work::Batch(batch) => {
             for action in batch {
                 let res = execute_action(vfs, action)?;
                 bytes_written += res.bytes_written;

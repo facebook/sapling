@@ -54,7 +54,6 @@ rust_library(
         "fbsource//third-party/rust:tracing",
         "//eden/fs/rust/edenfs-asserted-states-client:edenfs-asserted-states-client",
         "//eden/scm/lib/async-runtime:async-runtime",
-        "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/context:context",
         "//eden/scm/lib/dag:dag",

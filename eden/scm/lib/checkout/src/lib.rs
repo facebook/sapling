@@ -62,6 +62,7 @@ use types::hgid::MF_UNTRACKED_NODE_ID;
 use util::fs_err as fs;
 use vfs::UpdateFlag;
 use vfs::VFS;
+use vfs::Work;
 use workingcopy::sparse;
 use workingcopy::workingcopy::LockedWorkingCopy;
 
@@ -155,12 +156,6 @@ pub struct CheckoutStats {
 
     /// Errors not associated with a path.
     other_failed: Vec<Error>,
-}
-
-enum Work {
-    Write(Key, blob::Blob, UpdateFlag, Option<UpdateFlag>),
-    SetExec(RepoPathBuf, bool),
-    Remove(RepoPathBuf),
 }
 
 const DEFAULT_CONCURRENCY: usize = 16;
@@ -268,12 +263,12 @@ impl CheckoutPlan {
         let actions: HashMap<_, _> = self
             .update_content
             .iter()
-            .filter_map(|(p, u)| {
-                u.as_ref()
-                    .map(|u| (Key::new(p.clone(), u.content_hgid.clone()), u.clone()))
-            })
+            .filter_map(|(p, u)| u.as_ref().map(|u| (p.clone(), u.clone())))
             .collect();
-        let keys: Vec<_> = actions.keys().cloned().collect();
+        let keys: Vec<_> = actions
+            .iter()
+            .map(|(p, u)| Key::new(p.clone(), u.content_hgid.clone()))
+            .collect();
         let fetch_data_iter = store.get_content_iter(FetchContext::default(), keys)?;
 
         let stats = thread::scope(|s| -> Result<CheckoutStats> {
@@ -308,23 +303,23 @@ impl CheckoutPlan {
                 let err_tx = err_tx.clone();
                 let progress_tx = progress_tx.clone();
                 let b = thread::Builder::new().name(format!("checkout-{}/{}", i, n));
+                let actions = &actions;
                 b.spawn_scoped(s, move || {
                     let mut bar_count = 0;
                     while let Ok(work) = rx.recv() {
                         let result = match &work {
-                            Work::Write(key, data, flag, from_flag) => {
+                            Work::Write(path, data, flag, from_flag) => {
                                 if matches!(from_flag, Some(UpdateFlag::Symlink)) {
-                                    // Take special care if we are writing over a symlink.
-                                    vfs.rewrite_symlink(&key.path, data.clone(), *flag)
-                                        .map(|_| ())
+                                    vfs.rewrite_symlink(path, data.clone(), *flag).map(|_| ())
                                 } else {
-                                    vfs.write(&key.path, data.clone(), *flag).map(|_| ())
+                                    vfs.write(path, data.clone(), *flag).map(|_| ())
                                 }
                             }
-                            Work::SetExec(path, exec) => {
+                            Work::SetExecutable(path, exec) => {
                                 vfs.set_executable(path, *exec).map(|_| ())
                             }
                             Work::Remove(path) => vfs.remove(path),
+                            Work::Batch(_) => unreachable!(),
                         };
                         bar_count += 1;
                         if bar_count >= VFS_BATCH_SIZE {
@@ -340,8 +335,10 @@ impl CheckoutPlan {
                             continue;
                         }
                         if support_resume {
-                            if let Work::Write(key, ..) = work {
-                                let _ = progress_tx.send((key.hgid, key.path));
+                            if let Work::Write(path, ..) = &work {
+                                if let Some(action) = actions.get(path) {
+                                    let _ = progress_tx.send((action.content_hgid, path.clone()));
+                                }
                             }
                         }
                     }
@@ -358,8 +355,11 @@ impl CheckoutPlan {
                     .map_err(|_| anyhow!("remove send failed"))?;
             }
             for action in &self.update_meta {
-                tx.send(Work::SetExec(action.path.to_owned(), action.set_x_flag))
-                    .map_err(|_| anyhow!("update_meta send failed"))?;
+                tx.send(Work::SetExecutable(
+                    action.path.to_owned(),
+                    action.set_x_flag,
+                ))
+                .map_err(|_| anyhow!("update_meta send failed"))?;
             }
             for entry in fetch_data_iter {
                 let (key, data) = match entry {
@@ -374,11 +374,11 @@ impl CheckoutPlan {
                 let data = redact_if_needed(data);
 
                 let action = actions
-                    .get(&key)
+                    .get(&key.path)
                     .ok_or_else(|| format_err!("Storage returned unknown key {}", key))?;
                 let flag = type_to_flag(&action.file_type);
                 tx.send(Work::Write(
-                    key,
+                    key.path,
                     data,
                     flag,
                     action.from_file_type.as_ref().map(type_to_flag),
@@ -409,8 +409,9 @@ impl CheckoutPlan {
                         }
                     }
                     Some(Work::Remove(path)) => stats.remove_failed.push((path, err)),
-                    Some(Work::SetExec(path, _)) => stats.set_exec_failed.push((path, err)),
-                    Some(Work::Write(key, ..)) => stats.write_failed.push((key.path, err)),
+                    Some(Work::SetExecutable(path, _)) => stats.set_exec_failed.push((path, err)),
+                    Some(Work::Write(path, ..)) => stats.write_failed.push((path, err)),
+                    Some(Work::Batch(_)) => unreachable!(),
                 }
             }
 
@@ -952,16 +953,6 @@ impl UpdateContentAction {
             content_hgid: up.to.hgid,
             file_type: up.to.file_type,
             from_file_type: up.from.map(|from| from.file_type),
-        }
-    }
-}
-
-impl Work {
-    fn path(&self) -> &RepoPath {
-        match self {
-            Self::Write(key, ..) => &key.path,
-            Self::SetExec(path, ..) => path,
-            Self::Remove(path) => path,
         }
     }
 }
