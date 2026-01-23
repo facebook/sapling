@@ -29,6 +29,9 @@ pub enum SubtreeChange {
     /// Import history from an external repository.
     #[thrift(thrift::bonsai::SubtreeImport)]
     SubtreeImport(SubtreeImport),
+    /// Cross-repo merge: merge history with an external repository.
+    #[thrift(thrift::bonsai::SubtreeCrossRepoMerge)]
+    SubtreeCrossRepoMerge(SubtreeCrossRepoMerge),
 }
 
 impl SubtreeChange {
@@ -61,12 +64,21 @@ impl SubtreeChange {
         })
     }
 
+    pub fn cross_repo_merge(from_path: MPath, from_commit: String, from_repo_url: String) -> Self {
+        Self::SubtreeCrossRepoMerge(SubtreeCrossRepoMerge {
+            from_path,
+            from_commit,
+            from_repo_url,
+        })
+    }
+
     pub fn source(&self) -> Option<ChangesetId> {
         match self {
             Self::SubtreeCopy(copy) => Some(copy.from_cs_id),
             Self::SubtreeDeepCopy(copy) => Some(copy.from_cs_id),
             Self::SubtreeMerge(merge) => Some(merge.from_cs_id),
             Self::SubtreeImport(_) => None,
+            Self::SubtreeCrossRepoMerge(_) => None,
         }
     }
 
@@ -77,6 +89,7 @@ impl SubtreeChange {
             Self::SubtreeDeepCopy(copy) => Some((copy.from_cs_id, &copy.from_path)),
             Self::SubtreeMerge(merge) => Some((merge.from_cs_id, &merge.from_path)),
             Self::SubtreeImport(_) => None,
+            Self::SubtreeCrossRepoMerge(_) => None,
         }
     }
 
@@ -112,6 +125,7 @@ impl SubtreeChange {
             Self::SubtreeDeepCopy(copy) => copy.from_cs_id = new_cs_id,
             Self::SubtreeMerge(merge) => merge.from_cs_id = new_cs_id,
             Self::SubtreeImport(_) => {}
+            Self::SubtreeCrossRepoMerge(_) => {}
         }
     }
 }
@@ -140,6 +154,14 @@ pub struct SubtreeMerge {
 #[derive(ThriftConvert, Arbitrary, Debug, Clone, Eq, PartialEq, Hash)]
 #[thrift(thrift::bonsai::SubtreeImport)]
 pub struct SubtreeImport {
+    pub from_path: MPath,
+    pub from_commit: String,
+    pub from_repo_url: String,
+}
+
+#[derive(ThriftConvert, Arbitrary, Debug, Clone, Eq, PartialEq, Hash)]
+#[thrift(thrift::bonsai::SubtreeCrossRepoMerge)]
+pub struct SubtreeCrossRepoMerge {
     pub from_path: MPath,
     pub from_commit: String,
     pub from_repo_url: String,

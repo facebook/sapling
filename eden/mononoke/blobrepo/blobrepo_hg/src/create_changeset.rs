@@ -387,6 +387,16 @@ async fn resolve_subtree_changes(
                 ),
             ))
         }
+        for cross_repo_merge in changes.cross_repo_merges.iter() {
+            subtree_changes.push((
+                cross_repo_merge.to_path.clone(),
+                SubtreeChange::cross_repo_merge(
+                    cross_repo_merge.from_path.clone(),
+                    cross_repo_merge.from_commit.clone(),
+                    cross_repo_merge.url.clone(),
+                ),
+            ))
+        }
         let subtree_changes = SortedVectorMap::from_iter(subtree_changes.into_iter());
         Ok((manifest_replacements, subtree_changes))
     } else {
@@ -404,6 +414,7 @@ mod tests {
     use mercurial_derivation::DeriveHgChangeset;
     use mercurial_types::subtree::HgSubtreeChanges;
     use mercurial_types::subtree::HgSubtreeCopy;
+    use mercurial_types::subtree::HgSubtreeCrossRepoMerge;
     use mercurial_types::subtree::HgSubtreeDeepCopy;
     use mercurial_types::subtree::HgSubtreeImport;
     use mercurial_types::subtree::HgSubtreeMerge;
@@ -471,6 +482,12 @@ mod tests {
                         url: "other:repo".to_string(),
                         to_path: MPath::new("dir4")?,
                     }],
+                    cross_repo_merges: vec![HgSubtreeCrossRepoMerge {
+                        from_path: MPath::new("xmergedir")?,
+                        from_commit: "xmerge commit".to_string(),
+                        url: "xmerge:repo".to_string(),
+                        to_path: MPath::new("dir5")?,
+                    }],
                 },
                 hashmap! {
                     a_id => a_handle,
@@ -502,6 +519,7 @@ mod tests {
                 MPath::new("dir1/dir3a")? => SubtreeChange::deep_copy(MPath::new("dir1/dir3")?, commits["B"]),
                 MPath::new("dir1a")? =>  SubtreeChange::copy( MPath::new("dir1")?, commits["A"]),
                 MPath::new("dir4")? => SubtreeChange::import(MPath::new("otherdir")?, "other commit".to_string(), "other:repo".to_string()),
+                MPath::new("dir5")? => SubtreeChange::cross_repo_merge(MPath::new("xmergedir")?, "xmerge commit".to_string(), "xmerge:repo".to_string()),
             }
         );
 

@@ -172,6 +172,16 @@ impl SubtreeChangeOutput {
                 requested: requested.clone(),
                 schemes: schemes.clone(),
             }),
+            thrift::SubtreeChange::subtree_cross_repo_merge(xmerge) => Some(SubtreeChangeOutput {
+                change_type: String::from("cross_repo_merge"),
+                source_url: Some(xmerge.source_url.clone()),
+                source_commit_id: Some(xmerge.source_commit_id.clone()),
+                source_commit_ids: None,
+                source_path: xmerge.source_path.clone(),
+                destination_path: path,
+                requested: requested.clone(),
+                schemes: schemes.clone(),
+            }),
             _ => None,
         }
     }

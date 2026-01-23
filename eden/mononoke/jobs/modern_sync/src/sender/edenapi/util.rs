@@ -168,6 +168,13 @@ pub fn to_identical_changeset(
                     from_commit: import.from_commit,
                     from_repo_url: import.from_repo_url,
                 },
+                SubtreeChange::SubtreeCrossRepoMerge(cross_repo_merge) => {
+                    EdenapiSubtreeChange::CrossRepoMerge {
+                        from_path: to_hg_path(&cross_repo_merge.from_path)?,
+                        from_commit: cross_repo_merge.from_commit,
+                        from_repo_url: cross_repo_merge.from_repo_url,
+                    }
+                }
                 SubtreeChange::SubtreeCopy(_) => {
                     bail!("Shallow subtree copy (SubtreeCopy) is not supported in modern sync")
                 }

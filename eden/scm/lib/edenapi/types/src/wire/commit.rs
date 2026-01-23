@@ -453,6 +453,9 @@ pub enum WireSubtreeChange {
     #[serde(rename = "3")]
     Import(WireRepoPathBuf, String, String),
 
+    #[serde(rename = "4")]
+    CrossRepoMerge(WireRepoPathBuf, String, String),
+
     #[serde(other, rename = "0")]
     Unknown,
 }
@@ -474,6 +477,11 @@ impl ToWire for SubtreeChange {
                 from_commit,
                 from_repo_url,
             } => WireSubtreeChange::Import(from_path.to_wire(), from_commit, from_repo_url),
+            Self::CrossRepoMerge {
+                from_path,
+                from_commit,
+                from_repo_url,
+            } => WireSubtreeChange::CrossRepoMerge(from_path.to_wire(), from_commit, from_repo_url),
         }
     }
 }
@@ -497,6 +505,13 @@ impl ToApi for WireSubtreeChange {
                 from_commit,
                 from_repo_url,
             }),
+            Self::CrossRepoMerge(from_path, from_commit, from_repo_url) => {
+                Ok(SubtreeChange::CrossRepoMerge {
+                    from_path: from_path.to_api()?,
+                    from_commit,
+                    from_repo_url,
+                })
+            }
             Self::Unknown => Err(WireToApiConversionError::UnrecognizedEnumVariant(
                 "WireSubtreeChange",
             )),

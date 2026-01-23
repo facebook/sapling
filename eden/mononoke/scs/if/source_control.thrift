@@ -2285,6 +2285,12 @@ struct SubtreeImport {
   3: string source_url;
 }
 
+struct SubtreeCrossRepoMerge {
+  1: Path source_path;
+  2: string source_commit_id;
+  3: string source_url;
+}
+
 @hack.MigrationBlockingLegacyJSONSerialization
 union SubtreeChange {
   1: SubtreeCopy subtree_copy;
@@ -2292,6 +2298,8 @@ union SubtreeChange {
   2: SubtreeMerge subtree_merge;
 
   3: SubtreeImport subtree_import;
+
+  4: SubtreeCrossRepoMerge subtree_cross_repo_merge;
 }
 
 struct CommitSubtreeChangesResponse {

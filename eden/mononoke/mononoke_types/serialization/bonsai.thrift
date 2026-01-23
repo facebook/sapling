@@ -239,6 +239,22 @@ struct SubtreeImport {
   3: string from_repo_url;
 }
 
+// A subtree cross-repo merge marks an entire subtree as *merged* with
+// a path in a different repository.  History operations for these files should
+// include the merge with the source repository.  Note that Mononoke does not
+// follow these links, it merely stores the fact that the link exists.
+struct SubtreeCrossRepoMerge {
+  // Path in the source commit the subtree is merged from.
+  1: path.MPath from_path;
+
+  // Source commit id in the source repository.  The exact meaning of this
+  // id is up to the source repository.
+  2: string from_commit;
+
+  // Source repository url.
+  3: string from_repo_url;
+}
+
 // A change that applies to a whole subtree.
 //
 // Subtree changes can have two kinds of effects:
@@ -281,6 +297,15 @@ union SubtreeChange {
   // This change is *not* manifest altering.  The file changes will contain the
   // necessary changes to import the source to the destination.
   4: SubtreeImport subtree_import;
+  // This subtree is merged with a subtree from another repository (cross-repo merge).
+  //
+  // This change modifies history to include a merge with another repository.
+  // Note: Mononoke does not follow that link, it merely stores the fact that
+  // the link exists.
+  //
+  // This change is *not* manifest altering.  The file changes will contain the
+  // necessary changes to merge the source with the destination.
+  5: SubtreeCrossRepoMerge subtree_cross_repo_merge;
 }
 
 @rust.Type{name = "sorted_vector_map::SortedVectorMap"}

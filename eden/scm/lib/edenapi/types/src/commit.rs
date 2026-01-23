@@ -741,6 +741,11 @@ pub enum SubtreeChange {
         from_commit: String,
         from_repo_url: String,
     },
+    CrossRepoMerge {
+        from_path: RepoPathBuf,
+        from_commit: String,
+        from_repo_url: String,
+    },
 }
 
 #[auto_wire]

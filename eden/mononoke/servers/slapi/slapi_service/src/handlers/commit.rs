@@ -1410,6 +1410,15 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
                                     from_commit,
                                     from_repo_url,
                                 ),
+                                EdenapiSubtreeChange::CrossRepoMerge {
+                                    from_path,
+                                    from_commit,
+                                    from_repo_url,
+                                } => SubtreeChange::cross_repo_merge(
+                                    to_mpath(from_path)?,
+                                    from_commit,
+                                    from_repo_url,
+                                ),
                             };
                             Ok((mpath, subtree_change))
                         })

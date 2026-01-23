@@ -39,6 +39,7 @@ use mononoke_api::UnifiedDiff;
 use mononoke_types::MPath;
 use mononoke_types::SubtreeChange;
 use mononoke_types::subtree_change::SubtreeCopy;
+use mononoke_types::subtree_change::SubtreeCrossRepoMerge;
 use mononoke_types::subtree_change::SubtreeDeepCopy;
 use mononoke_types::subtree_change::SubtreeImport;
 use mononoke_types::subtree_change::SubtreeMerge;
@@ -639,6 +640,18 @@ impl AsyncIntoResponseWith<BTreeMap<String, thrift::SubtreeChange>>
                         source_url: from_repo_url,
                         ..Default::default()
                     }),
+                    SubtreeChange::SubtreeCrossRepoMerge(SubtreeCrossRepoMerge {
+                        from_path,
+                        from_commit,
+                        from_repo_url,
+                    }) => thrift::SubtreeChange::subtree_cross_repo_merge(
+                        thrift::SubtreeCrossRepoMerge {
+                            source_path: from_path.to_string(),
+                            source_commit_id: from_commit,
+                            source_url: from_repo_url,
+                            ..Default::default()
+                        },
+                    ),
                 };
                 Ok((path.to_string(), change))
             })

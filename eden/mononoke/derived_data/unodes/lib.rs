@@ -234,6 +234,7 @@ pub async fn find_unode_rename_sources(
                 })),
             ),
             SubtreeChange::SubtreeImport(_) => (to_path.clone(), None),
+            SubtreeChange::SubtreeCrossRepoMerge(_) => (to_path.clone(), None),
         },
     ));
 

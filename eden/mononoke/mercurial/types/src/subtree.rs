@@ -26,6 +26,7 @@ use mononoke_types::FileType;
 use mononoke_types::MPath;
 use mononoke_types::subtree_change::SubtreeChange;
 use mononoke_types::subtree_change::SubtreeCopy;
+use mononoke_types::subtree_change::SubtreeCrossRepoMerge;
 use mononoke_types::subtree_change::SubtreeDeepCopy;
 use mononoke_types::subtree_change::SubtreeImport;
 use mononoke_types::subtree_change::SubtreeMerge;
@@ -45,6 +46,7 @@ pub struct HgSubtreeChanges {
     pub deep_copies: Vec<HgSubtreeDeepCopy>,
     pub merges: Vec<HgSubtreeMerge>,
     pub imports: Vec<HgSubtreeImport>,
+    pub cross_repo_merges: Vec<HgSubtreeCrossRepoMerge>,
 }
 
 impl HgSubtreeChanges {
@@ -56,17 +58,20 @@ impl HgSubtreeChanges {
         let mut deep_copies = Vec::new();
         let mut merges = Vec::new();
         let mut imports = Vec::new();
+        let mut cross_repo_merges = Vec::new();
         for changes in all_changes {
             copies.extend(changes.copies);
             deep_copies.extend(changes.deepcopies);
             merges.extend(changes.merges);
             imports.extend(changes.imports);
+            cross_repo_merges.extend(changes.xmerges);
         }
         Ok(HgSubtreeChanges {
             copies,
             deep_copies,
             merges,
             imports,
+            cross_repo_merges,
         })
     }
 
@@ -75,6 +80,7 @@ impl HgSubtreeChanges {
             && self.deep_copies.is_empty()
             && self.merges.is_empty()
             && self.imports.is_empty()
+            && self.cross_repo_merges.is_empty()
     }
 
     /// Get the set of changeset ids that are referenced by this set of changes.
@@ -98,6 +104,7 @@ impl HgSubtreeChanges {
             deepcopies: self.deep_copies.clone(),
             merges: self.merges.clone(),
             imports: self.imports.clone(),
+            xmerges: self.cross_repo_merges.clone(),
             version: 1,
         }];
         let json = serde_json::to_string(&all_changes).context("Failed to serialize changes")?;
@@ -129,6 +136,7 @@ impl HgSubtreeChanges {
         let mut deep_copies = Vec::new();
         let mut merges = Vec::new();
         let mut imports = Vec::new();
+        let mut cross_repo_merges = Vec::new();
         for (path, change) in subtree_changes.iter() {
             match change {
                 SubtreeChange::SubtreeCopy(SubtreeCopy {
@@ -182,6 +190,18 @@ impl HgSubtreeChanges {
                         url: from_repo_url.clone(),
                     });
                 }
+                SubtreeChange::SubtreeCrossRepoMerge(SubtreeCrossRepoMerge {
+                    from_path,
+                    from_commit,
+                    from_repo_url,
+                }) => {
+                    cross_repo_merges.push(HgSubtreeCrossRepoMerge {
+                        from_path: from_path.clone(),
+                        to_path: path.clone(),
+                        from_commit: from_commit.clone(),
+                        url: from_repo_url.clone(),
+                    });
+                }
             }
         }
         Ok(Some(HgSubtreeChanges {
@@ -189,6 +209,7 @@ impl HgSubtreeChanges {
             deep_copies,
             merges,
             imports,
+            cross_repo_merges,
         }))
     }
 }
@@ -203,6 +224,8 @@ pub struct HgSubtreeChangesVersion {
     merges: Vec<HgSubtreeMerge>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     imports: Vec<HgSubtreeImport>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    xmerges: Vec<HgSubtreeCrossRepoMerge>,
     #[serde(rename = "v", with = "version")]
     #[allow(unused)]
     version: u64,
@@ -267,6 +290,16 @@ pub struct HgSubtreeMerge {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct HgSubtreeImport {
+    pub from_commit: String,
+    #[serde(with = "mpath")]
+    pub from_path: MPath,
+    #[serde(with = "mpath")]
+    pub to_path: MPath,
+    pub url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct HgSubtreeCrossRepoMerge {
     pub from_commit: String,
     #[serde(with = "mpath")]
     pub from_path: MPath,
@@ -425,6 +458,12 @@ mod tests {
                     from_commit: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee".to_string(),
                     url: "other:repo".to_string(),
                 }],
+                cross_repo_merges: vec![HgSubtreeCrossRepoMerge {
+                    from_path: MPath::new("k").unwrap(),
+                    to_path: MPath::new("l").unwrap(),
+                    from_commit: "ffffffffffffffffffffffffffffffffffffffff".to_string(),
+                    url: "xmerge:repo".to_string(),
+                }],
             },
             concat!(
                 r##"[{"copies":[{"from_commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","from_path":"a","to_path":"b"},"##,
@@ -432,6 +471,7 @@ mod tests {
                 r##""deepcopies":[{"from_commit":"cccccccccccccccccccccccccccccccccccccccc","from_path":"e","to_path":"f"}],"##,
                 r##""merges":[{"from_commit":"dddddddddddddddddddddddddddddddddddddddd","from_path":"g","to_path":"h"}],"##,
                 r##""imports":[{"from_commit":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","from_path":"i","to_path":"j","url":"other:repo"}],"##,
+                r##""xmerges":[{"from_commit":"ffffffffffffffffffffffffffffffffffffffff","from_path":"k","to_path":"l","url":"xmerge:repo"}],"##,
                 r##""v":1}]"##
             ),
         );
