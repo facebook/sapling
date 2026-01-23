@@ -28,7 +28,10 @@ pub(crate) fn init() {
             // The pure Rust logic does not understand revlog but fine with eagerepo.
             // Note: The Python logic might still want to use the non-eager storage
             // like filescmstore etc.
-            let store_path = info.store_path();
+            let store_path = match info.store_path() {
+                Some(p) => p,
+                None => return Ok(None),
+            };
             let format = match info.has_requirement("git") {
                 true => SerializationFormat::Git,
                 false => SerializationFormat::Hg,

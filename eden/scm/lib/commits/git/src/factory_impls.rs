@@ -55,7 +55,9 @@ fn open_git(
     info: &dyn StoreInfo,
     is_dotgit: bool,
 ) -> anyhow::Result<Box<dyn DagCommits + Send + 'static>> {
-    let store_path = info.store_path();
+    let store_path = info
+        .store_path()
+        .ok_or_else(|| anyhow::anyhow!("git commits require a store path"))?;
     let metalog = info.metalog()?;
     let mut metalog = metalog.write();
     let git_path = calculate_git_path(store_path)?;

@@ -517,7 +517,8 @@ pub trait StoreInfo: 'static {
     /// Provides the config.
     fn config(&self) -> &dyn configmodel::Config;
     /// Provide the "storage path", which is usually `.sl/store` in the backing repo.
-    fn store_path(&self) -> &Path;
+    /// Returns `None` for ephemeral repos with no local disk storage.
+    fn store_path(&self) -> Option<&Path>;
     /// Provide the remote peer.
     fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn SaplingRemoteApi>>>;
     // Provide the metalog, useful to sync refs from git.

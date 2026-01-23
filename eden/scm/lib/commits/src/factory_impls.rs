@@ -65,11 +65,15 @@ fn maybe_construct_commits(
         true => SerializationFormat::Git,
         false => SerializationFormat::Hg,
     };
+
+    let Some(store_path) = info.store_path() else {
+        return Ok(None);
+    };
     if info.has_requirement(LAZY_STORE_REQUIREMENT) {
         let eden_api = get_required_edenapi(info)?;
         tracing::info!(target: "changelog_info", changelog_backend="lazy");
         Ok(Some(open_hybrid(
-            info.store_path(),
+            store_path,
             eden_api,
             true,
             false,
@@ -78,12 +82,12 @@ fn maybe_construct_commits(
         )?))
     } else if info.has_requirement(DOUBLE_WRITE_REQUIREMENT) {
         tracing::info!(target: "changelog_info", changelog_backend="doublewrite");
-        Ok(Some(open_double(info.store_path(), format)?))
+        Ok(Some(open_double(store_path, format)?))
     } else if info.has_requirement(HYBRID_REQUIREMENT) {
         let eden_api = get_required_edenapi(info)?;
         tracing::info!(target: "changelog_info", changelog_backend="hybrid");
         Ok(Some(open_hybrid(
-            info.store_path(),
+            store_path,
             eden_api,
             false,
             true,
@@ -94,7 +98,7 @@ fn maybe_construct_commits(
         let eden_api = get_required_edenapi(info)?;
         tracing::info!(target: "changelog_info", changelog_backend="lazytext");
         Ok(Some(open_hybrid(
-            info.store_path(),
+            store_path,
             eden_api,
             false,
             false,
@@ -103,17 +107,10 @@ fn maybe_construct_commits(
         )?))
     } else if info.has_requirement(SEGMENTS_REQUIREMENT) {
         tracing::info!(target: "changelog_info", changelog_backend="segments");
-        Ok(Some(open_segments(
-            info.store_path(),
-            format,
-            has_invalid_hash,
-        )?))
+        Ok(Some(open_segments(store_path, format, has_invalid_hash)?))
     } else {
         tracing::info!(target: "changelog_info", changelog_backend="rustrevlog");
-        Ok(Some(Box::new(RevlogCommits::new(
-            info.store_path(),
-            format,
-        )?)))
+        Ok(Some(Box::new(RevlogCommits::new(store_path, format)?)))
     }
 }
 

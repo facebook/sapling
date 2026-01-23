@@ -21,7 +21,10 @@ pub(crate) fn setup_git_store_constructor() {
     ) -> anyhow::Result<Option<Box<dyn StoreOutput>>> {
         if info.has_requirement("git-store") {
             const GIT_DIR_FILE: &str = "gitdir";
-            let store_path = info.store_path();
+            let store_path = match info.store_path() {
+                Some(p) => p,
+                None => return Ok(None),
+            };
             let git_dir = store_path.join(fs_err::read_to_string(store_path.join(GIT_DIR_FILE))?);
             let store = GitStore::open(&git_dir, info.config()).context("opening git store")?;
             let store = Arc::new(store);

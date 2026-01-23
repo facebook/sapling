@@ -27,8 +27,8 @@ impl StoreInfo for Repo {
         Repo::config(self)
     }
 
-    fn store_path(&self) -> &Path {
-        &self.store_path
+    fn store_path(&self) -> Option<&Path> {
+        Some(&self.store_path)
     }
 
     fn remote_peer(&self) -> anyhow::Result<Option<Arc<dyn SaplingRemoteApi>>> {
