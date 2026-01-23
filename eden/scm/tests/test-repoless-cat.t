@@ -114,3 +114,60 @@ Test --output with %% (literal percent):
   $ hg cat -R test:server -r $B --output 'output/%%test' foo
   $ cat 'output/%test'
   foo content
+
+Test --output with absolute path:
+
+  $ rm -rf output
+  $ hg cat -R test:server -r $B --output "$TESTTMP/output/%s" foo
+  $ cat "$TESTTMP/output/foo"
+  foo content
+
+Test --output with %% in directory name:
+
+  $ rm -rf output
+  $ hg cat -R test:server -r $B --output 'output/%%dir%%/%s' foo
+  $ cat 'output/%dir%/foo'
+  foo content
+
+Test --output with deeper path (multiple components):
+
+  $ rm -rf output
+  $ hg cat -R test:server -r $B --output 'output/a/b/c/%s' foo
+  $ cat output/a/b/c/foo
+  foo content
+
+  $ rm -rf output
+  $ hg cat -R test:server -r $B --output 'output/%h/files/%p' dir/file
+  $ cat output/${SHORT_B}/files/dir/file
+  dir content
+
+Test we don't blow away existing directories:
+
+  $ rm -rf output
+  $ mkdir -p output/precious
+  $ echo "precious content" > output/precious/file
+  $ hg cat -R test:server -r $B --output output/precious dir/file
+  abort: can't clear conflicts after handling error "failed to open file `*precious`: *": cannot write to "*precious": conflicting directory exists at "*precious" (glob)
+  [255]
+  $ cat output/precious/file
+  precious content
+
+#if no-windows
+
+Test cat --output preserves executable and symlink metadata:
+
+  $ newserver server2
+  $ drawdag <<'EOS'
+  > A  # A/script = #!/bin/sh\necho hello\n (executable)
+  >    # A/link = script (symlink)
+  >    # A/normal = normal content\n
+  > EOS
+
+  $ rm -rf output
+  $ hg cat -R test:server2 -r $A --output 'output/%p' script link normal
+  $ ls -l output
+  l* link -> script (glob)
+  -rw-r--r-- normal
+  -rwxr-xr-x script
+
+#endif
