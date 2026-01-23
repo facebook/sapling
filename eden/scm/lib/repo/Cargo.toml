@@ -26,6 +26,7 @@ sapling-constructors = { version = "0.1.0", path = "../constructors", default-fe
 sapling-eagerepo = { version = "0.1.0", path = "../eagerepo" }
 sapling-edenapi = { version = "0.1.0", path = "../edenapi" }
 sapling-factory = { version = "0.1.0", path = "../util/factory" }
+sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
@@ -44,7 +45,7 @@ thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
+sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 tempfile = "3.22"
 
 [features]

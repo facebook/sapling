@@ -15,6 +15,7 @@ use configloader::config::Options;
 use configloader::hg::RepoInfo;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
+use manifest_tree::ReadTreeManifest;
 use metalog::MetaLog;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
@@ -28,6 +29,7 @@ use crate::scmstore::build_scm_file_store;
 use crate::scmstore::build_scm_tree_store;
 use crate::slapi_client::OnceSlapi;
 use crate::slapi_client::get_eden_api;
+use crate::trees::SlapiTreeResolver;
 
 /// A lightweight repo flavor that doesn't require local disk presence.
 /// It can load config from a RepoUrl and provides access to SLAPI client
@@ -38,6 +40,7 @@ pub struct SlapiRepo {
     eden_api: OnceSlapi,
     file_store: OnceCell<Arc<dyn FileStore>>,
     tree_store: OnceCell<Arc<dyn TreeStore>>,
+    tree_resolver: OnceCell<Arc<dyn ReadTreeManifest + Send + Sync>>,
 }
 
 impl SlapiRepo {
@@ -64,6 +67,7 @@ impl SlapiRepo {
             eden_api: Default::default(),
             file_store: Default::default(),
             tree_store: Default::default(),
+            tree_resolver: Default::default(),
         })
     }
 
@@ -110,6 +114,17 @@ impl SlapiRepo {
 
         Ok(ts)
     }
+
+    /// Get the tree resolver, constructing it if necessary.
+    pub fn tree_resolver(&self) -> Result<Arc<dyn ReadTreeManifest + Send + Sync>> {
+        let tr = self.tree_resolver.get_or_try_init(|| {
+            Ok::<_, anyhow::Error>(Arc::new(SlapiTreeResolver::new(
+                self.eden_api()?,
+                self.tree_store()?,
+            )))
+        })?;
+        Ok(Arc::clone(tr))
+    }
 }
 
 impl StoreInfo for SlapiRepo {
@@ -150,8 +165,10 @@ mod tests {
     use eagerepo::EagerRepo;
     use format_util::hg_sha1_serialize;
     use manifest_tree::Flag;
+    use manifest_tree::Manifest;
     use manifest_tree::TreeElement;
     use manifest_tree::TreeEntry;
+    use pathmatcher::AlwaysMatcher;
     use storemodel::SerializationFormat;
     use types::FetchContext;
     use types::HgId;
@@ -226,5 +243,44 @@ mod tests {
         let fctx = FetchContext::new(FetchMode::AllowRemote);
         let content = tree_store.get_content(fctx, &key.path, key.hgid).unwrap();
         assert_eq!(content.into_vec(), tree_content);
+    }
+
+    #[test]
+    fn test_tree_resolver() {
+        let dir = tempfile::tempdir().unwrap();
+        let eager_repo = EagerRepo::open(dir.path()).unwrap();
+
+        // Create a tree with one file.
+        let elements = vec![TreeElement::new(
+            PathComponentBuf::from_string("bar.txt".to_string()).unwrap(),
+            HgId::null_id().clone(),
+            Flag::File(Default::default()),
+        )];
+        let entry = TreeEntry::from_elements(elements, SerializationFormat::Hg);
+        let tree_content = entry.as_ref();
+        let tree_data = hg_sha1_serialize(tree_content, HgId::null_id(), HgId::null_id());
+        let tree_id = eager_repo.add_sha1_blob(&tree_data).unwrap();
+
+        // Create a commit referencing the tree.
+        let commit_text = format!("{}\ntest\n\ntest commit", tree_id.to_hex());
+        let commit_data =
+            hg_sha1_serialize(commit_text.as_bytes(), HgId::null_id(), HgId::null_id());
+        let commit_id = eager_repo.add_sha1_blob(&commit_data).unwrap();
+        block_on(eager_repo.flush()).unwrap();
+
+        let config = BTreeMap::<&str, &str>::new();
+        let url = RepoUrl::from_str(&config, &format!("eager:{}", dir.path().display())).unwrap();
+        let slapi_repo = SlapiRepo::load(url).unwrap();
+
+        // Use tree_resolver to get root tree id from commit.
+        let tree_resolver = slapi_repo.tree_resolver().unwrap();
+        let root_id = tree_resolver.get_root_id(&commit_id).unwrap();
+        assert_eq!(root_id, tree_id);
+
+        // Use tree_resolver to get tree manifest from commit.
+        let manifest = tree_resolver.get(&commit_id).unwrap();
+        let files: Vec<_> = manifest.files(AlwaysMatcher::new()).collect();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].as_ref().unwrap().path.as_str(), "bar.txt");
     }
 }

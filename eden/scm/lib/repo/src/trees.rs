@@ -9,7 +9,13 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use anyhow::bail;
+use async_runtime::block_on;
 use commits_trait::DagCommits;
+use configmodel::Text;
+use edenapi::SaplingRemoteApi;
+use format_util::CommitFields;
+use format_util::HgCommitLazyFields;
+use format_util::hg_sha1_deserialize;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
@@ -63,5 +69,54 @@ impl ReadTreeManifest for TreeManifestResolver {
         }
 
         Ok(tree_ids[0].1)
+    }
+}
+
+/// A tree manifest resolver that fetches commit data from SLAPI.
+pub struct SlapiTreeResolver {
+    eden_api: Arc<dyn SaplingRemoteApi>,
+    tree_store: Arc<dyn TreeStore>,
+}
+
+impl SlapiTreeResolver {
+    pub fn new(eden_api: Arc<dyn SaplingRemoteApi>, tree_store: Arc<dyn TreeStore>) -> Self {
+        SlapiTreeResolver {
+            eden_api,
+            tree_store,
+        }
+    }
+}
+
+impl ReadTreeManifest for SlapiTreeResolver {
+    fn get(&self, commit_id: &HgId) -> Result<TreeManifest> {
+        if commit_id.is_null() {
+            return Ok(TreeManifest::ephemeral(self.tree_store.clone()));
+        }
+
+        Ok(TreeManifest::durable(
+            self.tree_store.clone(),
+            self.get_root_id(commit_id)?,
+        ))
+    }
+
+    fn get_root_id(&self, commit_id: &HgId) -> Result<HgId> {
+        if commit_id.is_null() {
+            return Ok(hgid::NULL_ID);
+        }
+
+        let commit_text = block_on(async {
+            self.eden_api
+                .commit_revlog_data(vec![commit_id.clone()])
+                .await?
+                .single()
+                .await
+        })?;
+
+        let text = commit_text
+            .revlog_data
+            .slice_to_bytes(hg_sha1_deserialize(&commit_text.revlog_data)?.0);
+        let commit_fields = HgCommitLazyFields::new(Text::from_utf8_lossy(text));
+
+        commit_fields.root_tree()
     }
 }
