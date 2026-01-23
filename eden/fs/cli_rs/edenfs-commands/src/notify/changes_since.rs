@@ -14,8 +14,11 @@ use async_trait::async_trait;
 use clap::Parser;
 use edenfs_asserted_states::ChangeEvent;
 use edenfs_asserted_states::Changes;
+use edenfs_asserted_states::get_changes_between_commit_transition;
 use edenfs_asserted_states::get_streaming_changes_client;
+use edenfs_client::changes_since::ChangeNotification::LargeChange;
 use edenfs_client::changes_since::ChangesSinceV2Result;
+use edenfs_client::changes_since::LargeChangeNotification::CommitTransition;
 use edenfs_client::types::JournalPosition;
 use edenfs_client::utils::get_mount_point;
 use futures::StreamExt;
@@ -93,28 +96,67 @@ pub struct ChangesSinceCmd {
     #[clap(short, long, default_value = "0")]
     /// [Unit: ms] number of milliseconds to wait between events
     throttle: u64,
+
+    #[clap(
+        long,
+        help = "Convert Commit Transitions to a list of changes between the two commits"
+    )]
+    unpack_commit_transitions: bool,
 }
 
 impl ChangesSinceCmd {
-    fn print_result(&self, result: &ChangesSinceV2Result) {
+    async fn unpack_commit_transitions_in_result(
+        &self,
+        old_result: ChangesSinceV2Result,
+    ) -> Result<ChangesSinceV2Result> {
+        let mount_point = get_mount_point(&self.mount_point)?;
+        // Append the changes between the commit transitions after the commit transition change
+        let mut unpacked_changes = Vec::new();
+        for change in old_result.changes {
+            unpacked_changes.push(change.clone());
+            if let LargeChange(CommitTransition(commit_transition)) = change {
+                let unpacked =
+                    get_changes_between_commit_transition(&mount_point, commit_transition).await?;
+                for ch in unpacked {
+                    unpacked_changes.push(ch);
+                }
+            }
+        }
+        let result = ChangesSinceV2Result {
+            to_position: old_result.to_position,
+            changes: unpacked_changes,
+        };
+        Ok(result)
+    }
+
+    async fn print_result(&self, result: &ChangesSinceV2Result) -> Result<()> {
+        let mut output = result;
+        let unpacked: ChangesSinceV2Result;
+        if self.unpack_commit_transitions {
+            unpacked = self
+                .unpack_commit_transitions_in_result(result.clone())
+                .await?;
+            output = &unpacked;
+        }
         println!(
             "{}",
             if self.json {
                 if self.formatted_position {
                     let mut value =
-                        serde_json::to_value(result).expect("Failed to serialize result to JSON.");
+                        serde_json::to_value(output).expect("Failed to serialize result to JSON.");
                     value["to_position"] =
-                        serde_json::Value::String(result.to_position.to_string());
+                        serde_json::Value::String(output.to_position.to_string());
                     serde_json::to_string(&value).expect("Failed to serialize result to JSON.")
                         + "\n"
                 } else {
-                    serde_json::to_string(&result).expect("Failed to serialize result to JSON.")
+                    serde_json::to_string(&output).expect("Failed to serialize result to JSON.")
                         + "\n"
                 }
             } else {
-                result.to_string()
+                output.to_string()
             }
         );
+        Ok(())
     }
 
     #[allow(dead_code)]
@@ -169,7 +211,7 @@ impl crate::Subcommand for ChangesSinceCmd {
             )
             .await?;
 
-        self.print_result(&result);
+        let _ = self.print_result(&result).await;
         let mut rc = 0;
         if self.subscribe {
             let stream = client
@@ -196,7 +238,7 @@ impl crate::Subcommand for ChangesSinceCmd {
                     .for_each(|result| async {
                         match result {
                             Ok(Changes::ChangesSince(result)) => {
-                                self.print_result(&result);
+                                let _ = self.print_result(&result).await;
                             }
                             Ok(Changes::ChangeEvent(result)) => {
                                 self.print_change_event(&result);
@@ -211,7 +253,9 @@ impl crate::Subcommand for ChangesSinceCmd {
                 stream
                     .for_each(|result| async {
                         match result {
-                            Ok(result) => self.print_result(&result),
+                            Ok(result) => {
+                                let _ = self.print_result(&result).await;
+                            }
                             Err(e) => {
                                 eprintln!("Error: {}", e);
                             }

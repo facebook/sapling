@@ -87,3 +87,19 @@ def stat_mtime_to_timespec(stat: os.stat_result) -> TimeSpec:
     return TimeSpec(
         seconds=int(stat.st_mtime), nanoSeconds=(stat.st_mtime_ns % 1_000_000_000)
     )
+
+
+def str_to_int_array(s: str) -> List[int]:
+    return [ord(x) for x in s]
+
+
+def int_array_to_str(arr: List[int]) -> str:
+    return "".join([chr(x) for x in arr])
+
+
+def hex_str_to_int_array(s: str) -> List[int]:
+    return list(bytes.fromhex(s))
+
+
+def int_array_to_hash_str(arr: List[int]) -> str:
+    return bytearray(arr).hex()

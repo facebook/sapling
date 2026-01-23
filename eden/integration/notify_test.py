@@ -13,17 +13,19 @@ import subprocess
 import sys
 import time
 import typing as t
+from typing import Any
 
-from .lib import testcase
+from .lib import testcase, util
 
 
 @testcase.eden_repo_test
 class NotifyTest(testcase.EdenRepoTest):
     git_test_supported = False
+    initial_commit: str = ""
 
     def populate_repo(self) -> None:
         self.repo.write_file("hello", "hola\n")
-        self.repo.commit("Initial commit.")
+        self.initial_commit = self.repo.commit("Initial commit.")
 
     def setUp(self) -> None:
         super().setUp()
@@ -38,7 +40,7 @@ class NotifyTest(testcase.EdenRepoTest):
             self.loop.close()
         super().tearDown()
 
-    async def subscribe(self) -> asyncio.subprocess.Process:
+    async def subscribe(self, *args) -> asyncio.subprocess.Process:
         self.mkdir(".edenfs-notifications-state")
         # Wait to prevent the file creation from showing up in the stream
         time.sleep(1)
@@ -50,6 +52,7 @@ class NotifyTest(testcase.EdenRepoTest):
             "5",
             "--json",
             self.mount,
+            *args,
         )
         env["EDENFS_LOG"] = "edenfs=trace"
 
@@ -144,7 +147,7 @@ class NotifyTest(testcase.EdenRepoTest):
     async def wait_for_next_event(
         self,
         sub: asyncio.subprocess.Process,
-        action: t.Callable[[], None] = lambda: None,
+        action: t.Callable[[], Any] = lambda: None,
         attempt: int = 10,
     ) -> t.Optional[t.Dict[str, t.Any]]:
         """Pull until the next event generated from the subscription
@@ -492,3 +495,81 @@ class NotifyTest(testcase.EdenRepoTest):
                 in changes,
                 msg=f"changes: {changes}",
             )
+
+    async def test_subscribe_unpack_commit_transitions(self) -> None:
+        self.eden_repo.write_file("new_file", "hola\n")
+        second_commit = self.eden_repo.commit("Add new file.")
+
+        subscription = await self.subscribe("--unpack-commit-transitions")
+
+        event = await self.wait_for_next_event(subscription)
+
+        self.assertIsNotNone(event)
+        self.assertIsNotNone(event["to_position"])
+        self.assertIsNotNone(event["to_position"]["mount_generation"])
+        self.assertIsNotNone(event["to_position"]["sequence_number"])
+        self.assertIsNotNone(event["to_position"]["snapshot_hash"])
+        self.assertListEqual(event["changes"], [])
+
+        self.eden_repo.update(self.initial_commit)
+
+        event = await self.wait_for_next_event(subscription, attempt=2)
+
+        self.assertIsNotNone(event)
+        self.assertIsNotNone(event["to_position"])
+        self.assertIsNotNone(event["to_position"]["mount_generation"])
+        self.assertIsNotNone(event["to_position"]["sequence_number"])
+        self.assertIsNotNone(event["to_position"]["snapshot_hash"])
+        self.assertListEqual(
+            event["changes"],
+            [
+                {
+                    "LargeChange": {
+                        "CommitTransition": {
+                            "from": util.hex_str_to_int_array(second_commit),
+                            "to": util.hex_str_to_int_array(self.initial_commit),
+                        }
+                    }
+                },
+                {
+                    "SmallChange": {
+                        "Removed": {
+                            "file_type": "Regular",
+                            "path": util.str_to_int_array("new_file"),
+                        }
+                    }
+                },
+            ],
+            msg=f"event: {event['changes']}",
+        )
+
+        self.eden_repo.update(second_commit)
+        event = await self.wait_for_next_event(subscription)
+
+        self.assertIsNotNone(event)
+        self.assertIsNotNone(event["to_position"])
+        self.assertIsNotNone(event["to_position"]["mount_generation"])
+        self.assertIsNotNone(event["to_position"]["sequence_number"])
+        self.assertIsNotNone(event["to_position"]["snapshot_hash"])
+        self.assertListEqual(
+            event["changes"],
+            [
+                {
+                    "LargeChange": {
+                        "CommitTransition": {
+                            "from": util.hex_str_to_int_array(self.initial_commit),
+                            "to": util.hex_str_to_int_array(second_commit),
+                        }
+                    }
+                },
+                {
+                    "SmallChange": {
+                        "Added": {
+                            "file_type": "Regular",
+                            "path": util.str_to_int_array("new_file"),
+                        }
+                    }
+                },
+            ],
+            msg=f"event: {event['changes']}",
+        )
