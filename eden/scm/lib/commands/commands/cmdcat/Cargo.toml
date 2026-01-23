@@ -13,6 +13,7 @@ license = "GPL-2.0-only"
 anyhow = "1.0.98"
 blob = { version = "0.1.0", path = "../../../blob" }
 cmdutil = { version = "0.1.0", path = "../../cmdutil" }
+flume = "0.11.1"
 sapling-clidispatch = { version = "0.1.0", path = "../../../clidispatch" }
 sapling-manifest = { version = "0.1.0", path = "../../../manifest" }
 sapling-pathmatcher = { version = "0.1.0", path = "../../../pathmatcher" }

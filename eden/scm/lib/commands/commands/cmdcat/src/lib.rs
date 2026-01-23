@@ -9,6 +9,9 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use anyhow::anyhow;
 use anyhow::bail;
@@ -49,6 +52,55 @@ define_flags! {
 
         #[args]
         args: Vec<String>,
+    }
+}
+
+/// FirstError helps propagate the first error seen in parallel operations. It also provides a
+/// "has_error" method to aid in cancellation.
+struct FirstError {
+    tx: flume::Sender<anyhow::Error>,
+    rx: flume::Receiver<anyhow::Error>,
+    has_error: Arc<AtomicBool>,
+}
+
+impl Clone for FirstError {
+    fn clone(&self) -> Self {
+        FirstError {
+            tx: self.tx.clone(),
+            rx: self.rx.clone(),
+            has_error: self.has_error.clone(),
+        }
+    }
+}
+
+impl FirstError {
+    fn new() -> Self {
+        let (tx, rx) = flume::bounded(1);
+        FirstError {
+            tx,
+            rx,
+            has_error: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    /// Store error (if first).
+    fn send_error(&self, err: anyhow::Error) {
+        self.has_error.store(true, Ordering::Relaxed);
+        let _ = self.tx.try_send(err);
+    }
+
+    /// Return whether an error has been stored. Useful for cancelation.
+    fn has_error(&self) -> bool {
+        self.has_error.load(Ordering::Relaxed)
+    }
+
+    /// Wait for all copies this FirstError to be dropped, and then yield the first error, if any.
+    fn wait(self) -> anyhow::Result<()> {
+        drop(self.tx);
+        match self.rx.try_recv() {
+            Ok(err) => Err(err),
+            Err(_) => Ok(()),
+        }
     }
 }
 
