@@ -22,6 +22,18 @@ Shipped features:
 - Author avatars with deterministic colors
 - Soft diff colors (cyan-blue additions, salmon deletions)
 
+## Current Milestone: v1.1 Refinement & Fixes
+
+**Goal:** Fix v1.0 issues discovered in usage and refine color scheme to match Graphite more closely
+
+**Target improvements:**
+- Fix broken auto-scroll sync between left and middle columns
+- Reduce visual prominence of middle column action bar
+- Fix double-scroll issue in left column
+- Show +/- line counts in file change statistics
+- Add configurable editor for opening files
+- Match Graphite's color palette more closely (darker backgrounds, muted greens, better grays)
+
 ## Requirements
 
 ### Validated
@@ -40,7 +52,12 @@ Shipped features:
 
 ### Active
 
-(None yet — discover through usage)
+- [ ] Auto-scroll sync properly positions "you are here" commit at viewport top
+- [ ] Top action bar has reduced opacity until hovered
+- [ ] Left column has single scrollable area (no double-scroll)
+- [ ] Files changed shows +123/-45 style line counts
+- [ ] User can configure preferred editor for opening files
+- [ ] Color scheme matches Graphite screenshots (darker backgrounds, muted additions, better grays)
 
 ### Out of Scope
 
@@ -74,4 +91,4 @@ The team previously used Graphite and is accustomed to its polished review UI. v
 | 12-color avatar palette with deterministic hash | Same author always gets same color for consistency | Good |
 
 ---
-*Last updated: 2026-01-22 after v1.0 milestone*
+*Last updated: 2026-01-23 after starting v1.1 milestone*
