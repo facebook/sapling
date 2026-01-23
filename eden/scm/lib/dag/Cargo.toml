@@ -19,7 +19,6 @@ async-trait = "0.1.86"
 bitflags = { version = "2.9", features = ["serde", "std"], default-features = false }
 byteorder = "1.5"
 fail = { version = "0.4", features = ["failpoints"] }
-fs2 = { version = "0.4", optional = true }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 indexmap = { version = "2.9.0", features = ["arbitrary", "rayon", "serde"] }
 rand = { version = "0.9", features = ["small_rng"] }
@@ -37,7 +36,6 @@ thiserror = "2.0.12"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]
-fs2 = "0.4"
 once_cell = "1.21"
 quickcheck = "1.0"
 sapling-dag-types = { version = "0.1.0", path = "dag-types" }
@@ -49,5 +47,5 @@ tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 
 [features]
 default = ["indexedlog-backend", "render"]
-indexedlog-backend = ["fs2", "sapling-indexedlog", "tempfile"]
+indexedlog-backend = ["sapling-indexedlog", "tempfile"]
 render = ["sapling-renderdag"]

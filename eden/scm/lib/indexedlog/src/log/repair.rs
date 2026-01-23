@@ -106,7 +106,6 @@ impl OpenOptions {
                     Ok(meta) => {
                         // If metadata can be read, trust it.
                         if meta.primary_len > primary_len {
-                            use fs2::FileExt as _;
                             // Log was truncated for some reason...
                             // (This should be relatively rare)
                             // Fill Log with 0s.
@@ -114,8 +113,8 @@ impl OpenOptions {
                                 .write(true)
                                 .open(&primary_path)
                                 .context(&primary_path, "cannot open for write")?;
-                            file.allocate(meta.primary_len)
-                                .context(&primary_path, "cannot fallocate")?;
+                            file.set_len(meta.primary_len)
+                                .context(&primary_path, "cannot extend file")?;
                             message += &format!(
                                 "Extended log to {:?} bytes required by meta\n",
                                 meta.primary_len

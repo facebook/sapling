@@ -23,7 +23,7 @@ pub fn spawn_pool(pool_size: usize) -> anyhow::Result<()> {
         .create(true)
         .write(true)
         .open(dir.join("spawn.lock"))?;
-    fs2::FileExt::lock_exclusive(&spawn_lock)?;
+    spawn_lock.lock()?;
 
     let existing = udsipc::pool::list_uds_paths(&dir, prefix)
         .take(pool_size)

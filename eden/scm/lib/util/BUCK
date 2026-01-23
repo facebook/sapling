@@ -66,7 +66,6 @@ rust_library(
         "fbsource//third-party/rust:dirs",
         "fbsource//third-party/rust:fn-error-context",
         "fbsource//third-party/rust:fs-err",
-        "fbsource//third-party/rust:fs2",
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:shellexpand",

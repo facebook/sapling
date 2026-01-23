@@ -17,7 +17,6 @@ anyhow = "1.0.98"
 bitflags = { version = "2.9", features = ["serde", "std"], default-features = false }
 byteorder = "1.5"
 fs-err = { version = "3", features = ["tokio"] }
-fs2 = "0.4"
 sapling-atomicfile = { version = "0.1.0", path = "../atomicfile" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-repolock = { version = "0.1.0", path = "../repolock" }

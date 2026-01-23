@@ -15,7 +15,6 @@ name = "runlog"
 [dependencies]
 anyhow = "1.0.98"
 chrono = { version = "0.4.41", features = ["clock", "serde", "std"], default-features = false }
-fs2 = "0.4"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 rand = { version = "0.9", features = ["small_rng"] }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }

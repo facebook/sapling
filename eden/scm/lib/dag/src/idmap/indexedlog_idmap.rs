@@ -519,7 +519,7 @@ impl Persist for IdMap {
                 .create(true)
                 .open(&path)?
         };
-        fs2::FileExt::lock_exclusive(&lock_file)?;
+        lock_file.lock()?;
         Ok(lock_file)
     }
 

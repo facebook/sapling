@@ -26,9 +26,9 @@ pub struct ScopedFileLock<'a> {
 impl<'a> ScopedFileLock<'a> {
     pub fn new(file: &'a mut File, exclusive: bool) -> io::Result<Self> {
         if exclusive {
-            fs2::FileExt::lock_exclusive(file)?;
+            file.lock()?;
         } else {
-            fs2::FileExt::lock_shared(file)?;
+            file.lock_shared()?;
         }
         Ok(ScopedFileLock { file })
     }
@@ -48,7 +48,7 @@ impl<'a> AsMut<File> for ScopedFileLock<'a> {
 
 impl<'a> Drop for ScopedFileLock<'a> {
     fn drop(&mut self) {
-        fs2::FileExt::unlock(self.file).expect("unlock");
+        self.file.unlock().expect("unlock");
     }
 }
 
@@ -240,10 +240,10 @@ fn lock_file(file: &File, exclusive: bool, non_blocking: bool) -> io::Result<()>
     }
     #[cfg(not(windows))]
     match (exclusive, non_blocking) {
-        (true, false) => fs2::FileExt::lock_exclusive(file)?,
-        (true, true) => fs2::FileExt::try_lock_exclusive(file)?,
-        (false, false) => fs2::FileExt::lock_shared(file)?,
-        (false, true) => fs2::FileExt::try_lock_shared(file)?,
+        (true, false) => file.lock()?,
+        (true, true) => file.try_lock()?,
+        (false, false) => file.lock_shared()?,
+        (false, true) => file.try_lock_shared()?,
     }
     Ok(())
 }
@@ -263,7 +263,7 @@ fn unlock_file(file: &File) -> io::Result<()> {
     }
     #[cfg(not(windows))]
     {
-        fs2::FileExt::unlock(file)?;
+        file.unlock()?;
     }
     Ok(())
 }

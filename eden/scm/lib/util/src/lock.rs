@@ -36,14 +36,16 @@ impl PathLock {
     /// Waits for the lock to be freed, if it's currently locked.
     pub fn exclusive<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let file = open_lockfile(path.as_ref())?;
-        fs2::FileExt::lock_exclusive(file.file())
+        file.file()
+            .lock()
             .path_context("error exclusive locking file", path.as_ref())?;
         Ok(PathLock { file })
     }
 
     pub fn shared<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let file = open_lockfile(path.as_ref())?;
-        fs2::FileExt::lock_shared(file.file())
+        file.file()
+            .lock_shared()
             .path_context("error shared locking file", path.as_ref())?;
         Ok(PathLock { file })
     }
@@ -53,7 +55,9 @@ impl PathLock {
     }
 
     pub fn unlock(&self) -> io::Result<()> {
-        fs2::FileExt::unlock(self.file.file())
+        self.file
+            .file()
+            .unlock()
             .path_context("error unlocking file", self.file.path())
     }
 
@@ -91,13 +95,13 @@ pub fn open_lockfile<P: AsRef<Path>>(path: P) -> io::Result<File> {
 
 pub fn try_lock_exclusive<P: AsRef<Path>>(path: P) -> io::Result<File> {
     let file = open_lockfile(path.as_ref())?;
-    fs2::FileExt::try_lock_exclusive(file.file())?;
+    file.file().try_lock()?;
     Ok(file)
 }
 
 pub fn try_lock_shared<P: AsRef<Path>>(path: P) -> io::Result<File> {
     let file = open_lockfile(path.as_ref())?;
-    fs2::FileExt::try_lock_shared(file.file())?;
+    file.file().try_lock_shared()?;
     Ok(file)
 }
 
@@ -143,7 +147,7 @@ impl ContentLock {
         let _dir_lock = PathLock::exclusive(&self.dir_lock_path)?;
         let file = match try_lock_exclusive(&self.lock_path) {
             Ok(lock_file) => lock_file,
-            Err(err) if err.kind() == fs2::lock_contended_error().kind() => {
+            Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
                 let contents = fs_err::read(&self.content_path)?;
                 return Err(LockContendedError {
                     path: self.content_path.clone(),
@@ -178,7 +182,7 @@ impl ContentLock {
         let _dir_lock = PathLock::shared(&self.dir_lock_path)?;
         match try_lock_shared(&self.lock_path) {
             Ok(_) => Ok(()),
-            Err(err) if err.kind() == fs2::lock_contended_error().kind() => {
+            Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
                 let contents = fs_err::read(&self.content_path)?;
                 Err(LockContendedError {
                     path: self.content_path.clone(),

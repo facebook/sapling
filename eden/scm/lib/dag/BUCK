@@ -17,7 +17,6 @@ rust_library(
             },
         }},
         "extra_buck_dependencies": {"dev-dependencies": [
-            "fbsource//third-party/rust:fs2",
             "fbsource//third-party/rust:tokio",
             "//eden/scm/lib/dag/dag-types:dag-types",
             "//eden/scm/lib/indexedlog:indexedlog",
@@ -28,7 +27,6 @@ rust_library(
                 "render",
             ],
             "indexedlog-backend": [
-                "fs2",
                 "sapling-indexedlog",
                 "tempfile",
             ],
@@ -63,7 +61,6 @@ rust_library(
         "fbsource//third-party/rust:bitflags",
         "fbsource//third-party/rust:byteorder",
         "fbsource//third-party/rust:fail",
-        "fbsource//third-party/rust:fs2",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:indexmap",
         "fbsource//third-party/rust:rand",

@@ -36,7 +36,6 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:chrono",
-        "fbsource//third-party/rust:fs2",
         "fbsource//third-party/rust:parking_lot",
         "fbsource//third-party/rust:rand",
         "fbsource//third-party/rust:serde",

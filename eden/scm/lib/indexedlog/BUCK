@@ -81,7 +81,6 @@ rust_library(
     test_labels = ["tpx-rust-no-backtrace-workaround"],
     deps = [
         "fbsource//third-party/rust:byteorder",
-        "fbsource//third-party/rust:fs2",
         "fbsource//third-party/rust:memmap2",
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:rand",

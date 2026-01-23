@@ -167,7 +167,7 @@ fn remove_file_ignore_missing<P: AsRef<Path>>(path: P) -> io::Result<()> {
 // locked (by running command). Return false if lock file doesn't exist.
 fn is_locked<P: AsRef<Path>>(path: P) -> Result<bool> {
     match fs::File::open(path.as_ref().with_extension(LOCK_EXT)) {
-        Ok(f) => Ok(fs2::FileExt::try_lock_shared(&f).is_err()),
+        Ok(f) => Ok(f.try_lock_shared().is_err()),
         Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(false),
         Err(err) => Err(Error::new(err)),
     }

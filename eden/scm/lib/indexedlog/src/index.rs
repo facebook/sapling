@@ -89,7 +89,6 @@ use byteorder::ByteOrder;
 use byteorder::LittleEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use fs2::FileExt as _;
 use minibytes::Bytes;
 use tracing::debug_span;
 use twox_hash::XxHash;
@@ -2469,7 +2468,7 @@ impl Index {
 
     pub(crate) fn try_clone_internal(&self, copy_dirty: bool) -> crate::Result<Index> {
         let file = match &self.file {
-            Some(f) => Some(f.duplicate().context(self.path(), "cannot duplicate")?),
+            Some(f) => Some(f.try_clone().context(self.path(), "cannot duplicate")?),
             None => None,
         };
 
