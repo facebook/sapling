@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::ops::Deref;
@@ -11,7 +12,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_runtime::block_on;
@@ -37,17 +37,12 @@ use repo_minimal_info::Requirements;
 pub use repo_minimal_info::read_sharedpath;
 use repolock::RepoLocker;
 use repourl::RepoUrl;
-use revisionstore::SaplingRemoteApiFileStore;
-use revisionstore::SaplingRemoteApiTreeStore;
 use revisionstore::scmstore;
-use revisionstore::scmstore::FileStoreBuilder;
-use revisionstore::scmstore::TreeStoreBuilder;
 use revisionstore::trait_impls::ArcFileStore;
 use revsets::errors::RevsetLookupError;
 use revsets::utils as revset_utils;
 use rewrite_macros::cached_field;
 use storemodel::FileStore;
-use storemodel::SerializationFormat;
 use storemodel::StoreInfo;
 use storemodel::StoreOutput;
 use storemodel::TreeStore;
@@ -60,6 +55,8 @@ use workingcopy::workingcopy::WorkingCopy;
 
 use crate::errors;
 use crate::init;
+use crate::scmstore::build_scm_file_store;
+use crate::scmstore::build_scm_tree_store;
 use crate::trees::TreeManifestResolver;
 
 const DEFAULT_CAPABILITIES: [&str; 1] = ["sapling-common"];
@@ -513,32 +510,7 @@ impl Repo {
             return Ok(store);
         }
 
-        tracing::trace!(target: "repo::file_store", "creating edenapi");
-        let eden_api = self.optional_eden_api().map_err(|err| err.tag_network())?;
-
-        tracing::trace!(target: "repo::file_store", "building filestore");
-        let mut file_builder = FileStoreBuilder::new(self.config()).local_path(self.store_path());
-
-        if let Some(eden_api) = eden_api {
-            tracing::trace!(target: "repo::file_store", "enabling edenapi");
-            file_builder = file_builder.edenapi(SaplingRemoteApiFileStore::new(eden_api));
-        } else {
-            tracing::trace!(target: "repo::file_store", "disabling edenapi");
-            file_builder = file_builder.override_edenapi(false);
-        }
-
-        // Note: This currently does nothing, since the "git" repo requirement makes
-        // try_construct_file_tree_store return a GitStore. Therefore we never hit this code path.
-        let info: &dyn StoreInfo = self;
-        if info.has_requirement("git") {
-            tracing::trace!(target: "repo::file_store", "enabling git serialization");
-            file_builder = file_builder.format(SerializationFormat::Git);
-        }
-
-        tracing::trace!(target: "repo::file_store", "building file store");
-        let file_store = file_builder.build().context("when building FileStore")?;
-
-        let fs = Arc::new(file_store);
+        let fs = build_scm_file_store(self)?;
         let _ = self.file_scm_store.set(fs.clone());
 
         let fs = Arc::new(ArcFileStore(fs));
@@ -563,40 +535,10 @@ impl Repo {
             return Ok(store);
         }
 
-        let eden_api = self.optional_eden_api().map_err(|err| err.tag_network())?;
-        let mut tree_builder = TreeStoreBuilder::new(self.config())
-            .local_path(self.store_path())
-            .suffix("manifests");
-
-        if let Some(eden_api) = eden_api {
-            tracing::trace!(target: "repo::tree_store", "enabling edenapi");
-            tree_builder = tree_builder.edenapi(SaplingRemoteApiTreeStore::new(eden_api));
-        } else {
-            tracing::trace!(target: "repo::tree_store", "disabling edenapi");
-            tree_builder = tree_builder.override_edenapi(false);
-        }
-
         // Trigger construction of file store.
         let _ = self.file_store();
 
-        // The presence of the file store on the tree store causes the tree store to
-        // request tree metadata (and write it back to file store aux cache).
-        if let Some(file_store) = self.file_scm_store() {
-            tracing::trace!(target: "repo::tree_store", "configuring filestore for aux fetching");
-            tree_builder = tree_builder.filestore(file_store);
-        } else {
-            tracing::trace!(target: "repo::tree_store", "no filestore for aux fetching");
-        }
-
-        // Note: This currently does nothing, since the "git" repo requirement makes
-        // try_construct_file_tree_store return a GitStore. Therefore we never hit this code path.
-        let info: &dyn StoreInfo = self;
-        if info.has_requirement("git") {
-            tracing::trace!(target: "repo::tree_store", "enabling git serialization");
-            tree_builder = tree_builder.format(SerializationFormat::Git);
-        }
-
-        let ts = Arc::new(tree_builder.build()?);
+        let ts = build_scm_tree_store(self, self.file_scm_store())?;
         let _ = self.tree_scm_store.set(ts.clone());
         let _ = self.tree_store.set(ts.clone());
 
