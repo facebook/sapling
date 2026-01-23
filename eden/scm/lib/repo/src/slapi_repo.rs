@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use anyhow::anyhow;
+use async_runtime::block_on;
 use configloader::Config;
 use configloader::config::Options;
 use configloader::hg::RepoInfo;
@@ -21,9 +22,12 @@ use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use repourl::RepoUrl;
 use revisionstore::trait_impls::ArcFileStore;
+use revsets::errors::RevsetLookupError;
+use revsets::utils::remote_hash_prefix_lookup;
 use storemodel::FileStore;
 use storemodel::StoreInfo;
 use storemodel::TreeStore;
+use types::HgId;
 
 use crate::scmstore::build_scm_file_store;
 use crate::scmstore::build_scm_tree_store;
@@ -124,6 +128,32 @@ impl SlapiRepo {
             )))
         })?;
         Ok(Arc::clone(tr))
+    }
+
+    /// Resolve a commit identifier to an HgId.
+    /// Supports hex commit hash prefixes and bookmark names.
+    pub fn resolve_commit(&self, id: &str) -> Result<HgId> {
+        let slapi = self.eden_api()?;
+
+        // Check if this looks like a hex commit hash prefix.
+        if id
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+        {
+            if !id.is_empty() && id.len() <= 40 {
+                if let Some(hgid) = remote_hash_prefix_lookup(slapi.as_ref(), id)? {
+                    return Ok(hgid);
+                }
+            }
+        }
+
+        // Fall back to bookmark lookup.
+        let mut bms = block_on(slapi.bookmarks(vec![id.to_string()], None))?;
+
+        match bms.pop().and_then(|bm| bm.hgid) {
+            None => Err(RevsetLookupError::RevsetNotFound(id.to_owned()).into()),
+            Some(hgid) => Ok(hgid),
+        }
     }
 }
 
@@ -282,5 +312,52 @@ mod tests {
         let files: Vec<_> = manifest.files(AlwaysMatcher::new()).collect();
         assert_eq!(files.len(), 1);
         assert_eq!(files[0].as_ref().unwrap().path.as_str(), "bar.txt");
+    }
+
+    #[test]
+    fn test_resolve_commit() {
+        let dir = tempfile::tempdir().unwrap();
+        let eager_repo = EagerRepo::open(dir.path()).unwrap();
+
+        // Create a tree with one file.
+        let elements = vec![TreeElement::new(
+            PathComponentBuf::from_string("file.txt".to_string()).unwrap(),
+            HgId::null_id().clone(),
+            Flag::File(Default::default()),
+        )];
+        let entry = TreeEntry::from_elements(elements, SerializationFormat::Hg);
+        let tree_content = entry.as_ref();
+        let tree_data = hg_sha1_serialize(tree_content, HgId::null_id(), HgId::null_id());
+        let tree_id = eager_repo.add_sha1_blob(&tree_data).unwrap();
+
+        // Create a commit referencing the tree using add_commit to properly register in DAG.
+        let commit_text = format!("{}\ntest\n\ntest commit", tree_id.to_hex());
+        let commit_id = block_on(eager_repo.add_commit(&[], commit_text.as_bytes())).unwrap();
+
+        // Set a bookmark pointing to the commit.
+        eager_repo.set_bookmark("main", Some(commit_id)).unwrap();
+
+        block_on(eager_repo.flush()).unwrap();
+
+        let config = BTreeMap::<&str, &str>::new();
+        let url = RepoUrl::from_str(&config, &format!("eager:{}", dir.path().display())).unwrap();
+        let slapi_repo = SlapiRepo::load(url).unwrap();
+
+        // Test 1: Resolve by full commit hash.
+        let resolved = slapi_repo.resolve_commit(&commit_id.to_hex()).unwrap();
+        assert_eq!(resolved, commit_id);
+
+        // Test 2: Resolve by hash prefix.
+        let prefix = &commit_id.to_hex()[..12];
+        let resolved = slapi_repo.resolve_commit(prefix).unwrap();
+        assert_eq!(resolved, commit_id);
+
+        // Test 3: Resolve by bookmark name.
+        let resolved = slapi_repo.resolve_commit("main").unwrap();
+        assert_eq!(resolved, commit_id);
+
+        // Test 4: Not found case.
+        let err = slapi_repo.resolve_commit("nonexistent").unwrap_err();
+        assert!(err.downcast_ref::<RevsetLookupError>().is_some());
     }
 }
