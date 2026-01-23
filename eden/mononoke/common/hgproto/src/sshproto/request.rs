@@ -42,7 +42,6 @@ use nom::error::FromExternalError;
 use nom::error::ParseError;
 use nom::multi::many0;
 use nom::multi::separated_list0;
-use nom::sequence::separated_pair;
 use nom::sequence::terminated;
 
 use crate::GetbundleArgs;
@@ -265,16 +264,6 @@ fn manifestid(input: &[u8]) -> IResult<&[u8], HgManifestId, Error> {
         HgManifestId::from_str,
     )
     .parse(input)
-}
-
-// A pair of nodehashes, separated by '-'
-fn pair(input: &[u8]) -> IResult<&[u8], (HgChangesetId, HgChangesetId), Error> {
-    separated_pair(nodehash, tag("-"), nodehash).parse(input)
-}
-
-// A space-separated list of pairs.
-fn pairlist(input: &[u8]) -> IResult<&[u8], Vec<(HgChangesetId, HgChangesetId)>, Error> {
-    separated_list_complete(" ", pair).parse(input)
 }
 
 // A space-separated list of changeset IDs
@@ -593,9 +582,6 @@ fn parse_with_params(
     use SingleRequest::*;
 
     alt((
-        command!("between", Between, parse_params, {
-            pairs => pairlist,
-        }),
         command!("branchmap", Branchmap, parse_params, {}),
         command!("capabilities", Capabilities, parse_params, {}),
         parse_command("debugwireargs", parse_params, 2+1, |kv| {
@@ -1017,64 +1003,6 @@ mod test {
     }
 
     #[mononoke::test]
-    fn test_pair() {
-        let p =
-            b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
-        assert_eq!(
-            pair(p),
-            Ok((
-                &b""[..],
-                (HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH))
-            )),
-        );
-
-        assert_eq!(pair(&p[..80]), Err(Err::Incomplete(Needed::new(1))));
-
-        assert_eq!(pair(&p[..41]), Err(Err::Incomplete(Needed::new(40))));
-
-        assert_eq!(pair(&p[..40]), Err(Err::Incomplete(Needed::new(1))));
-    }
-
-    #[mononoke::test]
-    fn test_pairlist() {
-        let p =
-            b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000 \
-              0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
-        assert_eq!(
-            pairlist(p),
-            Ok((
-                &b""[..],
-                vec![
-                    (HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH)),
-                    (HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH))
-                ]
-            )),
-        );
-
-        let p =
-            b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
-        assert_eq!(
-            pairlist(p),
-            Ok((
-                &b""[..],
-                vec![(HgChangesetId::new(NULL_HASH), HgChangesetId::new(NULL_HASH))]
-            )),
-        );
-
-        let p = b"";
-        assert_eq!(pairlist(p), Ok((&b""[..], vec![])));
-
-        let p = b"0000000000000000000000000000000000000000-00000000000000";
-        assert_eq!(
-            pairlist(p),
-            Ok((
-                &b"0000000000000000000000000000000000000000-00000000000000"[..],
-                vec![]
-            )),
-        );
-    }
-
-    #[mononoke::test]
     fn test_hashlist() {
         let p =
             b"0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 \
@@ -1194,10 +1122,6 @@ mod test_parse {
         HgChangesetId::new("3333333333333333333333333333333333333333".parse().unwrap())
     }
 
-    fn hash_fours() -> HgChangesetId {
-        HgChangesetId::new("4444444444444444444444444444444444444444".parse().unwrap())
-    }
-
     fn hash_ones_manifest() -> HgManifestId {
         HgManifestId::new("1111111111111111111111111111111111111111".parse().unwrap())
     }
@@ -1306,20 +1230,6 @@ mod test_parse {
                 SingleRequest::Known { nodes: vec![] },
             ]),
         )
-    }
-
-    #[mononoke::test]
-    fn test_parse_between() {
-        let inp = "between\n\
-             pairs 163\n\
-             1111111111111111111111111111111111111111-2222222222222222222222222222222222222222 \
-             3333333333333333333333333333333333333333-4444444444444444444444444444444444444444";
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::Between {
-                pairs: vec![(hash_ones(), hash_twos()), (hash_threes(), hash_fours())],
-            }),
-        );
     }
 
     #[mononoke::test]

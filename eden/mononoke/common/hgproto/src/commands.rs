@@ -92,14 +92,6 @@ impl<H: HgCommands + Send + Sync + 'static> HgCommandHandler<H> {
         }
 
         match req {
-            SingleRequest::Between { pairs } => (
-                hgcmds
-                    .between(pairs)
-                    .map_ok(SingleResponse::Between)
-                    .into_stream()
-                    .boxed(),
-                ok(instream).boxed(),
-            ),
             SingleRequest::Branchmap => (
                 hgcmds
                     .branchmap()
@@ -515,14 +507,6 @@ pub type HgCommandRes<T> = BoxFuture<'static, Result<T, Error>>;
 //
 // TODO: placeholder types are generally `()`
 pub trait HgCommands {
-    // @wireprotocommand('between', 'pairs')
-    fn between(
-        &self,
-        _pairs: Vec<(HgChangesetId, HgChangesetId)>,
-    ) -> HgCommandRes<Vec<Vec<HgChangesetId>>> {
-        unimplemented("between")
-    }
-
     // @wireprotocommand('branchmap')
     fn branchmap(&self) -> HgCommandRes<HashMap<String, HashSet<HgChangesetId>>> {
         // We have no plans to support mercurial branches and hence no plans for branchmap,

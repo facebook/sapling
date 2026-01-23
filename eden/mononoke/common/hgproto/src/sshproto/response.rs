@@ -91,16 +91,6 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
             Bytes::from(out)
         }
 
-        Between(vecs) => {
-            let mut out = Vec::new();
-
-            for v in vecs {
-                separated(&mut out, v, " ").expect("write to vec failed");
-            }
-
-            Bytes::from(out)
-        }
-
         ClientTelemetry(hostname) => Bytes::from(hostname),
 
         Debugwireargs(res) => res,

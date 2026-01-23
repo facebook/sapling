@@ -13,7 +13,6 @@ use std::fmt::Write;
 use std::future::Future;
 use std::hash::Hash;
 use std::hash::Hasher;
-use std::mem;
 use std::num::NonZeroU64;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -67,13 +66,10 @@ use futures_ext::FbFutureExt;
 use futures_ext::FbStreamExt;
 use futures_ext::FbTryFutureExt;
 use futures_ext::stream::FbTryStreamExt;
-use futures_old::Async;
 use futures_old::Future as OldFuture;
-use futures_old::Poll;
 use futures_old::Stream as OldStream;
 use futures_old::future as future_old;
 use futures_old::stream as stream_old;
-use futures_old::try_ready;
 use futures_stats::TimedFutureExt;
 use futures_stats::TimedStreamExt;
 use getbundle_response::PhasesPart;
@@ -109,7 +105,6 @@ use mercurial_types::NULL_CSID;
 use mercurial_types::NULL_HASH;
 use mercurial_types::NonRootMPath;
 use mercurial_types::RepoPath;
-use mercurial_types::blobs::HgBlobChangeset;
 use mercurial_types::calculate_hg_node_id;
 use mercurial_types::convert_parents_to_remotefilelog_format;
 use mercurial_types::fetch_manifest_envelope;
@@ -204,7 +199,6 @@ mod ops {
     pub static LISTKEYS: &str = "listkeys";
     pub static LISTKEYSPATTERNS: &str = "listkeyspatterns";
     pub static KNOWN: &str = "known";
-    pub static BETWEEN: &str = "between";
     pub static GETBUNDLE: &str = "getbundle";
     pub static GETTREEPACK: &str = "gettreepack";
     pub static GETPACKV1: &str = "getpackv1";
@@ -1014,102 +1008,6 @@ where
 }
 
 impl<R: Repo> HgCommands for RepoClient<R> {
-    // @wireprotocommand('between', 'pairs')
-    fn between(
-        &self,
-        pairs: Vec<(HgChangesetId, HgChangesetId)>,
-    ) -> HgCommandRes<Vec<Vec<HgChangesetId>>> {
-        struct ParentStream<CS, R> {
-            ctx: CoreContext,
-            repo: Arc<R>,
-            n: HgChangesetId,
-            bottom: HgChangesetId,
-            wait_cs: Option<CS>,
-        }
-
-        impl<CS, R: Repo> ParentStream<CS, R> {
-            fn new(
-                ctx: CoreContext,
-                repo: &Arc<R>,
-                top: HgChangesetId,
-                bottom: HgChangesetId,
-            ) -> Self {
-                ParentStream {
-                    ctx,
-                    repo: repo.clone(),
-                    n: top,
-                    bottom,
-                    wait_cs: None,
-                }
-            }
-        }
-
-        impl<R: Repo> OldStream for ParentStream<OldBoxFuture<HgBlobChangeset, Error>, R> {
-            type Item = HgChangesetId;
-            type Error = Error;
-
-            fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-                if self.n == self.bottom || self.n.into_nodehash() == NULL_HASH {
-                    return Ok(Async::Ready(None));
-                }
-
-                self.wait_cs = self.wait_cs.take().or_else(|| {
-                    Some(
-                        {
-                            cloned!(self.n, self.ctx, self.repo);
-                            async move { n.load(&ctx, repo.repo_blobstore()).await }
-                        }
-                        .boxed()
-                        .compat()
-                        .from_err()
-                        .boxify(),
-                    )
-                });
-                let cs = try_ready!(self.wait_cs.as_mut().unwrap().poll());
-                self.wait_cs = None; // got it
-
-                let p = cs.p1().unwrap_or(NULL_HASH);
-                let prev_n = mem::replace(&mut self.n, HgChangesetId::new(p));
-
-                Ok(Async::Ready(Some(prev_n)))
-            }
-        }
-
-        self.command_future(ops::BETWEEN, UNSAMPLED, |ctx, command_logger| {
-            // TODO(jsgf): do pairs in parallel?
-            // TODO: directly return stream of streams
-            cloned!(self.repo);
-            stream_old::iter_ok(pairs)
-                .and_then({
-                    cloned!(ctx);
-                    move |(top, bottom)| {
-                        let mut f = 1;
-                        ParentStream::new(ctx.clone(), &repo, top, bottom)
-                            .enumerate()
-                            .filter(move |&(i, _)| {
-                                if i == f {
-                                    f *= 2;
-                                    true
-                                } else {
-                                    false
-                                }
-                            })
-                            .map(|(_, v)| v)
-                            .collect()
-                    }
-                })
-                .collect()
-                .compat()
-                .timeout(default_timeout())
-                .flatten_err()
-                .timed()
-                .map(move |(stats, res)| {
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    res
-                })
-        })
-    }
-
     // @wireprotocommand('clienttelemetry')
     fn clienttelemetry(&self, args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
         self.command_future(

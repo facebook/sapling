@@ -50,9 +50,6 @@ impl Request {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum SingleRequest {
-    Between {
-        pairs: Vec<(HgChangesetId, HgChangesetId)>,
-    },
     Branchmap,
     Capabilities,
     ClientTelemetry {
@@ -101,7 +98,6 @@ pub enum SingleRequest {
 impl SingleRequest {
     pub fn name(&self) -> &'static str {
         match *self {
-            SingleRequest::Between { .. } => "between",
             SingleRequest::Branchmap => "branchmap",
             SingleRequest::Capabilities => "capabilities",
             SingleRequest::ClientTelemetry { .. } => "clienttelemetry",
@@ -191,7 +187,6 @@ pub enum Response {
 
 #[derive(Debug)]
 pub enum SingleResponse {
-    Between(Vec<Vec<HgChangesetId>>),
     Branchmap(HashMap<String, HashSet<HgChangesetId>>),
     Capabilities(Vec<String>),
     ClientTelemetry(String),
