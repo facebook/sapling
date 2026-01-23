@@ -1,26 +1,33 @@
-name: Publish https://reviewstack.dev
+name: Deploy ReviewStack to Cloudflare Pages
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * 1-5'
+  push:
+    branches:
+      - main
+    paths:
+      - 'eden/contrib/reviewstack/**'
+      - 'eden/contrib/reviewstack.dev/**'
+      - 'eden/contrib/shared/**'
+      - '.github/workflows/reviewstack.dev-deploy.yml'
 
 jobs:
   deploy:
     runs-on: ubuntu-22.04
-    # Our build container already has Node, Yarn, and Python installed.
-    container:
-      image: ${{ format('ghcr.io/{0}/build_ubuntu_22_04:latest', github.repository) }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
-      - name: Grant Access
-        run: git config --global --add safe.directory "$PWD"
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: eden/contrib/yarn.lock
       - name: Install dependencies
         working-directory: ./eden/contrib/
-        run: yarn install --prefer-offline
+        run: yarn install
 
       # Build codegen and then do some sanity checks so we don't push the site
       # when the tests are broken.
@@ -37,11 +44,10 @@ jobs:
         working-directory: ./eden/contrib/reviewstack.dev
         run: yarn release
 
-      # Push to the release branch.
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v4
-        if: ${{ github.ref == 'refs/heads/main' }}
+      # Deploy to Cloudflare Pages
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: reviewstack.dev-prod
-          publish_dir: ./eden/contrib/reviewstack.dev/build
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy ./eden/contrib/reviewstack.dev/build --project-name=reviewstack

@@ -41,6 +41,7 @@ import {
   YourPullRequestsQuery,
   YourPullRequestsWithoutMergeQueueQuery,
 } from './generated/graphql';
+import {parseStackInfo, type StackEntry} from './parseStackInfo';
 import queryGraphQL from './queryGraphQL';
 
 export type GitHubDiffSummary = {
@@ -60,9 +61,20 @@ export type GitHubDiffSummary = {
   head: Hash;
   /** Name of the branch on GitHub, which should match the local bookmark */
   branchName?: string;
+  /** Stack info parsed from PR body Sapling footer. Top-to-bottom order (first = top of stack). */
+  stackInfo?: StackEntry[];
+  /** Author login (GitHub username) */
+  author?: string;
+  /** Author avatar URL */
+  authorAvatarUrl?: string;
 };
 
 const DEFAULT_GH_FETCH_TIMEOUT = 60_000; // 1 minute
+
+export type DiffSummariesData = {
+  summaries: Map<DiffId, GitHubDiffSummary>;
+  currentUser?: string;
+};
 
 type GitHubCodeReviewSystem = CodeReviewSystem & {type: 'github'};
 export class GitHubCodeReviewProvider implements CodeReviewProvider {
@@ -70,13 +82,14 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     private codeReviewSystem: GitHubCodeReviewSystem,
     private logger: Logger,
   ) {}
-  private diffSummaries = new TypedEventEmitter<'data', Map<DiffId, GitHubDiffSummary>>();
+  private diffSummaries = new TypedEventEmitter<'data', DiffSummariesData>();
   private hasMergeQueueSupport: Promise<boolean> | null = null;
 
   onChangeDiffSummaries(
-    callback: (result: Result<Map<DiffId, GitHubDiffSummary>>) => unknown,
+    callback: (result: Result<Map<DiffId, GitHubDiffSummary>>, currentUser?: string) => unknown,
   ): Disposable {
-    const handleData = (data: Map<DiffId, GitHubDiffSummary>) => callback({value: data});
+    const handleData = (data: DiffSummariesData) =>
+      callback({value: data.summaries}, data.currentUser);
     const handleError = (error: Error) => callback({error});
     this.diffSummaries.on('data', handleData);
     this.diffSummaries.on('error', handleError);
@@ -111,11 +124,14 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   private fetchYourPullRequestsGraphQL(
     includeMergeQueue: boolean,
   ): Promise<YourPullRequestsQueryData | undefined> {
+    // Calculate date 30 days ago for the updated filter
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
+
     const variables = {
-      // TODO: somehow base this query on the list of DiffIds
-      // This is not very easy with github's graphql API, which doesn't allow more than 5 "OR"s in a search query.
-      // But if we used one-query-per-diff we would reach rate limiting too quickly.
-      searchQuery: `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr author:@me`,
+      // Fetch all open PRs in the repo updated in the last 30 days
+      searchQuery: `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr is:open updated:>=${dateFilter}`,
       numToFetch: 50,
     };
     if (includeMergeQueue) {
@@ -138,9 +154,10 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         this.logger.info('fetching github PR summaries');
         const allSummaries = await this.fetchYourPullRequestsGraphQL(hasMergeQueueSupport);
         if (allSummaries?.search.nodes == null) {
-          this.diffSummaries.emit('data', new Map());
+          this.diffSummaries.emit('data', {summaries: new Map()});
           return;
         }
+        const currentUser = allSummaries.viewer?.login;
 
         const map = new Map<DiffId, GitHubDiffSummary>();
         for (const summary of allSummaries.search.nodes) {
@@ -151,6 +168,9 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               this.logger.warn(`PR #${id} is missing base or head ref, skipping.`);
               continue;
             }
+            // Parse stack info from the PR body (Sapling footer format)
+            const stackInfo = parseStackInfo(summary.body) ?? undefined;
+
             map.set(id, {
               type: 'github',
               title: summary.title,
@@ -174,11 +194,14 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               base: summary.baseRef.target.oid,
               head: summary.headRef.target.oid,
               branchName: summary.headRef.name,
+              stackInfo,
+              author: summary.author?.login ?? undefined,
+              authorAvatarUrl: summary.author?.avatarUrl ?? undefined,
             });
           }
         }
         this.logger.info(`fetched ${map.size} github PR summaries`);
-        this.diffSummaries.emit('data', map);
+        this.diffSummaries.emit('data', {summaries: map, currentUser});
       } catch (error) {
         this.logger.info('error fetching github PR summaries: ', error);
         this.diffSummaries.emit('error', error as Error);

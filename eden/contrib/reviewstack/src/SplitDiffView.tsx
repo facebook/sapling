@@ -23,7 +23,9 @@ import SplitDiffRow from './SplitDiffRow';
 import {diffAndTokenize, lineRange} from './diffServiceClient';
 import {DiffSide} from './generated/graphql';
 import {grammars, languages} from './generated/textmate/TextMateGrammarManifest';
+import {GeneratedStatus} from './github/types';
 import {
+  fileGeneratedStatus,
   gitHubPullRequestLineToPositionForFile,
   gitHubPullRequestSelectedVersionIndex,
   gitHubPullRequestVersions,
@@ -38,7 +40,7 @@ import {UnfoldIcon} from '@primer/octicons-react';
 import {Box, Spinner, Text} from '@primer/react';
 import {diffChars} from 'diff';
 import React, {useCallback, useEffect, useState} from 'react';
-import {useRecoilValue, useRecoilValueLoadable, waitForAll} from 'recoil';
+import {constSelector, useRecoilValue, useRecoilValueLoadable, waitForAll} from 'recoil';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
 import {
   applyTokenizationToLine,
@@ -81,7 +83,6 @@ export default function SplitDiffView({
   after,
   isPullRequest,
 }: Props): React.ReactElement {
-  const [open, setOpen] = useState(true);
   const scopeName = getFilepathClassifier().findScopeNameForPath(path);
   const colorMode = useRecoilValue(primerColorMode);
   const loadable = useRecoilValueLoadable(
@@ -104,14 +105,32 @@ export default function SplitDiffView({
       isPullRequest ? gitHubPullRequestVersions : nullAtom,
       isPullRequest ? gitHubPullRequestSelectedVersionIndex : nullAtom,
       isPullRequest ? gitHubPullRequestLineToPositionForFile(path) : nullAtom,
+      // Check if file is generated to default collapse state for generated files
+      isPullRequest ? fileGeneratedStatus(path) : constSelector(GeneratedStatus.Manual),
     ]),
   );
 
-  const [{patch, tokenization}, allThreads, newCommentInputCallbacks, commitIDs] =
-    loadable.getValue();
+  const [
+    {patch, tokenization},
+    allThreads,
+    newCommentInputCallbacks,
+    commitIDs,
+    _versions,
+    _selectedVersionIndex,
+    _lineToPosition,
+    generatedStatus,
+  ] = loadable.getValue();
+  const isGenerated = generatedStatus === GeneratedStatus.Generated;
+  // Default to collapsed for generated files
+  const [open, setOpen] = useState(!isGenerated);
   return (
     <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
-      <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
+      <FileHeader
+        path={path}
+        open={open}
+        onChangeOpen={open => setOpen(open)}
+        isGenerated={isGenerated}
+      />
       {open && (
         <SplitDiffViewTable
           path={path}

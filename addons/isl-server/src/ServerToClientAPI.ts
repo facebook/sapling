@@ -132,8 +132,8 @@ export default class ServerToClientAPI {
 
     if (repo.codeReviewProvider != null) {
       this.repoDisposables.push(
-        repo.codeReviewProvider.onChangeDiffSummaries(value => {
-          this.postMessage({type: 'fetchedDiffSummaries', summaries: value});
+        repo.codeReviewProvider.onChangeDiffSummaries((value, currentUser) => {
+          this.postMessage({type: 'fetchedDiffSummaries', summaries: value, currentUser});
         }),
       );
     }

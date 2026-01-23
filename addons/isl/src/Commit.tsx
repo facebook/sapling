@@ -43,6 +43,7 @@ import {clipboardLinkHtml} from './clipboard';
 import {
   branchingDiffInfos,
   codeReviewProvider,
+  currentGitHubUser,
   diffSummary,
   latestCommitMessageTitle,
 } from './codeReview/CodeReviewInfo';
@@ -128,6 +129,25 @@ const commitLabelForCommit = atomFamilyWeak((hash: string) =>
       return localShort;
     }
     return null;
+  }),
+);
+
+/**
+ * Atom to check if a commit is from an external author (someone other than the current user).
+ * Returns true if the PR author differs from the current GitHub user.
+ */
+export const isExternalCommitByDiffId = atomFamilyWeak((diffId: string) =>
+  atom(get => {
+    const currentUser = get(currentGitHubUser);
+    if (currentUser == null) {
+      return false;
+    }
+    const summary = get(diffSummary(diffId));
+    if (summary?.value == null) {
+      return false;
+    }
+    const author = summary.value.type === 'github' ? summary.value.author : undefined;
+    return author != null && author !== currentUser;
   }),
 );
 
