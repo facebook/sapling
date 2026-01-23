@@ -1613,7 +1613,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
     [
         ("o", "output", "", _("print output to file with formatted name"), _("FORMAT")),
         ("r", "rev", "", _("print the given revision"), _("REV")),
-        ("", "decode", None, _("apply any matching decode filter (DEPRECATED)")),
     ]
     + walkopts
     + formatteropts,

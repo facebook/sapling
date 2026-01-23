@@ -212,7 +212,7 @@ Show an error if we use --options with an ambiguous abbreviation
 
 Show all commands + options
   $ hg debugcommands | grep 'cat:|debugcolor:'
-  cat: output, rev, decode, include, exclude, template
+  cat: output, rev, include, exclude, template
   debugcolor: style
 
   $ hg init a
