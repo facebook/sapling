@@ -5,13 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use std::fs;
+use std::collections::HashMap;
+use std::fs::create_dir_all;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
+use std::thread;
 
 use anyhow::anyhow;
 use anyhow::bail;
@@ -25,15 +28,21 @@ use cmdutil::IO;
 use cmdutil::Result;
 use cmdutil::WalkOpts;
 use cmdutil::define_flags;
+use manifest::FileMetadata;
 use manifest::FileType;
-use manifest::Manifest;
+use manifest::FsNodeMetadata;
+use manifest_tree::TreeManifest;
+use parking_lot::Mutex;
 use repo::CoreRepo;
+use storemodel::FileStore;
 use types::FetchContext;
 use types::HgId;
+use types::Key;
 use types::RepoPath;
 use types::RepoPathBuf;
 use vfs::UpdateFlag;
 use vfs::VFS;
+use vfs::Work;
 
 define_flags! {
     pub struct CatOpts {
@@ -54,6 +63,11 @@ define_flags! {
         args: Vec<String>,
     }
 }
+
+const BATCH_SIZE: usize = 1000;
+const CONCURRENT_FETCHES: usize = 5;
+const VFS_WORKERS: usize = 16;
+const VFS_QUEUE_SIZE: usize = 1000;
 
 /// FirstError helps propagate the first error seen in parallel operations. It also provides a
 /// "has_error" method to aid in cancellation.
@@ -104,43 +118,74 @@ impl FirstError {
     }
 }
 
-#[derive(Clone)]
 enum Outputter {
     Disk {
-        vfs: VFS,
         output_template: String,
         commit_id: HgId,
         repo_name: Option<String>,
+        work_tx: flume::Sender<Work>,
+        vfs_result_rx: flume::Receiver<Result<Work, (Option<Work>, anyhow::Error)>>,
     },
-    Io(IO),
+    Io(Arc<Mutex<IO>>),
+}
+
+impl Clone for Outputter {
+    fn clone(&self) -> Self {
+        match self {
+            Outputter::Disk {
+                output_template,
+                commit_id,
+                repo_name,
+                work_tx,
+                vfs_result_rx,
+            } => Outputter::Disk {
+                output_template: output_template.clone(),
+                commit_id: *commit_id,
+                repo_name: repo_name.clone(),
+                work_tx: work_tx.clone(),
+                vfs_result_rx: vfs_result_rx.clone(),
+            },
+            Outputter::Io(io) => Outputter::Io(io.clone()),
+        }
+    }
 }
 
 impl Outputter {
     fn new_disk(
-        vfs: VFS,
+        vfs: &VFS,
         output_template: String,
         commit_id: HgId,
         repo_name: Option<String>,
     ) -> Self {
+        let (work_tx, vfs_result_rx) = vfs.batch(VFS_WORKERS, VFS_QUEUE_SIZE);
         Outputter::Disk {
-            vfs,
             output_template,
             commit_id,
             repo_name,
+            work_tx,
+            vfs_result_rx,
         }
     }
 
     fn new_io(io: IO) -> Self {
-        Outputter::Io(io)
+        Outputter::Io(Arc::new(Mutex::new(io)))
+    }
+
+    fn fs_results(&self) -> Option<flume::Receiver<Result<Work, (Option<Work>, anyhow::Error)>>> {
+        match self {
+            Outputter::Disk { vfs_result_rx, .. } => Some(vfs_result_rx.clone()),
+            Outputter::Io(_) => None,
+        }
     }
 
     fn output_file(&self, path: &RepoPath, data: Blob, file_type: FileType) -> anyhow::Result<()> {
         match self {
             Outputter::Disk {
-                vfs,
                 output_template,
                 commit_id,
                 repo_name,
+                work_tx,
+                ..
             } => {
                 let update_flag = match file_type {
                     FileType::Regular => UpdateFlag::Regular,
@@ -151,11 +196,14 @@ impl Outputter {
 
                 let filename =
                     make_output_filename(output_template, commit_id, path, repo_name.as_deref())?;
-
                 let repo_path = RepoPathBuf::from_string(filename)?;
-                vfs.write(&repo_path, data, update_flag).map(|_| ())
+                work_tx
+                    .send(Work::Write(repo_path, data, update_flag, None))
+                    .map_err(|_| anyhow!("vfs worker channel closed"))?;
+                Ok(())
             }
             Outputter::Io(io) => {
+                let io = io.lock();
                 let mut out = io.output();
                 data.each_chunk(|chunk| out.write_all(chunk))?;
                 Ok(())
@@ -202,36 +250,163 @@ pub fn run(ctx: ReqCtx<CatOpts>, repo: &CoreRepo) -> Result<u8> {
 
     let file_store = repo.file_store()?;
 
-    // Get repo name for %b format specifier
-    let repo_name = repo.repo_name();
-
     let outputter = if let Some(output_template) = output_template {
+        let repo_name = repo.repo_name().map(|s| s.to_string());
+
         // Split output template into prefix and relative template.
         let (prefix, relative_template) = split_output_template(&output_template)?;
         let vfs_path = std::env::current_dir()?.join(prefix);
-        fs::create_dir_all(&vfs_path)?;
+
+        create_dir_all(&vfs_path)?;
         let vfs = VFS::new(vfs_path)?;
 
-        Outputter::new_disk(
-            vfs,
-            relative_template,
-            commit_id,
-            repo_name.map(|n| n.to_string()),
-        )
+        Outputter::new_disk(&vfs, relative_template, commit_id, repo_name)
     } else {
         Outputter::new_io(ctx.io().clone())
     };
 
-    let mut saw_file = false;
-    for file in manifest.files(matcher) {
-        saw_file = true;
-        let file = file?;
-        let content =
-            file_store.get_content(FetchContext::sapling_default(), &file.path, file.meta.hgid)?;
-        outputter.output_file(&file.path, content, file.meta.file_type)?;
+    let count = fetch_and_output(&manifest, matcher, &file_store, outputter)?;
+
+    Ok(if count > 0 { 0 } else { 1 })
+}
+
+fn fetch_and_output<M: 'static + pathmatcher::Matcher + Sync + Send>(
+    manifest: &TreeManifest,
+    matcher: M,
+    file_store: &Arc<dyn FileStore>,
+    outputter: Outputter,
+) -> Result<usize> {
+    let first_error = FirstError::new();
+    let output_count = Arc::new(AtomicUsize::new(0));
+
+    let file_node_rx = manifest.iter(matcher);
+
+    let (fetch_content_tx, fetch_content_rx) =
+        flume::bounded::<Vec<(RepoPathBuf, FileMetadata)>>(CONCURRENT_FETCHES);
+
+    let mut handles: Vec<thread::JoinHandle<()>> = Vec::new();
+
+    // Spawn VFS error forwarder thread (only for Disk output)
+    if let Some(rx) = outputter.fs_results() {
+        let first_error = first_error.clone();
+        handles.push(thread::spawn(move || {
+            while let Ok(result) = rx.recv() {
+                if let Err((_, err)) = result {
+                    first_error.send_error(err);
+                    break;
+                }
+            }
+        }));
     }
 
-    Ok(if saw_file { 0 } else { 1 })
+    // Spawn fetch threads
+    for _ in 0..CONCURRENT_FETCHES {
+        let fetch_content_rx = fetch_content_rx.clone();
+        let file_store = file_store.clone();
+        let outputter = outputter.clone();
+        let first_error = first_error.clone();
+        let output_count = output_count.clone();
+
+        handles.push(thread::spawn(move || {
+            let run = || -> anyhow::Result<()> {
+                while let Ok(batch) = fetch_content_rx.recv() {
+                    if first_error.has_error() {
+                        return Ok(());
+                    }
+
+                    let keys: Vec<Key> = batch
+                        .iter()
+                        .map(|(path, meta)| Key::new(path.clone(), meta.hgid))
+                        .collect();
+
+                    let iter =
+                        file_store.get_content_iter(FetchContext::sapling_default(), keys)?;
+
+                    let file_info = batch
+                        .into_iter()
+                        .map(|(path, meta)| (Key::new(path, meta.hgid), meta.file_type))
+                        .collect::<HashMap<_, _>>();
+
+                    for result in iter {
+                        if first_error.has_error() {
+                            return Ok(());
+                        }
+
+                        let (key, data) = result?;
+
+                        let file_type = file_info
+                            .get(&key)
+                            .ok_or_else(|| anyhow!("missing file info for {}", key.hgid))?;
+
+                        outputter.output_file(&key.path, data, *file_type)?;
+                        output_count.fetch_add(1, Ordering::Relaxed);
+                    }
+                }
+                Ok(())
+            };
+
+            if let Err(e) = run() {
+                first_error.send_error(e);
+            }
+        }));
+    }
+
+    drop(fetch_content_rx);
+    drop(outputter);
+
+    let mut current_batch = Vec::new();
+
+    loop {
+        if first_error.has_error() {
+            break;
+        }
+
+        match file_node_rx.recv() {
+            Ok(result_batch) => {
+                for result in result_batch {
+                    let (path, metadata) = match result {
+                        Ok(v) => v,
+                        Err(e) => {
+                            first_error.send_error(e);
+                            break;
+                        }
+                    };
+                    if let FsNodeMetadata::File(file_meta) = metadata {
+                        current_batch.push((path, file_meta));
+
+                        if current_batch.len() >= BATCH_SIZE {
+                            if fetch_content_tx
+                                .send(std::mem::take(&mut current_batch))
+                                .is_err()
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            Err(_) => {
+                // Channel disconnected, flush remaining batch
+                if !current_batch.is_empty() {
+                    let _ = fetch_content_tx.send(current_batch);
+                }
+                break;
+            }
+        }
+    }
+
+    drop(fetch_content_tx);
+
+    // Wait for all threads
+    for handle in handles {
+        if let Err(e) = handle.join() {
+            std::panic::resume_unwind(e);
+        }
+    }
+
+    first_error.wait()?;
+
+    Ok(output_count.load(Ordering::Relaxed))
 }
 
 /// Check if a string contains a format specifier (% followed by non-%).

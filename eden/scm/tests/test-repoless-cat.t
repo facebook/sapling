@@ -1,5 +1,7 @@
 #require no-eden
 
+  $ setconfig drawdag.defaultfiles=false
+
 Test repoless "cat" command using eagerepo.
 
   $ eagerepo
@@ -43,9 +45,7 @@ Test cat from earlier commit:
 
 Test cat with short commit hash prefix:
 
-  $ echo $B
-  38c22ebcb15088febc0bceaf2da8f0f6dd7bbc52
-  $ SHORT_B=38c22ebcb150
+  $ SHORT_B=$(echo $B | python -c "import sys; print(sys.stdin.read()[:12], end='')")
   $ hg cat -R test:server -r $SHORT_B foo
   foo content
 
@@ -99,7 +99,7 @@ Test --output with %H (full hash):
   $ rm -rf output
   $ hg cat -R test:server -r $B --output 'output/%H' foo
   $ ls output
-  38c22ebcb15088febc0bceaf2da8f0f6dd7bbc52
+  e852cc83929aae9b8d3b025c327dbbc858924676
 
 Test --output with %h (short hash):
 
@@ -171,3 +171,21 @@ Test cat --output preserves executable and symlink metadata:
   -rwxr-xr-x script
 
 #endif
+
+Test cat handles identical files with different paths:
+
+  $ newserver server-identical
+  $ drawdag <<'EOS'
+  > A  # A/one = content\n
+  >    # A/two = content\n
+  > EOS
+
+  $ rm -rf output
+  $ hg cat -R test:server-identical -r $A --output 'output/%p'
+  $ ls output | sort
+  one
+  two
+  $ cat output/one
+  content
+  $ cat output/two
+  content
