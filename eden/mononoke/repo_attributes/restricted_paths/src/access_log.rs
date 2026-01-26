@@ -34,18 +34,17 @@ pub(crate) enum RestrictedPathAccessData {
     FullPath { full_path: NonRootMPath },
 }
 
-pub(crate) async fn log_access_to_restricted_path(
+/// Check if the caller has access to paths protected by the given ACLs.
+pub async fn has_access_to_acl(
     ctx: &CoreContext,
-    repo_id: RepositoryId,
-    restricted_paths: Vec<NonRootMPath>,
-    acls: Vec<&MononokeIdentity>,
-    access_data: RestrictedPathAccessData,
-    acl_provider: Arc<dyn AclProvider>,
-    scuba: MononokeScubaSampleBuilder,
+    acl_provider: &Arc<dyn AclProvider>,
+    acls: &[&MononokeIdentity],
 ) -> Result<bool> {
-    // TODO(T239041722): store permission checkers in RestrictedPaths to improve
-    // performance if needed.
-    let permission_checker = stream::iter(acls.clone())
+    if acls.is_empty() {
+        return Ok(true);
+    }
+
+    let permission_checker = stream::iter(acls.iter().cloned())
         .map(anyhow::Ok)
         .try_fold(PermissionCheckerBuilder::new(), async |builder, acl| {
             Ok(builder.allow(
@@ -61,9 +60,23 @@ pub(crate) async fn log_access_to_restricted_path(
         .context("creating PermissionCheckerBuilder")?
         .build();
 
-    let has_authorization = permission_checker
+    Ok(permission_checker
         .check_set(ctx.metadata().identities(), &["read"])
-        .await;
+        .await)
+}
+
+pub(crate) async fn log_access_to_restricted_path(
+    ctx: &CoreContext,
+    repo_id: RepositoryId,
+    restricted_paths: Vec<NonRootMPath>,
+    acls: Vec<&MononokeIdentity>,
+    access_data: RestrictedPathAccessData,
+    acl_provider: Arc<dyn AclProvider>,
+    scuba: MononokeScubaSampleBuilder,
+) -> Result<bool> {
+    // TODO(T239041722): store permission checkers in RestrictedPaths to improve
+    // performance if needed.
+    let has_authorization = has_access_to_acl(ctx, &acl_provider, &acls).await?;
 
     log_access_to_scuba(
         ctx,
