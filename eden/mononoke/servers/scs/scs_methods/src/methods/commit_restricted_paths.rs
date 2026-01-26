@@ -807,4 +807,76 @@ mod tests {
 
         Ok(())
     }
+
+    // Other unit tests
+
+    #[mononoke::test]
+    fn test_compute_path_coverage_empty() {
+        assert_eq!(compute_path_coverage(vec![]), thrift::PathCoverage::NONE);
+    }
+
+    #[mononoke::test]
+    fn test_compute_path_coverage_all_true() {
+        assert_eq!(
+            compute_path_coverage(vec![true, true, true]),
+            thrift::PathCoverage::ALL
+        );
+    }
+
+    #[mononoke::test]
+    fn test_compute_path_coverage_all_false() {
+        assert_eq!(
+            compute_path_coverage(vec![false, false]),
+            thrift::PathCoverage::NONE
+        );
+    }
+
+    #[mononoke::test]
+    fn test_compute_path_coverage_mixed() {
+        assert_eq!(
+            compute_path_coverage(vec![true, false, true]),
+            thrift::PathCoverage::SOME
+        );
+    }
+
+    #[mononoke::test]
+    fn test_build_path_restriction_root() {
+        let path = NonRootMPath::new("foo/bar/restricted").unwrap();
+        let acl = MononokeIdentity::new("TIER", "my-acl");
+
+        let result = build_path_restriction_root(&path, &acl);
+
+        assert_eq!(result.path, "foo/bar/restricted");
+        assert_eq!(result.acls, vec!["TIER:my-acl"]);
+    }
+
+    #[mononoke::test]
+    fn test_build_path_restriction_root_single_component() {
+        let path = NonRootMPath::new("restricted").unwrap();
+        let acl = MononokeIdentity::new("ACL", "restricted-access");
+
+        let result = build_path_restriction_root(&path, &acl);
+
+        assert_eq!(result.path, "restricted");
+        assert_eq!(result.acls, vec!["ACL:restricted-access"]);
+    }
+
+    #[mononoke::test]
+    fn test_is_prefix_of_same_path() {
+        let path = NonRootMPath::new("foo/bar").unwrap();
+        assert!(path.is_prefix_of(&path));
+    }
+
+    #[mononoke::test]
+    fn test_compute_path_coverage_single_true() {
+        assert_eq!(compute_path_coverage(vec![true]), thrift::PathCoverage::ALL);
+    }
+
+    #[mononoke::test]
+    fn test_compute_path_coverage_single_false() {
+        assert_eq!(
+            compute_path_coverage(vec![false]),
+            thrift::PathCoverage::NONE
+        );
+    }
 }
