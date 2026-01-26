@@ -68,6 +68,25 @@ impl DagItemId {
     pub fn root_cs_id(&self) -> ChangesetId {
         self.root_cs_id
     }
+
+    pub fn from_suffix(suffix: &str, repo_id: RepositoryId, config_name: String) -> Result<Self> {
+        let (data_type_str, cs_id_str) = suffix
+            .rsplit_once('_')
+            .ok_or_else(|| anyhow!("Invalid DagItemId suffix format: {}", suffix))?;
+
+        let derived_data_type = data_type_str
+            .parse::<DerivableType>()
+            .with_context(|| format!("While parsing DerivableType from suffix {}", suffix))?;
+        let root_cs_id = ChangesetId::from_str(cs_id_str)
+            .with_context(|| format!("While parsing ChangesetId from suffix {}", suffix))?;
+
+        Ok(Self {
+            repo_id,
+            config_name,
+            derived_data_type,
+            root_cs_id,
+        })
+    }
 }
 
 fn default_derivation_priority() -> derivation_queue_thrift::DerivationPriority {
@@ -261,32 +280,13 @@ impl TryFrom<&str> for DagItemId {
 
     fn try_from(path: &str) -> Result<Self> {
         // expecting format `/mononoke_derivation/<node_type>/<repo_id>/<config_name>/<data_type>_<root_cs_id>`
-        // skip leading '/' and split the prefix into parts 5
         let items: Vec<&str> = path.split('/').collect();
         match items[..] {
-            ["", _, _, a, b, c] => {
-                let repo_id = a.parse::<RepositoryId>()?;
-                let config_name = b.to_string();
-                // parse part like `Unodes_30e4c306c0d74cdf898b23df9c61fd14eec6df7013964e537f53343efe7b30c3'
-                let (derived_data_type, root_cs_id) = match c.rsplit_once('_') {
-                    Some((data, cs)) => (
-                        data.parse::<DerivableType>().with_context(|| {
-                            format!("While parsing Derived Data Type from {}", b)
-                        })?,
-                        ChangesetId::from_str(cs)?,
-                    ),
-                    None => {
-                        return Err(anyhow!("Couldn't parse DerivationDagItem from {}", path));
-                    }
-                };
-                Ok(Self {
-                    repo_id,
-                    config_name,
-                    derived_data_type,
-                    root_cs_id,
-                })
+            ["", _, _, repo_id_str, config_name, suffix] => {
+                let repo_id = repo_id_str.parse::<RepositoryId>()?;
+                Self::from_suffix(suffix, repo_id, config_name.to_string())
             }
-            _ => Err(anyhow!("Couldn't parse {} into DerivationDagItem", path)),
+            _ => Err(anyhow!("Couldn't parse {} into DagItemId", path)),
         }
     }
 }
