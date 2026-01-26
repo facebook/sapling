@@ -64,7 +64,7 @@ impl BacktraceCollector {
         let reuse_count = frame_names
             .iter()
             .zip(self.last_backtrace.iter())
-            .take_while(|&(ref name, idx)| {
+            .take_while(|&(name, idx)| {
                 self.names
                     .get_index(*idx)
                     .map(|s| s.as_str() == name.as_str())
