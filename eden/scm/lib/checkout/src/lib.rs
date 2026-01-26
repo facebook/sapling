@@ -393,9 +393,7 @@ impl CheckoutPlan {
             on_abort.cancel();
         }
 
-        let stats = Ok(stats);
-
-        stats
+        Ok(stats)
     }
 
     fn vfs_worker_count(&self, total: usize) -> usize {
