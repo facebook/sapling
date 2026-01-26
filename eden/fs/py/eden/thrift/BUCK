@@ -37,6 +37,7 @@ python_library(
         "//eden/fs/service:thrift-python-clients",
         "//eden/fs/service:thrift-python-services",
         "//eden/fs/service:thrift-python-types",
+        "//thrift/lib/python:types",
         "//thrift/lib/python/client:base",
     ],
 )
