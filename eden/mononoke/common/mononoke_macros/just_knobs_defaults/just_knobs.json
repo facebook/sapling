@@ -64,6 +64,7 @@
     "scm/mononoke:create_changeset_stack_empty_changeset_check": true,
     "scm/mononoke:rendezvous_bonsai_tag_mapping": true,
     "scm/mononoke:pushrebase_disable_commit_validation": false,
+    "scm/mononoke:scs_restricted_paths_use_mock_api": false,
     "rl_source_control/mgs_super_safe_lands:mgs_symbolic_manifest_read_from_top_level_ssl_jk": true
   },
   "ints": {

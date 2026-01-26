@@ -1,0 +1,573 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::sync::Arc;
+
+use anyhow::Context;
+use anyhow::Result;
+use context::CoreContext;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use futures::stream;
+use itertools::Itertools;
+use mononoke_api::MononokeError;
+use mononoke_api::Repo;
+use mononoke_api::RepoContext;
+use mononoke_types::NonRootMPath;
+use permission_checker::AclProvider;
+use permission_checker::MononokeIdentity;
+use restricted_paths::RestrictedPaths;
+use restricted_paths::RestrictedPathsArc;
+use restricted_paths::has_access_to_acl;
+use source_control as thrift;
+
+pub(crate) async fn restricted_paths_access_impl(
+    ctx: &CoreContext,
+    repo: &RepoContext<Repo>,
+    acl_provider: &Arc<dyn AclProvider>,
+    paths: BTreeSet<String>,
+    check_permissions: bool,
+) -> Result<thrift::CommitRestrictedPathsAccessResponse, scs_errors::ServiceError> {
+    let restricted_paths = repo.repo().restricted_paths_arc();
+
+    // If no restricted paths configured, return empty response
+    if !restricted_paths.has_restricted_paths() {
+        return Ok(thrift::CommitRestrictedPathsAccessResponse {
+            are_restricted: thrift::PathCoverage::NONE,
+            has_access: thrift::PathCoverage::ALL,
+            restriction_roots: BTreeMap::new(),
+            authorized_paths: if check_permissions {
+                paths.into_iter().collect()
+            } else {
+                vec![]
+            },
+            ..Default::default()
+        });
+    }
+
+    // Helper struct to accumulate results during processing
+    struct PathResult {
+        path_str: String,
+        is_restricted: bool,
+        has_access: bool,
+        restriction_root: Option<(NonRootMPath, MononokeIdentity)>,
+    }
+
+    let results: Vec<PathResult> = stream::iter(paths.iter())
+        .map(anyhow::Ok)
+        .and_then(|path_str| {
+            let restricted_paths = &restricted_paths;
+            async move {
+                let path = NonRootMPath::try_from(path_str.as_str())
+                    .with_context(|| format!("Casting path {path_str} to NonRootMPath"))?;
+
+                let res = match find_restriction_root(restricted_paths, &path) {
+                    Some((root_path, acl)) => {
+                        let can_access = if check_permissions {
+                            has_access_to_acl(ctx, acl_provider, &[&acl])
+                                .await
+                                .with_context(|| format!("Checking access to ACL {acl}"))?
+                        } else {
+                            false
+                        };
+                        PathResult {
+                            path_str: path_str.clone(),
+                            is_restricted: true,
+                            has_access: can_access,
+                            restriction_root: Some((root_path, acl)),
+                        }
+                    }
+                    None => PathResult {
+                        path_str: path_str.clone(),
+                        is_restricted: false,
+                        has_access: true,
+                        restriction_root: None,
+                    },
+                };
+                Ok(res)
+            }
+        })
+        .try_collect()
+        .await
+        .map_err(|err| MononokeError::InternalError(err.into()))?;
+
+    let is_restricted: Vec<bool> = results.iter().map(|r| r.is_restricted).collect();
+    let has_access: Vec<bool> = results.iter().map(|r| r.has_access).collect();
+    let authorized_paths: Vec<String> = results
+        .iter()
+        .filter(|r| r.has_access && check_permissions)
+        .map(|r| r.path_str.clone())
+        .sorted()
+        .collect();
+    let restriction_roots: BTreeMap<String, Vec<thrift::PathRestrictionRoot>> = results
+        .iter()
+        .filter_map(|r| {
+            r.restriction_root.as_ref().map(|(root_path, acl)| {
+                (
+                    r.path_str.clone(),
+                    vec![build_path_restriction_root(root_path, acl)],
+                )
+            })
+        })
+        .collect();
+
+    Ok(thrift::CommitRestrictedPathsAccessResponse {
+        are_restricted: compute_path_coverage(is_restricted),
+        has_access: compute_path_coverage(has_access),
+        restriction_roots,
+        authorized_paths,
+        ..Default::default()
+    })
+}
+
+/// Check if the mock API should be used for this repo.
+pub(crate) fn use_mock_api(repo_name: &str) -> bool {
+    justknobs::eval(
+        "scm/mononoke:scs_restricted_paths_use_mock_api",
+        None,
+        Some(repo_name),
+    )
+    // Default to using the Mock API initially
+    .unwrap_or(true)
+}
+
+/// Find the restriction root for a path, if any.
+fn find_restriction_root(
+    restricted_paths: &RestrictedPaths,
+    path: &NonRootMPath,
+) -> Option<(NonRootMPath, MononokeIdentity)> {
+    for (restricted_path_prefix, acl) in &restricted_paths.config().path_acls {
+        if restricted_path_prefix.is_prefix_of(path) {
+            return Some((restricted_path_prefix.clone(), acl.clone()));
+        }
+    }
+    None
+}
+
+/// Build PathRestrictionRoot thrift struct.
+fn build_path_restriction_root(
+    root_path: &NonRootMPath,
+    acl: &MononokeIdentity,
+) -> thrift::PathRestrictionRoot {
+    thrift::PathRestrictionRoot {
+        path: root_path.to_string(),
+        acls: vec![acl.to_string()],
+        ..Default::default()
+    }
+}
+
+pub(crate) fn compute_path_coverage(
+    values: impl IntoIterator<Item = bool>,
+) -> thrift::PathCoverage {
+    let mut has_true = false;
+    let mut has_false = false;
+
+    for value in values {
+        if value {
+            has_true = true;
+        } else {
+            has_false = true;
+        }
+        if has_true && has_false {
+            return thrift::PathCoverage::SOME;
+        }
+    }
+
+    match (has_true, has_false) {
+        (true, false) => thrift::PathCoverage::ALL,
+        (false, true) | (false, false) => thrift::PathCoverage::NONE,
+        _ => unreachable!(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::str::FromStr;
+    use std::sync::Arc;
+
+    use context::CoreContext;
+    use fbinit::FacebookInit;
+    use metaconfig_types::RestrictedPathsConfig;
+    use mononoke_api::Repo;
+    use mononoke_api::RepoContext;
+    use mononoke_macros::mononoke;
+    use mononoke_types::RepositoryId;
+    use permission_checker::dummy::DummyAclProvider;
+    use restricted_paths::ArcRestrictedPaths;
+    use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
+    use scuba_ext::MononokeScubaSampleBuilder;
+    use sql_construct::SqlConstruct;
+    use test_repo_factory::TestRepoFactory;
+
+    use super::*;
+
+    /// Helper to create RestrictedPaths for testing
+    async fn create_test_restricted_paths(
+        fb: FacebookInit,
+        path_acls: Vec<(&str, &str)>, // (path, "TYPE:acl_name")
+    ) -> ArcRestrictedPaths {
+        let repo_id = RepositoryId::new(0);
+
+        let path_acls_map: HashMap<NonRootMPath, MononokeIdentity> = path_acls
+            .into_iter()
+            .map(|(path, acl_str)| {
+                (
+                    NonRootMPath::new(path).unwrap(),
+                    MononokeIdentity::from_str(acl_str).unwrap(),
+                )
+            })
+            .collect();
+
+        let config = RestrictedPathsConfig {
+            path_acls: path_acls_map,
+            use_manifest_id_cache: false,
+            cache_update_interval_ms: 100,
+            soft_path_acls: Vec::new(),
+        };
+
+        let manifest_id_store = Arc::new(
+            SqlRestrictedPathsManifestIdStoreBuilder::with_sqlite_in_memory()
+                .expect("Failed to create Sqlite connection")
+                .with_repo_id(repo_id),
+        );
+
+        // TODO(T248649079): test the ACL checks logic
+        let acl_provider = DummyAclProvider::new(fb).unwrap();
+        let scuba = MononokeScubaSampleBuilder::with_discard();
+
+        Arc::new(RestrictedPaths::new(
+            config,
+            manifest_id_store,
+            acl_provider,
+            None,
+            scuba,
+        ))
+    }
+
+    /// Helper to create a RepoContext with restricted paths for testing
+    struct RestrictedPathsAccessTestData {
+        ctx: CoreContext,
+        repo_ctx: RepoContext<Repo>,
+        acl_provider: Arc<dyn AclProvider>,
+    }
+
+    async fn create_restricted_paths_access_test_data(
+        fb: FacebookInit,
+        path_acls: Vec<(&str, &str)>,
+    ) -> RestrictedPathsAccessTestData {
+        let restricted_paths = create_test_restricted_paths(fb, path_acls).await;
+        let ctx = CoreContext::test_mock(fb);
+
+        let repo: Repo = TestRepoFactory::new(fb)
+            .unwrap()
+            .with_restricted_paths(restricted_paths)
+            .build()
+            .await
+            .unwrap();
+
+        let repo_ctx = RepoContext::new_test(ctx.clone(), Arc::new(repo))
+            .await
+            .unwrap();
+
+        let acl_provider = DummyAclProvider::new(fb).unwrap();
+
+        RestrictedPathsAccessTestData {
+            ctx,
+            repo_ctx,
+            acl_provider,
+        }
+    }
+
+    // Tests for `commit_restricted_paths_access` method
+
+    #[mononoke::fbinit_test]
+    async fn test_restricted_paths_access_exact_match(fb: FacebookInit) -> Result<()> {
+        let RestrictedPathsAccessTestData {
+            ctx,
+            repo_ctx,
+            acl_provider,
+        } = create_restricted_paths_access_test_data(fb, vec![("restricted/dir", "TIER:my-acl")])
+            .await;
+
+        let paths = BTreeSet::from(["restricted/dir".to_string()]);
+        let response = restricted_paths_access_impl(&ctx, &repo_ctx, &acl_provider, paths, false)
+            .await
+            .unwrap();
+
+        assert_eq!(response.are_restricted, thrift::PathCoverage::ALL);
+        assert_eq!(response.restriction_roots.len(), 1);
+        let roots = response.restriction_roots.get("restricted/dir").unwrap();
+        assert_eq!(roots[0].path, "restricted/dir");
+        assert_eq!(roots[0].acls, vec!["TIER:my-acl"]);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_restricted_paths_access_nested_path(fb: FacebookInit) -> Result<()> {
+        let RestrictedPathsAccessTestData {
+            ctx,
+            repo_ctx,
+            acl_provider,
+        } = create_restricted_paths_access_test_data(fb, vec![("restricted", "TIER:my-acl")]).await;
+
+        let paths = BTreeSet::from(["restricted/subdir/file.txt".to_string()]);
+        let response = restricted_paths_access_impl(&ctx, &repo_ctx, &acl_provider, paths, false)
+            .await
+            .unwrap();
+
+        assert_eq!(response.are_restricted, thrift::PathCoverage::ALL);
+        assert_eq!(response.restriction_roots.len(), 1);
+        let roots = response
+            .restriction_roots
+            .get("restricted/subdir/file.txt")
+            .unwrap();
+        assert_eq!(roots[0].path, "restricted");
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_restricted_paths_access_no_match(fb: FacebookInit) -> Result<()> {
+        let RestrictedPathsAccessTestData {
+            ctx,
+            repo_ctx,
+            acl_provider,
+        } = create_restricted_paths_access_test_data(fb, vec![("restricted/dir", "TIER:my-acl")])
+            .await;
+
+        let paths = BTreeSet::from(["other/path/file.txt".to_string()]);
+        let response = restricted_paths_access_impl(&ctx, &repo_ctx, &acl_provider, paths, false)
+            .await
+            .unwrap();
+
+        assert_eq!(response.are_restricted, thrift::PathCoverage::NONE);
+        assert!(response.restriction_roots.is_empty());
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_restricted_paths_access_sibling_path(fb: FacebookInit) -> Result<()> {
+        let RestrictedPathsAccessTestData {
+            ctx,
+            repo_ctx,
+            acl_provider,
+        } = create_restricted_paths_access_test_data(fb, vec![("foo/bar", "TIER:my-acl")]).await;
+
+        // foo/baz is a sibling of foo/bar, not under it
+        let paths = BTreeSet::from(["foo/baz/file.txt".to_string()]);
+        let response = restricted_paths_access_impl(&ctx, &repo_ctx, &acl_provider, paths, false)
+            .await
+            .unwrap();
+
+        assert_eq!(response.are_restricted, thrift::PathCoverage::NONE);
+        assert!(response.restriction_roots.is_empty());
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_restricted_paths_access_multiple_restrictions_single_path(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let RestrictedPathsAccessTestData {
+            ctx,
+            repo_ctx,
+            acl_provider,
+        } = create_restricted_paths_access_test_data(
+            fb,
+            vec![("first", "TIER:first-acl"), ("second", "TIER:second-acl")],
+        )
+        .await;
+
+        let paths = BTreeSet::from(["second/nested/file.txt".to_string()]);
+        let response = restricted_paths_access_impl(&ctx, &repo_ctx, &acl_provider, paths, false)
+            .await
+            .unwrap();
+
+        assert_eq!(response.are_restricted, thrift::PathCoverage::ALL);
+        let roots = response
+            .restriction_roots
+            .get("second/nested/file.txt")
+            .unwrap();
+        assert_eq!(roots[0].path, "second");
+        assert_eq!(roots[0].acls, vec!["TIER:second-acl"]);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_restricted_paths_access_multiple_paths_from_different_roots(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let RestrictedPathsAccessTestData {
+            ctx,
+            repo_ctx,
+            acl_provider,
+        } = create_restricted_paths_access_test_data(
+            fb,
+            vec![
+                ("first", "TIER:first-acl"),
+                ("second", "TIER:second-acl"),
+                ("third/nested", "TIER:third-acl"),
+            ],
+        )
+        .await;
+
+        let paths = BTreeSet::from([
+            "first/file1.txt".to_string(),
+            "second/subdir/file2.txt".to_string(),
+            "third/nested/deep/file3.txt".to_string(),
+            "unrestricted/file4.txt".to_string(),
+        ]);
+        let response = restricted_paths_access_impl(&ctx, &repo_ctx, &acl_provider, paths, false)
+            .await
+            .unwrap();
+
+        // 3 restricted + 1 unrestricted = SOME
+        assert_eq!(response.are_restricted, thrift::PathCoverage::SOME);
+        assert_eq!(response.restriction_roots.len(), 3);
+
+        // Verify each restricted path has correct root
+        let first_roots = response.restriction_roots.get("first/file1.txt").unwrap();
+        assert_eq!(first_roots[0].path, "first");
+        assert_eq!(first_roots[0].acls, vec!["TIER:first-acl"]);
+
+        let second_roots = response
+            .restriction_roots
+            .get("second/subdir/file2.txt")
+            .unwrap();
+        assert_eq!(second_roots[0].path, "second");
+        assert_eq!(second_roots[0].acls, vec!["TIER:second-acl"]);
+
+        let third_roots = response
+            .restriction_roots
+            .get("third/nested/deep/file3.txt")
+            .unwrap();
+        assert_eq!(third_roots[0].path, "third/nested");
+        assert_eq!(third_roots[0].acls, vec!["TIER:third-acl"]);
+
+        // Unrestricted path should not be in restriction_roots
+        assert!(
+            !response
+                .restriction_roots
+                .contains_key("unrestricted/file4.txt")
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_restricted_paths_access_no_restrictions_configured(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        // Create repo with no restricted paths
+        let RestrictedPathsAccessTestData {
+            ctx,
+            repo_ctx,
+            acl_provider,
+        } = create_restricted_paths_access_test_data(fb, vec![]).await;
+
+        let paths = BTreeSet::from(["any/path/file.txt".to_string()]);
+        let response = restricted_paths_access_impl(&ctx, &repo_ctx, &acl_provider, paths, false)
+            .await
+            .unwrap();
+
+        assert_eq!(response.are_restricted, thrift::PathCoverage::NONE);
+        assert_eq!(response.has_access, thrift::PathCoverage::ALL);
+        assert!(response.restriction_roots.is_empty());
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_restricted_paths_access_check_permissions_populates_authorized_paths(
+        fb: FacebookInit,
+    ) -> Result<()> {
+        let RestrictedPathsAccessTestData {
+            ctx,
+            repo_ctx,
+            acl_provider,
+        } = create_restricted_paths_access_test_data(fb, vec![("restricted", "TIER:my-acl")]).await;
+
+        let paths = BTreeSet::from([
+            "restricted/file.txt".to_string(),
+            "unrestricted/file.txt".to_string(),
+        ]);
+        let response = restricted_paths_access_impl(
+            &ctx,
+            &repo_ctx,
+            &acl_provider,
+            paths,
+            true, // check_permissions = true
+        )
+        .await
+        .unwrap();
+
+        // DummyAclProvider grants access, so both paths should be authorized
+        // The unrestricted path is always authorized, and restricted path
+        // depends on DummyAclProvider behavior
+        assert!(!response.authorized_paths.is_empty());
+        assert!(
+            response
+                .authorized_paths
+                .contains(&"unrestricted/file.txt".to_string())
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_restricted_paths_access_all_paths_restricted(fb: FacebookInit) -> Result<()> {
+        let RestrictedPathsAccessTestData {
+            ctx,
+            repo_ctx,
+            acl_provider,
+        } = create_restricted_paths_access_test_data(fb, vec![("restricted", "TIER:my-acl")]).await;
+
+        let paths = BTreeSet::from([
+            "restricted/file1.txt".to_string(),
+            "restricted/file2.txt".to_string(),
+            "restricted/subdir/file3.txt".to_string(),
+        ]);
+        let response = restricted_paths_access_impl(&ctx, &repo_ctx, &acl_provider, paths, false)
+            .await
+            .unwrap();
+
+        assert_eq!(response.are_restricted, thrift::PathCoverage::ALL);
+        assert_eq!(response.restriction_roots.len(), 3);
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_restricted_paths_access_all_paths_unrestricted(fb: FacebookInit) -> Result<()> {
+        let RestrictedPathsAccessTestData {
+            ctx,
+            repo_ctx,
+            acl_provider,
+        } = create_restricted_paths_access_test_data(fb, vec![("restricted", "TIER:my-acl")]).await;
+
+        let paths = BTreeSet::from([
+            "unrestricted/file1.txt".to_string(),
+            "other/file2.txt".to_string(),
+            "another/subdir/file3.txt".to_string(),
+        ]);
+        let response = restricted_paths_access_impl(&ctx, &repo_ctx, &acl_provider, paths, false)
+            .await
+            .unwrap();
+
+        assert_eq!(response.are_restricted, thrift::PathCoverage::NONE);
+        assert!(response.restriction_roots.is_empty());
+
+        Ok(())
+    }
+}

@@ -64,6 +64,7 @@ repo_authorization = { version = "0.1.0", path = "../../../repo_authorization" }
 repo_blobstore = { version = "0.1.0", path = "../../../repo_attributes/repo_blobstore" }
 repo_identity = { version = "0.1.0", path = "../../../repo_attributes/repo_identity" }
 repos = { version = "0.1.0", path = "../../../../../configerator/structs/scm/mononoke/repos/repos" }
+restricted_paths = { version = "0.1.0", path = "../../../repo_attributes/restricted_paths" }
 sapling-clientinfo = { version = "0.1.0", path = "../../../../scm/lib/clientinfo" }
 scribe_ext = { version = "0.1.0", path = "../../../common/scribe_ext" }
 scs_errors = { version = "0.1.0", path = "../scs_errors" }
@@ -77,3 +78,8 @@ synced_commit_mapping = { version = "0.1.0", path = "../../../features/commit_re
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
+
+[dev-dependencies]
+fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+sql_construct = { version = "0.1.0", path = "../../../common/sql_construct" }
+test_repo_factory = { version = "0.1.0", path = "../../../repo_factory/test_repo_factory" }

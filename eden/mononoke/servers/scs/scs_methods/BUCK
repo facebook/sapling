@@ -10,6 +10,12 @@ rust_library(
     named_deps = ({} if rust_oss.is_oss_build() else {
         "MononokeScsRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeScsRequest_ods3-rust",
     }),
+    test_deps = [
+        "//common/rust/shed/fbinit:fbinit-tokio",
+        "//eden/mononoke/common/sql_construct:sql_construct",
+        "//eden/mononoke/repo_factory:test_repo_factory",
+        "//eden/mononoke/servers/slapi/slapi_server/context:context",
+    ],
     deps = ([
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-stream",
@@ -73,6 +79,7 @@ rust_library(
         "//eden/mononoke/metaconfig:metaconfig_types",
         "//eden/mononoke/mononoke_api:mononoke_api",
         "//eden/mononoke/mononoke_api_hg:mononoke_api_hg",
+        "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/clients/facebook/diff_service_client:diff_service_client",
         "//eden/mononoke/facebook/diff_service/if:diff_service_if-rust",
         "//eden/mononoke/facebook/diff_service/if:diff_service_if-rust-clients",
@@ -85,6 +92,7 @@ rust_library(
         "//eden/mononoke/features/pushrebase:pushrebase",
         "//eden/mononoke/repo_attributes/pushrebase_mutation_mapping:pushrebase_mutation_mapping",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",
+        "//eden/mononoke/repo_attributes/restricted_paths:restricted_paths",
         "//eden/mononoke/repo_authorization:repo_authorization",
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/scs/if:source_control-rust-services",

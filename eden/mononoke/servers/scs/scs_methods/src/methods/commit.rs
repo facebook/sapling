@@ -55,6 +55,7 @@ use phases::PhasesRef;
 use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
 
+use super::commit_restricted_paths;
 use crate::commit_id::map_commit_identities;
 use crate::commit_id::map_commit_identity;
 use crate::from_request::FromRequest;
@@ -1704,11 +1705,26 @@ impl SourceControlServiceImpl {
     /// Query paths for restriction status and access permissions.
     pub(crate) async fn commit_restricted_paths_access(
         &self,
-        _ctx: CoreContext,
-        _commit: thrift::CommitSpecifier,
-        _params: thrift::CommitRestrictedPathsAccessParams,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitRestrictedPathsAccessParams,
     ) -> Result<thrift::CommitRestrictedPathsAccessResponse, scs_errors::ServiceError> {
-        unimplemented!("commit_restricted_paths_access not implemented yet")
+        let (repo, _changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
+        if commit_restricted_paths::use_mock_api(repo.name()) {
+            return Err(scs_errors::not_implemented(
+                "commit_restricted_paths_access is not mocked yet".to_string(),
+            )
+            .into());
+        }
+        let paths: BTreeSet<String> = params.paths.into_iter().collect();
+        commit_restricted_paths::restricted_paths_access_impl(
+            repo.ctx(),
+            &repo,
+            &self.acl_provider,
+            paths,
+            params.check_permissions,
+        )
+        .await
     }
 
     /// Find all restriction roots under the specified roots.
@@ -1733,10 +1749,42 @@ impl SourceControlServiceImpl {
     /// Query restriction information for all file changes in the specified commit.
     pub(crate) async fn commit_restricted_paths_changes(
         &self,
-        _ctx: CoreContext,
-        _commit: thrift::CommitSpecifier,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
         _params: thrift::CommitRestrictedPathsChangesParams,
     ) -> Result<thrift::CommitRestrictedPathsChangesResponse, scs_errors::ServiceError> {
-        unimplemented!("commit_restricted_paths_changes not implemented yet")
+        let (repo, changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
+        if commit_restricted_paths::use_mock_api(repo.name()) {
+            return Err(scs_errors::not_implemented(
+                "commit_restricted_paths_changes is not mocked yet".to_string(),
+            )
+            .into());
+        }
+
+        // Get changed paths from the bonsai changeset
+        let bonsai = changeset.bonsai_changeset().await?;
+        let changed_paths: BTreeSet<String> = bonsai
+            .file_changes_map()
+            .keys()
+            .map(|path| path.to_string())
+            .collect();
+
+        let access_response = commit_restricted_paths::restricted_paths_access_impl(
+            repo.ctx(),
+            &repo,
+            &self.acl_provider,
+            changed_paths.clone(),
+            true, // Always check permissions for changes endpoint
+        )
+        .await?;
+
+        Ok(thrift::CommitRestrictedPathsChangesResponse {
+            are_restricted: access_response.are_restricted,
+            has_access: access_response.has_access,
+            restriction_roots: access_response.restriction_roots,
+            authorized_paths: access_response.authorized_paths,
+            changed_paths: changed_paths.into_iter().collect(),
+            ..Default::default()
+        })
     }
 }
