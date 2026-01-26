@@ -1432,6 +1432,12 @@ class ChownCmd(Subcmd):
             default=False,
             help="Are redirections also chowned",
         )
+        parser.add_argument(
+            "--verbose",
+            action="store_true",
+            default=False,
+            help="Add more info to the output, such as the output of the chown sub-calls",
+        )
 
     def resolve_uid(self, uid_str: str) -> int:
         try:
@@ -1472,15 +1478,37 @@ class ChownCmd(Subcmd):
             ).values():
                 target = redir.expand_target_abspath(checkout)
                 print(f"Chowning redirection: {redir.repo_path}...", end="", flush=True)
-                subprocess.run(["sudo", "chown", "-R", f"{uid}:{gid}", str(target)])
-                subprocess.run(
+                result1 = subprocess.run(
+                    ["sudo", "chown", "-R", f"{uid}:{gid}", str(target)],
+                    capture_output=True,
+                    text=True,
+                )
+                if args.verbose:
+                    print(f"\nChowning target: {str(target)}")
+                    print("stdout:")
+                    print(result1.stdout)
+                    if result1.stderr:
+                        print("stderr: ")
+                        print(result1.stderr)
+
+                result2 = subprocess.run(
                     [
                         "sudo",
                         "chown",
                         f"{uid}:{gid}",
                         str(checkout.path / redir.repo_path),
-                    ]
+                    ],
+                    capture_output=True,
+                    text=True,
                 )
+                if args.verbose:
+                    print(f"Chowning repo path: {checkout.path / redir.repo_path}")
+                    print("stdout:")
+                    print(result2.stdout)
+                    if result2.stderr:
+                        print("stderr:")
+                        print(result2.stderr)
+
                 print("done")
 
         return 0

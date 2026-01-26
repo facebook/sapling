@@ -78,10 +78,10 @@ class ChownTest(testcase.EdenRepoTest):
     def run_chown(self, mount: str, use_ids: bool = False) -> None:
         if use_ids:
             output = self.eden.run_cmd(
-                "chown", mount, str(self.nobody_uid), str(self.nobody_gid)
+                "chown", mount, str(self.nobody_uid), str(self.nobody_gid), "--verbose"
             )
         else:
-            output = self.eden.run_cmd("chown", mount, "nobody", "nobody")
+            output = self.eden.run_cmd("chown", mount, "nobody", "nobody", "--verbose")
         print(output)
 
     def test_chown(self) -> None:
