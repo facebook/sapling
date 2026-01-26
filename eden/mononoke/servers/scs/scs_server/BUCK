@@ -61,6 +61,7 @@ cpp_library(
     deps = [
         "//eden/mononoke/scs/if:source_control-cpp2-metadata",
         "//eden/mononoke/scs/if:source_control-cpp2-services",
+        "//thrift/lib/cpp2/gen:module_metadata_h",
     ],
     exported_deps = [
         "//common/rust/srserver:metadata-header",
