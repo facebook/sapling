@@ -37,7 +37,7 @@ where
             cloned!(repo_derived_data);
             async move {
                 repo_derived_data
-                    .derive::<Derivable>(ctx, cs_id, DerivationPriority::LOW)
+                    .derive::<Derivable>(ctx, cs_id, DerivationPriority::HIGH)
                     .await?;
                 Ok(())
             }
