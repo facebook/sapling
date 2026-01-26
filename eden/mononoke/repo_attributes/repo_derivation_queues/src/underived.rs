@@ -28,6 +28,7 @@ use tracing::debug;
 use tracing::error;
 
 use crate::DerivationDagItem;
+use crate::DerivationPriority;
 use crate::DerivationQueue;
 use crate::EnqueueResponse;
 use crate::InternalError;
@@ -122,6 +123,7 @@ pub async fn build_underived_batched_graph<'a>(
                     bubble_id,
                     deps.unique().collect(),
                     ctx.metadata().client_info(),
+                    DerivationPriority::LOW,
                 )?;
 
                 let max_failed_attempts = justknobs::get_as::<u64>("scm/mononoke:build_underived_batched_graph_max_failed_attempts", None)?;
@@ -223,6 +225,7 @@ pub async fn build_underived_batched_graph<'a>(
                                                 item.bubble_id(),
                                                 vec![],
                                                 item.client_info(),
+                                                DerivationPriority::LOW,
                                             )?
                                         )
                                     }
@@ -298,6 +301,7 @@ async fn deduplicate(
             bubble_id,
             vec![existing.id().clone()],
             ctx.metadata().client_info(),
+            DerivationPriority::LOW,
         )?;
         return Ok(Some(item));
     }

@@ -13,6 +13,12 @@ include "thrift/annotation/thrift.thrift"
 @thrift.AllowLegacyMissingUris
 package;
 
+@rust.Serde
+enum DerivationPriority {
+  LOW = 0,
+  HIGH = 1,
+}
+
 @rust.Exhaustive
 struct DagItemInfo {
   1: id.ChangesetId head_cs_id;
@@ -20,4 +26,5 @@ struct DagItemInfo {
   3: optional string client_info;
   4: optional i64 bubble_id;
   5: optional i64 retry_count;
+  6: DerivationPriority priority;
 }

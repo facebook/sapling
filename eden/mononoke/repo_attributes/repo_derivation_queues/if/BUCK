@@ -7,6 +7,10 @@ thrift_library(
     languages = [
         "rust",
     ],
+    rust_deps = [
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_derive",
+    ],
     thrift_srcs = {
         "derivation_queue.thrift": [],
     },

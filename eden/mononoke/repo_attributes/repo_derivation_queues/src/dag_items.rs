@@ -70,6 +70,10 @@ impl DagItemId {
     }
 }
 
+fn default_derivation_priority() -> derivation_queue_thrift::DerivationPriority {
+    derivation_queue_thrift::DerivationPriority::LOW
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DagItemInfo {
     head_cs_id: ChangesetId,
@@ -77,6 +81,8 @@ pub struct DagItemInfo {
     enqueue_timestamp: Option<Timestamp>,
     client_info: Option<ClientInfo>,
     retry_count: u64,
+    #[serde(default = "default_derivation_priority")]
+    priority: derivation_queue_thrift::DerivationPriority,
 }
 
 impl DagItemInfo {
@@ -84,6 +90,7 @@ impl DagItemInfo {
         head_cs_id: ChangesetId,
         bubble_id: Option<BubbleId>,
         client_info: Option<&ClientInfo>,
+        priority: derivation_queue_thrift::DerivationPriority,
     ) -> Self {
         let enqueue_timestamp = Some(Timestamp::now());
         Self {
@@ -92,7 +99,12 @@ impl DagItemInfo {
             enqueue_timestamp,
             client_info: client_info.cloned(),
             retry_count: 0,
+            priority,
         }
+    }
+
+    pub fn priority(&self) -> derivation_queue_thrift::DerivationPriority {
+        self.priority
     }
 
     fn to_thrift(&self) -> derivation_queue_thrift::DagItemInfo {
@@ -105,6 +117,7 @@ impl DagItemInfo {
                 .as_ref()
                 .and_then(|info| info.to_json().ok()),
             retry_count: Some(self.retry_count as i64),
+            priority: self.priority,
         }
     }
 
@@ -124,6 +137,7 @@ impl DagItemInfo {
                 .as_deref()
                 .and_then(|info| ClientInfo::from_json(info).ok()),
             retry_count: dag_item_info.retry_count.unwrap_or(0) as u64,
+            priority: dag_item_info.priority,
         })
     }
 
@@ -141,6 +155,10 @@ impl DagItemInfo {
 
     pub fn retry_count(&self) -> u64 {
         self.retry_count
+    }
+
+    pub fn set_priority(&mut self, priority: derivation_queue_thrift::DerivationPriority) {
+        self.priority = priority;
     }
 
     pub fn head_cs_id(&self) -> ChangesetId {
@@ -170,6 +188,7 @@ impl DerivationDagItem {
         bubble_id: Option<BubbleId>,
         deps: Vec<DagItemId>,
         client_info: Option<&ClientInfo>,
+        priority: derivation_queue_thrift::DerivationPriority,
     ) -> Result<DerivationDagItem, InternalError> {
         let dag_item_id = DagItemId {
             repo_id,
@@ -177,7 +196,7 @@ impl DerivationDagItem {
             derived_data_type,
             root_cs_id,
         };
-        let dag_item_info = DagItemInfo::new(head_cs_id, bubble_id, client_info);
+        let dag_item_info = DagItemInfo::new(head_cs_id, bubble_id, client_info, priority);
         if deps.contains(&dag_item_id) {
             return Err(InternalError::CircularDependency(dag_item_id));
         }

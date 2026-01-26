@@ -16,6 +16,7 @@ use mononoke_types::DerivableType;
 use prettytable::Table;
 use prettytable::cell;
 use prettytable::row;
+use repo_derivation_queues::DerivationPriority;
 use repo_derivation_queues::DerivationQueueSummary;
 use repo_derivation_queues::RepoDerivationQueuesRef;
 
@@ -93,6 +94,7 @@ async fn print_table(
         "time in queue",
         "retry count",
         "type",
+        "priority",
         "bubble",
         "head",
         "root",
@@ -104,6 +106,10 @@ async fn print_table(
     table.set_titles(titles);
 
     println!("Number of items in the queue: {}", summary.queue_size);
+    println!(
+        "  High priority ready: {}, Low priority ready: {}",
+        summary.high_priority_ready_size, summary.low_priority_ready_size
+    );
     let mut item_stream = summary.items.take(args.limit);
     while let Some(item) = item_stream.try_next().await? {
         let dd_type = item.derived_data_type();
@@ -111,6 +117,11 @@ async fn print_table(
             let timestamp = item
                 .enqueue_timestamp()
                 .ok_or_else(|| anyhow!("Missing enqueue timestamp"))?;
+            let priority_str = match item.priority() {
+                DerivationPriority::HIGH => "high",
+                DerivationPriority::LOW => "low",
+                _ => "unknown",
+            };
             let mut row = row![
                 format!(
                     "{}s{}ms",
@@ -119,6 +130,7 @@ async fn print_table(
                 ),
                 item.retry_count(),
                 dd_type,
+                priority_str,
                 format!("{:?}", item.bubble_id()),
                 item.head_cs_id(),
                 item.root_cs_id(),

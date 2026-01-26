@@ -16,6 +16,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use clientinfo::ClientInfo;
 use context::CoreContext;
+pub use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::DerivedDataManager;
 use ephemeral_blobstore::Bubble;
 use ephemeral_blobstore::BubbleId;
@@ -130,6 +131,8 @@ pub enum DequeueResponse {
 
 pub struct DerivationQueueSummary<'a> {
     pub queue_size: usize,
+    pub high_priority_ready_size: usize,
+    pub low_priority_ready_size: usize,
     pub items: BoxStream<'a, Result<DerivationQueueSummaryItem, InternalError>>,
 }
 
@@ -179,5 +182,9 @@ impl DerivationQueueSummaryItem {
 
     pub fn is_ready(&self) -> bool {
         self.is_ready
+    }
+
+    pub fn priority(&self) -> DerivationPriority {
+        self.dag_item_info.priority()
     }
 }
