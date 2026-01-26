@@ -138,6 +138,13 @@ struct AggregatedUsageCounts {
     purgeable_space: u64,
 }
 
+/// Represents the cleanup status to display for a usage row.
+enum CleanupStatus {
+    None,                     //no status shown (used in default mode)
+    Cleaned,                  //show "Cleaned" text
+    NotCleaned(&'static str), //show warning message with custom text
+}
+
 impl AggregatedUsageCounts {
     fn new() -> AggregatedUsageCounts {
         AggregatedUsageCounts {
