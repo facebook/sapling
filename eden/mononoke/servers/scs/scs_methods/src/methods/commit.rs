@@ -1700,4 +1700,43 @@ impl SourceControlServiceImpl {
             ..Default::default()
         })
     }
+
+    /// Query paths for restriction status and access permissions.
+    pub(crate) async fn commit_restricted_paths_access(
+        &self,
+        _ctx: CoreContext,
+        _commit: thrift::CommitSpecifier,
+        _params: thrift::CommitRestrictedPathsAccessParams,
+    ) -> Result<thrift::CommitRestrictedPathsAccessResponse, scs_errors::ServiceError> {
+        unimplemented!("commit_restricted_paths_access not implemented yet")
+    }
+
+    /// Find all restriction roots under the specified roots.
+    pub(crate) async fn commit_find_restricted_paths(
+        &self,
+        _ctx: CoreContext,
+        _commit: thrift::CommitSpecifier,
+        _params: thrift::CommitFindRestrictedPathsParams,
+    ) -> Result<
+        (
+            thrift::CommitFindRestrictedPathsStreamResponse,
+            BoxStream<
+                'static,
+                Result<thrift::CommitFindRestrictedPathsStreamItem, scs_errors::ServiceError>,
+            >,
+        ),
+        scs_errors::ServiceError,
+    > {
+        unimplemented!("commit_find_restricted_paths not implemented yet")
+    }
+
+    /// Query restriction information for all file changes in the specified commit.
+    pub(crate) async fn commit_restricted_paths_changes(
+        &self,
+        _ctx: CoreContext,
+        _commit: thrift::CommitSpecifier,
+        _params: thrift::CommitRestrictedPathsChangesParams,
+    ) -> Result<thrift::CommitRestrictedPathsChangesResponse, scs_errors::ServiceError> {
+        unimplemented!("commit_restricted_paths_changes not implemented yet")
+    }
 }

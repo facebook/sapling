@@ -163,6 +163,11 @@ impl AddScubaResponse for thrift::CommitPathExistsResponse {}
 
 impl AddScubaResponse for thrift::CommitPathInfoResponse {}
 
+impl AddScubaResponse for thrift::CommitRestrictedPathsAccessResponse {}
+impl AddScubaResponse for thrift::CommitFindRestrictedPathsStreamItem {}
+impl AddScubaResponse for thrift::CommitFindRestrictedPathsStreamResponse {}
+impl AddScubaResponse for thrift::CommitRestrictedPathsChangesResponse {}
+
 impl AddScubaResponse for thrift::CommitMultiplePathInfoResponse {}
 
 impl AddScubaResponse for thrift::CommitPathLastChangedResponse {}

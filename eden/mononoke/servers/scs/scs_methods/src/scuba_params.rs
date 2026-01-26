@@ -493,6 +493,10 @@ impl AddScubaParams for thrift::CommitPathExistsParams {}
 
 impl AddScubaParams for thrift::CommitPathInfoParams {}
 
+impl AddScubaParams for thrift::CommitRestrictedPathsAccessParams {}
+impl AddScubaParams for thrift::CommitFindRestrictedPathsParams {}
+impl AddScubaParams for thrift::CommitRestrictedPathsChangesParams {}
+
 impl AddScubaParams for thrift::RepoInfoParams {}
 
 impl AddScubaParams for thrift::CommitMultiplePathInfoParams {

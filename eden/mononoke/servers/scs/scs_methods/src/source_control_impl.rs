@@ -1404,6 +1404,16 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitChangedPathsApproxParams,
         ) -> Result<thrift::CommitChangedPathsApproxResponse, service::CommitChangedPathsApproxExn>;
 
+        async fn commit_restricted_paths_access(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitRestrictedPathsAccessParams,
+        ) -> Result<thrift::CommitRestrictedPathsAccessResponse, service::CommitRestrictedPathsAccessExn>;
+
+        async fn commit_restricted_paths_changes(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitRestrictedPathsChangesParams,
+        ) -> Result<thrift::CommitRestrictedPathsChangesResponse, service::CommitRestrictedPathsChangesExn>;
+
         async fn commit_history(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitHistoryParams,
@@ -1702,5 +1712,15 @@ impl SourceControlService for SourceControlServiceThriftImpl {
                 BoxStream<'static, Result<thrift::CommitFindFilesStreamItem, service::CommitFindFilesStreamStreamExn>>,
             ),
             service::CommitFindFilesStreamExn>;
+
+        async fn commit_find_restricted_paths(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitFindRestrictedPathsParams,
+        ) -> Result<
+            (
+                thrift::CommitFindRestrictedPathsStreamResponse,
+                BoxStream<'static, Result<thrift::CommitFindRestrictedPathsStreamItem, service::CommitFindRestrictedPathsStreamExn>>,
+            ),
+            service::CommitFindRestrictedPathsExn>;
     }
 }
