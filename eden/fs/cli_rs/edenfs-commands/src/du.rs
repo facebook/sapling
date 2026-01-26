@@ -158,6 +158,23 @@ impl AggregatedUsageCounts {
             purgeable_space: 0,
         }
     }
+
+    /// Helper to add a usage row to the table with optional cleanup status.
+    fn add_usage_row(table: &mut Table, label: &str, size: u64, status: CleanupStatus) {
+        let mut row = Row::new();
+        row.add_cell(Cell::new(label).set_alignment(CellAlignment::Right));
+        row.add_cell(Cell::new(format_size(size)));
+        match status {
+            CleanupStatus::None => {}
+            CleanupStatus::Cleaned => {
+                row.add_cell(Cell::new("Cleaned").fg(Color::Green));
+            }
+            CleanupStatus::NotCleaned(msg) => {
+                row.add_cell(Cell::new(msg).fg(Color::Yellow));
+            }
+        }
+        table.add_row(row);
+    }
 }
 
 #[derive(Serialize, Debug)]
