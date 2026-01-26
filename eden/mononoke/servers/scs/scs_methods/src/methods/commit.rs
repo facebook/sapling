@@ -52,6 +52,7 @@ use mononoke_api_hg::RepoContextHgExt;
 use mononoke_macros::mononoke;
 use mononoke_types::path::MPath;
 use phases::PhasesRef;
+use restricted_paths::RestrictedPathsArc;
 use scs_errors::ServiceErrorResultExt;
 use source_control as thrift;
 
@@ -1730,9 +1731,9 @@ impl SourceControlServiceImpl {
     /// Find all restriction roots under the specified roots.
     pub(crate) async fn commit_find_restricted_paths(
         &self,
-        _ctx: CoreContext,
-        _commit: thrift::CommitSpecifier,
-        _params: thrift::CommitFindRestrictedPathsParams,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitFindRestrictedPathsParams,
     ) -> Result<
         (
             thrift::CommitFindRestrictedPathsStreamResponse,
@@ -1743,7 +1744,26 @@ impl SourceControlServiceImpl {
         ),
         scs_errors::ServiceError,
     > {
-        unimplemented!("commit_find_restricted_paths not implemented yet")
+        let (repo, _changeset) = self.repo_changeset(ctx.clone(), &commit).await?;
+        if commit_restricted_paths::use_mock_api(repo.name()) {
+            return Err(scs_errors::not_implemented(
+                "commit_find_restricted_paths is not mocked yet".to_string(),
+            )
+            .into());
+        }
+
+        let restricted_paths_facet = repo.repo().restricted_paths_arc().clone();
+        let filter_roots: BTreeSet<String> = params.roots.into_iter().collect();
+
+        let stream = commit_restricted_paths::find_nested_restricted_roots_stream(
+            restricted_paths_facet,
+            filter_roots,
+        );
+
+        Ok((
+            thrift::CommitFindRestrictedPathsStreamResponse::default(),
+            stream,
+        ))
     }
 
     /// Query restriction information for all file changes in the specified commit.
