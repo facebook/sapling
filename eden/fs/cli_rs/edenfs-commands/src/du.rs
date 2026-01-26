@@ -116,6 +116,16 @@ pub struct DiskUsageCmd {
     json: bool,
 }
 
+/// Represents the different display modes for disk usage summary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DisplayMode {
+    Default,       //show usage counts without cleanup status
+    Purgeable,     //show purgeable space information (macOS only)
+    Clean,         //show cleanup status (cleaned vs not cleaned)
+    DeepClean,     //like Clean but fsck directories are also cleaned
+    CleanOrphaned, //clean orphaned redirections only
+}
+
 #[derive(Serialize, Debug)]
 struct AggregatedUsageCounts {
     materialized: u64,
