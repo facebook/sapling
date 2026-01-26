@@ -106,6 +106,10 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
         false
     }
 
+    fn likely_an_agent(&self) -> bool {
+        false
+    }
+
     fn is_proxygen_test_identity(&self) -> bool {
         false
     }

@@ -163,6 +163,10 @@ impl Metadata {
         &self.identities
     }
 
+    pub fn likely_an_agent(&self) -> bool {
+        self.identities.likely_an_agent()
+    }
+
     pub fn original_identities(&self) -> Option<&MononokeIdentitySet> {
         self.original_identities.as_ref()
     }

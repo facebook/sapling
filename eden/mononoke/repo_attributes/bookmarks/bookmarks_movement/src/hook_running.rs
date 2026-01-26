@@ -9,7 +9,6 @@ use std::collections::HashMap;
 
 use anyhow::Context;
 use anyhow::Result;
-use anyhow::anyhow;
 use bookmarks_types::BookmarkKey;
 use bytes::Bytes;
 use context::CoreContext;
@@ -19,14 +18,29 @@ use hooks::HookManager;
 use hooks::HookOutcome;
 use hooks::PushAuthoredBy;
 use mononoke_types::BonsaiChangeset;
+use thiserror::Error;
 
 use crate::BookmarkMovementError;
+
+#[derive(Debug, Error)]
+pub enum AdminBypassError {
+    #[error(
+        "In order to use BYPASS_ALL_HOOKS pushvar one needs to be member of the scm group OR have access to write_no_hooks action on repo ACL"
+    )]
+    NotAuthorized,
+    #[error(
+        "Even if one is a member of the scm group or has access to the write_no_hooks action on a repo ACL, AI can't push bypassing all hooks, even on behalf of a user."
+    )]
+    AgentBypassNotAllowed,
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
+}
 
 pub async fn is_admin_bypass(
     ctx: &CoreContext,
     hook_manager: &HookManager,
     pushvars: Option<&HashMap<String, Bytes>>,
-) -> Result<bool> {
+) -> Result<bool, AdminBypassError> {
     let pushvars = match pushvars {
         Some(pushvars) => pushvars,
         None => {
@@ -47,9 +61,13 @@ pub async fn is_admin_bypass(
         .check_if_all_hooks_bypass_allowed(ctx.metadata().identities())
         .await;
     if !is_admin && !has_write_no_hook_action {
-        return Err(anyhow!(
-            "In order to use BYPASS_ALL_HOOKS pushvar one needs to be member of the scm group OR have access to write_no_hooks action on repo ACL"
-        ));
+        return Err(AdminBypassError::NotAuthorized);
+    };
+
+    let block_agent_bypass =
+        justknobs::eval("scm/mononoke:block_hook_bypass_for_agents", None, None)?;
+    if block_agent_bypass && ctx.metadata().likely_an_agent() {
+        return Err(AdminBypassError::AgentBypassNotAllowed);
     }
 
     Ok(true)
@@ -88,7 +106,9 @@ pub async fn run_bookmark_hooks(
         }
     }
 
-    if is_admin_bypass(ctx, hook_manager, pushvars).await? || hook_manager.all_hooks_bypassed() {
+    let is_admin_bypass = is_admin_bypass(ctx, hook_manager, pushvars).await?;
+    let all_hooks_bypassed = hook_manager.all_hooks_bypassed();
+    if is_admin_bypass || all_hooks_bypassed {
         let mut scuba_bypassed_commits = hook_manager.scuba_bypassed_commits().clone();
 
         scuba_bypassed_commits
@@ -105,9 +125,15 @@ pub async fn run_bookmark_hooks(
                     .collect::<Vec<_>>(),
             );
         }
-
-        scuba_bypassed_commits
-            .log_with_msg("Bypassed all hooks using BYPASS_ALL_HOOKS pushvar.", None);
+        if is_admin_bypass {
+            scuba_bypassed_commits
+                .log_with_msg("Bypassed all hooks using BYPASS_ALL_HOOKS pushvar.", None);
+        } else {
+            scuba_bypassed_commits.log_with_msg(
+                "Bypassed all hooks because of all_hooks_bypassed repo config.",
+                None,
+            );
+        }
         return Ok(());
     }
 

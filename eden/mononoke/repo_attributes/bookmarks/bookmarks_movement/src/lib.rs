@@ -62,6 +62,7 @@ pub use pushrebase_hooks::get_pushrebase_hooks;
 
 pub use crate::create::CreateBookmarkOp;
 pub use crate::delete::DeleteBookmarkOp;
+pub use crate::hook_running::AdminBypassError;
 pub use crate::hook_running::run_bookmark_hooks;
 pub use crate::hook_running::run_changeset_hooks;
 pub use crate::pushrebase_onto::PushrebaseOntoBookmarkOp;
@@ -115,6 +116,9 @@ pub enum BookmarkMovementError {
 
     #[error(transparent)]
     AuthorizationError(#[from] AuthorizationError),
+
+    #[error(transparent)]
+    AdminBypassError(#[from] hook_running::AdminBypassError),
 
     #[error(
         "Invalid scratch bookmark: {bookmark} (scratch bookmarks must match pattern {pattern})"
