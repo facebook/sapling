@@ -15,6 +15,7 @@ use blobstore::Loadable;
 use bookmarks::ArcBookmarks;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::future::AbortHandle;
@@ -207,7 +208,9 @@ async fn get_descendant_count(
     repo_derived_data: ArcRepoDerivedData,
     cs_id: ChangesetId,
 ) -> Result<i64, Error> {
-    let root_fsnode_id = repo_derived_data.derive::<RootFsnodeId>(ctx, cs_id).await?;
+    let root_fsnode_id = repo_derived_data
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+        .await?;
     let count = root_fsnode_id
         .fsnode_id()
         .load(ctx, &repo_blobstore)

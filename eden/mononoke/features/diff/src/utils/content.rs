@@ -11,6 +11,7 @@ use anyhow::Context;
 use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use filestore::FetchKey;
 use fsnodes::RootFsnodeId;
 use git_types::git_lfs::format_lfs_pointer;
@@ -109,7 +110,7 @@ pub async fn get_file_info_from_changeset_path(
 ) -> Result<Option<(ContentId, FileType)>, DiffError> {
     let root_fsnode_id = repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, changeset_id)
+        .derive::<RootFsnodeId>(ctx, changeset_id, DerivationPriority::LOW)
         .await
         .map_err(DiffError::internal)?;
 
@@ -151,7 +152,7 @@ async fn get_file_change_from_changeset_path(
     // If not found in current changeset, look back through history
     let root_unode_manifest_id = repo
         .repo_derived_data()
-        .derive::<RootUnodeManifestId>(ctx, changeset_id)
+        .derive::<RootUnodeManifestId>(ctx, changeset_id, DerivationPriority::LOW)
         .await
         .map_err(DiffError::internal)?;
 

@@ -18,6 +18,8 @@ doc = false
 anyhow = "1.0.98"
 async-trait = "0.1.86"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+derivation_queue_thrift = { version = "0.1.0", path = "../../../../repo_attributes/repo_derivation_queues/if" }
+derivation_queue_thrift_clients = { version = "0.1.0", path = "../../../../repo_attributes/repo_derivation_queues/if/clients" }
 derived_data_service_if__types = { package = "derived_data_service_if", version = "0.1.0", path = ".." }
 fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fb303_core_clients = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }

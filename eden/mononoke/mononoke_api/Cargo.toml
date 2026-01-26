@@ -38,6 +38,7 @@ commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/comm
 context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../features/cross_repo_sync" }
 deleted_manifest = { version = "0.1.0", path = "../derived_data/deleted_manifest" }
+derivation_queue_thrift = { version = "0.1.0", path = "../repo_attributes/repo_derivation_queues/if" }
 derivative = "2.2"
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }

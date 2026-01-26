@@ -22,6 +22,7 @@ use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_service_if::DerivationType;
 use derived_data_service_if::DeriveRequest;
 use derived_data_service_if::DeriveResponse;
@@ -347,6 +348,7 @@ impl DerivedDataManager {
         ctx: &CoreContext,
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
+        priority: DerivationPriority,
     ) -> Result<Derivable, SharedDerivationError>
     where
         Derivable: BonsaiDerivable,
@@ -358,7 +360,7 @@ impl DerivedDataManager {
         self.check_blocked_derivation::<Derivable>(&[csid])?;
 
         if let Some(value) = self
-            .derive_remotely(ctx, csid, rederivation.clone())
+            .derive_remotely(ctx, csid, rederivation.clone(), priority)
             .map_err(SharedDerivationError::from)
             .await?
         {
@@ -461,6 +463,7 @@ impl DerivedDataManager {
         ctx: &CoreContext,
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
+        priority: DerivationPriority,
     ) -> Result<Option<Derivable>, DerivationError>
     where
         Derivable: BonsaiDerivable,
@@ -490,6 +493,7 @@ impl DerivedDataManager {
                 bubble_id: self.bubble_id().map(|bubble_id| bubble_id.into()),
                 config_name: self.config_name(),
                 derivation_type: DerivationType::derive_underived(DeriveUnderived {}),
+                priority,
             };
             let mut request_state = DerivationState::NotRequested;
             let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();

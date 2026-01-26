@@ -14,6 +14,7 @@ use changesets_uploader::PriorLookupPolicy;
 use changesets_uploader::UploadPolicy;
 use clap::Args;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use mercurial_derivation::RootHgAugmentedManifestId;
 use metaconfig_types::RepoConfigRef;
 use mononoke_app::args::ChangesetArgs;
@@ -93,7 +94,7 @@ pub async fn cas_store_upload(
 
     // Derive augmented manifest for this changeset if not yet derived.
     repo.repo_derived_data()
-        .derive::<RootHgAugmentedManifestId>(ctx, changeset_id)
+        .derive::<RootHgAugmentedManifestId>(ctx, changeset_id, DerivationPriority::LOW)
         .await?;
 
     let stats = if args.full {

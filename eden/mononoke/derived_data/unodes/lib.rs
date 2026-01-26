@@ -254,6 +254,7 @@ mod tests {
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphWriter;
     use context::CoreContext;
+    use derivation_queue_thrift::DerivationPriority;
     use fbinit::FacebookInit;
     use filenodes::Filenodes;
     use filestore::FilestoreConfig;
@@ -324,7 +325,7 @@ mod tests {
 
         repo.repo_derived_data()
             .manager()
-            .derive::<RootUnodeManifestId>(ctx, c4, None)
+            .derive::<RootUnodeManifestId>(ctx, c4, None, DerivationPriority::LOW)
             .await?;
         let renames = crate::find_unode_rename_sources(ctx, &derivation_ctx, &bonsai).await?;
 

@@ -231,6 +231,7 @@ mod test {
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
     use commit_graph::CommitGraphWriter;
+    use derivation_queue_thrift::DerivationPriority;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::TestRepoFixture;
@@ -348,7 +349,7 @@ mod test {
 
         // Validate that the derivation of the Git commit was successful
         repo.repo_derived_data()
-            .derive::<MappedGitCommitId>(&ctx, bcs_id)
+            .derive::<MappedGitCommitId>(&ctx, bcs_id, DerivationPriority::LOW)
             .await?;
         // All the generated git commit IDs would be stored in BonsaiGitMapping. For all such commits, validate
         // parity with its Bonsai counterpart.

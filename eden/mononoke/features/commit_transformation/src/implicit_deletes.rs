@@ -10,6 +10,7 @@ use std::sync::Arc;
 use anyhow::Error;
 use anyhow::Result;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use futures::TryStreamExt;
 use futures::future::try_join_all;
 use manifest::get_implicit_deletes;
@@ -94,7 +95,7 @@ async fn get_skeleton_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
             let repo_derived_data = repo.repo_derived_data();
 
             let root_skeleton_manifest_id = repo_derived_data
-                .derive::<RootSkeletonManifestId>(ctx, bcs_id)
+                .derive::<RootSkeletonManifestId>(ctx, bcs_id, DerivationPriority::LOW)
                 .await?;
 
             Ok(root_skeleton_manifest_id.into_skeleton_manifest_id())

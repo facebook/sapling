@@ -17,6 +17,7 @@ use anyhow::bail;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use filestore::StoreRequest;
 use fsnodes::RootFsnodeId;
 use futures::future;
@@ -353,7 +354,7 @@ async fn compact_submodule_expansion_deletion<'a, R: Repo>(
 
     let parent_fsnode_id: FsnodeId = large_repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, parent_cs_id)
+        .derive::<RootFsnodeId>(ctx, parent_cs_id, DerivationPriority::LOW)
         .await
         .context("Failed to derive parent root fsnode id")?
         .into_fsnode_id();

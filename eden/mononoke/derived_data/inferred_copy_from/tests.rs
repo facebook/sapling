@@ -11,6 +11,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use blobstore::Loadable;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use facet::futures::TryStreamExt;
 use fbinit::FacebookInit;
 use mononoke_api::repo::Repo;
@@ -350,7 +351,7 @@ async fn assert_entries(
 ) -> Result<()> {
     let root_inferred_copy_from_id = repo
         .repo_derived_data()
-        .derive::<RootInferredCopyFromId>(ctx, cs_id)
+        .derive::<RootInferredCopyFromId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
     let inferred_copy_from = root_inferred_copy_from_id
         .into_inner_id()

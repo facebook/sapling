@@ -25,6 +25,7 @@ content_manifest_derivation = { version = "0.1.0", path = "../../derived_data/co
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 criterion = { version = "0.5.1", features = ["async_tokio", "csv_output"] }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
+derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

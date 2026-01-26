@@ -21,6 +21,7 @@ use bytes::Bytes;
 use case_conflict_skeleton_manifest::RootCaseConflictSkeletonManifestId;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
+use derivation_queue_thrift::DerivationPriority;
 use futures::future;
 use futures::stream;
 use futures::stream::BoxStream;
@@ -371,7 +372,7 @@ impl AffectedChangesets {
 
         let sk_mf = repo
             .repo_derived_data()
-            .derive::<RootSkeletonManifestId>(ctx, bcs_id)
+            .derive::<RootSkeletonManifestId>(ctx, bcs_id, DerivationPriority::LOW)
             .await
             .map_err(Error::from)?
             .into_skeleton_manifest_id()
@@ -383,7 +384,7 @@ impl AffectedChangesets {
             // conflicts compared to its parents.
             let parents = stream::iter(bcs.parents().map(|parent_bcs_id| async move {
                 repo.repo_derived_data()
-                    .derive::<RootSkeletonManifestId>(ctx, parent_bcs_id)
+                    .derive::<RootSkeletonManifestId>(ctx, parent_bcs_id, DerivationPriority::LOW)
                     .await
                     .map_err(Error::from)?
                     .into_skeleton_manifest_id()
@@ -424,7 +425,7 @@ impl AffectedChangesets {
 
         let ccsm = repo
             .repo_derived_data()
-            .derive::<RootCaseConflictSkeletonManifestId>(ctx, bcs_id)
+            .derive::<RootCaseConflictSkeletonManifestId>(ctx, bcs_id, DerivationPriority::LOW)
             .await
             .map_err(Error::from)?
             .into_inner_id()
@@ -438,7 +439,11 @@ impl AffectedChangesets {
                 .parents()
                 .map(|parent_bcs_id| async move {
                     repo.repo_derived_data()
-                        .derive::<RootCaseConflictSkeletonManifestId>(ctx, parent_bcs_id)
+                        .derive::<RootCaseConflictSkeletonManifestId>(
+                            ctx,
+                            parent_bcs_id,
+                            DerivationPriority::LOW,
+                        )
                         .await
                         .map_err(Error::from)?
                         .into_inner_id()

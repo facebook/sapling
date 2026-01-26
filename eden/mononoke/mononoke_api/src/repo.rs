@@ -72,6 +72,7 @@ use cross_repo_sync::get_all_submodule_deps_from_repo_pair;
 use cross_repo_sync::get_small_and_large_repos;
 use cross_repo_sync::sync_commit;
 use dag_types::Location;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use ephemeral_blobstore::ArcRepoEphemeralStore;
@@ -1977,7 +1978,10 @@ pub async fn derive_git_changeset(
     derived_data: &RepoDerivedData,
     cs_id: ChangesetId,
 ) -> Result<GitSha1, Error> {
-    match derived_data.derive::<MappedGitCommitId>(ctx, cs_id).await {
+    match derived_data
+        .derive::<MappedGitCommitId>(ctx, cs_id, DerivationPriority::LOW)
+        .await
+    {
         Ok(id) => Ok(*id.oid()),
         Err(err) => Err(err.into()),
     }

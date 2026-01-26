@@ -31,6 +31,7 @@ commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/c
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 dashmap = { version = "5.5.3", features = ["rayon", "serde"] }
 deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manifest" }
+derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
 derive_more = { version = "1.0.0", features = ["full"] }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 executor_lib = { version = "0.1.0", path = "../../cmdlib/sharding" }

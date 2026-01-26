@@ -12,6 +12,7 @@ use futures::future::FutureExt;
 use futures_watchdog::WatchdogExt;
 use mononoke_types::ChangesetId;
 use phases::ArcPhases;
+use repo_derivation_queues::DerivationPriority;
 use repo_derived_data::ArcRepoDerivedData;
 use tracing::Instrument;
 use tracing::info;
@@ -35,7 +36,9 @@ where
         move |ctx: &CoreContext, cs_id: ChangesetId| {
             cloned!(repo_derived_data);
             async move {
-                repo_derived_data.derive::<Derivable>(ctx, cs_id).await?;
+                repo_derived_data
+                    .derive::<Derivable>(ctx, cs_id, DerivationPriority::LOW)
+                    .await?;
                 Ok(())
             }
             .instrument(tracing::info_span!("warmer", ddt = %Derivable::NAME))

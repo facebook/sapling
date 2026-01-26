@@ -39,6 +39,7 @@ use cross_repo_sync::unsafe_always_rewrite_sync_commit;
 use cross_repo_sync::unsafe_get_parent_map_for_target_bookmark_rewrite;
 use cross_repo_sync::unsafe_sync_commit;
 use cross_repo_sync::unsafe_sync_commit_pushrebase;
+use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
 use futures::FutureExt;
 use futures::future::try_join_all;
@@ -698,7 +699,7 @@ where
         // and doing it all again in the next changeset.
         let root_fsnode_id = large_repo
             .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, synced)
+            .derive::<RootFsnodeId>(ctx, synced, DerivationPriority::LOW)
             .await?;
         trace!(
             "Root fsnode id from {synced}: {0}",

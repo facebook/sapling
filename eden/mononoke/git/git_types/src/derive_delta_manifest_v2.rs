@@ -474,6 +474,7 @@ mod tests {
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
     use commit_graph::CommitGraphWriter;
+    use derivation_queue_thrift::DerivationPriority;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::TestRepoFixture;
@@ -522,7 +523,7 @@ mod tests {
         // Validate that the derivation of the GitDeltaManifestV2 for the head commit succeeds
         let root_mf_id = repo
             .repo_derived_data()
-            .derive::<RootGitDeltaManifestV2Id>(ctx, cs_id)
+            .derive::<RootGitDeltaManifestV2Id>(ctx, cs_id, DerivationPriority::LOW)
             .await?;
         // Validate the derivation of all the commits in this repo succeeds
         let all_cs_ids = repo
@@ -533,7 +534,7 @@ mod tests {
         repo.commit_graph()
             .process_topologically(ctx, all_cs_ids, |cs_id| async move {
                 repo.repo_derived_data()
-                    .derive::<RootGitDeltaManifestV2Id>(ctx, cs_id)
+                    .derive::<RootGitDeltaManifestV2Id>(ctx, cs_id, DerivationPriority::LOW)
                     .await?;
                 Ok(())
             })

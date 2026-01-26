@@ -12,6 +12,7 @@ use anyhow::Error;
 use anyhow::format_err;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::BonsaiChangesetMut;
 use mononoke_types::ChangesetId;
@@ -34,7 +35,7 @@ pub async fn get_version_for_merge<'a>(
 ) -> Result<CommitSyncConfigVersion, Error> {
     let cs_info = repo
         .repo_derived_data()
-        .derive::<ChangesetInfo>(ctx, source_cs_id)
+        .derive::<ChangesetInfo>(ctx, source_cs_id, DerivationPriority::LOW)
         .await?;
     get_version_for_merge_with_info(ctx, &cs_info, parent_outcomes)
 }
@@ -89,7 +90,7 @@ pub async fn get_version<'a>(
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
     let cs_info = repo
         .repo_derived_data()
-        .derive::<ChangesetInfo>(ctx, source_cs_id)
+        .derive::<ChangesetInfo>(ctx, source_cs_id, DerivationPriority::LOW)
         .await?;
     get_version_with_info(ctx, &cs_info, parent_versions)
 }

@@ -13,6 +13,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use filestore::FetchKey;
 use fsnodes::RootFsnodeId;
 use futures::Stream;
@@ -81,8 +82,10 @@ async fn fsnode_and_unode(
     cs_id: ChangesetId,
 ) -> Result<(RootFsnodeId, RootUnodeManifestId)> {
     let (fsnode, blame) = try_join!(
-        repo.repo_derived_data().derive::<RootFsnodeId>(ctx, cs_id),
-        repo.repo_derived_data().derive::<RootBlameV2>(ctx, cs_id)
+        repo.repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW),
+        repo.repo_derived_data()
+            .derive::<RootBlameV2>(ctx, cs_id, DerivationPriority::LOW)
     )?;
     let unode = blame.root_manifest();
     Ok((fsnode, unode))
@@ -200,7 +203,7 @@ async fn process_tree(
     let summary = fsnode.summary();
     let info = repo
         .repo_derived_data()
-        .derive::<ChangesetInfo>(ctx, *manifest_unode.linknode())
+        .derive::<ChangesetInfo>(ctx, *manifest_unode.linknode(), DerivationPriority::LOW)
         .await?;
 
     Ok(MetadataItem::Directory(DirectoryMetadata {
@@ -247,7 +250,7 @@ async fn process_file(
     })?;
     let info = repo
         .repo_derived_data()
-        .derive::<ChangesetInfo>(ctx, *file_unode.linknode())
+        .derive::<ChangesetInfo>(ctx, *file_unode.linknode(), DerivationPriority::LOW)
         .await?;
 
     let file_metadata = FileMetadata::new(path, bookmark.clone(), info, fsnode_file, change_type);

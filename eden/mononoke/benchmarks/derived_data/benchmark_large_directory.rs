@@ -25,6 +25,7 @@ use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use deleted_manifest::RootDeletedManifestV2Id;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
@@ -177,56 +178,56 @@ async fn derive(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) -
     match data {
         MappedHgChangesetId::NAME => repo
             .repo_derived_data()
-            .derive::<MappedHgChangesetId>(ctx, csid)
+            .derive::<MappedHgChangesetId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .hg_changeset_id()
             .to_string(),
         RootSkeletonManifestId::NAME => repo
             .repo_derived_data()
-            .derive::<RootSkeletonManifestId>(ctx, csid)
+            .derive::<RootSkeletonManifestId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .skeleton_manifest_id()
             .to_string(),
         RootSkeletonManifestV2Id::NAME => repo
             .repo_derived_data()
-            .derive::<RootSkeletonManifestV2Id>(ctx, csid)
+            .derive::<RootSkeletonManifestV2Id>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .into_inner_id()
             .to_string(),
         RootUnodeManifestId::NAME => repo
             .repo_derived_data()
-            .derive::<RootUnodeManifestId>(ctx, csid)
+            .derive::<RootUnodeManifestId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .manifest_unode_id()
             .to_string(),
         RootDeletedManifestV2Id::NAME => repo
             .repo_derived_data()
-            .derive::<RootDeletedManifestV2Id>(ctx, csid)
+            .derive::<RootDeletedManifestV2Id>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .id()
             .to_string(),
         RootFsnodeId::NAME => repo
             .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, csid)
+            .derive::<RootFsnodeId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .fsnode_id()
             .to_string(),
         RootHgAugmentedManifestId::NAME => repo
             .repo_derived_data()
-            .derive::<RootHgAugmentedManifestId>(ctx, csid)
+            .derive::<RootHgAugmentedManifestId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .hg_augmented_manifest_id()
             .to_string(),
         RootContentManifestId::NAME => repo
             .repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, csid)
+            .derive::<RootContentManifestId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .into_content_manifest_id()
@@ -239,7 +240,7 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
     match data {
         MappedHgChangesetId::NAME => repo
             .repo_derived_data()
-            .derive::<MappedHgChangesetId>(ctx, csid)
+            .derive::<MappedHgChangesetId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .hg_changeset_id()
@@ -253,7 +254,7 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
             .unwrap(),
         RootSkeletonManifestId::NAME => repo
             .repo_derived_data()
-            .derive::<RootSkeletonManifestId>(ctx, csid)
+            .derive::<RootSkeletonManifestId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .skeleton_manifest_id()
@@ -263,7 +264,7 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
             .unwrap(),
         RootSkeletonManifestV2Id::NAME => repo
             .repo_derived_data()
-            .derive::<RootSkeletonManifestV2Id>(ctx, csid)
+            .derive::<RootSkeletonManifestV2Id>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .into_inner_id()
@@ -276,7 +277,7 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
             .unwrap(),
         RootUnodeManifestId::NAME => repo
             .repo_derived_data()
-            .derive::<RootUnodeManifestId>(ctx, csid)
+            .derive::<RootUnodeManifestId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .manifest_unode_id()
@@ -286,7 +287,7 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
             .unwrap(),
         RootDeletedManifestV2Id::NAME => repo
             .repo_derived_data()
-            .derive::<RootDeletedManifestV2Id>(ctx, csid)
+            .derive::<RootDeletedManifestV2Id>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .list_all_entries(ctx, repo.repo_blobstore())
@@ -295,7 +296,7 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
             .unwrap(),
         RootFsnodeId::NAME => repo
             .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, csid)
+            .derive::<RootFsnodeId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .fsnode_id()
@@ -305,7 +306,7 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
             .unwrap(),
         RootHgAugmentedManifestId::NAME => repo
             .repo_derived_data()
-            .derive::<RootHgAugmentedManifestId>(ctx, csid)
+            .derive::<RootHgAugmentedManifestId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .hg_augmented_manifest_id()
@@ -315,7 +316,7 @@ async fn iterate(ctx: &CoreContext, repo: &Repo, data: &str, csid: ChangesetId) 
             .unwrap(),
         RootContentManifestId::NAME => repo
             .repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, csid)
+            .derive::<RootContentManifestId>(ctx, csid, DerivationPriority::LOW)
             .await
             .unwrap()
             .into_content_manifest_id()

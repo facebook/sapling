@@ -14,6 +14,7 @@ use clap::Args;
 use commit_graph::CommitGraphRef;
 use commit_id::parse_commit_id;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use futures::TryStreamExt;
 use manifest::Entry;
 use manifest::ManifestOps;
@@ -94,11 +95,11 @@ pub async fn add(ctx: &CoreContext, repo: &Repo, add_args: AddArgs) -> Result<()
 
     let src_root_unode_id = repo
         .repo_derived_data()
-        .derive::<RootUnodeManifestId>(ctx, src_cs_id)
+        .derive::<RootUnodeManifestId>(ctx, src_cs_id, DerivationPriority::LOW)
         .await?;
     let dst_root_unode_id = repo
         .repo_derived_data()
-        .derive::<RootUnodeManifestId>(ctx, dst_cs_id)
+        .derive::<RootUnodeManifestId>(ctx, dst_cs_id, DerivationPriority::LOW)
         .await?;
 
     let src_entry = src_root_unode_id

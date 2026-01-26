@@ -15,6 +15,7 @@ use blobstore::Loadable;
 use changesets_creation::save_changesets;
 use commit_transformation::git_submodules::InMemoryRepo;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use mononoke_macros::mononoke;
@@ -45,7 +46,7 @@ async fn test_original_blobstore_and_changesets_are_the_same_after_validation(
     // Derive Fsnodes for a commit in the InMemoryRepo
     in_memory_repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(&ctx, orig_repo_commit)
+        .derive::<RootFsnodeId>(&ctx, orig_repo_commit, DerivationPriority::LOW)
         .await?;
 
     // Check that Fsnodes are not derived for that commit in the original repo

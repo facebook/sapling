@@ -33,6 +33,7 @@ use commit_transformation::git_submodules::git_hash_from_submodule_metadata_file
 use commit_transformation::git_submodules::root_fsnode_id_from_submodule_git_commit;
 use commit_transformation::git_submodules::validate_working_copy_of_expansion_with_recursive_submodules;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use futures::future;
@@ -122,12 +123,12 @@ pub async fn verify_working_copy_with_version<'a, R: Repo>(
 
     let source_root_fsnode_id = source_repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, source_hash.0)
+        .derive::<RootFsnodeId>(ctx, source_hash.0, DerivationPriority::LOW)
         .await?
         .into_fsnode_id();
     let target_root_fsnode_id = target_repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, target_hash.0)
+        .derive::<RootFsnodeId>(ctx, target_hash.0, DerivationPriority::LOW)
         .await?
         .into_fsnode_id();
 

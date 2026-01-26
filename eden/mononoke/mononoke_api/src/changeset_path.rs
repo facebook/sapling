@@ -21,6 +21,7 @@ use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
+use derivation_queue_thrift::DerivationPriority;
 use filestore::FetchKey;
 use futures::future::TryFutureExt;
 use futures::future::try_join_all;
@@ -641,7 +642,7 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                     cs_ids = try_join_all(cs_ids.into_iter().map(|(cs_id, path)| async move {
                         let info = if cs_info_enabled {
                             repo.repo_derived_data()
-                                .derive::<ChangesetInfo>(ctx, cs_id)
+                                .derive::<ChangesetInfo>(ctx, cs_id, DerivationPriority::LOW)
                                 .watched()
                                 .await
                         } else {

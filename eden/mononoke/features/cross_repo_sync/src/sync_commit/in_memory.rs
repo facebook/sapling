@@ -25,6 +25,7 @@ use commit_transformation::git_submodules::InMemoryRepo;
 use commit_transformation::git_submodules::SubmoduleExpansionData;
 use commit_transformation::rewrite_commit;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::BonsaiChangeset;
@@ -160,7 +161,11 @@ pub(crate) async fn unsafe_sync_commit_in_memory<'a, R: Repo>(
             .source_repo
             .0
             .repo_derived_data()
-            .derive::<ChangesetInfo>(in_memory_syncer.ctx, cs.get_changeset_id())
+            .derive::<ChangesetInfo>(
+                in_memory_syncer.ctx,
+                cs.get_changeset_id(),
+                DerivationPriority::LOW,
+            )
             .await?,
     )?;
 

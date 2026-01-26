@@ -30,6 +30,7 @@ use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::SessionContainer;
+use derivation_queue_thrift::DerivationPriority;
 use filestore::FetchKey;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -667,7 +668,7 @@ pub async fn process_one_changeset(
 
     let cs_info = repo
         .repo_derived_data()
-        .derive::<ChangesetInfo>(ctx, cs_id.clone())
+        .derive::<ChangesetInfo>(ctx, cs_id.clone(), DerivationPriority::LOW)
         .await?;
 
     let hg_cs_id = repo.derive_hg_changeset(ctx, *cs_id).await?;

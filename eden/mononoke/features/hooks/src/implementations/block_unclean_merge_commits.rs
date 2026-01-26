@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use commit_graph::CommitGraphArc;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
 use futures::stream;
 use futures::stream::TryStreamExt;
@@ -96,7 +97,7 @@ impl ChangesetHook for BlockUncleanMergeCommitsHook {
                 Ok(async move {
                     let root_fsnode_id = hook_repo
                         .repo_derived_data()
-                        .derive::<RootFsnodeId>(ctx, p)
+                        .derive::<RootFsnodeId>(ctx, p, DerivationPriority::LOW)
                         .await
                         .with_context(|| "Can't lookup RootFsnodeId for ChangesetId")?;
                     Ok::<_, anyhow::Error>((p, root_fsnode_id))
@@ -239,7 +240,7 @@ async fn is_file_change_deletion_clean(
 
             let lca_root_fsnode_id = hook_repo
                 .repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, first_lcs_cs_id)
+                .derive::<RootFsnodeId>(ctx, first_lcs_cs_id, DerivationPriority::LOW)
                 .await
                 .with_context(|| "Can't lookup RootFsnodeId for ChangesetId")?;
 

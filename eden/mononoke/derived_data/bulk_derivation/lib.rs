@@ -19,6 +19,7 @@ use cloned::cloned;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestV2Id;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivableType;
 use derived_data_manager::DerivationError;
@@ -358,7 +359,9 @@ impl<T: BonsaiDerivable> SingleTypeDerivation for SingleTypeManager<T> {
         csid: ChangesetId,
         rederivation: Option<Arc<dyn Rederivation>>,
     ) -> Result<(), SharedDerivationError> {
-        self.manager.derive::<T>(ctx, csid, rederivation).await?;
+        self.manager
+            .derive::<T>(ctx, csid, rederivation, DerivationPriority::LOW)
+            .await?;
         Ok(())
     }
 }

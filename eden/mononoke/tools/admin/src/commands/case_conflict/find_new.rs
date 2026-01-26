@@ -11,6 +11,7 @@ use case_conflict_skeleton_manifest::RootCaseConflictSkeletonManifestId;
 use clap::Args;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use futures::TryStreamExt;
 use futures::stream::FuturesUnordered;
 use futures_stats::TimedTryFutureExt;
@@ -31,7 +32,7 @@ pub(super) async fn find_new(ctx: &CoreContext, repo: &Repo, args: FindNewArgs) 
 
     let ccsm = repo
         .repo_derived_data
-        .derive::<RootCaseConflictSkeletonManifestId>(ctx, cs_id)
+        .derive::<RootCaseConflictSkeletonManifestId>(ctx, cs_id, DerivationPriority::LOW)
         .await?
         .into_inner_id()
         .load(ctx, repo.repo_blobstore())
@@ -45,7 +46,11 @@ pub(super) async fn find_new(ctx: &CoreContext, repo: &Repo, args: FindNewArgs) 
         .map(|parent| async move {
             anyhow::Ok(
                 repo.repo_derived_data
-                    .derive::<RootCaseConflictSkeletonManifestId>(ctx, parent)
+                    .derive::<RootCaseConflictSkeletonManifestId>(
+                        ctx,
+                        parent,
+                        DerivationPriority::LOW,
+                    )
                     .await?
                     .into_inner_id()
                     .load(ctx, repo.repo_blobstore())

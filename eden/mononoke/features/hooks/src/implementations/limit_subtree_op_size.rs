@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use blobstore::StoreLoadable;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use hook_manager::ChangesetHook;
 use hook_manager::HookRejectionInfo;
 use manifest::ManifestOps;
@@ -90,7 +91,7 @@ impl ChangesetHook for LimitSubtreeOpSizeHook {
                 if let Some((source, source_path)) = change.change_source() {
                     let source_root = hook_repo
                         .repo_derived_data()
-                        .derive::<RootSkeletonManifestId>(ctx, source)
+                        .derive::<RootSkeletonManifestId>(ctx, source, DerivationPriority::LOW)
                         .await?
                         .into_skeleton_manifest_id();
                     let source_entry = source_root

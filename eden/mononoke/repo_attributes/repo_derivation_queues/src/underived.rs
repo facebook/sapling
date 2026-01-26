@@ -48,7 +48,9 @@ pub async fn build_underived_batched_graph<'a>(
     head: ChangesetId,
     bubble_id: Option<BubbleId>,
     batch_size: u64,
+    priority: Option<DerivationPriority>,
 ) -> Result<Option<EnqueueResponse>> {
+    let priority = priority.unwrap_or(DerivationPriority::LOW);
     let repo_id = ddm.repo_id();
     let config_name = ddm.config_name();
     let commit_graph = ddm.commit_graph_arc();
@@ -123,7 +125,7 @@ pub async fn build_underived_batched_graph<'a>(
                     bubble_id,
                     deps.unique().collect(),
                     ctx.metadata().client_info(),
-                    DerivationPriority::LOW,
+                    priority,
                 )?;
 
                 let max_failed_attempts = justknobs::get_as::<u64>("scm/mononoke:build_underived_batched_graph_max_failed_attempts", None)?;
@@ -225,7 +227,7 @@ pub async fn build_underived_batched_graph<'a>(
                                                 item.bubble_id(),
                                                 vec![],
                                                 item.client_info(),
-                                                DerivationPriority::LOW,
+                                                priority,
                                             )?
                                         )
                                     }
@@ -301,7 +303,7 @@ async fn deduplicate(
             bubble_id,
             vec![existing.id().clone()],
             ctx.metadata().client_info(),
-            DerivationPriority::LOW,
+            rejected.info().priority(),
         )?;
         return Ok(Some(item));
     }

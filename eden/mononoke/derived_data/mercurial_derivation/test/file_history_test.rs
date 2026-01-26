@@ -12,6 +12,7 @@ use anyhow::anyhow;
 use blobrepo_hg::file_history::get_file_history;
 use blobstore::Loadable;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use filenodes_derivation::FilenodesOnlyPublic;
 use fixtures::Linear;
@@ -33,7 +34,7 @@ async fn test_linear_get_file_history(fb: FacebookInit) -> Result<(), Error> {
 
     let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
     repo.repo_derived_data()
-        .derive::<FilenodesOnlyPublic>(&ctx, master_cs_id)
+        .derive::<FilenodesOnlyPublic>(&ctx, master_cs_id, DerivationPriority::LOW)
         .await?;
 
     let expected_linknodes = vec![

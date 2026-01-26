@@ -17,6 +17,7 @@ changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info"
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 dedupmap = { version = "0.1.0", path = "../../common/dedupmap" }
+derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }

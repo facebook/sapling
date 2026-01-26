@@ -18,6 +18,7 @@ use blame::fetch_content_for_blame;
 use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fastlog::FastlogParent;
 use fastlog::fetch_fastlog_batch_by_unode_id;
 use fastlog::fetch_flattened;
@@ -89,7 +90,7 @@ async fn fetch_mutable_blame(
         let blobstore = repo.repo_blobstore_arc();
         let unode = repo
             .repo_derived_data()
-            .derive::<RootUnodeManifestId>(ctx, my_csid)
+            .derive::<RootUnodeManifestId>(ctx, my_csid, DerivationPriority::LOW)
             .await?
             .manifest_unode_id()
             .find_entry(ctx.clone(), blobstore, path.clone().into())
@@ -295,7 +296,7 @@ async fn get_unode_entry(
 ) -> Result<Entry<ManifestUnodeId, FileUnodeId>, BlameError> {
     let root_unode_mf_id = repo
         .repo_derived_data()
-        .derive::<RootUnodeManifestId>(ctx, csid)
+        .derive::<RootUnodeManifestId>(ctx, csid, DerivationPriority::LOW)
         .await?;
     let unode_entry = root_unode_mf_id
         .manifest_unode_id()
@@ -361,7 +362,7 @@ async fn fetch_inferred_copy_from(
 ) -> Result<Option<InferredCopyFromEntry>, Error> {
     let root_inferred_copy_from_id = repo
         .repo_derived_data()
-        .derive::<RootInferredCopyFromId>(ctx, csid)
+        .derive::<RootInferredCopyFromId>(ctx, csid, DerivationPriority::LOW)
         .await?;
     let inferred_copy_from = root_inferred_copy_from_id
         .into_inner_id()

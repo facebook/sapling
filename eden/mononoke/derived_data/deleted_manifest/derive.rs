@@ -908,6 +908,7 @@ pub(crate) async fn get_unodes(
 #[cfg(test)]
 mod test {
     use anyhow::Result;
+    use derivation_queue_thrift::DerivationPriority;
     use derived_data_manager::BonsaiDerivable;
     use fbinit::FacebookInit;
     use maplit::btreemap;
@@ -1007,6 +1008,7 @@ mod test {
                 &ctx,
                 *commits.get("H").expect("Drawdag failed us"),
                 None,
+                DerivationPriority::LOW,
             )
             .await?;
 

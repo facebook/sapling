@@ -20,6 +20,7 @@ rust_library(
         "//eden/mononoke/repo_attributes/filenodes:filenodes",
         "//eden/mononoke/repo_attributes/filestore:filestore",
         "//eden/mononoke/repo_attributes/repo_blobstore:repo_blobstore",
+        "//eden/mononoke/repo_attributes/repo_derivation_queues/if:derivation_queue_thrift-rust",
         "//eden/mononoke/repo_attributes/restricted_paths:restricted_paths",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ],

@@ -19,6 +19,7 @@ use commit_graph::CommitGraphWriterRef;
 use commit_transformation::copy_file_contents;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use filestore::FilestoreConfigRef;
 use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
@@ -293,13 +294,13 @@ async fn list_directory(
         Some(repo.repo_identity().name()),
     ) {
         repo.repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, cs_id)
+            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
             .await?
             .into_content_manifest_id()
             .into()
     } else {
         repo.repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id)
+            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
             .await?
             .fsnode_id()
             .clone()

@@ -27,6 +27,7 @@ use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use commit_graph::CommitGraph;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::stream::TryStreamExt;
@@ -273,7 +274,7 @@ impl HookRepo {
 
                     let cs_info = self
                         .repo_derived_data
-                        .derive::<ChangesetInfo>(ctx, linknode)
+                        .derive::<ChangesetInfo>(ctx, linknode, DerivationPriority::LOW)
                         .await
                         .with_context(|| {
                             format!("Error deriving changeset info for bonsai: {}", linknode)
@@ -298,7 +299,7 @@ impl HookRepo {
     ) -> Result<HashMap<MPath, u64>> {
         let sk_mf = self
             .repo_derived_data
-            .derive::<RootSkeletonManifestId>(ctx, changeset_id)
+            .derive::<RootSkeletonManifestId>(ctx, changeset_id, DerivationPriority::LOW)
             .await
             .with_context(|| format!("Error deriving skeleton manifest for {}", changeset_id))?
             .skeleton_manifest_id()
@@ -400,7 +401,7 @@ async fn derive_fsnode(
     changeset_id: ChangesetId,
 ) -> Result<FsnodeId> {
     let fsnode_id = repo_derived_data
-        .derive::<RootFsnodeId>(ctx, changeset_id.clone())
+        .derive::<RootFsnodeId>(ctx, changeset_id.clone(), DerivationPriority::LOW)
         .await
         .with_context(|| {
             format!(
@@ -419,7 +420,7 @@ async fn derive_unode_manifest(
     changeset_id: ChangesetId,
 ) -> Result<ManifestUnodeId> {
     let unode_mf = repo_derived_data
-        .derive::<RootUnodeManifestId>(ctx, changeset_id.clone())
+        .derive::<RootUnodeManifestId>(ctx, changeset_id.clone(), DerivationPriority::LOW)
         .await
         .with_context(|| format!("Error deriving unode manifest for bonsai: {}", changeset_id))?
         .manifest_unode_id()

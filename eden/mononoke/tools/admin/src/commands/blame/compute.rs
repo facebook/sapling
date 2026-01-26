@@ -20,6 +20,7 @@ use bounded_traversal::bounded_traversal_dag;
 use clap::Args;
 use cloned::cloned;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use futures::FutureExt;
 use manifest::ManifestOps;
 use mononoke_app::args::ChangesetArgs;
@@ -176,7 +177,7 @@ async fn find_leaf(
 ) -> Result<FileUnodeId> {
     let mf_root = repo
         .repo_derived_data()
-        .derive::<RootUnodeManifestId>(&ctx, csid)
+        .derive::<RootUnodeManifestId>(&ctx, csid, DerivationPriority::LOW)
         .await?;
     let entry_opt = mf_root
         .manifest_unode_id()
@@ -199,7 +200,7 @@ async fn try_find_leaf(
 ) -> Result<Option<FileUnodeId>> {
     let mf_root = repo
         .repo_derived_data()
-        .derive::<RootUnodeManifestId>(&ctx, csid)
+        .derive::<RootUnodeManifestId>(&ctx, csid, DerivationPriority::LOW)
         .await?;
     let entry_opt = mf_root
         .manifest_unode_id()

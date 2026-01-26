@@ -55,6 +55,7 @@ use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use context::SessionClass;
 use deleted_manifest::RootDeletedManifestV2Id;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use enum_map::EnumMap;
 use fastlog::RootFastlog;
@@ -1835,7 +1836,7 @@ mod tests {
 
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         repo.repo_derived_data()
-            .derive::<RootUnodeManifestId>(&ctx, master_cs_id)
+            .derive::<RootUnodeManifestId>(&ctx, master_cs_id, DerivationPriority::LOW)
             .await?;
 
         let bookmarks = init_bookmarks(
@@ -1892,7 +1893,7 @@ mod tests {
             master = new_master;
         }
         repo.repo_derived_data()
-            .derive::<RootUnodeManifestId>(&ctx, master)
+            .derive::<RootUnodeManifestId>(&ctx, master, DerivationPriority::LOW)
             .await?;
         let derived_master = master;
 
@@ -1928,7 +1929,7 @@ mod tests {
         );
 
         repo.repo_derived_data()
-            .derive::<RootUnodeManifestId>(&ctx, master)
+            .derive::<RootUnodeManifestId>(&ctx, master, DerivationPriority::LOW)
             .await?;
         let bookmarks = init_bookmarks(
             &ctx,
@@ -1965,7 +1966,7 @@ mod tests {
 
         let derived_master = resolve_cs_id(&ctx, &repo, "master").await?;
         repo.repo_derived_data()
-            .derive::<RootUnodeManifestId>(&ctx, derived_master)
+            .derive::<RootUnodeManifestId>(&ctx, derived_master, DerivationPriority::LOW)
             .await?;
 
         for i in 1..50 {
@@ -2020,7 +2021,7 @@ mod tests {
             .commit()
             .await?;
         repo.repo_derived_data()
-            .derive::<RootUnodeManifestId>(&ctx, derived_master)
+            .derive::<RootUnodeManifestId>(&ctx, derived_master, DerivationPriority::LOW)
             .await?;
         bookmark(&ctx, &repo, "master")
             .set_to(derived_master)
@@ -2278,7 +2279,7 @@ mod tests {
                         cloned!(repo);
                         async move {
                             repo.repo_derived_data()
-                                .derive::<RootUnodeManifestId>(ctx, cs_id)
+                                .derive::<RootUnodeManifestId>(ctx, cs_id, DerivationPriority::LOW)
                                 .await?;
                             Ok(())
                         }
@@ -2391,6 +2392,7 @@ mod tests {
                     )
                     .await?
                     .unwrap(),
+                DerivationPriority::LOW,
             )
             .await?;
 
@@ -2407,7 +2409,7 @@ mod tests {
                     async move {
                         tokio::time::sleep(Duration::from_millis(derive_sleep_time_ms)).await;
                         repo.repo_derived_data()
-                            .derive::<RootUnodeManifestId>(ctx, cs_id)
+                            .derive::<RootUnodeManifestId>(ctx, cs_id, DerivationPriority::LOW)
                             .await?;
                         Ok(())
                     }

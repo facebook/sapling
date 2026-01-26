@@ -22,6 +22,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use fixtures::TestRepoFixture;
@@ -120,22 +121,34 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
         .await?
     {
         futures::future::try_join3(
-            derived_data.derive::<RootTestManifestDirectory>(ctx, master_cs_id),
-            derived_data.derive::<RootTestShardedManifestDirectory>(ctx, master_cs_id),
-            derived_data.derive::<RootSkeletonManifestId>(ctx, master_cs_id),
+            derived_data.derive::<RootTestManifestDirectory>(
+                ctx,
+                master_cs_id,
+                DerivationPriority::LOW,
+            ),
+            derived_data.derive::<RootTestShardedManifestDirectory>(
+                ctx,
+                master_cs_id,
+                DerivationPriority::LOW,
+            ),
+            derived_data.derive::<RootSkeletonManifestId>(
+                ctx,
+                master_cs_id,
+                DerivationPriority::LOW,
+            ),
         )
         .await?;
     }
     let visited = &RwLock::new(HashSet::new());
     for cs_id in all_commits {
         let test_sharded_manifest = derived_data
-            .derive::<RootTestShardedManifestDirectory>(ctx, cs_id)
+            .derive::<RootTestShardedManifestDirectory>(ctx, cs_id, DerivationPriority::LOW)
             .await?
             .into_inner();
         validate(visited, ctx, blobstore, test_sharded_manifest.clone()).await?;
 
         let skeleton_manifest = derived_data
-            .derive::<RootSkeletonManifestId>(ctx, cs_id)
+            .derive::<RootSkeletonManifestId>(ctx, cs_id, DerivationPriority::LOW)
             .await?
             .into_skeleton_manifest_id();
 
@@ -154,7 +167,7 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
         );
 
         let test_manifest = derived_data
-            .derive::<RootTestManifestDirectory>(ctx, cs_id)
+            .derive::<RootTestManifestDirectory>(ctx, cs_id, DerivationPriority::LOW)
             .await?
             .into_inner();
         let test_sharded_manifest_from_test_manifest =

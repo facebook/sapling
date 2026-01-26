@@ -13,6 +13,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarksRef;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use futures::TryStreamExt;
 use futures::future;
 use futures::future::try_join;
@@ -125,12 +126,16 @@ pub async fn validate(
     to_merge_commit: ChangesetId,
     path_regex: Regex,
 ) -> Result<(), Error> {
-    let head_root_unode = repo
-        .repo_derived_data()
-        .derive::<RootUnodeManifestId>(ctx, head_commit);
-    let to_merge_commit_root_unode = repo
-        .repo_derived_data()
-        .derive::<RootUnodeManifestId>(ctx, to_merge_commit);
+    let head_root_unode = repo.repo_derived_data().derive::<RootUnodeManifestId>(
+        ctx,
+        head_commit,
+        DerivationPriority::LOW,
+    );
+    let to_merge_commit_root_unode = repo.repo_derived_data().derive::<RootUnodeManifestId>(
+        ctx,
+        to_merge_commit,
+        DerivationPriority::LOW,
+    );
 
     let (head_root_unode, to_merge_commit_root_unode) =
         try_join(head_root_unode, to_merge_commit_root_unode).await?;
@@ -197,12 +202,16 @@ async fn find_files_that_need_to_be_deleted(
     let head_bookmark_val =
         maybe_head_bookmark_val.ok_or_else(|| anyhow!("{} not found", head_bookmark))?;
 
-    let head_root_unode = repo
-        .repo_derived_data()
-        .derive::<RootUnodeManifestId>(ctx, head_bookmark_val);
-    let commit_to_merge_root_unode = repo
-        .repo_derived_data()
-        .derive::<RootUnodeManifestId>(ctx, commit_to_merge);
+    let head_root_unode = repo.repo_derived_data().derive::<RootUnodeManifestId>(
+        ctx,
+        head_bookmark_val,
+        DerivationPriority::LOW,
+    );
+    let commit_to_merge_root_unode = repo.repo_derived_data().derive::<RootUnodeManifestId>(
+        ctx,
+        commit_to_merge,
+        DerivationPriority::LOW,
+    );
 
     let (head_root_unode, commit_to_merge_root_unode) =
         try_join(head_root_unode, commit_to_merge_root_unode).await?;

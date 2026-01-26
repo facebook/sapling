@@ -16,6 +16,7 @@ use anyhow::anyhow;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use context::PerfCounterType;
+use derivation_queue_thrift::DerivationPriority;
 use filestore::FilestoreConfigRef;
 use fsnodes::RootFsnodeId;
 use manifest::Entry;
@@ -178,13 +179,13 @@ impl CommitRemappingState {
             Some(repo.repo_identity().name()),
         ) {
             repo.repo_derived_data()
-                .derive::<RootContentManifestId>(ctx, cs_id)
+                .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
                 .await?
                 .into_content_manifest_id()
                 .into()
         } else {
             repo.repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, cs_id)
+                .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
                 .await?
                 .into_fsnode_id()
                 .into()

@@ -35,6 +35,7 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../../repo_attributes/bonsai_hg
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
 changesets_creation = { version = "0.1.0", path = "../../features/changesets_creation" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
+derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
 derived_data_test_utils = { version = "0.1.0", path = "../test_utils" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

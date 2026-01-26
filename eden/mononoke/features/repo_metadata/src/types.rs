@@ -15,6 +15,7 @@ use bytes::Bytes;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use dedupmap::DedupMap;
+use derivation_queue_thrift::DerivationPriority;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use futures::TryStreamExt;
@@ -215,7 +216,7 @@ impl BlamedTextFileMetadata {
         let info: HashMap<_, _> = stream::iter(cs_ids.values())
             .map(|cs_id| {
                 repo.repo_derived_data()
-                    .derive::<ChangesetInfo>(ctx, *cs_id)
+                    .derive::<ChangesetInfo>(ctx, *cs_id, DerivationPriority::LOW)
                     .map_ok(|info| (*cs_id, info))
             })
             .boxed()

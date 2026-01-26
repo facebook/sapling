@@ -24,6 +24,7 @@ use commit_transformation::MultiMover;
 use commit_transformation::get_renamed_implicit_deletes;
 use commit_transformation::rewrite_commit_with_implicit_deletes;
 use commit_transformation::upload_commits;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use fbinit::FacebookInit;
 use fileblob::Fileblob;
@@ -229,7 +230,11 @@ pub async fn rewrite_partial_changesets<R: MononokeRepo>(
                     temp_repo_ctx
                         .repo()
                         .repo_derived_data()
-                        .derive::<RootGitDeltaManifestV2Id>(ctx, new_bcs_id)
+                        .derive::<RootGitDeltaManifestV2Id>(
+                            ctx,
+                            new_bcs_id,
+                            DerivationPriority::LOW,
+                        )
                         .try_timed()
                         .await
                         .with_context(|| {

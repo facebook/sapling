@@ -21,6 +21,7 @@ commit_graph = { version = "0.1.0", path = "../repo_attributes/commit_graph/comm
 commit_transformation = { version = "0.1.0", path = "../features/commit_transformation/commit_transformation" }
 content_manifest_derivation = { version = "0.1.0", path = "../derived_data/content_manifest_derivation" }
 context = { version = "0.1.0", path = "../servers/slapi/slapi_server/context" }
+derivation_queue_thrift = { version = "0.1.0", path = "../repo_attributes/repo_derivation_queues/if" }
 filestore = { version = "0.1.0", path = "../repo_attributes/filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }

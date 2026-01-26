@@ -18,6 +18,7 @@ use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
 use context::PerfCounterType;
+use derivation_queue_thrift::DerivationPriority;
 use filenodes::FilenodeResult;
 use filenodes::FilenodesRef;
 use filenodes_derivation::FilenodesOnlyPublic;
@@ -121,7 +122,7 @@ async fn blobstore_and_filenodes_warmup(
             .load(ctx, repo.repo_blobstore())
             .map_err(Error::from),
         repo.repo_derived_data()
-            .derive::<FilenodesOnlyPublic>(ctx, bcs_id)
+            .derive::<FilenodesOnlyPublic>(ctx, bcs_id, DerivationPriority::LOW)
             .map_err(Error::from)
             .map_ok(|_| ()),
     )

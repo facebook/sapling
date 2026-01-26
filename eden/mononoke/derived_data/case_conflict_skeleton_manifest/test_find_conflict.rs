@@ -15,6 +15,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use futures::TryStreamExt;
@@ -122,7 +123,7 @@ async fn assert_new_case_conflict(
 ) -> Result<()> {
     let root_ccsm_id = repo
         .repo_derived_data()
-        .derive::<RootCaseConflictSkeletonManifestId>(ctx, cs_id)
+        .derive::<RootCaseConflictSkeletonManifestId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
 
     let ccsm = root_ccsm_id
@@ -138,7 +139,11 @@ async fn assert_new_case_conflict(
         .map(|parent| async move {
             anyhow::Ok(
                 repo.repo_derived_data()
-                    .derive::<RootCaseConflictSkeletonManifestId>(ctx, parent)
+                    .derive::<RootCaseConflictSkeletonManifestId>(
+                        ctx,
+                        parent,
+                        DerivationPriority::LOW,
+                    )
                     .await?
                     .into_inner_id()
                     .load(ctx, repo.repo_blobstore())

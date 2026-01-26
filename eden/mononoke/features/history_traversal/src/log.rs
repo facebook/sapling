@@ -25,6 +25,7 @@ use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::PathState;
 use deleted_manifest::RootDeletedManifestV2Id;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data::DerivationError;
 use fastlog::FastlogParent;
 use fastlog::RootFastlog;
@@ -567,7 +568,7 @@ async fn derive_unode_entry(
 ) -> Result<Option<UnodeEntry>, Error> {
     let root_unode_mf_id = repo
         .repo_derived_data()
-        .derive::<RootUnodeManifestId>(ctx, cs_id)
+        .derive::<RootUnodeManifestId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
     root_unode_mf_id
         .manifest_unode_id()
@@ -1208,7 +1209,7 @@ async fn prefetch_fastlog_by_changeset(
     // if there is no history, let's try to derive batched fastlog data
     // and fetch history again
     repo.repo_derived_data()
-        .derive::<RootFastlog>(ctx, changeset_id.clone())
+        .derive::<RootFastlog>(ctx, changeset_id.clone(), DerivationPriority::LOW)
         .await?;
     let fastlog_batch_opt = prefetch_history(ctx, repo, &entry).await?;
     fastlog_batch_opt
@@ -1304,7 +1305,7 @@ mod test {
         let top = parents.first().unwrap().clone();
 
         repo.repo_derived_data()
-            .derive::<RootFastlog>(ctx, top)
+            .derive::<RootFastlog>(ctx, top, DerivationPriority::LOW)
             .await?;
 
         expected.reverse();
@@ -1379,7 +1380,7 @@ mod test {
         let (top, graph) = branch_head("Top", 2, vec![l_top, m_top], graph).await?;
 
         repo.repo_derived_data()
-            .derive::<RootFastlog>(ctx, top)
+            .derive::<RootFastlog>(ctx, top, DerivationPriority::LOW)
             .await?;
 
         let expected = bfs(&graph, top);
@@ -1445,7 +1446,7 @@ mod test {
         }
 
         repo.repo_derived_data()
-            .derive::<RootFastlog>(ctx, prev_id)
+            .derive::<RootFastlog>(ctx, prev_id, DerivationPriority::LOW)
             .await?;
 
         expected.reverse();

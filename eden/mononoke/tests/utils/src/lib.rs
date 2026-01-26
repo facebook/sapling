@@ -30,6 +30,7 @@ use commit_graph::CommitGraphWriter;
 use commit_graph::CommitGraphWriterRef;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use filestore::FetchKey;
 use filestore::FilestoreConfig;
 use filestore::FilestoreConfigRef;
@@ -161,7 +162,7 @@ pub async fn list_working_copy_with_types(
     ) {
         let root = repo
             .repo_derived_data()
-            .derive::<RootContentManifestId>(ctx, cs_id)
+            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
             .await?;
 
         root.into_content_manifest_id()
@@ -171,7 +172,7 @@ pub async fn list_working_copy_with_types(
     } else {
         let root_fsnode_id = repo
             .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, cs_id)
+            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
             .await?;
 
         root_fsnode_id

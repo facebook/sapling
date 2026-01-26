@@ -169,6 +169,7 @@ mod test {
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
     use commit_graph::CommitGraphWriter;
+    use derivation_queue_thrift::DerivationPriority;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
@@ -229,7 +230,7 @@ mod test {
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
             repo.repo_derived_data()
                 .manager()
-                .derive::<RootFsnodeId>(&ctx, master_cs_id, None)
+                .derive::<RootFsnodeId>(&ctx, master_cs_id, None, DerivationPriority::LOW)
                 .await?
                 .into_fsnode_id()
         };
@@ -268,7 +269,7 @@ mod test {
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
             repo.repo_derived_data()
                 .manager()
-                .derive::<RootFsnodeId>(&ctx, master_cs_id, None)
+                .derive::<RootFsnodeId>(&ctx, master_cs_id, None, DerivationPriority::LOW)
                 .await?
                 .into_fsnode_id()
         };

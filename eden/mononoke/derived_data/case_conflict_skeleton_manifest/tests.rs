@@ -14,6 +14,7 @@ use bookmarks::Bookmarks;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use futures::TryStreamExt;
@@ -147,7 +148,7 @@ async fn assert_all_leaves(
 ) -> Result<()> {
     let root_ccsm_id = repo
         .repo_derived_data()
-        .derive::<RootCaseConflictSkeletonManifestId>(ctx, cs_id)
+        .derive::<RootCaseConflictSkeletonManifestId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
 
     let ccsm = root_ccsm_id
@@ -178,7 +179,7 @@ async fn assert_all_leaves(
     // Check that CCSM transformed skeleton manifest leaf entries are equivalent to CCSM leaf entries.
     let root_skeleton_manifest_id = repo
         .repo_derived_data()
-        .derive::<RootSkeletonManifestV2Id>(ctx, cs_id)
+        .derive::<RootSkeletonManifestV2Id>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
 
     let skeleton_manifest = root_skeleton_manifest_id

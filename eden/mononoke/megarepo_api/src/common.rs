@@ -28,6 +28,7 @@ use commit_transformation::create_directory_source_to_target_multi_mover;
 use commit_transformation::create_source_to_target_multi_mover;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
 use futures::StreamExt;
 use futures::TryFutureExt;
@@ -420,14 +421,14 @@ pub trait MegarepoOp<R> {
             Some(repo.repo_identity().name()),
         ) {
             repo.repo_derived_data()
-                .derive::<RootContentManifestId>(ctx, cs_id)
+                .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
                 .await
                 .map_err(Error::from)?
                 .into_content_manifest_id()
                 .into()
         } else {
             repo.repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, cs_id)
+                .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
                 .await
                 .map_err(Error::from)?
                 .into_fsnode_id()

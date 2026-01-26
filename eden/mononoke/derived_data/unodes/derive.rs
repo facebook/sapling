@@ -598,6 +598,7 @@ mod tests {
     use blobstore::Storable;
     use bytes::Bytes;
     use changesets_creation::save_changesets;
+    use derivation_queue_thrift::DerivationPriority;
     use derived_data_test_utils::bonsai_changeset_from_hg;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
@@ -659,7 +660,7 @@ mod tests {
         // Derive filenodes because they are going to be used in this test
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         repo.repo_derived_data()
-            .derive::<FilenodesOnlyPublic>(&ctx, master_cs_id)
+            .derive::<FilenodesOnlyPublic>(&ctx, master_cs_id, DerivationPriority::LOW)
             .await?;
 
         let parent_unode_id = {
@@ -858,7 +859,7 @@ mod tests {
             |ctx: CoreContext, repo: TestRepo| async move {
                 let p1_root_unode_mf_id = repo
                     .repo_derived_data
-                    .derive::<RootUnodeManifestId>(&ctx, p1)
+                    .derive::<RootUnodeManifestId>(&ctx, p1, DerivationPriority::LOW)
                     .await?;
 
                 let mut p1_unodes: Vec<_> = p1_root_unode_mf_id
@@ -875,7 +876,7 @@ mod tests {
 
                 let merge_root_unode_mf_id = repo
                     .repo_derived_data()
-                    .derive::<RootUnodeManifestId>(&ctx, merge)
+                    .derive::<RootUnodeManifestId>(&ctx, merge, DerivationPriority::LOW)
                     .await?;
 
                 let mut merge_unodes: Vec<_> = merge_root_unode_mf_id

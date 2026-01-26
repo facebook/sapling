@@ -256,6 +256,7 @@ mod test {
     use borrowed::borrowed;
     use cloned::cloned;
     use commit_graph::CommitGraphRef;
+    use derivation_queue_thrift::DerivationPriority;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::BranchEven;
@@ -300,7 +301,7 @@ mod test {
         let (unode_entries, mf_unode_id) = async move {
             let mf_unode_id = repo
                 .repo_derived_data()
-                .derive::<RootUnodeManifestId>(ctx, bcs_id)
+                .derive::<RootUnodeManifestId>(ctx, bcs_id, DerivationPriority::LOW)
                 .await?
                 .manifest_unode_id()
                 .clone();

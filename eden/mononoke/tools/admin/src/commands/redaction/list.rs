@@ -14,6 +14,7 @@ use blobstore::Loadable;
 use clap::Args;
 use commit_id::parse_commit_id;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
 use futures::stream::TryStreamExt;
 use manifest::ManifestOps;
@@ -49,7 +50,7 @@ pub(super) async fn paths_for_content_keys(
 ) -> Result<Vec<(NonRootMPath, ContentId)>> {
     let root_fsnode_id = repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id)
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
     let file_count = root_fsnode_id
         .fsnode_id()

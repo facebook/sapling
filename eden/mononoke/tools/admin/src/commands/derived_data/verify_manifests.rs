@@ -17,6 +17,7 @@ use clap::Args;
 use clap::builder::PossibleValuesParser;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
@@ -200,7 +201,10 @@ async fn derive_or_fetch<T: BonsaiDerivable>(
             .await?;
         value.ok_or_else(|| anyhow!("{} are not derived for {}", T::NAME, csid))
     } else {
-        Ok(repo.repo_derived_data().derive::<T>(ctx, csid).await?)
+        Ok(repo
+            .repo_derived_data()
+            .derive::<T>(ctx, csid, DerivationPriority::LOW)
+            .await?)
     }
 }
 

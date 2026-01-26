@@ -35,6 +35,7 @@ use cloned::cloned;
 use context::CoreContext;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use deleted_manifest::RootDeletedManifestV2Id;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use fastlog::RootFastlog;
 use fastlog::fetch_fastlog_batch_by_unode_id;
@@ -763,7 +764,7 @@ async fn evolve_filenode_flag<'a, V: 'a + VisitOne>(
             if checker.is_public(ctx, &bcs_id).await? {
                 let _ = repo
                     .repo_derived_data()
-                    .derive::<FilenodesOnlyPublic>(ctx, bcs_id)
+                    .derive::<FilenodesOnlyPublic>(ctx, bcs_id, DerivationPriority::LOW)
                     .await
                     .map_err(Error::from)?;
                 Some(true)
@@ -1207,7 +1208,7 @@ async fn maybe_derived<Derivable: BonsaiDerivable>(
     if enable_derive {
         Ok(Some(
             repo.repo_derived_data()
-                .derive::<Derivable>(ctx, bcs_id)
+                .derive::<Derivable>(ctx, bcs_id, DerivationPriority::LOW)
                 .await?,
         ))
     } else {
@@ -1228,7 +1229,7 @@ async fn is_derived<Derivable: BonsaiDerivable>(
     if enable_derive {
         let _ = repo
             .repo_derived_data()
-            .derive::<Derivable>(ctx, bcs_id)
+            .derive::<Derivable>(ctx, bcs_id, DerivationPriority::LOW)
             .await?;
         Ok(true)
     } else {

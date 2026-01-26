@@ -5,6 +5,7 @@ oncall("scm_server_infra")
 thrift_library(
     name = "derivation_queue_thrift",
     languages = [
+        "cpp2",
         "rust",
     ],
     rust_deps = [

@@ -15,6 +15,7 @@ use clap::Parser;
 use commit_id::IdentityScheme;
 use commit_id::parse_commit_id;
 use commit_id::print_commit_id;
+use derivation_queue_thrift::DerivationPriority;
 use git_types::MappedGitCommitId;
 use mercurial_derivation::MappedHgChangesetId;
 use mononoke_app::MononokeApp;
@@ -87,13 +88,13 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
             match to {
                 IdentityScheme::Hg => {
                     repo.repo_derived_data()
-                        .derive::<MappedHgChangesetId>(&ctx, cs_id)
+                        .derive::<MappedHgChangesetId>(&ctx, cs_id, DerivationPriority::LOW)
                         .await
                         .context("Failed to derive Mercurial changeset")?;
                 }
                 IdentityScheme::Git => {
                     repo.repo_derived_data()
-                        .derive::<MappedGitCommitId>(&ctx, cs_id)
+                        .derive::<MappedGitCommitId>(&ctx, cs_id, DerivationPriority::LOW)
                         .await
                         .context("Failed to derive Git commit")?;
                 }

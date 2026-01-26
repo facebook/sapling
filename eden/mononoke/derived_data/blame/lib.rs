@@ -19,6 +19,7 @@ use anyhow::Error;
 use blobstore::Loadable;
 use blobstore::LoadableError;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data::SharedDerivationError;
 pub use fetch::FetchOutcome;
 pub use fetch::fetch_content_for_blame;
@@ -79,7 +80,7 @@ pub async fn fetch_blame_v2(
 ) -> Result<(BlameV2, FileUnodeId), BlameError> {
     let root_unode = repo
         .repo_derived_data()
-        .derive::<RootBlameV2>(ctx, csid)
+        .derive::<RootBlameV2>(ctx, csid, DerivationPriority::LOW)
         .await?
         .root_manifest();
     let blobstore = repo.repo_blobstore();

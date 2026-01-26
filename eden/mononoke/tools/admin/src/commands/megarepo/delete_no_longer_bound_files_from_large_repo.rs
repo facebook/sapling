@@ -14,6 +14,7 @@ use anyhow::format_err;
 use cmdlib_cross_repo::create_commit_syncers_from_app;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncData;
+use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
 use manifest::Entry;
@@ -83,7 +84,7 @@ pub async fn run(
     // Find all files under a given path
     let root_fsnode_id = large_repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id)
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
     let entries = root_fsnode_id
         .fsnode_id()

@@ -19,6 +19,7 @@ use cloned::cloned;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_test_utils::bonsai_changeset_from_hg;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
@@ -767,7 +768,7 @@ async fn gen_deleted_manifest_nodes<Root: RootDeletedManifestIdCommon>(
     let manifest = repo
         .repo_derived_data()
         .manager()
-        .derive::<Root>(ctx, bonsai, None)
+        .derive::<Root>(ctx, bonsai, None, DerivationPriority::LOW)
         .await?;
     let mut deleted_nodes = iterate_all_entries::<Root>(ctx.clone(), repo.clone(), *manifest.id())
         .map_ok(|(path, st, ..)| (path, st))
@@ -807,7 +808,7 @@ async fn derive_manifest<Root: RootDeletedManifestIdCommon>(
 
     repo.repo_derived_data()
         .manager()
-        .derive::<RootUnodeManifestId>(ctx, bcs.get_changeset_id(), None)
+        .derive::<RootUnodeManifestId>(ctx, bcs.get_changeset_id(), None, DerivationPriority::LOW)
         .await?;
 
     let (current_unode, parent_unodes) = get_unodes(

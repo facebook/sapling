@@ -12,6 +12,7 @@ include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 include "eden/mononoke/mononoke_types/serialization/id.thrift"
 include "eden/mononoke/mononoke_types/serialization/changeset_info.thrift"
 include "eden/mononoke/mononoke_types/serialization/test_manifest.thrift"
+include "eden/mononoke/repo_attributes/repo_derivation_queues/if/derivation_queue.thrift"
 include "thrift/annotation/rust.thrift"
 include "thrift/annotation/thrift.thrift"
 
@@ -57,6 +58,7 @@ struct DeriveRequest {
   4: string config_name;
   5: DerivationType derivation_type;
   6: optional i64 bubble_id;
+  7: derivation_queue.DerivationPriority priority;
 }
 
 @rust.Exhaustive

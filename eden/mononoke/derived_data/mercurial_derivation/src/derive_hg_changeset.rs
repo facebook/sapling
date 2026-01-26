@@ -21,6 +21,7 @@ use borrowed::borrowed;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use futures::FutureExt;
 use futures::TryStreamExt;
 use futures::future;
@@ -561,7 +562,10 @@ pub async fn derive_hg_changeset(
 ) -> Result<HgChangesetId, Error> {
     STATS::get_hg_from_bonsai_changeset.add_value(1);
     let start_timestamp = Instant::now();
-    let result = match derived_data.derive::<MappedHgChangesetId>(ctx, cs_id).await {
+    let result = match derived_data
+        .derive::<MappedHgChangesetId>(ctx, cs_id, DerivationPriority::LOW)
+        .await
+    {
         Ok(id) => Ok(id.hg_changeset_id()),
         Err(err) => Err(err.into()),
     };

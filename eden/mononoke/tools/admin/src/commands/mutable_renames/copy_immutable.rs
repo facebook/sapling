@@ -17,6 +17,7 @@ use clap::Args;
 use commit_graph::CommitGraphRef;
 use commit_id::parse_commit_id;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
@@ -69,7 +70,7 @@ pub async fn copy_immutable_impl(
         stream::iter(src_cs_ids.into_iter().map(|cs_id| async move {
             let src_unode_manifest_id = repo
                 .repo_derived_data()
-                .derive::<RootUnodeManifestId>(ctx, cs_id)
+                .derive::<RootUnodeManifestId>(ctx, cs_id, DerivationPriority::LOW)
                 .await?;
             Ok::<_, Error>((cs_id, src_unode_manifest_id))
         }))

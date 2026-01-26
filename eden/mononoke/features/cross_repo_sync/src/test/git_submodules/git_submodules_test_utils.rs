@@ -26,6 +26,7 @@ use bulk_derivation::BulkDerivation;
 use commit_graph::CommitGraphRef;
 use commit_transformation::SubmoduleDeps;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use fn_error_context::context;
 use fsnodes::RootFsnodeId;
@@ -229,7 +230,7 @@ pub(crate) async fn build_submodule_sync_test_data(
         .expect("Failed to get master bookmark changeset id of repo B");
     let b_master_git_sha1 = repo_b
         .repo_derived_data()
-        .derive::<MappedGitCommitId>(&ctx, b_master_cs)
+        .derive::<MappedGitCommitId>(&ctx, b_master_cs, DerivationPriority::LOW)
         .await?;
 
     let (small_repo, small_repo_cs_map) =
@@ -715,7 +716,7 @@ pub(crate) async fn check_submodule_metadata_file_in_large_repo<'a>(
 ) -> Result<()> {
     let fsnode_id = large_repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id)
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
         .await?
         .into_fsnode_id();
 
@@ -784,7 +785,7 @@ pub(crate) async fn assert_working_copy_matches_expected(
     println!("Asserting working copy matches expectation");
     let root_fsnode_id = repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id)
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
         .await?
         .into_fsnode_id();
 
@@ -815,7 +816,7 @@ pub(crate) async fn git_sha1_from_changeset(
 ) -> Result<GitSha1> {
     let c_master_mapped_git_commit = repo
         .repo_derived_data()
-        .derive::<MappedGitCommitId>(ctx, cs_id)
+        .derive::<MappedGitCommitId>(ctx, cs_id, DerivationPriority::LOW)
         .await
         .with_context(|| format!("Failed to derive MappedGitCommitId for changeset {cs_id}"))?;
 

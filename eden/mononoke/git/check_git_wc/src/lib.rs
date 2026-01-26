@@ -16,6 +16,7 @@ use anyhow::bail;
 use blobstore::Loadable;
 use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use either::Either;
 use fsnodes::RootFsnodeId;
 use futures::StreamExt;
@@ -129,7 +130,7 @@ async fn check_receiver(
         Either::Left(
             hg_repo
                 .repo_derived_data()
-                .derive::<RootContentManifestId>(ctx, cs)
+                .derive::<RootContentManifestId>(ctx, cs, DerivationPriority::LOW)
                 .await?
                 .into_content_manifest_id()
                 .load(ctx, hg_repo.repo_blobstore())
@@ -139,7 +140,7 @@ async fn check_receiver(
         Either::Right(
             hg_repo
                 .repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, cs)
+                .derive::<RootFsnodeId>(ctx, cs, DerivationPriority::LOW)
                 .await?
                 .into_fsnode_id()
                 .load(ctx, hg_repo.repo_blobstore())

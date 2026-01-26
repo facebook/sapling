@@ -31,6 +31,7 @@ eden/mononoke/mononoke_types/serialization/test_manifest.thrift mononoke_types_s
 eden/mononoke/mononoke_types/serialization/time.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/mononoke_types/serialization/unodes.thrift mononoke_types_serialization //eden/mononoke/mononoke_types/serialization:mononoke_types_serialization-rust
 eden/mononoke/repo_attributes/filenodes/if/filenodes.thrift filenodes_if //eden/mononoke/repo_attributes/filenodes/if:filenodes-if-rust
+eden/mononoke/repo_attributes/repo_derivation_queues/if/derivation_queue.thrift derivation_queue_thrift //eden/mononoke/repo_attributes/repo_derivation_queues/if:derivation_queue_thrift-rust
 fb303/thrift/fb303_core.thrift fb303_core //fb303/thrift:fb303_core-rust
 thrift/annotation/cpp.thrift fb303_core->cpp //thrift/annotation:cpp-rust
 thrift/annotation/rust.thrift rust //thrift/annotation:rust-rust

@@ -15,6 +15,7 @@ use changesets_uploader::UploadPolicy;
 use changesets_uploader::UploadStats;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
@@ -93,7 +94,7 @@ pub async fn try_derive<'a>(
 ) -> Result<(), Error> {
     // Derive augmented manifest for this changeset if not yet derived.
     repo.repo_derived_data()
-        .derive::<RootHgAugmentedManifestId>(ctx, bcs_id)
+        .derive::<RootHgAugmentedManifestId>(ctx, bcs_id, DerivationPriority::LOW)
         .await?;
     Ok(())
 }

@@ -21,6 +21,7 @@ thrift_library(
         "//eden/mononoke/mercurial/types/if:mercurial-thrift",
         "//eden/mononoke/mononoke_types/serialization:mononoke_types_serialization",
         "//eden/mononoke/repo_attributes/filenodes/if:filenodes-if",
+        "//eden/mononoke/repo_attributes/repo_derivation_queues/if:derivation_queue_thrift",
         "//fb303/thrift:fb303_core",
         "//thrift/annotation:rust",
         "//thrift/annotation:thrift",

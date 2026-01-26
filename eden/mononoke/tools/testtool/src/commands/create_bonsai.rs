@@ -18,6 +18,7 @@ use anyhow::anyhow;
 use bytes::Bytes;
 use changesets_creation::save_changesets;
 use clap::Parser;
+use derivation_queue_thrift::DerivationPriority;
 use mercurial_derivation::MappedHgChangesetId;
 use mononoke_app::MononokeApp;
 use mononoke_app::args::RepoArgs;
@@ -95,7 +96,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .context("Failed to save changeset")?;
     let hg_cs = repo
         .repo_derived_data()
-        .derive::<MappedHgChangesetId>(&ctx, bcs_id)
+        .derive::<MappedHgChangesetId>(&ctx, bcs_id, DerivationPriority::LOW)
         .await
         .context("Failed to derive Mercurial changeset")?
         .hg_changeset_id();

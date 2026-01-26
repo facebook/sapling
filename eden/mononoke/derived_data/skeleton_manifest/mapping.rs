@@ -240,6 +240,7 @@ mod test {
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
     use commit_graph::CommitGraphWriter;
+    use derivation_queue_thrift::DerivationPriority;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
@@ -303,7 +304,7 @@ mod test {
     ) -> Result<()> {
         let manager = repo.repo_derived_data().manager();
         let root_skeleton_manifest_id = manager
-            .derive::<RootSkeletonManifestId>(ctx, bcs_id, None)
+            .derive::<RootSkeletonManifestId>(ctx, bcs_id, None, DerivationPriority::LOW)
             .await?
             .into_skeleton_manifest_id();
 

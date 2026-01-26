@@ -14,6 +14,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -116,7 +117,7 @@ async fn get_new_submodule_mpaths(
         .map(|p| async move {
             hook_repo
                 .repo_derived_data()
-                .derive::<RootFsnodeId>(ctx, p)
+                .derive::<RootFsnodeId>(ctx, p, DerivationPriority::LOW)
                 .await
                 .with_context(|| "Can't lookup RootFsnodeId for ChangesetId")
         })

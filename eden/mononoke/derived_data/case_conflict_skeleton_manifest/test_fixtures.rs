@@ -20,6 +20,7 @@ use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriter;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use filestore::FilestoreConfig;
 use fixtures::TestRepoFixture;
@@ -130,13 +131,13 @@ async fn test_for_fixture<F: TestRepoFixture + Send>(fb: FacebookInit) -> Result
     repo.commit_graph()
         .process_topologically(ctx, all_commits, |cs_id| async move {
             let ccsm_id = derived_data
-                .derive::<RootCaseConflictSkeletonManifestId>(ctx, cs_id)
+                .derive::<RootCaseConflictSkeletonManifestId>(ctx, cs_id, DerivationPriority::LOW)
                 .await?;
             let ccsm = ccsm_id.into_inner_id().load(ctx, blobstore).await?;
             validate(visited, ctx, blobstore, ccsm.clone()).await?;
 
             let skeleton_manifest = derived_data
-                .derive::<RootSkeletonManifestId>(ctx, cs_id)
+                .derive::<RootSkeletonManifestId>(ctx, cs_id, DerivationPriority::LOW)
                 .await?
                 .into_skeleton_manifest_id();
 

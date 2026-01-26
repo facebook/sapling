@@ -18,6 +18,7 @@ use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use commit_graph::CommitGraph;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivationError;
 use derived_data_manager::DerivedDataManager;
@@ -307,11 +308,14 @@ impl RepoDerivedData {
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
+        priority: DerivationPriority,
     ) -> Result<Derivable, SharedDerivationError>
     where
         Derivable: BonsaiDerivable,
     {
-        self.manager().derive::<Derivable>(ctx, csid, None).await
+        self.manager()
+            .derive::<Derivable>(ctx, csid, None, priority)
+            .await
     }
 
     /// Fetch an already derived derived data type using the default manager.

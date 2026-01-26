@@ -21,6 +21,7 @@ use commit_cloud_types::WorkspaceSnapshot;
 use commit_cloud_types::changeset::CloudChangesetId;
 use commit_cloud_types::references::WorkspaceRemoteBookmark;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use futures::FutureExt;
 use futures::future;
 use futures::stream;
@@ -135,7 +136,7 @@ pub(crate) async fn cast_references_data(
         // map (CloudChangesetId, BonsaiChangesetId) to (CloudChangesetId, unix_timestamp)
         .and_then(|(cid, bcs_id)| async move {
             repo_derived_data
-                .derive::<ChangesetInfo>(core_ctx, bcs_id)
+                .derive::<ChangesetInfo>(core_ctx, bcs_id, DerivationPriority::LOW)
                 .await
                 .map_err(Into::into)
                 .map(|cs_info| future::ok((cid, cs_info.author_date().as_chrono().timestamp())))

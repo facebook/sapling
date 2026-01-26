@@ -24,6 +24,7 @@ use cmdlib_displaying::display_content;
 use cmdlib_displaying::display_fsnode_manifest;
 use cmdlib_displaying::display_hg_manifest;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
 use ephemeral_blobstore::RepoEphemeralStoreRef;
@@ -196,7 +197,7 @@ async fn display_fsnode(
 ) -> Result<()> {
     let root_fsnode_id = repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id)
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
     let fsnode = if path.is_empty() {
         Entry::Tree(root_fsnode_id.fsnode_id().clone())

@@ -233,6 +233,7 @@ mod test {
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
     use commit_graph::CommitGraphWriter;
+    use derivation_queue_thrift::DerivationPriority;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
@@ -296,7 +297,7 @@ mod test {
     ) -> Result<()> {
         let root_fsnode_id = repo
             .repo_derived_data()
-            .derive::<RootFsnodeId>(ctx, bcs_id)
+            .derive::<RootFsnodeId>(ctx, bcs_id, DerivationPriority::LOW)
             .await?
             .into_fsnode_id();
 

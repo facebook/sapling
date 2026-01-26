@@ -118,6 +118,7 @@ mod test {
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
     use commit_graph::CommitGraphWriter;
+    use derivation_queue_thrift::DerivationPriority;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
@@ -160,7 +161,9 @@ mod test {
             .unwrap();
         let bcs = bcs_id.load(&ctx, repo.repo_blobstore()).await?;
         // Make sure that the changeset info was saved in the blobstore
-        let info = manager.derive(&ctx, bcs_id, None).await?;
+        let info = manager
+            .derive(&ctx, bcs_id, None, DerivationPriority::LOW)
+            .await?;
 
         check_info(&info, &bcs);
         Ok(())

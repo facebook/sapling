@@ -297,6 +297,7 @@ mod tests {
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
     use commit_graph::CommitGraphWriter;
+    use derivation_queue_thrift::DerivationPriority;
     use fbinit::FacebookInit;
     use filenodes::FilenodeRange;
     use filenodes::FilenodeResult;
@@ -353,7 +354,7 @@ mod tests {
         // hgchangesets was derived already
         repo.repo_derived_data()
             .manager()
-            .derive::<MappedHgChangesetId>(ctx, cs_id, None)
+            .derive::<MappedHgChangesetId>(ctx, cs_id, None, DerivationPriority::LOW)
             .await?;
         let filenodes = generate_all_filenodes(
             ctx,
@@ -491,7 +492,7 @@ mod tests {
         let manager = repo.repo_derived_data().manager();
 
         manager
-            .derive::<FilenodesOnlyPublic>(&ctx, child_empty, None)
+            .derive::<FilenodesOnlyPublic>(&ctx, child_empty, None, DerivationPriority::LOW)
             .await?;
 
         // Make sure they are in the mapping
@@ -515,7 +516,7 @@ mod tests {
 
         let manager = repo.repo_derived_data().manager();
         manager
-            .derive::<FilenodesOnlyPublic>(&ctx, child_empty, None)
+            .derive::<FilenodesOnlyPublic>(&ctx, child_empty, None, DerivationPriority::LOW)
             .await?;
 
         // Make sure they are in the mapping
@@ -553,7 +554,7 @@ mod tests {
             for cs in cs_ids.clone() {
                 let root_filenode = repo2
                     .repo_derived_data()
-                    .derive::<FilenodesOnlyPublic>(&ctx, cs)
+                    .derive::<FilenodesOnlyPublic>(&ctx, cs, DerivationPriority::LOW)
                     .await?;
                 res.insert(cs, root_filenode);
             }

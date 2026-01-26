@@ -18,6 +18,7 @@ use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data::macro_export::BonsaiDerivable;
 use either::Either;
 use fsnodes::RootFsnodeId;
@@ -438,7 +439,9 @@ async fn get_submodule_expansion_fsnode_id<'a, R: Repo>(
     // Get the root fsnodes from the parent commits, so the one from this commit
     // can be derived.
     let parent_root_fsnodes = stream::iter(bonsai.parents())
-        .then(|cs_id| large_repo_derived_data.derive::<RootFsnodeId>(ctx, cs_id))
+        .then(|cs_id| {
+            large_repo_derived_data.derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+        })
         .boxed()
         .try_collect::<Vec<_>>()
         .timed()

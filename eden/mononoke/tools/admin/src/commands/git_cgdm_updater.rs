@@ -23,6 +23,7 @@ use clap::Parser;
 use commit_graph::CommitGraph;
 use commit_graph::CommitGraphRef;
 use context::SessionClass;
+use derivation_queue_thrift::DerivationPriority;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -146,7 +147,7 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
     let gdm_sizes = stream::iter(&cs_ids)
         .map(async |cs_id| {
             repo.repo_derived_data()
-                .derive::<RootGitDeltaManifestV3Id>(&ctx, *cs_id)
+                .derive::<RootGitDeltaManifestV3Id>(&ctx, *cs_id, DerivationPriority::LOW)
                 .await?;
             let gdm = repo
                 .repo_derived_data()

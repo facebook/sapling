@@ -212,6 +212,7 @@ mod tests {
     use commit_graph::CommitGraphRef;
     use commit_graph::CommitGraphWriter;
     use context::CoreContext;
+    use derivation_queue_thrift::DerivationPriority;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::Linear;
@@ -474,13 +475,15 @@ mod tests {
             let mut parent_unodes = vec![];
 
             for p in parents {
-                let parent_unode = manager.derive::<RootUnodeManifestId>(&ctx, p, None).await?;
+                let parent_unode = manager
+                    .derive::<RootUnodeManifestId>(&ctx, p, None, DerivationPriority::LOW)
+                    .await?;
                 let parent_unode = parent_unode.manifest_unode_id().clone();
                 parent_unodes.push(parent_unode);
             }
 
             let merge_unode = manager
-                .derive::<RootUnodeManifestId>(&ctx, merge_bcs_id, None)
+                .derive::<RootUnodeManifestId>(&ctx, merge_bcs_id, None, DerivationPriority::LOW)
                 .await?;
             let merge_unode = merge_unode.manifest_unode_id().clone();
 
@@ -725,7 +728,7 @@ mod tests {
             .await?
             .unwrap();
         let root_unode = manager
-            .derive::<RootUnodeManifestId>(ctx, bcs_id, None)
+            .derive::<RootUnodeManifestId>(ctx, bcs_id, None, DerivationPriority::LOW)
             .await?;
         Ok(root_unode.manifest_unode_id().clone())
     }
@@ -737,12 +740,12 @@ mod tests {
     ) -> ManifestUnodeId {
         let manager = repo.repo_derived_data().manager();
         manager
-            .derive::<RootFastlog>(ctx, bcs_id, None)
+            .derive::<RootFastlog>(ctx, bcs_id, None, DerivationPriority::LOW)
             .await
             .unwrap();
 
         let root_unode = manager
-            .derive::<RootUnodeManifestId>(ctx, bcs_id, None)
+            .derive::<RootUnodeManifestId>(ctx, bcs_id, None, DerivationPriority::LOW)
             .await
             .unwrap();
         root_unode.manifest_unode_id().clone()

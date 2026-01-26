@@ -17,6 +17,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogArc;
 use bookmarks::BookmarksArc;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use git_types::MappedGitCommitId;
 use mercurial_derivation::MappedHgChangesetId;
 use mononoke_types::ChangesetId;
@@ -141,19 +142,19 @@ pub async fn derive_data(
 ) -> Result<(), Error> {
     if derive_hg {
         repo.repo_derived_data()
-            .derive::<MappedHgChangesetId>(ctx, cs_id)
+            .derive::<MappedHgChangesetId>(ctx, cs_id, DerivationPriority::LOW)
             .await?;
     }
 
     if derive_git {
         repo.repo_derived_data()
-            .derive::<MappedGitCommitId>(ctx, cs_id)
+            .derive::<MappedGitCommitId>(ctx, cs_id, DerivationPriority::LOW)
             .await?;
     }
 
     if derive_unodes {
         repo.repo_derived_data()
-            .derive::<RootUnodeManifestId>(ctx, cs_id)
+            .derive::<RootUnodeManifestId>(ctx, cs_id, DerivationPriority::LOW)
             .await?;
     }
 

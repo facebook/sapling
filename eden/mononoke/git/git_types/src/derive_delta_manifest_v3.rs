@@ -505,6 +505,7 @@ mod tests {
     use commit_graph::CommitGraph;
     use commit_graph::CommitGraphRef;
     use commit_graph::CommitGraphWriter;
+    use derivation_queue_thrift::DerivationPriority;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use fixtures::TestRepoFixture;
@@ -551,7 +552,7 @@ mod tests {
             .ok_or_else(|| format_err!("no master"))?;
         // Validate that the derivation of the GitDeltaManifestV3 for the head commit succeeds
         repo.repo_derived_data()
-            .derive::<RootGitDeltaManifestV3Id>(ctx, cs_id)
+            .derive::<RootGitDeltaManifestV3Id>(ctx, cs_id, DerivationPriority::LOW)
             .await?;
         let manifest = repo
             .repo_derived_data()
@@ -572,7 +573,7 @@ mod tests {
         repo.commit_graph()
             .process_topologically(ctx, all_cs_ids, |cs_id| async move {
                 repo.repo_derived_data()
-                    .derive::<RootGitDeltaManifestV3Id>(ctx, cs_id)
+                    .derive::<RootGitDeltaManifestV3Id>(ctx, cs_id, DerivationPriority::LOW)
                     .await?;
                 Ok(())
             })

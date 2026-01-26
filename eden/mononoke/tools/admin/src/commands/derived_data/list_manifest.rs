@@ -17,6 +17,7 @@ use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use deleted_manifest::RootDeletedManifestV2Id;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
 use futures::stream::BoxStream;
@@ -388,7 +389,7 @@ where
     if derive {
         Ok(repo
             .repo_derived_data()
-            .derive::<TreeId>(ctx, cs_id)
+            .derive::<TreeId>(ctx, cs_id, DerivationPriority::LOW)
             .await?)
     } else {
         repo.repo_derived_data()

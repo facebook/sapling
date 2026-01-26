@@ -17,6 +17,7 @@ doc = false
 [dependencies]
 anyhow = "1.0.98"
 codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+derivation_queue_thrift = { version = "0.1.0", path = "../../../repo_attributes/repo_derivation_queues/if" }
 fb303_core = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filenodes_if = { version = "0.1.0", path = "../../../repo_attributes/filenodes/if" }

@@ -12,6 +12,7 @@
 use anyhow::Context;
 use anyhow::Result;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use git_types::MappedGitCommitId;
 use mononoke_macros::mononoke;
@@ -53,7 +54,7 @@ async fn test_valid_submodule_expansion_update_succeeds(fb: FacebookInit) -> Res
     .context("Failed to build test data")?;
     let b_a_mapped_git_commit = repo_b
         .repo_derived_data()
-        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_map["B_A"])
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_map["B_A"], DerivationPriority::LOW)
         .await?;
 
     let b_a_git_hash = *b_a_mapped_git_commit.oid();
@@ -388,7 +389,7 @@ async fn test_atomic_submodule_updates_with_other_changes_backsync_successfully(
     .context("Failed to build test data")?;
     let b_a_mapped_git_commit = repo_b
         .repo_derived_data()
-        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_map["B_A"])
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_map["B_A"], DerivationPriority::LOW)
         .await?;
 
     let b_a_git_hash = *b_a_mapped_git_commit.oid();
@@ -522,7 +523,7 @@ async fn test_changing_submodule_metadata_pointer_without_expansion_fails(
     .context("Failed to build test data")?;
     let b_a_mapped_git_commit = repo_b
         .repo_derived_data()
-        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_map["B_A"])
+        .derive::<MappedGitCommitId>(&ctx, repo_b_cs_map["B_A"], DerivationPriority::LOW)
         .await?;
 
     let b_a_git_hash = *b_a_mapped_git_commit.oid();
@@ -579,7 +580,7 @@ async fn test_changing_submodule_metadata_pointer_to_git_commit_from_another_rep
 
     let c_a_mapped_git_commit = repo_c
         .repo_derived_data()
-        .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_A"])
+        .derive::<MappedGitCommitId>(&ctx, repo_c_cs_map["C_A"], DerivationPriority::LOW)
         .await?;
 
     let c_a_git_hash = *c_a_mapped_git_commit.oid();

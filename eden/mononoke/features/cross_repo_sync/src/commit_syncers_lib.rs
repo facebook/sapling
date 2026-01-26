@@ -28,6 +28,7 @@ use commit_transformation::StripCommitExtras;
 use commit_transformation::SubmoduleDeps;
 use commit_transformation::SubmoduleExpansionContentIds;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use environment::Caching;
 use fbinit::FacebookInit;
 use futures::FutureExt;
@@ -213,7 +214,7 @@ where
                         &commit_sync_data
                             .get_source_repo()
                             .repo_derived_data()
-                            .derive::<ChangesetInfo>(ctx, cs_id)
+                            .derive::<ChangesetInfo>(ctx, cs_id, DerivationPriority::LOW)
                             .await?,
                     )
                 };

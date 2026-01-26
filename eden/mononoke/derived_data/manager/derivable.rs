@@ -15,6 +15,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_service_if::DerivedData;
 use futures::future::try_join;
 use futures::stream;
@@ -333,7 +334,7 @@ where
         let type_id = TypeId::of::<Derivable>();
         if visited.insert(type_id) {
             try_join(
-                ddm.derive::<Derivable>(ctx, csid, rederivation.clone()),
+                ddm.derive::<Derivable>(ctx, csid, rederivation.clone(), DerivationPriority::LOW),
                 Rest::derive_predecessors(ddm, ctx, csid, rederivation, visited),
             )
             .await?;

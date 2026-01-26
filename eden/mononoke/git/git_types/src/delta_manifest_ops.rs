@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use blobstore::KeyedBlobstore;
 use blobstore::Loadable;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use futures::stream::BoxStream;
 use gix_hash::ObjectId;
 use gix_object::Kind;
@@ -42,7 +43,7 @@ pub async fn fetch_git_delta_manifest(
     match git_delta_manifest_version {
         GitDeltaManifestVersion::V2 => {
             let root_mf_id = derived_data
-                .derive::<RootGitDeltaManifestV2Id>(ctx, cs_id)
+                .derive::<RootGitDeltaManifestV2Id>(ctx, cs_id, DerivationPriority::LOW)
                 .await
                 .with_context(|| {
                     format!(
@@ -82,7 +83,7 @@ pub async fn fetch_git_delta_manifest(
                 Some(gdm_v3) => gdm_v3,
                 None => {
                     derived_data
-                        .derive::<RootGitDeltaManifestV3Id>(ctx, cs_id)
+                        .derive::<RootGitDeltaManifestV3Id>(ctx, cs_id, DerivationPriority::LOW)
                         .await
                         .with_context(|| {
                             format!(

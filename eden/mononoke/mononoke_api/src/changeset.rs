@@ -34,6 +34,7 @@ use context::CoreContext;
 use deleted_manifest::DeletedManifestOps;
 use deleted_manifest::RootDeletedManifestIdCommon;
 use deleted_manifest::RootDeletedManifestV2Id;
+use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
 use futures::future::try_join;
@@ -340,7 +341,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         let id = self.id;
         async move {
             repo_derived_data
-                .derive::<Derivable>(&ctx, id)
+                .derive::<Derivable>(&ctx, id, DerivationPriority::LOW)
                 .await
                 .map_err(MononokeError::from)
         }
@@ -1463,7 +1464,7 @@ impl<R: MononokeRepo> ChangesetContext<R> {
                             repo_ctx
                                 .repo()
                                 .repo_derived_data()
-                                .derive::<ChangesetInfo>(&ctx, cs_id)
+                                .derive::<ChangesetInfo>(&ctx, cs_id, DerivationPriority::LOW)
                                 .await?
                         } else {
                             let bonsai = cs_id.load(&ctx, repo_ctx.repo().repo_blobstore()).await?;

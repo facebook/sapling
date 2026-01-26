@@ -20,6 +20,7 @@ use blobstore::Storable;
 use changesets_creation::save_changesets;
 use cloned::cloned;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::stream;
@@ -169,7 +170,7 @@ pub async fn submodule_diff<T: Repo>(
 ) -> Result<impl Stream<Item = Result<BonsaiDiffFileChange<(FileType, ContentId, u64)>>> + use<T>> {
     let fsnode_id = sm_repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id)
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
         .await
         .with_context(|| format!("Failed to get fsnode id form changeset id {}", cs_id))?
         .into_fsnode_id();
@@ -179,7 +180,7 @@ pub async fn submodule_diff<T: Repo>(
             anyhow::Ok(
                 sm_repo
                     .repo_derived_data()
-                    .derive::<RootFsnodeId>(ctx, parent_cs_id)
+                    .derive::<RootFsnodeId>(ctx, parent_cs_id, DerivationPriority::LOW)
                     .await
                     .with_context(|| {
                         format!(
@@ -236,7 +237,7 @@ where
 {
     let fsnode_id = repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id)
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
         .await
         .with_context(|| {
             format!(
@@ -269,7 +270,7 @@ where
 {
     let fsnode_id = repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id)
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
         .await
         .with_context(|| {
             format!(
@@ -307,7 +308,7 @@ pub async fn root_fsnode_id_from_submodule_git_commit(
 
     let submodule_root_fsnode_id: RootFsnodeId = repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id)
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
         .await
         .context("Failed to derive RootFsnodeId")?;
 

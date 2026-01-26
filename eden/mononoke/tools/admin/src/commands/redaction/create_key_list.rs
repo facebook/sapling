@@ -24,6 +24,7 @@ use clap::ArgGroup;
 use clap::Args;
 use commit_id::parse_commit_id;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use fsnodes::RootFsnodeId;
 use futures::stream::TryStreamExt;
 use manifest::Entry;
@@ -165,7 +166,7 @@ async fn content_keys_for_paths(
 ) -> Result<HashSet<String>> {
     let root_fsnode_id = repo
         .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id)
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
         .await?;
     let path_content_keys = root_fsnode_id
         .fsnode_id()

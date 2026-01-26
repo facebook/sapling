@@ -15,6 +15,7 @@ use bounded_traversal::bounded_traversal_stream;
 use cloned::cloned;
 use commit_graph::CommitGraphRef;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
@@ -129,7 +130,9 @@ pub trait DeletedManifestOps: RootDeletedManifestIdCommon {
         // let's get deleted manifests for each changeset id
         // and try to find the given path
         if let Some(cs_id) = queue.pop_front() {
-            let root_dfm_id = manager.derive::<Self>(&ctx, cs_id, None).await?;
+            let root_dfm_id = manager
+                .derive::<Self>(&ctx, cs_id, None, DerivationPriority::LOW)
+                .await?;
             let entry = root_dfm_id
                 .find_entry(&ctx, repo.repo_blobstore(), path.clone())
                 .await?;
@@ -386,7 +389,7 @@ async fn derive_unode_entry(
     let root_unode_mf_id = repo
         .repo_derived_data()
         .manager()
-        .derive::<RootUnodeManifestId>(ctx, cs_id, None)
+        .derive::<RootUnodeManifestId>(ctx, cs_id, None, DerivationPriority::LOW)
         .await?;
     root_unode_mf_id
         .manifest_unode_id()
