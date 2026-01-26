@@ -7,10 +7,10 @@
 
 use std::sync::Arc;
 
-use anyhow::Context;
+use anyhow::Context as _;
 use anyhow::Result;
 use blobstore::Loadable;
-use buffered_weighted::StreamExt;
+use buffered_weighted::StreamExt as BufferedWeightedStreamExt;
 use cloned::cloned;
 use commit_graph_types::frontier::AncestorsWithinDistance;
 use context::CoreContext;
@@ -42,6 +42,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 
+use crate::OptionalWeightObserver;
 use crate::Repo;
 use crate::bookmarks_provider::bookmarks;
 use crate::bookmarks_provider::list_tags;
@@ -368,6 +369,7 @@ fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'static>(
     fetch_container: FetchContainer,
     base_set: Arc<FxHashSet<ObjectId>>,
     changesets_or_groups: Vec<T>,
+    weight_observer: OptionalWeightObserver,
 ) -> BoxStream<'a, Result<PackfileItem>> {
     let FetchContainer {
         ctx,
@@ -440,37 +442,45 @@ fn packfile_stream_from_changesets<'a, T: GDMEntryProvider + Send + 'static>(
             justknobs::get_as::<usize>("scm/mononoke:git_generator_buffer_bytes", None)
                 .unwrap_or(DEFAULT_GIT_GENERATOR_BUFFER_BYTES);
 
-        let mut stream = tokio_stream::wrappers::ReceiverStream::new(gdm_receiver)
-            .filter_map({
-                async |entry_result| {
-                    let entry = match entry_result {
-                        Ok(entry) => entry,
-                        Err(entry_err) => {
-                            if let Err(send_err) = packfile_item_sender.send(Err(entry_err)).await {
-                                tracing::warn!("Error sending packfile item: {send_err:?}");
+        let weighted_stream =
+            tokio_stream::wrappers::ReceiverStream::new(gdm_receiver).filter_map({
+                let error_sender = packfile_item_sender.clone();
+                move |entry_result| {
+                    let filter = filter.clone();
+                    let fetch_container = fetch_container.clone();
+                    let base_set = base_set.clone();
+                    let error_sender = error_sender.clone();
+                    async move {
+                        let entry = match entry_result {
+                            Ok(entry) => entry,
+                            Err(entry_err) => {
+                                if let Err(send_err) = error_sender.send(Err(entry_err)).await {
+                                    tracing::warn!("Error sending packfile item: {send_err:?}");
+                                }
+                                return None;
                             }
-                            return None;
-                        }
-                    };
+                        };
 
-                    let weight = entry_weight(
-                        entry.as_ref(),
-                        delta_inclusion,
-                        filter.clone(),
-                        chain_breaking_mode,
-                    );
+                        let weight = entry_weight(
+                            entry.as_ref(),
+                            delta_inclusion,
+                            filter.clone(),
+                            chain_breaking_mode,
+                        );
 
-                    Some((
-                        weight,
-                        packfile_item_for_delta_manifest_entry(
+                        let future = packfile_item_for_delta_manifest_entry(
                             fetch_container.clone(),
                             base_set.clone(),
                             entry,
-                        ),
-                    ))
+                        );
+
+                        Some((weight, future))
+                    }
                 }
-            })
-            .buffered_weighted(max_buffer)
+            });
+
+        let mut stream = weighted_stream
+            .buffered_weighted(max_buffer, weight_observer)
             .try_filter_map(futures::future::ok)
             .boxed();
 
@@ -493,6 +503,7 @@ async fn tree_and_blob_packfile_stream<'a>(
     divided_changesets: CGDMDividedChangesets,
     base_set: Arc<FxHashSet<ObjectId>>,
     tree_and_blob_shas: Vec<ObjectId>,
+    weight_observer: OptionalWeightObserver,
 ) -> Result<BoxStream<'a, Result<PackfileItem>>> {
     // Get the packfile items corresponding to blob and tree objects in the repo. Where applicable, use delta to represent them
     // efficiently in the packfile/bundle
@@ -523,12 +534,14 @@ async fn tree_and_blob_packfile_stream<'a>(
         fetch_container.clone(),
         base_set.clone(),
         divided_changesets.groups,
+        weight_observer.clone(),
     );
 
     let individual_cs_ids_packfile_item_stream = packfile_stream_from_changesets(
         fetch_container,
         base_set,
         divided_changesets.individual_cs_ids,
+        weight_observer,
     );
 
     let requested_trees_and_blobs = stream::iter(tree_and_blob_shas.into_iter().map(Ok))
@@ -864,6 +877,7 @@ pub async fn generate_pack_item_stream<'a>(
         divided_changesets.clone(),
         Arc::new(base_set),
         vec![],
+        None, // No weight tracking for bundle generation
     )
     .await
     .context("Error while generating blob and tree packfile item stream")?;
@@ -942,6 +956,7 @@ pub async fn fetch_response<'a>(
     mut request: FetchRequest,
     progress_writer: Sender<String>,
     perf_scuba: MononokeScubaSampleBuilder,
+    weight_observer: OptionalWeightObserver,
 ) -> Result<FetchResponse<'a>> {
     let delta_inclusion = DeltaInclusion::standard();
     let filter = Arc::new(request.filter.clone());
@@ -1043,6 +1058,7 @@ pub async fn fetch_response<'a>(
         divided_changesets.clone(),
         Arc::new(base_set),
         translated_sha_heads.non_tag_non_commit_oids,
+        weight_observer,
     )
     .try_timed()
     .await

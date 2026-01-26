@@ -9,7 +9,9 @@ rust_binary(
     named_deps = ({} if rust_oss.is_oss_build() else {
         "MononokeGitRequest_ods3_types": "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rust",
     }),
-    test_deps = ["//eden/mononoke/common/mononoke_macros:mononoke_macros"],
+    test_deps = [
+        "//eden/mononoke/common/mononoke_macros:mononoke_macros",
+    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:async-stream",
@@ -36,6 +38,7 @@ rust_binary(
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tokio-stream",
         "fbsource//third-party/rust:tracing",
+        "//common/rust/shed/buffered_weighted:buffered_weighted",
         "//common/rust/shed/cloned:cloned",
         "//common/rust/shed/fbinit:fbinit",
         "//common/rust/shed/futures_stats:futures_stats",

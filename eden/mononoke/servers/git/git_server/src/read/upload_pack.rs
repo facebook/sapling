@@ -13,6 +13,7 @@ use anyhow::Result;
 use async_stream::try_stream;
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_git_mapping::BonsaisOrGitShas;
+use buffered_weighted::WeightObserver;
 use bytes::Bytes;
 use either::Either;
 use futures::StreamExt;
@@ -65,6 +66,7 @@ use crate::model::RepositoryParams;
 use crate::model::RepositoryRequestContext;
 use crate::model::ResponseType;
 use crate::model::Service;
+use crate::model::WeightTracker;
 use crate::scuba::MononokeGitScubaHandler;
 use crate::scuba::MononokeGitScubaKey;
 use crate::util::empty_body;
@@ -576,6 +578,27 @@ pub async fn fetch(
     mononoke::spawn_task({
         let request_context = request_context.clone();
         async move {
+            // Track this request for memory-based scaling
+            let repo_name = request_context.repo.repo_identity().name().to_string();
+            let weight_tracker: Option<Arc<WeightTracker>> = if justknobs::eval(
+                "scm/mononoke:git_server_enable_memory_tracking",
+                None,
+                Some(&repo_name),
+            )
+            .unwrap_or(false)
+            {
+                Some(WeightTracker::new(
+                    request_context.ctx.fb,
+                    repo_name.clone(),
+                ))
+            } else {
+                None
+            };
+            // Convert to trait object for cross-crate use
+            let weight_observer: Option<Arc<dyn WeightObserver>> =
+                weight_tracker.map(|t| t as Arc<dyn WeightObserver>);
+            // The WeightTracker will automatically decrement active_requests when dropped
+
             let mut scuba = scuba_handler.to_scuba(&request_context.ctx);
             let mut perf_scuba = scuba.clone();
             let writer_future = async move {
@@ -596,6 +619,7 @@ pub async fn fetch(
                     fetch_request,
                     progress_writer,
                     perf_scuba.clone(),
+                    weight_observer,
                 )
                 .await?;
                 perf_scuba.add(MononokeGitScubaKey::NWants, n_wants);

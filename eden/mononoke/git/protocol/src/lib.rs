@@ -7,10 +7,13 @@
 
 #![feature(trait_alias)]
 
+use std::sync::Arc;
+
 use bonsai_git_mapping::BonsaiGitMappingRef;
 use bonsai_tag_mapping::BonsaiTagMappingRef;
 use bookmarks::BookmarksRef;
 use bookmarks_cache::BookmarksCacheRef;
+use buffered_weighted::WeightObserver;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use filestore::FilestoreConfigRef;
@@ -36,6 +39,9 @@ const REF_PREFIX: &str = "refs/";
 const TAGS_PREFIX: &str = "tags/";
 const HEADS_PREFIX: &str = "heads/";
 const PACKFILE_SUFFIX: &str = ".pack";
+
+/// Type alias for an optional weight observer for tracking buffer usage.
+pub type OptionalWeightObserver = Option<Arc<dyn WeightObserver>>;
 
 pub trait Repo = RepoIdentityRef
     + RepoBlobstoreArc

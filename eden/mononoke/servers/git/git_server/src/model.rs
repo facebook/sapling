@@ -6,6 +6,7 @@
  */
 
 mod context;
+pub mod memory_tracker;
 mod method;
 mod push_data;
 mod pushvars;
@@ -14,6 +15,7 @@ pub use context::GitServerContext;
 pub use context::RepositoryRequestContext;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
+pub use memory_tracker::WeightTracker;
 pub use method::BundleUriOutcome;
 pub use method::GitMethod;
 pub use method::GitMethodInfo;
