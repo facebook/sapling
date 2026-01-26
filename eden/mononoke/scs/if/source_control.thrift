@@ -823,6 +823,31 @@ struct SparseProfileDeltaSizes {
   1: map<SparseProfileName, SparseProfileChange> size_changes;
 }
 
+/// Path Restriction Types
+/// ======================
+
+/// ACL name protecting a restricted path
+typedef string PathAcl
+
+/// Represents what subset of the provided paths a given predicate is true for
+enum PathCoverage {
+  /// None of the paths match the predicate
+  NONE = 0,
+  /// Some (but not all) paths match the predicate
+  SOME = 1,
+  /// All paths match the predicate
+  ALL = 2,
+}
+
+/// Represents a path restriction root: the path where restriction is configured and the ACLs protecting it
+@rust.Ord
+struct PathRestrictionRoot {
+  /// Path to the restriction root (directory containing .slacl file)
+  1: Path path;
+  /// ACLs protecting this restriction root
+  2: list<PathAcl> acls;
+}
+
 /// Method parameters structures
 
 struct RepoInfoParams {}
@@ -1648,6 +1673,22 @@ struct CommitMultiplePathLastChangedParams {
   2: set<CommitIdentityScheme> identity_schemes;
 }
 
+struct CommitRestrictedPathsAccessParams {
+  /// The paths that the caller is querying information for.
+  /// An empty set is valid input.
+  1: set<Path> paths;
+  /// Determines if ACLs should be checked and the `authorized_paths` field should be populated.
+  2: bool check_permissions;
+}
+
+struct CommitFindRestrictedPathsParams {
+  /// Paths under which to find all restriction roots and the ACLs needed to access them.
+  /// Pass empty set for the entire repository.
+  1: set<Path> roots;
+}
+
+struct CommitRestrictedPathsChangesParams {}
+
 struct CommitSparseProfileDeltaToken {
   1: i64 id;
 }
@@ -2407,6 +2448,42 @@ struct CommitMultiplePathLastChangedResponse {
   ///
   /// Requested paths that have never existed are omitted.
   1: map<Path, CommitPathLastChange> path_last_change;
+}
+
+struct CommitRestrictedPathsAccessResponse {
+  /// Extent to which the provided paths are restricted
+  1: PathCoverage are_restricted;
+  /// Extent to which the caller has authorization to access the provided paths
+  2: PathCoverage has_access;
+  /// Maps each provided path that is inside a restriction to its restriction roots and their ACLs.
+  /// Value is a list because a single path might be nested inside multiple restriction roots.
+  3: map<Path, list<PathRestrictionRoot>> restriction_roots;
+  /// Subset of the provided paths that the caller has access to. List will be sorted.
+  4: list<Path> authorized_paths;
+}
+
+/// Empty initial response for streaming (all data comes via stream items)
+struct CommitFindRestrictedPathsStreamResponse {}
+
+/// Each stream item represents a single restriction root and its ACLs
+struct CommitFindRestrictedPathsStreamItem {
+  /// Path to the restriction root
+  1: Path path;
+  /// ACLs protecting this restriction root
+  2: list<PathAcl> acls;
+}
+
+struct CommitRestrictedPathsChangesResponse {
+  /// Extent to which the changed paths in this commit are restricted
+  1: PathCoverage are_restricted;
+  /// Extent to which the caller has authorization to access the changed paths
+  2: PathCoverage has_access;
+  /// Maps each changed path that is inside a restriction to its restriction roots and their ACLs.
+  3: map<Path, list<PathRestrictionRoot>> restriction_roots;
+  /// Subset of the changed paths that the caller has access to
+  4: list<Path> authorized_paths;
+  /// All paths changed in this commit (added, modified, or deleted)
+  5: list<Path> changed_paths;
 }
 
 struct CommitSparseProfileDeltaResponse {
@@ -3308,6 +3385,50 @@ service SourceControlService extends fb303_core.BaseService {
   CommitMultiplePathLastChangedResponse commit_multiple_path_last_changed(
     1: CommitSpecifier commit,
     2: CommitMultiplePathLastChangedParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Path Restriction Methods
+  /// =========================
+
+  /// Query paths for restriction status and access permissions.
+  /// Returns which paths are restricted, the ACLs protecting them,
+  /// and which paths the caller has authorization to access.
+  CommitRestrictedPathsAccessResponse commit_restricted_paths_access(
+    1: CommitSpecifier commit,
+    2: CommitRestrictedPathsAccessParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Find all restriction roots under the specified roots.
+  /// Returns a stream of restriction root paths and their ACLs.
+  CommitFindRestrictedPathsStreamResponse, stream<
+    CommitFindRestrictedPathsStreamItem throws (
+      1: RequestError request_error,
+      2: InternalError internal_error,
+      3: OverloadError overload_error,
+    )
+  > commit_find_restricted_paths(
+    1: CommitSpecifier commit,
+    2: CommitFindRestrictedPathsParams params,
+  ) throws (
+    1: RequestError request_error,
+    2: InternalError internal_error,
+    3: OverloadError overload_error,
+  );
+
+  /// Query restriction information for all file changes in the specified commit.
+  /// This is a convenience wrapper around commit_restricted_paths_access that
+  /// extracts the changed paths from the commit first.
+  CommitRestrictedPathsChangesResponse commit_restricted_paths_changes(
+    1: CommitSpecifier commit,
+    2: CommitRestrictedPathsChangesParams params,
   ) throws (
     1: RequestError request_error,
     2: InternalError internal_error,
