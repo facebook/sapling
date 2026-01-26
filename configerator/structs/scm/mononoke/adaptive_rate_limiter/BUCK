@@ -9,6 +9,7 @@ thrift_library(
         "py-deprecated",
         "rust",
     ],
+    py3_namespace = "scm.mononoke.adaptive_rate_limiter",
     rust_allow_oss_build = False,
     rust_autocargo = {"ignore_rule": True},
     thrift_rust_options = "serde",
