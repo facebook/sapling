@@ -46,11 +46,15 @@ export function FileHeader({
   open,
   onChangeOpen,
   fileActions,
+  reviewed,
+  onToggleReviewed,
 }: {
   path: RepoPath;
   copyFrom?: RepoPath;
   iconType?: IconType;
   fileActions?: JSX.Element;
+  reviewed?: boolean;
+  onToggleReviewed?: () => void;
 } & EnsureAssignedTogether<{
   open: boolean;
   onChangeOpen: (open: boolean) => void;
@@ -125,8 +129,22 @@ export function FileHeader({
 
   return (
     <div
-      className={`split-diff-view-file-header file-header-${open ? 'open' : 'collapsed'}`}
+      className={`split-diff-view-file-header file-header-${open ? 'open' : 'collapsed'}${reviewed ? ' file-header-reviewed' : ''}`}
       style={{color}}>
+      {onToggleReviewed != null && (
+        <Tooltip title={reviewed ? t('Mark as not reviewed') : t('Mark as reviewed')}>
+          <Button
+            icon
+            className={`file-reviewed-checkbox${reviewed ? ' reviewed' : ''}`}
+            data-testid={`file-reviewed-checkbox-${reviewed ? 'checked' : 'unchecked'}`}
+            onClick={e => {
+              e.stopPropagation();
+              onToggleReviewed();
+            }}>
+            <Icon icon={reviewed ? 'pass-filled' : 'circle-large-outline'} />
+          </Button>
+        </Tooltip>
+      )}
       {onChangeOpen && (
         <Button
           icon

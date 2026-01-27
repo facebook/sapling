@@ -37,7 +37,7 @@ import {latestHeadCommit} from '../serverAPIState';
 import {themeState} from '../theme';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
-import {currentComparisonMode} from './atoms';
+import {currentComparisonMode, reviewedFilesAtom, reviewedFileKey} from './atoms';
 import {parsePatchAndFilter, sortFilesByType} from './utils';
 
 import './ComparisonView.css';
@@ -446,6 +446,16 @@ function ComparisonViewFile({
   setRef?: (path: string, element: HTMLDivElement | null) => void;
 }) {
   const path = diff.newFileName ?? diff.oldFileName ?? '';
+  const reviewKey = reviewedFileKey(comparison, path);
+  const [reviewed, setReviewed] = useAtom(reviewedFilesAtom(reviewKey));
+
+  // Reviewed files are always collapsed. To expand, uncheck the review first.
+  const effectiveCollapsed = collapsed || reviewed;
+
+  const handleToggleReviewed = useCallback(() => {
+    setReviewed(prev => !prev);
+  }, [setReviewed]);
+
   const context: Context = {
     id: {path, comparison},
     copy: platform.clipboardCopy,
@@ -485,9 +495,11 @@ function ComparisonViewFile({
     useComparisonInvalidationKeyHook: () => useAtomValue(latestHeadCommit)?.hash ?? '',
     useThemeHook: () => useAtomValue(themeState),
     t,
-    collapsed,
+    collapsed: effectiveCollapsed,
     setCollapsed,
     display: displayMode,
+    reviewed,
+    onToggleReviewed: handleToggleReviewed,
   };
   return (
     <div

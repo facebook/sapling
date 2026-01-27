@@ -23,6 +23,8 @@ export type Context = {
   openFileToLine?: (line: OneIndexedLineNumber) => unknown;
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
+  reviewed?: boolean;
+  onToggleReviewed?: () => void;
   fetchAdditionalLines?(
     id: ContextId,
     start: OneIndexedLineNumber,

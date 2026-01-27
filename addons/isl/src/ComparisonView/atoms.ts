@@ -8,8 +8,8 @@
 import type {Comparison} from 'shared/Comparison';
 
 import {atom} from 'jotai';
-import {ComparisonType} from 'shared/Comparison';
-import {writeAtom} from '../jotaiUtils';
+import {ComparisonType, comparisonStringKey} from 'shared/Comparison';
+import {localStorageBackedAtomFamily, writeAtom} from '../jotaiUtils';
 import platform from '../platform';
 
 export type ComparisonMode = {
@@ -41,3 +41,26 @@ export async function showComparison(comparison: Comparison, scrollToFile?: stri
 export function dismissComparison() {
   writeAtom(currentComparisonMode, last => ({...last, visible: false}));
 }
+
+/**
+ * Generate a stable key for a file in a comparison.
+ * Key format: `{comparisonType}:{hash?}:{filePath}`
+ * This ensures:
+ * - Same comparison type retains reviewed state
+ * - Different commits have separate reviewed states
+ * - Uncommitted changes reviewed state persists until you commit
+ */
+export function reviewedFileKey(comparison: Comparison, filePath: string): string {
+  return `${comparisonStringKey(comparison)}:${filePath}`;
+}
+
+/**
+ * Atom family for tracking which files have been reviewed in a comparison.
+ * Each file's reviewed state is stored separately in localStorage,
+ * keyed by comparison + file path.
+ */
+export const reviewedFilesAtom = localStorageBackedAtomFamily<string, boolean>(
+  'isl.reviewed-files:',
+  () => false,
+  14, // Expire after 14 days
+);
