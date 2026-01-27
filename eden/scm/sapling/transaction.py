@@ -391,7 +391,7 @@ class transaction(util.transactional):
 
     @active
     def addfilegenerator(self, genid, filenames, genfunc, order=0, location=""):
-        """add a function to generates some files at transaction commit
+        """add a function to generate some files at transaction commit
 
         The `genfunc` argument is a function capable of generating proper
         content of each entry in the `filename` tuple.
