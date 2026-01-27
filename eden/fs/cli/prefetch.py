@@ -281,6 +281,13 @@ class PrefetchCmd(Subcmd):
             default=False,
             action="store_true",
         )
+        parser.add_argument(
+            "-r",
+            "--relative",
+            help="Resolve patterns relative to the current working directory instead of the repo root",
+            default=False,
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         checkout_and_patterns = _find_checkout_and_patterns(args)
@@ -298,12 +305,17 @@ class PrefetchCmd(Subcmd):
             if args.PATTERN:
                 telemetry_sample.add_normvector("patterns", args.PATTERN)
 
+            search_root = None
+            if args.relative:
+                search_root = os.fsencode(checkout_and_patterns.rel_path)
+
             with checkout_and_patterns.instance.get_thrift_client_legacy() as client:
                 prefetchResult = client.prefetchFilesV2(
                     PrefetchParams(
                         mountPoint=bytes(checkout_and_patterns.checkout.path),
                         globs=checkout_and_patterns.patterns,
                         directoriesOnly=args.directories_only,
+                        searchRoot=search_root,
                         background=args.background,
                         returnPrefetchedFiles=not args.background
                         and not args.silent

@@ -7,6 +7,7 @@
 # pyre-unsafe
 
 import logging
+import os
 import time
 from typing import List, Optional, Tuple
 
@@ -580,6 +581,41 @@ class PrefetchCaseDependentTest(PrefetchTestBase, testcase.EdenRepoTest):
             ["CA*/?ixedcase"],
             expected_matches=[] if self.is_case_sensitive else [b"case/MIXEDcase"],
         )
+
+
+@testcase.eden_repo_test
+class PrefetchRelativeFlagTest(GlobTestBase):
+    def test_prefetch_relative_flag_from_subdirectory(self) -> None:
+        output = self.eden.run_cmd(
+            "prefetch",
+            "--relative",
+            "--debug-print",
+            "foo/**/*.java",
+            cwd=os.path.join(self.mount, "java", "com", "example"),
+        )
+
+        # Output should contain only the three java files recursively in java/com/example/foo
+        # java/com/example/Example.java is not matched because it is outside the cwd
+        output_lines = sorted(line for line in output.strip().split("\n") if line)
+
+        expected_lines = [
+            "foo/Foo.java",
+            "foo/bar/Bar.java",
+            "foo/bar/baz/Baz.java",
+        ]
+        self.assertEqual(expected_lines, output_lines)
+
+    def test_prefetch_without_relative_flag_from_subdirectory(self) -> None:
+        output = self.eden.run_cmd(
+            "prefetch",
+            "--debug-print",
+            "foo/**/*.java",
+            cwd=os.path.join(self.mount, "java", "com", "example"),
+        )
+
+        # Output should be empty because the relative flag is not passed
+        output_lines = sorted(line for line in output.strip().split("\n") if line)
+        self.assertEqual([], output_lines)
 
 
 # Mac and Linux fortunately appear to share the same dtype definitions

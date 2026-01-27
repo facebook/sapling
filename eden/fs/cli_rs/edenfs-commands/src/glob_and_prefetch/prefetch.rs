@@ -46,6 +46,13 @@ pub struct PrefetchCmd {
         help = "Print the paths being prefetched. Does not work if using --background"
     )]
     debug_print: bool,
+
+    #[clap(
+        short = 'r',
+        long,
+        help = "Resolve patterns relative to the current working directory instead of the repo root"
+    )]
+    relative: bool,
 }
 
 impl PrefetchCmd {
@@ -79,7 +86,7 @@ impl crate::Subcommand for PrefetchCmd {
     async fn run(&self) -> Result<ExitCode> {
         let instance = get_edenfs_instance();
         let client = instance.get_client();
-        let (mount_point, _search_root) = self.common.get_mount_point_and_search_root()?;
+        let (mount_point, search_root) = self.common.get_mount_point_and_search_root()?;
 
         let mut sample = self.new_sample(&mount_point);
 
@@ -87,13 +94,19 @@ impl crate::Subcommand for PrefetchCmd {
         let silent = self.silent || !self.debug_print;
         let return_prefetched_files = !(self.background || silent);
 
+        let optional_search_root: Option<&PathBuf> = if self.relative {
+            Some(&search_root)
+        } else {
+            None
+        };
+
         let result = match client
             .prefetch_files(
                 &mount_point,
                 patterns.clone(),
                 self.directories_only,
                 None,
-                None::<PathBuf>,
+                optional_search_root,
                 Some(self.background),
                 None,
                 return_prefetched_files,
