@@ -33,6 +33,8 @@
   overflow: hidden;
   width: 100%;
   height: 100%;
+  /* Allow shrinking below content size for proper overflow behavior */
+  min-height: 0;
 }
 
 /* actual content takes all the size minus label and resize handle and 1px of border on each side */
@@ -55,6 +57,8 @@
   flex-direction: column;
   flex-grow: 1;
   width: 100%;
+  /* Allow shrinking below content size for proper overflow/scroll behavior */
+  min-height: 0;
   /* Extra breathing room for the prominent middle column */
   padding: var(--prominent-padding);
   /* Unified Graphite background */
