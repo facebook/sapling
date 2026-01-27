@@ -378,7 +378,7 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
   let row2: JSX.Element | null = null;
   if (isIrregular) {
     row0 = <DivRow className={className} {...commitRowProps} left={nodeLinePart} />;
-    row1 = <DivRow left={postNodeLinePart} right={commitPart} />;
+    row1 = <DivRow left={postNodeLinePart} right={commitPart} data-commit-hash={info.hash} id={`commit-${info.hash}`} />;
   } else {
     const left = (
       <>
@@ -394,6 +394,7 @@ function DagRowInner(props: {row: ExtendedGraphRow; info: DagCommitInfo} & Rende
         left={left}
         right={commitPart}
         data-commit-hash={info.hash}
+        id={`commit-${info.hash}`}
       />
     );
   }

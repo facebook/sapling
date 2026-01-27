@@ -928,7 +928,8 @@ export type LocalStorageName =
   | 'isl.smart-actions-order'
   // The keys below are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:'
-  | 'isl.first-pass-comments:';
+  | 'isl.first-pass-comments:'
+  | 'isl.reviewed-files:';
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}

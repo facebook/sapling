@@ -13,7 +13,7 @@ import {Icon} from 'isl-components/Icon';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
-import {useState, useCallback} from 'react';
+import {useState, useCallback, useEffect} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import serverAPI from './ClientToServerAPI';
 import {showComparison} from './ComparisonView/atoms';
@@ -24,14 +24,41 @@ import {
   hiddenStacksAtom,
 } from './codeReview/PRStacksAtom';
 import {T} from './i18n';
+import {scrollToCommit} from './CommitTreeList';
+import {writeAtom} from './jotaiUtils';
 import {inlineProgressByHash, useRunOperation} from './operationsState';
 import {PullOperation} from './operations/PullOperation';
 import {GotoOperation} from './operations/GotoOperation';
 import {PullStackOperation} from './operations/PullStackOperation';
 import {dagWithPreviews} from './previews';
+import {selectedCommits} from './selection';
 import {succeedableRevset} from './types';
 
 import './PRDashboard.css';
+
+/**
+ * Scroll the PR column to show a PR row at the top.
+ * Uses native scrollIntoView with CSS scroll-margin-top for padding.
+ */
+function scrollToPR(hash: string): void {
+  const element = document.getElementById(`pr-${hash}`);
+  element?.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+/**
+ * Hook to scroll the PR column when a commit is selected in the middle column.
+ */
+function useScrollToPROnSelection() {
+  const selected = useAtomValue(selectedCommits);
+
+  useEffect(() => {
+    if (selected.size !== 1) {
+      return;
+    }
+    const hash = Array.from(selected)[0];
+    scrollToPR(hash);
+  }, [selected]);
+}
 
 function MainBranchSection() {
   const runOperation = useRunOperation();
@@ -101,6 +128,9 @@ export function PRDashboard() {
   const [hiddenStacks, setHiddenStacks] = useAtom(hiddenStacksAtom);
   const [showHidden, setShowHidden] = useState(false);
 
+  // Scroll to PR row when a commit is selected in the middle column
+  useScrollToPROnSelection();
+
   const handleRefresh = () => {
     serverAPI.postMessage({type: 'fetchDiffSummaries'});
   };
@@ -117,7 +147,7 @@ export function PRDashboard() {
     <div className="pr-dashboard">
       <div className="pr-dashboard-header">
         <span className="pr-dashboard-title">
-          <T>PR Stacks</T>
+          <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v2)</span>
         </span>
         <div className="pr-dashboard-header-buttons">
           {hiddenCount > 0 && (
@@ -352,10 +382,18 @@ function PRRow({pr}: {pr: DiffSummary}) {
   const inlineProgress = useAtomValue(inlineProgressByHash(headHash ?? ''));
 
   const handleCheckout = useCallback(() => {
-    if (!headHash || isCurrentCommit) {
+    if (!headHash) {
       return;
     }
-    runOperation(new GotoOperation(succeedableRevset(headHash)));
+    // Select the commit (this also triggers scroll via useScrollToSelectedCommit hook)
+    writeAtom(selectedCommits, new Set([headHash]));
+    // Also explicitly scroll in case the hook doesn't fire (e.g., same selection)
+    scrollToCommit(headHash);
+    if (!isCurrentCommit) {
+      runOperation(new GotoOperation(succeedableRevset(headHash)));
+    }
+    // Scroll again after operation completes and React re-renders
+    setTimeout(() => scrollToCommit(headHash), 500);
   }, [headHash, isCurrentCommit, runOperation]);
 
   const handleViewChanges = (e: React.MouseEvent) => {
@@ -373,7 +411,7 @@ function PRRow({pr}: {pr: DiffSummary}) {
   ].filter(Boolean).join(' ');
 
   return (
-    <div className={prRowClass} onClick={handleCheckout}>
+    <div className={prRowClass} onClick={handleCheckout} id={headHash ? `pr-${headHash}` : undefined}>
       {inlineProgress ? (
         <Icon icon="loading" className="pr-row-status" />
       ) : (

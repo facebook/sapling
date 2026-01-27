@@ -96,6 +96,8 @@ export function SplitDiffView({
         open={!collapsed}
         onChangeOpen={open => ctx.setCollapsed(!open)}
         fileActions={fileActions}
+        reviewed={ctx.reviewed}
+        onToggleReviewed={ctx.onToggleReviewed}
       />
       {!collapsed && preamble && <div className="split-diff-view-file-preamble">{preamble}</div>}
       {!collapsed && !isContentCollapsed && <SplitDiffTable ctx={ctx} path={path} patch={patch} />}

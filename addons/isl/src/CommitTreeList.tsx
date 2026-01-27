@@ -248,8 +248,39 @@ function HighlightedGlyph({info}: {info: DagCommitInfo}) {
 }
 
 /**
- * Hook to scroll the commit tree to show the selected commit centered in view.
- * Uses a timeout to ensure DOM has rendered before scrolling.
+ * Scroll the middle column to show a commit at the top.
+ * Uses native scrollIntoView with CSS scroll-margin-top for padding.
+ * Waits for element to exist in DOM if not immediately available.
+ */
+export function scrollToCommit(hash: string): void {
+  const shortHash = hash.slice(0, 8);
+
+  const tryScroll = (attempt: number) => {
+    const element = document.getElementById(`commit-${hash}`);
+
+    if (element) {
+      console.log(`[scroll] ${shortHash} found on attempt ${attempt}, scrolling`);
+      element.scrollIntoView({behavior: 'smooth', block: 'start'});
+      return;
+    }
+
+    // Element not found - wait for React to render it (up to 5s)
+    if (attempt < 100) {
+      requestAnimationFrame(() => {
+        setTimeout(() => tryScroll(attempt + 1), 50);
+      });
+    } else {
+      console.log(`[scroll] ${shortHash} NOT found after ${attempt} attempts`);
+    }
+  };
+
+  console.log(`[scroll] ${shortHash} starting`);
+  // Wait for next frame before starting to poll
+  requestAnimationFrame(() => tryScroll(0));
+}
+
+/**
+ * Hook to scroll the commit tree to show the selected commit at the top.
  */
 function useScrollToSelectedCommit() {
   const selected = useAtomValue(selectedCommits);
@@ -258,20 +289,8 @@ function useScrollToSelectedCommit() {
     if (selected.size !== 1) {
       return;
     }
-
     const hash = Array.from(selected)[0];
-    const timer = setTimeout(() => {
-      const element = document.querySelector(`[data-commit-hash="${hash}"]`);
-      if (element) {
-        element.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-          inline: 'nearest',
-        });
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
+    scrollToCommit(hash);
   }, [selected]);
 }
 
