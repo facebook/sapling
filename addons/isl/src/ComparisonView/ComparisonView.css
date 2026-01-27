@@ -22,6 +22,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  border-bottom: 1px solid var(--graphite-border);
 }
 .comparison-view-header-group {
   display: flex;
@@ -42,6 +43,7 @@
   gap: var(--pad);
   padding-bottom: var(--pad);
   align-items: center;
+  background: var(--graphite-bg);
   /* height: calc(100% - 41px); */
 }
 
@@ -84,4 +86,5 @@
   display: flex;
   flex-direction: column;
   position: relative;
+  background: var(--graphite-bg);
 }

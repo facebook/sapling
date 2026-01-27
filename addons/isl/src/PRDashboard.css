@@ -154,6 +154,7 @@
   padding: var(--halfpad);
   gap: var(--halfpad);
   border-radius: 2px;
+  scroll-margin-top: 94px;
 }
 
 .pr-row:hover {
