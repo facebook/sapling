@@ -136,13 +136,15 @@ struct AggregatedUsageCounts {
     shared: u64,
     fsck: u64,
     purgeable_space: u64,
+    #[serde(skip)]
+    display_mode: DisplayMode,
 }
 
 /// Represents the cleanup status to display for a usage row.
 enum CleanupStatus {
-    None,                     //no status shown (used in default mode)
-    Cleaned,                  //show "Cleaned" text
-    NotCleaned(&'static str), //show warning message with custom text
+    None,                                //no status shown (used in default mode)
+    Cleaned,                             //show "Cleaned" text
+    NotCleaned { reason: &'static str }, //show warning message with custom text
 }
 
 impl AggregatedUsageCounts {
@@ -156,6 +158,7 @@ impl AggregatedUsageCounts {
             shared: 0,
             fsck: 0,
             purgeable_space: 0,
+            display_mode: DisplayMode::Default,
         }
     }
 
@@ -169,8 +172,8 @@ impl AggregatedUsageCounts {
             CleanupStatus::Cleaned => {
                 row.add_cell(Cell::new("Cleaned").fg(Color::Green));
             }
-            CleanupStatus::NotCleaned(msg) => {
-                row.add_cell(Cell::new(msg).fg(Color::Yellow));
+            CleanupStatus::NotCleaned { reason } => {
+                row.add_cell(Cell::new(reason).fg(Color::Yellow));
             }
         }
         table.add_row(row);
@@ -213,86 +216,100 @@ impl fmt::Display for AggregatedUsageCounts {
         let mut table = Table::new();
         table.load_preset(comfy_table::presets::NOTHING);
 
+        let is_clean_mode = matches!(
+            self.display_mode,
+            DisplayMode::Clean | DisplayMode::DeepClean
+        );
+
         if self.materialized > 0 {
-            let mut row = Row::new();
-            row.add_cell(Cell::new("Materialized files:").set_alignment(CellAlignment::Right));
-            row.add_cell(Cell::new(format_size(self.materialized)));
-            if f.alternate() {
-                row.add_cell(Cell::new("Not cleaned. Please see WARNING above").fg(Color::Yellow));
-            }
-            table.add_row(row);
-        }
-        if self.redirection > 0 {
-            let mut row = Row::new();
-            row.add_cell(Cell::new("Redirections:").set_alignment(CellAlignment::Right));
-            row.add_cell(Cell::new(format_size(self.redirection)));
-            if f.alternate() {
-                row.add_cell(Cell::new("Cleaned").fg(Color::Green));
-            }
-            table.add_row(row);
-        }
-        if self.orphaned_redirections > 0 {
-            let mut row = Row::new();
-            row.add_cell(Cell::new("Orphaned redirections:").set_alignment(CellAlignment::Right));
-            row.add_cell(Cell::new(format_size(self.orphaned_redirections)));
-            if f.alternate() || f.sign_minus() {
-                row.add_cell(Cell::new("Cleaned").fg(Color::Green));
-            }
-            table.add_row(row);
-        }
-        if self.ignored > 0 {
-            let mut row = Row::new();
-            row.add_cell(Cell::new("Ignored files:").set_alignment(CellAlignment::Right));
-            row.add_cell(Cell::new(format_size(self.ignored)));
-            if f.alternate() {
-                row.add_cell(Cell::new("Not cleaned. Please see WARNING above").fg(Color::Yellow));
-            }
-            table.add_row(row);
-        }
-        if self.backing > 0 {
-            let mut row = Row::new();
-            row.add_cell(Cell::new("Backing repos:").set_alignment(CellAlignment::Right));
-            row.add_cell(Cell::new(format_size(self.backing)));
-            if f.alternate() {
-                row.add_cell(Cell::new("Not cleaned. Please see CAUTION above").fg(Color::Yellow));
-            }
-            table.add_row(row);
-        }
-        if self.shared > 0 {
-            let mut row = Row::new();
-            row.add_cell(Cell::new("Shared space:").set_alignment(CellAlignment::Right));
-            row.add_cell(Cell::new(format_size(self.shared)));
-            if f.alternate() {
-                row.add_cell(Cell::new("Cleaned").fg(Color::Green));
-            }
-            table.add_row(row);
-        }
-        if self.fsck > 0 {
-            let mut row = Row::new();
-            row.add_cell(
-                Cell::new("Filesystem Check recovered files:").set_alignment(CellAlignment::Right),
-            );
-            row.add_cell(Cell::new(format_size(self.fsck)));
-            if f.alternate() {
-                if f.sign_plus() {
-                    row.add_cell(Cell::new("Cleaned").fg(Color::Green));
-                } else {
-                    row.add_cell(
-                        Cell::new(
-                            "Not cleaned. Directories listed above. Check and remove manually",
-                        )
-                        .fg(Color::Yellow),
-                    );
+            let status = if is_clean_mode {
+                CleanupStatus::NotCleaned {
+                    reason: "Not cleaned. Please see WARNING above",
                 }
-            }
-            table.add_row(row);
+            } else {
+                CleanupStatus::None
+            };
+            Self::add_usage_row(&mut table, "Materialized files:", self.materialized, status);
+        }
+
+        if self.redirection > 0 {
+            let status = if is_clean_mode {
+                CleanupStatus::Cleaned
+            } else {
+                CleanupStatus::None
+            };
+            Self::add_usage_row(&mut table, "Redirections:", self.redirection, status);
+        }
+
+        if self.orphaned_redirections > 0 {
+            let status = if is_clean_mode || self.display_mode == DisplayMode::CleanOrphaned {
+                CleanupStatus::Cleaned
+            } else {
+                CleanupStatus::None
+            };
+            Self::add_usage_row(
+                &mut table,
+                "Orphaned redirections:",
+                self.orphaned_redirections,
+                status,
+            );
+        }
+
+        if self.ignored > 0 {
+            let status = if is_clean_mode {
+                CleanupStatus::NotCleaned {
+                    reason: "Not cleaned. Please see WARNING above",
+                }
+            } else {
+                CleanupStatus::None
+            };
+            Self::add_usage_row(&mut table, "Ignored files:", self.ignored, status);
+        }
+
+        if self.backing > 0 {
+            let status = if is_clean_mode {
+                CleanupStatus::NotCleaned {
+                    reason: "Not cleaned. Please see CAUTION above",
+                }
+            } else {
+                CleanupStatus::None
+            };
+            Self::add_usage_row(&mut table, "Backing repos:", self.backing, status);
+        }
+
+        if self.shared > 0 {
+            let status = if is_clean_mode {
+                CleanupStatus::Cleaned
+            } else {
+                CleanupStatus::None
+            };
+            Self::add_usage_row(&mut table, "Shared space:", self.shared, status);
+        }
+
+        if self.fsck > 0 {
+            let status = match self.display_mode {
+                DisplayMode::DeepClean => CleanupStatus::Cleaned,
+                DisplayMode::Clean => CleanupStatus::NotCleaned {
+                    reason: "Not cleaned. Directories listed above. Check and remove manually",
+                },
+                _ => CleanupStatus::None,
+            };
+            Self::add_usage_row(
+                &mut table,
+                "Filesystem Check recovered files:",
+                self.fsck,
+                status,
+            );
         }
 
         #[cfg(target_os = "macos")]
-        if !f.alternate() && !f.sign_minus() {
+        if !matches!(
+            self.display_mode,
+            DisplayMode::Clean | DisplayMode::DeepClean | DisplayMode::CleanOrphaned
+        ) {
             let mut row = Row::new();
             row.add_cell(Cell::new("Purgeable space:").set_alignment(CellAlignment::Right));
-            if f.sign_plus() {
+            if self.display_mode == DisplayMode::Purgeable {
                 row.add_cell(Cell::new(format_size(self.purgeable_space)));
             } else {
                 row.add_cell(Cell::new("Requires --purgeable flag."));
@@ -940,20 +957,19 @@ impl crate::Subcommand for DiskUsageCmd {
             }
             // PRINT SUMMARY
             write_title("Summary");
-            if self.clean_orphaned {
-                // Displays with the sign_minus print flag
-                println!("{:-}", aggregated_usage_counts);
+            let mut aggregated_usage_counts = aggregated_usage_counts;
+            aggregated_usage_counts.display_mode = if self.clean_orphaned {
+                DisplayMode::CleanOrphaned
             } else if self.deep_clean {
-                // Displays with the alternate print flag
-                println!("{:+#}", aggregated_usage_counts);
+                DisplayMode::DeepClean
             } else if self.clean {
-                // Displays with the alternate print flag
-                println!("{:#}", aggregated_usage_counts);
+                DisplayMode::Clean
             } else if cfg!(target_os = "macos") && self.purgeable {
-                println!("{:+}", aggregated_usage_counts);
+                DisplayMode::Purgeable
             } else {
-                println!("{}", aggregated_usage_counts);
-            }
+                DisplayMode::Default
+            };
+            println!("{}", aggregated_usage_counts);
 
             // PRINT DETAILS
             if !redirect_usage_count.path_usage.is_empty() {
