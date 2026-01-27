@@ -126,7 +126,7 @@ registerDisposable(
     const fields = parseCommitMessageFields(schema, title, description);
 
     if (mode === 'commit') {
-      writeAtom(editedCommitMessages(hash), fields);
+      writeAtom(editedCommitMessages('head'), fields);
     } else {
       const currentMessage = readAtom(editedCommitMessages(hash));
       writeAtom(
