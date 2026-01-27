@@ -23,12 +23,14 @@ import sys
 import time
 import typing
 import uuid
+from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
 from typing import (
     Any,
     Callable,
     Dict,
+    Generator,
     IO,
     KeysView,
     List,
@@ -41,7 +43,8 @@ from typing import (
 
 import facebook.eden.ttypes as eden_ttypes
 import toml
-from eden.thrift import legacy
+from eden.fs.service.eden.thrift_clients import EdenService
+from eden.thrift import client, legacy
 from eden.thrift.legacy import EdenNotRunningError
 from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
 from filelock import BaseFileLock, FileLock
@@ -541,6 +544,16 @@ class EdenInstance(AbstractEdenInstance):
             eden_dir=str(self._config_dir),
             timeout=timeout,
         )
+
+    @contextmanager
+    def get_thrift_client(
+        self, timeout: Optional[float] = None
+    ) -> Generator[EdenService.Sync, None, None]:
+        with client.create_thrift_client(
+            eden_dir=str(self._config_dir),
+            timeout=timeout if timeout is not None else 0,
+        ) as thrift_client:
+            yield thrift_client
 
     def get_checkout_info(
         self, path: Union[Path, str]
