@@ -1130,6 +1130,106 @@ mod tests {
         assert_eq!(unwrapped_usage_counts.failed_file_checks.len(), 1);
     }
 
+    // Helper function to create AggregatedUsageCounts with specified values
+    fn create_usage_counts(
+        materialized: u64,
+        redirection: u64,
+        orphaned_redirections: u64,
+        ignored: u64,
+        backing: u64,
+        shared: u64,
+        fsck: u64,
+        display_mode: DisplayMode,
+    ) -> AggregatedUsageCounts {
+        AggregatedUsageCounts {
+            materialized,
+            ignored,
+            redirection,
+            orphaned_redirections,
+            backing,
+            shared,
+            fsck,
+            purgeable_space: 0,
+            display_mode,
+        }
+    }
+
+    #[test]
+    fn test_display_default_mode_shows_no_status() {
+        let counts = create_usage_counts(1000, 2000, 0, 0, 0, 0, 0, DisplayMode::Default);
+        let output = format!("{}", counts);
+
+        // Should contain the labels and sizes
+        assert!(output.contains("Materialized files:"));
+        assert!(output.contains("Redirections:"));
+        // Should NOT contain cleanup status in default mode
+        assert!(!output.contains("Cleaned"));
+        assert!(!output.contains("Not cleaned"));
+    }
+
+    #[test]
+    fn test_display_clean_mode_shows_status() {
+        let counts = create_usage_counts(1000, 2000, 3000, 4000, 5000, 6000, 0, DisplayMode::Clean);
+        let output = format!("{}", counts);
+
+        // Should contain cleanup status
+        assert!(output.contains("Cleaned"));
+        assert!(output.contains("Not cleaned"));
+        // Materialized files should show "Not cleaned" warning
+        assert!(output.contains("Not cleaned. Please see WARNING above"));
+        // Redirections should show "Cleaned"
+        assert!(output.contains("Cleaned"));
+    }
+
+    #[test]
+    fn test_display_deep_clean_mode_fsck_cleaned() {
+        let counts = create_usage_counts(0, 0, 0, 0, 0, 0, 1000, DisplayMode::DeepClean);
+        let output = format!("{}", counts);
+
+        // In DeepClean mode, fsck should show "Cleaned"
+        assert!(output.contains("Filesystem Check recovered files:"));
+        assert!(output.contains("Cleaned"));
+        // Should NOT contain the "Not cleaned" message for fsck
+        assert!(!output.contains("Check and remove manually"));
+    }
+
+    #[test]
+    fn test_display_clean_mode_fsck_not_cleaned() {
+        let counts = create_usage_counts(0, 0, 0, 0, 0, 0, 1000, DisplayMode::Clean);
+        let output = format!("{}", counts);
+
+        // In Clean mode (not DeepClean), fsck should show "Not cleaned"
+        assert!(output.contains("Filesystem Check recovered files:"));
+        assert!(
+            output.contains("Not cleaned. Directories listed above. Check and remove manually")
+        );
+    }
+
+    #[test]
+    fn test_display_clean_orphaned_mode() {
+        let counts = create_usage_counts(0, 0, 5000, 0, 0, 0, 0, DisplayMode::CleanOrphaned);
+        let output = format!("{}", counts);
+
+        // Orphaned redirections should show "Cleaned" in CleanOrphaned mode
+        assert!(output.contains("Orphaned redirections:"));
+        assert!(output.contains("Cleaned"));
+    }
+
+    #[test]
+    fn test_display_shows_only_nonzero_values() {
+        let counts = create_usage_counts(1000, 0, 0, 2000, 0, 0, 0, DisplayMode::Default);
+        let output = format!("{}", counts);
+
+        // Should only show materialized and ignored
+        assert!(output.contains("Materialized files:"));
+        assert!(output.contains("Ignored files:"));
+        // Should not show zero values
+        assert!(!output.contains("Redirections:"));
+        assert!(!output.contains("Orphaned redirections:"));
+        assert!(!output.contains("Backing repos:"));
+        assert!(!output.contains("Shared space:"));
+    }
+
     // TODO: Test Legacy Redirects
     // TODO: Test Spareimage on MacOS
     // TODO: Test Bind Mounts on Linux
