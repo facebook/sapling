@@ -288,6 +288,7 @@ members = [
   "saplingnative/bindings/modules/pythreading",
   "saplingnative/bindings/modules/pytracing",
   "saplingnative/bindings/modules/pytreestate",
+  "saplingnative/bindings/modules/pyutil",
   "saplingnative/bindings/modules/pyversion",
   "saplingnative/bindings/modules/pyvlq",
   "saplingnative/bindings/modules/pywebview",

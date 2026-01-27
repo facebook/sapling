@@ -81,6 +81,7 @@ rust_python_library(
         "//eden/scm/saplingnative/bindings/modules/pythreading:pythreading",
         "//eden/scm/saplingnative/bindings/modules/pytracing:pytracing",
         "//eden/scm/saplingnative/bindings/modules/pytreestate:pytreestate",
+        "//eden/scm/saplingnative/bindings/modules/pyutil:pyutil",
         "//eden/scm/saplingnative/bindings/modules/pyversion:pyversion",
         "//eden/scm/saplingnative/bindings/modules/pyvlq:pyvlq",
         "//eden/scm/saplingnative/bindings/modules/pywebview:pywebview",

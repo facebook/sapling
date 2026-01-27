@@ -40,7 +40,6 @@ getfstype = bindings.fs.fstype
 
 executablepath = win32.executablepath
 getmaxrss = win32.getmaxmemoryusage
-getuser = win32.getuser
 hidewindow = win32.hidewindow
 makedir = win32.makedir
 nlinks = win32.nlinks

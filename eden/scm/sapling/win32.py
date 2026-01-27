@@ -18,7 +18,6 @@ import msvcrt
 import os
 import random
 
-
 # pyre-fixme[16]: Module `ctypes` has no attribute `WinDLL`.
 _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 # pyre-fixme[16]: Module `ctypes` has no attribute `WinDLL`.
@@ -563,15 +562,6 @@ def executablepath():
     elif len == size:
         raise ctypes.WinError(_ERROR_INSUFFICIENT_BUFFER)
     return buf.value
-
-
-def getuser():
-    """return name of current user"""
-    size = _DWORD(300)
-    buf = ctypes.create_string_buffer(size.value + 1)
-    if not _advapi32.GetUserNameA(ctypes.byref(buf), ctypes.byref(size)):
-        raise ctypes.WinError()
-    return buf.value.decode()
 
 
 _signalhandler = []

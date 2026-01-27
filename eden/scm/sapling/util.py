@@ -1489,7 +1489,8 @@ def _reloadenv():
         def istest():
             return False
 
-        getuser = platform.getuser
+        def getuser():
+            return bindings.util.username()
 
 
 def istest():

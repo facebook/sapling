@@ -25,7 +25,7 @@ macro_rules! add_modules {
 /// Populate an existing empty module so it contains utilities.
 pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyNone> {
     let m = module;
-    m.add(py, "__doc__", "Mercurial Rust Bindings")?;
+    m.add(py, "__doc__", "Sapling Rust Bindings")?;
     add_modules!(
         py,
         m,
@@ -103,6 +103,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
             threading,
             tracing,
             treestate,
+            util,
             version,
             vlq,
             webview,

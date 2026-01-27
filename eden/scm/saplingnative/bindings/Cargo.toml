@@ -74,6 +74,7 @@ pytermwiz = { version = "0.1.0", path = "modules/pytermwiz" }
 pythreading = { version = "0.1.0", path = "modules/pythreading" }
 pytracing = { version = "0.1.0", path = "modules/pytracing" }
 pytreestate = { version = "0.1.0", path = "modules/pytreestate" }
+pyutil = { version = "0.1.0", path = "modules/pyutil" }
 pyversion = { version = "0.1.0", path = "modules/pyversion" }
 pyvlq = { version = "0.1.0", path = "modules/pyvlq" }
 pywebview = { version = "0.1.0", path = "modules/pywebview" }

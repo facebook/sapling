@@ -481,11 +481,6 @@ def statfiles(files):
         yield st
 
 
-def getuser():
-    """return name of current user"""
-    return getpass.getuser()
-
-
 def username(uid=None):
     """Return the name of the user with the given uid.
 
