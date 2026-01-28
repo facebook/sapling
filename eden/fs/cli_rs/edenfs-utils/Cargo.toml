@@ -30,4 +30,4 @@ winapi = { version = "0.3", features = ["everything", "std"] }
 
 [target.'cfg(target_os = "windows")'.dev-dependencies]
 quickcheck = "1.0"
-quickcheck_macros = "1.0"
+quickcheck_macros = "1.1.0"
