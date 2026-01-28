@@ -29508,7 +29508,7 @@ export type YourPullRequestsQueryVariables = Exact<{
 }>;
 
 
-export type YourPullRequestsQueryData = { __typename?: 'Query', search: { __typename?: 'SearchResultItemConnection', nodes?: Array<{ __typename?: 'App' } | { __typename?: 'Discussion' } | { __typename?: 'Issue' } | { __typename?: 'MarketplaceListing' } | { __typename?: 'Organization' } | { __typename: 'PullRequest', number: number, title: string, body: string, state: PullRequestState, isDraft: boolean, url: string, reviewDecision?: PullRequestReviewDecision | null, comments: { __typename?: 'IssueCommentConnection', totalCount: number }, mergeQueueEntry?: { __typename?: 'MergeQueueEntry', estimatedTimeToMerge?: number | null } | null, baseRef?: { __typename?: 'Ref', name: string, target?: { __typename?: 'Blob', oid: string } | { __typename?: 'Commit', oid: string } | { __typename?: 'Tag', oid: string } | { __typename?: 'Tree', oid: string } | null } | null, headRef?: { __typename?: 'Ref', name: string, target?: { __typename?: 'Blob', oid: string } | { __typename?: 'Commit', oid: string } | { __typename?: 'Tag', oid: string } | { __typename?: 'Tree', oid: string } | null } | null, commits: { __typename?: 'PullRequestCommitConnection', nodes?: Array<{ __typename?: 'PullRequestCommit', commit: { __typename?: 'Commit', oid: string, statusCheckRollup?: { __typename?: 'StatusCheckRollup', state: StatusState } | null } } | null> | null } } | { __typename?: 'Repository' } | { __typename?: 'User' } | null> | null } };
+export type YourPullRequestsQueryData = { __typename?: 'Query', viewer: { __typename?: 'User', login: string }, search: { __typename?: 'SearchResultItemConnection', nodes?: Array<{ __typename?: 'App' } | { __typename?: 'Discussion' } | { __typename?: 'Issue' } | { __typename?: 'MarketplaceListing' } | { __typename?: 'Organization' } | { __typename: 'PullRequest', number: number, title: string, body: string, state: PullRequestState, isDraft: boolean, url: string, reviewDecision?: PullRequestReviewDecision | null, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null, comments: { __typename?: 'IssueCommentConnection', totalCount: number }, mergeQueueEntry?: { __typename?: 'MergeQueueEntry', estimatedTimeToMerge?: number | null } | null, baseRef?: { __typename?: 'Ref', name: string, target?: { __typename?: 'Blob', oid: string } | { __typename?: 'Commit', oid: string } | { __typename?: 'Tag', oid: string } | { __typename?: 'Tree', oid: string } | null } | null, headRef?: { __typename?: 'Ref', name: string, target?: { __typename?: 'Blob', oid: string } | { __typename?: 'Commit', oid: string } | { __typename?: 'Tag', oid: string } | { __typename?: 'Tree', oid: string } | null } | null, commits: { __typename?: 'PullRequestCommitConnection', nodes?: Array<{ __typename?: 'PullRequestCommit', commit: { __typename?: 'Commit', oid: string, statusCheckRollup?: { __typename?: 'StatusCheckRollup', state: StatusState } | null } } | null> | null } } | { __typename?: 'Repository' } | { __typename?: 'User' } | null> | null } };
 
 export type YourPullRequestsWithoutMergeQueueQueryVariables = Exact<{
   searchQuery: Scalars['String'];
@@ -29516,7 +29516,7 @@ export type YourPullRequestsWithoutMergeQueueQueryVariables = Exact<{
 }>;
 
 
-export type YourPullRequestsWithoutMergeQueueQueryData = { __typename?: 'Query', search: { __typename?: 'SearchResultItemConnection', nodes?: Array<{ __typename?: 'App' } | { __typename?: 'Discussion' } | { __typename?: 'Issue' } | { __typename?: 'MarketplaceListing' } | { __typename?: 'Organization' } | { __typename: 'PullRequest', number: number, title: string, body: string, state: PullRequestState, isDraft: boolean, url: string, reviewDecision?: PullRequestReviewDecision | null, comments: { __typename?: 'IssueCommentConnection', totalCount: number }, baseRef?: { __typename?: 'Ref', name: string, target?: { __typename?: 'Blob', oid: string } | { __typename?: 'Commit', oid: string } | { __typename?: 'Tag', oid: string } | { __typename?: 'Tree', oid: string } | null } | null, headRef?: { __typename?: 'Ref', name: string, target?: { __typename?: 'Blob', oid: string } | { __typename?: 'Commit', oid: string } | { __typename?: 'Tag', oid: string } | { __typename?: 'Tree', oid: string } | null } | null, commits: { __typename?: 'PullRequestCommitConnection', nodes?: Array<{ __typename?: 'PullRequestCommit', commit: { __typename?: 'Commit', oid: string, statusCheckRollup?: { __typename?: 'StatusCheckRollup', state: StatusState } | null } } | null> | null } } | { __typename?: 'Repository' } | { __typename?: 'User' } | null> | null } };
+export type YourPullRequestsWithoutMergeQueueQueryData = { __typename?: 'Query', viewer: { __typename?: 'User', login: string }, search: { __typename?: 'SearchResultItemConnection', nodes?: Array<{ __typename?: 'App' } | { __typename?: 'Discussion' } | { __typename?: 'Issue' } | { __typename?: 'MarketplaceListing' } | { __typename?: 'Organization' } | { __typename: 'PullRequest', number: number, title: string, body: string, state: PullRequestState, isDraft: boolean, url: string, reviewDecision?: PullRequestReviewDecision | null, author?: { __typename?: 'Bot', login: string, avatarUrl: string } | { __typename?: 'EnterpriseUserAccount', login: string, avatarUrl: string } | { __typename?: 'Mannequin', login: string, avatarUrl: string } | { __typename?: 'Organization', login: string, avatarUrl: string } | { __typename?: 'User', login: string, avatarUrl: string } | null, comments: { __typename?: 'IssueCommentConnection', totalCount: number }, baseRef?: { __typename?: 'Ref', name: string, target?: { __typename?: 'Blob', oid: string } | { __typename?: 'Commit', oid: string } | { __typename?: 'Tag', oid: string } | { __typename?: 'Tree', oid: string } | null } | null, headRef?: { __typename?: 'Ref', name: string, target?: { __typename?: 'Blob', oid: string } | { __typename?: 'Commit', oid: string } | { __typename?: 'Tag', oid: string } | { __typename?: 'Tree', oid: string } | null } | null, commits: { __typename?: 'PullRequestCommitConnection', nodes?: Array<{ __typename?: 'PullRequestCommit', commit: { __typename?: 'Commit', oid: string, statusCheckRollup?: { __typename?: 'StatusCheckRollup', state: StatusState } | null } } | null> | null } } | { __typename?: 'Repository' } | { __typename?: 'User' } | null> | null } };
 
 export const CommentParts = `
     fragment CommentParts on Comment {
@@ -29578,6 +29578,9 @@ export const PullRequestCommentsQuery = `
 ${ReactionParts}`;
 export const YourPullRequestsQuery = `
     query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
+  viewer {
+    login
+  }
   search(query: $searchQuery, type: ISSUE, first: $numToFetch) {
     nodes {
       ... on PullRequest {
@@ -29587,6 +29590,10 @@ export const YourPullRequestsQuery = `
         body
         state
         isDraft
+        author {
+          login
+          avatarUrl
+        }
         url
         reviewDecision
         comments {
@@ -29624,6 +29631,9 @@ export const YourPullRequestsQuery = `
     `;
 export const YourPullRequestsWithoutMergeQueueQuery = `
     query YourPullRequestsWithoutMergeQueueQuery($searchQuery: String!, $numToFetch: Int!) {
+  viewer {
+    login
+  }
   search(query: $searchQuery, type: ISSUE, first: $numToFetch) {
     nodes {
       ... on PullRequest {
@@ -29633,6 +29643,10 @@ export const YourPullRequestsWithoutMergeQueueQuery = `
         body
         state
         isDraft
+        author {
+          login
+          avatarUrl
+        }
         url
         reviewDecision
         comments {
