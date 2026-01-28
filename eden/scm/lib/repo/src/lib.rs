@@ -7,6 +7,7 @@
 
 #![allow(dead_code)]
 
+pub mod commit;
 pub mod constants;
 pub mod core_repo;
 pub mod errors;
@@ -18,6 +19,7 @@ pub mod slapi_repo;
 mod trait_impls;
 pub mod trees;
 
+pub use commit::Commit;
 pub use commits_trait::DagCommits;
 pub use core_repo::CoreRepo;
 pub use manifest_tree::ReadTreeManifest;
