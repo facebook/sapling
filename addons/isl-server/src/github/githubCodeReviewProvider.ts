@@ -12,6 +12,7 @@ import type {
   DiffSignalSummary,
   Disposable,
   Hash,
+  Notification,
   Result,
 } from 'isl/src/types';
 import type {CodeReviewProvider} from '../CodeReviewProvider';
@@ -312,6 +313,127 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     }
     return url;
   }
+
+  public async fetchNotifications(): Promise<Notification[]> {
+    const {hostname, owner, repo} = this.codeReviewSystem;
+    const {ejeca} = await import('shared/ejeca');
+    const {Internal} = await import('../Internal');
+
+    try {
+      // Fetch notifications from GitHub REST API filtered by this repo
+      const {stdout} = await ejeca(
+        'gh',
+        [
+          'api',
+          `/repos/${owner}/${repo}/notifications`,
+          '--hostname',
+          hostname,
+          '-H',
+          'Accept: application/vnd.github+json',
+        ],
+        {
+          env: {
+            ...((await Internal.additionalGhEnvVars?.()) ?? {}),
+          },
+        },
+      );
+
+      const rawNotifications: GitHubNotificationResponse[] = JSON.parse(stdout);
+      const notifications: Notification[] = [];
+
+      for (const notif of rawNotifications) {
+        // Only process PR notifications
+        if (notif.subject.type !== 'PullRequest' || !notif.subject.url) {
+          continue;
+        }
+
+        // Extract PR number from the API URL
+        const prMatch = notif.subject.url.match(/\/pulls\/(\d+)$/);
+        if (!prMatch) {
+          continue;
+        }
+        const prNumber = parseInt(prMatch[1], 10);
+
+        // Map notification reason to our notification type
+        let notificationType: Notification['type'];
+        let reviewState: Notification['reviewState'];
+
+        switch (notif.reason) {
+          case 'review_requested':
+            notificationType = 'review-request';
+            break;
+          case 'mention':
+          case 'team_mention':
+            notificationType = 'mention';
+            break;
+          case 'approval':
+            notificationType = 'review-received';
+            reviewState = 'APPROVED';
+            break;
+          case 'changes_requested':
+            notificationType = 'review-received';
+            reviewState = 'CHANGES_REQUESTED';
+            break;
+          case 'comment':
+            notificationType = 'review-received';
+            reviewState = 'COMMENTED';
+            break;
+          default:
+            // Skip unsupported notification types
+            continue;
+        }
+
+        // Try to get actor info from the PR details
+        let actor = 'Unknown';
+        let actorAvatarUrl: string | undefined;
+
+        try {
+          const prDetailsResult = await ejeca(
+            'gh',
+            [
+              'api',
+              `/repos/${owner}/${repo}/pulls/${prNumber}`,
+              '--hostname',
+              hostname,
+              '-H',
+              'Accept: application/vnd.github+json',
+            ],
+            {
+              env: {
+                ...((await Internal.additionalGhEnvVars?.()) ?? {}),
+              },
+            },
+          );
+          const prDetails: GitHubPRDetails = JSON.parse(prDetailsResult.stdout);
+          if (prDetails.user) {
+            actor = prDetails.user.login;
+            actorAvatarUrl = prDetails.user.avatar_url;
+          }
+        } catch {
+          // Continue without actor info
+        }
+
+        notifications.push({
+          id: `${notificationType}-${prNumber}-${notif.id}`,
+          type: notificationType,
+          prNumber,
+          prTitle: notif.subject.title,
+          prUrl: `https://${hostname}/${owner}/${repo}/pull/${prNumber}`,
+          repoName: notif.repository.full_name,
+          actor,
+          actorAvatarUrl,
+          timestamp: new Date(notif.updated_at),
+          reviewState,
+        });
+      }
+
+      this.logger.info(`fetched ${notifications.length} github notifications`);
+      return notifications;
+    } catch (error) {
+      this.logger.error('error fetching github notifications:', error);
+      throw error;
+    }
+  }
 }
 
 function githubStatusRollupStateToCIStatus(state: StatusState | undefined): DiffSignalSummary {
@@ -328,3 +450,34 @@ function githubStatusRollupStateToCIStatus(state: StatusState | undefined): Diff
       return 'pass';
   }
 }
+
+type GitHubNotificationResponse = {
+  id: string;
+  reason: string;
+  subject: {
+    title: string;
+    url: string;
+    type: string;
+  };
+  repository: {
+    full_name: string;
+  };
+  updated_at: string;
+};
+
+type GitHubPRDetails = {
+  number: number;
+  html_url: string;
+  user?: {
+    login: string;
+    avatar_url?: string;
+  };
+};
+
+type GitHubReviewDetails = {
+  user?: {
+    login: string;
+    avatar_url?: string;
+  };
+  state: string;
+};

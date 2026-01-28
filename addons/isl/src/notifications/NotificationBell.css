@@ -1,0 +1,177 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.notification-bell-button {
+  position: relative;
+}
+
+.notification-bell-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  color: var(--foreground);
+  background-color: var(--button-primary-background);
+  border-radius: 8px;
+}
+
+.notification-dropdown {
+  min-width: 320px;
+  max-width: 400px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: var(--pad);
+}
+
+.notification-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  padding-bottom: var(--halfpad);
+  margin-bottom: var(--halfpad);
+  border-bottom: 1px solid var(--subtle-hover-darken);
+  font-weight: 600;
+}
+
+.notification-count {
+  color: var(--foreground-sub);
+  font-weight: normal;
+}
+
+.notification-dropdown-loading,
+.notification-dropdown-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--halfpad);
+  padding: var(--pad);
+  color: var(--foreground-sub);
+}
+
+.notification-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--halfpad);
+}
+
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--halfpad);
+  padding: var(--halfpad);
+  border-radius: var(--halfpad);
+  transition: background-color 0.15s ease;
+}
+
+.notification-item:hover {
+  background-color: var(--subtle-hover-darken);
+}
+
+.notification-item-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--halfpad);
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.notification-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.notification-item-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-item-header {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  margin-bottom: 2px;
+}
+
+.notification-type-icon {
+  font-size: 12px;
+}
+
+.notification-type-icon.review-request {
+  color: var(--signal-medium-foreground);
+}
+
+.notification-type-icon.mention {
+  color: var(--button-primary-background);
+}
+
+.notification-type-icon.review-received {
+  color: var(--signal-okay-foreground);
+}
+
+.notification-type-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--foreground-sub);
+  text-transform: uppercase;
+}
+
+.notification-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--foreground);
+}
+
+.notification-item-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  font-size: 11px;
+  color: var(--foreground-sub);
+  margin-top: 2px;
+}
+
+.notification-actor {
+  font-weight: 500;
+}
+
+.notification-timestamp {
+  opacity: 0.7;
+}
+
+.notification-dismiss-button {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.notification-item:hover .notification-dismiss-button {
+  opacity: 1;
+}
+
+.notification-dismiss-button:hover {
+  background-color: var(--subtle-hover-darken);
+}
