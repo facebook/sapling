@@ -29,8 +29,10 @@ import type {
   Commit,
   DateTime,
   ForcePushEvent,
+  GitAttributePattern,
   GitObjectID,
   ID,
+  SLOCInfo,
   Version,
   VersionCommit,
 } from './github/types';
@@ -39,6 +41,12 @@ import type {RecoilValueReadOnly} from 'recoil';
 
 import {lineToPosition} from './diffServiceClient';
 import {DiffSide, PullRequestReviewState, UserHomePageQuery} from './generated/graphql';
+import {
+  cacheGitAttributePatterns,
+  getCachedGitAttributePatterns,
+  getGeneratedStatus,
+  parseGitAttributes,
+} from './generatedFiles';
 import CachingGitHubClient, {openDatabase} from './github/CachingGitHubClient';
 import GraphQLGitHubClient from './github/GraphQLGitHubClient';
 import {diffCommits, diffCommitWithParent} from './github/diff';
@@ -50,6 +58,7 @@ import {
   gitHubUsername,
 } from './github/gitHubCredentials';
 import queryGraphQL from './github/queryGraphQL';
+import {GeneratedStatus} from './github/types';
 import {stackedPullRequest, stackedPullRequestFragments} from './stackState';
 import {getPathForChange, getTreeEntriesForChange, groupBy, groupByDiffSide} from './utils';
 import {atom, atomFamily, constSelector, selector, selectorFamily, waitForAll} from 'recoil';
@@ -1307,3 +1316,198 @@ function createClient(
   const client = new GraphQLGitHubClient(hostname, organization, repository, token);
   return new CachingGitHubClient(db, client, organization, repository);
 }
+
+// =============================================================================
+// SLOC (Significant Lines of Code) selectors
+// =============================================================================
+
+/**
+ * Fetches and parses the .gitattributes file from the repo root.
+ * Uses localStorage cache to avoid re-fetching for the same commit.
+ */
+export const gitAttributesPatterns = selector<GitAttributePattern[]>({
+  key: 'gitAttributesPatterns',
+  get: async ({get}) => {
+    const orgAndRepo = get(gitHubOrgAndRepo);
+    const commits = get(gitHubPullRequestCommits);
+    const client = get(gitHubClient);
+
+    if (orgAndRepo == null || commits.length === 0 || client == null) {
+      return [];
+    }
+
+    const {org, repo} = orgAndRepo;
+    // Use the latest commit's OID
+    const latestCommit = commits[commits.length - 1];
+    const commitOid = latestCommit.oid;
+
+    // Check localStorage cache first
+    const cached = getCachedGitAttributePatterns(org, repo, commitOid);
+    if (cached != null) {
+      return cached;
+    }
+
+    // Fetch .gitattributes from the repo root
+    try {
+      // Get the tree for the head commit to find .gitattributes
+      const commit = await client.getCommit(commitOid);
+      if (commit == null) {
+        return [];
+      }
+
+      // Find .gitattributes in the root tree
+      const gitattributesEntry = commit.tree.entries.find(
+        entry => entry.name === '.gitattributes' && entry.type === 'blob',
+      );
+
+      if (gitattributesEntry == null) {
+        // No .gitattributes file - cache empty result
+        cacheGitAttributePatterns(org, repo, commitOid, []);
+        return [];
+      }
+
+      // Fetch the blob content
+      const blob = await client.getBlob(gitattributesEntry.oid);
+      if (blob == null || blob.isBinary || blob.text == null) {
+        cacheGitAttributePatterns(org, repo, commitOid, []);
+        return [];
+      }
+
+      // Parse the .gitattributes content
+      const patterns = parseGitAttributes(blob.text);
+      cacheGitAttributePatterns(org, repo, commitOid, patterns);
+      return patterns;
+    } catch {
+      // On error, return empty patterns
+      return [];
+    }
+  },
+});
+
+/**
+ * Get the generated status for a specific file in the current PR diff.
+ * Checks .gitattributes patterns, file content, and default patterns.
+ */
+export const fileGeneratedStatus = selectorFamily<GeneratedStatus, string>({
+  key: 'fileGeneratedStatus',
+  get:
+    (filePath: string) =>
+    ({get}) => {
+      const gitAttrPatterns = get(gitAttributesPatterns);
+      const diff = get(gitHubPullRequestVersionDiff);
+
+      if (diff == null) {
+        return GeneratedStatus.Manual;
+      }
+
+      // Find the file in the diff to get its blob OID
+      const fileChange = diff.diff.find(change => getPathForChange(change) === filePath);
+
+      // Get the blob for content scanning
+      let blob: Blob | null = null;
+      if (fileChange != null) {
+        const entries = getTreeEntriesForChange(fileChange);
+        // Prefer the "after" version, fall back to "before" for deletions
+        const blobOid = entries.after?.oid ?? entries.before?.oid;
+        if (blobOid != null) {
+          blob = get(gitHubBlob(blobOid));
+        }
+      }
+
+      return getGeneratedStatus(filePath, gitAttrPatterns, blob);
+    },
+});
+
+/**
+ * Calculate SLOC (Significant Lines of Code) for the current PR.
+ * Excludes generated files from the count.
+ *
+ * Note: This selector intentionally calls getGeneratedStatus() directly instead
+ * of using the fileGeneratedStatus selectorFamily to avoid creating deep
+ * dependency chains that can cause performance issues with many files.
+ */
+export const pullRequestSLOC = selector<SLOCInfo>({
+  key: 'pullRequestSLOC',
+  get: ({get}) => {
+    const pullRequest = get(gitHubPullRequest);
+    const diff = get(gitHubPullRequestVersionDiff);
+    // Load gitAttributesPatterns once, not per-file via fileGeneratedStatus
+    const gitAttrPatterns = get(gitAttributesPatterns);
+
+    if (pullRequest == null || diff == null) {
+      return {
+        significantLines: 0,
+        totalLines: 0,
+        generatedFileCount: 0,
+        generatedFiles: [],
+      };
+    }
+
+    // Use the PR-level additions/deletions as the total
+    // Note: This counts all lines, not just non-blank lines
+    const totalLines = pullRequest.additions + pullRequest.deletions;
+
+    let generatedLines = 0;
+    const generatedFiles: string[] = [];
+
+    for (const change of diff.diff) {
+      const filePath = getPathForChange(change);
+      const entries = getTreeEntriesForChange(change);
+
+      // Get blob for generated status detection (prefer after, fall back to before)
+      const blobOid = entries.after?.oid ?? entries.before?.oid;
+      const blob = blobOid != null ? get(gitHubBlob(blobOid)) : null;
+
+      // Check if file is generated using the function directly to avoid
+      // deep dependency chains from fileGeneratedStatus selectorFamily
+      const generatedStatus = getGeneratedStatus(filePath, gitAttrPatterns, blob);
+      if (generatedStatus === GeneratedStatus.Generated) {
+        generatedFiles.push(filePath);
+
+        // Count diff lines (additions + deletions) for this generated file
+        // This must be compatible with how totalLines is calculated (PR additions + deletions)
+        let fileAdditions = 0;
+        let fileDeletions = 0;
+
+        if (change.type === 'add' && entries.after != null) {
+          // New file: all non-blank lines are additions
+          const afterBlob = get(gitHubBlob(entries.after.oid));
+          if (afterBlob?.text != null) {
+            fileAdditions = afterBlob.text.split('\n').filter(line => line.trim() !== '').length;
+          }
+        } else if (change.type === 'remove' && entries.before != null) {
+          // Deleted file: all non-blank lines are deletions
+          const beforeBlob = get(gitHubBlob(entries.before.oid));
+          if (beforeBlob?.text != null) {
+            fileDeletions = beforeBlob.text.split('\n').filter(line => line.trim() !== '').length;
+          }
+        } else if (change.type === 'modify') {
+          // Modified file: approximate by comparing before/after line counts
+          const beforeBlob = entries.before != null ? get(gitHubBlob(entries.before.oid)) : null;
+          const afterBlob = entries.after != null ? get(gitHubBlob(entries.after.oid)) : null;
+
+          const beforeLines =
+            beforeBlob?.text?.split('\n').filter(line => line.trim() !== '').length ?? 0;
+          const afterLines =
+            afterBlob?.text?.split('\n').filter(line => line.trim() !== '').length ?? 0;
+
+          fileAdditions = Math.max(0, afterLines - beforeLines);
+          fileDeletions = Math.max(0, beforeLines - afterLines);
+        }
+
+        generatedLines += fileAdditions + fileDeletions;
+      }
+    }
+
+    // Significant lines = total - generated
+    // This is an approximation since we're using PR-level totals
+    const significantLines = Math.max(0, totalLines - generatedLines);
+
+    return {
+      significantLines,
+      totalLines,
+      generatedFileCount: generatedFiles.length,
+      generatedFiles,
+    };
+  },
+});
