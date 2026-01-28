@@ -6,16 +6,18 @@
  */
 
 import {ChevronDownIcon, ChevronRightIcon} from '@primer/octicons-react';
-import {Box, Text, Tooltip} from '@primer/react';
+import {Box, Label, Text, Tooltip} from '@primer/react';
 
 export function FileHeader({
   path,
   open,
   onChangeOpen,
+  isGenerated,
 }: {
   path: string;
   open?: boolean;
   onChangeOpen?: (open: boolean) => void;
+  isGenerated?: boolean;
 }) {
   // Even though the enclosing <SplitDiffView> will have border-radius set, we
   // have to define it again here or things don't look right.
@@ -79,6 +81,19 @@ export function FileHeader({
         </Box>
       )}
       <Box sx={{display: 'flex', flexGrow: 1}}>{filePathParts}</Box>
+      {isGenerated && (
+        <Tooltip aria-label="This file is generated and excluded from significant lines count" direction="sw">
+          <Label
+            variant="secondary"
+            sx={{
+              marginLeft: 2,
+              fontSize: 0,
+              fontWeight: 'normal',
+            }}>
+            Generated
+          </Label>
+        </Tooltip>
+      )}
     </Box>
   );
 }

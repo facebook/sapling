@@ -106,9 +106,11 @@ function PullRequestDetails() {
 
   const stack = pullRequestStack.contents;
   const { bodyHTML } = pullRequest;
-  let pullRequestBodyHTML;
+  let pullRequestBodyHTML: string;
   switch (stack.type) {
     case 'no-stack':
+    case 'graphite':
+      // Graphite stack info is in a comment, not the PR body, so no stripping needed
       pullRequestBodyHTML = bodyHTML;
       break;
     case 'sapling':
