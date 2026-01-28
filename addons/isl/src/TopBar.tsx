@@ -19,6 +19,7 @@ import serverAPI from './ClientToServerAPI';
 import {CwdSelector} from './CwdSelector';
 import {DownloadCommitsTooltipButton} from './DownloadCommitsMenu';
 import {FocusModeToggle} from './FocusMode';
+import {NotificationBell} from './notifications/NotificationBell';
 import {generatedFileCache} from './GeneratedFile';
 import {PullButton} from './PullButton';
 import {SettingsGearButton} from './SettingsTooltip';
@@ -76,6 +77,7 @@ export function TopBar() {
       <span className="button-group">
         <FlexSpacer />
         <DebugToolsButton />
+        <NotificationBell />
         <FocusModeToggle />
         <BugButton />
         <SettingsGearButton />

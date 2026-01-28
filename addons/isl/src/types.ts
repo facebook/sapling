@@ -929,7 +929,8 @@ export type LocalStorageName =
   // The keys below are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:'
   | 'isl.first-pass-comments:'
-  | 'isl.reviewed-files:';
+  | 'isl.reviewed-files:'
+  | 'isl.dismissed-notification-ids';
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}
@@ -945,6 +946,7 @@ export type ClientToServerMessage =
   | {type: 'runOperation'; operation: RunnableOperation}
   | {type: 'abortRunningOperation'; operationId: string}
   | {type: 'fetchActiveAlerts'}
+  | {type: 'fetchNotifications'}
   | {type: 'fetchGeneratedStatuses'; paths: Array<RepoRelativePath>}
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'fetchShelvedChanges'}
@@ -1108,6 +1110,7 @@ export type ServerToClientMessage =
       results: Record<RepoRelativePath, GeneratedStatus>;
     }
   | {type: 'fetchedActiveAlerts'; alerts: Array<Alert>}
+  | {type: 'fetchedNotifications'; notifications: Result<Array<Notification>>}
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'fetchedShelvedChanges'; shelvedChanges: Result<Array<ShelvedChange>>}
   | {type: 'fetchedLatestCommit'; info: Result<CommitInfo>; revset: string}
@@ -1266,4 +1269,20 @@ export type ArcStableGKInfo = {
   gk: string;
   id: string;
   label: string;
+};
+
+// Notification types for GitHub notifications
+export type NotificationType = 'review-request' | 'mention' | 'review-received';
+
+export type Notification = {
+  id: string;
+  type: NotificationType;
+  prNumber: number;
+  prTitle: string;
+  prUrl: string;
+  repoName: string;
+  actor: string;
+  actorAvatarUrl?: string;
+  timestamp: Date;
+  reviewState?: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED';
 };

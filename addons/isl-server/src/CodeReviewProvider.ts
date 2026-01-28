@@ -17,6 +17,7 @@ import type {
   Disposable,
   LandConfirmationInfo,
   LandInfo,
+  Notification,
   OperationCommandProgressReporter,
   Result,
   ServerToClientMessage,
@@ -78,6 +79,9 @@ export interface CodeReviewProvider {
 
   fetchLandInfo?(topOfStack: DiffId): Promise<LandInfo>;
   confirmLand?(landConfirmationInfo: NonNullable<LandConfirmationInfo>): Promise<Result<undefined>>;
+
+  /** Fetch notifications for review requests, mentions, and reviews */
+  fetchNotifications?(): Promise<Array<Notification>>;
 
   handleClientToServerMessage?(
     message: ClientToServerMessage,

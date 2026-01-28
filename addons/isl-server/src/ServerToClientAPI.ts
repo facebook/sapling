@@ -1066,6 +1066,24 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchNotifications': {
+        repo.codeReviewProvider
+          ?.fetchNotifications?.()
+          ?.then(notifications => {
+            this.postMessage({
+              type: 'fetchedNotifications',
+              notifications: {value: notifications},
+            });
+          })
+          .catch(err => {
+            this.logger.error('Failed to fetch notifications:', err);
+            this.postMessage({
+              type: 'fetchedNotifications',
+              notifications: {error: err as Error},
+            });
+          });
+        break;
+      }
       case 'gotUiState': {
         break;
       }
