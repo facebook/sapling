@@ -16,11 +16,28 @@
   justify-content: center;
   left: 0;
   top: 0;
+  /* Smooth backdrop */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: modalBackdropFadeIn 0.2s var(--ease-out-expo, ease-out);
+}
+
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
 }
 
 .dark-theme .modal,
 .vscode-dark .modal {
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
 }
 
 .modal-contents {
@@ -31,13 +48,28 @@
   padding: var(--padding-amt);
   padding-bottom: 0;
   background-color: var(--background);
-  border-radius: 8px;
-  box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  box-shadow:
+    var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.5)),
+    0 0 0 1px var(--graphite-border, rgba(255, 255, 255, 0.1));
   height: calc((100vh / var(--zoom, 1)) - 2 * var(--border-amt) - 2 * var(--padding-amt));
   width: calc((100vw / var(--zoom, 1)) - 2 * var(--border-amt) - 2 * var(--padding-amt));
   display: flex;
   flex-direction: column;
   position: relative;
+  /* Smooth entrance animation */
+  animation: modalSlideIn 0.25s var(--ease-out-expo, ease-out);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .dismiss-modal {

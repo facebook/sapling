@@ -40,6 +40,14 @@
   padding: 3px 8px;
   font-size: 70%;
   white-space: nowrap;
+  transition:
+    transform 0.15s var(--ease-out-back, ease),
+    box-shadow 0.15s var(--ease-in-out-smooth, ease);
+}
+
+.github-diff-status:hover {
+  transform: scale(1.03);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 .github-diff-info a {
   color: white;

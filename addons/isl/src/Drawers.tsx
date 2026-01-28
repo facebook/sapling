@@ -11,6 +11,7 @@ import type {EnsureAssignedTogether} from 'shared/EnsureAssignedTogether';
 import {useAtom} from 'jotai';
 import {createElement, useCallback, useRef, useState} from 'react';
 import {debounce} from 'shared/debounce';
+import {useScrollFade} from './ComponentUtils';
 import {islDrawerState} from './drawerState';
 
 import './Drawers.css';
@@ -63,7 +64,7 @@ export function Drawers({
             {left}
           </Drawer>
         ) : null}
-        <div className="drawer-main-content">{children}</div>
+        <MainContent>{children}</MainContent>
         {right ? (
           <Drawer side={Side.right} label={rightLabel} errorBoundary={errorBoundary}>
             {right}
@@ -81,7 +82,17 @@ export function Drawers({
 }
 
 const stickyCollapseSizePx = 60;
-const minDrawerSizePx = 100;
+const minDrawerSizePx = 200; // Must match --min-pane-width in Drawers.css
+
+/** Main content area with scroll fade indicators */
+function MainContent({children}: {children: React.ReactNode}) {
+  const {scrollRef, scrollProps} = useScrollFade<HTMLDivElement>();
+  return (
+    <div ref={scrollRef} className="drawer-main-content scroll-fade-container" {...scrollProps}>
+      {children}
+    </div>
+  );
+}
 
 export function Drawer({
   side,
@@ -97,6 +108,7 @@ export function Drawer({
   const isVertical = side === 'top' || side === 'bottom';
   const dragHandleElement = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
+  const {scrollRef, scrollProps} = useScrollFade<HTMLDivElement>();
 
   const [drawerState, setDrawerState] = useAtom(islDrawerState);
   const state = drawerState[side];
@@ -151,10 +163,15 @@ export function Drawer({
     [isVertical, side, setInnerState],
   );
 
+  // Ensure size respects minimum
+  const clampedSize = Math.max(state.size, minDrawerSizePx);
+
   return (
     <div
-      className={`drawer drawer-${side}${isExpanded ? ' drawer-expanded' : ''}`}
-      style={isExpanded ? {[isVertical ? 'height' : 'width']: `${state.size}px`} : undefined}>
+      ref={isExpanded ? scrollRef : undefined}
+      className={`drawer drawer-${side}${isExpanded ? ' drawer-expanded scroll-fade-container' : ''}`}
+      style={isExpanded ? {[isVertical ? 'height' : 'width']: `${clampedSize}px`} : undefined}
+      {...(isExpanded ? scrollProps : {})}>
       <div
         className="drawer-label"
         data-testid="drawer-label"
