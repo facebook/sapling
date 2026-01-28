@@ -6,9 +6,11 @@
  */
 
 import type {StackPullRequestFragment} from './generated/graphql';
+import type {GraphiteStackBody} from './graphiteStack';
 import type {SaplingPullRequestBody} from './saplingStack';
 
 import {pullRequestNumbersFromBody} from './ghstackUtils';
+import {parseGraphiteStackComment} from './graphiteStack';
 import {gitHubClient, gitHubPullRequest} from './recoil';
 import {parseSaplingStackBody} from './saplingStack';
 import {selector, waitForAll} from 'recoil';
@@ -23,6 +25,10 @@ type StackedPullRequest =
       stack: number[];
     }
   | {
+      type: 'graphite';
+      body: GraphiteStackBody;
+    }
+  | {
       type: 'no-stack';
     };
 
@@ -31,6 +37,8 @@ export const stackedPullRequest = selector<StackedPullRequest>({
   get: ({get}) => {
     const pullRequest = get(gitHubPullRequest);
     const body = pullRequest?.body;
+
+    // Check PR body for Sapling or ghstack stack info
     if (body != null) {
       const saplingStack = parseSaplingStackBody(body);
       if (saplingStack != null) {
@@ -40,6 +48,17 @@ export const stackedPullRequest = selector<StackedPullRequest>({
       const ghstack = pullRequestNumbersFromBody(body);
       if (ghstack != null) {
         return {type: 'ghstack', stack: ghstack};
+      }
+    }
+
+    // Check timeline comments for Graphite stack info
+    const timelineItems = pullRequest?.timelineItems?.nodes ?? [];
+    for (const item of timelineItems) {
+      if (item?.__typename === 'IssueComment' && item.body != null) {
+        const graphiteStack = parseGraphiteStackComment(item.body);
+        if (graphiteStack != null) {
+          return {type: 'graphite', body: graphiteStack};
+        }
       }
     }
 
@@ -59,6 +78,9 @@ const stackedPullRequestNumbers = selector<number[]>({
       }
       case 'ghstack': {
         return stacked.stack;
+      }
+      case 'graphite': {
+        return stacked.body.stack;
       }
     }
   },
