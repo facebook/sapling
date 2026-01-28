@@ -48,6 +48,12 @@ import {
   diffSummary,
   latestCommitMessageTitle,
 } from './codeReview/CodeReviewInfo';
+import {
+  showOnlyMyStacksAtom,
+  hideBotStacksAtom,
+  hideMergedStacksAtom,
+  isBotAuthor,
+} from './codeReview/PRStacksAtom';
 import {DiffBadge, DiffFollower, DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {useFeatureFlagSync} from './featureFlags';
@@ -152,6 +158,49 @@ export const isExternalCommitByDiffId = atomFamilyWeak((diffId: string) =>
   }),
 );
 
+/**
+ * Atom to check if a commit should be visually dimmed based on active filters.
+ * Returns true if the commit matches any active filter criteria.
+ */
+export const isFilteredCommitByDiffId = atomFamilyWeak((diffId: string) =>
+  atom(get => {
+    if (!diffId) {
+      return false;
+    }
+
+    const summary = get(diffSummary(diffId));
+    if (summary?.value == null) {
+      return false;
+    }
+
+    const prAuthor = summary.value.type === 'github' ? summary.value.author : undefined;
+    const prState = summary.value.state;
+
+    // Check "show only my stacks" filter
+    const showOnlyMine = get(showOnlyMyStacksAtom);
+    if (showOnlyMine) {
+      const currentUser = get(currentGitHubUser);
+      if (currentUser && prAuthor && prAuthor !== currentUser) {
+        return true;
+      }
+    }
+
+    // Check "hide bots" filter
+    const hideBots = get(hideBotStacksAtom);
+    if (hideBots && isBotAuthor(prAuthor)) {
+      return true;
+    }
+
+    // Check "hide merged" filter
+    const hideMerged = get(hideMergedStacksAtom);
+    if (hideMerged && prState === 'MERGED') {
+      return true;
+    }
+
+    return false;
+  }),
+);
+
 export const Commit = memo(
   ({
     commit,
@@ -186,6 +235,9 @@ export const Commit = memo(
     const title = useAtomValue(latestCommitMessageTitle(commit.hash));
 
     const commitLabel = useAtomValue(commitLabelForCommit(commit.hash));
+
+    // Check if commit should be dimmed based on active filters
+    const isFiltered = useAtomValue(isFilteredCommitByDiffId(commit.diffId ?? ''));
 
     const clipboardCopy = (text: string, url?: string) =>
       copyAndShowToast(text, url == null ? undefined : clipboardLinkHtml(text, url));
@@ -489,7 +541,8 @@ export const Commit = memo(
           (commit.isDot ? ' head-commit' : '') +
           (commit.successorInfo != null ? ' obsolete' : '') +
           (isIrrelevantToCwd ? ' irrelevant' : '') +
-          (isOriginMain ? ' origin-main-commit' : '')
+          (isOriginMain ? ' origin-main-commit' : '') +
+          (isFiltered ? ' commit-filtered' : '')
         }
         onContextMenu={contextMenu}
         data-testid={`commit-${commit.hash}`}>

@@ -22,4 +22,22 @@
   margin-bottom: var(--pad);
   cursor: default;
   pointer-events: auto;
+  /* Refined toast styling */
+  box-shadow:
+    var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.4)),
+    0 0 0 1px var(--graphite-border, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  /* Smooth slide-up entrance */
+  animation: toastSlideUp 0.3s var(--ease-out-expo, ease-out);
+}
+
+@keyframes toastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

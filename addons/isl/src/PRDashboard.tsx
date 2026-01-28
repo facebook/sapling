@@ -13,7 +13,7 @@ import {Icon} from 'isl-components/Icon';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
-import {useState, useCallback, useEffect} from 'react';
+import {useState, useCallback, useEffect, useRef} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import serverAPI from './ClientToServerAPI';
 import {showComparison} from './ComparisonView/atoms';
@@ -22,6 +22,10 @@ import {
   prStacksAtom,
   stackLabelsAtom,
   hiddenStacksAtom,
+  hideMergedStacksAtom,
+  showOnlyMyStacksAtom,
+  hideBotStacksAtom,
+  isBotAuthor,
 } from './codeReview/PRStacksAtom';
 import {T} from './i18n';
 import {scrollToCommit} from './CommitTreeList';
@@ -60,7 +64,7 @@ function useScrollToPROnSelection() {
   }, [selected]);
 }
 
-function MainBranchSection() {
+function MainBranchSection({}: {isScrolled?: boolean}) {
   const runOperation = useRunOperation();
   const dag = useAtomValue(dagWithPreviews);
 
@@ -98,12 +102,16 @@ function MainBranchSection() {
       ? 'You are here'
       : 'Up to date';
 
+  const statusClass = isBehind
+    ? 'main-branch-status main-branch-status-behind'
+    : 'main-branch-status';
+
   return (
     <div className="main-branch-section">
       <div className="main-branch-info">
         <Icon icon="git-branch" />
         <span className="main-branch-name">{remoteName.replace('origin/', '')}</span>
-        <span className="main-branch-status">{syncStatusText}</span>
+        <span className={statusClass}>{syncStatusText}</span>
       </div>
       <Tooltip title={isOnMain && !isBehind ? 'Already on main' : 'Pull latest and checkout main'}>
         <Button
@@ -126,47 +134,121 @@ function MainBranchSection() {
 export function PRDashboard() {
   const stacks = useAtomValue(prStacksAtom);
   const [hiddenStacks, setHiddenStacks] = useAtom(hiddenStacksAtom);
+  const [hideMerged, setHideMerged] = useAtom(hideMergedStacksAtom);
+  const [showOnlyMine, setShowOnlyMine] = useAtom(showOnlyMyStacksAtom);
+  const [hideBots, setHideBots] = useAtom(hideBotStacksAtom);
   const [showHidden, setShowHidden] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const currentUser = useAtomValue(currentGitHubUser);
+  const dashboardRef = useRef<HTMLDivElement>(null);
 
   // Scroll to PR row when a commit is selected in the middle column
   useScrollToPROnSelection();
+
+  // Detect scroll for blur effect on sticky headers
+  useEffect(() => {
+    // Find the scrollable parent (the drawer content wrapper)
+    let container: Element | null = dashboardRef.current?.parentElement ?? null;
+    while (container && getComputedStyle(container).overflowY !== 'auto') {
+      container = container.parentElement;
+    }
+    if (!container) return;
+
+    const handleScroll = () => {
+      setIsScrolled(container!.scrollTop > 10);
+    };
+
+    handleScroll(); // Check initial
+    container.addEventListener('scroll', handleScroll, {passive: true});
+    return () => container!.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleRefresh = () => {
     serverAPI.postMessage({type: 'fetchDiffSummaries'});
   };
 
+  // Filter stacks: hide manually hidden, optionally merged, bots, and optionally non-mine stacks
   const visibleStacks = showHidden
     ? stacks
-    : stacks.filter(stack => !hiddenStacks.includes(stack.id));
+    : stacks.filter(stack => {
+        if (hiddenStacks.includes(stack.id)) return false;
+        if (hideMerged && stack.isMerged) return false;
+        if (hideBots && isBotAuthor(stack.mainAuthor)) return false;
+        if (showOnlyMine && currentUser && stack.mainAuthor !== currentUser) return false;
+        return true;
+      });
 
   const hiddenCount = stacks.filter(stack =>
     hiddenStacks.includes(stack.id),
   ).length;
 
+  const mergedCount = stacks.filter(stack => stack.isMerged).length;
+
+  const botCount = stacks.filter(stack => isBotAuthor(stack.mainAuthor)).length;
+
+  const otherAuthorsCount = currentUser
+    ? stacks.filter(stack => stack.mainAuthor && stack.mainAuthor !== currentUser).length
+    : 0;
+
   return (
-    <div className="pr-dashboard">
-      <div className="pr-dashboard-header">
-        <span className="pr-dashboard-title">
-          <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v2)</span>
-        </span>
-        <div className="pr-dashboard-header-buttons">
-          {hiddenCount > 0 && (
+    <div className="pr-dashboard" ref={dashboardRef}>
+      {/* Unified sticky header */}
+      <div className="pr-dashboard-sticky-header">
+        <div className="pr-dashboard-header">
+          <span className="pr-dashboard-title">
+            <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v4.1)</span>
+          </span>
+          <div className="pr-dashboard-header-buttons">
+            {currentUser && (
+              <Tooltip
+                title={showOnlyMine ? `Show all authors (${otherAuthorsCount} hidden)` : 'Show only my stacks'}>
+                <Button
+                  icon
+                  onClick={() => setShowOnlyMine(prev => !prev)}
+                  className={showOnlyMine ? 'author-filter-active' : 'author-filter-inactive'}>
+                  <Icon icon="account" />
+                  {showOnlyMine && otherAuthorsCount > 0 && <span className="hidden-count">{otherAuthorsCount}</span>}
+                </Button>
+              </Tooltip>
+            )}
             <Tooltip
-              title={showHidden ? 'Hide hidden stacks' : 'Show hidden stacks'}>
-              <Button icon onClick={() => setShowHidden(prev => !prev)}>
-                <Icon icon={showHidden ? 'eye' : 'eye-closed'} />
-                <span className="hidden-count">{hiddenCount}</span>
+              title={hideBots ? `Show ${botCount} bot PRs` : 'Hide bot PRs (renovate, dependabot, etc)'}>
+              <Button
+                icon
+                onClick={() => setHideBots(prev => !prev)}
+                className={hideBots ? 'bot-filter-active' : 'bot-filter-inactive'}>
+                <Icon icon="hubot" />
+                {hideBots && botCount > 0 && <span className="hidden-count">{botCount}</span>}
               </Button>
             </Tooltip>
-          )}
-          <Tooltip title="Refresh PR list">
-            <Button icon onClick={handleRefresh}>
-              <Icon icon="refresh" />
-            </Button>
-          </Tooltip>
+            <Tooltip
+              title={hideMerged ? `Show ${mergedCount} merged` : 'Hide merged stacks'}>
+              <Button
+                icon
+                onClick={() => setHideMerged(prev => !prev)}
+                className={hideMerged ? 'merged-toggle-hidden' : 'merged-toggle-visible'}>
+                <Icon icon="check" />
+                {mergedCount > 0 && <span className="hidden-count">{mergedCount}</span>}
+              </Button>
+            </Tooltip>
+            {hiddenCount > 0 && (
+              <Tooltip
+                title={showHidden ? 'Hide hidden stacks' : 'Show hidden stacks'}>
+                <Button icon onClick={() => setShowHidden(prev => !prev)}>
+                  <Icon icon={showHidden ? 'eye' : 'eye-closed'} />
+                  <span className="hidden-count">{hiddenCount}</span>
+                </Button>
+              </Tooltip>
+            )}
+            <Tooltip title="Refresh PR list">
+              <Button icon onClick={handleRefresh}>
+                <Icon icon="refresh" />
+              </Button>
+            </Tooltip>
+          </div>
         </div>
+        <MainBranchSection isScrolled={isScrolled} />
       </div>
-      <MainBranchSection />
       <div className="pr-dashboard-content">
         {visibleStacks.length === 0 ? (
           <div className="pr-dashboard-empty">
@@ -267,6 +349,7 @@ function StackCard({
     isExternal ? 'stack-card-external' : '',
     isCurrentStack ? 'stack-card-current' : '',
     inlineProgress ? 'stack-card-loading' : '',
+    stack.isMerged ? 'stack-card-merged' : '',
   ].filter(Boolean).join(' ');
 
   const headerClass = [
@@ -296,6 +379,17 @@ function StackCard({
             {headerTitle}
           </span>
         )}
+
+        {/* Merge status badge */}
+        {stack.isMerged ? (
+          <span className="stack-merge-badge stack-merge-badge-merged">
+            <Icon icon="check" /> Merged
+          </span>
+        ) : stack.mergedCount > 0 ? (
+          <span className="stack-merge-badge stack-merge-badge-partial">
+            {stack.mergedCount}/{stack.prs.length}
+          </span>
+        ) : null}
 
         {stack.mainAuthor && (
           <Tooltip title={stack.mainAuthor}>
@@ -373,7 +467,6 @@ function LabelEditor({
 function PRRow({pr}: {pr: DiffSummary}) {
   const stateIcon = getPRStateIcon(pr.state);
   const stateClass = getPRStateClass(pr.state);
-  const author = pr.type === 'github' ? pr.author : undefined;
   const headHash = pr.type === 'github' ? pr.head : undefined;
 
   const runOperation = useRunOperation();
@@ -428,7 +521,6 @@ function PRRow({pr}: {pr: DiffSummary}) {
       <span className="pr-row-title" title={pr.title}>
         {pr.title}
       </span>
-      {author && <span className="pr-row-author">@{author}</span>}
       {headHash && (
         <Tooltip title="View changes in this commit">
           <Button icon className="pr-row-view-changes" onClick={handleViewChanges}>

@@ -11,19 +11,35 @@
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  padding: var(--pad);
-  background-color: var(--background);
+  padding: var(--halfpad) 0; /* Vertical padding only */
   margin-left: var(--halfpad);
   gap: var(--pad);
   position: sticky;
   top: 0;
   /* Should > .changed-file z-index */
   z-index: 11;
+  /* Subtle bottom border only - no shadow */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  /* BACKDROP BLUR */
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  backdrop-filter: blur(24px) saturate(200%);
+  background: rgba(26, 32, 44, 0.5);
 }
 
 .top-bar .button-group {
   display: flex;
-  gap: var(--pad);
+  gap: var(--halfpad);
   align-items: center;
   flex-grow: 1;
+  padding: 0 var(--halfpad);
+}
+
+/* First button group - extend to left edge */
+.top-bar .button-group:first-child {
+  padding-left: var(--pad);
+}
+
+/* Last button group - extend to right edge */
+.top-bar .button-group:last-child {
+  padding-right: var(--pad);
 }

@@ -51,7 +51,7 @@ import {
 import {PendingDiffStats} from './CommitInfoView/DiffStats';
 import {temporaryCommitTitle} from './CommitTitle';
 import {OpenComparisonViewButton} from './ComparisonView/OpenComparisonViewButton';
-import {Row} from './ComponentUtils';
+import {Row, useScrollFade} from './ComponentUtils';
 import {FileTree, FileTreeFolderHeader} from './FileTree';
 import {useGeneratedFileStatuses} from './GeneratedFile';
 import {Internal} from './Internal';
@@ -368,6 +368,7 @@ function LinearFileList(props: {
   place?: Place;
 }) {
   const {files, generatedStatuses, ...rest} = props;
+  const {scrollRef, canScrollUp, canScrollDown, scrollProps} = useScrollFade<HTMLDivElement>();
 
   const groupedByGenerated = group(files, file => generatedStatuses[file.path]);
   const [initiallyExpanded, setInitiallyExpanded] = useAtom(generatedFilesInitiallyExpanded);
@@ -399,8 +400,11 @@ function LinearFileList(props: {
   }
 
   return (
-    <div className="changed-files-list-container">
-      <div className="changed-files-list">
+    <div
+      className="changed-files-list-container"
+      data-can-scroll-up={String(canScrollUp)}
+      data-can-scroll-down={String(canScrollDown)}>
+      <div ref={scrollRef} className="changed-files-list" onScroll={scrollProps.onScroll}>
         {groupedByGenerated[GeneratedStatus.Manual]?.map(file => (
           <File
             key={file.path}

@@ -30,6 +30,60 @@ export const hiddenStacksAtom = atomWithStorage<string[]>(
 );
 
 /**
+ * Whether to auto-hide merged stacks.
+ */
+export const hideMergedStacksAtom = atomWithStorage<boolean>(
+  'isl.hideMergedStacks',
+  true,
+);
+
+/**
+ * Whether to show only stacks authored by the current user.
+ * When true, hides stacks from other authors.
+ */
+export const showOnlyMyStacksAtom = atomWithStorage<boolean>(
+  'isl.showOnlyMyStacks',
+  false,
+);
+
+/**
+ * Whether to hide stacks from bot authors (renovate, dependabot, etc).
+ * Default true - bots are hidden by default.
+ */
+export const hideBotStacksAtom = atomWithStorage<boolean>(
+  'isl.hideBotStacks',
+  true,
+);
+
+/**
+ * List of known bot author patterns (case-insensitive).
+ */
+const BOT_AUTHOR_PATTERNS = [
+  'renovate',
+  'dependabot',
+  'github-actions',
+  'semantic-release',
+  'greenkeeper',
+  'snyk-bot',
+  'codecov',
+  'mergify',
+  'netlify',
+  'vercel',
+  'bot',
+];
+
+/**
+ * Check if an author name matches a known bot pattern.
+ */
+export function isBotAuthor(author: string | undefined): boolean {
+  if (!author) return false;
+  const lowerAuthor = author.toLowerCase();
+  return BOT_AUTHOR_PATTERNS.some(
+    pattern => lowerAuthor.includes(pattern) || lowerAuthor.endsWith('[bot]'),
+  );
+}
+
+/**
  * Represents a stack of PRs grouped together.
  */
 export type PRStack = {
@@ -45,6 +99,10 @@ export type PRStack = {
   mainAuthor?: string;
   /** Avatar URL of the main contributor */
   mainAuthorAvatarUrl?: string;
+  /** Whether all PRs in this stack are merged */
+  isMerged: boolean;
+  /** Count of merged PRs in the stack */
+  mergedCount: number;
 };
 
 /**
@@ -104,6 +162,10 @@ export const prStacksAtom = atom<PRStack[]>(get => {
         const mainAuthorAvatarUrl =
           firstPr.type === 'github' ? firstPr.authorAvatarUrl : undefined;
 
+        // Check merge status
+        const mergedCount = stackPrs.filter(pr => pr.state === 'MERGED').length;
+        const isMerged = mergedCount === stackPrs.length;
+
         stacks.push({
           id: `stack-${topPrNumber}`,
           topPrNumber,
@@ -111,6 +173,8 @@ export const prStacksAtom = atom<PRStack[]>(get => {
           isStack: stackPrs.length > 1,
           mainAuthor,
           mainAuthorAvatarUrl,
+          isMerged,
+          mergedCount,
         });
       }
     } else {
@@ -123,6 +187,9 @@ export const prStacksAtom = atom<PRStack[]>(get => {
       const mainAuthorAvatarUrl =
         summary.type === 'github' ? summary.authorAvatarUrl : undefined;
 
+      // Check merge status
+      const isMerged = summary.state === 'MERGED';
+
       stacks.push({
         id: `single-${diffId}`,
         topPrNumber: prNumber,
@@ -130,6 +197,8 @@ export const prStacksAtom = atom<PRStack[]>(get => {
         isStack: false,
         mainAuthor,
         mainAuthorAvatarUrl,
+        isMerged,
+        mergedCount: isMerged ? 1 : 0,
       });
     }
   }

@@ -8,17 +8,37 @@
 .pr-dashboard {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
+  /* Fit content - parent handles scrolling */
+  min-height: min-content;
+  /* Pull up to eliminate top gap from parent padding */
+  margin-top: -16px;
+  margin-left: -16px;
+  margin-right: -16px;
+  /* Ensure bottom padding so last items are scrollable into view */
+  padding-bottom: 40px;
+}
+
+/* Unified sticky header container */
+.pr-dashboard-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  flex-shrink: 0;
+  /* BACKDROP BLUR */
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  backdrop-filter: blur(24px) saturate(200%);
+  background: rgba(26, 32, 44, 0.6);
+  /* Subtle bottom border */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .pr-dashboard-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--pad);
-  border-bottom: 1px solid var(--subtle-hover-darken);
-  flex-shrink: 0;
+  height: 56px;
+  box-sizing: border-box;
+  padding: 0 12px;
 }
 
 .pr-dashboard-title {
@@ -26,18 +46,32 @@
   font-size: 14px;
 }
 
-/* Main Branch Section */
+.pr-dashboard-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Main Branch Section - inside sticky header */
 .main-branch-section {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--pad);
-  background: var(--graphite-bg, var(--background));
-  border-bottom: 1px solid var(--graphite-border, var(--subtle-hover-darken));
-  flex-shrink: 0;
+  height: 56px;
+  box-sizing: border-box; /* Include border in height */
+  padding: 0 12px;
+  /* Subtle top separator line */
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.main-branch-info {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+}
+
+.main-branch-goto-button {
+  margin-right: var(--halfpad); /* Slight margin on right for button */
 }
 
 .main-branch-info {
@@ -59,8 +93,15 @@
   border-radius: 3px;
 }
 
+.main-branch-status-behind {
+  background: color-mix(in srgb, var(--signal-warning) 20%, transparent);
+  color: var(--signal-warning);
+  font-weight: 500;
+}
+
 .main-branch-goto-button {
   gap: 4px;
+  margin-right: 4px;
 }
 
 .main-branch-goto-button:disabled {
@@ -69,6 +110,9 @@
 
 .pr-dashboard-content {
   padding: var(--pad);
+  /* Account for negative margins on parent */
+  padding-left: calc(var(--pad) + 16px);
+  padding-right: calc(var(--pad) + 16px);
 }
 
 .pr-dashboard-empty {
@@ -194,10 +238,12 @@
   color: var(--foreground-sub);
   text-decoration: none;
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .pr-row-number:hover {
   text-decoration: underline;
+  color: var(--link-foreground, #4a90e2);
 }
 
 .pr-row-title {
@@ -304,4 +350,70 @@
 
 .pr-row:hover .pr-row-view-changes {
   opacity: 1;
+}
+
+/* Merged stack styling */
+.stack-card-merged {
+  opacity: 0.7;
+  border-left-color: var(--scm-modified-foreground, #a855f7);
+}
+
+.stack-card-merged .stack-card-header {
+  background: color-mix(in srgb, var(--scm-modified-foreground) 10%, var(--subtle-hover-darken));
+}
+
+/* Merge status badges */
+.stack-merge-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.stack-merge-badge-merged {
+  background: color-mix(in srgb, var(--scm-modified-foreground) 20%, transparent);
+  color: var(--scm-modified-foreground, #a855f7);
+}
+
+.stack-merge-badge-partial {
+  background: var(--subtle-hover-darken);
+  color: var(--foreground-sub);
+}
+
+/* Merged toggle button styling */
+.merged-toggle-hidden {
+  opacity: 0.6;
+}
+
+.merged-toggle-visible .codicon-check {
+  color: var(--scm-modified-foreground, #a855f7);
+}
+
+/* Author filter button */
+.author-filter-active {
+  background: color-mix(in srgb, var(--graphite-accent) 20%, transparent);
+}
+
+.author-filter-active .codicon-account {
+  color: var(--graphite-accent, #4a90e2);
+}
+
+.author-filter-inactive {
+  opacity: 0.6;
+}
+
+/* Bot filter button */
+.bot-filter-active {
+  background: color-mix(in srgb, var(--signal-warning, #f59e0b) 20%, transparent);
+}
+
+.bot-filter-active .codicon-hubot {
+  color: var(--signal-warning, #f59e0b);
+}
+
+.bot-filter-inactive {
+  opacity: 0.6;
 }

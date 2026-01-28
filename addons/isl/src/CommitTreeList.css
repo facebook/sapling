@@ -53,7 +53,7 @@
 /* used by the split branch selection */
 .commit-avatar {
   position: absolute;
-  border: 1px solid var(--foreground);
+  border: 1.5px solid var(--foreground);
   margin-bottom: 0px;
   z-index: 3;
   background-color: var(--foreground, hsla(0, 0%, 0%, 0.1));
@@ -68,8 +68,9 @@
   width: 16px;
   box-sizing: border-box;
   transition:
-    transform 0.2s,
-    box-shadow 0.3s;
+    transform 0.2s var(--ease-out-back, ease),
+    box-shadow 0.25s var(--ease-in-out-smooth, ease),
+    border-color 0.15s ease;
 }
 
 /* Avatar may render below the top of the border,
@@ -90,12 +91,43 @@
 }
 
 .commit.highlighted .commit-avatar {
-  box-shadow: 0px 0px 4px 2px var(--focus-border);
-  transform: scale(1.2);
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px var(--focus-border),
+    0 0 12px 2px var(--graphite-glow, rgba(74, 144, 226, 0.3));
+  transform: scale(1.25);
 }
 
 .head-commit .commit-avatar {
   border-color: var(--button-primary-hover-background);
+}
+
+/* Filtered/dimmed commits (hidden by active filters in left column) */
+.commit.commit-filtered {
+  opacity: 0.15;
+  transition: opacity 0.2s ease;
+}
+
+.commit.commit-filtered:hover {
+  opacity: 0.5;
+}
+
+/* Head commit (checked-out) gradient highlight */
+.head-commit .commit-rows {
+  /* Gradient highlight from left to transparent - visible, extends across most of the row */
+  background: linear-gradient(
+    90deg,
+    rgba(74, 144, 226, 0.20) 0%,
+    rgba(74, 144, 226, 0.14) 20%,
+    rgba(74, 144, 226, 0.08) 45%,
+    rgba(74, 144, 226, 0.03) 70%,
+    transparent 90%
+  );
+  /* Left border accent for head commit */
+  border-left: 3px solid var(--graphite-accent, #4a90e2);
+  margin-left: -3px;
+  /* Soft inner glow on left edge */
+  box-shadow: inset 5px 0 16px -3px rgba(74, 144, 226, 0.3);
 }
 
 .commit.obsolete .commit-title {
@@ -125,8 +157,13 @@
   margin-left: -3px; /* Prevent layout shift */
 }
 
+.commit-rows {
+  transition: background-color 0.1s var(--ease-in-out-smooth, ease);
+  border-radius: 4px;
+}
+
 .commit-rows:hover:not(.commit-row-selected) {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgba(255, 255, 255, 0.04);
 }
 
 .commit-tree-root {
@@ -253,17 +290,22 @@
 .goto-button,
 .open-commit-info-button {
   opacity: 0;
-  transition: opacity 0.1s;
+  transition:
+    opacity 0.15s var(--ease-in-out-smooth, ease),
+    transform 0.15s var(--ease-out-back, ease);
+  transform: translateX(-4px);
 }
 
 .commit:hover .goto-button,
 .commit:hover .open-commit-info-button {
   opacity: 1;
+  transform: translateX(0);
 }
 
 .goto-button:focus-within,
 .open-commit-info-button:focus-within {
   opacity: 1;
+  transform: translateX(0);
 }
 
 .stable-commit-metadata {
