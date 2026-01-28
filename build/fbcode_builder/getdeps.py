@@ -443,13 +443,25 @@ class InstallSysDepsCmd(ProjectCmdBase):
         elif manager == "deb":
             packages = sorted(set(all_packages["deb"]))
             if packages:
+                cmd_argss.append(["sed", "-i", "-e", "s/http:/https:/g", "/etc/apt/sources.list"])
                 cmd_argss.append(
                     [
                         "sudo",
                         "--preserve-env=http_proxy",
                         "apt-get",
+                        "update",
+                    ]
+                )
+                cmd_argss.append(
+                     [
+                        "sudo",
+                        "--preserve-env=http_proxy",
+                        "apt-get",
                         "install",
                         "-y",
+                        "--no-install-recommends",
+                        "-o",
+                        "Acquire::Retries=3",
                     ]
                     + packages
                 )
