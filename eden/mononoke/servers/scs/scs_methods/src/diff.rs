@@ -168,19 +168,28 @@ impl<'a> DiffRouter<'a> {
 
     /// Check if remote diff should be used for this repo
     fn should_use_remote_diff(&self, repo_name: &str) -> bool {
-        // Check if remote diff is enabled by command line flag
-        // Also check JustKnob for additional safety in production
+        // Gate 1: CLI flag must be enabled
         if !self.diff_options.diff_remotely {
             return false;
         }
 
-        // If config is present (e.g., for local testing), always use remote diff
-        if self.remote_diff_config.is_some() {
-            return true;
+        // Gate 2: Check JK - this is the kill switch in production
+        match justknobs::eval("scm/mononoke:remote_diff", None, Some(repo_name)) {
+            Ok(true) => {
+                // JK explicitly enabled - allow remote diff
+                true
+            }
+            Ok(false) => {
+                // JK explicitly disabled - this is the kill switch, always block
+                false
+            }
+            Err(_) => {
+                // JK not configured (e.g., in integration tests)
+                // Fall back to checking if remote_diff_config is present,
+                // which indicates explicit test configuration
+                self.remote_diff_config.is_some()
+            }
         }
-
-        // Otherwise check JustKnob for production use
-        justknobs::eval("scm/mononoke:remote_diff", None, Some(repo_name)).unwrap_or(false)
     }
 
     /// Generate headerless unified diff between two files.
@@ -589,5 +598,162 @@ impl<'a> DiffRouter<'a> {
                     first_added_line_number: lc.first_added_line_number.map(|n| n as usize),
                 }),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use environment::RemoteDiffOptions;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::with_just_knobs;
+    use maplit::hashmap;
+    use metaconfig_types::RemoteDiffConfig;
+    use mononoke_macros::mononoke;
+
+    use super::*;
+
+    fn create_diff_router<'a>(
+        fb: fbinit::FacebookInit,
+        diff_options: &'a RemoteDiffOptions,
+        remote_diff_config: Option<&'a RemoteDiffConfig>,
+    ) -> DiffRouter<'a> {
+        DiffRouter {
+            fb,
+            diff_options,
+            remote_diff_config,
+        }
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_cli_flag_disabled(fb: fbinit::FacebookInit) {
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: false,
+        };
+        let router = create_diff_router(fb, &diff_options, None);
+
+        // Even with JK enabled, should return false when CLI flag is off
+        let result = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:remote_diff".to_string() => KnobVal::Bool(true)
+            ]),
+            || router.should_use_remote_diff("test_repo"),
+        );
+        assert!(!result, "Should return false when CLI flag is disabled");
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_jk_disabled(fb: fbinit::FacebookInit) {
+        // When JK is disabled, should always return false even with CLI flag enabled
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let router = create_diff_router(fb, &diff_options, None);
+
+        let result = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:remote_diff".to_string() => KnobVal::Bool(false)
+            ]),
+            || router.should_use_remote_diff("test_repo"),
+        );
+        assert!(!result, "Should return false when JK is disabled");
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_jk_is_kill_switch_with_config(fb: fbinit::FacebookInit) {
+        // Even with remote_diff_config present, JK should still act as kill switch
+        // This was the bug - config presence used to bypass JK check
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let config = RemoteDiffConfig::HostPort("localhost:8080".to_string());
+        let router = create_diff_router(fb, &diff_options, Some(&config));
+
+        // With JK disabled, should return false even though config is present
+        let result = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:remote_diff".to_string() => KnobVal::Bool(false)
+            ]),
+            || router.should_use_remote_diff("test_repo"),
+        );
+        assert!(
+            !result,
+            "JK should act as kill switch even when remote_diff_config is present"
+        );
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_enabled(fb: fbinit::FacebookInit) {
+        // When both CLI flag and JK are enabled, should return true
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let router = create_diff_router(fb, &diff_options, None);
+
+        let result = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:remote_diff".to_string() => KnobVal::Bool(true)
+            ]),
+            || router.should_use_remote_diff("test_repo"),
+        );
+        assert!(
+            result,
+            "Should return true when both CLI flag and JK are enabled"
+        );
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_enabled_with_config(fb: fbinit::FacebookInit) {
+        // When both CLI flag and JK are enabled with config, should return true
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let config = RemoteDiffConfig::SmcTier("diff_service.smc".to_string());
+        let router = create_diff_router(fb, &diff_options, Some(&config));
+
+        let result = with_just_knobs(
+            JustKnobsInMemory::new(hashmap![
+                "scm/mononoke:remote_diff".to_string() => KnobVal::Bool(true)
+            ]),
+            || router.should_use_remote_diff("test_repo"),
+        );
+        assert!(
+            result,
+            "Should return true when CLI flag and JK are enabled with config"
+        );
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_jk_not_configured_no_config(fb: fbinit::FacebookInit) {
+        // When JK is not configured (returns error) and no config, should return false
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let router = create_diff_router(fb, &diff_options, None);
+
+        // Don't use with_just_knobs - JK will fail to evaluate
+        let result = router.should_use_remote_diff("test_repo");
+        assert!(
+            !result,
+            "Should return false when JK is not configured and no config is present"
+        );
+    }
+
+    #[mononoke::fbinit_test]
+    fn test_should_use_remote_diff_jk_not_configured_with_config(fb: fbinit::FacebookInit) {
+        // When JK is not configured (returns error) but config is present,
+        // should return true (test/dev mode fallback)
+        let diff_options = RemoteDiffOptions {
+            diff_remotely: true,
+        };
+        let config = RemoteDiffConfig::HostPort("localhost:8080".to_string());
+        let router = create_diff_router(fb, &diff_options, Some(&config));
+
+        // Don't use with_just_knobs - JK will fail to evaluate
+        let result = router.should_use_remote_diff("test_repo");
+        assert!(
+            result,
+            "Should return true when JK is not configured but config is present (test mode)"
+        );
     }
 }
