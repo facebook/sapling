@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+
+# pyre-unsafe
+
+
+"""Integration tests for the `eden du` (disk usage) command."""
+
+import json
+import subprocess
+from pathlib import Path
+
+from .lib import testcase
+
+
+@testcase.eden_repo_test
+class DiskUsageTest(testcase.EdenRepoTest):
+    """Test the `eden du` command for displaying disk usage information."""
+
+    def populate_repo(self) -> None:
+        # Create tracked files for basic tests
+        self.repo.write_file("hello.txt", "Hello, World!\n")
+        self.repo.write_file("subdir/file.txt", "File in subdirectory\n")
+        self.repo.write_file("original.txt", "Original content\n")
+        self.repo.commit("Initial commit.")
+
+    # Basic functionality tests
+    def test_du_basic_runs_successfully(self) -> None:
+        """Test that `eden du` runs without errors and produces expected sections."""
+        output = self.eden.run_cmd("du", self.mount)
+        # Verify all expected sections are present
+        self.assertIn("Mounts", output)
+        self.assertIn("Backing repos", output)
+        self.assertIn("Buck redirections", output)
+        self.assertIn("Summary", output)
+        # Verify the mount path is shown
+        self.assertIn(self.mount, output)
+
+    # JSON output tests
+    def test_du_json_output_has_valid_fields(self) -> None:
+        """Test that `eden du --json` produces valid JSON with correct field types and values."""
+        output = self.eden.run_cmd("du", "--json", self.mount)
+        data = json.loads(output)
+
+        # Verify all required fields exist and have valid integer values
+        required_fields = [
+            "materialized",
+            "ignored",
+            "redirection",
+            "backing",
+            "shared",
+            "fsck",
+        ]
+        for field in required_fields:
+            self.assertIn(field, data, f"JSON output missing required field: {field}")
+            self.assertIsInstance(
+                data[field], int, f"Field '{field}' should be an integer"
+            )
+            self.assertGreaterEqual(
+                data[field], 0, f"Field '{field}' should be non-negative"
+            )
+
+    # Fast mode tests
+    def test_du_fast_mode_shows_summary_only(self) -> None:
+        """Test that `eden du --fast` shows only summary without detailed section headers."""
+        output = self.eden.run_cmd("du", "--fast", self.mount)
+
+        # Fast mode should show Summary section
+        self.assertIn("Summary", output)
+
+        # Fast mode should NOT show the detailed "Mounts" section header
+        self.assertNotIn("Mounts\n", output)
+
+    def test_du_fast_and_json_report_same_base_values(self) -> None:
+        """Test that fast mode and JSON mode report consistent base information."""
+        fast_output = self.eden.run_cmd("du", "--fast", self.mount)
+        json_output = self.eden.run_cmd("du", "--json", self.mount)
+
+        data = json.loads(json_output)
+        self.assertIsInstance(data, dict)
+        self.assertIn("Summary", fast_output)
+
+    # Clean mode tests
+    def test_du_clean_mode_shows_warning_and_sections(self) -> None:
+        """Test that `eden du --clean` shows warnings and expected sections."""
+        result = self.eden.run_unchecked(
+            "du",
+            "--clean",
+            self.mount,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+
+        # Should show cleanup warning about ignored files
+        self.assertIn("WARNING", result.stdout)
+        self.assertIn("ignored", result.stdout.lower())
+        # Should show expected sections
+        self.assertIn("Mounts", result.stdout)
+        self.assertIn("Buck redirections", result.stdout)
+
+    def test_du_deep_clean_mode_shows_warning(self) -> None:
+        """Test that `eden du --deep-clean` shows the cleanup warning."""
+        result = self.eden.run_unchecked(
+            "du",
+            "--deep-clean",
+            self.mount,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+        self.assertIn("WARNING", result.stdout)
+
+    def test_du_clean_orphaned_mode_runs_successfully(self) -> None:
+        """Test that `eden du --clean-orphaned` runs without errors."""
+        output = self.eden.run_cmd("du", "--clean-orphaned", self.mount)
+        self.assertIn("Summary", output)
+
+    # Materialized files tests
+    def test_du_materialized_increases_after_file_modification(self) -> None:
+        """Test that materialized size increases after modifying a tracked file."""
+        before_output = self.eden.run_cmd("du", "--json", self.mount)
+        before_data = json.loads(before_output)
+        before_materialized = before_data["materialized"]
+
+        # Modify the tracked file to materialize it in the overlay
+        file_path = Path(self.mount) / "original.txt"
+        file_path.write_text("Modified content that is longer than before!\n")
+
+        after_output = self.eden.run_cmd("du", "--json", self.mount)
+        after_data = json.loads(after_output)
+        after_materialized = after_data["materialized"]
+
+        self.assertGreaterEqual(
+            after_materialized,
+            before_materialized,
+            "Materialized size should not decrease after file modification",
+        )
+
+    def test_du_ignored_counts_untracked_files(self) -> None:
+        """Test that ignored size includes untracked files."""
+        before_output = self.eden.run_cmd("du", "--json", self.mount)
+        before_data = json.loads(before_output)
+        before_ignored = before_data["ignored"]
+
+        # Create a new untracked file
+        new_file = Path(self.mount) / "new_untracked_file.txt"
+        new_file.write_text("This is an untracked file with some content!\n")
+
+        after_output = self.eden.run_cmd("du", "--json", self.mount)
+        after_data = json.loads(after_output)
+        after_ignored = after_data["ignored"]
+
+        self.assertGreaterEqual(
+            after_ignored,
+            before_ignored,
+            "Ignored size should not decrease after creating untracked file",
+        )
+
+    def test_du_materialized_increases_with_new_directory(self) -> None:
+        """Test that materialized size accounts for new directories."""
+        before_output = self.eden.run_cmd("du", "--json", self.mount)
+        before_data = json.loads(before_output)
+        before_materialized = before_data["materialized"]
+
+        # Create a new directory and file
+        new_dir = Path(self.mount) / "new_subdir"
+        new_dir.mkdir(parents=True, exist_ok=True)
+        new_file = new_dir / "new_file.txt"
+        new_file.write_text("Content in new directory\n")
+
+        after_output = self.eden.run_cmd("du", "--json", self.mount)
+        after_data = json.loads(after_output)
+        after_materialized = after_data["materialized"]
+
+        self.assertGreaterEqual(
+            after_materialized,
+            before_materialized,
+            "Materialized size should not decrease after creating new directory",
+        )

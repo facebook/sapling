@@ -666,3 +666,13 @@ python_integration_test(
         "//eden/integration/lib:lib",
     ],
 )
+
+python_integration_test(
+    name = "du",
+    srcs = ["du_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
