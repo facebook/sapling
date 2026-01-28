@@ -122,6 +122,11 @@
   background-color: var(--selected-commit-background);
 }
 
+.commit-row-actioning {
+  outline: 1px solid var(--focus-border);
+  outline-offset: -1px;
+}
+
 .commit-tree-root {
   min-width: 450px;
 }

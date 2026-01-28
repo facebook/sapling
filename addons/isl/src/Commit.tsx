@@ -18,9 +18,9 @@ import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue, useSetAtom} from 'jotai';
-import React, {memo} from 'react';
+import React, {memo, useEffect} from 'react';
 import {ComparisonType} from 'shared/Comparison';
-import {useContextMenu} from 'shared/ContextMenu';
+import {contextMenuState, useContextMenu} from 'shared/ContextMenu';
 import {MS_PER_DAY} from 'shared/constants';
 import {useAutofocusRef} from 'shared/hooks';
 import {notEmpty, nullthrows} from 'shared/utils';
@@ -70,7 +70,12 @@ import {CommitPreview, dagWithPreviews, uncommittedChangesWithPreviews} from './
 import {RelativeDate, relativeDate} from './relativeDate';
 import {repoRelativeCwd, useIsIrrelevantToCwd} from './repositoryData';
 import {isNarrowCommitTree} from './responsive';
-import {selectedCommitInfos, selectedCommits, useCommitCallbacks} from './selection';
+import {
+  actioningCommit,
+  selectedCommitInfos,
+  selectedCommits,
+  useCommitCallbacks,
+} from './selection';
 import {inMergeConflicts, mergeConflicts} from './serverAPIState';
 import {SmartActionsDropdown} from './smartActions/SmartActionsDropdown';
 import {SmartActionsMenu} from './smartActions/SmartActionsMenu';
@@ -155,6 +160,15 @@ export const Commit = memo(
 
     const {isSelected, onDoubleClickToShowDrawer} = useCommitCallbacks(commit);
     const actionsPrevented = previewPreventsActions(previewType);
+
+    const isActioning = useAtomValue(actioningCommit) === commit.hash;
+    const isContextMenuOpen = useAtomValue(contextMenuState) != null;
+
+    useEffect(() => {
+      if (!isContextMenuOpen && isActioning) {
+        writeAtom(actioningCommit, null);
+      }
+    }, [isContextMenuOpen, isActioning]);
 
     const inConflicts = useAtomValue(inMergeConflicts);
 
@@ -467,9 +481,18 @@ export const Commit = memo(
           (commit.successorInfo != null ? ' obsolete' : '') +
           (isIrrelevantToCwd ? ' irrelevant' : '')
         }
-        onContextMenu={contextMenu}
+        onContextMenu={e => {
+          writeAtom(actioningCommit, commit.hash);
+          contextMenu(e);
+        }}
         data-testid={`commit-${commit.hash}`}>
-        <div className={'commit-rows'} data-testid={isSelected ? 'selected-commit' : undefined}>
+        <div
+          className={
+            'commit-rows' +
+            (isSelected ? ' commit-row-selected' : '') +
+            (isActioning ? ' commit-row-actioning' : '')
+          }
+          data-testid={isSelected ? 'selected-commit' : undefined}>
           <DragToRebase
             className={
               'commit-details' + (previewType != null ? ` commit-preview-${previewType}` : '')
