@@ -361,7 +361,14 @@ def callcatch(ui, req, func):
     except socket.error as inst:
         ui.warn(_("%s\n") % inst.args[-1], error=_("abort"))
     except Exception as e:
-        if type(e).__name__ == "TApplicationException":
+        error_name = type(e).__name__
+        if error_name == "EdenError":
+            ui.warn(_("EdenError: %s\n") % e, error=_("abort"))
+            if edenf_faq := ui.config("edenfs", "faq-page"):
+                ui.warn(
+                    _("(see %s for more troubleshooting information)\n") % edenf_faq
+                )
+        elif error_name == "TApplicationException":
             ui.warn(_("ThriftError: %s\n") % e, error=_("abort"))
             ui.warn(_("(try 'eden doctor' to diagnose this issue)\n"))
         else:
