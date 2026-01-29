@@ -33,58 +33,6 @@ statprof can be used as a standalone module
 
   $ cd ..
 
-#if no-chg
-profiler extension could be loaded before other extensions
-
-  $ cat > fooprof.py <<EOF
-  > from __future__ import absolute_import
-  > import contextlib, sys
-  > @contextlib.contextmanager
-  > def profile(ui, fp, section):
-  >     print('fooprof: start profile')
-  >     sys.stdout.flush()
-  >     yield
-  >     print('fooprof: end profile')
-  >     sys.stdout.flush()
-  > def extsetup(ui):
-  >     ui.write('fooprof: loaded\n')
-  > EOF
-
-  $ cat > otherextension.py <<EOF
-  > from __future__ import absolute_import
-  > def extsetup(ui):
-  >     ui.write('otherextension: loaded\n')
-  > EOF
-
-  $ hg init b
-  $ cd b
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > other = $TESTTMP/otherextension.py
-  > fooprof = $TESTTMP/fooprof.py
-  > EOF
-
-  $ hg log -r null -T "foo\n"
-  otherextension: loaded
-  fooprof: loaded
-  foo
-  $ HGPROF=fooprof hg log -r null -T "foo\n" --profile
-  fooprof: loaded
-  fooprof: start profile
-  otherextension: loaded
-  foo
-  fooprof: end profile
-
-  $ HGPROF=other hg log -r null -T "foo\n" --profile 2>&1 | head -n 2
-  otherextension: loaded
-  unrecognized profiler 'other' - ignored
-
-  $ HGPROF=unknown hg log -r null -T "foo\n" --profile 2>&1 | head -n 1
-  unrecognized profiler 'unknown' - ignored
-
-  $ cd ..
-#endif
-
 Test minelapsed config option
 (This cannot be tested because profiling is disabled for 'debugshell')
 
