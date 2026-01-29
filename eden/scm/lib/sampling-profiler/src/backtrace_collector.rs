@@ -21,6 +21,9 @@ pub struct BacktraceCollector {
     /// memory fragmentation.
     traces: Vec<Id>,
 
+    /// (Cache) total number of backtraces.
+    backtrace_count: usize,
+
     /// (Cache) the frame names in the last backtrace.
     /// Most recent call last.
     last_backtrace: Vec<usize>,
@@ -84,6 +87,8 @@ impl BacktraceCollector {
             self.traces.push(TypedId::Frame(idx).into());
             self.last_backtrace.push(idx);
         }
+
+        self.backtrace_count += 1;
     }
 
     /// Iterate through all collected backtraces. Most recent call last.
@@ -130,7 +135,8 @@ impl BacktraceCollector {
     pub fn ascii_summary(&self) -> String {
         let mut tree = self.tree();
         let opts = AsciiOptions {
-            min_duration_to_hide: 1,
+            // Minimal resolution = 1% of duration.
+            min_duration_to_hide: (self.backtrace_count as u64 / 100).max(1),
             ..Default::default()
         };
         tree.merge_children(&opts, &|t| t.extra);
