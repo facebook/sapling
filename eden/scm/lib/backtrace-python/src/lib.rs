@@ -82,28 +82,39 @@ unsafe extern "C" {
 #[derive(Copy, Clone)]
 struct PythonSupplementalFrameResolver;
 
+/// Raw offsets.
+/// When IP (program counter) is `OFFSET.0 + Sapling_PyEvalFrame`,
+/// the `PyFrame` can be read at `OFFSET.1 + SP`.
+const OFFSET: Option<(usize, usize)> = {
+    if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+        // Sapling_PyEvalFrame(PyThreadState* tstate, PyFrameObject* f, int exc)
+        // (lldb) disassemble -n Sapling_PyEvalFrame
+        // `Sapling_PyEvalFrame:
+        //  <+0>:  pushq  %rbp
+        //  <+1>:  movq   %rsp, %rbp        ; FP
+        //  <+4>:  subq   $0x20, %rsp       ; SP = FP - 0x20
+        //  <+8>:  movq   %rdi, -0x18(%rbp)
+        //  <+12>: movq   %rsi, -0x10(%rbp) ; PyFrame f at FP - 0x10 or SP + 0x10
+        //  <+16>: movl   %edx, -0x4(%rbp)
+        //  <+19>: movq   -0x18(%rbp), %rdi
+        //  <+23>: movq   -0x10(%rbp), %rsi
+        //  <+27>: movl   -0x4(%rbp), %edx
+        //  <+30>: callq  0x8d4eb0       ; symbol stub for: _PyEval_EvalFrameDefault
+        //  <+35>: addq   $0x20, %rsp
+        //  <+39>: popq   %rbp
+        //  <+40>: retq
+        Some((35, 0x10))
+    } else {
+        // Unsupported OS or arch.
+        None
+    }
+};
+
 impl SupplementalFrameResolver for PythonSupplementalFrameResolver {
     fn maybe_extract_supplemental_info(&self, ip: usize, sp: usize) -> FrameDecision {
-        let offset: usize = if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-            // (lldb) disassemble -n Sapling_PyEvalFrame
-            // example`Sapling_PyEvalFrame:
-            // example[0x4be510] <+0>:  pushq  %rbp
-            // example[0x4be511] <+1>:  movq   %rsp, %rbp
-            // example[0x4be514] <+4>:  subq   $0x20, %rsp
-            // example[0x4be518] <+8>:  movq   %rdi, -0x18(%rbp)
-            // example[0x4be51c] <+12>: movq   %rsi, -0x10(%rbp)
-            // example[0x4be520] <+16>: movl   %edx, -0x4(%rbp)
-            // example[0x4be523] <+19>: movq   -0x18(%rbp), %rdi
-            // example[0x4be527] <+23>: movq   -0x10(%rbp), %rsi
-            // example[0x4be52b] <+27>: movl   -0x4(%rbp), %edx
-            // example[0x4be52e] <+30>: callq  0x8d4eb0       ; symbol stub for: _PyEval_EvalFrameDefault
-            // example[0x4be533] <+35>: addq   $0x20, %rsp
-            // example[0x4be537] <+39>: popq   %rbp
-            // example[0x4be538] <+40>: retq
-            35
-        } else {
-            // Unsupported OS or arch.
-            return FrameDecision::Keep;
+        let offset: usize = match OFFSET {
+            Some(o) => o.0,
+            None => return FrameDecision::Keep,
         };
         if ip != (Sapling_PyEvalFrame as usize + offset) {
             // Skip native python frames to reduce noise.
@@ -148,32 +159,15 @@ fn extract_python_supplemental_info(sp: usize) -> Option<SupplementalInfo> {
         return None;
     }
     // Read the `f` variable on stack. See sapling/dbgutil.py, D55728746
-    // Sapling_PyEvalFrame(PyThreadState* tstate, PyFrameObject* f, int exc)
-    //
-    // x64:
-    //   pushq  %rbp
-    //   movq   %rsp, %rbp        ; FP
-    //   subq   $0x20, %rsp       ; SP = FP - 0x20
-    //   movq   %rdi, -0x8(%rbp)
-    //   movq   %rsi, -0x10(%rbp) ; PyFrame f at FP - 0x10, or SP + 0x10
-    //   movl   %edx, -0x14(%rbp)
-    //   movq   -0x8(%rbp), %rdi
-    //   movq   -0x10(%rbp), %rsi
-    //   movl   -0x14(%rbp), %edx
-    //   callq  0x1034bddee       ; symbol stub for: _PyEval_EvalFrameDefault
-    //   addq   $0x20, %rsp
-    //   popq   %rbp
-    //   retq
-    if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-        let addr = sp.checked_add(0x10)?;
-        unsafe {
-            let frame_ptr: *const *mut libc::c_void = addr as *const _;
-            let frame: *mut libc::c_void = *frame_ptr;
-            let mut line_no: libc::c_int = 0;
-            let code = sapling_cext_evalframe_extract_code_lineno_from_frame(frame, &mut line_no);
-            if !code.is_null() {
-                return Some([code as usize, line_no as usize]);
-            }
+    let offset = OFFSET?.1;
+    let addr = sp.checked_add(offset)?;
+    unsafe {
+        let frame_ptr: *const *mut libc::c_void = addr as *const _;
+        let frame: *mut libc::c_void = *frame_ptr;
+        let mut line_no: libc::c_int = 0;
+        let code = sapling_cext_evalframe_extract_code_lineno_from_frame(frame, &mut line_no);
+        if !code.is_null() {
+            return Some([code as usize, line_no as usize]);
         }
     }
     None
