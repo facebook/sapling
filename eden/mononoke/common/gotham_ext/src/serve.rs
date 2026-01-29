@@ -36,6 +36,7 @@ pub async fn https<H>(
     capture_session_data: bool,
     connection_security_checker: ConnectionSecurityChecker,
     handler: MononokeHttpHandler<H>,
+    http1_vectored_writes: bool,
 ) -> Result<(), Error>
 where
     H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe,
@@ -75,8 +76,14 @@ where
 
             let ssl_socket = QuietShutdownStream::new(ssl_socket);
 
-            Http::new()
-                .serve_connection(ssl_socket, service)
+            let mut http = Http::new();
+            // Use vectored writes (Queue strategy) instead of Flatten to avoid
+            // copying all response body data into a single growing Vec<u8>.
+            // This prevents multi-GB allocations for large streaming responses.
+            if http1_vectored_writes {
+                http.http1_writev(true);
+            }
+            http.serve_connection(ssl_socket, service)
                 .await
                 .context("Error serving connection")?;
 
@@ -89,7 +96,11 @@ where
     }
 }
 
-pub async fn http<H>(listener: TcpListener, handler: MononokeHttpHandler<H>) -> Result<(), Error>
+pub async fn http<H>(
+    listener: TcpListener,
+    handler: MononokeHttpHandler<H>,
+    http1_vectored_writes: bool,
+) -> Result<(), Error>
 where
     H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe,
 {
@@ -107,8 +118,14 @@ where
 
             let socket = QuietShutdownStream::new(socket);
 
-            Http::new()
-                .serve_connection(socket, service)
+            let mut http = Http::new();
+            // Use vectored writes (Queue strategy) instead of Flatten to avoid
+            // copying all response body data into a single growing Vec<u8>.
+            // This prevents multi-GB allocations for large streaming responses.
+            if http1_vectored_writes {
+                http.http1_writev(true);
+            }
+            http.serve_connection(socket, service)
                 .await
                 .context("Error serving connection")?;
 

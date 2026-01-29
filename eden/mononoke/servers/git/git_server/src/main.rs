@@ -96,6 +96,11 @@ const SM_CLEANUP_TIMEOUT_SECS: u64 = 60;
 const PERF_LOG_SAMPLING: u64 = 1;
 /// Configerator path for rate limiting config
 const CONFIGERATOR_RATE_LIMITING_CONFIG: &str = "scm/mononoke/ratelimiting/git_ratelimits";
+/// JustKnob to enable vectored writes for HTTP/1.1 connections.
+/// When enabled, hyper uses Queue strategy (zero-copy) instead of Flatten
+/// (copies all body data into a single Vec), preventing multi-GB allocations
+/// for large streaming responses like git packfiles.
+const HTTP1_VECTORED_WRITES: &str = "scm/mononoke:http1_vectored_writes_enabled";
 // Used to determine how many entries are in cachelib's HashTable. A smaller
 // object size results in more entries and possibly higher idle memory usage.
 // More info: https://fburl.com/wiki/i78i3uzk
@@ -356,6 +361,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             }
 
             let serve = async move {
+                let http1_vectored_writes =
+                    justknobs::eval(HTTP1_VECTORED_WRITES, None, Some(SERVICE_NAME))
+                        .unwrap_or(false);
+
                 if let Some(tls_acceptor) = tls_acceptor {
                     let connection_security_checker =
                         ConnectionSecurityChecker::new(acl_provider.as_ref(), &common).await?;
@@ -366,10 +375,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         capture_session_data,
                         connection_security_checker,
                         handler,
+                        http1_vectored_writes,
                     )
                     .await
                 } else {
-                    serve::http(listener, handler).await
+                    serve::http(listener, handler, http1_vectored_writes).await
                 }
             };
             pin_mut!(serve);

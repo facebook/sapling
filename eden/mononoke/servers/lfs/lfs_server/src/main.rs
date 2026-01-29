@@ -362,10 +362,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         capture_session_data,
                         connection_security_checker,
                         handler,
+                        false, // http1_vectored_writes - not enabled for LFS server
                     )
                     .await
                 } else {
-                    serve::http(listener, handler).await
+                    serve::http(listener, handler, false).await
                 }
             };
             pin_mut!(serve);
