@@ -16,6 +16,9 @@ pub struct BacktraceCollector {
     /// Frame names.
     names: IndexSet<String>,
 
+    /// Footnote. Such as the sampling frequency.
+    footnote: String,
+
     /// See `Id` for details.
     /// This is a flat `Vec` instead of `Vec`s of `Vec`s as an attempt to reduce
     /// memory fragmentation.
@@ -131,6 +134,12 @@ impl BacktraceCollector {
         tree
     }
 
+    /// Set the footnote that might affect `ascii_summary`.
+    pub fn with_footnote(mut self, footnote: impl Into<String>) -> Self {
+        self.footnote = footnote.into();
+        self
+    }
+
     /// Render backtraces as an ASCII summary.
     pub fn ascii_summary(&self) -> String {
         let mut tree = self.tree();
@@ -170,7 +179,14 @@ impl BacktraceCollector {
         }
 
         let rows = tree.render_ascii_rows(&opts, &Desc);
-        rows.to_string()
+        let mut out = rows.to_string();
+        if !self.footnote.is_empty() {
+            out.push_str(&self.footnote);
+            if !out.ends_with('\n') {
+                out.push('\n');
+            }
+        }
+        out
     }
 }
 
@@ -240,7 +256,7 @@ mod tests {
 
     #[test]
     fn test_basic_ascii_summary() {
-        let mut collector = BacktraceCollector::default();
+        let mut collector = BacktraceCollector::default().with_footnote("This is a footnote.");
         for names in [
             &["_start", "main", "fib"][..],
             &["_start", "main", "fib", "fib1 at a.py:12"],
@@ -261,6 +277,7 @@ Start  Dur | Name               Source
     2   +1   \ fib1             a.py:12
     3   +1   \ fib2             a.py:22
     4   +1  \ output           
+This is a footnote.
 "#
         );
     }
