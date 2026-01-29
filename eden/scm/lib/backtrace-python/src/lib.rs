@@ -125,6 +125,26 @@ const OFFSET: Option<(usize, usize)> = {
         //  <+44>: add    sp, sp, #0x30
         //  <+48>: ret
         Some((40, 0x10))
+    } else if cfg!(all(
+        target_os = "windows",
+        target_env = "msvc",
+        target_arch = "x86_64"
+    )) {
+        //  <+0>:   pushq  %rbp
+        //  <+1>:   subq   $0x40, %rsp
+        //  <+5>:   leaq   0x40(%rsp), %rbp  ; FP = SP + 0x40
+        //  <+10>:  movl   %r8d, -0x4(%rbp)
+        //  <+14>:  movq   %rdx, -0x18(%rbp) ; rdx is 2nd arg. FP - 0x18 = SP + 0x28
+        //  <+18>:  movq   %rcx, -0x10(%rbp)
+        //  <+22>:  movl   -0x4(%rbp), %r8d
+        //  <+26>:  movq   -0x18(%rbp), %rdx
+        //  <+30>:  movq   -0x10(%rbp), %rcx
+        //  <+34>:  callq  *0x517e830(%rip)
+        //  <+40>:  nop
+        //  <+41>:  addq   $0x40, %rsp
+        //  <+45>:  popq   %rbp
+        //  <+46>:  retq
+        Some((40, 0x28))
     } else {
         // Unsupported OS or arch.
         None
