@@ -548,6 +548,11 @@ sort=inlinetime
 statformat=hotpath
 type=stat
 
+[profiling]
+always-on-enabled=True
+always-on-interval=1s
+logging-threshold=10s
+
 [smartlog]
 repos=remote/
 indentnonpublic=True
