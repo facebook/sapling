@@ -107,6 +107,24 @@ const OFFSET: Option<(usize, usize)> = {
         //  <+39>: popq   %rbp
         //  <+40>: retq
         Some((35, 0x10))
+    } else if cfg!(all(
+        any(target_os = "linux", target_os = "macos"),
+        target_arch = "aarch64"
+    )) {
+        //  <+0>:  sub    sp, sp, #0x30
+        //  <+4>:  stp    x29, x30, [sp, #0x20]
+        //  <+8>:  add    x29, sp, #0x20      ; FP (x29) = SP + 0x20
+        //  <+12>: stur   x0, [x29, #-0x8]    ; x0 is 1st arg (tstate)
+        //  <+16>: str    x1, [sp, #0x10]     ; x1 is 2nd arg (f), at SP + 0x10
+        //  <+20>: str    w2, [sp, #0xc]
+        //  <+24>: ldur   x0, [x29, #-0x8]
+        //  <+28>: ldr    x1, [sp, #0x10]
+        //  <+32>: ldr    w2, [sp, #0xc]
+        //  <+36>: bl     0x102c76340    ; symbol stub for: _PyEval_EvalFrameDefault
+        //  <+40>: ldp    x29, x30, [sp, #0x20]
+        //  <+44>: add    sp, sp, #0x30
+        //  <+48>: ret
+        Some((40, 0x10))
     } else {
         // Unsupported OS or arch.
         None
