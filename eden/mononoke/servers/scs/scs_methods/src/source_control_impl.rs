@@ -342,16 +342,15 @@ impl SourceControlServiceImpl {
                 .collect()
         };
 
-        // Get any valid CAT identieies.
+        // Get any valid CAT identities.
         let cats_identities: MononokeIdentitySet = req_ctxt
-            .identities_cats(
+            .authenticated_identities_cats_struct(
                 &self.identity,
                 &[EnvironmentType::PROD, EnvironmentType::CORP],
             )
             .map_err(scs_errors::internal_error)?
-            .entries()
             .into_iter()
-            .map(MononokeIdentity::from_identity_ref)
+            .map(MononokeIdentity::Authenticated)
             .collect();
 
         let client_info: Option<ClientInfo> = req_ctxt
