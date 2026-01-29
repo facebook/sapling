@@ -6545,6 +6545,7 @@ bool EdenServiceHandler::removeCancellationSource(uint64_t requestId) {
 
       bool success = elapsed <=
           std::chrono::seconds(CANCELLATION_VERIFICATION_THRESHOLD_SECONDS);
+
       if (success) {
         // Request cancelled within threshold - success
         XLOGF(
@@ -6566,6 +6567,12 @@ bool EdenServiceHandler::removeCancellationSource(uint64_t requestId) {
             CANCELLATION_VERIFICATION_THRESHOLD_SECONDS);
         server_->getStats()->increment(&ThriftStats::cancelRequestLongRunning);
       }
+
+      server_->getServerState()->getStructuredLogger()->logEvent(
+          ThriftCancellation{
+              it->second.endpoint,
+              success,
+              static_cast<double>(elapsed.count())});
     }
 
     lockedStore->erase(it);

@@ -322,6 +322,25 @@ struct FinishedCheckout : public EdenFSEvent {
   }
 };
 
+struct ThriftCancellation : public EdenFSEvent {
+  std::string endpoint;
+  bool success = false;
+  double duration = 0.0;
+
+  ThriftCancellation(std::string endpoint, bool success, double duration)
+      : endpoint(std::move(endpoint)), success(success), duration(duration) {}
+
+  void populate(DynamicEvent& event) const override {
+    event.addString("endpoint", endpoint);
+    event.addBool("success", success);
+    event.addDouble("duration", duration);
+  }
+
+  const char* getType() const override {
+    return "thrift_cancellation";
+  }
+};
+
 struct NFSStaleError : public EdenFSEvent {
   uint64_t ino;
 
