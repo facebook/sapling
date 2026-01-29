@@ -45,7 +45,8 @@ const SIG: i32 = libc::SIGPROF;
 
 impl Profiler {
     /// Start profiling the current thread with the given interval.
-    /// `backtrace_process_func` is a callback to receive resolved frames.
+    /// `backtrace_process_func` is a callback to receive resolved frames
+    /// (most recent call first).
     pub fn new(
         interval: Duration,
         backtrace_process_func: ResolvedBacktraceProcessFunc,
