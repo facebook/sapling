@@ -1036,10 +1036,7 @@ async fn verify_dir<'a>(
                         Some(Entry::Tree(target_dir_fsnode_id)),
                     ) = (&source_entry, target_fsnode)
                     {
-                        let target_dir = target_dir_fsnode_id.load(ctx, &target_blobstore).await?;
-                        if source_dir.summary().simple_format_sha256
-                            != target_dir.summary().simple_format_sha256
-                        {
+                        if *source_dir.id() != target_dir_fsnode_id {
                             let source_dir = source_dir.id().load(ctx, &source_blobstore).await?;
                             let (validation_errors, recurse) =
                                 verify_and_filter_out_submodule_changes(
