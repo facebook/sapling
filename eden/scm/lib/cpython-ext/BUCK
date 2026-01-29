@@ -23,6 +23,7 @@ rust_python_library(
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tracing",
+        "//eden/scm/lib/backtrace-ext:backtrace-ext",
         "//eden/scm/lib/types:types",
     ],
 )

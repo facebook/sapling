@@ -103,6 +103,8 @@ fn maybe_py_finalize() {
         // do not call `Py_Finalize` again.
         let enabled = ENABLED.fetch_and(false, Ordering::AcqRel);
         if enabled && ffi::Py_IsInitialized() != 0 {
+            // Disable backtrace-python features. Resolving Python frames is no longer safe.
+            backtrace_ext::set_supplemental_frame_resolver(None);
             info_span!("Finalize Python").in_scope(|| {
                 ffi::PyGILState_Ensure();
                 ffi::Py_Finalize();
