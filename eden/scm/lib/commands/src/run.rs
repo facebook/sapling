@@ -226,6 +226,7 @@ fn dispatch_command(
     exiting_via_signal: Arc<AtomicBool>,
 ) -> i32 {
     log_repo_path_and_exe_version(dispatcher.repo());
+    let scoped_profiler = global_profiler::setup_profiling(dispatcher.config()).unwrap_or(None);
 
     if let Some(repo) = dispatcher.repo() {
         tracing::info!(target: "symlink_info",
@@ -311,6 +312,8 @@ fn dispatch_command(
                 // reflects what the user actually typed (we muck with the args in Rust
                 // dispatch).
                 let mut interp = HgPython::new(dispatcher.orig_args());
+                // Resolve Python frames on supported platforms.
+                backtrace_python::init();
                 if dispatcher.global_opts().trace {
                     // Error is not fatal.
                     let _ = interp.setup_tracing("*".into());
@@ -379,6 +382,7 @@ fn dispatch_command(
         }
     }
 
+    drop(scoped_profiler);
     if let Err(err) = log_perftrace(io, config, start_time) {
         tracing::error!(?err, "error logging perftrace");
     }
