@@ -53,7 +53,7 @@ impl SupportedInfo {
 
     fn new() -> Self {
         Self {
-            os_arch: cfg!(all(target_os = "linux", target_arch = "x86_64")),
+            os_arch: OFFSET.is_some(),
             c_evalframe: unsafe { sapling_cext_evalframe_resolve_frame_is_supported() } != 0,
         }
     }
@@ -86,7 +86,10 @@ struct PythonSupplementalFrameResolver;
 /// When IP (program counter) is `OFFSET.0 + Sapling_PyEvalFrame`,
 /// the `PyFrame` can be read at `OFFSET.1 + SP`.
 const OFFSET: Option<(usize, usize)> = {
-    if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+    if cfg!(all(
+        any(target_os = "linux", target_os = "macos"),
+        target_arch = "x86_64"
+    )) {
         // Sapling_PyEvalFrame(PyThreadState* tstate, PyFrameObject* f, int exc)
         // (lldb) disassemble -n Sapling_PyEvalFrame
         // `Sapling_PyEvalFrame:
