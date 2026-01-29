@@ -169,6 +169,7 @@ members = [
   "lib/sampling",
   "lib/sampling-profiler",
   "lib/sampling-profiler/examples",
+  "lib/sampling-profiler/global-profiler",
   "lib/sparse",
   "lib/spawn-ext",
   "lib/status",
