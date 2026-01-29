@@ -35,6 +35,7 @@ import {EducationInfoTip} from './Education';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {Internal} from './Internal';
 import {SubmitSelectionButton} from './SubmitSelectionButton';
+import {SubmitSingleCommitButton} from './SubmitSingleCommitButton';
 import {getSuggestedRebaseOperation, suggestedRebaseDestinations} from './SuggestedRebase';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
@@ -436,8 +437,10 @@ export const Commit = memo(
     }
 
     if (!isPublic && !actionsPrevented && commit.isDot && !inConflicts) {
+      commitActions.push(<SubmitSingleCommitButton key="submit" />);
       commitActions.push(<UncommitButton key="uncommit" />);
     }
+
     if (!isPublic && !actionsPrevented && commit.isDot && !isObsoleted && !inConflicts) {
       commitActions.push(
         <SplitButton icon key="split" trackerEventName="SplitOpenFromHeadCommit" commit={commit} />,

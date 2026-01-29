@@ -152,6 +152,7 @@ export type TrackEventName =
   | 'SplitOpenFromHeadCommit'
   | 'SplitOpenFromSmartActions'
   | 'SplitOpenRangeSelector'
+  | 'SubmitSingleCommit'
   | 'AISplitButtonClick'
   | 'SuccessionsDetected'
   | 'BuggySuccessionDetected'
