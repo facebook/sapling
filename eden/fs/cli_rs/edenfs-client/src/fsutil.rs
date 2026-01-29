@@ -69,7 +69,7 @@ fn parse_handler_output(output: &str) -> Result<Vec<FileHandleEntry>, HandleErro
                     process_name: caps["process_name"].to_string(),
                     process_id: caps["pid"].to_string(),
                     resource_type: caps["resource_type"].to_string(),
-                    path: caps["path"].trim().to_string(), // Trim because handle ends somes lines with \r\r\n and lines() only removes \r\n
+                    path: caps["path"].trim().to_string(), // Trim because handle ends some lines with \r\r\n and lines() only removes \r\n
                     kill_order: get_kill_order(&caps["process_name"]),
                 };
                 ret.push(new_elem);

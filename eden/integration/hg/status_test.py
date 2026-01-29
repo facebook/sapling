@@ -595,16 +595,16 @@ class StatusTest(EdenHgTestCase):
             await self.counter_check(client, miss_cnt=1, hit_cnt=num_requests - 1)
 
     async def test_status_cache_expire_blocking_setValue(self) -> None:
-        await self.status_cache_expire_blocing_common("setValue")
+        await self.status_cache_expire_blocking_common("setValue")
 
     async def test_status_cache_expire_blocking_insert(self) -> None:
-        await self.status_cache_expire_blocing_common("insert")
+        await self.status_cache_expire_blocking_common("insert")
 
     async def test_status_cache_expire_blocking_dropPromise(self) -> None:
-        await self.status_cache_expire_blocing_common("dropPromise")
+        await self.status_cache_expire_blocking_common("dropPromise")
 
     # not suing subTest because it's hard to get threading working correctly with a clean env
-    async def status_cache_expire_blocing_common(self, check_point) -> None:
+    async def status_cache_expire_blocking_common(self, check_point) -> None:
         """Test that status requests with latest journal sequence number will
         invalidate the existing cache with old sequence number."""
 

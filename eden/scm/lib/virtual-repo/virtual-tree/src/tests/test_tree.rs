@@ -306,7 +306,7 @@ mod tests {
         // - 1/ and 2/ (same tree with "1/1, 2/1"). Uses #2.
         //
         // Root tree 2 should reuse the TreeId in Root tree 1 for:
-        // - 1/1: matches 3/ in Root tree 1. Resues #3.
+        // - 1/1: matches 3/ in Root tree 1. Reuses #3.
         // - 3/1: matches 1/1 in Root tree 1. Reuses #1.
         assert_eq!(
             root_tree.show_root_trees(),

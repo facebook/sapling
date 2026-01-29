@@ -54,7 +54,7 @@ class StaleInodeTestHgNFS(EdenHgTestCase):
         return parent_config
 
     # asserts the behavior that we do not unload inodes after rms. This behavior
-    # is garunteed by the NFS client as removes are just renames to a hidden file
+    # is guaranteed by the NFS client as removes are just renames to a hidden file
     # until all file handles are closed.
     def test_remove_file_no_update(self) -> None:
         bonjour = os.path.join(self.mount, "bonjour")

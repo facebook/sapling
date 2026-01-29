@@ -737,7 +737,7 @@ impl Eq for FullObjectEntry {}
 pub enum ChainBreakingMode {
     // Do not break any delta chains
     None,
-    // Break chains stochastically but deteministically with a random function
+    // Break chains stochastically but deterministically with a random function
     Stochastic,
     // Break any chain that goes beyond the configured threshold for trees and blobs respectively
     Threshold { tree: u64, blob: u64 },

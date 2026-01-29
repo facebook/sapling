@@ -159,7 +159,7 @@ impl Client for ThriftClient {
                     sample.add_int("success", true as i64);
                     sample.add_int("duration_us", stats.completion_time.as_micros() as i64);
                     sample.add_string("method", method.name());
-                    let _ = SCUBA_CLIENT.log(sample); // Ideally log should be infalliable, but since its not we don't want to fail the request
+                    let _ = SCUBA_CLIENT.log(sample); // Ideally log should be infallible, but since its not we don't want to fail the request
                     break Ok(result);
                 }
                 Err(e) => e,

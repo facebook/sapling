@@ -575,15 +575,15 @@ class PrjFSBuffer(testcase.EdenRepoTest):
         path: Path,
         expect_renamed: bool = False,
         expected_error_code: Optional[int] = None,
-        expected_error_code_when_eden_stoped: Optional[int] = None,
+        expected_error_code_when_eden_stopped: Optional[int] = None,
     ) -> None:
         self.check_projfs_rename_impl(path, expect_renamed, expected_error_code)
         self.eden.shutdown()
         self.check_projfs_rename_impl(
             path,
             expect_renamed,
-            expected_error_code=expected_error_code_when_eden_stoped,
-            is_eden_stoped=True,
+            expected_error_code=expected_error_code_when_eden_stopped,
+            is_eden_stopped=True,
         )
 
     def check_projfs_rename_impl(
@@ -591,10 +591,10 @@ class PrjFSBuffer(testcase.EdenRepoTest):
         path: Path,
         expect_renamed: bool = False,
         expected_error_code: Optional[int] = None,
-        is_eden_stoped: bool = False,
+        is_eden_stopped: bool = False,
     ) -> None:
         command = [FindExe.CHECK_WINDOWS_RENAME, "--path", str(path)]
-        if is_eden_stoped:
+        if is_eden_stopped:
             command.append("--checksparse")
         result = subprocess.run(command)
         print(f"exitcode: {result.returncode}")
@@ -613,7 +613,7 @@ class PrjFSBuffer(testcase.EdenRepoTest):
             hello_abs_path,
             expect_renamed=False,
             expected_error_code=1,
-            expected_error_code_when_eden_stoped=1,
+            expected_error_code_when_eden_stopped=1,
         )
 
     def test_rename_detection_virtual_dir_is_not_renamed(self) -> None:
@@ -624,7 +624,7 @@ class PrjFSBuffer(testcase.EdenRepoTest):
             somedir_abs_path,
             expect_renamed=False,
             expected_error_code=1,
-            expected_error_code_when_eden_stoped=4,
+            expected_error_code_when_eden_stopped=4,
         )
 
     def test_rename_detection_placeholder_file_is_not_renamed(self) -> None:
@@ -637,7 +637,7 @@ class PrjFSBuffer(testcase.EdenRepoTest):
             hello_abs_path,
             expect_renamed=False,
             expected_error_code=1,
-            expected_error_code_when_eden_stoped=1,
+            expected_error_code_when_eden_stopped=1,
         )
 
     def test_rename_detection_placeholder_dir_is_not_renamed(self) -> None:
@@ -656,7 +656,7 @@ class PrjFSBuffer(testcase.EdenRepoTest):
             somedir_abs_path,
             expect_renamed=False,
             expected_error_code=1,
-            expected_error_code_when_eden_stoped=4,
+            expected_error_code_when_eden_stopped=4,
         )
 
     def test_rename_detection_hydrated_placeholder_is_not_renamed(self) -> None:
@@ -675,7 +675,7 @@ class PrjFSBuffer(testcase.EdenRepoTest):
                 hello_abs_path,
                 expect_renamed=False,
                 expected_error_code=1,
-                expected_error_code_when_eden_stoped=1,
+                expected_error_code_when_eden_stopped=1,
             )
 
     def test_rename_detection_full_file_is_not_renamed(self) -> None:
@@ -694,7 +694,7 @@ class PrjFSBuffer(testcase.EdenRepoTest):
                 hello_abs_path,
                 expect_renamed=False,
                 expected_error_code=2,
-                expected_error_code_when_eden_stoped=4,
+                expected_error_code_when_eden_stopped=4,
             )
 
     def test_rename_detection_locally_created_file_is_not_renamed(self) -> None:
@@ -706,7 +706,7 @@ class PrjFSBuffer(testcase.EdenRepoTest):
             new_file_abs_path,
             expect_renamed=False,
             expected_error_code=2,
-            expected_error_code_when_eden_stoped=4,
+            expected_error_code_when_eden_stopped=4,
         )
 
     def test_rename_detection_full_dir_is_not_renamed(self) -> None:
@@ -719,7 +719,7 @@ class PrjFSBuffer(testcase.EdenRepoTest):
             anotherdir_abs_path,
             expect_renamed=False,
             expected_error_code=2,
-            expected_error_code_when_eden_stoped=4,
+            expected_error_code_when_eden_stopped=4,
         )
 
     def test_rename_detection_tombstone_is_not_renamed(self) -> None:
@@ -738,7 +738,7 @@ class PrjFSBuffer(testcase.EdenRepoTest):
             hello_abs_path,
             expect_renamed=False,
             expected_error_code=4,
-            is_eden_stoped=True,
+            is_eden_stopped=True,
         )
 
     def test_rename_detection_renamed_placeholder(self) -> None:
@@ -819,7 +819,7 @@ class PrjFSBuffer(testcase.EdenRepoTest):
             renamed_hi_abs_path,
             expect_renamed=False,
             expected_error_code=2,
-            expected_error_code_when_eden_stoped=4,
+            expected_error_code_when_eden_stopped=4,
         )
 
     def test_rename_detection_full_then_renamed(self) -> None:
@@ -841,7 +841,7 @@ class PrjFSBuffer(testcase.EdenRepoTest):
             renamed_hi_abs_path,
             expect_renamed=False,
             expected_error_code=2,
-            expected_error_code_when_eden_stoped=4,
+            expected_error_code_when_eden_stopped=4,
         )
 
     def test_rename_detection_locally_create_renamed(self) -> None:
@@ -857,5 +857,5 @@ class PrjFSBuffer(testcase.EdenRepoTest):
             renamed_file_abs_path,
             expect_renamed=False,
             expected_error_code=2,
-            expected_error_code_when_eden_stoped=4,
+            expected_error_code_when_eden_stopped=4,
         )

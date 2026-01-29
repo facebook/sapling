@@ -645,7 +645,7 @@ export type OperationProgress =
   | {id: string; kind: 'stdout'; message: string}
   // overally progress information, typically for a progress bar or progress not found directly in the stdout
   | {id: string; kind: 'progress'; progress: ProgressStep}
-  // progress information for a specific commit, shown inline. Null hash means to apply the messasge to all hashes. Null message means to clear the message.
+  // progress information for a specific commit, shown inline. Null hash means to apply the message to all hashes. Null message means to clear the message.
   | {id: string; kind: 'inlineProgress'; hash?: string; message?: string}
   | {id: string; kind: 'exit'; exitCode: number; timestamp: number}
   | {id: string; kind: 'error'; error: string}

@@ -169,7 +169,7 @@ class ChangesTestCommon(testBase):
             ]
             self.assertTrue(self.check_changes(changes.changes, expected_changes))
 
-    async def test_incude_exclude_file_same_suffix(self):
+    async def test_include_exclude_file_same_suffix(self):
         await self.repo_write_file("test_file.ext1", "", add=False)
         await self.repo_write_file("test_file.ext2", "", add=False)
         async with self.get_async_thrift_client() as client:
@@ -183,7 +183,7 @@ class ChangesTestCommon(testBase):
             )
             self.assertEqual(changes.changes, [])
 
-    async def test_incude_exclude_file_suffix(self):
+    async def test_include_exclude_file_suffix(self):
         await self.repo_write_file("test_file.ext1", "", add=False)
         await self.repo_write_file("test_file.ext2", "", add=False)
         async with self.get_async_thrift_client() as client:

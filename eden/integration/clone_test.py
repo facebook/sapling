@@ -185,7 +185,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.clone_rev(self.repo.get_head_hash(), self.repo.path, target)
         self.assertTrue(
             os.path.isfile(os.path.join(target, "hello")),
-            msg="clone should succeed with --snapshop arg.",
+            msg="clone should succeed with --snapshot arg.",
         )
 
     def test_clone_with_short_revision_cmd_line_arg_works(self) -> None:
@@ -195,7 +195,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.clone_rev(short, self.repo.path, target)
         self.assertTrue(
             os.path.isfile(os.path.join(target, "hello")),
-            msg="clone should succeed with short --snapshop arg.",
+            msg="clone should succeed with short --snapshot arg.",
         )
 
     def test_clone_to_non_empty_directory_fails(self) -> None:

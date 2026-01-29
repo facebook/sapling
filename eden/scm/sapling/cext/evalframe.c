@@ -105,7 +105,7 @@ void sapling_cext_evalframe_set_pass_through(unsigned char enabled) {
  * paused at the time of calling this function (e.g. running a signal handler
  * that calls this function, or paused by a debugger). So the frame and its
  * referred Python objects should not have refcount drop to 0 even if the
- * Python intepreter is running in another thread.
+ * Python interpreter is running in another thread.
  */
 EXPORT PyCodeObject* sapling_cext_evalframe_extract_code_lineno_from_frame(
     PyFrame* f,

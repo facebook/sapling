@@ -137,12 +137,12 @@ class HisteditTest(EdenHgTestCase):
         )
 
     def test_abort_after_merge_conflict(self) -> None:
-        self.write_file("will_have_confict.txt", "original\n")
-        self.hg("add", "will_have_confict.txt")
+        self.write_file("will_have_conflict.txt", "original\n")
+        self.hg("add", "will_have_conflict.txt")
         commit4 = self.repo.commit("commit4")
-        self.write_file("will_have_confict.txt", "1\n")
+        self.write_file("will_have_conflict.txt", "1\n")
         commit5 = self.repo.commit("commit5")
-        self.write_file("will_have_confict.txt", "2\n")
+        self.write_file("will_have_conflict.txt", "2\n")
         commit6 = self.repo.commit("commit6")
 
         histedit = HisteditCommand()
@@ -157,9 +157,9 @@ class HisteditTest(EdenHgTestCase):
             "Fix up the change (pick %s)\n" % commit6[:12]
         ) + "  (hg histedit --continue to resume)"
         self.assertIn(expected_msg, str(context.exception))
-        self.assert_status({"will_have_confict.txt": "M"}, op="histedit")
+        self.assert_status({"will_have_conflict.txt": "M"}, op="histedit")
         self.assert_file_regex(
-            "will_have_confict.txt",
+            "will_have_conflict.txt",
             """\
             <<<<<<< local.*
             original
@@ -170,7 +170,7 @@ class HisteditTest(EdenHgTestCase):
         )
 
         self.hg("histedit", "--abort")
-        self.assertEqual("2\n", self.read_file("will_have_confict.txt"))
+        self.assertEqual("2\n", self.read_file("will_have_conflict.txt"))
         self.assertListEqual(
             original_commits,
             self.repo.log(),

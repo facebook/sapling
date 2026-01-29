@@ -22,6 +22,8 @@ Smartlog provides you with a succinct view of your work by hiding all commits th
 
 Smartlog can be displayed via `sl smartlog` or by just running `sl`.
 
+<!-- typos:ignore-all -->
+
 <pre>
 <span class="shell-prompt">&gt;</span> <span class="shell-command">sl</span><br />
 o  <span class="sl-public">5abffb82f</span>  Wednesday at 09:39  <span class="sl-bookmark">remote/main</span><br />

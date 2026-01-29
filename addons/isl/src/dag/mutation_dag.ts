@@ -15,7 +15,7 @@ import {TextRenderer} from './renderText';
 /**
  * Dag that tracks predecessor -> successor relationships.
  *
- * Precessors are "ancestors". Successors are "descendants".
+ * Predecessors are "ancestors". Successors are "descendants".
  *
  * This graph can contain hashes that were deleted in the main graph.
  * For example, amend A1 to A2 to A3 to A4. This graph will keep all

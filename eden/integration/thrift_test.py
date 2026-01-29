@@ -490,7 +490,7 @@ class ThriftTest(testcase.EdenRepoTest):
         await self._ensure_blake3_computed()
         # Materialize a file in a nested directory
         self.mkdir("adir2")
-        # Resuse contents of "hello" file so we don't need to calculate another blake3
+        # Reuse contents of "hello" file so we don't need to calculate another blake3
         self.write_file("adir2/file", "hola\n")
 
         async with self.get_async_thrift_client() as client:

@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 # pyre-unsafe
+# @lint-ignore-every SPELL
 
 import logging
 import os
