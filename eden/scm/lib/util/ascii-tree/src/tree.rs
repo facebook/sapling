@@ -111,19 +111,22 @@ impl<T> Tree<T> {
             let child_ids: Vec<usize> = ctx.tree_spans[id].children.to_vec();
 
             for child_id in child_ids {
-                // Do not try to merge this child span if itself, or any of the
-                // grand children is interesting. But some of the grand children
-                // might be merged. So go visit them.
-                if ctx.tree_spans[child_id].is_interesting(ctx.opts, Some(&ctx.tree_spans[id])) || {
-                    ctx.tree_spans[child_id].children.iter().any(|&id| {
-                        ctx.tree_spans[id].is_interesting(ctx.opts, Some(&ctx.tree_spans[child_id]))
-                    })
-                } {
+                // Recurse into children, if self is interesting.
+                // If self is not interesting (will be hidden) then there is no point to process
+                // children.
+                if ctx.tree_spans[child_id].is_interesting(ctx.opts, Some(&ctx.tree_spans[id])) {
                     visit(ctx, child_id, extract_key);
+                }
+
+                // Skip merging if any child is interesting, to avoid accidentically hiding
+                // interesting children.
+                if ctx.tree_spans[child_id].children.iter().any(|&id| {
+                    ctx.tree_spans[id].is_interesting(ctx.opts, Some(&ctx.tree_spans[child_id]))
+                }) {
                     continue;
                 }
 
-                // Otherwise, attempt to merge from `child_id` to `existing_child_id`.
+                // Attempt to merge from `child_id` to `existing_child_id`.
                 if let Some(key) = (extract_key)(&ctx.tree_spans[child_id]) {
                     let existing_child_id = *key_to_id.entry(key).or_insert(child_id);
                     if existing_child_id != child_id {

@@ -80,15 +80,14 @@ Start Dur.ms | Name               Source
 "#
         );
 
-        // FIXME: work1 (100) is missing
         assert_eq!(
             render(200, true),
             r#"
 Start Dur.ms | Name               Source
     0   +600 | _start             ?
     0   +600 | main               ?
+    0   +400  \ work1 (2 times)   ?
   100   +200  \ work2             ?
-  300   +300  \ work1             ?
 "#
         );
 

@@ -1613,8 +1613,7 @@ Start Dur.ms | Name               Source
    10     +2   | foo              a.py line 10
    20     +2  \ foo               a.py line 10
    24    +10  \ foo               a.py line 10
-   26     +2   \ foo              a.py line 10
-   30     +2   \ foo              a.py line 10
+   26     +4   | foo (2 times)    a.py line 10
 
 "#
         );
@@ -1656,8 +1655,7 @@ Start Dur.ms | Name               Source
             r#"Process _ Thread _ Start Time _:
 Start Dur.ms | Name               Source
     2     +8 | foo                a.py line 10
-    4      0  \ bar               a.py line 20
-    6      0  \ bar               a.py line 20
+    4      0  \ bar (2 times)     a.py line 20
     8      0  \ foo               a.py line 10
 
 "#
