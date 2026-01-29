@@ -110,6 +110,8 @@ pub enum HttpScubaKey {
     XFBGitWrapper,
     /// Which kind of network type user came from. E.g. corp or vpnless.
     XFBNetworkType,
+    /// Whether identities contain AGENT taint
+    LikelyAgentic,
 }
 
 impl AsRef<str> for HttpScubaKey {
@@ -148,6 +150,7 @@ impl AsRef<str> for HttpScubaKey {
             XFBX2PAgentRequestId => "x_fb_x2pagent_request_id",
             XFBGitWrapper => "git_wrapper",
             XFBNetworkType => "fb_network_type",
+            LikelyAgentic => "likely_agentic",
         }
     }
 }
@@ -342,6 +345,7 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
 
         let fetch_cause = metadata.fetch_cause();
         scuba.add(HttpScubaKey::FetchCause, fetch_cause);
+        scuba.add(HttpScubaKey::LikelyAgentic, metadata.likely_an_agent());
 
         let fetch_from_cas_attempted = metadata.fetch_from_cas_attempted();
         scuba.add(

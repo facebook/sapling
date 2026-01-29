@@ -214,6 +214,7 @@ impl SourceControlServiceImpl {
         let session = self.create_session(req_ctxt).await?;
         let identities = session.metadata().identities();
         let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, identities)?;
+        scuba.add("likely_agentic", session.metadata().likely_an_agent());
         if let Some(client_info) = session.metadata().client_request_info() {
             scuba.add_client_request_info(client_info);
         }

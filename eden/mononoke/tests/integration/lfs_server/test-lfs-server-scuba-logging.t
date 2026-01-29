@@ -88,6 +88,7 @@
       "http_method": "POST",
       "http_path": "/lfs1/objects/batch",
       "http_user_agent": "Sapling/*", (glob)
+      "likely_agentic": "false",
       "method": "batch",
       "repository": "lfs1",
       "request_id": "*", (glob)
@@ -154,6 +155,7 @@
       "http_path": "/lfs1/upload/ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746/2048",
       "http_query": "server_hostname=*", (glob)
       "http_user_agent": "Sapling/*", (glob)
+      "likely_agentic": "false",
       "method": "upload",
       "repository": "lfs1",
       "request_id": "*", (glob)
@@ -224,6 +226,7 @@
       "http_method": "POST",
       "http_path": "/lfs1/objects/batch",
       "http_user_agent": "Sapling/*", (glob)
+      "likely_agentic": "false",
       "method": "batch",
       "repository": "lfs1",
       "request_id": "*", (glob)
@@ -296,6 +299,7 @@
       "http_path": "/lfs1/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d",
       "http_query": "server_hostname=*", (glob)
       "http_user_agent": "Sapling/*", (glob)
+      "likely_agentic": "false",
       "method": "download",
       "repository": "lfs1",
       "request_id": "*", (glob)
@@ -356,6 +360,7 @@
       "http_path": "/config",
       "http_query": "foo=bar",
       "http_user_agent": "curl/*", (glob)
+      "likely_agentic": "false",
       "request_id": "*", (glob)
       "sandcastle_alias": null,
       "sandcastle_nonce": null,

@@ -70,6 +70,7 @@
       "http_method": "GET",
       "http_path": "/health_check",
       "http_user_agent": "curl/*", (glob)
+      "likely_agentic": "false",
       "request_id": "*", (glob)
       "sandcastle_alias": null,
       "sandcastle_nonce": null,

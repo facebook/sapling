@@ -323,6 +323,8 @@ impl MononokeScubaSampleBuilder {
             metadata.fetch_from_cas_attempted(),
         );
 
+        self.inner.add("likely_agentic", metadata.likely_an_agent());
+
         self
     }
 

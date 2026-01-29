@@ -91,8 +91,11 @@
   $ wait_for_json_record_count "$SCUBA" 3
   $ format_single_scuba_sample < "$SCUBA" | grep agent
       "http_user_agent": "mononoke-lfs-server/0.1.0 git/2.15.1",
+      "likely_agentic": "false",
       "http_user_agent": "mononoke-lfs-server/0.1.0 git/2.15.1",
+      "likely_agentic": "false",
       "http_user_agent": "mononoke-lfs-server/0.1.0 git/2.15.1",
+      "likely_agentic": "false",
   $ truncate -s 0 "$log_proxy" "$log_upstream"
 
   $ hg debuglfsreceive a1bcf2c963bec9588aaa30bd33ef07873792e3ec241453b0d21635d1c4bbae84 2048 "$lfs_proxy" | sha256sum
