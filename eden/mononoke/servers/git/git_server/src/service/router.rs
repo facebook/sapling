@@ -34,6 +34,7 @@ use super::error_formatter::GitErrorFormatter;
 use crate::model::GitServerContext;
 use crate::model::RepositoryParams;
 use crate::model::ServiceType;
+use crate::profiling;
 use crate::read;
 use crate::service::slapi_compat::GitHandlers;
 use crate::write;
@@ -120,6 +121,18 @@ fn health_handler(state: State) -> Pin<Box<HandlerFuture>> {
     .boxed()
 }
 
+fn flamegraph_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
+    async move {
+        let (future_stats, res) = profiling::flamegraph(&mut state).timed().await;
+        ScubaMiddlewareState::try_set_future_stats(&mut state, &future_stats);
+        match res {
+            Ok(res) => Ok((state, res)),
+            Err(err) => build_error_response(err, state, &GitErrorFormatter),
+        }
+    }
+    .boxed()
+}
+
 pub async fn get_capabilities() -> Result<BytesBody<Bytes>, HttpError> {
     let caps: Vec<&str> = vec!["commit-cloud"];
     let caps_json = serde_json::to_vec(&caps).map_err(|e| {
@@ -167,6 +180,7 @@ pub fn build_router(context: GitServerContext) -> Router {
             .to(clone_bundle_handler);
 
         route.get("/health_check").to(health_handler);
+        route.get("/flamegraph").to(flamegraph_handler);
 
         // SLAPI endpoints
         route

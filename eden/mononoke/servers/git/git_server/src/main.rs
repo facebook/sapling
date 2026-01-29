@@ -83,6 +83,7 @@ mod command;
 mod errors;
 mod middleware;
 mod model;
+mod profiling;
 mod read;
 mod scuba;
 mod service;
@@ -265,7 +266,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let requests_counter = Arc::new(AtomicI64::new(0));
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     let server = {
-        cloned!(requests_counter);
+        cloned!(requests_counter, acl_provider);
         let tls_args = args.tls_params.clone();
         move |app: MononokeApp| async move {
             let repos_mgr = Arc::new(app.open_managed_repos(service_name).await?);
@@ -292,6 +293,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 enforce_authorization,
                 args.upstream_lfs_server,
                 tls_args,
+                acl_provider.clone(),
             );
 
             let router = build_router(git_server_context);

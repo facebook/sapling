@@ -52,6 +52,7 @@ rust_binary(
         "//eden/mononoke/cmdlib/sharding_ext:sharding_ext",
         "//eden/mononoke/common/connection_security_checker:connection_security_checker",
         "//eden/mononoke/common/gotham_ext:gotham_ext",
+        "//eden/mononoke/common/memory_profiling:memory_profiling",
         "//eden/mononoke/common/metadata:metadata",
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
         "//eden/mononoke/common/mononoke_repos:mononoke_repos",

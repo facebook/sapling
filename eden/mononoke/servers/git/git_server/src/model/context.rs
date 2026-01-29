@@ -18,6 +18,7 @@ use metaconfig_parser::RepoConfigs;
 use mononoke_api::Mononoke;
 use mononoke_app::args::TLSArgs;
 use mononoke_repos::MononokeRepos;
+use permission_checker::AclProvider;
 use repo_authorization::AuthorizationContext;
 use repo_permission_checker::RepoPermissionCheckerRef;
 use stats::prelude::*;
@@ -76,6 +77,8 @@ pub struct GitServerContextInner {
     upstream_lfs_server: Option<String>,
     // Used for communicating with upstream LFS server
     tls_args: Option<TLSArgs>,
+    // ACL provider for checking group membership
+    acl_provider: Arc<dyn AclProvider>,
 }
 
 impl GitServerContextInner {
@@ -84,12 +87,14 @@ impl GitServerContextInner {
         enforce_auth: bool,
         upstream_lfs_server: Option<String>,
         tls_args: Option<TLSArgs>,
+        acl_provider: Arc<dyn AclProvider>,
     ) -> Self {
         Self {
             repos,
             enforce_auth,
             upstream_lfs_server,
             tls_args,
+            acl_provider,
         }
     }
 }
@@ -105,14 +110,31 @@ impl GitServerContext {
         enforce_auth: bool,
         upstream_lfs_server: Option<String>,
         tls_args: Option<TLSArgs>,
+        acl_provider: Arc<dyn AclProvider>,
     ) -> Self {
         let inner = Arc::new(RwLock::new(GitServerContextInner::new(
             repos,
             enforce_auth,
             upstream_lfs_server,
             tls_args,
+            acl_provider,
         )));
         Self { inner }
+    }
+
+    pub fn acl_provider(&self) -> Arc<dyn AclProvider> {
+        self.inner
+            .read()
+            .expect("poisoned lock in git server context")
+            .acl_provider
+            .clone()
+    }
+
+    pub fn enforce_authorization(&self) -> bool {
+        self.inner
+            .read()
+            .expect("poisoned lock in git server context")
+            .enforce_auth
     }
 
     pub async fn request_context(
