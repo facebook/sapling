@@ -14,6 +14,7 @@ use crate::row::Alignment;
 use crate::row::Row;
 use crate::row::Rows;
 
+#[derive(Clone)]
 pub struct Tree<T>(pub Vec<TreeSpan<T>>);
 
 impl<T> Default for Tree<T> {

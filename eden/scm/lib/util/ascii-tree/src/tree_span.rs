@@ -7,6 +7,7 @@
 
 pub use crate::AsciiOptions;
 
+#[derive(Clone)]
 pub struct TreeSpan<T> {
     pub children: Vec<usize>,
 

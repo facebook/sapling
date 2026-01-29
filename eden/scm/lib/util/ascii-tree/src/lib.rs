@@ -56,11 +56,20 @@ mod tests {
             }
         }
 
-        let mut opts = AsciiOptions::default();
-        let desc = Desc;
-        let out = tree.render_ascii_rows(&opts, &desc);
+        let render = |min_duration_to_hide, merge| -> String {
+            let mut opts = AsciiOptions::default();
+            opts.min_duration_to_hide = min_duration_to_hide;
+            let mut tree = tree.clone();
+            if merge {
+                tree.merge_children(&opts, &|n| n.extra);
+            }
+            let desc = Desc;
+            let out = tree.render_ascii_rows(&opts, &desc);
+            format!("\n{}", out)
+        };
+
         assert_eq!(
-            format!("\n{}", out),
+            render(0, false),
             r#"
 Start Dur.ms | Name               Source
     0   +600 | _start             ?
@@ -71,11 +80,20 @@ Start Dur.ms | Name               Source
 "#
         );
 
-        opts.min_duration_to_hide = 400;
-        tree.merge_children(&opts, &|n| n.extra);
-        let out = tree.render_ascii_rows(&opts, &desc);
+        // FIXME: work1 (100) is missing
         assert_eq!(
-            format!("\n{}", out),
+            render(200, true),
+            r#"
+Start Dur.ms | Name               Source
+    0   +600 | _start             ?
+    0   +600 | main               ?
+  100   +200  \ work2             ?
+  300   +300  \ work1             ?
+"#
+        );
+
+        assert_eq!(
+            render(400, true),
             r#"
 Start Dur.ms | Name               Source
     0   +600 | _start             ?
