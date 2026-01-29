@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::LazyCell;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::env;
@@ -899,30 +900,44 @@ fn log_repo_path_and_exe_version(repo: Option<&Repo>) {
 }
 
 fn log_perftrace(io: &IO, config: &dyn Config, start_time: StartTime) -> Result<()> {
-    if let Some(threshold) = config.get_opt::<Duration>("tracing", "threshold")? {
-        let elapsed = start_time.elapsed();
-        if elapsed >= threshold {
-            let key = format!(
-                "flat/perftrace-{}-{}-{}",
-                hostname::get()?.to_string_lossy(),
-                std::process::id(),
-                (start_time.epoch_ms() as f64) / 1e3,
-            );
+    let elapsed = LazyCell::new(|| start_time.elapsed());
+    let mut outputs = Vec::new();
 
+    if let Some(threshold) = config.get_opt::<Duration>("tracing", "threshold")? {
+        if *elapsed >= threshold {
             let mut ascii_opts = tracing_collector::model::AsciiOptions::default();
 
             // Minimum resolution = 1% of duration.
             ascii_opts.min_duration_to_hide = (elapsed.as_micros() / 100) as u64;
 
-            let output = pytracing::DATA.lock().ascii(&ascii_opts);
-
-            tracing::info!(target: "perftrace", key=key.as_str(), payload=output.as_str(), "Trace:\n{}\n", output);
-            tracing::info!(target: "perftracekey", perftracekey=key.as_str(), "Trace key:\n{}\n", key);
-
+            let tracing_summary = pytracing::DATA.lock().ascii(&ascii_opts);
             if config.get_or_default("tracing", "stderr")? {
-                let _ = write!(io.error(), "{}\n", output);
+                let _ = write!(io.error(), "{}\n", &tracing_summary);
+            }
+            outputs.push(tracing_summary);
+        }
+    }
+
+    if let Some(threshold) = config.get_opt::<Duration>("profiling", "logging-threshold")? {
+        if *elapsed >= threshold {
+            let profiling_summaries = global_profiler::completed_profiling_summaries();
+            for summary in profiling_summaries {
+                outputs.push("\nNative profiling summary:".into());
+                outputs.push(summary);
             }
         }
+    }
+
+    if !outputs.is_empty() {
+        let key = format!(
+            "flat/perftrace-{}-{}-{}",
+            hostname::get()?.to_string_lossy(),
+            std::process::id(),
+            (start_time.epoch_ms() as f64) / 1e3,
+        );
+        let output = outputs.join("\n");
+        tracing::info!(target: "perftrace", key=key.as_str(), payload=output.as_str(), "Trace:\n{}\n", output);
+        tracing::info!(target: "perftracekey", perftracekey=key.as_str(), "Trace key:\n{}\n", key);
     }
 
     Ok(())
