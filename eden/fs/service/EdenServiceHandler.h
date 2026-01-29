@@ -60,11 +60,16 @@ struct RequestCancellationInfo {
   std::optional<folly::CancellationSource> cancellationSource;
   RequestStatus status = RequestStatus::ACTIVE;
   std::optional<std::chrono::steady_clock::time_point> cancellationRequestedAt;
+  std::string endpoint;
 
   RequestCancellationInfo() = default;
 
-  explicit RequestCancellationInfo(folly::CancellationSource source)
-      : cancellationSource(std::move(source)), status(RequestStatus::ACTIVE) {}
+  RequestCancellationInfo(
+      folly::CancellationSource source,
+      std::string endpoint)
+      : cancellationSource(std::move(source)),
+        status(RequestStatus::ACTIVE),
+        endpoint(std::move(endpoint)) {}
 
   static RequestCancellationInfo createUncancelable() {
     RequestCancellationInfo info;
@@ -533,7 +538,8 @@ class EdenServiceHandler
 
   void insertCancellationSource(
       uint64_t requestId,
-      folly::CancellationSource cancellationSource);
+      folly::CancellationSource cancellationSource,
+      std::string endpoint);
 
   std::optional<folly::CancellationSource> getCancellationSource(
       uint64_t requestId);

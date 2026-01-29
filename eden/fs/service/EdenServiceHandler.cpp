@@ -351,7 +351,9 @@ class ThriftRequestScope {
       if (enableCancellation) {
         folly::CancellationSource cancellationSource;
         handler->insertCancellationSource(
-            requestId_, std::move(cancellationSource));
+            requestId_,
+            std::move(cancellationSource),
+            std::string(sourceLocation_.function_name()));
       } else {
         handler->insertUncancelableRequest(requestId_);
       }
@@ -6506,10 +6508,13 @@ OptionalProcessId EdenServiceHandler::getAndRegisterClientPid(
 
 void EdenServiceHandler::insertCancellationSource(
     uint64_t requestId,
-    folly::CancellationSource cancellationSource) {
+    folly::CancellationSource cancellationSource,
+    std::string endpoint) {
   auto lockedStore = requestCancellationStore_.wlock();
   lockedStore->emplace(
-      requestId, RequestCancellationInfo(std::move(cancellationSource)));
+      requestId,
+      RequestCancellationInfo(
+          std::move(cancellationSource), std::move(endpoint)));
   XLOGF(
       DBG6,
       "Inserted cancellation source for request ID: {}. Total active: {}",
@@ -6538,13 +6543,15 @@ bool EdenServiceHandler::removeCancellationSource(uint64_t requestId) {
       auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
           now - it->second.cancellationRequestedAt.value());
 
-      if (elapsed <=
-          std::chrono::seconds(CANCELLATION_VERIFICATION_THRESHOLD_SECONDS)) {
+      bool success = elapsed <=
+          std::chrono::seconds(CANCELLATION_VERIFICATION_THRESHOLD_SECONDS);
+      if (success) {
         // Request cancelled within threshold - success
         XLOGF(
             DBG3,
-            "Request {} cancelled after {} ms (<= {} second)",
+            "Request {} ({}) cancelled after {} ms (<= {} second)",
             requestId,
+            it->second.endpoint,
             elapsed.count(),
             CANCELLATION_VERIFICATION_THRESHOLD_SECONDS);
         server_->getStats()->increment(&ThriftStats::cancelRequestSuccess);
@@ -6552,8 +6559,9 @@ bool EdenServiceHandler::removeCancellationSource(uint64_t requestId) {
         // Request took too long to cancel (>= threshold) - long running
         XLOGF(
             DBG3,
-            "Request {} cancelled after {} ms (> {} second)",
+            "Request {} ({}) cancelled after {} ms (> {} second)",
             requestId,
+            it->second.endpoint,
             elapsed.count(),
             CANCELLATION_VERIFICATION_THRESHOLD_SECONDS);
         server_->getStats()->increment(&ThriftStats::cancelRequestLongRunning);

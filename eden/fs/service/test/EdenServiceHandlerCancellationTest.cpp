@@ -33,7 +33,7 @@ TEST_F(EdenServiceHandlerCancellationTest, RequestCancellationStates) {
 
   folly::CancellationSource source;
   auto token = source.getToken();
-  RequestCancellationInfo cancelableInfo(std::move(source));
+  RequestCancellationInfo cancelableInfo(std::move(source), "testEndpoint");
 
   EXPECT_EQ(RequestStatus::ACTIVE, cancelableInfo.status);
   EXPECT_TRUE(cancelableInfo.isCancelable());
@@ -51,7 +51,7 @@ TEST_F(EdenServiceHandlerCancellationTest, NoCancellation) {
   folly::CancellationSource cancelSource;
   auto cancellationToken = cancelSource.getToken();
 
-  RequestCancellationInfo requestInfo(std::move(cancelSource));
+  RequestCancellationInfo requestInfo(std::move(cancelSource), "testEndpoint");
   EXPECT_EQ(RequestStatus::ACTIVE, requestInfo.status);
   EXPECT_TRUE(requestInfo.isCancelable());
 
@@ -79,7 +79,7 @@ TEST_F(EdenServiceHandlerCancellationTest, CancellationDuringOperation) {
   folly::CancellationSource cancelSource;
   auto cancellationToken = cancelSource.getToken();
 
-  RequestCancellationInfo requestInfo(std::move(cancelSource));
+  RequestCancellationInfo requestInfo(std::move(cancelSource), "testEndpoint");
 
   std::atomic<bool> operationCompleted{false};
   std::atomic<bool> operationCancelled{false};
@@ -117,7 +117,7 @@ TEST_F(EdenServiceHandlerCancellationTest, ConcurrentTokenUsage) {
 
   folly::CancellationSource source;
   auto token = source.getToken();
-  RequestCancellationInfo requestInfo(std::move(source));
+  RequestCancellationInfo requestInfo(std::move(source), "testEndpoint");
 
   std::vector<std::thread> threads;
   threads.reserve(numThreads);

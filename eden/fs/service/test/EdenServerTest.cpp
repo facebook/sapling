@@ -33,7 +33,8 @@ TEST_F(EdenServerTest, StopCancelsAllActiveRequests) {
       token, [&requestCancelled] { requestCancelled = true; });
 
   uint64_t testRequestId = 12345;
-  handler->insertCancellationSource(testRequestId, std::move(source));
+  handler->insertCancellationSource(
+      testRequestId, std::move(source), "test_endpoint");
 
   EXPECT_FALSE(requestCancelled);
   EXPECT_EQ(handler->getActiveCancellationSourceCount(), 1);
