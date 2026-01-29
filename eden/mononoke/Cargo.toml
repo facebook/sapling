@@ -120,6 +120,7 @@ members = [
   "common/lfs_protocol",
   "common/logger_ext",
   "common/memory",
+  "common/memory_profiling",
   "common/metadata",
   "common/mononoke_configs",
   "common/mononoke_macros",
