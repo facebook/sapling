@@ -593,6 +593,42 @@ class FilteredFSBasic(FilteredFSBase):
         )
         self.assertEqual(out, "")
 
+    def test_filtered_prefetch(self) -> None:
+        """Test that sl prefetch respects sparse filters.
+
+        When a user provides file patterns to prefetch, the sparse matcher
+        should be intersected with the user-provided matcher to ensure
+        files outside the sparse profile are not prefetched.
+        """
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+        self.enable_filters("filters/v1_filter1")
+        self.assert_filtered_and_unfiltered(
+            initial_files.difference(unfiltered_files), unfiltered_files
+        )
+
+        out = self.hg(
+            "prefetch",
+            "-r",
+            ".",
+            "adir/file",
+            "bdir/test.sh",
+            "--config",
+            "experimental.print-prefetch-count=true",
+        )
+        # FIXME: sl prefetch doesn't respect filters yet
+        # Only adir/file should be prefetched (1 file), bdir/test.sh is filtered
+        self.assertIn("has 2 files", out)
+
 
 @filteredhg_test
 # pyre-ignore[13]: T62487924

@@ -119,6 +119,13 @@ def wraprepo(repo) -> None:
                         walked = walkfiles(
                             repo, ctx, matcher, base, nodes_only=omit_paths
                         )
+                        if self.ui.configbool(
+                            "experimental", "print-prefetch-count", False
+                        ):
+                            self.ui.status(
+                                _("prefetch: rev %s has %d files\n")
+                                % (rev, len(walked))
+                            )
                         if type(files) is set:
                             files.update(walked)
                         elif type(files) is list:
