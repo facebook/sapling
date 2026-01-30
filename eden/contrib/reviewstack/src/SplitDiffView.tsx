@@ -18,6 +18,7 @@ import type {NewCommentInputCallbacks} from './recoil';
 import type {Hunk, ParsedDiff} from 'diff';
 import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
 
+import LargeDiffPlaceholder from './LargeDiffPlaceholder';
 import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffRow from './SplitDiffRow';
 import {diffAndTokenize, lineRange} from './diffServiceClient';
@@ -47,6 +48,12 @@ import {
 } from 'shared/createTokenizedIntralineDiff';
 import FilepathClassifier from 'shared/textmate-lib/FilepathClassifier';
 import {unwrap} from 'shared/utils';
+
+/**
+ * Threshold for the number of lines in a diff before we consider it "large"
+ * and defer rendering until the user explicitly requests it.
+ */
+const LARGE_DIFF_LINE_THRESHOLD = 500;
 
 /**
  * It is paramount that the blob for each non-null GitObjectID is written to
@@ -82,6 +89,17 @@ export default function SplitDiffView({
   isPullRequest,
 }: Props): React.ReactElement {
   const [open, setOpen] = useState(true);
+  const [diffLoaded, setDiffLoaded] = useState(false);
+
+  // Reset diffLoaded state when the file path changes
+  useEffect(() => {
+    setDiffLoaded(false);
+  }, [path]);
+
+  const handleLoadDiff = useCallback(() => {
+    setDiffLoaded(true);
+  }, []);
+
   const scopeName = getFilepathClassifier().findScopeNameForPath(path);
   const colorMode = useRecoilValue(primerColorMode);
   const loadable = useRecoilValueLoadable(
@@ -132,20 +150,29 @@ export default function SplitDiffView({
 
   const [{patch, tokenization}, allThreads, newCommentInputCallbacks, commitIDs] =
     loadable.getValue();
+
+  // Calculate total lines to determine if this is a large diff
+  const totalLines = patch.hunks.reduce((sum: number, hunk: Hunk) => sum + hunk.lines.length, 0);
+  const isLargeDiff = totalLines > LARGE_DIFF_LINE_THRESHOLD;
+  const shouldShowDiff = !isLargeDiff || diffLoaded;
+
   return (
     <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
       <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
-      {open && (
-        <SplitDiffViewTable
-          path={path}
-          beforeOID={before}
-          tokenization={tokenization}
-          patch={patch}
-          allThreads={allThreads}
-          newCommentInputCallbacks={newCommentInputCallbacks}
-          commitIDs={commitIDs}
-        />
-      )}
+      {open &&
+        (shouldShowDiff ? (
+          <SplitDiffViewTable
+            path={path}
+            beforeOID={before}
+            tokenization={tokenization}
+            patch={patch}
+            allThreads={allThreads}
+            newCommentInputCallbacks={newCommentInputCallbacks}
+            commitIDs={commitIDs}
+          />
+        ) : (
+          <LargeDiffPlaceholder onLoadDiff={handleLoadDiff} totalLines={totalLines} />
+        ))}
     </Box>
   );
 }

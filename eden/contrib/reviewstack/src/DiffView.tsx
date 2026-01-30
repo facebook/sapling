@@ -10,6 +10,7 @@ import type {GitObjectID} from './github/types';
 
 import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffView from './SplitDiffView';
+import hasBinaryContent from './hasBinaryContent';
 import joinPath from './joinPath';
 import {fileContentsDelta, gitHubBlob} from './recoil';
 import {Box, Text} from '@primer/react';
@@ -87,7 +88,8 @@ function AddedFile({
     case 'hasValue': {
       const {contents: blob} = blobLoadable;
       const {isBinary, text} = blob ?? {};
-      if (text != null && !isBinary) {
+      // Check both the isBinary flag and perform our own binary content detection
+      if (text != null && !isBinary && !hasBinaryContent(text)) {
         return (
           <SplitDiffView path={path} before={null} after={oid} isPullRequest={isPullRequest} />
         );
@@ -147,7 +149,13 @@ function ModifiedFile({modify, isPullRequest}: {modify: ModifyChange; isPullRequ
         return null;
       }
 
-      if (before.isBinary || after.isBinary) {
+      // Check both the isBinary flag and perform our own binary content detection
+      if (
+        before.isBinary ||
+        after.isBinary ||
+        hasBinaryContent(before.text) ||
+        hasBinaryContent(after.text)
+      ) {
         // We could handle this more gracefully, particularly if only one of the
         // two files is binary, but this is good enough, for now.
         return <BinaryFile path={path} />;
@@ -177,7 +185,6 @@ function ModifiedFile({modify, isPullRequest}: {modify: ModifyChange; isPullRequ
 }
 
 function BinaryFile({path}: {path: string}) {
-  // TODO(mbolin): Check for special binary headers, such as PNG.
   return (
     <Box>
       <FileHeader path={path} />
