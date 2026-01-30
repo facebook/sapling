@@ -19,7 +19,7 @@ use types::workingcopy_client::CheckoutMode;
 use types::workingcopy_client::FileStatus;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
-    let name = [package, "edenclient"].join(".");
+    let name = [package, "workingcopyclient"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<WorkingCopyClient>(py)?;
     #[cfg(feature = "eden")]
