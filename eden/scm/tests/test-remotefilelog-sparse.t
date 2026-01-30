@@ -77,3 +77,31 @@ pulled
   4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg rebase -d 'desc(a)' --keep
   rebasing 876b1317060d "x2" (remote/master master)
+
+# prefetch with explicit patterns should still respect sparse profile
+
+  $ cd ../
+  $ clone master shallow3 --noupdate
+  $ cd shallow3
+  $ printf "[extensions]\nsparse=\n" >> .hg/hgrc
+
+  $ hg sparse -I x
+  $ clearcache
+
+# Prefetch with explicit pattern that includes excluded file should not fetch excluded file
+  $ hg prefetch -r 'desc(x1)' -I x -I z
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
+
+# Verify that only x was fetched (since z is excluded by sparse profile)
+  $ hg cat -r 'desc(x1)' x
+  x
+
+# Now include z in sparse profile and prefetch again
+  $ hg sparse -I z
+  $ clearcache
+  $ hg prefetch -r 'desc(x1)' -I z
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
+
+# Verify z is now fetched
+  $ hg cat -r 'desc(x1)' z
+  z
