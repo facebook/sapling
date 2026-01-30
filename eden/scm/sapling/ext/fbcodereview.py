@@ -749,6 +749,9 @@ def uisetup(ui) -> None:
 
 def reposetup(ui, repo):
     repo.ui.setconfig(
+        "hooks", "pre-rebase.marklanded", _get_shell_cmd(ui, ["debugmarklanded"])
+    )
+    repo.ui.setconfig(
         "hooks", "post-pull.marklanded", _get_shell_cmd(ui, ["debugmarklanded"])
     )
 

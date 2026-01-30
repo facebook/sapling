@@ -135,7 +135,7 @@ Fake land the commit
 Rebasing the bookmark will make the draft commit disappear.
 
   $ cd ../client1
-  $ hg rebase -b foo -d 67d363c9001e1d7227625f0fa5004aca4572d214
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg rebase -b foo -d 67d363c9001e1d7227625f0fa5004aca4572d214
   note: not rebasing 00422fad0026 "draft-commit" (bar baz foo), already in destination as 441f69264760 "landed-commit"
   $ tglogp
   o  67d363c9001e public 'public-commit-2' bar baz foo
@@ -165,7 +165,7 @@ Sync in client2.   This will omit the bookmark because we don't have the landed 
   67d363c9001e not found, omitting foo bookmark
   $ tglogp
   @  df4f53cec30a public 'base'
-  
+
 Pull so that we have the public commit and sync again.
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg pull -q
