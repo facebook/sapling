@@ -189,6 +189,7 @@ function onMessage(port: MessagePort, {data}: {data: Message}) {
       updateRequestCount(1);
       fetchLineToPosition(params)
         .then(ok => port.postMessage({id, ok}))
+        .catch(err => port.postMessage({id, ok: null, err: String(err)}))
         .finally(() => updateRequestCount(-1));
       break;
     }
@@ -200,6 +201,7 @@ function onMessage(port: MessagePort, {data}: {data: Message}) {
           const colorMap = store.getColorMap();
           port.postMessage({id, ok: colorMap});
         })
+        .catch(err => port.postMessage({id, ok: null, err: String(err)}))
         .finally(() => updateRequestCount(-1));
       break;
     }
@@ -207,6 +209,7 @@ function onMessage(port: MessagePort, {data}: {data: Message}) {
       updateRequestCount(1);
       diffAndTokenize(params)
         .then(ok => port.postMessage({id, ok}))
+        .catch(err => port.postMessage({id, ok: null, err: String(err)}))
         .finally(() => updateRequestCount(-1));
       break;
     }
@@ -214,6 +217,7 @@ function onMessage(port: MessagePort, {data}: {data: Message}) {
       updateRequestCount(1);
       findlineRange(params)
         .then(ok => port.postMessage({id, ok}))
+        .catch(err => port.postMessage({id, ok: null, err: String(err)}))
         .finally(() => updateRequestCount(-1));
       break;
     }
@@ -227,6 +231,8 @@ function onMessage(port: MessagePort, {data}: {data: Message}) {
 globalScope.addEventListener('connect', (event: MessageEvent) => {
   const port = event.ports[0];
   port.onmessage = (event: MessageEvent) => onMessage(port, event);
+  // Explicitly start the port to ensure messages flow
+  port.start();
 });
 
 broadcastAvailability();

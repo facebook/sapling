@@ -120,6 +120,10 @@ class DiffServiceClient {
     this.worker.port.onmessage = event => this.onmessage(event);
     // eslint-disable-next-line no-console
     this.worker.port.onmessageerror = event => console.error(event);
+    // eslint-disable-next-line no-console
+    this.worker.onerror = event => console.error('SharedWorker error:', event);
+    // Explicitly start the port to ensure messages flow
+    this.worker.port.start();
   }
 
   private onmessage({data}: {data: Response}) {
@@ -230,8 +234,26 @@ class WorkerPool {
       return client.sendMessage(message);
     }
 
-    // No available workers! Add the message to the `pendingMessages` list and
-    // request a new one if we haven't hit MAX_SERVICE_WORKERS.
+    // No available workers! Create a new worker if we haven't hit MAX_SERVICE_WORKERS
+    // and send the message directly to it (don't wait for availability broadcast).
+    let workerIndex = this.workers.findIndex(val => val === undefined);
+    if (workerIndex === -1) {
+      const numWorkers = this.workers.length;
+      if (numWorkers < MAX_SERVICE_WORKERS) {
+        workerIndex = numWorkers;
+      }
+    }
+
+    if (workerIndex !== -1) {
+      const workerName = createWorkerName(workerIndex);
+      const client = new DiffServiceClient(workerName);
+      // Mark as available immediately since we're about to use it
+      this.workers[workerIndex] = {client, available: true};
+      // Send the actual message directly - don't wait for availability
+      return client.sendMessage(message);
+    }
+
+    // All workers are busy - queue the message and wait for one to become available
     let resolve: ((value: unknown) => void) | null = null;
     let reject: ((error: Error) => void) | null = null;
     const promise = new Promise((_resolve, _reject) => {
@@ -244,29 +266,6 @@ class WorkerPool {
       resolve: unwrap<(value: unknown) => void>(resolve),
       reject: unwrap<(error: Error) => void>(reject),
     });
-
-    // Note it is possible that there are "holes" in this.workers, e.g.,
-    // this.workers[0] is undefined while this.workers[1] is set, but
-    // unavailable. In all likelihood, this.workers[0] *exists*, but we have
-    // not received an initial availability update yet. If this is the case, we
-    // try to fill the hole before extending this.workers.
-    let workerIndex = this.workers.findIndex(val => val === undefined);
-    if (workerIndex === -1) {
-      const numWorkers = this.workers.length;
-      if (numWorkers < MAX_SERVICE_WORKERS) {
-        workerIndex = numWorkers;
-      }
-    }
-
-    if (workerIndex !== -1) {
-      const workerName = createWorkerName(workerIndex);
-      // While it is possible that the ServiceWorker was already created by
-      // another browser tab and is available, we initially assume it is
-      // unavailable, but we request it to publish its availability.
-      const client = new DiffServiceClient(workerName);
-      this.workers[workerIndex] = {client, available: false};
-      client.sendMessage({method: 'publishAvailability', id: -1, params: null});
-    }
 
     return promise;
   }
