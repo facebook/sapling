@@ -98,6 +98,7 @@ subcmd = pull_request_command.subcommand(
         ),
         ("m", "message", None, _("message describing changes to updated commits")),
         ("d", "draft", False, _("mark new pull requests as draft")),
+        ("o", "open", False, _("open pull requests in browser after creation")),
     ],
 )
 def submit_cmd(ui, repo, *args, **opts):

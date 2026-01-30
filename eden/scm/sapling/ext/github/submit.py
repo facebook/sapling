@@ -5,6 +5,7 @@
 
 import asyncio
 import os
+import webbrowser
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, List, Optional, Tuple
@@ -32,8 +33,11 @@ def submit(ui, repo, *args, **opts) -> int:
     """Create or update GitHub pull requests."""
     github_repo = check_github_repo(repo)
     is_draft = opts.get("draft")
+    is_open = opts.get("open")
     return asyncio.run(
-        update_commits_in_stack(ui, repo, github_repo, is_draft=is_draft)
+        update_commits_in_stack(
+            ui, repo, github_repo, is_draft=is_draft, is_open=is_open
+        )
     )
 
 
@@ -147,7 +151,7 @@ async def get_partitions(ui, repo, store, filter) -> List[List[CommitData]]:
 
 
 async def update_commits_in_stack(
-    ui, repo, github_repo: GitHubRepo, is_draft: bool
+    ui, repo, github_repo: GitHubRepo, is_draft: bool, is_open: bool = False
 ) -> int:
     parents = repo.dirstate.parents()
     if parents[0] == nullid:
@@ -261,6 +265,14 @@ async def update_commits_in_stack(
         )
     ]
     await asyncio.gather(*rewrite_and_archive_requests)
+
+    # Open pull requests in browser if --open flag was specified
+    if is_open:
+        pr_urls = [none_throws(p[0].pr).url for p in partitions if p[0].pr]
+        for url in pr_urls:
+            ui.status_err(_("opening %s\n") % url)
+            webbrowser.open(url)
+
     return 0
 
 
