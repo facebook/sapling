@@ -6,7 +6,7 @@
 # shallowrepo.py - shallow repository that uses remote filelogs
 
 
-from sapling import progress, util
+from sapling import match as matchmod, progress, util
 from sapling.i18n import _
 from sapling.scmutil import walkfiles
 
@@ -105,8 +105,16 @@ def wraprepo(repo) -> None:
             with progress.bar(self.ui, _("prefetching"), total=len(revs)) as prog:
                 for rev in sorted(revs):
                     ctx = self[rev]
-                    if matcher is None:
-                        matcher = self.maybesparsematch(rev)
+                    sparse_matcher = self.maybesparsematch(rev)
+                    current_matcher = matcher
+                    if current_matcher is None:
+                        current_matcher = sparse_matcher
+                    elif sparse_matcher is not None:
+                        # Intersect user-provided matcher with sparse matcher to
+                        # ensure we don't prefetch files outside the sparse profile
+                        current_matcher = matchmod.intersectmatchers(
+                            current_matcher, sparse_matcher
+                        )
 
                     # Don't store millions of file paths in memory unnecessarily. It maybe
                     # be useful to turn paths back on to get more info for file specific
@@ -117,7 +125,7 @@ def wraprepo(repo) -> None:
 
                     with progress.spinner(self.ui, _("computing files")):
                         walked = walkfiles(
-                            repo, ctx, matcher, base, nodes_only=omit_paths
+                            repo, ctx, current_matcher, base, nodes_only=omit_paths
                         )
                         if self.ui.configbool(
                             "experimental", "print-prefetch-count", False

@@ -616,6 +616,9 @@ class FilteredFSBasic(FilteredFSBase):
             initial_files.difference(unfiltered_files), unfiltered_files
         )
 
+        # prefetch should only prefetch unfiltered files
+        # When we request both filtered and unfiltered files, only unfiltered
+        # files should be included in the prefetch count
         out = self.hg(
             "prefetch",
             "-r",
@@ -625,9 +628,8 @@ class FilteredFSBasic(FilteredFSBase):
             "--config",
             "experimental.print-prefetch-count=true",
         )
-        # FIXME: sl prefetch doesn't respect filters yet
         # Only adir/file should be prefetched (1 file), bdir/test.sh is filtered
-        self.assertIn("has 2 files", out)
+        self.assertIn("has 1 files", out)
 
 
 @filteredhg_test
