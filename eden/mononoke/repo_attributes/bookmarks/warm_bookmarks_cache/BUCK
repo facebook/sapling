@@ -67,7 +67,6 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/repo_attributes/phases:phases",
         "//eden/mononoke/repo_attributes/repo_derived_data:repo_derived_data",
-        "//eden/mononoke/repo_attributes/repo_derivation_queues/if:derivation_queue_thrift-rust",
         "//eden/mononoke/repo_attributes/repo_derivation_queues:repo_derivation_queues",
         "//eden/mononoke/repo_attributes/repo_event_publisher:repo_event_publisher",
         "//eden/mononoke/repo_attributes/repo_identity:repo_identity",

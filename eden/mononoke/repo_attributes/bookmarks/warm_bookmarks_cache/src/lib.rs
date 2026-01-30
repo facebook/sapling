@@ -55,7 +55,6 @@ use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use context::SessionClass;
 use deleted_manifest::RootDeletedManifestV2Id;
-use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use enum_map::EnumMap;
 use fastlog::RootFastlog;
@@ -1773,6 +1772,7 @@ mod tests {
     use mononoke_macros::mononoke;
     use mononoke_types::RepositoryId;
     use repo_blobstore::RepoBlobstore;
+    use repo_derivation_queues::DerivationPriority;
     use repo_derived_data::RepoDerivedData;
     use repo_derived_data::RepoDerivedDataArc;
     use repo_derived_data::RepoDerivedDataRef;
