@@ -222,10 +222,15 @@ Cat with sparse profile filters to allowed paths:
   output/allowed/file2
 
   $ rm -rf output
-FIXME Empty profile should allow everything:
+Empty profile should allow everything:
   $ hg cat -R test:server3 -r $A --config clone.eden-sparse-filter.foo= --output 'output/%p' path:
-  [1]
   $ find output -type f | sort
+  output/allowed/file1
+  output/allowed/file2
+  output/blocked/secret
+  output/other
+  output/sparse/profile
+
 
 #if no-windows
 

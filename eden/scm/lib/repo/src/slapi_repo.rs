@@ -15,10 +15,8 @@ use async_runtime::block_on;
 use configloader::Config;
 use configloader::config::Options;
 use configloader::hg::RepoInfo;
-use configmodel::ConfigExt;
 use edenapi::SaplingRemoteApi;
 use edenapi::SaplingRemoteApiError;
-use manifest::Manifest;
 use manifest_tree::ReadTreeManifest;
 use manifest_tree::TreeManifest;
 use metalog::MetaLog;
@@ -173,7 +171,8 @@ impl SlapiRepo {
     /// it if present.
     pub fn sparse_matcher(&self, manifest: &TreeManifest) -> Result<Option<DynMatcher>> {
         match filters::util::filter_paths_from_config(self.config()) {
-            Some(paths) => {
+            // {""} is a special case that means "null filter" - match eveything.
+            Some(paths) if !paths.iter().all(|p| p.is_empty()) => {
                 let sparse_root = Root::from_bytes(
                     paths
                         .into_iter()
@@ -187,7 +186,7 @@ impl SlapiRepo {
 
                 Ok(Some(Arc::new(sparse_matcher)))
             }
-            None => Ok(None),
+            _ => Ok(None),
         }
     }
 }
