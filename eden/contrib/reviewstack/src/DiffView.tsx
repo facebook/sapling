@@ -13,21 +13,40 @@ import SplitDiffView from './SplitDiffView';
 import joinPath from './joinPath';
 import {fileContentsDelta, gitHubBlob} from './recoil';
 import {Box, Text} from '@primer/react';
+import React, {Suspense} from 'react';
 import {useRecoilValueLoadable} from 'recoil';
+
+function DiffFileSkeleton(): React.ReactElement {
+  return (
+    <Box
+      borderWidth="1px"
+      borderStyle="solid"
+      borderColor="border.default"
+      borderRadius={2}
+      padding={3}
+      bg="canvas.subtle">
+      <Box height={20} width="60%" bg="neutral.muted" borderRadius={1} />
+    </Box>
+  );
+}
 
 export default function DiffView({diff, isPullRequest}: {diff: Diff; isPullRequest: boolean}) {
   if (diff != null) {
-    const children = diff.map(change => {
-      const name = change.type === 'modify' ? change.before.name : change.entry.name;
-      const key = `${change.basePath}/${name}`;
-      return (
-        <Box key={key} paddingY={1}>
-          <ChangeDisplay change={change} isPullRequest={isPullRequest} />
-        </Box>
-      );
-    });
-    // TODO: Add SuspenseList here so files can load in individually
-    return <div>{children}</div>;
+    return (
+      <div>
+        {diff.map(change => {
+          const name = change.type === 'modify' ? change.before.name : change.entry.name;
+          const key = `${change.basePath}/${name}`;
+          return (
+            <Suspense key={key} fallback={<DiffFileSkeleton />}>
+              <Box paddingY={1}>
+                <ChangeDisplay change={change} isPullRequest={isPullRequest} />
+              </Box>
+            </Suspense>
+          );
+        })}
+      </div>
+    );
   } else {
     return <div>commit not found or fetched from GitHub URL above</div>;
   }

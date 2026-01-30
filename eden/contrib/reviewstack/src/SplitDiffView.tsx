@@ -107,6 +107,29 @@ export default function SplitDiffView({
     ]),
   );
 
+  if (loadable.state === 'loading') {
+    return (
+      <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
+        <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
+        <Box padding={3} display="flex" justifyContent="center" alignItems="center">
+          <Spinner size="small" />
+          <Text marginLeft={2}>Loading diff...</Text>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (loadable.state === 'hasError') {
+    return (
+      <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
+        <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
+        <Box padding={3} color="danger.fg">
+          <Text>Error loading diff: {loadable.contents?.message ?? 'Unknown error'}</Text>
+        </Box>
+      </Box>
+    );
+  }
+
   const [{patch, tokenization}, allThreads, newCommentInputCallbacks, commitIDs] =
     loadable.getValue();
   return (
@@ -238,7 +261,7 @@ const SplitDiffViewTable = React.memo(
     // in the file unless tokenization is non-null. Because we support so many
     // TextMate grammars, this should not be a major issue, in practice, though
     // it should be addressed.
-    if (tokenization.before != null) {
+    if (tokenization.before != null && hunks.length > 0) {
       const key = 's-last';
       const lastHunk = hunks[lastHunkIndex];
       if (expandedSeparators.has(key)) {
@@ -489,11 +512,7 @@ function HunkSeparator({
   const label = numLines === 1 ? 'Expand 1 line' : `Expand ${numLines} lines`;
   return (
     <SeparatorRow>
-      <Box
-        display="inline-block"
-        onClick={onExpand}
-        padding={1}
-        sx={{cursor: 'pointer', ':hover': {bg: 'accent.emphasis', color: 'fg.onEmphasis'}}}>
+      <Box display="inline-block" onClick={onExpand} padding={1} sx={HUNK_SEPARATOR_SX}>
         <UnfoldIcon size={16} />
         <Text paddingX={4}>{label}</Text>
         <UnfoldIcon size={16} />
@@ -501,6 +520,11 @@ function HunkSeparator({
     </SeparatorRow>
   );
 }
+
+const HUNK_SEPARATOR_SX = {
+  cursor: 'pointer',
+  ':hover': {bg: 'accent.emphasis', color: 'fg.onEmphasis'},
+};
 
 type ExpandingSeparatorProps = {
   path: string;
