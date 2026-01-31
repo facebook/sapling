@@ -65,14 +65,7 @@ function isTargetTextInputElement(event: KeyboardEvent): boolean {
   );
 }
 
-class CommandDispatcher<CommandName extends string> extends (
-  window as {
-    EventTarget: {
-      new (): EventTarget;
-      prototype: EventTarget;
-    };
-  }
-).EventTarget {
+class CommandDispatcher<CommandName extends string> extends EventTarget {
   private keydownListener: (event: KeyboardEvent) => void;
   constructor(commands: CommandMap<CommandName>) {
     super();
