@@ -22,6 +22,7 @@ use anyhow::Result;
 use atexit::AtExit;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use cpython_ext::PythonKeepAlive;
 use fs_err as fs;
 use parking_lot::RwLock;
 use sampling_profiler::BacktraceCollector;
@@ -101,6 +102,10 @@ pub fn setup_profiling(config: &dyn Config) -> Result<Option<AtExit>> {
         let collector = BACKTRACE_COLLECTOR.clone();
         *collector.write() = BacktraceCollector::default().with_footnote(footnote);
 
+        // Extend Python lifetime to include the profiler.
+        // `Py_Finalize` should be delayed after dropping the profiler.
+        let python_keepalvie = PythonKeepAlive::new();
+
         // Attempt to initialize (at least part of) Python frame resolution.
         // If the Python interpreter is not initialized, this will not completely
         // enable the Python frame resolution. Python initialization logic should
@@ -122,7 +127,10 @@ pub fn setup_profiling(config: &dyn Config) -> Result<Option<AtExit>> {
         )
         .ok();
 
-        let at_exit = AtExit::new(Box::new(move || teardown_profiling(output)));
+        let at_exit = AtExit::new(Box::new(move || {
+            teardown_profiling(output);
+            drop(python_keepalvie);
+        }));
         tracing::debug!(?interval, "Profiler initialized");
         Ok(Some(at_exit))
     })
