@@ -1093,6 +1093,31 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         poststats = os.stat(filepath)
         self.assertEqual(poststats.st_size, 7)
 
+    def test_open_unmaterialized_file(self) -> None:
+        filepath = self.get_path("dir/file2")
+        # Open the file for writing, which should truncate the file
+        with open(filepath, "w") as f:  # noqa
+            pass
+
+        # FIXME:  In sandcastle NFS, the file is not truncated as it should be
+        if "SANDCASTLE" in os.environ and self.use_nfs() and sys.platform == "linux":
+            self.assertEqual(self.read_file("dir/file2"), "new two")
+        else:
+            self.assertEqual(self.read_file("dir/file2"), "")
+
+    def test_open_materialized_file(self) -> None:
+        # This test is to demonstrate that materialized files behave as expected
+        filepath = self.get_path("dir/file2")
+        # Open the file for reading, which should materialize the file
+        with open(filepath, "r") as f:  # noqa
+            pass
+        # Open the file for writing, which should truncate the file
+        with open(filepath, "w") as f:  # noqa
+            pass
+
+        # The file should be truncated
+        self.assertEqual(self.read_file("dir/file2"), "")
+
     if sys.platform == "win32":  # noqa: C901
 
         async def _retry_update_after_failed_entry_cache_invalidation(
