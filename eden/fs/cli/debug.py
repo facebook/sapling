@@ -248,6 +248,24 @@ class ParentsCmd(Subcmd):
         return 0
 
 
+@debug_cmd("localreponame", "Print the basename of the EdenFS checkout path")
+class LocalRepoNameCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "path",
+            nargs=argparse.OPTIONAL,
+            help="The path to an EdenFS mount point. Uses `pwd` by default.",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        path = args.path or os.getcwd()
+        _, checkout, _ = cmd_util.find_checkout(args, path)
+        if checkout is None:
+            return 1
+        print(checkout.path.name, file=sys.stdout)
+        return 0
+
+
 @debug_cmd(
     "tree",
     "Show EdenFS's data for a source control tree. Fetches from ObjectStore "
