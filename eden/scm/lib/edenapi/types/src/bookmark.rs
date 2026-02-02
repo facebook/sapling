@@ -93,3 +93,25 @@ impl Default for Freshness {
         Self::MaybeStale
     }
 }
+
+/// Request to list bookmarks matching patterns (replacement for wireproto listkeyspatterns).
+/// Patterns can be exact bookmark names or prefix patterns ending with '*'.
+#[auto_wire]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct ListBookmarkPatternsRequest {
+    /// List of patterns to match. Patterns ending with '*' are treated as
+    /// prefix matches; all others are treated as exact matches.
+    #[id(0)]
+    pub patterns: Vec<String>,
+}
+
+/// Response for listing bookmarks matching patterns.
+#[auto_wire]
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
+pub struct ListBookmarkPatternsResponse {
+    #[id(0)]
+    #[no_default]
+    pub data: Result<BookmarkEntry, ServerError>,
+}

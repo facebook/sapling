@@ -127,6 +127,7 @@ pub enum SaplingRemoteApiMethod {
     GitObjects,
     History,
     LandStack,
+    ListBookmarkPatterns,
     Lookup,
     PathHistory,
     SetBookmark,
@@ -176,6 +177,7 @@ impl fmt::Display for SaplingRemoteApiMethod {
             Self::GitObjects => "git_objects",
             Self::History => "history",
             Self::LandStack => "land_stack",
+            Self::ListBookmarkPatterns => "list_bookmark_patterns",
             Self::Lookup => "lookup",
             Self::PathHistory => "path_history",
             Self::SetBookmark => "set_bookmark",
@@ -543,6 +545,7 @@ pub fn build_router<R: Send + Sync + Clone + 'static>(ctx: ServerContext<R>) -> 
         Handlers::setup::<history::HistoryHandler>(route);
         Handlers::setup::<land::LandStackHandler>(route);
         Handlers::setup::<legacy::StreamingCloneHandler>(route);
+        Handlers::setup::<legacy::ListBookmarkPatternsHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);
         Handlers::setup::<path_history::PathHistoryHandler>(route);
         Handlers::setup::<suffix_query::SuffixQueryHandler>(route);
