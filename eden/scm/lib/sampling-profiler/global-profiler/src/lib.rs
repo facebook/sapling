@@ -101,6 +101,12 @@ pub fn setup_profiling(config: &dyn Config) -> Result<Option<AtExit>> {
         let collector = BACKTRACE_COLLECTOR.clone();
         *collector.write() = BacktraceCollector::default().with_footnote(footnote);
 
+        // Attempt to initialize (at least part of) Python frame resolution.
+        // If the Python interpreter is not initialized, this will not completely
+        // enable the Python frame resolution. Python initialization logic should
+        // call this function again for full initialization.
+        backtrace_python::init();
+
         // Prepare `Profiler`. This starts profiling.
         *profiler = Profiler::new(
             interval,
