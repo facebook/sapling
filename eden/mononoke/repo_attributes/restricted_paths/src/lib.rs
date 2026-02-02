@@ -24,6 +24,7 @@ use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
 use scuba_ext::MononokeScubaSampleBuilder;
+use tokio::task;
 
 pub use crate::access_log::ACCESS_LOG_SCUBA_TABLE;
 pub use crate::access_log::has_access_to_acl;
@@ -250,19 +251,19 @@ pub fn spawn_log_restricted_path_access(
     restricted_paths: Arc<RestrictedPaths>,
     path: &mononoke_types::MPath,
     switch_value: &str,
-) -> Result<()> {
+) -> Result<Option<task::JoinHandle<Result<bool>>>> {
     // Early return if logging is disabled - avoid all overhead
     if !justknobs::eval(
         "scm/mononoke:enabled_restricted_paths_access_logging",
         None,
         Some(switch_value),
     )? {
-        return Ok(());
+        return Ok(None);
     }
 
     // Early return if config is empty - no restricted paths to check
     if restricted_paths.config().is_empty() {
-        return Ok(());
+        return Ok(None);
     }
 
     // Only spawn task if we're actually going to log something
@@ -270,14 +271,18 @@ pub fn spawn_log_restricted_path_access(
         let ctx_clone = ctx.clone();
 
         // Log asynchronously to avoid blocking the request
-        let _spawned_task = mononoke::spawn_task(async move {
-            let _is_restricted = restricted_paths
+        let spawned_task = mononoke::spawn_task(async move {
+            restricted_paths
                 .log_access_by_path_if_restricted(&ctx_clone, non_root_mpath)
-                .await;
+                .await
         });
+
+        // But return the task handle so callers can wait on the access check result
+        // if needed.
+        return Ok(Some(spawned_task));
     }
 
-    Ok(())
+    Ok(None)
 }
 
 /// Helper function to spawn an async task that logs access to restricted paths by manifest ID.
@@ -304,32 +309,34 @@ pub fn spawn_log_restricted_manifest_access(
     manifest_id: ManifestId,
     manifest_type: ManifestType,
     switch_value: &str,
-) -> Result<()> {
+) -> Result<Option<task::JoinHandle<Result<bool>>>> {
     // Early return if logging is disabled - avoid all overhead
     if !justknobs::eval(
         "scm/mononoke:enabled_restricted_paths_access_logging",
         None,
         Some(switch_value),
     )? {
-        return Ok(());
+        return Ok(None);
     }
 
     // Early return if config is empty - no restricted paths to check
     if restricted_paths.config().is_empty() {
-        return Ok(());
+        return Ok(None);
     }
 
     // Only spawn task if we're actually going to log something
     let ctx_clone = ctx.clone();
 
     // Log asynchronously to avoid blocking the request
-    let _spawned_task = mononoke::spawn_task(async move {
-        let _is_restricted = restricted_paths
+    let spawned_task = mononoke::spawn_task(async move {
+        restricted_paths
             .log_access_by_manifest_if_restricted(&ctx_clone, manifest_id, manifest_type)
-            .await;
+            .await
     });
 
-    Ok(())
+    // But return the task handle so callers can wait on the access check result
+    // if needed.
+    Ok(Some(spawned_task))
 }
 
 #[cfg(test)]
