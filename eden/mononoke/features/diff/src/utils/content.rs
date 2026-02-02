@@ -33,6 +33,11 @@ use crate::types::DiffSingleInput;
 use crate::types::LfsPointer;
 use crate::types::Repo;
 
+fn max_diff_file_size_mb() -> u64 {
+    justknobs::get_as::<u64>("scm/mononoke:max_diff_file_size_mb", None)
+        .expect("JustKnob scm/mononoke:max_diff_file_size_mb is not configured")
+}
+
 pub async fn load_content(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -61,10 +66,26 @@ pub async fn load_content(
         let blobstore = repo.repo_blobstore();
         let fetch_key = FetchKey::Canonical(content_id);
 
+        // Check file size before loading to prevent OOM on large files
+        let max_size_mb = max_diff_file_size_mb();
+        let max_size_bytes = max_size_mb * 1024 * 1024;
+
+        let metadata = filestore::get_metadata(&blobstore, ctx, &fetch_key)
+            .await
+            .map_err(|e| DiffError::internal(e.context("Failed to get file metadata")))?
+            .ok_or_else(|| DiffError::content_not_found(content_id))?;
+
+        if metadata.total_size > max_size_bytes {
+            return Err(DiffError::file_size_limit_exceeded(
+                content_id,
+                metadata.total_size,
+                max_size_bytes,
+            ));
+        }
+
         // We need to store the full file in memory, so there is no reason
         // to use the streaming version.
         // Use fetch_concat_opt which returns Option<Bytes> to properly handle missing content
-        // TODO: Add size limit to avoid overloading the service
         match filestore::fetch_concat_opt(blobstore, ctx, &fetch_key).await {
             Ok(Some(bytes)) => Ok(Some(bytes)),
             Ok(None) => {

@@ -20,6 +20,7 @@ rust_library(
         "fbsource//third-party/rust:regex",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
+        "//common/rust/shed/justknobs_stub:justknobs",
         "//eden/mononoke/blobstore:blobstore",
         "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/derived_data:unodes",

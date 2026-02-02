@@ -54,4 +54,15 @@ impl DiffError {
             size, max_size
         ))
     }
+
+    /// Create an error for when file size exceeds the diff limit
+    pub fn file_size_limit_exceeded(content_id: ContentId, size: u64, limit: u64) -> Self {
+        DiffError::InvalidInput(format!(
+            "File size {} bytes for content {} exceeds maximum allowed diff size of {} bytes ({} MB)",
+            size,
+            content_id,
+            limit,
+            limit / (1024 * 1024)
+        ))
+    }
 }
