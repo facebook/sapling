@@ -108,6 +108,27 @@ fn is_transient_diff_error<E: DiffServiceError>(e: &E) -> bool {
     }
 }
 
+fn convert_diff_service_error<E: DiffServiceError + std::fmt::Debug>(e: E) -> ServiceError {
+    match e.request_error() {
+        Some(req_err) => match &req_err.reason {
+            diff_service_if::RequestErrorReason::diff_error(diff_err) => {
+                scs_errors::invalid_request(format!("diff service: {}", diff_err.reason)).into()
+            }
+            diff_service_if::RequestErrorReason::transient_error(transient) => {
+                scs_errors::internal_error(format!(
+                    "diff service transient error: {}",
+                    transient.message
+                ))
+                .into()
+            }
+            diff_service_if::RequestErrorReason::UnknownField(_) => {
+                scs_errors::internal_error(format!("diff service error: {:#?}", e)).into()
+            }
+        },
+        None => scs_errors::internal_error(format!("diff service error: {:#?}", e)).into(),
+    }
+}
+
 /// Router for diff operations that can use either local mononoke_api
 /// or remote diff_service based on command line args and JustKnobs configuration.
 pub struct DiffRouter<'a> {
@@ -297,7 +318,7 @@ impl<'a> DiffRouter<'a> {
         .max_attempts(DIFF_SERVICE_MAX_RETRY_ATTEMPTS)
         .retry_if(|_attempt, e| is_transient_diff_error(e))
         .await
-        .map_err(|e| scs_errors::internal_error(format!("diff service error: {:#?}", e)))?;
+        .map_err(convert_diff_service_error)?;
 
         let (response, mut stream) = result;
 
@@ -417,7 +438,7 @@ impl<'a> DiffRouter<'a> {
         .max_attempts(DIFF_SERVICE_MAX_RETRY_ATTEMPTS)
         .retry_if(|_attempt, e| is_transient_diff_error(e))
         .await
-        .map_err(|e| scs_errors::internal_error(format!("diff service error: {:#?}", e)))?;
+        .map_err(convert_diff_service_error)?;
 
         let (response, mut stream) = result;
         let mut raw_diff = Vec::new();
@@ -485,7 +506,7 @@ impl<'a> DiffRouter<'a> {
         .max_attempts(DIFF_SERVICE_MAX_RETRY_ATTEMPTS)
         .retry_if(|_attempt, e| is_transient_diff_error(e))
         .await
-        .map_err(|e| scs_errors::internal_error(format!("diff service error: {:#?}", e)))?;
+        .map_err(convert_diff_service_error)?;
 
         // Convert the diff_service_if enums to mononoke_api enums
         let convert_file_type = |ft: Option<diff_service_if::DiffFileType>| -> Result<
