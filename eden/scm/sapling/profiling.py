@@ -209,12 +209,14 @@ class profile:
         self._started = time.time()
         proffn = None
         profiler = self._ui.config(self._section, "type")
+        if profiler == "noop":
+            return
         if profiler not in ("ls", "stat", "flame"):
             # try load profiler from extension with the same name
             proffn = _loadprofiler(self._ui, profiler)
             if proffn is None:
                 self._ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
-                profiler = "stat"
+                profiler = "noop"
 
         self._fp = io.StringIO()
 
