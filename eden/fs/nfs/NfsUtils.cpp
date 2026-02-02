@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/nfs/NfsUtils.h"
+#include "eden/fs/utils/Clock.h"
 
 namespace facebook::eden {
 uint32_t getEffectiveAccessRights(
@@ -44,6 +45,40 @@ uint32_t getEffectiveAccessRights(
   }
 
   return desiredAccess & expandedAccessBits;
+}
+
+std::optional<struct timespec> makeTimespec(auto& time, const Clock& clock) {
+  switch (time.tag) {
+    case time_how::DONT_CHANGE:
+      return std::nullopt;
+    case time_how::SET_TO_CLIENT_TIME:
+      return std::optional(nfsTimeToTimespec(std::get<nfstime3>(time.v)));
+    case time_how::SET_TO_SERVER_TIME:
+      return std::optional(clock.getRealtime());
+    default:
+      return std::nullopt;
+  }
+}
+
+DesiredMetadata sattr3ToDesiredMetadata(
+    const struct sattr3& attr,
+    const Clock& clock) {
+  DesiredMetadata desired;
+  if (std::holds_alternative<uint64_t>(attr.size.v)) {
+    desired.size = std::get<uint64_t>(attr.size.v);
+  }
+  if (std::holds_alternative<uint32_t>(attr.mode.v)) {
+    desired.mode = std::get<uint32_t>(attr.mode.v);
+  }
+  if (std::holds_alternative<uint32_t>(attr.uid.v)) {
+    desired.uid = std::get<uint32_t>(attr.uid.v);
+  }
+  if (std::holds_alternative<uint32_t>(attr.gid.v)) {
+    desired.gid = std::get<uint32_t>(attr.gid.v);
+  }
+  desired.atime = makeTimespec(attr.atime, clock);
+  desired.mtime = makeTimespec(attr.mtime, clock);
+  return desired;
 }
 
 } // namespace facebook::eden

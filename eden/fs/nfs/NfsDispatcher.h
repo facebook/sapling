@@ -181,6 +181,7 @@ class NfsDispatcher {
       InodeNumber dir,
       PathComponent name,
       mode_t mode,
+      createhow3 how,
       const ObjectFetchContextPtr& context) = 0;
 
   /**

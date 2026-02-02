@@ -57,6 +57,7 @@ class NfsDispatcherImpl : public NfsDispatcher {
       InodeNumber ino,
       PathComponent name,
       mode_t mode,
+      createhow3 how,
       const ObjectFetchContextPtr& context) override;
 
   ImmediateFuture<NfsDispatcher::MkdirRes> mkdir(

@@ -794,10 +794,13 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::create(
   auto mode = S_IFREG | setMode3ToMode(attr.mode);
 
   return extractPathComponent(std::move(args.where.name))
-      .thenValue([this, ino = args.where.dir.ino, mode, &context](
-                     PathComponent&& name) {
+      .thenValue([this,
+                  ino = args.where.dir.ino,
+                  mode,
+                  how = args.how,
+                  &context](PathComponent&& name) {
         return dispatcher_->create(
-            ino, std::move(name), mode, context.getObjectFetchContext());
+            ino, std::move(name), mode, how, context.getObjectFetchContext());
       })
       .thenTry([ser = std::move(ser),
                 createmode = args.how.tag,

@@ -12,6 +12,7 @@
 #include <folly/portability/SysStat.h>
 #include "eden/common/utils/DirType.h"
 #include "eden/common/utils/Throw.h"
+#include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/nfs/NfsdRpc.h"
 
 namespace facebook::eden {
@@ -221,5 +222,11 @@ inline post_op_attr statToPostOpAttr(const folly::Try<struct stat>& stat) {
 uint32_t getEffectiveAccessRights(
     const struct stat& stat,
     uint32_t desiredAccess);
+
+std::optional<struct timespec> makeTimespec(auto& time, const Clock& clock);
+
+DesiredMetadata sattr3ToDesiredMetadata(
+    const struct sattr3& attr,
+    const Clock& clock);
 
 } // namespace facebook::eden

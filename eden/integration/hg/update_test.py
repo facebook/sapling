@@ -978,6 +978,8 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
     commit3: str
     # pyre-fixme[13]: Attribute `commit4` is never initialized.
     commit4: str
+    # pyre-fixme[13]: Attribute `file2Stat` is never initialized.
+    file2Stat: os.stat_result
     enable_fault_injection: bool = True
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
@@ -1001,6 +1003,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
 
         repo.update(self.commit1)
         repo.write_file("dir/file2", "new two")
+        self.file2Stat = os.stat(repo.get_path("dir/file2"))
         self.commit4 = repo.commit("Change file2")
 
     def _populate_kernel_caches(self) -> None:
@@ -1099,11 +1102,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         with open(filepath, "w") as f:  # noqa
             pass
 
-        # FIXME:  In sandcastle NFS, the file is not truncated as it should be
-        if "SANDCASTLE" in os.environ and self.use_nfs() and sys.platform == "linux":
-            self.assertEqual(self.read_file("dir/file2"), "new two")
-        else:
-            self.assertEqual(self.read_file("dir/file2"), "")
+        self.assertEqual(self.read_file("dir/file2"), "")
 
     def test_open_materialized_file(self) -> None:
         # This test is to demonstrate that materialized files behave as expected
@@ -1117,6 +1116,29 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
 
         # The file should be truncated
         self.assertEqual(self.read_file("dir/file2"), "")
+
+    def test_open_unmaterialized_folder(self) -> None:
+        filepath = self.get_path("dir")
+        # Expect an error when trying to open a folder
+        if sys.platform == "win32":
+            with self.assertRaises(PermissionError):
+                with open(filepath, "w") as f:  # noqa
+                    pass
+        else:
+            with self.assertRaises(IsADirectoryError):
+                with open(filepath, "w") as f:  # noqa
+                    pass
+
+    def test_open_unmaterialized_touch(self) -> None:
+        # Test that running non-write operations does not truncate the file
+        filepath = self.get_path("dir/file2")
+        self.touch("dir/file2")
+        # Verify the file now exists and has the same contents
+        self.assertTrue(os.path.isfile(filepath))
+        self.assertEqual(self.read_file("dir/file2"), "new two")
+        postStat = os.stat(filepath)
+        self.assertEqual(postStat.st_size, self.file2Stat.st_size)
+        self.assertNotEqual(postStat.st_mtime, self.file2Stat.st_mtime)
 
     if sys.platform == "win32":  # noqa: C901
 

@@ -415,7 +415,6 @@ class EdenTestCase(EdenTestCaseBase):
         fullpath = self.get_path(path)
         self.make_parent_dir(fullpath)
         with open(fullpath, "wb") as f:
-            f.truncate()
             f.write(contents.encode())
         os.chmod(fullpath, mode)
 

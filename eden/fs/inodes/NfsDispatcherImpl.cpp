@@ -13,6 +13,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/nfs/NfsUtils.h"
@@ -168,6 +169,7 @@ ImmediateFuture<NfsDispatcher::CreateRes> NfsDispatcherImpl::create(
     InodeNumber dir,
     PathComponent name,
     mode_t mode,
+    createhow3 how,
     const ObjectFetchContextPtr& context) {
   // macOS loves sprinkling ._ (AppleDouble) files all over the repository,
   // prevent it from doing so.
@@ -178,24 +180,87 @@ ImmediateFuture<NfsDispatcher::CreateRes> NfsDispatcherImpl::create(
   }
   // Make sure that we're attempting to create a file.
   mode = S_IFREG | (0777 & mode);
-  return inodeMap_->lookupTreeInode(dir).thenValue(
-      [context = context.copy(), name = std::move(name), mode](
-          const TreeInodePtr& inode) {
-        // TODO(xavierd): Modify mknod to obtain the pre and post stat of the
-        // directory.
-        // Set dev to 0 as this is unused for a regular file.
-        auto newFile = inode->mknod(name, mode, 0, InvalidationRequired::No);
-        auto statFut = statHelper(newFile, context);
-        return std::move(statFut).thenValue(
-            [newFile = std::move(newFile)](struct stat&& stat) {
-              newFile->incFsRefcount();
-              return CreateRes{
-                  newFile->getNodeId(),
-                  std::move(stat),
-                  std::nullopt,
-                  std::nullopt};
-            });
+
+  DesiredMetadata desired;
+  if (how.tag == createmode3::UNCHECKED || how.tag == createmode3::GUARDED) {
+    // UNCHECKED and GUARDED mode contains a sattr3 attribute.
+    sattr3 obj_attributes = std::get<sattr3>(how.v);
+    // Create the desired metadata here to avoid potential use after free on the
+    // clock.
+    desired = sattr3ToDesiredMetadata(obj_attributes, getClock());
+    // When using an existing file, keep the current mode/gid/uid
+    desired.uid = std::nullopt;
+    desired.gid = std::nullopt;
+    desired.mode = std::nullopt;
+  } else {
+    // EXCLUSIVE mode contains a verf attribute instead of sattr3.
+    // EXCLUSIVE mode is not currently supported (Nfsd3 returns NFS3ERR_NOTSUPP
+    // for it), but check defensively to avoid std::bad_variant_access if called
+    // with an unsupported mode.
+    return makeImmediateFuture<NfsDispatcher::CreateRes>(
+        std::system_error(ENOTSUP, std::generic_category()));
+  }
+
+  return inodeMap_->lookupTreeInode(dir).thenValue([context = context.copy(),
+                                                    name = std::move(name),
+                                                    mode,
+                                                    tag = how.tag,
+                                                    desired =
+                                                        std::move(desired)](
+                                                       const TreeInodePtr&
+                                                           inode) {
+    // TODO(xavierd): Modify mknod to obtain the pre and post stat of the
+    // directory.
+    // Set dev to 0 as this is unused for a regular file.
+    try {
+      FileInodePtr newFile =
+          inode->mknod(name, mode, 0, InvalidationRequired::No);
+      auto statFut = statHelper(newFile, context);
+      return std::move(statFut).thenValue([newFile = std::move(newFile)](
+                                              struct stat&& stat) {
+        newFile->incFsRefcount();
+        return CreateRes{
+            newFile->getNodeId(), std::move(stat), std::nullopt, std::nullopt};
       });
+    } catch (const InodeError& e) {
+      if (e.code().value() == EEXIST && tag == createmode3::UNCHECKED) {
+        // File already exists, load the existing file, or
+        // error if it is a tree(via asFilePtr).
+        auto existing = inode->getOrLoadChild(name, context);
+        return std::move(existing).thenValue([desired,
+                                              name,
+                                              context = context.copy()](
+                                                 InodePtr&& fileInode) {
+          auto fileInodePtr = fileInode.asFilePtr();
+          XLOGF(
+              DBG1,
+              "Path {} already exists in unchecked create, loading existing file",
+              name);
+          if (desired.size.has_value()) {
+            XLOGF(
+                DBG1,
+                "Setting desired file attributes size: {}",
+                desired.size.value());
+          }
+          auto setAttrFut = fileInodePtr->setattr(desired, context);
+          return std::move(setAttrFut)
+              .thenValue([fileInodePtr =
+                              std::move(fileInodePtr)](struct stat&& stat) {
+                XLOGF(DBG1, "Updated file attributes: size {}", stat.st_size);
+                XLOGF(DBG1, "Updated file attributes: mode {}", stat.st_mode);
+                fileInodePtr->incFsRefcount();
+                return CreateRes{
+                    fileInodePtr->getNodeId(),
+                    std::move(stat),
+                    std::nullopt,
+                    std::nullopt};
+              });
+        });
+      } else {
+        throw;
+      }
+    }
+  });
 }
 
 ImmediateFuture<NfsDispatcher::MkdirRes> NfsDispatcherImpl::mkdir(
@@ -294,8 +359,8 @@ ImmediateFuture<NfsDispatcher::RmdirRes> NfsDispatcherImpl::rmdir(
        name = std::move(name)](const TreeInodePtr& inode) {
         return inode->rmdir(name, InvalidationRequired::No, context)
             .thenValue([](auto&&) {
-              // TODO(xavierd): Modify rmdir to obtain the pre and post stat of
-              // the directory.
+              // TODO(xavierd): Modify rmdir to obtain the pre and post stat
+              // of the directory.
               return NfsDispatcher::RmdirRes{std::nullopt, std::nullopt};
             });
       });
@@ -388,8 +453,8 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
       });
 #else
   // TODO: implement readdirplus on Windows.
-  // shouldn't be too hard, but left out for now since we don't use readdir plus
-  // in production.
+  // shouldn't be too hard, but left out for now since we don't use readdir
+  // plus in production.
   (void)dir;
   (void)offset;
   (void)count;
@@ -408,8 +473,8 @@ ImmediateFuture<struct statfs> NfsDispatcherImpl::statfs(
     InodeNumber /*dir*/,
     const ObjectFetchContextPtr& /*context*/) {
 #ifndef _WIN32
-  // See the comment in FuseDispatcherImpl::statfs for why we gather the statFs
-  // from the overlay.
+  // See the comment in FuseDispatcherImpl::statfs for why we gather the
+  // statFs from the overlay.
   return mount_->getOverlay()->statFs();
 #else
   // TODO: implement statfs on windows

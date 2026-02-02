@@ -137,10 +137,12 @@ cpp_library(
     name = "nfs_utils",
     srcs = ["NfsUtils.cpp"],
     headers = ["NfsUtils.h"],
+    deps = ["//eden/fs/utils:clock"],
     exported_deps = [
         ":nfsd_rpc",
         "//eden/common/utils:throw",
         "//eden/common/utils:utils",
+        "//eden/fs/inodes:inode_metadata",
         "//folly:try",
         "//folly:utility",
         "//folly/portability:sys_stat",
