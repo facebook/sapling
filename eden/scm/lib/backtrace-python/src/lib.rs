@@ -21,8 +21,10 @@ use backtrace_ext::SupplementalInfo;
 mod libpython_filter;
 
 /// Setup backtrace-ext to resolve Python frames on supported platforms.
-/// Python interpreter must be initialized at this time.
 /// This function is a no-op if the platform is not supported.
+///
+/// Calling this function when the Python interpreter is not initialized does
+/// not complete the initialization. Call again after Python initialization.
 pub fn init() {
     let is_supported = SUPPORTED_INFO.is_supported();
     if is_supported {
@@ -31,6 +33,7 @@ pub fn init() {
         static RESOLVER_THIN_REF: &&dyn SupplementalFrameResolver = &RESOLVER_FAT_REF;
         libpython_filter::init();
         backtrace_ext::set_supplemental_frame_resolver(Some(RESOLVER_THIN_REF));
+        // This function is a no-op if called before Python initialization.
         unsafe { sapling_cext_evalframe_set_pass_through(1) }
     }
 }

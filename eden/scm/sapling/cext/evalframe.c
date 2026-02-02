@@ -76,12 +76,17 @@ Sapling_PyEvalFrame(PyThreadState* tstate, PyFrame* f, int exc) {
  * Update the "EvalFrame" function to go through pass_through_eval_frame to
  * track Python function names in the native stack. Intended to be called by
  * cpython bindings in Rust.
+ *
+ * Note: calling this function when the Python interpreter is not initialized
+ * is a no-op.
  */
 void sapling_cext_evalframe_set_pass_through(unsigned char enabled) {
 #if HAS_SET_EVAL_FRAME_FUNC
-  _PyInterpreterState_SetEvalFrameFunc(
-      PyInterpreterState_Get(),
-      enabled ? Sapling_PyEvalFrame : _PyEval_EvalFrameDefault);
+  if (Py_IsInitialized()) {
+    _PyInterpreterState_SetEvalFrameFunc(
+        PyInterpreterState_Get(),
+        enabled ? Sapling_PyEvalFrame : _PyEval_EvalFrameDefault);
+  }
 #endif
 }
 
