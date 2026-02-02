@@ -1930,3 +1930,99 @@ async fn test_fold_commits_file_type_defaults_to_regular_for_new_file(
 
     Ok(())
 }
+
+#[mononoke::fbinit_test]
+async fn test_fold_commits_move_preserved_with_additional_changes(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    // Graph: A-B
+    // A has file `old_path`
+    // B moves (copies + deletes) `old_path` to `new_path`
+    // additional_changes: modify content of `new_path` WITHOUT copy_info
+    // Expected: After folding, `new_path` should still be marked as copied from `old_path`
+    //           (the move info should be preserved even when additional changes modify the file)
+    //
+    // This tests the bug fix for: when folding additional changes that modify a moved file,
+    // the move information was being lost because copy_chain.remove(&path) was called
+    // when copy_info was None. The fix preserves the copy chain for modifications.
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, commits) = init_repo(
+        &ctx,
+        r##"
+            A-B
+            # default_files: false
+            # modify: A old_path "original content\n"
+            # copy: B new_path "original content\n" A old_path
+            # delete: B old_path
+        "##,
+    )
+    .await?;
+
+    // Verify precondition: B has moved old_path to new_path
+    let b_ctx = repo.changeset(commits["B"]).await?.expect("B exists");
+    let new_path_copy_from = get_copy_from_path(&b_ctx, "new_path").await?;
+    assert_eq!(
+        new_path_copy_from,
+        Some(NonRootMPath::try_from("old_path")?),
+        "new_path should have copy_from old_path in B"
+    );
+
+    // Verify old_path is deleted in B
+    let old_path_in_b = b_ctx.path_with_content("old_path").await?.file().await?;
+    assert!(old_path_in_b.is_none(), "old_path should be deleted in B");
+
+    // Additional change: modify new_path content WITHOUT providing copy_info
+    // This simulates what happens when amending a commit with a move
+    let additional_changes = BTreeMap::from([(
+        MPath::try_from("new_path")?,
+        CreateChange::Tracked(
+            CreateChangeFile {
+                contents: CreateChangeFileContents::New {
+                    bytes: Bytes::from("modified content\n"),
+                },
+                file_type: Some(FileType::Regular),
+                git_lfs: None,
+            },
+            None, // No copy_info - this is just a content modification
+        ),
+    )]);
+
+    let folded = repo
+        .fold_commits(
+            commits["B"],
+            None,
+            Some(additional_changes),
+            None,
+            CreateChangesetChecks::check(),
+        )
+        .await?
+        .changeset_ctx;
+
+    // Verify: new_path should still have copy_from old_path (move preserved)
+    let folded_copy_from = get_copy_from_path(&folded, "new_path").await?;
+    assert_eq!(
+        folded_copy_from,
+        Some(NonRootMPath::try_from("old_path")?),
+        "new_path should STILL have copy_from old_path after additional changes - move info should be preserved"
+    );
+
+    // Verify: content was updated
+    let content = folded
+        .path_with_content("new_path")
+        .await?
+        .file()
+        .await?
+        .expect("new_path should exist")
+        .content_concat()
+        .await?;
+    assert_eq!(content, Bytes::from("modified content\n"));
+
+    // Verify: old_path is still deleted
+    let old_path_after = folded.path_with_content("old_path").await?.file().await?;
+    assert!(
+        old_path_after.is_none(),
+        "old_path should still be deleted after folding"
+    );
+
+    Ok(())
+}

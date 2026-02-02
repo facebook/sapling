@@ -816,10 +816,12 @@ impl<R: MononokeRepo> RepoContext<R> {
 
                                 copy_chain.insert(path.clone(), ultimate_src);
                             }
-                        } else {
-                            // No explicit copy_from, remove any previous copy chain info
-                            copy_chain.remove(&path);
                         }
+                        // Note: We intentionally do NOT remove from copy_chain when copy_info
+                        // is None. This preserves move/rename information when additional
+                        // changes modify a file that was previously moved. The copy chain
+                        // tracks the ultimate source of the file, and a content modification
+                        // should not erase that history.
 
                         // Insert and prune; file_type resolved later from stack or base
                         working_tree.insert_and_prune(mpath.clone(), Some(change.clone()));
