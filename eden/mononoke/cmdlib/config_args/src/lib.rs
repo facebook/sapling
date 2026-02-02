@@ -110,7 +110,7 @@ impl ConfigArgs {
                 fb,
                 true,
                 crypto_regex,
-                CONFIGERATOR_POLL_INTERVAL,
+                true,
                 CONFIGERATOR_REFRESH_TIMEOUT,
             )
         }
