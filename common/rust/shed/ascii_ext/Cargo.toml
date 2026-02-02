@@ -11,5 +11,5 @@ repository = "https://github.com/facebookexperimental/rust-shed"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-ascii = "1.0"
+ascii = "1.1.0"
 quickcheck = "1.0"

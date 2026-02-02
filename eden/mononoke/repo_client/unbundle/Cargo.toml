@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.98"
-ascii = "1.0"
+ascii = "1.1.0"
 backsyncer = { version = "0.1.0", path = "../../features/commit_rewriting/backsyncer" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }

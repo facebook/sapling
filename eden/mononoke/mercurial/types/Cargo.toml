@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.98"
-ascii = "1.0"
+ascii = "1.1.0"
 async-stream = "0.3"
 async-trait = "0.1.86"
 base64 = { version = "0.22.1", features = ["alloc"] }

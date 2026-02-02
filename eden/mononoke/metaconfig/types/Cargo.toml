@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0.98"
-ascii = "1.0"
+ascii = "1.1.0"
 bincode = { version = "2", features = ["serde"] }
 bookmarks_types = { version = "0.1.0", path = "../../repo_attributes/bookmarks/bookmarks_types" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }

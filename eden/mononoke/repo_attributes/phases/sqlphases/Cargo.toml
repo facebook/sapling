@@ -10,7 +10,7 @@ autotests = false
 
 [dependencies]
 anyhow = "1.0.98"
-ascii = "1.0"
+ascii = "1.1.0"
 async-trait = "0.1.86"
 bincode = { version = "2", features = ["serde"] }
 bytes = { version = "1.10", features = ["serde"] }

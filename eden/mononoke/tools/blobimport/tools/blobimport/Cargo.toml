@@ -13,7 +13,7 @@ path = "../../src/main.rs"
 
 [dependencies]
 anyhow = "1.0.98"
-ascii = "1.0"
+ascii = "1.1.0"
 blobimport_lib = { version = "0.1.0", path = "../../../../blobimport_lib" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../../../repo_attributes/bonsai_globalrev_mapping" }
 clap = { version = "4.5.42", features = ["derive", "env", "string", "unicode", "wrap_help"] }
