@@ -269,6 +269,58 @@ pub struct MononokeConfigUpdateReceiver<Repo> {
     service_name: Option<ShardedService>,
 }
 
+/// Determines which repos should be loaded/reloaded based on config.
+///
+/// A repo should be loaded if:
+/// 1. It already exists on the server (always reload to pick up config changes), OR
+/// 2. It's a new repo that is:
+///    - enabled in config, AND
+///    - either no service_name is configured, OR
+///    - the repo is shallow-sharded for the given service (not deep-sharded)
+fn compute_reloadable_repos<F>(
+    repo_configs: &RepoConfigs,
+    service_name: Option<&ShardedService>,
+    repo_exists: F,
+) -> Vec<(String, RepoConfig)>
+where
+    F: Fn(&str) -> bool,
+{
+    let mut repos_to_load = vec![];
+    for (repo_name, repo_config) in repo_configs.repos.clone().into_iter() {
+        if repo_exists(repo_name.as_str()) {
+            // Repo was already present on the server. Need to reload it.
+            repos_to_load.push((repo_name, repo_config))
+        }
+        // Only reload repos that are enabled in config
+        else if repo_config.enabled {
+            match (service_name, &repo_config.deep_sharding_config) {
+                (Some(service_name), Some(config)) => {
+                    // Service name is provided AND Repo is shallow sharded for this service, so should be loaded.
+                    if !config.status.get(service_name).cloned().unwrap_or(false) {
+                        repos_to_load.push((repo_name, repo_config));
+                    }
+                }
+                (Some(_), None) => {
+                    // Service name is provided but sharding config doesn't exist for repo. In this case it should
+                    // be considered as shallow-sharded.
+                    repos_to_load.push((repo_name, repo_config));
+                }
+                (None, _) => {
+                    // Service name is not provided so regardless of whether the sharding config
+                    // exists or not, the repo should be considered as shallow-sharded.
+                    repos_to_load.push((repo_name, repo_config));
+                }
+            }
+        }
+        // The repos present on the server but not part of RepoConfigs are ignored by
+        // default. This situation can happen when the name of the repo changes
+        // (e.g. whatsapp/server.mirror renamed to whatsapp/server) or when a repo is
+        // added or removed. In such a case, reloading of the repo with the old name
+        // would not be possible based on the new configs.
+    }
+    repos_to_load
+}
+
 impl<Repo> MononokeConfigUpdateReceiver<Repo> {
     fn new(
         repos: Arc<MononokeRepos<Repo>>,
@@ -284,35 +336,9 @@ impl<Repo> MononokeConfigUpdateReceiver<Repo> {
 
     /// Method for determining the set of repos to be reloaded with the new config
     fn reloadable_repo(&self, repo_configs: Arc<RepoConfigs>) -> Vec<(String, RepoConfig)> {
-        let mut repos_to_load = vec![];
-        for (repo_name, repo_config) in repo_configs.repos.clone().into_iter() {
-            if self.repos.get_by_name(repo_name.as_str()).is_some() {
-                // Repo was already present on the server. Need to reload it.
-                repos_to_load.push((repo_name, repo_config))
-            }
-            // If the service name is known, then by default we need to reload or add all repos
-            // that are in RepoConfig AND are shallow-sharded (i.e. NOT deep-sharded).
-            else if repo_config.enabled
-                && let Some(ref service_name) = self.service_name
-            {
-                if let Some(ref config) = repo_config.deep_sharding_config {
-                    // Repo is shallow sharded for this service AND enabled, so should be loaded.
-                    if !config.status.get(service_name).cloned().unwrap_or(false) {
-                        repos_to_load.push((repo_name, repo_config));
-                    }
-                } else {
-                    // Service specific sharding config doesn't exist for repo but the repo is
-                    // enabled so should be considered as shallow-sharded.
-                    repos_to_load.push((repo_name, repo_config));
-                }
-            }
-            // The repos present on the server but not part of RepoConfigs are ignored by
-            // default. This situation can happen when the name of the repo changes
-            // (e.g. whatsapp/server.mirror renamed to whatsapp/server) or when a repo is
-            // added or removed. In such a case, reloading of the repo with the old name
-            // would not be possible based on the new configs.
-        }
-        repos_to_load
+        compute_reloadable_repos(&repo_configs, self.service_name.as_ref(), |name| {
+            self.repos.get_by_name(name).is_some()
+        })
     }
 }
 
@@ -371,5 +397,234 @@ where
         // Ensure that we only add or replace repos and NEVER remove them
         self.repos.reload(repos_input);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::collections::HashMap;
+    use std::collections::HashSet;
+
+    use metaconfig_parser::RepoConfigs;
+    use metaconfig_types::CommonConfig;
+    use metaconfig_types::RepoConfig;
+    use metaconfig_types::ShardedService;
+    use metaconfig_types::ShardingModeConfig;
+    use mononoke_macros::mononoke;
+
+    use super::compute_reloadable_repos;
+
+    /// Helper to create a RepoConfig with the specified enabled state and sharding config
+    fn make_repo_config(
+        enabled: bool,
+        deep_sharding_config: Option<ShardingModeConfig>,
+    ) -> RepoConfig {
+        RepoConfig {
+            enabled,
+            deep_sharding_config,
+            ..Default::default()
+        }
+    }
+
+    /// Helper to create a ShardingModeConfig with the given service marked as deep-sharded or not
+    fn make_sharding_config(service: ShardedService, is_deep_sharded: bool) -> ShardingModeConfig {
+        let mut status = HashMap::new();
+        status.insert(service, is_deep_sharded);
+        ShardingModeConfig { status }
+    }
+
+    /// Helper to create RepoConfigs from a list of (name, config) pairs
+    fn make_repo_configs(repos: Vec<(String, RepoConfig)>) -> RepoConfigs {
+        RepoConfigs {
+            repos: repos.into_iter().collect(),
+            common: CommonConfig::default(),
+        }
+    }
+
+    /// Helper to get repo names from result
+    fn get_repo_names(result: &[(String, RepoConfig)]) -> Vec<&str> {
+        let mut names: Vec<_> = result.iter().map(|(name, _)| name.as_str()).collect();
+        names.sort();
+        names
+    }
+
+    /// Helper to create a repo_exists function from a set of existing repo names
+    fn existing_repos(names: &[&str]) -> impl Fn(&str) -> bool {
+        let set: HashSet<String> = names.iter().map(|s| s.to_string()).collect();
+        move |name: &str| set.contains(name)
+    }
+
+    #[mononoke::test]
+    fn test_existing_repo_always_reloaded() {
+        // Repos already present on the server should always be reloaded,
+        // regardless of service_name or deep_sharding_config
+        let repo_configs = make_repo_configs(vec![(
+            "existing_repo".to_string(),
+            make_repo_config(true, None),
+        )]);
+
+        let result =
+            compute_reloadable_repos(&repo_configs, None, existing_repos(&["existing_repo"]));
+        assert_eq!(get_repo_names(&result), vec!["existing_repo"]);
+    }
+
+    #[mononoke::test]
+    fn test_existing_disabled_repo_still_reloaded() {
+        // Even disabled repos should be reloaded if they're already on the server
+        let repo_configs = make_repo_configs(vec![(
+            "existing_repo".to_string(),
+            make_repo_config(false, None),
+        )]);
+
+        let result =
+            compute_reloadable_repos(&repo_configs, None, existing_repos(&["existing_repo"]));
+        assert_eq!(get_repo_names(&result), vec!["existing_repo"]);
+    }
+
+    #[mononoke::test]
+    fn test_new_repo_no_service_name() {
+        // New repos should be loaded when no service_name is provided
+        // This is the key bug fix: previously these repos were not loaded
+        let repo_configs =
+            make_repo_configs(vec![("new_repo".to_string(), make_repo_config(true, None))]);
+
+        let result = compute_reloadable_repos(&repo_configs, None, existing_repos(&[]));
+        assert_eq!(get_repo_names(&result), vec!["new_repo"]);
+    }
+
+    #[mononoke::test]
+    fn test_new_repo_no_service_name_with_sharding_config() {
+        // New repos with sharding config should still be loaded when no service_name is provided
+        let sharding_config = make_sharding_config(ShardedService::SaplingRemoteApi, true);
+        let repo_configs = make_repo_configs(vec![(
+            "new_repo".to_string(),
+            make_repo_config(true, Some(sharding_config)),
+        )]);
+
+        let result = compute_reloadable_repos(&repo_configs, None, existing_repos(&[]));
+        assert_eq!(get_repo_names(&result), vec!["new_repo"]);
+    }
+
+    #[mononoke::test]
+    fn test_new_repo_with_service_name_no_sharding_config() {
+        // New repos without sharding config should be loaded (shallow-sharded by default)
+        let repo_configs =
+            make_repo_configs(vec![("new_repo".to_string(), make_repo_config(true, None))]);
+
+        let result = compute_reloadable_repos(
+            &repo_configs,
+            Some(&ShardedService::SaplingRemoteApi),
+            existing_repos(&[]),
+        );
+        assert_eq!(get_repo_names(&result), vec!["new_repo"]);
+    }
+
+    #[mononoke::test]
+    fn test_new_repo_shallow_sharded_for_service() {
+        // New repos explicitly marked as shallow-sharded (false) should be loaded
+        let sharding_config = make_sharding_config(ShardedService::SaplingRemoteApi, false);
+        let repo_configs = make_repo_configs(vec![(
+            "new_repo".to_string(),
+            make_repo_config(true, Some(sharding_config)),
+        )]);
+
+        let result = compute_reloadable_repos(
+            &repo_configs,
+            Some(&ShardedService::SaplingRemoteApi),
+            existing_repos(&[]),
+        );
+        assert_eq!(get_repo_names(&result), vec!["new_repo"]);
+    }
+
+    #[mononoke::test]
+    fn test_new_repo_deep_sharded_for_service() {
+        // New repos marked as deep-sharded (true) for the service should NOT be loaded
+        let sharding_config = make_sharding_config(ShardedService::SaplingRemoteApi, true);
+        let repo_configs = make_repo_configs(vec![(
+            "new_repo".to_string(),
+            make_repo_config(true, Some(sharding_config)),
+        )]);
+
+        let result = compute_reloadable_repos(
+            &repo_configs,
+            Some(&ShardedService::SaplingRemoteApi),
+            existing_repos(&[]),
+        );
+        assert!(result.is_empty(), "Deep-sharded repos should not be loaded");
+    }
+
+    #[mononoke::test]
+    fn test_new_repo_deep_sharded_for_different_service() {
+        // Repos deep-sharded for a different service should be loaded
+        // Repo is deep-sharded for SourceControlService, but we're SaplingRemoteApi
+        let sharding_config = make_sharding_config(ShardedService::SourceControlService, true);
+        let repo_configs = make_repo_configs(vec![(
+            "new_repo".to_string(),
+            make_repo_config(true, Some(sharding_config)),
+        )]);
+
+        let result = compute_reloadable_repos(
+            &repo_configs,
+            Some(&ShardedService::SaplingRemoteApi),
+            existing_repos(&[]),
+        );
+        assert_eq!(get_repo_names(&result), vec!["new_repo"]);
+    }
+
+    #[mononoke::test]
+    fn test_disabled_new_repo_not_loaded() {
+        // Disabled new repos should not be loaded
+        let repo_configs = make_repo_configs(vec![(
+            "disabled_repo".to_string(),
+            make_repo_config(false, None),
+        )]);
+
+        let result = compute_reloadable_repos(&repo_configs, None, existing_repos(&[]));
+        assert!(result.is_empty(), "Disabled new repos should not be loaded");
+    }
+
+    #[mononoke::test]
+    fn test_mixed_repos() {
+        // Test a mix of existing, new, enabled, disabled, and sharded repos
+        let deep_sharded = make_sharding_config(ShardedService::SaplingRemoteApi, true);
+        let shallow_sharded = make_sharding_config(ShardedService::SaplingRemoteApi, false);
+
+        let repo_configs = make_repo_configs(vec![
+            ("existing_enabled".to_string(), make_repo_config(true, None)),
+            (
+                "existing_disabled".to_string(),
+                make_repo_config(false, None),
+            ),
+            (
+                "new_enabled_no_sharding".to_string(),
+                make_repo_config(true, None),
+            ),
+            ("new_disabled".to_string(), make_repo_config(false, None)),
+            (
+                "new_shallow_sharded".to_string(),
+                make_repo_config(true, Some(shallow_sharded)),
+            ),
+            (
+                "new_deep_sharded".to_string(),
+                make_repo_config(true, Some(deep_sharded)),
+            ),
+        ]);
+
+        let result = compute_reloadable_repos(
+            &repo_configs,
+            Some(&ShardedService::SaplingRemoteApi),
+            existing_repos(&["existing_enabled", "existing_disabled"]),
+        );
+        let names = get_repo_names(&result);
+
+        // Should include: existing repos (both), new enabled repos that are not deep-sharded
+        assert!(names.contains(&"existing_enabled"));
+        assert!(names.contains(&"existing_disabled"));
+        assert!(names.contains(&"new_enabled_no_sharding"));
+        assert!(names.contains(&"new_shallow_sharded"));
+
+        // Should NOT include: new disabled repos, new deep-sharded repos
+        assert!(!names.contains(&"new_disabled"));
+        assert!(!names.contains(&"new_deep_sharded"));
     }
 }
