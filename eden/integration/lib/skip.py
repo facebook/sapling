@@ -431,6 +431,15 @@ if "SANDCASTLE" in os.environ:
         TEST_DISABLED["changes_test.ChangesTestNix"] = [
             "test_modify_folder_chown",
         ]
+    class_name = "chown_test.ChownTestDefault"
+    method_name = "test_chown_with_bindmount"
+    class_skipped = TEST_DISABLED.get(class_name)
+    if class_skipped is None:
+        TEST_DISABLED[class_name] = [method_name]
+    elif isinstance(class_skipped, list):
+        if method_name not in class_skipped:
+            class_skipped.append(method_name)
+
 
 try:
     from eden.integration.facebook.lib.skip import add_fb_specific_skips
