@@ -283,6 +283,7 @@ mod tests {
             use_manifest_id_cache: false,
             cache_update_interval_ms: 100,
             soft_path_acls: Vec::new(),
+            enforcement_conditions: Vec::new(),
         };
 
         let manifest_id_store = Arc::new(

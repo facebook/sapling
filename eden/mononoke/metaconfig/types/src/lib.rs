@@ -2198,6 +2198,27 @@ pub struct SoftRestrictedPathConfig {
     pub max_copied_files_limit: u64,
 }
 
+/// A single enforcement condition for restricted paths access.
+/// All non-empty fields must match for the condition to be satisfied (AND logic).
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
+pub struct EnforcementCondition {
+    /// Client identities that must ALL be present in the request.
+    pub client_identities: Vec<MononokeIdentity>,
+    /// Sandcastle alias to match (exact match).
+    pub sandcastle_alias: Option<String>,
+    /// Client main ID to match (exact match).
+    pub client_main_id: Option<String>,
+}
+
+impl EnforcementCondition {
+    /// Check if this condition is empty (matches nothing for safety).
+    pub fn is_empty(&self) -> bool {
+        self.client_identities.is_empty()
+            && self.sandcastle_alias.is_none()
+            && self.client_main_id.is_none()
+    }
+}
+
 /// Configuration for restricted paths and their associated ACLs
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RestrictedPathsConfig {
@@ -2210,6 +2231,9 @@ pub struct RestrictedPathsConfig {
     pub cache_update_interval_ms: u64,
     /// Soft restricted paths configuration
     pub soft_path_acls: Vec<SoftRestrictedPathConfig>,
+    /// Enforcement conditions for incremental rollout.
+    /// Empty Vec = enforcement disabled (logging only).
+    pub enforcement_conditions: Vec<EnforcementCondition>,
 }
 
 impl Default for RestrictedPathsConfig {
@@ -2219,6 +2243,7 @@ impl Default for RestrictedPathsConfig {
             use_manifest_id_cache: true,
             cache_update_interval_ms: 1000,
             soft_path_acls: Vec::new(),
+            enforcement_conditions: Vec::new(),
         }
     }
 }
