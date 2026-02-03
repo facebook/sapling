@@ -109,8 +109,10 @@ struct PrjfsTraceEvent : TraceEventBase {
 
   static PrjfsTraceEvent finish(
       PrjfsTraceCallType callType,
-      const PrjfsOperationData& data) {
-    return PrjfsTraceEvent{callType, PrjfsOperationData{data}, FinishDetails{}};
+      const PrjfsOperationData& data,
+      std::optional<HRESULT> result) {
+    return PrjfsTraceEvent{
+        callType, PrjfsOperationData{data}, FinishDetails{result}};
   }
 
   Type getType() const {
@@ -130,6 +132,10 @@ struct PrjfsTraceEvent : TraceEventBase {
     return std::get<StartDetails>(details_).arguments;
   }
 
+  const std::optional<HRESULT>& getResult() const {
+    return std::get<FinishDetails>(details_).result;
+  }
+
  private:
   struct StartDetails {
     /**
@@ -142,7 +148,9 @@ struct PrjfsTraceEvent : TraceEventBase {
     std::unique_ptr<std::string> arguments;
   };
 
-  struct FinishDetails {};
+  struct FinishDetails {
+    std::optional<HRESULT> result;
+  };
 
   using Details = std::variant<StartDetails, FinishDetails>;
 

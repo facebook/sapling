@@ -1677,6 +1677,10 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
               break;
             case PrjfsTraceEvent::FINISH:
               te.type_ref() = FsEventType::FINISH;
+              auto result = event.getResult();
+              if (result) {
+                te.result() = *result;
+              }
               break;
           }
 

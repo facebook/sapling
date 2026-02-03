@@ -43,7 +43,7 @@ PrjfsRequestContext::PrjfsRequestContext(
 PrjfsRequestContext::~PrjfsRequestContext() {
   if (channel_) {
     channel_->getTraceBusPtr()->publish(
-        PrjfsTraceEvent::finish(callType_, data_));
+        PrjfsTraceEvent::finish(callType_, data_, result_));
   }
 }
 
