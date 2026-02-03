@@ -49,6 +49,7 @@ Example usage::
     sl wt remove ../my-repo-feature-review
 """
 
+import json
 import os
 import platform
 import shutil
@@ -206,28 +207,101 @@ def add_cmd(ui, repo, name=None, commit=None, **opts):
 
 @subcmd(
     "list",
-    [],
+    [
+        ("", "json", False, _("output in JSON format")),
+    ],
     "",
 )
 def list_cmd(ui, repo, **opts):
     """list all working trees
 
     Shows all git worktrees associated with this repository.
+
+    Use --json to output machine-readable JSON format with the following fields:
+    - path: absolute path to the worktree
+    - commit: commit hash checked out in the worktree
+    - branch: branch name (if any)
+    - isMain: whether this is the main worktree
     """
     if not _is_git_repo(repo):
         raise error.Abort(_("worktree command requires a git repository"))
 
-    result = subprocess.run(
-        ["git", "worktree", "list"],
-        cwd=repo.root,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        raise error.Abort(_("git worktree list failed: %s") % result.stderr.strip())
+    if opts.get("json"):
+        result = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            cwd=repo.root,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise error.Abort(_("git worktree list failed: %s") % result.stderr.strip())
 
-    ui.write(result.stdout)
+        worktrees = _parse_porcelain_output(result.stdout, repo.root)
+        ui.write(json.dumps(worktrees))
+    else:
+        result = subprocess.run(
+            ["git", "worktree", "list"],
+            cwd=repo.root,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise error.Abort(_("git worktree list failed: %s") % result.stderr.strip())
+
+        ui.write(result.stdout)
     return 0
+
+
+def _parse_porcelain_output(output, main_repo_root):
+    """Parse git worktree list --porcelain output into structured data.
+
+    The porcelain format has entries separated by blank lines, with each entry
+    containing lines like:
+        worktree /path/to/worktree
+        HEAD abc123...
+        branch refs/heads/main
+        (or "detached" for detached HEAD)
+
+    Returns a list of dicts with path, commit, branch (optional), and isMain fields.
+    """
+    worktrees = []
+    current = {}
+
+    for line in output.split("\n"):
+        line = line.strip()
+        if not line:
+            if current:
+                # Normalize path for comparison
+                current_path = os.path.normpath(current.get("path", ""))
+                main_path = os.path.normpath(main_repo_root)
+                current["isMain"] = current_path == main_path
+                worktrees.append(current)
+                current = {}
+            continue
+
+        if line.startswith("worktree "):
+            current["path"] = line[9:]
+        elif line.startswith("HEAD "):
+            current["commit"] = line[5:]
+        elif line.startswith("branch "):
+            # Extract branch name from refs/heads/...
+            branch_ref = line[7:]
+            if branch_ref.startswith("refs/heads/"):
+                current["branch"] = branch_ref[11:]
+            else:
+                current["branch"] = branch_ref
+        elif line == "detached":
+            # Detached HEAD, no branch
+            pass
+
+    # Don't forget the last entry if output doesn't end with blank line
+    if current:
+        current_path = os.path.normpath(current.get("path", ""))
+        main_path = os.path.normpath(main_repo_root)
+        current["isMain"] = current_path == main_path
+        worktrees.append(current)
+
+    return worktrees
 
 
 @subcmd(
