@@ -1,10 +1,10 @@
 ---
-sidebar_position: 40
+sidebar_position: 2
 ---
 
 ## ssl
 <!--
-  @generated SignedSource<<adf1085c88ed3f8539fddfae00bc77f8>>
+  @generated <<SignedSource::*O*zOeWoEQle#+L!plEphiEmie@IsG>>
   Run `./scripts/generate-command-markdown.py` to regenerate.
 -->
 
