@@ -75,10 +75,12 @@ ImmediateFuture<folly::Unit> PrjfsRequestContext::catchErrors(
 }
 
 void PrjfsRequestContext::sendSuccess() const {
+  result_ = S_OK;
   return channel_->sendSuccess(commandId_, nullptr);
 }
 
 void PrjfsRequestContext::sendNotificationSuccess() const {
+  result_ = S_OK;
   PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS extra{};
   extra.CommandType = PRJ_COMPLETE_COMMAND_TYPE_NOTIFICATION;
   return channel_->sendSuccess(commandId_, &extra);
@@ -86,6 +88,7 @@ void PrjfsRequestContext::sendNotificationSuccess() const {
 
 void PrjfsRequestContext::sendEnumerationSuccess(
     PRJ_DIR_ENTRY_BUFFER_HANDLE buffer) const {
+  result_ = S_OK;
   PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS extra{};
   extra.CommandType = PRJ_COMPLETE_COMMAND_TYPE_ENUMERATION;
   extra.Enumeration.DirEntryBufferHandle = buffer;
@@ -93,6 +96,7 @@ void PrjfsRequestContext::sendEnumerationSuccess(
 }
 
 void PrjfsRequestContext::sendError(HRESULT result) const {
+  result_ = result;
   return channel_->sendError(commandId_, result);
 }
 

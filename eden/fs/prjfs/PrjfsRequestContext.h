@@ -10,6 +10,7 @@
 #include "folly/portability/Windows.h"
 
 #include <ProjectedFSLib.h> // @manual
+#include <optional>
 
 #include "eden/common/utils/ImmediateFuture.h"
 #include "eden/common/utils/PathFuncs.h"
@@ -76,6 +77,7 @@ class PrjfsRequestContext : public RequestContext {
   int32_t commandId_;
   PrjfsTraceCallType callType_;
   PrjfsTraceEvent::PrjfsOperationData data_;
+  mutable std::optional<HRESULT> result_;
 };
 
 } // namespace facebook::eden
