@@ -101,7 +101,7 @@ class RequestContext {
         pal_{pal},
         logger_{std::move(logger)},
         fsObjectFetchContext_{std::move(fsObjectFetchContext)} {}
-  ~RequestContext() noexcept;
+  virtual ~RequestContext() noexcept;
 
   RequestContext(const RequestContext&) = delete;
   RequestContext& operator=(const RequestContext&) = delete;

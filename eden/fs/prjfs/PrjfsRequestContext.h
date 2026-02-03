@@ -39,7 +39,11 @@ class PrjfsRequestContext : public RequestContext {
 
   explicit PrjfsRequestContext(
       folly::ReadMostlySharedPtr<PrjfsChannelInner> channel,
-      const PRJ_CALLBACK_DATA& prjfsData);
+      const PRJ_CALLBACK_DATA& prjfsData,
+      PrjfsTraceCallType callType,
+      LPCWSTR destinationFileName);
+
+  virtual ~PrjfsRequestContext();
 
   folly::ReadMostlyWeakPtr<PrjfsChannelInner> getChannelForAsyncUse();
 
@@ -58,8 +62,20 @@ class PrjfsRequestContext : public RequestContext {
   void sendError(HRESULT result) const;
 
  private:
+  static std::string formatTraceEventString(
+      PrjfsTraceCallType callType,
+      const PrjfsTraceEvent::PrjfsOperationData& data,
+      const PRJ_CALLBACK_DATA& prjfsData,
+      LPCWSTR destinationFileName);
+
+  static std::string processPathToName(PCWSTR fullAppName);
+
+  static std::wstring_view basenameFromAppName(PCWSTR fullAppName);
+
   folly::ReadMostlySharedPtr<PrjfsChannelInner> channel_;
   int32_t commandId_;
+  PrjfsTraceCallType callType_;
+  PrjfsTraceEvent::PrjfsOperationData data_;
 };
 
 } // namespace facebook::eden

@@ -41,10 +41,6 @@ class FaultInjector;
 
 using EdenStatsPtr = RefPtr<EdenStats>;
 
-namespace detail {
-struct PrjfsLiveRequest;
-}
-
 using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
 
 typedef enum __PRJ_EXT_INFO_TYPE {
@@ -191,7 +187,6 @@ class PrjfsChannelInner {
   HRESULT startEnumeration(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
       const GUID* enumerationId);
 
   /**
@@ -202,7 +197,6 @@ class PrjfsChannelInner {
   HRESULT endEnumeration(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
       const GUID* enumerationId);
 
   /**
@@ -213,7 +207,6 @@ class PrjfsChannelInner {
   HRESULT getEnumerationData(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
       const GUID* enumerationId,
       PCWSTR searchExpression,
       PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle);
@@ -225,8 +218,7 @@ class PrjfsChannelInner {
    */
   HRESULT getPlaceholderInfo(
       std::shared_ptr<PrjfsRequestContext> context,
-      const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest);
+      const PRJ_CALLBACK_DATA* callbackData);
 
   /**
    * Test whether a given file exist in the repository.
@@ -235,8 +227,7 @@ class PrjfsChannelInner {
    */
   HRESULT queryFileName(
       std::shared_ptr<PrjfsRequestContext> context,
-      const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest);
+      const PRJ_CALLBACK_DATA* callbackData);
 
   /**
    * Read the content of the given file.
@@ -246,7 +237,6 @@ class PrjfsChannelInner {
   HRESULT getFileData(
       std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
-      std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
       UINT64 byteOffset,
       UINT32 length);
 

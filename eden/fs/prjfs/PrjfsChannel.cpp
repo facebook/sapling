@@ -122,96 +122,6 @@ bool disallowMisbehavingApplications(PCWSTR fullAppName) noexcept {
 }
 } // namespace
 
-namespace detail {
-struct PrjfsLiveRequest {
-  PrjfsLiveRequest(
-      std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus,
-      const std::atomic<size_t>& traceDetailedArguments,
-      PrjfsTraceCallType callType,
-      const PRJ_CALLBACK_DATA& data,
-      LPCWSTR destinationFileName)
-      : traceBus_{std::move(traceBus)}, type_{callType}, data_{data} {
-    if (traceDetailedArguments.load(std::memory_order_acquire)) {
-      traceBus_->publish(
-          PrjfsTraceEvent::start(
-              callType,
-              data_,
-              formatTraceEventString(data, destinationFileName)));
-    } else {
-      traceBus_->publish(PrjfsTraceEvent::start(callType, data_));
-    }
-  }
-
-  PrjfsLiveRequest(PrjfsLiveRequest&& that) noexcept = default;
-  PrjfsLiveRequest& operator=(PrjfsLiveRequest&&) = delete;
-
-  ~PrjfsLiveRequest() {
-    if (traceBus_) {
-      traceBus_->publish(PrjfsTraceEvent::finish(type_, data_));
-    }
-  }
-
-  std::string formatTraceEventString(
-      const PRJ_CALLBACK_DATA& data,
-      LPCWSTR destinationFileName) {
-    // Most events only have data.FilePathName set to a repo-relative path,
-    // describing the file that is related to the event.
-    //
-    // This path can be the empty string L"" if the operation is in the repo
-    // root directory, such as `dir %REPO_ROOT%`. In these cases,
-    // destinationFileName is nullptr, either pass explicitly in this codebase,
-    // or given to the ::notification() function (which is implementation of
-    // PRJ_NOTIFICATION_CB).
-    //
-    // Some operations have both a src and destination path, like *RENAME or
-    // *SET_HARDLINK. In these cases, destinationFileName may be a pointer to a
-    // string. This string is zero-length if the destination file in question is
-    // outside the repo. To make this more readable in the logs, if
-    // destinationFileName is provided (non-nullptr), we convert zero-length
-    // paths to `nonRepoPath` below. This conversion is not done when
-    // destinationFileName is nullptr, because we don't want to falsely
-    // represent other operations on the repo root as operating on a non-repo
-    // path.
-    static const wchar_t nonRepoPath[] = L"<non-repo-path>";
-    LPCWSTR relativeFileName = data.FilePathName;
-    if (destinationFileName != nullptr) {
-      if (relativeFileName && !relativeFileName[0]) {
-        relativeFileName = nonRepoPath;
-      }
-      if (destinationFileName && !destinationFileName[0]) {
-        destinationFileName = nonRepoPath;
-      }
-    }
-
-    return fmt::format(
-        "{} from {}({}): {}({}{}{})",
-        data_.commandId,
-        processPathToName(data.TriggeringProcessImageFileName),
-        data_.pid,
-        apache::thrift::util::enumName(type_, "(unknown)"),
-        relativeFileName == nullptr ? RelativePath{}
-                                    : RelativePath(relativeFileName),
-        (destinationFileName && relativeFileName) ? "=>" : "",
-        destinationFileName == nullptr ? RelativePath{}
-                                       : RelativePath(destinationFileName));
-  }
-
- private:
-  std::string processPathToName(PCWSTR fullAppName) {
-    if (fullAppName == nullptr) {
-      return "None";
-    } else {
-      auto appName = basenameFromAppName(fullAppName);
-      return wideToMultibyteString<std::string>(appName);
-    }
-  }
-
-  std::shared_ptr<TraceBus<PrjfsTraceEvent>> traceBus_;
-  PrjfsTraceCallType type_;
-  PrjfsTraceEvent::PrjfsOperationData data_;
-};
-} // namespace detail
-
 namespace {
 
 template <class Method, class... Args>
@@ -234,18 +144,9 @@ HRESULT runCallback(
 
     auto channelPtr = channel.get();
     auto context = std::make_shared<PrjfsRequestContext>(
-        std::move(channel), *callbackData);
-    auto liveRequest = std::make_unique<detail::PrjfsLiveRequest>(
-        channelPtr->getTraceBusPtr(),
-        channelPtr->getTraceDetailedArguments(),
-        callType,
-        *callbackData,
-        destinationFileName);
+        std::move(channel), *callbackData, callType, destinationFileName);
     return (channelPtr->*method)(
-        std::move(context),
-        callbackData,
-        std::move(liveRequest),
-        std::forward<Args>(args)...);
+        std::move(context), callbackData, std::forward<Args>(args)...);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }
@@ -391,19 +292,13 @@ HRESULT notification(
     }
 
     auto channelPtr = channel.get();
-    auto context = std::make_shared<PrjfsRequestContext>(
-        std::move(channel), *callbackData);
     auto typeIt = notificationTypeMap.find(notificationType);
     auto nType = PrjfsTraceCallType::INVALID;
     if (typeIt != notificationTypeMap.end()) {
       nType = typeIt->second;
     }
-    auto liveRequest = detail::PrjfsLiveRequest{
-        channelPtr->getTraceBusPtr(),
-        channelPtr->getTraceDetailedArguments(),
-        nType,
-        *callbackData,
-        destinationFileName};
+    auto context = std::make_shared<PrjfsRequestContext>(
+        std::move(channel), *callbackData, nType, destinationFileName);
     return channelPtr->notification(
         std::move(context),
         callbackData,
@@ -422,16 +317,16 @@ HRESULT notification(
 void detachAndCompleteCallback(
     ImmediateFuture<folly::Unit> future,
     std::shared_ptr<PrjfsRequestContext> context,
-    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
     EdenStatsPtr stats,
     StatsGroupBase::Counter PrjfsStats::* countSuccessful,
     StatsGroupBase::Counter PrjfsStats::* countFailure) {
-  auto completionFuture =
-      context
-          ->catchErrors(
-              std::move(future), stats.copy(), countSuccessful, countFailure)
-          .ensure([context = std::move(context),
-                   liveRequest = std::move(liveRequest)] {});
+  auto completionFuture = context
+                              ->catchErrors(
+                                  std::move(future),
+                                  std::move(stats),
+                                  countSuccessful,
+                                  countFailure)
+                              .ensure([context = std::move(context)]() {});
   if (!completionFuture.isReady()) {
     folly::futures::detachOnGlobalCPUExecutor(
         std::move(completionFuture).semi());
@@ -504,7 +399,6 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::waitForPendingNotifications() {
 HRESULT PrjfsChannelInner::startEnumeration(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
-    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
     const GUID* enumerationId) {
   auto guid = Guid(*enumerationId);
   auto path = RelativePath(callbackData->FilePathName);
@@ -531,7 +425,6 @@ HRESULT PrjfsChannelInner::startEnumeration(
   detachAndCompleteCallback(
       std::move(fut),
       std::move(context),
-      std::move(liveRequest),
       getStats().copy(),
       &PrjfsStats::openDirSuccessful,
       &PrjfsStats::openDirFailure);
@@ -542,7 +435,6 @@ HRESULT PrjfsChannelInner::startEnumeration(
 HRESULT PrjfsChannelInner::endEnumeration(
     std::shared_ptr<PrjfsRequestContext> /* context */,
     const PRJ_CALLBACK_DATA* /* callbackData */,
-    std::unique_ptr<detail::PrjfsLiveRequest> /* liveRequest */,
     const GUID* enumerationId) {
   auto guid = Guid(*enumerationId);
   FB_LOGF(getStraceLogger(), DBG7, "closedir({})", guid.toString());
@@ -564,7 +456,6 @@ LARGE_INTEGER timespecToPrjTime(EdenTimestamp time) {
 HRESULT PrjfsChannelInner::getEnumerationData(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
-    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
     const GUID* enumerationId,
     PCWSTR searchExpression,
     PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) {
@@ -677,7 +568,6 @@ HRESULT PrjfsChannelInner::getEnumerationData(
   detachAndCompleteCallback(
       std::move(fut),
       std::move(context),
-      std::move(liveRequest),
       getStats().copy(),
       &PrjfsStats::readDirSuccessful,
       &PrjfsStats::readDirFailure);
@@ -687,8 +577,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
 
 HRESULT PrjfsChannelInner::getPlaceholderInfo(
     std::shared_ptr<PrjfsRequestContext> context,
-    const PRJ_CALLBACK_DATA* callbackData,
-    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest) {
+    const PRJ_CALLBACK_DATA* callbackData) {
   auto path = RelativePath(callbackData->FilePathName);
   auto virtualizationContext = callbackData->NamespaceVirtualizationContext;
 
@@ -768,7 +657,6 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
   detachAndCompleteCallback(
       std::move(fut),
       std::move(context),
-      std::move(liveRequest),
       getStats().copy(),
       &PrjfsStats::lookupSuccessful,
       &PrjfsStats::lookupFailure);
@@ -778,8 +666,7 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
 
 HRESULT PrjfsChannelInner::queryFileName(
     std::shared_ptr<PrjfsRequestContext> context,
-    const PRJ_CALLBACK_DATA* callbackData,
-    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest) {
+    const PRJ_CALLBACK_DATA* callbackData) {
   auto path = RelativePath(callbackData->FilePathName);
 
   auto fut = makeImmediateFutureWith([this,
@@ -803,7 +690,6 @@ HRESULT PrjfsChannelInner::queryFileName(
   detachAndCompleteCallback(
       std::move(fut),
       std::move(context),
-      std::move(liveRequest),
       getStats().copy(),
       &PrjfsStats::accessSuccessful,
       &PrjfsStats::accessFailure);
@@ -951,7 +837,6 @@ folly::Try<folly::Unit> removeCachedFileImpl(
 HRESULT PrjfsChannelInner::getFileData(
     std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
-    std::unique_ptr<detail::PrjfsLiveRequest> liveRequest,
     UINT64 byteOffset,
     UINT32 length) {
   auto fut = makeImmediateFutureWith([this,
@@ -1195,7 +1080,6 @@ HRESULT PrjfsChannelInner::getFileData(
   detachAndCompleteCallback(
       std::move(fut),
       std::move(context),
-      std::move(liveRequest),
       getStats().copy(),
       &PrjfsStats::readSuccessful,
       &PrjfsStats::readFailure);
