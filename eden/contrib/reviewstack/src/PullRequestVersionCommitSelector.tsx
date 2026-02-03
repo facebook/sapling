@@ -36,7 +36,7 @@ export default React.memo(function PullRequestVersionCommitSelector({
   return (
     <ActionMenu>
       <ActionMenu.Button>{commitsLabel(commits, beforeIndex, afterIndex)}</ActionMenu.Button>
-      <ActionMenu.Overlay width="xxlarge">
+      <ActionMenu.Overlay width="xxlarge" sx={{maxHeight: '70vh', overflowY: 'auto'}}>
         <ActionList>
           {commits.map(({author, commit, committedDate, title}, index) => (
             <PullRequestVersionCommitSelectorItem
