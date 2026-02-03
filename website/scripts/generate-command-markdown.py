@@ -82,6 +82,7 @@ DEFAULT_COMMAND_LIST = [
     "unhide",
     "unshelve",
     "web",
+    "wt",
 ]
 
 
@@ -105,6 +106,8 @@ def generate_commands_json(command_list: List[str]) -> Dict:
             get_sapling(),
             "--config",
             "extensions.github=",
+            "--config",
+            "extensions.worktree=",
             "debugshell",
             os.path.realpath(subprocess_cwd / "extract-command-documentation.py"),
             json.dumps(command_list, indent=2),
