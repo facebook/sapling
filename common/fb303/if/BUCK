@@ -13,7 +13,6 @@ thrift_library(
         "//thrift/annotation:java",
         "//thrift/annotation:python",
         "//thrift/annotation:thrift",
-        "//thrift/facebook/erlang:annotations",
     ],
     plugins = [thrift_plugin_automock],
     thrift_srcs = {
