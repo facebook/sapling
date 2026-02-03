@@ -199,7 +199,35 @@ pub fn is_state_locked(dir: &Path, name: &str) -> Result<bool, ContentLockError>
     // If the lock doesn't exist, return false
     let content_lock = ContentLock::new_with_name(dir, name);
     match content_lock.check_lock() {
-        Ok(()) => Ok(false),
+        Ok(lock) => match lock {
+            // No state lock is currently held, but check if we should clean up the .notify file
+            // while the directory shared lock prevents a race condition on a new lock from being made
+            Some(_dir_lock) => {
+                let notify_file_path = content_lock.content_path.with_extension("notify");
+                if notify_file_path.exists() {
+                    match remove_file(&notify_file_path) {
+                        // Even after checking for the shared lock, multiple processes may race to remove the notify file.
+                        // Upgrading from shared->exclusive lock is not supported, so instead we just ignore FileNotFound errors.
+                        Ok(_) => {
+                            // We deleted the file
+                        }
+                        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                            tracing::debug!(
+                                "Notify file {:?} deleted by different process: {:?}",
+                                notify_file_path,
+                                e
+                            );
+                        }
+                        Err(e) => {
+                            return Err(e.into());
+                        }
+                    }
+                }
+                Ok(false)
+            }
+            // No lock has been made on this path
+            None => Ok(false),
+        },
         Err(ContentLockError::Contended(_)) => Ok(true),
         Err(ContentLockError::Io(err)) => Err(err.into()),
     }

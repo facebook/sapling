@@ -290,7 +290,13 @@ class NotifyTest(testcase.EdenRepoTest):
             event = await self.wait_for_next_event(subscription, attempt=1)
             if event is None:
                 break
-            changes.extend(event["changes"])
+            if "changes" in event:
+                changes.extend(event["changes"])
+            else:
+                # Check that a double state event is the same leave as above
+                if "event_type" in event:
+                    self.assertEqual(event["event_type"], "Left", msg=f"event: {event}")
+                    self.assertEqual(event["state"], "hello", msg=f"event: {event}")
         if sys.platform != "win32":
             self.assertTrue(
                 {
@@ -432,7 +438,16 @@ class NotifyTest(testcase.EdenRepoTest):
 
         # expect this to return None since the second state is asserted
         event = await self.wait_for_next_event(subscription, attempt=1)
-        self.assertIsNone(event)
+        try:
+            self.assertIsNone(event)
+        except AssertionError:
+            # Check for double state leave
+            if event and "event_type" in event and event["event_type"] == "Left":
+                self.assertEqual(event["state"], "hello", msg=f"event: {event}")
+                event = await self.wait_for_next_event(subscription, attempt=1)
+                self.assertIsNone(event)
+            else:
+                raise
 
         # exit the second state
         goodbye_process.terminate()
@@ -447,7 +462,13 @@ class NotifyTest(testcase.EdenRepoTest):
             event = await self.wait_for_next_event(subscription, attempt=1)
             if event is None:
                 break
-            changes.extend(event["changes"])
+            if "changes" in event:
+                changes.extend(event["changes"])
+            else:
+                # Check that a double state event is the same leave as above
+                if "event_type" in event:
+                    self.assertEqual(event["event_type"], "Left", msg=f"event: {event}")
+                    self.assertEqual(event["state"], "goodbye", msg=f"event: {event}")
         if sys.platform != "win32":
             self.assertTrue(
                 {
@@ -652,3 +673,77 @@ class NotifyTest(testcase.EdenRepoTest):
         success_state_process = await self.enter_state("hello", duration=1)
         stdout, stderr = await success_state_process.communicate()
         self.assertIn("Holding state for 1 seconds", stdout.decode())
+
+    async def test_subscribe_cleanup_left_over_state(self) -> None:
+        hello_notify_file_path = self.eden_repo.get_path(
+            ".edenfs-notifications-state/hello/hello.notify"
+        )
+
+        # Test that killing the state process leaves the notify file behind
+        # Expect that the notify file is created when the state is entered
+        self.assertFalse(os.path.exists(hello_notify_file_path))
+        state_process = await self.enter_state("hello")
+        await self.wait_for_file(hello_notify_file_path, timeout=10)
+        self.assertTrue(
+            os.path.exists(hello_notify_file_path),
+            msg=f"notify file was not created: {hello_notify_file_path}",
+        )
+        # Expect reading subscription states to keep the notify file if the state is asserted
+        get_states_process = await self.get_states()
+        stdout, _stderr = await get_states_process.communicate()
+        self.assertEqual(json.loads(stdout.decode()), ["hello"])
+        self.assertTrue(
+            os.path.exists(hello_notify_file_path),
+            msg=f"notify file was not created: {hello_notify_file_path}",
+        )
+        # Expect killing the state process to leave the notify file behind
+        state_process.kill()
+        await state_process.communicate()
+        self.assertTrue(os.path.exists(hello_notify_file_path))
+
+        # Expect reading subscription states to clear the notify file if the state is not asserted
+        get_states_process = await self.get_states()
+        stdout, _stderr = await get_states_process.communicate()
+        # Expect no states to be asserted, and the notify file to be deleted
+        self.assertEqual(json.loads(stdout.decode()), [])
+        self.assertFalse(os.path.exists(hello_notify_file_path))
+
+    async def test_subscribe_cleanup_left_over_state_multiple_checks(self) -> None:
+        hello_notify_file_path = self.eden_repo.get_path(
+            ".edenfs-notifications-state/hello/hello.notify"
+        )
+
+        # Test that killing the state process leaves the notify file behind
+        # Expect that the notify file is created when the state is entered
+        self.assertFalse(os.path.exists(hello_notify_file_path))
+        state_process = await self.enter_state("hello")
+        await self.wait_for_file(hello_notify_file_path, timeout=10)
+        self.assertTrue(
+            os.path.exists(hello_notify_file_path),
+            msg=f"notify file was not created: {hello_notify_file_path}",
+        )
+        # Expect reading subscription states to keep the notify file if the state is asserted
+        get_states_process = await self.get_states()
+        stdout, _stderr = await get_states_process.communicate()
+        self.assertEqual(json.loads(stdout.decode()), ["hello"])
+        self.assertTrue(
+            os.path.exists(hello_notify_file_path),
+            msg=f"notify file was not created: {hello_notify_file_path}",
+        )
+        # Expect killing the state process to leave the notify file behind
+        state_process.kill()
+        await state_process.communicate()
+        self.assertTrue(os.path.exists(hello_notify_file_path))
+
+        # Expect reading subscription states to clear the notify file if the state is not asserted
+        # Expect that multiple reads will not error
+        get_states_process = await self.get_states()
+        get_states_process2 = await self.get_states()
+        stdout, stderr = await get_states_process.communicate()
+        stdout2, stderr2 = await get_states_process2.communicate()
+        # Expect no states to be asserted, and the notify file to be deleted
+        self.assertEqual(json.loads(stdout.decode()), [])
+        self.assertEqual(json.loads(stdout2.decode()), [])
+        self.assertEqual(stderr.decode(), "")
+        self.assertEqual(stderr2.decode(), "")
+        self.assertFalse(os.path.exists(hello_notify_file_path))

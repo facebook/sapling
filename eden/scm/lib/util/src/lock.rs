@@ -173,15 +173,16 @@ impl ContentLock {
         Ok(PathLock::new(file))
     }
 
-    // Checks if there is a lock on path. Returns () if there isn't one.
+    // Checks if there is a lock on path. Returns None if the path doesn't exist, or the
+    // directory lock if there isn't a lock on path for the parent to do additional work.
     // If there is already a lock on path, returns the value contained in content_path
-    pub fn check_lock(&self) -> Result<(), ContentLockError> {
+    pub fn check_lock(&self) -> Result<Option<PathLock>, ContentLockError> {
         if !self.dir_lock_path.try_exists()? || !self.lock_path.try_exists()? {
-            return Ok(());
+            return Ok(None);
         }
-        let _dir_lock = PathLock::shared(&self.dir_lock_path)?;
+        let dir_lock = PathLock::shared(&self.dir_lock_path)?;
         match try_lock_shared(&self.lock_path) {
-            Ok(_) => Ok(()),
+            Ok(_) => Ok(Some(dir_lock)),
             Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
                 let contents = fs_err::read(&self.content_path)?;
                 Err(LockContendedError {
