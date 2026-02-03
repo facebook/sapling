@@ -67,6 +67,7 @@ import {CONFLICT_SIDE_LABELS} from './mergeConflicts/consts';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
+import {WorktreeAddOperation} from './operations/WorktreeAddOperation';
 import {
   inlineProgressByHash,
   operationBeingPreviewed,
@@ -388,6 +389,13 @@ export const Commit = memo(
             createBookmarkAtCommit(commit);
           },
           loggingLabel: 'Create Bookmark',
+        });
+        items.push({
+          label: <T>Checkout in Worktree</T>,
+          onClick: () => {
+            runOperation(new WorktreeAddOperation(commit.hash));
+          },
+          loggingLabel: 'Checkout in Worktree',
         });
         items.push({
           label: hasChildren ? <T>Hide Commit and Descendants</T> : <T>Hide Commit</T>,
