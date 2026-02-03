@@ -17,6 +17,7 @@ use crate::Subcommand;
 mod changes_since;
 mod enter_state;
 mod get_position;
+mod get_states;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Provides a list of filesystem changes since the specified position")]
@@ -30,6 +31,7 @@ pub enum NotifySubcommand {
     GetPosition(get_position::GetPositionCmd),
     ChangesSince(changes_since::ChangesSinceCmd),
     EnterState(enter_state::EnterStateCmd),
+    GetStates(get_states::GetStatesCmd),
 }
 
 #[async_trait]
@@ -40,6 +42,7 @@ impl Subcommand for NotifyCmd {
             GetPosition(cmd) => cmd,
             ChangesSince(cmd) => cmd,
             EnterState(cmd) => cmd,
+            GetStates(cmd) => cmd,
         };
         sc.run().await
     }

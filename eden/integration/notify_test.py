@@ -117,6 +117,25 @@ class NotifyTest(testcase.EdenRepoTest):
             cwd=self.mount,
         )
 
+    async def get_states(self) -> asyncio.subprocess.Process:
+        args = [
+            "notify",
+            "get-states",
+            self.mount,
+            "--json",
+        ]
+        cmd, env = self.eden.get_edenfsctl_cmd_env(*args)
+        env["EDENFS_LOG"] = "edenfs=trace"
+
+        return await asyncio.create_subprocess_exec(
+            *cmd,
+            env=env,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=self.mount,
+        )
+
     async def next_event(
         self, sub: asyncio.subprocess.Process, timeout: int = 5
     ) -> t.Optional[t.Dict[str, t.Any]]:
@@ -586,6 +605,35 @@ class NotifyTest(testcase.EdenRepoTest):
             ],
             msg=f"event: {event['changes']}",
         )
+
+    async def test_get_states(self) -> None:
+        get_states_process = await self.get_states()
+        stdout, _stderr = await get_states_process.communicate()
+        self.assertEqual(json.loads(stdout.decode()), [])
+
+        hello_process = await self.enter_state("hello")
+        await self.wait_for_file(".edenfs-notifications-state/hello/hello.notify")
+        get_states_process = await self.get_states()
+        stdout, _stderr = await get_states_process.communicate()
+        self.assertEqual(json.loads(stdout.decode()), ["hello"])
+
+        goodbye_process = await self.enter_state("goodbye")
+        await self.wait_for_file(".edenfs-notifications-state/goodbye/goodbye.notify")
+        get_states_process = await self.get_states()
+        stdout, _stderr = await get_states_process.communicate()
+        self.assertEqual(sorted(json.loads(stdout.decode())), ["goodbye", "hello"])
+
+        hello_process.terminate()
+        await hello_process.wait()
+        get_states_process = await self.get_states()
+        stdout, _stderr = await get_states_process.communicate()
+        self.assertEqual(json.loads(stdout.decode()), ["goodbye"])
+
+        goodbye_process.terminate()
+        await goodbye_process.wait()
+        get_states_process = await self.get_states()
+        stdout, _stderr = await get_states_process.communicate()
+        self.assertEqual(json.loads(stdout.decode()), [])
 
     async def test_multiple_state_enter(self) -> None:
         # This process should get the state
