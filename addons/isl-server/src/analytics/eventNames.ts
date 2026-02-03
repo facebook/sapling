@@ -197,7 +197,8 @@ export type TrackEventName =
   | 'RecommendedBookmarksReminderResponse'
   | 'PullFullRepoBranchOperation'
   | 'SubtreeMergeOperation'
-  | 'WorktreeAddOperation';
+  | 'WorktreeAddOperation'
+  | 'WorktreeListCommand';
 
 export type TrackErrorName =
   | 'BlameError'

@@ -31,6 +31,7 @@ import type {
   SettableConfigName,
   ShelvedChange,
   StableInfo,
+  WorktreeInfo,
   Submodule,
   SubmodulesByRoot,
   UncommittedChanges,
@@ -1541,6 +1542,20 @@ export class Repository {
     // sort by date ascending
     shelves.sort((a, b) => b.date.getTime() - a.date.getTime());
     return shelves;
+  }
+
+  public async getWorktrees(ctx: RepositoryContext): Promise<Array<WorktreeInfo>> {
+    const result = await this.runCommand(
+      ['wt', 'list', '--json'],
+      'WorktreeListCommand',
+      ctx,
+    );
+    try {
+      return JSON.parse(result.stdout) as Array<WorktreeInfo>;
+    } catch (err) {
+      ctx.logger.error('Failed to parse worktree list output:', err);
+      return [];
+    }
   }
 
   public getAllDiffIds(): Array<DiffId> {
