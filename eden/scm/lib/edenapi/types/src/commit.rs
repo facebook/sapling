@@ -796,14 +796,8 @@ impl From<IdenticalChangesetContent> for HgChangesetContent {
             user: changeset.author.into_bytes(),
             time: changeset.time,
             tz: changeset.tz,
-            extras: changeset
-                .extras
-                .into_iter()
-                .map(|extra| Extra {
-                    key: extra.key.into_bytes(),
-                    value: extra.value,
-                })
-                .collect(),
+            // Use raw HG extras directly to preserve exact bytes for hash computation
+            extras: changeset.hg_info.extras,
             files: changeset.hg_file_changes,
             message: changeset.message.into_bytes(),
         }
