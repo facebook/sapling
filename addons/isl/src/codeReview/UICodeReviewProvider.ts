@@ -41,6 +41,8 @@ export interface UICodeReviewProvider {
       updateMessage?: string;
       /** Whether to update the remote message with the local commit message */
       updateFields?: boolean;
+      /** Whether to automatically publish when all CI signals pass */
+      publishWhenReady?: boolean;
     },
   ): Operation;
 

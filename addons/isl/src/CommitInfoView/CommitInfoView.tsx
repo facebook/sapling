@@ -39,6 +39,7 @@ import {
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {showBranchingPrModal} from '../codeReview/github/BranchingPrModal';
 import {overrideDisabledSubmitModes} from '../codeReview/github/branchPrState';
+import {publishWhenReady, PublishWhenReadyCheckbox} from '../codeReview/PublishWhenReadyCheckbox';
 import {Commit} from '../Commit';
 import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
 import {Center} from '../ComponentUtils';
@@ -164,6 +165,7 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
         )}
         <div className="commit-info-actions-bar-left">
           <SubmitAsDraftCheckbox commitsToBeSubmit={selectedCommits} />
+          <PublishWhenReadyCheckbox />
         </div>
         <div className="commit-info-actions-bar-right">
           <SubmitSelectionButton />
@@ -756,6 +758,7 @@ function ActionsBar({
       )}
       <div className="commit-info-actions-bar-left">
         <SubmitAsDraftCheckbox commitsToBeSubmit={isCommitMode ? [] : [commit]} />
+        <PublishWhenReadyCheckbox />
       </div>
       <div className="commit-info-actions-bar-right">
         {isAnythingBeingEdited && !isCommitMode ? (
@@ -906,6 +909,7 @@ function SubmitButton({
   const [repoInfo, setRepoInfo] = useAtom(repositoryInfo);
   const diffSummaries = useAtomValue(allDiffSummaries);
   const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
+  const shouldPublishWhenReady = useAtomValue(publishWhenReady);
   const [updateMessage, setUpdateMessage] = useAtom(diffUpdateMessagesState(commit.hash));
   const provider = useAtomValue(codeReviewProvider);
 
@@ -1037,6 +1041,7 @@ function SubmitButton({
             draft: shouldSubmitAsDraft,
             updateFields: shouldUpdateMessage,
             updateMessage: updateMessage || undefined,
+            publishWhenReady: shouldPublishWhenReady,
           },
         );
 

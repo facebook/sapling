@@ -14,6 +14,7 @@ import {OperationDisabledButton} from './OperationDisabledButton';
 import {multiSubmitUpdateMessage} from './SubmitUpdateMessageInput';
 import {allDiffSummaries, codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {submitAsDraft} from './codeReview/DraftCheckbox';
+import {publishWhenReady} from './codeReview/PublishWhenReadyCheckbox';
 import {t, T} from './i18n';
 import {readAtom, writeAtom} from './jotaiUtils';
 import {dagWithPreviews} from './previews';
@@ -81,6 +82,7 @@ export function SubmitSelectionButton({commit}: {commit?: CommitInfo}) {
             return provider.submitOperation(submittable, {
               draft: readAtom(submitAsDraft),
               updateMessage: updateMessage || undefined,
+              publishWhenReady: readAtom(publishWhenReady),
             });
           }}
           contextKey={`submit-selection-${submittable[0].hash}`}>

@@ -844,6 +844,7 @@ export type SubscriptionKind =
 export const allConfigNames = [
   // these config names are for compatibility.
   'isl.submitAsDraft',
+  'isl.publishWhenReady',
   'isl.changedFilesDisplayType',
   // sapling config prefers foo-bar naming.
   'isl.pull-button-choice',
@@ -876,6 +877,7 @@ export type ConfigName = (typeof allConfigNames)[number];
  */
 export const settableConfigNames = [
   'isl.submitAsDraft',
+  'isl.publishWhenReady',
   'isl.changedFilesDisplayType',
   'isl.pull-button-choice',
   'isl.show-stack-submit-confirmation',

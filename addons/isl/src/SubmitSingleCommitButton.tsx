@@ -12,6 +12,7 @@ import {useAtomValue} from 'jotai';
 import {tracker} from './analytics';
 import {codeReviewProvider, diffSummary} from './codeReview/CodeReviewInfo';
 import {submitAsDraft} from './codeReview/DraftCheckbox';
+import {publishWhenReady} from './codeReview/PublishWhenReadyCheckbox';
 import {t, T} from './i18n';
 import {readAtom} from './jotaiUtils';
 import {useRunOperation} from './operationsState';
@@ -53,6 +54,7 @@ export function SubmitSingleCommitButton() {
           runOperation(
             provider.submitOperation([], {
               draft: draft ?? false,
+              publishWhenReady: readAtom(publishWhenReady),
             }),
           );
         }}

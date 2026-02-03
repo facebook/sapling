@@ -10,11 +10,11 @@ import type {CommitInfo} from '../types';
 import {Checkbox} from 'isl-components/Checkbox';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
+import {submitAsDraft} from '../atoms/submitOptionAtoms';
 import {t, T} from '../i18n';
-import {configBackedAtom} from '../jotaiUtils';
 import {codeReviewProvider} from './CodeReviewInfo';
 
-export const submitAsDraft = configBackedAtom<boolean>('isl.submitAsDraft', false);
+export {submitAsDraft} from '../atoms/submitOptionAtoms';
 
 export function SubmitAsDraftCheckbox({
   commitsToBeSubmit,
@@ -24,6 +24,7 @@ export function SubmitAsDraftCheckbox({
   | {forceShow: true; commitsToBeSubmit?: undefined}) {
   const [isDraft, setIsDraft] = useAtom(submitAsDraft);
   const provider = useAtomValue(codeReviewProvider);
+
   if (
     !forceShow &&
     (provider == null ||
@@ -37,7 +38,7 @@ export function SubmitAsDraftCheckbox({
     return null;
   }
   return (
-    <Checkbox checked={isDraft} onChange={checked => setIsDraft(checked)}>
+    <Checkbox checked={isDraft} onChange={setIsDraft}>
       <Tooltip
         title={
           forceShow

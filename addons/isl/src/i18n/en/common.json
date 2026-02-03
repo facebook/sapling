@@ -27,5 +27,6 @@
   "moreCommandsToRun_one": "1 more command",
   "moreCommandsToRun_other": "$count more commands",
   "whetherToSubmitDiffAsDraft_one": "Whether to submit this diff as a draft",
-  "whetherToSubmitDiffAsDraft_other": "Whether to submit these $count diffs as a draft"
+  "whetherToSubmitDiffAsDraft_other": "Whether to submit these $count diffs as a draft",
+  "publishWhenReadyTooltip": "Submit as draft and automatically publish for review when all CI signals pass. Publishing will request reviewers and notify them. CI validation starts immediately."
 }

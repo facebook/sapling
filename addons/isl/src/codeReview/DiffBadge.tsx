@@ -246,6 +246,7 @@ function ResubmitSyncButton({
             provider.submitOperation([commit], {
               draft: confirmation.submitAsDraft,
               updateMessage: confirmation.updateMessage,
+              publishWhenReady: confirmation.publishWhenReady,
             }),
           );
         }}>

@@ -140,6 +140,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
                 return reviewProvider.submitOperation(resubmittableStack, {
                   draft: confirmation.submitAsDraft,
                   updateMessage: confirmation.updateMessage,
+                  publishWhenReady: confirmation.publishWhenReady,
                 });
               }}>
               <T>Resubmit stack</T>
@@ -171,6 +172,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
               reviewProvider.submitOperation(submittableStack, {
                 draft: confirmation.submitAsDraft,
                 updateMessage: confirmation.updateMessage,
+                publishWhenReady: confirmation.publishWhenReady,
               }),
             );
           },
@@ -211,6 +213,7 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
                 return reviewProvider.submitOperation(submittableStack, {
                   draft: confirmation.submitAsDraft,
                   updateMessage: confirmation.updateMessage,
+                  publishWhenReady: confirmation.publishWhenReady,
                 });
               }}>
               <T>Submit stack</T>
