@@ -11,11 +11,11 @@ import Link from './Link';
 import URLFor from './URLFor';
 import Username from './Username';
 import {APP_HEADER_HEIGHT} from './constants';
-import {primerColorMode} from './themeState';
+import {primerColorModeAtom} from './jotai/atoms';
 import {HomeIcon} from '@primer/octicons-react';
 import {Box, Header, Text, ToggleSwitch} from '@primer/react';
+import {useAtom} from 'jotai';
 import {useCallback} from 'react';
-import {useRecoilState} from 'recoil';
 
 type Props = {
   orgAndRepo: GitHubOrgAndRepo | null;
@@ -60,7 +60,7 @@ function PullsLink({org, repo}: {org: string; repo: string}) {
 }
 
 function ThemeSelector() {
-  const [colorMode, setColorMode] = useRecoilState(primerColorMode);
+  const [colorMode, setColorMode] = useAtom(primerColorModeAtom);
   const checked = colorMode === 'night';
   const onClick = useCallback(() => {
     setColorMode(colorMode === 'night' ? 'day' : 'night');

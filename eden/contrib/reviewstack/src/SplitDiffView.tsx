@@ -21,25 +21,18 @@ import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
 import LargeDiffPlaceholder from './LargeDiffPlaceholder';
 import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffRow from './SplitDiffRow';
-import {diffAndTokenize, lineRange} from './diffServiceClient';
+import {lineRange} from './diffServiceClient';
 import {DiffSide} from './generated/graphql';
 import {grammars, languages} from './generated/textmate/TextMateGrammarManifest';
-import {
-  gitHubPullRequestLineToPositionForFile,
-  gitHubPullRequestSelectedVersionIndex,
-  gitHubPullRequestVersions,
-  gitHubDiffCommitIDs,
-  gitHubDiffNewCommentInputCallbacks,
-  gitHubThreadsForDiffFile,
-  nullAtom,
-} from './recoil';
-import {primerColorMode} from './themeState';
+import {primerColorModeAtom} from './jotai/atoms';
+import {useSplitDiffViewData} from './jotai/hooks/';
 import {groupBy} from './utils';
 import {UnfoldIcon} from '@primer/octicons-react';
 import {Box, Spinner, Text} from '@primer/react';
 import {diffChars} from 'diff';
+import {useAtomValue} from 'jotai';
 import React, {useCallback, useEffect, useState} from 'react';
-import {useRecoilValue, useRecoilValueLoadable, waitForAll} from 'recoil';
+import {useRecoilValueLoadable} from 'recoil';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
 import {
   applyTokenizationToLine,
@@ -101,29 +94,10 @@ export default function SplitDiffView({
   }, []);
 
   const scopeName = getFilepathClassifier().findScopeNameForPath(path);
-  const colorMode = useRecoilValue(primerColorMode);
-  const loadable = useRecoilValueLoadable(
-    waitForAll([
-      diffAndTokenize({path, before, after, scopeName, colorMode}),
-      gitHubThreadsForDiffFile(path),
-      gitHubDiffNewCommentInputCallbacks,
-      // Reset the newCommentInput state when switching views (i.e., with
-      // different commit IDs being compared). Although `commitIDs` is not used
-      // directly in the effect, we do want to run it when `commitIDs` changes.
-      gitHubDiffCommitIDs,
+  const colorMode = useAtomValue(primerColorModeAtom);
 
-      // TODO(T122242329): This is a bit of a hack where we preload these values
-      // to ensure the derived state used by <SplitDiffRowSide> is guaranteed
-      // to be available synchronously, avoiding a potentially explosive amount
-      // of re-rendering due to notifications from useRecoilValue() about
-      // updates to async selectors. The contract between the fetching here and
-      // the loading in <SplitDiffRowSide> is very brittle, so ideally this
-      // would be redesigned to be more robust.
-      isPullRequest ? gitHubPullRequestVersions : nullAtom,
-      isPullRequest ? gitHubPullRequestSelectedVersionIndex : nullAtom,
-      isPullRequest ? gitHubPullRequestLineToPositionForFile(path) : nullAtom,
-    ]),
-  );
+  // Use the bridged Jotai hook instead of useRecoilValueLoadable
+  const loadable = useSplitDiffViewData(path, before, after, scopeName, colorMode, isPullRequest);
 
   if (loadable.state === 'loading') {
     return (
@@ -142,14 +116,19 @@ export default function SplitDiffView({
       <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
         <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
         <Box padding={3} color="danger.fg">
-          <Text>Error loading diff: {loadable.contents?.message ?? 'Unknown error'}</Text>
+          <Text>Error loading diff: {loadable.error?.message ?? 'Unknown error'}</Text>
         </Box>
       </Box>
     );
   }
 
-  const [{patch, tokenization}, allThreads, newCommentInputCallbacks, commitIDs] =
-    loadable.getValue();
+  const {
+    diffAndTokenize: diffResult,
+    threads: allThreads,
+    newCommentInputCallbacks,
+    commitIDs,
+  } = loadable.data;
+  const {patch, tokenization} = diffResult;
 
   // Calculate total lines to determine if this is a large diff
   const totalLines = patch.hunks.reduce((sum: number, hunk: Hunk) => sum + hunk.lines.length, 0);

@@ -18,10 +18,11 @@ import PullsView from './PullsView';
 import SplitDiffViewPrimerStyles from './SplitDiffViewPrimerStyles';
 import UserHomePage from './UserHomePage';
 import {gitHubTokenPersistence} from './github/gitHubCredentials';
-import {primerColorMode} from './themeState';
+import {primerColorModeAtom} from './jotai/atoms';
 import {BaseStyles, Box, Text, useTheme} from '@primer/react';
+import {useAtomValue} from 'jotai';
 import React, {useEffect} from 'react';
-import {useRecoilValue, useRecoilValueLoadable} from 'recoil';
+import {useRecoilValueLoadable} from 'recoil';
 
 type Page =
   | {type: 'home'}
@@ -117,7 +118,7 @@ function ContentOrLoginDialog({page}: {page: Page}): React.ReactElement {
  */
 // eslint-disable-next-line prefer-arrow-callback
 const ThemeListener = React.memo(function ThemeListener(): React.ReactElement {
-  const colorMode = useRecoilValue(primerColorMode);
+  const colorMode = useAtomValue(primerColorModeAtom);
   const {setColorMode} = useTheme();
   useEffect(() => {
     setColorMode(colorMode);
