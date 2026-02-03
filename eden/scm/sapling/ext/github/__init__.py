@@ -159,6 +159,19 @@ def pull_cmd(ui, repo, *args, **opts):
             False,
             _("only fetch PRs from target towards trunk (skip upstack)"),
         ),
+        (
+            "",
+            "wt",
+            False,
+            _("import the stack into a new worktree instead of the current working copy"),
+        ),
+        (
+            "",
+            "wt-name",
+            "",
+            _("name for the worktree (default: pr-<number>)"),
+            _("NAME"),
+        ),
     ],
     _("PULL_REQUEST"),
 )
@@ -176,6 +189,11 @@ def get_cmd(ui, repo, *args, **opts):
 
     Use --downstack to fetch only PRs from the target towards trunk,
     skipping any upstack (descendant) PRs.
+
+    Use --wt to import the stack into a new worktree instead of
+    updating the current working copy. This preserves your current
+    work while reviewing a PR. The worktree is created as a sibling
+    directory named 'pr-<number>' (or use --wt-name to customize).
     """
     return get_stack.get(ui, repo, *args, **opts)
 
