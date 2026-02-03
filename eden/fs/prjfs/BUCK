@@ -8,7 +8,12 @@ cpp_library(
         "Enumerator.cpp",
         "PrjfsChannel.cpp",
         "PrjfsDispatcher.cpp",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "PrjfsRequestContext.cpp",
+        ],
+    }),
     headers = [
         "Enumerator.h",
         "PrjfsChannel.h",

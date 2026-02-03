@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#pragma once
+
 #include "folly/portability/Windows.h"
 
 #include <ProjectedFSLib.h> // @manual
@@ -18,7 +20,7 @@ namespace facebook::eden {
 
 class PrjfsObjectFetchContext : public FsObjectFetchContext {
  public:
-  PrjfsObjectFetchContext(ProcessId pid) : pid_{pid} {}
+  explicit PrjfsObjectFetchContext(ProcessId pid) : pid_{pid} {}
 
   OptionalProcessId getClientPid() const override {
     return pid_;
@@ -37,62 +39,23 @@ class PrjfsRequestContext : public RequestContext {
 
   explicit PrjfsRequestContext(
       folly::ReadMostlySharedPtr<PrjfsChannelInner> channel,
-      const PRJ_CALLBACK_DATA& prjfsData)
-      : RequestContext(
-            channel->getProcessAccessLog(),
-            channel->getStructuredLogger(),
-            channel->getLongRunningFSRequestThreshold(),
-            makeRefPtr<PrjfsObjectFetchContext>(
-                ProcessId{prjfsData.TriggeringProcessId})),
-        channel_(std::move(channel)),
-        commandId_(prjfsData.CommandId) {}
+      const PRJ_CALLBACK_DATA& prjfsData);
 
-  folly::ReadMostlyWeakPtr<PrjfsChannelInner> getChannelForAsyncUse() {
-    return folly::ReadMostlyWeakPtr<PrjfsChannelInner>{channel_};
-  }
+  folly::ReadMostlyWeakPtr<PrjfsChannelInner> getChannelForAsyncUse();
 
   ImmediateFuture<folly::Unit> catchErrors(
       ImmediateFuture<folly::Unit>&& fut,
       EdenStatsPtr stats,
       StatsGroupBase::Counter PrjfsStats::* countSuccessful,
-      StatsGroupBase::Counter PrjfsStats::* countFailure) {
-    return std::move(fut).thenTry(
-        [this, stats = std::move(stats), countSuccessful, countFailure](
-            folly::Try<folly::Unit>&& try_) {
-          auto result = tryToHResult(try_);
-          if (result != S_OK) {
-            if (stats && countFailure) {
-              stats->increment(countFailure);
-            }
-            sendError(result);
-          } else {
-            if (stats && countSuccessful) {
-              stats->increment(countSuccessful);
-            }
-          }
-        });
-  }
+      StatsGroupBase::Counter PrjfsStats::* countFailure);
 
-  void sendSuccess() const {
-    return channel_->sendSuccess(commandId_, nullptr);
-  }
+  void sendSuccess() const;
 
-  void sendNotificationSuccess() const {
-    PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS extra{};
-    extra.CommandType = PRJ_COMPLETE_COMMAND_TYPE_NOTIFICATION;
-    return channel_->sendSuccess(commandId_, &extra);
-  }
+  void sendNotificationSuccess() const;
 
-  void sendEnumerationSuccess(PRJ_DIR_ENTRY_BUFFER_HANDLE buffer) const {
-    PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS extra{};
-    extra.CommandType = PRJ_COMPLETE_COMMAND_TYPE_ENUMERATION;
-    extra.Enumeration.DirEntryBufferHandle = buffer;
-    return channel_->sendSuccess(commandId_, &extra);
-  }
+  void sendEnumerationSuccess(PRJ_DIR_ENTRY_BUFFER_HANDLE buffer) const;
 
-  void sendError(HRESULT result) const {
-    return channel_->sendError(commandId_, result);
-  }
+  void sendError(HRESULT result) const;
 
  private:
   folly::ReadMostlySharedPtr<PrjfsChannelInner> channel_;
