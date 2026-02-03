@@ -18,7 +18,7 @@ import type {DiffAndTokenizeParams, DiffAndTokenizeResponse} from '../diffServic
 import type {DiffSide} from '../generated/graphql';
 import type {DiffCommitIDs} from '../github/diffTypes';
 import type {GitHubPullRequestReviewThread} from '../github/pullRequestTimelineTypes';
-import type {Version} from '../github/types';
+import type {ID, Version} from '../github/types';
 import type {LineToPosition} from '../lineToPosition';
 import type {NewCommentInputCallbacks} from '../recoil';
 
@@ -132,3 +132,22 @@ export function serializeDiffParams(params: DiffAndTokenizeParams): string {
     colorMode: params.colorMode,
   });
 }
+
+// =============================================================================
+// Migrated Atoms
+// =============================================================================
+// These atoms have been fully migrated from Recoil and no longer need
+// a bridge. Components should import them directly from this file.
+// =============================================================================
+
+/**
+ * Migrated from: gitHubPullRequestJumpToCommentID in recoil.ts
+ *
+ * An atom family that tracks whether a specific comment should be scrolled to.
+ * When set to true, the comment will scroll into view and the atom will be
+ * reset to false.
+ */
+export const gitHubPullRequestJumpToCommentIDAtom = atomFamily(
+  (_id: ID) => atom<boolean>(false),
+  (a, b) => a === b,
+);

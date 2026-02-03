@@ -528,11 +528,6 @@ export const gitHubPullRequestCommentForID = selectorFamily<PullRequestReviewCom
     },
 });
 
-export const gitHubPullRequestJumpToCommentID = atomFamily<boolean, ID>({
-  key: 'gitHubPullRequestJumpToCommentID',
-  default: false,
-});
-
 export const gitHubPullRequestNewCommentInputCell = atom<{
   lineNumber: number;
   path: string;
@@ -602,8 +597,8 @@ export const gitHubPullRequestNewCommentInputCallbacks = selector<NewCommentInpu
             _side === DiffSide.Left
               ? DiffSide.Left
               : _side === DiffSide.Right
-              ? DiffSide.Right
-              : null;
+                ? DiffSide.Right
+                : null;
           if (isNaN(lineNumber) || side == null) {
             return;
           }

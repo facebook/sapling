@@ -13,10 +13,10 @@ import PendingLabel from './PendingLabel';
 import PullRequestInlineCommentInput from './PullRequestInlineCommentInput';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
 import {PullRequestReviewCommentState} from './generated/graphql';
-import {gitHubPullRequestJumpToCommentID} from './recoil';
+import {gitHubPullRequestJumpToCommentIDAtom} from './jotai/atoms';
 import {Box, Button} from '@primer/react';
+import {useAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
-import {useRecoilState} from 'recoil';
 
 type Props = {
   comments: GitHubPullRequestReviewThreadComment[];
@@ -54,8 +54,8 @@ export default function InlineCommentThread({comments}: Props): React.ReactEleme
 
 function Comment({comment}: {comment: GitHubPullRequestReviewThreadComment}): React.ReactElement {
   const ref = useRef<HTMLDivElement | null>(null);
-  const [jumpToCommentID, setJumpToCommentID] = useRecoilState(
-    gitHubPullRequestJumpToCommentID(comment.id),
+  const [jumpToCommentID, setJumpToCommentID] = useAtom(
+    gitHubPullRequestJumpToCommentIDAtom(comment.id),
   );
 
   useEffect(() => {
