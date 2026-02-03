@@ -55,9 +55,19 @@ def get(ui, repo, *args, **opts):
 
     is_goto = opts.get("goto")
     downstack_only = opts.get("downstack")
+    use_worktree = opts.get("wt")
+    wt_name = opts.get("wt_name")
 
     return asyncio.run(
-        _get_stack(ui, repo, pr_id=pr_id, is_goto=is_goto, downstack_only=downstack_only)
+        _get_stack(
+            ui,
+            repo,
+            pr_id=pr_id,
+            is_goto=is_goto,
+            downstack_only=downstack_only,
+            use_worktree=use_worktree,
+            wt_name=wt_name,
+        )
     )
 
 
@@ -67,6 +77,8 @@ async def _get_stack(
     pr_id: PullRequestId,
     is_goto: bool,
     downstack_only: bool,
+    use_worktree: bool = False,
+    wt_name: str = "",
 ) -> int:
     """Internal implementation of stack fetch.
 
@@ -129,8 +141,17 @@ async def _get_stack(
 
     ui.status(_("successfully imported %d PR(s)\n") % num_prs)
 
-    # Goto target if requested
-    if is_goto and target_node is not None:
+    # Create worktree if requested (takes precedence over goto)
+    if use_worktree and target_node is not None:
+        from sapling.node import hex as node_hex
+
+        from ..worktree import create_worktree_for_commit
+
+        target_hex = node_hex(target_node)
+        worktree_name = wt_name if wt_name else f"pr-{pr_id.number}"
+        create_worktree_for_commit(ui, repo, target_hex, name=worktree_name)
+    # Goto target if requested (and not using worktree)
+    elif is_goto and target_node is not None:
         target_entry = stack_result.entries[stack_result.target_index]
         updatetotally(ui, repo, target_node, None)
         ui.status(_("now at #%d\n") % target_entry.number)
