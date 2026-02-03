@@ -46,19 +46,26 @@ impl crate::Subcommand for EnterStateCmd {
     async fn run(&self) -> Result<ExitCode> {
         let asserted_states_client =
             AssertedStatesClient::new(&get_mount_point(&self.mount_point)?)?;
-        let _state = asserted_states_client.enter_state(&self.name);
-        match self.duration {
-            Some(duration) => {
-                println!("Holding state for {} seconds", duration);
-                std::thread::sleep(std::time::Duration::from_secs(duration));
+        let state = asserted_states_client.enter_state(&self.name);
+        match state {
+            Ok(_state_lock) => {
+                match self.duration {
+                    Some(duration) => {
+                        println!("Holding state for {} seconds", duration);
+                        std::thread::sleep(std::time::Duration::from_secs(duration));
+                    }
+                    None => {
+                        println!("Press enter to release state");
+                        let _ = std::io::stdin().read_line(&mut String::new())?;
+                    }
+                }
+                // State is released when the dropped as the program exits
+                Ok(0)
             }
-            None => {
-                println!("Press enter to release state");
-                let _ = std::io::stdin().read_line(&mut String::new())?;
+            Err(e) => {
+                eprintln!("Failed to enter state '{}': {e}", self.name);
+                Ok(1)
             }
         }
-        // State is released when the dropped as the program exits
-
-        Ok(0)
     }
 }

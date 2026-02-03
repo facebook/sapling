@@ -8,6 +8,7 @@
 
 import asyncio
 import json
+import os
 import platform
 import subprocess
 import sys
@@ -112,6 +113,7 @@ class NotifyTest(testcase.EdenRepoTest):
             env=env,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             cwd=self.mount,
         )
 
@@ -158,12 +160,23 @@ class NotifyTest(testcase.EdenRepoTest):
         subscription sees it.
         """
         for _ in range(attempt):
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
             action()
             event = await self.next_event(sub)
             if event:
                 return event
         return None
+
+    async def wait_for_file(self, path: str, timeout: float = 5.0) -> None:
+        """Wait for the file to be created in the mount."""
+        while True:
+            if os.path.exists(os.path.join(self.mount, path)):
+                return
+            await asyncio.sleep(0.1)
+            if timeout > 0:
+                timeout -= 0.1
+            if timeout <= 0:
+                raise RuntimeError(f"Timed out waiting for {path}")
 
     async def test_debug_subscribe(self) -> None:
         subscription = await self.subscribe()
@@ -573,3 +586,21 @@ class NotifyTest(testcase.EdenRepoTest):
             ],
             msg=f"event: {event['changes']}",
         )
+
+    async def test_multiple_state_enter(self) -> None:
+        # This process should get the state
+        lock_process = await self.enter_state("hello")
+        await self.wait_for_file(".edenfs-notifications-state/hello/hello.notify")
+        # This process should fail to enter the state
+        fail_state_process = await self.enter_state("hello")
+        stdout, stderr = await fail_state_process.communicate()
+        self.assertEqual(stdout.decode(), "")
+        self.assertIn("State is already asserted", stderr.decode())
+
+        lock_process.terminate()
+        await lock_process.wait()
+
+        # Now that the first process has left the state, the second process should be able to enter
+        success_state_process = await self.enter_state("hello", duration=1)
+        stdout, stderr = await success_state_process.communicate()
+        self.assertIn("Holding state for 1 seconds", stdout.decode())
