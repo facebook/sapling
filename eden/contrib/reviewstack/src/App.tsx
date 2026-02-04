@@ -16,6 +16,7 @@ import PrimerStyles from './PrimerStyles';
 import PullRequestLayout from './PullRequestLayout';
 import PullsView from './PullsView';
 import SplitDiffViewPrimerStyles from './SplitDiffViewPrimerStyles';
+import TextMateStyles from './TextMateStyles';
 import UserHomePage from './UserHomePage';
 import {gitHubTokenPersistence} from './github/gitHubCredentials';
 import {JotaiRecoilSync} from './jotai/JotaiRecoilSync';
@@ -63,6 +64,7 @@ export default function App({page}: {page: Page}): React.ReactElement {
         <BaseStyles>
           <PrimerStyles />
           <SplitDiffViewPrimerStyles />
+          <TextMateStyles />
           <Box bg="canvas.default" fontFamily="normal" className="reviewstack">
             <ContentOrLoginDialog page={page} />
           </Box>
