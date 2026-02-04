@@ -35,7 +35,7 @@ gix-hash = "0.18.0"
 gix-object = "0.49.1"
 gix-packetline = { version = "0.19.0", features = ["blocking-io"] }
 gix-transport = "0.47.0"
-gotham = "0.7.1"
+gotham = "0.7.4"
 gotham_derive = "0.7.0"
 gotham_ext = { version = "0.1.0", path = "../../../common/gotham_ext" }
 http = "0.2"
