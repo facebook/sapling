@@ -799,7 +799,9 @@ export const gitHubPullRequestSelectedVersionIndex = atom<number>({
       const versions = get(gitHubPullRequestVersions);
 
       if (versions.length === 0) {
-        throw new Error('no versions available for the pull request');
+        // Return 0 when no versions available yet (loading state).
+        // Dependent selectors should handle this gracefully.
+        return 0;
       }
 
       return versions.length - 1;
@@ -817,6 +819,12 @@ export const gitHubPullRequestIsViewingLatest = selector<boolean>({
         gitHubPullRequestComparableVersions,
       ]),
     );
+
+    // Handle loading state when versions aren't available yet
+    if (versions.length === 0) {
+      return true; // Default to true during loading
+    }
+
     const {beforeCommitID, afterCommitID} = comparableVersions;
     const latestVersionIndex = versions.length - 1;
     const latestVersion = versions[latestVersionIndex];
@@ -845,6 +853,14 @@ export const gitHubPullRequestComparableVersions = atom<ComparableVersions>({
         waitForAll([gitHubPullRequestVersions, gitHubPullRequestSelectedVersionIndex]),
       );
       const version = versions[selectedVersionIndex];
+
+      // Handle loading state when versions aren't available yet
+      if (version == null) {
+        return {
+          beforeCommitID: null,
+          afterCommitID: '' as GitObjectID,
+        };
+      }
 
       return {
         beforeCommitID: version.baseParent,

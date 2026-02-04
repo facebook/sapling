@@ -17,24 +17,19 @@ import PullRequestReviewers from './PullRequestReviewers';
 import PullRequestSignals from './PullRequestSignals';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
 import {stripStackInfoFromBodyHTML} from './ghstackUtils';
+import {gitHubOrgAndRepoAtom, gitHubPullRequestAtom, gitHubPullRequestIDAtom} from './jotai';
 import {
-  gitHubPullRequest,
-  gitHubOrgAndRepo,
   gitHubPullRequestForParams,
-  gitHubPullRequestID,
   gitHubPullRequestComparableVersions,
   gitHubPullRequestVersionDiff,
+  gitHubPullRequest,
 } from './recoil';
 import {stripStackInfoFromSaplingBodyHTML} from './saplingStack';
 import {stackedPullRequest} from './stackState';
 import {Box, Text} from '@primer/react';
+import {useAtomValue, useSetAtom} from 'jotai';
 import {Suspense, useEffect} from 'react';
-import {
-  useRecoilValue,
-  useRecoilValueLoadable,
-  useResetRecoilState,
-  useSetRecoilState,
-} from 'recoil';
+import {useRecoilValueLoadable, useResetRecoilState, useSetRecoilState} from 'recoil';
 
 export default function PullRequest() {
   const resetComparableVersions = useResetRecoilState(gitHubPullRequestComparableVersions);
@@ -53,8 +48,8 @@ export default function PullRequest() {
 }
 
 function PullRequestBootstrap() {
-  const number = useRecoilValue(gitHubPullRequestID);
-  const orgAndRepo = useRecoilValue(gitHubOrgAndRepo);
+  const number = useAtomValue(gitHubPullRequestIDAtom);
+  const orgAndRepo = useAtomValue(gitHubOrgAndRepoAtom);
   if (number != null && orgAndRepo != null) {
     return <PullRequestWithParams params={{orgAndRepo, number}} />;
   } else {
@@ -69,10 +64,11 @@ function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
   // briefly see a loading indicator followed by a massive redraw to restore
   // what they were just looking at. To avoid this, we leverage
   // useRecoilValueLoadable() to probe for updates to gitHubPullRequestForParams
-  // while using the gitHubPullRequest for the purposes of rendering, as it is
+  // while using the gitHubPullRequestAtom for the purposes of rendering, as it is
   // updated synchronously and therefore will not trigger <Suspense>.
   const pullRequestLoadable = useRecoilValueLoadable(gitHubPullRequestForParams(params));
-  const setPullRequest = useSetRecoilState(gitHubPullRequest);
+  const setPullRequestJotai = useSetAtom(gitHubPullRequestAtom);
+  const setPullRequestRecoil = useSetRecoilState(gitHubPullRequest);
   const pullRequest =
     pullRequestLoadable.state === 'hasValue' ? pullRequestLoadable.contents : null;
   const isPullRequestNotFound = pullRequestLoadable.state === 'hasValue' && pullRequest == null;
@@ -80,12 +76,14 @@ function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
   useEffect(() => {
     if (pullRequest != null) {
       // Here we should diff the new value with the existing value for the
-      // gitHubPullRequest atom, preserving as many of the original references
+      // gitHubPullRequestAtom, preserving as many of the original references
       // as possible to limit the number of updates to the dataflow graph,
       // which will short-circuit a bunch off diff'ing React will have to do.
-      setPullRequest(pullRequest);
+      setPullRequestJotai(pullRequest);
+      // Also sync to Recoil for selectors that still depend on the Recoil atom
+      setPullRequestRecoil(pullRequest);
     }
-  }, [pullRequest, setPullRequest]);
+  }, [pullRequest, setPullRequestJotai, setPullRequestRecoil]);
   if (isPullRequestNotFound) {
     return <PullRequestNotFound />;
   } else {
@@ -98,7 +96,7 @@ function PullRequestNotFound() {
 }
 
 function PullRequestDetails() {
-  const pullRequest = useRecoilValue(gitHubPullRequest);
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const pullRequestStack = useRecoilValueLoadable(stackedPullRequest);
   if (pullRequest == null || pullRequestStack.state !== 'hasValue') {
     return null;

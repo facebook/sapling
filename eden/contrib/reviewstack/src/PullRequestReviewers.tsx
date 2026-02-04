@@ -10,20 +10,24 @@ import type {UserFragment} from './generated/graphql';
 import FieldLabel from './FieldLabel';
 import RepoAssignableUsersInput from './RepoAssignableUsersInput';
 import {gitHubUsername} from './github/gitHubCredentials';
-import {gitHubPullRequestReviewersAtom} from './jotai';
-import {gitHubClient, gitHubPullRequest, gitHubPullRequestViewerDidAuthor} from './recoil';
+import {
+  gitHubPullRequestAtom,
+  gitHubPullRequestReviewersAtom,
+  gitHubPullRequestViewerDidAuthorAtom,
+} from './jotai';
+import {gitHubClient} from './recoil';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {GearIcon} from '@primer/octicons-react';
 import {ActionMenu, AvatarToken, Box, Button} from '@primer/react';
-import {useAtom} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import {useEffect} from 'react';
 import {useRecoilCallback, useRecoilValue} from 'recoil';
 
 export default function PullRequestReviewers(): React.ReactElement {
   const refreshPullRequest = useRefreshPullRequest();
-  const pullRequest = useRecoilValue(gitHubPullRequest);
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const [pullRequestReviewers, setPullRequestReviewers] = useAtom(gitHubPullRequestReviewersAtom);
-  const viewerDidAuthor = useRecoilValue(gitHubPullRequestViewerDidAuthor);
+  const viewerDidAuthor = useAtomValue(gitHubPullRequestViewerDidAuthorAtom);
   const username = useRecoilValue(gitHubUsername);
 
   // Initialize pullRequestReviewers state using pullRequest once it is available.
@@ -70,7 +74,7 @@ export default function PullRequestReviewers(): React.ReactElement {
           return Promise.reject('client not found');
         }
 
-        const pullRequestId = snapshot.getLoadable(gitHubPullRequest).valueMaybe()?.id;
+        const pullRequestId = pullRequest?.id;
         if (pullRequestId == null) {
           return Promise.reject('pull request not found');
         }
@@ -101,7 +105,7 @@ export default function PullRequestReviewers(): React.ReactElement {
           setPullRequestReviewers(pullRequestReviewers);
         }
       },
-    [pullRequestReviewers, refreshPullRequest, setPullRequestReviewers],
+    [pullRequest, pullRequestReviewers, refreshPullRequest, setPullRequestReviewers],
   );
 
   const label = !viewerDidAuthor ? (

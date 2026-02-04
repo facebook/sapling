@@ -5,28 +5,61 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {gitHubOrgAndRepoAtom} from './atoms';
-import {gitHubOrgAndRepo} from '../recoil';
-import {useSetAtom} from 'jotai';
+import {gitHubCommitID, gitHubOrgAndRepo, gitHubPullRequest} from '../recoil';
+import {gitHubCommitIDAtom, gitHubOrgAndRepoAtom, gitHubPullRequestAtom} from './atoms';
+import {useAtomValue, useSetAtom} from 'jotai';
 import {useEffect} from 'react';
-import {useRecoilValue} from 'recoil';
+import {useRecoilValue, useSetRecoilState} from 'recoil';
 
 /**
  * Synchronizes Recoil state to Jotai atoms during the migration period.
  *
- * This component bridges the gap where:
- * - Components set Recoil atoms (e.g., PullRequestLayout sets gitHubOrgAndRepo)
- * - Other components consume Jotai atoms that depend on those values
+ * This component provides bidirectional sync between Recoil and Jotai:
+ * - Recoil -> Jotai: For atoms still set via Recoil (e.g., PullRequestLayout)
+ * - Jotai -> Recoil: For atoms migrated to Jotai but with remaining Recoil dependents
  *
- * Can be removed once all setters are migrated to Jotai.
+ * Can be removed once all setters and consumers are migrated to Jotai.
  */
 export function JotaiRecoilSync(): null {
-  const orgAndRepo = useRecoilValue(gitHubOrgAndRepo);
+  // Bidirectional sync for orgAndRepo
+  // - PullRequestLayout sets via Recoil
+  // - CommitView sets via Jotai
+  // - gitHubClient (Recoil selector) reads from Recoil
+  // - Jotai atoms read from Jotai
+  const recoilOrgAndRepo = useRecoilValue(gitHubOrgAndRepo);
+  const jotaiOrgAndRepo = useAtomValue(gitHubOrgAndRepoAtom);
   const setOrgAndRepoAtom = useSetAtom(gitHubOrgAndRepoAtom);
+  const setOrgAndRepoRecoil = useSetRecoilState(gitHubOrgAndRepo);
 
   useEffect(() => {
-    setOrgAndRepoAtom(orgAndRepo);
-  }, [orgAndRepo, setOrgAndRepoAtom]);
+    // Sync Recoil -> Jotai when Recoil has a value and Jotai doesn't (or differs)
+    if (recoilOrgAndRepo != null) {
+      setOrgAndRepoAtom(recoilOrgAndRepo);
+    }
+  }, [recoilOrgAndRepo, setOrgAndRepoAtom]);
+
+  useEffect(() => {
+    // Sync Jotai -> Recoil when Jotai has a value (for CommitView)
+    if (jotaiOrgAndRepo != null) {
+      setOrgAndRepoRecoil(jotaiOrgAndRepo);
+    }
+  }, [jotaiOrgAndRepo, setOrgAndRepoRecoil]);
+
+  // Jotai -> Recoil sync for pull request (migrated to Jotai but Recoil selectors depend on it)
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
+  const setPullRequest = useSetRecoilState(gitHubPullRequest);
+
+  useEffect(() => {
+    setPullRequest(pullRequest);
+  }, [pullRequest, setPullRequest]);
+
+  // Jotai -> Recoil sync for commit ID (CommitView sets via Jotai, Recoil selectors depend on it)
+  const commitID = useAtomValue(gitHubCommitIDAtom);
+  const setCommitID = useSetRecoilState(gitHubCommitID);
+
+  useEffect(() => {
+    setCommitID(commitID);
+  }, [commitID, setCommitID]);
 
   return null;
 }

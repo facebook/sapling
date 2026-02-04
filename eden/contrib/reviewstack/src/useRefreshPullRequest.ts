@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {gitHubPullRequestID, gitHubOrgAndRepo, gitHubPullRequestForParams} from './recoil';
+import {gitHubOrgAndRepoAtom, gitHubPullRequestIDAtom} from './jotai';
+import {gitHubPullRequestForParams} from './recoil';
+import {useAtomValue} from 'jotai';
 import {useRecoilCallback} from 'recoil';
 
 /**
@@ -16,20 +18,21 @@ import {useRecoilCallback} from 'recoil';
  *   a new value of `gitHubPullRequest` from the old one.
  */
 export default function useRefreshPullRequest(): () => void {
+  const number = useAtomValue(gitHubPullRequestIDAtom);
+  const orgAndRepo = useAtomValue(gitHubOrgAndRepoAtom);
+
   return useRecoilCallback(
-    ({snapshot, refresh}) =>
+    ({refresh}) =>
       () => {
-        const number = snapshot.getLoadable(gitHubPullRequestID).valueMaybe();
-        const orgAndRepo = snapshot.getLoadable(gitHubOrgAndRepo).valueMaybe();
         if (number == null || orgAndRepo == null) {
           return;
         }
 
         const params = {number, orgAndRepo};
         // Refreshing the selector here should trigger `PullRequest.tsx` to
-        // update the gitHubPullRequest atom.
+        // update the gitHubPullRequestAtom.
         refresh(gitHubPullRequestForParams(params));
       },
-    [],
+    [number, orgAndRepo],
   );
 }

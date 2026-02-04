@@ -22,6 +22,10 @@ export {
   gitHubPullRequestJumpToCommentIDAtom,
   gitHubPullRequestLabelsAtom,
   gitHubPullRequestReviewersAtom,
+  gitHubCommitIDAtom,
+  gitHubPullRequestIDAtom,
+  gitHubPullRequestAtom,
+  gitHubPullRequestViewerDidAuthorAtom,
 } from './atoms';
 
 export type {SupportedPrimerColorMode, GitHubOrgAndRepo, PullRequestReviewersList} from './atoms';

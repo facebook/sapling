@@ -9,19 +9,23 @@ import type {LabelFragment} from './generated/graphql';
 
 import FieldLabel from './FieldLabel';
 import RepoLabelsInput from './RepoLabelsInput';
-import {gitHubPullRequestLabelsAtom} from './jotai';
-import {gitHubClient, gitHubPullRequest, gitHubPullRequestViewerDidAuthor} from './recoil';
+import {
+  gitHubPullRequestAtom,
+  gitHubPullRequestLabelsAtom,
+  gitHubPullRequestViewerDidAuthorAtom,
+} from './jotai';
+import {gitHubClient} from './recoil';
 import {GearIcon} from '@primer/octicons-react';
 import {ActionMenu, Box, Button, IssueLabelToken} from '@primer/react';
-import {useAtom} from 'jotai';
+import {useAtom, useAtomValue} from 'jotai';
 import {useEffect, useMemo} from 'react';
-import {useRecoilCallback, useRecoilValue} from 'recoil';
+import {useRecoilCallback} from 'recoil';
 import {notEmpty} from 'shared/utils';
 
 export default function PullRequestLabels(): React.ReactElement {
-  const pullRequest = useRecoilValue(gitHubPullRequest);
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const [pullRequestLabels, setPullRequestLabels] = useAtom(gitHubPullRequestLabelsAtom);
-  const viewerDidAuthor = useRecoilValue(gitHubPullRequestViewerDidAuthor);
+  const viewerDidAuthor = useAtomValue(gitHubPullRequestViewerDidAuthorAtom);
   const existingLabelIDs = useMemo(
     () => new Set(pullRequestLabels.map(({id}) => id)),
     [pullRequestLabels],
@@ -43,7 +47,7 @@ export default function PullRequestLabels(): React.ReactElement {
           return Promise.reject('client not found');
         }
 
-        const pullRequestId = snapshot.getLoadable(gitHubPullRequest).valueMaybe()?.id;
+        const pullRequestId = pullRequest?.id;
         if (pullRequestId == null) {
           return Promise.reject('pull request not found');
         }
@@ -75,7 +79,7 @@ export default function PullRequestLabels(): React.ReactElement {
           setPullRequestLabels(pullRequestLabels);
         }
       },
-    [pullRequestLabels, setPullRequestLabels],
+    [pullRequest, pullRequestLabels, setPullRequestLabels],
   );
 
   const label = !viewerDidAuthor ? (

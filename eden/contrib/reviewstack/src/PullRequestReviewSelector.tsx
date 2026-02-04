@@ -7,10 +7,10 @@
 
 import {useCommand} from './KeyboardShortcuts';
 import {PullRequestReviewEvent} from './generated/graphql';
-import {gitHubPullRequestViewerDidAuthor} from './recoil';
+import {gitHubPullRequestViewerDidAuthorAtom} from './jotai';
 import {ActionList, ActionMenu} from '@primer/react';
+import {useAtomValue} from 'jotai';
 import React from 'react';
-import {useRecoilValue} from 'recoil';
 import {isMac} from 'shared/OperatingSystem';
 
 const MODIFIER = isMac ? '\u2325' : 'Alt';
@@ -44,7 +44,7 @@ export default React.memo(function PullRequestReviewSelector({
   event,
   onSelect,
 }: Props): React.ReactElement {
-  const viewerDidAuthor = useRecoilValue(gitHubPullRequestViewerDidAuthor);
+  const viewerDidAuthor = useAtomValue(gitHubPullRequestViewerDidAuthorAtom);
   const actions = viewerDidAuthor ? AUTHOR_ACTIONS : REVIEWER_ACTIONS;
 
   useCommand('Comment', () => {

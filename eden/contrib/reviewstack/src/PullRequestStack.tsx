@@ -7,19 +7,20 @@
 
 import type {StackPullRequestFragment} from './generated/graphql';
 
+import {gitHubPullRequestIDAtom} from './jotai';
 import {useCommand} from './KeyboardShortcuts';
 import PullRequestStackItem from './PullRequestStackItem';
-import {gitHubPullRequestID} from './recoil';
 import {stackedPullRequestFragments} from './stackState';
 import useNavigateToPullRequest from './useNavigateToPullRequest';
 import {ArrowDownIcon, ArrowUpIcon} from '@primer/octicons-react';
 import {ActionList, ActionMenu, ButtonGroup, IconButton} from '@primer/react';
+import {useAtomValue} from 'jotai';
 import {useCallback, useEffect, useState} from 'react';
-import {useRecoilValue, useRecoilValueLoadable} from 'recoil';
+import {useRecoilValueLoadable} from 'recoil';
 
 export default function PullRequestStack(): React.ReactElement | null {
   const navigateToPullRequest = useNavigateToPullRequest();
-  const pullRequestNumber = useRecoilValue(gitHubPullRequestID);
+  const pullRequestNumber = useAtomValue(gitHubPullRequestIDAtom);
 
   // Our goal is to ensure this component *always* renders synchronously [and
   // never suspends] to support the common case where the user is toggling the

@@ -12,19 +12,16 @@ import CommitHeader from './CommitHeader';
 import CommitLink from './CommitLink';
 import DiffView from './DiffView';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
-import {
-  gitHubCommitID,
-  gitHubCurrentCommit,
-  gitHubDiffForCurrentCommit,
-  gitHubOrgAndRepo,
-} from './recoil';
+import {gitHubCommitIDAtom, gitHubOrgAndRepoAtom} from './jotai';
+import {gitHubCurrentCommit, gitHubDiffForCurrentCommit, gitHubOrgAndRepo} from './recoil';
 import {Box, Text} from '@primer/react';
+import {useSetAtom} from 'jotai';
 import {Suspense, useEffect} from 'react';
-import {useRecoilValue, useSetRecoilState} from 'recoil';
+import {useRecoilValue} from 'recoil';
 
 export default function CommitView({org, repo, oid}: {org: string; repo: string; oid: string}) {
-  const setOrgAndRepo = useSetRecoilState(gitHubOrgAndRepo);
-  const setCommitID = useSetRecoilState(gitHubCommitID);
+  const setOrgAndRepo = useSetAtom(gitHubOrgAndRepoAtom);
+  const setCommitID = useSetAtom(gitHubCommitIDAtom);
 
   useEffect(() => {
     setOrgAndRepo({org, repo});
@@ -76,7 +73,8 @@ function CommitMessage({commit}: {commit: Commit}) {
 }
 
 function CommitParents({commit}: {commit: Commit}) {
-  const {org, repo} = useRecoilValue(gitHubOrgAndRepo) ?? {};
+  const orgAndRepo = useRecoilValue(gitHubOrgAndRepo);
+  const {org, repo} = orgAndRepo ?? {};
   const {parents} = commit;
   if (parents.length === 0 || org == null || repo == null) {
     return null;

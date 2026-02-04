@@ -14,8 +14,9 @@ import PullRequestHeader from './PullRequestHeader';
 import PullRequestTimeline from './PullRequestTimeline';
 import PullRequestTimelineCommentInput from './PullRequestTimelineCommentInput';
 import {APP_HEADER_HEIGHT} from './constants';
-import {gitHubOrgAndRepo, gitHubPullRequestID} from './recoil';
+import {gitHubOrgAndRepoAtom, gitHubPullRequestIDAtom} from './jotai';
 import {Box, Text} from '@primer/react';
+import {useSetAtom} from 'jotai';
 import React, {Component, Suspense, useEffect} from 'react';
 import {atom, useSetRecoilState} from 'recoil';
 import {Drawers} from 'shared/Drawers';
@@ -45,8 +46,8 @@ export default function PullRequestLayout({
   repo: string;
   number: number;
 }): React.ReactElement {
-  const setOrgAndRepo = useSetRecoilState(gitHubOrgAndRepo);
-  const setPullRequestID = useSetRecoilState(gitHubPullRequestID);
+  const setOrgAndRepo = useSetAtom(gitHubOrgAndRepoAtom);
+  const setPullRequestID = useSetAtom(gitHubPullRequestIDAtom);
 
   useEffect(() => {
     setOrgAndRepo({org, repo});

@@ -12,7 +12,8 @@
 
 import type {LabelFragment, UserFragment} from '../generated/graphql';
 import type GitHubClient from '../github/GitHubClient';
-import type {ID} from '../github/types';
+import type {PullRequest} from '../github/pullRequestTimelineTypes';
+import type {GitObjectID, ID} from '../github/types';
 
 import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
 import GraphQLGitHubClient from '../github/GraphQLGitHubClient';
@@ -184,4 +185,44 @@ export type PullRequestReviewersList = {
 export const gitHubPullRequestReviewersAtom = atom<PullRequestReviewersList>({
   reviewers: [],
   reviewerIDs: new Set<string>(),
+});
+
+// =============================================================================
+// GitHub Commit and Pull Request IDs
+// =============================================================================
+
+/**
+ * Migrated from: gitHubCommitID in recoil.ts
+ *
+ * The current commit ID being viewed.
+ */
+export const gitHubCommitIDAtom = atom<GitObjectID | null>(null);
+
+/**
+ * Migrated from: gitHubPullRequestID in recoil.ts
+ *
+ * The current pull request number being viewed.
+ */
+export const gitHubPullRequestIDAtom = atom<number | null>(null);
+
+// =============================================================================
+// Pull Request
+// =============================================================================
+
+/**
+ * Migrated from: gitHubPullRequest in recoil.ts
+ *
+ * The current pull request data. Set when navigating to a PR.
+ */
+export const gitHubPullRequestAtom = atom<PullRequest | null>(null);
+
+/**
+ * Migrated from: gitHubPullRequestViewerDidAuthor in recoil.ts
+ *
+ * Derived atom that indicates if the current viewer authored the PR.
+ * Used to conditionally show edit controls (labels, reviewers, etc.)
+ */
+export const gitHubPullRequestViewerDidAuthorAtom = atom<boolean>(get => {
+  const pullRequest = get(gitHubPullRequestAtom);
+  return pullRequest?.viewerDidAuthor ?? false;
 });
