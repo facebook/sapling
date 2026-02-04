@@ -19,32 +19,19 @@ export class PullStackOperation extends Operation {
   constructor(
     private prNumber: number,
     private goto: boolean = true,
-    private useWorktree: boolean = false,
-    private worktreeName?: string,
   ) {
     super('PullStackOperation');
   }
 
   getArgs() {
     const args = ['pr', 'get', String(this.prNumber)];
-    if (this.useWorktree) {
-      args.push('--wt');
-      if (this.worktreeName) {
-        args.push('--wt-name', this.worktreeName);
-      }
-    } else if (this.goto) {
+    if (this.goto) {
       args.push('--goto');
     }
     return args;
   }
 
   getDescriptionForDisplay() {
-    if (this.useWorktree) {
-      const wtName = this.worktreeName ?? `pr-${this.prNumber}`;
-      return {
-        description: `Pull stack for PR #${this.prNumber} into worktree "${wtName}"`,
-      };
-    }
     return {
       description: `Pull stack for PR #${this.prNumber}`,
     };

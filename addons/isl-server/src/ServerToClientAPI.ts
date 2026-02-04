@@ -1143,24 +1143,6 @@ export default class ServerToClientAPI {
           });
         break;
       }
-      case 'fetchWorktrees': {
-        repo
-          .getWorktrees(ctx)
-          .then(worktrees => {
-            this.postMessage({
-              type: 'fetchedWorktrees',
-              worktrees: {value: worktrees},
-            });
-          })
-          .catch(err => {
-            this.logger.error('Failed to fetch worktrees:', err);
-            this.postMessage({
-              type: 'fetchedWorktrees',
-              worktrees: {error: err as Error},
-            });
-          });
-        break;
-      }
       case 'gotUiState': {
         break;
       }

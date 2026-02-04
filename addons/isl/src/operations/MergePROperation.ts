@@ -41,9 +41,6 @@ export class MergePROperation extends Operation {
       args.push('--delete-branch');
     }
 
-    // Non-interactive mode
-    args.push('--yes');
-
     return args;
   }
 
@@ -56,7 +53,7 @@ export class MergePROperation extends Operation {
 
     return {
       description: `Merging PR #${this.prNumber} (${strategyLabel})`,
-      tooltip: `gh pr merge ${this.prNumber} --${this.strategy}${this.deleteBranch ? ' --delete-branch' : ''} --yes`,
+      tooltip: `gh pr merge ${this.prNumber} --${this.strategy}${this.deleteBranch ? ' --delete-branch' : ''}`,
     };
   }
 }
