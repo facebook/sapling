@@ -10,19 +10,31 @@
  * These atoms are migrated from Recoil and implemented natively in Jotai.
  */
 
-import type {CheckRunFragment, DiffSide, LabelFragment, UserFragment} from '../generated/graphql';
+import type {
+  CheckRunFragment,
+  DiffSide,
+  LabelFragment,
+  UserFragment,
+  UserHomePageQueryData,
+  UserHomePageQueryVariables,
+} from '../generated/graphql';
 import type GitHubClient from '../github/GitHubClient';
 import type {DiffCommitIDs, DiffWithCommitIDs} from '../github/diffTypes';
 import type {GitHubPullRequestReviewThread, PullRequest} from '../github/pullRequestTimelineTypes';
-import type {Commit, DateTime, GitObjectID, ID, Version, VersionCommit} from '../github/types';
+import type {PullsQueryInput, PullsWithPageInfo} from '../github/pullsTypes';
+import type {Blob, Commit, DateTime, GitObjectID, ID, Version, VersionCommit} from '../github/types';
 
+import {UserHomePageQuery} from '../generated/graphql';
 import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
 import GraphQLGitHubClient from '../github/GraphQLGitHubClient';
 import {diffCommitWithParent, diffCommits} from '../github/diff';
 import {diffVersions} from '../github/diffVersions';
+import {createGraphQLEndpointForHostname} from '../github/gitHubCredentials';
+import queryGraphQL from '../github/queryGraphQL';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai-family';
 import {atomWithStorage} from 'jotai/utils';
+import {createRequestHeaders} from 'shared/github/auth';
 import {notEmpty} from 'shared/utils';
 
 // =============================================================================
@@ -76,7 +88,7 @@ export const gitHubClientAtom = atom<Promise<GitHubClient | null>>(async get => 
   if (token != null && orgAndRepo != null) {
     const {org, repo} = orgAndRepo;
     const db = await get(databaseConnectionAtom);
-    const hostname = localStorage.getItem('github.hostname') ?? 'api.github.com';
+    const hostname = localStorage.getItem('github.hostname') ?? 'github.com';
     const client = new GraphQLGitHubClient(hostname, org, repo, token);
     return new CachingGitHubClient(db, client, org, repo);
   } else {
@@ -609,3 +621,141 @@ export const gitHubPullRequestCheckRunsAtom = atom<CheckRun[]>(get => {
     }
   });
 });
+
+// =============================================================================
+// User Home Page Data
+// =============================================================================
+
+/**
+ * Migrated from: gitHubUserHomePageData selector in recoil.ts
+ *
+ * Async atom that fetches the viewer's home-page PR data.
+ * This includes review requests and recent pull requests.
+ */
+export const gitHubUserHomePageDataAtom = atom<Promise<UserHomePageQueryData | null>>(_get => {
+  const token = localStorage.getItem('github.token');
+  if (token == null) {
+    return Promise.resolve(null);
+  }
+
+  // Based on search query for https://github.com/pulls/review-requested
+  const reviewRequestedQuery = 'is:open is:pr archived:false review-requested:@me';
+
+  const hostname = localStorage.getItem('github.hostname') ?? 'github.com';
+  const graphQLEndpoint = createGraphQLEndpointForHostname(hostname);
+  return queryGraphQL<UserHomePageQueryData, UserHomePageQueryVariables>(
+    UserHomePageQuery,
+    {reviewRequestedQuery},
+    createRequestHeaders(token),
+    graphQLEndpoint,
+  );
+});
+
+// =============================================================================
+// Pull Requests Search
+// =============================================================================
+
+/**
+ * Migrated from: gitHubPullRequests selectorFamily in recoil.ts
+ *
+ * Fetches search results for a (labels, states, pagination) tuple.
+ * Returns pull requests matching the query criteria.
+ */
+export const gitHubPullRequestsAtom = atomFamily(
+  (input: PullsQueryInput) =>
+    atom<Promise<PullsWithPageInfo | null>>(async get => {
+      const client = await get(gitHubClientAtom);
+      if (client == null) {
+        return null;
+      }
+      return client.getPullRequests(input);
+    }),
+  (a, b) => {
+    // Compare pagination params - check which variant we have
+    const aHasFirst = 'first' in a;
+    const bHasFirst = 'first' in b;
+    if (aHasFirst !== bHasFirst) {
+      return false;
+    }
+    if (aHasFirst && bHasFirst) {
+      if (a.first !== b.first || a.after !== b.after) {
+        return false;
+      }
+    } else {
+      // Both have 'last' variant
+      const aLast = a as {last: number; before?: string};
+      const bLast = b as {last: number; before?: string};
+      if (aLast.last !== bLast.last || aLast.before !== bLast.before) {
+        return false;
+      }
+    }
+    // Compare labels and states
+    if (a.labels.length !== b.labels.length) {
+      return false;
+    }
+    if (!a.labels.every((label, i) => label === b.labels[i])) {
+      return false;
+    }
+    if (a.states.length !== b.states.length) {
+      return false;
+    }
+    if (!a.states.every((state, i) => state === b.states[i])) {
+      return false;
+    }
+    return true;
+  },
+);
+
+// =============================================================================
+// GitHub Blob
+// =============================================================================
+
+/**
+ * Migrated from: gitHubBlob selectorFamily in recoil.ts
+ *
+ * Fetches a blob by its OID using the GitHub client.
+ */
+export const gitHubBlobAtom = atomFamily(
+  (oid: string) =>
+    atom<Promise<Blob | null>>(async get => {
+      const client = await get(gitHubClientAtom);
+      return client != null ? client.getBlob(oid) : null;
+    }),
+  (a, b) => a === b,
+);
+
+// =============================================================================
+// File Contents Delta
+// =============================================================================
+
+/**
+ * Type for file modification (before/after OIDs and path).
+ */
+export type FileMod = {
+  before: GitObjectID | null;
+  after: GitObjectID | null;
+  path: string;
+};
+
+/**
+ * Type for the file contents delta (before/after blobs).
+ */
+export type FileContentsDelta = {before: Blob | null; after: Blob | null};
+
+/**
+ * Migrated from: fileContentsDelta selectorFamily in recoil.ts
+ *
+ * Derives the before/after blob contents for a file modification.
+ * Used for rendering diffs.
+ */
+export const fileContentsDeltaAtom = atomFamily(
+  (mod: FileMod) =>
+    atom<Promise<FileContentsDelta>>(async get => {
+      const [before, after] = await Promise.all([
+        mod.before != null ? get(gitHubBlobAtom(mod.before)) : null,
+        mod.after != null ? get(gitHubBlobAtom(mod.after)) : null,
+      ]);
+      return {before, after};
+    }),
+  (a, b) => a.before === b.before && a.after === b.after && a.path === b.path,
+);

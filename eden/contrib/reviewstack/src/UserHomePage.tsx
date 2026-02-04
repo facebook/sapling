@@ -11,10 +11,10 @@ import CenteredSpinner from './CenteredSpinner';
 import Link from './Link';
 import PullRequestStateLabel from './PullRequestStateLabel';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
-import {gitHubUserHomePageData} from './recoil';
+import {gitHubUserHomePageDataAtom} from './jotai/atoms';
 import {Box, Heading, Text} from '@primer/react';
+import {useAtomValue} from 'jotai';
 import {Suspense} from 'react';
-import {useRecoilValue} from 'recoil';
 import {notEmpty} from 'shared/utils';
 
 export default function UserHomePage(): React.ReactElement {
@@ -26,7 +26,7 @@ export default function UserHomePage(): React.ReactElement {
 }
 
 function UserHomePageRoot(): React.ReactElement {
-  const data = useRecoilValue(gitHubUserHomePageData);
+  const data = useAtomValue(gitHubUserHomePageDataAtom);
   return (
     <Box>
       <ReviewRequestsForUser reviewRequests={data?.search.nodes ?? []} />

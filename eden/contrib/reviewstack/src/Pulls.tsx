@@ -18,11 +18,11 @@ import PullRequestReviewDecisionLabel from './PullRequestReviewDecisionLabel';
 import RepoLabelsInput from './RepoLabelsInput';
 import {CURSOR_POINTER} from './constants';
 import {PullRequestState} from './generated/graphql';
-import {gitHubPullRequests} from './recoil';
+import {gitHubPullRequestsAtom} from './jotai/atoms';
 import {formatISODate} from './utils';
 import {ActionMenu, Box, IssueLabelToken, PageLayout, SubNav, Text} from '@primer/react';
+import {useAtomValue} from 'jotai';
 import {Fragment, Suspense, useCallback, useMemo, useState} from 'react';
-import {useRecoilValue} from 'recoil';
 import {notEmpty} from 'shared/utils';
 
 const PAGE_SIZE = 25;
@@ -105,8 +105,8 @@ type Props = {
 
 function PullsBootstrap({labels, onClickLabelToken, pagination, setPagination, tab}: Props) {
   const states = tab === 'open' ? OPEN_STATES : CLOSED_STATES;
-  const pullsWithPageInfo = useRecoilValue(
-    gitHubPullRequests({
+  const pullsWithPageInfo = useAtomValue(
+    gitHubPullRequestsAtom({
       ...pagination,
       labels: labels.map(({name}) => name),
       states,

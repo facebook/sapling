@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {UserHomePageQueryData, UserHomePageQueryVariables} from './generated/graphql';
 import type GitHubClient from './github/GitHubClient';
 import type {CommitChange, DiffWithCommitIDs} from './github/diffTypes';
 import type {
@@ -16,7 +15,6 @@ import type {
   GitHubPullRequestReviewThread,
   PullRequest,
 } from './github/pullRequestTimelineTypes';
-import type {PullsQueryInput, PullsWithPageInfo} from './github/pullsTypes';
 import type {CommitComparison} from './github/restApiTypes';
 import type {
   Blob,
@@ -32,20 +30,17 @@ import type {LineToPosition} from './lineToPosition';
 import type {RecoilValueReadOnly} from 'recoil';
 
 import {lineToPosition} from './diffServiceClient';
-import {DiffSide, PullRequestReviewState, UserHomePageQuery} from './generated/graphql';
+import {DiffSide, PullRequestReviewState} from './generated/graphql';
 import CachingGitHubClient, {openDatabase} from './github/CachingGitHubClient';
 import GraphQLGitHubClient from './github/GraphQLGitHubClient';
 import {diffCommits, diffCommitWithParent} from './github/diff';
 import {
-  gitHubGraphQLEndpoint,
   gitHubHostname,
   gitHubTokenPersistence,
 } from './github/gitHubCredentials';
-import queryGraphQL from './github/queryGraphQL';
 import {stackedPullRequest, stackedPullRequestFragments} from './stackState';
 import {getPathForChange, getTreeEntriesForChange, groupBy, groupByDiffSide} from './utils';
 import {atom, atomFamily, constSelector, selector, selectorFamily, waitForAll} from 'recoil';
-import {createRequestHeaders} from 'shared/github/auth';
 import {notEmpty} from 'shared/utils';
 
 export type GitHubOrgAndRepo = {
@@ -1022,19 +1017,6 @@ export const fileContentsDelta = selectorFamily<FileContentsDelta, FileMod>({
     },
 });
 
-export const gitHubPullRequests = selectorFamily<PullsWithPageInfo | null, PullsQueryInput>({
-  key: 'gitHubPullRequests',
-  get:
-    input =>
-    ({get}) => {
-      const client = get(gitHubClient);
-      if (client == null) {
-        return null;
-      }
-      return client.getPullRequests(input);
-    },
-});
-
 /**
  * GitHub comments are attached to diffs and not commits, with placement
  * described using "position". In the context of a pull request, a commit has a
@@ -1123,27 +1105,6 @@ export const gitHubPullRequestPositionForLine = selectorFamily<
       const lineToPositionForSide = lineToPosition?.[side];
       return lineToPositionForSide?.[line] ?? null;
     },
-});
-
-export const gitHubUserHomePageData = selector<UserHomePageQueryData | null>({
-  key: 'gitHubUserHomePageData',
-  get: ({get}) => {
-    const token = get(gitHubTokenPersistence);
-    if (token == null) {
-      return null;
-    }
-
-    // Based on search query for https://github.com/pulls/review-requested
-    const reviewRequestedQuery = 'is:open is:pr archived:false review-requested:@me';
-
-    const graphQLEndpoint = get(gitHubGraphQLEndpoint);
-    return queryGraphQL<UserHomePageQueryData, UserHomePageQueryVariables>(
-      UserHomePageQuery,
-      {reviewRequestedQuery},
-      createRequestHeaders(token),
-      graphQLEndpoint,
-    );
-  },
 });
 
 function createClient(
