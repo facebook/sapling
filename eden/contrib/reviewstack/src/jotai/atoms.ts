@@ -6,25 +6,23 @@
  */
 
 /**
- * This file contains Jotai atoms that are being migrated from Recoil.
- * See README.md in this directory for migration instructions.
- *
- * As atoms are migrated from recoil.ts, they should be added here.
- * Once all consumers of an atom are updated, the corresponding Recoil
- * atom can be removed from recoil.ts.
+ * This file contains Jotai atoms for the ReviewStack application.
+ * These atoms are migrated from Recoil and implemented natively in Jotai.
  */
 
-import type {DiffAndTokenizeParams, DiffAndTokenizeResponse} from '../diffServiceWorker';
-import type {DiffSide} from '../generated/graphql';
-import type {DiffCommitIDs} from '../github/diffTypes';
-import type {GitHubPullRequestReviewThread} from '../github/pullRequestTimelineTypes';
-import type {ID, Version} from '../github/types';
-import type {LineToPosition} from '../lineToPosition';
-import type {NewCommentInputCallbacks} from '../recoil';
+import type {LabelFragment, UserFragment} from '../generated/graphql';
+import type GitHubClient from '../github/GitHubClient';
+import type {ID} from '../github/types';
 
+import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
+import GraphQLGitHubClient from '../github/GraphQLGitHubClient';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai-family';
-import {atomWithStorage, loadable} from 'jotai/utils';
+import {atomWithStorage} from 'jotai/utils';
+
+// =============================================================================
+// Theme Atoms
+// =============================================================================
 
 /**
  * Migrated from: primerColorMode in themeState.ts
@@ -44,100 +42,98 @@ export const primerColorModeAtom = atomWithStorage<SupportedPrimerColorMode>(
 );
 
 // =============================================================================
-// Recoil Bridge Atoms
-// =============================================================================
-// These atoms bridge Recoil selectors to Jotai during the migration period.
-// They allow components to use Jotai hooks while the underlying data still
-// comes from Recoil. Once the full migration is complete, these can be
-// replaced with native Jotai implementations.
-//
-// The bridge works by storing a "setter" function that Recoil components call
-// to push updates into Jotai atoms. Components using Jotai will reactively
-// update when the values change.
+// GitHub Organization and Repository
 // =============================================================================
 
-/**
- * Bridge atom for diffAndTokenize results.
- * Key is a serialized version of DiffAndTokenizeParams.
- */
-export const diffAndTokenizeResultAtom = atomFamily(
-  (_params: string) => atom<DiffAndTokenizeResponse | null>(null),
-  (a, b) => a === b,
-);
-
-/**
- * Bridge atom for gitHubThreadsForDiffFile results.
- */
-export const gitHubThreadsForDiffFileResultAtom = atomFamily(
-  (_path: string) => atom<{[key in DiffSide]: GitHubPullRequestReviewThread[]} | null>(null),
-  (a, b) => a === b,
-);
-
-/**
- * Bridge atom for gitHubDiffNewCommentInputCallbacks.
- */
-export const gitHubDiffNewCommentInputCallbacksAtom = atom<NewCommentInputCallbacks | null>(null);
-
-/**
- * Bridge atom for gitHubDiffCommitIDs.
- */
-export const gitHubDiffCommitIDsAtom = atom<DiffCommitIDs | null>(null);
-
-/**
- * Bridge atom for gitHubPullRequestVersions.
- */
-export const gitHubPullRequestVersionsAtom = atom<Version[]>([]);
-
-/**
- * Bridge atom for gitHubPullRequestSelectedVersionIndex.
- */
-export const gitHubPullRequestSelectedVersionIndexAtom = atom<number>(0);
-
-/**
- * Bridge atom for gitHubPullRequestLineToPositionForFile results.
- */
-export const gitHubPullRequestLineToPositionForFileResultAtom = atomFamily(
-  (_path: string) => atom<LineToPosition | null>(null),
-  (a, b) => a === b,
-);
-
-/**
- * Combined atom that loads all the data needed for SplitDiffView.
- * This replaces the waitForAll([...]) pattern from Recoil.
- */
-export type SplitDiffViewData = {
-  diffAndTokenize: DiffAndTokenizeResponse;
-  threads: {[key in DiffSide]: GitHubPullRequestReviewThread[]} | null;
-  newCommentInputCallbacks: NewCommentInputCallbacks | null;
-  commitIDs: DiffCommitIDs | null;
+export type GitHubOrgAndRepo = {
+  org: string;
+  repo: string;
 };
 
-export const splitDiffViewDataAtom = atomFamily(
-  (_params: {path: string; paramsKey: string; isPullRequest: boolean}) => {
-    const baseAtom = atom<SplitDiffViewData | null>(null);
-    return loadable(baseAtom);
-  },
-  (a, b) => a.path === b.path && a.paramsKey === b.paramsKey && a.isPullRequest === b.isPullRequest,
-);
+export const gitHubOrgAndRepoAtom = atom<GitHubOrgAndRepo | null>(null);
+
+// =============================================================================
+// GitHub Client
+// =============================================================================
+
+const databaseConnectionAtom = atom<Promise<IDBDatabase>>(() => {
+  return openDatabase();
+});
+
+export const gitHubClientAtom = atom<Promise<GitHubClient | null>>(async get => {
+  // Note: gitHubTokenPersistence and gitHubHostname are Recoil atoms from gitHubCredentials.
+  // We access their default values directly since they're based on localStorage.
+  // This is a temporary bridge during the migration.
+  // IMPORTANT: The keys must match those used in gitHubCredentials.ts
+  const token = localStorage.getItem('github.token');
+  const orgAndRepo = get(gitHubOrgAndRepoAtom);
+
+  if (token != null && orgAndRepo != null) {
+    const {org, repo} = orgAndRepo;
+    const db = await get(databaseConnectionAtom);
+    const hostname = localStorage.getItem('github.hostname') ?? 'api.github.com';
+    const client = new GraphQLGitHubClient(hostname, org, repo, token);
+    return new CachingGitHubClient(db, client, org, repo);
+  } else {
+    return null;
+  }
+});
+
+// =============================================================================
+// Repo Labels
+// =============================================================================
 
 /**
- * Serializes DiffAndTokenizeParams for use as atomFamily keys.
+ * Migrated from: gitHubRepoLabelsQuery in recoil.ts
+ *
+ * Search query for filtering repository labels.
  */
-export function serializeDiffParams(params: DiffAndTokenizeParams): string {
-  return JSON.stringify({
-    path: params.path,
-    before: params.before,
-    after: params.after,
-    scopeName: params.scopeName,
-    colorMode: params.colorMode,
-  });
-}
+export const gitHubRepoLabelsQuery = atom<string>('');
+
+/**
+ * Migrated from: gitHubRepoLabels in recoil.ts
+ *
+ * Fetches repository labels based on the search query.
+ */
+export const gitHubRepoLabels = atom<Promise<LabelFragment[]>>(async get => {
+  const client = await get(gitHubClientAtom);
+  const query = get(gitHubRepoLabelsQuery);
+  if (client == null) {
+    return [];
+  }
+  return client.getRepoLabels(query);
+});
 
 // =============================================================================
-// Migrated Atoms
+// Repo Assignable Users
 // =============================================================================
-// These atoms have been fully migrated from Recoil and no longer need
-// a bridge. Components should import them directly from this file.
+
+/**
+ * Migrated from: gitHubRepoAssignableUsersQuery in recoil.ts
+ *
+ * Search query for filtering assignable users.
+ */
+export const gitHubRepoAssignableUsersQuery = atom<string>('');
+
+/**
+ * Migrated from: gitHubRepoAssignableUsers in recoil.ts
+ *
+ * Fetches assignable users based on the search query.
+ */
+export const gitHubRepoAssignableUsers = atom<Promise<UserFragment[]>>(async get => {
+  const client = await get(gitHubClientAtom);
+  const query = get(gitHubRepoAssignableUsersQuery);
+  const token = localStorage.getItem('github.token');
+  const username = token != null ? localStorage.getItem(`username.${token}`) : null;
+  if (client == null) {
+    return [];
+  }
+  const users = await client.getRepoAssignableUsers(query);
+  return users.filter(user => user.login !== username);
+});
+
+// =============================================================================
+// Comment Thread Navigation
 // =============================================================================
 
 /**

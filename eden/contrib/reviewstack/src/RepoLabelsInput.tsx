@@ -8,11 +8,12 @@
 import type {LabelFragment} from './generated/graphql';
 import type {ChangeEvent} from 'react';
 
-import {gitHubRepoLabels, gitHubRepoLabelsQuery} from './recoil';
+import {gitHubRepoLabels, gitHubRepoLabelsQuery} from './jotai';
 import useDebounced from './useDebounced';
 import {ActionList, Box, TextInput} from '@primer/react';
-import React, {useCallback, useEffect, useState} from 'react';
-import {useRecoilState, useRecoilValueLoadable, useResetRecoilState} from 'recoil';
+import {useAtom, useAtomValue} from 'jotai';
+import {loadable} from 'jotai/utils';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 
 type Props = {
   existingLabelIDs: Set<string>;
@@ -24,11 +25,16 @@ export default React.memo(function RepoLabelsInput({
   existingLabelIDs,
   onSelect,
 }: Props): React.ReactElement {
-  const repoLabels = useRecoilValueLoadable(gitHubRepoLabels).valueMaybe();
-  const [query, setQuery] = useRecoilState(gitHubRepoLabelsQuery);
+  const loadableRepoLabels = useMemo(() => loadable(gitHubRepoLabels), []);
+  const repoLabelsLoadable = useAtomValue(loadableRepoLabels);
+  const repoLabels: LabelFragment[] | undefined =
+    repoLabelsLoadable.state === 'hasData' ? repoLabelsLoadable.data : undefined;
+  const [query, setQuery] = useAtom(gitHubRepoLabelsQuery);
   const [queryInput, setQueryInput] = useState(query);
   const setQueryAtom = useDebounced(setQuery);
-  const resetQueryAtom = useResetRecoilState(gitHubRepoLabelsQuery);
+  const resetQueryAtom = useCallback(() => {
+    setQuery('');
+  }, [setQuery]);
 
   const onChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -39,7 +45,11 @@ export default React.memo(function RepoLabelsInput({
     [setQueryAtom, setQueryInput],
   );
 
-  useEffect(() => resetQueryAtom, [resetQueryAtom]);
+  useEffect(() => {
+    return () => {
+      resetQueryAtom();
+    };
+  }, [resetQueryAtom]);
 
   return (
     <ActionList selectionVariant="single">

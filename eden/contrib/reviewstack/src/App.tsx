@@ -18,6 +18,7 @@ import PullsView from './PullsView';
 import SplitDiffViewPrimerStyles from './SplitDiffViewPrimerStyles';
 import UserHomePage from './UserHomePage';
 import {gitHubTokenPersistence} from './github/gitHubCredentials';
+import {JotaiRecoilSync} from './jotai/JotaiRecoilSync';
 import {primerColorModeAtom} from './jotai/atoms';
 import {BaseStyles, Box, Text, useTheme} from '@primer/react';
 import {useAtomValue} from 'jotai';
@@ -57,6 +58,7 @@ export default function App({page}: {page: Page}): React.ReactElement {
   return (
     <div>
       <ShortcutCommandContext>
+        <JotaiRecoilSync />
         <ThemeListener />
         <BaseStyles>
           <PrimerStyles />

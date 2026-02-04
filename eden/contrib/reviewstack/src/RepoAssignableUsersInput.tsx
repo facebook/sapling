@@ -8,11 +8,12 @@
 import type {UserFragment} from './generated/graphql';
 import type {ChangeEvent} from 'react';
 
-import {gitHubRepoAssignableUsers, gitHubRepoAssignableUsersQuery} from './recoil';
+import {gitHubRepoAssignableUsers, gitHubRepoAssignableUsersQuery} from './jotai';
 import useDebounced from './useDebounced';
 import {ActionList, Avatar, Box, TextInput} from '@primer/react';
-import React, {useCallback, useEffect, useState} from 'react';
-import {useRecoilState, useRecoilValueLoadable, useResetRecoilState} from 'recoil';
+import {useAtom, useAtomValue} from 'jotai';
+import {loadable} from 'jotai/utils';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 
 type Props = {
   existingUserIDs: ReadonlySet<string>;
@@ -24,11 +25,16 @@ export default React.memo(function RepoAssignableUsersInput({
   existingUserIDs,
   onSelect,
 }: Props): React.ReactElement {
-  const users = useRecoilValueLoadable(gitHubRepoAssignableUsers).valueMaybe();
-  const [query, setQuery] = useRecoilState(gitHubRepoAssignableUsersQuery);
+  const loadableUsers = useMemo(() => loadable(gitHubRepoAssignableUsers), []);
+  const usersLoadable = useAtomValue(loadableUsers);
+  const users: UserFragment[] | undefined =
+    usersLoadable.state === 'hasData' ? usersLoadable.data : undefined;
+  const [query, setQuery] = useAtom(gitHubRepoAssignableUsersQuery);
   const [queryInput, setQueryInput] = useState(query);
   const setQueryAtom = useDebounced(setQuery);
-  const resetQueryAtom = useResetRecoilState(gitHubRepoAssignableUsersQuery);
+  const resetQueryAtom = useCallback(() => {
+    setQuery('');
+  }, [setQuery]);
 
   const onChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -39,7 +45,11 @@ export default React.memo(function RepoAssignableUsersInput({
     [setQueryAtom, setQueryInput],
   );
 
-  useEffect(() => resetQueryAtom, [resetQueryAtom]);
+  useEffect(() => {
+    return () => {
+      resetQueryAtom();
+    };
+  }, [resetQueryAtom]);
 
   return (
     <ActionList selectionVariant="single">

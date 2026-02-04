@@ -47,7 +47,6 @@ import {
   gitHubGraphQLEndpoint,
   gitHubHostname,
   gitHubTokenPersistence,
-  gitHubUsername,
 } from './github/gitHubCredentials';
 import queryGraphQL from './github/queryGraphQL';
 import {stackedPullRequest, stackedPullRequestFragments} from './stackState';
@@ -1210,41 +1209,6 @@ export const gitHubUserHomePageData = selector<UserHomePageQueryData | null>({
       createRequestHeaders(token),
       graphQLEndpoint,
     );
-  },
-});
-
-export const gitHubRepoAssignableUsersQuery = atom<string>({
-  key: 'gitHubRepoAssignableUsersQuery',
-  default: '',
-});
-
-export const gitHubRepoAssignableUsers = selector<UserFragment[]>({
-  key: 'gitHubRepoAssignableUsers',
-  get: async ({get}) => {
-    const [client, query, username] = get(
-      waitForAll([gitHubClient, gitHubRepoAssignableUsersQuery, gitHubUsername]),
-    );
-    if (client == null) {
-      return [];
-    }
-    const users = await client.getRepoAssignableUsers(query);
-    return users.filter(user => user.login !== username);
-  },
-});
-
-export const gitHubRepoLabelsQuery = atom<string>({
-  key: 'gitHubRepoLabelsQuery',
-  default: '',
-});
-
-export const gitHubRepoLabels = selector<LabelFragment[]>({
-  key: 'gitHubRepoLabels',
-  get: ({get}) => {
-    const [client, query] = get(waitForAll([gitHubClient, gitHubRepoLabelsQuery]));
-    if (client == null) {
-      return [];
-    }
-    return client.getRepoLabels(query);
   },
 });
 
