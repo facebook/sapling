@@ -8,9 +8,11 @@
 import type {GitObjectID, ID} from './github/types';
 
 import PullRequestCommentInput from './PullRequestCommentInput';
-import {gitHubClient, gitHubPullRequest} from './recoil';
+import {gitHubClientAtom, gitHubPullRequestAtom} from './jotai';
 import useRefreshPullRequest from './useRefreshPullRequest';
-import {useRecoilCallback} from 'recoil';
+import {useAtomValue} from 'jotai';
+import {loadable} from 'jotai/utils';
+import {useCallback, useMemo} from 'react';
 
 type Props = {
   commentID: ID;
@@ -24,30 +26,34 @@ export default function PullRequestInlineCommentInput({
   onCancel,
 }: Props): React.ReactElement {
   const refreshPullRequest = useRefreshPullRequest();
-  const addComment = useRecoilCallback<[string], Promise<void>>(
-    ({snapshot}) =>
-      async comment => {
-        const clientLoadable = snapshot.getLoadable(gitHubClient);
-        if (clientLoadable.state !== 'hasValue' || clientLoadable.contents == null) {
-          return Promise.reject('client not found');
-        }
-        const client = clientLoadable.contents;
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
 
-        const pullRequestId = snapshot.getLoadable(gitHubPullRequest).valueMaybe()?.id;
-        if (pullRequestId == null) {
-          return Promise.reject('pull request not found');
-        }
+  // Load the GitHub client asynchronously
+  const loadableClient = useMemo(() => loadable(gitHubClientAtom), []);
+  const clientLoadable = useAtomValue(loadableClient);
+  const client = clientLoadable.state === 'hasData' ? clientLoadable.data : null;
 
-        await client.addPullRequestReviewComment({
-          body: comment,
-          commitOID: commitID,
-          inReplyTo: commentID,
-          pullRequestId,
-        });
+  const addComment = useCallback(
+    async (comment: string) => {
+      if (client == null) {
+        return Promise.reject('client not found');
+      }
 
-        refreshPullRequest();
-      },
-    [commentID, commitID, refreshPullRequest],
+      const pullRequestId = pullRequest?.id;
+      if (pullRequestId == null) {
+        return Promise.reject('pull request not found');
+      }
+
+      await client.addPullRequestReviewComment({
+        body: comment,
+        commitOID: commitID,
+        inReplyTo: commentID,
+        pullRequestId,
+      });
+
+      refreshPullRequest();
+    },
+    [client, commentID, commitID, pullRequest, refreshPullRequest],
   );
 
   return (

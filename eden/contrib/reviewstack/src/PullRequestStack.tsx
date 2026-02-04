@@ -7,9 +7,9 @@
 
 import type {StackPullRequestFragment} from './generated/graphql';
 
-import {gitHubPullRequestIDAtom} from './jotai';
 import {useCommand} from './KeyboardShortcuts';
 import PullRequestStackItem from './PullRequestStackItem';
+import {gitHubPullRequestIDAtom} from './jotai';
 import {stackedPullRequestFragments} from './stackState';
 import useNavigateToPullRequest from './useNavigateToPullRequest';
 import {ArrowDownIcon, ArrowUpIcon} from '@primer/octicons-react';

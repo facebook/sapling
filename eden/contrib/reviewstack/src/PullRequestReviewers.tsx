@@ -11,17 +11,18 @@ import FieldLabel from './FieldLabel';
 import RepoAssignableUsersInput from './RepoAssignableUsersInput';
 import {gitHubUsername} from './github/gitHubCredentials';
 import {
+  gitHubClientAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestReviewersAtom,
   gitHubPullRequestViewerDidAuthorAtom,
 } from './jotai';
-import {gitHubClient} from './recoil';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {GearIcon} from '@primer/octicons-react';
 import {ActionMenu, AvatarToken, Box, Button} from '@primer/react';
 import {useAtom, useAtomValue} from 'jotai';
-import {useEffect} from 'react';
-import {useRecoilCallback, useRecoilValue} from 'recoil';
+import {loadable} from 'jotai/utils';
+import {useCallback, useEffect, useMemo} from 'react';
+import {useRecoilValue} from 'recoil';
 
 export default function PullRequestReviewers(): React.ReactElement {
   const refreshPullRequest = useRefreshPullRequest();
@@ -29,6 +30,11 @@ export default function PullRequestReviewers(): React.ReactElement {
   const [pullRequestReviewers, setPullRequestReviewers] = useAtom(gitHubPullRequestReviewersAtom);
   const viewerDidAuthor = useAtomValue(gitHubPullRequestViewerDidAuthorAtom);
   const username = useRecoilValue(gitHubUsername);
+
+  // Load the GitHub client asynchronously
+  const loadableClient = useMemo(() => loadable(gitHubClientAtom), []);
+  const clientLoadable = useAtomValue(loadableClient);
+  const client = clientLoadable.state === 'hasData' ? clientLoadable.data : null;
 
   // Initialize pullRequestReviewers state using pullRequest once it is available.
   useEffect(() => {
@@ -66,46 +72,44 @@ export default function PullRequestReviewers(): React.ReactElement {
     }
   }, [pullRequest, setPullRequestReviewers, username]);
 
-  const updateReviewers = useRecoilCallback<[UserFragment, boolean], Promise<void>>(
-    ({snapshot}) =>
-      async (user: UserFragment, isExisting: boolean) => {
-        const client = snapshot.getLoadable(gitHubClient).valueMaybe();
-        if (client == null) {
-          return Promise.reject('client not found');
-        }
+  const updateReviewers = useCallback(
+    async (user: UserFragment, isExisting: boolean) => {
+      if (client == null) {
+        return Promise.reject('client not found');
+      }
 
-        const pullRequestId = pullRequest?.id;
-        if (pullRequestId == null) {
-          return Promise.reject('pull request not found');
-        }
+      const pullRequestId = pullRequest?.id;
+      if (pullRequestId == null) {
+        return Promise.reject('pull request not found');
+      }
 
-        try {
-          // When adding or removing a reviewer, optimistically update
-          // pullRequestReviewers and the UI instead of waiting for the respective
-          // API call to return.
-          const reviewerIDs = new Set(pullRequestReviewers.reviewerIDs);
-          let reviewers: UserFragment[];
-          if (!isExisting) {
-            reviewers = pullRequestReviewers.reviewers.concat(user);
-            reviewers.sort((a, b) => a.login.localeCompare(b.login));
-            reviewerIDs.add(user.id);
-          } else {
-            reviewers = pullRequestReviewers.reviewers.filter(({id}) => user.id !== id);
-            reviewerIDs.delete(user.id);
-          }
-          setPullRequestReviewers({reviewers, reviewerIDs});
-          await client.requestReviews({
-            pullRequestId,
-            userIds: [...reviewerIDs],
-          });
-          refreshPullRequest();
-        } catch {
-          // If there is an error, roll back the update by resetting
-          // pullRequestReviewers to its previous value.
-          setPullRequestReviewers(pullRequestReviewers);
+      try {
+        // When adding or removing a reviewer, optimistically update
+        // pullRequestReviewers and the UI instead of waiting for the respective
+        // API call to return.
+        const reviewerIDs = new Set(pullRequestReviewers.reviewerIDs);
+        let reviewers: UserFragment[];
+        if (!isExisting) {
+          reviewers = pullRequestReviewers.reviewers.concat(user);
+          reviewers.sort((a, b) => a.login.localeCompare(b.login));
+          reviewerIDs.add(user.id);
+        } else {
+          reviewers = pullRequestReviewers.reviewers.filter(({id}) => user.id !== id);
+          reviewerIDs.delete(user.id);
         }
-      },
-    [pullRequest, pullRequestReviewers, refreshPullRequest, setPullRequestReviewers],
+        setPullRequestReviewers({reviewers, reviewerIDs});
+        await client.requestReviews({
+          pullRequestId,
+          userIds: [...reviewerIDs],
+        });
+        refreshPullRequest();
+      } catch {
+        // If there is an error, roll back the update by resetting
+        // pullRequestReviewers to its previous value.
+        setPullRequestReviewers(pullRequestReviewers);
+      }
+    },
+    [client, pullRequest, pullRequestReviewers, refreshPullRequest, setPullRequestReviewers],
   );
 
   const label = !viewerDidAuthor ? (

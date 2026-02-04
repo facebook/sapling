@@ -8,53 +8,58 @@
 import PullRequestCommentInput from './PullRequestCommentInput';
 import PullRequestReviewSelector from './PullRequestReviewSelector';
 import {PullRequestReviewEvent} from './generated/graphql';
-import {gitHubClient, gitHubPullRequest, gitHubPullRequestPendingReviewID} from './recoil';
+import {gitHubClientAtom, gitHubPullRequestAtom} from './jotai';
+import {gitHubPullRequestPendingReviewID} from './recoil';
 import useRefreshPullRequest from './useRefreshPullRequest';
-import {useState} from 'react';
-import {useRecoilCallback, useRecoilValue} from 'recoil';
+import {useAtomValue} from 'jotai';
+import {loadable} from 'jotai/utils';
+import {useCallback, useMemo, useState} from 'react';
+import {useRecoilValue} from 'recoil';
 
 export default function PullRequestTimelineCommentInput(): React.ReactElement {
   const pendingReviewID = useRecoilValue(gitHubPullRequestPendingReviewID);
   const refreshPullRequest = useRefreshPullRequest();
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const [event, setEvent] = useState(PullRequestReviewEvent.Comment);
-  const addComment = useRecoilCallback<[string], Promise<void>>(
-    ({snapshot}) =>
-      async comment => {
-        const clientLoadable = snapshot.getLoadable(gitHubClient);
-        if (clientLoadable.state !== 'hasValue' || clientLoadable.contents == null) {
-          return Promise.reject('client not found');
-        }
-        const client = clientLoadable.contents;
 
-        const pullRequestLoadable = snapshot.getLoadable(gitHubPullRequest);
-        if (pullRequestLoadable.state !== 'hasValue' || pullRequestLoadable.contents == null) {
-          return Promise.reject('pull request not found');
-        }
-        const pullRequest = pullRequestLoadable.contents;
+  // Load the GitHub client asynchronously
+  const loadableClient = useMemo(() => loadable(gitHubClientAtom), []);
+  const clientLoadable = useAtomValue(loadableClient);
+  const client = clientLoadable.state === 'hasData' ? clientLoadable.data : null;
 
-        if (pendingReviewID == null) {
-          if (event === PullRequestReviewEvent.Comment) {
-            await client.addComment(pullRequest.id, comment);
-          } else {
-            await client.addPullRequestReview({
-              body: comment,
-              pullRequestId: pullRequest.id,
-              event,
-            });
-          }
+  const addComment = useCallback(
+    async (comment: string) => {
+      if (client == null) {
+        return Promise.reject('client not found');
+      }
+
+      if (pullRequest == null) {
+        return Promise.reject('pull request not found');
+      }
+
+      if (pendingReviewID == null) {
+        if (event === PullRequestReviewEvent.Comment) {
+          await client.addComment(pullRequest.id, comment);
         } else {
-          await client.submitPullRequestReview({
+          await client.addPullRequestReview({
             body: comment,
             pullRequestId: pullRequest.id,
-            pullRequestReviewId: pendingReviewID,
             event,
           });
         }
+      } else {
+        await client.submitPullRequestReview({
+          body: comment,
+          pullRequestId: pullRequest.id,
+          pullRequestReviewId: pendingReviewID,
+          event,
+        });
+      }
 
-        refreshPullRequest();
-        setEvent(PullRequestReviewEvent.Comment);
-      },
-    [event, pendingReviewID, refreshPullRequest],
+      refreshPullRequest();
+      setEvent(PullRequestReviewEvent.Comment);
+    },
+    [client, event, pendingReviewID, pullRequest, refreshPullRequest],
   );
 
   return (

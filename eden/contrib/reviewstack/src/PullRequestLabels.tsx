@@ -10,16 +10,16 @@ import type {LabelFragment} from './generated/graphql';
 import FieldLabel from './FieldLabel';
 import RepoLabelsInput from './RepoLabelsInput';
 import {
+  gitHubClientAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestLabelsAtom,
   gitHubPullRequestViewerDidAuthorAtom,
 } from './jotai';
-import {gitHubClient} from './recoil';
 import {GearIcon} from '@primer/octicons-react';
 import {ActionMenu, Box, Button, IssueLabelToken} from '@primer/react';
 import {useAtom, useAtomValue} from 'jotai';
-import {useEffect, useMemo} from 'react';
-import {useRecoilCallback} from 'recoil';
+import {loadable} from 'jotai/utils';
+import {useCallback, useEffect, useMemo} from 'react';
 import {notEmpty} from 'shared/utils';
 
 export default function PullRequestLabels(): React.ReactElement {
@@ -31,6 +31,11 @@ export default function PullRequestLabels(): React.ReactElement {
     [pullRequestLabels],
   );
 
+  // Load the GitHub client asynchronously
+  const loadableClient = useMemo(() => loadable(gitHubClientAtom), []);
+  const clientLoadable = useAtomValue(loadableClient);
+  const client = clientLoadable.state === 'hasData' ? clientLoadable.data : null;
+
   // Initialize pullRequestLabels state using pullRequest once it is available.
   useEffect(() => {
     if (pullRequest != null) {
@@ -39,47 +44,45 @@ export default function PullRequestLabels(): React.ReactElement {
     }
   }, [pullRequest, setPullRequestLabels]);
 
-  const updateLabels = useRecoilCallback<[LabelFragment, boolean], Promise<void>>(
-    ({snapshot}) =>
-      async ({id, name, color}: LabelFragment, isExisting: boolean) => {
-        const client = snapshot.getLoadable(gitHubClient).valueMaybe();
-        if (client == null) {
-          return Promise.reject('client not found');
-        }
+  const updateLabels = useCallback(
+    async ({id, name, color}: LabelFragment, isExisting: boolean) => {
+      if (client == null) {
+        return Promise.reject('client not found');
+      }
 
-        const pullRequestId = pullRequest?.id;
-        if (pullRequestId == null) {
-          return Promise.reject('pull request not found');
-        }
+      const pullRequestId = pullRequest?.id;
+      if (pullRequestId == null) {
+        return Promise.reject('pull request not found');
+      }
 
-        try {
-          // When adding or removing a label, optimistically update
-          // pullRequestLabels and the UI instead of waiting for the respective
-          // API call to return.
-          if (!isExisting) {
-            const labels = [...pullRequestLabels, {id, name, color}].sort((a, b) =>
-              a.name.localeCompare(b.name),
-            );
-            setPullRequestLabels(labels);
-            await client.addLabels({
-              labelableId: pullRequestId,
-              labelIds: [id],
-            });
-          } else {
-            const labels = pullRequestLabels.filter(label => label.id !== id);
-            setPullRequestLabels(labels);
-            await client.removeLabels({
-              labelableId: pullRequestId,
-              labelIds: [id],
-            });
-          }
-        } catch {
-          // If there is an error, roll back the update by resetting
-          // pullRequestLabels to its previous value.
-          setPullRequestLabels(pullRequestLabels);
+      try {
+        // When adding or removing a label, optimistically update
+        // pullRequestLabels and the UI instead of waiting for the respective
+        // API call to return.
+        if (!isExisting) {
+          const labels = [...pullRequestLabels, {id, name, color}].sort((a, b) =>
+            a.name.localeCompare(b.name),
+          );
+          setPullRequestLabels(labels);
+          await client.addLabels({
+            labelableId: pullRequestId,
+            labelIds: [id],
+          });
+        } else {
+          const labels = pullRequestLabels.filter(label => label.id !== id);
+          setPullRequestLabels(labels);
+          await client.removeLabels({
+            labelableId: pullRequestId,
+            labelIds: [id],
+          });
         }
-      },
-    [pullRequest, pullRequestLabels, setPullRequestLabels],
+      } catch {
+        // If there is an error, roll back the update by resetting
+        // pullRequestLabels to its previous value.
+        setPullRequestLabels(pullRequestLabels);
+      }
+    },
+    [client, pullRequest, pullRequestLabels, setPullRequestLabels],
   );
 
   const label = !viewerDidAuthor ? (
