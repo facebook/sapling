@@ -22,6 +22,8 @@ import {availableCwds, CwdSelections} from './CwdSelector';
 import {Drawers} from './Drawers';
 import {EmptyState} from './EmptyState';
 import {useCommand} from './ISLShortcuts';
+import {PRDashboard} from './PRDashboard';
+import {Confetti} from './Confetti';
 import {Internal} from './Internal';
 import {TopBar} from './TopBar';
 import {TopLevelAlerts} from './TopLevelAlert';
@@ -59,6 +61,9 @@ export default function App() {
 
   return (
     <AllProviders>
+      <div style={{background: '#ff00ff', color: 'white', padding: '8px', fontWeight: 'bold', textAlign: 'center'}}>
+        🔧 LOCAL DEV BUILD v2 🔧
+      </div>
       {mode.mode === 'isl' ? (
         <>
           <NullStateOrDrawers />
@@ -108,6 +113,7 @@ function ISLDrawers() {
       errorBoundary={ErrorBoundary}>
       <MainContent />
       <CommandHistoryAndProgress />
+      <Confetti />
     </Drawers>
   );
 }

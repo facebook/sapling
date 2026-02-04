@@ -1,0 +1,71 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+.review-submission-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 400px;
+  max-width: 500px;
+}
+
+.review-submission-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.review-submission-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.review-summary-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--foreground);
+}
+
+.review-summary-label .optional-hint {
+  color: var(--subtle-foreground);
+  font-weight: normal;
+}
+
+.review-submission-body textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.pending-comments-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--hover-darken);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--subtle-foreground);
+}
+
+.review-submission-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--panel-view-border);
+}
+
+/* Make Cancel button less prominent */
+.review-submission-actions button:first-child {
+  margin-right: auto;
+}

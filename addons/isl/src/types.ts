@@ -89,6 +89,34 @@ export type DiffCommentReaction = {
     | 'THUMBS_UP';
 };
 
+/**
+ * Individual CI check run status for detailed CI display
+ */
+export type CICheckRun = {
+  name: string;
+  status: 'COMPLETED' | 'IN_PROGRESS' | 'QUEUED' | 'PENDING';
+  conclusion?: 'SUCCESS' | 'FAILURE' | 'NEUTRAL' | 'CANCELLED' | 'TIMED_OUT' | 'SKIPPED' | 'STALE';
+  detailsUrl?: string;
+};
+
+/**
+ * Mergeability state from GitHub
+ */
+export type MergeableState = 'MERGEABLE' | 'CONFLICTING' | 'UNKNOWN';
+
+/**
+ * Detailed merge state status from GitHub
+ */
+export type MergeStateStatus =
+  | 'BEHIND'     // Head ref out of date
+  | 'BLOCKED'    // Blocked by branch protection
+  | 'CLEAN'      // Ready to merge
+  | 'DIRTY'      // Merge conflicts
+  | 'DRAFT'      // PR is draft
+  | 'HAS_HOOKS'  // Pre-receive hooks
+  | 'UNKNOWN'    // Not yet computed
+  | 'UNSTABLE';  // Required checks not passing
+
 export type InternalCommitMessageFields = InternalTypes['InternalCommitMessageFields'];
 
 export enum CodePatchSuggestionStatus {
@@ -116,6 +144,15 @@ export enum ArchivedReasonType {
   STALE_DIFF_CLOSED = 'STALE_DIFF_CLOSED',
   STALE_FILE_CHANGED = 'STALE_FILE_CHANGED',
 }
+
+export type PullRequestReviewEvent = 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
+
+export type DraftPullRequestReviewThread = {
+  path: string;
+  line: number;
+  body: string;
+  side?: 'LEFT' | 'RIGHT';
+};
 
 export enum WarningCheckResult {
   PASS = 'PASS',
@@ -167,6 +204,8 @@ export type DiffComment = {
   replies: Array<DiffComment>;
   /** If this comment has been resolved. true => "resolved", false => "unresolved", null => the comment is not resolvable, don't show any UI for it */
   isResolved?: boolean;
+  /** Thread ID for replies (GitHub thread node ID). Used for COM-05, COM-06 reply/resolution. */
+  threadId?: string;
 };
 
 /**
@@ -325,8 +364,12 @@ export type StableInfo = {
 };
 
 export type SlocInfo = {
-  /** Significant lines of code for commit */
+  /** Significant lines of code for commit (insertions + deletions) */
   sloc: number | undefined;
+  /** Number of inserted lines */
+  insertions?: number;
+  /** Number of deleted lines */
+  deletions?: number;
 };
 
 export type CommitInfo = {
@@ -585,6 +628,14 @@ export type FetchedSubmodules = Result<Submodule[] | undefined>;
 export type SubmodulesByRoot = Map<AbsolutePath, FetchedSubmodules>;
 
 export type AlertSeverity = 'SEV 0' | 'SEV 1' | 'SEV 2' | 'SEV 3' | 'SEV 4' | 'UBN';
+
+export type WorktreeInfo = {
+  path: string;
+  commit: Hash;
+  branch?: string;
+  isMain: boolean;
+};
+
 export type Alert = {
   key: string;
   title: string;
@@ -645,7 +696,7 @@ export type OperationProgress =
   | {id: string; kind: 'stdout'; message: string}
   // overally progress information, typically for a progress bar or progress not found directly in the stdout
   | {id: string; kind: 'progress'; progress: ProgressStep}
-  // progress information for a specific commit, shown inline. Null hash means to apply the message to all hashes. Null message means to clear the message.
+  // progress information for a specific commit, shown inline. Null hash means to apply the messasge to all hashes. Null message means to clear the message.
   | {id: string; kind: 'inlineProgress'; hash?: string; message?: string}
   | {id: string; kind: 'exit'; exitCode: number; timestamp: number}
   | {id: string; kind: 'error'; error: string}
@@ -811,6 +862,10 @@ export type PlatformSpecificServerToClientMessages =
   | {
       type: 'platform/gotAIReviewComments';
       comments: Result<CodeReviewIssue[]>;
+    }
+  | {
+      type: 'platform/openFileError';
+      error: string;
     };
 
 export type CodeReviewProviderSpecificClientToServerMessages =
@@ -844,7 +899,6 @@ export type SubscriptionKind =
 export const allConfigNames = [
   // these config names are for compatibility.
   'isl.submitAsDraft',
-  'isl.publishWhenReady',
   'isl.changedFilesDisplayType',
   // sapling config prefers foo-bar naming.
   'isl.pull-button-choice',
@@ -877,7 +931,6 @@ export type ConfigName = (typeof allConfigNames)[number];
  */
 export const settableConfigNames = [
   'isl.submitAsDraft',
-  'isl.publishWhenReady',
   'isl.changedFilesDisplayType',
   'isl.pull-button-choice',
   'isl.show-stack-submit-confirmation',
@@ -930,7 +983,10 @@ export type LocalStorageName =
   | 'isl.smart-actions-order'
   // The keys below are prefixes, with further dynamic keys appended afterwards
   | 'isl.edited-commit-messages:'
-  | 'isl.first-pass-comments:';
+  | 'isl.first-pass-comments:'
+  | 'isl.reviewed-files:'
+  | 'isl.pending-comments:'
+  | 'isl.dismissed-notification-ids';
 
 export type ClientToServerMessage =
   | {type: 'heartbeat'; id: string}
@@ -946,6 +1002,8 @@ export type ClientToServerMessage =
   | {type: 'runOperation'; operation: RunnableOperation}
   | {type: 'abortRunningOperation'; operationId: string}
   | {type: 'fetchActiveAlerts'}
+  | {type: 'fetchNotifications'}
+  | {type: 'fetchWorktrees'}
   | {type: 'fetchGeneratedStatuses'; paths: Array<RepoRelativePath>}
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'fetchShelvedChanges'}
@@ -966,6 +1024,16 @@ export type ClientToServerMessage =
   | {type: 'fetchCommitCloudState'}
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
   | {type: 'fetchDiffComments'; diffId: DiffId}
+  | {type: 'graphqlReply'; threadId: string; body: string}
+  | {type: 'resolveThread'; threadId: string}
+  | {type: 'unresolveThread'; threadId: string}
+  | {
+      type: 'submitPullRequestReview';
+      pullRequestId: string;
+      event: PullRequestReviewEvent;
+      body?: string;
+      threads?: DraftPullRequestReviewThread[];
+    }
   | {type: 'fetchLandInfo'; topOfStack: DiffId}
   | {type: 'fetchAndSetStables'; additionalStables: Array<string>}
   | {type: 'fetchStableLocationAutocompleteOptions'}
@@ -1109,6 +1177,8 @@ export type ServerToClientMessage =
       results: Record<RepoRelativePath, GeneratedStatus>;
     }
   | {type: 'fetchedActiveAlerts'; alerts: Array<Alert>}
+  | {type: 'fetchedNotifications'; notifications: Result<Array<Notification>>}
+  | {type: 'fetchedWorktrees'; worktrees: Result<Array<WorktreeInfo>>}
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'fetchedShelvedChanges'; shelvedChanges: Result<Array<ShelvedChange>>}
   | {type: 'fetchedLatestCommit'; info: Result<CommitInfo>; revset: string}
@@ -1122,8 +1192,14 @@ export type ServerToClientMessage =
   | {type: 'repoInfo'; info: RepoInfo; cwd?: string}
   | {type: 'repoError'; error: RepositoryError | undefined}
   | {type: 'fetchedAvatars'; avatars: Map<string, string>; authors: Array<string>}
-  | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>}
+  | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>; currentUser?: string}
   | {type: 'fetchedDiffComments'; diffId: DiffId; comments: Result<Array<DiffComment>>}
+  | {type: 'graphqlReplyResult'; threadId: string; success?: boolean; error?: string}
+  | {type: 'threadResolutionResult'; threadId: string; isResolved?: boolean; success?: boolean; error?: string}
+  | {
+      type: 'submittedPullRequestReview';
+      result: Result<{reviewId: string}>;
+    }
   | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
   | {type: 'confirmedLand'; result: Result<undefined>}
   | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}
@@ -1139,7 +1215,6 @@ export type ServerToClientMessage =
       title: string;
       description: string;
       mode?: 'commit' | 'amend';
-      hash?: string;
     }
   | {type: 'uploadFileResult'; id: string; result: Result<string>}
   | {type: 'gotRepoUrlAtHash'; url: Result<string>}
@@ -1268,4 +1343,20 @@ export type ArcStableGKInfo = {
   gk: string;
   id: string;
   label: string;
+};
+
+// Notification types for GitHub notifications
+export type NotificationType = 'review-request' | 'mention' | 'review-received';
+
+export type Notification = {
+  id: string;
+  type: NotificationType;
+  prNumber: number;
+  prTitle: string;
+  prUrl: string;
+  repoName: string;
+  actor: string;
+  actorAvatarUrl?: string;
+  timestamp: Date;
+  reviewState?: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED';
 };
