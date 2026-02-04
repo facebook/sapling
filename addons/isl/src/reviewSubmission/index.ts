@@ -7,4 +7,4 @@
 
 export {ReviewSubmissionModal} from './ReviewSubmissionModal';
 export type {ReviewSubmissionResult} from './ReviewSubmissionModal';
-export {useSubmitReview} from './useSubmitReview';
+export {useSubmitReview, useQuickReviewAction} from './useSubmitReview';

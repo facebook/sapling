@@ -112,3 +112,66 @@ export function useSubmitReview(nodeId: string | undefined) {
     pendingCommentCount: pendingComments.length,
   };
 }
+
+/**
+ * Hook for quick review actions (Approve / Request Changes) without modal.
+ * Used for the quick action buttons in the header.
+ */
+export function useQuickReviewAction(nodeId: string | undefined) {
+  const reviewMode = useAtomValue(reviewModeAtom);
+  const prNumber = reviewMode.prNumber;
+  const pendingComments = useAtomValue(pendingCommentsAtom(prNumber ?? ''));
+
+  const submitQuickReview = useCallback(async (event: 'APPROVE' | 'REQUEST_CHANGES') => {
+    if (!nodeId || !prNumber) {
+      showToast(t('Cannot submit review: missing PR information'), {durationMs: 3000});
+      return;
+    }
+
+    // Convert pending comments to GraphQL thread format
+    const threads = pendingComments
+      .filter(c => c.type === 'inline' && c.path && c.line)
+      .map(c => ({
+        path: c.path!,
+        line: c.line!,
+        body: c.body,
+        side: c.side,
+      }));
+
+    // Submit directly to GitHub
+    serverAPI.postMessage({
+      type: 'submitPullRequestReview',
+      pullRequestId: nodeId,
+      event,
+      body: undefined,
+      threads: threads.length > 0 ? threads : undefined,
+    });
+
+    // Wait for response
+    const response = await serverAPI.nextMessageMatching(
+      'submittedPullRequestReview',
+      () => true,
+    );
+
+    if (response.result.error) {
+      showToast(t('Failed to submit review: $error', {replace: {$error: response.result.error.message}}), {
+        durationMs: 5000,
+      });
+      return;
+    }
+
+    // Success! Clear pending comments
+    clearPendingComments(prNumber);
+
+    const actionText = event === 'APPROVE' ? t('approved') : t('requested changes on');
+    showToast(t('Review submitted: $action PR #$pr', {
+      replace: {$action: actionText, $pr: prNumber},
+    }));
+  }, [nodeId, prNumber, pendingComments]);
+
+  return {
+    approve: useCallback(() => submitQuickReview('APPROVE'), [submitQuickReview]),
+    requestChanges: useCallback(() => submitQuickReview('REQUEST_CHANGES'), [submitQuickReview]),
+    canSubmit: !!nodeId && !!prNumber,
+  };
+}
