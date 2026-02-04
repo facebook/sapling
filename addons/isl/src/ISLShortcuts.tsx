@@ -21,6 +21,7 @@ const CMD = isMac ? Modifier.CMD : Modifier.CTRL;
 export const [ISLCommandContext, useCommand, dispatchCommand, allCommands] = makeCommandDispatcher({
   OpenShortcutHelp: [Modifier.SHIFT, KeyCode.QuestionMark],
   ToggleSidebar: [CMD, KeyCode.Period],
+  ToggleLeftSidebar: [CMD, KeyCode.Comma],
   OpenUncommittedChangesComparisonView: [CMD, KeyCode.SingleQuote],
   OpenHeadChangesComparisonView: [[CMD, Modifier.SHIFT], KeyCode.SingleQuote],
   Escape: [Modifier.NONE, KeyCode.Escape],
@@ -58,6 +59,7 @@ export const ISLShortcutLabels: Partial<Record<ISLCommandName, string>> = {
   Escape: t('Dismiss Tooltips and Popups'),
   OpenShortcutHelp: t('Open Shortcut Help'),
   ToggleSidebar: t('Toggle Commit Info Sidebar'),
+  ToggleLeftSidebar: t('Toggle PR Stacks Sidebar'),
   OpenUncommittedChangesComparisonView: t('Open Uncommitted Changes Comparison View'),
   OpenHeadChangesComparisonView: t('Open Head Changes Comparison View'),
   SelectAllCommits: t('Select All Commits'),

@@ -306,6 +306,12 @@ export const inlineProgressByHash = atomFamilyWeak((hash: Hash) =>
   }),
 );
 
+/** Returns true if any operation is currently running (not yet exited). */
+export const isOperationRunningAtom = atom(get => {
+  const info = get(operationList);
+  return info.currentOperation != null && info.currentOperation.exitCode == null;
+});
+
 export const operationBeingPreviewed = atomResetOnCwdChange<Operation | undefined>(undefined);
 
 /** We don't send entire operations to the server, since not all fields are serializable.

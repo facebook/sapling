@@ -11,11 +11,21 @@
   align-items: center;
   gap: var(--halfpad);
   word-break: break-all;
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin: -1px -4px;
+  transition: background-color 0.15s var(--ease-in-out-smooth, ease);
+}
+
+.copyable:hover {
+  background-color: var(--graphite-hover-bg, rgba(255, 255, 255, 0.03));
 }
 
 .copyable .codicon {
   opacity: 0;
-  transition: opacity transform 0.1s;
+  transition:
+    opacity 0.15s var(--ease-in-out-smooth, ease),
+    transform 0.2s var(--ease-out-back, ease);
 }
 .copyable.icon-only .codicon {
   opacity: 1;
@@ -23,19 +33,29 @@
 
 .copyable:hover .codicon {
   opacity: 1;
-  transform: scale(1.1);
+  transform: scale(1.15);
 }
 
-@keyframes beat {
+/* Satisfying copy feedback animation */
+@keyframes copyPulse {
   0% {
-    transform: scale(1, 1);
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.95);
   }
   100% {
-    transform: scale(1.01, 1.01);
+    transform: scale(1);
   }
 }
+
 .copyable:active {
-  animation: beat 0.1s linear backwards;
+  animation: copyPulse 0.15s var(--ease-out-expo, ease-out);
+}
+
+/* Success state with subtle glow */
+.copyable.copy-success {
+  background-color: var(--graphite-success-glow, rgba(34, 197, 94, 0.15));
 }
 
 .copyable-success-tooltip {

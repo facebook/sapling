@@ -17,6 +17,19 @@
   justify-content: center;
   text-align: center;
   letter-spacing: 2px;
+  /* Gentle entrance animation */
+  animation: emptyStateFadeIn 0.4s var(--ease-out-expo, ease-out);
+}
+
+@keyframes emptyStateFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 0.7;
+    transform: translateY(0);
+  }
 }
 
 .empty-state-small {

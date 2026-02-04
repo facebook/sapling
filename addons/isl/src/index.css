@@ -84,3 +84,112 @@ vscode-button[appearance='icon'] {
 vscode-button[appearance='icon']:not(:hover) {
   background-color: var(--subtle-hover-darken);
 }
+
+/* ========================================
+   Global UI Polish Enhancements
+   ======================================== */
+
+/* Hide scrollbars - scroll fade indicators provide enough affordance */
+.isl-root ::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.isl-root {
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Smooth transitions for all interactive elements */
+.isl-root button,
+.isl-root [role="button"],
+.isl-root a,
+.isl-root input,
+.isl-root select,
+.isl-root textarea {
+  transition:
+    background-color 0.15s var(--ease-in-out-smooth, ease),
+    border-color 0.15s var(--ease-in-out-smooth, ease),
+    box-shadow 0.15s var(--ease-in-out-smooth, ease),
+    transform 0.1s var(--ease-out-back, ease);
+}
+
+/* Subtle lift on interactive element hover */
+.isl-root button:hover:not(:disabled),
+.isl-root [role="button"]:hover:not([aria-disabled="true"]) {
+  transform: translateY(-0.5px);
+}
+
+.isl-root button:active:not(:disabled),
+.isl-root [role="button"]:active:not([aria-disabled="true"]) {
+  transform: translateY(0.5px);
+}
+
+/* ========================================
+   Scroll Fade/Blur Indicators
+   ======================================== */
+
+/*
+ * Scroll fade system: Shows subtle blur gradients at scroll boundaries
+ * to indicate more content. Fades appear/disappear based on scroll position.
+ *
+ * Usage: Add .scroll-fade-container to a scrollable element, then add
+ * data attributes via JS: data-scroll-top="true|false" data-scroll-bottom="true|false"
+ */
+
+.scroll-fade-container {
+  position: relative;
+}
+
+/* Create pseudo-elements for the fade overlays */
+.scroll-fade-container::before,
+.scroll-fade-container::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--scroll-fade-height, 12px);
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-in-out-smooth, ease);
+}
+
+/* Top fade */
+.scroll-fade-container::before {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--scroll-fade-color, var(--graphite-bg, var(--background))) 0%,
+    transparent 100%
+  );
+  /* Subtle blur effect via backdrop-filter */
+  backdrop-filter: blur(var(--scroll-fade-blur, 2px));
+  -webkit-backdrop-filter: blur(var(--scroll-fade-blur, 2px));
+  /* Mask to fade the blur itself */
+  mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+}
+
+/* Bottom fade */
+.scroll-fade-container::after {
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    var(--scroll-fade-color, var(--graphite-bg, var(--background))) 0%,
+    transparent 100%
+  );
+  backdrop-filter: blur(var(--scroll-fade-blur, 2px));
+  -webkit-backdrop-filter: blur(var(--scroll-fade-blur, 2px));
+  mask-image: linear-gradient(to top, black 0%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, black 0%, transparent 100%);
+}
+
+/* Show fades when scrollable */
+.scroll-fade-container[data-can-scroll-up="true"]::before {
+  opacity: 1;
+}
+
+.scroll-fade-container[data-can-scroll-down="true"]::after {
+  opacity: 1;
+}

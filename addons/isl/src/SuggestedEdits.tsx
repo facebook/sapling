@@ -9,7 +9,7 @@ import {atom} from 'jotai';
 import {minimalDisambiguousPaths} from 'shared/minimalDisambiguousPaths';
 import {tracker} from './analytics';
 import {File} from './ChangedFile';
-import {Column, Row} from './ComponentUtils';
+import {Column, Row, useScrollFade} from './ComponentUtils';
 import {T, t} from './i18n';
 import {Internal} from './Internal';
 import {readAtom, writeAtom} from './jotaiUtils';
@@ -128,9 +128,13 @@ export async function confirmSuggestedEditsForFiles(
  */
 function SimpleChangedFilesList({files}: {files: Array<string>}) {
   const disambiguated = minimalDisambiguousPaths(files);
+  const {scrollRef, canScrollUp, canScrollDown, scrollProps} = useScrollFade<HTMLDivElement>();
   return (
-    <div className="changed-files-list-container">
-      <div className="changed-files-list">
+    <div
+      className="changed-files-list-container"
+      data-can-scroll-up={String(canScrollUp)}
+      data-can-scroll-down={String(canScrollDown)}>
+      <div ref={scrollRef} className="changed-files-list" onScroll={scrollProps.onScroll}>
         {files.map((path, i) => (
           <File
             file={{

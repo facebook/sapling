@@ -97,9 +97,22 @@ function ISLDrawers() {
       right: {...state.right, collapsed: !state.right.collapsed},
     }));
   });
+  useCommand('ToggleLeftSidebar', () => {
+    setDrawerState(state => ({
+      ...state,
+      left: {...state.left, collapsed: !state.left.collapsed},
+    }));
+  });
 
   return (
     <Drawers
+      leftLabel={
+        <>
+          <Icon icon="git-pull-request" />
+          <T>PR Stacks</T>
+        </>
+      }
+      left={<PRDashboard />}
       rightLabel={
         <>
           <Icon icon="edit" />

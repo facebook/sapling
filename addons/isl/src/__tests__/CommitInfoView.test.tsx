@@ -41,6 +41,7 @@ const {
   expectIsNOTEditingTitle,
   expectIsEditingDescription,
   expectIsNOTEditingDescription,
+  expandChangesToAmend,
 } = CommitInfoTestUtils;
 
 describe('CommitInfoView', () => {
@@ -133,11 +134,13 @@ describe('CommitInfoView', () => {
       });
 
       it('shows uncommitted changes for head commit', () => {
+        expandChangesToAmend();
         expect(withinCommitInfo().queryByText(ignoreRTL('file1.js'))).toBeInTheDocument();
         expect(withinCommitInfo().queryByText(ignoreRTL('file2.js'))).toBeInTheDocument();
       });
 
       it('shows file actions on uncommitted changes in commit info view', () => {
+        expandChangesToAmend();
         // (1) uncommitted changes in commit list, (2) uncommitted changes in commit info, (3) committed changes in commit info
         expect(withinCommitInfo().queryAllByTestId('file-actions')).toHaveLength(3);
       });
@@ -160,6 +163,7 @@ describe('CommitInfoView', () => {
       });
 
       it('enables amend button with uncommitted changes', () => {
+        expandChangesToAmend();
         expect(withinCommitInfo().queryByText(ignoreRTL('file1.js'))).toBeInTheDocument();
         expect(withinCommitInfo().queryByText(ignoreRTL('file2.js'))).toBeInTheDocument();
 
@@ -200,6 +204,7 @@ describe('CommitInfoView', () => {
       });
 
       it('runs amend with selected files', async () => {
+        expandChangesToAmend();
         expect(withinCommitInfo().queryByText(ignoreRTL('file1.js'))).toBeInTheDocument();
         expect(withinCommitInfo().queryByText(ignoreRTL('file2.js'))).toBeInTheDocument();
 
@@ -240,6 +245,7 @@ describe('CommitInfoView', () => {
       });
 
       it('disallows amending when all uncommitted changes deselected', () => {
+        expandChangesToAmend();
         // click every checkbox in changes to amend
         act(() => {
           const checkboxes = withinCommitInfo()

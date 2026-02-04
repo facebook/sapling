@@ -20,7 +20,6 @@ import {Commit} from './Commit';
 import {FlexSpacer} from './ComponentUtils';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {submitAsDraft, SubmitAsDraftCheckbox} from './codeReview/DraftCheckbox';
-import {publishWhenReady, PublishWhenReadyCheckbox} from './codeReview/PublishWhenReadyCheckbox';
 import {t, T} from './i18n';
 import {configBackedAtom, readAtom} from './jotaiUtils';
 import {CommitPreview} from './previews';
@@ -34,7 +33,7 @@ export const confirmShouldSubmitEnabledAtom = configBackedAtom<boolean>(
 );
 
 export type SubmitConfirmationReponse =
-  | {submitAsDraft: boolean; updateMessage?: string; publishWhenReady?: boolean}
+  | {submitAsDraft: boolean; updateMessage?: string}
   | undefined;
 
 type SubmitType = 'submit' | 'submit-all' | 'resubmit';
@@ -100,7 +99,6 @@ function ConfirmModalContent({
     confirmShouldSubmitEnabledAtom,
   );
   const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
-  const shouldPublishWhenReady = useAtomValue(publishWhenReady);
   const [updateMessage, setUpdateMessage] = useState('');
   const commitsWithDiffs = stack.filter(commit => commit.diffId != null);
 
@@ -129,7 +127,6 @@ function ConfirmModalContent({
           </TextField>
         )}
         <SubmitAsDraftCheckbox commitsToBeSubmit={stack} />
-        <PublishWhenReadyCheckbox />
       </div>
       <Divider />
       <div className="use-modal-buttons">
@@ -157,7 +154,6 @@ function ConfirmModalContent({
             returnResultAndDismiss({
               submitAsDraft: shouldSubmitAsDraft,
               updateMessage: updateMessage || undefined,
-              publishWhenReady: shouldPublishWhenReady,
             })
           }>
           <T>Submit</T>

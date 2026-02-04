@@ -17,6 +17,7 @@ import type {
   Disposable,
   LandConfirmationInfo,
   LandInfo,
+  Notification,
   OperationCommandProgressReporter,
   Result,
   ServerToClientMessage,
@@ -29,7 +30,7 @@ export type DiffSummaries = Map<DiffId, DiffSummary>;
 export interface CodeReviewProvider {
   triggerDiffSummariesFetch(diffs: Array<DiffId>): unknown;
 
-  onChangeDiffSummaries(callback: (result: Result<DiffSummaries>) => unknown): Disposable;
+  onChangeDiffSummaries(callback: (result: Result<DiffSummaries>, currentUser?: string) => unknown): Disposable;
 
   /** Run a command not handled within sapling, such as a separate submit handler */
   runExternalCommand?(
@@ -87,6 +88,9 @@ export interface CodeReviewProvider {
 
   fetchLandInfo?(topOfStack: DiffId): Promise<LandInfo>;
   confirmLand?(landConfirmationInfo: NonNullable<LandConfirmationInfo>): Promise<Result<undefined>>;
+
+  /** Fetch notifications for review requests, mentions, and reviews */
+  fetchNotifications?(): Promise<Array<Notification>>;
 
   handleClientToServerMessage?(
     message: ClientToServerMessage,

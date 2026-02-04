@@ -6,11 +6,13 @@
  */
 
 .split-diff-view {
-  border: 1px solid var(--tooltip-border);
-  border-radius: 2px;
-  color: var(--diffEditor-foreground);
+  border: 1px solid var(--graphite-border);
+  border-radius: 6px;
+  color: var(--graphite-text-primary);
   font-family: var(--monospace-fontFamily);
   tab-size: var(--tab-size);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .split-diff-view-hunk-table {
@@ -20,8 +22,8 @@
 .split-diff-view-file-header {
   display: flex;
   align-items: center;
-  color: var(--diffEditor-foreground);
-  background-color: var(--tooltip-background);
+  color: var(--graphite-text-primary);
+  background-color: var(--graphite-bg-subtle);
   padding: var(--halfpad) var(--pad);
   line-height: 2em;
 
@@ -29,7 +31,7 @@
   top: 0;
   margin-left: -1px;
   margin-right: -1px;
-  border: 1px solid var(--panel-view-border);
+  border: 1px solid var(--graphite-border);
   gap: var(--halfpad);
   z-index: 1;
 }
@@ -37,6 +39,49 @@
 .split-diff-view-file-header-toggle-open {
   padding-right: 2px;
   cursor: pointer;
+}
+
+.file-reviewed-checkbox {
+  color: var(--graphite-text-tertiary);
+  transition:
+    color 0.15s var(--ease-in-out-smooth, ease),
+    transform 0.2s var(--ease-out-back, ease);
+}
+
+.file-reviewed-checkbox:hover {
+  color: var(--graphite-text-secondary);
+  transform: scale(1.1);
+}
+
+.file-reviewed-checkbox.reviewed {
+  color: var(--scm-added-foreground);
+}
+
+.file-reviewed-checkbox.reviewed:hover {
+  color: var(--scm-added-foreground);
+  opacity: 0.8;
+  transform: scale(1.1);
+}
+
+/* Satisfying check animation */
+@keyframes checkPop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.file-reviewed-checkbox.just-checked {
+  animation: checkPop 0.25s var(--ease-out-back, ease);
+}
+
+.split-diff-view-file-header.file-header-reviewed {
+  background-color: color-mix(in srgb, var(--graphite-bg-subtle), var(--scm-added-foreground) 5%);
 }
 
 .split-diff-view-file-header.file-header-collapsed {
@@ -152,11 +197,11 @@
   padding-right: 10px;
   text-align: right;
   white-space: nowrap;
-  background-color: var(--subtle-hover-darken);
+  background-color: var(--graphite-bg-subtle);
 }
 
 .split-diff-view-hunk-table.display-split td:nth-child(3) {
-  border-left: 1px solid var(--tooltip-border);
+  border-left: 1px solid var(--graphite-border);
 }
 
 .split-diff-view-hunk-table.display-unified td:nth-child(1) {
@@ -164,7 +209,7 @@
 }
 
 .split-diff-view-hunk-table tr.separator-row {
-  background-color: var(--tooltip-background);
+  background-color: var(--graphite-bg-subtle);
   height: 12px;
 }
 

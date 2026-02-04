@@ -20,12 +20,9 @@ import tarfile
 import tempfile
 from typing import List
 
+rm_rf = functools.partial(shutil.rmtree, ignore_errors=True)
 print_err = functools.partial(print, file=sys.stderr)
 glob_r = functools.partial(glob.glob, recursive=True)
-
-
-def rm_rf(path: str) -> None:
-    shutil.rmtree(path, ignore_errors=True)
 
 
 # used to detect if files are changed.

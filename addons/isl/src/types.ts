@@ -628,14 +628,6 @@ export type FetchedSubmodules = Result<Submodule[] | undefined>;
 export type SubmodulesByRoot = Map<AbsolutePath, FetchedSubmodules>;
 
 export type AlertSeverity = 'SEV 0' | 'SEV 1' | 'SEV 2' | 'SEV 3' | 'SEV 4' | 'UBN';
-
-export type WorktreeInfo = {
-  path: string;
-  commit: Hash;
-  branch?: string;
-  isMain: boolean;
-};
-
 export type Alert = {
   key: string;
   title: string;
@@ -1003,7 +995,6 @@ export type ClientToServerMessage =
   | {type: 'abortRunningOperation'; operationId: string}
   | {type: 'fetchActiveAlerts'}
   | {type: 'fetchNotifications'}
-  | {type: 'fetchWorktrees'}
   | {type: 'fetchGeneratedStatuses'; paths: Array<RepoRelativePath>}
   | {type: 'fetchCommitMessageTemplate'}
   | {type: 'fetchShelvedChanges'}
@@ -1178,7 +1169,6 @@ export type ServerToClientMessage =
     }
   | {type: 'fetchedActiveAlerts'; alerts: Array<Alert>}
   | {type: 'fetchedNotifications'; notifications: Result<Array<Notification>>}
-  | {type: 'fetchedWorktrees'; worktrees: Result<Array<WorktreeInfo>>}
   | {type: 'fetchedCommitMessageTemplate'; template: string}
   | {type: 'fetchedShelvedChanges'; shelvedChanges: Result<Array<ShelvedChange>>}
   | {type: 'fetchedLatestCommit'; info: Result<CommitInfo>; revset: string}

@@ -119,23 +119,29 @@ registerDisposable(
     const title = event.title;
     const description = event.description;
     const mode = event.mode ?? 'commit'; // Default to 'commit' if not specified
-    const hash = event.hash ?? readAtom(latestHeadCommit)?.hash ?? 'head';
 
     writeAtom(islDrawerState, val => ({...val, right: {...val.right, collapsed: false}}));
     const schema = readAtom(commitMessageFieldsSchema);
     const fields = parseCommitMessageFields(schema, title, description);
 
     if (mode === 'commit') {
+      // For commit mode, always update the 'head' commit message
       writeAtom(editedCommitMessages('head'), fields);
     } else {
-      const currentMessage = readAtom(editedCommitMessages(hash));
-      writeAtom(
-        editedCommitMessages(hash),
-        mergeCommitMessageFields(schema, currentMessage as CommitMessageFields, fields),
-      );
+      // For amend mode, update the currently selected commit or head if none selected
+      const selected = readAtom(selectedCommits);
+      const targetHash =
+        selected.size === 1 ? Array.from(selected)[0] : readAtom(latestHeadCommit)?.hash;
+      if (targetHash) {
+        const currentMessage = readAtom(editedCommitMessages(targetHash));
+        writeAtom(
+          editedCommitMessages(targetHash),
+          mergeCommitMessageFields(schema, currentMessage as CommitMessageFields, fields),
+        );
+        writeAtom(selectedCommits, new Set([targetHash]));
+      }
     }
 
-    writeAtom(selectedCommits, new Set([hash]));
     writeAtom(rawCommitMode, mode);
   }),
 );

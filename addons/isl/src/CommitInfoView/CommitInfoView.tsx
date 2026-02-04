@@ -39,7 +39,7 @@ import {
 import {submitAsDraft, SubmitAsDraftCheckbox} from '../codeReview/DraftCheckbox';
 import {showBranchingPrModal} from '../codeReview/github/BranchingPrModal';
 import {overrideDisabledSubmitModes} from '../codeReview/github/branchPrState';
-import {publishWhenReady, PublishWhenReadyCheckbox} from '../codeReview/PublishWhenReadyCheckbox';
+import {Collapsable} from '../Collapsable';
 import {Commit} from '../Commit';
 import {OpenComparisonViewButton} from '../ComparisonView/OpenComparisonViewButton';
 import {Center} from '../ComponentUtils';
@@ -165,7 +165,6 @@ export function MultiCommitInfo({selectedCommits}: {selectedCommits: Array<Commi
         )}
         <div className="commit-info-actions-bar-left">
           <SubmitAsDraftCheckbox commitsToBeSubmit={selectedCommits} />
-          <PublishWhenReadyCheckbox />
         </div>
         <div className="commit-info-actions-bar-right">
           <SubmitSelectionButton />
@@ -393,27 +392,6 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
           </Section>
         )}
         <Divider />
-        {commit.isDot && !isAmendDisabled ? (
-          <Section data-testid="changes-to-amend">
-            <SmallCapsTitle>
-              {isCommitMode ? <T>Changes to Commit</T> : <T>Changes to Amend</T>}
-              <Badge>
-                {selectedFilesLength === uncommittedChanges.length
-                  ? null
-                  : selectedFilesLength + '/'}
-                {uncommittedChanges.length}
-              </Badge>
-            </SmallCapsTitle>
-            {uncommittedChanges.length > 0 ? <PendingDiffStats /> : null}
-            {uncommittedChanges.length === 0 ? (
-              <Subtle>
-                {isCommitMode ? <T>No changes to commit</T> : <T>No changes to amend</T>}
-              </Subtle>
-            ) : (
-              <UncommittedChanges place={isCommitMode ? 'commit sidebar' : 'amend sidebar'} />
-            )}
-          </Section>
-        ) : null}
         {isCommitMode ? null : (
           <Section data-testid="committed-changes">
             <SmallCapsTitle>
@@ -433,6 +411,32 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
             </div>
           </Section>
         )}
+        {commit.isDot && !isAmendDisabled ? (
+          <Collapsable
+            startExpanded={false}
+            title={
+              <SmallCapsTitle>
+                {isCommitMode ? <T>Changes to Commit</T> : <T>Changes to Amend</T>}
+                <Badge>
+                  {selectedFilesLength === uncommittedChanges.length
+                    ? null
+                    : selectedFilesLength + '/'}
+                  {uncommittedChanges.length}
+                </Badge>
+              </SmallCapsTitle>
+            }>
+            <div data-testid="changes-to-amend">
+              {uncommittedChanges.length > 0 ? <PendingDiffStats /> : null}
+              {uncommittedChanges.length === 0 ? (
+                <Subtle>
+                  {isCommitMode ? <T>No changes to commit</T> : <T>No changes to amend</T>}
+                </Subtle>
+              ) : (
+                <UncommittedChanges place={isCommitMode ? 'commit sidebar' : 'amend sidebar'} />
+              )}
+            </div>
+          </Collapsable>
+        ) : null}
       </div>
       {!isAmendDisabled && (
         <div className="commit-info-view-toolbar-bottom">
@@ -758,7 +762,6 @@ function ActionsBar({
       )}
       <div className="commit-info-actions-bar-left">
         <SubmitAsDraftCheckbox commitsToBeSubmit={isCommitMode ? [] : [commit]} />
-        <PublishWhenReadyCheckbox />
       </div>
       <div className="commit-info-actions-bar-right">
         {isAnythingBeingEdited && !isCommitMode ? (
@@ -909,7 +912,6 @@ function SubmitButton({
   const [repoInfo, setRepoInfo] = useAtom(repositoryInfo);
   const diffSummaries = useAtomValue(allDiffSummaries);
   const shouldSubmitAsDraft = useAtomValue(submitAsDraft);
-  const shouldPublishWhenReady = useAtomValue(publishWhenReady);
   const [updateMessage, setUpdateMessage] = useAtom(diffUpdateMessagesState(commit.hash));
   const provider = useAtomValue(codeReviewProvider);
 
@@ -1041,7 +1043,6 @@ function SubmitButton({
             draft: shouldSubmitAsDraft,
             updateFields: shouldUpdateMessage,
             updateMessage: updateMessage || undefined,
-            publishWhenReady: shouldPublishWhenReady,
           },
         );
 

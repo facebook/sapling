@@ -7,6 +7,7 @@
 
 import * as stylex from '@stylexjs/stylex';
 import {Icon} from 'isl-components/Icon';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {notEmpty} from 'shared/utils';
 import {spacing} from '../../components/theme/tokens.stylex';
 
@@ -164,4 +165,118 @@ export function stylexPropsWithClassName(
 ) {
   const {className, ...rest} = stylex.props(style);
   return {...rest, className: className + ' ' + names.filter(notEmpty).join(' ')};
+}
+
+/**
+ * Hook to manage scroll fade indicators on a scrollable element.
+ * Returns a ref to attach to the scrollable element and data attributes
+ * to control the fade visibility.
+ *
+ * The fades show when there's content above/below the visible area.
+ *
+ * Usage:
+ * - Attach `scrollRef` to the element that scrolls
+ * - Spread `scrollProps` on the element with the CSS fade pseudo-elements
+ *   (can be the same element or a parent container)
+ */
+export function useScrollFade<T extends HTMLElement = HTMLDivElement>(): {
+  scrollRef: React.RefObject<T | null>;
+  canScrollUp: boolean;
+  canScrollDown: boolean;
+  scrollProps: {
+    onScroll: React.UIEventHandler<T>;
+    'data-can-scroll-up': string;
+    'data-can-scroll-down': string;
+  };
+} {
+  const scrollRef = useRef<T>(null);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+
+    const threshold = 5; // Small threshold to avoid floating point issues
+    const scrollTop = el.scrollTop;
+    const scrollHeight = el.scrollHeight;
+    const clientHeight = el.clientHeight;
+
+    setCanScrollUp(scrollTop > threshold);
+    setCanScrollDown(scrollTop + clientHeight < scrollHeight - threshold);
+  }, []);
+
+  // Handle scroll events
+  const handleScroll = useCallback(() => {
+    updateScrollState();
+  }, [updateScrollState]);
+
+  // Initial check and resize observer
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+
+    // Initial state
+    updateScrollState();
+
+    // Watch for resize changes
+    const resizeObserver = new ResizeObserver(() => {
+      updateScrollState();
+    });
+    resizeObserver.observe(el);
+
+    // Watch for content changes via mutation observer
+    const mutationObserver = new MutationObserver(() => {
+      updateScrollState();
+    });
+    mutationObserver.observe(el, {childList: true, subtree: true});
+
+    return () => {
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+    };
+  }, [updateScrollState]);
+
+  return {
+    scrollRef,
+    canScrollUp,
+    canScrollDown,
+    scrollProps: {
+      onScroll: handleScroll,
+      'data-can-scroll-up': String(canScrollUp),
+      'data-can-scroll-down': String(canScrollDown),
+    },
+  };
+}
+
+/**
+ * Wrapper component that adds scroll fade indicators to its children.
+ * The children should be a scrollable element.
+ */
+export function ScrollFadeContainer({
+  children,
+  className,
+  fadeHeight = 12,
+  ...props
+}: {
+  children: React.ReactNode;
+  className?: string;
+  fadeHeight?: number;
+} & React.HTMLAttributes<HTMLDivElement>) {
+  const {scrollRef, scrollProps} = useScrollFade<HTMLDivElement>();
+
+  return (
+    <div
+      ref={scrollRef}
+      className={`scroll-fade-container ${className ?? ''}`}
+      style={{'--scroll-fade-height': `${fadeHeight}px`} as React.CSSProperties}
+      {...scrollProps}
+      {...props}>
+      {children}
+    </div>
+  );
 }

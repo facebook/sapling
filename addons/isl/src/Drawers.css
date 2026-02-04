@@ -12,9 +12,20 @@
   width: 100%;
   height: 100%;
 
+  /* Graphite color scheme - deep navy background */
+  background-color: var(--graphite-bg);
+  color: var(--graphite-text-primary);
+
+  /* Layout spacing tokens for breathing room */
+  --drawer-padding: 16px;
+  --section-gap: 12px;
+  --item-padding: 8px;
+  --prominent-padding: 20px;
+
+  /* Sizing tokens */
   --drag-handle-size: 7px;
-  --drawer-label-size: calc(2 * var(--halfpad) + 1ch);
-  --min-pane-width: 50px;
+  --drawer-label-size: 28px; /* Ensure label text is always visible */
+  --min-pane-width: 200px; /* Minimum readable width for drawer content */
 }
 .drawers-horizontal {
   display: flex;
@@ -22,16 +33,28 @@
   overflow: hidden;
   width: 100%;
   height: 100%;
+  /* Allow shrinking below content size for proper overflow behavior */
+  min-height: 0;
 }
 
-/* actual content takes all the size minus label and resize handle and 1px of border on each side */
+/* actual content takes remaining space after label and resize handle */
 .drawer-left > div:nth-child(3),
 .drawer-right > div:nth-child(3) {
-  width: calc(100% - var(--drawer-label-size) - var(--drag-handle-size) - var(--pad) - 2px);
+  flex: 1;
+  min-width: 0; /* Allow content to shrink below its content size */
+  min-height: 0; /* Critical: allows flex child to scroll */
+  overflow-y: auto; /* Allow vertical scrolling */
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  /* Consistent padding for drawer content areas */
+  padding: var(--drawer-padding);
 }
 .drawer-top > div:nth-child(3),
 .drawer-bottom > div:nth-child(3) {
-  height: calc(100% - var(--drawer-label-size) - var(--drag-handle-size) - var(--pad) - 2px);
+  flex: 1;
+  min-height: 0; /* Allow content to shrink below its content size */
+  overflow: hidden;
+  /* Consistent padding for drawer content areas */
+  padding: var(--drawer-padding);
 }
 
 .drawer-main-content {
@@ -40,13 +63,28 @@
   flex-direction: column;
   flex-grow: 1;
   width: 100%;
+  /* Allow shrinking below content size for proper overflow/scroll behavior */
+  min-height: 0;
+  /* Extra breathing room for the prominent middle column */
+  padding: var(--prominent-padding);
+  /* Unified Graphite background */
+  background-color: var(--graphite-bg);
+  /* Subtle borders for section separation */
+  border-left: 1px solid var(--graphite-border);
+  border-right: 1px solid var(--graphite-border);
+  /* Scroll fade configuration */
+  --scroll-fade-color: var(--graphite-bg);
 }
 
 .drawer {
   display: flex;
   flex: none;
-  overflow-y: auto;
+  overflow: hidden; /* Don't scroll at drawer level - content scrolls */
   justify-content: flex-end;
+  /* Unified Graphite background across all columns */
+  background-color: var(--graphite-bg);
+  /* Scroll fade configuration */
+  --scroll-fade-color: var(--graphite-bg);
 }
 
 .drawer.drawer-top {
@@ -73,7 +111,14 @@
 
 .drawer.drawer-expanded.drawer-left {
   min-width: var(--min-pane-width);
-  max-width: calc((100vw / var(--zoom)) - var(--min-pane-width));
+  /* Leave room for middle content + right drawer minimum */
+  max-width: calc((100vw / var(--zoom)) - 2 * var(--min-pane-width) - 100px);
+}
+
+.drawer.drawer-expanded.drawer-right {
+  min-width: var(--min-pane-width);
+  /* Leave room for middle content + left drawer minimum */
+  max-width: calc((100vw / var(--zoom)) - 2 * var(--min-pane-width) - 100px);
 }
 .drawer.drawer-expanded.drawer-top {
   min-height: var(--min-pane-width);
@@ -81,8 +126,9 @@
 }
 
 .drawer .resizable-drag-handle {
-  border: 1px solid var(--panel-view-border);
+  border: 1px solid var(--graphite-border);
   user-select: none;
+  flex-shrink: 0;
 }
 
 .drawer-top .resizable-drag-handle,
@@ -105,11 +151,13 @@
 
 .drawer .resizable-drag-handle:hover,
 .drawer .resizable-drag-handle.resizing {
-  background-color: var(--focus-border);
-  border-color: var(--focus-border);
+  background-color: var(--graphite-accent);
+  border-color: var(--graphite-accent);
+  box-shadow: 0 0 8px var(--graphite-glow, rgba(74, 144, 226, 0.3));
   transition:
-    background-color 0s 300ms,
-    border-color 0s 300ms;
+    background-color 0.15s var(--ease-in-out-smooth, ease) 150ms,
+    border-color 0.15s var(--ease-in-out-smooth, ease) 150ms,
+    box-shadow 0.2s var(--ease-in-out-smooth, ease) 150ms;
 }
 
 .drawer-label {
@@ -117,13 +165,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 0px solid var(--panel-view-border);
+  border: 0px solid var(--graphite-border);
   cursor: pointer;
-  padding: var(--halfpad);
+  padding: var(--item-padding);
   gap: var(--halfpad);
+  transition:
+    background-color 0.15s var(--ease-in-out-smooth, ease),
+    box-shadow 0.2s var(--ease-in-out-smooth, ease),
+    backdrop-filter 0.2s var(--ease-in-out-smooth, ease);
 }
 .drawer-label:hover {
-  background-color: var(--list-hover-background);
+  background-color: color-mix(in srgb, var(--graphite-hover-bg) 70%, transparent);
+  box-shadow: 0 0 8px var(--graphite-glow, rgba(74, 144, 226, 0.15));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.drawer-label:active {
+  background-color: var(--graphite-selected-bg, rgba(74, 144, 226, 0.15));
 }
 
 .drawer-left .drawer-label {
@@ -142,10 +201,14 @@
 .drawer-left .drawer-label,
 .drawer-right .drawer-label {
   width: var(--drawer-label-size);
+  min-width: var(--drawer-label-size);
+  flex-shrink: 0;
 }
 .drawer-top .drawer-label,
 .drawer-bottom .drawer-label {
   height: var(--drawer-label-size);
+  min-height: var(--drawer-label-size);
+  flex-shrink: 0;
 }
 
 .drawer-left .drawer-label,
