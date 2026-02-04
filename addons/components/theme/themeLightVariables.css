@@ -49,4 +49,41 @@
   --panel-tab-foreground: rgba(66, 66, 66, 0.75);
   --panel-view-background: #ffffff;
   --panel-view-border: rgba(128, 128, 128, 0.35);
+
+  /* Graphite-style variables for light theme */
+  --graphite-bg: #ffffff;
+  --graphite-bg-subtle: #f5f5f5;
+  --graphite-bg-elevated: #fafafa;
+
+  --graphite-text-primary: #1f1f1f;
+  --graphite-text-secondary: #616161;
+  --graphite-text-tertiary: #9e9e9e;
+
+  --graphite-accent: #0078d4;
+  --graphite-accent-hover: #106ebe;
+
+  --graphite-border: rgba(0, 0, 0, 0.1);
+  --graphite-border-subtle: rgba(0, 0, 0, 0.05);
+
+  --graphite-hover-bg: rgba(0, 0, 0, 0.04);
+  --graphite-selected-bg: rgba(0, 120, 212, 0.1);
+
+  --graphite-glow: rgba(0, 120, 212, 0.15);
+  --graphite-glow-strong: rgba(0, 120, 212, 0.25);
+  --graphite-success-glow: rgba(34, 197, 94, 0.15);
+
+  /* Refined shadows for depth (lighter for light theme) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+  --shadow-glow: 0 0 20px rgba(0, 120, 212, 0.1);
+
+  /* Animation timing (same as dark) */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Scroll fade indicators */
+  --scroll-fade-height: 12px;
+  --scroll-fade-blur: 2px;
 }

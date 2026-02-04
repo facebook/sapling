@@ -7,14 +7,15 @@
 
 html .dark-theme,
 html .vscode-dark {
+  /* SCM file status colors - refined but familiar */
   --scm-modified-foreground: #e2c08d;
-  --scm-added-foreground: #73c991;
-  --scm-removed-foreground: #f3674f;
-  --scm-missing-foreground: #b4eaed;
+  --scm-added-foreground: #4ADE80;
+  --scm-removed-foreground: #F87171;
+  --scm-missing-foreground: #60A5FA;
   --selected-commit-background: rgba(255, 255, 255, 0.1);
 
-  --error-fg-color: #f3674f;
-  --error-bg-color: #f3674f20;
+  --error-fg-color: #EF4444;
+  --error-bg-color: rgba(239, 68, 68, 0.15);
 
   --tooltip-background: var(--vscode-editorWidget-background, #252526);
   --tooltip-border: var(--vscode-editorWidget-border, #454545);
@@ -25,30 +26,30 @@ html .vscode-dark {
 
   --selection-mix-mode: lighten;
 
-  /* github PR colors */
+  /* GitHub PR badge colors - cleaner modern palette */
   --github-badge-fg: white;
-  --github-open-bg: #238636;
-  --github-closed-bg: #da3633;
-  --github-merged-bg: #8957e5;
+  --github-open-bg: #22C55E;
+  --github-closed-bg: #EF4444;
+  --github-merged-bg: #A855F7;
   --github-neutral-bg: #6e7781;
 
-  /* Editor colors */
+  /* Editor/diff colors - refined with better contrast */
   --diffEditor-foreground: rgb(201, 209, 217);
   --diffEditor-insertedLineHighlightBackground: var(
     --vscode-diffEditor-insertedTextBackground,
-    rgba(156, 204, 44, 0.2)
+    rgba(74, 222, 128, 0.25)
   );
   --diffEditor-removedLineHighlightBackground: var(
     --vscode-diffEditor-removedTextBackground,
-    rgba(255, 0, 0, 0.2)
+    rgba(248, 113, 113, 0.25)
   );
   --diffEditor-insertedLineBackground: var(
     --vscode-diffEditor-insertedLineBackground,
-    rgba(155, 185, 85, 0.2)
+    rgba(74, 222, 128, 0.12)
   );
   --diffEditor-removedLineBackground: var(
     --vscode-diffEditor-removedLineBackground,
-    rgba(255, 0, 0, 0.2)
+    rgba(248, 113, 113, 0.12)
   );
 
   --diffEditor-modifiedLineBackground: #deb94033;
@@ -61,14 +62,14 @@ html .vscode-dark {
 
   --banner-fg: rgb(235, 236, 237);
   --banner-warning-bg: #deb94066;
-  --banner-error-bg: #fa7e7c55;
+  --banner-error-bg: rgba(239, 68, 68, 0.25);
   --banner-default-bg: #45454577;
   --banner-green-bg: #73a280;
 
-  /* Signal colors */
-  --signal-good-bg: #2da44e;
-  --signal-medium-bg: #e0d12d;
-  --signal-bad-bg: #cf222e;
+  /* Signal colors - cleaner modern palette */
+  --signal-good-bg: #22C55E;
+  --signal-medium-bg: #F97316;
+  --signal-bad-bg: #EF4444;
   --signal-fg: white;
 
   --checkbox-border: var(--vscode-contrastBorder, rgba(255, 255, 255, 0.2));

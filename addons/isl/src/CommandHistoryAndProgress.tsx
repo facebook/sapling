@@ -16,6 +16,7 @@ import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
+import {useState, useEffect, useRef} from 'react';
 import {notEmpty, truncate} from 'shared/utils';
 import {Delayed} from './Delayed';
 import {LogRenderExposures} from './analytics/LogRenderExposures';
@@ -100,6 +101,39 @@ function OperationDescription(props: {
 const nextToRunCollapsedAtom = atom(false);
 const queueErrorCollapsedAtom = atom(true);
 
+/** Minimum time to show the centered overlay to avoid jarring flashes */
+const MIN_OVERLAY_DISPLAY_MS = 400;
+
+/**
+ * Hook to manage centered overlay visibility with minimum display time.
+ * Prevents jarring flash for quick operations.
+ */
+function useCenteredOverlay(isRunning: boolean): boolean {
+  const [showCentered, setShowCentered] = useState(false);
+  const showStartTime = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isRunning) {
+      // Operation started - show overlay immediately
+      setShowCentered(true);
+      showStartTime.current = Date.now();
+    } else if (showCentered) {
+      // Operation finished - wait for minimum time before hiding
+      const elapsed = Date.now() - (showStartTime.current ?? 0);
+      const remaining = Math.max(0, MIN_OVERLAY_DISPLAY_MS - elapsed);
+
+      const timer = setTimeout(() => {
+        setShowCentered(false);
+        showStartTime.current = null;
+      }, remaining);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isRunning, showCentered]);
+
+  return showCentered;
+}
+
 export function CommandHistoryAndProgress() {
   const list = useAtomValue(operationList);
   const queued = useAtomValue(queuedOperations);
@@ -110,11 +144,16 @@ export function CommandHistoryAndProgress() {
   const [errorCollapsed, setErrorCollapsed] = useAtom(queueErrorCollapsedAtom);
 
   const info = useAtomValue(repositoryInfo);
+
+  // Compute isRunning before early returns to satisfy React hooks rules
+  const progress = list.currentOperation;
+  const isRunning = progress != null && progress.exitCode == null;
+  const showCentered = useCenteredOverlay(isRunning);
+
   if (!info) {
     return null;
   }
 
-  const progress = list.currentOperation;
   if (progress == null) {
     return null;
   }
@@ -182,7 +221,7 @@ export function CommandHistoryAndProgress() {
   }
 
   return (
-    <div className="progress-container" data-testid="progress-container">
+    <div className={`progress-container${showCentered ? ' progress-container-centered' : ''}`} data-testid="progress-container">
       {queuedError != null || queued.length > 0 ? (
         <div className="queued-operations-container" data-testid="queued-commands">
           {queuedError != null && (

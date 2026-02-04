@@ -8,8 +8,8 @@
 .dark-theme,
 .vscode-dark {
   /*
-   * VS Code Webview UI Toolkit theme colors.
-   * Note that these are only needed outside of vscode.
+   * Hybrid theme: VS Code base with refined accents.
+   * Keeps familiar dark background, adds cleaner semantic colors.
    */
   --background: #1e1e1e;
   --focus-border: #007fd4;
@@ -41,12 +41,59 @@
   --input-background: #3c3c3c;
   --input-foreground: #cccccc;
   --input-placeholder-foreground: #cccccc;
-  --link-active-foreground: #3794ff;
-  --link-foreground: #3794ff;
+  --link-active-foreground: #60A5FA;
+  --link-foreground: #60A5FA;
   --progress-background: #0e70c0;
   --panel-tab-active-border: #e7e7e7;
   --panel-tab-active-foreground: #e7e7e7;
   --panel-tab-foreground: #e7e7e799;
   --panel-view-background: #1e1e1e;
   --panel-view-border: #80808059;
+
+  /* Refined color palette - keeps VS Code base, cleaner accents */
+  --graphite-bg: #1e1e1e;
+  --graphite-bg-subtle: #252526;
+  --graphite-bg-elevated: #2d2d2d;
+
+  --graphite-text-primary: #e8eaed;
+  --graphite-text-secondary: #9aa0a6;
+  --graphite-text-tertiary: #737373;
+  --graphite-text-muted: #525252;
+
+  --graphite-accent: #4a90e2;
+  --graphite-accent-hover: #5fa3f5;
+  --graphite-accent-muted: #2d5a8a;
+  --graphite-accent-subtle: #1d3a5a;
+
+  --graphite-border: rgba(255, 255, 255, 0.1);
+  --graphite-border-subtle: rgba(255, 255, 255, 0.05);
+
+  --graphite-hover-bg: rgba(255, 255, 255, 0.03);
+  --graphite-selected-bg: rgba(74, 144, 226, 0.15);
+
+  --graphite-glow: rgba(74, 144, 226, 0.15);
+  --graphite-glow-strong: rgba(74, 144, 226, 0.25);
+  --graphite-success-glow: rgba(34, 197, 94, 0.2);
+
+  /* Refined shadows for depth */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 20px rgba(74, 144, 226, 0.15);
+
+  /* Animation timing */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Refined semantic colors */
+  --graphite-blue: #60A5FA;
+  --graphite-red: #EF4444;
+  --graphite-red-muted: #7F1D1D;
+  --graphite-orange: #F97316;
+  --graphite-yellow: #FBBF24;
+
+  /* Scroll fade indicators */
+  --scroll-fade-height: 12px;
+  --scroll-fade-blur: 2px;
 }

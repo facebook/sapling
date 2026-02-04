@@ -108,7 +108,8 @@
 
 .changed-files-list {
   --changed-files-list-height: 500px;
-  --changed-files-overflow-color: var(--background);
+  --changed-files-overflow-color: var(--graphite-bg, var(--background));
+  --scroll-fade-height: 16px;
   overflow-y: scroll;
   max-height: var(--changed-files-list-height);
 }
@@ -132,19 +133,53 @@
   margin-left: calc(2 * var(--pad));
 }
 
-.changed-files-list:after {
-  --overflow-gradient-height: 20px;
-  display: block;
-  content: ' ';
-  width: 100%;
-  height: var(--overflow-gradient-height);
-  background: linear-gradient(transparent, var(--changed-files-overflow-color));
-  z-index: 10;
+/* Top and bottom scroll fade indicators with blur */
+.changed-files-list-container::before,
+.changed-files-list-container::after {
+  content: '';
   position: absolute;
-  bottom: 0px;
   left: 0;
-  top: calc(var(--changed-files-list-height) - var(--overflow-gradient-height));
+  right: 0;
+  height: var(--scroll-fade-height, 16px);
   pointer-events: none;
+  z-index: 15;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-in-out-smooth, ease);
+}
+
+.changed-files-list-container::before {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--changed-files-overflow-color, var(--graphite-bg)) 0%,
+    transparent 100%
+  );
+  backdrop-filter: blur(var(--scroll-fade-blur, 2px));
+  -webkit-backdrop-filter: blur(var(--scroll-fade-blur, 2px));
+  mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+}
+
+.changed-files-list-container::after {
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    var(--changed-files-overflow-color, var(--graphite-bg)) 0%,
+    transparent 100%
+  );
+  backdrop-filter: blur(var(--scroll-fade-blur, 2px));
+  -webkit-backdrop-filter: blur(var(--scroll-fade-blur, 2px));
+  mask-image: linear-gradient(to top, black 0%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, black 0%, transparent 100%);
+}
+
+/* Show fades based on scroll position */
+.changed-files-list-container[data-can-scroll-up="true"]::before {
+  opacity: 1;
+}
+
+.changed-files-list-container[data-can-scroll-down="true"]::after {
+  opacity: 1;
 }
 
 .changed-file-path {
@@ -153,6 +188,12 @@
   gap: var(--halfpad);
   cursor: pointer;
   overflow: hidden;
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  transition:
+    background-color 0.1s var(--ease-in-out-smooth, ease),
+    color 0.1s ease;
 }
 
 .changed-file-path-text {
@@ -169,6 +210,7 @@
 
 .changed-file-path:hover {
   color: var(--highlight-foreground);
+  background-color: var(--graphite-hover-bg, rgba(255, 255, 255, 0.03));
 }
 
 .file-actions {
@@ -214,17 +256,23 @@
 .show-on-hover,
 .file-show-on-hover {
   opacity: 0;
-  transition: opacity 0.1s;
+  transition:
+    opacity 0.15s var(--ease-in-out-smooth, ease),
+    transform 0.15s var(--ease-out-back, ease);
+  transform: scale(0.9);
 }
 .show-on-hover:focus-within,
 .file-show-on-hover:focus-within {
   opacity: 1;
+  transform: scale(1);
 }
 .uncommitted-changes:hover .show-on-hover {
   opacity: 1;
+  transform: scale(1);
 }
 .changed-file:hover .file-show-on-hover {
   opacity: 1;
+  transform: scale(1);
 }
 .uncommitted-changes:hover vscode-button:disabled.show-on-hover {
   opacity: 0.4;

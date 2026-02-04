@@ -16,6 +16,10 @@
   flex-direction: column;
 }
 
+.render-dag-row {
+  scroll-margin-top: 94px;
+}
+
 .render-dag-row,
 .render-dag-row-left-side-line {
   padding-left: var(--pad);

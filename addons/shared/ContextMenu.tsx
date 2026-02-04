@@ -53,7 +53,7 @@ export type ContextMenuItem =
     }
   | {type: 'divider'};
 
-export const contextMenuState = atom<null | ContextMenuData>(null);
+const contextMenuState = atom<null | ContextMenuData>(null);
 
 export function ContextMenus() {
   const [state, setState] = useAtom(contextMenuState);

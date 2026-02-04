@@ -459,7 +459,7 @@ export class WatchForChanges {
 
     const FILE_CHANGE_EDENFS_SUBSCRIPTION = 'sapling-smartlog-file-change-edenfs';
     try {
-      // In some bad cases, a file that has a lot of activity can constantly trigger the subscription.
+      // In some bad cases, a file that has alot of activity can constantly trigger the subscription.
       // Incrementally increase the throttling of events to avoid spamming `status`.
       // This does mean "legit" changes will start being missed.
       // TODO: can we scan the list of changes and build a list of files that are overfiring, then send those to the UI as a warning?

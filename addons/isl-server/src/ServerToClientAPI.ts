@@ -132,8 +132,8 @@ export default class ServerToClientAPI {
 
     if (repo.codeReviewProvider != null) {
       this.repoDisposables.push(
-        repo.codeReviewProvider.onChangeDiffSummaries(value => {
-          this.postMessage({type: 'fetchedDiffSummaries', summaries: value});
+        repo.codeReviewProvider.onChangeDiffSummaries((value, currentUser) => {
+          this.postMessage({type: 'fetchedDiffSummaries', summaries: value, currentUser});
         }),
       );
     }
@@ -1122,6 +1122,24 @@ export default class ServerToClientAPI {
           })
           .catch(err => {
             this.logger.error('Failed to fetch active alerts:', err);
+          });
+        break;
+      }
+      case 'fetchNotifications': {
+        repo.codeReviewProvider
+          ?.fetchNotifications?.()
+          ?.then(notifications => {
+            this.postMessage({
+              type: 'fetchedNotifications',
+              notifications: {value: notifications},
+            });
+          })
+          .catch(err => {
+            this.logger.error('Failed to fetch notifications:', err);
+            this.postMessage({
+              type: 'fetchedNotifications',
+              notifications: {error: err as Error},
+            });
           });
         break;
       }

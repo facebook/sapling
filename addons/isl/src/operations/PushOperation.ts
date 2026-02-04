@@ -16,12 +16,16 @@ export class PushOperation extends Operation {
     private topOfStackRev: SucceedableRevset | ExactRevset | OptimisticRevset,
     private toBranchName: string,
     private destination?: string,
+    private force?: boolean,
   ) {
     super('PushOperation');
   }
 
   getArgs() {
     const args = ['push', '--rev', this.topOfStackRev, '--to', this.toBranchName];
+    if (this.force) {
+      args.push('--force');
+    }
     if (this.destination) {
       args.push(this.destination);
     }
