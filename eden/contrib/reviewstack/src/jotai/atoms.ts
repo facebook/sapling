@@ -12,11 +12,13 @@
 
 import type {LabelFragment, UserFragment} from '../generated/graphql';
 import type GitHubClient from '../github/GitHubClient';
+import type {DiffWithCommitIDs} from '../github/diffTypes';
 import type {PullRequest} from '../github/pullRequestTimelineTypes';
-import type {GitObjectID, ID} from '../github/types';
+import type {Commit, GitObjectID, ID} from '../github/types';
 
 import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
 import GraphQLGitHubClient from '../github/GraphQLGitHubClient';
+import {diffCommitWithParent} from '../github/diff';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai-family';
 import {atomWithStorage} from 'jotai/utils';
@@ -225,4 +227,38 @@ export const gitHubPullRequestAtom = atom<PullRequest | null>(null);
 export const gitHubPullRequestViewerDidAuthorAtom = atom<boolean>(get => {
   const pullRequest = get(gitHubPullRequestAtom);
   return pullRequest?.viewerDidAuthor ?? false;
+});
+
+// =============================================================================
+// Current Commit
+// =============================================================================
+
+/**
+ * Migrated from: gitHubCurrentCommit in recoil.ts
+ *
+ * Fetches the current commit data based on the commit ID.
+ * Used on the /commit/:oid route.
+ */
+export const gitHubCurrentCommitAtom = atom<Promise<Commit | null>>(async get => {
+  const client = await get(gitHubClientAtom);
+  const oid = get(gitHubCommitIDAtom);
+  return (client != null && oid != null) ?
+    client.getCommit(oid) : null;
+
+});
+
+/**
+ * Migrated from: gitHubDiffForCurrentCommit in recoil.ts
+ *
+ * Computes the diff for the current commit by comparing it with its parent.
+ * Used to display the commit diff view.
+ */
+export const gitHubDiffForCurrentCommitAtom = atom<Promise<DiffWithCommitIDs | null>>(async get => {
+  const client = await get(gitHubClientAtom);
+  const commit = await get(gitHubCurrentCommitAtom);
+  if (client != null && commit != null) {
+    return diffCommitWithParent(commit, client);
+  } else {
+    return null;
+  }
 });

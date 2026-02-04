@@ -12,12 +12,15 @@ import CommitHeader from './CommitHeader';
 import CommitLink from './CommitLink';
 import DiffView from './DiffView';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
-import {gitHubCommitIDAtom, gitHubOrgAndRepoAtom} from './jotai';
-import {gitHubCurrentCommit, gitHubDiffForCurrentCommit, gitHubOrgAndRepo} from './recoil';
+import {
+  gitHubCommitIDAtom,
+  gitHubCurrentCommitAtom,
+  gitHubDiffForCurrentCommitAtom,
+  gitHubOrgAndRepoAtom,
+} from './jotai';
 import {Box, Text} from '@primer/react';
-import {useSetAtom} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
 import {Suspense, useEffect} from 'react';
-import {useRecoilValue} from 'recoil';
 
 export default function CommitView({org, repo, oid}: {org: string; repo: string; oid: string}) {
   const setOrgAndRepo = useSetAtom(gitHubOrgAndRepoAtom);
@@ -42,8 +45,8 @@ export default function CommitView({org, repo, oid}: {org: string; repo: string;
 }
 
 function CommitDisplay() {
-  const diff = useRecoilValue(gitHubDiffForCurrentCommit);
-  const commit = useRecoilValue(gitHubCurrentCommit);
+  const diff = useAtomValue(gitHubDiffForCurrentCommitAtom);
+  const commit = useAtomValue(gitHubCurrentCommitAtom);
 
   if (diff != null) {
     return (
@@ -73,7 +76,7 @@ function CommitMessage({commit}: {commit: Commit}) {
 }
 
 function CommitParents({commit}: {commit: Commit}) {
-  const orgAndRepo = useRecoilValue(gitHubOrgAndRepo);
+  const orgAndRepo = useAtomValue(gitHubOrgAndRepoAtom);
   const {org, repo} = orgAndRepo ?? {};
   const {parents} = commit;
   if (parents.length === 0 || org == null || repo == null) {

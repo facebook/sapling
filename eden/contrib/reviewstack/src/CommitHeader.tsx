@@ -6,12 +6,12 @@
  */
 
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
-import {gitHubCurrentCommit} from './recoil';
+import {gitHubCurrentCommitAtom} from './jotai';
 import {Box, Link, Text} from '@primer/react';
-import {useRecoilValue} from 'recoil';
+import {useAtomValue} from 'jotai';
 
 export default function CommitHeader(): React.ReactElement | null {
-  const commit = useRecoilValue(gitHubCurrentCommit);
+  const commit = useAtomValue(gitHubCurrentCommitAtom);
 
   if (commit == null) {
     return null;

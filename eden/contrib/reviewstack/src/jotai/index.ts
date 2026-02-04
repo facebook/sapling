@@ -26,6 +26,8 @@ export {
   gitHubPullRequestIDAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestViewerDidAuthorAtom,
+  gitHubCurrentCommitAtom,
+  gitHubDiffForCurrentCommitAtom,
 } from './atoms';
 
 export type {SupportedPrimerColorMode, GitHubOrgAndRepo, PullRequestReviewersList} from './atoms';
