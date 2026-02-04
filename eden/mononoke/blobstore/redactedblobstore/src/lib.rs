@@ -189,6 +189,19 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
             scuba_builder.add("unix_username", unix_username);
         }
 
+        if let Some(client_correlator) = ctx.client_correlator() {
+            scuba_builder.add("client_correlator", client_correlator);
+        }
+
+        scuba_builder.add(
+            "client_identities",
+            ctx.metadata()
+                .identities()
+                .iter()
+                .map(|i| i.to_string())
+                .collect::<Vec<_>>(),
+        );
+
         scuba_builder.log();
     }
 }
