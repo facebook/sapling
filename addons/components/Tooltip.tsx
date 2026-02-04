@@ -46,6 +46,13 @@ export type TooltipProps = {
    */
   delayMs?: number;
   /**
+   * When true, the tooltip stays visible when the mouse moves from the trigger
+   * element onto the tooltip content itself. This allows users to interact with
+   * the tooltip content, such as selecting and copying text.
+   * Only applies to hover-triggered tooltips with a `component` prop.
+   */
+  interactive?: boolean;
+  /**
    * Callback to run when the tooltip becomes visible.
    * For 'click' tooltips that also have a 'title', this only fires when the 'click' tooltip is shown.
    */
@@ -126,11 +133,13 @@ export function Tooltip({
   additionalToggles,
   group,
   inline: inlineProp,
+  interactive,
 }: TooltipPropsWithChildren) {
   const inline = inlineProp ?? false;
   const trigger = triggerProp ?? 'hover';
   const placement = placementProp ?? 'top';
   const [visible, setVisible] = useState<VisibleState>(false);
+  const isHoveringTooltipContent = useRef(false);
 
   // trigger onDismiss when visibility newly becomes false
   const lastVisible = useRef(false);
@@ -236,8 +245,18 @@ export function Tooltip({
     // Do not change visible if 'click' shows the content.
     const onMouseEnter = () =>
       setVisible(vis => (trigger === 'click' ? (vis === true ? vis : 'title') : true));
-    const onMouseLeave = () =>
-      setVisible(vis => (trigger === 'click' && vis === true ? vis : false));
+    const onMouseLeave = () => {
+      // For interactive tooltips, delay hiding to allow mouse to move to tooltip content
+      if (interactive && component != null) {
+        setTimeout(() => {
+          if (!isHoveringTooltipContent.current) {
+            setVisible(vis => (trigger === 'click' && vis === true ? vis : false));
+          }
+        }, 100);
+      } else {
+        setVisible(vis => (trigger === 'click' && vis === true ? vis : false));
+      }
+    };
     const div = ref.current;
     div?.addEventListener('mouseenter', onMouseEnter);
     div?.addEventListener('mouseleave', onMouseLeave);
@@ -245,7 +264,7 @@ export function Tooltip({
       div?.removeEventListener('mouseenter', onMouseEnter);
       div?.removeEventListener('mouseleave', onMouseLeave);
     };
-  }, [trigger, title]);
+  }, [trigger, title, interactive, component]);
 
   // Force delayMs to be 0 when `component` is shown by click.
   const realDelayMs = trigger === 'click' && visible === true ? 0 : delayMs;
@@ -271,7 +290,20 @@ export function Tooltip({
           : undefined
       }>
       {visible && ref.current && (
-        <RenderTooltipOnto delayMs={realDelayMs} element={ref.current} placement={placement}>
+        <RenderTooltipOnto
+          delayMs={realDelayMs}
+          element={ref.current}
+          placement={placement}
+          interactive={interactive}
+          onTooltipMouseEnter={() => {
+            isHoveringTooltipContent.current = true;
+          }}
+          onTooltipMouseLeave={() => {
+            isHoveringTooltipContent.current = false;
+            if (trigger === 'hover') {
+              setVisible(false);
+            }
+          }}>
           {getContent()}
         </RenderTooltipOnto>
       )}
@@ -295,11 +327,17 @@ function RenderTooltipOnto({
   placement,
   children,
   delayMs,
+  interactive,
+  onTooltipMouseEnter,
+  onTooltipMouseLeave,
 }: {
   element: HTMLElement;
   placement: Placement;
   children: ReactNode;
   delayMs?: number;
+  interactive?: boolean;
+  onTooltipMouseEnter?: () => void;
+  onTooltipMouseLeave?: () => void;
 }) {
   const sourceBoundingRect = element.getBoundingClientRect();
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -367,7 +405,9 @@ function RenderTooltipOnto({
           `tooltip tooltip-${effectivePlacement}` +
           (typeof children === 'string' ? ' simple-text-tooltip' : '')
         }
-        style={style}>
+        style={style}
+        onMouseEnter={interactive ? onTooltipMouseEnter : undefined}
+        onMouseLeave={interactive ? onTooltipMouseLeave : undefined}>
         <div
           className={`tooltip-arrow tooltip-arrow-${effectivePlacement}`}
           // If we had to push the tooltip back to prevent overflow,

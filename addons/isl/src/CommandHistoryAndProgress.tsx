@@ -269,7 +269,8 @@ export function CommandHistoryAndProgress() {
               </pre>
             )}
           </div>
-        )}>
+        )}
+        interactive>
         <div className="progress-container-row">
           {icon}
           {label}
