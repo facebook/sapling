@@ -10,13 +10,16 @@ import type {DateTime, GitObjectID, VersionCommit} from './github/types';
 import BulletItems from './BulletItems';
 import CommentCount from './CommentCount';
 import CommitLink from './CommitLink';
-import {gitHubPullRequestComparableVersionsAtom} from './jotai';
-import {gitHubPullRequestThreadsByCommit, gitHubPullRequestSelectedVersionIndex} from './recoil';
+import {
+  gitHubPullRequestComparableVersionsAtom,
+  gitHubPullRequestSelectedVersionIndexAtom,
+} from './jotai';
+import {gitHubPullRequestThreadsByCommit} from './recoil';
 import {countCommentsForThreads, formatISODate, versionLabel} from './utils';
 import {ActionList, Box, Text} from '@primer/react';
-import {useSetAtom} from 'jotai';
+import {useAtom, useSetAtom} from 'jotai';
 import React, {useCallback} from 'react';
-import {useRecoilState, useRecoilValue} from 'recoil';
+import {useRecoilValue} from 'recoil';
 
 // eslint-disable-next-line prefer-arrow-callback
 export default React.memo(function PullRequestVersionSelectorItem({
@@ -36,8 +39,8 @@ export default React.memo(function PullRequestVersionSelectorItem({
   org: string;
   repo: string;
 }): React.ReactElement {
-  const [selectedVersionIndex, setSelectedVersionIndex] = useRecoilState(
-    gitHubPullRequestSelectedVersionIndex,
+  const [selectedVersionIndex, setSelectedVersionIndex] = useAtom(
+    gitHubPullRequestSelectedVersionIndexAtom,
   );
   const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
   const reviewThreadsByCommit = useRecoilValue(gitHubPullRequestThreadsByCommit);

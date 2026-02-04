@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {GitHubOrgAndRepo} from './recoil';
+import type {GitHubOrgAndRepo} from './jotai';
 
 import Link from './Link';
 import URLFor from './URLFor';

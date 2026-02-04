@@ -5,29 +5,36 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {gitHubPullRequestComparableVersionsAtom} from './jotai';
 import {
-  gitHubPullRequestComparableVersions,
-  gitHubPullRequestIsViewingLatest,
-  gitHubPullRequestSelectedVersionIndex,
-} from './recoil';
+  gitHubPullRequestComparableVersionsAtom,
+  gitHubPullRequestSelectedVersionIndexAtom,
+  gitHubPullRequestVersionsAtom,
+} from './jotai';
+import {gitHubPullRequestIsViewingLatest} from './recoil';
 import {ArrowLeftIcon} from '@primer/octicons-react';
 import {Link, Text} from '@primer/react';
-import {useSetAtom} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
 import {useCallback} from 'react';
-import {useRecoilValue, useResetRecoilState} from 'recoil';
+import {useRecoilValue} from 'recoil';
 
 export default function PullRequestLatestVersionLink(): React.ReactElement | null {
-  const resetSelectedVersionIndex = useResetRecoilState(gitHubPullRequestSelectedVersionIndex);
+  const versions = useAtomValue(gitHubPullRequestVersionsAtom);
+  const setSelectedVersionIndex = useSetAtom(gitHubPullRequestSelectedVersionIndexAtom);
   const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
   const isViewingLatest = useRecoilValue(gitHubPullRequestIsViewingLatest);
-  // Get the default value from Recoil (computed from versions) to reset to
-  const recoilComparableVersions = useRecoilValue(gitHubPullRequestComparableVersions);
 
   const onClick = useCallback(() => {
-    setComparableVersions(recoilComparableVersions);
-    resetSelectedVersionIndex();
-  }, [setComparableVersions, recoilComparableVersions, resetSelectedVersionIndex]);
+    // Reset to latest version
+    const latestVersionIndex = Math.max(0, versions.length - 1);
+    const latestVersion = versions[latestVersionIndex];
+    setSelectedVersionIndex(latestVersionIndex);
+    if (latestVersion != null) {
+      setComparableVersions({
+        beforeCommitID: latestVersion.baseParent,
+        afterCommitID: latestVersion.headCommit,
+      });
+    }
+  }, [versions, setSelectedVersionIndex, setComparableVersions]);
 
   if (isViewingLatest) {
     return null;

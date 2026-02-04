@@ -5,47 +5,49 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {gitHubCommitID, gitHubOrgAndRepo, gitHubPullRequest} from '../recoil';
-import {gitHubCommitIDAtom, gitHubOrgAndRepoAtom, gitHubPullRequestAtom} from './atoms';
+import {
+  gitHubCommitID,
+  gitHubOrgAndRepo,
+  gitHubPullRequest,
+  gitHubPullRequestSelectedVersionIndex,
+  gitHubPullRequestVersions,
+} from '../recoil';
+import {
+  gitHubCommitIDAtom,
+  gitHubOrgAndRepoAtom,
+  gitHubPullRequestAtom,
+  gitHubPullRequestSelectedVersionIndexAtom,
+  gitHubPullRequestVersionsAtom,
+} from './atoms';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {useEffect} from 'react';
-import {useRecoilValue, useSetRecoilState} from 'recoil';
+import {useRecoilValue, useRecoilValueLoadable, useSetRecoilState} from 'recoil';
 
 /**
- * Synchronizes Recoil state to Jotai atoms during the migration period.
+ * Synchronizes state between Jotai and Recoil during the migration period.
  *
- * This component provides bidirectional sync between Recoil and Jotai:
- * - Recoil -> Jotai: For atoms still set via Recoil (e.g., PullRequestLayout)
- * - Jotai -> Recoil: For atoms migrated to Jotai but with remaining Recoil dependents
+ * This component provides:
+ * - Jotai -> Recoil sync: For atoms where components now use Jotai but Recoil
+ *   selectors still depend on the Recoil atoms
+ * - Recoil -> Jotai sync: For complex selectors that remain in Recoil but whose
+ *   values are needed by Jotai-based components
  *
- * Can be removed once all setters and consumers are migrated to Jotai.
+ * Can be removed once all Recoil selectors are migrated to Jotai.
  */
 export function JotaiRecoilSync(): null {
-  // Bidirectional sync for orgAndRepo
-  // - PullRequestLayout sets via Recoil
-  // - CommitView sets via Jotai
-  // - gitHubClient (Recoil selector) reads from Recoil
-  // - Jotai atoms read from Jotai
-  const recoilOrgAndRepo = useRecoilValue(gitHubOrgAndRepo);
+  // Jotai -> Recoil sync for orgAndRepo
+  // All component consumers now use Jotai, but Recoil selectors like
+  // gitHubClient still depend on the Recoil atom
   const jotaiOrgAndRepo = useAtomValue(gitHubOrgAndRepoAtom);
-  const setOrgAndRepoAtom = useSetAtom(gitHubOrgAndRepoAtom);
   const setOrgAndRepoRecoil = useSetRecoilState(gitHubOrgAndRepo);
 
   useEffect(() => {
-    // Sync Recoil -> Jotai when Recoil has a value and Jotai doesn't (or differs)
-    if (recoilOrgAndRepo != null) {
-      setOrgAndRepoAtom(recoilOrgAndRepo);
-    }
-  }, [recoilOrgAndRepo, setOrgAndRepoAtom]);
-
-  useEffect(() => {
-    // Sync Jotai -> Recoil when Jotai has a value (for CommitView)
-    if (jotaiOrgAndRepo != null) {
-      setOrgAndRepoRecoil(jotaiOrgAndRepo);
-    }
+    setOrgAndRepoRecoil(jotaiOrgAndRepo);
   }, [jotaiOrgAndRepo, setOrgAndRepoRecoil]);
 
-  // Jotai -> Recoil sync for pull request (migrated to Jotai but Recoil selectors depend on it)
+  // Jotai -> Recoil sync for pull request
+  // All component consumers now use Jotai, but Recoil selectors like
+  // gitHubPullRequestCommits, gitHubPullRequestReviewThreads still depend on the Recoil atom
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const setPullRequest = useSetRecoilState(gitHubPullRequest);
 
@@ -53,13 +55,46 @@ export function JotaiRecoilSync(): null {
     setPullRequest(pullRequest);
   }, [pullRequest, setPullRequest]);
 
-  // Jotai -> Recoil sync for commit ID (CommitView sets via Jotai, Recoil selectors depend on it)
+  // Jotai -> Recoil sync for commit ID
+  // CommitView sets via Jotai, Recoil selectors depend on Recoil atom
   const commitID = useAtomValue(gitHubCommitIDAtom);
   const setCommitID = useSetRecoilState(gitHubCommitID);
 
   useEffect(() => {
     setCommitID(commitID);
   }, [commitID, setCommitID]);
+
+  // Recoil -> Jotai sync for versions
+  // gitHubPullRequestVersions is a complex computed selector that depends on many
+  // Recoil selectors. We sync its value to the Jotai atom for component consumers.
+  // Use loadable to avoid throwing during async loading.
+  const recoilVersionsLoadable = useRecoilValueLoadable(gitHubPullRequestVersions);
+  const setVersionsAtom = useSetAtom(gitHubPullRequestVersionsAtom);
+
+  useEffect(() => {
+    if (recoilVersionsLoadable.state === 'hasValue') {
+      setVersionsAtom(recoilVersionsLoadable.contents);
+    }
+  }, [recoilVersionsLoadable, setVersionsAtom]);
+
+  // Bidirectional sync for selectedVersionIndex
+  // - Recoil -> Jotai: When versions load, Recoil computes the default (latest version)
+  // - Jotai -> Recoil: When user selects a version, Jotai updates and Recoil selectors
+  //   like gitHubPullRequestIsViewingLatest need the updated value
+  const recoilSelectedVersionIndex = useRecoilValue(gitHubPullRequestSelectedVersionIndex);
+  const jotaiSelectedVersionIndex = useAtomValue(gitHubPullRequestSelectedVersionIndexAtom);
+  const setSelectedVersionIndexAtom = useSetAtom(gitHubPullRequestSelectedVersionIndexAtom);
+  const setSelectedVersionIndexRecoil = useSetRecoilState(gitHubPullRequestSelectedVersionIndex);
+
+  useEffect(() => {
+    // Sync Recoil -> Jotai for initial default value
+    setSelectedVersionIndexAtom(recoilSelectedVersionIndex);
+  }, [recoilSelectedVersionIndex, setSelectedVersionIndexAtom]);
+
+  useEffect(() => {
+    // Sync Jotai -> Recoil when user changes selection
+    setSelectedVersionIndexRecoil(jotaiSelectedVersionIndex);
+  }, [jotaiSelectedVersionIndex, setSelectedVersionIndexRecoil]);
 
   return null;
 }

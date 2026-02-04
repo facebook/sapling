@@ -8,12 +8,12 @@
 import PullRequestLatestVersionLink from './PullRequestLatestVersionLink';
 import PullRequestVersionCommitSelector from './PullRequestVersionCommitSelector';
 import PullRequestVersionSelector from './PullRequestVersionSelector';
-import {gitHubOrgAndRepo} from './recoil';
+import {gitHubOrgAndRepoAtom} from './jotai';
 import {Box} from '@primer/react';
-import {useRecoilValue} from 'recoil';
+import {useAtomValue} from 'jotai';
 
 export default function PullRequestVersions(): React.ReactElement | null {
-  const {org, repo} = useRecoilValue(gitHubOrgAndRepo) ?? {};
+  const {org, repo} = useAtomValue(gitHubOrgAndRepoAtom) ?? {};
 
   if (org == null || repo == null) {
     return null;

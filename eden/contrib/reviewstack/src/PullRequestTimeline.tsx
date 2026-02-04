@@ -26,11 +26,8 @@ import CommitLink from './CommitLink';
 import PendingLabel from './PendingLabel';
 import PullRequestReviewComment from './PullRequestReviewComment';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
-import {
-  gitHubOrgAndRepo,
-  gitHubPullRequest,
-  gitHubPullRequestReviewThreadsByFirstCommentID,
-} from './recoil';
+import {gitHubOrgAndRepoAtom, gitHubPullRequestAtom} from './jotai';
+import {gitHubPullRequestReviewThreadsByFirstCommentID} from './recoil';
 import {
   CheckCircleFillIcon,
   FileDiffIcon,
@@ -38,6 +35,7 @@ import {
   GitPullRequestClosedIcon,
 } from '@primer/octicons-react';
 import {Box, StyledOcticon, Text} from '@primer/react';
+import {useAtomValue} from 'jotai';
 import React, {Suspense} from 'react';
 import {useRecoilValue} from 'recoil';
 import {notEmpty} from 'shared/utils';
@@ -51,7 +49,7 @@ export default function PullRequestTimeline(): React.ReactElement {
 }
 
 function PullRequestTimelineBootstrap(): React.ReactElement {
-  const pullRequest = useRecoilValue(gitHubPullRequest);
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const items = (pullRequest?.timelineItems.nodes ?? []).filter(notEmpty);
   let version = 1;
   return (
@@ -338,7 +336,7 @@ function RenamedTitleEvent({item}: {item: RenamedTitleEventItem}): React.ReactEl
 }
 
 function MergedEvent({item}: {item: MergedEventItem}) {
-  const {org, repo} = useRecoilValue(gitHubOrgAndRepo) ?? {};
+  const {org, repo} = useAtomValue(gitHubOrgAndRepoAtom) ?? {};
   const {actor, mergedCommit, mergeRefName} = item;
   const commitOID = mergedCommit?.oid;
   const commit =

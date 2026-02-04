@@ -35,6 +35,11 @@ export {
   gitHubDiffForCommitsAtom,
   gitHubPullRequestVersionDiffAtom,
   gitHubDiffCommitIDsAtom,
+  gitHubPullRequestVersionsAtom,
+  gitHubPullRequestSelectedVersionIndexAtom,
+  gitHubPullRequestSelectedVersionCommitsAtom,
+  gitHubThreadsForDiffFileAtom,
+  gitHubPullRequestLineToPositionForFileAtom,
 } from './atoms';
 
 export type {
@@ -42,4 +47,6 @@ export type {
   GitHubOrgAndRepo,
   PullRequestReviewersList,
   ComparableVersions,
+  ThreadsBySide,
+  LineToPositionBySide,
 } from './atoms';

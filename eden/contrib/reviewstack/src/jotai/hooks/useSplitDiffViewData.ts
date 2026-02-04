@@ -22,15 +22,19 @@ import {diffAndTokenize} from '../../diffServiceClient';
 import {
   gitHubDiffNewCommentInputCallbacks,
   gitHubPullRequestLineToPositionForFile,
-  gitHubPullRequestSelectedVersionIndex,
-  gitHubPullRequestVersions,
   gitHubThreadsForDiffFile,
   nullAtom,
 } from '../../recoil';
-import {gitHubDiffCommitIDsAtom} from '../atoms';
-import {useAtomValue} from 'jotai';
+import {
+  gitHubDiffCommitIDsAtom,
+  gitHubPullRequestLineToPositionForFileAtom,
+  gitHubPullRequestSelectedVersionIndexAtom,
+  gitHubPullRequestVersionsAtom,
+  gitHubThreadsForDiffFileAtom,
+} from '../atoms';
+import {useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
-import {useMemo} from 'react';
+import {useEffect, useMemo} from 'react';
 import {useRecoilValueLoadable, waitForAll} from 'recoil';
 
 export type SplitDiffViewLoadableState =
@@ -52,6 +56,7 @@ export type SplitDiffViewLoadableState =
  *
  * Uses a hybrid approach during migration:
  * - commitIDs comes from the Jotai gitHubDiffCommitIDsAtom
+ * - threads are synced from Recoil to Jotai atomFamily per file path
  * - Other selectors still use Recoil
  *
  * Returns a loadable-like object with state: 'loading' | 'hasError' | 'hasValue'
@@ -68,20 +73,48 @@ export function useSplitDiffViewData(
   const loadableCommitIDsAtom = useMemo(() => loadable(gitHubDiffCommitIDsAtom), []);
   const commitIDsLoadable = useAtomValue(loadableCommitIDsAtom);
 
+  // Read Jotai atoms for versions (these are synced from Recoil in JotaiRecoilSync)
+  // Note: These are read to ensure they're loaded, but not directly used in the return value
+  const versions = useAtomValue(gitHubPullRequestVersionsAtom);
+  useAtomValue(gitHubPullRequestSelectedVersionIndexAtom);
+
+  // Jotai atom for threads for this specific file path
+  const threadsAtom = useMemo(() => gitHubThreadsForDiffFileAtom(path), [path]);
+  const setJotaiThreads = useSetAtom(threadsAtom);
+
+  // Jotai atom for line-to-position mapping for this file path
+  const lineToPositionAtom = useMemo(
+    () => gitHubPullRequestLineToPositionForFileAtom(path),
+    [path],
+  );
+  const setJotaiLineToPosition = useSetAtom(lineToPositionAtom);
+
   // Use Recoil for remaining selectors that haven't been migrated yet
   const recoilLoadable = useRecoilValueLoadable(
     waitForAll([
       diffAndTokenize({path, before, after, scopeName, colorMode}),
       gitHubThreadsForDiffFile(path),
       gitHubDiffNewCommentInputCallbacks,
-      isPullRequest ? gitHubPullRequestVersions : nullAtom,
-      isPullRequest ? gitHubPullRequestSelectedVersionIndex : nullAtom,
       isPullRequest ? gitHubPullRequestLineToPositionForFile(path) : nullAtom,
     ]),
   );
 
+  // Sync threads from Recoil to Jotai for this file path
+  useEffect(() => {
+    if (recoilLoadable.state === 'hasValue') {
+      const [, recoilThreads, , lineToPositionForFile] = recoilLoadable.contents;
+      setJotaiThreads(recoilThreads);
+      setJotaiLineToPosition(lineToPositionForFile);
+    }
+  }, [recoilLoadable, setJotaiThreads, setJotaiLineToPosition]);
+
   // Handle loading state from either source
+  // Also wait for versions to be loaded for PR case
   if (recoilLoadable.state === 'loading' || commitIDsLoadable.state === 'loading') {
+    return {state: 'loading'};
+  }
+  if (isPullRequest && versions.length === 0) {
+    // Versions haven't been synced yet from Recoil
     return {state: 'loading'};
   }
 
@@ -100,6 +133,8 @@ export function useSplitDiffViewData(
     state: 'hasValue',
     data: {
       diffAndTokenize: diffAndTokenizeResult,
+      // Use the threads from the Recoil loadable directly for now,
+      // but they're also synced to the Jotai atom for future consumers
       threads,
       newCommentInputCallbacks,
       commitIDs,

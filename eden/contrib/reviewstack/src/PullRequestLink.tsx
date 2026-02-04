@@ -7,8 +7,8 @@
 
 import Link from './Link';
 import URLFor from './URLFor';
-import {gitHubOrgAndRepo} from './recoil';
-import {useRecoilValue} from 'recoil';
+import {gitHubOrgAndRepoAtom} from './jotai';
+import {useAtomValue} from 'jotai';
 
 type Props = {
   children: React.ReactElement;
@@ -16,7 +16,7 @@ type Props = {
 };
 
 export default function PullRequestLink({children, number}: Props): React.ReactElement {
-  const {org, repo} = useRecoilValue(gitHubOrgAndRepo) ?? {};
+  const {org, repo} = useAtomValue(gitHubOrgAndRepoAtom) ?? {};
 
   if (org == null || repo == null) {
     return children;

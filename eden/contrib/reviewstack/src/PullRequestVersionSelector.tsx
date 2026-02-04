@@ -6,11 +6,11 @@
  */
 
 import PullRequestVersionSelectorItem from './PullRequestVersionSelectorItem';
-import {gitHubPullRequestSelectedVersionIndex, gitHubPullRequestVersions} from './recoil';
+import {gitHubPullRequestSelectedVersionIndexAtom, gitHubPullRequestVersionsAtom} from './jotai';
 import {versionLabel} from './utils';
 import {ActionList, ActionMenu} from '@primer/react';
+import {useAtomValue} from 'jotai';
 import React from 'react';
-import {useRecoilValue} from 'recoil';
 
 type Props = {
   org: string;
@@ -22,8 +22,8 @@ export default React.memo(function PullRequestVersionSelector({
   org,
   repo,
 }: Props): React.ReactElement {
-  const versions = useRecoilValue(gitHubPullRequestVersions);
-  const selectedVersionIndex = useRecoilValue(gitHubPullRequestSelectedVersionIndex);
+  const versions = useAtomValue(gitHubPullRequestVersionsAtom);
+  const selectedVersionIndex = useAtomValue(gitHubPullRequestSelectedVersionIndexAtom);
 
   return (
     <ActionMenu>

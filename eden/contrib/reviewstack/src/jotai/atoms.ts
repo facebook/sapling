@@ -10,11 +10,11 @@
  * These atoms are migrated from Recoil and implemented natively in Jotai.
  */
 
-import type {LabelFragment, UserFragment} from '../generated/graphql';
+import type {DiffSide, LabelFragment, UserFragment} from '../generated/graphql';
 import type GitHubClient from '../github/GitHubClient';
 import type {DiffCommitIDs, DiffWithCommitIDs} from '../github/diffTypes';
-import type {PullRequest} from '../github/pullRequestTimelineTypes';
-import type {Commit, DateTime, GitObjectID, ID} from '../github/types';
+import type {GitHubPullRequestReviewThread, PullRequest} from '../github/pullRequestTimelineTypes';
+import type {Commit, DateTime, GitObjectID, ID, Version, VersionCommit} from '../github/types';
 
 import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
 import GraphQLGitHubClient from '../github/GraphQLGitHubClient';
@@ -488,3 +488,86 @@ export const gitHubDiffCommitIDsAtom = atom<Promise<DiffCommitIDs | null>>(async
     return diffWithCommitIDs?.commitIDs ?? null;
   }
 });
+
+// =============================================================================
+// Pull Request Versions
+// =============================================================================
+
+/**
+ * Migrated from: gitHubPullRequestVersions selector in recoil.ts
+ *
+ * The list of PR versions (each force push creates a new version).
+ * This is a complex selector with many dependencies, so during migration
+ * it receives its value from Recoil via JotaiRecoilSync.
+ */
+export const gitHubPullRequestVersionsAtom = atom<Version[]>([]);
+
+/**
+ * Migrated from: gitHubPullRequestSelectedVersionIndex atom in recoil.ts
+ *
+ * The currently selected version index. Defaults to the latest version.
+ * This atom is writable - components can set it to change the selected version.
+ */
+export const gitHubPullRequestSelectedVersionIndexAtom = atom<number>(0);
+
+/**
+ * Migrated from: gitHubPullRequestSelectedVersionCommits selector in recoil.ts
+ *
+ * Derived atom that returns the commits for the currently selected version.
+ */
+export const gitHubPullRequestSelectedVersionCommitsAtom = atom<VersionCommit[]>(get => {
+  const versions = get(gitHubPullRequestVersionsAtom);
+  const selectedVersionIndex = get(gitHubPullRequestSelectedVersionIndexAtom);
+  return versions[selectedVersionIndex]?.commits ?? [];
+});
+
+// =============================================================================
+// Pull Request Review Threads
+// =============================================================================
+
+/**
+ * Type for threads organized by diff side.
+ * DiffSide.Left = deletions (red), DiffSide.Right = additions/unchanged (green/white)
+ */
+export type ThreadsBySide = {[key in DiffSide]: GitHubPullRequestReviewThread[]};
+
+/**
+ * Migrated from: gitHubThreadsForDiffFile selectorFamily in recoil.ts
+ *
+ * This atomFamily stores the appropriate threads for each side of the diff for a file,
+ * depending on what is being compared as "before" and "after".
+ *
+ * During migration, this receives its value from Recoil via JotaiRecoilSync.
+ * The atomFamily pattern allows storing threads per file path.
+ */
+export const gitHubThreadsForDiffFileAtom = atomFamily(
+  (_path: string) => atom<ThreadsBySide | null>(null),
+  (a, b) => a === b,
+);
+
+// =============================================================================
+// Line to Position Mapping
+// =============================================================================
+
+/**
+ * Type for line-to-position mapping per diff side.
+ * Maps line numbers to their "position" values for GitHub comments API.
+ */
+export type LineToPositionBySide =
+  | {
+      [key in DiffSide]: {[key: number]: number} | null;
+    }
+  | null;
+
+/**
+ * Migrated from: gitHubPullRequestLineToPositionForFile selectorFamily in recoil.ts
+ *
+ * This atomFamily stores the line-to-position mapping for each file.
+ * The position value is required when adding comments via the GitHub API.
+ *
+ * During migration, this receives its value from Recoil via useSplitDiffViewData.
+ */
+export const gitHubPullRequestLineToPositionForFileAtom = atomFamily(
+  (_path: string) => atom<LineToPositionBySide>(null),
+  (a, b) => a === b,
+);

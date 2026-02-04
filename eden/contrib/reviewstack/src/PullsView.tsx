@@ -9,10 +9,10 @@ import CenteredSpinner from './CenteredSpinner';
 import Pulls from './Pulls';
 import PullsHeader from './PullsHeader';
 import {APP_HEADER_HEIGHT} from './constants';
-import {gitHubOrgAndRepo} from './recoil';
+import {gitHubOrgAndRepoAtom} from './jotai';
 import {Box} from '@primer/react';
+import {useSetAtom} from 'jotai';
 import {Suspense, useEffect} from 'react';
-import {useSetRecoilState} from 'recoil';
 
 const HEADER_HEIGHT = 60;
 const TOTAL_HEADER_HEIGHT = HEADER_HEIGHT + APP_HEADER_HEIGHT;
@@ -23,7 +23,7 @@ type Props = {
 };
 
 export default function PullsView({org, repo}: Props): React.ReactElement {
-  const setOrgAndRepo = useSetRecoilState(gitHubOrgAndRepo);
+  const setOrgAndRepo = useSetAtom(gitHubOrgAndRepoAtom);
 
   useEffect(() => {
     setOrgAndRepo({org, repo});
