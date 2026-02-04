@@ -20,6 +20,9 @@ query YourPullRequestsWithoutMergeQueueQuery($searchQuery: String!, $numToFetch:
         comments {
           totalCount
         }
+        mergeable
+        mergeStateStatus
+        viewerCanMergeAsAdmin
         baseRef {
           target {
             oid
@@ -38,6 +41,22 @@ query YourPullRequestsWithoutMergeQueueQuery($searchQuery: String!, $numToFetch:
               oid
               statusCheckRollup {
                 state
+                contexts(first: 100) {
+                  nodes {
+                    __typename
+                    ... on CheckRun {
+                      name
+                      status
+                      conclusion
+                      detailsUrl
+                    }
+                    ... on StatusContext {
+                      context
+                      state
+                      targetUrl
+                    }
+                  }
+                }
               }
             }
           }

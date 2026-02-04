@@ -6,6 +6,7 @@ query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
     nodes {
       ... on PullRequest {
         __typename
+        id
         number
         title
         body
@@ -23,6 +24,9 @@ query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
         mergeQueueEntry {
           estimatedTimeToMerge
         }
+        mergeable
+        mergeStateStatus
+        viewerCanMergeAsAdmin
         baseRef {
           target {
             oid
@@ -41,6 +45,22 @@ query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
               oid
               statusCheckRollup {
                 state
+                contexts(first: 100) {
+                  nodes {
+                    __typename
+                    ... on CheckRun {
+                      name
+                      status
+                      conclusion
+                      detailsUrl
+                    }
+                    ... on StatusContext {
+                      context
+                      state
+                      targetUrl
+                    }
+                  }
+                }
               }
             }
           }

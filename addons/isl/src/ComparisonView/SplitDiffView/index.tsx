@@ -58,6 +58,18 @@ export function SplitDiffView({
   const isSubmodule = guessIsSubmodule(patch);
   const fileActions = (
     <>
+      {ctx.onFileCommentClick != null && (
+        <Tooltip title={t('Add file comment')} placement={'bottom'}>
+          <Button
+            icon
+            className="split-diff-view-file-header-comment-button"
+            onClick={() => {
+              ctx.onFileCommentClick?.(path);
+            }}>
+            <Icon icon="comment" />
+          </Button>
+        </Tooltip>
+      )}
       {platform.openDiff == null ? null : (
         <Tooltip title={t('Open diff view for file')} placement={'bottom'}>
           <Button

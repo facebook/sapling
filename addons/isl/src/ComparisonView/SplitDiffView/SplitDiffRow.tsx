@@ -17,6 +17,8 @@ type Props = {
   path: string;
   unified: boolean;
   openFileToLine?: (lineNumber: OneIndexedLineNumber) => unknown;
+  /** Optional callback when a line number is clicked for commenting (in review mode) */
+  onCommentClick?: (lineNumber: number, side: 'LEFT' | 'RIGHT', path: string) => void;
 };
 
 type SplitDiffRowType = 'add' | 'common' | 'modify' | 'remove' | 'expanded';
@@ -30,6 +32,7 @@ export default function SplitDiffRow({
   path,
   unified,
   openFileToLine,
+  onCommentClick,
 }: Props): [JSX.Element, JSX.Element, JSX.Element, JSX.Element] {
   let beforeClass;
   let afterClass;
@@ -75,6 +78,7 @@ export default function SplitDiffRow({
       side: 'LEFT',
       column: 0,
       canComment,
+      onCommentClick,
     }),
     <td data-column={unified ? 2 : 1} className={beforeClass}>
       {before}
@@ -87,6 +91,7 @@ export default function SplitDiffRow({
       column: unified ? 1 : 2,
       canComment,
       openFileToLine, // opening to a line number only makes sense on the "right" comparison side
+      onCommentClick,
     }),
     <td data-column={unified ? 2 : 3} className={afterClass}>
       {after}
@@ -102,6 +107,7 @@ type LineNumberProps = {
   column: number;
   canComment: boolean;
   openFileToLine?: (lineNumber: OneIndexedLineNumber) => unknown;
+  onCommentClick?: (lineNumber: number, side: 'LEFT' | 'RIGHT', path: string) => void;
 };
 
 function LineNumber({
@@ -110,11 +116,30 @@ function LineNumber({
   path,
   side,
   column,
+  canComment,
   openFileToLine,
+  onCommentClick,
 }: LineNumberProps): JSX.Element {
   const clickableLineNumber = openFileToLine != null && lineNumber != null;
+  const commentable = onCommentClick != null && canComment && lineNumber != null;
+
   const extraClassName =
-    (className != null ? ` ${className}-number` : '') + (clickableLineNumber ? ' clickable' : '');
+    (className != null ? ` ${className}-number` : '') +
+    (clickableLineNumber ? ' clickable' : '') +
+    (commentable ? ' lineNumber-commentable' : '');
+
+  const handleClick = () => {
+    if (lineNumber == null) {
+      return;
+    }
+    // Comment click takes priority when in review mode
+    if (commentable) {
+      onCommentClick(lineNumber, side, path);
+    } else if (clickableLineNumber) {
+      openFileToLine(lineNumber);
+    }
+  };
+
   return (
     <td
       className={`lineNumber${extraClassName} lineNumber-${side}`}
@@ -122,7 +147,7 @@ function LineNumber({
       data-path={path}
       data-side={side}
       data-column={column}
-      onClick={clickableLineNumber ? () => openFileToLine(lineNumber) : undefined}>
+      onClick={clickableLineNumber || commentable ? handleClick : undefined}>
       {lineNumber}
     </td>
   );

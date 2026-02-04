@@ -268,3 +268,21 @@ td.lineNumber.patch-expanded-number {
 .lineNumber.clickable:hover {
   text-decoration: underline;
 }
+
+/* Commentable line numbers in review mode */
+.lineNumber.lineNumber-commentable {
+  cursor: pointer;
+  position: relative;
+}
+
+.lineNumber.lineNumber-commentable:hover {
+  background-color: var(--graphite-accent-subtle, rgba(74, 144, 226, 0.15));
+}
+
+.lineNumber.lineNumber-commentable:hover::before {
+  content: '+';
+  position: absolute;
+  left: 2px;
+  color: var(--graphite-accent, #4a90e2);
+  font-weight: bold;
+}

@@ -55,6 +55,19 @@ export function reviewedFileKey(comparison: Comparison, filePath: string): strin
 }
 
 /**
+ * Generate a stable key for a file being reviewed in a PR context.
+ * Key format: `pr:{prNumber}:{headHash}:{filePath}`
+ *
+ * This ensures:
+ * - Same PR version retains reviewed state
+ * - New commits (different headHash) reset reviewed state
+ * - Different PRs have separate reviewed states
+ */
+export function reviewedFileKeyForPR(prNumber: number, headHash: string, filePath: string): string {
+  return `pr:${prNumber}:${headHash}:${filePath}`;
+}
+
+/**
  * Atom family for tracking which files have been reviewed in a comparison.
  * Each file's reviewed state is stored separately in localStorage,
  * keyed by comparison + file path.

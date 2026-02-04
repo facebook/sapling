@@ -701,7 +701,7 @@ export default class ServerToClientAPI {
                 type: 'fetchedPendingSignificantLinesOfCode',
                 requestId: data.requestId,
                 hash: data.hash,
-                result: {value: value ?? 0},
+                result: {value: value ?? {sloc: 0, insertions: 0, deletions: 0}},
               });
             })
             .catch(err => {
@@ -722,7 +722,7 @@ export default class ServerToClientAPI {
               this.postMessage({
                 type: 'fetchedSignificantLinesOfCode',
                 hash: data.hash,
-                result: {value: value ?? 0},
+                result: {value: value ?? {sloc: 0, insertions: 0, deletions: 0}},
               });
             })
             .catch(err => {
@@ -743,7 +743,7 @@ export default class ServerToClientAPI {
                 type: 'fetchedPendingAmendSignificantLinesOfCode',
                 requestId: data.requestId,
                 hash: data.hash,
-                result: {value: value ?? 0},
+                result: {value: value ?? {sloc: 0, insertions: 0, deletions: 0}},
               });
             })
             .catch(err => {
@@ -872,6 +872,65 @@ export default class ServerToClientAPI {
               type: 'fetchedDiffComments',
               diffId: data.diffId,
               comments: {error},
+            });
+          });
+        break;
+      }
+      case 'graphqlReply': {
+        repo.codeReviewProvider
+          ?.replyToThread?.(data.threadId, data.body)
+          ?.then(() => {
+            this.postMessage({
+              type: 'graphqlReplyResult',
+              threadId: data.threadId,
+              success: true,
+            });
+          })
+          .catch((error: Error) => {
+            this.postMessage({
+              type: 'graphqlReplyResult',
+              threadId: data.threadId,
+              error: error.message,
+            });
+          });
+        break;
+      }
+      case 'resolveThread': {
+        repo.codeReviewProvider
+          ?.resolveThread?.(data.threadId)
+          ?.then(() => {
+            this.postMessage({
+              type: 'threadResolutionResult',
+              threadId: data.threadId,
+              isResolved: true,
+              success: true,
+            });
+          })
+          .catch((error: Error) => {
+            this.postMessage({
+              type: 'threadResolutionResult',
+              threadId: data.threadId,
+              error: error.message,
+            });
+          });
+        break;
+      }
+      case 'unresolveThread': {
+        repo.codeReviewProvider
+          ?.unresolveThread?.(data.threadId)
+          ?.then(() => {
+            this.postMessage({
+              type: 'threadResolutionResult',
+              threadId: data.threadId,
+              isResolved: false,
+              success: true,
+            });
+          })
+          .catch((error: Error) => {
+            this.postMessage({
+              type: 'threadResolutionResult',
+              threadId: data.threadId,
+              error: error.message,
             });
           });
         break;

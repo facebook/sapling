@@ -14,7 +14,7 @@ import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
-import {useEffect} from 'react';
+import {useEffect, useState} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {group} from 'shared/utils';
 import {colors, font, radius, spacing} from '../../../components/theme/tokens.stylex';
@@ -25,6 +25,7 @@ import {Link} from '../Link';
 import {T, t} from '../i18n';
 import platform from '../platform';
 import {RelativeDate} from '../relativeDate';
+import {ReplyInput, ThreadResolutionButton} from '../reviewComments';
 import {layout} from '../stylexUtils';
 import {themeState} from '../theme';
 import {diffCommentData} from './codeReviewAtoms';
@@ -75,16 +76,101 @@ const styles = stylex.create({
   diffView: {
     marginBlock: spacing.pad,
   },
+  replyButton: {
+    cursor: 'pointer',
+    opacity: 0.7,
+    ':hover': {
+      opacity: 1,
+    },
+  },
+  resolved: {
+    opacity: 0.7,
+    borderLeftWidth: '2px',
+    borderLeftStyle: 'solid',
+    borderLeftColor: colors.grey,
+    paddingLeft: spacing.pad,
+  },
+  collapsedSummary: {
+    cursor: 'pointer',
+    padding: spacing.pad,
+    backgroundColor: colors.subtleHoverDarken,
+    borderRadius: radius.round,
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.half,
+    width: '100%',
+  },
+  threadHeader: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.pad,
+    marginBottom: spacing.half,
+  },
 });
 
-function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: boolean}) {
+function Comment({
+  comment,
+  isTopLevel,
+  onRefresh,
+}: {
+  comment: DiffComment;
+  isTopLevel?: boolean;
+  onRefresh?: () => void;
+}) {
+  const [showReply, setShowReply] = useState(false);
+  // Track local resolution state for optimistic UI updates
+  const [localIsResolved, setLocalIsResolved] = useState(comment.isResolved);
+  // Collapsed state - resolved threads start collapsed
+  const [collapsed, setCollapsed] = useState(comment.isResolved === true);
+
+  // If this is a resolved thread and collapsed, show summary
+  if (isTopLevel && localIsResolved === true && collapsed) {
+    return (
+      <div
+        {...stylex.props(styles.collapsedSummary)}
+        onClick={() => setCollapsed(false)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => e.key === 'Enter' && setCollapsed(false)}>
+        <Icon icon="check" />
+        <Subtle>
+          <T>Resolved thread</T>
+          {' - '}
+          {comment.author}
+          {': '}
+          {comment.html.replace(/<[^>]*>/g, '').slice(0, 50)}
+          {comment.html.replace(/<[^>]*>/g, '').length > 50 ? '...' : ''}
+        </Subtle>
+        <Icon icon="chevron-down" />
+      </div>
+    );
+  }
+
   return (
-    <Row xstyle={styles.comment}>
+    <Row xstyle={[styles.comment, isTopLevel && localIsResolved === true && styles.resolved]}>
       <Column {...stylex.props(styles.left)}>
         <AvatarImg username={comment.author} url={comment.authorAvatarUri} xstyle={styles.avatar} />
       </Column>
       <Column xstyle={styles.commentInfo}>
-        <b {...stylex.props(styles.author)}>{comment.author}</b>
+        {/* Thread header with author and resolution button */}
+        <div {...stylex.props(styles.threadHeader)}>
+          <b {...stylex.props(styles.author)}>{comment.author}</b>
+          {isTopLevel && comment.threadId && (
+            <ThreadResolutionButton
+              threadId={comment.threadId}
+              isResolved={localIsResolved ?? false}
+              onStatusChange={newStatus => {
+                setLocalIsResolved(newStatus);
+                if (newStatus) {
+                  // When resolved, collapse after a brief moment
+                  setTimeout(() => setCollapsed(true), 500);
+                }
+                onRefresh?.();
+              }}
+            />
+          )}
+        </div>
         <div>
           {isTopLevel && comment.filename && (
             <Link
@@ -106,18 +192,45 @@ function Comment({comment, isTopLevel}: {comment: DiffComment; isTopLevel?: bool
         <Subtle {...stylex.props(styles.byline)}>
           <RelativeDate date={comment.created} />
           <Reactions reactions={comment.reactions} />
-          {comment.isResolved === true ? (
-            <span>
+          {localIsResolved === true ? (
+            <span
+              {...stylex.props(styles.replyButton)}
+              onClick={() => setCollapsed(!collapsed)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => e.key === 'Enter' && setCollapsed(!collapsed)}>
               <T>Resolved</T>
             </span>
-          ) : comment.isResolved === false ? (
+          ) : localIsResolved === false ? (
             <span>
               <T>Unresolved</T>
             </span>
           ) : null}
+          {comment.threadId && (
+            <Tooltip title={t('Reply to thread')}>
+              <span
+                {...stylex.props(styles.replyButton)}
+                onClick={() => setShowReply(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => e.key === 'Enter' && setShowReply(true)}>
+                <Icon icon="comment" />
+              </span>
+            </Tooltip>
+          )}
         </Subtle>
+        {showReply && comment.threadId && (
+          <ReplyInput
+            threadId={comment.threadId}
+            onCancel={() => setShowReply(false)}
+            onSuccess={() => {
+              setShowReply(false);
+              onRefresh?.();
+            }}
+          />
+        )}
         {comment.replies.map((reply, i) => (
-          <Comment key={i} comment={reply} />
+          <Comment key={i} comment={reply} onRefresh={onRefresh} />
         ))}
       </Column>
     </Row>
@@ -216,7 +329,7 @@ export default function DiffCommentsDetails({diffId}: {diffId: DiffId}) {
   return (
     <div {...stylex.props(layout.flexCol, styles.list)}>
       {comments.data.map((comment, i) => (
-        <Comment key={i} comment={comment} isTopLevel />
+        <Comment key={i} comment={comment} isTopLevel onRefresh={refresh} />
       ))}
     </div>
   );

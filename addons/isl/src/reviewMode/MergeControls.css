@@ -1,0 +1,195 @@
+/* Merge Controls - Review Mode */
+
+.merge-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.merge-controls-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  color: var(--subtle-foreground);
+  padding: 8px 0;
+  font-size: 12px;
+}
+
+.merge-controls-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.merge-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.merge-controls-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.merge-strategy-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.merge-strategy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.merge-strategy-select {
+  display: flex;
+  min-width: 155px;
+}
+
+.merge-strategy-select select {
+  flex: 1;
+}
+
+.merge-delete-branch {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--graphite-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.merge-delete-branch:hover {
+  color: var(--graphite-text-primary);
+}
+
+.merge-delete-branch input {
+  margin: 0;
+  width: 12px;
+  height: 12px;
+}
+
+/* Green merge button - GitHub style */
+.merge-btn {
+  background: var(--signal-good, #22c55e) !important;
+  color: white !important;
+  border: none !important;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.merge-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--signal-good, #22c55e) 85%, black) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--signal-good, #22c55e) 40%, transparent);
+}
+
+.merge-btn:disabled {
+  background: var(--graphite-bg-subtle) !important;
+  color: var(--graphite-text-secondary) !important;
+  border: 1px solid var(--graphite-border) !important;
+  transform: none;
+  box-shadow: none;
+}
+
+.merge-btn .codicon {
+  font-size: 14px;
+}
+
+.merge-block-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--signal-warning, #f59e0b) 8%, transparent);
+  border-radius: 6px;
+  border-left: 2px solid var(--signal-warning, #f59e0b);
+  margin-top: 6px;
+}
+
+.merge-block-reason {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--signal-warning, #f59e0b);
+  line-height: 1.4;
+}
+
+/* Sync state - when branch is behind base */
+.merge-controls-sync {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--signal-warning, #f59e0b) 6%, transparent);
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--signal-warning, #f59e0b) 20%, transparent);
+}
+
+.merge-controls-sync-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--signal-warning, #f59e0b);
+}
+
+.merge-controls-sync-message .codicon {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* Merged success state */
+.merge-controls-merged {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--scm-modified-foreground, #a855f7) 10%, transparent);
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--scm-modified-foreground, #a855f7) 25%, transparent);
+}
+
+.merge-success-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--scm-modified-foreground, #a855f7);
+}
+
+.merge-success-message .codicon {
+  font-size: 16px;
+}
+
+/* Stack order issue - blue info style instead of yellow warning */
+.merge-controls-stack-order {
+  background: color-mix(in srgb, var(--graphite-accent, #4a90e2) 8%, transparent);
+  border-color: color-mix(in srgb, var(--graphite-accent, #4a90e2) 25%, transparent);
+}
+
+.merge-controls-stack-order .merge-controls-sync-message {
+  color: var(--graphite-accent, #4a90e2);
+}
+
+/* Real conflicts - red/error style */
+.merge-controls-conflicts {
+  background: color-mix(in srgb, var(--signal-bad, #ef4444) 8%, transparent);
+  border-color: color-mix(in srgb, var(--signal-bad, #ef4444) 25%, transparent);
+}
+
+.merge-controls-conflicts .merge-controls-sync-message {
+  color: var(--signal-bad, #ef4444);
+}
