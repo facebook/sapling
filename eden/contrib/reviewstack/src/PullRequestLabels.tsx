@@ -9,21 +9,18 @@ import type {LabelFragment} from './generated/graphql';
 
 import FieldLabel from './FieldLabel';
 import RepoLabelsInput from './RepoLabelsInput';
-import {
-  gitHubClient,
-  gitHubPullRequest,
-  gitHubPullRequestLabels,
-  gitHubPullRequestViewerDidAuthor,
-} from './recoil';
+import {gitHubPullRequestLabelsAtom} from './jotai';
+import {gitHubClient, gitHubPullRequest, gitHubPullRequestViewerDidAuthor} from './recoil';
 import {GearIcon} from '@primer/octicons-react';
 import {ActionMenu, Box, Button, IssueLabelToken} from '@primer/react';
+import {useAtom} from 'jotai';
 import {useEffect, useMemo} from 'react';
-import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
+import {useRecoilCallback, useRecoilValue} from 'recoil';
 import {notEmpty} from 'shared/utils';
 
 export default function PullRequestLabels(): React.ReactElement {
   const pullRequest = useRecoilValue(gitHubPullRequest);
-  const [pullRequestLabels, setPullRequestLabels] = useRecoilState(gitHubPullRequestLabels);
+  const [pullRequestLabels, setPullRequestLabels] = useAtom(gitHubPullRequestLabelsAtom);
   const viewerDidAuthor = useRecoilValue(gitHubPullRequestViewerDidAuthor);
   const existingLabelIDs = useMemo(
     () => new Set(pullRequestLabels.map(({id}) => id)),

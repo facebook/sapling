@@ -123,6 +123,7 @@ export const gitHubRepoAssignableUsersQuery = atom<string>('');
 export const gitHubRepoAssignableUsers = atom<Promise<UserFragment[]>>(async get => {
   const client = await get(gitHubClientAtom);
   const query = get(gitHubRepoAssignableUsersQuery);
+  // Get username from localStorage - derive key from token as done in gitHubCredentials.ts
   const token = localStorage.getItem('github.token');
   const username = token != null ? localStorage.getItem(`username.${token}`) : null;
   if (client == null) {
@@ -147,3 +148,40 @@ export const gitHubPullRequestJumpToCommentIDAtom = atomFamily(
   (_id: ID) => atom<boolean>(false),
   (a, b) => a === b,
 );
+
+// =============================================================================
+// Pull Request Labels
+// =============================================================================
+
+/**
+ * Migrated from: gitHubPullRequestLabels in recoil.ts
+ *
+ * Stores the labels associated with the current pull request.
+ * Initialized from the pull request data and updated optimistically
+ * when labels are added or removed.
+ */
+export const gitHubPullRequestLabelsAtom = atom<LabelFragment[]>([]);
+
+// =============================================================================
+// Pull Request Reviewers
+// =============================================================================
+
+/**
+ * Type for the pull request reviewers state.
+ */
+export type PullRequestReviewersList = {
+  reviewers: ReadonlyArray<UserFragment>;
+  reviewerIDs: ReadonlySet<string>;
+};
+
+/**
+ * Migrated from: gitHubPullRequestReviewers in recoil.ts
+ *
+ * Stores the reviewers associated with the current pull request.
+ * Initialized from the pull request data and updated optimistically
+ * when reviewers are added or removed.
+ */
+export const gitHubPullRequestReviewersAtom = atom<PullRequestReviewersList>({
+  reviewers: [],
+  reviewerIDs: new Set<string>(),
+});

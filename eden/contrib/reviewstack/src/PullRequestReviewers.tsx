@@ -10,24 +10,19 @@ import type {UserFragment} from './generated/graphql';
 import FieldLabel from './FieldLabel';
 import RepoAssignableUsersInput from './RepoAssignableUsersInput';
 import {gitHubUsername} from './github/gitHubCredentials';
-import {
-  gitHubClient,
-  gitHubPullRequest,
-  gitHubPullRequestReviewers,
-  gitHubPullRequestViewerDidAuthor,
-} from './recoil';
+import {gitHubPullRequestReviewersAtom} from './jotai';
+import {gitHubClient, gitHubPullRequest, gitHubPullRequestViewerDidAuthor} from './recoil';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {GearIcon} from '@primer/octicons-react';
 import {ActionMenu, AvatarToken, Box, Button} from '@primer/react';
+import {useAtom} from 'jotai';
 import {useEffect} from 'react';
-import {useRecoilCallback, useRecoilState, useRecoilValue} from 'recoil';
+import {useRecoilCallback, useRecoilValue} from 'recoil';
 
 export default function PullRequestReviewers(): React.ReactElement {
   const refreshPullRequest = useRefreshPullRequest();
   const pullRequest = useRecoilValue(gitHubPullRequest);
-  const [pullRequestReviewers, setPullRequestReviewers] = useRecoilState(
-    gitHubPullRequestReviewers,
-  );
+  const [pullRequestReviewers, setPullRequestReviewers] = useAtom(gitHubPullRequestReviewersAtom);
   const viewerDidAuthor = useRecoilValue(gitHubPullRequestViewerDidAuthor);
   const username = useRecoilValue(gitHubUsername);
 

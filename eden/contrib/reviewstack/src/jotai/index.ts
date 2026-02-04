@@ -20,6 +20,8 @@ export {
   gitHubRepoAssignableUsersQuery,
   gitHubRepoAssignableUsers,
   gitHubPullRequestJumpToCommentIDAtom,
+  gitHubPullRequestLabelsAtom,
+  gitHubPullRequestReviewersAtom,
 } from './atoms';
 
-export type {SupportedPrimerColorMode, GitHubOrgAndRepo} from './atoms';
+export type {SupportedPrimerColorMode, GitHubOrgAndRepo, PullRequestReviewersList} from './atoms';

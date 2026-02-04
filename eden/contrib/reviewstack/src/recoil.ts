@@ -7,8 +7,6 @@
 
 import type {
   CheckRunFragment,
-  LabelFragment,
-  UserFragment,
   UserHomePageQueryData,
   UserHomePageQueryVariables,
 } from './generated/graphql';
@@ -1209,24 +1207,6 @@ export const gitHubUserHomePageData = selector<UserHomePageQueryData | null>({
       createRequestHeaders(token),
       graphQLEndpoint,
     );
-  },
-});
-
-export const gitHubPullRequestLabels = atom<LabelFragment[]>({
-  key: 'gitHubPullRequestLabels',
-  default: [],
-});
-
-export type PullRequestReviewersList = {
-  reviewers: ReadonlyArray<UserFragment>;
-  reviewerIDs: ReadonlySet<string>;
-};
-
-export const gitHubPullRequestReviewers = atom<PullRequestReviewersList>({
-  key: 'gitHubPullRequestReviewers',
-  default: {
-    reviewers: [],
-    reviewerIDs: new Set(),
   },
 });
 
