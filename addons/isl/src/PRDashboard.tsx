@@ -17,6 +17,7 @@ import {useState, useCallback, useEffect, useRef} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import serverAPI from './ClientToServerAPI';
 import {showComparison} from './ComparisonView/atoms';
+import {enterReviewMode} from './reviewMode';
 import {currentGitHubUser} from './codeReview/CodeReviewInfo';
 import {
   prStacksAtom,
@@ -196,7 +197,7 @@ export function PRDashboard() {
       <div className="pr-dashboard-sticky-header">
         <div className="pr-dashboard-header">
           <span className="pr-dashboard-title">
-            <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v4.1)</span>
+            <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v4.2)</span>
           </span>
           <div className="pr-dashboard-header-buttons">
             {currentUser && (
@@ -468,6 +469,7 @@ function PRRow({pr}: {pr: DiffSummary}) {
   const stateIcon = getPRStateIcon(pr.state);
   const stateClass = getPRStateClass(pr.state);
   const headHash = pr.type === 'github' ? pr.head : undefined;
+  const isMerged = pr.state === 'MERGED';
 
   const runOperation = useRunOperation();
   const dag = useAtomValue(dagWithPreviews);
@@ -496,6 +498,13 @@ function PRRow({pr}: {pr: DiffSummary}) {
     }
   };
 
+  const handleReview = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (headHash) {
+      enterReviewMode(pr.number, headHash);
+    }
+  }, [pr.number, headHash]);
+
   const prRowClass = [
     'pr-row',
     headHash && !isCurrentCommit ? 'pr-row-clickable' : '',
@@ -521,6 +530,19 @@ function PRRow({pr}: {pr: DiffSummary}) {
       <span className="pr-row-title" title={pr.title}>
         {pr.title}
       </span>
+      {isMerged && (
+        <span className="pr-row-merged-badge">
+          <Icon icon="check" size="S" />
+          <T>Merged</T>
+        </span>
+      )}
+      {headHash && (
+        <Tooltip title="Enter review mode for this PR">
+          <Button icon className="pr-row-review-button" onClick={handleReview}>
+            <Icon icon="eye" />
+          </Button>
+        </Tooltip>
+      )}
       {headHash && (
         <Tooltip title="View changes in this commit">
           <Button icon className="pr-row-view-changes" onClick={handleViewChanges}>

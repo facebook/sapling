@@ -19,6 +19,7 @@ import {Row} from './ComponentUtils';
 import {shouldShowSubmitStackConfirmation, useShowConfirmSubmitStack} from './ConfirmSubmitStack';
 import {HighlightCommitsWhileHovering} from './HighlightedCommits';
 import {OperationDisabledButton} from './OperationDisabledButton';
+import {RebaseAllDraftCommitsOperation} from './operations/RebaseAllDraftCommitsOperation';
 import {showSuggestedRebaseForStack, SuggestedRebaseButton} from './SuggestedRebase';
 import {allDiffSummaries, codeReviewProvider} from './codeReview/CodeReviewInfo';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
@@ -269,6 +270,20 @@ export function StackActions({hash}: {hash: Hash}): React.ReactElement | null {
   } else if (suggestedRebase) {
     // FIXME: Support optimistic commits, requires CommitInfo instead of just Hash
     actions.push(<SuggestedRebaseButton key="suggested-rebase" source={succeedableRevset(hash)} />);
+    // Quick action to rebase all draft commits onto main
+    actions.push(
+      <Tooltip key="rebase-onto-main" title={t('Rebase all draft commits onto main')} placement="bottom">
+        <OperationDisabledButton
+          contextKey={`rebase-onto-main-${hash}`}
+          kind="icon"
+          icon={<Icon icon="git-merge" slot="start" />}
+          runOperation={() =>
+            [new RebaseAllDraftCommitsOperation(undefined, succeedableRevset('main()'))]
+          }>
+          <T>Rebase onto main</T>
+        </OperationDisabledButton>
+      </Tooltip>,
+    );
   }
 
   if (actions.length === 0) {

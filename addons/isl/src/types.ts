@@ -89,6 +89,34 @@ export type DiffCommentReaction = {
     | 'THUMBS_UP';
 };
 
+/**
+ * Individual CI check run status for detailed CI display
+ */
+export type CICheckRun = {
+  name: string;
+  status: 'COMPLETED' | 'IN_PROGRESS' | 'QUEUED' | 'PENDING';
+  conclusion?: 'SUCCESS' | 'FAILURE' | 'NEUTRAL' | 'CANCELLED' | 'TIMED_OUT' | 'SKIPPED' | 'STALE';
+  detailsUrl?: string;
+};
+
+/**
+ * Mergeability state from GitHub
+ */
+export type MergeableState = 'MERGEABLE' | 'CONFLICTING' | 'UNKNOWN';
+
+/**
+ * Detailed merge state status from GitHub
+ */
+export type MergeStateStatus =
+  | 'BEHIND'     // Head ref out of date
+  | 'BLOCKED'    // Blocked by branch protection
+  | 'CLEAN'      // Ready to merge
+  | 'DIRTY'      // Merge conflicts
+  | 'DRAFT'      // PR is draft
+  | 'HAS_HOOKS'  // Pre-receive hooks
+  | 'UNKNOWN'    // Not yet computed
+  | 'UNSTABLE';  // Required checks not passing
+
 export type InternalCommitMessageFields = InternalTypes['InternalCommitMessageFields'];
 
 export enum CodePatchSuggestionStatus {
@@ -116,6 +144,15 @@ export enum ArchivedReasonType {
   STALE_DIFF_CLOSED = 'STALE_DIFF_CLOSED',
   STALE_FILE_CHANGED = 'STALE_FILE_CHANGED',
 }
+
+export type PullRequestReviewEvent = 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
+
+export type DraftPullRequestReviewThread = {
+  path: string;
+  line: number;
+  body: string;
+  side?: 'LEFT' | 'RIGHT';
+};
 
 export enum WarningCheckResult {
   PASS = 'PASS',
@@ -167,6 +204,8 @@ export type DiffComment = {
   replies: Array<DiffComment>;
   /** If this comment has been resolved. true => "resolved", false => "unresolved", null => the comment is not resolvable, don't show any UI for it */
   isResolved?: boolean;
+  /** Thread ID for replies (GitHub thread node ID). Used for COM-05, COM-06 reply/resolution. */
+  threadId?: string;
 };
 
 /**
@@ -325,8 +364,12 @@ export type StableInfo = {
 };
 
 export type SlocInfo = {
-  /** Significant lines of code for commit */
+  /** Significant lines of code for commit (insertions + deletions) */
   sloc: number | undefined;
+  /** Number of inserted lines */
+  insertions?: number;
+  /** Number of deleted lines */
+  deletions?: number;
 };
 
 export type CommitInfo = {
@@ -819,6 +862,10 @@ export type PlatformSpecificServerToClientMessages =
   | {
       type: 'platform/gotAIReviewComments';
       comments: Result<CodeReviewIssue[]>;
+    }
+  | {
+      type: 'platform/openFileError';
+      error: string;
     };
 
 export type CodeReviewProviderSpecificClientToServerMessages =
@@ -938,6 +985,7 @@ export type LocalStorageName =
   | 'isl.edited-commit-messages:'
   | 'isl.first-pass-comments:'
   | 'isl.reviewed-files:'
+  | 'isl.pending-comments:'
   | 'isl.dismissed-notification-ids';
 
 export type ClientToServerMessage =
@@ -976,6 +1024,16 @@ export type ClientToServerMessage =
   | {type: 'fetchCommitCloudState'}
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
   | {type: 'fetchDiffComments'; diffId: DiffId}
+  | {type: 'graphqlReply'; threadId: string; body: string}
+  | {type: 'resolveThread'; threadId: string}
+  | {type: 'unresolveThread'; threadId: string}
+  | {
+      type: 'submitPullRequestReview';
+      pullRequestId: string;
+      event: PullRequestReviewEvent;
+      body?: string;
+      threads?: DraftPullRequestReviewThread[];
+    }
   | {type: 'fetchLandInfo'; topOfStack: DiffId}
   | {type: 'fetchAndSetStables'; additionalStables: Array<string>}
   | {type: 'fetchStableLocationAutocompleteOptions'}
@@ -1136,6 +1194,12 @@ export type ServerToClientMessage =
   | {type: 'fetchedAvatars'; avatars: Map<string, string>; authors: Array<string>}
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>; currentUser?: string}
   | {type: 'fetchedDiffComments'; diffId: DiffId; comments: Result<Array<DiffComment>>}
+  | {type: 'graphqlReplyResult'; threadId: string; success?: boolean; error?: string}
+  | {type: 'threadResolutionResult'; threadId: string; isResolved?: boolean; success?: boolean; error?: string}
+  | {
+      type: 'submittedPullRequestReview';
+      result: Result<{reviewId: string}>;
+    }
   | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
   | {type: 'confirmedLand'; result: Result<undefined>}
   | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}
