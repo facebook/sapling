@@ -24,7 +24,6 @@ import {tracker} from './analytics';
 import {
   bookmarksDataStorage,
   recommendedBookmarksAtom,
-  recommendedBookmarksAvailableAtom,
   REMOTE_MASTER_BOOKMARK,
 } from './BookmarksData';
 import {Row} from './ComponentUtils';
@@ -72,11 +71,11 @@ export function getBookmarkAddons(
   showWarningOnMaster: boolean,
   tooltipOverride?: string,
 ): {icon: string | undefined; tooltip: React.ReactNode | undefined} {
-  if (showWarningOnMaster && name === REMOTE_MASTER_BOOKMARK) {
-    return {icon: 'warning', tooltip: tooltipOverride ?? Internal.MasterBookmarkInfo?.()};
-  }
   if (showRecommendedIcon) {
     return {icon: 'star-full', tooltip: tooltipOverride ?? Internal.RecommendedBookmarkInfo?.()};
+  }
+  if (showWarningOnMaster && name === REMOTE_MASTER_BOOKMARK) {
+    return {icon: 'warning', tooltip: tooltipOverride ?? Internal.MasterBookmarkInfo?.()};
   }
   return {icon: undefined, tooltip: tooltipOverride};
 }
@@ -143,7 +142,7 @@ export function AllBookmarksTruncated({
 }) {
   const bookmarksData = useAtomValue(bookmarksDataStorage);
   const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
-  const recommendedBookmarksAvailable = useAtomValue(recommendedBookmarksAvailableAtom);
+  const showWarningOnMaster = Internal.shouldCheckRebase?.() ?? false;
 
   const FullRepoBranchBookmark = Internal.FullRepoBranchBookmark;
   const compareFullRepoBranch = Internal.compareFullRepoBranch;
@@ -175,7 +174,7 @@ export function AllBookmarksTruncated({
           const {icon, tooltip} = getBookmarkAddons(
             value,
             isRecommended,
-            recommendedBookmarksAvailable,
+            showWarningOnMaster,
             tooltipOverride,
           );
 

@@ -40,6 +40,36 @@ async function basicExample() {
   }
 }
 
+async function waitReadyExample() {
+  console.log('\n=== EdenFS Wait Ready Example ===');
+
+  // Create a client instance with a short timeout for demonstration
+  const client = new EdenFSNotificationsClient({
+    mountPoint: null,
+    timeout: 5000, // 5 second default timeout
+    edenBinaryPath: process.env.EDEN_PATH ? process.env.EDEN_PATH : 'eden',
+  });
+
+  try {
+    // Wait for EdenFS to be ready (useful after restart or initial setup)
+    console.log('Waiting for EdenFS to be ready...');
+    const isReady = await client.waitReady({
+      timeout: 10000, // Wait up to 10 seconds
+    });
+
+    if (isReady) {
+      console.log('EdenFS is ready!');
+      // Now safe to perform operations
+      const position = await client.getPosition();
+      console.log('Current position:', position);
+    } else {
+      console.log('EdenFS did not become ready within timeout');
+    }
+  } catch (error) {
+    console.error('Error:', error.message);
+  }
+}
+
 async function changesExample(position) {
   console.log('=== EdenFS Notify changesSince Example ===');
 
@@ -343,6 +373,7 @@ async function runExamples() {
 
   try {
     await basicExample();
+    await waitReadyExample();
     if (process.argv.length > 2) {
       await changesExample(process.argv[2]);
     }

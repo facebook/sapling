@@ -41,6 +41,24 @@ export interface JournalPosition {
 }
 
 /**
+ * Options for getStatus command
+ */
+export interface GetStatusOptions {
+  /** Use case identifier for the command */
+  useCase?: string;
+}
+
+/**
+ * Options for waitReady command
+ */
+export interface WaitReadyOptions {
+  /** Use case identifier for the command */
+  useCase?: string;
+  /** Timeout in milliseconds for the command (overrides constructor value) */
+  timeout?: number;
+}
+
+/**
  * Options for getPosition command
  */
 export interface GetPositionOptions {
@@ -83,7 +101,7 @@ export interface GetChangesSinceOptions {
  */
 export interface SubscriptionOptions {
   /** Journal position to start from */
-  position?: string | JournalPosition;
+  position?: string;
   /** Use case identifier */
   useCase?: string;
   /** Mount point path */
@@ -213,7 +231,7 @@ export interface ChangesSinceResponse {
   /** List of changes */
   changes: Change[];
   /** New journal position after changes */
-  to_position?: string | JournalPosition;
+  to_position?: string;
 }
 
 /**
@@ -221,7 +239,7 @@ export interface ChangesSinceResponse {
  */
 export interface SubscriptionEvent extends ChangesSinceResponse {
   /** Position a state change occurred at */
-  position?: string | JournalPosition;
+  position?: string;
   /** Event type for state changes */
   event_type?: 'Entered' | 'Left';
   /** State name for state change events */
@@ -248,8 +266,21 @@ export class EdenFSNotificationsClient extends EventEmitter {
   mountPoint: string | null;
   timeout: number;
   edenBinaryPath: string;
+  readonly DEFAULT_EDENFS_RECONNECT_DELAY_MS: number;
+  readonly MAXIMUM_EDENFS_RECONNECT_DELAY_MS: number;
 
   constructor(options?: EdenFSClientOptions);
+
+  /**
+   * Get the current EdenFS status
+   */
+  getStatus(options?: GetStatusOptions): Promise<string>;
+
+  /**
+   * Wait until EdenFS is ready, using getStatus
+   * @returns Promise that resolves to true if healthy, false if timeout
+   */
+  waitReady(options?: WaitReadyOptions): Promise<boolean>;
 
   /**
    * Get the current EdenFS journal position
@@ -327,7 +358,7 @@ export class EdenFSUtils {
   /**
    * Extract file type from change
    */
-  static extractFileType(smallChange): string;
+  static extractFileType(smallChange: SmallChange): string;
 
   /**
    * Extract file path(s) from single change

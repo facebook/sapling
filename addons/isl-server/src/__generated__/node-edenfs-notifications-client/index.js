@@ -46,11 +46,82 @@ class EdenFSNotificationsClient extends EventEmitter {
   /** @type {string} */
   edenBinaryPath;
 
+  DEFAULT_EDENFS_RECONNECT_DELAY_MS = 100;
+  MAXIMUM_EDENFS_RECONNECT_DELAY_MS = 60 * 1000;
+
   constructor(options) {
     super();
     this.mountPoint = options?.mountPoint ?? null;
     this.timeout = options?.timeout ?? 30000; // 30 seconds default timeout
     this.edenBinaryPath = options?.edenBinaryPath ?? 'eden';
+  }
+
+  /**
+   * Get the current EdenFS status
+   * @returns {boolean} Edenfs running/not running
+   */
+  async getStatus(options = {}) {
+    const args = ['status'];
+
+    if (options.useCase) {
+      args.push('--use-case', options.useCase);
+    } else {
+      args.push('--use-case', 'node-client');
+    }
+
+    return new Promise((resolve, reject) => {
+      execFile(this.edenBinaryPath, args, {timeout: this.timeout}, (error, stdout, stderr) => {
+        if (error) {
+          reject(
+            new Error(
+              `Failed to get status: ${error.message}\nStdout: ${stdout}\nStderr: ${stderr}`,
+            ),
+          );
+          return;
+        }
+
+        try {
+          const result = stdout.trim();
+          resolve(result);
+        } catch (parseError) {
+          reject(new Error(`Failed to parse response: ${parseError.message}\nStdout: ${stdout}`));
+        }
+      });
+    });
+  }
+
+  /**
+   * Wait until EdenFS is ready
+   * @returns {Promise<boolean>} True=Healthy, False=Timeout
+   */
+  async waitReady(options={}) {
+    const maxDelay = this.MAXIMUM_EDENFS_RECONNECT_DELAY_MS;
+    let delay = this.DEFAULT_EDENFS_RECONNECT_DELAY_MS;
+    const start = Date.now();
+    const deadline = start + (options.timeout ?? this.timeout);
+
+    // Helper: sleep for ms
+    const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+    // If timeout=0, wait forever
+    while (options.timeout == 0 || Date.now() < deadline) {
+      try {
+        const status = await this.getStatus({useCase: options.useCase ?? undefined});
+        // Consider any truthy/non-empty status string as "healthy"
+        if (status && typeof status === 'string' && status.trim().length > 0) {
+          return true;
+        }
+      } catch (e) {
+        // Swallow and retry with backoff
+      }
+
+      // Exponential backoff (capped)
+      await sleep(delay);
+      delay = Math.min(delay * 2, maxDelay);
+    }
+
+    return false;
+
   }
 
   /**
@@ -539,7 +610,6 @@ class EdenFSUtils {
       if (smallChange.Removed) return 'removed';
       if (smallChange.Renamed) return 'renamed';
       if (smallChange.Replaced) return 'replaced';
-      if (smallChange.Removed) return 'removed';
     } else if (change.LargeChange) {
       const largeChange = change.LargeChange;
       if (largeChange.DirectoryRenamed) return 'directory renamed';

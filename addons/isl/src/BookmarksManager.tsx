@@ -345,6 +345,7 @@ function BookmarksList({
   const [bookmarksData, setBookmarksData] = useAtom(bookmarksDataStorage);
   const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
   const recommendedBookmarksAvailable = useAtomValue(recommendedBookmarksAvailableAtom);
+  const showWarningOnMaster = Internal.shouldCheckRebase?.() ?? false;
 
   if (bookmarks.length == 0) {
     return null;
@@ -365,7 +366,7 @@ function BookmarksList({
           const {icon, tooltip} = getBookmarkAddons(
             name,
             isRecommended,
-            recommendedBookmarksAvailable,
+            showWarningOnMaster,
             tooltipOverride,
           );
 
