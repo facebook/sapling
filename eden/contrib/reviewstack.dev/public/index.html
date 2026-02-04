@@ -6,6 +6,10 @@
       The production bundle is designed such that React and Recoil dependencies
       should be injectable so it is easier to embed in larger React applications.
 
+      IMPORTANT: These scripts MUST load synchronously in the <head> because
+      webpack is configured with externals that expect these globals to exist
+      before the bundle loads. If these fail to load, the bundle will error.
+
       Note that "development" is used instead of "production" in the React URLs
       below to catch issues like:
       "Each child in a list should have a unique "key" prop."
@@ -35,146 +39,240 @@
 
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/Sapling_favicon-light-green-transparent-big.svg" />
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-      }
-    </style>
+    <link rel="stylesheet" href="%PUBLIC_URL%/reviewstack.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Review GitHub Pull Requests" />
     <title>Review GitHub Pull Requests</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <div id="root">
+      <div class="reviewstack-loading">
+        <div class="reviewstack-loading-spinner"></div>
+        <div class="reviewstack-loading-text">Loading ReviewStack...</div>
+      </div>
+    </div>
     <script>
-      window.addEventListener('load', () => {
-        const {useNavigate, useParams, Link} = ReactRouterDOM;
-        function CustomLink({href, style, children}) {
-          const childArray = Array.isArray(children) ? children : [children];
-          return React.createElement(Link, {to: href, style}, ...childArray);
+      /**
+       * ReviewStack Initialization Script
+       *
+       * This script waits for the webpack bundle to load and then initializes
+       * the React application. The CDN dependencies (React, ReactDOM, Recoil)
+       * are loaded synchronously in the <head> because webpack's externals
+       * require them to be available before the bundle executes.
+       *
+       * The initialization is deferred until:
+       * 1. The DOM is ready
+       * 2. The ReviewStack bundle has loaded and exported its API
+       */
+      (function() {
+        'use strict';
+
+        var MAX_WAIT_MS = 30000;
+        var CHECK_INTERVAL_MS = 50;
+
+        function showError(title, message) {
+          var root = document.getElementById('root');
+          if (root) {
+            root.innerHTML =
+              '<div class="reviewstack-error">' +
+                '<div class="reviewstack-error-title">' + escapeHtml(title) + '</div>' +
+                '<div class="reviewstack-error-message">' + escapeHtml(message) + '</div>' +
+                '<button class="reviewstack-error-retry" onclick="location.reload()">Retry</button>' +
+              '</div>';
+          }
         }
 
-        const {
-          App,
-          ThemeProvider,
-          configureLoginDialog,
-          getColorModeFromLocalStorage,
-          setCustomLinkElement,
-          setCustomNavigateHook,
-        } = ReviewStack;
-        setCustomLinkElement(CustomLink);
-        setCustomNavigateHook(useNavigate);
-        configureLoginDialog();
+        function escapeHtml(text) {
+          var div = document.createElement('div');
+          div.textContent = text;
+          return div.innerHTML;
+        }
 
-        function ProjectPageEntrypoint() {
-          const {org, repo} = useParams();
-          return React.createElement(App, {
-            page: {
-              type: 'project',
-              org,
-              repo,
-            },
+        function checkRequiredGlobals() {
+          var required = [
+            {name: 'React', global: window.React},
+            {name: 'ReactDOM', global: window.ReactDOM},
+            {name: 'Recoil', global: window.Recoil},
+            {name: 'ReactRouterDOM', global: window.ReactRouterDOM},
+          ];
+          var missing = required.filter(function(r) { return !r.global; });
+          if (missing.length > 0) {
+            var names = missing.map(function(r) { return r.name; }).join(', ');
+            throw new Error('Required libraries failed to load: ' + names + '. Please refresh the page.');
+          }
+        }
+
+        function waitForReviewStack() {
+          return new Promise(function(resolve, reject) {
+            var startTime = Date.now();
+
+            function check() {
+              if (window.ReviewStack && window.ReviewStack.App) {
+                resolve();
+              } else if (Date.now() - startTime > MAX_WAIT_MS) {
+                reject(new Error('ReviewStack bundle did not load within ' + (MAX_WAIT_MS / 1000) + ' seconds. Please refresh the page.'));
+              } else {
+                setTimeout(check, CHECK_INTERVAL_MS);
+              }
+            }
+            check();
           });
         }
 
-        function PullsEntrypoint() {
-          const {org, repo} = useParams();
+        function initializeApp() {
+          var useNavigate = ReactRouterDOM.useNavigate;
+          var useParams = ReactRouterDOM.useParams;
+          var Link = ReactRouterDOM.Link;
 
-          return React.createElement(App, {
-            page: {
-              type: 'pulls',
-              org,
-              repo,
-            },
-          });
-        }
-
-        function PullRequestEntrypoint() {
-          const {org, repo, pr} = useParams();
-          const prNum = parseInt(pr, 10);
-          if (isNaN(prNum)) {
-            return null;
+          function CustomLink(props) {
+            var href = props.href;
+            var style = props.style;
+            var children = props.children;
+            var childArray = Array.isArray(children) ? children : [children];
+            return React.createElement(Link, {to: href, style: style}, childArray);
           }
 
-          return React.createElement(App, {
-            page: {
-              type: 'pr',
-              org,
-              repo,
-              number: prNum,
-            },
-          });
-        }
+          ReviewStack.setCustomLinkElement(CustomLink);
+          ReviewStack.setCustomNavigateHook(useNavigate);
+          ReviewStack.configureLoginDialog();
 
-        function CommitEntrypoint() {
-          const {org, repo, oid} = useParams();
-          return React.createElement(App, {
-            page: {
-              type: 'commit',
-              org,
-              repo,
-              oid,
-            },
-          });
-        }
+          function ProjectPageEntrypoint() {
+            var {org, repo} = useParams();
+            return React.createElement(ReviewStack.App, {
+              page: {
+                type: 'project',
+                org: org,
+                repo: repo,
+              },
+            });
+          }
 
-        function LandingPage() {
-          return React.createElement(App, {
-            page: {
-              type: 'home',
-            },
-          });
-        }
+          function PullsEntrypoint() {
+            var {org, repo} = useParams();
+            return React.createElement(ReviewStack.App, {
+              page: {
+                type: 'pulls',
+                org: org,
+                repo: repo,
+              },
+            });
+          }
 
-        const container = document.getElementById('root');
-        const root = ReactDOM.createRoot(container);
-        root.render(
-          React.createElement(
-            React.StrictMode,
-            null,
+          function PullRequestEntrypoint() {
+            var {org, repo, pr} = useParams();
+            var prNum = parseInt(pr, 10);
+            if (isNaN(prNum)) {
+              return null;
+            }
+            return React.createElement(ReviewStack.App, {
+              page: {
+                type: 'pr',
+                org: org,
+                repo: repo,
+                number: prNum,
+              },
+            });
+          }
+
+          function CommitEntrypoint() {
+            var {org, repo, oid} = useParams();
+            return React.createElement(ReviewStack.App, {
+              page: {
+                type: 'commit',
+                org: org,
+                repo: repo,
+                oid: oid,
+              },
+            });
+          }
+
+          function LandingPage() {
+            return React.createElement(ReviewStack.App, {
+              page: {
+                type: 'home',
+              },
+            });
+          }
+
+          var root = ReactDOM.createRoot(document.getElementById('root'));
+          root.render(
             React.createElement(
-              Recoil.RecoilRoot,
+              React.StrictMode,
               null,
               React.createElement(
-                ThemeProvider,
-                {
-                  colorMode: getColorModeFromLocalStorage(),
-                },
+                ReviewStack.JotaiProvider,
+                null,
                 React.createElement(
-                  ReactRouterDOM.BrowserRouter,
+                  Recoil.RecoilRoot,
                   null,
                   React.createElement(
-                    ReactRouterDOM.Routes,
-                    null,
-                    React.createElement(ReactRouterDOM.Route, {
-                      path: '/',
-                      element: React.createElement(LandingPage),
-                    }),
-                    React.createElement(ReactRouterDOM.Route, {
-                      path: '/:org/:repo',
-                      element: React.createElement(ProjectPageEntrypoint),
-                    }),
-                    React.createElement(ReactRouterDOM.Route, {
-                      path: '/:org/:repo/pulls',
-                      element: React.createElement(PullsEntrypoint),
-                    }),
-                    React.createElement(ReactRouterDOM.Route, {
-                      path: '/:org/:repo/pull/:pr',
-                      element: React.createElement(PullRequestEntrypoint),
-                    }),
-                    React.createElement(ReactRouterDOM.Route, {
-                      path: '/:org/:repo/commit/:oid',
-                      element: React.createElement(CommitEntrypoint),
-                    }),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      });
+                    ReviewStack.ThemeProvider,
+                    {
+                      colorMode: ReviewStack.getColorModeFromLocalStorage(),
+                    },
+                    React.createElement(
+                      ReactRouterDOM.BrowserRouter,
+                      null,
+                      React.createElement(
+                        ReactRouterDOM.Routes,
+                        null,
+                        React.createElement(ReactRouterDOM.Route, {
+                          path: '/',
+                          element: React.createElement(LandingPage),
+                        }),
+                        React.createElement(ReactRouterDOM.Route, {
+                          path: '/:org/:repo',
+                          element: React.createElement(ProjectPageEntrypoint),
+                        }),
+                        React.createElement(ReactRouterDOM.Route, {
+                          path: '/:org/:repo/pulls',
+                          element: React.createElement(PullsEntrypoint),
+                        }),
+                        React.createElement(ReactRouterDOM.Route, {
+                          path: '/:org/:repo/pull/:pr',
+                          element: React.createElement(PullRequestEntrypoint),
+                        }),
+                        React.createElement(ReactRouterDOM.Route, {
+                          path: '/:org/:repo/commit/:oid',
+                          element: React.createElement(CommitEntrypoint),
+                        })
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          );
+        }
+
+        // Main entry point - wait for DOM and bundle to be ready
+        function main() {
+          try {
+            checkRequiredGlobals();
+          } catch (error) {
+            console.error('CDN loading failed:', error);
+            showError('Failed to load dependencies', error.message);
+            return;
+          }
+
+          waitForReviewStack()
+            .then(function() {
+              initializeApp();
+            })
+            .catch(function(error) {
+              console.error('Failed to initialize ReviewStack:', error);
+              showError('Failed to load ReviewStack', error.message);
+            });
+        }
+
+        // Start initialization when DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', main);
+        } else {
+          main();
+        }
+      })();
     </script>
   </body>
 </html>

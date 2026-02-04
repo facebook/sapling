@@ -11,6 +11,7 @@ import {setCustomLoginDialogComponent} from 'reviewstack/src/LoginDialog';
 export {
   App,
   getColorModeFromLocalStorage,
+  JotaiProvider,
   setCustomLinkElement,
   setCustomNavigateHook,
   ThemeProvider,

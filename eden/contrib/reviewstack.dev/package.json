@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "jotai": "^2.17.0",
+    "jotai": "^2.12.3",
     "jotai-family": "^1.0.1",
     "netlify-auth-providers": "1.0.0-alpha5",
     "react": "^18.2.0",

@@ -10,9 +10,11 @@ import {setCustomLinkElement} from './Link';
 import {getColorModeFromLocalStorage} from './themeState';
 import {setCustomNavigateHook} from './useNavigate';
 import {ThemeProvider} from '@primer/react';
+import {Provider as JotaiProvider} from 'jotai';
 export {
   App,
   getColorModeFromLocalStorage,
+  JotaiProvider,
   setCustomLinkElement,
   setCustomNavigateHook,
   ThemeProvider,
