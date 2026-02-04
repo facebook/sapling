@@ -446,3 +446,157 @@
 .pr-row-merged-badge .codicon {
   font-size: 10px;
 }
+
+/* ===== STALE PR BUTTON ===== */
+
+.stack-card-close-stale-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  background: color-mix(in srgb, var(--signal-bad, #ef4444) 15%, transparent);
+  color: var(--signal-bad, #ef4444);
+  border: 1px solid color-mix(in srgb, var(--signal-bad, #ef4444) 40%, transparent);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.stack-card-close-stale-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--signal-bad, #ef4444) 25%, transparent);
+  border-color: var(--signal-bad, #ef4444);
+}
+
+.stack-card-close-stale-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stack-card-close-stale-button .codicon {
+  font-size: 12px;
+}
+
+/* ===== SKELETON LOADING STYLES ===== */
+
+/* Pulsing animation */
+@keyframes skeleton-pulse {
+  0% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+
+/* Base skeleton box */
+.skeleton-box {
+  background: linear-gradient(
+    90deg,
+    var(--subtle-hover-darken) 0%,
+    color-mix(in srgb, var(--foreground) 8%, var(--subtle-hover-darken)) 50%,
+    var(--subtle-hover-darken) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 3px;
+}
+
+/* Skeleton stack card */
+.stack-card-skeleton {
+  pointer-events: none;
+}
+
+.stack-card-skeleton .stack-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+}
+
+/* Skeleton icon (expand button, action icons) */
+.skeleton-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* Skeleton title */
+.skeleton-title {
+  flex: 1;
+  height: 16px;
+  max-width: 140px;
+  border-radius: 3px;
+}
+
+/* Skeleton avatar */
+.skeleton-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin-left: auto;
+  margin-right: var(--halfpad);
+  flex-shrink: 0;
+}
+
+/* Skeleton button (Pull button) */
+.skeleton-button {
+  width: 56px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+/* Skeleton PR row */
+.pr-row-skeleton {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  padding: var(--halfpad);
+}
+
+/* Skeleton status dot */
+.skeleton-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Skeleton PR number */
+.skeleton-pr-number {
+  width: 44px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* Skeleton PR title */
+.skeleton-pr-title {
+  flex: 1;
+  height: 14px;
+  max-width: 280px;
+}
+
+/* Stagger animation delays for visual interest */
+.stack-card-skeleton:nth-child(1) { animation-delay: 0s; }
+.stack-card-skeleton:nth-child(2) { animation-delay: 0.1s; }
+.stack-card-skeleton:nth-child(3) { animation-delay: 0.2s; }
+.stack-card-skeleton:nth-child(4) { animation-delay: 0.3s; }
+.stack-card-skeleton:nth-child(5) { animation-delay: 0.4s; }
+.stack-card-skeleton:nth-child(6) { animation-delay: 0.5s; }
+.stack-card-skeleton:nth-child(7) { animation-delay: 0.6s; }
+.stack-card-skeleton:nth-child(8) { animation-delay: 0.7s; }
+
+/* Stagger skeleton boxes within each card */
+.stack-card-skeleton .skeleton-box:nth-child(1) { animation-delay: 0s; }
+.stack-card-skeleton .skeleton-box:nth-child(2) { animation-delay: 0.05s; }
+.stack-card-skeleton .skeleton-box:nth-child(3) { animation-delay: 0.1s; }
+.stack-card-skeleton .skeleton-box:nth-child(4) { animation-delay: 0.15s; }
+
+.pr-row-skeleton:nth-child(1) .skeleton-box { animation-delay: 0.1s; }
+.pr-row-skeleton:nth-child(2) .skeleton-box { animation-delay: 0.15s; }
+.pr-row-skeleton:nth-child(3) .skeleton-box { animation-delay: 0.2s; }
+.pr-row-skeleton:nth-child(4) .skeleton-box { animation-delay: 0.25s; }
+.pr-row-skeleton:nth-child(5) .skeleton-box { animation-delay: 0.3s; }

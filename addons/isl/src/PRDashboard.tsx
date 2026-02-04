@@ -18,7 +18,7 @@ import {ComparisonType} from 'shared/Comparison';
 import serverAPI from './ClientToServerAPI';
 import {showComparison} from './ComparisonView/atoms';
 import {enterReviewMode} from './reviewMode';
-import {currentGitHubUser} from './codeReview/CodeReviewInfo';
+import {currentGitHubUser, allDiffSummaries, triggerFullDiffSummariesRefresh} from './codeReview/CodeReviewInfo';
 import {
   prStacksAtom,
   stackLabelsAtom,
@@ -34,12 +34,72 @@ import {writeAtom} from './jotaiUtils';
 import {inlineProgressByHash, useRunOperation} from './operationsState';
 import {PullOperation} from './operations/PullOperation';
 import {GotoOperation} from './operations/GotoOperation';
-import {PullStackOperation} from './operations/PullStackOperation';
+import {ClosePROperation} from './operations/ClosePROperation';
+import {showToast} from './toast';
+import {t} from './i18n';
 import {dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
 import {succeedableRevset} from './types';
 
 import './PRDashboard.css';
+
+/**
+ * Skeleton loading state for the PR Dashboard.
+ * Shows animated placeholders while data is being fetched.
+ */
+function PRDashboardSkeleton() {
+  // Varying PR counts to look natural: stack of 3, stack of 2, single, stack of 2, single, stack of 3, single, single
+  const skeletonConfigs = [3, 2, 1, 2, 1, 3, 1, 1];
+  return (
+    <div className="pr-dashboard pr-dashboard-skeleton">
+      <div className="pr-dashboard-sticky-header">
+        <div className="pr-dashboard-header">
+          <span className="pr-dashboard-title">
+            <T>PR Stacks</T>
+          </span>
+        </div>
+      </div>
+      <div className="pr-dashboard-content">
+        {skeletonConfigs.map((prCount, i) => (
+          <StackCardSkeleton key={i} prCount={prCount} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton for a single stack card.
+ */
+function StackCardSkeleton({prCount = 2}: {prCount?: number}) {
+  return (
+    <div className="stack-card stack-card-skeleton">
+      <div className="stack-card-header">
+        <div className="skeleton-box skeleton-icon" />
+        <div className="skeleton-box skeleton-title" />
+        <div className="skeleton-box skeleton-avatar" />
+      </div>
+      <div className="stack-card-prs">
+        {Array.from({length: prCount}, (_, i) => (
+          <PRRowSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton for a single PR row.
+ */
+function PRRowSkeleton() {
+  return (
+    <div className="pr-row pr-row-skeleton">
+      <div className="skeleton-box skeleton-dot" />
+      <div className="skeleton-box skeleton-pr-number" />
+      <div className="skeleton-box skeleton-pr-title" />
+    </div>
+  );
+}
 
 /**
  * Scroll the PR column to show a PR row at the top.
@@ -133,6 +193,7 @@ function MainBranchSection({}: {isScrolled?: boolean}) {
 }
 
 export function PRDashboard() {
+  const diffSummariesResult = useAtomValue(allDiffSummaries);
   const stacks = useAtomValue(prStacksAtom);
   const [hiddenStacks, setHiddenStacks] = useAtom(hiddenStacksAtom);
   const [hideMerged, setHideMerged] = useAtom(hideMergedStacksAtom);
@@ -164,14 +225,22 @@ export function PRDashboard() {
     return () => container!.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Show skeleton while loading (value is null) - must be after all hooks
+  const isLoading = diffSummariesResult.value === null && !diffSummariesResult.error;
+  if (isLoading) {
+    return <PRDashboardSkeleton />;
+  }
+
   const handleRefresh = () => {
-    serverAPI.postMessage({type: 'fetchDiffSummaries'});
+    // Use full refresh to replace (not merge) so closed PRs disappear
+    triggerFullDiffSummariesRefresh();
   };
 
-  // Filter stacks: hide manually hidden, optionally merged, bots, and optionally non-mine stacks
+  // Filter stacks: always hide closed, hide manually hidden, optionally merged, bots, and optionally non-mine stacks
   const visibleStacks = showHidden
-    ? stacks
+    ? stacks.filter(stack => !stack.isClosed) // Still hide closed even when showing hidden
     : stacks.filter(stack => {
+        if (stack.isClosed) return false; // Always hide closed (abandoned) PRs
         if (hiddenStacks.includes(stack.id)) return false;
         if (hideMerged && stack.isMerged) return false;
         if (hideBots && isBotAuthor(stack.mainAuthor)) return false;
@@ -304,9 +373,46 @@ function StackCard({
   const isCurrentStack = topHeadHash ? dag.resolve('.')?.hash === topHeadHash : false;
   const inlineProgress = useAtomValue(inlineProgressByHash(topHeadHash ?? ''));
 
-  const handlePullStack = () => {
-    runOperation(new PullStackOperation(stack.topPrNumber, /* goto */ true));
-  };
+  // Detect "stale" stacks: the true top PR (from stackInfo) was merged via GitHub
+  // but the lower PRs are still open. All visible PRs in this stack are stale.
+  const stalePRs = stack.hasStaleAbove
+    ? stack.prs.filter(pr => pr.state !== 'MERGED' && pr.state !== 'CLOSED')
+    : [];
+  const hasStaleStack = stack.hasStaleAbove && stalePRs.length > 0;
+
+  const [isClosingStale, setIsClosingStale] = useState(false);
+
+  const handleCloseStalePRs = useCallback(async () => {
+    if (stalePRs.length === 0 || isClosingStale) return;
+
+    setIsClosingStale(true);
+    const mergedPrNumber = stack.mergedAbovePrNumber ?? stack.topPrNumber;
+    showToast(
+      t('Closing $count stale PRs...', {replace: {$count: String(stalePRs.length)}}),
+      {durationMs: 3000}
+    );
+
+    for (const pr of stalePRs) {
+      try {
+        const closeOp = new ClosePROperation(
+          Number(pr.number),
+          `Closed: changes already merged via PR #${mergedPrNumber}`
+        );
+        await runOperation(closeOp);
+      } catch (err) {
+        // Continue closing others even if one fails
+      }
+    }
+
+    showToast(t('Closed $count stale PRs', {replace: {$count: String(stalePRs.length)}}), {durationMs: 3000});
+    setIsClosingStale(false);
+
+    // Refresh the PR list after a short delay to let GitHub propagate the changes
+    // Use full refresh to replace (not merge) so closed PRs disappear
+    setTimeout(() => {
+      triggerFullDiffSummariesRefresh();
+    }, 1500);
+  }, [stalePRs, isClosingStale, stack.mergedAbovePrNumber, stack.topPrNumber, runOperation]);
 
   const handleStackCheckout = useCallback((e: React.MouseEvent) => {
     // Don't interfere with child element clicks
@@ -409,15 +515,25 @@ function StackCard({
         )}
 
         <div className="stack-card-actions">
+          {hasStaleStack && (
+            <Tooltip
+              title={`Close ${stalePRs.length} stale PR${stalePRs.length > 1 ? 's' : ''} — these PRs are still open but their changes were already merged via PR #${stack.mergedAbovePrNumber ?? '?'} on GitHub. This happens when merging directly on GitHub instead of through ISL.`}>
+              <Button
+                className="stack-card-close-stale-button"
+                onClick={handleCloseStalePRs}
+                disabled={isClosingStale}>
+                {isClosingStale ? (
+                  <Icon icon="loading" />
+                ) : (
+                  <Icon icon="trash" />
+                )}
+                <span>Close {stalePRs.length} stale</span>
+              </Button>
+            </Tooltip>
+          )}
           <Tooltip title={isHidden ? 'Show stack' : 'Hide stack'}>
             <Button icon onClick={onToggleHidden}>
               <Icon icon={isHidden ? 'eye' : 'eye-closed'} />
-            </Button>
-          </Tooltip>
-          <Tooltip title={`Pull ${stack.isStack ? 'stack' : 'PR'} and checkout`}>
-            <Button className="stack-card-pull-button" onClick={handlePullStack}>
-              <Icon icon="cloud-download" />
-              <T>Pull</T>
             </Button>
           </Tooltip>
         </div>

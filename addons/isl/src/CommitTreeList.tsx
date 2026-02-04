@@ -15,7 +15,6 @@ import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtomValue} from 'jotai';
 import {Commit, InlineProgressSpan, isExternalCommitByDiffId} from './Commit';
-import {Center, LargeSpinner} from './ComponentUtils';
 import {FetchingAdditionalCommitsRow} from './FetchAdditionalCommitsButton';
 import {isHighlightedCommit} from './HighlightedCommits';
 import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
@@ -294,6 +293,46 @@ function useScrollToSelectedCommit() {
   }, [selected]);
 }
 
+/**
+ * Skeleton for the top bar during loading.
+ * Matches the structure: Pull button, folder dropdown, icon buttons.
+ */
+function TopBarSkeleton() {
+  return (
+    <div className="top-bar-skeleton">
+      <div className="top-bar-skeleton-left">
+        <div className="skeleton-box skeleton-button-wide" />
+        <div className="skeleton-box skeleton-button-medium" />
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+      </div>
+      <div className="top-bar-skeleton-right">
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Loading view with skeleton top bar and spinner for commit tree.
+ */
+function CommitTreeLoading() {
+  return (
+    <div className="commit-tree-loading">
+      <TopBarSkeleton />
+      <div className="commit-tree-loading-spinner">
+        <div className="loading-spinner" />
+        <span className="loading-text">Loading commits...</span>
+      </div>
+    </div>
+  );
+}
+
 export function CommitTreeList() {
   // Make sure we trigger subscription to changes to uncommitted changes *before* we have a tree to render,
   // so we don't miss the first returned uncommitted changes message.
@@ -312,9 +351,7 @@ export function CommitTreeList() {
   const {trees} = useAtomValue(treeWithPreviews);
   const fetchError = useAtomValue(commitFetchError);
   return fetchError == null && trees.length === 0 ? (
-    <Center>
-      <LargeSpinner />
-    </Center>
+    <CommitTreeLoading />
   ) : (
     <>
       {fetchError ? <CommitFetchError error={fetchError} /> : null}

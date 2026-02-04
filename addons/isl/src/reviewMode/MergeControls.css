@@ -3,67 +3,84 @@
 .merge-controls {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  padding: 12px 0 8px 0;
 }
 
 .merge-controls-loading {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--halfpad);
   color: var(--subtle-foreground);
   padding: 8px 0;
   font-size: 12px;
 }
 
-.merge-controls-status {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
 .merge-controls-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
+  padding-right: 12px;
 }
 
 .merge-controls-actions {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
 }
 
 .merge-strategy-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: flex-end;
+  gap: 10px;
 }
 
 .merge-strategy-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .merge-strategy-select {
   display: flex;
-  min-width: 155px;
+  min-width: 170px;
 }
 
-.merge-strategy-select select {
+.merge-strategy-select select,
+.merge-strategy-select vscode-dropdown {
   flex: 1;
+  font-size: 12px !important;
+  border-radius: 6px !important;
+  border: 1.5px solid var(--graphite-border) !important;
+  background: var(--graphite-bg) !important;
+  transition: border-color 0.15s ease !important;
+}
+
+.merge-strategy-select select:hover,
+.merge-strategy-select vscode-dropdown:hover {
+  border-color: #a855f7 !important;
+}
+
+.merge-strategy-select select:focus,
+.merge-strategy-select vscode-dropdown:focus {
+  border-color: #a855f7 !important;
+  outline: none !important;
 }
 
 .merge-delete-branch {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 10px;
+  gap: 6px;
+  font-size: 11px;
   color: var(--graphite-text-secondary);
   cursor: pointer;
   white-space: nowrap;
   transition: color 0.15s ease;
+  user-select: none;
 }
 
 .merge-delete-branch:hover {
@@ -72,48 +89,51 @@
 
 .merge-delete-branch input {
   margin: 0;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
+  accent-color: var(--button-primary-background);
 }
 
-/* Green merge button - GitHub style */
+/* Merge button - distinctive purple/violet outlined style matching header review buttons */
 .merge-btn {
-  background: var(--signal-good, #22c55e) !important;
-  color: white !important;
-  border: none !important;
-  font-weight: 600;
-  padding: 6px 14px;
-  border-radius: 6px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent !important;
+  color: #a855f7 !important;
+  border: 1.5px solid #a855f7 !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  padding: 6px 18px !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease !important;
+  min-width: 90px;
 }
 
 .merge-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--signal-good, #22c55e) 85%, black) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--signal-good, #22c55e) 40%, transparent);
+  background: rgba(168, 85, 247, 0.12) !important;
+  border-color: #c084fc !important;
+  color: #c084fc !important;
 }
 
 .merge-btn:disabled {
-  background: var(--graphite-bg-subtle) !important;
+  background: transparent !important;
   color: var(--graphite-text-secondary) !important;
-  border: 1px solid var(--graphite-border) !important;
-  transform: none;
-  box-shadow: none;
+  border: 1.5px solid var(--graphite-border) !important;
+  opacity: 0.5;
 }
 
 .merge-btn .codicon {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .merge-block-reasons {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 4px;
   padding: 8px 12px;
   background: color-mix(in srgb, var(--signal-warning, #f59e0b) 8%, transparent);
   border-radius: 6px;
-  border-left: 2px solid var(--signal-warning, #f59e0b);
-  margin-top: 6px;
+  margin-top: 4px;
+  align-self: flex-end;
 }
 
 .merge-block-reason {
@@ -125,7 +145,7 @@
   line-height: 1.4;
 }
 
-/* Sync state - when branch is behind base */
+/* Legacy sync state styles - kept for stack order issue UI */
 .merge-controls-sync {
   display: flex;
   align-items: center;
@@ -192,4 +212,146 @@
 
 .merge-controls-conflicts .merge-controls-sync-message {
   color: var(--signal-bad, #ef4444);
+}
+
+/* Rebase button - matches merge button style but with orange/amber color */
+.rebase-btn {
+  background: transparent !important;
+  color: #f59e0b !important;
+  border: 1.5px solid #f59e0b !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  padding: 6px 18px !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease !important;
+  min-width: 140px;
+}
+
+.rebase-btn:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.12) !important;
+  border-color: #fbbf24 !important;
+  color: #fbbf24 !important;
+}
+
+.rebase-btn:disabled {
+  background: transparent !important;
+  color: var(--graphite-text-secondary) !important;
+  border: 1.5px solid var(--graphite-border) !important;
+  opacity: 0.5;
+}
+
+.rebase-btn .codicon {
+  font-size: 13px;
+}
+
+/* Sync status message - compact inline badge */
+.merge-sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.merge-sync-behind {
+  background: color-mix(in srgb, var(--signal-warning, #f59e0b) 12%, transparent);
+  color: var(--signal-warning, #f59e0b);
+}
+
+.merge-sync-behind .codicon {
+  font-size: 12px;
+}
+
+.merge-sync-conflicts {
+  background: color-mix(in srgb, var(--signal-bad, #ef4444) 12%, transparent);
+  color: var(--signal-bad, #ef4444);
+}
+
+.merge-sync-conflicts .codicon {
+  font-size: 12px;
+}
+
+/* Info about closing PRs below */
+.merge-close-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--graphite-text-secondary);
+  padding: 4px 8px;
+  background: color-mix(in srgb, var(--graphite-accent, #4a90e2) 8%, transparent);
+  border-radius: 4px;
+}
+
+.merge-close-info .codicon {
+  font-size: 12px;
+  color: var(--graphite-accent, #4a90e2);
+}
+
+/* Resolve conflicts button - red/warning style */
+.resolve-conflicts-btn {
+  background: transparent !important;
+  color: var(--signal-bad, #ef4444) !important;
+  border: 1.5px solid var(--signal-bad, #ef4444) !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  padding: 6px 18px !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease !important;
+}
+
+.resolve-conflicts-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--signal-bad, #ef4444) 12%, transparent) !important;
+}
+
+/* Stale PR state */
+.merge-controls-stale {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--signal-medium, #f59e0b) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--signal-medium, #f59e0b) 30%, transparent);
+  border-radius: 8px;
+  margin: 8px 12px;
+}
+
+.merge-stale-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: var(--signal-medium, #f59e0b);
+}
+
+.merge-stale-message .codicon {
+  font-size: 16px;
+}
+
+.merge-stale-explanation {
+  font-size: 12px;
+  color: var(--foreground-sub);
+  line-height: 1.4;
+}
+
+.close-stale-btn {
+  align-self: flex-start;
+  background: transparent !important;
+  color: var(--signal-medium, #f59e0b) !important;
+  border: 1.5px solid var(--signal-medium, #f59e0b) !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  padding: 6px 16px !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease !important;
+}
+
+.close-stale-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--signal-medium, #f59e0b) 15%, transparent) !important;
+}
+
+.close-stale-btn:disabled {
+  opacity: 0.6;
 }
