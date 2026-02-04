@@ -23,7 +23,7 @@ import {
 } from '../CommitInfoView/CommitMessageFields';
 import {Internal} from '../Internal';
 import {getTracker} from '../analytics/globalTracker';
-import {atomFamilyWeak, atomWithOnChange, writeAtom} from '../jotaiUtils';
+import {atomFamilyWeak, atomWithOnChange, readAtom, writeAtom} from '../jotaiUtils';
 import {messageSyncingEnabledState} from '../messageSyncing';
 import {dagWithPreviews} from '../previews';
 import {commitByHash, repositoryInfo} from '../serverAPIState';
@@ -91,9 +91,34 @@ export const branchingDiffInfos = atomFamilyWeak((branchName: string) =>
 export const allDiffSummaries = atom<Result<Map<DiffId, DiffSummary> | null>>({value: null});
 export const diffIdsByBranchName = atom<Map<string, DiffId>>(new Map());
 
+/**
+ * Flag to indicate the next diff summaries fetch should replace existing data
+ * instead of merging. Used after closing PRs to remove stale entries.
+ */
+const shouldReplaceDiffSummaries = atom<boolean>(false);
+
+/**
+ * Trigger a full refresh of diff summaries that replaces existing data.
+ * Use this after operations that close/delete PRs to ensure they disappear from the UI.
+ */
+export function triggerFullDiffSummariesRefresh() {
+  writeAtom(shouldReplaceDiffSummaries, true);
+  serverAPI.postMessage({type: 'fetchDiffSummaries'});
+}
+/**
+ * Current GitHub user login (username) from the authenticated user.
+ * Used to determine if a PR/stack is "external" (authored by someone else).
+ */
+export const currentGitHubUser = atom<string | undefined>(undefined);
+
 registerDisposable(
   allDiffSummaries,
   serverAPI.onMessageOfType('fetchedDiffSummaries', event => {
+    // Store the current GitHub user if provided
+    if (event.currentUser) {
+      writeAtom(currentGitHubUser, event.currentUser);
+    }
+
     writeAtom(diffIdsByBranchName, existing => {
       if (event.summaries.error) {
         return existing;
@@ -108,6 +133,12 @@ registerDisposable(
       return map;
     });
 
+    // Check if we should replace instead of merge (e.g., after closing PRs)
+    const shouldReplace = readAtom(shouldReplaceDiffSummaries);
+    if (shouldReplace) {
+      writeAtom(shouldReplaceDiffSummaries, false);
+    }
+
     writeAtom(allDiffSummaries, existing => {
       if (existing.error) {
         // TODO: if we only fetch one diff, but had an error on the overall fetch... should we still somehow show that error...?
@@ -117,6 +148,11 @@ registerDisposable(
       }
 
       if (event.summaries.error || existing.value == null) {
+        return event.summaries;
+      }
+
+      // Replace mode: use only the new summaries (removes closed PRs)
+      if (shouldReplace) {
         return event.summaries;
       }
 
