@@ -7,9 +7,11 @@
 
 import type {DiffSummary} from '../types';
 
+import {PullRequestState} from 'isl-server/src/github/generated/graphql';
 import {atom} from 'jotai';
 import {atomWithStorage} from 'jotai/utils';
 import {allDiffSummaries} from './CodeReviewInfo';
+import {reviewModeAtom} from '../reviewMode';
 
 /**
  * Stack labels stored in localStorage.
@@ -103,6 +105,26 @@ export type PRStack = {
   isMerged: boolean;
   /** Count of merged PRs in the stack */
   mergedCount: number;
+};
+
+/**
+ * Context for navigating between PRs in a stack during review mode.
+ */
+export type StackNavigationContext = {
+  /** Current PR's position in stack (0 = top of stack) */
+  currentIndex: number;
+  /** Total PRs in stack */
+  stackSize: number;
+  /** Stack entries with PR details for navigation */
+  entries: Array<{
+    prNumber: number;
+    headHash: string;
+    title: string;
+    isCurrent: boolean;
+    state: DiffSummary['state'];
+  }>;
+  /** Whether this is a single PR (no stack navigation needed) */
+  isSinglePr: boolean;
 };
 
 /**
@@ -236,4 +258,74 @@ export const prStacksCountAtom = atom<number>(get => {
 export const multiPrStacksCountAtom = atom<number>(get => {
   const stacks = get(prStacksAtom);
   return stacks.filter(s => s.isStack).length;
+});
+
+/**
+ * Derived atom that provides stack navigation context for the current PR in review mode.
+ * Returns null when not in review mode.
+ * Returns { isSinglePr: true, ... } when PR has no stack.
+ */
+export const currentPRStackContextAtom = atom<StackNavigationContext | null>(get => {
+  const reviewMode = get(reviewModeAtom);
+  if (!reviewMode.active || !reviewMode.prNumber) {
+    return null;
+  }
+
+  const diffs = get(allDiffSummaries);
+  if (diffs.error || !diffs.value) {
+    return null;
+  }
+
+  const currentPR = diffs.value.get(reviewMode.prNumber);
+  if (!currentPR || currentPR.type !== 'github') {
+    return null;
+  }
+
+  const stackInfo = getStackInfo(currentPR);
+  if (!stackInfo || stackInfo.length <= 1) {
+    return {
+      isSinglePr: true,
+      currentIndex: 0,
+      stackSize: 1,
+      entries: [{
+        prNumber: Number(reviewMode.prNumber),
+        headHash: currentPR.head,
+        title: currentPR.title,
+        isCurrent: true,
+        state: currentPR.state,
+      }],
+    };
+  }
+
+  // Build entries with full PR details from allDiffSummaries
+  const entries = stackInfo
+    .map(entry => {
+      const prData = diffs.value?.get(String(entry.prNumber));
+      if (!prData || prData.type !== 'github') {
+        // PR not in summaries - still include with partial data
+        return {
+          prNumber: entry.prNumber,
+          headHash: '',
+          title: `PR #${entry.prNumber}`,
+          isCurrent: entry.isCurrent,
+          state: PullRequestState.Open,
+        };
+      }
+      return {
+        prNumber: entry.prNumber,
+        headHash: prData.head,
+        title: prData.title,
+        isCurrent: entry.isCurrent,
+        state: prData.state,
+      };
+    });
+
+  const currentIndex = entries.findIndex(e => e.isCurrent);
+
+  return {
+    currentIndex: currentIndex >= 0 ? currentIndex : 0,
+    stackSize: entries.length,
+    entries,
+    isSinglePr: false,
+  };
 });

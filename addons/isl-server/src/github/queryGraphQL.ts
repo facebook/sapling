@@ -20,6 +20,9 @@ export default async function queryGraphQL<TData, TVariables>(
   }
 
   const args = ['api', 'graphql'];
+  // DEBUG: Log the query
+  // eslint-disable-next-line no-console
+  console.log('[queryGraphQL] hostname:', hostname, 'variables:', JSON.stringify(variables).slice(0, 200));
   for (const [key, value] of Object.entries(variables as unknown as {[key: string]: unknown})) {
     const type = typeof value;
     switch (type) {
@@ -70,6 +73,9 @@ export default async function queryGraphQL<TData, TVariables>(
 
     return json.data;
   } catch (error: unknown) {
+    // DEBUG: Log the error
+    // eslint-disable-next-line no-console
+    console.error('[queryGraphQL] Error:', error);
     if (isEjecaSpawnError(error)) {
       if (error.code === 'ENOENT' || error.code === 'EACCES') {
         // `gh` not installed on path

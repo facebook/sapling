@@ -97,6 +97,7 @@ export const SplitDiffTable = React.memo(
           tokenization?.[index],
           ctx.openFileToLine,
           displayLineNumbers,
+          ctx.onCommentClick,
         );
 
         const isLast = index === lastHunkIndex;
@@ -194,6 +195,7 @@ function addRowsForHunk(
   tokenization: TokenizedDiffHunk | undefined,
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
   displayLineNumbers: boolean = true,
+  onCommentClick?: (lineNumber: number, side: 'LEFT' | 'RIGHT', path: string) => void,
 ): void {
   const {oldStart, newStart, lines} = hunk;
   const groups = organizeLinesIntoGroups(lines);
@@ -217,6 +219,7 @@ function addRowsForHunk(
       tokenization?.[1].slice(afterTokenizedIndex),
       openFileToLine,
       displayLineNumbers,
+      onCommentClick,
     );
     beforeLineNumber += common.length;
     afterLineNumber += common.length;
@@ -256,6 +259,7 @@ function addRowsForHunk(
           path,
           unified,
           openFileToLine,
+          onCommentClick,
         });
 
         if (unified) {
@@ -300,6 +304,7 @@ function addRowsForHunk(
           path,
           unified,
           openFileToLine,
+          onCommentClick,
         });
 
         if (unified) {
@@ -335,6 +340,7 @@ function addRowsForHunk(
           path,
           unified,
           openFileToLine,
+          onCommentClick,
         });
 
         if (unified) {
@@ -390,6 +396,7 @@ function addUnmodifiedRows(
   tokenizationAfter?: TokenizedHunk | undefined,
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
   displayLineNumbers: boolean = true,
+  onCommentClick?: (lineNumber: number, side: 'LEFT' | 'RIGHT', path: string) => void,
 ): void {
   let beforeLineNumber = initialBeforeLineNumber;
   let afterLineNumber = initialAfterLineNumber;
@@ -409,6 +416,7 @@ function addUnmodifiedRows(
       path,
       unified,
       openFileToLine,
+      onCommentClick,
     });
     if (unified) {
       rows.push(

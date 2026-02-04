@@ -6,14 +6,23 @@
  */
 
 import type {
+  CICheckRun,
+  ClientToServerMessage,
   CodeReviewSystem,
+  CommandArg,
   DiffComment,
   DiffId,
   DiffSignalSummary,
   Disposable,
+  DraftPullRequestReviewThread,
   Hash,
+  MergeableState,
+  MergeStateStatus,
   Notification,
+  OperationCommandProgressReporter,
+  PullRequestReviewEvent,
   Result,
+  ServerToClientMessage,
 } from 'isl/src/types';
 import type {CodeReviewProvider} from '../CodeReviewProvider';
 import type {Logger} from '../logger';
@@ -44,6 +53,7 @@ import {
 } from './generated/graphql';
 import {parseStackInfo, type StackEntry} from './parseStackInfo';
 import queryGraphQL from './queryGraphQL';
+import {submitPullRequestReview} from './submitPullRequestReview';
 
 export type GitHubDiffSummary = {
   type: 'github';
@@ -51,6 +61,8 @@ export type GitHubDiffSummary = {
   commitMessage: string;
   state: PullRequestState | 'DRAFT' | 'MERGE_QUEUED';
   number: DiffId;
+  /** GitHub GraphQL node ID, required for mutations like addPullRequestReview */
+  nodeId: string;
   url: string;
   commentCount: number;
   anyUnresolvedComments: false;
@@ -68,6 +80,14 @@ export type GitHubDiffSummary = {
   author?: string;
   /** Author avatar URL */
   authorAvatarUrl?: string;
+  /** Mergeability state: MERGEABLE, CONFLICTING, or UNKNOWN */
+  mergeable?: MergeableState;
+  /** Detailed merge state status */
+  mergeStateStatus?: MergeStateStatus;
+  /** Individual CI check runs for detailed status display */
+  ciChecks?: CICheckRun[];
+  /** Whether viewer can bypass branch protection to merge */
+  viewerCanMergeAsAdmin?: boolean;
 };
 
 const DEFAULT_GH_FETCH_TIMEOUT = 60_000; // 1 minute
@@ -131,9 +151,11 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
 
     const variables = {
-      // Fetch all open PRs in the repo updated in the last 30 days
-      searchQuery: `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr is:open updated:>=${dateFilter}`,
-      numToFetch: 50,
+      // Fetch all PRs (open, merged, closed) updated in the last 30 days
+      // This allows "hide merged" filtering to work properly
+      searchQuery: `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr updated:>=${dateFilter}`,
+      // Reduced from 50 to avoid GitHub's 500k node limit (numToFetch × 100 commits × 100 contexts)
+      numToFetch: 20,
     };
     if (includeMergeQueue) {
       return this.query<YourPullRequestsQueryData, YourPullRequestsQueryVariables>(
@@ -185,6 +207,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
                     ? 'MERGE_QUEUED'
                     : summary.state,
               number: id,
+              nodeId: summary.id,
               url: summary.url,
               commentCount: summary.comments.totalCount,
               anyUnresolvedComments: false,
@@ -198,6 +221,11 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               stackInfo,
               author: summary.author?.login ?? undefined,
               authorAvatarUrl: summary.author?.avatarUrl ?? undefined,
+              // Merge + CI status fields (Phase 12)
+              mergeable: summary.mergeable as MergeableState | undefined,
+              mergeStateStatus: summary.mergeStateStatus as MergeStateStatus | undefined,
+              ciChecks: extractCIChecks(summary),
+              viewerCanMergeAsAdmin: summary.viewerCanMergeAsAdmin ?? undefined,
             });
           }
         }
@@ -237,15 +265,22 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
 
     this.logger.info(`fetched ${comments?.length} comments for github PR ${diffId}}`);
 
+    // Fetch thread IDs separately via reviewThreads query
+    const threadMap = await this.fetchThreadInfo(diffId);
+
     return (
       [...comments, ...inline]?.filter(notEmpty).map(comment => {
+        const reviewComment = comment as PullRequestReviewComment;
+        // Match thread by path and line to get the threadId
+        const threadKey = `${reviewComment.path ?? ''}:${reviewComment.line ?? ''}`;
+        const threadInfo = threadMap.get(threadKey);
         return {
           author: comment.author?.login ?? '',
           authorAvatarUri: comment.author?.avatarUrl,
           html: comment.bodyHTML,
           created: new Date(comment.createdAt),
-          filename: (comment as PullRequestReviewComment).path ?? undefined,
-          line: (comment as PullRequestReviewComment).line ?? undefined,
+          filename: reviewComment.path ?? undefined,
+          line: reviewComment.line ?? undefined,
           reactions:
             comment.reactions?.nodes
               ?.filter(
@@ -257,9 +292,142 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
                 reaction: reaction.content,
               })) ?? [],
           replies: [], // PR top level doesn't have nested replies, you just reply to their name
+          threadId: threadInfo?.id,
+          isResolved: threadInfo?.isResolved,
         };
       }) ?? []
     );
+  }
+
+  /**
+   * Fetch thread IDs for inline comments.
+   * Returns a map of `path:line` -> { id, isResolved }
+   */
+  private async fetchThreadInfo(
+    diffId: string,
+  ): Promise<Map<string, {id: string; isResolved: boolean}>> {
+    const threadQuery = `
+      query PullRequestThreadsQuery($url: URI!) {
+        resource(url: $url) {
+          ... on PullRequest {
+            reviewThreads(first: 100) {
+              nodes {
+                id
+                isResolved
+                path
+                line
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    type ThreadQueryData = {
+      resource?: {
+        reviewThreads?: {
+          nodes?: Array<{
+            id: string;
+            isResolved: boolean;
+            path: string;
+            line: number | null;
+          } | null> | null;
+        } | null;
+      } | null;
+    };
+
+    try {
+      const response = await this.query<ThreadQueryData, {url: string}>(threadQuery, {
+        url: this.getPrUrl(diffId),
+      });
+
+      const threads = response?.resource?.reviewThreads?.nodes ?? [];
+      const map = new Map<string, {id: string; isResolved: boolean}>();
+      for (const thread of threads) {
+        if (thread != null) {
+          const key = `${thread.path}:${thread.line ?? ''}`;
+          map.set(key, {id: thread.id, isResolved: thread.isResolved});
+        }
+      }
+      return map;
+    } catch (error) {
+      this.logger.error('Failed to fetch thread info:', error);
+      return new Map();
+    }
+  }
+
+  /**
+   * Resolve a comment thread.
+   * Uses GitHub's resolveReviewThread GraphQL mutation.
+   */
+  public async resolveThread(threadId: string): Promise<void> {
+    const mutation = `
+      mutation ResolveThread($input: ResolveReviewThreadInput!) {
+        resolveReviewThread(input: $input) {
+          thread { id isResolved }
+        }
+      }
+    `;
+
+    const response = await this.query<
+      {resolveReviewThread?: {thread?: {id: string; isResolved: boolean} | null} | null},
+      {input: {threadId: string}}
+    >(mutation, {input: {threadId}});
+
+    if (response?.resolveReviewThread?.thread?.isResolved !== true) {
+      throw new Error('Failed to resolve thread');
+    }
+  }
+
+  /**
+   * Unresolve a previously resolved comment thread.
+   * Uses GitHub's unresolveReviewThread GraphQL mutation.
+   */
+  public async unresolveThread(threadId: string): Promise<void> {
+    const mutation = `
+      mutation UnresolveThread($input: UnresolveReviewThreadInput!) {
+        unresolveReviewThread(input: $input) {
+          thread { id isResolved }
+        }
+      }
+    `;
+
+    const response = await this.query<
+      {unresolveReviewThread?: {thread?: {id: string; isResolved: boolean} | null} | null},
+      {input: {threadId: string}}
+    >(mutation, {input: {threadId}});
+
+    if (response?.unresolveReviewThread?.thread?.isResolved !== false) {
+      throw new Error('Failed to unresolve thread');
+    }
+  }
+
+  /**
+   * Reply to an existing comment thread.
+   * Replies are submitted immediately (not batched) because they're on existing threads.
+   */
+  public async replyToThread(threadId: string, body: string): Promise<void> {
+    const mutation = `
+      mutation AddReply($threadId: ID!, $body: String!) {
+        addPullRequestReviewThreadReply(input: {
+          pullRequestReviewThreadId: $threadId,
+          body: $body
+        }) {
+          comment {
+            id
+          }
+        }
+      }
+    `;
+
+    const response = await this.query<
+      {addPullRequestReviewThreadReply?: {comment?: {id: string} | null} | null},
+      {threadId: string; body: string}
+    >(mutation, {threadId, body});
+
+    if (response?.addPullRequestReviewThreadReply?.comment?.id == null) {
+      throw new Error('Failed to add reply to thread');
+    }
   }
 
   private query<D, V>(query: string, variables: V, timeoutMs?: number): Promise<D | undefined> {
@@ -271,9 +439,107 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     );
   }
 
+  handleClientToServerMessage(
+    message: ClientToServerMessage,
+    postMessage: (message: ServerToClientMessage) => void,
+  ): boolean {
+    if (message.type === 'submitPullRequestReview') {
+      this.handleSubmitPullRequestReview(message, postMessage);
+      return true;
+    }
+    return false;
+  }
+
+  private async handleSubmitPullRequestReview(
+    message: {
+      type: 'submitPullRequestReview';
+      pullRequestId: string;
+      event: PullRequestReviewEvent;
+      body?: string;
+      threads?: DraftPullRequestReviewThread[];
+    },
+    postMessage: (message: ServerToClientMessage) => void,
+  ): Promise<void> {
+    try {
+      const reviewId = await submitPullRequestReview(
+        this.codeReviewSystem.hostname,
+        message.pullRequestId,
+        message.event,
+        message.body,
+        message.threads,
+      );
+      postMessage({
+        type: 'submittedPullRequestReview',
+        result: {value: {reviewId}},
+      });
+    } catch (error) {
+      postMessage({
+        type: 'submittedPullRequestReview',
+        result: {error: error as Error},
+      });
+    }
+  }
+
   public dispose() {
     this.diffSummaries.removeAllListeners();
     this.triggerDiffSummariesFetch.dispose();
+  }
+
+  /**
+   * Run external commands via `gh` CLI.
+   * Used for operations like `gh pr merge`, `gh pr close`, etc.
+   */
+  public async runExternalCommand(
+    cwd: string,
+    args: CommandArg[],
+    onProgress: OperationCommandProgressReporter,
+    _signal: AbortSignal,
+  ): Promise<void> {
+    const {ejeca} = await import('shared/ejeca');
+    const {Internal} = await import('../Internal');
+
+    // Convert CommandArg[] to string[] (filter out non-string args for gh commands)
+    const stringArgs = args.filter((arg): arg is string => typeof arg === 'string');
+
+    // Use gh CLI with the repo's hostname
+    const ghPath = Internal.ghPath ?? 'gh';
+    const hostname = this.codeReviewSystem.hostname;
+
+    // Add hostname for GitHub Enterprise
+    const ghArgs =
+      hostname !== 'github.com'
+        ? ['--hostname', hostname, ...stringArgs]
+        : stringArgs;
+
+    this.logger.info('running gh command:', ghPath, ghArgs.join(' '));
+    onProgress('spawn');
+
+    try {
+      const result = await ejeca(ghPath, ghArgs, {
+        cwd,
+        env: {
+          ...process.env,
+          // Set GH_REPO to ensure gh knows which repo to operate on
+          GH_REPO: `${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}`,
+        },
+      });
+
+      if (result.stdout) {
+        onProgress('stdout', result.stdout);
+      }
+      if (result.stderr) {
+        onProgress('stderr', result.stderr);
+      }
+    } catch (error) {
+      const err = error as Error & {stderr?: string; stdout?: string};
+      if (err.stderr) {
+        onProgress('stderr', err.stderr);
+      }
+      if (err.stdout) {
+        onProgress('stdout', err.stdout);
+      }
+      throw error;
+    }
   }
 
   public getSummaryName(): string {
@@ -449,6 +715,45 @@ function githubStatusRollupStateToCIStatus(state: StatusState | undefined): Diff
     case StatusState.Success:
       return 'pass';
   }
+}
+
+/**
+ * Extract CI check runs from the GraphQL PR data.
+ * Handles both CheckRun (GitHub Checks API) and StatusContext (legacy status API).
+ */
+function extractCIChecks(pr: any): CICheckRun[] | undefined {
+  const contexts = pr.commits?.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes;
+  if (!contexts || contexts.length === 0) {
+    return undefined;
+  }
+
+  return contexts
+    .filter(notEmpty)
+    .map(context => {
+      if (context.__typename === 'CheckRun') {
+        return {
+          name: context.name ?? 'Unknown',
+          status: (context.status ?? 'QUEUED') as CICheckRun['status'],
+          conclusion: context.conclusion as CICheckRun['conclusion'],
+          detailsUrl: context.detailsUrl,
+        };
+      } else {
+        // StatusContext (legacy status API)
+        return {
+          name: context.context ?? 'Unknown',
+          status: context.state === 'PENDING' ? 'PENDING' : 'COMPLETED',
+          conclusion:
+            context.state === 'SUCCESS'
+              ? 'SUCCESS'
+              : context.state === 'FAILURE'
+                ? 'FAILURE'
+                : context.state === 'ERROR'
+                  ? 'FAILURE'
+                  : undefined,
+          detailsUrl: context.targetUrl,
+        } as CICheckRun;
+      }
+    });
 }
 
 type GitHubNotificationResponse = {

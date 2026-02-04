@@ -1,0 +1,117 @@
+/* CI Status Badge - Review Mode */
+
+.ci-status-badge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--halfpad);
+}
+
+.ci-status-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--halfpad);
+  padding: var(--halfpad) var(--pad);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--button-secondary-background);
+  color: var(--foreground);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.ci-status-summary:hover:not(:disabled) {
+  background: var(--button-secondary-hover-background);
+}
+
+.ci-status-summary:disabled {
+  cursor: default;
+}
+
+/* Status colors */
+.ci-status-pass .ci-status-summary {
+  color: var(--signal-success-foreground);
+}
+
+.ci-status-failed .ci-status-summary {
+  color: var(--signal-error-foreground);
+}
+
+.ci-status-running .ci-status-summary {
+  color: var(--signal-pending-foreground);
+}
+
+.ci-status-warning .ci-status-summary {
+  color: var(--signal-warning-foreground);
+}
+
+.ci-status-no-signal {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--halfpad);
+  padding: var(--halfpad) var(--pad);
+  color: var(--subtle-foreground);
+  font-size: 12px;
+}
+
+/* Check details dropdown */
+.ci-status-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--halfpad);
+  background: var(--tooltip-background);
+  border-radius: var(--radius);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ci-check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.ci-check-link {
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+  text-decoration: none;
+  color: inherit;
+}
+
+.ci-check-link:hover {
+  background: var(--hover-darken);
+}
+
+.ci-check-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Check status colors */
+.ci-check-pass {
+  color: var(--signal-success-foreground);
+}
+
+.ci-check-failed {
+  color: var(--signal-error-foreground);
+}
+
+.ci-check-running {
+  color: var(--signal-pending-foreground);
+}
+
+.ci-check-neutral,
+.ci-check-cancelled {
+  color: var(--subtle-foreground);
+}
+
+.ci-check-unknown {
+  color: var(--subtle-foreground);
+}

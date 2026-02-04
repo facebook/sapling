@@ -88,3 +88,261 @@
   position: relative;
   background: var(--graphite-bg);
 }
+
+/* File navigation controls in review mode */
+.comparison-view-file-navigation {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--tooltip-border);
+}
+
+.file-nav-indicator {
+  font-size: 12px;
+  color: var(--foreground);
+  opacity: 0.8;
+  min-width: 50px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.comparison-view-file-navigation button {
+  padding: 2px 4px;
+}
+
+.comparison-view-file-navigation button:disabled {
+  opacity: 0.3;
+}
+
+/* Inline comment input in review mode */
+.inline-comment-input-container {
+  padding: var(--pad);
+  border-top: 1px solid var(--graphite-border);
+  background: var(--graphite-bg-subtle);
+}
+
+/* Pending comments section for a file */
+.file-pending-comments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--halfpad);
+  padding: var(--pad);
+  border-top: 1px solid var(--graphite-border);
+  background: var(--graphite-bg-subtle);
+}
+
+/* Review mode header section */
+.review-mode-header {
+  display: flex;
+  align-items: center;
+  gap: var(--pad);
+  padding: var(--halfpad) var(--pad);
+  background: var(--graphite-bg-subtle);
+  border-radius: 4px;
+  margin-bottom: var(--pad);
+}
+
+.review-mode-header .pending-info {
+  font-size: 12px;
+  color: var(--graphite-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--halfpad);
+}
+
+/* PR-level comment section */
+.pr-level-comments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--halfpad);
+  padding: var(--pad);
+  border: 1px solid var(--graphite-border);
+  border-radius: 4px;
+  margin-bottom: var(--pad);
+  background: var(--graphite-bg-subtle);
+}
+
+.pr-level-comments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--halfpad);
+}
+
+.pr-level-comments-title {
+  font-weight: 500;
+  color: var(--graphite-text-primary);
+}
+
+/* Pending comment badge on Submit Review button */
+.pending-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--button-primary-foreground);
+  color: var(--button-primary-background);
+  border-radius: 9px;
+}
+
+/* Merge controls section in review mode */
+.comparison-view-merge-section {
+  padding: var(--pad);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+/* Sync warning modal */
+.sync-warning-modal {
+  max-width: 400px;
+}
+
+.sync-warning-content {
+  padding: var(--pad);
+}
+
+.sync-warning-content h3 {
+  margin-bottom: var(--pad);
+  color: var(--foreground);
+}
+
+.sync-warning-details {
+  margin-bottom: var(--pad);
+}
+
+.warning-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.warning-icon {
+  margin-right: 8px;
+  font-weight: bold;
+}
+
+.warning-explanation {
+  font-size: 0.9em;
+  color: var(--subtle-foreground);
+  margin-left: 24px;
+}
+
+.sync-warning-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--halfpad);
+}
+
+/* Sync Progress */
+.sync-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.sync-progress-running {
+  background-color: var(--button-secondary-hover-background);
+  color: var(--foreground);
+}
+
+.sync-progress-success {
+  background-color: rgba(var(--signal-success-rgb), 0.15);
+  color: var(--signal-success);
+}
+
+.sync-progress-error {
+  background-color: rgba(var(--signal-error-rgb), 0.15);
+  color: var(--signal-error);
+}
+
+.sync-progress-text {
+  flex: 1;
+}
+
+.sync-progress .codicon-loading {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Stack navigation bar for multi-PR stacks */
+.stack-navigation-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--pad);
+  padding: var(--halfpad) var(--pad);
+  background: var(--graphite-bg-subtle);
+  border-bottom: 1px solid var(--graphite-border);
+  margin-bottom: var(--halfpad);
+}
+
+.stack-navigation-bar .stack-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--graphite-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stack-navigation-bar .stack-pr-pills {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.stack-navigation-bar .stack-pr-pill {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--graphite-bg);
+  border: 1px solid var(--graphite-border);
+  color: var(--graphite-text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stack-navigation-bar .stack-pr-pill:hover:not(:disabled) {
+  background: var(--graphite-bg-hover);
+  border-color: var(--button-primary-background);
+}
+
+.stack-navigation-bar .stack-pr-pill:disabled {
+  cursor: default;
+}
+
+.stack-navigation-bar .stack-pr-current {
+  background: var(--button-primary-background);
+  border-color: var(--button-primary-background);
+  color: var(--button-primary-foreground);
+}
+
+.stack-navigation-bar .stack-pr-merged {
+  opacity: 0.6;
+}
+
+.stack-navigation-bar .stack-pr-merged .codicon {
+  font-size: 10px;
+}
+
+.stack-navigation-bar .stack-position {
+  font-size: 11px;
+  color: var(--graphite-text-secondary);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}

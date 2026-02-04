@@ -341,6 +341,17 @@
   margin-left: auto;
 }
 
+/* PR row review button */
+.pr-row-review-button {
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.pr-row:hover .pr-row-review-button {
+  opacity: 1;
+}
+
 /* PR row view changes button */
 .pr-row-view-changes {
   opacity: 0;
@@ -416,4 +427,22 @@
 
 .bot-filter-inactive {
   opacity: 0.6;
+}
+
+/* PR Row merged badge */
+.pr-row-merged-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--scm-modified-foreground) 20%, transparent);
+  color: var(--scm-modified-foreground, #a855f7);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.pr-row-merged-badge .codicon {
+  font-size: 10px;
 }
