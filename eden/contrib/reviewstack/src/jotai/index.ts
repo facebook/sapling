@@ -40,6 +40,7 @@ export {
   gitHubPullRequestSelectedVersionCommitsAtom,
   gitHubThreadsForDiffFileAtom,
   gitHubPullRequestLineToPositionForFileAtom,
+  gitHubPullRequestCheckRunsAtom,
 } from './atoms';
 
 export type {
@@ -49,4 +50,5 @@ export type {
   ComparableVersions,
   ThreadsBySide,
   LineToPositionBySide,
+  CheckRun,
 } from './atoms';

@@ -5,11 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {
-  CheckRunFragment,
-  UserHomePageQueryData,
-  UserHomePageQueryVariables,
-} from './generated/graphql';
+import type {UserHomePageQueryData, UserHomePageQueryVariables} from './generated/graphql';
 import type GitHubClient from './github/GitHubClient';
 import type {CommitChange, DiffWithCommitIDs} from './github/diffTypes';
 import type {
@@ -1147,32 +1143,6 @@ export const gitHubUserHomePageData = selector<UserHomePageQueryData | null>({
       createRequestHeaders(token),
       graphQLEndpoint,
     );
-  },
-});
-
-type CheckRun = {
-  workflowName: string | undefined;
-} & CheckRunFragment;
-
-export const gitHubPullRequestCheckRuns = selector<CheckRun[]>({
-  key: 'gitHubPullRequestCheckRuns',
-  get: ({get}) => {
-    const pullRequest = get(gitHubPullRequest);
-    const latestCommit = pullRequest?.commits.nodes?.[0]?.commit;
-    const checkSuites = latestCommit?.checkSuites?.nodes ?? [];
-    return checkSuites.flatMap(checkSuite => {
-      if (checkSuite != null) {
-        const {checkRuns, workflowRun} = checkSuite;
-        const workflowName = workflowRun?.workflow.name;
-        return (
-          checkRuns?.nodes
-            ?.map(fragment => (fragment != null ? {...fragment, workflowName} : null))
-            .filter(notEmpty) ?? []
-        );
-      } else {
-        return [];
-      }
-    });
   },
 });
 

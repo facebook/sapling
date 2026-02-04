@@ -9,17 +9,17 @@ import PullRequestStack from './PullRequestStack';
 import PullRequestStateLabel from './PullRequestStateLabel';
 import PullRequestVersions from './PullRequestVersions';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
-import {gitHubPullRequest} from './recoil';
+import {gitHubPullRequestAtom} from './jotai';
 import {Box, Link, Text} from '@primer/react';
+import {useAtomValue} from 'jotai';
 import {Suspense} from 'react';
-import {useRecoilValue} from 'recoil';
 
 type Props = {
   height: number;
 };
 
 export default function PullRequestHeader({height}: Props): React.ReactElement | null {
-  const pullRequest = useRecoilValue(gitHubPullRequest);
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
 
   if (pullRequest == null) {
     return null;

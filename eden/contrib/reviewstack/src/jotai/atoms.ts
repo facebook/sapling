@@ -10,7 +10,7 @@
  * These atoms are migrated from Recoil and implemented natively in Jotai.
  */
 
-import type {DiffSide, LabelFragment, UserFragment} from '../generated/graphql';
+import type {CheckRunFragment, DiffSide, LabelFragment, UserFragment} from '../generated/graphql';
 import type GitHubClient from '../github/GitHubClient';
 import type {DiffCommitIDs, DiffWithCommitIDs} from '../github/diffTypes';
 import type {GitHubPullRequestReviewThread, PullRequest} from '../github/pullRequestTimelineTypes';
@@ -23,6 +23,7 @@ import {diffVersions} from '../github/diffVersions';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai-family';
 import {atomWithStorage} from 'jotai/utils';
+import {notEmpty} from 'shared/utils';
 
 // =============================================================================
 // Theme Atoms
@@ -571,3 +572,40 @@ export const gitHubPullRequestLineToPositionForFileAtom = atomFamily(
   (_path: string) => atom<LineToPositionBySide>(null),
   (a, b) => a === b,
 );
+
+// =============================================================================
+// Pull Request Check Runs
+// =============================================================================
+
+/**
+ * Type for check runs with workflow name included.
+ */
+export type CheckRun = {
+  workflowName: string | undefined;
+} & CheckRunFragment;
+
+/**
+ * Migrated from: gitHubPullRequestCheckRuns selector in recoil.ts
+ *
+ * Derived atom that extracts check runs from the current pull request's
+ * latest commit's check suites. Each check run includes the workflow name
+ * for display purposes.
+ */
+export const gitHubPullRequestCheckRunsAtom = atom<CheckRun[]>(get => {
+  const pullRequest = get(gitHubPullRequestAtom);
+  const latestCommit = pullRequest?.commits.nodes?.[0]?.commit;
+  const checkSuites = latestCommit?.checkSuites?.nodes ?? [];
+  return checkSuites.flatMap(checkSuite => {
+    if (checkSuite != null) {
+      const {checkRuns, workflowRun} = checkSuite;
+      const workflowName = workflowRun?.workflow.name;
+      return (
+        checkRuns?.nodes
+          ?.map(fragment => (fragment != null ? {...fragment, workflowName} : null))
+          .filter(notEmpty) ?? []
+      );
+    } else {
+      return [];
+    }
+  });
+});

@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {gitHubPullRequest} from './recoil';
+import {gitHubPullRequestAtom} from './jotai';
 import {CounterLabel} from '@primer/react';
-import {useRecoilValue} from 'recoil';
+import {useAtomValue} from 'jotai';
 
 export default function PullRequestChangeCount(): React.ReactElement | null {
-  const pullRequest = useRecoilValue(gitHubPullRequest);
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
 
   if (pullRequest == null) {
     return null;

@@ -8,7 +8,7 @@
 import type {CheckStatusState} from './generated/graphql';
 
 import {CheckConclusionState} from './generated/graphql';
-import {gitHubPullRequestCheckRuns} from './recoil';
+import {gitHubPullRequestCheckRunsAtom} from './jotai';
 import {
   AlertIcon,
   BlockedIcon,
@@ -21,11 +21,11 @@ import {
   XCircleIcon,
 } from '@primer/octicons-react';
 import {Box, Details, Link, StyledOcticon, Text, useDetails} from '@primer/react';
+import {useAtomValue} from 'jotai';
 import {useMemo} from 'react';
-import {useRecoilValue} from 'recoil';
 
 export default function PullRequestSignals(): React.ReactElement {
-  const checkRuns = useRecoilValue(gitHubPullRequestCheckRuns);
+  const checkRuns = useAtomValue(gitHubPullRequestCheckRunsAtom);
   const successful = useMemo(
     () => checkRuns.filter(({conclusion}) => conclusion === CheckConclusionState.Success).length,
     [checkRuns],

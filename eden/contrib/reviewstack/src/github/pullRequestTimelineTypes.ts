@@ -68,7 +68,7 @@ export type GitHubPullRequestReviewThreadsByLine = Map<number, GitHubPullRequest
 
 export type PullRequestReviewComment = {
   originalLine: PullRequestReviewThread['originalLine'];
-  comment: PullRequestComment;
+  comment: GitHubPullRequestReviewThreadComment;
 };
 
 export type PullRequestTimelineItem = PullRequestTimelineItemFragment;

@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {gitHubOrgAndRepoAtom} from './jotai';
 import URLFor from './URLFor';
-import {gitHubOrgAndRepo} from './recoil';
 import useNavigate from './useNavigate';
+import {useAtomValue} from 'jotai';
 import {useCallback} from 'react';
-import {useRecoilValue} from 'recoil';
 
 export default function useNavigateToPullRequest(): (number: number) => void {
   const navigate = useNavigate();
-  const {org, repo} = useRecoilValue(gitHubOrgAndRepo) ?? {};
+  const {org, repo} = useAtomValue(gitHubOrgAndRepoAtom) ?? {};
 
   return useCallback(
     (number: number) => {
