@@ -28,6 +28,18 @@ export {
   gitHubPullRequestViewerDidAuthorAtom,
   gitHubCurrentCommitAtom,
   gitHubDiffForCurrentCommitAtom,
+  gitHubDiffCommitIDsForCommitViewAtom,
+  gitHubPullRequestComparableVersionsAtom,
+  gitHubCommitAtom,
+  gitHubPullRequestCommitBaseParentAtom,
+  gitHubDiffForCommitsAtom,
+  gitHubPullRequestVersionDiffAtom,
+  gitHubDiffCommitIDsAtom,
 } from './atoms';
 
-export type {SupportedPrimerColorMode, GitHubOrgAndRepo, PullRequestReviewersList} from './atoms';
+export type {
+  SupportedPrimerColorMode,
+  GitHubOrgAndRepo,
+  PullRequestReviewersList,
+  ComparableVersions,
+} from './atoms';

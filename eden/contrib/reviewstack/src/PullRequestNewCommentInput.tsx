@@ -7,15 +7,15 @@
 
 import PullRequestCommentInput from './PullRequestCommentInput';
 import {DiffSide} from './generated/graphql';
-import {
-  gitHubClient,
-  gitHubPullRequest,
-  gitHubPullRequestComparableVersions,
-  gitHubPullRequestNewCommentInputCell,
-  gitHubPullRequestPositionForLine,
-} from './recoil';
+import {gitHubClientAtom, gitHubPullRequestAtom} from './jotai';
+import type {ComparableVersions} from './jotai';
+import {gitHubPullRequestComparableVersionsAtom} from './jotai';
+import {gitHubPullRequestNewCommentInputCell, gitHubPullRequestPositionForLine} from './recoil';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {Box, Text} from '@primer/react';
+import {useAtomValue} from 'jotai';
+import {loadable} from 'jotai/utils';
+import {useMemo, useCallback} from 'react';
 import {useRecoilCallback, useResetRecoilState} from 'recoil';
 
 type Props = {
@@ -27,22 +27,28 @@ type Props = {
 export default function PullRequestNewCommentInput({line, path, side}: Props): React.ReactElement {
   const onCancel = useResetRecoilState(gitHubPullRequestNewCommentInputCell);
   const refreshPullRequest = useRefreshPullRequest();
+
+  // Use Jotai loadable pattern for async client access in callbacks
+  const loadableClient = useMemo(() => loadable(gitHubClientAtom), []);
+  const clientLoadable = useAtomValue(loadableClient);
+  const client = clientLoadable.state === 'hasData' ? clientLoadable.data : null;
+
+  // Read pull request and comparable versions from Jotai
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
+  const comparableVersions = useAtomValue(gitHubPullRequestComparableVersionsAtom);
+
   const addComment = useRecoilCallback<[string], Promise<void>>(
     ({snapshot}) =>
       async comment => {
-        const client = snapshot.getLoadable(gitHubClient).valueMaybe();
         if (client == null) {
           return Promise.reject('client not found');
         }
 
-        const pullRequestId = snapshot.getLoadable(gitHubPullRequest).valueMaybe()?.id;
+        const pullRequestId = pullRequest?.id;
         if (pullRequestId == null) {
           return Promise.reject('pull request id not found');
         }
 
-        const comparableVersions = snapshot
-          .getLoadable(gitHubPullRequestComparableVersions)
-          .valueMaybe();
         if (comparableVersions == null) {
           return Promise.reject('comparableVersions not found');
         }
@@ -72,7 +78,7 @@ export default function PullRequestNewCommentInput({line, path, side}: Props): R
         onCancel();
         refreshPullRequest();
       },
-    [line, onCancel, path, refreshPullRequest, side],
+    [client, comparableVersions, line, onCancel, path, pullRequest, refreshPullRequest, side],
   );
 
   return (

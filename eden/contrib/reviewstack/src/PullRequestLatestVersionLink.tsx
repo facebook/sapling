@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import {gitHubPullRequestComparableVersionsAtom} from './jotai';
 import {
   gitHubPullRequestComparableVersions,
   gitHubPullRequestIsViewingLatest,
@@ -12,18 +13,21 @@ import {
 } from './recoil';
 import {ArrowLeftIcon} from '@primer/octicons-react';
 import {Link, Text} from '@primer/react';
+import {useSetAtom} from 'jotai';
 import {useCallback} from 'react';
 import {useRecoilValue, useResetRecoilState} from 'recoil';
 
 export default function PullRequestLatestVersionLink(): React.ReactElement | null {
   const resetSelectedVersionIndex = useResetRecoilState(gitHubPullRequestSelectedVersionIndex);
-  const resetComparableVersions = useResetRecoilState(gitHubPullRequestComparableVersions);
+  const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
   const isViewingLatest = useRecoilValue(gitHubPullRequestIsViewingLatest);
+  // Get the default value from Recoil (computed from versions) to reset to
+  const recoilComparableVersions = useRecoilValue(gitHubPullRequestComparableVersions);
 
   const onClick = useCallback(() => {
-    resetComparableVersions();
+    setComparableVersions(recoilComparableVersions);
     resetSelectedVersionIndex();
-  }, [resetComparableVersions, resetSelectedVersionIndex]);
+  }, [setComparableVersions, recoilComparableVersions, resetSelectedVersionIndex]);
 
   if (isViewingLatest) {
     return null;

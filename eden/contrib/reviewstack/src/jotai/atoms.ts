@@ -12,13 +12,14 @@
 
 import type {LabelFragment, UserFragment} from '../generated/graphql';
 import type GitHubClient from '../github/GitHubClient';
-import type {DiffWithCommitIDs} from '../github/diffTypes';
+import type {DiffCommitIDs, DiffWithCommitIDs} from '../github/diffTypes';
 import type {PullRequest} from '../github/pullRequestTimelineTypes';
-import type {Commit, GitObjectID, ID} from '../github/types';
+import type {Commit, DateTime, GitObjectID, ID} from '../github/types';
 
 import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
 import GraphQLGitHubClient from '../github/GraphQLGitHubClient';
-import {diffCommitWithParent} from '../github/diff';
+import {diffCommitWithParent, diffCommits} from '../github/diff';
+import {diffVersions} from '../github/diffVersions';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai-family';
 import {atomWithStorage} from 'jotai/utils';
@@ -260,5 +261,230 @@ export const gitHubDiffForCurrentCommitAtom = atom<Promise<DiffWithCommitIDs | n
     return diffCommitWithParent(commit, client);
   } else {
     return null;
+  }
+});
+
+// =============================================================================
+// Diff Commit IDs
+// =============================================================================
+
+/**
+ * Partially migrated from: gitHubDiffCommitIDs in recoil.ts
+ *
+ * Extracts the commit IDs from the current diff.
+ * This Jotai version handles the commit view case (when there's no pull request).
+ * For the PR case, use the Recoil gitHubDiffCommitIDs selector until
+ * gitHubPullRequestVersionDiff is migrated.
+ */
+export const gitHubDiffCommitIDsForCommitViewAtom = atom<Promise<DiffCommitIDs | null>>(
+  async get => {
+    const pullRequest = get(gitHubPullRequestAtom);
+    // Only handle the commit view case (when there's no pull request)
+    if (pullRequest != null) {
+      // Return null for PR case - consumers should use Recoil selector
+      return null;
+    }
+    const diffWithCommitIDs = await get(gitHubDiffForCurrentCommitAtom);
+    return diffWithCommitIDs?.commitIDs ?? null;
+  },
+);
+
+// =============================================================================
+// Pull Request Version Diff Support
+// =============================================================================
+
+/**
+ * Migrated from: ComparableVersions type in recoil.ts
+ *
+ * When there is no "before" explicitly selected, the view shows the Diff for
+ * the selected "after" version compared to its parent.
+ */
+export type ComparableVersions = {
+  beforeCommitID: GitObjectID | null;
+  afterCommitID: GitObjectID;
+};
+
+/**
+ * Migrated from: gitHubPullRequestComparableVersions in recoil.ts
+ *
+ * Stores the currently selected versions for comparison in a PR.
+ * This is a writable atom - the default is computed from versions (done by consumers).
+ */
+export const gitHubPullRequestComparableVersionsAtom = atom<ComparableVersions | null>(null);
+
+/**
+ * Migrated from: gitHubCommit selectorFamily in recoil.ts
+ *
+ * Fetches a commit by its OID using the GitHub client.
+ */
+export const gitHubCommitAtom = atomFamily(
+  (oid: GitObjectID) =>
+    atom<Promise<Commit | null>>(async get => {
+      const client = await get(gitHubClientAtom);
+      return client != null ? client.getCommit(oid) : null;
+    }),
+  (a, b) => a === b,
+);
+
+/**
+ * Migrated from: gitHubPullRequestCommitBaseParent selectorFamily in recoil.ts
+ *
+ * For a given commit in a PR, get its merge base commit with the main branch.
+ * Used to identify the appropriate base for comparison when generating diffs
+ * across versions.
+ *
+ * Note: This is a simplified version that fetches the base parent directly
+ * through the client. The full version in Recoil goes through
+ * gitHubPullRequestVersionBaseAndCommits which uses gitHubCommitComparison.
+ */
+export const gitHubPullRequestCommitBaseParentAtom = atomFamily(
+  (commitID: GitObjectID) =>
+    atom<Promise<{oid: GitObjectID; committedDate: DateTime} | null>>(async get => {
+      const client = await get(gitHubClientAtom);
+      const pullRequest = get(gitHubPullRequestAtom);
+      if (client == null || pullRequest == null) {
+        return null;
+      }
+
+      const baseRef = pullRequest.baseRefOid;
+      if (baseRef == null) {
+        return null;
+      }
+
+      // Use commit comparison to find the merge base
+      const comparison = await client.getCommitComparison(baseRef, commitID);
+      if (comparison == null) {
+        return null;
+      }
+
+      return {
+        oid: comparison.mergeBaseCommit.sha,
+        committedDate: comparison.mergeBaseCommit.commit.committer.date,
+      };
+    }),
+  (a, b) => a === b,
+);
+
+/**
+ * Migrated from: gitHubDiffForCommits selectorFamily in recoil.ts
+ *
+ * Computes the diff between two commits (base and head).
+ */
+export const gitHubDiffForCommitsAtom = atomFamily(
+  ({baseCommitID, commitID}: {baseCommitID: GitObjectID; commitID: GitObjectID}) =>
+    atom<Promise<DiffWithCommitIDs | null>>(async get => {
+      const client = await get(gitHubClientAtom);
+      if (client == null) {
+        return null;
+      }
+
+      const [baseCommit, commit] = await Promise.all([
+        get(gitHubCommitAtom(baseCommitID)),
+        get(gitHubCommitAtom(commitID)),
+      ]);
+
+      if (baseCommit == null || commit == null) {
+        return null;
+      }
+
+      return diffCommits(baseCommit, commit, client);
+    }),
+  (a, b) => a.baseCommitID === b.baseCommitID && a.commitID === b.commitID,
+);
+
+/**
+ * Migrated from: gitHubPullRequestVersionDiff selector in recoil.ts
+ *
+ * Returns the appropriate Diff for the current pull request. By default, it
+ * shows the Diff for the head commit of the PR compared to its parent, though
+ * if the user has selected a pair of versions via the radio buttons, it returns
+ * the Diff between those versions.
+ *
+ * Note: When comparableVersions is null (initial state before user selection),
+ * the Recoil gitHubPullRequestComparableVersions selector computes a default
+ * from gitHubPullRequestVersions. Since that logic remains in Recoil during
+ * migration, a null here means we should return null and let the Recoil-based
+ * default kick in when the component re-renders.
+ */
+export const gitHubPullRequestVersionDiffAtom = atom<Promise<DiffWithCommitIDs | null>>(
+  async get => {
+    const client = await get(gitHubClientAtom);
+    const comparableVersions = get(gitHubPullRequestComparableVersionsAtom);
+
+    if (client == null || comparableVersions == null) {
+      return null;
+    }
+
+    const {beforeCommitID, afterCommitID} = comparableVersions;
+
+    // If afterCommitID is empty, we can't compute a diff
+    if (afterCommitID === '') {
+      return null;
+    }
+
+    // Get the base parent for the "after" commit
+    const afterBaseParent = await get(gitHubPullRequestCommitBaseParentAtom(afterCommitID));
+    const afterBaseCommitID = afterBaseParent?.oid;
+
+    if (beforeCommitID != null) {
+      // Comparing two explicit versions
+      const beforeBaseParent = await get(gitHubPullRequestCommitBaseParentAtom(beforeCommitID));
+      const beforeBaseCommitID = beforeBaseParent?.oid;
+
+      if (beforeBaseCommitID != null && afterBaseCommitID != null) {
+        // If the base parents are the same, then there was no rebase and the
+        // two versions can be diffed directly
+        if (beforeBaseCommitID === afterBaseCommitID) {
+          return get(
+            gitHubDiffForCommitsAtom({baseCommitID: beforeCommitID, commitID: afterCommitID}),
+          );
+        }
+
+        // Different base parents - need to diff the versions against their respective bases
+        // and then diff the diffs
+        const [beforeDiff, afterDiff] = await Promise.all([
+          get(
+            gitHubDiffForCommitsAtom({baseCommitID: beforeBaseCommitID, commitID: beforeCommitID}),
+          ),
+          get(gitHubDiffForCommitsAtom({baseCommitID: afterBaseCommitID, commitID: afterCommitID})),
+        ]);
+
+        if (beforeDiff != null && afterDiff != null) {
+          return {
+            diff: diffVersions(beforeDiff.diff, afterDiff.diff),
+            commitIDs: {
+              before: beforeCommitID,
+              after: afterCommitID,
+            },
+          };
+        }
+      }
+    } else if (afterBaseCommitID != null) {
+      // No explicit "before" - compare "after" against its base
+      return get(
+        gitHubDiffForCommitsAtom({baseCommitID: afterBaseCommitID, commitID: afterCommitID}),
+      );
+    }
+
+    return null;
+  },
+);
+
+/**
+ * Migrated from: gitHubDiffCommitIDs selector in recoil.ts
+ *
+ * Extracts the commit IDs from the current diff.
+ * Handles both commit view (single commit) and PR view (version comparison).
+ */
+export const gitHubDiffCommitIDsAtom = atom<Promise<DiffCommitIDs | null>>(async get => {
+  const pullRequest = get(gitHubPullRequestAtom);
+  if (pullRequest != null) {
+    // PR case - use version diff
+    const diffWithCommitIDs = await get(gitHubPullRequestVersionDiffAtom);
+    return diffWithCommitIDs?.commitIDs ?? null;
+  } else {
+    // Commit view case
+    const diffWithCommitIDs = await get(gitHubDiffForCurrentCommitAtom);
+    return diffWithCommitIDs?.commitIDs ?? null;
   }
 });

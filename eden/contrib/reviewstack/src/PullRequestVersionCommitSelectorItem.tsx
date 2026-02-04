@@ -11,11 +11,13 @@ import BulletItems from './BulletItems';
 import CommentCount from './CommentCount';
 import CommitLink from './CommitLink';
 import ToggleButton from './ToggleButton';
-import {gitHubPullRequestComparableVersions, gitHubPullRequestThreadsForCommit} from './recoil';
+import {gitHubPullRequestComparableVersionsAtom} from './jotai';
+import {gitHubPullRequestThreadsForCommit} from './recoil';
 import {countCommentsForThreads, formatISODate} from './utils';
 import {ActionList, Box, Text} from '@primer/react';
+import {useSetAtom} from 'jotai';
 import React, {useCallback} from 'react';
-import {useRecoilValue, useSetRecoilState} from 'recoil';
+import {useRecoilValue} from 'recoil';
 
 const TOGGLE_BUTTON_WIDTH = 70;
 
@@ -49,7 +51,7 @@ export default React.memo(function PullRequestVersionCommitSelectorItem({
   org: string;
   repo: string;
 }): React.ReactElement {
-  const setComparableVersions = useSetRecoilState(gitHubPullRequestComparableVersions);
+  const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
   const reviewThreadsForCommit = useRecoilValue(gitHubPullRequestThreadsForCommit(commit));
   const commentCount = countCommentsForThreads(reviewThreadsForCommit);
 
@@ -58,8 +60,15 @@ export default React.memo(function PullRequestVersionCommitSelectorItem({
     // "after" against base.
     const newBefore = beforeIndex === index ? null : commit;
     // If the currently selected "after" is already newer, then keep it.
+    // When afterCommitID is empty (initial state), use the commit at afterIndex
+    // which defaults to the latest commit.
     // Otherwise, update to the immediate next version.
-    const newAfter = afterIndex > index ? afterCommitID : commits[index + 1]?.commit;
+    const newAfter =
+      afterIndex > index
+        ? afterCommitID !== ''
+          ? afterCommitID
+          : commits[afterIndex].commit
+        : (commits[index + 1]?.commit ?? commits[commits.length - 1].commit);
     setComparableVersions({
       beforeCommitID: newBefore,
       afterCommitID: newAfter,

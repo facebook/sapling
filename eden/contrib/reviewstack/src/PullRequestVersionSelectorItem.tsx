@@ -10,15 +10,13 @@ import type {DateTime, GitObjectID, VersionCommit} from './github/types';
 import BulletItems from './BulletItems';
 import CommentCount from './CommentCount';
 import CommitLink from './CommitLink';
-import {
-  gitHubPullRequestComparableVersions,
-  gitHubPullRequestThreadsByCommit,
-  gitHubPullRequestSelectedVersionIndex,
-} from './recoil';
+import {gitHubPullRequestComparableVersionsAtom} from './jotai';
+import {gitHubPullRequestThreadsByCommit, gitHubPullRequestSelectedVersionIndex} from './recoil';
 import {countCommentsForThreads, formatISODate, versionLabel} from './utils';
 import {ActionList, Box, Text} from '@primer/react';
+import {useSetAtom} from 'jotai';
 import React, {useCallback} from 'react';
-import {useRecoilState, useRecoilValue, useSetRecoilState} from 'recoil';
+import {useRecoilState, useRecoilValue} from 'recoil';
 
 // eslint-disable-next-line prefer-arrow-callback
 export default React.memo(function PullRequestVersionSelectorItem({
@@ -41,7 +39,7 @@ export default React.memo(function PullRequestVersionSelectorItem({
   const [selectedVersionIndex, setSelectedVersionIndex] = useRecoilState(
     gitHubPullRequestSelectedVersionIndex,
   );
-  const setComparableVersions = useSetRecoilState(gitHubPullRequestComparableVersions);
+  const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
   const reviewThreadsByCommit = useRecoilValue(gitHubPullRequestThreadsByCommit);
   const commentCount = commits.reduce((acc, commit) => {
     const reviewThreadsForCommit = reviewThreadsByCommit.get(commit.commit);

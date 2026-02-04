@@ -17,26 +17,33 @@ import PullRequestReviewers from './PullRequestReviewers';
 import PullRequestSignals from './PullRequestSignals';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
 import {stripStackInfoFromBodyHTML} from './ghstackUtils';
-import {gitHubOrgAndRepoAtom, gitHubPullRequestAtom, gitHubPullRequestIDAtom} from './jotai';
 import {
-  gitHubPullRequestForParams,
-  gitHubPullRequestComparableVersions,
-  gitHubPullRequestVersionDiff,
+  gitHubOrgAndRepoAtom,
+  gitHubPullRequestAtom,
+  gitHubPullRequestComparableVersionsAtom,
+  gitHubPullRequestIDAtom,
+  gitHubPullRequestVersionDiffAtom,
+} from './jotai';
+import {
   gitHubPullRequest,
+  gitHubPullRequestComparableVersions,
+  gitHubPullRequestForParams,
 } from './recoil';
 import {stripStackInfoFromSaplingBodyHTML} from './saplingStack';
 import {stackedPullRequest} from './stackState';
 import {Box, Text} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {Suspense, useEffect} from 'react';
-import {useRecoilValueLoadable, useResetRecoilState, useSetRecoilState} from 'recoil';
+import {useRecoilValue, useRecoilValueLoadable, useSetRecoilState} from 'recoil';
 
 export default function PullRequest() {
-  const resetComparableVersions = useResetRecoilState(gitHubPullRequestComparableVersions);
-  // Reset the radio buttons as part of the initial page load.
+  const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
+  // Get the default value from Recoil (computed from versions)
+  const recoilComparableVersions = useRecoilValue(gitHubPullRequestComparableVersions);
+  // Initialize the Jotai atom with the Recoil-computed default on page load.
   useEffect(() => {
-    resetComparableVersions();
-  }, [resetComparableVersions]);
+    setComparableVersions(recoilComparableVersions);
+  }, [setComparableVersions, recoilComparableVersions]);
 
   return (
     <Suspense fallback={<CenteredSpinner />}>
@@ -150,8 +157,7 @@ function PullRequestDetails() {
 }
 
 function PullRequestVersionDiff() {
-  const loadable = useRecoilValueLoadable(gitHubPullRequestVersionDiff);
-  const diff = loadable.getValue();
+  const diff = useAtomValue(gitHubPullRequestVersionDiffAtom);
 
   if (diff != null) {
     return (
