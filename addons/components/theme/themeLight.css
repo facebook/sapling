@@ -7,6 +7,8 @@
 
 html .light-theme,
 html .vscode-light {
+  color-scheme: light;
+
   /* custom values **/
   --scm-modified-foreground: #895503;
   --scm-added-foreground: #007100;

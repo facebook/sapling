@@ -7,6 +7,8 @@
 
 html .dark-theme,
 html .vscode-dark {
+  color-scheme: dark;
+
   --scm-modified-foreground: #e2c08d;
   --scm-added-foreground: #73c991;
   --scm-removed-foreground: #f3674f;
