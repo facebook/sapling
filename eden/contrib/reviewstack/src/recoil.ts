@@ -11,7 +11,7 @@ import type {
   UserHomePageQueryVariables,
 } from './generated/graphql';
 import type GitHubClient from './github/GitHubClient';
-import type {CommitChange, DiffCommitIDs, DiffWithCommitIDs} from './github/diffTypes';
+import type {CommitChange, DiffWithCommitIDs} from './github/diffTypes';
 import type {
   CommitData,
   PullRequestCommitItem,
@@ -40,7 +40,6 @@ import {DiffSide, PullRequestReviewState, UserHomePageQuery} from './generated/g
 import CachingGitHubClient, {openDatabase} from './github/CachingGitHubClient';
 import GraphQLGitHubClient from './github/GraphQLGitHubClient';
 import {diffCommits, diffCommitWithParent} from './github/diff';
-import {diffVersions} from './github/diffVersions';
 import {
   gitHubGraphQLEndpoint,
   gitHubHostname,
@@ -136,13 +135,8 @@ export const gitHubPullRequest = atom<PullRequest | null>({
   default: null,
 });
 
-export const gitHubPullRequestViewerDidAuthor = selector<boolean>({
-  key: 'gitHubPullRequestViewerDidAuthor',
-  get: ({get}) => {
-    const pullRequest = get(gitHubPullRequest);
-    return pullRequest?.viewerDidAuthor ?? false;
-  },
-});
+// NOTE: gitHubPullRequestViewerDidAuthor has been migrated to Jotai.
+// See gitHubPullRequestViewerDidAuthorAtom in jotai/atoms.ts
 
 export const gitHubPullRequestBaseRef = selector<GitObjectID | null>({
   key: 'gitHubPullRequestBaseRef',
@@ -880,61 +874,8 @@ export const gitHubPullRequestSelectedVersionCommits = selector<VersionCommit[]>
   },
 });
 
-/**
- * Returns the appropriate Diff for the current pull request. By default, it
- * shows the Diff for the head commit of the PR compared to its parent, though
- * if the user has selected a pair of versions via the radio buttons, it returns
- * the Diff between those versions.
- */
-export const gitHubPullRequestVersionDiff = selector<DiffWithCommitIDs | null>({
-  key: 'gitHubPullRequestVersionDiff',
-  get: ({get}) => {
-    const [client, comparableVersions] = get(
-      waitForAll([gitHubClient, gitHubPullRequestComparableVersions]),
-    );
-    if (client == null) {
-      return null;
-    }
-
-    const {beforeCommitID, afterCommitID} = comparableVersions;
-    const afterBaseCommitID = get(gitHubPullRequestCommitBaseParent(afterCommitID))?.oid;
-    if (beforeCommitID != null) {
-      const beforeBaseCommitID = get(gitHubPullRequestCommitBaseParent(beforeCommitID))?.oid;
-      if (beforeBaseCommitID != null && afterBaseCommitID != null) {
-        // If the base parents are the same, then there was no rebase and the
-        // two versions can be diffed directly
-        if (beforeBaseCommitID === afterBaseCommitID) {
-          return gitHubDiffForCommits({baseCommitID: beforeCommitID, commitID: afterCommitID});
-        }
-
-        const [beforeDiff, afterDiff] = get(
-          waitForAll([
-            gitHubDiffForCommits({baseCommitID: beforeBaseCommitID, commitID: beforeCommitID}),
-            gitHubDiffForCommits({baseCommitID: afterBaseCommitID, commitID: afterCommitID}),
-          ]),
-        );
-        if (beforeDiff != null && afterDiff != null) {
-          return {
-            diff: diffVersions(beforeDiff.diff, afterDiff.diff),
-            commitIDs: {
-              before: beforeCommitID,
-              after: afterCommitID,
-            },
-          };
-        }
-      }
-    } else if (afterBaseCommitID != null) {
-      return get(
-        gitHubDiffForCommits({
-          baseCommitID: afterBaseCommitID,
-          commitID: afterCommitID,
-        }),
-      );
-    }
-
-    return null;
-  },
-});
+// NOTE: gitHubPullRequestVersionDiff has been migrated to Jotai.
+// See gitHubPullRequestVersionDiffAtom in jotai/atoms.ts
 
 const gitHubPullRequestDiffCommitWithBaseByPath = selectorFamily<
   Map<string, CommitChange> | null,
@@ -983,15 +924,8 @@ export const gitHubCommitComparison = selectorFamily<
     },
 });
 
-export const gitHubDiffCommitIDs = selector<DiffCommitIDs | null>({
-  key: 'gitHubDiffCommitIDs',
-  get: ({get}) => {
-    const pullRequest = get(gitHubPullRequest);
-    const diffWithCommitIDs =
-      pullRequest != null ? get(gitHubPullRequestVersionDiff) : get(gitHubDiffForCurrentCommit);
-    return diffWithCommitIDs?.commitIDs ?? null;
-  },
-});
+// NOTE: gitHubDiffCommitIDs has been migrated to Jotai.
+// See gitHubDiffCommitIDsAtom in jotai/atoms.ts
 
 export const gitHubDiffForCommitID = selectorFamily<DiffWithCommitIDs | null, GitObjectID>({
   key: 'gitHubDiffForCommitID',
@@ -1020,18 +954,8 @@ export const gitHubDiffForCommits = selectorFamily<
     },
 });
 
-export const gitHubDiffForCurrentCommit = selector<DiffWithCommitIDs | null>({
-  key: 'gitHubDiffForCurrentCommit',
-  get: ({get}) => {
-    const client = get(gitHubClient);
-    const commit = get(gitHubCurrentCommit);
-    if (client != null && commit != null) {
-      return diffCommitWithParent(commit, client);
-    } else {
-      return null;
-    }
-  },
-});
+// NOTE: gitHubDiffForCurrentCommit has been migrated to Jotai.
+// See gitHubDiffForCurrentCommitAtom in jotai/atoms.ts
 
 export const gitHubClient = selector<GitHubClient | null>({
   key: 'gitHubClient',

@@ -65,10 +65,10 @@ function isTargetTextInputElement(event: KeyboardEvent): boolean {
   );
 }
 
-class CommandDispatcher<CommandName extends string> extends EventTarget {
+class CommandDispatcher<CommandName extends string> {
+  private eventTarget = new EventTarget();
   private keydownListener: (event: KeyboardEvent) => void;
   constructor(commands: CommandMap<CommandName>) {
-    super();
     const knownKeysWithCommands = new Set<KeyCode>();
     for (const cmdDef of Object.values(commands) as Array<CommandDefinition>) {
       const [, key] = cmdDef;
@@ -93,12 +93,24 @@ class CommandDispatcher<CommandName extends string> extends EventTarget {
       >) {
         const [mods, key] = cmdAttrs;
         if (key === event.keyCode && collapseModifiersToNumber(mods) === modValue) {
-          this.dispatchEvent(new Event(command));
+          this.eventTarget.dispatchEvent(new Event(command));
           break;
         }
       }
     };
     document.body.addEventListener('keydown', this.keydownListener);
+  }
+
+  addEventListener(type: string, callback: EventListenerOrEventListenerObject | null) {
+    this.eventTarget.addEventListener(type, callback);
+  }
+
+  removeEventListener(type: string, callback: EventListenerOrEventListenerObject | null) {
+    this.eventTarget.removeEventListener(type, callback);
+  }
+
+  dispatchEvent(event: Event): boolean {
+    return this.eventTarget.dispatchEvent(event);
   }
 }
 
