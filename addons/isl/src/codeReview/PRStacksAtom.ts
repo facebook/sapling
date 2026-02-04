@@ -103,8 +103,18 @@ export type PRStack = {
   mainAuthorAvatarUrl?: string;
   /** Whether all PRs in this stack are merged */
   isMerged: boolean;
+  /** Whether all PRs in this stack are closed (abandoned, not merged) */
+  isClosed: boolean;
   /** Count of merged PRs in the stack */
   mergedCount: number;
+  /**
+   * True if this stack has "stale" PRs - PRs that are still open but whose
+   * changes were already merged via a higher PR (merged directly on GitHub).
+   * This happens when the top PR in stackInfo is missing (merged elsewhere).
+   */
+  hasStaleAbove: boolean;
+  /** The PR number that was merged above this stack (if hasStaleAbove) */
+  mergedAbovePrNumber?: number;
 };
 
 /**
@@ -122,6 +132,8 @@ export type StackNavigationContext = {
     title: string;
     isCurrent: boolean;
     state: DiffSummary['state'];
+    /** Review decision: APPROVED, CHANGES_REQUESTED, REVIEW_REQUIRED, or undefined */
+    reviewDecision?: string;
   }>;
   /** Whether this is a single PR (no stack navigation needed) */
   isSinglePr: boolean;
@@ -162,6 +174,13 @@ export const prStacksAtom = atom<PRStack[]>(get => {
       const stackPrs: DiffSummary[] = [];
       let topPrNumber: number | null = null;
 
+      // Track if the TRUE top of the stack (first in stackInfo) is missing
+      // This indicates the top was merged via GitHub and lower PRs are now "stale"
+      const trueTopPrNumber = stackInfo[0]?.prNumber;
+      const trueTopInDiffs = trueTopPrNumber ? diffsMap.has(String(trueTopPrNumber)) : false;
+      let hasStaleAbove = false;
+      let mergedAbovePrNumber: number | undefined;
+
       for (const entry of stackInfo) {
         const prDiffId = String(entry.prNumber);
         const prSummary = diffsMap.get(prDiffId);
@@ -173,6 +192,10 @@ export const prStacksAtom = atom<PRStack[]>(get => {
           if (topPrNumber === null) {
             topPrNumber = entry.prNumber;
           }
+        } else if (topPrNumber === null && entry.prNumber === trueTopPrNumber) {
+          // The true top is missing (likely merged) - mark stack as having stale PRs
+          hasStaleAbove = true;
+          mergedAbovePrNumber = trueTopPrNumber;
         }
       }
 
@@ -184,9 +207,11 @@ export const prStacksAtom = atom<PRStack[]>(get => {
         const mainAuthorAvatarUrl =
           firstPr.type === 'github' ? firstPr.authorAvatarUrl : undefined;
 
-        // Check merge status
+        // Check merge/close status
         const mergedCount = stackPrs.filter(pr => pr.state === 'MERGED').length;
+        const closedCount = stackPrs.filter(pr => pr.state === 'CLOSED').length;
         const isMerged = mergedCount === stackPrs.length;
+        const isClosed = closedCount === stackPrs.length;
 
         stacks.push({
           id: `stack-${topPrNumber}`,
@@ -196,7 +221,10 @@ export const prStacksAtom = atom<PRStack[]>(get => {
           mainAuthor,
           mainAuthorAvatarUrl,
           isMerged,
+          isClosed,
           mergedCount,
+          hasStaleAbove,
+          mergedAbovePrNumber,
         });
       }
     } else {
@@ -209,8 +237,9 @@ export const prStacksAtom = atom<PRStack[]>(get => {
       const mainAuthorAvatarUrl =
         summary.type === 'github' ? summary.authorAvatarUrl : undefined;
 
-      // Check merge status
+      // Check merge/close status
       const isMerged = summary.state === 'MERGED';
+      const isClosed = summary.state === 'CLOSED';
 
       stacks.push({
         id: `single-${diffId}`,
@@ -220,7 +249,9 @@ export const prStacksAtom = atom<PRStack[]>(get => {
         mainAuthor,
         mainAuthorAvatarUrl,
         isMerged,
+        isClosed,
         mergedCount: isMerged ? 1 : 0,
+        hasStaleAbove: false,
       });
     }
   }
@@ -262,6 +293,7 @@ export const multiPrStacksCountAtom = atom<number>(get => {
 
 /**
  * Derived atom that provides stack navigation context for the current PR in review mode.
+ * Uses prStacksAtom for consistent stack data with the left column.
  * Returns null when not in review mode.
  * Returns { isSinglePr: true, ... } when PR has no stack.
  */
@@ -276,19 +308,30 @@ export const currentPRStackContextAtom = atom<StackNavigationContext | null>(get
     return null;
   }
 
+  const currentPrNumberStr = String(reviewMode.prNumber);
   const currentPR = diffs.value.get(reviewMode.prNumber);
-  if (!currentPR || currentPR.type !== 'github') {
-    return null;
-  }
 
-  const stackInfo = getStackInfo(currentPR);
-  if (!stackInfo || stackInfo.length <= 1) {
+  // Find the stack containing this PR from prStacksAtom (same source as left column)
+  const stacks = get(prStacksAtom);
+  const containingStack = stacks.find(stack =>
+    stack.prs.some(pr => {
+      // Use string comparison to avoid type mismatches
+      const prNumStr = pr.type === 'github' ? String(pr.number) : String(pr);
+      return prNumStr === currentPrNumberStr;
+    })
+  );
+
+  if (!containingStack || !containingStack.isStack) {
+    // Single PR - no stack navigation
+    if (!currentPR || currentPR.type !== 'github') {
+      return null;
+    }
     return {
       isSinglePr: true,
       currentIndex: 0,
       stackSize: 1,
       entries: [{
-        prNumber: Number(reviewMode.prNumber),
+        prNumber: Number(currentPrNumberStr),
         headHash: currentPR.head,
         title: currentPR.title,
         isCurrent: true,
@@ -297,28 +340,22 @@ export const currentPRStackContextAtom = atom<StackNavigationContext | null>(get
     };
   }
 
-  // Build entries with full PR details from allDiffSummaries
-  const entries = stackInfo
-    .map(entry => {
-      const prData = diffs.value?.get(String(entry.prNumber));
-      if (!prData || prData.type !== 'github') {
-        // PR not in summaries - still include with partial data
-        return {
-          prNumber: entry.prNumber,
-          headHash: '',
-          title: `PR #${entry.prNumber}`,
-          isCurrent: entry.isCurrent,
-          state: PullRequestState.Open,
-        };
-      }
-      return {
-        prNumber: entry.prNumber,
-        headHash: prData.head,
-        title: prData.title,
-        isCurrent: entry.isCurrent,
-        state: prData.state,
-      };
-    });
+  // Build entries from the stack PRs (ordered top-to-bottom, same as left column)
+  const entries = containingStack.prs.map(pr => {
+    if (pr.type !== 'github') {
+      return null;
+    }
+    // Use string comparison for isCurrent to avoid type mismatches
+    const prNumStr = String(pr.number);
+    return {
+      prNumber: Number(pr.number),
+      headHash: pr.head,
+      title: pr.title,
+      isCurrent: prNumStr === currentPrNumberStr,
+      state: pr.state,
+      reviewDecision: pr.reviewDecision,
+    };
+  }).filter((e): e is NonNullable<typeof e> => e !== null);
 
   const currentIndex = entries.findIndex(e => e.isCurrent);
 
@@ -326,6 +363,6 @@ export const currentPRStackContextAtom = atom<StackNavigationContext | null>(get
     currentIndex: currentIndex >= 0 ? currentIndex : 0,
     stackSize: entries.length,
     entries,
-    isSinglePr: false,
+    isSinglePr: entries.length <= 1,
   };
 });
