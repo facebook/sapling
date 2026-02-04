@@ -13,7 +13,7 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0.98"
 blobstore = { version = "0.1.0", path = "../../../blobstore" }
-bytes = { version = "1.10", features = ["serde"] }
+bytes = { version = "1.11.1", features = ["serde"] }
 cas_client = { version = "0.1.0", path = "../client" }
 context = { version = "0.1.0", path = "../../../servers/slapi/slapi_server/context" }
 filestore = { version = "0.1.0", path = "../../../repo_attributes/filestore" }
