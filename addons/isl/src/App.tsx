@@ -61,9 +61,6 @@ export default function App() {
 
   return (
     <AllProviders>
-      <div style={{background: '#ff00ff', color: 'white', padding: '8px', fontWeight: 'bold', textAlign: 'center'}}>
-        🔧 LOCAL DEV BUILD v2 🔧
-      </div>
       {mode.mode === 'isl' ? (
         <>
           <NullStateOrDrawers />
