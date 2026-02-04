@@ -14,12 +14,11 @@ import {Button} from 'isl-components/Button';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {ErrorShortMessages} from 'isl-server/src/constants';
 import {atom, useAtomValue} from 'jotai';
-import {Commit, InlineProgressSpan} from './Commit';
-import {Center, LargeSpinner} from './ComponentUtils';
+import {Commit, InlineProgressSpan, isExternalCommitByDiffId} from './Commit';
 import {FetchingAdditionalCommitsRow} from './FetchAdditionalCommitsButton';
 import {isHighlightedCommit} from './HighlightedCommits';
 import {RegularGlyph, RenderDag, YouAreHereGlyph} from './RenderDag';
-import {StackActions} from './StackActions';
+import {StackActions, collapsedStacksAtom} from './StackActions';
 import {YOU_ARE_HERE_VIRTUAL_COMMIT} from './dag/virtualCommit';
 import {T, t} from './i18n';
 import {atomFamilyWeak, localStorageBackedAtom} from './jotaiUtils';
@@ -35,10 +34,25 @@ import {
   useCommitCallbacks,
   useShortcutToRebaseSelected,
 } from './selection';
+import {useEffect} from 'react';
 import {commitFetchError, latestUncommittedChangesData} from './serverAPIState';
 import {MaybeEditStackModal} from './stackEdit/ui/EditStackModal';
 
 import './CommitTreeList.css';
+
+/**
+ * Check if a commit has origin/main or origin/master bookmark.
+ * Used to apply special highlighting to the main branch marker.
+ */
+function isOriginMain(commit: DagCommitInfo): boolean {
+  return commit.remoteBookmarks.some(
+    bookmark =>
+      bookmark === 'origin/main' ||
+      bookmark === 'origin/master' ||
+      bookmark === 'remote/main' ||
+      bookmark === 'remote/master',
+  );
+}
 
 type DagCommitListProps = {
   isNarrow: boolean;
@@ -72,6 +86,27 @@ const renderSubsetUnionSelection = atom(get => {
     subset = dag.filter(commit => commit.isDot || !isIrrelevantToCwd(commit, cwd), subset);
   }
 
+  // Filter out commits in collapsed stacks (but keep the stack root)
+  const collapsedStacks = get(collapsedStacksAtom);
+  if (collapsedStacks.length > 0) {
+    const collapsedSet = new Set(collapsedStacks);
+    subset = dag.filter(commit => {
+      // Always show the commit if it's the stack root (in collapsedStacks)
+      if (collapsedSet.has(commit.hash)) {
+        return true;
+      }
+      // Hide commits whose ancestors include a collapsed stack root
+      for (const rootHash of collapsedStacks) {
+        const rootCommit = dag.get(rootHash);
+        if (rootCommit && dag.isAncestor(rootHash, commit.hash)) {
+          // This commit is a descendant of a collapsed stack root, hide it
+          return false;
+        }
+      }
+      return true;
+    }, subset);
+  }
+
   return subset.union(selection);
 });
 
@@ -91,6 +126,7 @@ function DagCommitList(props: DagCommitListProps) {
       renderCommitExtras={renderCommitExtras}
       renderGlyph={renderGlyph}
       useExtraCommitRowProps={useExtraCommitRowProps}
+      useLineColor={useLineColor}
     />
   );
 }
@@ -128,6 +164,19 @@ function useExtraCommitRowProps(info: DagCommitInfo): React.HTMLAttributes<HTMLD
   };
 }
 
+const EXTERNAL_COMMIT_COLOR = 'var(--external-commit-line-color, #6b7280)';
+
+function useLineColor(info: DagCommitInfo): string | undefined {
+  const diffId = info.diffId;
+  // Use empty string as sentinel for "no diffId" - atom will return false for it
+  const isExternal = useAtomValue(isExternalCommitByDiffId(diffId ?? ''));
+  // Only return external color if there's actually a diffId
+  if (diffId == null) {
+    return undefined;
+  }
+  return isExternal ? EXTERNAL_COMMIT_COLOR : undefined;
+}
+
 function YouAreHereGlyphWithProgress({info}: {info: DagCommitInfo}) {
   const inlineProgress = useAtomValue(inlineProgressByHash(info.hash));
   return (
@@ -146,12 +195,14 @@ const dagHasChildren = atomFamilyWeak((key: string) => {
 
 function DagCommitBody({info}: {info: DagCommitInfo}) {
   const hasChildren = useAtomValue(dagHasChildren(info.hash));
+  const isMainBranch = isOriginMain(info);
   return (
     <Commit
       commit={info}
       key={info.hash}
       previewType={info.previewType}
       hasChildren={hasChildren}
+      isOriginMain={isMainBranch}
     />
   );
 }
@@ -195,6 +246,93 @@ function HighlightedGlyph({info}: {info: DagCommitInfo}) {
   );
 }
 
+/**
+ * Scroll the middle column to show a commit at the top.
+ * Uses native scrollIntoView with CSS scroll-margin-top for padding.
+ * Waits for element to exist in DOM if not immediately available.
+ */
+export function scrollToCommit(hash: string): void {
+  const shortHash = hash.slice(0, 8);
+
+  const tryScroll = (attempt: number) => {
+    const element = document.getElementById(`commit-${hash}`);
+
+    if (element) {
+      console.log(`[scroll] ${shortHash} found on attempt ${attempt}, scrolling`);
+      element.scrollIntoView({behavior: 'smooth', block: 'start'});
+      return;
+    }
+
+    // Element not found - wait for React to render it (up to 5s)
+    if (attempt < 100) {
+      requestAnimationFrame(() => {
+        setTimeout(() => tryScroll(attempt + 1), 50);
+      });
+    } else {
+      console.log(`[scroll] ${shortHash} NOT found after ${attempt} attempts`);
+    }
+  };
+
+  console.log(`[scroll] ${shortHash} starting`);
+  // Wait for next frame before starting to poll
+  requestAnimationFrame(() => tryScroll(0));
+}
+
+/**
+ * Hook to scroll the commit tree to show the selected commit at the top.
+ */
+function useScrollToSelectedCommit() {
+  const selected = useAtomValue(selectedCommits);
+
+  useEffect(() => {
+    if (selected.size !== 1) {
+      return;
+    }
+    const hash = Array.from(selected)[0];
+    scrollToCommit(hash);
+  }, [selected]);
+}
+
+/**
+ * Skeleton for the top bar during loading.
+ * Matches the structure: Pull button, folder dropdown, icon buttons.
+ */
+function TopBarSkeleton() {
+  return (
+    <div className="top-bar-skeleton">
+      <div className="top-bar-skeleton-left">
+        <div className="skeleton-box skeleton-button-wide" />
+        <div className="skeleton-box skeleton-button-medium" />
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+      </div>
+      <div className="top-bar-skeleton-right">
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+        <div className="skeleton-box skeleton-icon-btn" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Loading view with skeleton top bar and spinner for commit tree.
+ */
+function CommitTreeLoading() {
+  return (
+    <div className="commit-tree-loading">
+      <TopBarSkeleton />
+      <div className="commit-tree-loading-spinner">
+        <div className="loading-spinner" />
+        <span className="loading-text">Loading commits...</span>
+      </div>
+    </div>
+  );
+}
+
 export function CommitTreeList() {
   // Make sure we trigger subscription to changes to uncommitted changes *before* we have a tree to render,
   // so we don't miss the first returned uncommitted changes message.
@@ -206,15 +344,14 @@ export function CommitTreeList() {
   useArrowKeysToChangeSelection();
   useBackspaceToHideSelected();
   useShortcutToRebaseSelected();
+  useScrollToSelectedCommit();
 
   const isNarrow = useAtomValue(isNarrowCommitTree);
 
   const {trees} = useAtomValue(treeWithPreviews);
   const fetchError = useAtomValue(commitFetchError);
   return fetchError == null && trees.length === 0 ? (
-    <Center>
-      <LargeSpinner />
-    </Center>
+    <CommitTreeLoading />
   ) : (
     <>
       {fetchError ? <CommitFetchError error={fetchError} /> : null}

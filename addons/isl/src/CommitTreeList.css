@@ -53,7 +53,7 @@
 /* used by the split branch selection */
 .commit-avatar {
   position: absolute;
-  border: 1px solid var(--foreground);
+  border: 1.5px solid var(--foreground);
   margin-bottom: 0px;
   z-index: 3;
   background-color: var(--foreground, hsla(0, 0%, 0%, 0.1));
@@ -68,8 +68,9 @@
   width: 16px;
   box-sizing: border-box;
   transition:
-    transform 0.2s,
-    box-shadow 0.3s;
+    transform 0.2s var(--ease-out-back, ease),
+    box-shadow 0.25s var(--ease-in-out-smooth, ease),
+    border-color 0.15s ease;
 }
 
 /* Avatar may render below the top of the border,
@@ -90,12 +91,43 @@
 }
 
 .commit.highlighted .commit-avatar {
-  box-shadow: 0px 0px 4px 2px var(--focus-border);
-  transform: scale(1.2);
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px var(--focus-border),
+    0 0 12px 2px var(--graphite-glow, rgba(74, 144, 226, 0.3));
+  transform: scale(1.25);
 }
 
 .head-commit .commit-avatar {
   border-color: var(--button-primary-hover-background);
+}
+
+/* Filtered/dimmed commits (hidden by active filters in left column) */
+.commit.commit-filtered {
+  opacity: 0.15;
+  transition: opacity 0.2s ease;
+}
+
+.commit.commit-filtered:hover {
+  opacity: 0.5;
+}
+
+/* Head commit (checked-out) gradient highlight */
+.head-commit .commit-rows {
+  /* Gradient highlight from left to transparent - visible, extends across most of the row */
+  background: linear-gradient(
+    90deg,
+    rgba(74, 144, 226, 0.20) 0%,
+    rgba(74, 144, 226, 0.14) 20%,
+    rgba(74, 144, 226, 0.08) 45%,
+    rgba(74, 144, 226, 0.03) 70%,
+    transparent 90%
+  );
+  /* Left border accent for head commit */
+  border-left: 3px solid var(--graphite-accent, #4a90e2);
+  margin-left: -3px;
+  /* Soft inner glow on left edge */
+  box-shadow: inset 5px 0 16px -3px rgba(74, 144, 226, 0.3);
 }
 
 .commit.obsolete .commit-title {
@@ -120,11 +152,18 @@
 
 .commit-row-selected {
   background-color: var(--selected-commit-background);
+  /* VS Code-style left border accent */
+  border-left: 3px solid var(--graphite-accent, #4a90e2);
+  margin-left: -3px; /* Prevent layout shift */
 }
 
-.commit-row-actioning {
-  outline: 1px solid var(--focus-border);
-  outline-offset: -1px;
+.commit-rows {
+  transition: background-color 0.1s var(--ease-in-out-smooth, ease);
+  border-radius: 4px;
+}
+
+.commit-rows:hover:not(.commit-row-selected) {
+  background-color: rgba(255, 255, 255, 0.04);
 }
 
 .commit-tree-root {
@@ -251,17 +290,22 @@
 .goto-button,
 .open-commit-info-button {
   opacity: 0;
-  transition: opacity 0.1s;
+  transition:
+    opacity 0.15s var(--ease-in-out-smooth, ease),
+    transform 0.15s var(--ease-out-back, ease);
+  transform: translateX(-4px);
 }
 
 .commit:hover .goto-button,
 .commit:hover .open-commit-info-button {
   opacity: 1;
+  transform: translateX(0);
 }
 
 .goto-button:focus-within,
 .open-commit-info-button:focus-within {
   opacity: 1;
+  transform: translateX(0);
 }
 
 .stable-commit-metadata {
@@ -290,4 +334,159 @@
   margin: var(--halfpad);
   position: relative;
   min-height: var(--vscode-icon-button-height);
+}
+
+/* Origin/main commit highlighting */
+.commit.origin-main-commit {
+  /* Subtle left border to indicate main branch */
+  border-left: 2px solid var(--graphite-accent, #4a90e2);
+  margin-left: -2px;
+}
+
+.commit.origin-main-commit .commit-details {
+  /* Very subtle background tint */
+  background: linear-gradient(
+    90deg,
+    rgba(74, 144, 226, 0.08) 0%,
+    transparent 50%
+  );
+}
+
+.origin-main-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  margin-left: var(--halfpad);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--graphite-accent, #4a90e2);
+  background: rgba(74, 144, 226, 0.12);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.origin-main-badge .codicon {
+  font-size: 12px;
+}
+
+/* Origin/main when also head commit */
+.commit.origin-main-commit.head-commit {
+  border-left-color: var(--graphite-accent, #4a90e2);
+}
+
+/* Commit author avatar */
+.commit-author-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.avatar-initials {
+  flex-shrink: 0;
+}
+
+/* ===== COMMIT TREE LOADING ===== */
+
+/* Pulsing animation */
+@keyframes skeleton-pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.4; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Loading container */
+.commit-tree-loading {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+/* Top bar skeleton */
+.top-bar-skeleton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--subtle-hover-darken);
+  gap: 8px;
+}
+
+.top-bar-skeleton-left,
+.top-bar-skeleton-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.top-bar-skeleton .skeleton-box {
+  background: linear-gradient(
+    90deg,
+    var(--subtle-hover-darken) 0%,
+    color-mix(in srgb, var(--foreground) 8%, var(--subtle-hover-darken)) 50%,
+    var(--subtle-hover-darken) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.skeleton-button-wide {
+  width: 70px;
+  height: 28px;
+}
+
+.skeleton-button-medium {
+  width: 80px;
+  height: 28px;
+}
+
+.skeleton-icon-btn {
+  width: 28px;
+  height: 28px;
+}
+
+/* Stagger animation delays */
+.top-bar-skeleton-left .skeleton-box:nth-child(1) { animation-delay: 0s; }
+.top-bar-skeleton-left .skeleton-box:nth-child(2) { animation-delay: 0.1s; }
+.top-bar-skeleton-left .skeleton-box:nth-child(3) { animation-delay: 0.2s; }
+.top-bar-skeleton-left .skeleton-box:nth-child(4) { animation-delay: 0.3s; }
+.top-bar-skeleton-left .skeleton-box:nth-child(5) { animation-delay: 0.4s; }
+
+.top-bar-skeleton-right .skeleton-box:nth-child(1) { animation-delay: 0.15s; }
+.top-bar-skeleton-right .skeleton-box:nth-child(2) { animation-delay: 0.25s; }
+.top-bar-skeleton-right .skeleton-box:nth-child(3) { animation-delay: 0.35s; }
+.top-bar-skeleton-right .skeleton-box:nth-child(4) { animation-delay: 0.45s; }
+.top-bar-skeleton-right .skeleton-box:nth-child(5) { animation-delay: 0.55s; }
+
+/* Loading spinner area */
+.commit-tree-loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 16px;
+  padding: 40px;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--subtle-hover-darken);
+  border-top-color: var(--graphite-accent, #4a90e2);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  font-size: 13px;
+  color: var(--foreground-sub);
 }

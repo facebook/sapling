@@ -6,21 +6,17 @@
  */
 
 import type {DiffSummary} from '../types';
-import type {MergeStrategy} from '../operations/MergePROperation';
 
 import {Button} from 'isl-components/Button';
-import {Dropdown} from 'isl-components/Dropdown';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {useState, useCallback} from 'react';
-import {diffSummary, allDiffSummaries} from '../codeReview/CodeReviewInfo';
-import {currentPRStackContextAtom} from '../codeReview/PRStacksAtom';
-import {useRunOperation, isOperationRunningAtom} from '../operationsState';
+import {diffSummary, allDiffSummaries, triggerFullDiffSummariesRefresh} from '../codeReview/CodeReviewInfo';
+import {currentPRStackContextAtom, prStacksAtom} from '../codeReview/PRStacksAtom';
+import {useRunOperation} from '../operationsState';
 import {MergePROperation} from '../operations/MergePROperation';
-import {PullStackOperation} from '../operations/PullStackOperation';
-import {RebaseOperation} from '../operations/RebaseOperation';
-import {CIStatusBadge} from './CIStatusBadge';
+import {ClosePROperation} from '../operations/ClosePROperation';
 import {
   deriveMergeability,
   formatMergeBlockReasons,
@@ -29,118 +25,79 @@ import {
 import {writeAtom} from '../jotaiUtils';
 import {showToast} from '../toast';
 import {T, t} from '../i18n';
-import {exitReviewMode, navigateToPRInStack} from '../reviewMode';
-import {succeedableRevset} from '../types';
+import {exitReviewMode} from '../reviewMode';
 import './MergeControls.css';
 
 export type MergeControlsProps = {
   prNumber: string;
 };
 
-const MERGE_STRATEGIES: {value: MergeStrategy; label: string}[] = [
-  {value: 'squash', label: 'Squash and merge'},
-  {value: 'merge', label: 'Create merge commit'},
-  {value: 'rebase', label: 'Rebase and merge'},
-];
-
 /**
  * Type guard to check if a DiffSummary is a GitHubDiffSummary.
  */
-function isGitHubDiffSummary(pr: DiffSummary): pr is DiffSummary & {type: 'github'} {
+function isGitHubDiffSummary(pr: DiffSummary): pr is DiffSummary & {type: 'github'; url: string} {
   return pr.type === 'github';
 }
 
 /**
  * Merge controls panel for review mode.
- * Shows CI status, strategy selection, and merge/rebase buttons.
+ *
+ * Key behaviors:
+ * - Always uses rebase merge strategy
+ * - Can merge from any PR in the stack (top is typical, but middle works too)
+ * - After merge, closes all PRs below (their changes are already in main)
+ * - If conflicts exist, shows link to GitHub to resolve (no local rebase)
  */
 export function MergeControls({prNumber}: MergeControlsProps) {
-  const [strategy, setStrategy] = useState<MergeStrategy>('squash');
-  const [deleteBranch, setDeleteBranch] = useState(false);
+  const [deleteBranch, setDeleteBranch] = useState(true);
   const runOperation = useRunOperation();
   const mergeInProgress = useAtomValue(mergeInProgressAtom);
-  const isOperationRunning = useAtomValue(isOperationRunningAtom);
   const stackContext = useAtomValue(currentPRStackContextAtom);
   const diffs = useAtomValue(allDiffSummaries);
+  const stacks = useAtomValue(prStacksAtom);
 
   // Get PR data for CI status and mergeability
   const prData = useAtomValue(diffSummary(prNumber));
   const pr = prData?.value;
 
-  // Find the next unmerged PR in the stack (for auto-navigation after merge)
-  const findNextUnmergedPR = useCallback((): {prNumber: string; headHash: string} | null => {
-    if (!stackContext || stackContext.isSinglePr || !diffs.value) {
-      return null;
-    }
-    // Stack entries are top-to-bottom, but we merge bottom-up
-    // Find the first unmerged PR that isn't the current one
-    // Prefer PRs closer to the base (higher index) for proper merge order
-    for (let i = stackContext.entries.length - 1; i >= 0; i--) {
-      const entry = stackContext.entries[i];
-      if (entry.state !== 'MERGED' && entry.prNumber !== Number(prNumber)) {
-        const prData = diffs.value.get(String(entry.prNumber));
-        if (prData?.type === 'github' && prData.head) {
-          return {prNumber: String(entry.prNumber), headHash: prData.head};
-        }
-      }
-    }
-    return null;
-  }, [stackContext, diffs.value, prNumber]);
-
   // Check if we're currently merging this PR
   const isMerging = mergeInProgress === prNumber;
 
-  // Check sync status - is PR behind base branch or has conflicts?
-  const mergeStateStatus = pr && isGitHubDiffSummary(pr) ? pr.mergeStateStatus : undefined;
+  // Check if this PR is part of a stale stack (top PR was merged via GitHub)
+  const currentStack = stacks.find(s => s.prs.some(p => String(p.number) === prNumber));
+  const isStaleStack = currentStack?.hasStaleAbove ?? false;
+  const mergedAbovePrNumber = currentStack?.mergedAbovePrNumber;
+
+  // Check sync status - has conflicts?
   const mergeable = pr && isGitHubDiffSummary(pr) ? pr.mergeable : undefined;
-  const isBehind = mergeStateStatus === 'BEHIND';
+  const mergeStateStatus = pr && isGitHubDiffSummary(pr) ? pr.mergeStateStatus : undefined;
   const hasConflicts = mergeStateStatus === 'DIRTY' || mergeable === 'CONFLICTING';
-  const needsSync = isBehind || hasConflicts;
 
-  // Handle rebase operation - uses local Sapling rebase instead of GitHub API
-  // First pulls the PR if not available locally, then rebases onto main
-  const handleRebase = useCallback(async () => {
-    // Prefer branch name (bookmark) over hash since the hash might not exist locally
-    const branchName = pr && isGitHubDiffSummary(pr) ? pr.branchName : null;
+  // Get PR URL for GitHub link
+  const prUrl = pr && isGitHubDiffSummary(pr) ? pr.url : null;
 
-    // Use branch name if available, otherwise fall back to PR number
-    const source = branchName || `pr${prNumber}`;
-
-    // DEBUG: Log what we're doing
-    // eslint-disable-next-line no-console
-    console.log('[MergeControls] handleRebase called', {prNumber, branchName, source});
-
-    if (!source) {
-      showToast(t('Cannot rebase: PR branch not found'), {durationMs: 5000});
-      return;
+  // Get PRs below this one in the stack (to close after merge)
+  const getPRsBelowInStack = useCallback((): number[] => {
+    if (!stackContext || stackContext.isSinglePr || !diffs.value) {
+      return [];
     }
-
-    try {
-      // First, pull the PR to ensure it exists locally (without --goto)
-      // This uses `sl pr get` which discovers and imports the full stack
-      // eslint-disable-next-line no-console
-      console.log('[MergeControls] Starting PullStackOperation for PR', prNumber);
-      showToast(t('Pulling PR #$pr...', {replace: {$pr: prNumber}}), {durationMs: 3000});
-      await runOperation(new PullStackOperation(Number(prNumber), /* goto */ false));
-
-      // Now rebase the PR's commit onto main using Sapling
-      // eslint-disable-next-line no-console
-      console.log('[MergeControls] Starting RebaseOperation with source:', source);
-      showToast(t('Rebasing onto main...'), {durationMs: 3000});
-      await runOperation(new RebaseOperation(
-        succeedableRevset(source),
-        succeedableRevset('main')
-      ));
-
-      showToast(t('Rebase complete! Push changes to update the PR.'), {durationMs: 5000});
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('[MergeControls] Rebase failed:', error);
-      showToast(t('Rebase failed: $error', {replace: {$error: String(error)}}), {durationMs: 8000});
+    const currentIndex = stackContext.entries.findIndex(e => e.prNumber === Number(prNumber));
+    if (currentIndex < 0) {
+      return [];
     }
-  }, [pr, prNumber, runOperation]);
+    // Get all unmerged PRs below this one (higher index = closer to base)
+    const prsBelow: number[] = [];
+    for (let i = currentIndex + 1; i < stackContext.entries.length; i++) {
+      const entry = stackContext.entries[i];
+      const prData = diffs.value.get(String(entry.prNumber));
+      if (prData && prData.state !== 'MERGED') {
+        prsBelow.push(entry.prNumber);
+      }
+    }
+    return prsBelow;
+  }, [stackContext, prNumber, diffs.value]);
 
-  // Derive mergeability
+  // Derive mergeability (but exclude "behind" as a blocking reason - we use rebase merge)
   const mergeability = pr
     ? deriveMergeability({
         signalSummary: pr.signalSummary,
@@ -151,56 +108,64 @@ export function MergeControls({prNumber}: MergeControlsProps) {
       })
     : {canMerge: false, reasons: ['Loading PR data...']};
 
-  // Check if this PR is the last open PR in the stack (for confetti)
-  const isLastOpenPRInStack = useCallback((): boolean => {
-    if (!stackContext || stackContext.isSinglePr) {
-      return true; // Single PR = always "last"
-    }
-    const openPRs = stackContext.entries.filter(e => e.state !== 'MERGED');
-    return openPRs.length <= 1;
-  }, [stackContext]);
+  // Filter out "behind" reason since we always use rebase merge
+  const filteredReasons = mergeability.reasons.filter(r => !r.includes('behind'));
+  const canMerge = filteredReasons.length === 0 && !hasConflicts;
 
   const handleMerge = useCallback(async () => {
-    if (!mergeability.canMerge || isMerging) {
+    if (!canMerge || isMerging) {
       return;
     }
 
     writeAtom(mergeInProgressAtom, prNumber);
 
     try {
-      const op = new MergePROperation(Number(prNumber), strategy, deleteBranch);
+      // Always use rebase merge strategy
+      const op = new MergePROperation(Number(prNumber), 'rebase', deleteBranch);
       await runOperation(op);
 
-      const wasLastPR = isLastOpenPRInStack();
+      // Get PRs below to close
+      const prsBelow = getPRsBelowInStack();
 
-      if (wasLastPR) {
-        // Last PR in stack merged - celebrate!
-        showToast(t('Stack merged! All PRs have been merged.'), {durationMs: 5000});
-        window.dispatchEvent(new CustomEvent('isl-confetti'));
-        setTimeout(() => {
-          exitReviewMode();
-        }, 2000);
-      } else {
-        // Not the last PR - navigate to next one after short delay
-        const nextPR = findNextUnmergedPR();
-        showToast(t('PR #$pr merged successfully', {replace: {$pr: prNumber}}), {durationMs: 3000});
-        if (nextPR) {
-          setTimeout(() => {
-            navigateToPRInStack(nextPR.prNumber, nextPR.headHash);
-          }, 2000);
+      if (prsBelow.length > 0) {
+        // Close all PRs below - their changes are already in main via the merged PR
+        showToast(
+          t('Closing $count PRs below (already merged)...', {replace: {$count: String(prsBelow.length)}}),
+          {durationMs: 3000}
+        );
+
+        for (const belowPrNumber of prsBelow) {
+          try {
+            const closeOp = new ClosePROperation(
+              belowPrNumber,
+              `Closed automatically - changes were included in PR #${prNumber} which was merged.`
+            );
+            await runOperation(closeOp);
+          } catch (err) {
+            // Log but don't fail the whole operation if one close fails
+            // eslint-disable-next-line no-console
+            console.warn(`Failed to close PR #${belowPrNumber}:`, err);
+          }
         }
       }
+
+      // Success - refresh PR list (full replace so merged PR disappears), celebrate and exit
+      triggerFullDiffSummariesRefresh();
+      showToast(t('PR #$pr merged successfully!', {replace: {$pr: prNumber}}), {durationMs: 5000});
+      window.dispatchEvent(new CustomEvent('isl-confetti'));
+      setTimeout(() => {
+        exitReviewMode();
+      }, 2000);
     } catch (error) {
       showToast(t('Failed to merge PR: $error', {replace: {$error: String(error)}}), {durationMs: 8000});
     } finally {
       writeAtom(mergeInProgressAtom, null);
     }
-  }, [prNumber, strategy, deleteBranch, mergeability.canMerge, isMerging, runOperation, isLastOpenPRInStack, findNextUnmergedPR]);
+  }, [prNumber, deleteBranch, canMerge, isMerging, runOperation, getPRsBelowInStack]);
 
   if (!pr) {
     return (
       <div className="merge-controls merge-controls-loading">
-        <div style={{color: 'magenta', fontWeight: 'bold'}}>LOCAL DEV BUILD v2</div>
         <Icon icon="loading" /> Loading...
       </div>
     );
@@ -219,142 +184,120 @@ export function MergeControls({prNumber}: MergeControlsProps) {
     );
   }
 
-  // Get CI checks - only available on GitHub PRs
-  const ciChecks = isGitHubDiffSummary(pr) ? pr.ciChecks : undefined;
+  // If this PR is part of a stale stack (top was merged via GitHub), show close button
+  // Get all stale PRs in this stack (open PRs that should be closed)
+  const stalePRsInStack = currentStack?.prs.filter(
+    p => p.state !== 'MERGED' && p.state !== 'CLOSED'
+  ) ?? [];
+  const stalePRCount = stalePRsInStack.length;
 
-  // Check if this is a stacked PR that needs the base PR merged first
-  const isStackedPRNeedingBaseMerge = useCallback((): boolean => {
-    if (!stackContext || stackContext.isSinglePr || !diffs.value) {
-      return false;
-    }
-    const currentIndex = stackContext.entries.findIndex(e => e.prNumber === Number(prNumber));
-    if (currentIndex < 0) {
-      return false;
-    }
-    // Check if there are unmerged PRs below this one (closer to base)
-    for (let i = currentIndex + 1; i < stackContext.entries.length; i++) {
-      const entry = stackContext.entries[i];
-      const prData = diffs.value.get(String(entry.prNumber));
-      // If PR is in diffs and not merged, it needs to be merged first
-      if (prData && prData.state !== 'MERGED') {
-        return true;
-      }
-    }
-    return false;
-  }, [stackContext, prNumber, diffs.value]);
-
-  const needsBasePRMerged = isStackedPRNeedingBaseMerge();
-
-  // If behind base branch or has conflicts, show sync UI
-  if (needsSync) {
-    const isStackOrderIssue = needsBasePRMerged && hasConflicts;
-
-    // Find the base PR to navigate to
-    const findBasePR = (): {prNumber: string; headHash: string} | null => {
-      if (!stackContext || !diffs.value) return null;
-      const currentIndex = stackContext.entries.findIndex(e => e.prNumber === Number(prNumber));
-      if (currentIndex < 0) return null;
-      for (let i = currentIndex + 1; i < stackContext.entries.length; i++) {
-        const entry = stackContext.entries[i];
-        if (entry.state !== 'MERGED') {
-          const prData = diffs.value.get(String(entry.prNumber));
-          if (prData?.type === 'github' && prData.head) {
-            return {prNumber: String(entry.prNumber), headHash: prData.head};
-          }
+  if (isStaleStack) {
+    const handleCloseAllStale = async () => {
+      writeAtom(mergeInProgressAtom, prNumber);
+      try {
+        for (const stalePR of stalePRsInStack) {
+          const closeOp = new ClosePROperation(
+            Number(stalePR.number),
+            `Closed: changes already merged via PR #${mergedAbovePrNumber}`
+          );
+          await runOperation(closeOp);
         }
+        showToast(t('Closed $count stale PRs', {replace: {$count: String(stalePRCount)}}), {durationMs: 3000});
+        exitReviewMode();
+        // Refresh the PR list after a short delay to let GitHub propagate the changes
+        // Use full refresh to replace (not merge) so closed PRs disappear
+        setTimeout(() => {
+          triggerFullDiffSummariesRefresh();
+        }, 1500);
+      } catch (error) {
+        showToast(t('Failed to close PRs: $error', {replace: {$error: String(error)}}), {durationMs: 5000});
+      } finally {
+        writeAtom(mergeInProgressAtom, null);
       }
-      return null;
     };
 
-    const handleGoToBase = () => {
-      const basePR = findBasePR();
-      if (basePR) {
-        navigateToPRInStack(basePR.prNumber, basePR.headHash);
-      }
-    };
-
-    if (isStackOrderIssue) {
-      return (
-        <div className="merge-controls merge-controls-sync merge-controls-stack-order">
-          <div className="merge-controls-sync-message">
-            <Icon icon="info" />
-            <span><T>Merge the base PR first - stacked PRs must be merged bottom-up</T></span>
-          </div>
-          <Tooltip title={t('Navigate to the base PR that needs to be merged first')} placement="bottom">
-            <Button primary onClick={handleGoToBase}>
-              <Icon icon="arrow-down" slot="start" />
-              <T>Go to base PR</T>
-            </Button>
-          </Tooltip>
-        </div>
-      );
-    }
-
-    // Conflicts or behind - show rebase button
-    const isConflicts = hasConflicts;
     return (
-      <div className={`merge-controls merge-controls-sync ${isConflicts ? 'merge-controls-conflicts' : ''}`}>
-        <div className="merge-controls-sync-message">
-          <Icon icon="warning" />
+      <div className="merge-controls merge-controls-stale">
+        <div className="merge-stale-message">
+          <Icon icon="info" />
           <span>
-            {isConflicts
-              ? <T>This branch has conflicts - rebase to resolve</T>
-              : <T>This branch is out of date with the base branch</T>}
+            <T replace={{$pr: mergedAbovePrNumber ?? '?'}}>
+              This PR is stale — its changes were already merged via PR #$pr on GitHub.
+            </T>
           </span>
         </div>
-        <Tooltip title={t('Rebase PR commits onto latest main using Sapling')} placement="bottom">
-          <Button
-            primary
-            disabled={isOperationRunning}
-            onClick={handleRebase}>
-            {isOperationRunning ? (
-              <>
-                <Icon icon="loading" slot="start" />
-                <T>Rebasing...</T>
-              </>
-            ) : (
-              <>
-                <Icon icon="repo-sync" slot="start" />
-                <T>Rebase onto main</T>
-              </>
-            )}
-          </Button>
-        </Tooltip>
+        <div className="merge-stale-explanation">
+          <T>This happens when someone merges directly on GitHub instead of through ISL. You can safely close this PR.</T>
+        </div>
+        <Button
+          className="close-stale-btn"
+          onClick={handleCloseAllStale}
+          disabled={isMerging}>
+          {isMerging ? (
+            <>
+              <Icon icon="loading" slot="start" />
+              <T>Closing...</T>
+            </>
+          ) : (
+            <>
+              <Icon icon="trash" slot="start" />
+              <span>Close {stalePRCount} stale PR{stalePRCount !== 1 ? 's' : ''}</span>
+            </>
+          )}
+        </Button>
       </div>
     );
   }
 
+  // If conflicts exist, show link to GitHub to resolve
+  if (hasConflicts) {
+    return (
+      <div className="merge-controls">
+        <div className="merge-controls-row">
+          <div className="merge-controls-actions">
+            <div className="merge-strategy-group">
+              <div className="merge-sync-status merge-sync-conflicts">
+                <Icon icon="warning" />
+                <span><T>Merge conflicts detected</T></span>
+              </div>
+              <div className="merge-strategy-row">
+                {prUrl && (
+                  <Tooltip title={t('Open GitHub to resolve conflicts')} placement="top">
+                    <Button
+                      className="resolve-conflicts-btn"
+                      onClick={() => window.open(prUrl, '_blank')}>
+                      <Icon icon="link-external" slot="start" />
+                      <T>Resolve on GitHub</T>
+                    </Button>
+                  </Tooltip>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Count PRs that will be closed after merge
+  const prsBelow = getPRsBelowInStack();
+
   return (
     <div className="merge-controls">
       <div className="merge-controls-row">
-        <div className="merge-controls-status">
-          <CIStatusBadge
-            signalSummary={pr.signalSummary}
-            ciChecks={ciChecks}
-          />
-        </div>
-
         <div className="merge-controls-actions">
           <div className="merge-strategy-group">
             <div className="merge-strategy-row">
-              <div className="merge-strategy-select">
-                <Dropdown
-                  options={MERGE_STRATEGIES.map(({value, label}) => ({value, name: label}))}
-                  value={strategy}
-                  onChange={(e) => setStrategy(e.currentTarget.value as MergeStrategy)}
-                  disabled={isMerging}
-                />
-              </div>
               <Tooltip
                 title={
-                  mergeability.canMerge
-                    ? t('Merge PR #$pr', {replace: {$pr: prNumber}})
-                    : formatMergeBlockReasons(mergeability.reasons)
+                  canMerge
+                    ? t('Rebase and merge PR #$pr', {replace: {$pr: prNumber}})
+                    : formatMergeBlockReasons(filteredReasons)
                 }
-                placement="bottom">
+                placement="top">
                 <Button
                   className="merge-btn"
-                  disabled={!mergeability.canMerge || isMerging}
+                  disabled={!canMerge || isMerging}
                   onClick={handleMerge}>
                   {isMerging ? (
                     <>
@@ -364,7 +307,7 @@ export function MergeControls({prNumber}: MergeControlsProps) {
                   ) : (
                     <>
                       <Icon icon="git-merge" slot="start" />
-                      <T>Merge</T>
+                      <T>Rebase and merge</T>
                     </>
                   )}
                 </Button>
@@ -377,15 +320,25 @@ export function MergeControls({prNumber}: MergeControlsProps) {
                 onChange={(e) => setDeleteBranch(e.target.checked)}
                 disabled={isMerging}
               />
-              <T>Delete branch</T>
+              <T>Delete branch after merge</T>
             </label>
+            {prsBelow.length > 0 && (
+              <div className="merge-close-info">
+                <Icon icon="info" size="S" />
+                <span>
+                  <T replace={{$count: prsBelow.length}}>
+                    Will close $count PR(s) below after merge
+                  </T>
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {!mergeability.canMerge && (
+      {!canMerge && filteredReasons.length > 0 && (
         <div className="merge-block-reasons">
-          {mergeability.reasons.map((reason, i) => (
+          {filteredReasons.map((reason, i) => (
             <div key={i} className="merge-block-reason">
               <Icon icon="warning" size="S" />
               {reason}
