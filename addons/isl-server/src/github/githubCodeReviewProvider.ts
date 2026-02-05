@@ -165,8 +165,8 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
       // Fetch all PRs (open, merged, closed) within the selected time range
       // This allows "hide merged" filtering to work properly
       searchQuery,
-      // Reduced from 50 to avoid GitHub's 500k node limit (numToFetch × 100 commits × 100 contexts)
-      numToFetch: 20,
+      // With commits(last:1) optimization: 100 PRs × 1 commit × 100 contexts = 10k nodes (well under 500k limit)
+      numToFetch: 100,
     };
     if (includeMergeQueue) {
       return this.query<YourPullRequestsQueryData, YourPullRequestsQueryVariables>(
