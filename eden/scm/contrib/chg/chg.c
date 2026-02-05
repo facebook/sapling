@@ -471,6 +471,9 @@ static const char* gethgcmd(const char* cli_name) {
 
     hgclient_t* hgc;
     size_t retry = 0;
+    size_t versionmismatch = 0;
+    size_t rlimitincompat = 0;
+    size_t groupsmismatch = 0;
     while (1) {
       hgc = connectcmdserver(&opts);
       if (!hgc) {
@@ -487,6 +490,7 @@ static const char* gethgcmd(const char* cli_name) {
             server_versionhash);
         killcmdserver(&opts);
         needreconnect = 1;
+        ++versionmismatch;
       } else {
         debugmsg("version matched (%" PRIu64 ")", client_versionhash);
       }
@@ -507,6 +511,7 @@ static const char* gethgcmd(const char* cli_name) {
               nofile);
           killcmdserver(&opts);
           needreconnect = 1;
+          ++rlimitincompat;
         } else {
           debugmsg(
               "RLIMIT_NOFILE compatible (client %lu <= server %lu)",
@@ -520,6 +525,7 @@ static const char* gethgcmd(const char* cli_name) {
       if (hgc_groups_mismatch(hgc)) {
         killcmdserver(&opts);
         needreconnect = 1;
+        ++groupsmismatch;
         debugmsg("groups mismatch, reconnecting");
       } else {
         debugmsg("groups match");
@@ -538,8 +544,14 @@ static const char* gethgcmd(const char* cli_name) {
             "Please make sure %s is not a wrapper which "
             "changes sensitive environment variables "
             "before executing hg. If you have to use a "
-            "wrapper, wrap chg instead of hg.",
-            gethgcmd(cli_name));
+            "wrapper, wrap chg instead of hg.\n\n"
+            "Version mismatch: %zu times\n"
+            "RLIMIT_NOFILE incompatible: %zu times\n"
+            "Groups mismatch: %zu times\n",
+            gethgcmd(cli_name),
+            versionmismatch,
+            rlimitincompat,
+            groupsmismatch);
       }
     }
 
