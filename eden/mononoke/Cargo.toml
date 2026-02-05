@@ -34,6 +34,8 @@ rinja = { git = "https://github.com/fbsource/askama", rev = "2fc6173c98034c148f4
 riscv = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e085e12845944d5bbbc869c290" }
 riscv-pac = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e085e12845944d5bbbc869c290" }
 riscv-rt = { git = "https://github.com/jsgf/riscv.git", rev = "90cfc5f2404e39e085e12845944d5bbbc869c290" }
+rootcause = { git = "https://github.com/rootcause-rs/rootcause.git", rev = "5010b020a57786de6f18bad027560d54b73875b0" }
+rootcause-backtrace = { git = "https://github.com/rootcause-rs/rootcause.git", rev = "5010b020a57786de6f18bad027560d54b73875b0" }
 sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "24317d5eab40fbc33caf1142946e2f39caad73ea" }
 stabby = { git = "https://github.com/nitinsingh-meta/stabby", rev = "304c895c34e502fc635b85df6d4f22f746747ed4" }
 vhost = { git = "https://github.com/rust-vmm/vhost/", rev = "93e2d9cf9151a5cbeef4fff1fdf26fdb989f060d" }
