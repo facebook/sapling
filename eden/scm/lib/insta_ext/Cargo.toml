@@ -13,4 +13,4 @@ license = "MIT"
 name = "insta_ext"
 
 [dependencies]
-insta = { version = "1.30.0", features = ["glob", "json"] }
+insta = { version = "1.46.3", features = ["glob", "json"] }

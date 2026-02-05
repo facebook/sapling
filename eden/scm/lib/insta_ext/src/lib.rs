@@ -5,6 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+use std::borrow::Cow;
+use std::path::Path;
+
 // for macros
 pub use insta;
 
@@ -48,9 +51,11 @@ pub fn run(
         .and_then(|p| p.to_str())
         .unwrap();
     insta::_macro_support::assert_snapshot(
-        test_name.into(),
-        snapshot,
-        "unused",
+        insta::_macro_support::SnapshotValue::FileText {
+            name: Some(Cow::Borrowed(test_name)),
+            content: snapshot,
+        },
+        Path::new("fbcode/eden/scm/lib/insta_ext"),
         function_name,
         // buck builds have a _unittest module suffix which cargo doesn't
         // this makes the snapshot location consistent on both
