@@ -1,3 +1,6 @@
+# Worktrees
+.worktrees/
+
 # Buck
 /.buckconfig.local
 /.buckd
