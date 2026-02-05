@@ -627,6 +627,24 @@
 .pr-row-skeleton:nth-child(5) .skeleton-box { animation-delay: 0.3s; }
 
 /* Time Range Dropdown */
+.time-range-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.time-range-wrapper.loading .time-range-dropdown {
+  opacity: 0.6;
+  pointer-events: none;
+  background-image: none; /* Hide chevron when loading */
+}
+
+.time-range-loading {
+  position: absolute;
+  right: 6px;
+  font-size: 12px;
+}
+
 .time-range-dropdown {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);

@@ -601,8 +601,10 @@ export type WorktreeInfo = {
   path: AbsolutePath;
   /** Commit hash currently checked out in the worktree */
   commit: Hash;
-  /** Name of the worktree (usually the folder name) */
-  name: string;
+  /** Name of the worktree (derived from folder name if not provided) */
+  name?: string;
+  /** Branch name if the worktree is on a branch */
+  branch?: string;
   /** Whether this is the main worktree (the original repo) */
   isMain: boolean;
 };

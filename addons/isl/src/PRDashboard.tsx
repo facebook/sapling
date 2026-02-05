@@ -37,6 +37,7 @@ import {PullOperation} from './operations/PullOperation';
 import {GotoOperation} from './operations/GotoOperation';
 import {ClosePROperation} from './operations/ClosePROperation';
 import {WorktreeAddOperation} from './operations/WorktreeAddOperation';
+import {worktreesForCommit} from './worktrees';
 import {showToast} from './toast';
 import {t} from './i18n';
 import {dagWithPreviews} from './previews';
@@ -409,6 +410,10 @@ function StackCard({
   const isCurrentStack = topHeadHash ? dag.resolve('.')?.hash === topHeadHash : false;
   const inlineProgress = useAtomValue(inlineProgressByHash(topHeadHash ?? ''));
 
+  // Check if a worktree already exists for this commit
+  const existingWorktrees = useAtomValue(worktreesForCommit(topHeadHash ?? ''));
+  const existingWorktree = existingWorktrees.length > 0 ? existingWorktrees[0] : undefined;
+
   // Detect "stale" stacks: the true top PR (from stackInfo) was merged via GitHub
   // but the lower PRs are still open. All visible PRs in this stack are stale.
   const stalePRs = stack.hasStaleAbove
@@ -552,17 +557,35 @@ function StackCard({
 
         <div className="stack-card-actions">
           {isExternal && topHeadHash && (
-            <Tooltip title="Open this stack in a new worktree">
-              <Button
-                className="stack-card-worktree-button"
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  runOperation(new WorktreeAddOperation(topHeadHash));
-                }}>
-                <Icon icon="folder-opened" />
-                <T>Open in Worktree</T>
-              </Button>
-            </Tooltip>
+            existingWorktree ? (
+              <Tooltip title="Switch ISL to the existing worktree for this stack">
+                <Button
+                  className="stack-card-worktree-button"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    serverAPI.postMessage({
+                      type: 'changeCwd',
+                      cwd: existingWorktree.path,
+                    });
+                    serverAPI.cwdChanged();
+                  }}>
+                  <Icon icon="go-to-file" />
+                  <T>Switch to Worktree</T>
+                </Button>
+              </Tooltip>
+            ) : (
+              <Tooltip title="Open this stack in a new worktree">
+                <Button
+                  className="stack-card-worktree-button"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    runOperation(new WorktreeAddOperation(topHeadHash));
+                  }}>
+                  <Icon icon="folder-opened" />
+                  <T>Open in Worktree</T>
+                </Button>
+              </Tooltip>
+            )
           )}
           {hasStaleStack && (
             <Tooltip

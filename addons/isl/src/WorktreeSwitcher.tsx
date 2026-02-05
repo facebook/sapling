@@ -14,6 +14,8 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
 import {Column, ScrollY} from './ComponentUtils';
 import {T, t} from './i18n';
+import {useRunOperation} from './operationsState';
+import {WorktreeRemoveOperation} from './operations/WorktreeRemoveOperation';
 import {repositoryInfo} from './serverAPIState';
 import {worktreesAtom} from './worktrees';
 import serverAPI from './ClientToServerAPI';
@@ -23,8 +25,9 @@ const styles = stylex.create({
     position: 'relative',
   },
   dropdownContainer: {
+    width: 'max-content',
     minWidth: '280px',
-    maxWidth: '400px',
+    maxWidth: 'min(500px, 90vw)',
     alignItems: 'flex-start',
     padding: 'var(--pad)',
     gap: 'var(--halfpad)',
@@ -81,6 +84,7 @@ const styles = stylex.create({
     gap: '2px',
     overflow: 'hidden',
     flex: 1,
+    minWidth: 0,
   },
   worktreeName: {
     fontWeight: 500,
@@ -111,6 +115,21 @@ const styles = stylex.create({
     background: 'var(--subtle-hover-darken)',
     color: 'var(--foreground-sub)',
     flexShrink: 0,
+  },
+  deleteButton: {
+    flexShrink: 0,
+    opacity: {
+      default: 0.5,
+      ':hover': 1,
+    },
+    color: {
+      default: 'var(--foreground-sub)',
+      ':hover': 'var(--signal-medium-fg)',
+    },
+    cursor: 'pointer',
+    padding: '2px',
+    borderRadius: '3px',
+    marginLeft: 'auto',
   },
   emptyState: {
     color: 'var(--foreground-sub)',
@@ -177,6 +196,8 @@ function WorktreeDropdown({
   currentPath: string | undefined;
   dismiss: () => void;
 }) {
+  const runOperation = useRunOperation();
+
   const handleWorktreeClick = (worktree: WorktreeInfo) => {
     if (worktree.path === currentPath) {
       dismiss();
@@ -191,6 +212,11 @@ function WorktreeDropdown({
     dismiss();
   };
 
+  const handleDeleteWorktree = (e: React.MouseEvent, worktree: WorktreeInfo) => {
+    e.stopPropagation();
+    runOperation(new WorktreeRemoveOperation(worktree.path));
+  };
+
   // Sort worktrees: main first, then by name
   const sortedWorktrees = [...worktrees].sort((a, b) => {
     if (a.isMain && !b.isMain) {
@@ -199,7 +225,9 @@ function WorktreeDropdown({
     if (!a.isMain && b.isMain) {
       return 1;
     }
-    return a.name.localeCompare(b.name);
+    const aName = a.name ?? getLastPathSegment(a.path);
+    const bName = b.name ?? getLastPathSegment(b.path);
+    return aName.localeCompare(bName);
   });
 
   return (
@@ -238,7 +266,9 @@ function WorktreeDropdown({
                     )}
                   />
                   <div {...stylex.props(styles.worktreeInfo)}>
-                    <span {...stylex.props(styles.worktreeName)}>{worktree.name}</span>
+                    <span {...stylex.props(styles.worktreeName)}>
+                      {worktree.name ?? getLastPathSegment(worktree.path)}
+                    </span>
                     <span {...stylex.props(styles.worktreePath)}>{worktree.path}</span>
                   </div>
                   {worktree.isMain && (
@@ -248,6 +278,15 @@ function WorktreeDropdown({
                     <span {...stylex.props(styles.currentBadge)}>
                       <T>current</T>
                     </span>
+                  )}
+                  {!worktree.isMain && !isCurrent && (
+                    <Tooltip title={t('Delete this worktree')}>
+                      <span
+                        {...stylex.props(styles.deleteButton)}
+                        onClick={e => handleDeleteWorktree(e, worktree)}>
+                        <Icon icon="trash" />
+                      </span>
+                    </Tooltip>
                   )}
                 </div>
               );

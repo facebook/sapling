@@ -162,3 +162,48 @@
   border-right-width: 1px;
   margin-bottom: var(--pad);
 }
+
+/* Worktree branch animation */
+.worktree-branch-animation {
+  color: var(--foreground);
+}
+
+.worktree-branch-animation .branch-trunk {
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+  animation: drawBranch 0.5s ease-out forwards;
+}
+
+.worktree-branch-animation .branch-left {
+  stroke-dasharray: 12;
+  stroke-dashoffset: 12;
+  animation: drawBranch 0.4s ease-out 0.2s forwards;
+}
+
+.worktree-branch-animation .branch-right {
+  stroke-dasharray: 12;
+  stroke-dashoffset: 12;
+  animation: drawBranch 0.4s ease-out 0.3s forwards;
+}
+
+@keyframes drawBranch {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.worktree-branch-animation .node-right-pulse {
+  animation: nodePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes nodePulse {
+  0%, 100% {
+    opacity: 1;
+    transform-origin: center;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.3);
+  }
+}
