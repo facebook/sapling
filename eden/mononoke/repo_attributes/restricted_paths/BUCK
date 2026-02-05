@@ -38,10 +38,7 @@ rust_library(
         "//eden/mononoke/mononoke_types:mononoke_types",
         "//eden/mononoke/servers/slapi/slapi_server/context:context",
     ] + ([] if rust_oss.is_oss_build() else [
-        # fbcode-only deps for schematized logger
-        "//common/rust/build_info:build_info",
-        "//common/rust/fbwhoami:fbwhoami",
-        "//common/rust/shed/hostname:hostname",
+        # fbcode-only dep for schematized logger (CommonServerData/CommonMetadata from scuba_ext)
         "//dsi/logger/configs/MononokeRestrictedPathsAccessLoggerConfig:mononoke_restricted_paths_access_rust_logger",
     ]),
 )

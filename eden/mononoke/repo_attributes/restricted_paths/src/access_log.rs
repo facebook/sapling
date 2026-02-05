@@ -71,16 +71,14 @@ pub async fn has_access_to_acl(
 
 #[cfg(fbcode_build)]
 mod schematized_logger {
-    use std::env::var;
-
     use anyhow::Result;
     use context::CoreContext;
-    use fbwhoami::FbWhoAmI;
-    use hostname::get_hostname;
     use mononoke_restricted_paths_access_rust_logger::MononokeRestrictedPathsAccessLogger;
     use mononoke_types::NonRootMPath;
     use mononoke_types::RepositoryId;
     use permission_checker::MononokeIdentity;
+    use scuba_ext::CommonMetadata;
+    use scuba_ext::CommonServerData;
 
     use super::RestrictedPathAccessData;
 
@@ -97,11 +95,13 @@ mod schematized_logger {
     ) -> Result<()> {
         let mut logger = MononokeRestrictedPathsAccessLogger::new(ctx.fb);
 
-        // Add common server data (equivalent to scuba.add_common_server_data())
-        add_common_server_data(&mut logger);
+        // Add common server data using shared struct
+        let server_data = CommonServerData::collect();
+        apply_server_data(&mut logger, &server_data);
 
-        // Add metadata (equivalent to scuba.add_metadata())
-        add_metadata(&mut logger, ctx);
+        // Add metadata using shared struct
+        let metadata = CommonMetadata::from_metadata(ctx.metadata());
+        apply_metadata(&mut logger, &metadata);
 
         // Set core access fields
         logger.set_repo_id(repo_id.id() as i64);
@@ -129,139 +129,112 @@ mod schematized_logger {
         Ok(())
     }
 
-    /// Add common server data to the schematized logger.
-    /// Mirrors the behavior of ScubaSampleBuilder::add_common_server_data().
-    fn add_common_server_data(logger: &mut MononokeRestrictedPathsAccessLogger) {
-        if let Ok(hostname) = get_hostname() {
-            logger.set_server_hostname(hostname);
+    /// Apply CommonServerData fields to the schematized logger.
+    fn apply_server_data(
+        logger: &mut MononokeRestrictedPathsAccessLogger,
+        data: &CommonServerData,
+    ) {
+        if let Some(ref hostname) = data.server_hostname {
+            logger.set_server_hostname(hostname.clone());
         }
-
-        if let Ok(who) = FbWhoAmI::get() {
-            if let Some(region) = who.region.as_deref() {
-                logger.set_region(region.to_owned());
-            }
-            if let Some(dc) = who.datacenter.as_deref() {
-                logger.set_datacenter(dc.to_owned());
-            }
-            if let Some(dc_prefix) = who.region_datacenter_prefix.as_deref() {
-                logger.set_region_datacenter_prefix(dc_prefix.to_owned());
-            }
+        if let Some(ref region) = data.region {
+            logger.set_region(region.clone());
         }
-
-        if let Ok(smc_tier) = var("SMC_TIERS") {
-            logger.set_server_tier(smc_tier);
+        if let Some(ref dc) = data.datacenter {
+            logger.set_datacenter(dc.clone());
         }
-
-        if let Ok(tw_task_id) = var("TW_TASK_ID") {
-            logger.set_tw_task_id(tw_task_id);
+        if let Some(ref dc_prefix) = data.region_datacenter_prefix {
+            logger.set_region_datacenter_prefix(dc_prefix.clone());
         }
-
-        if let Ok(tw_canary_id) = var("TW_CANARY_ID") {
-            logger.set_tw_canary_id(tw_canary_id);
+        if let Some(ref tier) = data.server_tier {
+            logger.set_server_tier(tier.clone());
         }
-
-        if let (Ok(tw_cluster), Ok(tw_user), Ok(tw_name)) = (
-            var("TW_JOB_CLUSTER"),
-            var("TW_JOB_USER"),
-            var("TW_JOB_NAME"),
-        ) {
-            logger.set_tw_handle(format!("{}/{}/{}", tw_cluster, tw_user, tw_name));
-
-            if let Ok(tw_task_id) = var("TW_TASK_ID") {
-                logger.set_tw_task_handle(format!(
-                    "{}/{}/{}/{}",
-                    tw_cluster, tw_user, tw_name, tw_task_id
-                ));
-            }
+        if let Some(ref tw_task_id) = data.tw_task_id {
+            logger.set_tw_task_id(tw_task_id.clone());
         }
-
-        if let Ok(cluster) = var("CHRONOS_CLUSTER") {
-            logger.set_chronos_cluster(cluster);
+        if let Some(ref tw_canary_id) = data.tw_canary_id {
+            logger.set_tw_canary_id(tw_canary_id.clone());
         }
-
-        if let Ok(id) = var("CHRONOS_JOB_INSTANCE_ID") {
-            logger.set_chronos_job_instance_id(id);
+        if let Some(ref tw_handle) = data.tw_handle {
+            logger.set_tw_handle(tw_handle.clone());
         }
-
-        if let Ok(job_name) = var("CHRONOS_JOB_NAME") {
-            logger.set_chronos_job_name(job_name);
+        if let Some(ref tw_task_handle) = data.tw_task_handle {
+            logger.set_tw_task_handle(tw_task_handle.clone());
         }
-
-        logger.set_build_revision(build_info::BuildInfo::get_revision().to_string());
-        logger.set_build_rule(build_info::BuildInfo::get_rule().to_string());
+        if let Some(ref cluster) = data.chronos_cluster {
+            logger.set_chronos_cluster(cluster.clone());
+        }
+        if let Some(ref id) = data.chronos_job_instance_id {
+            logger.set_chronos_job_instance_id(id.clone());
+        }
+        if let Some(ref name) = data.chronos_job_name {
+            logger.set_chronos_job_name(name.clone());
+        }
+        if let Some(ref rev) = data.build_revision {
+            logger.set_build_revision(rev.clone());
+        }
+        if let Some(ref rule) = data.build_rule {
+            logger.set_build_rule(rule.clone());
+        }
     }
 
-    /// Add metadata fields to the schematized logger.
-    /// Mirrors the behavior of MononokeScubaSampleBuilder::add_metadata().
-    fn add_metadata(logger: &mut MononokeRestrictedPathsAccessLogger, ctx: &CoreContext) {
-        let metadata = ctx.metadata();
+    /// Apply CommonMetadata fields to the schematized logger.
+    fn apply_metadata(logger: &mut MononokeRestrictedPathsAccessLogger, data: &CommonMetadata) {
+        logger.set_session_uuid(data.session_uuid.clone());
+        logger.set_client_identities(data.client_identities.clone());
 
-        logger.set_session_uuid(metadata.session_id().to_string());
-
-        logger.set_client_identities(
-            metadata
-                .identities()
-                .iter()
-                .map(|i| i.to_string())
-                .collect(),
-        );
-
-        if let Some(first_identity) = metadata.identities().first() {
-            logger.set_client_identity_variant(first_identity.variant().to_string());
+        if let Some(ref variant) = data.client_identity_variant {
+            logger.set_client_identity_variant(variant.clone());
         }
-
-        if let Some(client_hostname) = metadata.client_hostname() {
-            logger.set_source_hostname(client_hostname.to_owned());
-        } else if let Some(client_ip) = metadata.client_ip() {
-            logger.set_client_ip(client_ip.to_string());
+        if let Some(ref hostname) = data.source_hostname {
+            logger.set_source_hostname(hostname.clone());
         }
-
-        if let Some(unix_name) = metadata.unix_name() {
-            logger.set_unix_username(unix_name.to_string());
+        if let Some(ref ip) = data.client_ip {
+            logger.set_client_ip(ip.clone());
         }
-
-        // Add client request info if available
-        if let Some(cri) = ctx.client_request_info() {
-            if let Some(main_id) = &cri.main_id {
-                logger.set_client_main_id(main_id.clone());
-            }
-            logger.set_client_entry_point(cri.entry_point.to_string());
-            logger.set_client_correlator(cri.correlator.clone());
-
-            // Add enabled experiments JKs
-            let enabled_experiments_jk =
-                scuba_ext::MononokeScubaSampleBuilder::get_enabled_experiments_jk(cri);
-            logger.set_enabled_experiments_jk(enabled_experiments_jk);
+        if let Some(ref unix_name) = data.unix_username {
+            logger.set_unix_username(unix_name.clone());
         }
-
-        if let Some(sandcastle_alias) = metadata.sandcastle_alias() {
-            logger.set_sandcastle_alias(sandcastle_alias.to_string());
+        if let Some(ref main_id) = data.client_main_id {
+            logger.set_client_main_id(main_id.clone());
         }
-        if let Some(sandcastle_vcs) = metadata.sandcastle_vcs() {
-            logger.set_sandcastle_vcs(sandcastle_vcs.to_string());
+        if let Some(ref entry_point) = data.client_entry_point {
+            logger.set_client_entry_point(entry_point.clone());
         }
-        if let Some(revproxy_region) = metadata.revproxy_region() {
-            logger.set_revproxy_region(revproxy_region.to_string());
+        if let Some(ref correlator) = data.client_correlator {
+            logger.set_client_correlator(correlator.clone());
         }
-        if let Some(sandcastle_nonce) = metadata.sandcastle_nonce() {
-            logger.set_sandcastle_nonce(sandcastle_nonce.to_string());
+        if !data.enabled_experiments_jk.is_empty() {
+            logger.set_enabled_experiments_jk(data.enabled_experiments_jk.clone());
         }
-        if let Some(tw_job) = metadata.clientinfo_tw_job() {
-            logger.set_client_tw_job(tw_job.to_string());
+        if let Some(ref alias) = data.sandcastle_alias {
+            logger.set_sandcastle_alias(alias.clone());
         }
-        if let Some(tw_task) = metadata.clientinfo_tw_task() {
-            logger.set_client_tw_task(tw_task.to_string());
+        if let Some(ref vcs) = data.sandcastle_vcs {
+            logger.set_sandcastle_vcs(vcs.clone());
         }
-        if let Some(atlas) = metadata.clientinfo_atlas() {
-            logger.set_client_atlas(atlas.to_string());
+        if let Some(ref region) = data.revproxy_region {
+            logger.set_revproxy_region(region.clone());
         }
-        if let Some(atlas_env_id) = metadata.clientinfo_atlas_env_id() {
-            logger.set_client_atlas_env_id(atlas_env_id.to_string());
+        if let Some(ref nonce) = data.sandcastle_nonce {
+            logger.set_sandcastle_nonce(nonce.clone());
         }
-        if let Some(fetch_cause) = metadata.fetch_cause() {
-            logger.set_fetch_cause(fetch_cause.to_string());
+        if let Some(ref tw_job) = data.client_tw_job {
+            logger.set_client_tw_job(tw_job.clone());
         }
-        logger.set_fetch_from_cas_attempted(metadata.fetch_from_cas_attempted());
+        if let Some(ref tw_task) = data.client_tw_task {
+            logger.set_client_tw_task(tw_task.clone());
+        }
+        if let Some(ref atlas) = data.client_atlas {
+            logger.set_client_atlas(atlas.clone());
+        }
+        if let Some(ref env_id) = data.client_atlas_env_id {
+            logger.set_client_atlas_env_id(env_id.clone());
+        }
+        if let Some(ref cause) = data.fetch_cause {
+            logger.set_fetch_cause(cause.clone());
+        }
+        logger.set_fetch_from_cas_attempted(data.fetch_from_cas_attempted);
     }
 }
 

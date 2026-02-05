@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs/lib:rust_oss.bzl", "rust_oss")
 load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
 
 oncall("scm_server_infra")
@@ -20,5 +21,10 @@ rust_library(
         "//eden/mononoke/common/permission_checker:permission_checker",
         "//eden/mononoke/common/scribe_ext:scribe_ext",
         "//eden/scm/lib/clientinfo:clientinfo",
-    ],
+    ] + ([] if rust_oss.is_oss_build() else [
+        # fbcode-only deps for schematized_logging module
+        "//common/rust/build_info:build_info",
+        "//common/rust/fbwhoami:fbwhoami",
+        "//common/rust/shed/hostname:hostname",
+    ]),
 )

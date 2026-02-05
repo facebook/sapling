@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(fbcode_build)]
+mod schematized_logging;
 use std::collections::hash_map::Entry;
 use std::io::Error as IoError;
 use std::num::NonZeroU64;
@@ -25,6 +27,10 @@ use observability::ScubaLoggingDecisionFields;
 pub use observability::ScubaVerbosityLevel;
 use permission_checker::MononokeIdentitySetExt;
 pub use sampling::Sampling;
+#[cfg(fbcode_build)]
+pub use schematized_logging::CommonMetadata;
+#[cfg(fbcode_build)]
+pub use schematized_logging::CommonServerData;
 pub use scribe_ext::ScribeClientImplementation;
 use scuba::ScubaSample;
 use scuba::ScubaSampleBuilder;

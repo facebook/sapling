@@ -380,6 +380,8 @@ mod facebook {
     use mononoke_types::RepositoryId;
     use mononoke_xdb_telemetry_logger::MononokeXdbTelemetryLogger;
     use mysql_client::MysqlError;
+    use scuba_ext::CommonMetadata;
+    use scuba_ext::CommonServerData;
     use scuba_ext::MononokeScubaSampleBuilder;
     use sql::mysql::MysqlQueryTelemetry;
     use sql_query_telemetry::SqlQueryTelemetry;
@@ -899,154 +901,110 @@ mod facebook {
     /// Set metadata fields on the logger from metadata.
     fn set_metadata(log_entry: &mut MononokeXdbTelemetryLogger, sql_query_tel: &SqlQueryTelemetry) {
         let metadata = sql_query_tel.metadata();
+        let common_metadata = CommonMetadata::from_metadata(metadata);
 
-        // Session UUID
-        log_entry.set_session_uuid(metadata.session_id().to_string());
+        // Apply common metadata fields
+        apply_metadata(log_entry, &common_metadata);
 
-        // Client identities
-        let client_identities: Vec<String> = metadata
-            .identities()
-            .iter()
-            .map(|i| i.to_string())
-            .collect();
-        log_entry.set_client_identities(client_identities);
+        // Set client request info (uses MononokeScubaSampleBuilder helper for experiments)
+        set_client_request_info(log_entry, sql_query_tel);
 
-        // Client identity variant
-        if let Some(first_identity) = metadata.identities().first() {
-            log_entry.set_client_identity_variant(first_identity.variant().to_string());
-        }
-
-        // Source hostname or client IP (mutually exclusive)
-        if let Some(client_hostname) = metadata.client_hostname() {
-            log_entry.set_source_hostname(client_hostname.to_owned());
-        } else if let Some(client_ip) = metadata.client_ip() {
-            log_entry.set_client_ip(client_ip.to_string());
-        }
-
-        // Unix username
-        if let Some(unix_name) = metadata.unix_name() {
-            log_entry.set_unix_username(unix_name.to_string());
-        }
-
-        // Sandcastle fields
-        if let Some(sandcastle_alias) = metadata.sandcastle_alias() {
-            log_entry.set_sandcastle_alias(sandcastle_alias.to_string());
-        }
-        if let Some(sandcastle_vcs) = metadata.sandcastle_vcs() {
-            log_entry.set_sandcastle_vcs(sandcastle_vcs.to_string());
-        }
-        if let Some(sandcastle_nonce) = metadata.sandcastle_nonce() {
-            log_entry.set_sandcastle_nonce(sandcastle_nonce.to_string());
-        }
-
-        // Reverse proxy region
-        if let Some(revproxy_region) = metadata.revproxy_region() {
-            log_entry.set_revproxy_region(revproxy_region.to_string());
-        }
-
-        // Tupperware client info
-        if let Some(client_tw_job) = metadata.clientinfo_tw_job() {
-            log_entry.set_client_tw_job(client_tw_job.to_string());
-        }
-        if let Some(client_tw_task) = metadata.clientinfo_tw_task() {
-            log_entry.set_client_tw_task(client_tw_task.to_string());
-        }
-
-        // Atlas client info
-        if let Some(client_atlas) = metadata.clientinfo_atlas() {
-            log_entry.set_client_atlas(client_atlas.to_string());
-        }
-        if let Some(client_atlas_env_id) = metadata.clientinfo_atlas_env_id() {
-            log_entry.set_client_atlas_env_id(client_atlas_env_id.to_string());
-        }
-
-        // Fetch fields
-        if let Some(fetch_cause) = metadata.fetch_cause() {
-            log_entry.set_fetch_cause(fetch_cause.to_string());
-        }
-        log_entry.set_fetch_from_cas_attempted(metadata.fetch_from_cas_attempted());
-
-        // Common server data fields
-        set_common_server_data(log_entry);
+        // Set common server data
+        let server_data = CommonServerData::collect();
+        apply_server_data(log_entry, &server_data);
     }
 
-    /// Set common server data fields on the logger.
-    /// This replicates the logic from `add_mapped_common_server_data` in scuba/builder.rs
-    fn set_common_server_data(log_entry: &mut MononokeXdbTelemetryLogger) {
-        use std::env::var;
+    /// Apply CommonServerData fields to the schematized logger.
+    fn apply_server_data(logger: &mut MononokeXdbTelemetryLogger, data: &CommonServerData) {
+        if let Some(ref hostname) = data.server_hostname {
+            logger.set_server_hostname(hostname.clone());
+        }
+        if let Some(ref region) = data.region {
+            logger.set_region(region.clone());
+        }
+        if let Some(ref dc) = data.datacenter {
+            logger.set_datacenter(dc.clone());
+        }
+        if let Some(ref dc_prefix) = data.region_datacenter_prefix {
+            logger.set_region_datacenter_prefix(dc_prefix.clone());
+        }
+        if let Some(ref tier) = data.server_tier {
+            logger.set_server_tier(tier.clone());
+        }
+        if let Some(ref tw_task_id) = data.tw_task_id {
+            logger.set_tw_task_id(tw_task_id.clone());
+        }
+        if let Some(ref tw_canary_id) = data.tw_canary_id {
+            logger.set_tw_canary_id(tw_canary_id.clone());
+        }
+        if let Some(ref tw_handle) = data.tw_handle {
+            logger.set_tw_handle(tw_handle.clone());
+        }
+        if let Some(ref tw_task_handle) = data.tw_task_handle {
+            logger.set_tw_task_handle(tw_task_handle.clone());
+        }
+        if let Some(ref cluster) = data.chronos_cluster {
+            logger.set_chronos_cluster(cluster.clone());
+        }
+        if let Some(ref id) = data.chronos_job_instance_id {
+            logger.set_chronos_job_instance_id(id.clone());
+        }
+        if let Some(ref name) = data.chronos_job_name {
+            logger.set_chronos_job_name(name.clone());
+        }
+        if let Some(ref rev) = data.build_revision {
+            logger.set_build_revision(rev.clone());
+        }
+        if let Some(ref rule) = data.build_rule {
+            logger.set_build_rule(rule.clone());
+        }
+    }
 
-        // Server hostname
-        if let Ok(hostname) = hostname::get_hostname() {
-            log_entry.set_server_hostname(hostname);
-        }
+    /// Apply CommonMetadata fields to the schematized logger.
+    fn apply_metadata(logger: &mut MononokeXdbTelemetryLogger, data: &CommonMetadata) {
+        logger.set_session_uuid(data.session_uuid.clone());
+        logger.set_client_identities(data.client_identities.clone());
 
-        // Region, datacenter, and region_datacenter_prefix from fbwhoami
-        if let Ok(who) = fbwhoami::FbWhoAmI::get() {
-            if let Some(region) = &who.region {
-                log_entry.set_region(region.to_string());
-            }
-            if let Some(dc) = &who.datacenter {
-                log_entry.set_datacenter(dc.to_string());
-            }
-            if let Some(dc_prefix) = &who.region_datacenter_prefix {
-                log_entry.set_region_datacenter_prefix(dc_prefix.to_string());
-            }
+        if let Some(ref variant) = data.client_identity_variant {
+            logger.set_client_identity_variant(variant.clone());
         }
-
-        // Server tier from SMC_TIERS environment variable
-        if let Ok(smc_tier) = var("SMC_TIERS") {
-            log_entry.set_server_tier(smc_tier);
+        if let Some(ref hostname) = data.source_hostname {
+            logger.set_source_hostname(hostname.clone());
         }
-
-        // Tupperware task ID
-        if let Ok(tw_task_id) = var("TW_TASK_ID") {
-            log_entry.set_tw_task_id(tw_task_id);
+        if let Some(ref ip) = data.client_ip {
+            logger.set_client_ip(ip.clone());
         }
-
-        // Tupperware canary ID
-        if let Ok(tw_canary_id) = var("TW_CANARY_ID") {
-            log_entry.set_tw_canary_id(tw_canary_id);
+        if let Some(ref unix_name) = data.unix_username {
+            logger.set_unix_username(unix_name.clone());
         }
-
-        // Chronos fields
-        if let Ok(cluster) = var("CHRONOS_CLUSTER") {
-            log_entry.set_chronos_cluster(cluster);
+        if let Some(ref alias) = data.sandcastle_alias {
+            logger.set_sandcastle_alias(alias.clone());
         }
-        if let Ok(id) = var("CHRONOS_JOB_INSTANCE_ID") {
-            log_entry.set_chronos_job_instance_id(id);
+        if let Some(ref vcs) = data.sandcastle_vcs {
+            logger.set_sandcastle_vcs(vcs.clone());
         }
-        if let Ok(job_name) = var("CHRONOS_JOB_NAME") {
-            log_entry.set_chronos_job_name(job_name);
+        if let Some(ref region) = data.revproxy_region {
+            logger.set_revproxy_region(region.clone());
         }
-
-        // Tupperware job handle (format: cluster/user/name)
-        if let (Ok(tw_cluster), Ok(tw_user), Ok(tw_name)) = (
-            var("TW_JOB_CLUSTER"),
-            var("TW_JOB_USER"),
-            var("TW_JOB_NAME"),
-        ) {
-            log_entry.set_tw_handle(format!("{}/{}/{}", tw_cluster, tw_user, tw_name));
+        if let Some(ref nonce) = data.sandcastle_nonce {
+            logger.set_sandcastle_nonce(nonce.clone());
         }
-
-        // Tupperware task handle (format: cluster/user/name/taskid)
-        if let (Ok(tw_cluster), Ok(tw_user), Ok(tw_name), Ok(tw_task_id)) = (
-            var("TW_JOB_CLUSTER"),
-            var("TW_JOB_USER"),
-            var("TW_JOB_NAME"),
-            var("TW_TASK_ID"),
-        ) {
-            log_entry.set_tw_task_handle(format!(
-                "{}/{}/{}/{}",
-                tw_cluster, tw_user, tw_name, tw_task_id
-            ));
+        if let Some(ref tw_job) = data.client_tw_job {
+            logger.set_client_tw_job(tw_job.clone());
         }
-
-        // Build info (Linux only)
-        #[cfg(target_os = "linux")]
-        {
-            log_entry.set_build_revision(build_info::BuildInfo::get_revision().to_string());
-            log_entry.set_build_rule(build_info::BuildInfo::get_rule().to_string());
+        if let Some(ref tw_task) = data.client_tw_task {
+            logger.set_client_tw_task(tw_task.clone());
         }
+        if let Some(ref atlas) = data.client_atlas {
+            logger.set_client_atlas(atlas.clone());
+        }
+        if let Some(ref env_id) = data.client_atlas_env_id {
+            logger.set_client_atlas_env_id(env_id.clone());
+        }
+        if let Some(ref cause) = data.fetch_cause {
+            logger.set_fetch_cause(cause.clone());
+        }
+        logger.set_fetch_from_cas_attempted(data.fetch_from_cas_attempted);
     }
 
     pub(super) fn handle_mysql_error(
