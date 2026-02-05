@@ -7,12 +7,17 @@
 
 .split-diff-view {
   border: 1px solid var(--graphite-border);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--graphite-text-primary);
   font-family: var(--monospace-fontFamily);
   tab-size: var(--tab-size);
   overflow: hidden;
-  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.2));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.split-diff-view:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .split-diff-view-hunk-table {
@@ -34,6 +39,11 @@
   border: 1px solid var(--graphite-border);
   gap: var(--halfpad);
   z-index: 1;
+  transition: background-color 0.15s ease;
+}
+
+.split-diff-view-file-header:hover {
+  background-color: color-mix(in srgb, var(--graphite-bg-subtle) 95%, white);
 }
 
 .split-diff-view-file-header-toggle-open {
@@ -82,6 +92,7 @@
 
 .split-diff-view-file-header.file-header-reviewed {
   background-color: color-mix(in srgb, var(--graphite-bg-subtle), var(--scm-added-foreground) 5%);
+  border-left: 3px solid var(--scm-added-foreground);
 }
 
 .split-diff-view-file-header.file-header-collapsed {
@@ -283,16 +294,30 @@ td.lineNumber.patch-expanded-number {
 .lineNumber.lineNumber-commentable {
   cursor: pointer;
   position: relative;
+  transition: background-color 0.1s ease;
 }
 
 .lineNumber.lineNumber-commentable:hover {
-  background-color: var(--graphite-accent-subtle, rgba(74, 144, 226, 0.15));
+  background-color: rgba(92, 124, 250, 0.15);
 }
 
 .lineNumber.lineNumber-commentable:hover::before {
   content: '+';
   position: absolute;
-  left: 2px;
-  color: var(--graphite-accent, #4a90e2);
-  font-weight: bold;
+  left: 3px;
+  color: #5c7cfa;
+  font-weight: 700;
+  font-size: 11px;
+  animation: commentPulse 0.2s ease-out;
+}
+
+@keyframes commentPulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
