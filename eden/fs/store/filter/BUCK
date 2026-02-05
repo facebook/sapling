@@ -52,15 +52,12 @@ cpp_library(
     name = "hg_sparse_filter",
     srcs = ["HgSparseFilter.cpp"],
     headers = ["HgSparseFilter.h"],
-    os_deps = [
-        (
-            "windows",
-            ["fbsource//third-party/rust:cxx"],
-        ),
-    ],
     preferred_linkage = "static",
     undefined_symbols = True,
-    deps = [
+    deps = select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": ["fbsource//third-party/rust:cxx"],
+    }) + [
         "//eden/fs/model:model",
         "//eden/fs/service:thrift_util",
         "//folly/futures:core",
