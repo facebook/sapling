@@ -8,16 +8,14 @@
 import PullRequestCommentInput from './PullRequestCommentInput';
 import PullRequestReviewSelector from './PullRequestReviewSelector';
 import {PullRequestReviewEvent} from './generated/graphql';
-import {gitHubClientAtom, gitHubPullRequestAtom} from './jotai';
-import {gitHubPullRequestPendingReviewID} from './recoil';
+import {gitHubClientAtom, gitHubPullRequestAtom, gitHubPullRequestPendingReviewIDAtom} from './jotai';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useCallback, useMemo, useState} from 'react';
-import {useRecoilValue} from 'recoil';
 
 export default function PullRequestTimelineCommentInput(): React.ReactElement {
-  const pendingReviewID = useRecoilValue(gitHubPullRequestPendingReviewID);
+  const pendingReviewID = useAtomValue(gitHubPullRequestPendingReviewIDAtom);
   const refreshPullRequest = useRefreshPullRequest();
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const [event, setEvent] = useState(PullRequestReviewEvent.Comment);

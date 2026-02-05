@@ -41,6 +41,10 @@ export {
   gitHubThreadsForDiffFileAtom,
   gitHubPullRequestLineToPositionForFileAtom,
   gitHubPullRequestCheckRunsAtom,
+  gitHubPullRequestPendingReviewIDAtom,
+  gitHubPullRequestReviewThreadsAtom,
+  gitHubPullRequestReviewThreadsByFirstCommentIDAtom,
+  gitHubPullRequestCommentForIDAtom,
 } from './atoms';
 
 export type {

@@ -10,8 +10,6 @@ import type {CommitChange, DiffWithCommitIDs} from './github/diffTypes';
 import type {
   CommitData,
   PullRequestCommitItem,
-  PullRequestReviewComment,
-  PullRequestReviewItem,
   GitHubPullRequestReviewThread,
   PullRequest,
 } from './github/pullRequestTimelineTypes';
@@ -22,7 +20,6 @@ import type {
   DateTime,
   ForcePushEvent,
   GitObjectID,
-  ID,
   Version,
   VersionCommit,
 } from './github/types';
@@ -30,7 +27,7 @@ import type {LineToPosition} from './lineToPosition';
 import type {RecoilValueReadOnly} from 'recoil';
 
 import {lineToPosition} from './diffServiceClient';
-import {DiffSide, PullRequestReviewState} from './generated/graphql';
+import {DiffSide} from './generated/graphql';
 import CachingGitHubClient, {openDatabase} from './github/CachingGitHubClient';
 import GraphQLGitHubClient from './github/GraphQLGitHubClient';
 import {diffCommits, diffCommitWithParent} from './github/diff';
@@ -137,22 +134,8 @@ export const gitHubPullRequestBaseRef = selector<GitObjectID | null>({
   },
 });
 
-/**
- * A PR should have at most a single pending review per user. Any inline
- * comments made will either create a new pending review or be added to the
- * existing one.
- */
-export const gitHubPullRequestPendingReviewID = selector<ID | null>({
-  key: 'gitHubPullRequestPendingReviewID',
-  get: ({get}) => {
-    const pullRequest = get(gitHubPullRequest);
-    const pendingReview = (pullRequest?.timelineItems?.nodes ?? []).find(
-      item =>
-        item?.__typename === 'PullRequestReview' && item.state === PullRequestReviewState.Pending,
-    ) as PullRequestReviewItem;
-    return pendingReview?.id ?? null;
-  },
-});
+// NOTE: gitHubPullRequestPendingReviewID has been migrated to Jotai.
+// See gitHubPullRequestPendingReviewIDAtom in jotai/atoms.ts
 
 export const gitHubPullRequestCommits = selector<CommitData[]>({
   key: 'gitHubPullRequestCommits',
@@ -472,43 +455,11 @@ export const gitHubPullRequestReviewThreads = selector<GitHubPullRequestReviewTh
   },
 });
 
-export const gitHubPullRequestReviewThreadsByFirstCommentID = selector<{
-  [id: ID]: GitHubPullRequestReviewThread;
-}>({
-  key: 'gitHubPullRequestReviewThreadsByFirstCommentID',
-  get: ({get}) => {
-    return Object.fromEntries(
-      get(gitHubPullRequestReviewThreads).map(thread => [thread.firstCommentID, thread]),
-    );
-  },
-});
+// NOTE: gitHubPullRequestReviewThreadsByFirstCommentID has been migrated to Jotai.
+// See gitHubPullRequestReviewThreadsByFirstCommentIDAtom in jotai/atoms.ts
 
-const gitHubPullRequestReviewCommentsByID = selector<Map<ID, PullRequestReviewComment>>({
-  key: 'gitHubPullRequestReviewCommentsByID',
-  get: ({get}) => {
-    const reviewThreads = get(gitHubPullRequestReviewThreads);
-    const commentsByID = new Map();
-    reviewThreads.forEach(({originalLine, comments}) => {
-      comments.forEach(comment => {
-        const {id} = comment;
-        if (id != null) {
-          commentsByID.set(id, {originalLine, comment});
-        }
-      });
-    });
-    return commentsByID;
-  },
-});
-
-export const gitHubPullRequestCommentForID = selectorFamily<PullRequestReviewComment | null, ID>({
-  key: 'gitHubPullRequestCommentForID',
-  get:
-    id =>
-    ({get}) => {
-      const commentsByID = get(gitHubPullRequestReviewCommentsByID);
-      return commentsByID.get(id) ?? null;
-    },
-});
+// NOTE: gitHubPullRequestCommentForID has been migrated to Jotai.
+// See gitHubPullRequestCommentForIDAtom in jotai/atoms.ts
 
 export const gitHubPullRequestNewCommentInputCell = atom<{
   lineNumber: number;
@@ -855,15 +806,8 @@ export const gitHubPullRequestComparableVersions = atom<ComparableVersions>({
   }),
 });
 
-export const gitHubPullRequestSelectedVersionCommits = selector<VersionCommit[]>({
-  key: 'gitHubPullRequestSelectedVersionCommits',
-  get: ({get}) => {
-    const [versions, selectedVersionIndex] = get(
-      waitForAll([gitHubPullRequestVersions, gitHubPullRequestSelectedVersionIndex]),
-    );
-    return versions[selectedVersionIndex]?.commits ?? [];
-  },
-});
+// NOTE: gitHubPullRequestSelectedVersionCommits has been migrated to Jotai.
+// See gitHubPullRequestSelectedVersionCommitsAtom in jotai/atoms.ts
 
 // NOTE: gitHubPullRequestVersionDiff has been migrated to Jotai.
 // See gitHubPullRequestVersionDiffAtom in jotai/atoms.ts

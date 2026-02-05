@@ -26,8 +26,11 @@ import CommitLink from './CommitLink';
 import PendingLabel from './PendingLabel';
 import PullRequestReviewComment from './PullRequestReviewComment';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
-import {gitHubOrgAndRepoAtom, gitHubPullRequestAtom} from './jotai';
-import {gitHubPullRequestReviewThreadsByFirstCommentID} from './recoil';
+import {
+  gitHubOrgAndRepoAtom,
+  gitHubPullRequestAtom,
+  gitHubPullRequestReviewThreadsByFirstCommentIDAtom,
+} from './jotai';
 import {
   CheckCircleFillIcon,
   FileDiffIcon,
@@ -37,7 +40,6 @@ import {
 import {Box, StyledOcticon, Text} from '@primer/react';
 import {useAtomValue} from 'jotai';
 import React, {Suspense} from 'react';
-import {useRecoilValue} from 'recoil';
 import {notEmpty} from 'shared/utils';
 
 export default function PullRequestTimeline(): React.ReactElement {
@@ -135,7 +137,7 @@ function TimelineBasicEvent(props: {children?: React.ReactNode}): React.ReactEle
 }
 
 function PullRequestReview({item}: {item: PullRequestReviewItem}): React.ReactElement {
-  const threadMap = useRecoilValue(gitHubPullRequestReviewThreadsByFirstCommentID);
+  const threadMap = useAtomValue(gitHubPullRequestReviewThreadsByFirstCommentIDAtom);
   const comments = (item.comments.nodes ?? []).filter(notEmpty).flatMap((comment, index) => {
     // Check and see whether the first comment in the PullRequestReview corresponds
     // to a thread. If so, the comments in the thread are not available as

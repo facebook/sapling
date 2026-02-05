@@ -20,7 +20,11 @@ import type {
 } from '../generated/graphql';
 import type GitHubClient from '../github/GitHubClient';
 import type {DiffCommitIDs, DiffWithCommitIDs} from '../github/diffTypes';
-import type {GitHubPullRequestReviewThread, PullRequest} from '../github/pullRequestTimelineTypes';
+import type {
+  GitHubPullRequestReviewThread,
+  PullRequest,
+  PullRequestReviewComment,
+} from '../github/pullRequestTimelineTypes';
 import type {PullsQueryInput, PullsWithPageInfo} from '../github/pullsTypes';
 import type {Blob, Commit, DateTime, GitObjectID, ID, Version, VersionCommit} from '../github/types';
 
@@ -704,6 +708,118 @@ export const gitHubPullRequestsAtom = atomFamily(
     }
     return true;
   },
+);
+
+// =============================================================================
+// Pull Request Pending Review ID
+// =============================================================================
+
+/**
+ * Migrated from: gitHubPullRequestPendingReviewID selector in recoil.ts
+ *
+ * A PR should have at most a single pending review per user. Any inline
+ * comments made will either create a new pending review or be added to the
+ * existing one.
+ */
+export const gitHubPullRequestPendingReviewIDAtom = atom<ID | null>(get => {
+  const pullRequest = get(gitHubPullRequestAtom);
+  const pendingReview = (pullRequest?.timelineItems?.nodes ?? []).find(
+    item => item?.__typename === 'PullRequestReview' && item.state === 'PENDING',
+  );
+  return (pendingReview as {id: ID} | undefined)?.id ?? null;
+});
+
+// =============================================================================
+// Pull Request Review Threads
+// =============================================================================
+
+/**
+ * Migrated from: gitHubPullRequestReviewThreads selector in recoil.ts
+ *
+ * Extracts and normalizes review threads from the pull request.
+ */
+export const gitHubPullRequestReviewThreadsAtom = atom<GitHubPullRequestReviewThread[]>(get => {
+  const pullRequest = get(gitHubPullRequestAtom);
+  return (pullRequest?.reviewThreads.nodes ?? []).filter(notEmpty).map(reviewThread => {
+    const {originalLine, diffSide, comments} = reviewThread;
+    const normalizedComments = (comments?.nodes ?? [])
+      .map(comment => {
+        if (comment == null) {
+          return null;
+        }
+
+        const {id, author, originalCommit, path, state, bodyHTML} = comment;
+        const reviewThreadComment = {
+          id,
+          author: author ?? null,
+          originalCommit,
+          path,
+          state,
+          bodyHTML,
+        };
+        return reviewThreadComment;
+      })
+      .filter(notEmpty);
+    const firstCommentID = normalizedComments[0].id;
+    return {
+      firstCommentID,
+      originalLine,
+      diffSide,
+      comments: normalizedComments,
+    };
+  });
+});
+
+/**
+ * Migrated from: gitHubPullRequestReviewThreadsByFirstCommentID selector in recoil.ts
+ *
+ * Returns review threads indexed by the ID of their first comment.
+ * Used to look up thread information when rendering inline comments.
+ */
+export const gitHubPullRequestReviewThreadsByFirstCommentIDAtom = atom<{
+  [id: ID]: GitHubPullRequestReviewThread;
+}>(get => {
+  return Object.fromEntries(
+    get(gitHubPullRequestReviewThreadsAtom).map(thread => [thread.firstCommentID, thread]),
+  );
+});
+
+// =============================================================================
+// Pull Request Comment Lookup
+// =============================================================================
+
+// Note: PullRequestReviewComment type is imported from pullRequestTimelineTypes.ts
+
+/**
+ * Internal atom that indexes all review comments by their ID.
+ */
+const gitHubPullRequestReviewCommentsByIDAtom = atom<Map<ID, PullRequestReviewComment>>(get => {
+  const reviewThreads = get(gitHubPullRequestReviewThreadsAtom);
+  const commentsByID = new Map<ID, PullRequestReviewComment>();
+  reviewThreads.forEach(({originalLine, comments}) => {
+    comments.forEach(comment => {
+      const {id} = comment;
+      if (id != null) {
+        commentsByID.set(id, {originalLine, comment});
+      }
+    });
+  });
+  return commentsByID;
+});
+
+/**
+ * Migrated from: gitHubPullRequestCommentForID selectorFamily in recoil.ts
+ *
+ * Looks up a review comment by its ID. Returns the comment with its
+ * original line number for display purposes.
+ */
+export const gitHubPullRequestCommentForIDAtom = atomFamily(
+  (id: ID) =>
+    atom<PullRequestReviewComment | null>(get => {
+      const commentsByID = get(gitHubPullRequestReviewCommentsByIDAtom);
+      return commentsByID.get(id) ?? null;
+    }),
+  (a, b) => a === b,
 );
 
 // =============================================================================

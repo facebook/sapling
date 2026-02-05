@@ -8,13 +8,14 @@
 import type {GitObjectID, VersionCommit} from './github/types';
 
 import PullRequestVersionCommitSelectorItem from './PullRequestVersionCommitSelectorItem';
-import {gitHubPullRequestComparableVersionsAtom} from './jotai';
-import {gitHubPullRequestSelectedVersionCommits} from './recoil';
+import {
+  gitHubPullRequestComparableVersionsAtom,
+  gitHubPullRequestSelectedVersionCommitsAtom,
+} from './jotai';
 import {shortOid} from './utils';
 import {ActionList, ActionMenu} from '@primer/react';
 import {useAtomValue} from 'jotai';
 import React from 'react';
-import {useRecoilValue} from 'recoil';
 import {notEmpty} from 'shared/utils';
 
 type Props = {
@@ -32,7 +33,7 @@ export default React.memo(function PullRequestVersionCommitSelector({
     beforeCommitID: null,
     afterCommitID: '',
   };
-  const commits = useRecoilValue(gitHubPullRequestSelectedVersionCommits);
+  const commits = useAtomValue(gitHubPullRequestSelectedVersionCommitsAtom);
   const beforeIndex = getIndex(beforeCommitID, commits, -1);
   const afterIndex = getIndex(afterCommitID, commits, commits.length - 1);
 

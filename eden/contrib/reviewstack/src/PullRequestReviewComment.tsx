@@ -9,9 +9,9 @@ import type {ID, GitObject} from './github/types';
 
 import PullRequestReviewCommentLineNumber from './PullRequestReviewCommentLineNumber';
 import TrustedRenderedMarkdown from './TrustedRenderedMarkdown';
-import {gitHubPullRequestCommentForID} from './recoil';
+import {gitHubPullRequestCommentForIDAtom} from './jotai';
 import {Box} from '@primer/react';
-import {useRecoilValue} from 'recoil';
+import {useAtomValue} from 'jotai';
 
 type Props = {
   comment: {
@@ -23,7 +23,7 @@ type Props = {
 };
 
 export default function PullRequestReviewComment({comment}: Props): React.ReactElement {
-  const reviewComment = useRecoilValue(gitHubPullRequestCommentForID(comment.id));
+  const reviewComment = useAtomValue(gitHubPullRequestCommentForIDAtom(comment.id));
   const commentID = comment.id;
   const commit = comment.originalCommit?.oid;
   const lineNumber = reviewComment?.originalLine;
