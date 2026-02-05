@@ -2234,6 +2234,8 @@ pub struct RestrictedPathsConfig {
     /// Enforcement conditions for incremental rollout.
     /// Empty Vec = enforcement disabled (logging only).
     pub enforcement_conditions: Vec<EnforcementCondition>,
+    /// Group name for tooling that should be allowlisted for all restricted paths.
+    pub tooling_allowlist_group: Option<String>,
 }
 
 impl Default for RestrictedPathsConfig {
@@ -2244,6 +2246,7 @@ impl Default for RestrictedPathsConfig {
             cache_update_interval_ms: 1000,
             soft_path_acls: Vec::new(),
             enforcement_conditions: Vec::new(),
+            tooling_allowlist_group: None,
         }
     }
 }

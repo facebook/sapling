@@ -65,6 +65,22 @@ pub async fn has_access_to_acl(
         .await)
 }
 
+/// Check if the caller is a member of the given group.
+pub async fn is_part_of_group(
+    ctx: &CoreContext,
+    acl_provider: &Arc<dyn AclProvider>,
+    group_name: &str,
+) -> Result<bool> {
+    let membership_checker = acl_provider
+        .group(group_name)
+        .await
+        .with_context(|| format!("Failed to get membership checker for group {}", group_name))?;
+
+    Ok(membership_checker
+        .is_member(ctx.metadata().identities())
+        .await)
+}
+
 // ============================================================================
 // Schematized logger implementation (fbcode_build only)
 // ============================================================================
@@ -91,6 +107,7 @@ mod schematized_logger {
         restricted_paths: &[NonRootMPath],
         access_data: &RestrictedPathAccessData,
         has_authorization: bool,
+        is_allowlisted_tooling: bool,
         acls: &[&MononokeIdentity],
     ) -> Result<()> {
         let mut logger = MononokeRestrictedPathsAccessLogger::new(ctx.fb);
@@ -112,6 +129,7 @@ mod schematized_logger {
                 .collect::<Vec<_>>(),
         );
         logger.set_has_authorization(has_authorization.to_string());
+        logger.set_is_allowlisted_tooling(is_allowlisted_tooling.to_string());
         logger.set_acls(acls.iter().map(|acl| acl.to_string()).collect::<Vec<_>>());
 
         // Set access data variant fields
@@ -245,11 +263,22 @@ pub(crate) async fn log_access_to_restricted_path(
     acls: Vec<&MononokeIdentity>,
     access_data: RestrictedPathAccessData,
     acl_provider: Arc<dyn AclProvider>,
+    tooling_allowlist_group: Option<&str>,
     scuba: MononokeScubaSampleBuilder,
 ) -> Result<bool> {
     // TODO(T239041722): store permission checkers in RestrictedPaths to improve
     // performance if needed.
-    let has_authorization = has_access_to_acl(ctx, &acl_provider, &acls).await?;
+    let has_path_acl_access = has_access_to_acl(ctx, &acl_provider, &acls).await?;
+
+    // Check if caller is in the tooling allowlist group
+    let is_allowlisted_tooling = if let Some(group_name) = tooling_allowlist_group {
+        is_part_of_group(ctx, &acl_provider, group_name).await?
+    } else {
+        false
+    };
+
+    // Caller has authorization if they have access via path ACLs OR via tooling allowlist
+    let has_authorization = has_path_acl_access || is_allowlisted_tooling;
 
     // Log to schematized logger (logs to both Scuba and Hive) if enabled via JK
     // Only available in fbcode builds
@@ -268,6 +297,7 @@ pub(crate) async fn log_access_to_restricted_path(
                 &restricted_paths,
                 &access_data,
                 has_authorization,
+                is_allowlisted_tooling,
                 &acls,
             ) {
                 tracing::error!("Failed to log to schematized logger: {:?}", e);
@@ -275,14 +305,13 @@ pub(crate) async fn log_access_to_restricted_path(
         }
     }
 
-    // Keep existing Scuba logging during migration for safety.
-    // This can be removed once the schematized logger is verified in production.
     log_access_to_scuba(
         ctx,
         repo_id,
         restricted_paths,
         access_data,
         has_authorization,
+        is_allowlisted_tooling,
         acls,
         scuba,
     )?;
@@ -296,6 +325,7 @@ fn log_access_to_scuba(
     restricted_paths: Vec<NonRootMPath>,
     access_data: RestrictedPathAccessData,
     has_authorization: bool,
+    is_allowlisted_tooling: bool,
     acls: Vec<&MononokeIdentity>,
     mut scuba: MononokeScubaSampleBuilder,
 ) -> Result<()> {
@@ -316,6 +346,7 @@ fn log_access_to_scuba(
     );
 
     scuba.add("has_authorization", has_authorization);
+    scuba.add("is_allowlisted_tooling", is_allowlisted_tooling);
     scuba.add(
         "acls",
         acls.into_iter()

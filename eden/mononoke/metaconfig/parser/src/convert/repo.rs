@@ -1233,12 +1233,16 @@ impl Convert for RawRestrictedPathsConfig {
             .map(|cond| cond.convert())
             .collect::<Result<Vec<_>>>()?;
 
+        // tooling_allowlist_group is used directly as a group name for membership checking
+        let tooling_allowlist_group = self.tooling_allowlist_acl;
+
         Ok(RestrictedPathsConfig {
             path_acls,
             use_manifest_id_cache,
             cache_update_interval_ms,
             soft_path_acls,
             enforcement_conditions,
+            tooling_allowlist_group,
         })
     }
 }

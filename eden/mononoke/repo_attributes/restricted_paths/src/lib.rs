@@ -181,6 +181,7 @@ impl RestrictedPaths {
             acls,
             crate::access_log::RestrictedPathAccessData::Manifest(manifest_id, manifest_type),
             self.acl_provider.clone(),
+            self.config.tooling_allowlist_group.as_deref(),
             self.scuba.clone(),
         )
         .await
@@ -223,6 +224,7 @@ impl RestrictedPaths {
             matched_acls,
             crate::access_log::RestrictedPathAccessData::FullPath { full_path: path },
             self.acl_provider.clone(),
+            self.config.tooling_allowlist_group.as_deref(),
             self.scuba.clone(),
         )
         .await
@@ -413,6 +415,7 @@ mod tests {
             cache_update_interval_ms,
             soft_path_acls: Vec::new(),
             enforcement_conditions: Vec::new(),
+            tooling_allowlist_group: None,
         };
 
         let scuba = MononokeScubaSampleBuilder::with_discard();
@@ -450,6 +453,7 @@ mod tests {
             cache_update_interval_ms,
             soft_path_acls: Vec::new(),
             enforcement_conditions: Vec::new(),
+            tooling_allowlist_group: None,
         };
 
         let scuba = MononokeScubaSampleBuilder::with_discard();
