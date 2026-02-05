@@ -44,6 +44,13 @@ Init an hg repo using the git changelog backend:
     Commit Data (user, message):
       Git
 
+Test log with --exclude: (tofix: should not crash)
+
+  $ hg log --exclude yaml 2>&1 | grep -E -v '^  '
+  * Sapling SCM (version *) has crashed: (glob)
+  Traceback (most recent call last):
+  TypeError: 'NoneType' object is not iterable
+
 Make sure tests aren't sensitive to the system git overrides file.
   $ LOG=config=info hg root 2>&1 | grep git_overrides.rc || true
 
