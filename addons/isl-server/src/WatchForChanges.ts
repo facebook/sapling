@@ -413,6 +413,10 @@ export class WatchForChanges {
             // Even though we tell it not to match .sl, modifying a file inside .sl
             // will emit an event for the folder itself, which we want to ignore.
             ['not', ['match', outerDotDir, 'basename']],
+            // Exclude edenfs notifications directory - EdenFS notifications can modify hidden files
+            // in this directory which would otherwise trigger watchman events.
+            ['not', ['dirname', '.edenfs-notifications-state']],
+            ['not', ['match', '.edenfs-notifications-state', 'basename']],
           ],
           defer: [WatchForChanges.WATCHMAN_DEFER],
           empty_on_fresh_instance: true,
