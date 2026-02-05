@@ -141,19 +141,19 @@
 
 /* Inline comment input in review mode */
 .inline-comment-input-container {
-  padding: var(--pad);
-  border-top: 1px solid var(--graphite-border);
-  background: var(--graphite-bg-subtle);
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(30, 34, 42, 0.5) 0%, rgba(30, 34, 42, 0.8) 100%);
 }
 
 /* Pending comments section for a file */
 .file-pending-comments {
   display: flex;
   flex-direction: column;
-  gap: var(--halfpad);
-  padding: var(--pad);
-  border-top: 1px solid var(--graphite-border);
-  background: var(--graphite-bg-subtle);
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(30, 34, 42, 0.5);
 }
 
 /* Review mode footer section - at bottom with merge controls */
@@ -299,46 +299,65 @@
   to { transform: rotate(360deg); }
 }
 
-/* Review action buttons in header */
-.comparison-view-header .review-action-btn {
-  font-size: 12px !important;
+/* Review actions bar - below stack navigation */
+.review-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--graphite-bg);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Review action buttons */
+.review-action-btn {
+  font-size: 13px !important;
   font-weight: 500 !important;
-  padding: 5px 14px !important;
+  padding: 8px 20px !important;
   border-radius: 6px !important;
   transition: all 0.15s ease !important;
   min-width: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
 }
 
-.comparison-view-header .review-action-approve {
+.review-action-approve {
   background: transparent !important;
   color: #22c55e !important;
   border: 1.5px solid #22c55e !important;
 }
 
-.comparison-view-header .review-action-approve:hover:not(:disabled) {
-  background: rgba(34, 197, 94, 0.1) !important;
+.review-action-approve:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.15) !important;
+  border-color: #4ade80 !important;
 }
 
-.comparison-view-header .review-action-approve:disabled {
+.review-action-approve:disabled {
   opacity: 0.5;
   border-color: var(--graphite-border) !important;
   color: var(--graphite-text-secondary) !important;
 }
 
-.comparison-view-header .review-action-request-changes {
+.review-action-request-changes {
   background: transparent !important;
   color: #f59e0b !important;
   border: 1.5px solid #f59e0b !important;
 }
 
-.comparison-view-header .review-action-request-changes:hover:not(:disabled) {
-  background: rgba(245, 158, 11, 0.1) !important;
+.review-action-request-changes:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.15) !important;
+  border-color: #fbbf24 !important;
 }
 
-.comparison-view-header .review-action-request-changes:disabled {
+.review-action-request-changes:disabled {
   opacity: 0.5;
   border-color: var(--graphite-border) !important;
   color: var(--graphite-text-secondary) !important;
+}
+
+.review-action-btn .codicon {
+  font-size: 14px;
 }
 
 /* Stack navigation container - holds PR info + stack nav */
@@ -351,8 +370,8 @@
 .pr-info-header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 16px 12px 16px;
+  gap: 8px;
+  padding: 12px 16px 16px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   background: var(--graphite-bg);
 }
@@ -360,18 +379,18 @@
 .pr-info-title-row {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 10px;
 }
 
 .pr-info-number {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--graphite-text-secondary);
+  color: #5c7cfa;
   flex-shrink: 0;
 }
 
 .pr-info-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--graphite-text-primary);
   text-decoration: none;
@@ -385,15 +404,41 @@ a.pr-info-title:hover {
   text-decoration: underline;
 }
 
+/* File count and LOC stats row */
+.pr-info-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.pr-stat-files {
+  color: var(--graphite-text-secondary);
+}
+
+.pr-stat-additions {
+  color: #22c55e;
+  font-weight: 500;
+}
+
+.pr-stat-deletions {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+/* Description with blockquote-like style */
 .pr-info-description {
   font-size: 12px;
   color: var(--graphite-text-secondary);
-  line-height: 1.4;
+  line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
+  padding-left: 12px;
+  border-left: 3px solid rgba(255, 255, 255, 0.15);
+  margin-top: 4px;
 }
 
 /* Stack navigation bar for multi-PR stacks */
@@ -408,11 +453,21 @@ a.pr-info-title:hover {
 }
 
 .stack-navigation-bar .stack-label {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--graphite-text-secondary);
+  color: #5c7cfa;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  padding: 6px 12px;
+  background: rgba(92, 124, 250, 0.1);
+  border-radius: 4px;
+}
+
+.stack-navigation-bar .stack-label .codicon {
+  font-size: 14px;
 }
 
 .stack-navigation-bar .stack-pr-pills {
