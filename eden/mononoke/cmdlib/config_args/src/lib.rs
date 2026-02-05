@@ -83,7 +83,6 @@ impl ConfigArgs {
     }
 
     pub fn create_config_store(&self, fb: FacebookInit) -> Result<ConfigStore> {
-        const CRYPTO_PROJECT: &str = "SCM";
         const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
         const CONFIGERATOR_REFRESH_TIMEOUT: Duration = Duration::from_secs(1);
 
@@ -95,24 +94,7 @@ impl ConfigArgs {
                 CONFIGERATOR_POLL_INTERVAL,
             ))
         } else {
-            let crypto_regex_paths = match &self.crypto_path_regex {
-                Some(paths) => paths.clone(),
-                None => vec![
-                    "scm/mononoke/repos/.*".to_string(),
-                    "scm/mononoke/redaction/.*".to_string(),
-                ],
-            };
-            let crypto_regex = crypto_regex_paths
-                .into_iter()
-                .map(|path| (path, CRYPTO_PROJECT.to_string()))
-                .collect();
-            ConfigStore::regex_signed_configerator(
-                fb,
-                true,
-                crypto_regex,
-                true,
-                CONFIGERATOR_REFRESH_TIMEOUT,
-            )
+            ConfigStore::configerator(fb, true, true, CONFIGERATOR_REFRESH_TIMEOUT)
         }
     }
 
