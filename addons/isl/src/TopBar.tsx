@@ -18,6 +18,7 @@ import {CollapseAllStacksButton} from './CollapseAllStacksButton';
 import serverAPI from './ClientToServerAPI';
 import {CwdSelector} from './CwdSelector';
 import {DownloadCommitsTooltipButton} from './DownloadCommitsMenu';
+import {WorktreeSwitcher} from './WorktreeSwitcher';
 import {FocusModeToggle} from './FocusMode';
 import {NotificationBell} from './notifications/NotificationBell';
 import {generatedFileCache} from './GeneratedFile';
@@ -66,6 +67,7 @@ export function TopBar() {
       <span className="button-group">
         {canPush && <PullButton />}
         <CwdSelector />
+        <WorktreeSwitcher />
         <DownloadCommitsTooltipButton />
         <ShelvedChangesMenu />
         <BulkActionsMenu />

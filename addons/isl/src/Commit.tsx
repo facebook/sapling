@@ -14,11 +14,12 @@ import {succeedableRevset, WarningCheckResult} from './types';
 
 import * as stylex from '@stylexjs/stylex';
 import {Button} from 'isl-components/Button';
+import {ButtonDropdown} from 'isl-components/ButtonDropdown';
 import {Icon} from 'isl-components/Icon';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtomValue, useSetAtom} from 'jotai';
-import React, {memo} from 'react';
+import React, {memo, useState} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import {useContextMenu} from 'shared/ContextMenu';
 import {MS_PER_DAY} from 'shared/constants';
@@ -67,6 +68,7 @@ import {CONFLICT_SIDE_LABELS} from './mergeConflicts/consts';
 import {getAmendToOperation, isAmendToAllowedForCommit} from './operationUtils';
 import {GotoOperation} from './operations/GotoOperation';
 import {HideOperation} from './operations/HideOperation';
+import {WorktreeAddOperation} from './operations/WorktreeAddOperation';
 import {
   inlineProgressByHash,
   operationBeingPreviewed,
@@ -89,6 +91,7 @@ import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {copyAndShowToast} from './toast';
 import {showModal} from './useModal';
 import {short} from './utils';
+import {WorktreeIndicator} from './WorktreeIndicator';
 
 export const rebaseOffWarmWarningEnabled = localStorageBackedAtom<boolean>(
   'isl.rebase-off-warm-warning-enabled',
@@ -390,6 +393,13 @@ export const Commit = memo(
           loggingLabel: 'Create Bookmark',
         });
         items.push({
+          label: <T>Checkout in Worktree</T>,
+          onClick: () => {
+            runOperation(new WorktreeAddOperation(commit.hash));
+          },
+          loggingLabel: 'Checkout in Worktree',
+        });
+        items.push({
           label: hasChildren ? <T>Hide Commit and Descendants</T> : <T>Hide Commit</T>,
           onClick: () =>
             writeAtom(
@@ -475,24 +485,7 @@ export const Commit = memo(
 
     if (!actionsPrevented && !commit.isDot) {
       commitActions.push(
-        <span className="goto-button" key="goto-button">
-          <Tooltip
-            title={t(
-              'Update files in the working copy to match this commit. Mark this commit as the "current commit".',
-            )}
-            delayMs={250}>
-            <Button
-              aria-label={t('Go to commit "$title"', {replace: {$title: commit.title}})}
-              xstyle={styles.gotoButton}
-              onClick={async event => {
-                event.stopPropagation(); // don't toggle selection by letting click propagate onto selection target.
-                await gotoAction(runOperation, commit);
-              }}>
-              <T>Goto</T>
-              <Icon icon="newline" />
-            </Button>
-          </Tooltip>
-        </span>,
+        <GotoDropdown key="goto-button" commit={commit} runOperation={runOperation} />,
       );
     }
 
@@ -596,6 +589,7 @@ export const Commit = memo(
               stable={commit?.stableCommitMetadata ?? []}
               fullRepoBranch={commit.fullRepoBranch}
             />
+            <WorktreeIndicator hash={commit.hash} />
             {isPublic ? <CommitDate date={commit.date} /> : null}
             {isNarrow ? commitActions : null}
           </DragToRebase>
@@ -1078,4 +1072,55 @@ async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<WarningC
   }
 
   return WarningCheckResult.PASS;
+}
+
+/**
+ * Dropdown button that offers both "Goto" and "Goto in Worktree" options.
+ */
+type GotoMode = 'goto' | 'worktree';
+
+const GOTO_OPTIONS: ReadonlyArray<{id: GotoMode; label: string}> = [
+  {id: 'goto', label: 'Goto'},
+  {id: 'worktree', label: 'Goto in Worktree'},
+];
+
+function GotoDropdown({
+  commit,
+  runOperation,
+}: {
+  commit: CommitInfo;
+  runOperation: ReturnType<typeof useRunOperation>;
+}) {
+  const [selectedMode, setSelectedMode] = useState<{id: GotoMode; label: string}>(GOTO_OPTIONS[0]);
+
+  const handleClick = async (mode: {id: GotoMode; label: string}) => {
+    if (mode.id === 'worktree') {
+      runOperation(new WorktreeAddOperation(commit.hash));
+    } else {
+      await gotoAction(runOperation, commit);
+    }
+  };
+
+  return (
+    <span className="goto-button" onClick={e => e.stopPropagation()}>
+      <Tooltip
+        title={
+          selectedMode.id === 'worktree'
+            ? t('Create a new worktree and check out this commit there.')
+            : t(
+                'Update files in the working copy to match this commit. Mark this commit as the "current commit".',
+              )
+        }
+        delayMs={250}>
+        <ButtonDropdown
+          options={GOTO_OPTIONS}
+          selected={selectedMode}
+          onChangeSelected={setSelectedMode}
+          onClick={handleClick}
+          icon={<Icon icon={selectedMode.id === 'worktree' ? 'folder-opened' : 'newline'} />}
+          data-testid="goto-dropdown"
+        />
+      </Tooltip>
+    </span>
+  );
 }
