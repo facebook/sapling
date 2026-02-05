@@ -155,7 +155,7 @@ impl EdenFileSystem {
                 })?;
         tracing::debug!(?should_wait_for_checkout, "get_status");
 
-        let mut start_time: Option<Instant> = None;
+        let mut derace_start_time: Option<Instant> = None;
         let mut checkout_start_time: Option<Instant> = None;
         // Holds the strong reference for the progress thread. When this is dropped,
         // the progress thread detects it via its Weak reference and exits automatically.
@@ -204,7 +204,7 @@ impl EdenFileSystem {
 
                 if wait_for_touch_file.is_some() {
                     // If we are in derace mode, log how long we waited.
-                    match start_time {
+                    match derace_start_time {
                         Some(start) => {
                             // We had multiple loops - log additional time we waited past first "status".
                             tracing::trace!(elapsed=?start.elapsed(), "eventually found derace touch file");
@@ -241,9 +241,9 @@ impl EdenFileSystem {
                 return Ok(status_map);
             }
 
-            match start_time {
+            match derace_start_time {
                 // Start the derace clock _after_ the first status attempt (i.e. it measures additional time).
-                None => start_time = Some(Instant::now()),
+                None => derace_start_time = Some(Instant::now()),
                 Some(start) => {
                     if start.elapsed() >= timeout {
                         tracing::trace!(target: "eden_derace_info", eden_derace_error="timeout");
