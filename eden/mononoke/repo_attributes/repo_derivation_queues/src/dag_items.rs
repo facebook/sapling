@@ -93,6 +93,17 @@ fn default_derivation_priority() -> derivation_queue_thrift::DerivationPriority 
     derivation_queue_thrift::DerivationPriority::LOW
 }
 
+/// Convert a DerivationPriority to a string for logging.
+pub fn derivation_priority_to_str(
+    priority: derivation_queue_thrift::DerivationPriority,
+) -> &'static str {
+    match priority {
+        derivation_queue_thrift::DerivationPriority::LOW => "low",
+        derivation_queue_thrift::DerivationPriority::HIGH => "high",
+        _ => "unknown",
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DagItemInfo {
     head_cs_id: ChangesetId,
@@ -268,6 +279,10 @@ impl DerivationDagItem {
 
     pub fn retry_count(&self) -> u64 {
         self.dag_item_info.retry_count
+    }
+
+    pub fn priority(&self) -> derivation_queue_thrift::DerivationPriority {
+        self.dag_item_info.priority
     }
 
     pub fn deps(&self) -> &Vec<DagItemId> {

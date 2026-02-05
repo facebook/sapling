@@ -31,6 +31,7 @@ use serde::Serialize;
 pub use crate::dag_items::DagItemId;
 pub use crate::dag_items::DagItemInfo;
 pub use crate::dag_items::DerivationDagItem;
+pub use crate::dag_items::derivation_priority_to_str;
 pub use crate::errors::InternalError;
 pub use crate::underived::build_underived_batched_graph;
 
