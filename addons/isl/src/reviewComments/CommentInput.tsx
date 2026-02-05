@@ -8,8 +8,8 @@
 import type {PendingComment} from './pendingCommentsState';
 
 import * as stylex from '@stylexjs/stylex';
-import {Button} from 'isl-components/Button';
-import {useState, useCallback} from 'react';
+import {Icon} from 'isl-components/Icon';
+import {useState, useCallback, useRef, useEffect} from 'react';
 import {colors, spacing, radius, font} from '../../../components/theme/tokens.stylex';
 import {addPendingComment} from './pendingCommentsState';
 
@@ -28,39 +28,154 @@ export type CommentInputProps = {
   onSubmit?: () => void;
 };
 
+const fadeIn = stylex.keyframes({
+  '0%': {opacity: 0, transform: 'translateY(-4px)'},
+  '100%': {opacity: 1, transform: 'translateY(0)'},
+});
+
 const styles = stylex.create({
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.half,
-    padding: spacing.pad,
-    backgroundColor: colors.bg,
-    border: '1px solid var(--graphite-border)',
-    borderRadius: radius.round,
+    gap: '12px',
+    padding: '16px',
+    backgroundColor: 'rgba(30, 34, 42, 0.95)',
+    border: '1px solid rgba(92, 124, 250, 0.3)',
+    borderRadius: '8px',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.03)',
+    animationName: fadeIn,
+    animationDuration: '0.2s',
+    animationTimingFunction: 'ease-out',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  typeIcon: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '28px',
+    height: '28px',
+    borderRadius: '6px',
+    backgroundColor: 'rgba(92, 124, 250, 0.15)',
+    color: '#5c7cfa',
+  },
+  labelContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  },
+  label: {
+    fontSize: '13px',
+    fontWeight: '500',
+    color: colors.fg,
+    letterSpacing: '-0.01em',
+  },
+  sublabel: {
+    fontSize: '11px',
+    color: 'var(--graphite-text-tertiary)',
+    fontFamily: 'var(--monospace-fontFamily)',
+  },
+  textareaWrapper: {
+    position: 'relative',
   },
   textarea: {
-    minHeight: '60px',
+    width: '100%',
+    minHeight: '80px',
     resize: 'vertical',
-    padding: spacing.half,
-    backgroundColor: 'var(--graphite-bg-subtle)',
+    padding: '12px 14px',
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
     color: colors.fg,
-    border: '1px solid var(--graphite-border-subtle)',
-    borderRadius: radius.small,
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: '6px',
     fontFamily: 'inherit',
-    fontSize: font.normal,
+    fontSize: '13px',
+    lineHeight: '1.5',
+    transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+    '::placeholder': {
+      color: 'var(--graphite-text-tertiary)',
+    },
     ':focus': {
       outline: 'none',
-      borderColor: 'var(--graphite-accent)',
+      borderColor: 'rgba(92, 124, 250, 0.5)',
+      boxShadow: '0 0 0 3px rgba(92, 124, 250, 0.1)',
     },
+  },
+  footer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  hint: {
+    fontSize: '11px',
+    color: 'var(--graphite-text-tertiary)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  kbd: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px 5px',
+    fontSize: '10px',
+    fontFamily: 'inherit',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: '3px',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    color: 'var(--graphite-text-secondary)',
   },
   buttons: {
     display: 'flex',
-    gap: spacing.half,
-    justifyContent: 'flex-end',
+    gap: '8px',
   },
-  label: {
-    fontSize: font.small,
+  cancelBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '7px 14px',
+    fontSize: '12px',
+    fontWeight: '500',
     color: 'var(--graphite-text-secondary)',
+    backgroundColor: 'transparent',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    ':hover': {
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      borderColor: 'rgba(255, 255, 255, 0.15)',
+      color: colors.fg,
+    },
+  },
+  submitBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '7px 16px',
+    fontSize: '12px',
+    fontWeight: '500',
+    color: '#5c7cfa',
+    backgroundColor: 'transparent',
+    border: '1.5px solid #5c7cfa',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    ':hover': {
+      backgroundColor: 'rgba(92, 124, 250, 0.15)',
+      borderColor: '#748ffc',
+      color: '#748ffc',
+    },
+  },
+  submitBtnDisabled: {
+    opacity: 0.4,
+    cursor: 'not-allowed',
+    ':hover': {
+      backgroundColor: 'transparent',
+      borderColor: '#5c7cfa',
+      color: '#5c7cfa',
+    },
   },
 });
 
@@ -78,6 +193,12 @@ export function CommentInput({
   onSubmit,
 }: CommentInputProps) {
   const [body, setBody] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-focus the textarea on mount
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
 
   const handleSubmit = useCallback(() => {
     if (body.trim() === '') {
@@ -113,10 +234,21 @@ export function CommentInput({
     [handleSubmit, onCancel],
   );
 
+  const getIcon = (): 'comment' | 'file' | 'comment-discussion' => {
+    switch (type) {
+      case 'inline':
+        return 'comment';
+      case 'file':
+        return 'file';
+      case 'pr':
+        return 'comment-discussion';
+    }
+  };
+
   const getLabel = () => {
     switch (type) {
       case 'inline':
-        return `Comment on line ${line}`;
+        return 'Line comment';
       case 'file':
         return 'File comment';
       case 'pr':
@@ -124,22 +256,61 @@ export function CommentInput({
     }
   };
 
+  const getSublabel = () => {
+    switch (type) {
+      case 'inline':
+        return `Line ${line}${side === 'LEFT' ? ' (old)' : side === 'RIGHT' ? ' (new)' : ''}`;
+      case 'file':
+        return path ? path.split('/').pop() : undefined;
+      case 'pr':
+        return undefined;
+    }
+  };
+
+  const sublabel = getSublabel();
+  const canSubmit = body.trim() !== '';
+
   return (
     <div {...stylex.props(styles.container)}>
-      <span {...stylex.props(styles.label)}>{getLabel()}</span>
-      <textarea
-        {...stylex.props(styles.textarea)}
-        value={body}
-        onChange={e => setBody(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Leave a comment..."
-        autoFocus
-      />
-      <div {...stylex.props(styles.buttons)}>
-        <Button onClick={onCancel}>Cancel</Button>
-        <Button primary disabled={body.trim() === ''} onClick={handleSubmit}>
-          Add comment
-        </Button>
+      <div {...stylex.props(styles.header)}>
+        <div {...stylex.props(styles.typeIcon)}>
+          <Icon icon={getIcon()} />
+        </div>
+        <div {...stylex.props(styles.labelContainer)}>
+          <span {...stylex.props(styles.label)}>{getLabel()}</span>
+          {sublabel && <span {...stylex.props(styles.sublabel)}>{sublabel}</span>}
+        </div>
+      </div>
+
+      <div {...stylex.props(styles.textareaWrapper)}>
+        <textarea
+          ref={textareaRef}
+          {...stylex.props(styles.textarea)}
+          value={body}
+          onChange={e => setBody(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Write your comment..."
+        />
+      </div>
+
+      <div {...stylex.props(styles.footer)}>
+        <div {...stylex.props(styles.hint)}>
+          <span {...stylex.props(styles.kbd)}>⌘</span>
+          <span {...stylex.props(styles.kbd)}>↵</span>
+          <span>to submit</span>
+        </div>
+        <div {...stylex.props(styles.buttons)}>
+          <button {...stylex.props(styles.cancelBtn)} onClick={onCancel}>
+            Cancel
+          </button>
+          <button
+            {...stylex.props(styles.submitBtn, !canSubmit && styles.submitBtnDisabled)}
+            onClick={handleSubmit}
+            disabled={!canSubmit}>
+            <Icon icon="check" />
+            Add comment
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -92,6 +92,16 @@
   color: var(--foreground);
 }
 
+/* File-level comment button in file header */
+.split-diff-view-file-header-comment-button {
+  color: var(--graphite-text-secondary);
+  transition: color 0.15s ease;
+}
+
+.split-diff-view-file-header-comment-button:hover {
+  color: #5c7cfa;
+}
+
 .split-diff-view-file-path-parts {
   display: flex;
   flex-grow: 1;

@@ -8,11 +8,10 @@
 import type {PendingComment} from './pendingCommentsState';
 
 import * as stylex from '@stylexjs/stylex';
-import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useCallback} from 'react';
-import {colors, spacing, radius, font} from '../../../components/theme/tokens.stylex';
+import {colors} from '../../../components/theme/tokens.stylex';
 import {removePendingComment} from './pendingCommentsState';
 
 export type PendingCommentDisplayProps = {
@@ -26,58 +25,102 @@ const styles = stylex.create({
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.half,
-    padding: spacing.pad,
-    backgroundColor: 'var(--graphite-bg-subtle)',
-    border: '1px dashed var(--graphite-border)',
-    borderRadius: radius.round,
+    gap: '10px',
+    padding: '14px 16px',
+    backgroundColor: 'rgba(92, 124, 250, 0.06)',
+    border: '1px solid rgba(92, 124, 250, 0.2)',
+    borderRadius: '8px',
     position: 'relative',
+    borderLeft: '3px solid #5c7cfa',
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.half,
+    gap: '8px',
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
   },
   badge: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: spacing.quarter,
-    padding: `${spacing.quarter} ${spacing.half}`,
-    backgroundColor: 'var(--graphite-accent-subtle)',
-    color: 'var(--graphite-accent)',
-    borderRadius: radius.small,
-    fontSize: font.small,
-    fontWeight: 500,
+    gap: '5px',
+    padding: '3px 8px',
+    backgroundColor: 'rgba(92, 124, 250, 0.15)',
+    color: '#5c7cfa',
+    borderRadius: '4px',
+    fontSize: '11px',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px',
+  },
+  badgeIcon: {
+    fontSize: '11px',
   },
   typeLabel: {
-    fontSize: font.smaller,
+    fontSize: '11px',
     color: 'var(--graphite-text-tertiary)',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
+  },
+  location: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontSize: '11px',
+    color: 'var(--graphite-text-secondary)',
+    fontFamily: 'var(--monospace-fontFamily)',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    maxWidth: '100%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   body: {
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
     color: colors.fg,
-    fontSize: font.normal,
-    lineHeight: 1.4,
+    fontSize: '13px',
+    lineHeight: '1.5',
+    padding: '8px 0',
   },
   actions: {
     display: 'flex',
-    gap: spacing.half,
+    gap: '6px',
     justifyContent: 'flex-end',
+    paddingTop: '4px',
+    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+    marginTop: '2px',
   },
-  deleteButton: {
-    opacity: 0.6,
-    transition: 'opacity 0.15s ease',
+  actionBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '28px',
+    height: '28px',
+    borderRadius: '5px',
+    backgroundColor: 'transparent',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    color: 'var(--graphite-text-tertiary)',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
     ':hover': {
-      opacity: 1,
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      borderColor: 'rgba(255, 255, 255, 0.12)',
+      color: 'var(--graphite-text-secondary)',
     },
   },
-  location: {
-    fontSize: font.smaller,
-    color: 'var(--graphite-text-muted)',
+  deleteBtn: {
+    ':hover': {
+      backgroundColor: 'rgba(239, 68, 68, 0.12)',
+      borderColor: 'rgba(239, 68, 68, 0.3)',
+      color: '#ef4444',
+    },
   },
 });
 
@@ -118,10 +161,12 @@ export function PendingCommentDisplay({
 
   const getLocationText = () => {
     if (comment.type === 'inline' && comment.path && comment.line) {
-      return `${comment.path}:${comment.line}`;
+      // Show just filename:line for brevity
+      const filename = comment.path.split('/').pop() ?? comment.path;
+      return `${filename}:${comment.line}`;
     }
     if (comment.type === 'file' && comment.path) {
-      return comment.path;
+      return comment.path.split('/').pop() ?? comment.path;
     }
     return null;
   };
@@ -131,15 +176,20 @@ export function PendingCommentDisplay({
   return (
     <div {...stylex.props(styles.container)}>
       <div {...stylex.props(styles.header)}>
-        <div {...stylex.props(styles.badge)}>
-          <Icon icon={getTypeIcon()} />
-          <span>Pending</span>
+        <div {...stylex.props(styles.headerLeft)}>
+          <div {...stylex.props(styles.badge)}>
+            <Icon icon="clock" />
+            <span>Pending</span>
+          </div>
+          <span {...stylex.props(styles.typeLabel)}>{getTypeLabel()}</span>
         </div>
-        <span {...stylex.props(styles.typeLabel)}>{getTypeLabel()}</span>
       </div>
 
       {locationText != null && (
-        <span {...stylex.props(styles.location)}>{locationText}</span>
+        <span {...stylex.props(styles.location)}>
+          <Icon icon={getTypeIcon()} />
+          {locationText}
+        </span>
       )}
 
       <div {...stylex.props(styles.body)}>{comment.body}</div>
@@ -147,15 +197,15 @@ export function PendingCommentDisplay({
       <div {...stylex.props(styles.actions)}>
         {onEdit != null && (
           <Tooltip title="Edit comment">
-            <Button xstyle={styles.deleteButton} onClick={onEdit}>
+            <button {...stylex.props(styles.actionBtn)} onClick={onEdit}>
               <Icon icon="edit" />
-            </Button>
+            </button>
           </Tooltip>
         )}
         <Tooltip title="Delete comment">
-          <Button xstyle={styles.deleteButton} onClick={handleDelete}>
+          <button {...stylex.props(styles.actionBtn, styles.deleteBtn)} onClick={handleDelete}>
             <Icon icon="trash" />
-          </Button>
+          </button>
         </Tooltip>
       </div>
     </div>

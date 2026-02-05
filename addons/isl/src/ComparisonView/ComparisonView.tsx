@@ -40,20 +40,16 @@ import {
   PendingCommentsBadge,
 } from '../reviewComments';
 import {latestHeadCommit} from '../serverAPIState';
-import {reviewModeAtom} from '../reviewMode';
+import {reviewModeAtom, enterReviewMode} from '../reviewMode';
 import {MergeControls} from '../reviewMode/MergeControls';
-import {useSubmitReview, useQuickReviewAction} from '../reviewSubmission';
-import {allDiffSummaries} from '../codeReview/CodeReviewInfo';
+import {useQuickReviewAction} from '../reviewSubmission';
+import {allDiffSummaries, diffSummary} from '../codeReview/CodeReviewInfo';
 import {themeState} from '../theme';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {currentComparisonMode, reviewedFilesAtom, reviewedFileKey, reviewedFileKeyForPR} from './atoms';
 import {parsePatchAndFilter, sortFilesByType} from './utils';
-import {SyncPRButton} from './SyncPRButton';
-import {SyncProgress} from './SyncProgress';
 import {currentPRStackContextAtom} from '../codeReview/PRStacksAtom';
-import {enterReviewMode} from '../reviewMode';
-import {diffSummary} from '../codeReview/CodeReviewInfo';
 
 import './ComparisonView.css';
 
@@ -77,6 +73,10 @@ const currentComparisonData = atomFamilyWeak((comparison: Comparison) =>
 
 /**
  * PR title and description header shown in review mode.
+ * Note: LOC stats (additions/deletions) are intentionally not shown here
+ * because fetching them would require additional GitHub API calls that
+ * can hit node limits. The data would need to be added to GitHubDiffSummary
+ * query which we want to keep lightweight.
  */
 function PRInfoHeader({prNumber}: {prNumber: string}) {
   const prData = useAtomValue(diffSummary(prNumber));
@@ -87,7 +87,8 @@ function PRInfoHeader({prNumber}: {prNumber: string}) {
   }
 
   const title = pr.title || `PR #${prNumber}`;
-  const description = pr.type === 'github' ? pr.body : undefined;
+  // Use commitMessage as the description - it contains the PR body
+  const description = pr.type === 'github' ? pr.commitMessage : undefined;
   const prUrl = pr.type === 'github' ? pr.url : null;
 
   return (
@@ -110,7 +111,7 @@ function PRInfoHeader({prNumber}: {prNumber: string}) {
       </div>
       {description && (
         <div className="pr-info-description" title={description}>
-          {description.length > 120 ? `${description.slice(0, 120)}...` : description}
+          {description.length > 200 ? `${description.slice(0, 200)}...` : description}
         </div>
       )}
     </div>
@@ -216,6 +217,58 @@ function DiffSkeleton({fileCount = 3}: {fileCount?: number}) {
 }
 
 /**
+ * Review action buttons bar (Approve / Request Changes).
+ * Shown below stack navigation in review mode.
+ */
+function ReviewActionsBar() {
+  const reviewMode = useAtomValue(reviewModeAtom);
+  const allDiffs = useAtomValue(allDiffSummaries);
+
+  // Get nodeId from diff summaries when in review mode
+  const nodeId = useMemo(() => {
+    if (!reviewMode.active || !reviewMode.prNumber) {
+      return undefined;
+    }
+    const summaries = allDiffs.value;
+    if (!summaries) {
+      return undefined;
+    }
+    const summary = summaries.get(reviewMode.prNumber);
+    if (summary?.type !== 'github') {
+      return undefined;
+    }
+    return summary.nodeId;
+  }, [reviewMode.active, reviewMode.prNumber, allDiffs]);
+
+  const {approve, requestChanges, canSubmit} = useQuickReviewAction(nodeId);
+
+  if (!reviewMode.active) {
+    return null;
+  }
+
+  return (
+    <div className="review-actions-bar">
+      <Button
+        className="review-action-btn review-action-approve"
+        onClick={approve}
+        disabled={!canSubmit}
+        data-testid="quick-approve-button">
+        <Icon icon="check" slot="start" />
+        <T>Approve</T>
+      </Button>
+      <Button
+        className="review-action-btn review-action-request-changes"
+        onClick={requestChanges}
+        disabled={!canSubmit}
+        data-testid="quick-request-changes-button">
+        <Icon icon="warning" slot="start" />
+        <T>Request Changes</T>
+      </Button>
+    </div>
+  );
+}
+
+/**
  * Horizontal bar showing all PRs in a stack for navigation.
  * Shows stack direction: left = base (closest to main), right = tip (newest).
  * Only renders when in review mode with a multi-PR stack.
@@ -256,7 +309,8 @@ function StackNavigationBar() {
       {showStackNav && (
         <div className="stack-navigation-bar">
           <span className="stack-label">
-            <T>Stack</T>
+            <Icon icon="git-branch" />
+            <T>STACK</T>
           </span>
           <span className="stack-direction-hint stack-direction-base">
             <T>main</T>
@@ -302,6 +356,9 @@ function StackNavigationBar() {
           </span>
         </div>
       )}
+
+      {/* Review Actions - below stack nav */}
+      <ReviewActionsBar />
     </div>
   );
 }
@@ -591,23 +648,6 @@ function ComparisonViewHeader({
     ) === true;
   const isLoading = compared.state === 'loading';
 
-  // Review mode: Get nodeId from diff summaries for Submit Review button
-  const reviewMode = useAtomValue(reviewModeAtom);
-  const allDiffs = useAtomValue(allDiffSummaries);
-
-  // Get nodeId from diff summaries when in review mode
-  const nodeId = useMemo(() => {
-    if (!reviewMode.active || !reviewMode.prNumber) return undefined;
-    const summaries = allDiffs.value;
-    if (!summaries) return undefined;
-    const summary = summaries.get(reviewMode.prNumber);
-    if (summary?.type !== 'github') return undefined;
-    return summary.nodeId;
-  }, [reviewMode.active, reviewMode.prNumber, allDiffs]);
-
-  const {submitReview, canSubmit, pendingCommentCount} = useSubmitReview(nodeId);
-  const {approve, requestChanges, canSubmit: canQuickSubmit} = useQuickReviewAction(nodeId);
-
   return (
     <>
       <div className="comparison-view-header">
@@ -670,27 +710,6 @@ function ComparisonViewHeader({
                 <Icon icon="arrow-down" />
               </Button>
             </span>
-          )}
-          {/* Quick review action buttons */}
-          {reviewMode.active && (
-            <>
-              <Button
-                className="review-action-btn review-action-approve"
-                onClick={approve}
-                disabled={!canQuickSubmit}
-                data-testid="quick-approve-button">
-                <Icon icon="check" slot="start" />
-                <T>Approved</T>
-              </Button>
-              <Button
-                className="review-action-btn review-action-request-changes"
-                onClick={requestChanges}
-                disabled={!canQuickSubmit}
-                data-testid="quick-request-changes-button">
-                <Icon icon="diff" slot="start" />
-                <T>Request Changes</T>
-              </Button>
-            </>
           )}
           <Button
             onClick={() => {
