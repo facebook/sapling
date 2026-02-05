@@ -1194,3 +1194,238 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
 
     Ok(())
 }
+
+// Test that is_allowlisted_tooling is set to true when the user is in the
+// tooling allowlist group.
+#[mononoke::fbinit_test]
+async fn test_tooling_allowlist_acl_user_in_acl(fb: FacebookInit) -> Result<()> {
+    // User myusername0 has access to the tooling_group
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let restricted_paths = vec![(
+        NonRootMPath::new("restricted/dir").unwrap(),
+        restricted_acl.clone(),
+    )];
+
+    let expected_manifest_id = ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b");
+    let expected_fsnode_id =
+        ManifestId::from("537548f0637858f6ebbba3e7f6c4d0c4e1ee7f88ca50fe3acff964115de0a0a3");
+
+    // Base sample with fields common to ALL expected samples
+    let base_sample = ScubaAccessLogSampleBuilder::new()
+        .with_repo_id(RepositoryId::new(0))
+        .with_client_identities(
+            vec!["USER:myusername0"]
+                .into_iter()
+                .map(String::from)
+                .collect::<Vec<_>>(),
+        )
+        .with_client_main_id(TEST_CLIENT_MAIN_ID.to_string());
+
+    RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_tooling_allowlist_group("tooling_group")
+        .with_test_groups(vec![("tooling_group", vec!["myusername0"])])
+        .with_test_acls(vec![("restricted_acl", vec!["other_user"])])
+        .with_file_path_changes(vec![("restricted/dir/a", None)])
+        .expecting_manifest_id_store_entries(vec![
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Hg,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+        ])
+        .expecting_scuba_access_logs(vec![
+            // HgManifest access log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_manifest_id(expected_manifest_id.clone())
+                .with_manifest_type(ManifestType::Hg)
+                // User HAS authorization because they are in the tooling allowlist
+                .with_has_authorization(true)
+                // User IS in the tooling allowlist
+                .with_is_allowlisted_tooling(true)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // HgAugmentedManifest access log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_manifest_id(expected_manifest_id.clone())
+                .with_manifest_type(ManifestType::HgAugmented)
+                .with_has_authorization(true)
+                .with_is_allowlisted_tooling(true)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // Path access log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_full_path(NonRootMPath::new("restricted/dir")?)
+                .with_has_authorization(true)
+                .with_is_allowlisted_tooling(true)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // Fsnode access log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_manifest_id(expected_fsnode_id.clone())
+                .with_manifest_type(ManifestType::Fsnode)
+                .with_has_authorization(true)
+                .with_is_allowlisted_tooling(true)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // Path fsnode access log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_full_path(NonRootMPath::new("restricted/dir/a")?)
+                .with_has_authorization(true)
+                .with_is_allowlisted_tooling(true)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_full_path(NonRootMPath::new("restricted/dir/a")?)
+                .with_has_authorization(true)
+                .with_is_allowlisted_tooling(true)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+        ])
+        .build(fb)
+        .await?
+        .run_restricted_paths_test()
+        .await?;
+
+    Ok(())
+}
+
+// Test that is_allowlisted_tooling is set to false when the user is NOT in the
+// tooling allowlist group.
+#[mononoke::fbinit_test]
+async fn test_tooling_allowlist_acl_user_not_in_acl(fb: FacebookInit) -> Result<()> {
+    // User myusername0 does NOT have access to the tooling_group (only other_user does)
+    let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
+    let restricted_paths = vec![(
+        NonRootMPath::new("restricted/dir").unwrap(),
+        restricted_acl.clone(),
+    )];
+
+    let expected_manifest_id = ManifestId::from("0e3837eaab4fb0454c78f290aeb747a201ccd05b");
+    let expected_fsnode_id =
+        ManifestId::from("537548f0637858f6ebbba3e7f6c4d0c4e1ee7f88ca50fe3acff964115de0a0a3");
+
+    // Base sample with fields common to ALL expected samples
+    let base_sample = ScubaAccessLogSampleBuilder::new()
+        .with_repo_id(RepositoryId::new(0))
+        .with_client_identities(
+            vec!["USER:myusername0"]
+                .into_iter()
+                .map(String::from)
+                .collect::<Vec<_>>(),
+        )
+        .with_client_main_id(TEST_CLIENT_MAIN_ID.to_string());
+
+    RestrictedPathsTestDataBuilder::new()
+        .with_restricted_paths(restricted_paths)
+        .with_tooling_allowlist_group("tooling_group")
+        // myusername0 is NOT in the tooling_group
+        .with_test_groups(vec![("tooling_group", vec!["other_user"])])
+        .with_test_acls(vec![("restricted_acl", vec!["other_user"])])
+        .with_file_path_changes(vec![("restricted/dir/a", None)])
+        .expecting_manifest_id_store_entries(vec![
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Hg,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::HgAugmented,
+                expected_manifest_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+            RestrictedPathManifestIdEntry::new(
+                ManifestType::Fsnode,
+                expected_fsnode_id.clone(),
+                RepoPath::dir("restricted/dir")?,
+            )?,
+        ])
+        .expecting_scuba_access_logs(vec![
+            // HgManifest access log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_manifest_id(expected_manifest_id.clone())
+                .with_manifest_type(ManifestType::Hg)
+                // User does NOT have authorization to the restricted path
+                .with_has_authorization(false)
+                // User is NOT in the tooling allowlist
+                .with_is_allowlisted_tooling(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // HgAugmentedManifest access log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_manifest_id(expected_manifest_id.clone())
+                .with_manifest_type(ManifestType::HgAugmented)
+                .with_has_authorization(false)
+                .with_is_allowlisted_tooling(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // Path access log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_full_path(NonRootMPath::new("restricted/dir")?)
+                .with_has_authorization(false)
+                .with_is_allowlisted_tooling(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // Fsnode access log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_manifest_id(expected_fsnode_id.clone())
+                .with_manifest_type(ManifestType::Fsnode)
+                .with_has_authorization(false)
+                .with_is_allowlisted_tooling(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            // Path fsnode access log
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_full_path(NonRootMPath::new("restricted/dir/a")?)
+                .with_has_authorization(false)
+                .with_is_allowlisted_tooling(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+            base_sample
+                .clone()
+                .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
+                .with_full_path(NonRootMPath::new("restricted/dir/a")?)
+                .with_has_authorization(false)
+                .with_is_allowlisted_tooling(false)
+                .with_acls(vec![restricted_acl.clone()])
+                .build()?,
+        ])
+        .build(fb)
+        .await?
+        .run_restricted_paths_test()
+        .await?;
+
+    Ok(())
+}

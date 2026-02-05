@@ -72,6 +72,8 @@ pub struct RestrictedPathsTestData {
 
 pub struct RestrictedPathsTestDataBuilder {
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
+    tooling_allowlist_group: Option<String>,
+    groups_config: Vec<(String, Vec<String>)>,
     acls: Option<Acls>,
     file_path_changes: Vec<(String, Option<String>)>,
     expected_manifest_entries: Option<Vec<RestrictedPathManifestIdEntry>>,
@@ -88,6 +90,7 @@ pub struct ScubaAccessLogSample {
     client_identities: Vec<String>,
     client_main_id: String,
     has_authorization: bool,
+    is_allowlisted_tooling: bool,
     acls: Vec<MononokeIdentity>,
 }
 
@@ -101,6 +104,7 @@ pub struct ScubaAccessLogSampleBuilder {
     client_identities: Vec<String>,
     client_main_id: Option<String>,
     has_authorization: Option<bool>,
+    is_allowlisted_tooling: Option<bool>,
     acls: Vec<MononokeIdentity>,
 }
 
@@ -115,6 +119,7 @@ impl ScubaAccessLogSampleBuilder {
             client_identities: Vec::new(),
             client_main_id: None,
             has_authorization: None,
+            is_allowlisted_tooling: None,
             acls: Vec::new(),
         }
     }
@@ -159,6 +164,11 @@ impl ScubaAccessLogSampleBuilder {
         self
     }
 
+    pub fn with_is_allowlisted_tooling(mut self, is_allowlisted_tooling: bool) -> Self {
+        self.is_allowlisted_tooling = Some(is_allowlisted_tooling);
+        self
+    }
+
     pub fn with_acls(mut self, acls: Vec<MononokeIdentity>) -> Self {
         self.acls = acls;
         self
@@ -172,6 +182,8 @@ impl ScubaAccessLogSampleBuilder {
         let has_authorization = self
             .has_authorization
             .ok_or_else(|| anyhow!("has_authorization is required"))?;
+        // Default to false if not provided, since most tests don't have a tooling allowlist
+        let is_allowlisted_tooling = self.is_allowlisted_tooling.unwrap_or(false);
 
         Ok(ScubaAccessLogSample {
             repo_id,
@@ -182,6 +194,7 @@ impl ScubaAccessLogSampleBuilder {
             client_identities: self.client_identities,
             client_main_id,
             has_authorization,
+            is_allowlisted_tooling,
             acls: self.acls,
         })
     }
@@ -191,6 +204,8 @@ impl RestrictedPathsTestDataBuilder {
     pub fn new() -> Self {
         Self {
             restricted_paths: vec![],
+            tooling_allowlist_group: None,
+            groups_config: vec![],
             acls: None,
             file_path_changes: vec![],
             expected_manifest_entries: None,
@@ -206,8 +221,43 @@ impl RestrictedPathsTestDataBuilder {
         self
     }
 
+    /// Set the tooling allowlist group name.
+    /// The group should be created via `with_test_groups`.
+    pub fn with_tooling_allowlist_group(mut self, group_name: &str) -> Self {
+        self.tooling_allowlist_group = Some(group_name.to_string());
+        self
+    }
+
+    /// Set up test groups for membership checking.
+    pub fn with_test_groups(mut self, groups_config: Vec<(&str, Vec<&str>)>) -> Self {
+        self.groups_config = groups_config
+            .into_iter()
+            .map(|(name, users)| {
+                (
+                    name.to_string(),
+                    users.into_iter().map(|s| s.to_string()).collect(),
+                )
+            })
+            .collect();
+        self
+    }
+
     pub fn with_test_acls(mut self, repo_regions_config: Vec<(&str, Vec<&str>)>) -> Self {
-        self.acls = Some(setup_test_acls(repo_regions_config).expect("Failed to create test ACLs"));
+        // Convert groups_config to the format expected by setup_test_acls_with_groups
+        let groups_config: Vec<(&str, Vec<&str>)> = self
+            .groups_config
+            .iter()
+            .map(|(name, users)| {
+                (
+                    name.as_str(),
+                    users.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+                )
+            })
+            .collect();
+        self.acls = Some(
+            setup_test_acls_with_groups(repo_regions_config, groups_config)
+                .expect("Failed to create test ACLs"),
+        );
         self
     }
 
@@ -267,6 +317,7 @@ impl RestrictedPathsTestDataBuilder {
         let repo = setup_test_repo(
             &ctx,
             self.restricted_paths,
+            self.tooling_allowlist_group,
             self.acls,
             log_file_path.clone(),
         )
@@ -446,6 +497,15 @@ impl RestrictedPathsTestData {
 /// Creates an Acls structure for testing with specified repo regions and users.
 /// The ACL provides the test user access to all repos and specified repo regions.
 fn setup_test_acls(repo_regions_config: Vec<(&str, Vec<&str>)>) -> Result<Acls> {
+    setup_test_acls_with_groups(repo_regions_config, vec![])
+}
+
+/// Creates an Acls structure for testing with specified repo regions, users, and groups.
+/// The ACL provides the test user access to all repos, specified repo regions, and groups.
+fn setup_test_acls_with_groups(
+    repo_regions_config: Vec<(&str, Vec<&str>)>,
+    groups_config: Vec<(&str, Vec<&str>)>,
+) -> Result<Acls> {
     let mut repo_regions = HashMap::new();
 
     // Add each configured repo region
@@ -463,6 +523,16 @@ fn setup_test_acls(repo_regions_config: Vec<(&str, Vec<&str>)>) -> Result<Acls> 
                 },
             }),
         );
+    }
+
+    // Add each configured group
+    let mut groups = HashMap::new();
+    for (group_name, usernames) in groups_config {
+        let mut users = MononokeIdentitySet::new();
+        for username in usernames {
+            users.insert(MononokeIdentity::from_str(&format!("USER:{}", username))?);
+        }
+        groups.insert(group_name.to_string(), Arc::new(users));
     }
 
     let default_user = MononokeIdentity::from_str("USER:myusername0")?;
@@ -491,7 +561,7 @@ fn setup_test_acls(repo_regions_config: Vec<(&str, Vec<&str>)>) -> Result<Acls> 
         repo_regions,
         tiers: HashMap::new(),
         workspaces: HashMap::new(),
-        groups: HashMap::new(),
+        groups,
     })
 }
 
@@ -523,6 +593,7 @@ fn setup_acl_file(acls: Option<Acls>) -> Result<std::path::PathBuf> {
 async fn setup_test_repo(
     ctx: &CoreContext,
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
+    tooling_allowlist_group: Option<String>,
     acls: Option<Acls>,
     log_file_path: std::path::PathBuf,
 ) -> Result<TestRepo> {
@@ -546,6 +617,7 @@ async fn setup_test_repo(
         path_acls,
         use_manifest_id_cache,
         cache_update_interval_ms,
+        tooling_allowlist_group,
         ..Default::default()
     };
 
@@ -656,6 +728,12 @@ fn deserialize_scuba_log_file(
                         .transpose()?
                         .ok_or(anyhow!("missing has_authorization"))?;
 
+                    let is_allowlisted_tooling: bool = flattened_log["is_allowlisted_tooling"]
+                        .as_str()
+                        .map(|st| st.parse::<bool>())
+                        .transpose()?
+                        .unwrap_or(false);
+
                     let restricted_paths: Vec<NonRootMPath> = flattened_log["restricted_paths"]
                         .as_array()
                         .map(|ids| {
@@ -700,6 +778,7 @@ fn deserialize_scuba_log_file(
                         full_path,
                         client_identities,
                         has_authorization,
+                        is_allowlisted_tooling,
                         client_main_id,
                         acls,
                     })
