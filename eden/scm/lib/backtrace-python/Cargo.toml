@@ -17,3 +17,6 @@ name = "backtrace_python"
 libc = "0.2.139"
 sapling-backtrace-ext = { version = "0.1.0", path = "../backtrace-ext" }
 sapling-evalframe-sys = { version = "0.1.0", path = "evalframe-sys" }
+
+[build-dependencies]
+sapling-backtrace-python-offset-probe = { version = "0.1.0", path = "offset-probe" }
