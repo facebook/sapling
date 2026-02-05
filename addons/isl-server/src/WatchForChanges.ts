@@ -105,15 +105,21 @@ export class WatchForChanges {
     // calculate how long we'd like to be waiting from what we know of the windows.
     let desiredNextTickTime = DEFAULT_POLL_INTERVAL;
 
-    // TODO: check eden here? might not be necessary
-    if (this.watchman.status !== 'healthy') {
-      if (this.pageFocusTracker.hasPageWithFocus()) {
-        desiredNextTickTime = FOCUSED_POLL_INTERVAL;
-      } else if (this.pageFocusTracker.hasVisiblePage()) {
-        desiredNextTickTime = VISIBLE_POLL_INTERVAL;
+    if (this.repoInfo.isEdenFs !== true) {
+      if (this.watchman.status !== 'healthy') {
+        if (this.pageFocusTracker.hasPageWithFocus()) {
+          desiredNextTickTime = FOCUSED_POLL_INTERVAL;
+        } else if (this.pageFocusTracker.hasVisiblePage()) {
+          desiredNextTickTime = VISIBLE_POLL_INTERVAL;
+        }
+      } else {
+        // if watchman is working normally, and we're not visible, don't poll nearly as often
+        if (!this.pageFocusTracker.hasPageWithFocus() && !this.pageFocusTracker.hasVisiblePage()) {
+          desiredNextTickTime = HIDDEN_POLL_INTERVAL;
+        }
       }
     } else {
-      // if watchman is working normally, and we're not visible, don't poll nearly as often
+      // if using eden and we're not visible, don't poll nearly as often
       if (!this.pageFocusTracker.hasPageWithFocus() && !this.pageFocusTracker.hasVisiblePage()) {
         desiredNextTickTime = HIDDEN_POLL_INTERVAL;
       }

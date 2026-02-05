@@ -349,6 +349,7 @@ describe('WatchForChanges - edenfs', () => {
       tracker: mockTracker,
     };
 
+    focusTracker.setState('page', 'visible');
     await watch.setupSubscriptions(ctx);
 
     // wait an actual async tick so mock subscriptions are set up
@@ -363,6 +364,11 @@ describe('WatchForChanges - edenfs', () => {
     expect(onChange).toHaveBeenCalledTimes(1);
     jest.advanceTimersByTime(3.0 * ONE_MINUTE_MS); // 15 minutes after watchman change, a new poll occurred
     expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenCalledWith('everything', undefined);
+
+    focusTracker.setState('page', 'hidden');
+    jest.advanceTimersByTime(180 * ONE_MINUTE_MS);
+    expect(onChange).toHaveBeenCalledTimes(3);
     expect(onChange).toHaveBeenCalledWith('everything', undefined);
   });
 });
