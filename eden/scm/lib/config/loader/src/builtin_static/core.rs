@@ -63,8 +63,6 @@ log-implicit-follow-threshold=10000
 titles-namespace=true
 local-committemplate=true
 
-evalframe-passthrough=true
-
 run-python-hooks-via-pyhook=true
 
 lock-free-pull=true

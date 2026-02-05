@@ -23,9 +23,6 @@ unsafe extern "C" {
     fn traceprof_enable();
     fn traceprof_disable();
     fn traceprof_report_stderr();
-
-    fn sapling_cext_evalframe_set_pass_through(enabled: u8);
-    fn sapling_cext_evalframe_resolve_frame(frame_ptr: usize) -> *const u8;
 }
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -45,12 +42,6 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "osutil", osutil)?;
     m.add(py, "parsers", parsers)?;
     m.add(py, "bser", bser)?;
-
-    m.add(
-        py,
-        "evalframe_set_pass_through",
-        py_fn!(py, evalframe_set_pass_through(enabled: bool = true)),
-    )?;
 
     m.add_class::<TraceProf>(py)?;
 
@@ -78,11 +69,3 @@ py_class!(pub class TraceProf |py| {
         Ok(None)
     }
 });
-
-fn evalframe_set_pass_through(_py: Python, enabled: bool) -> PyResult<Option<u8>> {
-    unsafe {
-        sapling_cext_evalframe_set_pass_through(enabled as u8);
-        sapling_cext_evalframe_resolve_frame(0); // keep the C function alive
-    };
-    Ok(None)
-}

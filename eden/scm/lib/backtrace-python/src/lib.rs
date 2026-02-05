@@ -33,8 +33,12 @@ pub fn init() {
         static RESOLVER_THIN_REF: &&dyn SupplementalFrameResolver = &RESOLVER_FAT_REF;
         libpython_filter::init();
         backtrace_ext::set_supplemental_frame_resolver(Some(RESOLVER_THIN_REF));
-        // This function is a no-op if called before Python initialization.
-        unsafe { sapling_cext_evalframe_set_pass_through(1) }
+        unsafe {
+            // This function is a no-op if called before Python initialization.
+            sapling_cext_evalframe_set_pass_through(1);
+            // keep the C function alive (for dbgutil.py lldb usage)
+            sapling_cext_evalframe_resolve_frame(0);
+        }
     }
 }
 
@@ -77,6 +81,7 @@ unsafe extern "C" {
         pline_no: *mut libc::c_int,
     ) -> *mut libc::c_void /* PyCodeObject */;
     fn sapling_cext_evalframe_resolve_frame_is_supported() -> libc::c_int;
+    fn sapling_cext_evalframe_resolve_frame(frame_ptr: usize) -> *const u8;
 
     // only need the function address, no need to call this function
     fn Sapling_PyEvalFrame(tstate: usize, f: usize, exc: libc::c_int);
