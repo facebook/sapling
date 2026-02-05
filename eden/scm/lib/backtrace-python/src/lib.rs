@@ -35,9 +35,9 @@ pub fn init() {
         backtrace_ext::set_supplemental_frame_resolver(Some(RESOLVER_THIN_REF));
         unsafe {
             // This function is a no-op if called before Python initialization.
-            sapling_cext_evalframe_set_pass_through(1);
+            evalframe_sys::set_pass_through(true);
             // keep the C function alive (for dbgutil.py lldb usage)
-            sapling_cext_evalframe_resolve_frame(0);
+            evalframe_sys::resolve_frame(0);
         }
     }
 }
@@ -61,31 +61,12 @@ impl SupportedInfo {
     fn new() -> Self {
         Self {
             os_arch: OFFSET.is_some(),
-            c_evalframe: unsafe { sapling_cext_evalframe_resolve_frame_is_supported() } != 0,
+            c_evalframe: evalframe_sys::resolve_frame_is_supported(),
         }
     }
 }
 
 pub static SUPPORTED_INFO: LazyLock<SupportedInfo> = LazyLock::new(SupportedInfo::new);
-
-// for evalframe.c
-unsafe extern "C" {
-    fn sapling_cext_evalframe_set_pass_through(enabled: u8);
-
-    unsafe fn sapling_cext_evalframe_resolve_code_object(
-        code: *mut libc::c_void, /* PyCodeObject */
-        pfilename: *mut *const libc::c_char,
-    ) -> *const libc::c_char;
-    fn sapling_cext_evalframe_extract_code_lineno_from_frame(
-        frame: *mut libc::c_void, /* PyFrame */
-        pline_no: *mut libc::c_int,
-    ) -> *mut libc::c_void /* PyCodeObject */;
-    fn sapling_cext_evalframe_resolve_frame_is_supported() -> libc::c_int;
-    fn sapling_cext_evalframe_resolve_frame(frame_ptr: usize) -> *const u8;
-
-    // only need the function address, no need to call this function
-    fn Sapling_PyEvalFrame(tstate: usize, f: usize, exc: libc::c_int);
-}
 
 #[derive(Copy, Clone)]
 struct PythonSupplementalFrameResolver;
@@ -165,7 +146,7 @@ impl SupplementalFrameResolver for PythonSupplementalFrameResolver {
             Some(o) => o.0,
             None => return FrameDecision::Keep,
         };
-        if ip != (Sapling_PyEvalFrame as usize + offset) {
+        if ip != (evalframe_sys::sapling_py_eval_frame_addr() + offset) {
             // Skip native python frames to reduce noise.
             return if libpython_filter::is_python_frame(ip) {
                 FrameDecision::Skip
@@ -183,10 +164,8 @@ impl SupplementalFrameResolver for PythonSupplementalFrameResolver {
         let [code, line_no] = *info;
         unsafe {
             let mut filename_ptr: *const libc::c_char = std::ptr::null();
-            let name_ptr = sapling_cext_evalframe_resolve_code_object(
-                code as *mut libc::c_void,
-                &mut filename_ptr,
-            );
+            let name_ptr =
+                evalframe_sys::resolve_code_object(code as *mut libc::c_void, &mut filename_ptr);
             if !name_ptr.is_null() && !filename_ptr.is_null() {
                 let name_cstr = CStr::from_ptr(name_ptr);
                 let filename_cstr = CStr::from_ptr(filename_ptr);
@@ -214,7 +193,7 @@ fn extract_python_supplemental_info(sp: usize) -> Option<SupplementalInfo> {
         let frame_ptr: *const *mut libc::c_void = addr as *const _;
         let frame: *mut libc::c_void = *frame_ptr;
         let mut line_no: libc::c_int = 0;
-        let code = sapling_cext_evalframe_extract_code_lineno_from_frame(frame, &mut line_no);
+        let code = evalframe_sys::extract_code_lineno_from_frame(frame, &mut line_no);
         if !code.is_null() {
             return Some([code as usize, line_no as usize]);
         }

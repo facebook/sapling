@@ -16,7 +16,4 @@ name = "backtrace_python"
 [dependencies]
 libc = "0.2.139"
 sapling-backtrace-ext = { version = "0.1.0", path = "../backtrace-ext" }
-
-[build-dependencies]
-cc = "1.2.10"
-sapling-python-sysconfig = { version = "0.1.0", path = "../util/python-sysconfig" }
+sapling-evalframe-sys = { version = "0.1.0", path = "evalframe-sys" }
