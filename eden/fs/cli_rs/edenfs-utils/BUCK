@@ -5,29 +5,90 @@ oncall("scm_client_infra")
 rust_library(
     name = "edenfs-utils",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {"dependencies_override": {
+        "dependencies": {
+            "anyhow": {"version": "1.0.98"},
+            "byteorder": {"version": "1.5"},
+            "edenfs-error": {"path": "../edenfs-error"},
+            "regex": {"version": "1.12.2"},
+            "sysinfo": {"version": "0.35.1"},
+            "tracing": {
+                "features": [
+                    "attributes",
+                    "valuable",
+                ],
+                "version": "0.1.41",
+            },
+        },
+        "dev-dependencies": {
+            "csv": {"version": "1.3"},
+            "lazy_static": {"version": "1.5"},
+        },
+        "target": {
+            "'cfg(target_os = \"linux\")'": {"dependencies": {"nix": {
+                "features": [
+                    "dir",
+                    "event",
+                    "hostname",
+                    "inotify",
+                    "ioctl",
+                    "mman",
+                    "mount",
+                    "net",
+                    "poll",
+                    "ptrace",
+                    "reboot",
+                    "resource",
+                    "sched",
+                    "signal",
+                    "term",
+                    "time",
+                    "user",
+                    "zerocopy",
+                ],
+                "version": "0.30.1",
+            }}},
+            "'cfg(target_os = \"macos\")'": {"dependencies": {"nix": {
+                "features": [
+                    "dir",
+                    "event",
+                    "hostname",
+                    "inotify",
+                    "ioctl",
+                    "mman",
+                    "mount",
+                    "net",
+                    "poll",
+                    "ptrace",
+                    "reboot",
+                    "resource",
+                    "sched",
+                    "signal",
+                    "term",
+                    "time",
+                    "user",
+                    "zerocopy",
+                ],
+                "version": "0.30.1",
+            }}},
+            "'cfg(target_os = \"windows\")'": {
+                "dependencies": {"winapi": {
+                    "features": [
+                        "everything",
+                        "std",
+                    ],
+                    "version": "0.3",
+                }},
+                "dev-dependencies": {
+                    "quickcheck": {"version": "1.0"},
+                    "quickcheck_macros": {"version": "1.1.0"},
+                },
+            },
+        },
+    }}},
     env = {
         "TEST_DATA": "$(location //eden/facebook/test-data:normalized-hostname)",
     },
-    os_deps = [
-        (
-            "macos",
-            [
-                "fbsource//third-party/rust:nix",
-            ],
-        ),
-        (
-            "linux",
-            [
-                "fbsource//third-party/rust:nix",
-            ],
-        ),
-        (
-            "windows",
-            [
-                "fbsource//third-party/rust:winapi",
-            ],
-        ),
-    ],
     test_deps = [
         "fbsource//third-party/rust:csv",
         "fbsource//third-party/rust:lazy_static",
@@ -48,5 +109,16 @@ rust_library(
         "fbsource//third-party/rust:sysinfo",
         "fbsource//third-party/rust:tracing",
         "//eden/fs/cli_rs/edenfs-error:edenfs-error",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:nix",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:nix",
+        ],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:winapi",
+        ],
+    }),
 )

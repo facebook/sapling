@@ -7,13 +7,33 @@ rust_library(
     name = "spawn-ext",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"target": {"'cfg(windows)'": {"dependencies": {"winapi": {
-            "features": [
-                "handleapi",
-                "winbase",
-            ],
-            "version": "0.3",
-        }}}}},
+        "dependencies_override": {"target": {
+            "'cfg(target_os = \"linux\")'": {"dependencies": {"libc": {"version": "0.2.139"}}},
+            "'cfg(target_os = \"macos\")'": {"dependencies": {"libc": {"version": "0.2.139"}}},
+            "'cfg(target_os = \"windows\")'": {"dependencies": {
+                "tracing": {
+                    "features": [
+                        "attributes",
+                        "valuable",
+                    ],
+                    "version": "0.1.41",
+                },
+                "winapi": {
+                    "features": [
+                        "everything",
+                        "std",
+                    ],
+                    "version": "0.3",
+                },
+            }},
+            "'cfg(windows)'": {"dependencies": {"winapi": {
+                "features": [
+                    "handleapi",
+                    "winbase",
+                ],
+                "version": "0.3",
+            }}},
+        }},
         "lib": {"name": "spawn-ext"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -24,30 +44,22 @@ rust_library(
         },
     }},
     crate_root = "src/lib.rs",
-    os_deps = [
-        (
-            "linux",
-            [
-                "fbsource//third-party/rust:libc",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "fbsource//third-party/rust:libc",
-            ],
-        ),
-        (
-            "windows",
-            [
-                "fbsource//third-party/rust:tracing",
-                "fbsource//third-party/rust:winapi",
-            ],
-        ),
-    ],
     test_deps = [
         "fbsource//third-party/rust:tempfile",
     ],
+    deps = select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:libc",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:libc",
+        ],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:tracing",
+            "fbsource//third-party/rust:winapi",
+        ],
+    }),
 )
 
 rust_binary(

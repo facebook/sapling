@@ -14,12 +14,12 @@ async-trait = "0.1.86"
 byteorder = "1.5"
 dirs = "6.0"
 dunce = "1.0.5"
-edenfs-config = { version = "0.1.0", path = "../edenfs-config" }
-edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
-edenfs-utils = { version = "0.1.0", path = "../edenfs-utils" }
-fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+edenfs-config = { path = "../edenfs-config" }
+edenfs-error = { path = "../edenfs-error" }
+edenfs-utils = { path = "../edenfs-utils" }
+fbinit = { path = "../../../../common/rust/shed/fbinit" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_stats = { path = "../../../../common/rust/shed/futures_stats" }
 hex = { version = "0.4.3", features = ["alloc"] }
 hg_util = { package = "sapling-util", version = "0.1.0", path = "../../../scm/lib/util" }
 lazy_static = "1.5"
@@ -29,17 +29,17 @@ pathdiff = "0.2"
 rand = { version = "0.9", features = ["small_rng"] }
 rayon = "1.11.0"
 regex = "1.12.2"
-sapling-atomicfile = { version = "0.1.0", path = "../../../scm/lib/atomicfile" }
-sapling-config-remote-loader = { version = "0.1.0", path = "../../../scm/lib/config/remote-loader" }
-sapling-http-client = { version = "0.1.0", path = "../../../scm/lib/http-client" }
-sapling-thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
+sapling-atomicfile = { path = "../../../scm/lib/atomicfile" }
+sapling-config-remote-loader = { path = "../../../scm/lib/config/remote-loader" }
+sapling-http-client = { path = "../../../scm/lib/http-client" }
+sapling-thrift-types = { path = "../../../scm/lib/thrift-types" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 shlex = "1.3"
 strum = { version = "0.27.1", features = ["derive"] }
 subprocess = "0.2.15"
 sysinfo = "0.35.1"
-thrift_streaming_clients = { version = "0.1.0", path = "../../service/thrift_streaming/clients" }
+thrift_streaming_clients = { path = "../../service/thrift_streaming/clients" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 toml = { version = "0.9.11", features = ["preserve_order"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
@@ -47,8 +47,8 @@ uuid = { version = "1.17", features = ["rng-getrandom", "serde", "v4", "v5", "v6
 whoami = "1.5"
 
 [dev-dependencies]
-fb303_core_clients = { version = "0.0.0", git = "https://github.com/facebook/fb303.git", branch = "main" }
-fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fb303_core_clients = { version = "0.0.0", path = "../../../../fb303/thrift/rust/clients", git = "https://github.com/facebook/fb303.git", branch = "main" }
+fbinit-tokio = { version = "0.1.2", path = "../../../../common/rust/shed/fbinit/fbinit-tokio", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mockall = "0.13.1"
 serde_test = "1.0.167"
 tempfile = "3.22"
@@ -57,4 +57,4 @@ tempfile = "3.22"
 psutil = "3.2.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-mkscratch = { version = "0.1.0", path = "../../../scm/exec/scratch" }
+mkscratch = { path = "../../../scm/exec/scratch" }

@@ -165,14 +165,6 @@ python_library(
         "util.py",
         "win_ui.py",
     ],
-    os_deps = [
-        (
-            "linux",
-            [
-                "//eden/fs/cli/facebook:telemetry",
-            ],
-        ),
-    ],
     deps = [
         "fbsource//third-party/pypi/filelock:filelock",
         "fbsource//third-party/pypi/psutil:psutil",
@@ -194,7 +186,12 @@ python_library(
         "//thrift/lib/py:server_base",
         "//thrift/lib/py/util:inspect",
         "//thrift/lib/py/util:py_util",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "//eden/fs/cli/facebook:telemetry",
+        ],
+    }),
 )
 
 python_library(
@@ -203,15 +200,14 @@ python_library(
         "proc_utils.py",
         "proc_utils_win.py",
     ],
-    os_deps = [
-        (
-            "linux",
-            ["//common/base/pid_info/py:build_info_lib"],
-        ),
-    ],
     deps = [
         "//eden/fs/py/eden/thrift:legacy",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "//common/base/pid_info/py:build_info_lib",
+        ],
+    }),
 )
 
 python_library(

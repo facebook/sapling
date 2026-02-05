@@ -7,30 +7,47 @@ oncall("scm_client_infra")
 rust_binary(
     name = "benchmarks",
     srcs = ["benchmarks.rs"],
-    os_deps = [
-        (
-            "linux",
-            [
-                "fbsource//third-party/rust:libc",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "fbsource//third-party/rust:libc",
-            ],
-        ),
-        (
-            "windows",
-            [
-                "fbsource//third-party/rust:winapi",
-            ],
-        ),
-    ],
+    autocargo = {"cargo_toml_config": {"dependencies_override": {
+        "dependencies": {
+            "criterion": {
+                "features": [
+                    "async_tokio",
+                    "csv_output",
+                ],
+                "version": "0.5.1",
+            },
+            "rand": {
+                "features": ["small_rng"],
+                "version": "0.9",
+            },
+        },
+        "target": {
+            "'cfg(target_os = \"linux\")'": {"dependencies": {"libc": {"version": "0.2.139"}}},
+            "'cfg(target_os = \"macos\")'": {"dependencies": {"libc": {"version": "0.2.139"}}},
+            "'cfg(target_os = \"windows\")'": {"dependencies": {"winapi": {
+                "features": [
+                    "everything",
+                    "std",
+                ],
+                "version": "0.3",
+            }}},
+        },
+    }}},
     deps = [
         "fbsource//third-party/rust:criterion",
         "fbsource//third-party/rust:rand",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:libc",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:libc",
+        ],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:winapi",
+        ],
+    }),
 )
 
 cpp_binary(

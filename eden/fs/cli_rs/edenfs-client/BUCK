@@ -5,23 +5,123 @@ oncall("scm_client_infra")
 rust_library(
     name = "edenfs-client",
     srcs = glob(["src/**/*.rs"]),
+    autocargo = {"cargo_toml_config": {"dependencies_override": {
+        "dependencies": {
+            "anyhow": {"version": "1.0.98"},
+            "async-recursion": {"version": "1.1.1"},
+            "async-trait": {"version": "0.1.86"},
+            "byteorder": {"version": "1.5"},
+            "dirs": {"version": "6.0"},
+            "dunce": {"version": "1.0.5"},
+            "edenfs-config": {"path": "../edenfs-config"},
+            "edenfs-error": {"path": "../edenfs-error"},
+            "edenfs-utils": {"path": "../edenfs-utils"},
+            "fbinit": {"path": "../../../../common/rust/shed/fbinit"},
+            "futures": {
+                "features": [
+                    "async-await",
+                    "compat",
+                ],
+                "version": "0.3.31",
+            },
+            "futures_stats": {"path": "../../../../common/rust/shed/futures_stats"},
+            "hex": {
+                "features": ["alloc"],
+                "version": "0.4.3",
+            },
+            "hg_util": {
+                "package": "sapling-util",
+                "path": "../../../scm/lib/util",
+            },
+            "lazy_static": {"version": "1.5"},
+            "libc": {"version": "0.2.139"},
+            "parking_lot": {
+                "features": ["send_guard"],
+                "version": "0.12.1",
+            },
+            "pathdiff": {"version": "0.2"},
+            "rand": {
+                "features": ["small_rng"],
+                "version": "0.9",
+            },
+            "rayon": {"version": "1.11.0"},
+            "regex": {"version": "1.12.2"},
+            "sapling-atomicfile": {"path": "../../../scm/lib/atomicfile"},
+            "sapling-config-remote-loader": {"path": "../../../scm/lib/config/remote-loader"},
+            "sapling-http-client": {"path": "../../../scm/lib/http-client"},
+            "sapling-thrift-types": {"path": "../../../scm/lib/thrift-types"},
+            "serde": {
+                "features": [
+                    "derive",
+                    "rc",
+                ],
+                "version": "1.0.219",
+            },
+            "serde_json": {
+                "features": [
+                    "alloc",
+                    "float_roundtrip",
+                    "raw_value",
+                    "unbounded_depth",
+                ],
+                "version": "1.0.140",
+            },
+            "shlex": {"version": "1.3"},
+            "strum": {
+                "features": ["derive"],
+                "version": "0.27.1",
+            },
+            "subprocess": {"version": "0.2.15"},
+            "sysinfo": {"version": "0.35.1"},
+            "thrift_streaming_clients": {"path": "../../service/thrift_streaming/clients"},
+            "tokio": {
+                "features": [
+                    "full",
+                    "test-util",
+                    "tracing",
+                ],
+                "version": "1.47.1",
+            },
+            "toml": {
+                "features": ["preserve_order"],
+                "version": "0.9.11",
+            },
+            "tracing": {
+                "features": [
+                    "attributes",
+                    "valuable",
+                ],
+                "version": "0.1.41",
+            },
+            "uuid": {
+                "features": [
+                    "rng-getrandom",
+                    "serde",
+                    "v4",
+                    "v5",
+                    "v6",
+                    "v7",
+                    "v8",
+                ],
+                "version": "1.17",
+            },
+            "whoami": {"version": "1.5"},
+        },
+        "dev-dependencies": {
+            "fb303_core_clients": {"path": "../../../../fb303/thrift/rust/clients"},
+            "fbinit-tokio": {"path": "../../../../common/rust/shed/fbinit/fbinit-tokio"},
+            "mockall": {"version": "0.13.1"},
+            "serde_test": {"version": "1.0.167"},
+            "tempfile": {"version": "3.22"},
+        },
+        "target": {
+            "'cfg(target_os = \"macos\")'": {"dependencies": {"psutil": {"version": "3.2.2"}}},
+            "'cfg(target_os = \"windows\")'": {"dependencies": {"mkscratch": {"path": "../../../scm/exec/scratch"}}},
+        },
+    }}},
     named_deps = {
         "hg_util": "//eden/scm/lib/util:util",
     },
-    os_deps = [
-        (
-            "windows",
-            [
-                "//eden/scm/exec/scratch:mkscratch",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "fbsource//third-party/rust:psutil",
-            ],
-        ),
-    ],
     test_deps = [
         "fbsource//third-party/rust:mockall",
         "fbsource//third-party/rust:rand",
@@ -72,5 +172,13 @@ rust_library(
         "//eden/scm/lib/config/remote-loader:remote-loader",
         "//eden/scm/lib/http-client:http-client",
         "//eden/scm/lib/thrift-types:thrift-types",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:psutil",
+        ],
+        "ovr_config//os:windows": [
+            "//eden/scm/exec/scratch:mkscratch",
+        ],
+    }),
 )

@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.98"
 byteorder = "1.5"
-edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
+edenfs-error = { path = "../edenfs-error" }
 regex = "1.12.2"
 sysinfo = "0.35.1"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

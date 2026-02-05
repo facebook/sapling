@@ -11,19 +11,18 @@ rust_binary(
         "ignore_rule": True,
     },
     crate_root = "facebook/edenfsctl.rs",
-    os_deps = [
-        (
-            "linux",
-            ["fbsource//third-party/rust:whoami"],
-        ),
-    ],
     resources = {
         "edenfsctl": "//eden/fs/cli_rs/edenfsctl:edenfsctl",
         "edenfsctl_python": "//eden/fs/cli:edenfsctl",
     },
     deps = [
         "fbsource//third-party/rust:buck-resources",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:whoami",
+        ],
+    }),
 )
 
 rust_binary(
@@ -37,12 +36,6 @@ rust_binary(
         "ovr_config//os:macos",
     ],
     crate_root = "facebook/edenfsctl.rs",
-    os_deps = [
-        (
-            "linux",
-            ["fbsource//third-party/rust:whoami"],
-        ),
-    ],
     resources = {
         "edenfsctl": "//eden/fs/cli_rs/edenfsctl:edenfsctl",
         "edenfsctl_python": "//eden/fs/cli:edenfsctl",
@@ -50,7 +43,12 @@ rust_binary(
     deps = [
         "fbsource//third-party/rust:buck-resources",
         "//eden/fs/privhelper:privhelper",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:whoami",
+        ],
+    }),
 )
 
 # Similar to the Python version of this alias

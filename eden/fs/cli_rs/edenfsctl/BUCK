@@ -5,14 +5,52 @@ oncall("scm_client_infra")
 rust_binary(
     name = "edenfsctl",
     srcs = glob(["src/**/*.rs"]),
-    os_deps = [
-        (
-            "windows",
-            [
-                "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
-            ],
-        ),
-    ],
+    autocargo = {"cargo_toml_config": {"dependencies_override": {
+        "dependencies": {
+            "anyhow": {"version": "1.0.98"},
+            "clap": {
+                "features": [
+                    "derive",
+                    "env",
+                    "regex",
+                    "unicode",
+                    "wrap_help",
+                ],
+                "version": "3.2.25",
+            },
+            "edenfs-commands": {"path": "../edenfs-commands"},
+            "fail": {
+                "features": ["failpoints"],
+                "version": "0.4",
+            },
+            "fbinit": {"path": "../../../../common/rust/shed/fbinit"},
+            "sapling-testutil": {"path": "../../../scm/lib/util/testutil"},
+            "tracing": {
+                "features": [
+                    "attributes",
+                    "valuable",
+                ],
+                "version": "0.1.41",
+            },
+            "tracing-subscriber": {
+                "features": [
+                    "chrono",
+                    "env-filter",
+                    "json",
+                    "local-time",
+                    "parking_lot",
+                    "registry",
+                ],
+                "version": "0.3.20",
+            },
+        },
+        "dev-dependencies": {
+            "tempfile": {"version": "3.22"},
+        },
+        "target": {
+            "'cfg(target_os = \"windows\")'": {"dependencies": {"edenfs-utils": {"path": "../edenfs-utils"}}},
+        },
+    }}},
     test_deps = [
         "fbsource//third-party/rust:tempfile",
     ],
@@ -26,5 +64,10 @@ rust_binary(
         "//eden/fs/cli_rs/edenfs-commands:edenfs-commands",
         "//eden/fs/rust/facebook/edenfs-telemetry:edenfs-telemetry",
         "//eden/scm/lib/util/testutil:testutil",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "//eden/fs/cli_rs/edenfs-utils:edenfs-utils",
+        ],
+    }),
 )
