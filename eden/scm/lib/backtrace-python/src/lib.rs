@@ -35,7 +35,7 @@ pub fn init() {
         backtrace_ext::set_supplemental_frame_resolver(Some(RESOLVER_THIN_REF));
         unsafe {
             // This function is a no-op if called before Python initialization.
-            evalframe_sys::set_pass_through(true);
+            evalframe_sys::set_mode(evalframe_sys::EvalFrameMode::Enabled);
             // keep the C function alive (for dbgutil.py lldb usage)
             evalframe_sys::resolve_frame(0);
         }

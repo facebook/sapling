@@ -13,10 +13,25 @@
 
 #![allow(non_camel_case_types)]
 
-/// Enable or disable the pass-through eval frame function.
+/// Evalframe mode for `set_mode`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(i32)]
+pub enum EvalFrameMode {
+    /// Disabled: use default Python eval frame.
+    Disabled = 0,
+    /// Enabled: use Sapling_PyEvalFrame (minimal overhead, no tracking).
+    Enabled = 1,
+    /// Probe: use Sapling_PyEvalFrameProbe (tracks last_frame for offset detection).
+    Probe = 2,
+}
+
+/// Set the evalframe mode.
 ///
-/// When enabled, Python frame evaluation goes through `Sapling_PyEvalFrame`
-/// which keeps the frame state in its stack frame for native debuggers.
+/// - `Disabled`: Use default Python eval frame.
+/// - `Enabled`: Use `Sapling_PyEvalFrame` which keeps the frame state in its
+///   stack frame for native debuggers, with minimal overhead.
+/// - `Probe`: Use `Sapling_PyEvalFrameProbe` which also tracks the last frame
+///   for offset detection at build time.
 ///
 /// Note: calling this function when the Python interpreter is not initialized
 /// is a no-op.
@@ -24,8 +39,8 @@
 /// # Safety
 /// This function is safe to call at any time, but should only be called
 /// after Python initialization for the setting to take effect.
-pub unsafe fn set_pass_through(enabled: bool) {
-    sapling_cext_evalframe_set_pass_through(if enabled { 1 } else { 0 });
+pub unsafe fn set_mode(mode: EvalFrameMode) {
+    unsafe { sapling_cext_evalframe_set_mode(mode as libc::c_int) }
 }
 
 /// Check if frame resolution is supported on this Python version.
@@ -79,9 +94,17 @@ pub fn sapling_py_eval_frame_addr() -> usize {
     Sapling_PyEvalFrame as *const () as usize
 }
 
+/// Get the last PyFrame value captured by `Sapling_PyEvalFrame`.
+///
+/// This is useful for probing the PyFrame variable on the stack during
+/// offset detection at build time.
+pub fn get_last_frame() -> usize {
+    unsafe { sapling_cext_evalframe_get_last_frame() }
+}
+
 // Raw FFI declarations for evalframe.c
 unsafe extern "C" {
-    fn sapling_cext_evalframe_set_pass_through(enabled: u8);
+    fn sapling_cext_evalframe_set_mode(mode: libc::c_int);
 
     fn sapling_cext_evalframe_resolve_code_object(
         code: *mut libc::c_void,
@@ -96,6 +119,8 @@ unsafe extern "C" {
     fn sapling_cext_evalframe_resolve_frame_is_supported() -> libc::c_int;
 
     fn sapling_cext_evalframe_resolve_frame(frame_ptr: usize) -> *const u8;
+
+    fn sapling_cext_evalframe_get_last_frame() -> usize;
 
     // The pass-through eval frame function. We only need its address.
     fn Sapling_PyEvalFrame(tstate: usize, f: usize, exc: libc::c_int);

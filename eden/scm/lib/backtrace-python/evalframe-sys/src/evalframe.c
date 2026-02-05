@@ -61,9 +61,25 @@ To learn examples about the APIs, check  cpython/Modules/_testinternalcapi.c.
 #pragma optimize("", off)
 #endif
 
+// Only used by codegen (offset-probe, D92185212) in a controlled way.
+// Not used by regular runs.
+static size_t last_frame = 0;
+
+// Runtime evalframe: minimal overhead, does not track last_frame.
 EXPORT PyObject* NO_OPT
+
 Sapling_PyEvalFrame(PyThreadState* tstate, PyFrame* f, int exc) {
   return _PyEval_EvalFrameDefault(tstate, f, exc);
+}
+
+// Probe evalframe: tracks last_frame for offset detection at build time.
+// Calls Sapling_PyEvalFrame so offsets computed during probing are valid
+// for runtime use.
+EXPORT PyObject* NO_OPT
+
+Sapling_PyEvalFrameProbe(PyThreadState* tstate, PyFrame* f, int exc) {
+  last_frame = (size_t)f;
+  return Sapling_PyEvalFrame(tstate, f, exc);
 }
 
 #if defined(_MSC_VER)
@@ -73,19 +89,33 @@ Sapling_PyEvalFrame(PyThreadState* tstate, PyFrame* f, int exc) {
 #endif // HAS_SET_EVAL_FRAME_FUNC
 
 /**
- * Update the "EvalFrame" function to go through pass_through_eval_frame to
- * track Python function names in the native stack. Intended to be called by
- * cpython bindings in Rust.
+ * Update the "EvalFrame" function to go through a custom eval frame function.
+ * Intended to be called by cpython bindings in Rust.
+ *
+ * mode:
+ *   0 = disabled (use default Python eval)
+ *   1 = enabled (use Sapling_PyEvalFrame - minimal overhead, no tracking)
+ *   2 = probe (use Sapling_PyEvalFrameProbe - tracks last_frame for offset
+ * detection)
  *
  * Note: calling this function when the Python interpreter is not initialized
  * is a no-op.
  */
-void sapling_cext_evalframe_set_pass_through(unsigned char enabled) {
+void sapling_cext_evalframe_set_mode(int mode) {
 #if HAS_SET_EVAL_FRAME_FUNC
   if (Py_IsInitialized()) {
-    _PyInterpreterState_SetEvalFrameFunc(
-        PyInterpreterState_Get(),
-        enabled ? Sapling_PyEvalFrame : _PyEval_EvalFrameDefault);
+    PyInterpreterState* interp = PyInterpreterState_Get();
+    switch (mode) {
+      case 1:
+        _PyInterpreterState_SetEvalFrameFunc(interp, Sapling_PyEvalFrame);
+        break;
+      case 2:
+        _PyInterpreterState_SetEvalFrameFunc(interp, Sapling_PyEvalFrameProbe);
+        break;
+      default:
+        _PyInterpreterState_SetEvalFrameFunc(interp, _PyEval_EvalFrameDefault);
+        break;
+    }
   }
 #endif
 }
@@ -242,4 +272,12 @@ EXPORT const char* sapling_cext_evalframe_resolve_frame(size_t address) {
 EXPORT int sapling_cext_evalframe_resolve_frame_is_supported() {
   return (PY_VERSION_HEX >= 0x03090000 && PY_VERSION_HEX < 0x030b0000) ||
       (PY_VERSION_HEX >= 0x030c0000);
+}
+
+/**
+ * Report the last `PyFrame` value.
+ * Useful to probe the `PyFrame` variable on the `Sapling_PyEvalFrame` stack.
+ */
+EXPORT size_t sapling_cext_evalframe_get_last_frame() {
+  return last_frame;
 }
