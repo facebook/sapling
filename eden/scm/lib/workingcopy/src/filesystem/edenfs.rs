@@ -20,6 +20,7 @@ use anyhow::bail;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use context::CoreContext;
+use edenfs_client::EdenError;
 use edenfs_client::EdenFsClient;
 use edenfs_client::FileStatus;
 use fs_err::File;
@@ -27,6 +28,8 @@ use fs_err::remove_file;
 use manifest_tree::TreeManifest;
 use parking_lot::Mutex;
 use pathmatcher::DynMatcher;
+use progress_model::ProgressBar;
+use progress_model::Registry;
 use storemodel::FileStore;
 use treestate::treestate::TreeState;
 use types::HgId;
@@ -51,6 +54,7 @@ pub struct EdenFileSystem {
     client: Arc<EdenFsClient>,
     vfs: VFS,
     store: Arc<dyn FileStore>,
+    config: Arc<dyn Config>,
 
     // For wait_for_potential_change
     journal_position: Cell<(i64, i64)>,
@@ -60,7 +64,7 @@ pub struct EdenFileSystem {
 
 impl EdenFileSystem {
     pub fn new(
-        config: &dyn Config,
+        config: Arc<dyn Config>,
         client: Arc<EdenFsClient>,
         vfs: VFS,
         dot_dir: &Path,
@@ -93,6 +97,7 @@ impl EdenFileSystem {
             client,
             vfs,
             store,
+            config,
             journal_position,
             derace_mode,
         })
@@ -135,9 +140,58 @@ impl EdenFileSystem {
             }
         }
 
+        let should_wait_for_checkout =
+            self.config
+                .get_or("status", "should-wait-edenfs-checkout", || true)?;
+        let checkout_timeout: Duration =
+            self.config
+                .get_or("status", "edenfs-checkout-wait-timeout", || {
+                    Duration::from_secs(60)
+                })?;
+        let checkout_poll_interval: Duration =
+            self.config
+                .get_or("status", "edenfs-checkout-poll-interval", || {
+                    Duration::from_millis(100)
+                })?;
+        tracing::debug!(?should_wait_for_checkout, "get_status");
+
         let mut start_time: Option<Instant> = None;
+        let mut checkout_start_time: Option<Instant> = None;
+        // Holds the strong reference for the progress thread. When this is dropped,
+        // the progress thread detects it via its Weak reference and exits automatically.
+        let mut checkout_progress_handle: Option<Arc<()>> = None;
+
+        let _active_bar = ProgressBar::new_adhoc("EdenFS status", 0, "");
+
         loop {
-            let mut status_map = self.client.get_status(p1, include_ignored)?;
+            let status_result = self.client.get_status(p1, include_ignored);
+            let mut status_map = match status_result {
+                Ok(map) => {
+                    tracing::info!("EdenFS status succeeded");
+                    map
+                }
+                Err(err) if should_wait_for_checkout && is_checkout_in_progress_error(&err) => {
+                    // Check if we've exceeded the checkout timeout
+                    let checkout_start = checkout_start_time.get_or_insert_with(Instant::now);
+                    if checkout_start.elapsed() >= checkout_timeout {
+                        tracing::warn!(
+                            elapsed = ?checkout_start.elapsed(),
+                            "timed out waiting for EdenFS checkout to complete"
+                        );
+                        return Err(err);
+                    }
+
+                    // Launch progress thread on first checkout error
+                    if checkout_progress_handle.is_none() {
+                        tracing::info!("EdenFS checkout in progress, launching progress thread");
+                        checkout_progress_handle = Some(spawn_progress_thread(self.client.clone()));
+                    }
+
+                    std::thread::sleep(checkout_poll_interval);
+                    continue;
+                }
+                Err(err) => return Err(err),
+            };
 
             // Handle derace touch file regardless of whether we created it. We want to
             // ignore it and clean it up if it leaked previously.
@@ -206,6 +260,76 @@ impl EdenFileSystem {
             // Wait a bit for touch file PJFS notification to get to eden.
             std::thread::sleep(Duration::from_millis(5));
         }
+    }
+}
+
+/// Spawn a background thread to update checkout progress.
+/// Creates its own progress bar and updates it until the caller drops the returned Arc
+/// or checkout completes.
+/// Returns an Arc<()> that acts as a handle - when dropped, the thread will detect it
+/// via its Weak reference and exit automatically.
+fn spawn_progress_thread(client: Arc<EdenFsClient>) -> Arc<()> {
+    let handle = Arc::new(());
+    let weak_handle = Arc::downgrade(&handle);
+
+    let bar = progress_model::ProgressBarBuilder::new()
+        .topic("Awaiting active checkout")
+        .unit("files")
+        .adhoc(true)
+        .thread_local_parent()
+        .pending();
+
+    std::thread::spawn(move || {
+        let _active = ProgressBar::push_active(bar.clone(), Registry::main());
+
+        let poll_interval = Duration::from_millis(100);
+        let mut max_total = 0;
+
+        tracing::info!("started checkout progress thread");
+
+        while weak_handle.upgrade().is_some() {
+            let progress_result = client.checkout_progress();
+
+            // Check if caller dropped the handle while checkout_progress() was in flight.
+            // If so, exit immediately to prevent updating stale progress info.
+            if weak_handle.upgrade().is_none() {
+                break;
+            }
+
+            match progress_result {
+                Ok(Some(progress)) => {
+                    bar.set_position(progress.position);
+                    max_total = std::cmp::max(max_total, progress.total);
+                    bar.set_total(max_total);
+                    tracing::trace!(
+                        position = progress.position,
+                        total = progress.total,
+                        "EdenFS checkout progress"
+                    );
+                }
+                Ok(None) => {
+                    tracing::info!("checkout progress completes");
+                    break;
+                }
+                Err(err) => {
+                    tracing::trace!(?err, "error getting checkout progress, will retry");
+                }
+            }
+            std::thread::sleep(poll_interval);
+        }
+
+        tracing::info!("checkout progress thread exiting");
+    });
+
+    handle
+}
+
+/// Check if an error is an EdenError with CHECKOUT_IN_PROGRESS type.
+fn is_checkout_in_progress_error(err: &anyhow::Error) -> bool {
+    if let Some(eden_err) = err.downcast_ref::<EdenError>() {
+        eden_err.error_type == "CHECKOUT_IN_PROGRESS"
+    } else {
+        false
     }
 }
 

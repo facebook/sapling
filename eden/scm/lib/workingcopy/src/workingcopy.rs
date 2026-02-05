@@ -336,7 +336,7 @@ impl WorkingCopy {
                         config.clone(),
                     )?);
                     Box::new(EdenFileSystem::new(
-                        &config,
+                        config.clone(),
                         client,
                         vfs.clone(),
                         dot_dir,
