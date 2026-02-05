@@ -39,7 +39,7 @@ query YourPullRequestsQuery($searchQuery: String!, $numToFetch: Int!) {
           }
           name
         }
-        commits(last: 100) {
+        commits(last: 1) {
           nodes {
             commit {
               oid
