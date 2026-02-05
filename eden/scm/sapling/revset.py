@@ -20,6 +20,7 @@ from . import (
     bookmarks,
     dagop,
     error,
+    git,
     hbisect,
     hintutil,
     match as matchmod,
@@ -1376,11 +1377,13 @@ def _matchfiles(repo, subset, x):
 
     # This directly read the changelog data as creating changectx for all
     # revisions is quite expensive.
+    # Note: it does not support git format repo, because CommitFields::files()
+    # returns None for git format repos (see commit_fields.rs).
     getfiles = repo.changelog.readfiles
     wdirrev = node.wdirrev
 
     def matches(x):
-        if x == wdirrev or x is None:
+        if git.isgitformat(repo) or x == wdirrev or x is None:
             files = repo[x].files()
         else:
             files = getfiles(x)
