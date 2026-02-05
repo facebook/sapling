@@ -6,6 +6,26 @@ rust_library(
     name = "io",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"target": {
+            "'cfg(target_os = \"linux\")'": {"dependencies": {
+                "termios": {"version": "0.3"},
+            }},
+            "'cfg(target_os = \"macos\")'": {"dependencies": {
+                "termios": {"version": "0.3"},
+            }},
+        }},
+        "extra_buck_dependencies": {"dependencies": [
+            "fbsource//third-party/rust:once_cell",
+            "fbsource//third-party/rust:parking_lot",
+            "fbsource//third-party/rust:pipe",
+            "fbsource//third-party/rust:terminal_size",
+            "fbsource//third-party/rust:termwiz",
+            "//eden/scm/lib/config/model:configmodel",
+            "//eden/scm/lib/spawn-ext:spawn-ext",
+            "//eden/scm/lib/third-party/streampager:streampager",
+            "//eden/scm/lib/util/hgplain:hgplain",
+            "//eden/scm/lib/util/time-interval:time-interval",
+        ]},
         "lib": {"name": "io"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -15,20 +35,6 @@ rust_library(
             "repository": "https://github.com/facebook/sapling",
         },
     }},
-    os_deps = [
-        (
-            "macos",
-            [
-                "fbsource//third-party/rust:termios",
-            ],
-        ),
-        (
-            "linux",
-            [
-                "fbsource//third-party/rust:termios",
-            ],
-        ),
-    ],
     deps = [
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:parking_lot",
@@ -40,5 +46,13 @@ rust_library(
         "//eden/scm/lib/third-party/streampager:streampager",
         "//eden/scm/lib/util/hgplain:hgplain",
         "//eden/scm/lib/util/time-interval:time-interval",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:termios",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:termios",
+        ],
+    }),
 )

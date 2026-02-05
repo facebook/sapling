@@ -6,13 +6,95 @@ rust_library(
     name = "util",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"target": {'\'cfg(target_os = "windows")\'': {"dependencies": {"winapi": {"features": [
-            "fileapi",
-            "winnt",
-            "handleapi",
-            "winbase",
-            "winerror",
-        ]}}}}},
+        "dependencies_override": {"target": {
+            "'cfg(target_os = \"linux\")'": {"dependencies": {
+                "libc": {"version": "0.2.139"},
+                "nix": {
+                    "features": [
+                        "dir",
+                        "event",
+                        "hostname",
+                        "inotify",
+                        "ioctl",
+                        "mman",
+                        "mount",
+                        "net",
+                        "poll",
+                        "ptrace",
+                        "reboot",
+                        "resource",
+                        "sched",
+                        "signal",
+                        "term",
+                        "time",
+                        "user",
+                        "zerocopy",
+                    ],
+                    "version": "0.30.1",
+                },
+                "tempfile": {"version": "3.22"},
+            }},
+            "'cfg(target_os = \"macos\")'": {"dependencies": {
+                "libc": {"version": "0.2.139"},
+                "nix": {
+                    "features": [
+                        "dir",
+                        "event",
+                        "hostname",
+                        "inotify",
+                        "ioctl",
+                        "mman",
+                        "mount",
+                        "net",
+                        "poll",
+                        "ptrace",
+                        "reboot",
+                        "resource",
+                        "sched",
+                        "signal",
+                        "term",
+                        "time",
+                        "user",
+                        "zerocopy",
+                    ],
+                    "version": "0.30.1",
+                },
+                "tempfile": {"version": "3.22"},
+            }},
+            "'cfg(target_os = \"windows\")'": {
+                "dependencies": {
+                    "widestring": {"version": "1.0.2"},
+                    "winapi": {
+                        "features": [
+                            "fileapi",
+                            "handleapi",
+                            "winbase",
+                            "winerror",
+                            "winnt",
+                        ],
+                        "version": "0.3",
+                    },
+                },
+                "dev-dependencies": {
+                    "tempfile": {"version": "3.22"},
+                },
+            },
+        }},
+        "extra_buck_dependencies": {"dependencies": [
+            "fbsource//third-party/rust:anyhow",
+            "fbsource//third-party/rust:dirs",
+            "fbsource//third-party/rust:fn-error-context",
+            "fbsource//third-party/rust:fs-err",
+            "fbsource//third-party/rust:once_cell",
+            "fbsource//third-party/rust:rand",
+            "fbsource//third-party/rust:shellexpand",
+            "fbsource//third-party/rust:thiserror",
+            "fbsource//third-party/rust:tracing",
+            "//eden/scm/lib/atomicfile:atomicfile",
+            "//eden/scm/lib/lazystr:lazystr",
+            "//eden/scm/lib/metrics:metrics",
+            "//eden/scm/lib/util/rewrite-macros:rewrite-macros",
+        ]},
         "lib": {"name": "util"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -24,31 +106,6 @@ rust_library(
         },
     }},
     crate_root = "src/lib.rs",
-    os_deps = [
-        (
-            "linux",
-            [
-                "fbsource//third-party/rust:libc",
-                "fbsource//third-party/rust:nix",
-                "fbsource//third-party/rust:tempfile",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "fbsource//third-party/rust:libc",
-                "fbsource//third-party/rust:nix",
-                "fbsource//third-party/rust:tempfile",
-            ],
-        ),
-        (
-            "windows",
-            [
-                "fbsource//third-party/rust:widestring",
-                "fbsource//third-party/rust:winapi",
-            ],
-        ),
-    ],
     test_deps = [
         "fbsource//third-party/rust:memmap2",
         "fbsource//third-party/rust:tempfile",
@@ -75,5 +132,21 @@ rust_library(
         "//eden/scm/lib/lazystr:lazystr",
         "//eden/scm/lib/metrics:metrics",
         "//eden/scm/lib/util/rewrite-macros:rewrite-macros",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:libc",
+            "fbsource//third-party/rust:nix",
+            "fbsource//third-party/rust:tempfile",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:libc",
+            "fbsource//third-party/rust:nix",
+            "fbsource//third-party/rust:tempfile",
+        ],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:widestring",
+            "fbsource//third-party/rust:winapi",
+        ],
+    }),
 )

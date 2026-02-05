@@ -33,5 +33,5 @@ libc = "0.2.139"
 libc = "0.2.139"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-sapling-atexit = { version = "0.1.0", path = "../util/atexit" }
-sapling-procutil = { version = "0.1.0", path = "../util/procutil" }
+sapling-atexit = { path = "../util/atexit" }
+sapling-procutil = { path = "../util/procutil" }

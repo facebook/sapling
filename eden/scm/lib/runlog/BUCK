@@ -6,6 +6,27 @@ rust_library(
     name = "runlog",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
+        "dependencies_override": {"target": {
+            "'cfg(target_os = \"linux\")'": {"dependencies": {
+                "libc": {"version": "0.2.139"},
+            }},
+            "'cfg(target_os = \"macos\")'": {"dependencies": {
+                "libc": {"version": "0.2.139"},
+            }},
+        }},
+        "extra_buck_dependencies": {"dependencies": [
+            "fbsource//third-party/rust:anyhow",
+            "fbsource//third-party/rust:chrono",
+            "fbsource//third-party/rust:parking_lot",
+            "fbsource//third-party/rust:rand",
+            "fbsource//third-party/rust:serde",
+            "fbsource//third-party/rust:serde_json",
+            "//eden/scm/lib/config/model:configmodel",
+            "//eden/scm/lib/hg-http:hg-http",
+            "//eden/scm/lib/progress/model:progress-model",
+            "//eden/scm/lib/repo:repo",
+            "//eden/scm/lib/util:util",
+        ]},
         "lib": {"name": "runlog"},
         "package": {
             "authors": ["Meta Source Control Team <sourcecontrol-dev@meta.com>"],
@@ -16,20 +37,6 @@ rust_library(
         },
     }},
     crate_root = "src/lib.rs",
-    os_deps = [
-        (
-            "linux",
-            [
-                "fbsource//third-party/rust:libc",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "fbsource//third-party/rust:libc",
-            ],
-        ),
-    ],
     test_deps = [
         "fbsource//third-party/rust:tempfile",
     ],
@@ -45,5 +52,13 @@ rust_library(
         "//eden/scm/lib/progress/model:progress-model",
         "//eden/scm/lib/repo:repo",
         "//eden/scm/lib/util:util",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:libc",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:libc",
+        ],
+    }),
 )

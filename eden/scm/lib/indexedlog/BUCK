@@ -21,10 +21,64 @@ rust_library(
                 "name": "log",
             },
         ],
-        "extra_buck_dependencies": {"dev-dependencies": [
-            "fbsource//third-party/rust:rand_chacha",
-            "//eden/scm/lib/minibench:minibench",
-        ]},
+        "dependencies_override": {"target": {
+            "'cfg(target_os = \"linux\")'": {
+                "dependencies": {
+                    "hex": {
+                        "features": ["alloc"],
+                        "version": "0.4.3",
+                    },
+                    "libc": {"version": "0.2.139"},
+                    "sapling-btrfs": {
+                        "optional": True,
+                        "path": "../util/btrfs",
+                    },
+                },
+                "dev-dependencies": {
+                    "tempfile": {"version": "3.22"},
+                },
+            },
+            "'cfg(target_os = \"macos\")'": {
+                "dependencies": {
+                    "hex": {
+                        "features": ["alloc"],
+                        "version": "0.4.3",
+                    },
+                    "libc": {"version": "0.2.139"},
+                },
+                "dev-dependencies": {
+                    "tempfile": {"version": "3.22"},
+                },
+            },
+            "'cfg(target_os = \"windows\")'": {"dependencies": {
+                "winapi": {
+                    "features": [
+                        "everything",
+                        "std",
+                    ],
+                    "version": "0.3",
+                },
+            }},
+        }},
+        "extra_buck_dependencies": {
+            "dependencies": [
+                "fbsource//third-party/rust:byteorder",
+                "fbsource//third-party/rust:memmap2",
+                "fbsource//third-party/rust:once_cell",
+                "fbsource//third-party/rust:rand",
+                "fbsource//third-party/rust:tempfile",
+                "fbsource//third-party/rust:tracing",
+                "fbsource//third-party/rust:twox-hash",
+                "//eden/scm/lib/atomicfile:atomicfile",
+                "//eden/scm/lib/config/model:configmodel",
+                "//eden/scm/lib/minibytes:minibytes",
+                "//eden/scm/lib/vlqencoding:vlqencoding",
+            ],
+            "dev-dependencies": [
+                "fbsource//third-party/rust:rand_chacha",
+                "//eden/scm/lib/minibench:minibench",
+            ],
+        },
         "features": {
             "btrfs": ["sapling-btrfs"],
             "configurable": ["sapling-configmodel"],
@@ -45,29 +99,6 @@ rust_library(
         "btrfs",
         "configurable",
         "sigbus-handler",
-    ],
-    os_deps = [
-        (
-            "linux",
-            [
-                "fbsource//third-party/rust:hex",
-                "fbsource//third-party/rust:libc",
-                "//eden/scm/lib/util/btrfs:btrfs",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "fbsource//third-party/rust:hex",
-                "fbsource//third-party/rust:libc",
-            ],
-        ),
-        (
-            "windows",
-            [
-                "fbsource//third-party/rust:winapi",
-            ],
-        ),
     ],
     test_deps = [
         "fbsource//third-party/rust:quickcheck",
@@ -91,29 +122,38 @@ rust_library(
         "//eden/scm/lib/config/model:configmodel",
         "//eden/scm/lib/minibytes:minibytes",
         "//eden/scm/lib/vlqencoding:vlqencoding",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:hex",
+            "fbsource//third-party/rust:libc",
+            "//eden/scm/lib/util/btrfs:btrfs",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:hex",
+            "fbsource//third-party/rust:libc",
+        ],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:winapi",
+        ],
+    }),
 )
 
 rust_unittest(
     name = "low_fileno_limit_test",
     srcs = ["tests/low_fileno_limit.rs"],
     crate_root = "tests/low_fileno_limit.rs",
-    os_deps = [
-        (
-            "linux",
-            [
-                "fbsource//third-party/rust:libc",
-                "fbsource//third-party/rust:tempfile",
-                ":indexedlog",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "fbsource//third-party/rust:libc",
-                "fbsource//third-party/rust:tempfile",
-                ":indexedlog",
-            ],
-        ),
-    ],
+    deps = select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:libc",
+            "fbsource//third-party/rust:tempfile",
+            ":indexedlog",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:libc",
+            "fbsource//third-party/rust:tempfile",
+            ":indexedlog",
+        ],
+    }),
 )
