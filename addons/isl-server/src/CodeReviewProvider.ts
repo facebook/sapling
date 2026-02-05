@@ -30,6 +30,9 @@ export type DiffSummaries = Map<DiffId, DiffSummary>;
 export interface CodeReviewProvider {
   triggerDiffSummariesFetch(diffs: Array<DiffId>): unknown;
 
+  /** Set the time range for filtering PRs/diffs. undefined means "all time". */
+  setTimeRange?(days: number | undefined): void;
+
   onChangeDiffSummaries(callback: (result: Result<DiffSummaries>, currentUser?: string) => unknown): Disposable;
 
   /** Run a command not handled within sapling, such as a separate submit handler */

@@ -669,6 +669,21 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'fetchWorktrees': {
+        repo
+          .getWorktrees(ctx)
+          .then(worktrees => {
+            this.postMessage({
+              type: 'fetchedWorktrees',
+              worktrees: {value: worktrees},
+            });
+          })
+          .catch(err => {
+            logger?.error('Could not fetch worktrees', err);
+            this.postMessage({type: 'fetchedWorktrees', worktrees: {error: err}});
+          });
+        break;
+      }
       case 'fetchLatestCommit': {
         repo
           .lookupCommits(ctx, [data.revset])
@@ -978,6 +993,19 @@ export default class ServerToClientAPI {
         this.postMessage({type: 'beganLoadingMoreCommits'});
         repo.fetchSmartlogCommits();
         this.tracker.track('LoadMoreCommits', {extras: {daysToFetch: rangeInDays ?? 'Infinity'}});
+        return;
+      }
+      case 'setTimeRange': {
+        const {days} = data;
+        // Update both commit and PR time ranges
+        repo.setTimeRange(days);
+        repo.codeReviewProvider?.setTimeRange?.(days);
+        // Trigger refresh of both
+        this.postMessage({type: 'commitsShownRange', rangeInDays: days});
+        this.postMessage({type: 'beganLoadingMoreCommits'});
+        repo.fetchSmartlogCommits();
+        repo.codeReviewProvider?.triggerDiffSummariesFetch?.();
+        this.tracker.track('SetTimeRange', {extras: {daysToFetch: days ?? 'Infinity'}});
         return;
       }
       case 'exportStack': {

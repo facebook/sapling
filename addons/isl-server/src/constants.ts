@@ -13,7 +13,7 @@ export const CLOSED_AND_SHOULD_NOT_RECONNECT_CODE = 4100;
 
 export const ONE_MINUTE_MS = 60_000;
 
-export const DEFAULT_DAYS_OF_COMMITS_TO_LOAD = 14;
+export const DEFAULT_DAYS_OF_COMMITS_TO_LOAD = 7;
 
 /**
  * Short error messages sent from the server to the client.

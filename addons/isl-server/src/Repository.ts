@@ -158,9 +158,12 @@ export class Repository {
   private currentVisibleCommitRangeIndex = 0;
   private visibleCommitRanges: Array<number | undefined> = [
     DEFAULT_DAYS_OF_COMMITS_TO_LOAD,
+    14,
     60,
     undefined,
   ];
+  /** Currently selected time range in days. undefined means "all time". */
+  private selectedTimeRange: number | undefined = DEFAULT_DAYS_OF_COMMITS_TO_LOAD;
 
   /**
    * Additional commits to include in batched `log` fetch,
@@ -368,7 +371,21 @@ export class Repository {
     if (this.currentVisibleCommitRangeIndex + 1 < this.visibleCommitRanges.length) {
       this.currentVisibleCommitRangeIndex++;
     }
-    return this.visibleCommitRanges[this.currentVisibleCommitRangeIndex];
+    this.selectedTimeRange = this.visibleCommitRanges[this.currentVisibleCommitRangeIndex];
+    return this.selectedTimeRange;
+  }
+
+  /**
+   * Set the time range for filtering commits.
+   * This is the unified setter used by the time range dropdown.
+   */
+  public setTimeRange(days: number | undefined): void {
+    this.selectedTimeRange = days;
+    // Also update the index to match if possible
+    const index = this.visibleCommitRanges.indexOf(days);
+    if (index >= 0) {
+      this.currentVisibleCommitRangeIndex = index;
+    }
   }
 
   public isPathInsideRepo(p: AbsolutePath): boolean {
@@ -972,7 +989,7 @@ export class Repository {
     try {
       this.smartlogCommitsBeginFetchingEmitter.emit('start');
 
-      const visibleCommitDayRange = this.visibleCommitRanges[this.currentVisibleCommitRangeIndex];
+      const visibleCommitDayRange = this.selectedTimeRange;
 
       const primaryRevset = '(interestingbookmarks() + heads(draft()))';
 
