@@ -37,6 +37,14 @@ rust_library(
     }},
     crate_root = "src/lib.rs",
     mapped_srcs = {":gen_offsets.rs": "src/offsets.rs"},
+    os_deps = [
+        (
+            "windows",
+            [
+                "fbsource//third-party/rust:winapi",
+            ],
+        ),
+    ],
     deps = [
         "fbsource//third-party/rust:libc",
         "//eden/scm/lib/backtrace-ext:backtrace-ext",

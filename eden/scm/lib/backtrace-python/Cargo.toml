@@ -20,3 +20,6 @@ sapling-evalframe-sys = { version = "0.1.0", path = "evalframe-sys" }
 
 [build-dependencies]
 sapling-backtrace-python-offset-probe = { version = "0.1.0", path = "offset-probe" }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["everything", "std"] }

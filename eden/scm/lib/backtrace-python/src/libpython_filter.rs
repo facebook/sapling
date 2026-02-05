@@ -58,7 +58,11 @@ fn get_python_ranges() -> Vec<Range> {
     {
         parse_dyld_images()
     }
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    #[cfg(target_os = "windows")]
+    {
+        parse_windows_modules()
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
     {
         Default::default()
     }
@@ -178,6 +182,98 @@ fn parse_dyld_images() -> Vec<Range> {
     ranges
 }
 
+/// Parse loaded modules to find libpython and .pyd/.dll ranges
+#[cfg(target_os = "windows")]
+fn parse_windows_modules() -> Vec<Range> {
+    use std::mem::MaybeUninit;
+    use std::ptr;
+
+    use winapi::shared::minwindef::DWORD;
+    use winapi::shared::minwindef::FALSE;
+    use winapi::shared::minwindef::HMODULE;
+    use winapi::shared::minwindef::MAX_PATH;
+    use winapi::um::processthreadsapi::GetCurrentProcess;
+    use winapi::um::psapi::EnumProcessModules;
+    use winapi::um::psapi::GetModuleFileNameExW;
+    use winapi::um::psapi::GetModuleInformation;
+    use winapi::um::psapi::MODULEINFO;
+
+    let mut ranges = Vec::new();
+
+    let process = unsafe { GetCurrentProcess() };
+
+    // First, get the number of modules
+    let mut bytes_needed: DWORD = 0;
+    if unsafe { EnumProcessModules(process, ptr::null_mut(), 0, &mut bytes_needed) } == FALSE {
+        return ranges;
+    }
+
+    let module_count = bytes_needed as usize / std::mem::size_of::<HMODULE>();
+    if module_count == 0 {
+        return ranges;
+    }
+
+    // Allocate buffer for module handles
+    let mut modules: Vec<HMODULE> = vec![ptr::null_mut(); module_count];
+
+    if unsafe {
+        EnumProcessModules(
+            process,
+            modules.as_mut_ptr(),
+            bytes_needed,
+            &mut bytes_needed,
+        )
+    } == FALSE
+    {
+        return ranges;
+    }
+
+    // Iterate through modules
+    for &module in &modules {
+        if module.is_null() {
+            continue;
+        }
+
+        // Get module filename
+        let mut filename: [u16; MAX_PATH] = [0; MAX_PATH];
+        let len = unsafe {
+            GetModuleFileNameExW(process, module, filename.as_mut_ptr(), MAX_PATH as DWORD)
+        };
+
+        if len == 0 {
+            continue;
+        }
+
+        let path = String::from_utf16_lossy(&filename[..len as usize]);
+
+        if !is_python_library_path(&path) {
+            continue;
+        }
+
+        // Get module information (base address and size)
+        let mut mod_info: MaybeUninit<MODULEINFO> = MaybeUninit::uninit();
+        if unsafe {
+            GetModuleInformation(
+                process,
+                module,
+                mod_info.as_mut_ptr(),
+                std::mem::size_of::<MODULEINFO>() as DWORD,
+            )
+        } == FALSE
+        {
+            continue;
+        }
+
+        let mod_info = unsafe { mod_info.assume_init() };
+        let start = mod_info.lpBaseOfDll as usize;
+        let end = start + mod_info.SizeOfImage as usize;
+        ranges.push(Range { start, end });
+    }
+
+    ranges.sort();
+    ranges
+}
+
 /// Check if a pathname is a Python library or extension
 fn is_python_library_path(path: &str) -> bool {
     // Linux examples:
@@ -189,5 +285,31 @@ fn is_python_library_path(path: &str) -> bool {
     // /usr/local/Cellar/python@3.11/3.11.4/Frameworks/Python.framework/Versions/3.11/Python
     // /Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/lib-dynload/_json.cpython-311-darwin.so
     // /opt/homebrew/lib/python3.11/site-packages/numpy/.dylibs/libopenblas64_.0.dylib
-    path.contains("/libpython") || path.contains("/python") || path.contains("/Python.framework/")
+    //
+    // Windows examples:
+    // C:\Python311\python311.dll
+    // C:\Python311\python3.dll
+    // C:\Python311\DLLs\_socket.pyd
+    // C:\Users\...\AppData\Local\Programs\Python\Python311\python311.dll
+    // C:\Users\...\site-packages\numpy\core\_multiarray_umath.cp311-win_amd64.pyd
+
+    // Unix-style paths
+    if path.contains("/libpython")
+        || path.contains("/python")
+        || path.contains("/Python.framework/")
+    {
+        return true;
+    }
+
+    // Windows-style paths (use backslash)
+    if path.contains("\\python") || path.contains("\\Python") {
+        return true;
+    }
+
+    // .pyd files are Python extension modules on Windows
+    if path.ends_with(".pyd") {
+        return true;
+    }
+
+    false
 }
