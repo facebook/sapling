@@ -20,30 +20,20 @@ import {stripStackInfoFromBodyHTML} from './ghstackUtils';
 import {
   gitHubOrgAndRepoAtom,
   gitHubPullRequestAtom,
-  gitHubPullRequestComparableVersionsAtom,
   gitHubPullRequestIDAtom,
   gitHubPullRequestVersionDiffAtom,
 } from './jotai';
-import {
-  gitHubPullRequest,
-  gitHubPullRequestComparableVersions,
-  gitHubPullRequestForParams,
-} from './recoil';
+import {gitHubPullRequest, gitHubPullRequestForParams} from './recoil';
 import {stripStackInfoFromSaplingBodyHTML} from './saplingStack';
 import {stackedPullRequest} from './stackState';
 import {Box, Text} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {Suspense, useEffect} from 'react';
-import {useRecoilValue, useRecoilValueLoadable, useSetRecoilState} from 'recoil';
+import {useRecoilValueLoadable, useSetRecoilState} from 'recoil';
 
 export default function PullRequest() {
-  const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
-  // Get the default value from Recoil (computed from versions)
-  const recoilComparableVersions = useRecoilValue(gitHubPullRequestComparableVersions);
-  // Initialize the Jotai atom with the Recoil-computed default on page load.
-  useEffect(() => {
-    setComparableVersions(recoilComparableVersions);
-  }, [setComparableVersions, recoilComparableVersions]);
+  // Note: comparableVersions sync is handled by JotaiRecoilSync component
+  // which properly waits for valid data before syncing
 
   return (
     <Suspense fallback={<CenteredSpinner />}>

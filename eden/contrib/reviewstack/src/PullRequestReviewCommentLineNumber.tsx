@@ -7,16 +7,15 @@
 
 import type {GitObjectID, ID} from './github/types';
 
-import {gitHubPullRequestComparableVersions} from './recoil';
 import {
+  gitHubPullRequestComparableVersionsAtom,
   gitHubPullRequestJumpToCommentIDAtom,
   gitHubPullRequestSelectedVersionIndexAtom,
-} from './jotai/atoms';
-import {gitHubPullRequestVersionIndexForCommit} from './recoil';
+  gitHubPullRequestVersionIndexForCommitAtom,
+} from './jotai';
 import {Box, Link, Text} from '@primer/react';
-import {useSetAtom} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
 import React, {useCallback} from 'react';
-import {useRecoilValue, useSetRecoilState} from 'recoil';
 
 type Props = {
   commentID: ID;
@@ -30,10 +29,10 @@ export default React.memo(function PullRequestReviewCommentLineNumber({
   commit,
   lineNumber,
 }: Props): React.ReactElement {
-  const versionIndex = useRecoilValue(gitHubPullRequestVersionIndexForCommit(commit));
+  const versionIndex = useAtomValue(gitHubPullRequestVersionIndexForCommitAtom(commit));
   const setJumpToCommentID = useSetAtom(gitHubPullRequestJumpToCommentIDAtom(commentID));
   const setSelectedVersionIndex = useSetAtom(gitHubPullRequestSelectedVersionIndexAtom);
-  const setComparableVersions = useSetRecoilState(gitHubPullRequestComparableVersions);
+  const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
 
   const onClick = useCallback(() => {
     if (versionIndex != null) {

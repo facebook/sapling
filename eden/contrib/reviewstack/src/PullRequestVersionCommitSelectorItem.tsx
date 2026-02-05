@@ -11,13 +11,11 @@ import BulletItems from './BulletItems';
 import CommentCount from './CommentCount';
 import CommitLink from './CommitLink';
 import ToggleButton from './ToggleButton';
-import {gitHubPullRequestComparableVersionsAtom} from './jotai';
-import {gitHubPullRequestThreadsForCommit} from './recoil';
+import {gitHubPullRequestComparableVersionsAtom, gitHubPullRequestThreadsForCommitAtom} from './jotai';
 import {countCommentsForThreads, formatISODate} from './utils';
 import {ActionList, Box, Text} from '@primer/react';
-import {useSetAtom} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
 import React, {useCallback} from 'react';
-import {useRecoilValue} from 'recoil';
 
 const TOGGLE_BUTTON_WIDTH = 70;
 
@@ -52,7 +50,7 @@ export default React.memo(function PullRequestVersionCommitSelectorItem({
   repo: string;
 }): React.ReactElement {
   const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
-  const reviewThreadsForCommit = useRecoilValue(gitHubPullRequestThreadsForCommit(commit));
+  const reviewThreadsForCommit = useAtomValue(gitHubPullRequestThreadsForCommitAtom(commit));
   const commentCount = countCommentsForThreads(reviewThreadsForCommit);
 
   const onClickBefore = useCallback(() => {

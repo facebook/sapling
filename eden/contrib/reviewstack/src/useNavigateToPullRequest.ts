@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {gitHubOrgAndRepoAtom} from './jotai';
 import URLFor from './URLFor';
+import {gitHubOrgAndRepoAtom} from './jotai';
 import useNavigate from './useNavigate';
 import {useAtomValue} from 'jotai';
 import {useCallback} from 'react';

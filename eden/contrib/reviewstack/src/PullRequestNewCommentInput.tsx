@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {ComparableVersions} from './jotai';
+
 import PullRequestCommentInput from './PullRequestCommentInput';
 import {DiffSide} from './generated/graphql';
-import {gitHubClientAtom, gitHubPullRequestAtom} from './jotai';
-import type {ComparableVersions} from './jotai';
-import {gitHubPullRequestComparableVersionsAtom} from './jotai';
+import {gitHubClientAtom, gitHubPullRequestAtom,gitHubPullRequestComparableVersionsAtom} from './jotai';
 import {gitHubPullRequestNewCommentInputCell, gitHubPullRequestPositionForLine} from './recoil';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {Box, Text} from '@primer/react';

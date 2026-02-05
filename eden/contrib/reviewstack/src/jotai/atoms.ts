@@ -26,7 +26,15 @@ import type {
   PullRequestReviewComment,
 } from '../github/pullRequestTimelineTypes';
 import type {PullsQueryInput, PullsWithPageInfo} from '../github/pullsTypes';
-import type {Blob, Commit, DateTime, GitObjectID, ID, Version, VersionCommit} from '../github/types';
+import type {
+  Blob,
+  Commit,
+  DateTime,
+  GitObjectID,
+  ID,
+  Version,
+  VersionCommit,
+} from '../github/types';
 
 import {UserHomePageQuery} from '../generated/graphql';
 import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
@@ -260,9 +268,7 @@ export const gitHubPullRequestViewerDidAuthorAtom = atom<boolean>(get => {
 export const gitHubCurrentCommitAtom = atom<Promise<Commit | null>>(async get => {
   const client = await get(gitHubClientAtom);
   const oid = get(gitHubCommitIDAtom);
-  return (client != null && oid != null) ?
-    client.getCommit(oid) : null;
-
+  return client != null && oid != null ? client.getCommit(oid) : null;
 });
 
 /**
@@ -537,6 +543,107 @@ export const gitHubPullRequestSelectedVersionCommitsAtom = atom<VersionCommit[]>
   const selectedVersionIndex = get(gitHubPullRequestSelectedVersionIndexAtom);
   return versions[selectedVersionIndex]?.commits ?? [];
 });
+
+/**
+ * Migrated from: gitHubPullRequestIsViewingLatest selector in recoil.ts
+ *
+ * Determines if the user is viewing the latest version of the PR.
+ * Used to show/hide the "Back to Latest" link.
+ */
+export const gitHubPullRequestIsViewingLatestAtom = atom<boolean>(get => {
+  const versions = get(gitHubPullRequestVersionsAtom);
+  if (versions.length === 0) {
+    return true; // Default to true during loading
+  }
+
+  const selectedVersionIndex = get(gitHubPullRequestSelectedVersionIndexAtom);
+  if (selectedVersionIndex !== versions.length - 1) {
+    return false; // Not on the latest version
+  }
+
+  const comparableVersions = get(gitHubPullRequestComparableVersionsAtom);
+  if (comparableVersions == null) {
+    return true; // No explicit comparison selected, assume latest
+  }
+
+  // Viewing latest means: no explicit "before" selected, and "after" is the head commit
+  const latestVersion = versions[versions.length - 1];
+  return (
+    comparableVersions.beforeCommitID == null &&
+    comparableVersions.afterCommitID === latestVersion.headCommit
+  );
+});
+
+/**
+ * Migrated from: gitHubPullRequestVersionIndexesByCommit selector in recoil.ts
+ *
+ * Internal atom that indexes versions by commit ID.
+ */
+const gitHubPullRequestVersionIndexesByCommitAtom = atom<Map<GitObjectID, number>>(get => {
+  const versions = get(gitHubPullRequestVersionsAtom);
+  const versionIndexByCommit = new Map<GitObjectID, number>();
+  versions.forEach(({commits}, index) => {
+    commits.forEach(commit => {
+      versionIndexByCommit.set(commit.commit, index);
+    });
+  });
+  return versionIndexByCommit;
+});
+
+/**
+ * Migrated from: gitHubPullRequestVersionIndexForCommit selectorFamily in recoil.ts
+ *
+ * Looks up the version index for a given commit.
+ * Used to navigate to the version containing a specific commit.
+ */
+export const gitHubPullRequestVersionIndexForCommitAtom = atomFamily(
+  (commit: GitObjectID) =>
+    atom<number | null>(get => {
+      const versionIndexesByCommit = get(gitHubPullRequestVersionIndexesByCommitAtom);
+      return versionIndexesByCommit.get(commit) ?? null;
+    }),
+  (a, b) => a === b,
+);
+
+/**
+ * Migrated from: gitHubPullRequestThreadsByCommit selector in recoil.ts
+ *
+ * Groups review threads by commit ID.
+ * Used to count comments per version.
+ */
+export const gitHubPullRequestThreadsByCommitAtom = atom<
+  Map<GitObjectID, GitHubPullRequestReviewThread[]>
+>(get => {
+  const reviewThreads = get(gitHubPullRequestReviewThreadsAtom);
+  const threadsByCommit = new Map<GitObjectID, GitHubPullRequestReviewThread[]>();
+
+  reviewThreads.forEach(thread => {
+    // All comments in the thread should have the same original commit as the first
+    const firstComment = thread.comments[0];
+    const commitOid = firstComment?.originalCommit?.oid;
+    if (commitOid != null) {
+      const existing = threadsByCommit.get(commitOid) ?? [];
+      existing.push(thread);
+      threadsByCommit.set(commitOid, existing);
+    }
+  });
+
+  return threadsByCommit;
+});
+
+/**
+ * Migrated from: gitHubPullRequestThreadsForCommit selectorFamily in recoil.ts
+ *
+ * Gets review threads for a specific commit.
+ */
+export const gitHubPullRequestThreadsForCommitAtom = atomFamily(
+  (commitID: GitObjectID) =>
+    atom<GitHubPullRequestReviewThread[]>(get => {
+      const reviewThreadsByCommit = get(gitHubPullRequestThreadsByCommitAtom);
+      return reviewThreadsByCommit.get(commitID) ?? [];
+    }),
+  (a, b) => a === b,
+);
 
 // =============================================================================
 // Pull Request Review Threads

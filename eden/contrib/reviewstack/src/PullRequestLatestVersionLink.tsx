@@ -7,21 +7,20 @@
 
 import {
   gitHubPullRequestComparableVersionsAtom,
+  gitHubPullRequestIsViewingLatestAtom,
   gitHubPullRequestSelectedVersionIndexAtom,
   gitHubPullRequestVersionsAtom,
 } from './jotai';
-import {gitHubPullRequestIsViewingLatest} from './recoil';
 import {ArrowLeftIcon} from '@primer/octicons-react';
 import {Link, Text} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {useCallback} from 'react';
-import {useRecoilValue} from 'recoil';
 
 export default function PullRequestLatestVersionLink(): React.ReactElement | null {
   const versions = useAtomValue(gitHubPullRequestVersionsAtom);
   const setSelectedVersionIndex = useSetAtom(gitHubPullRequestSelectedVersionIndexAtom);
   const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
-  const isViewingLatest = useRecoilValue(gitHubPullRequestIsViewingLatest);
+  const isViewingLatest = useAtomValue(gitHubPullRequestIsViewingLatestAtom);
 
   const onClick = useCallback(() => {
     // Reset to latest version

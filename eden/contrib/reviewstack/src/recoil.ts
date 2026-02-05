@@ -396,29 +396,8 @@ export const gitHubPullRequestVersions = selector<Version[]>({
   },
 });
 
-const gitHubPullRequestVersionIndexesByCommit = selector<Map<GitObjectID, number>>({
-  key: 'gitHubPullRequestVersionIndexesByCommit',
-  get: ({get}) => {
-    const versions = get(gitHubPullRequestVersions);
-    const versionIndexByCommit = new Map();
-    versions.forEach(({commits}, index) => {
-      commits.forEach(commit => {
-        versionIndexByCommit.set(commit.commit, index);
-      });
-    });
-    return versionIndexByCommit;
-  },
-});
-
-export const gitHubPullRequestVersionIndexForCommit = selectorFamily<number | null, GitObjectID>({
-  key: 'gitHubPullRequestVersionIndexForCommit',
-  get:
-    commit =>
-    ({get}) => {
-      const versionIndexesByCommit = get(gitHubPullRequestVersionIndexesByCommit);
-      return versionIndexesByCommit.get(commit) ?? null;
-    },
-});
+// NOTE: gitHubPullRequestVersionIndexForCommit has been migrated to Jotai.
+// See gitHubPullRequestVersionIndexForCommitAtom in jotai/atoms.ts
 
 export const gitHubPullRequestReviewThreads = selector<GitHubPullRequestReviewThread[]>({
   key: 'gitHubPullRequestReviewThreads',
@@ -596,6 +575,10 @@ export const gitHubPullRequestCanAddComment = selectorFamily<
     },
 });
 
+// NOTE: gitHubPullRequestThreadsByCommit and gitHubPullRequestThreadsForCommit have Jotai versions.
+// See gitHubPullRequestThreadsByCommitAtom and gitHubPullRequestThreadsForCommitAtom in jotai/atoms.ts
+// The Recoil versions are kept temporarily for internal use by gitHubPullRequestThreadsForCommitFile.
+
 export const gitHubPullRequestThreadsByCommit = selector<
   Map<GitObjectID, GitHubPullRequestReviewThread[]>
 >({
@@ -745,31 +728,8 @@ export const gitHubPullRequestSelectedVersionIndex = atom<number>({
   }),
 });
 
-export const gitHubPullRequestIsViewingLatest = selector<boolean>({
-  key: 'gitHubPullRequestIsViewingLatest',
-  get: ({get}) => {
-    const [versions, selectedVersionIndex, comparableVersions] = get(
-      waitForAll([
-        gitHubPullRequestVersions,
-        gitHubPullRequestSelectedVersionIndex,
-        gitHubPullRequestComparableVersions,
-      ]),
-    );
-
-    // Handle loading state when versions aren't available yet
-    if (versions.length === 0) {
-      return true; // Default to true during loading
-    }
-
-    const {beforeCommitID, afterCommitID} = comparableVersions;
-    const latestVersionIndex = versions.length - 1;
-    const latestVersion = versions[latestVersionIndex];
-    const isLatestVersion = selectedVersionIndex === latestVersionIndex;
-    const isLatestCommit = beforeCommitID == null && afterCommitID == latestVersion.headCommit;
-
-    return isLatestVersion && isLatestCommit;
-  },
-});
+// NOTE: gitHubPullRequestIsViewingLatest has been migrated to Jotai.
+// See gitHubPullRequestIsViewingLatestAtom in jotai/atoms.ts
 
 /**
  * When there is no "before" explicitly selected, the view shows the Diff for

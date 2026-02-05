@@ -9,6 +9,7 @@ import {
   gitHubCommitID,
   gitHubOrgAndRepo,
   gitHubPullRequest,
+  gitHubPullRequestComparableVersions,
   gitHubPullRequestSelectedVersionIndex,
   gitHubPullRequestVersions,
 } from '../recoil';
@@ -16,6 +17,7 @@ import {
   gitHubCommitIDAtom,
   gitHubOrgAndRepoAtom,
   gitHubPullRequestAtom,
+  gitHubPullRequestComparableVersionsAtom,
   gitHubPullRequestSelectedVersionIndexAtom,
   gitHubPullRequestVersionsAtom,
 } from './atoms';
@@ -95,6 +97,35 @@ export function JotaiRecoilSync(): null {
     // Sync Jotai -> Recoil when user changes selection
     setSelectedVersionIndexRecoil(jotaiSelectedVersionIndex);
   }, [jotaiSelectedVersionIndex, setSelectedVersionIndexRecoil]);
+
+  // Bidirectional sync for comparableVersions
+  // - Recoil -> Jotai: When versions load, Recoil computes the default (based on latest version)
+  // - Jotai -> Recoil: When user changes comparison, Jotai updates and some Recoil selectors
+  //   may still depend on it
+  const recoilComparableVersionsLoadable = useRecoilValueLoadable(
+    gitHubPullRequestComparableVersions,
+  );
+  const jotaiComparableVersions = useAtomValue(gitHubPullRequestComparableVersionsAtom);
+  const setComparableVersionsAtom = useSetAtom(gitHubPullRequestComparableVersionsAtom);
+  const setComparableVersionsRecoil = useSetRecoilState(gitHubPullRequestComparableVersions);
+
+  useEffect(() => {
+    // Sync Recoil -> Jotai for initial default value
+    // Only sync if we have a valid afterCommitID (not empty string from loading state)
+    if (recoilComparableVersionsLoadable.state === 'hasValue') {
+      const contents = recoilComparableVersionsLoadable.contents;
+      if (contents.afterCommitID !== '') {
+        setComparableVersionsAtom(contents);
+      }
+    }
+  }, [recoilComparableVersionsLoadable, setComparableVersionsAtom]);
+
+  useEffect(() => {
+    // Sync Jotai -> Recoil when user changes comparison
+    if (jotaiComparableVersions != null) {
+      setComparableVersionsRecoil(jotaiComparableVersions);
+    }
+  }, [jotaiComparableVersions, setComparableVersionsRecoil]);
 
   return null;
 }

@@ -113,8 +113,15 @@ export function useSplitDiffViewData(
   if (recoilLoadable.state === 'loading' || commitIDsLoadable.state === 'loading') {
     return {state: 'loading'};
   }
-  if (isPullRequest && versions.length === 0) {
-    // Versions haven't been synced yet from Recoil
+
+  // PR case: versions haven't been synced yet from Recoil, or commitIDs aren't yet available.
+  // This handles the race condition where gitHubPullRequestComparableVersionsAtom
+  // hasn't been synced from Recoil yet, causing gitHubDiffCommitIDsAtom to return null.
+  if (
+    isPullRequest &&
+    (versions.length === 0 ||
+      (commitIDsLoadable.state === 'hasData' && commitIDsLoadable.data == null))
+  ) {
     return {state: 'loading'};
   }
 

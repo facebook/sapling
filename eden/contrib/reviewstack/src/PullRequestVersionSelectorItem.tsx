@@ -13,13 +13,12 @@ import CommitLink from './CommitLink';
 import {
   gitHubPullRequestComparableVersionsAtom,
   gitHubPullRequestSelectedVersionIndexAtom,
+  gitHubPullRequestThreadsByCommitAtom,
 } from './jotai';
-import {gitHubPullRequestThreadsByCommit} from './recoil';
 import {countCommentsForThreads, formatISODate, versionLabel} from './utils';
 import {ActionList, Box, Text} from '@primer/react';
-import {useAtom, useSetAtom} from 'jotai';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import React, {useCallback} from 'react';
-import {useRecoilValue} from 'recoil';
 
 // eslint-disable-next-line prefer-arrow-callback
 export default React.memo(function PullRequestVersionSelectorItem({
@@ -43,7 +42,7 @@ export default React.memo(function PullRequestVersionSelectorItem({
     gitHubPullRequestSelectedVersionIndexAtom,
   );
   const setComparableVersions = useSetAtom(gitHubPullRequestComparableVersionsAtom);
-  const reviewThreadsByCommit = useRecoilValue(gitHubPullRequestThreadsByCommit);
+  const reviewThreadsByCommit = useAtomValue(gitHubPullRequestThreadsByCommitAtom);
   const commentCount = commits.reduce((acc, commit) => {
     const reviewThreadsForCommit = reviewThreadsByCommit.get(commit.commit);
     if (reviewThreadsForCommit == null) {
