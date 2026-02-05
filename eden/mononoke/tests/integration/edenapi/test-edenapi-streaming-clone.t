@@ -36,9 +36,10 @@ Test clone using SLAPI streaming clone endpoint (instead of wireproto)
   $ cd "$TESTTMP"
   $ hg clone mono:repo repo-slapi-streamclone --config experimental.use-slapi-streaming-clone=true
   Cloning repo into $TESTTMP/repo-slapi-streamclone
+  fetching changelog
   streaming changelog via SLAPI
   transferred * in * seconds (*) (glob)
-  pulling from mono:repo
+  fetching selected remote bookmarks
   Checking out 'master_bookmark'
   3 files updated
 
@@ -104,19 +105,20 @@ Delete existing chunks and recreate with tag
 Clone with tag using SLAPI - should use streaming clone with the tag
   $ hg clone mono:repo repo-slapi-tag --config experimental.use-slapi-streaming-clone=true --config stream_out_shallow.tag=my_tag
   Cloning repo into $TESTTMP/repo-slapi-tag
+  fetching changelog
   streaming changelog via SLAPI
   transferred * in * seconds (*) (glob)
-  pulling from mono:repo
+  fetching selected remote bookmarks
   Checking out 'master_bookmark'
   3 files updated
 
 Clone without tag using SLAPI - should get 0 bytes (no default tag chunks)
   $ hg clone mono:repo repo-slapi-notag --config experimental.use-slapi-streaming-clone=true
   Cloning repo into $TESTTMP/repo-slapi-notag
+  fetching changelog
   streaming changelog via SLAPI
   transferred * in * seconds (*) (glob)
-  pulling from mono:repo
-  fetching revlog data for 3 commits
+  fetching selected remote bookmarks
   Checking out 'master_bookmark'
   3 files updated
 
@@ -176,9 +178,10 @@ Test with multiple chunks
   $ rm -rf "$TESTTMP/repo-slapi-multichunk"
   $ hg clone mono:repo repo-slapi-multichunk --config experimental.use-slapi-streaming-clone=true
   Cloning repo into $TESTTMP/repo-slapi-multichunk
+  fetching changelog
   streaming changelog via SLAPI
   transferred * in * seconds (*) (glob)
-  pulling from mono:repo
+  fetching selected remote bookmarks
   Checking out 'master_bookmark'
   3 files updated
 
