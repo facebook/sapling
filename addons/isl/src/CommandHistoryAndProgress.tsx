@@ -18,6 +18,7 @@ import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue} from 'jotai';
 import {useState, useEffect, useRef} from 'react';
 import {notEmpty, truncate} from 'shared/utils';
+import {WorktreeAddOperation} from './operations/WorktreeAddOperation';
 import {Delayed} from './Delayed';
 import {LogRenderExposures} from './analytics/LogRenderExposures';
 import {codeReviewProvider} from './codeReview/CodeReviewInfo';
@@ -171,9 +172,10 @@ export function CommandHistoryAndProgress() {
   let icon;
   let abort = null;
   let showLastLineOfOutput = false;
+  const isWorktreeOperation = progress.operation instanceof WorktreeAddOperation;
   if (progress.exitCode == null) {
     label = desc?.description ? command : <T replace={{$command: command}}>Running $command</T>;
-    icon = <Icon icon="loading" />;
+    icon = isWorktreeOperation ? <WorktreeBranchAnimation /> : <Icon icon="loading" />;
     showLastLineOfOutput = desc?.tooltip == null;
     // Only show "Abort" for slow commands, since "Abort" might leave modified
     // files or pending commits around.
@@ -395,5 +397,49 @@ function ProgressBar({progress, progressTotal}: {progress: number; progressTotal
     <span className="progress-bar">
       <span className="progress-bar-filled" style={{width: `${Math.round(100 * pct)}%`}} />
     </span>
+  );
+}
+
+/**
+ * Animated SVG showing branches growing - represents worktree creation.
+ */
+function WorktreeBranchAnimation() {
+  return (
+    <svg
+      className="worktree-branch-animation"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{width: 20, height: 20}}>
+      {/* Main trunk */}
+      <path
+        className="branch-trunk"
+        d="M12 20 L12 8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      {/* Left branch */}
+      <path
+        className="branch-left"
+        d="M12 12 L6 6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      {/* Right branch - the new worktree */}
+      <path
+        className="branch-right"
+        d="M12 12 L18 6"
+        stroke="var(--signal-medium-fg, #58a6ff)"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      {/* Node circles */}
+      <circle cx="12" cy="20" r="2" fill="currentColor" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+      <circle cx="6" cy="6" r="1.5" fill="currentColor" />
+      <circle className="node-right-pulse" cx="18" cy="6" r="2" fill="var(--signal-medium-fg, #58a6ff)" />
+    </svg>
   );
 }

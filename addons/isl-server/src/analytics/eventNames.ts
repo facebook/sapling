@@ -198,7 +198,9 @@ export type TrackEventName =
   | 'PullFullRepoBranchOperation'
   | 'SubtreeMergeOperation'
   | 'WorktreeAddOperation'
-  | 'WorktreeListCommand';
+  | 'WorktreeRemoveOperation'
+  | 'WorktreeListCommand'
+  | 'SetTimeRange';
 
 export type TrackErrorName =
   | 'BlameError'

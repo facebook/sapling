@@ -9,10 +9,13 @@ import type {Hash, WorktreeInfo} from './types';
 
 import {atom} from 'jotai';
 import serverAPI from './ClientToServerAPI';
-import {atomFamilyWeak, writeAtom} from './jotaiUtils';
+import {atomFamilyWeak, readAtom, writeAtom} from './jotaiUtils';
 import {WorktreeAddOperation} from './operations/WorktreeAddOperation';
+import {WorktreeRemoveOperation} from './operations/WorktreeRemoveOperation';
 import {onOperationExited} from './operationsState';
+import platform from './platform';
 import {registerCleanup, registerDisposable} from './utils';
+import {showToast} from './toast';
 
 /**
  * Atom holding the list of worktrees for the current repository.
@@ -22,12 +25,24 @@ export const worktreesAtom = atom<WorktreeInfo[]>([]);
 
 /**
  * Atom family that returns worktrees for a specific commit hash.
- * A commit may be checked out in multiple worktrees.
+ * Matches worktrees where:
+ * 1. The current checkout matches the hash exactly, OR
+ * 2. The worktree name or path contains the hash prefix (was created for this commit)
  */
 export const worktreesForCommit = atomFamilyWeak((hash: Hash) =>
   atom(get => {
+    if (!hash) {
+      return [];
+    }
     const worktrees = get(worktreesAtom);
-    return worktrees.filter(wt => wt.commit === hash);
+    const shortHash = hash.slice(0, 8);
+    return worktrees.filter(
+      wt =>
+        wt.commit === hash ||
+        wt.commit.startsWith(shortHash) ||
+        (wt.name && wt.name.includes(shortHash)) ||
+        wt.path.includes(shortHash),
+    );
   }),
 );
 
@@ -70,14 +85,84 @@ registerCleanup(
 );
 
 // Refresh worktrees when a WorktreeAddOperation completes successfully
+// and optionally open the new worktree in a new VSCode window
 registerDisposable(
   worktreesAtom,
-  onOperationExited((message, operation) => {
+  onOperationExited(async (message, operation) => {
     if (operation instanceof WorktreeAddOperation && message.exitCode === 0) {
-      fetchWorktrees().catch(() => {
+      const expectedName = operation.getWorktreeName();
+      const expectedCommit = operation.getCommit();
+
+      // Get worktrees before refresh to compare
+      const worktreesBefore = new Set(readAtom(worktreesAtom).map(wt => wt.path));
+
+      try {
+        const worktreesAfter = await fetchWorktrees();
+
+        // Find the newly created worktree
+        // Match by: not in "before" list AND (name matches OR commit matches OR path contains commit hash)
+        const expectedCommitPrefix = expectedCommit.slice(0, 8);
+        const newWorktree = worktreesAfter.find(
+          wt =>
+            !worktreesBefore.has(wt.path) &&
+            (wt.name === expectedName ||
+              wt.commit.startsWith(expectedCommitPrefix) ||
+              wt.path.includes(expectedCommit) ||
+              wt.path.includes(expectedCommitPrefix)),
+        );
+
+        // Open the new worktree in VSCode
+        if (newWorktree) {
+          if (platform.platformName === 'vscode') {
+            // Direct integration when running inside VSCode
+            openWorktreeInVSCode(newWorktree.path);
+          } else {
+            // Show toast with command to open in VSCode for browser platforms
+            showWorktreeCreatedToast(newWorktree.path, newWorktree.name ?? expectedName);
+          }
+        }
+      } catch {
         // Ignore errors when refreshing worktrees
-      });
+      }
     }
   }),
   import.meta.hot,
 );
+
+// Refresh worktrees when a WorktreeRemoveOperation completes
+registerDisposable(
+  worktreesAtom,
+  onOperationExited(async (message, operation) => {
+    if (operation instanceof WorktreeRemoveOperation && message.exitCode === 0) {
+      try {
+        await fetchWorktrees();
+        const name = operation.getPath().split(/[/\\]/).pop() ?? operation.getPath();
+        showToast(`Worktree "${name}" removed`, {durationMs: 3000});
+      } catch {
+        // Ignore errors when refreshing worktrees
+      }
+    }
+  }),
+  import.meta.hot,
+);
+
+/**
+ * Open a worktree folder in a new VSCode window (when running inside VSCode).
+ */
+function openWorktreeInVSCode(worktreePath: string) {
+  window.clientToServerAPI?.postMessage({
+    type: 'platform/executeVSCodeCommand',
+    command: 'vscode.openFolder',
+    args: [{scheme: 'file', path: worktreePath}, {forceNewWindow: true}],
+  });
+}
+
+/**
+ * Show a toast notification when worktree is created.
+ * Used when running in browser (not inside VSCode extension).
+ */
+function showWorktreeCreatedToast(_worktreePath: string, worktreeName: string) {
+  showToast(`Worktree "${worktreeName}" created`, {
+    durationMs: 5000,
+  });
+}

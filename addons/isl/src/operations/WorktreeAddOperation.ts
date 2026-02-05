@@ -23,6 +23,16 @@ export class WorktreeAddOperation extends Operation {
     super('WorktreeAddOperation');
   }
 
+  /** Get the commit hash this worktree was created for */
+  getCommit(): string {
+    return this.commit;
+  }
+
+  /** Get the expected worktree name (short hash if not specified) */
+  getWorktreeName(): string {
+    return this.name ?? this.commit.slice(0, 8);
+  }
+
   getArgs() {
     const args = ['wt', 'add'];
     if (this.name) {
