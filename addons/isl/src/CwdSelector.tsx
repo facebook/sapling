@@ -195,7 +195,7 @@ export function CwdSelector() {
         label={mainLabel}
         hideRightBorder={
           (repoRoots && repoRoots.length > 1) ||
-          (submodulesMap?.get(repoRoot)?.value?.length ?? 0) > 0
+          (submodulesMap?.get(repoRoot)?.value?.filter(m => m.active).length ?? 0) > 0
         }
       />
       <SubmoduleSelectorGroup repoRoots={repoRoots} submoduleOptions={submodulesMap} />
