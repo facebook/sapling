@@ -9,6 +9,7 @@
 
 import argparse
 import asyncio
+import concurrent.futures
 import enum
 import errno
 import inspect
@@ -39,6 +40,8 @@ CHEF_LOG_TIMESTAMP_KEY = "chef.run_success_timestamp"
 CHEF_RUN_AGE_PROBLEM = timedelta(days=14)
 # Coordinate with Eden daemon sigterm shutdown timing. Refer to: sigtermShutdownTimeout
 DEFAULT_STOP_TIMEOUT = 20
+# Timeout for stopping aux processes
+AUX_PROCESSES_STOP_TIMEOUT = 60
 
 
 class ForegroundColor(Enum):
@@ -2378,13 +2381,47 @@ def unmount_redirections_for_path(
             )
 
 
-def stop_aux_processes_for_path(
-    repo_path: str, complain_about_failing_to_unmount_redirs: bool = True
+def _stop_aux_processes_for_path_impl(
+    repo_path: str, complain_about_failing_to_unmount_redirs: bool
 ) -> None:
-    """Tear down processes that will hold onto file handles and prevent shutdown
-    for a given mount point/repo"""
+    """Internal implementation for stopping aux processes."""
     unmount_redirections_for_path(repo_path, complain_about_failing_to_unmount_redirs)
     stop_internal_processes(repo_path)
+
+
+class AuxProcessTimeoutError(Exception):
+    """Raised when stopping aux processes times out."""
+
+    pass
+
+
+def stop_aux_processes_for_path(
+    repo_path: str,
+    complain_about_failing_to_unmount_redirs: bool = True,
+    timeout: float = AUX_PROCESSES_STOP_TIMEOUT,
+) -> None:
+    """Tear down processes that will hold onto file handles and prevent shutdown
+    for a given mount point/repo.
+
+    Uses a timeout to prevent hanging indefinitely if aux processes are stuck.
+
+    Raises:
+        AuxProcessTimeoutError: If stopping aux processes exceeds the timeout.
+        Exception: Any exception raised by the underlying implementation.
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(
+            _stop_aux_processes_for_path_impl,
+            repo_path,
+            complain_about_failing_to_unmount_redirs,
+        )
+        try:
+            future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError:
+            raise AuxProcessTimeoutError(
+                f"Stopping aux processes for {repo_path} timed out after "
+                f"{timeout} seconds"
+            )
 
 
 def stop_aux_processes(client: EdenClient) -> None:
