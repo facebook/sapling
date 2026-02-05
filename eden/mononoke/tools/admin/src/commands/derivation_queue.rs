@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod enqueue;
 mod summary;
 mod unsafe_evict;
 
@@ -16,6 +17,7 @@ use bonsai_svnrev_mapping::BonsaiSvnrevMapping;
 use bookmarks::Bookmarks;
 use clap::Parser;
 use clap::Subcommand;
+use enqueue::EnqueueArgs;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::RepoConfigRef;
 use mononoke_app::MononokeApp;
@@ -41,6 +43,8 @@ pub struct CommandArgs {
 
 #[derive(Subcommand)]
 pub enum DerivationQueueSubcommand {
+    /// Enqueue a derivation request for a commit
+    Enqueue(EnqueueArgs),
     /// Display a summary of the items in the derivation queue.
     Summary(SummaryArgs),
     /// Evict an item (referenced by root cs_id and derived data type) from the derivation queue. WARNING: can leave dependent items in the queue stuck
@@ -84,6 +88,9 @@ pub async fn run(app: MononokeApp, args: CommandArgs) -> Result<()> {
         .unwrap_or_else(|| &repo.repo_config().derived_data_config.enabled_config_name);
 
     match args.subcommand {
+        DerivationQueueSubcommand::Enqueue(args) => {
+            enqueue::enqueue(&ctx, &repo, config_name, args).await
+        }
         DerivationQueueSubcommand::Summary(args) => {
             summary::summary(&ctx, &repo, config_name, args).await
         }
