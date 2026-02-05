@@ -105,6 +105,12 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   ) {}
   private diffSummaries = new TypedEventEmitter<'data', DiffSummariesData>();
   private hasMergeQueueSupport: Promise<boolean> | null = null;
+  /** Time range in days for filtering PRs. undefined means "all time". */
+  private timeRangeDays: number | undefined = 7;
+
+  setTimeRange(days: number | undefined): void {
+    this.timeRangeDays = days;
+  }
 
   onChangeDiffSummaries(
     callback: (result: Result<Map<DiffId, GitHubDiffSummary>>, currentUser?: string) => unknown,
@@ -145,15 +151,20 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   private fetchYourPullRequestsGraphQL(
     includeMergeQueue: boolean,
   ): Promise<YourPullRequestsQueryData | undefined> {
-    // Calculate date 30 days ago for the updated filter
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
+    // Build search query with optional date filter
+    let searchQuery = `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr`;
+
+    if (this.timeRangeDays != null) {
+      const dateAgo = new Date();
+      dateAgo.setDate(dateAgo.getDate() - this.timeRangeDays);
+      const dateFilter = dateAgo.toISOString().split('T')[0];
+      searchQuery += ` updated:>=${dateFilter}`;
+    }
 
     const variables = {
-      // Fetch all PRs (open, merged, closed) updated in the last 30 days
+      // Fetch all PRs (open, merged, closed) within the selected time range
       // This allows "hide merged" filtering to work properly
-      searchQuery: `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr updated:>=${dateFilter}`,
+      searchQuery,
       // Reduced from 50 to avoid GitHub's 500k node limit (numToFetch × 100 commits × 100 contexts)
       numToFetch: 20,
     };

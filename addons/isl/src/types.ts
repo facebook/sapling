@@ -592,6 +592,21 @@ export type ShelvedChange = {
   description: string;
 };
 
+/**
+ * Information about a git worktree.
+ * Worktrees allow checking out multiple commits simultaneously in separate directories.
+ */
+export type WorktreeInfo = {
+  /** Absolute path to the worktree directory */
+  path: AbsolutePath;
+  /** Commit hash currently checked out in the worktree */
+  commit: Hash;
+  /** Name of the worktree (usually the folder name) */
+  name: string;
+  /** Whether this is the main worktree (the original repo) */
+  isMain: boolean;
+};
+
 export enum CommitCloudBackupStatus {
   InProgress = 'IN_PROGRESS',
   Pending = 'PENDING',
@@ -870,6 +885,12 @@ export type CodeReviewProviderSpecificServerToClientMessages =
 
 export type PageVisibility = 'focused' | 'visible' | 'hidden';
 
+/**
+ * Time range options for filtering commits and PRs.
+ * undefined means "all time" (no date filter).
+ */
+export type TimeRangeDays = 7 | 14 | 30 | undefined;
+
 export type FileABugFields = {title: string; description: string; repro: string};
 export type FileABugProgress =
   | {status: 'starting'}
@@ -1045,6 +1066,7 @@ export type ClientToServerMessage =
       numLines: number;
     }
   | {type: 'loadMoreCommits'}
+  | {type: 'setTimeRange'; days: TimeRangeDays}
   | {type: 'subscribe'; kind: SubscriptionKind; subscriptionID: string}
   | {type: 'unsubscribe'; kind: SubscriptionKind; subscriptionID: string}
   | {type: 'exportStack'; revs: string; assumeTracked?: Array<string>}
@@ -1131,7 +1153,8 @@ export type ClientToServerMessage =
       type: 'unsubscribeToFullRepoBranch';
       id: string;
       fullRepoBranch: InternalTypes['FullRepoBranch'];
-    };
+    }
+  | {type: 'fetchWorktrees'};
 
 export type SubscriptionResultsData = {
   uncommittedChanges: FetchedUncommittedChanges;
@@ -1313,7 +1336,8 @@ export type ServerToClientMessage =
       type: 'openSplitViewForCommit';
       commitHash: string;
       commits?: Array<PartiallySelectedDiffCommit>;
-    };
+    }
+  | {type: 'fetchedWorktrees'; worktrees: Result<Array<WorktreeInfo>>};
 
 export type Disposable = {
   dispose(): void;

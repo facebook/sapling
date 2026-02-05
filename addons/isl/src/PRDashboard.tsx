@@ -6,9 +6,10 @@
  */
 
 import type {PRStack} from './codeReview/PRStacksAtom';
-import type {DiffSummary} from './types';
+import type {DiffSummary, TimeRangeDays} from './types';
 
 import {Button} from 'isl-components/Button';
+import {Dropdown} from 'isl-components/Dropdown';
 import {Icon} from 'isl-components/Icon';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
@@ -35,10 +36,12 @@ import {inlineProgressByHash, useRunOperation} from './operationsState';
 import {PullOperation} from './operations/PullOperation';
 import {GotoOperation} from './operations/GotoOperation';
 import {ClosePROperation} from './operations/ClosePROperation';
+import {WorktreeAddOperation} from './operations/WorktreeAddOperation';
 import {showToast} from './toast';
 import {t} from './i18n';
 import {dagWithPreviews} from './previews';
 import {selectedCommits} from './selection';
+import {selectedTimeRangeAtom, setTimeRange} from './serverAPIState';
 import {succeedableRevset} from './types';
 
 import './PRDashboard.css';
@@ -192,6 +195,38 @@ function MainBranchSection({}: {isScrolled?: boolean}) {
   );
 }
 
+const TIME_RANGE_OPTIONS: Array<{value: TimeRangeDays; label: string}> = [
+  {value: 7, label: '7 days'},
+  {value: 14, label: '14 days'},
+  {value: 30, label: '30 days'},
+  {value: undefined, label: 'All time'},
+];
+
+function TimeRangeDropdown() {
+  const selectedRange = useAtomValue(selectedTimeRangeAtom);
+
+  const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    const days = value === 'undefined' ? undefined : (parseInt(value, 10) as TimeRangeDays);
+    setTimeRange(days);
+  };
+
+  return (
+    <Tooltip title="Filter PRs and commits by date range">
+      <select
+        className="time-range-dropdown"
+        value={selectedRange === undefined ? 'undefined' : String(selectedRange)}
+        onChange={handleChange}>
+        {TIME_RANGE_OPTIONS.map(opt => (
+          <option key={opt.value ?? 'undefined'} value={opt.value === undefined ? 'undefined' : String(opt.value)}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    </Tooltip>
+  );
+}
+
 export function PRDashboard() {
   const diffSummariesResult = useAtomValue(allDiffSummaries);
   const stacks = useAtomValue(prStacksAtom);
@@ -269,6 +304,7 @@ export function PRDashboard() {
             <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v4.2)</span>
           </span>
           <div className="pr-dashboard-header-buttons">
+            <TimeRangeDropdown />
             {currentUser && (
               <Tooltip
                 title={showOnlyMine ? `Show all authors (${otherAuthorsCount} hidden)` : 'Show only my stacks'}>
@@ -515,6 +551,19 @@ function StackCard({
         )}
 
         <div className="stack-card-actions">
+          {isExternal && topHeadHash && (
+            <Tooltip title="Open this stack in a new worktree">
+              <Button
+                className="stack-card-worktree-button"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  runOperation(new WorktreeAddOperation(topHeadHash));
+                }}>
+                <Icon icon="folder-opened" />
+                <T>Open in Worktree</T>
+              </Button>
+            </Tooltip>
+          )}
           {hasStaleStack && (
             <Tooltip
               title={`Close ${stalePRs.length} stale PR${stalePRs.length > 1 ? 's' : ''} — these PRs are still open but their changes were already merged via PR #${stack.mergedAbovePrNumber ?? '?'} on GitHub. This happens when merging directly on GitHub instead of through ISL.`}>

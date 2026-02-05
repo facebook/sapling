@@ -484,13 +484,20 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(
         ejecaSpy,
-        'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + .)',
+        'smartlog(((interestingbookmarks() + heads(draft())) & date(-7)) + .)',
       );
     });
 
     it('updates revset when changing date range', async () => {
       const ejecaSpy = mockEjeca([]);
       const repo = new Repository(repoInfo, ctx);
+
+      repo.nextVisibleCommitRangeInDays();
+      await repo.fetchSmartlogCommits();
+      expectCalledWithRevset(
+        ejecaSpy,
+        'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + .)',
+      );
 
       repo.nextVisibleCommitRangeInDays();
       await repo.fetchSmartlogCommits();
@@ -514,7 +521,7 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(
         ejecaSpy,
-        'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + . + present(aaa))',
+        'smartlog(((interestingbookmarks() + heads(draft())) & date(-7)) + . + present(aaa))',
       );
 
       repo.stableLocations = [
@@ -524,9 +531,10 @@ www/flib/intern/entity/diff/EntPhabricatorDiffSchema.php                        
       await repo.fetchSmartlogCommits();
       expectCalledWithRevset(
         ejecaSpy,
-        'smartlog(((interestingbookmarks() + heads(draft())) & date(-14)) + . + present(aaa) + present(bbb))',
+        'smartlog(((interestingbookmarks() + heads(draft())) & date(-7)) + . + present(aaa) + present(bbb))',
       );
 
+      repo.nextVisibleCommitRangeInDays();
       repo.nextVisibleCommitRangeInDays();
       repo.nextVisibleCommitRangeInDays();
       await repo.fetchSmartlogCommits();

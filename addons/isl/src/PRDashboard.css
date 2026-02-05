@@ -477,6 +477,31 @@
   font-size: 12px;
 }
 
+/* ===== WORKTREE BUTTON ===== */
+
+.stack-card-worktree-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  background: color-mix(in srgb, var(--graphite-accent, #4a90e2) 15%, transparent);
+  color: var(--graphite-accent, #4a90e2);
+  border: 1px solid color-mix(in srgb, var(--graphite-accent, #4a90e2) 40%, transparent);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.stack-card-worktree-button:hover {
+  background: color-mix(in srgb, var(--graphite-accent, #4a90e2) 25%, transparent);
+  border-color: var(--graphite-accent, #4a90e2);
+}
+
+.stack-card-worktree-button .codicon {
+  font-size: 12px;
+}
+
 /* ===== SKELETON LOADING STYLES ===== */
 
 /* Pulsing animation */
@@ -600,3 +625,37 @@
 .pr-row-skeleton:nth-child(3) .skeleton-box { animation-delay: 0.2s; }
 .pr-row-skeleton:nth-child(4) .skeleton-box { animation-delay: 0.25s; }
 .pr-row-skeleton:nth-child(5) .skeleton-box { animation-delay: 0.3s; }
+
+/* Time Range Dropdown */
+.time-range-dropdown {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: var(--foreground);
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  padding-right: 22px;
+  min-width: 80px;
+}
+
+.time-range-dropdown:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.time-range-dropdown:focus {
+  border-color: var(--button-primary-hover-background);
+  box-shadow: 0 0 0 1px var(--button-primary-hover-background);
+}
+
+.time-range-dropdown option {
+  background: var(--tooltip-background);
+  color: var(--foreground);
+}

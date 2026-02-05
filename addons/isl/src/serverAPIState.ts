@@ -19,6 +19,7 @@ import type {
   SubscriptionResultsData,
   UncommittedChanges,
   ValidatedRepoInfo,
+  TimeRangeDays,
 } from './types';
 
 import {Set as ImSet} from 'immutable';
@@ -434,6 +435,25 @@ registerDisposable(
   }),
   import.meta.hot,
 );
+
+/**
+ * User-selected time range for filtering commits and PRs.
+ * This controls both the smartlog commit query and the GitHub PR query.
+ * Stored in localStorage to persist across sessions.
+ */
+export const selectedTimeRangeAtom = atomResetOnCwdChange<TimeRangeDays>(
+  DEFAULT_DAYS_OF_COMMITS_TO_LOAD as TimeRangeDays,
+);
+
+/**
+ * Set the time range for filtering commits and PRs.
+ * This updates both the local atom and sends a message to the server
+ * to re-fetch data with the new range.
+ */
+export function setTimeRange(days: TimeRangeDays) {
+  writeAtom(selectedTimeRangeAtom, days);
+  serverAPI.postMessage({type: 'setTimeRange', days});
+}
 
 /**
  * Latest head commit from original data from the server, without any previews.
