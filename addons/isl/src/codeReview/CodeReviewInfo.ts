@@ -110,11 +110,6 @@ export function triggerFullDiffSummariesRefresh() {
   writeAtom(shouldReplaceDiffSummaries, true);
   serverAPI.postMessage({type: 'fetchDiffSummaries'});
 }
-/**
- * Current GitHub user login (username) from the authenticated user.
- * Used to determine if a PR/stack is "external" (authored by someone else).
- */
-export const currentGitHubUser = atom<string | undefined>(undefined);
 
 registerDisposable(
   allDiffSummaries,
