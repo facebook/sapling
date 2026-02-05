@@ -122,3 +122,5 @@ describe('totalLines calculation logic', () => {
     expect(calculateTotalLines(hunks)).toBe(1);
   });
 });
+
+export {};
