@@ -34,15 +34,26 @@ def submit(ui, repo, *args, **opts) -> int:
     github_repo = check_github_repo(repo)
     is_draft = opts.get("draft")
     is_open = opts.get("open")
-    return asyncio.run(
-        update_commits_in_stack(
-            ui,
-            repo,
-            github_repo,
-            is_draft=is_draft,
-            is_open=is_open,
+    pr_workflow = opts.get("pr_workflow")
+
+    def run():
+        return asyncio.run(
+            update_commits_in_stack(
+                ui,
+                repo,
+                github_repo,
+                is_draft=is_draft,
+                is_open=is_open,
+            )
         )
-    )
+
+    if pr_workflow:
+        with ui.configoverride(
+            {("github", "pr-workflow"): pr_workflow},
+            "submit",
+        ):
+            return run()
+    return run()
 
 
 class SubmitWorkflow(Enum):

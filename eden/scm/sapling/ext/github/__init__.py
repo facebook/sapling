@@ -120,21 +120,6 @@ def submit_cmd(ui, repo, *args, **opts):
 
     Returns 0 on success.
     """
-    pr_workflow = opts.get("pr_workflow")
-    if pr_workflow:
-        normalized_pr_workflow = pr_workflow.strip().lower()
-        if normalized_pr_workflow not in {"overlap", "single"}:
-            raise error.Abort(
-                _(
-                    "invalid value for --pr-workflow: %s (expected 'overlap' or 'single')"
-                )
-                % pr_workflow
-            )
-        with ui.configoverride(
-            {("github", "pr-workflow"): normalized_pr_workflow},
-            "submit",
-        ):
-            return submit.submit(ui, repo, *args, **opts)
     return submit.submit(ui, repo, *args, **opts)
 
 

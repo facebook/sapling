@@ -40,8 +40,18 @@ CLI flag should override config and use overlap workflow behavior.
   updated body for https://github.com/facebook/test_github_repo/pull/43
   updated body for https://github.com/facebook/test_github_repo/pull/42
 
-Invalid workflow values should abort before submission.
+Invalid workflow values should warn and default to overlap.
 
-  $ sl pr submit --pr-workflow banana
-  abort: invalid value for --pr-workflow: banana (expected 'overlap' or 'single')
-  [255]
+  $ cd ..
+  $ sl init --git repo-banana
+  $ cd repo-banana
+  $ echo a > a1
+  $ sl ci -Aqm one
+  $ echo a >> a1
+  $ sl ci -Aqm two
+  $ sl pr submit --pr-workflow banana --config extensions.pr_submit=$TESTDIR/github/mock_create_prs_overlap_workflow.py
+  unrecognized config for github.pr_workflow: defaulting to 'overlap'pushing 2 to https://github.com/facebook/test_github_repo.git
+  created new pull request: https://github.com/facebook/test_github_repo/pull/42
+  created new pull request: https://github.com/facebook/test_github_repo/pull/43
+  updated body for https://github.com/facebook/test_github_repo/pull/43
+  updated body for https://github.com/facebook/test_github_repo/pull/42
