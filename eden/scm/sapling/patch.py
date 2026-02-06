@@ -2750,6 +2750,7 @@ def diffhunks(
     modified = sorted(modifiedset)
     added = sorted(addedset)
     removed = sorted(removedset)
+
     # Files merged in during a merge and then copied/renamed are
     # reported as copies. We want to show them in the diff as additions.
     copy = {

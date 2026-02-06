@@ -803,43 +803,20 @@ def _setupdiff(ui) -> None:
 
     extensions.wrapfunction(context.workingfilectx, "size", workingfilectxsize)
 
-    # wrap trydiff to filter diffs if '--sparse' is set
-    def trydiff(
+    # wrap diffhunks to filter diffs if '--sparse' is set
+    def diffhunks(
         orig,
         repo,
-        revs,
-        ctx1,
-        ctx2,
-        modified,
-        added,
-        removed,
-        copy,
-        getfilectx,
-        opts,
-        losedatafn,
-        prefix,
-        relroot,
+        *args,
+        match=None,
+        **opts,
     ):
         sparsematch = repo.sparsematch()
-        modified = list(filter(sparsematch, modified))
-        added = list(filter(sparsematch, added))
-        removed = list(filter(sparsematch, removed))
-        copy = dict((d, s) for d, s in copy.items() if sparsematch(s))
-        return orig(
-            repo,
-            revs,
-            ctx1,
-            ctx2,
-            modified,
-            added,
-            removed,
-            copy,
-            getfilectx,
-            opts,
-            losedatafn,
-            prefix,
-            relroot,
-        )
+        if match is None:
+            match = sparsematch
+        else:
+            match = matchmod.intersectmatchers(match, sparsematch)
+        return orig(repo, *args, match=match, **opts)
 
     def diff(orig, ui, repo, *pats, **opts):
         issparse = False
@@ -848,12 +825,12 @@ def _setupdiff(ui) -> None:
         if _hassparse(repo):
             issparse = bool(opts.get("sparse"))
         if issparse:
-            extensions.wrapfunction(patch, "trydiff", trydiff)
+            extensions.wrapfunction(patch, "diffhunks", diffhunks)
         try:
             orig(ui, repo, *pats, **opts)
         finally:
             if issparse:
-                extensions.unwrapfunction(patch, "trydiff", trydiff)
+                extensions.unwrapfunction(patch, "diffhunks", diffhunks)
 
     extensions.wrapcommand(commands.table, "diff", diff)
 

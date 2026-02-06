@@ -87,12 +87,9 @@ Run diff --sparse.  This should only show files within the sparse profile.
   @@ -1,1 +1,1 @@
   -show-modify-1
   +show-modify-2
-  diff --git a/show/movein b/show/movein
-  new file mode 100644
-  --- /dev/null
-  +++ b/show/movein
-  @@ -0,0 +1,1 @@
-  +show-movein
+  diff --git a/hide/movein b/show/movein
+  copy from hide/movein
+  copy to show/movein
   diff --git a/show/moveout b/show/moveout
   deleted file mode 100644
   --- a/show/moveout
