@@ -21,6 +21,7 @@ import {isFullyOrPartiallySelected} from '../partialSelection';
 import {uncommittedChangesWithPreviews} from '../previews';
 import {commitByHash} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
+import {arraysEqual} from '../utils';
 import {MAX_FILES_ALLOWED_FOR_DIFF_STAT} from './diffStatConstants';
 
 const isPageHiddenAtom = atom(get => get(pageVisibility) === 'hidden');
@@ -89,6 +90,8 @@ const commitSlocFamily = atomFamilyWeak((hash: string) => {
   }, undefined);
 });
 
+let previouslySelectedFiles: string[] = [];
+
 const selectedFilesAtom = atom(get => {
   const isPathFullorPartiallySelected = get(isFullyOrPartiallySelected);
 
@@ -100,7 +103,10 @@ const selectedFilesAtom = atom(get => {
     return selected;
   }, [] as string[]);
 
-  return selectedFiles;
+  if (!arraysEqual(previouslySelectedFiles, selectedFiles)) {
+    previouslySelectedFiles = selectedFiles;
+  }
+  return previouslySelectedFiles;
 });
 
 /**
