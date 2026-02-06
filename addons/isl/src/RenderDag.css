@@ -32,6 +32,10 @@
   flex-grow: 1;
 }
 
+.render-dag-row-commit {
+  user-select: none;
+}
+
 .render-dag-svg-patterns {
   /* Cannot use 'display: none' - it ignores the svg pattern definitions */
   opacity: 0;
