@@ -6,80 +6,86 @@ rust_library(
     name = "util",
     srcs = glob(["src/**/*.rs"]),
     autocargo = {"cargo_toml_config": {
-        "dependencies_override": {"target": {
-            "'cfg(target_os = \"linux\")'": {"dependencies": {
-                "libc": {"version": "0.2.139"},
-                "nix": {
-                    "features": [
-                        "dir",
-                        "event",
-                        "hostname",
-                        "inotify",
-                        "ioctl",
-                        "mman",
-                        "mount",
-                        "net",
-                        "poll",
-                        "ptrace",
-                        "reboot",
-                        "resource",
-                        "sched",
-                        "signal",
-                        "term",
-                        "time",
-                        "user",
-                        "zerocopy",
-                    ],
-                    "version": "0.30.1",
-                },
+        "dependencies_override": {
+            "dev-dependencies": {
+                "memmap2": {"version": "0.9.5"},
                 "tempfile": {"version": "3.22"},
-            }},
-            "'cfg(target_os = \"macos\")'": {"dependencies": {
-                "libc": {"version": "0.2.139"},
-                "nix": {
-                    "features": [
-                        "dir",
-                        "event",
-                        "hostname",
-                        "inotify",
-                        "ioctl",
-                        "mman",
-                        "mount",
-                        "net",
-                        "poll",
-                        "ptrace",
-                        "reboot",
-                        "resource",
-                        "sched",
-                        "signal",
-                        "term",
-                        "time",
-                        "user",
-                        "zerocopy",
-                    ],
-                    "version": "0.30.1",
-                },
-                "tempfile": {"version": "3.22"},
-            }},
-            "'cfg(target_os = \"windows\")'": {
-                "dependencies": {
-                    "widestring": {"version": "1.0.2"},
-                    "winapi": {
+            },
+            "target": {
+                "'cfg(target_os = \"linux\")'": {"dependencies": {
+                    "libc": {"version": "0.2.139"},
+                    "nix": {
                         "features": [
-                            "fileapi",
-                            "handleapi",
-                            "winbase",
-                            "winerror",
-                            "winnt",
+                            "dir",
+                            "event",
+                            "hostname",
+                            "inotify",
+                            "ioctl",
+                            "mman",
+                            "mount",
+                            "net",
+                            "poll",
+                            "ptrace",
+                            "reboot",
+                            "resource",
+                            "sched",
+                            "signal",
+                            "term",
+                            "time",
+                            "user",
+                            "zerocopy",
                         ],
-                        "version": "0.3",
+                        "version": "0.30.1",
+                    },
+                    "tempfile": {"version": "3.22"},
+                }},
+                "'cfg(target_os = \"macos\")'": {"dependencies": {
+                    "libc": {"version": "0.2.139"},
+                    "nix": {
+                        "features": [
+                            "dir",
+                            "event",
+                            "hostname",
+                            "inotify",
+                            "ioctl",
+                            "mman",
+                            "mount",
+                            "net",
+                            "poll",
+                            "ptrace",
+                            "reboot",
+                            "resource",
+                            "sched",
+                            "signal",
+                            "term",
+                            "time",
+                            "user",
+                            "zerocopy",
+                        ],
+                        "version": "0.30.1",
+                    },
+                    "tempfile": {"version": "3.22"},
+                }},
+                "'cfg(target_os = \"windows\")'": {
+                    "dependencies": {
+                        "widestring": {"version": "1.0.2"},
+                        "winapi": {
+                            "features": [
+                                "fileapi",
+                                "handleapi",
+                                "winbase",
+                                "winerror",
+                                "winnt",
+                            ],
+                            "version": "0.3",
+                        },
+                    },
+                    "dev-dependencies": {
+                        "tempfile": {"version": "3.22"},
                     },
                 },
-                "dev-dependencies": {
-                    "tempfile": {"version": "3.22"},
-                },
             },
-        }},
+        },
         "extra_buck_dependencies": {"dependencies": [
             "fbsource//third-party/rust:anyhow",
             "fbsource//third-party/rust:dirs",
@@ -109,15 +115,12 @@ rust_library(
     test_deps = [
         "fbsource//third-party/rust:memmap2",
         "fbsource//third-party/rust:tempfile",
-    ],
-    test_os_deps = [
-        (
-            "windows",
-            [
-                "fbsource//third-party/rust:tempfile",
-            ],
-        ),
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:tempfile",
+        ],
+    }),
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:dirs",
