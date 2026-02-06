@@ -24,11 +24,15 @@ pub struct WarmBookmarksCacheArgs {
     #[clap(long, value_name = "BOOL")]
     pub use_remote_bookmark_cache: Option<bool>,
 
-    /// Specify SMC tier for the derived data service
+    /// Specify Shard Manager tier for the bookmark service
+    #[clap(long, value_name = "SM_TIER", group = "Bookmark Cache Address")]
+    pub remote_bookmark_cache_sm_tier: Option<String>,
+
+    /// Specify SMC tier for the bookmark service (non-sharded routing)
     #[clap(long, value_name = "SMC", group = "Bookmark Cache Address")]
     pub remote_bookmark_cache_tier: Option<String>,
 
-    /// Specify Host:Port pair to connect to derived data service
+    /// Specify Host:Port pair to connect to bookmark service
     #[clap(long, value_name = "HOST:PORT", group = "Bookmark Cache Address")]
     pub remote_bookmark_cache_host_port: Option<String>,
 
@@ -49,6 +53,8 @@ impl AppExtension for WarmBookmarksCacheExtension {
         // Parse the address from CLI arguments
         let address = if let Some(host_port) = args.remote_bookmark_cache_host_port.as_ref() {
             Some(BookmarkCacheAddress::HostPort(host_port.to_string()))
+        } else if let Some(sm_tier) = args.remote_bookmark_cache_sm_tier.as_ref() {
+            Some(BookmarkCacheAddress::ShardManagerTier(sm_tier.to_string()))
         } else {
             args.remote_bookmark_cache_tier
                 .as_ref()

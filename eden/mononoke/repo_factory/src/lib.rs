@@ -1777,6 +1777,13 @@ impl RepoFactory {
                     BookmarkCacheAddress::SmcTier(tier_name) => {
                         BookmarkServiceClient::from_tier_name(self.env.fb, tier_name.to_string())?
                     }
+                    BookmarkCacheAddress::ShardManagerTier(tier_name) => {
+                        BookmarkServiceClient::from_sm_tier_name(
+                            self.env.fb,
+                            tier_name.to_string(),
+                            repo_identity.name().to_string(),
+                        )?
+                    }
                 };
                 let repo_client = RepoBookmarkServiceClient::new(
                     repo_identity.name().to_string(),

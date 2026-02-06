@@ -74,6 +74,7 @@ pub enum BookmarkCacheDerivedData {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BookmarkCacheAddress {
+    ShardManagerTier(String),
     SmcTier(String),
     HostPort(String),
 }
