@@ -5,18 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ComparableVersions} from './jotai';
-
 import PullRequestCommentInput from './PullRequestCommentInput';
 import {DiffSide} from './generated/graphql';
-import {gitHubClientAtom, gitHubPullRequestAtom,gitHubPullRequestComparableVersionsAtom} from './jotai';
-import {gitHubPullRequestNewCommentInputCell, gitHubPullRequestPositionForLine} from './recoil';
+import {
+  gitHubClientAtom,
+  gitHubPullRequestAtom,
+  gitHubPullRequestComparableVersionsAtom,
+  gitHubPullRequestNewCommentInputCellAtom,
+  gitHubPullRequestPositionForLineAtom,
+} from './jotai';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {Box, Text} from '@primer/react';
-import {useAtomValue} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useMemo, useCallback} from 'react';
-import {useRecoilCallback, useResetRecoilState} from 'recoil';
 
 type Props = {
   line: number;
@@ -25,7 +27,8 @@ type Props = {
 };
 
 export default function PullRequestNewCommentInput({line, path, side}: Props): React.ReactElement {
-  const onCancel = useResetRecoilState(gitHubPullRequestNewCommentInputCell);
+  const setCellAtom = useSetAtom(gitHubPullRequestNewCommentInputCellAtom);
+  const onCancel = useCallback(() => setCellAtom(null), [setCellAtom]);
   const refreshPullRequest = useRefreshPullRequest();
 
   // Use Jotai loadable pattern for async client access in callbacks
@@ -37,48 +40,51 @@ export default function PullRequestNewCommentInput({line, path, side}: Props): R
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const comparableVersions = useAtomValue(gitHubPullRequestComparableVersionsAtom);
 
-  const addComment = useRecoilCallback<[string], Promise<void>>(
-    ({snapshot}) =>
-      async comment => {
-        if (client == null) {
-          return Promise.reject('client not found');
-        }
+  // Get position for this line using the Jotai atom
+  const positionAtom = useMemo(
+    () => gitHubPullRequestPositionForLineAtom({line, path, side}),
+    [line, path, side],
+  );
+  const position = useAtomValue(positionAtom);
 
-        const pullRequestId = pullRequest?.id;
-        if (pullRequestId == null) {
-          return Promise.reject('pull request id not found');
-        }
+  const addComment = useCallback(
+    async (comment: string): Promise<void> => {
+      if (client == null) {
+        return Promise.reject('client not found');
+      }
 
-        if (comparableVersions == null) {
-          return Promise.reject('comparableVersions not found');
-        }
+      const pullRequestId = pullRequest?.id;
+      if (pullRequestId == null) {
+        return Promise.reject('pull request id not found');
+      }
 
-        const {beforeCommitID, afterCommitID} = comparableVersions;
-        const commitID =
-          beforeCommitID != null && side === DiffSide.Left ? beforeCommitID : afterCommitID;
+      if (comparableVersions == null) {
+        return Promise.reject('comparableVersions not found');
+      }
 
-        const position = snapshot
-          .getLoadable(gitHubPullRequestPositionForLine({line, path, side}))
-          .valueMaybe();
-        if (position == null) {
-          return Promise.reject('positionForLine not found');
-        }
+      const {beforeCommitID, afterCommitID} = comparableVersions;
+      const commitID =
+        beforeCommitID != null && side === DiffSide.Left ? beforeCommitID : afterCommitID;
 
-        await client.addPullRequestReviewComment({
-          body: comment,
-          commitOID: commitID,
-          path,
-          position,
-          pullRequestId,
-        });
+      if (position == null) {
+        return Promise.reject('positionForLine not found');
+      }
 
-        // Note that onCancel() will reset gitHubPullRequestNewCommentInputCell
-        // to null, which will result in this component being removed from the
-        // DOM.
-        onCancel();
-        refreshPullRequest();
-      },
-    [client, comparableVersions, line, onCancel, path, pullRequest, refreshPullRequest, side],
+      await client.addPullRequestReviewComment({
+        body: comment,
+        commitOID: commitID,
+        path,
+        position,
+        pullRequestId,
+      });
+
+      // Note that onCancel() will reset gitHubPullRequestNewCommentInputCellAtom
+      // to null, which will result in this component being removed from the
+      // DOM.
+      onCancel();
+      refreshPullRequest();
+    },
+    [client, comparableVersions, onCancel, path, position, pullRequest, refreshPullRequest, side],
   );
 
   return (

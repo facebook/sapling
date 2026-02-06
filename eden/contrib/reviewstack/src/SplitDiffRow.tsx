@@ -10,9 +10,13 @@ import type {GitHubPullRequestReviewThreadsByLine} from './github/pullRequestTim
 import InlineCommentThread from './InlineCommentThread';
 import PullRequestNewCommentInput from './PullRequestNewCommentInput';
 import {DiffSide} from './generated/graphql';
-import {gitHubPullRequestCanAddComment, gitHubPullRequestNewCommentInputShown} from './recoil';
+import {
+  gitHubPullRequestCanAddCommentAtom,
+  gitHubPullRequestNewCommentInputShownAtom,
+} from './jotai';
 import {Box} from '@primer/react';
-import {constSelector, useRecoilValue, waitForAll} from 'recoil';
+import {useAtomValue} from 'jotai';
+import {useMemo} from 'react';
 import {notEmpty} from 'shared/utils';
 
 type Props = {
@@ -115,8 +119,6 @@ type SideProps = {
   canComment: boolean;
 };
 
-const nope = constSelector(false);
-
 function SplitDiffRowSide({
   className,
   content,
@@ -126,17 +128,25 @@ function SplitDiffRowSide({
   threads,
   canComment,
 }: SideProps) {
-  const param = {path, lineNumber, side};
-  // TODO(T122242329): These selectors have transitive dependencies that are
-  // async, but due to some preloading in <SplitDiffView>, we ensure that these
-  // derived values are available synchronously. This makes it possible for us
-  // to use useRecoilValue() here without a <Suspense> component as an ancestor.
-  const [canAddComment, isNewCommentInputShown] = useRecoilValue(
-    waitForAll([
-      canComment ? gitHubPullRequestCanAddComment(param) : nope,
-      canComment ? gitHubPullRequestNewCommentInputShown(param) : nope,
-    ]),
+  const param = useMemo(() => ({path, lineNumber, side}), [path, lineNumber, side]);
+
+  // These atoms are synchronous derived atoms that read from data preloaded
+  // by useSplitDiffViewData in <SplitDiffView>.
+  const canAddCommentAtom = useMemo(
+    () => gitHubPullRequestCanAddCommentAtom(param),
+    [param],
   );
+  const newCommentInputShownAtom = useMemo(
+    () => gitHubPullRequestNewCommentInputShownAtom(param),
+    [param],
+  );
+
+  const canAddCommentValue = useAtomValue(canAddCommentAtom);
+  const isNewCommentInputShownValue = useAtomValue(newCommentInputShownAtom);
+
+  // Only use the values if commenting is allowed for this row
+  const canAddComment = canComment && canAddCommentValue;
+  const isNewCommentInputShown = canComment && isNewCommentInputShownValue;
 
   let style;
   let commentThreads = null;

@@ -13,29 +13,38 @@
  */
 
 import type {DiffAndTokenizeResponse} from '../../diffServiceWorker';
-import type {DiffSide} from '../../generated/graphql';
 import type {DiffCommitIDs} from '../../github/diffTypes';
 import type {GitHubPullRequestReviewThread} from '../../github/pullRequestTimelineTypes';
-import type {NewCommentInputCallbacks} from '../../recoil';
 
 import {diffAndTokenize} from '../../diffServiceClient';
+import {DiffSide} from '../../generated/graphql';
 import {
-  gitHubDiffNewCommentInputCallbacks,
   gitHubPullRequestLineToPositionForFile,
-  gitHubThreadsForDiffFile,
   nullAtom,
 } from '../../recoil';
 import {
   gitHubDiffCommitIDsAtom,
+  gitHubPullRequestAtom,
+  gitHubPullRequestCanAddCommentAtom,
   gitHubPullRequestLineToPositionForFileAtom,
+  gitHubPullRequestNewCommentInputCellAtom,
   gitHubPullRequestSelectedVersionIndexAtom,
   gitHubPullRequestVersionsAtom,
   gitHubThreadsForDiffFileAtom,
 } from '../atoms';
-import {useAtomValue, useSetAtom} from 'jotai';
+import {useAtomValue, useSetAtom, useStore} from 'jotai';
 import {loadable} from 'jotai/utils';
-import {useEffect, useMemo} from 'react';
+import {useCallback, useEffect, useMemo} from 'react';
 import {useRecoilValueLoadable, waitForAll} from 'recoil';
+
+/**
+ * Type for the new comment input callbacks.
+ * Migrated from NewCommentInputCallbacks in recoil.ts
+ */
+export type NewCommentInputCallbacks = {
+  onShowNewCommentInput: (event: React.MouseEvent<HTMLTableElement>) => void;
+  onResetNewCommentInput: () => void;
+};
 
 export type SplitDiffViewLoadableState =
   | {state: 'loading'}
@@ -56,8 +65,9 @@ export type SplitDiffViewLoadableState =
  *
  * Uses a hybrid approach during migration:
  * - commitIDs comes from the Jotai gitHubDiffCommitIDsAtom
- * - threads are synced from Recoil to Jotai atomFamily per file path
- * - Other selectors still use Recoil
+ * - threads are now computed natively in Jotai
+ * - Comment input callbacks are now Jotai-based
+ * - Other selectors still use Recoil (diffAndTokenize, lineToPosition)
  *
  * Returns a loadable-like object with state: 'loading' | 'hasError' | 'hasValue'
  */
@@ -78,9 +88,9 @@ export function useSplitDiffViewData(
   const versions = useAtomValue(gitHubPullRequestVersionsAtom);
   useAtomValue(gitHubPullRequestSelectedVersionIndexAtom);
 
-  // Jotai atom for threads for this specific file path
+  // Jotai atom for threads - now computed natively in Jotai
   const threadsAtom = useMemo(() => gitHubThreadsForDiffFileAtom(path), [path]);
-  const setJotaiThreads = useSetAtom(threadsAtom);
+  const threads = useAtomValue(threadsAtom);
 
   // Jotai atom for line-to-position mapping for this file path
   const lineToPositionAtom = useMemo(
@@ -89,24 +99,73 @@ export function useSplitDiffViewData(
   );
   const setJotaiLineToPosition = useSetAtom(lineToPositionAtom);
 
+  // Jotai-based comment input callbacks
+  const store = useStore();
+  const pullRequest = useAtomValue(gitHubPullRequestAtom);
+  const setCellAtom = useSetAtom(gitHubPullRequestNewCommentInputCellAtom);
+
+  const onShowNewCommentInput = useCallback(
+    (event: React.MouseEvent<HTMLTableElement>) => {
+      const {target} = event;
+      if (!(target instanceof HTMLTableCellElement)) {
+        return;
+      }
+
+      const {lineNumber: lineNumberStr, path, side: sideStr} = target.dataset;
+      if (lineNumberStr == null || path == null || sideStr == null) {
+        return;
+      }
+
+      const lineNumber = parseInt(lineNumberStr, 10);
+      const side =
+        sideStr === DiffSide.Left
+          ? DiffSide.Left
+          : sideStr === DiffSide.Right
+            ? DiffSide.Right
+            : null;
+      if (isNaN(lineNumber) || side == null) {
+        return;
+      }
+
+      // Check if we can add a comment using the Jotai atom
+      const canAddComment = store.get(
+        gitHubPullRequestCanAddCommentAtom({lineNumber, path, side}),
+      );
+      if (!canAddComment) {
+        return;
+      }
+
+      setCellAtom({path, lineNumber, side});
+    },
+    [store, setCellAtom],
+  );
+
+  const onResetNewCommentInput = useCallback(() => {
+    setCellAtom(null);
+  }, [setCellAtom]);
+
+  const newCommentInputCallbacks: NewCommentInputCallbacks | null = useMemo(() => {
+    if (pullRequest != null) {
+      return {onShowNewCommentInput, onResetNewCommentInput};
+    }
+    return null;
+  }, [pullRequest, onShowNewCommentInput, onResetNewCommentInput]);
+
   // Use Recoil for remaining selectors that haven't been migrated yet
   const recoilLoadable = useRecoilValueLoadable(
     waitForAll([
       diffAndTokenize({path, before, after, scopeName, colorMode}),
-      gitHubThreadsForDiffFile(path),
-      gitHubDiffNewCommentInputCallbacks,
       isPullRequest ? gitHubPullRequestLineToPositionForFile(path) : nullAtom,
     ]),
   );
 
-  // Sync threads from Recoil to Jotai for this file path
+  // Sync lineToPosition from Recoil to Jotai for this file path
   useEffect(() => {
     if (recoilLoadable.state === 'hasValue') {
-      const [, recoilThreads, , lineToPositionForFile] = recoilLoadable.contents;
-      setJotaiThreads(recoilThreads);
+      const [, lineToPositionForFile] = recoilLoadable.contents;
       setJotaiLineToPosition(lineToPositionForFile);
     }
-  }, [recoilLoadable, setJotaiThreads, setJotaiLineToPosition]);
+  }, [recoilLoadable, setJotaiLineToPosition]);
 
   // Handle loading state from either source
   // Also wait for versions to be loaded for PR case
@@ -133,15 +192,14 @@ export function useSplitDiffViewData(
     return {state: 'hasError', error: commitIDsLoadable.error as Error};
   }
 
-  const [diffAndTokenizeResult, threads, newCommentInputCallbacks] = recoilLoadable.contents;
+  const [diffAndTokenizeResult] = recoilLoadable.contents;
   const commitIDs = commitIDsLoadable.data;
 
   return {
     state: 'hasValue',
     data: {
       diffAndTokenize: diffAndTokenizeResult,
-      // Use the threads from the Recoil loadable directly for now,
-      // but they're also synced to the Jotai atom for future consumers
+      // threads are now computed natively in Jotai
       threads,
       newCommentInputCallbacks,
       commitIDs,

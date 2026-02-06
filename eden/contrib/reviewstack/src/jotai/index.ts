@@ -42,6 +42,8 @@ export {
   gitHubPullRequestVersionIndexForCommitAtom,
   gitHubPullRequestThreadsByCommitAtom,
   gitHubPullRequestThreadsForCommitAtom,
+  gitHubPullRequestThreadsForCommitFileAtom,
+  gitHubPullRequestThreadsForDiffFileAtom,
   gitHubThreadsForDiffFileAtom,
   gitHubPullRequestLineToPositionForFileAtom,
   gitHubPullRequestCheckRunsAtom,
@@ -49,6 +51,10 @@ export {
   gitHubPullRequestReviewThreadsAtom,
   gitHubPullRequestReviewThreadsByFirstCommentIDAtom,
   gitHubPullRequestCommentForIDAtom,
+  gitHubPullRequestNewCommentInputCellAtom,
+  gitHubPullRequestNewCommentInputShownAtom,
+  gitHubPullRequestPositionForLineAtom,
+  gitHubPullRequestCanAddCommentAtom,
 } from './atoms';
 
 export type {
@@ -59,4 +65,5 @@ export type {
   ThreadsBySide,
   LineToPositionBySide,
   CheckRun,
+  NewCommentInputCell,
 } from './atoms';

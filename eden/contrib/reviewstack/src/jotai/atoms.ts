@@ -645,6 +645,103 @@ export const gitHubPullRequestThreadsForCommitAtom = atomFamily(
   (a, b) => a === b,
 );
 
+/**
+ * Migrated from: gitHubPullRequestThreadsForCommitFile selectorFamily in recoil.ts
+ *
+ * Gets review threads for a specific commit and file path.
+ */
+export const gitHubPullRequestThreadsForCommitFileAtom = atomFamily(
+  ({commitID, path}: {commitID: GitObjectID | null; path: string}) =>
+    atom<GitHubPullRequestReviewThread[]>(get => {
+      if (commitID == null) {
+        return [];
+      }
+
+      const threadsForCommit = get(gitHubPullRequestThreadsForCommitAtom(commitID));
+      return threadsForCommit.filter(thread => {
+        // All comments in the thread should have the same path as the first
+        const threadPath = thread.comments[0]?.path;
+        return threadPath === path;
+      });
+    }),
+  (a, b) => a.commitID === b.commitID && a.path === b.path,
+);
+
+/**
+ * Migrated from: gitHubPullRequestThreadsForCommitFileBySide selectorFamily in recoil.ts
+ *
+ * `DiffSide` refers to the side of the split diff view that the thread appears
+ * on. For a given commit, in the context of a pull request, the `Left` side is
+ * the base commit and includes threads attached to deletions that would appear
+ * in red. The `Right` side is the commit itself and includes threads attached
+ * to additions that appear in green or unchanged lines that appear in white.
+ */
+const gitHubPullRequestThreadsForCommitFileBySideAtom = atomFamily(
+  ({commitID, path}: {commitID: GitObjectID | null; path: string}) =>
+    atom<ThreadsBySide | null>(get => {
+      if (commitID == null) {
+        return null;
+      }
+      const threadsForFile = get(gitHubPullRequestThreadsForCommitFileAtom({commitID, path}));
+      // Group threads by their diffSide
+      const result: ThreadsBySide = {
+        LEFT: [],
+        RIGHT: [],
+      };
+      threadsForFile.forEach(thread => {
+        if (thread.diffSide === 'LEFT') {
+          result.LEFT.push(thread);
+        } else if (thread.diffSide === 'RIGHT') {
+          result.RIGHT.push(thread);
+        }
+      });
+      return result;
+    }),
+  (a, b) => a.commitID === b.commitID && a.path === b.path,
+);
+
+/**
+ * Migrated from: gitHubPullRequestThreadsForDiffFile selectorFamily in recoil.ts
+ *
+ * Get the appropriate threads for each side of the diff for a pull request,
+ * depending on what is being compared as "before" and "after".
+ */
+export const gitHubPullRequestThreadsForDiffFileAtom = atomFamily(
+  (path: string) =>
+    atom<ThreadsBySide | null>(get => {
+      const comparableVersions = get(gitHubPullRequestComparableVersionsAtom);
+      if (comparableVersions == null) {
+        return null;
+      }
+
+      const {beforeCommitID, afterCommitID} = comparableVersions;
+      const afterThreads = get(
+        gitHubPullRequestThreadsForCommitFileBySideAtom({commitID: afterCommitID, path}),
+      );
+
+      // If there is no explicit "before" (i.e., the "after" is being compared
+      // against its base), show the "after" threads as they are, according to
+      // their original diff sides.
+      if (beforeCommitID == null) {
+        return afterThreads;
+      }
+
+      const beforeThreads = get(
+        gitHubPullRequestThreadsForCommitFileBySideAtom({commitID: beforeCommitID, path}),
+      );
+
+      // If both "before" and "after" are explicitly selected, then both commits
+      // themselves are being shown (i.e., we are comparing two `Right` sides).
+      // Therefore, we should display the threads that are attached to the
+      // `Right` sides of their respective diffs.
+      return {
+        LEFT: beforeThreads?.RIGHT ?? [],
+        RIGHT: afterThreads?.RIGHT ?? [],
+      };
+    }),
+  (a, b) => a === b,
+);
+
 // =============================================================================
 // Pull Request Review Threads
 // =============================================================================
@@ -658,14 +755,18 @@ export type ThreadsBySide = {[key in DiffSide]: GitHubPullRequestReviewThread[]}
 /**
  * Migrated from: gitHubThreadsForDiffFile selectorFamily in recoil.ts
  *
- * This atomFamily stores the appropriate threads for each side of the diff for a file,
- * depending on what is being compared as "before" and "after".
- *
- * During migration, this receives its value from Recoil via JotaiRecoilSync.
- * The atomFamily pattern allows storing threads per file path.
+ * Get the appropriate threads for each side of the diff.
+ * Returns threads for pull request diffs, or null for commit-only views.
  */
 export const gitHubThreadsForDiffFileAtom = atomFamily(
-  (_path: string) => atom<ThreadsBySide | null>(null),
+  (path: string) =>
+    atom<ThreadsBySide | null>(get => {
+      const pullRequest = get(gitHubPullRequestAtom);
+      if (pullRequest != null) {
+        return get(gitHubPullRequestThreadsForDiffFileAtom(path));
+      }
+      return null;
+    }),
   (a, b) => a === b,
 );
 
@@ -982,3 +1083,89 @@ export const fileContentsDeltaAtom = atomFamily(
     }),
   (a, b) => a.before === b.before && a.after === b.after && a.path === b.path,
 );
+
+// =============================================================================
+// Comment Input State
+// =============================================================================
+
+/**
+ * Type for the new comment input cell state.
+ */
+export type NewCommentInputCell = {
+  lineNumber: number;
+  path: string;
+  side: DiffSide;
+} | null;
+
+/**
+ * Migrated from: gitHubPullRequestNewCommentInputCell atom in recoil.ts
+ *
+ * Stores which cell (line number, path, side) the user is currently adding a
+ * comment to. When null, no comment input is shown.
+ */
+export const gitHubPullRequestNewCommentInputCellAtom = atom<NewCommentInputCell>(null);
+
+/**
+ * Migrated from: gitHubPullRequestNewCommentInputShown selectorFamily in recoil.ts
+ *
+ * Returns whether the new comment input is shown for a specific cell.
+ */
+export const gitHubPullRequestNewCommentInputShownAtom = atomFamily(
+  ({lineNumber, path, side}: {lineNumber: number | null; path: string; side: DiffSide}) =>
+    atom<boolean>(get => {
+      const cell = get(gitHubPullRequestNewCommentInputCellAtom);
+      return (
+        cell != null && cell.path === path && cell.lineNumber === lineNumber && cell.side === side
+      );
+    }),
+  (a, b) => a.lineNumber === b.lineNumber && a.path === b.path && a.side === b.side,
+);
+
+/**
+ * Migrated from: gitHubPullRequestPositionForLine selectorFamily in recoil.ts
+ *
+ * Looks up the "position" value for a line in a file. The position is required
+ * by the GitHub API when adding comments to diffs.
+ *
+ * Note: This reads from gitHubPullRequestLineToPositionForFileAtom which is
+ * synced from Recoil via useSplitDiffViewData.
+ */
+export const gitHubPullRequestPositionForLineAtom = atomFamily(
+  ({line, path, side}: {line: number; path: string; side: DiffSide}) =>
+    atom<number | null>(get => {
+      const lineToPosition = get(gitHubPullRequestLineToPositionForFileAtom(path));
+      const lineToPositionForSide = lineToPosition?.[side];
+      return lineToPositionForSide?.[line] ?? null;
+    }),
+  (a, b) => a.line === b.line && a.path === b.path && a.side === b.side,
+);
+
+/**
+ * Migrated from: gitHubPullRequestCanAddComment selectorFamily in recoil.ts
+ *
+ * Determines if a comment can be added to a specific line of a pull request.
+ * Requirements:
+ * - The line must have a valid "position" value (appears in the canonical diff)
+ * - The commit must be part of the latest version (currently exists in the PR)
+ */
+export const gitHubPullRequestCanAddCommentAtom = atomFamily(
+  ({lineNumber, path, side}: {lineNumber: number | null; path: string; side: DiffSide}) =>
+    atom<boolean>(get => {
+      if (lineNumber == null) {
+        return false;
+      }
+
+      const pullRequest = get(gitHubPullRequestAtom);
+      if (pullRequest == null) {
+        return false;
+      }
+
+      const position = get(gitHubPullRequestPositionForLineAtom({line: lineNumber, path, side}));
+      const versions = get(gitHubPullRequestVersionsAtom);
+      const selectedVersionIndex = get(gitHubPullRequestSelectedVersionIndexAtom);
+
+      return position != null && selectedVersionIndex === versions.length - 1;
+    }),
+  (a, b) => a.lineNumber === b.lineNumber && a.path === b.path && a.side === b.side,
+);
+

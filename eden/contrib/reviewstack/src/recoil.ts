@@ -10,7 +10,6 @@ import type {CommitChange, DiffWithCommitIDs} from './github/diffTypes';
 import type {
   CommitData,
   PullRequestCommitItem,
-  GitHubPullRequestReviewThread,
   PullRequest,
 } from './github/pullRequestTimelineTypes';
 import type {CommitComparison} from './github/restApiTypes';
@@ -36,7 +35,7 @@ import {
   gitHubTokenPersistence,
 } from './github/gitHubCredentials';
 import {stackedPullRequest, stackedPullRequestFragments} from './stackState';
-import {getPathForChange, getTreeEntriesForChange, groupBy, groupByDiffSide} from './utils';
+import {getPathForChange, getTreeEntriesForChange} from './utils';
 import {atom, atomFamily, constSelector, selector, selectorFamily, waitForAll} from 'recoil';
 import {notEmpty} from 'shared/utils';
 
@@ -123,9 +122,6 @@ export const gitHubPullRequest = atom<PullRequest | null>({
   default: null,
 });
 
-// NOTE: gitHubPullRequestViewerDidAuthor has been migrated to Jotai.
-// See gitHubPullRequestViewerDidAuthorAtom in jotai/atoms.ts
-
 export const gitHubPullRequestBaseRef = selector<GitObjectID | null>({
   key: 'gitHubPullRequestBaseRef',
   get: ({get}) => {
@@ -134,8 +130,6 @@ export const gitHubPullRequestBaseRef = selector<GitObjectID | null>({
   },
 });
 
-// NOTE: gitHubPullRequestPendingReviewID has been migrated to Jotai.
-// See gitHubPullRequestPendingReviewIDAtom in jotai/atoms.ts
 
 export const gitHubPullRequestCommits = selector<CommitData[]>({
   key: 'gitHubPullRequestCommits',
@@ -396,50 +390,6 @@ export const gitHubPullRequestVersions = selector<Version[]>({
   },
 });
 
-// NOTE: gitHubPullRequestVersionIndexForCommit has been migrated to Jotai.
-// See gitHubPullRequestVersionIndexForCommitAtom in jotai/atoms.ts
-
-export const gitHubPullRequestReviewThreads = selector<GitHubPullRequestReviewThread[]>({
-  key: 'gitHubPullRequestReviewThreads',
-  get: ({get}) => {
-    const pullRequest = get(gitHubPullRequest);
-    return (pullRequest?.reviewThreads.nodes ?? []).filter(notEmpty).map(reviewThread => {
-      const {originalLine, diffSide, comments} = reviewThread;
-      const normalizedComments = (comments?.nodes ?? [])
-        .map(comment => {
-          if (comment == null) {
-            return null;
-          }
-
-          const {id, author, originalCommit, path, state, bodyHTML} = comment;
-          const reviewThreadComment = {
-            id,
-            author: author ?? null,
-            originalCommit,
-            path,
-            state,
-            bodyHTML,
-          };
-          return reviewThreadComment;
-        })
-        .filter(notEmpty);
-      const firstCommentID = normalizedComments[0].id;
-      return {
-        firstCommentID,
-        originalLine,
-        diffSide,
-        comments: normalizedComments,
-      };
-    });
-  },
-});
-
-// NOTE: gitHubPullRequestReviewThreadsByFirstCommentID has been migrated to Jotai.
-// See gitHubPullRequestReviewThreadsByFirstCommentIDAtom in jotai/atoms.ts
-
-// NOTE: gitHubPullRequestCommentForID has been migrated to Jotai.
-// See gitHubPullRequestCommentForIDAtom in jotai/atoms.ts
-
 export const gitHubPullRequestNewCommentInputCell = atom<{
   lineNumber: number;
   path: string;
@@ -448,6 +398,7 @@ export const gitHubPullRequestNewCommentInputCell = atom<{
   key: 'gitHubPullRequestNewCommentInputCell',
   default: null,
 });
+
 
 const gitHubPullRequestNewCommentInputShownForPath = selectorFamily<boolean, string>({
   key: 'gitHubPullRequestNewCommentInputShownForPath',
@@ -483,10 +434,12 @@ export const gitHubPullRequestNewCommentInputShown = selectorFamily<
   cachePolicy_UNSTABLE: {eviction: 'most-recent'},
 });
 
+
 export type NewCommentInputCallbacks = {
   onShowNewCommentInput: (event: React.MouseEvent<HTMLTableElement>) => void;
   onResetNewCommentInput: () => void;
 };
+
 
 export const gitHubPullRequestNewCommentInputCallbacks = selector<NewCommentInputCallbacks>({
   key: 'gitHubPullRequestNewCommentInputCallbacks',
@@ -544,6 +497,7 @@ export const gitHubDiffNewCommentInputCallbacks = selector<NewCommentInputCallba
   },
 });
 
+
 /**
  * In order to add a comment to a line of a pull request commit:
  * - The line must have a valid "position" value (i.e., the line must appear in
@@ -575,141 +529,6 @@ export const gitHubPullRequestCanAddComment = selectorFamily<
     },
 });
 
-// NOTE: gitHubPullRequestThreadsByCommit and gitHubPullRequestThreadsForCommit have Jotai versions.
-// See gitHubPullRequestThreadsByCommitAtom and gitHubPullRequestThreadsForCommitAtom in jotai/atoms.ts
-// The Recoil versions are kept temporarily for internal use by gitHubPullRequestThreadsForCommitFile.
-
-export const gitHubPullRequestThreadsByCommit = selector<
-  Map<GitObjectID, GitHubPullRequestReviewThread[]>
->({
-  key: 'gitHubPullRequestThreadsByCommit',
-  get: ({get}) => {
-    const reviewThreads = get(gitHubPullRequestReviewThreads);
-    return groupBy(reviewThreads, thread => {
-      // All comments in the thread should have the same original commit as the first
-      const firstComment = thread.comments[0];
-      return firstComment?.originalCommit?.oid ?? null;
-    });
-  },
-});
-
-export const gitHubPullRequestThreadsForCommit = selectorFamily<
-  GitHubPullRequestReviewThread[],
-  GitObjectID
->({
-  key: 'gitHubPullRequestThreadsForCommit',
-  get:
-    (commitID: GitObjectID) =>
-    ({get}) => {
-      const reviewThreadsByCommit = get(gitHubPullRequestThreadsByCommit);
-      return reviewThreadsByCommit.get(commitID) ?? [];
-    },
-});
-
-export const gitHubPullRequestThreadsForCommitFile = selectorFamily<
-  GitHubPullRequestReviewThread[],
-  {commitID: GitObjectID | null; path: string}
->({
-  key: 'gitHubPullRequestThreadsForCommitFile',
-  get:
-    ({commitID, path}) =>
-    ({get}) => {
-      if (commitID == null) {
-        return [];
-      }
-
-      const threadsForCommit = get(gitHubPullRequestThreadsForCommit(commitID));
-      return threadsForCommit.filter(thread => {
-        // All comments in the thread should have the same path as the first
-        const threadPath = thread.comments[0]?.path;
-        return threadPath === path;
-      });
-    },
-});
-
-/**
- * `DiffSide` refers to the side of the split diff view that the thread appears
- * on. For a given commit, in the context of a pull request, the `Left` side is
- * the base commit and includes threads attached to deletions that would appear
- * in red. The `Right` side is the commit itself and includes threads attached
- * to additions that appear in green or unchanged lines that appear in white.
- */
-const gitHubPullRequestThreadsForCommitFileBySide = selectorFamily<
-  {[key in DiffSide]: GitHubPullRequestReviewThread[]} | null,
-  {commitID: GitObjectID | null; path: string}
->({
-  key: 'gitHubPullRequestThreadsForCommitFileBySide',
-  get:
-    ({commitID, path}) =>
-    ({get}) => {
-      if (commitID == null) {
-        return null;
-      }
-      const threadsForFile = get(gitHubPullRequestThreadsForCommitFile({commitID, path}));
-      return groupByDiffSide(threadsForFile, thread => thread.diffSide);
-    },
-});
-
-/**
- * Get the appropriate threads for each side of the diff for a pull request,
- * depending on what is being compared as "before" and "after".
- */
-export const gitHubPullRequestThreadsForDiffFile = selectorFamily<
-  {[key in DiffSide]: GitHubPullRequestReviewThread[]} | null,
-  string
->({
-  key: 'gitHubPullRequestThreadsForDiffFile',
-  get:
-    path =>
-    ({get}) => {
-      const {beforeCommitID, afterCommitID} = get(gitHubPullRequestComparableVersions);
-      const afterThreads = get(
-        gitHubPullRequestThreadsForCommitFileBySide({commitID: afterCommitID, path}),
-      );
-
-      // If there is no explicit "before" (i.e., the "after" is being compared
-      // against its base), show the "after" threads as they are, according to
-      // their original diff sides.
-      if (beforeCommitID == null) {
-        return afterThreads;
-      }
-
-      const beforeThreads = get(
-        gitHubPullRequestThreadsForCommitFileBySide({commitID: beforeCommitID, path}),
-      );
-
-      // If both "before" and "after" are explicitly selected, then both commits
-      // themselves are being shown (i.e., we are comparing two `Right` sides).
-      // Therefore, we should display the threads that are attached to the
-      // `Right` sides of their respective diffs.
-      return {
-        [DiffSide.Left]: beforeThreads?.[DiffSide.Right] ?? [],
-        [DiffSide.Right]: afterThreads?.[DiffSide.Right] ?? [],
-      };
-    },
-});
-
-/**
- * Get the appropriate threads for each side of the diff for a pull request,
- * depending on what is being compared as "before" and "after".
- */
-export const gitHubThreadsForDiffFile = selectorFamily<
-  {[key in DiffSide]: GitHubPullRequestReviewThread[]} | null,
-  string
->({
-  key: 'gitHubThreadsForDiffFile',
-  get:
-    path =>
-    ({get}) => {
-      const pullRequest = get(gitHubPullRequest);
-      if (pullRequest != null) {
-        return get(gitHubPullRequestThreadsForDiffFile(path));
-      }
-
-      return null;
-    },
-});
-
 export const gitHubPullRequestSelectedVersionIndex = atom<number>({
   key: 'gitHubPullRequestSelectedVersionIndex',
   default: selector<number>({
@@ -728,8 +547,6 @@ export const gitHubPullRequestSelectedVersionIndex = atom<number>({
   }),
 });
 
-// NOTE: gitHubPullRequestIsViewingLatest has been migrated to Jotai.
-// See gitHubPullRequestIsViewingLatestAtom in jotai/atoms.ts
 
 /**
  * When there is no "before" explicitly selected, the view shows the Diff for
@@ -766,11 +583,7 @@ export const gitHubPullRequestComparableVersions = atom<ComparableVersions>({
   }),
 });
 
-// NOTE: gitHubPullRequestSelectedVersionCommits has been migrated to Jotai.
-// See gitHubPullRequestSelectedVersionCommitsAtom in jotai/atoms.ts
 
-// NOTE: gitHubPullRequestVersionDiff has been migrated to Jotai.
-// See gitHubPullRequestVersionDiffAtom in jotai/atoms.ts
 
 const gitHubPullRequestDiffCommitWithBaseByPath = selectorFamily<
   Map<string, CommitChange> | null,
@@ -819,8 +632,6 @@ export const gitHubCommitComparison = selectorFamily<
     },
 });
 
-// NOTE: gitHubDiffCommitIDs has been migrated to Jotai.
-// See gitHubDiffCommitIDsAtom in jotai/atoms.ts
 
 export const gitHubDiffForCommitID = selectorFamily<DiffWithCommitIDs | null, GitObjectID>({
   key: 'gitHubDiffForCommitID',
@@ -849,8 +660,6 @@ export const gitHubDiffForCommits = selectorFamily<
     },
 });
 
-// NOTE: gitHubDiffForCurrentCommit has been migrated to Jotai.
-// See gitHubDiffForCurrentCommitAtom in jotai/atoms.ts
 
 export const gitHubClient = selector<GitHubClient | null>({
   key: 'gitHubClient',
@@ -996,6 +805,7 @@ export const gitHubPullRequestLineToPositionForFile = selectorFamily<
       };
     },
 });
+
 
 export const gitHubPullRequestPositionForLine = selectorFamily<
   number | null,

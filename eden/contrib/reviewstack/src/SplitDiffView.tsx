@@ -13,8 +13,8 @@ import type {
   GitHubPullRequestReviewThread,
   GitHubPullRequestReviewThreadsByLine,
 } from './github/pullRequestTimelineTypes';
+import type {NewCommentInputCallbacks} from './jotai/hooks/useSplitDiffViewData';
 import type {GitObjectID} from './github/types';
-import type {NewCommentInputCallbacks} from './recoil';
 import type {Hunk, ParsedDiff} from 'diff';
 import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
 
