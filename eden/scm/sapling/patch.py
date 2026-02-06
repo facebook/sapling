@@ -2710,26 +2710,6 @@ def diffhunks(
 
     m1 = ctx1.manifest()
 
-    if copy is None:
-        copy = {}
-        if opts.git or opts.upgrade:
-            if m1.hasgrafts():
-                copy = copies.xdir_copies(
-                    repo, ctx1, ctx2, [m1.ungraftedpath(p) or p for p in removed]
-                )
-                # Convert copy info to "path space" of ctx2 since that matches paths
-                # produced by the diff.
-                copy = {k: m1.graftedpath(v, k) or v for k, v in copy.items()}
-            else:
-                copy = copies.pathcopies(ctx1, ctx2, match=match)
-
-            if opts.filtercopysource and match is not None:
-                newcopy = {}
-                for copydst, copysrc in copy.items():
-                    if match(copysrc):
-                        newcopy[copydst] = copysrc
-                copy = newcopy
-
     modifiedset = set(modified)
     addedset = set(added)
     removedset = set(removed)
@@ -2751,14 +2731,6 @@ def diffhunks(
     added = sorted(addedset)
     removed = sorted(removedset)
 
-    # Files merged in during a merge and then copied/renamed are
-    # reported as copies. We want to show them in the diff as additions.
-    copy = {
-        dst: src
-        for (dst, src) in copy.items()
-        if (m1.ungraftedpath(src) or src) in ctx1
-    }
-
     def difffn(opts, losedata):
         return trydiff(
             repo,
@@ -2774,6 +2746,7 @@ def diffhunks(
             losedata,
             prefix,
             relroot,
+            match,
         )
 
     if opts.upgrade and not opts.git:
@@ -3021,6 +2994,7 @@ def trydiff(
     losedatafn,
     prefix,
     relroot,
+    match,
 ):
     """given input data, generate a diff and yield it in blocks
 
@@ -3031,6 +3005,36 @@ def trydiff(
 
     If relroot is not empty, this function expects every path in modified,
     added, removed and copy to start with it."""
+
+    m1 = ctx1.manifest()
+
+    if copy is None:
+        copy = {}
+        if opts.git or opts.upgrade:
+            if m1.hasgrafts():
+                copy = copies.xdir_copies(
+                    repo, ctx1, ctx2, [m1.ungraftedpath(p) or p for p in removed]
+                )
+                # Convert copy info to "path space" of ctx2 since that matches paths
+                # produced by the diff.
+                copy = {k: m1.graftedpath(v, k) or v for k, v in copy.items()}
+            else:
+                copy = copies.pathcopies(ctx1, ctx2, match=match)
+
+            if opts.filtercopysource and match is not None:
+                newcopy = {}
+                for copydst, copysrc in copy.items():
+                    if match(copysrc):
+                        newcopy[copydst] = copysrc
+                copy = newcopy
+
+    # Files merged in during a merge and then copied/renamed are
+    # reported as copies. We want to show them in the diff as additions.
+    copy = {
+        dst: src
+        for (dst, src) in copy.items()
+        if (m1.ungraftedpath(src) or src) in ctx1
+    }
 
     def gitindex(text):
         if not text:

@@ -25,9 +25,9 @@ FIXME: "foo" is not actually modified.
 Make sure we do prefetch file content for diff operation:
 FIXME: "header" is seriallly fetched
   $ SL_LOG=file_fetches=trace hg diff -q --rev $A --rev $C
+  TRACE file_fetches: attrs=["content", "header"] keys=["foo", "foo", "middle", "top"]
   TRACE file_fetches: attrs=["header"] keys=["middle"]
   TRACE file_fetches: attrs=["header"] keys=["top"]
-  TRACE file_fetches: attrs=["content", "header"] keys=["foo", "foo", "middle", "top"]
   TRACE file_fetches: attrs=["content", "header"] keys=["foo"]
   TRACE file_fetches: attrs=["content", "header"] keys=["foo"]
   TRACE file_fetches: attrs=["content", "header"] keys=["middle"]
