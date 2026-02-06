@@ -29,7 +29,6 @@ use metaconfig_types::DerivedDataTypesConfig;
 use metaconfig_types::DirectoryBranchClusterConfig;
 use metaconfig_types::DirectoryBranchClusterFixedCluster;
 use metaconfig_types::DirectoryBranchClusterFixedConfig;
-use metaconfig_types::EnforcementCondition;
 use metaconfig_types::GitBundleURIConfig;
 use metaconfig_types::GitConcurrencyParams;
 use metaconfig_types::GitConfigs;
@@ -98,7 +97,6 @@ use repos::RawDerivedDataTypesConfig;
 use repos::RawDirectoryBranchClusterConfig;
 use repos::RawDirectoryBranchClusterFixedCluster;
 use repos::RawDirectoryBranchClusterFixedConfig;
-use repos::RawEnforcementCondition;
 use repos::RawGitBundleURIConfig;
 use repos::RawGitConcurrencyParams;
 use repos::RawGitConfigs;
@@ -1171,28 +1169,6 @@ impl Convert for RawSoftRestrictedPathConfig {
     }
 }
 
-impl Convert for RawEnforcementCondition {
-    type Output = EnforcementCondition;
-
-    fn convert(self) -> Result<Self::Output> {
-        let client_identities = self
-            .client_identities
-            .unwrap_or_default()
-            .into_iter()
-            .map(|id| {
-                MononokeIdentity::from_str(&id)
-                    .with_context(|| format!("Failed to parse identity: {}", id))
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        Ok(EnforcementCondition {
-            client_identities,
-            sandcastle_alias: self.sandcastle_alias,
-            client_main_id: self.client_main_id,
-        })
-    }
-}
-
 impl Convert for RawRestrictedPathsConfig {
     type Output = RestrictedPathsConfig;
 
@@ -1226,11 +1202,14 @@ impl Convert for RawRestrictedPathsConfig {
             .map(|raw| raw.convert())
             .collect::<Result<Vec<_>>>()?;
 
-        let enforcement_conditions = self
-            .enforcement_conditions
+        let conditional_enforcement_acls = self
+            .conditional_enforcement_acls
             .unwrap_or_default()
             .into_iter()
-            .map(|cond| cond.convert())
+            .map(|id| {
+                MononokeIdentity::from_str(&id)
+                    .with_context(|| format!("Failed to parse identity: {}", id))
+            })
             .collect::<Result<Vec<_>>>()?;
 
         // tooling_allowlist_group is used directly as a group name for membership checking
@@ -1241,7 +1220,7 @@ impl Convert for RawRestrictedPathsConfig {
             use_manifest_id_cache,
             cache_update_interval_ms,
             soft_path_acls,
-            enforcement_conditions,
+            conditional_enforcement_acls,
             tooling_allowlist_group,
         })
     }

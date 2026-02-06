@@ -414,7 +414,7 @@ mod tests {
             use_manifest_id_cache,
             cache_update_interval_ms,
             soft_path_acls: Vec::new(),
-            enforcement_conditions: Vec::new(),
+            conditional_enforcement_acls: Vec::new(),
             tooling_allowlist_group: None,
         };
 
@@ -452,7 +452,7 @@ mod tests {
             use_manifest_id_cache,
             cache_update_interval_ms,
             soft_path_acls: Vec::new(),
-            enforcement_conditions: Vec::new(),
+            conditional_enforcement_acls: Vec::new(),
             tooling_allowlist_group: None,
         };
 
