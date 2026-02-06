@@ -198,12 +198,30 @@ impl AsyncBody {
     pub fn decoded(self) -> ByteStream {
         let Self { encoding, body } = self;
         stream::once(async move {
-            Ok(match encoding? {
-                Encoding::Identity => body.boxed(),
-                Encoding::Brotli => decode!(BrotliDecoder, body),
-                Encoding::Deflate => decode!(DeflateDecoder, body),
-                Encoding::Gzip => decode!(GzipDecoder, body),
-                Encoding::Zstd => decode!(ZstdDecoder, body),
+            let encoding = encoding?;
+
+            // Handle empty streams specially to work around an async-compression bug
+            // where all decoders fail on empty input.
+            // https://github.com/Nullus157/async-compression/pull/444
+            let mut body = body;
+            let first_chunk = match body.next().await {
+                None => {
+                    // Empty stream - return empty result
+                    return Ok(stream::empty().boxed());
+                }
+                Some(result) => result?,
+            };
+
+            // Prepend first chunk back to stream
+            let prefix = stream::once(future::ready(Ok(first_chunk)));
+            let combined: ByteStream = prefix.chain(body).boxed();
+
+            Ok(match encoding {
+                Encoding::Identity => combined,
+                Encoding::Brotli => decode!(BrotliDecoder, combined),
+                Encoding::Deflate => decode!(DeflateDecoder, combined),
+                Encoding::Gzip => decode!(GzipDecoder, combined),
+                Encoding::Zstd => decode!(ZstdDecoder, combined),
                 other => {
                     return Err(HttpClientError::BadResponse(anyhow!(
                         "Unsupported Content-Encoding: {:?}",
@@ -405,8 +423,8 @@ mod tests {
 
         mock.assert();
 
-        // FIXME: error decoding empty response
-        assert!(res.into_body().decoded().try_concat().await.is_err());
+        // We decoded the empty response body properly.
+        assert!(res.into_body().decoded().try_concat().await?.is_empty());
 
         Ok(())
     }
