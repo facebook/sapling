@@ -328,7 +328,7 @@ impl StreamingChangesClient {
         Ok(stream.boxed())
     }
 
-    fn which_states_asserted(&self, states: &[String]) -> Result<HashSet<String>> {
+    pub fn which_states_asserted(&self, states: &[String]) -> Result<HashSet<String>> {
         self.states_client
             .which_states_asserted(states)
             .map_err(|e| EdenFsError::from(anyhow::Error::from(e)))
