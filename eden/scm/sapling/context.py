@@ -191,17 +191,21 @@ class basectx:
             dmf1, dmf2 = bindings.manifest.treemanifest.applydiffgrafts(mf1, mf2)
         d = dmf1.diff(dmf2, matcher=match)
 
+        # Prefetch file parents to avoid serial fetches in below `fctx.cmp(fctx)` call.
         prefetch = []
         for fn, (left, right) in d.items():
-            if left and right and left[0] and right[0] and left[1] == right[1]:
-                for side in (left, right):
-                    if side[0] not in wdirnodes:
-                        prefetch.append((fn, side[0]))
-
-        # Prefetch file contents and file parents to avoid serial fetches in below
-        # `fctx.cmp(fctx)` call.
+            # This condition is trying to only prefetch data for files that will hit the cmp()
+            # call.
+            if (
+                left
+                and right
+                and left[0]
+                and right[0]
+                and left[1] == right[1]
+                and right[0] in wdirnodes
+            ):
+                prefetch.append((fn, left[0]))
         if len(prefetch) > 1 and "remotefilelog" in self._repo.requirements:
-            self._repo.fileslog.filestore.prefetch(prefetch)
             self._repo.fileslog.metadatastore.prefetch(prefetch, length=1)
 
         for fn, value in d.items():

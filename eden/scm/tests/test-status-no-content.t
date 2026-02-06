@@ -15,17 +15,16 @@
 
   $ newclientrepo client server
 
-FIXME: we fetched content unnecessarily, and "foo" is not actually modified!
+Don't fetch content unnecessarily.
+FIXME: "foo" is not actually modified.
   $ SL_LOG=file_fetches=trace hg st -q --rev $A --rev $C
-  TRACE file_fetches: attrs=["content", "header"] keys=["foo", "foo"]
-  TRACE file_fetches: attrs=["history"] length=Some(1) keys=["foo", "foo"]
   M foo
   A middle
   A top
 
 Make sure we do prefetch file content for diff operation:
+FIXME: "header" is seriallly fetched
   $ SL_LOG=file_fetches=trace hg diff -q --rev $A --rev $C
-  TRACE file_fetches: attrs=["content", "header"] keys=["foo", "foo"]
   TRACE file_fetches: attrs=["header"] keys=["middle"]
   TRACE file_fetches: attrs=["header"] keys=["top"]
   TRACE file_fetches: attrs=["content", "header"] keys=["foo", "foo", "middle", "top"]
