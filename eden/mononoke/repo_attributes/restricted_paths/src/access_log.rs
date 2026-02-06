@@ -34,8 +34,9 @@ pub(crate) enum RestrictedPathAccessData {
     FullPath { full_path: NonRootMPath },
 }
 
-/// Check if the caller has access to paths protected by the given ACLs.
-pub async fn has_access_to_acl(
+/// Check if the caller has read access to paths protected by the given repo region ACLs.
+/// This uses PermissionChecker to verify the caller has "read" permission.
+pub async fn has_read_access_to_repo_region_acls(
     ctx: &CoreContext,
     acl_provider: &Arc<dyn AclProvider>,
     acls: &[&MononokeIdentity],
@@ -268,7 +269,8 @@ pub(crate) async fn log_access_to_restricted_path(
 ) -> Result<bool> {
     // TODO(T239041722): store permission checkers in RestrictedPaths to improve
     // performance if needed.
-    let has_path_acl_access = has_access_to_acl(ctx, &acl_provider, &acls).await?;
+    let has_path_acl_access =
+        has_read_access_to_repo_region_acls(ctx, &acl_provider, &acls).await?;
 
     // Check if caller is in the tooling allowlist group
     let is_allowlisted_tooling = if let Some(group_name) = tooling_allowlist_group {

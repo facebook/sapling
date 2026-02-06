@@ -25,7 +25,7 @@ use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
 use restricted_paths::RestrictedPaths;
 use restricted_paths::RestrictedPathsArc;
-use restricted_paths::has_access_to_acl;
+use restricted_paths::has_read_access_to_repo_region_acls;
 use source_control as thrift;
 
 pub(crate) async fn restricted_paths_access_impl(
@@ -71,7 +71,7 @@ pub(crate) async fn restricted_paths_access_impl(
                 let res = match find_restriction_root(restricted_paths, &path) {
                     Some((root_path, acl)) => {
                         let can_access = if check_permissions {
-                            has_access_to_acl(ctx, acl_provider, &[&acl])
+                            has_read_access_to_repo_region_acls(ctx, acl_provider, &[&acl])
                                 .await
                                 .with_context(|| format!("Checking access to ACL {acl}"))?
                         } else {

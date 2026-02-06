@@ -27,7 +27,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use tokio::task;
 
 pub use crate::access_log::ACCESS_LOG_SCUBA_TABLE;
-pub use crate::access_log::has_access_to_acl;
+pub use crate::access_log::has_read_access_to_repo_region_acls;
 use crate::access_log::log_access_to_restricted_path;
 pub use crate::cache::ManifestIdCache;
 pub use crate::cache::RestrictedPathsManifestIdCache;
