@@ -23,6 +23,8 @@ import {commitByHash} from '../serverAPIState';
 import {GeneratedStatus} from '../types';
 import {MAX_FILES_ALLOWED_FOR_DIFF_STAT} from './diffStatConstants';
 
+const isPageHiddenAtom = atom(get => get(pageVisibility) === 'hidden');
+
 const getGeneratedFiles = (files: ReadonlyArray<RepoRelativePath>): Array<RepoRelativePath> => {
   const generatedStatuses = getGeneratedFilesFrom(files);
 
@@ -183,8 +185,10 @@ const fetchPendingSloc = async (
   // pendingRequestId B (fast) => Server responds immediately, client updates
   // pendingRequestId A (slow) => Server responds, client ignores
 
-  // we don't want to fetch the pending changes if the page is hidden
-  const pageIsHidden = get(pageVisibility) === 'hidden';
+  // We don't want to fetch the pending changes if the page is hidden
+  // Use isPageHiddenAtom instead of pageVisibility directly to avoid
+  // re-triggering on focus/blur events (transitions between 'focused' and 'visible')
+  const pageIsHidden = get(isPageHiddenAtom);
   const commits = get(commitInfoViewCurrentCommits);
 
   if (pageIsHidden || commits == null || commits.length > 1) {
