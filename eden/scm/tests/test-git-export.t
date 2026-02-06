@@ -83,12 +83,13 @@ Cross and same-directory copies with a relative root:
   +copy1
 
   $ hg diff --git --root dir2/ -r 1:tip
-  diff --git a/copy b/copy
-  new file mode 100644
-  --- /dev/null
+  diff --git a/new b/copy
+  copy from new
+  copy to copy
+  --- a/new
   +++ b/copy
-  @@ -0,0 +1,2 @@
-  +new
+  @@ -1,1 +1,2 @@
+   new
   +copy2
 
   $ hg diff --git --root dir1 -r 1:tip -I '**/copy'
@@ -213,13 +214,14 @@ Cross and same-directory renames with a relative root:
    new
    copy1
   +rename1
-  diff --git a/rename2 b/rename2
-  new file mode 100644
-  --- /dev/null
+  diff --git a/copy b/rename2
+  copy from copy
+  copy to rename2
+  --- a/copy
   +++ b/rename2
-  @@ -0,0 +1,3 @@
-  +new
-  +copy2
+  @@ -1,2 +1,3 @@
+   new
+   copy2
   +rename2
 
   $ hg diff --root dir2 --git -r 2:tip
@@ -250,13 +252,14 @@ Cross and same-directory renames with a relative root:
    new
    copy1
   +rename1
-  diff --git a/rename2 b/rename2
-  new file mode 100644
-  --- /dev/null
+  diff --git a/copy b/rename2
+  copy from copy
+  copy to rename2
+  --- a/copy
   +++ b/rename2
-  @@ -0,0 +1,3 @@
-  +new
-  +copy2
+  @@ -1,2 +1,3 @@
+   new
+   copy2
   +rename2
 
 Delete:

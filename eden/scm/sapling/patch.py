@@ -36,6 +36,7 @@ from . import (
     encoding,
     error,
     mail,
+    match as matchmod,
     mdiff,
     pathutil,
     scmutil,
@@ -2687,12 +2688,12 @@ def diffhunks(
 
     getfilectx = lrugetfilectx()
 
-    relfiltered = False
-    if relroot != "" and match.always():
-        # as a special case, create a new matcher with just the relroot
-        pats = [relroot]
-        match = scmutil.match(ctx2, pats, default="path")
-        relfiltered = True
+    if relroot != "":
+        relrootmatch = scmutil.match(ctx2, [f"path:{relroot}"])
+        if match is None:
+            match = relrootmatch
+        else:
+            match = matchmod.intersectmatchers(match, relrootmatch)
 
     if not changes:
         changes = repo.status(ctx1, ctx2, match=match)
@@ -2728,27 +2729,6 @@ def diffhunks(
                     if match(copysrc):
                         newcopy[copydst] = copysrc
                 copy = newcopy
-
-    if relroot is not None:
-        if not relfiltered:
-            # XXX this would ideally be done in the matcher, but that is
-            # generally meant to 'or' patterns, not 'and' them. In this case we
-            # need to 'and' all the patterns from the matcher with relroot.
-            def filterrel(l):
-                return [f for f in l if f.startswith(relroot)]
-
-            modified = filterrel(modified)
-            added = filterrel(added)
-            removed = filterrel(removed)
-            relfiltered = True
-        # filter out copies where either side isn't inside the relative root
-        copy = dict(
-            (
-                (dst, src)
-                for (dst, src) in copy.items()
-                if dst.startswith(relroot) and src.startswith(relroot)
-            )
-        )
 
     modifiedset = set(modified)
     addedset = set(added)
@@ -3081,7 +3061,7 @@ def trydiff(
         repo.ui.configbool("devel", "all-warnings")
         or repo.ui.configbool("devel", "check-relroot")
     ):
-        for f in modified + added + removed + list(copy) + list(copy.values()):
+        for f in modified + added + removed + list(copy):
             if f is not None and not f.startswith(relroot):
                 raise AssertionError(
                     "file %s doesn't start with relroot %s" % (f, relroot)
