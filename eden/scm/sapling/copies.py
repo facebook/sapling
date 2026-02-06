@@ -150,22 +150,30 @@ def pathcopies(x, y, match=None):
     if x == y or not x or not y:
         return {}
 
+    copies = {}
+
     dagcopytrace = y.repo()._dagcopytrace
     if y.rev() is None:
         dirstate_copies = _dirstatecopies(y, match)
         if x == y.p1():
-            return dirstate_copies
-        committed_copies = dagcopytrace.path_copies(x.node(), y.p1().node(), match)
-        return _chain(x, y, committed_copies, dirstate_copies)
-
-    if x.rev() is None:
+            copies = dirstate_copies
+        else:
+            committed_copies = dagcopytrace.path_copies(x.node(), y.p1().node(), match)
+            copies = _chain(x, y, committed_copies, dirstate_copies)
+    elif x.rev() is None:
         dirstate_copies = _reverse_copies(_dirstatecopies(x, match))
         if y == x.p1():
-            return dirstate_copies
-        committed_copies = dagcopytrace.path_copies(x.p1().node(), y.node(), match)
-        return _chain(x, y, dirstate_copies, committed_copies)
+            copies = dirstate_copies
+        else:
+            committed_copies = dagcopytrace.path_copies(x.p1().node(), y.node(), match)
+            copies = _chain(x, y, dirstate_copies, committed_copies)
+    else:
+        copies = dagcopytrace.path_copies(x.node(), y.node(), match)
 
-    return dagcopytrace.path_copies(x.node(), y.node(), match)
+    if match is not None:
+        copies = {dst: src for dst, src in copies.items() if match(dst)}
+
+    return copies
 
 
 @perftrace.tracefunc("Merge Copies")
