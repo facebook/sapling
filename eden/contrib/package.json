@@ -10,7 +10,7 @@
     "@babel/runtime": "^7.21.0",
     "@typescript-eslint/eslint-plugin": "^5.15.0",
     "@typescript-eslint/parser": "^5.15.0",
-    "eslint": "^8.11.0",
+    "eslint": "^9.26.0",
     "eslint-plugin-import": "^2.25.4",
     "eslint-plugin-react-hooks": "^4.3.0",
     "eslint-plugin-rulesdir": "^0.2.1",
