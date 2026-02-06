@@ -301,7 +301,13 @@ async def rewrite_pull_request_body(
     if ui.configbool("github", "preserve-pull-request-description"):
         commit_msg_or_title_body = (pr.title, pr.body)
     else:
-        commit_msg_or_title_body = head_commit_data.get_msg()
+        # Use the PR template as the body if present, otherwise use commit message
+        pull_request_template = get_pull_request_template(head_commit_data, ui)
+        if pull_request_template:
+            commit_title, _unused = title_and_body(head_commit_data.get_msg())
+            commit_msg_or_title_body = (commit_title, pull_request_template)
+        else:
+            commit_msg_or_title_body = head_commit_data.get_msg()
 
     title, body = create_pull_request_title_and_body(
         commit_msg_or_title_body,
@@ -433,17 +439,43 @@ async def create_serial_strategy_params(
     return SerialStrategyParams(refs_to_update, pull_requests_to_create, repository)
 
 
-def get_pull_request_template(commit: CommitData) -> None | str:
-    ctx = commit.ctx
-    for path in [
-        ".github/pull_request_template.md",
-        "docs/pull_request_template.md",
-        "pull_request_template.md",
-    ]:
-        if path in ctx:
-            fctx = ctx[path]
-            data = fctx.data()
-            return data.decode(errors="replace")
+def get_pull_request_template(commit: CommitData, ui) -> None | str:
+    """Get the PR template content if available.
+
+    The template path can be configured via github.pull-request-template:
+    - Not set: checks standard GitHub locations (default)
+    - Set to a path: uses that specific path
+    - Set to empty string: disables PR template feature
+
+    The template is read from the working directory (repo root), not from
+    the commit being submitted. This matches GitHub's behavior of reading
+    the template from the repository's default branch.
+    """
+    template_path = ui.config("github", "pull-request-template")
+
+    if template_path == "":
+        # Explicitly disabled
+        return None
+    elif template_path:
+        # Custom path specified
+        paths = [template_path]
+    else:
+        # Default: standard GitHub locations
+        paths = [
+            ".github/pull_request_template.md",
+            "docs/pull_request_template.md",
+            "pull_request_template.md",
+        ]
+
+    repo = commit.ctx.repo()
+    wvfs = repo.wvfs  # Working directory virtual filesystem
+    for path in paths:
+        if wvfs.exists(path):
+            try:
+                data = wvfs.read(path)
+                return data.decode(errors="replace")
+            except IOError:
+                continue
 
     return None
 
@@ -476,8 +508,9 @@ async def create_pull_requests_serially(
 
         commit_msg = commit.get_msg()
         title, body = title_and_body(commit_msg)
-        pull_request_template = get_pull_request_template(commit)
-        body = "\n\n".join(filter(None, [body, pull_request_template]))
+        pull_request_template = get_pull_request_template(commit, ui)
+        if pull_request_template:
+            body = pull_request_template
         result = await gh_submit.create_pull_request(
             hostname=repository.hostname,
             owner=owner,
@@ -615,7 +648,11 @@ async def create_pull_requests_from_placeholder_issues(
 
     async def create_pull_request(params: PullRequestParams):
         commit = params.commit
-        body = commit.get_msg()
+        commit_msg = commit.get_msg()
+        _unused, body = title_and_body(commit_msg)
+        pull_request_template = get_pull_request_template(commit, ui)
+        if pull_request_template:
+            body = pull_request_template
         issue_number = params.number
 
         # Note that "overlapping" pull requests will all share the same base.
