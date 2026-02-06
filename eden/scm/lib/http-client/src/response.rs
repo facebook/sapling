@@ -382,4 +382,32 @@ mod tests {
 
         Ok(())
     }
+
+    /// Test that decoding empty response body.
+    #[tokio::test]
+    async fn test_empty_response_decompression() -> Result<()> {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/small")
+            .with_status(200)
+            .with_header("Content-Encoding", "zstd")
+            .with_body([])
+            .create();
+
+        let client = HttpClient::new();
+
+        let url = Url::parse(&server.url())?.join("small")?;
+        let res = client
+            .get(url)
+            .accept_encoding(Encoding::all())
+            .send_async()
+            .await?;
+
+        mock.assert();
+
+        // FIXME: error decoding empty response
+        assert!(res.into_body().decoded().try_concat().await.is_err());
+
+        Ok(())
+    }
 }
