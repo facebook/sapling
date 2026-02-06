@@ -47,15 +47,15 @@ pub struct LoggingArgs {
     /// Print debug output
     ///
     /// Equivalent to --log-level=DEBUG.
-    #[clap(long)]
+    #[clap(long, global = true)]
     pub debug: bool,
 
     /// Log level to use
-    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES))]
+    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES), global = true)]
     pub log_level: Option<String>,
 
     /// Log level to use for C++ logging
-    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES))]
+    #[clap(long, conflicts_with = "debug", value_parser = PossibleValuesParser::new(&LOG_LEVEL_NAMES), global = true)]
     pub cxx_log_level: Option<String>,
 
     /// Deprecated: Logview category (no longer used, accepted for compatibility)
