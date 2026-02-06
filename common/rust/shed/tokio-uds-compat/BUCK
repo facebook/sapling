@@ -8,6 +8,40 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     autocargo = {
         "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "tokio": {
+                        "features": [
+                            "full",
+                            "test-util",
+                            "tracing",
+                        ],
+                        "version": "1.47.1",
+                    },
+                },
+                "target": {
+                    "'cfg(windows)'": {
+                        "dependencies": {
+                            "async-io": {"version": "1.4.1"},
+                            "futures": {
+                                "features": [
+                                    "async-await",
+                                    "compat",
+                                ],
+                                "version": "0.3.31",
+                            },
+                            "tracing": {
+                                "features": [
+                                    "attributes",
+                                    "valuable",
+                                ],
+                                "version": "0.1.41",
+                            },
+                            "uds_windows": {"version": "1.0.1"},
+                        },
+                    },
+                },
+            },
             "example": [
                 {
                     "name": "server",
@@ -26,20 +60,17 @@ rust_library(
         },
     },
     crate = "tokio-uds-compat",
-    os_deps = [
-        (
-            "windows",
-            [
-                "fbsource//third-party/rust:async-io",
-                "fbsource//third-party/rust:futures",
-                "fbsource//third-party/rust:uds_windows",
-                "fbsource//third-party/rust:tracing",
-            ],
-        ),
-    ],
     deps = [
         "fbsource//third-party/rust:tokio",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:async-io",
+            "fbsource//third-party/rust:futures",
+            "fbsource//third-party/rust:tracing",
+            "fbsource//third-party/rust:uds_windows",
+        ],
+    }),
 )
 
 rust_binary(
