@@ -1089,6 +1089,21 @@ export const fileContentsDeltaAtom = atomFamily(
 // =============================================================================
 
 /**
+ * Type for pending scroll restore position.
+ */
+export type PendingScrollRestore = {
+  scrollX: number;
+  scrollY: number;
+} | null;
+
+/**
+ * Atom to track scroll position that should be restored after a pull request
+ * refresh completes. When a comment is added, the scroll position is saved here
+ * before the refresh, and restored after the pull request data updates.
+ */
+export const pendingScrollRestoreAtom = atom<PendingScrollRestore>(null);
+
+/**
  * Type for the new comment input cell state.
  */
 export type NewCommentInputCell = {

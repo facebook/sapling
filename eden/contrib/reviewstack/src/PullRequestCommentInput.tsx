@@ -5,10 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {ChangeEvent} from 'react';
+import type {ChangeEvent, KeyboardEvent} from 'react';
 
 import {Box, Button, Textarea} from '@primer/react';
-import {useCallback, useState} from 'react';
+import {useCallback, useRef, useState} from 'react';
 
 type Props = {
   /**
@@ -70,6 +70,25 @@ export default function PullRequestCommentInput({
     }
   }, [addComment, resetInputAfterAddingComment, comment, setDisabled, setComment]);
 
+  const isAddCommentDisabled = disabled || (!allowEmptyMessage && comment.trim() === '');
+
+  // Use a ref to avoid stale closure in onKeyDown
+  const isAddCommentDisabledRef = useRef(isAddCommentDisabled);
+  isAddCommentDisabledRef.current = isAddCommentDisabled;
+
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      // Command+Enter (Mac) or Ctrl+Enter (Windows/Linux) to submit
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        if (!isAddCommentDisabledRef.current) {
+          onAddComment();
+        }
+      }
+    },
+    [onAddComment],
+  );
+
   const cancelButton =
     onCancel != null ? (
       <Button variant="danger" onClick={onCancel} disabled={disabled}>
@@ -77,7 +96,6 @@ export default function PullRequestCommentInput({
       </Button>
     ) : null;
 
-  const isAddCommentDisabled = disabled || (!allowEmptyMessage && comment.trim() === '');
   return (
     <Box
       borderColor="border.default"
@@ -88,6 +106,7 @@ export default function PullRequestCommentInput({
       <Textarea
         value={comment}
         onChange={onChange}
+        onKeyDown={onKeyDown}
         placeholder="Write a comment..."
         block={true}
         autoFocus={autoFocus}

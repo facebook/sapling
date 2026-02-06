@@ -55,6 +55,7 @@ export {
   gitHubPullRequestNewCommentInputShownAtom,
   gitHubPullRequestPositionForLineAtom,
   gitHubPullRequestCanAddCommentAtom,
+  pendingScrollRestoreAtom,
 } from './atoms';
 
 export type {
@@ -66,4 +67,5 @@ export type {
   LineToPositionBySide,
   CheckRun,
   NewCommentInputCell,
+  PendingScrollRestore,
 } from './atoms';

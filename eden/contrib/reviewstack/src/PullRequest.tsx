@@ -22,6 +22,7 @@ import {
   gitHubPullRequestAtom,
   gitHubPullRequestIDAtom,
   gitHubPullRequestVersionDiffAtom,
+  pendingScrollRestoreAtom,
 } from './jotai';
 import {gitHubPullRequest, gitHubPullRequestForParams} from './recoil';
 import {stripStackInfoFromSaplingBodyHTML} from './saplingStack';
@@ -66,6 +67,7 @@ function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
   const pullRequestLoadable = useRecoilValueLoadable(gitHubPullRequestForParams(params));
   const setPullRequestJotai = useSetAtom(gitHubPullRequestAtom);
   const setPullRequestRecoil = useSetRecoilState(gitHubPullRequest);
+  const setPendingScrollRestore = useSetAtom(pendingScrollRestoreAtom);
   const pullRequest =
     pullRequestLoadable.state === 'hasValue' ? pullRequestLoadable.contents : null;
   const isPullRequestNotFound = pullRequestLoadable.state === 'hasValue' && pullRequest == null;
@@ -81,6 +83,29 @@ function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
       setPullRequestRecoil(pullRequest);
     }
   }, [pullRequest, setPullRequestJotai, setPullRequestRecoil]);
+
+  // Restore scroll position after pull request data updates.
+  // This runs after the effect above updates the atoms, and uses
+  // double requestAnimationFrame to wait for React to commit the render
+  // and the browser to paint.
+  useEffect(() => {
+    if (pullRequest != null) {
+      // Use double requestAnimationFrame to ensure we restore scroll after
+      // React has committed updates AND the browser has finished painting.
+      // The first RAF waits for the next frame, the second ensures paint completion.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setPendingScrollRestore(prev => {
+            if (prev != null) {
+              window.scrollTo(prev.scrollX, prev.scrollY);
+            }
+            return null;
+          });
+        });
+      });
+    }
+  }, [pullRequest, setPendingScrollRestore]);
+
   if (isPullRequestNotFound) {
     return <PullRequestNotFound />;
   } else {

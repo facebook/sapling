@@ -5,9 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {gitHubOrgAndRepoAtom, gitHubPullRequestIDAtom} from './jotai';
+import {
+  gitHubOrgAndRepoAtom,
+  gitHubPullRequestIDAtom,
+  pendingScrollRestoreAtom,
+} from './jotai';
 import {gitHubPullRequestForParams} from './recoil';
-import {useAtomValue} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
+import {useCallback} from 'react';
 import {useRecoilCallback} from 'recoil';
 
 /**
@@ -16,12 +21,16 @@ import {useRecoilCallback} from 'recoil';
  *   `gitHubPullRequest` directly, this refreshes
  *   `gitHubPullRequestForParams(params)` so that `PullRequest.tsx` will derive
  *   a new value of `gitHubPullRequest` from the old one.
+ *
+ *   The refresh preserves the current scroll position to prevent the view
+ *   from jumping when the data updates.
  */
 export default function useRefreshPullRequest(): () => void {
   const number = useAtomValue(gitHubPullRequestIDAtom);
   const orgAndRepo = useAtomValue(gitHubOrgAndRepoAtom);
+  const setPendingScrollRestore = useSetAtom(pendingScrollRestoreAtom);
 
-  return useRecoilCallback(
+  const recoilRefresh = useRecoilCallback(
     ({refresh}) =>
       () => {
         if (number == null || orgAndRepo == null) {
@@ -35,4 +44,16 @@ export default function useRefreshPullRequest(): () => void {
       },
     [number, orgAndRepo],
   );
+
+  return useCallback(() => {
+    // Save scroll position before refresh. This will be restored by
+    // PullRequestWithParams after the pull request data updates.
+    setPendingScrollRestore({
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+
+    recoilRefresh();
+  }, [recoilRefresh, setPendingScrollRestore]);
 }
+
