@@ -36,7 +36,11 @@ def submit(ui, repo, *args, **opts) -> int:
     is_open = opts.get("open")
     return asyncio.run(
         update_commits_in_stack(
-            ui, repo, github_repo, is_draft=is_draft, is_open=is_open
+            ui,
+            repo,
+            github_repo,
+            is_draft=is_draft,
+            is_open=is_open,
         )
     )
 
@@ -151,7 +155,11 @@ async def get_partitions(ui, repo, store, filter) -> List[List[CommitData]]:
 
 
 async def update_commits_in_stack(
-    ui, repo, github_repo: GitHubRepo, is_draft: bool, is_open: bool = False
+    ui,
+    repo,
+    github_repo: GitHubRepo,
+    is_draft: bool,
+    is_open: bool = False,
 ) -> int:
     parents = repo.dirstate.parents()
     if parents[0] == nullid:
