@@ -1,217 +1,60 @@
-# Recoil to Jotai Migration Guide
+# Jotai State Management
 
-This directory contains Jotai atoms that are being migrated from Recoil.
+This directory contains Jotai atoms for the ReviewStack application.
 
-## Current Migration Status
+## Architecture
 
-The app is currently in a hybrid state where both Recoil and Jotai providers coexist.
-This allows incremental migration of atoms and their consumers.
+The app uses [Jotai](https://jotai.org/) for React state management. All state is defined in `atoms.ts` and exported through `index.ts`.
 
-### Fully Migrated to Jotai (in `atoms.ts`)
+### Key Atom Categories
 
-These atoms are now natively implemented in Jotai:
+- **Theme**: `primerColorModeAtom` - User's color mode preference (day/night)
+- **Credentials**: `gitHubTokenPersistenceAtom`, `gitHubTokenStateAtom`, `gitHubHostnameAtom`, `gitHubUsernameAtom` - Authentication with cross-tab logout support
+- **GitHub Client**: `gitHubClientAtom` - Cached GitHub API client
+- **Pull Request**: `gitHubPullRequestAtom`, `gitHubPullRequestForParamsAtom` - PR data and loading
+- **Versions**: `gitHubPullRequestVersionsAtom`, `gitHubPullRequestSelectedVersionIndexAtom` - PR version history
+- **Diffs**: `gitHubDiffCommitIDsAtom`, `gitHubPullRequestVersionDiffAtom` - Diff computation
+- **Threads**: `gitHubPullRequestReviewThreadsAtom`, `gitHubThreadsForDiffFileAtom` - Review comments
+- **Stacked PRs**: `stackedPullRequestAtom`, `stackedPullRequestFragmentsAtom` - PR stack support
 
-- **Theme**: `primerColorModeAtom`
-- **Credentials (simple)**: `gitHubHostnameAtom`, `isConsumerGitHubAtom`, `gitHubGraphQLEndpointAtom`
-- **Org/Repo**: `gitHubOrgAndRepoAtom`
-- **GitHub Client**: `gitHubClientAtom`, `gitHubBlobAtom`, `gitHubCommitAtom`
-- **Pull Request**: `gitHubPullRequestAtom`, `gitHubPullRequestIDAtom`, `gitHubPullRequestViewerDidAuthorAtom`, `gitHubPullRequestViewerCanUpdateAtom`
-- **Labels/Reviewers**: `gitHubPullRequestLabelsAtom`, `gitHubPullRequestReviewersAtom`, `gitHubRepoLabelsQuery`, `gitHubRepoLabels`, `gitHubRepoAssignableUsersQuery`, `gitHubRepoAssignableUsers`
-- **Versions**: `gitHubPullRequestVersionsAtom` (computed natively in Jotai with all internal dependencies), `gitHubPullRequestSelectedVersionIndexAtom`, `gitHubPullRequestComparableVersionsAtom`, `gitHubPullRequestIsViewingLatestAtom`
-- **Diffs**: `gitHubDiffCommitIDsAtom`, `gitHubPullRequestVersionDiffAtom`, `gitHubDiffForCommitsAtom`, `gitHubDiffForCurrentCommitAtom`
-- **Threads**: `gitHubPullRequestReviewThreadsAtom`, `gitHubThreadsForDiffFileAtom`, `gitHubPullRequestThreadsByCommitAtom`
-- **Comments**: `gitHubPullRequestNewCommentInputCellAtom`, `gitHubPullRequestCanAddCommentAtom`, `gitHubPullRequestPendingReviewIDAtom`
-- **Line-to-Position**: `gitHubPullRequestComputedLineToPositionForFileAtom`, `gitHubPullRequestLineToPositionForFileAtom` (computed natively in Jotai)
-- **Check Runs**: `gitHubPullRequestCheckRunsAtom`
-- **User Home Page**: `gitHubUserHomePageDataAtom`
-- **Pull Requests Search**: `gitHubPullRequestsAtom`
-- **Notifications**: `notificationMessageAtom`
-- **Stacked PRs**: `stackedPullRequestAtom`, `stackedPullRequestFragmentsAtom` (fully migrated, `stackState.ts` removed)
-- **Pull Request Loading**: `gitHubPullRequestForParamsAtom`, `gitHubPullRequestRefreshTriggerAtom` (uses manual trigger pattern for refresh)
-- **Credentials**: `gitHubTokenPersistenceAtom`, `gitHubTokenStateAtom`, `gitHubTokenListenerAtom`, `gitHubUsernameAtom` (includes cross-tab logout handling)
+### Diff Service Atoms (`diffServiceClient.ts`)
 
-### Migrated in `diffServiceClient.ts`
-
-These diff service atoms are now Jotai-native:
+Heavy computation runs in a SharedWorker:
 
 - `diffAndTokenizeAtom` - Tokenizes and diffs file contents
 - `colorMapAtom` - TextMate color maps for syntax highlighting
 - `lineRangeAtom` - Fetches line ranges for expanding collapsed sections
 - `lineToPositionAtom` - Line to position mapping for comments
 
-### Still in Recoil (in `recoil.ts`)
-
-These simple atoms remain in Recoil to support components that still use Recoil:
-
-- **Org/Repo (Recoil)**: `gitHubOrgAndRepo` - Simple atom synced from Jotai
-- **Pull Request (Recoil)**: `gitHubPullRequest` - Simple atom synced from Jotai
-- **Selected Version Index (Recoil)**: `gitHubPullRequestSelectedVersionIndex` - Simple atom with defaults computed from Jotai
-- **Comparable Versions (Recoil)**: `gitHubPullRequestComparableVersions` - Simple atom with defaults computed from Jotai
-
-### Still in Recoil (in `gitHubCredentials.ts`)
-
-The file still contains the original Recoil atoms for backwards compatibility, but all component consumers now use Jotai:
-
-- `gitHubTokenPersistence` - No longer used by components (migrated to `gitHubTokenPersistenceAtom`)
-- `gitHubUsername` - No longer used by components (migrated to `gitHubUsernameAtom`)
-- `gitHubHostname` - No longer used by components (migrated to `gitHubHostnameAtom`)
-- `createGraphQLEndpointForHostname` - Utility function still used by Jotai atoms
-
-### Still in Recoil (in `shared/Drawers.tsx`)
-
-The shared Drawers component uses Recoil internally:
-
-- Accepts `RecoilState<AllDrawersState>` as prop
-- Used by `PullRequestLayout.tsx`
-
-### Sync Layer
-
-`JotaiRecoilSync.tsx` synchronizes state between Jotai and Recoil:
-
-- **Jotai → Recoil**: `gitHubOrgAndRepoAtom`, `gitHubPullRequestAtom`, `gitHubPullRequestSelectedVersionIndexAtom`, `gitHubPullRequestComparableVersionsAtom`
-- **Default Computation**: Computes version-based defaults (selectedVersionIndex, comparableVersions) from Jotai and syncs to both Jotai and Recoil atoms
-
-## Next Steps for Full Migration
-
-1. **Migrate `shared/Drawers.tsx`** - Update to accept Jotai atoms (this is a shared component affecting multiple projects)
-2. **Remove `gitHubCredentials.ts` Recoil atoms** - Once verified working, can remove the unused Recoil atoms
-3. **Remove remaining Recoil atoms** - Once Drawers is migrated, remove the sync layer and `recoil.ts`
-
-## How to Migrate an Atom
-
-### 1. Create the Jotai Atom
-
-For a simple Recoil atom:
+## Usage
 
 ```typescript
-// Before (Recoil)
-import {atom} from 'recoil';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {gitHubPullRequestAtom, primerColorModeAtom} from './jotai';
 
-export const myAtom = atom<string>({
-  key: 'myAtom',
-  default: 'initial value',
-});
+// Read-only
+const pullRequest = useAtomValue(gitHubPullRequestAtom);
 
-// After (Jotai)
-import {atom} from 'jotai';
+// Read and write
+const [colorMode, setColorMode] = useAtom(primerColorModeAtom);
 
-export const myAtom = atom<string>('initial value');
+// Write-only
+const setColorMode = useSetAtom(primerColorModeAtom);
 ```
 
-For a Recoil atom with effects (persistence, etc.):
+### Async Atoms with Loadable
+
+For async atoms where you want to avoid Suspense:
 
 ```typescript
-// Before (Recoil)
-import {atom} from 'recoil';
-
-export const myAtom = atom<string>({
-  key: 'myAtom',
-  default: 'initial value',
-  effects: [localStorageEffect('myAtom')],
-});
-
-// After (Jotai)
-import {atomWithStorage} from 'jotai/utils';
-
-export const myAtom = atomWithStorage<string>('myAtom', 'initial value');
-```
-
-### 2. Migrate Selectors to Derived Atoms
-
-```typescript
-// Before (Recoil)
-import {selector} from 'recoil';
-
-export const mySelector = selector({
-  key: 'mySelector',
-  get: ({get}) => {
-    const value = get(myAtom);
-    return value.toUpperCase();
-  },
-});
-
-// After (Jotai)
-import {atom} from 'jotai';
-
-export const myDerivedAtom = atom((get) => {
-  const value = get(myAtom);
-  return value.toUpperCase();
-});
-```
-
-### 3. Migrate Async Selectors
-
-```typescript
-// Before (Recoil)
-import {selector} from 'recoil';
-
-export const asyncSelector = selector({
-  key: 'asyncSelector',
-  get: async ({get}) => {
-    const id = get(idAtom);
-    const response = await fetch(`/api/data/${id}`);
-    return response.json();
-  },
-});
-
-// After (Jotai)
-import {atom} from 'jotai';
-
-export const asyncAtom = atom(async (get) => {
-  const id = get(idAtom);
-  const response = await fetch(`/api/data/${id}`);
-  return response.json();
-});
-```
-
-### 4. Update Component Consumers
-
-```typescript
-// Before (Recoil)
-import {useRecoilState, useRecoilValue} from 'recoil';
-
-function MyComponent() {
-  const [value, setValue] = useRecoilState(myAtom);
-  const derivedValue = useRecoilValue(mySelector);
-  // ...
-}
-
-// After (Jotai)
-import {useAtom, useAtomValue} from 'jotai';
-
-function MyComponent() {
-  const [value, setValue] = useAtom(myAtom);
-  const derivedValue = useAtomValue(myDerivedAtom);
-  // ...
-}
-```
-
-### 5. Handling Loadable States
-
-```typescript
-// Before (Recoil)
-import {useRecoilValueLoadable} from 'recoil';
-
-function MyComponent() {
-  const loadable = useRecoilValueLoadable(asyncSelector);
-  switch (loadable.state) {
-    case 'hasValue':
-      return <div>{loadable.contents}</div>;
-    case 'loading':
-      return <Spinner />;
-    case 'hasError':
-      return <Error error={loadable.contents} />;
-  }
-}
-
-// After (Jotai)
-import {useAtom} from 'jotai';
+import {useAtomValue} from 'jotai';
 import {loadable} from 'jotai/utils';
-
-const loadableAsyncAtom = loadable(asyncAtom);
+import {useMemo} from 'react';
 
 function MyComponent() {
-  const [result] = useAtom(loadableAsyncAtom);
+  const loadableAtom = useMemo(() => loadable(asyncAtom), []);
+  const result = useAtomValue(loadableAtom);
+
   if (result.state === 'loading') {
     return <Spinner />;
   }
@@ -222,35 +65,18 @@ function MyComponent() {
 }
 ```
 
-## Migration Checklist
+## API Quick Reference
 
-When migrating an atom/selector:
+| Hook | Purpose |
+|------|---------|
+| `useAtom(atom)` | Read and write an atom |
+| `useAtomValue(atom)` | Read-only access to an atom |
+| `useSetAtom(atom)` | Write-only access to an atom |
+| `useStore()` | Access the Jotai store directly |
 
-1. [ ] Create the Jotai atom in `src/jotai/atoms.ts`
-2. [ ] Update all component imports to use `jotai` instead of `recoil`
-3. [ ] Replace hook calls (`useRecoilState` → `useAtom`, etc.)
-4. [ ] Test the component thoroughly
-5. [ ] Remove the old Recoil atom from `recoil.ts` once all consumers are migrated
-
-## Files to Update After Full Migration
-
-Once all atoms are migrated:
-
-1. Remove `recoil` from `package.json` dependencies
-2. Remove `RecoilRoot` from `reviewstack.dev/public/index.html`
-3. Remove `recoil.ts` file
-4. Update `App.tsx` comments that reference RecoilRoot
-
-## API Equivalents Quick Reference
-
-| Recoil | Jotai |
-|--------|-------|
-| `atom()` | `atom()` |
-| `selector()` | `atom((get) => ...)` |
-| `useRecoilState()` | `useAtom()` |
-| `useRecoilValue()` | `useAtomValue()` |
-| `useSetRecoilState()` | `useSetAtom()` |
-| `useRecoilValueLoadable()` | `useAtom(loadable(atom))` |
-| `atomFamily()` | `atomFamily()` from `jotai-family` |
-| `selectorFamily()` | Use `atomFamily()` with derived atom pattern |
-| `waitForAll()` | Use `Promise.all()` in async atom |
+| Utility | Purpose |
+|---------|---------|
+| `atom()` | Create a primitive or derived atom |
+| `atomFamily()` | Create parameterized atoms (from `jotai-family`) |
+| `atomWithStorage()` | Create an atom with localStorage persistence |
+| `loadable()` | Wrap async atom to get loading/error/data states |

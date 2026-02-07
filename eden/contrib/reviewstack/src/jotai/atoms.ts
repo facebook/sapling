@@ -654,9 +654,53 @@ export type ComparableVersions = {
  * Migrated from: gitHubPullRequestComparableVersions in recoil.ts
  *
  * Stores the currently selected versions for comparison in a PR.
- * This is a writable atom - the default is computed from versions (done by consumers).
+ * This is a writable atom - when null, a default is computed from versions.
  */
-export const gitHubPullRequestComparableVersionsAtom = atom<ComparableVersions | null>(null);
+const gitHubPullRequestComparableVersionsBaseAtom = atom<ComparableVersions | null>(null);
+
+/**
+ * Derived atom that provides a default value when the base atom is null.
+ * The default uses the latest version's head commit as the afterCommitID.
+ */
+export const gitHubPullRequestComparableVersionsAtom = atom(
+  get => {
+    const stored = get(gitHubPullRequestComparableVersionsBaseAtom);
+    if (stored != null) {
+      return stored;
+    }
+
+    // Compute default from the pull request's timeline commits
+    const pullRequest = get(gitHubPullRequestAtom);
+    if (pullRequest == null) {
+      return null;
+    }
+
+    // Get the latest commit from the PR timeline (same logic as gitHubPullRequestCommitsAtom)
+    const commits = (pullRequest.timelineItems?.nodes ?? [])
+      .map(item => {
+        if (item?.__typename === 'PullRequestCommit') {
+          const commit = item as PullRequestCommitItem;
+          return commit.commit;
+        } else {
+          return null;
+        }
+      })
+      .filter(notEmpty);
+
+    const latestCommit = commits[commits.length - 1];
+    if (latestCommit == null) {
+      return null;
+    }
+
+    return {
+      beforeCommitID: null,
+      afterCommitID: latestCommit.oid,
+    };
+  },
+  (get, set, newValue: ComparableVersions | null) => {
+    set(gitHubPullRequestComparableVersionsBaseAtom, newValue);
+  },
+);
 
 /**
  * Migrated from: gitHubCommit selectorFamily in recoil.ts

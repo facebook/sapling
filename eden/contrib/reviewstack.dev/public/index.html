@@ -3,7 +3,7 @@
   <head>
     <meta name="referrer" content="no-referrer" />
     <!--
-      The production bundle is designed such that React and Recoil dependencies
+      The production bundle is designed such that React dependencies
       should be injectable so it is easier to embed in larger React applications.
 
       IMPORTANT: These scripts MUST load synchronously in the <head> because
@@ -16,13 +16,6 @@
     -->
     <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.min.js"></script>
-    <!--
-      Note that recoil.js appears to report errors (like when
-      `dangerouslyAllowMutability` is needed for a Recoil value) that
-      recoil.min.js does not, so recoil.js appears to be the "development"
-      version while recoil.min.js is the "production" version.
-    -->
-    <script src="https://cdn.jsdelivr.net/npm/recoil@0.7.5/umd/index.js"></script>
 
     <!--
       We use react-router for demo purposes, but this is not required to render the UI.
@@ -57,8 +50,8 @@
        * ReviewStack Initialization Script
        *
        * This script waits for the webpack bundle to load and then initializes
-       * the React application. The CDN dependencies (React, ReactDOM, Recoil)
-       * are loaded synchronously in the <head> because webpack's externals
+       * the React application. The CDN dependencies (React, ReactDOM) are
+       * loaded synchronously in the <head> because webpack's externals
        * require them to be available before the bundle executes.
        *
        * The initialization is deferred until:
@@ -93,7 +86,6 @@
           var required = [
             {name: 'React', global: window.React},
             {name: 'ReactDOM', global: window.ReactDOM},
-            {name: 'Recoil', global: window.Recoil},
             {name: 'ReactRouterDOM', global: window.ReactRouterDOM},
           ];
           var missing = required.filter(function(r) { return !r.global; });
@@ -204,40 +196,36 @@
                 ReviewStack.JotaiProvider,
                 null,
                 React.createElement(
-                  Recoil.RecoilRoot,
-                  null,
+                  ReviewStack.ThemeProvider,
+                  {
+                    colorMode: ReviewStack.getColorModeFromLocalStorage(),
+                  },
                   React.createElement(
-                    ReviewStack.ThemeProvider,
-                    {
-                      colorMode: ReviewStack.getColorModeFromLocalStorage(),
-                    },
+                    ReactRouterDOM.BrowserRouter,
+                    null,
                     React.createElement(
-                      ReactRouterDOM.BrowserRouter,
+                      ReactRouterDOM.Routes,
                       null,
-                      React.createElement(
-                        ReactRouterDOM.Routes,
-                        null,
-                        React.createElement(ReactRouterDOM.Route, {
-                          path: '/',
-                          element: React.createElement(LandingPage),
-                        }),
-                        React.createElement(ReactRouterDOM.Route, {
-                          path: '/:org/:repo',
-                          element: React.createElement(ProjectPageEntrypoint),
-                        }),
-                        React.createElement(ReactRouterDOM.Route, {
-                          path: '/:org/:repo/pulls',
-                          element: React.createElement(PullsEntrypoint),
-                        }),
-                        React.createElement(ReactRouterDOM.Route, {
-                          path: '/:org/:repo/pull/:pr',
-                          element: React.createElement(PullRequestEntrypoint),
-                        }),
-                        React.createElement(ReactRouterDOM.Route, {
-                          path: '/:org/:repo/commit/:oid',
-                          element: React.createElement(CommitEntrypoint),
-                        })
-                      )
+                      React.createElement(ReactRouterDOM.Route, {
+                        path: '/',
+                        element: React.createElement(LandingPage),
+                      }),
+                      React.createElement(ReactRouterDOM.Route, {
+                        path: '/:org/:repo',
+                        element: React.createElement(ProjectPageEntrypoint),
+                      }),
+                      React.createElement(ReactRouterDOM.Route, {
+                        path: '/:org/:repo/pulls',
+                        element: React.createElement(PullsEntrypoint),
+                      }),
+                      React.createElement(ReactRouterDOM.Route, {
+                        path: '/:org/:repo/pull/:pr',
+                        element: React.createElement(PullRequestEntrypoint),
+                      }),
+                      React.createElement(ReactRouterDOM.Route, {
+                        path: '/:org/:repo/commit/:oid',
+                        element: React.createElement(CommitEntrypoint),
+                      })
                     )
                   )
                 )

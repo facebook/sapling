@@ -11,7 +11,7 @@ ReviewStack is a novel user interface for GitHub pull requests with custom suppo
 
 - **Purpose**: Alternative GitHub PR review UI inspired by Meta's internal code review tool
 - **Design System**: Uses [GitHub's Primer design system](https://primer.style/)
-- **State Management**: [Recoil](https://recoiljs.org/) for React state management
+- **State Management**: [Jotai](https://jotai.org/) for React state management
 - **API**: GitHub GraphQL API v4 with IndexedDB caching layer
 - **Syntax Highlighting**: TextMate grammars via `vscode-textmate`
 - **Created with**: Create React App
@@ -33,8 +33,10 @@ src/
 │   ├── graphql.ts         # Generated TypeScript from GraphQL schema
 │   └── textmate/          # Generated grammar manifests
 ├── textmate/              # TextMate grammar loading utilities
-├── App.tsx                # Root component (assumes RecoilRoot + ThemeProvider ancestors)
-├── recoil.ts              # Recoil atoms and selectors (main state management)
+├── App.tsx                # Root component (assumes Provider + ThemeProvider ancestors)
+├── jotai/                 # Jotai atoms (main state management)
+│   ├── atoms.ts           # All Jotai atoms
+│   └── index.ts           # Public exports
 ├── stackState.ts          # State for stacked PRs (Sapling & ghstack support)
 ├── saplingStack.ts        # Sapling stack body parsing
 ├── ghstackUtils.ts        # ghstack body parsing
@@ -46,29 +48,34 @@ src/
 
 ## Key Architectural Patterns
 
-### State Management with Recoil
+### State Management with Jotai
 
-All global state is managed via Recoil atoms and selectors in `recoil.ts`:
+All global state is managed via Jotai atoms in `jotai/atoms.ts`:
 
 ```typescript
-// Atoms hold primitive state
-export const gitHubOrgAndRepo = atom<{org: string; repo: string} | null>({
-  key: 'gitHubOrgAndRepo',
-  default: null,
+import {atom} from 'jotai';
+import {atomFamily} from 'jotai-family';
+
+// Primitive atoms hold state
+export const gitHubOrgAndRepoAtom = atom<{org: string; repo: string} | null>(null);
+
+// Derived atoms compute values from other atoms
+export const gitHubPullRequestAtom = atom(async (get) => {
+  const client = get(gitHubClientAtom);
+  const id = get(gitHubPullRequestIDAtom);
+  return client?.getPullRequest(id) ?? null;
 });
 
-// Selectors derive computed state, often async
-export const gitHubPullRequest = selector<PullRequest | null>({
-  key: 'gitHubPullRequest',
-  get: async ({get}) => {
-    const client = get(gitHubClient);
-    const id = get(gitHubPullRequestID);
-    return client?.getPullRequest(id) ?? null;
-  },
-});
+// atomFamily for parameterized atoms
+export const gitHubCommitAtom = atomFamily((oid: string) =>
+  atom(async (get) => {
+    const client = get(gitHubClientAtom);
+    return client?.getCommit(oid) ?? null;
+  })
+);
 ```
 
-Use `useRecoilValue()` for reading, `useRecoilValueLoadable()` for async state, and `useSetRecoilState()` for updates.
+Use `useAtomValue()` for reading, `useAtom()` for read+write, and `useSetAtom()` for updates. For async atoms where you want to handle loading states without Suspense, use the `loadable()` utility from `jotai/utils`.
 
 ### GitHub Client Architecture
 
@@ -114,7 +121,7 @@ export default function PullRequestLayout({
   repo: string;
   number: number;
 }): React.ReactElement {
-  const setOrgAndRepo = useSetRecoilState(gitHubOrgAndRepo);
+  const setOrgAndRepo = useSetAtom(gitHubOrgAndRepoAtom);
   // ...
 }
 ```
@@ -234,4 +241,4 @@ Test files: `*.test.ts` alongside source files.
 - Use Primer React components and their `sx` prop for styles
 - CSS files named same as component (e.g., `SplitDiffView.css`)
 - Theme colors via Primer tokens: `canvas.default`, `fg.muted`, `border.default`, etc.
-- Light/dark mode handled via `primerColorMode` atom
+- Light/dark mode handled via `primerColorModeAtom` atom

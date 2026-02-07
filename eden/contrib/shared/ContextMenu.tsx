@@ -5,11 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+
 import {Icon} from './Icon';
 import {findParentWithClassName} from './utils';
 import {getZoomLevel} from './zoom';
+import {atom, useAtom, useSetAtom} from 'jotai';
 import {useEffect, useRef, useState} from 'react';
-import {atom, useRecoilState, useSetRecoilState} from 'recoil';
 
 import './ContextMenu.css';
 
@@ -29,7 +30,7 @@ import './ContextMenu.css';
 export function useContextMenu<T>(
   creator: () => Array<ContextMenuItem>,
 ): React.MouseEventHandler<T> {
-  const setState = useSetRecoilState(contextMenuState);
+  const setState = useSetAtom(contextMenuState);
   return e => {
     const zoom = getZoomLevel();
     setState({x: e.clientX / zoom, y: e.clientY / zoom, items: creator()});
@@ -49,13 +50,10 @@ export type ContextMenuItem =
     }
   | {type: 'divider'};
 
-const contextMenuState = atom<null | ContextMenuData>({
-  key: 'contextMenuState',
-  default: null,
-});
+const contextMenuState = atom<null | ContextMenuData>(null);
 
 export function ContextMenus() {
-  const [state, setState] = useRecoilState(contextMenuState);
+  const [state, setState] = useAtom(contextMenuState);
 
   const ref = useRef<HTMLDivElement>(null);
 

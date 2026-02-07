@@ -9,7 +9,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "recoil": "^0.7.5",
     "reviewstack": "0.1.0",
     "rewire": "^6.0.0",
     "shared": "0.1.0"

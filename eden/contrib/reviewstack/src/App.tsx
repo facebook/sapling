@@ -19,7 +19,6 @@ import PullsView from './PullsView';
 import SplitDiffViewPrimerStyles from './SplitDiffViewPrimerStyles';
 import TextMateStyles from './TextMateStyles';
 import UserHomePage from './UserHomePage';
-import {JotaiRecoilSync} from './jotai/JotaiRecoilSync';
 import {
   gitHubTokenListenerAtom,
   gitHubTokenPersistenceAtom,
@@ -56,16 +55,13 @@ type Page =
     };
 
 /**
- * <App> assumes that <RecoilRoot> from recoil, <Provider> from jotai, and
- * <ThemeProvider> from @primer/react are ancestor components in the hierarchy.
- *
- * Note: RecoilRoot is still needed for the sync layer and Drawers component.
+ * <App> assumes that <Provider> from jotai and <ThemeProvider> from
+ * @primer/react are ancestor components in the hierarchy.
  */
 export default function App({page}: {page: Page}): React.ReactElement {
   return (
     <div>
       <ShortcutCommandContext>
-        <JotaiRecoilSync />
         <ThemeListener />
         <BaseStyles>
           <PrimerStyles />

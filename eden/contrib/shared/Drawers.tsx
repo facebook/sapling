@@ -6,12 +6,12 @@
  */
 
 import type {EnsureAssignedTogether} from './EnsureAssignedTogether';
+import type {PrimitiveAtom} from 'jotai';
 import type {ComponentClass} from 'react';
-import type {RecoilState} from 'recoil';
 
 import {debounce} from './debounce';
+import {useAtom} from 'jotai';
 import {createElement, useCallback, useRef} from 'react';
-import {useRecoilState} from 'recoil';
 
 import './Drawers.css';
 
@@ -45,7 +45,7 @@ export function Drawers({
   errorBoundary,
   children,
 }: {
-  drawerState: RecoilState<AllDrawersState>;
+  drawerState: PrimitiveAtom<AllDrawersState>;
   errorBoundary: ErrorBoundaryComponent;
   children: React.ReactNode;
 } & EnsureAssignedTogether<{left: NonNullReactElement; leftLabel: NonNullReactElement}> &
@@ -108,7 +108,7 @@ export function Drawer({
   errorBoundary,
   children,
 }: {
-  stateAtom: RecoilState<AllDrawersState>;
+  stateAtom: PrimitiveAtom<AllDrawersState>;
   side: Side;
   label: React.ReactNode;
   errorBoundary: ErrorBoundaryComponent;
@@ -117,7 +117,7 @@ export function Drawer({
   const isVertical = side === 'top' || side === 'bottom';
   const dragHandleElement = useRef<HTMLDivElement>(null);
 
-  const [drawerState, setDrawerState] = useRecoilState(stateAtom);
+  const [drawerState, setDrawerState] = useAtom(stateAtom);
   const state = drawerState[side];
   const isExpanded = !state.collapsed;
 

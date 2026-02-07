@@ -16,9 +16,8 @@ import PullRequestTimelineCommentInput from './PullRequestTimelineCommentInput';
 import {APP_HEADER_HEIGHT} from './constants';
 import {gitHubOrgAndRepoAtom, gitHubPullRequestIDAtom} from './jotai';
 import {Box, Text} from '@primer/react';
-import {useSetAtom} from 'jotai';
+import {atom, useSetAtom} from 'jotai';
 import React, {Component, Suspense, useEffect} from 'react';
-import {atom, useSetRecoilState} from 'recoil';
 import {Drawers} from 'shared/Drawers';
 
 import './PullRequestLayout.css';
@@ -27,14 +26,11 @@ const HEADER_HEIGHT = 100;
 const TOTAL_HEADER_HEIGHT = HEADER_HEIGHT + APP_HEADER_HEIGHT;
 const COMMENT_INPUT_HEIGHT = 125;
 
-const drawerState = atom<AllDrawersState>({
-  key: 'drawerState',
-  default: {
-    right: {size: 500, collapsed: false},
-    left: {size: 200, collapsed: true},
-    top: {size: 200, collapsed: true},
-    bottom: {size: 200, collapsed: true},
-  },
+const drawerStateAtom = atom<AllDrawersState>({
+  right: {size: 500, collapsed: false},
+  left: {size: 200, collapsed: true},
+  top: {size: 200, collapsed: true},
+  bottom: {size: 200, collapsed: true},
 });
 
 export default function PullRequestLayout({
@@ -57,7 +53,7 @@ export default function PullRequestLayout({
     setPullRequestID(number);
   }, [number, setPullRequestID]);
 
-  const setDrawerState = useSetRecoilState(drawerState);
+  const setDrawerState = useSetAtom(drawerStateAtom);
   useCommand('ToggleSidebar', () => {
     setDrawerState(state => ({
       ...state,
@@ -70,7 +66,7 @@ export default function PullRequestLayout({
       <PullRequestHeader height={HEADER_HEIGHT} />
       <Suspense fallback={<CenteredSpinner message="Loading pull request..." />}>
         <Drawers
-          drawerState={drawerState}
+          drawerState={drawerStateAtom}
           errorBoundary={ErrorBoundary}
           rightLabel={<Text className="drawer-label-text">...</Text>}
           right={<TimelineDrawer />}>
