@@ -13,28 +13,27 @@ import {
   gitHubClientAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestLabelsAtom,
-  gitHubPullRequestViewerDidAuthorAtom,
+  gitHubPullRequestViewerCanUpdateAtom,
+  notificationMessageAtom,
 } from './jotai';
 import {GearIcon} from '@primer/octicons-react';
 import {ActionMenu, Box, Button, IssueLabelToken} from '@primer/react';
-import {useAtom, useAtomValue} from 'jotai';
-import {loadable} from 'jotai/utils';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useCallback, useEffect, useMemo} from 'react';
 import {notEmpty} from 'shared/utils';
 
 export default function PullRequestLabels(): React.ReactElement {
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const [pullRequestLabels, setPullRequestLabels] = useAtom(gitHubPullRequestLabelsAtom);
-  const viewerDidAuthor = useAtomValue(gitHubPullRequestViewerDidAuthorAtom);
+  const viewerCanUpdate = useAtomValue(gitHubPullRequestViewerCanUpdateAtom);
+  const setNotification = useSetAtom(notificationMessageAtom);
   const existingLabelIDs = useMemo(
     () => new Set(pullRequestLabels.map(({id}) => id)),
     [pullRequestLabels],
   );
 
-  // Load the GitHub client asynchronously
-  const loadableClient = useMemo(() => loadable(gitHubClientAtom), []);
-  const clientLoadable = useAtomValue(loadableClient);
-  const client = clientLoadable.state === 'hasData' ? clientLoadable.data : null;
+  // Client is already loaded by the time we're modifying labels
+  const client = useAtomValue(gitHubClientAtom);
 
   // Initialize pullRequestLabels state using pullRequest once it is available.
   useEffect(() => {
@@ -55,6 +54,7 @@ export default function PullRequestLabels(): React.ReactElement {
         return Promise.reject('pull request not found');
       }
 
+      const previousLabels = pullRequestLabels;
       try {
         // When adding or removing a label, optimistically update
         // pullRequestLabels and the UI instead of waiting for the respective
@@ -76,16 +76,21 @@ export default function PullRequestLabels(): React.ReactElement {
             labelIds: [id],
           });
         }
-      } catch {
+      } catch (e) {
         // If there is an error, roll back the update by resetting
         // pullRequestLabels to its previous value.
-        setPullRequestLabels(pullRequestLabels);
+        setPullRequestLabels(previousLabels);
+        const message = e instanceof Error ? e.message : String(e);
+        setNotification({
+          type: 'error',
+          message: `Failed to update labels: ${message}`,
+        });
       }
     },
-    [client, pullRequest, pullRequestLabels, setPullRequestLabels],
+    [client, pullRequest, pullRequestLabels, setPullRequestLabels, setNotification],
   );
 
-  const label = !viewerDidAuthor ? (
+  const label = !viewerCanUpdate ? (
     <FieldLabel label="Labels" />
   ) : (
     <ActionMenu>
@@ -107,7 +112,7 @@ export default function PullRequestLabels(): React.ReactElement {
             key={id}
             text={name}
             fillColor={`#${color}`}
-            onRemove={!viewerDidAuthor ? undefined : () => updateLabels({id, name, color}, true)}
+            onRemove={!viewerCanUpdate ? undefined : () => updateLabels({id, name, color}, true)}
           />
         ))}
       </Box>

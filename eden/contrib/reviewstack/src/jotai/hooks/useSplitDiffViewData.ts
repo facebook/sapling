@@ -26,11 +26,13 @@ import {
   gitHubDiffCommitIDsAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestCanAddCommentAtom,
+  gitHubPullRequestComparableVersionsAtom,
   gitHubPullRequestLineToPositionForFileAtom,
   gitHubPullRequestNewCommentInputCellAtom,
   gitHubPullRequestSelectedVersionIndexAtom,
   gitHubPullRequestVersionsAtom,
   gitHubThreadsForDiffFileAtom,
+  notificationMessageAtom,
 } from '../atoms';
 import {useAtomValue, useSetAtom, useStore} from 'jotai';
 import {loadable} from 'jotai/utils';
@@ -103,6 +105,7 @@ export function useSplitDiffViewData(
   const store = useStore();
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const setCellAtom = useSetAtom(gitHubPullRequestNewCommentInputCellAtom);
+  const setNotification = useSetAtom(notificationMessageAtom);
 
   const onShowNewCommentInput = useCallback(
     (event: React.MouseEvent<HTMLTableElement>) => {
@@ -132,12 +135,30 @@ export function useSplitDiffViewData(
         gitHubPullRequestCanAddCommentAtom({lineNumber, path, side}),
       );
       if (!canAddComment) {
+        // Check why we can't add a comment and show appropriate message
+        const versions = store.get(gitHubPullRequestVersionsAtom);
+        const selectedVersionIndex = store.get(gitHubPullRequestSelectedVersionIndexAtom);
+        const comparableVersions = store.get(gitHubPullRequestComparableVersionsAtom);
+
+        if (selectedVersionIndex !== versions.length - 1) {
+          setNotification({
+            type: 'info',
+            message:
+              'Comments can only be added when viewing the latest version of the pull request.',
+          });
+        } else if (comparableVersions?.beforeCommitID != null && side === DiffSide.Left) {
+          setNotification({
+            type: 'info',
+            message:
+              'Comments cannot be added to the left side when comparing versions. The left side shows an older revision that is no longer part of the pull request.',
+          });
+        }
         return;
       }
 
       setCellAtom({path, lineNumber, side});
     },
-    [store, setCellAtom],
+    [store, setCellAtom, setNotification],
   );
 
   const onResetNewCommentInput = useCallback(() => {

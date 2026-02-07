@@ -12,6 +12,7 @@ import {ErrorBoundary} from './ErrorBoundary';
 import GitHubProjectPage from './GitHubProjectPage';
 import {ShortcutCommandContext} from './KeyboardShortcuts';
 import LoginDialog from './LoginDialog';
+import NotificationBanner from './NotificationBanner';
 import PrimerStyles from './PrimerStyles';
 import PullRequestLayout from './PullRequestLayout';
 import PullsView from './PullsView';
@@ -68,6 +69,7 @@ export default function App({page}: {page: Page}): React.ReactElement {
           <Box bg="canvas.default" fontFamily="normal" className="reviewstack">
             <ContentOrLoginDialog page={page} />
           </Box>
+          <NotificationBanner />
         </BaseStyles>
       </ShortcutCommandContext>
     </div>

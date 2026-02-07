@@ -7,7 +7,7 @@
 
 import type {ChangeEvent, KeyboardEvent} from 'react';
 
-import {Box, Button, Textarea} from '@primer/react';
+import {Box, Button, Flash, Textarea} from '@primer/react';
 import {useCallback, useRef, useState} from 'react';
 
 type Props = {
@@ -29,6 +29,28 @@ type Props = {
   actionSelector?: React.ReactNode;
 };
 
+/**
+ * Convert API error messages to user-friendly messages.
+ */
+function formatErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+
+  // Handle specific GitHub API errors with user-friendly messages
+  if (message.includes('end commit oid is not part of the pull request')) {
+    return 'Cannot add comment: the commit you are viewing is no longer part of this pull request. This can happen after a force push. Try refreshing and viewing the latest version.';
+  }
+
+  if (message.includes('client not found')) {
+    return 'Cannot add comment: not connected to GitHub. Please try refreshing the page.';
+  }
+
+  if (message.includes('pull request not found') || message.includes('pull request id not found')) {
+    return 'Cannot add comment: pull request not found. Please try refreshing the page.';
+  }
+
+  return `Failed to add comment: ${message}`;
+}
+
 export default function PullRequestCommentInput({
   addComment,
   resetInputAfterAddingComment,
@@ -40,25 +62,29 @@ export default function PullRequestCommentInput({
 }: Props): React.ReactElement {
   const [comment, setComment] = useState<string>('');
   const [disabled, setDisabled] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const onChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
       const value = e.currentTarget.value;
       setComment(value);
+      // Clear error when user starts typing again
+      if (error != null) {
+        setError(null);
+      }
     },
-    [setComment],
+    [setComment, error],
   );
 
   const onAddComment = useCallback(async () => {
     setDisabled(true);
+    setError(null);
 
     try {
       await addComment(comment);
     } catch (e) {
-      // TODO: Show dialog box to user rather than just dump it to the console
-      // for debugging?
-      // eslint-disable-next-line no-console
-      console.error('addComment failed', e);
+      const errorMessage = formatErrorMessage(e);
+      setError(errorMessage);
       // If adding the comment fails, let the user try again.
       setDisabled(false);
       return;
@@ -103,6 +129,11 @@ export default function PullRequestCommentInput({
       borderTopStyle="solid"
       padding={1}
       width="100%">
+      {error != null && (
+        <Flash variant="danger" sx={{marginBottom: 2}}>
+          {error}
+        </Flash>
+      )}
       <Textarea
         value={comment}
         onChange={onChange}

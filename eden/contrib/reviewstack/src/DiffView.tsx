@@ -12,10 +12,10 @@ import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffView from './SplitDiffView';
 import hasBinaryContent from './hasBinaryContent';
 import joinPath from './joinPath';
-import {fileContentsDelta, gitHubBlob} from './recoil';
+import {fileContentsDeltaAtom, gitHubBlobAtom} from './jotai/atoms';
 import {Box, Text} from '@primer/react';
-import React, {Suspense} from 'react';
-import {useRecoilValueLoadable} from 'recoil';
+import {useAtomValue} from 'jotai';
+import React, {Suspense, useMemo} from 'react';
 
 function DiffFileSkeleton(): React.ReactElement {
   return (
@@ -83,104 +83,73 @@ function AddedFile({
   isPullRequest: boolean;
 }) {
   const path = joinPath(basePath, name);
-  const blobLoadable = useRecoilValueLoadable(gitHubBlob(oid));
-  switch (blobLoadable.state) {
-    case 'hasValue': {
-      const {contents: blob} = blobLoadable;
-      const {isBinary, text} = blob ?? {};
-      // Check both the isBinary flag and perform our own binary content detection
-      if (text != null && !isBinary && !hasBinaryContent(text)) {
-        return (
-          <SplitDiffView path={path} before={null} after={oid} isPullRequest={isPullRequest} />
-        );
-      } else {
-        return <BinaryFile path={path} />;
-      }
-    }
-    case 'loading': {
-      // Trigger suspense while loading
-      blobLoadable.getValue();
-      return <div>{`loading patch for ${path}`}</div>;
-    }
-    case 'hasError': {
-      return <div>{`error loading ${path}`}</div>;
-    }
+  const blobAtom = useMemo(() => gitHubBlobAtom(oid), [oid]);
+  const blob = useAtomValue(blobAtom);
+  const {isBinary, text} = blob ?? {};
+  // Check both the isBinary flag and perform our own binary content detection
+  if (text != null && !isBinary && !hasBinaryContent(text)) {
+    return (
+      <SplitDiffView path={path} before={null} after={oid} isPullRequest={isPullRequest} />
+    );
+  } else {
+    return <BinaryFile path={path} />;
   }
 }
 
 function RemovedFile({basePath, name, oid}: {basePath: string; name: string; oid: GitObjectID}) {
   const path = joinPath(basePath, name);
-  const blobLoadable = useRecoilValueLoadable(gitHubBlob(oid));
-  switch (blobLoadable.state) {
-    case 'hasValue': {
-      return (
-        <div>
-          <FileHeader path={path} />
-          <div className="patch-remove-line">File removed.</div>
-        </div>
-      );
-    }
-    case 'loading': {
-      // Trigger suspense while loading
-      blobLoadable.getValue();
-      return <div>{`loading patch for ${path}`}</div>;
-    }
-    case 'hasError': {
-      return <div>{`error loading ${path}`}</div>;
-    }
-  }
+  const blobAtom = useMemo(() => gitHubBlobAtom(oid), [oid]);
+  // useAtomValue will suspend until the blob is loaded
+  useAtomValue(blobAtom);
+  return (
+    <div>
+      <FileHeader path={path} />
+      <div className="patch-remove-line">File removed.</div>
+    </div>
+  );
 }
 
 function ModifiedFile({modify, isPullRequest}: {modify: ModifyChange; isPullRequest: boolean}) {
   const {basePath, before, after} = modify;
   const path = joinPath(basePath, before.name);
-  const fileMod = {
-    before: before.oid,
-    after: after.oid,
-    path,
-  };
-  const fileModLoadable = useRecoilValueLoadable(fileContentsDelta(fileMod));
-  switch (fileModLoadable.state) {
-    case 'hasValue': {
-      const {contents: delta} = fileModLoadable;
-      const {before, after} = delta;
-      if (before == null || after == null) {
-        // Something went wrong?
-        return null;
-      }
+  const fileMod = useMemo(
+    () => ({
+      before: before.oid,
+      after: after.oid,
+      path,
+    }),
+    [before.oid, after.oid, path],
+  );
+  const fileModAtom = useMemo(() => fileContentsDeltaAtom(fileMod), [fileMod]);
+  const delta = useAtomValue(fileModAtom);
+  const {before: beforeBlob, after: afterBlob} = delta;
+  if (beforeBlob == null || afterBlob == null) {
+    // Something went wrong?
+    return null;
+  }
 
-      // Check both the isBinary flag and perform our own binary content detection
-      if (
-        before.isBinary ||
-        after.isBinary ||
-        hasBinaryContent(before.text) ||
-        hasBinaryContent(after.text)
-      ) {
-        // We could handle this more gracefully, particularly if only one of the
-        // two files is binary, but this is good enough, for now.
-        return <BinaryFile path={path} />;
-      } else if (before.text == null || after.text == null) {
-        // Something went wrong?
-        return null;
-      } else {
-        return (
-          <SplitDiffView
-            path={path}
-            before={before.oid}
-            after={after.oid}
-            isPullRequest={isPullRequest}
-          />
-        );
-      }
-    }
-    case 'loading': {
-      // Trigger suspense while loading
-      fileModLoadable.getValue();
-      return <div>{`loading patch for ${path}`}</div>;
-    }
-    case 'hasError': {
-      return <div>{`error loading ${path}`}</div>;
-    }
+  // Check both the isBinary flag and perform our own binary content detection
+  if (
+    beforeBlob.isBinary ||
+    afterBlob.isBinary ||
+    hasBinaryContent(beforeBlob.text) ||
+    hasBinaryContent(afterBlob.text)
+  ) {
+    // We could handle this more gracefully, particularly if only one of the
+    // two files is binary, but this is good enough, for now.
+    return <BinaryFile path={path} />;
+  } else if (beforeBlob.text == null || afterBlob.text == null) {
+    // Something went wrong?
+    return null;
+  } else {
+    return (
+      <SplitDiffView
+        path={path}
+        before={beforeBlob.oid}
+        after={afterBlob.oid}
+        isPullRequest={isPullRequest}
+      />
+    );
   }
 }
 

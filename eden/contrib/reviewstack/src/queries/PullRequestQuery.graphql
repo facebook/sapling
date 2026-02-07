@@ -19,6 +19,7 @@ query PullRequestQuery(
       baseRefOid
       state
       reviewDecision
+      viewerCanUpdate
       viewerDidAuthor
       timelineItems(
         first: $numTimelineItems

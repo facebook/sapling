@@ -10,25 +10,28 @@ import type {ChangeEvent} from 'react';
 
 import {gitHubRepoLabels, gitHubRepoLabelsQuery} from './jotai';
 import useDebounced from './useDebounced';
-import {ActionList, Box, TextInput} from '@primer/react';
+import {ActionList, Box, Spinner, TextInput} from '@primer/react';
 import {useAtom, useAtomValue} from 'jotai';
-import {loadable} from 'jotai/utils';
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {Suspense, useCallback, useEffect, useState} from 'react';
 
 type Props = {
   existingLabelIDs: Set<string>;
   onSelect: (label: LabelFragment, isExisting: boolean) => void;
 };
 
-// eslint-disable-next-line prefer-arrow-callback
-export default React.memo(function RepoLabelsInput({
+function LoadingFallback(): React.ReactElement {
+  return (
+    <Box display="flex" justifyContent="center" padding={3}>
+      <Spinner size="medium" />
+    </Box>
+  );
+}
+
+function RepoLabelsInputInner({
   existingLabelIDs,
   onSelect,
 }: Props): React.ReactElement {
-  const loadableRepoLabels = useMemo(() => loadable(gitHubRepoLabels), []);
-  const repoLabelsLoadable = useAtomValue(loadableRepoLabels);
-  const repoLabels: LabelFragment[] | undefined =
-    repoLabelsLoadable.state === 'hasData' ? repoLabelsLoadable.data : undefined;
+  const repoLabels = useAtomValue(gitHubRepoLabels);
   const [query, setQuery] = useAtom(gitHubRepoLabelsQuery);
   const [queryInput, setQueryInput] = useState(query);
   const setQueryAtom = useDebounced(setQuery);
@@ -54,15 +57,10 @@ export default React.memo(function RepoLabelsInput({
   return (
     <ActionList selectionVariant="single">
       <Box display="flex" flexDirection="column" alignItems="stretch" padding={1}>
-        <TextInput
-          value={queryInput}
-          onChange={onChange}
-          loading={repoLabels == null}
-          placeholder="Search labels"
-        />
+        <TextInput value={queryInput} onChange={onChange} placeholder="Search labels" />
       </Box>
       <ActionList.Divider />
-      {(repoLabels ?? []).map(({id, name, color}) => (
+      {repoLabels.map(({id, name, color}) => (
         <ActionList.Item
           key={id}
           selected={existingLabelIDs.has(id)}
@@ -74,6 +72,15 @@ export default React.memo(function RepoLabelsInput({
         </ActionList.Item>
       ))}
     </ActionList>
+  );
+}
+
+// eslint-disable-next-line prefer-arrow-callback
+export default React.memo(function RepoLabelsInput(props: Props): React.ReactElement {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <RepoLabelsInputInner {...props} />
+    </Suspense>
   );
 });
 

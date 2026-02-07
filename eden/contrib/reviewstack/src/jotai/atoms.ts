@@ -12,7 +12,6 @@
 
 import type {
   CheckRunFragment,
-  DiffSide,
   LabelFragment,
   UserFragment,
   UserHomePageQueryData,
@@ -36,7 +35,7 @@ import type {
   VersionCommit,
 } from '../github/types';
 
-import {UserHomePageQuery} from '../generated/graphql';
+import {DiffSide, UserHomePageQuery} from '../generated/graphql';
 import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
 import GraphQLGitHubClient from '../github/GraphQLGitHubClient';
 import {diffCommitWithParent, diffCommits} from '../github/diff';
@@ -248,11 +247,22 @@ export const gitHubPullRequestAtom = atom<PullRequest | null>(null);
  * Migrated from: gitHubPullRequestViewerDidAuthor in recoil.ts
  *
  * Derived atom that indicates if the current viewer authored the PR.
- * Used to conditionally show edit controls (labels, reviewers, etc.)
+ * Used to determine author-specific behavior (e.g., different review actions).
+ * For edit permissions, use gitHubPullRequestViewerCanUpdateAtom instead.
  */
 export const gitHubPullRequestViewerDidAuthorAtom = atom<boolean>(get => {
   const pullRequest = get(gitHubPullRequestAtom);
   return pullRequest?.viewerDidAuthor ?? false;
+});
+
+/**
+ * Derived atom that indicates if the current viewer can update the PR.
+ * This is true for both authors AND collaborators with appropriate permissions.
+ * Use this for edit controls (labels, reviewers, etc.)
+ */
+export const gitHubPullRequestViewerCanUpdateAtom = atom<boolean>(get => {
+  const pullRequest = get(gitHubPullRequestAtom);
+  return pullRequest?.viewerCanUpdate ?? false;
 });
 
 // =============================================================================
@@ -1162,6 +1172,8 @@ export const gitHubPullRequestPositionForLineAtom = atomFamily(
  * Requirements:
  * - The line must have a valid "position" value (appears in the canonical diff)
  * - The commit must be part of the latest version (currently exists in the PR)
+ * - If comparing versions (beforeCommitID is set), cannot comment on the left side
+ *   because that commit is from an older version that may no longer be in the PR
  */
 export const gitHubPullRequestCanAddCommentAtom = atomFamily(
   ({lineNumber, path, side}: {lineNumber: number | null; path: string; side: DiffSide}) =>
@@ -1176,11 +1188,42 @@ export const gitHubPullRequestCanAddCommentAtom = atomFamily(
       }
 
       const position = get(gitHubPullRequestPositionForLineAtom({line: lineNumber, path, side}));
+      if (position == null) {
+        return false;
+      }
+
       const versions = get(gitHubPullRequestVersionsAtom);
       const selectedVersionIndex = get(gitHubPullRequestSelectedVersionIndexAtom);
 
-      return position != null && selectedVersionIndex === versions.length - 1;
+      // Must be viewing the latest version to add comments
+      if (selectedVersionIndex !== versions.length - 1) {
+        return false;
+      }
+
+      // If comparing versions (beforeCommitID is set), cannot comment on the left side
+      // because that commit is from an older version that may no longer be in the PR
+      const comparableVersions = get(gitHubPullRequestComparableVersionsAtom);
+      if (comparableVersions?.beforeCommitID != null && side === DiffSide.Left) {
+        return false;
+      }
+
+      return true;
     }),
   (a, b) => a.lineNumber === b.lineNumber && a.path === b.path && a.side === b.side,
 );
+
+// =============================================================================
+// Notification Atoms
+// =============================================================================
+
+/**
+ * A simple notification message to display to the user.
+ * Set to null to dismiss the notification.
+ */
+export type NotificationMessage = {
+  type: 'info' | 'warning' | 'error';
+  message: string;
+} | null;
+
+export const notificationMessageAtom = atom<NotificationMessage>(null);
 

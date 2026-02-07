@@ -14,27 +14,26 @@ import {
   gitHubClientAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestReviewersAtom,
-  gitHubPullRequestViewerDidAuthorAtom,
+  gitHubPullRequestViewerCanUpdateAtom,
+  notificationMessageAtom,
 } from './jotai';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {GearIcon} from '@primer/octicons-react';
 import {ActionMenu, AvatarToken, Box, Button} from '@primer/react';
-import {useAtom, useAtomValue} from 'jotai';
-import {loadable} from 'jotai/utils';
-import {useCallback, useEffect, useMemo} from 'react';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {useCallback, useEffect} from 'react';
 import {useRecoilValue} from 'recoil';
 
 export default function PullRequestReviewers(): React.ReactElement {
   const refreshPullRequest = useRefreshPullRequest();
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const [pullRequestReviewers, setPullRequestReviewers] = useAtom(gitHubPullRequestReviewersAtom);
-  const viewerDidAuthor = useAtomValue(gitHubPullRequestViewerDidAuthorAtom);
+  const viewerCanUpdate = useAtomValue(gitHubPullRequestViewerCanUpdateAtom);
+  const setNotification = useSetAtom(notificationMessageAtom);
   const username = useRecoilValue(gitHubUsername);
 
-  // Load the GitHub client asynchronously
-  const loadableClient = useMemo(() => loadable(gitHubClientAtom), []);
-  const clientLoadable = useAtomValue(loadableClient);
-  const client = clientLoadable.state === 'hasData' ? clientLoadable.data : null;
+  // Client is already loaded by the time we're modifying reviewers
+  const client = useAtomValue(gitHubClientAtom);
 
   // Initialize pullRequestReviewers state using pullRequest once it is available.
   useEffect(() => {
@@ -83,6 +82,7 @@ export default function PullRequestReviewers(): React.ReactElement {
         return Promise.reject('pull request not found');
       }
 
+      const previousReviewers = pullRequestReviewers;
       try {
         // When adding or removing a reviewer, optimistically update
         // pullRequestReviewers and the UI instead of waiting for the respective
@@ -103,16 +103,21 @@ export default function PullRequestReviewers(): React.ReactElement {
           userIds: [...reviewerIDs],
         });
         refreshPullRequest();
-      } catch {
+      } catch (e) {
         // If there is an error, roll back the update by resetting
         // pullRequestReviewers to its previous value.
-        setPullRequestReviewers(pullRequestReviewers);
+        setPullRequestReviewers(previousReviewers);
+        const message = e instanceof Error ? e.message : String(e);
+        setNotification({
+          type: 'error',
+          message: `Failed to update reviewers: ${message}`,
+        });
       }
     },
-    [client, pullRequest, pullRequestReviewers, refreshPullRequest, setPullRequestReviewers],
+    [client, pullRequest, pullRequestReviewers, refreshPullRequest, setPullRequestReviewers, setNotification],
   );
 
-  const label = !viewerDidAuthor ? (
+  const label = !viewerCanUpdate ? (
     <FieldLabel label="Reviewers" />
   ) : (
     <ActionMenu>
@@ -138,7 +143,7 @@ export default function PullRequestReviewers(): React.ReactElement {
             avatarSrc={user.avatarUrl}
             text={user.login}
             size="large"
-            onRemove={!viewerDidAuthor ? undefined : () => updateReviewers(user, true)}
+            onRemove={!viewerCanUpdate ? undefined : () => updateReviewers(user, true)}
           />
         ))}
       </Box>

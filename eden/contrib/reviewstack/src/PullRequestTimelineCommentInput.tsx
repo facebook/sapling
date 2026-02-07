@@ -11,8 +11,7 @@ import {PullRequestReviewEvent} from './generated/graphql';
 import {gitHubClientAtom, gitHubPullRequestAtom, gitHubPullRequestPendingReviewIDAtom} from './jotai';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {useAtomValue} from 'jotai';
-import {loadable} from 'jotai/utils';
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useState} from 'react';
 
 export default function PullRequestTimelineCommentInput(): React.ReactElement {
   const pendingReviewID = useAtomValue(gitHubPullRequestPendingReviewIDAtom);
@@ -20,10 +19,8 @@ export default function PullRequestTimelineCommentInput(): React.ReactElement {
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
   const [event, setEvent] = useState(PullRequestReviewEvent.Comment);
 
-  // Load the GitHub client asynchronously
-  const loadableClient = useMemo(() => loadable(gitHubClientAtom), []);
-  const clientLoadable = useAtomValue(loadableClient);
-  const client = clientLoadable.state === 'hasData' ? clientLoadable.data : null;
+  // Client is already loaded by the time we're adding a comment
+  const client = useAtomValue(gitHubClientAtom);
 
   const addComment = useCallback(
     async (comment: string) => {

@@ -11,8 +11,7 @@ import PullRequestCommentInput from './PullRequestCommentInput';
 import {gitHubClientAtom, gitHubPullRequestAtom} from './jotai';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {useAtomValue} from 'jotai';
-import {loadable} from 'jotai/utils';
-import {useCallback, useMemo} from 'react';
+import {useCallback} from 'react';
 
 type Props = {
   commentID: ID;
@@ -28,10 +27,8 @@ export default function PullRequestInlineCommentInput({
   const refreshPullRequest = useRefreshPullRequest();
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
 
-  // Load the GitHub client asynchronously
-  const loadableClient = useMemo(() => loadable(gitHubClientAtom), []);
-  const clientLoadable = useAtomValue(loadableClient);
-  const client = clientLoadable.state === 'hasData' ? clientLoadable.data : null;
+  // Client is already loaded by the time we're adding a comment
+  const client = useAtomValue(gitHubClientAtom);
 
   const addComment = useCallback(
     async (comment: string) => {

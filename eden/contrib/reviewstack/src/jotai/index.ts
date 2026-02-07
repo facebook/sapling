@@ -26,6 +26,7 @@ export {
   gitHubPullRequestIDAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestViewerDidAuthorAtom,
+  gitHubPullRequestViewerCanUpdateAtom,
   gitHubCurrentCommitAtom,
   gitHubDiffForCurrentCommitAtom,
   gitHubDiffCommitIDsForCommitViewAtom,
@@ -56,6 +57,9 @@ export {
   gitHubPullRequestPositionForLineAtom,
   gitHubPullRequestCanAddCommentAtom,
   pendingScrollRestoreAtom,
+  gitHubBlobAtom,
+  fileContentsDeltaAtom,
+  notificationMessageAtom,
 } from './atoms';
 
 export type {
@@ -68,4 +72,7 @@ export type {
   CheckRun,
   NewCommentInputCell,
   PendingScrollRestore,
+  FileMod,
+  FileContentsDelta,
+  NotificationMessage,
 } from './atoms';

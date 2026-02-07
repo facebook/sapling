@@ -10,25 +10,28 @@ import type {ChangeEvent} from 'react';
 
 import {gitHubRepoAssignableUsers, gitHubRepoAssignableUsersQuery} from './jotai';
 import useDebounced from './useDebounced';
-import {ActionList, Avatar, Box, TextInput} from '@primer/react';
+import {ActionList, Avatar, Box, Spinner, TextInput} from '@primer/react';
 import {useAtom, useAtomValue} from 'jotai';
-import {loadable} from 'jotai/utils';
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {Suspense, useCallback, useEffect, useState} from 'react';
 
 type Props = {
   existingUserIDs: ReadonlySet<string>;
   onSelect: (user: UserFragment, isExisting: boolean) => void;
 };
 
-// eslint-disable-next-line prefer-arrow-callback
-export default React.memo(function RepoAssignableUsersInput({
+function LoadingFallback(): React.ReactElement {
+  return (
+    <Box display="flex" justifyContent="center" padding={3}>
+      <Spinner size="medium" />
+    </Box>
+  );
+}
+
+function RepoAssignableUsersInputInner({
   existingUserIDs,
   onSelect,
 }: Props): React.ReactElement {
-  const loadableUsers = useMemo(() => loadable(gitHubRepoAssignableUsers), []);
-  const usersLoadable = useAtomValue(loadableUsers);
-  const users: UserFragment[] | undefined =
-    usersLoadable.state === 'hasData' ? usersLoadable.data : undefined;
+  const users = useAtomValue(gitHubRepoAssignableUsers);
   const [query, setQuery] = useAtom(gitHubRepoAssignableUsersQuery);
   const [queryInput, setQueryInput] = useState(query);
   const setQueryAtom = useDebounced(setQuery);
@@ -54,15 +57,10 @@ export default React.memo(function RepoAssignableUsersInput({
   return (
     <ActionList selectionVariant="single">
       <Box display="flex" flexDirection="column" alignItems="stretch" padding={1}>
-        <TextInput
-          value={queryInput}
-          onChange={onChange}
-          loading={users == null}
-          placeholder="Search users"
-        />
+        <TextInput value={queryInput} onChange={onChange} placeholder="Search users" />
       </Box>
       <ActionList.Divider />
-      {(users ?? []).map(user => (
+      {users.map(user => (
         <ActionList.Item
           key={user.id}
           selected={existingUserIDs.has(user.id)}
@@ -74,5 +72,14 @@ export default React.memo(function RepoAssignableUsersInput({
         </ActionList.Item>
       ))}
     </ActionList>
+  );
+}
+
+// eslint-disable-next-line prefer-arrow-callback
+export default React.memo(function RepoAssignableUsersInput(props: Props): React.ReactElement {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <RepoAssignableUsersInputInner {...props} />
+    </Suspense>
   );
 });

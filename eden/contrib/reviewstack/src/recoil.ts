@@ -29,7 +29,7 @@ import {lineToPosition} from './diffServiceClient';
 import {DiffSide} from './generated/graphql';
 import CachingGitHubClient, {openDatabase} from './github/CachingGitHubClient';
 import GraphQLGitHubClient from './github/GraphQLGitHubClient';
-import {diffCommits, diffCommitWithParent} from './github/diff';
+import {diffCommits} from './github/diff';
 import {
   gitHubHostname,
   gitHubTokenPersistence,
@@ -52,24 +52,6 @@ export const gitHubOrgAndRepo = atom<GitHubOrgAndRepo | null>({
 export const gitHubCommitID = atom<GitObjectID | null>({
   key: 'gitHubCommitID',
   default: null,
-});
-
-export const gitHubPullRequestID = atom<number | null>({
-  key: 'gitHubPullRequestID',
-  default: null,
-});
-
-export const gitHubCurrentCommit = selector<Commit | null>({
-  key: 'gitHubCurrentCommit',
-  get: ({get}) => {
-    const client = get(gitHubClient);
-    const oid = get(gitHubCommitID);
-    if (client != null && oid != null) {
-      return client.getCommit(oid);
-    } else {
-      return null;
-    }
-  },
 });
 
 export type GitHubPullRequestParams = {
@@ -494,16 +476,6 @@ export const gitHubCommitComparison = selectorFamily<
 });
 
 
-export const gitHubDiffForCommitID = selectorFamily<DiffWithCommitIDs | null, GitObjectID>({
-  key: 'gitHubDiffForCommitID',
-  get:
-    (oid: GitObjectID) =>
-    ({get}) => {
-      const [client, commit] = get(waitForAll([gitHubClient, gitHubCommit(oid)]));
-      return client != null && commit != null ? diffCommitWithParent(commit, client) : null;
-    },
-});
-
 export const gitHubDiffForCommits = selectorFamily<
   DiffWithCommitIDs | null,
   {baseCommitID: GitObjectID; commitID: GitObjectID}
@@ -556,7 +528,7 @@ const databaseConnection = selector<IDBDatabase>({
   dangerouslyAllowMutability: ALLOW_MUTABILITY_FOR_GITHUB_CLIENT,
 });
 
-export const gitHubBlob = selectorFamily<Blob | null, string>({
+const gitHubBlob = selectorFamily<Blob | null, string>({
   key: 'gitHubBlob',
   get:
     (oid: string) =>
@@ -566,30 +538,7 @@ export const gitHubBlob = selectorFamily<Blob | null, string>({
     },
 });
 
-type FileMod = {
-  before: GitObjectID | null;
-  after: GitObjectID | null;
-  path: string;
-};
-
-export type FileContentsDelta = {before: Blob | null; after: Blob | null};
-
 export const nullAtom: RecoilValueReadOnly<null> = constSelector(null);
-
-export const fileContentsDelta = selectorFamily<FileContentsDelta, FileMod>({
-  key: 'fileContentsDelta',
-  get:
-    (mod: FileMod) =>
-    ({get}) => {
-      const [before, after] = get(
-        waitForAll([
-          mod.before != null ? gitHubBlob(mod.before) : nullAtom,
-          mod.after != null ? gitHubBlob(mod.after) : nullAtom,
-        ]),
-      );
-      return {before, after};
-    },
-});
 
 /**
  * GitHub comments are attached to diffs and not commits, with placement

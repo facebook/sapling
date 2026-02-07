@@ -17,7 +17,6 @@ import {
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {Box, Text} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
-import {loadable} from 'jotai/utils';
 import {useMemo, useCallback} from 'react';
 
 type Props = {
@@ -31,10 +30,8 @@ export default function PullRequestNewCommentInput({line, path, side}: Props): R
   const onCancel = useCallback(() => setCellAtom(null), [setCellAtom]);
   const refreshPullRequest = useRefreshPullRequest();
 
-  // Use Jotai loadable pattern for async client access in callbacks
-  const loadableClient = useMemo(() => loadable(gitHubClientAtom), []);
-  const clientLoadable = useAtomValue(loadableClient);
-  const client = clientLoadable.state === 'hasData' ? clientLoadable.data : null;
+  // Client is already loaded by the time we're adding a comment
+  const client = useAtomValue(gitHubClientAtom);
 
   // Read pull request and comparable versions from Jotai
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
