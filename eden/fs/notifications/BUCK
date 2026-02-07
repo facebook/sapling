@@ -58,15 +58,6 @@ cpp_library(
     name = "windows_notifier",
     srcs = ["WindowsNotifier.cpp"],
     headers = ["WindowsNotifier.h"],
-    os_deps = [
-        (
-            "windows",
-            [
-                "fbsource//third-party/toolchains/win:ComCtl32.Lib",
-                "fbsource//third-party/toolchains/win:shell32.lib",
-            ],
-        ),
-    ],
     os_linker_flags = [
         (
             "windows",
@@ -84,7 +75,13 @@ cpp_library(
         "//eden/fs/telemetry:log_info",
         "//folly/futures:core",
         "//folly/portability:windows",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/toolchains/win:ComCtl32.Lib",
+            "fbsource//third-party/toolchains/win:shell32.lib",
+        ],
+    }),
     exported_deps = [
         ":notifier",
         "//eden/common/utils:utils",

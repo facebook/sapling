@@ -17,7 +17,83 @@ rust_library(
                 "harness": False,
                 "name": "bench",
             }],
-            "dependencies_override": {"dependencies": {"sapling-version": {"path": "../../version"}}},
+            "dependencies_override": {
+                "dependencies": {
+                    "anyhow": {"version": "1.0.98"},
+                    "dirs": {"version": "6.0"},
+                    "faccess": {"version": "0.2.4"},
+                    "filetime": {
+                        "optional": True,
+                        "version": "0.2.25",
+                    },
+                    "hostname": {"version": "0.3"},
+                    "parking_lot": {
+                        "features": ["send_guard"],
+                        "version": "0.12.1",
+                    },
+                    "regex": {
+                        "optional": True,
+                        "version": "1.12.2",
+                    },
+                    "sapling-async-runtime": {"path": "../../async-runtime"},
+                    "sapling-config-remote-loader": {"path": "../remote-loader"},
+                    "sapling-configmodel": {"path": "../model"},
+                    "sapling-configset": {"path": "../set"},
+                    "sapling-gitcompat": {"path": "../../gitcompat"},
+                    "sapling-hgplain": {"path": "../../util/hgplain"},
+                    "sapling-hgtime": {
+                        "optional": True,
+                        "path": "../../hgtime",
+                    },
+                    "sapling-http-client": {
+                        "optional": True,
+                        "path": "../../http-client",
+                    },
+                    "sapling-identity": {"path": "../../identity"},
+                    "sapling-minibytes": {"path": "../../minibytes"},
+                    "sapling-repo-minimal-info": {"path": "../../repo/repo-minimal-info"},
+                    "sapling-repourl": {"path": "../../repo/url"},
+                    "sapling-spawn-ext": {"path": "../../spawn-ext"},
+                    "sapling-staticconfig": {"path": "../static"},
+                    "sapling-types": {
+                        "optional": True,
+                        "path": "../../types",
+                    },
+                    "sapling-unionconfig": {"path": "../union"},
+                    "sapling-util": {"path": "../../util"},
+                    "sapling-version": {"path": "../../version"},
+                    "serde": {
+                        "features": [
+                            "derive",
+                            "rc",
+                        ],
+                        "optional": True,
+                        "version": "1.0.219",
+                    },
+                    "serde_json": {
+                        "features": [
+                            "alloc",
+                            "float_roundtrip",
+                            "raw_value",
+                            "unbounded_depth",
+                        ],
+                        "optional": True,
+                        "version": "1.0.140",
+                    },
+                    "serde_urlencoded": {
+                        "optional": True,
+                        "version": "0.7",
+                    },
+                    "tracing": {
+                        "features": [
+                            "attributes",
+                            "valuable",
+                        ],
+                        "version": "0.1.41",
+                    },
+                    "url": {"version": "2.5.4"},
+                },
+            },
             "extra_buck_dependencies": {"dev-dependencies": ["//eden/scm/lib/minibench:minibench"]},
             "features": {
                 "default": [],
@@ -48,12 +124,6 @@ rust_library(
     crate_root = "src/lib.rs",
     features = [
         "fb",
-    ],
-    os_deps = [
-        (
-            "linux",
-            ["//infrasec/authorization/if:if-aclchecker-rust-srclients"],
-        ),
     ],
     test_deps = [
         "fbsource//third-party/rust:once_cell",
@@ -101,7 +171,10 @@ rust_library(
         "//eden/scm/lib/version:rust_version",
         "//infrasec/authorization/if:if-aclchecker-rust-clients",
         "//infrasec/authorization/if:if-aclchecker-rust-x2pclients",
-    ]),
+    ]) + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": ["//infrasec/authorization/if:if-aclchecker-rust-srclients"],
+    }),
 )
 
 rust_binary(

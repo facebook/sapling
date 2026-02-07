@@ -20,12 +20,6 @@ cpp_library(
         "PrjfsDispatcher.h",
         "PrjfsRequestContext.h",
     ],
-    os_deps = [
-        (
-            "windows",
-            ["fbsource//third-party/toolchains/win:ProjectedFSLib.lib"],
-        ),
-    ],
     deps = [
         "fbsource//third-party/fmt:fmt",
         "//eden/common/telemetry:structured_logger",
@@ -42,7 +36,10 @@ cpp_library(
         "//folly/executors:global_executor",
         "//folly/executors:serial_executor",
         "//folly/logging:logging",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": ["fbsource//third-party/toolchains/win:ProjectedFSLib.lib"],
+    }),
     exported_deps = [
         "//eden/common/telemetry:telemetry",
         "//eden/common/utils:immediate_future",

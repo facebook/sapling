@@ -7,11 +7,11 @@ edition = "2024"
 build = "build.rs"
 
 [dependencies]
-commands = { version = "0.1.0", path = "../../lib/commands", default-features = false }
+commands = { path = "../../lib/commands", default-features = false }
 pyblackbox = { path = "../../saplingnative/bindings/modules/pyblackbox" }
-sapling-atexit = { version = "0.1.0", path = "../../lib/util/atexit" }
-sapling-clidispatch = { version = "0.1.0", path = "../../lib/clidispatch" }
-sapling-configloader = { version = "0.1.0", path = "../../lib/config/loader" }
+sapling-atexit = { path = "../../lib/util/atexit" }
+sapling-clidispatch = { path = "../../lib/clidispatch" }
+sapling-configloader = { path = "../../lib/config/loader" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [build-dependencies]
@@ -21,19 +21,19 @@ sapling-python-sysconfig = { version = "0.1.0", path = "../../lib/util/python-sy
 [target.'cfg(target_os = "linux")'.dependencies]
 dirs = { version = "6.0", optional = true }
 libc = "0.2.139"
-sapling-configmodel = { version = "0.1.0", path = "../../lib/config/model" }
-sapling-encoding = { version = "0.1.0", path = "../../lib/encoding" }
-sapling-identity = { version = "0.1.0", path = "../../lib/identity", optional = true }
-sapling-version = { version = "0.1.0", path = "../../lib/version" }
+sapling-configmodel = { path = "../../lib/config/model" }
+sapling-encoding = { path = "../../lib/encoding" }
+sapling-identity = { path = "../../lib/identity", optional = true }
+sapling-version = { path = "../../lib/version" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 dirs = { version = "6.0", optional = true }
 libc = "0.2.139"
-sapling-configmodel = { version = "0.1.0", path = "../../lib/config/model" }
-sapling-encoding = { version = "0.1.0", path = "../../lib/encoding" }
-sapling-identity = { version = "0.1.0", path = "../../lib/identity", optional = true }
-sapling-version = { version = "0.1.0", path = "../../lib/version" }
-sapling-webview-app = { version = "0.1.0", path = "../../lib/webview-app" }
+sapling-configmodel = { path = "../../lib/config/model" }
+sapling-encoding = { path = "../../lib/encoding" }
+sapling-identity = { path = "../../lib/identity", optional = true }
+sapling-version = { path = "../../lib/version" }
+sapling-webview-app = { path = "../../lib/webview-app" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 anyhow = "1.0.98"

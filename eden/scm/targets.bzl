@@ -114,40 +114,6 @@ def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
         }),
         # hgmain should be buildable by stable Rust (via cargo). Disallow nightly Rust features.
         rustc_flags = ["-Zallow-features="],
-        os_deps = [
-            (
-                "linux",
-                [
-                    "fbsource//third-party/rust:dirs",
-                    "fbsource//third-party/rust:libc",
-                    ":chg",
-                    "//eden/scm/lib/config/model:configmodel",
-                    "//eden/scm/lib/encoding:encoding",
-                    "//eden/scm/lib/identity:identity",
-                    "//eden/scm/lib/version:rust_version",
-                ],
-            ),
-            (
-                "macos",
-                [
-                    "fbsource//third-party/rust:dirs",
-                    "fbsource//third-party/rust:libc",
-                    ":chg",
-                    "//eden/scm/lib/config/model:configmodel",
-                    "//eden/scm/lib/encoding:encoding",
-                    "//eden/scm/lib/identity:identity",
-                    "//eden/scm/lib/version:rust_version",
-                    "//eden/scm/lib/webview-app:webview-app",
-                ],
-            ),
-            (
-                "windows",
-                [
-                    "fbsource//third-party/rust:anyhow",
-                    "fbsource//third-party/rust:winapi",
-                ],
-            ),
-        ],
         deps = [
             "fbsource//third-party/rust:tracing",
             "//eden/scm/lib/clidispatch:clidispatch",
@@ -157,7 +123,32 @@ def hg_binary(name, extra_deps = [], extra_features = [], **kwargs):
         ] + extra_deps + ([] if rust_oss.is_oss_build() else [
             "//common/rust/shed/fbinit:fbinit",
             "//common/rust/cpp_log_spew:cpp_log_spew",
-        ]),
+        ]) + select({
+            "DEFAULT": [],
+            "ovr_config//os:linux": [
+                "fbsource//third-party/rust:dirs",
+                "fbsource//third-party/rust:libc",
+                ":chg",
+                "//eden/scm/lib/config/model:configmodel",
+                "//eden/scm/lib/encoding:encoding",
+                "//eden/scm/lib/identity:identity",
+                "//eden/scm/lib/version:rust_version",
+            ],
+            "ovr_config//os:macos": [
+                "fbsource//third-party/rust:dirs",
+                "fbsource//third-party/rust:libc",
+                ":chg",
+                "//eden/scm/lib/config/model:configmodel",
+                "//eden/scm/lib/encoding:encoding",
+                "//eden/scm/lib/identity:identity",
+                "//eden/scm/lib/version:rust_version",
+                "//eden/scm/lib/webview-app:webview-app",
+            ],
+            "ovr_config//os:windows": [
+                "fbsource//third-party/rust:anyhow",
+                "fbsource//third-party/rust:winapi",
+            ],
+        }),
         **kwargs
     )
 

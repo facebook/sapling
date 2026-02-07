@@ -122,17 +122,61 @@ hg_binary(
         "cargo_toml_config": {
             "dependencies_override": {
                 "dependencies": {
-                    "commands": {"default-features": False},
+                    "commands": {
+                        "default-features": False,
+                        "path": "../../lib/commands",
+                    },
                     "pyblackbox": {"path": "../../saplingnative/bindings/modules/pyblackbox"},
+                    "sapling-atexit": {"path": "../../lib/util/atexit"},
+                    "sapling-clidispatch": {"path": "../../lib/clidispatch"},
+                    "sapling-configloader": {"path": "../../lib/config/loader"},
+                    "tracing": {
+                        "features": [
+                            "attributes",
+                            "valuable",
+                        ],
+                        "version": "0.1.41",
+                    },
                 },
                 "target": {
                     '\'cfg(target_os = "linux")\'': {"dependencies": {
-                        "dirs": {"optional": True},
-                        "sapling-identity": {"optional": True},
+                        "dirs": {
+                            "optional": True,
+                            "version": "6.0",
+                        },
+                        "libc": {"version": "0.2.139"},
+                        "sapling-configmodel": {"path": "../../lib/config/model"},
+                        "sapling-encoding": {"path": "../../lib/encoding"},
+                        "sapling-identity": {
+                            "optional": True,
+                            "path": "../../lib/identity",
+                        },
+                        "sapling-version": {"path": "../../lib/version"},
                     }},
                     '\'cfg(target_os = "macos")\'': {"dependencies": {
-                        "dirs": {"optional": True},
-                        "sapling-identity": {"optional": True},
+                        "dirs": {
+                            "optional": True,
+                            "version": "6.0",
+                        },
+                        "libc": {"version": "0.2.139"},
+                        "sapling-configmodel": {"path": "../../lib/config/model"},
+                        "sapling-encoding": {"path": "../../lib/encoding"},
+                        "sapling-identity": {
+                            "optional": True,
+                            "path": "../../lib/identity",
+                        },
+                        "sapling-version": {"path": "../../lib/version"},
+                        "sapling-webview-app": {"path": "../../lib/webview-app"},
+                    }},
+                    '\'cfg(target_os = "windows")\'': {"dependencies": {
+                        "anyhow": {"version": "1.0.98"},
+                        "winapi": {
+                            "features": [
+                                "everything",
+                                "std",
+                            ],
+                            "version": "0.3",
+                        },
                     }},
                 },
             },

@@ -13,14 +13,6 @@ cpp_library(
     srcs = [
         "EdenMain.cpp",
     ],
-    os_deps = [
-        (
-            "linux",
-            [
-                "//eden/fs/store/git:git",
-            ],
-        ),
-    ],
     deps = [
         ":init",
         ":startup_logger",
@@ -54,7 +46,12 @@ cpp_library(
         "//folly/portability:unistd",
         "//thrift/lib/cpp2:flags",
         "//thrift/lib/cpp2:server",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "//eden/fs/store/git:git",
+        ],
+    }),
     exported_deps = [
         ":server",
         "//eden/fs/store:backing_store_interface",
@@ -76,25 +73,6 @@ cpp_binary(
             "/STACK:2097152",  # This was picked arbitrarily as 2 MB
         ],
     }),
-    os_deps = [
-        (
-            "linux",
-            [
-                "//eden/fs/store/facebook/http:http",
-                "//eden/fs/store/facebook/recas:recas",
-                "//eden/fs/telemetry/facebook:activity_recorder",
-                "//eden/fs/telemetry/facebook:scribe_logger",
-                "//services_efficiency/heap:init",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "//eden/fs/telemetry/facebook:activity_recorder",
-                "//eden/fs/telemetry/facebook:scribe_logger",
-            ],
-        ),
-    ],
     deps = [
         ":main",
         ":server",
@@ -116,7 +94,20 @@ cpp_binary(
         "//folly:range",
         "//folly/logging:init",
         "//thrift/lib/cpp2:server",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "//eden/fs/store/facebook/http:http",
+            "//eden/fs/store/facebook/recas:recas",
+            "//eden/fs/telemetry/facebook:activity_recorder",
+            "//eden/fs/telemetry/facebook:scribe_logger",
+            "//services_efficiency/heap:init",
+        ],
+        "ovr_config//os:macos": [
+            "//eden/fs/telemetry/facebook:activity_recorder",
+            "//eden/fs/telemetry/facebook:scribe_logger",
+        ],
+    }),
 )
 
 cpp_binary(
@@ -327,20 +318,6 @@ cpp_library(
         "PeriodicTask.cpp",
         "ThriftPermissionChecker.cpp",
     ],
-    os_deps = [
-        (
-            "macos",
-            [
-                "//folly:subprocess",
-            ],
-        ),
-        (
-            "windows",
-            [
-                "//eden/fs/notifications:windows_notifier",
-            ],
-        ),
-    ],
     deps = [
         "fbsource//third-party/cpptoml:cpptoml",
         "fbsource//third-party/fmt:fmt",
@@ -427,7 +404,15 @@ cpp_library(
         "//thrift/lib/cpp2/server:cpp2_conn_context",
         "//thrift/lib/cpp2/server:parallel_concurrency_controller",
         "//thrift/lib/cpp2/server:round_robin_request_pile",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:macos": [
+            "//folly:subprocess",
+        ],
+        "ovr_config//os:windows": [
+            "//eden/fs/notifications:windows_notifier",
+        ],
+    }),
     exported_deps = [
         ":thrift-cpp2-types",
         ":thrift-streaming-cpp2-services",

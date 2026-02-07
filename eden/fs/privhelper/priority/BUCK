@@ -42,21 +42,15 @@ cpp_library(
     name = "process_priority",
     srcs = ["ProcessPriority.cpp"],
     headers = ["ProcessPriority.h"],
-    os_deps = [
-        (
-            "linux",
-            [":linux_memory_priority"],
-        ),
-        (
-            "macos",
-            [":darwin_memory_priority"],
-        ),
-    ],
     deps = [
         ":darwin_memory_priority",
         ":linux_memory_priority",
         "//folly/logging:logging",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [":linux_memory_priority"],
+        "ovr_config//os:macos": [":darwin_memory_priority"],
+    }),
     exported_deps = [
         ":memory_priority",
         "//folly:portability",

@@ -32,19 +32,16 @@ cpp_library(
     headers = [
         "WinStackTrace.h",
     ],
-    os_deps = [
-        (
-            "windows",
-            ["fbsource//third-party/toolchains/win:dbghelp.lib"],
-        ),
-    ],
     deps = [
         "//eden/common/utils:path",
         "//eden/common/utils:stringconv",
         "//eden/common/utils/windows:win_error",
         "//folly:c_portability",
         "//folly/portability:windows",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": ["fbsource//third-party/toolchains/win:dbghelp.lib"],
+    }),
 )
 
 cpp_library(
@@ -275,19 +272,13 @@ cpp_library(
 cpp_library(
     name = "fs_channel_types",
     headers = ["FsChannelTypes.h"],
-    os_deps = [
-        (
-            "linux",
-            ["//eden/fs/third-party:fuse_kernel"],
-        ),
-        (
-            "macos",
-            ["//eden/fs/third-party:fuse_kernel"],
-        ),
-    ],
     exported_deps = [
         "//folly:file",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": ["//eden/fs/third-party:fuse_kernel"],
+        "ovr_config//os:macos": ["//eden/fs/third-party:fuse_kernel"],
+    }),
 )
 
 cpp_library(

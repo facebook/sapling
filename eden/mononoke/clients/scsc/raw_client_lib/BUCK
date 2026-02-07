@@ -7,24 +7,6 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     allow_oss_build = False,
     autocargo = {"ignore_rule": True},
-    os_deps = [
-        (
-            "linux",
-            [
-                "//common/rust/identity:identity",
-                "//common/rust/thrift/srclient:srclient",
-                "//eden/mononoke/scs/if:source_control-rust-srclients",
-                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "//common/rust/identity:identity",
-                "//eden/mononoke/scs/if:source_control-rust-thriftclients",
-            ],
-        ),
-    ],
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:maplit",
@@ -35,5 +17,17 @@ rust_library(
         "//eden/mononoke/scs/if:source_control-rust-clients",
         "//eden/mononoke/scs/if:source_control-rust-x2pclients",
         "//eden/scm/lib/clientinfo:clientinfo",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "//common/rust/identity:identity",
+            "//common/rust/thrift/srclient:srclient",
+            "//eden/mononoke/scs/if:source_control-rust-srclients",
+            "//eden/mononoke/scs/if:source_control-rust-thriftclients",
+        ],
+        "ovr_config//os:macos": [
+            "//common/rust/identity:identity",
+            "//eden/mononoke/scs/if:source_control-rust-thriftclients",
+        ],
+    }),
 )

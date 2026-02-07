@@ -34,14 +34,6 @@ cpp_library(
         "ovr_config//os:linux",
         "ovr_config//os:macos",
     ],
-    os_deps = [
-        (
-            "linux",
-            [
-                "third-party//systemd:systemd",
-            ],
-        ),
-    ],
     deps = [
         "fbsource//third-party/fmt:fmt",
         "//eden/fs/config:config",
@@ -59,7 +51,12 @@ cpp_library(
         "//folly/logging:logging",
         "//folly/portability:sys_stat",
         "//thrift/lib/cpp2/async:header_client_channel",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "third-party//systemd:systemd",
+        ],
+    }),
     exported_deps = [
         "fbsource//third-party/googletest:gtest",
         "fbsource//third-party/googletest:gtest_headers",

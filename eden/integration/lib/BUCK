@@ -6,14 +6,6 @@ oncall("scm_client_infra")
 python_library(
     name = "lib",
     srcs = glob(["*.py"]),
-    os_deps = [
-        (
-            "windows",
-            [
-                ":ntapi",
-            ],
-        ),
-    ],
     deps = [
         "fbsource//third-party/pypi/pexpect:pexpect",
         "//eden/fs/cli:lib",
@@ -30,7 +22,12 @@ python_library(
         "//eden/test_support:py",
         "//fb303/thrift:fb303_core-python-types",
         "//thrift/lib/python:types",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            ":ntapi",
+        ],
+    }),
 )
 
 cpp_python_extension(

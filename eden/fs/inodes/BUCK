@@ -131,26 +131,6 @@ cpp_library(
         "VirtualInode.h",
         "VirtualInodeLoader.h",
     ],
-    os_deps = [
-        (
-            "linux",
-            [
-                "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
-                "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
-                "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
-                "//eden/fs/inodes/fscatalog:fsinodecatalog",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
-                "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
-                "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
-                "//eden/fs/inodes/fscatalog:fsinodecatalog",
-            ],
-        ),
-    ],
     deps = [
         "fbsource//third-party/cpptoml:cpptoml",
         "fbsource//third-party/fmt:fmt",
@@ -201,7 +181,21 @@ cpp_library(
         "//folly/system:pid",
         "//folly/system:thread_name",
         "//thrift/lib/cpp2/protocol:protocol",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "//eden/fs/inodes/fscatalog:fsinodecatalog",
+            "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
+            "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
+            "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
+        ],
+        "ovr_config//os:macos": [
+            "//eden/fs/inodes/fscatalog:fsinodecatalog",
+            "//eden/fs/inodes/lmdbcatalog:buffered_lmdb_inode_catalog",
+            "//eden/fs/inodes/lmdbcatalog:lmdb_file_content_store",
+            "//eden/fs/inodes/lmdbcatalog:lmdb_inode_catalog",
+        ],
+    }),
     exported_deps = [
         ":fs_channel",
         ":inode_metadata",

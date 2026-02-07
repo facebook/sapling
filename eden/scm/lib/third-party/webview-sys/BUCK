@@ -55,20 +55,18 @@ rust_library(
     ],
     doctests = False,
     edition = "2021",
-    os_deps = [
-        (
-            "macos",
-            [
-                ":webview-cocoa",
-            ],
-        ),
-    ],
     # This is a workaround. Ideally it should move to `cpp_library` linker_flags.
     rustc_flags = [
         "-lframework=CoreFoundation",
         "-lframework=WebKit",
     ],
     unittests = False,
+    deps = select({
+        "DEFAULT": [],
+        "ovr_config//os:macos": [
+            ":webview-cocoa",
+        ],
+    }),
 )
 
 cpp_library(

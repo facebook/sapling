@@ -21,30 +21,28 @@ harness = false
 anyhow = "1.0.98"
 dirs = "6.0"
 faccess = "0.2.4"
-fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filetime = { version = "0.2.25", optional = true }
-hostcaps = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hostname = "0.3"
 parking_lot = { version = "0.12.1", features = ["send_guard"] }
 regex = { version = "1.12.2", optional = true }
-sapling-async-runtime = { version = "0.1.0", path = "../../async-runtime" }
-sapling-config-remote-loader = { version = "0.1.0", path = "../remote-loader" }
-sapling-configmodel = { version = "0.1.0", path = "../model" }
-sapling-configset = { version = "0.1.0", path = "../set" }
-sapling-gitcompat = { version = "0.1.0", path = "../../gitcompat" }
-sapling-hgplain = { version = "0.1.0", path = "../../util/hgplain" }
-sapling-hgtime = { version = "0.1.0", path = "../../hgtime", optional = true }
-sapling-http-client = { version = "0.1.0", path = "../../http-client", optional = true }
-sapling-identity = { version = "0.1.0", path = "../../identity" }
-sapling-minibytes = { version = "0.1.0", path = "../../minibytes" }
-sapling-repo-minimal-info = { version = "0.1.0", path = "../../repo/repo-minimal-info" }
-sapling-repourl = { version = "0.1.0", path = "../../repo/url" }
-sapling-spawn-ext = { version = "0.1.0", path = "../../spawn-ext" }
-sapling-staticconfig = { version = "0.1.0", path = "../static" }
-sapling-types = { version = "0.1.0", path = "../../types", optional = true }
-sapling-unionconfig = { version = "0.1.0", path = "../union" }
-sapling-util = { version = "0.1.0", path = "../../util" }
-sapling-version = { version = "0.1.0", path = "../../version" }
+sapling-async-runtime = { path = "../../async-runtime" }
+sapling-config-remote-loader = { path = "../remote-loader" }
+sapling-configmodel = { path = "../model" }
+sapling-configset = { path = "../set" }
+sapling-gitcompat = { path = "../../gitcompat" }
+sapling-hgplain = { path = "../../util/hgplain" }
+sapling-hgtime = { path = "../../hgtime", optional = true }
+sapling-http-client = { path = "../../http-client", optional = true }
+sapling-identity = { path = "../../identity" }
+sapling-minibytes = { path = "../../minibytes" }
+sapling-repo-minimal-info = { path = "../../repo/repo-minimal-info" }
+sapling-repourl = { path = "../../repo/url" }
+sapling-spawn-ext = { path = "../../spawn-ext" }
+sapling-staticconfig = { path = "../static" }
+sapling-types = { path = "../../types", optional = true }
+sapling-unionconfig = { path = "../union" }
+sapling-util = { path = "../../util" }
+sapling-version = { path = "../../version" }
 serde = { version = "1.0.219", features = ["derive", "rc"], optional = true }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"], optional = true }
 serde_urlencoded = { version = "0.7", optional = true }

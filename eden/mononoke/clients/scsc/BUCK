@@ -8,24 +8,6 @@ rust_binary(
     srcs = glob(["src/**/*.rs"]),
     allow_oss_build = False,
     autocargo = {"ignore_rule": True},
-    os_deps = [
-        (
-            "linux",
-            [
-                "//common/rust/build_info:build_info",
-                "//common/rust/thrift/srclient:srclient",
-                "//tupperware/api/if:common-rust",
-                "//tupperware/api/if:tupperware-rust",
-                "//tupperware/api/if:tupperware-rust-srclients",
-            ],
-        ),
-        (
-            "macos",
-            [
-                "//common/rust/build_info:build_info",
-            ],
-        ),
-    ],
     test_deps = [
         "//eden/mononoke/common/mononoke_macros:mononoke_macros",
     ],
@@ -66,7 +48,19 @@ rust_binary(
         "//eden/mononoke/common/topo_sort:topo_sort",
         "//eden/mononoke/scs/if:source_control-rust",
         "//eden/mononoke/scs/if:source_control-rust-clients",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "//common/rust/build_info:build_info",
+            "//common/rust/thrift/srclient:srclient",
+            "//tupperware/api/if:common-rust",
+            "//tupperware/api/if:tupperware-rust",
+            "//tupperware/api/if:tupperware-rust-srclients",
+        ],
+        "ovr_config//os:macos": [
+            "//common/rust/build_info:build_info",
+        ],
+    }),
 )
 
 rpm.builder(

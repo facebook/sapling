@@ -61,7 +61,10 @@ cpp_library(
         "//eden/fs/model:model",
         "//eden/fs/service:thrift_util",
         "//folly/futures:core",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": ["fbsource//third-party/rust:cxx"],
+    }),
     exported_deps = [
         "fbsource//third-party/rust:cxx-core",
         ":filters",

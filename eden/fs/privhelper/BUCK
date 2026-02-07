@@ -61,16 +61,6 @@ cpp_library(
         "PrivHelperServerSanityCheck.cpp",
     ],
     headers = ["PrivHelperServer.h"],
-    os_deps = [
-        (
-            "macos",
-            [
-                "fbsource//third-party/osxfuse:osxfuse",
-                "fbsource//third-party/toolchains/macos:CoreFoundation",
-                "fbsource//third-party/toolchains/macos:IOKit",
-            ],
-        ),
-    ],
     deps = [
         ":nfs_rpc",
         "//eden/common/utils:errno_utils",
@@ -94,7 +84,14 @@ cpp_library(
         "//folly/logging:logging",
         "//folly/portability:unistd",
         "//folly/system:thread_name",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/osxfuse:osxfuse",
+            "fbsource//third-party/toolchains/macos:CoreFoundation",
+            "fbsource//third-party/toolchains/macos:IOKit",
+        ],
+    }),
     exported_deps = [
         ":conn",
         "//eden/common/utils:io",

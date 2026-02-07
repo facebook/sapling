@@ -355,12 +355,6 @@ python_unittest(
     name = "status",
     srcs = ["status_test.py"],
     env = artifacts["env"],
-    os_deps = [
-        (
-            "windows",
-            ["//eden/fs/py/eden/thrift:windows_thrift"],
-        ),
-    ],
     supports_static_listing = False,
     deps = [
         "//eden/fs/cli:lib",
@@ -368,7 +362,10 @@ python_unittest(
         "//eden/integration/lib:lib",
         "//thrift/lib/py:server_base",
         "//thrift/lib/python:types",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": ["//eden/fs/py/eden/thrift:windows_thrift"],
+    }),
 )
 
 python_unittest(
