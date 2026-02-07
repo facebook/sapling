@@ -23,10 +23,10 @@ import {
   gitHubPullRequestIDAtom,
   gitHubPullRequestVersionDiffAtom,
   pendingScrollRestoreAtom,
+  stackedPullRequestAtom,
 } from './jotai';
 import {gitHubPullRequest, gitHubPullRequestForParams} from './recoil';
 import {stripStackInfoFromSaplingBodyHTML} from './saplingStack';
-import {stackedPullRequest} from './stackState';
 import {Box, Text} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {Suspense, useEffect} from 'react';
@@ -119,12 +119,11 @@ function PullRequestNotFound() {
 
 function PullRequestDetails() {
   const pullRequest = useAtomValue(gitHubPullRequestAtom);
-  const pullRequestStack = useRecoilValueLoadable(stackedPullRequest);
-  if (pullRequest == null || pullRequestStack.state !== 'hasValue') {
+  const stack = useAtomValue(stackedPullRequestAtom);
+  if (pullRequest == null) {
     return null;
   }
 
-  const stack = pullRequestStack.contents;
   const {bodyHTML} = pullRequest;
   let pullRequestBodyHTML;
   switch (stack.type) {

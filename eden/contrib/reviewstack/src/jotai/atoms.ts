@@ -13,6 +13,7 @@
 import type {
   CheckRunFragment,
   LabelFragment,
+  StackPullRequestFragment,
   UserFragment,
   UserHomePageQueryData,
   UserHomePageQueryVariables,
@@ -34,14 +35,17 @@ import type {
   Version,
   VersionCommit,
 } from '../github/types';
+import type {SaplingPullRequestBody} from '../saplingStack';
 
 import {DiffSide, UserHomePageQuery} from '../generated/graphql';
+import {pullRequestNumbersFromBody} from '../ghstackUtils';
 import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
 import GraphQLGitHubClient from '../github/GraphQLGitHubClient';
 import {diffCommitWithParent, diffCommits} from '../github/diff';
 import {diffVersions} from '../github/diffVersions';
 import {createGraphQLEndpointForHostname} from '../github/gitHubCredentials';
 import queryGraphQL from '../github/queryGraphQL';
+import {parseSaplingStackBody} from '../saplingStack';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai-family';
 import {atomWithStorage} from 'jotai/utils';
@@ -68,6 +72,47 @@ export const primerColorModeAtom = atomWithStorage<SupportedPrimerColorMode>(
   LOCAL_STORAGE_KEY,
   'day',
 );
+
+// =============================================================================
+// GitHub Credentials (simple atoms migrated from gitHubCredentials.ts)
+// =============================================================================
+
+const GITHUB_HOSTNAME_PROPERTY = 'github.hostname';
+
+/**
+ * Migrated from: gitHubHostname atom in github/gitHubCredentials.ts
+ *
+ * The hostname for the GitHub instance. Defaults to 'github.com' for consumer
+ * GitHub, but can be set to an enterprise hostname.
+ *
+ * Note: This is a localStorage-backed atom. The more complex token management
+ * atoms (gitHubTokenPersistence, gitHubUsername) remain in Recoil due to their
+ * cross-tab synchronization effects.
+ */
+export const gitHubHostnameAtom = atomWithStorage<string>(
+  GITHUB_HOSTNAME_PROPERTY,
+  localStorage.getItem(GITHUB_HOSTNAME_PROPERTY) ?? 'github.com',
+);
+
+/**
+ * Migrated from: isConsumerGitHub selector in github/gitHubCredentials.ts
+ *
+ * Derived atom that indicates if the current hostname is consumer GitHub.
+ * Used to determine behavior differences between consumer and enterprise GitHub.
+ */
+export const isConsumerGitHubAtom = atom<boolean>(get => {
+  return get(gitHubHostnameAtom) === 'github.com';
+});
+
+/**
+ * Migrated from: gitHubGraphQLEndpoint selector in github/gitHubCredentials.ts
+ *
+ * Derives the GraphQL endpoint URL from the hostname.
+ */
+export const gitHubGraphQLEndpointAtom = atom<string>(get => {
+  const hostname = get(gitHubHostnameAtom);
+  return createGraphQLEndpointForHostname(hostname);
+});
 
 // =============================================================================
 // GitHub Organization and Repository
@@ -1226,4 +1271,84 @@ export type NotificationMessage = {
 } | null;
 
 export const notificationMessageAtom = atom<NotificationMessage>(null);
+
+// =============================================================================
+// Stacked Pull Requests
+// =============================================================================
+
+/**
+ * Migrated from: StackedPullRequest type in stackState.ts
+ *
+ * Represents the type of stacked PR detected (Sapling, ghstack, or none).
+ */
+export type StackedPullRequest =
+  | {
+      type: 'sapling';
+      body: SaplingPullRequestBody;
+    }
+  | {
+      type: 'ghstack';
+      stack: number[];
+    }
+  | {
+      type: 'no-stack';
+    };
+
+/**
+ * Migrated from: stackedPullRequest selector in stackState.ts
+ *
+ * Parses the pull request body to detect Sapling or ghstack stacks.
+ */
+export const stackedPullRequestAtom = atom<StackedPullRequest>(get => {
+  const pullRequest = get(gitHubPullRequestAtom);
+  const body = pullRequest?.body;
+  if (body != null) {
+    const saplingStack = parseSaplingStackBody(body);
+    if (saplingStack != null) {
+      return {type: 'sapling', body: saplingStack};
+    }
+
+    const ghstack = pullRequestNumbersFromBody(body);
+    if (ghstack != null) {
+      return {type: 'ghstack', stack: ghstack};
+    }
+  }
+
+  return {type: 'no-stack'};
+});
+
+/**
+ * Migrated from: stackedPullRequestNumbers selector in stackState.ts
+ *
+ * Extracts the PR numbers from the stacked PR info.
+ */
+const stackedPullRequestNumbersAtom = atom<number[]>(get => {
+  const stacked = get(stackedPullRequestAtom);
+  switch (stacked.type) {
+    case 'no-stack':
+      return [];
+    case 'sapling': {
+      return stacked.body.stack.map(({number}) => number);
+    }
+    case 'ghstack': {
+      return stacked.stack;
+    }
+  }
+});
+
+/**
+ * Migrated from: stackedPullRequestFragments selector in stackState.ts
+ *
+ * Fetches the stack PR fragments for display.
+ */
+export const stackedPullRequestFragmentsAtom = atom<Promise<StackPullRequestFragment[]>>(
+  async get => {
+    const client = await get(gitHubClientAtom);
+    const prs = get(stackedPullRequestNumbersAtom);
+    if (client == null || prs.length === 0) {
+      return [];
+    }
+    return client.getStackPullRequests(prs);
+  },
+);
 

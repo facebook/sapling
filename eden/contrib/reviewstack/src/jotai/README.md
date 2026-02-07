@@ -12,6 +12,7 @@ This allows incremental migration of atoms and their consumers.
 These atoms are now natively implemented in Jotai:
 
 - **Theme**: `primerColorModeAtom`
+- **Credentials (simple)**: `gitHubHostnameAtom`, `isConsumerGitHubAtom`, `gitHubGraphQLEndpointAtom`
 - **Org/Repo**: `gitHubOrgAndRepoAtom`
 - **GitHub Client**: `gitHubClientAtom`, `gitHubBlobAtom`, `gitHubCommitAtom`
 - **Pull Request**: `gitHubPullRequestAtom`, `gitHubPullRequestIDAtom`, `gitHubPullRequestViewerDidAuthorAtom`, `gitHubPullRequestViewerCanUpdateAtom`
@@ -24,6 +25,7 @@ These atoms are now natively implemented in Jotai:
 - **User Home Page**: `gitHubUserHomePageDataAtom`
 - **Pull Requests Search**: `gitHubPullRequestsAtom`
 - **Notifications**: `notificationMessageAtom`
+- **Stacked PRs**: `stackedPullRequestAtom`, `stackedPullRequestFragmentsAtom` (components use these; Recoil versions kept for gitHubPullRequestVersions)
 
 ### Migrated in `diffServiceClient.ts`
 
@@ -49,15 +51,15 @@ Authentication atoms with complex cross-tab sync:
 
 - `gitHubTokenPersistence` - Token with localStorage persistence and cross-tab logout
 - `gitHubUsername` - Username fetching and caching
-- `gitHubHostname` - GitHub hostname configuration
-- `isConsumerGitHub` - Consumer vs enterprise GitHub detection
+- `gitHubHostname` - Used internally by Recoil selectors (Jotai version `gitHubHostnameAtom` available for components)
+- `isConsumerGitHub` - Used internally by Recoil selectors (Jotai version `isConsumerGitHubAtom` available for components)
 
 ### Still in Recoil (in `stackState.ts`)
 
-Stacked PR support:
+Stacked PR support (Recoil versions kept for `gitHubPullRequestVersions`):
 
-- `stackedPullRequest` - Detects Sapling/ghstack PR stacks
-- `stackedPullRequestFragments` - Fetches stack PR data
+- `stackedPullRequest` - Detects Sapling/ghstack PR stacks (components now use `stackedPullRequestAtom`)
+- `stackedPullRequestFragments` - Fetches stack PR data (components now use `stackedPullRequestFragmentsAtom`)
 
 ### Still in Recoil (in `shared/Drawers.tsx`)
 

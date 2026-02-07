@@ -5,6 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+/**
+ * Recoil selectors for stacked pull request detection.
+ *
+ * Note: Components have been migrated to use the Jotai atoms in jotai/atoms.ts
+ * (stackedPullRequestAtom, stackedPullRequestFragmentsAtom). These Recoil
+ * selectors are kept for gitHubPullRequestVersions in recoil.ts which still
+ * depends on them. They can be removed once gitHubPullRequestVersions is
+ * migrated to Jotai.
+ */
+
 import type {StackPullRequestFragment} from './generated/graphql';
 import type {SaplingPullRequestBody} from './saplingStack';
 

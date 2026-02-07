@@ -7,14 +7,14 @@
 
 import Link from './Link';
 import URLFor from './URLFor';
-import {gitHubHostname} from './github/gitHubCredentials';
+import {gitHubHostnameAtom} from './jotai';
 import {MarkGithubIcon} from '@primer/octicons-react';
 import {Box, Text} from '@primer/react';
-import {useRecoilValue} from 'recoil';
+import {useAtomValue} from 'jotai';
 
 export default function GitHubProjectPage(props: {org: string; repo: string}): React.ReactElement {
   const orgRepo = `${props.org}/${props.repo}`;
-  const hostname = useRecoilValue(gitHubHostname);
+  const hostname = useAtomValue(gitHubHostnameAtom);
   return (
     <Box padding={2}>
       <Box pb={2}>

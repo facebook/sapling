@@ -9,14 +9,15 @@ import type {StackPullRequestFragment} from './generated/graphql';
 
 import {useCommand} from './KeyboardShortcuts';
 import PullRequestStackItem from './PullRequestStackItem';
-import {gitHubPullRequestIDAtom} from './jotai';
-import {stackedPullRequestFragments} from './stackState';
+import {gitHubPullRequestIDAtom, stackedPullRequestFragmentsAtom} from './jotai';
 import useNavigateToPullRequest from './useNavigateToPullRequest';
 import {ArrowDownIcon, ArrowUpIcon} from '@primer/octicons-react';
 import {ActionList, ActionMenu, ButtonGroup, IconButton} from '@primer/react';
 import {useAtomValue} from 'jotai';
+import {loadable} from 'jotai/utils';
 import {useCallback, useEffect, useState} from 'react';
-import {useRecoilValueLoadable} from 'recoil';
+
+const loadableStackedPullRequestFragmentsAtom = loadable(stackedPullRequestFragmentsAtom);
 
 export default function PullRequestStack(): React.ReactElement | null {
   const navigateToPullRequest = useNavigateToPullRequest();
@@ -28,19 +29,19 @@ export default function PullRequestStack(): React.ReactElement | null {
   // disappear while we are loading the pull request for the newly selected
   // item in the list. To that end, we employ the following strategy:
   //
-  // - If `stackedPullRequestFragments` is available immediately, assume it is
+  // - If `stackedPullRequestFragmentsAtom` is available immediately, assume it is
   //   the source of truth and use it.
-  // - Whenever we receive a value for `stackedPullRequestFragments`, stuff it
+  // - Whenever we receive a value for `stackedPullRequestFragmentsAtom`, stuff it
   //   in the state for this component via `setLastStack()`.
-  // - If `stackedPullRequestFragments` is not available immediately, use
+  // - If `stackedPullRequestFragmentsAtom` is not available immediately, use
   //   `lastStack` if both of the following are true:
   //   - `lastStack` is non-null
   //   - `pullRequestNumber` is in `lastStack`.
   // - Otherwise, we assume that `lastStack` is stale (or the pull request is
   //   not part of a stack), in which case we do not render anything at all.
-  const stackLoadable = useRecoilValueLoadable(stackedPullRequestFragments);
+  const stackLoadable = useAtomValue(loadableStackedPullRequestFragmentsAtom);
   const [lastStack, setLastStack] = useState<StackPullRequestFragment[] | null>(null);
-  const availableStack = stackLoadable.valueMaybe();
+  const availableStack = stackLoadable.state === 'hasData' ? stackLoadable.data : null;
   useEffect(() => {
     if (availableStack != null) {
       setLastStack(availableStack);

@@ -13,6 +13,9 @@
 
 export {
   primerColorModeAtom,
+  gitHubHostnameAtom,
+  isConsumerGitHubAtom,
+  gitHubGraphQLEndpointAtom,
   gitHubOrgAndRepoAtom,
   gitHubClientAtom,
   gitHubRepoLabelsQuery,
@@ -60,6 +63,8 @@ export {
   gitHubBlobAtom,
   fileContentsDeltaAtom,
   notificationMessageAtom,
+  stackedPullRequestAtom,
+  stackedPullRequestFragmentsAtom,
 } from './atoms';
 
 export type {
@@ -75,4 +80,5 @@ export type {
   FileMod,
   FileContentsDelta,
   NotificationMessage,
+  StackedPullRequest,
 } from './atoms';

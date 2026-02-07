@@ -6,10 +6,10 @@
  */
 
 import URLFor from './URLFor';
-import {isConsumerGitHub} from './github/gitHubCredentials';
+import {isConsumerGitHubAtom} from './jotai';
 import {Avatar, Tooltip} from '@primer/react';
+import {useAtomValue} from 'jotai';
 import {useCallback, useState} from 'react';
-import {useRecoilValue} from 'recoil';
 
 type Props = {
   login?: string;
@@ -18,7 +18,7 @@ type Props = {
 };
 
 export default function ActorAvatar({login, size = 24, url}: Props): React.ReactElement {
-  const noFallback = useRecoilValue(isConsumerGitHub);
+  const noFallback = useAtomValue(isConsumerGitHubAtom);
   const src = url ?? URLFor.defaultAvatar();
   // TODO: Note that on GitHub Enterprise, the `src` URL for the avatar may be
   // something like `https://avatars.HOSTNAME/u/ID` and that the browser may
