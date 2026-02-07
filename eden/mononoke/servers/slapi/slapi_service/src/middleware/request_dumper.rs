@@ -58,8 +58,7 @@ pub struct RequestDumper {
 
 fn get_content_len(headers: &HeaderMap) -> Option<usize> {
     let content_len = headers.get(http::header::CONTENT_LENGTH)?;
-    let cl: Result<usize> = try { content_len.to_str()?.parse()? };
-    cl.ok()
+    content_len.to_str().ok()?.parse().ok()
 }
 
 impl RequestDumper {

@@ -6,7 +6,6 @@
  */
 
 #![feature(associated_type_defaults)]
-#![feature(try_blocks)]
 
 pub mod context;
 mod errors;
