@@ -19,13 +19,16 @@ import PullsView from './PullsView';
 import SplitDiffViewPrimerStyles from './SplitDiffViewPrimerStyles';
 import TextMateStyles from './TextMateStyles';
 import UserHomePage from './UserHomePage';
-import {gitHubTokenPersistence} from './github/gitHubCredentials';
 import {JotaiRecoilSync} from './jotai/JotaiRecoilSync';
-import {primerColorModeAtom} from './jotai/atoms';
+import {
+  gitHubTokenListenerAtom,
+  gitHubTokenPersistenceAtom,
+  primerColorModeAtom,
+} from './jotai/atoms';
 import {BaseStyles, Box, Text, useTheme} from '@primer/react';
-import {useAtomValue} from 'jotai';
-import React, {useEffect} from 'react';
-import {useRecoilValueLoadable} from 'recoil';
+import {useAtom, useAtomValue} from 'jotai';
+import {loadable} from 'jotai/utils';
+import React, {useEffect, useMemo} from 'react';
 
 type Page =
   | {type: 'home'}
@@ -53,8 +56,10 @@ type Page =
     };
 
 /**
- * <App> assumes that <RecoilRoot> from recoil and <ThemeProvider> from
- * @primer/react are ancestor components in the hierarchy.
+ * <App> assumes that <RecoilRoot> from recoil, <Provider> from jotai, and
+ * <ThemeProvider> from @primer/react are ancestor components in the hierarchy.
+ *
+ * Note: RecoilRoot is still needed for the sync layer and Drawers component.
  */
 export default function App({page}: {page: Page}): React.ReactElement {
   return (
@@ -77,11 +82,17 @@ export default function App({page}: {page: Page}): React.ReactElement {
 }
 
 function ContentOrLoginDialog({page}: {page: Page}): React.ReactElement {
-  const tokenLoadable = useRecoilValueLoadable(gitHubTokenPersistence);
+  // Subscribe to the listener atom to set up cross-tab logout handling
+  useAtom(gitHubTokenListenerAtom);
+
+  // Use loadable to get loading/error/data states
+  const loadableTokenAtom = useMemo(() => loadable(gitHubTokenPersistenceAtom), []);
+  const tokenLoadable = useAtomValue(loadableTokenAtom);
   const orgAndRepo = page.type !== 'home' ? {org: page.org, repo: page.repo} : null;
+
   switch (tokenLoadable.state) {
-    case 'hasValue': {
-      const {contents: token} = tokenLoadable;
+    case 'hasData': {
+      const token = tokenLoadable.data;
       return token != null ? (
         <>
           <AppHeader orgAndRepo={orgAndRepo} />
@@ -113,8 +124,8 @@ function ContentOrLoginDialog({page}: {page: Page}): React.ReactElement {
 
 /**
  * ThemeListener is a component that exists to listen to changes to the user's
- * theme preference (which is defined as a Recoil atom) and updates
- * <ThemeProvider> accordingly, so it must be a descendant of both <RecoilRoot>
+ * theme preference (which is defined as a Jotai atom) and updates
+ * <ThemeProvider> accordingly, so it must be a descendant of both <Provider>
  * and <ThemeProvider>. Also, because of its use of hooks, it must be defined
  * as a functional React component.
  *

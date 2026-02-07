@@ -7,7 +7,7 @@
 
 import './PullRequest.css';
 
-import type {GitHubPullRequestParams} from './recoil';
+import type {GitHubPullRequestParams} from './jotai';
 
 import CenteredSpinner from './CenteredSpinner';
 import DiffView from './DiffView';
@@ -20,17 +20,17 @@ import {stripStackInfoFromBodyHTML} from './ghstackUtils';
 import {
   gitHubOrgAndRepoAtom,
   gitHubPullRequestAtom,
+  gitHubPullRequestForParamsAtom,
   gitHubPullRequestIDAtom,
   gitHubPullRequestVersionDiffAtom,
   pendingScrollRestoreAtom,
   stackedPullRequestAtom,
 } from './jotai';
-import {gitHubPullRequest, gitHubPullRequestForParams} from './recoil';
 import {stripStackInfoFromSaplingBodyHTML} from './saplingStack';
 import {Box, Text} from '@primer/react';
 import {useAtomValue, useSetAtom} from 'jotai';
-import {Suspense, useEffect} from 'react';
-import {useRecoilValueLoadable, useSetRecoilState} from 'recoil';
+import {loadable} from 'jotai/utils';
+import {Suspense, useEffect, useMemo} from 'react';
 
 export default function PullRequest() {
   // Note: comparableVersions sync is handled by JotaiRecoilSync component
@@ -56,21 +56,19 @@ function PullRequestBootstrap() {
 }
 
 function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
-  // When useRefreshPullRequest() is used to update gitHubPullRequestForParams,
-  // we expect *most* of the data that comes back to be the same as before.
-  // As such, we would prefer to avoid triggering <Suspense>, as the user would
-  // briefly see a loading indicator followed by a massive redraw to restore
-  // what they were just looking at. To avoid this, we leverage
-  // useRecoilValueLoadable() to probe for updates to gitHubPullRequestForParams
-  // while using the gitHubPullRequestAtom for the purposes of rendering, as it is
-  // updated synchronously and therefore will not trigger <Suspense>.
-  const pullRequestLoadable = useRecoilValueLoadable(gitHubPullRequestForParams(params));
+  // Use loadable to avoid suspending - we want to show the current PR while
+  // refreshing in the background
+  const loadablePRAtom = useMemo(
+    () => loadable(gitHubPullRequestForParamsAtom(params)),
+    [params],
+  );
+  const pullRequestLoadable = useAtomValue(loadablePRAtom);
   const setPullRequestJotai = useSetAtom(gitHubPullRequestAtom);
-  const setPullRequestRecoil = useSetRecoilState(gitHubPullRequest);
   const setPendingScrollRestore = useSetAtom(pendingScrollRestoreAtom);
   const pullRequest =
-    pullRequestLoadable.state === 'hasValue' ? pullRequestLoadable.contents : null;
-  const isPullRequestNotFound = pullRequestLoadable.state === 'hasValue' && pullRequest == null;
+    pullRequestLoadable.state === 'hasData' ? pullRequestLoadable.data : null;
+  const isPullRequestNotFound =
+    pullRequestLoadable.state === 'hasData' && pullRequest == null;
 
   useEffect(() => {
     if (pullRequest != null) {
@@ -79,10 +77,8 @@ function PullRequestWithParams({params}: {params: GitHubPullRequestParams}) {
       // as possible to limit the number of updates to the dataflow graph,
       // which will short-circuit a bunch off diff'ing React will have to do.
       setPullRequestJotai(pullRequest);
-      // Also sync to Recoil for selectors that still depend on the Recoil atom
-      setPullRequestRecoil(pullRequest);
     }
-  }, [pullRequest, setPullRequestJotai, setPullRequestRecoil]);
+  }, [pullRequest, setPullRequestJotai]);
 
   // Restore scroll position after pull request data updates.
   // This runs after the effect above updates the atoms, and uses

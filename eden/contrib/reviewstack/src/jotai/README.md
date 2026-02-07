@@ -17,15 +17,18 @@ These atoms are now natively implemented in Jotai:
 - **GitHub Client**: `gitHubClientAtom`, `gitHubBlobAtom`, `gitHubCommitAtom`
 - **Pull Request**: `gitHubPullRequestAtom`, `gitHubPullRequestIDAtom`, `gitHubPullRequestViewerDidAuthorAtom`, `gitHubPullRequestViewerCanUpdateAtom`
 - **Labels/Reviewers**: `gitHubPullRequestLabelsAtom`, `gitHubPullRequestReviewersAtom`, `gitHubRepoLabelsQuery`, `gitHubRepoLabels`, `gitHubRepoAssignableUsersQuery`, `gitHubRepoAssignableUsers`
-- **Versions**: `gitHubPullRequestVersionsAtom` (synced from Recoil), `gitHubPullRequestSelectedVersionIndexAtom`, `gitHubPullRequestComparableVersionsAtom`, `gitHubPullRequestIsViewingLatestAtom`
+- **Versions**: `gitHubPullRequestVersionsAtom` (computed natively in Jotai with all internal dependencies), `gitHubPullRequestSelectedVersionIndexAtom`, `gitHubPullRequestComparableVersionsAtom`, `gitHubPullRequestIsViewingLatestAtom`
 - **Diffs**: `gitHubDiffCommitIDsAtom`, `gitHubPullRequestVersionDiffAtom`, `gitHubDiffForCommitsAtom`, `gitHubDiffForCurrentCommitAtom`
 - **Threads**: `gitHubPullRequestReviewThreadsAtom`, `gitHubThreadsForDiffFileAtom`, `gitHubPullRequestThreadsByCommitAtom`
 - **Comments**: `gitHubPullRequestNewCommentInputCellAtom`, `gitHubPullRequestCanAddCommentAtom`, `gitHubPullRequestPendingReviewIDAtom`
+- **Line-to-Position**: `gitHubPullRequestComputedLineToPositionForFileAtom`, `gitHubPullRequestLineToPositionForFileAtom` (computed natively in Jotai)
 - **Check Runs**: `gitHubPullRequestCheckRunsAtom`
 - **User Home Page**: `gitHubUserHomePageDataAtom`
 - **Pull Requests Search**: `gitHubPullRequestsAtom`
 - **Notifications**: `notificationMessageAtom`
-- **Stacked PRs**: `stackedPullRequestAtom`, `stackedPullRequestFragmentsAtom` (components use these; Recoil versions kept for gitHubPullRequestVersions)
+- **Stacked PRs**: `stackedPullRequestAtom`, `stackedPullRequestFragmentsAtom` (fully migrated, `stackState.ts` removed)
+- **Pull Request Loading**: `gitHubPullRequestForParamsAtom`, `gitHubPullRequestRefreshTriggerAtom` (uses manual trigger pattern for refresh)
+- **Credentials**: `gitHubTokenPersistenceAtom`, `gitHubTokenStateAtom`, `gitHubTokenListenerAtom`, `gitHubUsernameAtom` (includes cross-tab logout handling)
 
 ### Migrated in `diffServiceClient.ts`
 
@@ -38,28 +41,21 @@ These diff service atoms are now Jotai-native:
 
 ### Still in Recoil (in `recoil.ts`)
 
-These remain in Recoil due to complex dependencies or cross-tab effects:
+These simple atoms remain in Recoil to support components that still use Recoil:
 
-- **Pull Request Loading**: `gitHubPullRequestForParams` - Used by `PullRequest.tsx` for initial loading and refresh; uses Recoil's `refresh()` API
-- **Versions Computation**: `gitHubPullRequestVersions` - Complex selector with many dependencies including stack state
-- **Line-to-Position**: `gitHubPullRequestLineToPositionForFile` - Complex dependency chain involving commit comparisons
-- **GitHub Client (Recoil)**: `gitHubClient` - Used by `stackState.ts` and internal selectors
+- **Org/Repo (Recoil)**: `gitHubOrgAndRepo` - Simple atom synced from Jotai
+- **Pull Request (Recoil)**: `gitHubPullRequest` - Simple atom synced from Jotai
+- **Selected Version Index (Recoil)**: `gitHubPullRequestSelectedVersionIndex` - Simple atom with defaults computed from Jotai
+- **Comparable Versions (Recoil)**: `gitHubPullRequestComparableVersions` - Simple atom with defaults computed from Jotai
 
 ### Still in Recoil (in `gitHubCredentials.ts`)
 
-Authentication atoms with complex cross-tab sync:
+The file still contains the original Recoil atoms for backwards compatibility, but all component consumers now use Jotai:
 
-- `gitHubTokenPersistence` - Token with localStorage persistence and cross-tab logout
-- `gitHubUsername` - Username fetching and caching
-- `gitHubHostname` - Used internally by Recoil selectors (Jotai version `gitHubHostnameAtom` available for components)
-- `isConsumerGitHub` - Used internally by Recoil selectors (Jotai version `isConsumerGitHubAtom` available for components)
-
-### Still in Recoil (in `stackState.ts`)
-
-Stacked PR support (Recoil versions kept for `gitHubPullRequestVersions`):
-
-- `stackedPullRequest` - Detects Sapling/ghstack PR stacks (components now use `stackedPullRequestAtom`)
-- `stackedPullRequestFragments` - Fetches stack PR data (components now use `stackedPullRequestFragmentsAtom`)
+- `gitHubTokenPersistence` - No longer used by components (migrated to `gitHubTokenPersistenceAtom`)
+- `gitHubUsername` - No longer used by components (migrated to `gitHubUsernameAtom`)
+- `gitHubHostname` - No longer used by components (migrated to `gitHubHostnameAtom`)
+- `createGraphQLEndpointForHostname` - Utility function still used by Jotai atoms
 
 ### Still in Recoil (in `shared/Drawers.tsx`)
 
@@ -72,17 +68,14 @@ The shared Drawers component uses Recoil internally:
 
 `JotaiRecoilSync.tsx` synchronizes state between Jotai and Recoil:
 
-- **Jotai → Recoil**: `gitHubOrgAndRepoAtom`, `gitHubPullRequestAtom`
-- **Recoil → Jotai**: `gitHubPullRequestVersions`
-- **Bidirectional**: `gitHubPullRequestSelectedVersionIndex`, `gitHubPullRequestComparableVersions`
+- **Jotai → Recoil**: `gitHubOrgAndRepoAtom`, `gitHubPullRequestAtom`, `gitHubPullRequestSelectedVersionIndexAtom`, `gitHubPullRequestComparableVersionsAtom`
+- **Default Computation**: Computes version-based defaults (selectedVersionIndex, comparableVersions) from Jotai and syncs to both Jotai and Recoil atoms
 
 ## Next Steps for Full Migration
 
-1. **Migrate `stackState.ts`** - Convert to Jotai atoms
-2. **Migrate `gitHubPullRequestVersions`** - Complex but would eliminate Recoil→Jotai sync
-3. **Migrate `gitHubCredentials.ts`** - Requires reimplementing cross-tab effects in Jotai
-4. **Migrate `shared/Drawers.tsx`** - Update to accept Jotai atoms
-5. **Migrate `gitHubPullRequestForParams`** - Need Jotai equivalent of `refresh()`
+1. **Migrate `shared/Drawers.tsx`** - Update to accept Jotai atoms (this is a shared component affecting multiple projects)
+2. **Remove `gitHubCredentials.ts` Recoil atoms** - Once verified working, can remove the unused Recoil atoms
+3. **Remove remaining Recoil atoms** - Once Drawers is migrated, remove the sync layer and `recoil.ts`
 
 ## How to Migrate an Atom
 

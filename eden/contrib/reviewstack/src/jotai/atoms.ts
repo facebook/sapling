@@ -17,19 +17,25 @@ import type {
   UserFragment,
   UserHomePageQueryData,
   UserHomePageQueryVariables,
+  UsernameQueryData,
+  UsernameQueryVariables,
 } from '../generated/graphql';
 import type GitHubClient from '../github/GitHubClient';
-import type {DiffCommitIDs, DiffWithCommitIDs} from '../github/diffTypes';
+import type {DiffCommitIDs, DiffWithCommitIDs, CommitChange} from '../github/diffTypes';
 import type {
   GitHubPullRequestReviewThread,
   PullRequest,
   PullRequestReviewComment,
+  CommitData,
+  PullRequestCommitItem,
 } from '../github/pullRequestTimelineTypes';
 import type {PullsQueryInput, PullsWithPageInfo} from '../github/pullsTypes';
+import type {CommitComparison} from '../github/restApiTypes';
 import type {
   Blob,
   Commit,
   DateTime,
+  ForcePushEvent,
   GitObjectID,
   ID,
   Version,
@@ -37,19 +43,24 @@ import type {
 } from '../github/types';
 import type {SaplingPullRequestBody} from '../saplingStack';
 
-import {DiffSide, UserHomePageQuery} from '../generated/graphql';
+import {lineToPositionAtom} from '../diffServiceClient';
+import {DiffSide, UsernameQuery, UserHomePageQuery} from '../generated/graphql';
 import {pullRequestNumbersFromBody} from '../ghstackUtils';
 import CachingGitHubClient, {openDatabase} from '../github/CachingGitHubClient';
 import GraphQLGitHubClient from '../github/GraphQLGitHubClient';
+import {ALL_DB_NAMES_EVER} from '../github/databaseInfo';
 import {diffCommitWithParent, diffCommits} from '../github/diff';
 import {diffVersions} from '../github/diffVersions';
 import {createGraphQLEndpointForHostname} from '../github/gitHubCredentials';
+import {broadcastLogoutMessage, subscribeToLogout} from '../github/logoutBroadcastChannel';
 import queryGraphQL from '../github/queryGraphQL';
 import {parseSaplingStackBody} from '../saplingStack';
+import {getPathForChange, getTreeEntriesForChange} from '../utils';
 import {atom} from 'jotai';
 import {atomFamily} from 'jotai-family';
 import {atomWithStorage} from 'jotai/utils';
 import {createRequestHeaders} from 'shared/github/auth';
+import rejectAfterTimeout from 'shared/rejectAfterTimeout';
 import {notEmpty} from 'shared/utils';
 
 // =============================================================================
@@ -74,20 +85,172 @@ export const primerColorModeAtom = atomWithStorage<SupportedPrimerColorMode>(
 );
 
 // =============================================================================
-// GitHub Credentials (simple atoms migrated from gitHubCredentials.ts)
+// GitHub Credentials (migrated from gitHubCredentials.ts)
 // =============================================================================
 
+const GITHUB_TOKEN_PROPERTY = 'github.token';
 const GITHUB_HOSTNAME_PROPERTY = 'github.hostname';
+
+/**
+ * If all databases are not dropped within this time window, then it seems
+ * unlikely that the operation will succeed.
+ */
+const DELETE_ALL_DATABASES_TIMEOUT_MS = 10_000;
+
+/**
+ * Drop all IndexedDB databases.
+ */
+async function dropAllDatabases(indexedDB: IDBFactory): Promise<unknown> {
+  let databaseNames: string[];
+  if (indexedDB.databases == null) {
+    // Firefox doesn't support indexedDB.databases()
+    databaseNames = [...ALL_DB_NAMES_EVER];
+  } else {
+    const databases = await indexedDB.databases();
+    databaseNames = databases.map(db => {
+      const {name} = db;
+      if (name != null) {
+        return name;
+      } else {
+        throw Error('IDBDatabaseInfo with no name');
+      }
+    });
+  }
+
+  return Promise.all(
+    databaseNames.map(name => {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.deleteDatabase(name);
+        request.onerror = event => reject(`failed to delete db ${name}: ${event}`);
+        request.onsuccess = event => resolve(`successfully deleted db ${name}: ${event}`);
+      });
+    }),
+  );
+}
+
+/**
+ * Clear all local data (indexedDB and localStorage).
+ */
+async function clearAllLocalData(): Promise<void> {
+  if (typeof indexedDB !== 'undefined') {
+    await rejectAfterTimeout(
+      dropAllDatabases(indexedDB),
+      DELETE_ALL_DATABASES_TIMEOUT_MS,
+      `databases not dropped within ${DELETE_ALL_DATABASES_TIMEOUT_MS}ms`,
+    );
+  }
+  localStorage.clear();
+}
+
+/**
+ * Represents the state of the GitHub token - can be loading, has value, or has error.
+ */
+export type GitHubTokenState =
+  | {state: 'loading'; promise: Promise<string | null>}
+  | {state: 'hasValue'; value: string | null}
+  | {state: 'hasError'; error: unknown};
+
+/**
+ * Primitive atom holding the token state.
+ * This manages the loading/settled states for token operations.
+ */
+export const gitHubTokenStateAtom = atom<GitHubTokenState>({
+  state: 'hasValue',
+  value: localStorage.getItem(GITHUB_TOKEN_PROPERTY),
+});
+
+/**
+ * Listener registration atom - when subscribed, sets up cross-tab logout listener.
+ * This uses onMount to set up the BroadcastChannel listener.
+ */
+export const gitHubTokenListenerAtom = atom(
+  get => get(gitHubTokenStateAtom),
+  (get, set) => {
+    // This is the onMount initializer - set up cross-tab logout listener
+    const unsubscribe = subscribeToLogout(() => {
+      const token = localStorage.getItem(GITHUB_TOKEN_PROPERTY);
+      if (token == null) {
+        // localStorage already cleared by another tab
+        set(gitHubTokenStateAtom, {state: 'hasValue', value: null});
+      } else {
+        // Wait for localStorage to be cleared
+        const promise = new Promise<string | null>(resolve => {
+          const handler = (event: StorageEvent) => {
+            if (event.storageArea !== localStorage) {
+              return;
+            }
+            if (event.key === null || (event.key === GITHUB_TOKEN_PROPERTY && event.newValue == null)) {
+              window.removeEventListener('storage', handler);
+              resolve(null);
+            }
+          };
+          window.addEventListener('storage', handler);
+        });
+        set(gitHubTokenStateAtom, {state: 'loading', promise});
+        promise.then(value => {
+          set(gitHubTokenStateAtom, {state: 'hasValue', value});
+        });
+      }
+    });
+    return unsubscribe;
+  },
+);
+gitHubTokenListenerAtom.onMount = setSelf => setSelf();
+
+/**
+ * Migrated from: gitHubTokenPersistence selector in github/gitHubCredentials.ts
+ *
+ * Writable atom for getting/setting the GitHub token with proper data clearing.
+ * - On get: Returns the current token value (or a promise if loading)
+ * - On set: Clears all local data first, then sets the token
+ */
+export const gitHubTokenPersistenceAtom = atom(
+  get => {
+    const state = get(gitHubTokenStateAtom);
+    switch (state.state) {
+      case 'hasValue':
+        return state.value;
+      case 'loading':
+        // Return the promise so consumers using loadable can see loading state
+        return state.promise;
+      case 'hasError':
+        throw state.error;
+    }
+  },
+  (get, set, token: string | null) => {
+    if (token == null) {
+      broadcastLogoutMessage();
+    }
+
+    // Get the hostname before clearing localStorage
+    const hostname = get(gitHubHostnameAtom);
+
+    // Create a promise for the async clearing operation
+    const promise: Promise<string | null> = clearAllLocalData().then(() => {
+      // Restore hostname and set new token if provided
+      if (token != null && hostname != null) {
+        localStorage.setItem(GITHUB_HOSTNAME_PROPERTY, hostname);
+        localStorage.setItem(GITHUB_TOKEN_PROPERTY, token);
+      }
+      return token;
+    });
+
+    // Set loading state
+    set(gitHubTokenStateAtom, {state: 'loading', promise});
+
+    // When promise resolves, set the final value
+    promise.then(
+      value => set(gitHubTokenStateAtom, {state: 'hasValue', value}),
+      error => set(gitHubTokenStateAtom, {state: 'hasError', error}),
+    );
+  },
+);
 
 /**
  * Migrated from: gitHubHostname atom in github/gitHubCredentials.ts
  *
  * The hostname for the GitHub instance. Defaults to 'github.com' for consumer
  * GitHub, but can be set to an enterprise hostname.
- *
- * Note: This is a localStorage-backed atom. The more complex token management
- * atoms (gitHubTokenPersistence, gitHubUsername) remain in Recoil due to their
- * cross-tab synchronization effects.
  */
 export const gitHubHostnameAtom = atomWithStorage<string>(
   GITHUB_HOSTNAME_PROPERTY,
@@ -112,6 +275,53 @@ export const isConsumerGitHubAtom = atom<boolean>(get => {
 export const gitHubGraphQLEndpointAtom = atom<string>(get => {
   const hostname = get(gitHubHostnameAtom);
   return createGraphQLEndpointForHostname(hostname);
+});
+
+/**
+ * Helper to derive localStorage key for cached username.
+ */
+function deriveLocalStoragePropForUsername(token: string): string {
+  return `username.${token}`;
+}
+
+/**
+ * Migrated from: gitHubUsername selector in github/gitHubCredentials.ts
+ *
+ * Fetches the GitHub username for the current token.
+ * Caches the username in localStorage to avoid repeated API calls.
+ */
+export const gitHubUsernameAtom = atom<Promise<string | null>>(async get => {
+  const tokenState = get(gitHubTokenStateAtom);
+  let token: string | null = null;
+
+  if (tokenState.state === 'hasValue') {
+    token = tokenState.value;
+  } else if (tokenState.state === 'loading') {
+    token = await tokenState.promise;
+  } else {
+    throw tokenState.error;
+  }
+
+  if (token == null) {
+    return null;
+  }
+
+  const key = deriveLocalStoragePropForUsername(token);
+  const cachedUsername = localStorage.getItem(key);
+  if (cachedUsername != null) {
+    return cachedUsername;
+  }
+
+  const graphQLEndpoint = get(gitHubGraphQLEndpointAtom);
+  const data = await queryGraphQL<UsernameQueryData, UsernameQueryVariables>(
+    UsernameQuery,
+    {},
+    createRequestHeaders(token),
+    graphQLEndpoint,
+  );
+  const username = data.viewer.login;
+  localStorage.setItem(key, username);
+  return username;
 });
 
 // =============================================================================
@@ -151,6 +361,64 @@ export const gitHubClientAtom = atom<Promise<GitHubClient | null>>(async get => 
     return null;
   }
 });
+
+// =============================================================================
+// Pull Request Loading
+// =============================================================================
+
+/**
+ * Type for pull request loading params.
+ * Migrated from: GitHubPullRequestParams in recoil.ts
+ */
+export type GitHubPullRequestParams = {
+  orgAndRepo: GitHubOrgAndRepo;
+  number: number;
+};
+
+/**
+ * Refresh trigger for PR loading. Increment this to force a refetch.
+ * This replaces Recoil's `refresh()` API.
+ */
+export const gitHubPullRequestRefreshTriggerAtom = atomFamily(
+  (_params: GitHubPullRequestParams) => atom<number>(0),
+  (a, b) => a.orgAndRepo.org === b.orgAndRepo.org &&
+            a.orgAndRepo.repo === b.orgAndRepo.repo &&
+            a.number === b.number,
+);
+
+/**
+ * Migrated from: gitHubPullRequestForParams atomFamily in recoil.ts
+ *
+ * Fetches pull request data for the given params. The PR will be refetched
+ * when gitHubPullRequestRefreshTriggerAtom is incremented.
+ *
+ * Returns null if the PR is not found.
+ */
+export const gitHubPullRequestForParamsAtom = atomFamily(
+  (params: GitHubPullRequestParams) =>
+    atom<Promise<PullRequest | null>>(async get => {
+      // Read the refresh trigger - when it changes, this atom re-evaluates
+      get(gitHubPullRequestRefreshTriggerAtom(params));
+
+      const token = localStorage.getItem('github.token');
+      if (token == null) {
+        // Return a never-settling promise to indicate we're waiting for auth
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        return new Promise<PullRequest | null>(() => {});
+      }
+
+      const db = await get(databaseConnectionAtom);
+      const hostname = localStorage.getItem('github.hostname') ?? 'github.com';
+      const {org, repo} = params.orgAndRepo;
+      const client = new GraphQLGitHubClient(hostname, org, repo, token);
+      const cachingClient = new CachingGitHubClient(db, client, org, repo);
+
+      return cachingClient.getPullRequest(params.number);
+    }),
+  (a, b) => a.orgAndRepo.org === b.orgAndRepo.org &&
+            a.orgAndRepo.repo === b.orgAndRepo.repo &&
+            a.number === b.number,
+);
 
 // =============================================================================
 // Repo Labels
@@ -572,13 +840,284 @@ export const gitHubDiffCommitIDsAtom = atom<Promise<DiffCommitIDs | null>>(async
 // =============================================================================
 
 /**
+ * Internal atom: extracts the base ref OID from the pull request.
+ * Migrated from: gitHubPullRequestBaseRef selector in recoil.ts
+ */
+const gitHubPullRequestBaseRefAtom = atom<GitObjectID | null>(get => {
+  const pullRequest = get(gitHubPullRequestAtom);
+  return pullRequest?.baseRefOid ?? null;
+});
+
+/**
+ * Internal atom: extracts commit data from the pull request timeline.
+ * Migrated from: gitHubPullRequestCommits selector in recoil.ts
+ */
+const gitHubPullRequestCommitsAtom = atom<CommitData[]>(get => {
+  const pullRequest = get(gitHubPullRequestAtom);
+  return (pullRequest?.timelineItems?.nodes ?? [])
+    .map(item => {
+      if (item?.__typename === 'PullRequestCommit') {
+        const commit = item as PullRequestCommitItem;
+        return commit.commit;
+      } else {
+        return null;
+      }
+    })
+    .filter(notEmpty);
+});
+
+/**
+ * Internal atom: extracts force push events from the pull request timeline.
+ * Migrated from: gitHubPullRequestForcePushes selector in recoil.ts
+ */
+const gitHubPullRequestForcePushesAtom = atom<ForcePushEvent[]>(get => {
+  const pullRequest = get(gitHubPullRequestAtom);
+  return (pullRequest?.timelineItems?.nodes ?? [])
+    .map(item => {
+      if (item?.__typename === 'HeadRefForcePushedEvent') {
+        const {createdAt, beforeCommit, afterCommit} = item;
+        if (createdAt == null || beforeCommit == null || afterCommit == null) {
+          return null;
+        }
+        return {
+          createdAt,
+          beforeCommit: beforeCommit.oid,
+          beforeCommittedDate: beforeCommit.committedDate,
+          beforeTree: beforeCommit.tree.oid,
+          beforeParents: (beforeCommit.parents?.nodes ?? [])
+            .filter(notEmpty)
+            .map(node => node.oid),
+          afterCommit: afterCommit.oid,
+          afterCommittedDate: beforeCommit.committedDate,
+          afterTree: afterCommit.tree.oid,
+          afterParents: (afterCommit.parents?.nodes ?? [])
+            .filter(notEmpty)
+            .map(node => node.oid),
+        };
+      } else {
+        return null;
+      }
+    })
+    .filter(notEmpty);
+});
+
+/**
+ * Internal atom: fetches commit comparison between two commits.
+ * Migrated from: gitHubCommitComparison selectorFamily in recoil.ts
+ */
+const gitHubCommitComparisonAtom = atomFamily(
+  ({base, head}: {base: GitObjectID; head: GitObjectID}) =>
+    atom<Promise<CommitComparison | null>>(async get => {
+      const client = await get(gitHubClientAtom);
+      return client != null ? client.getCommitComparison(base, head) : null;
+    }),
+  (a, b) => a.base === b.base && a.head === b.head,
+);
+
+/**
+ * Internal atom: for a given commit in a PR, get its merge base commit
+ * with the main branch, as well as all commits on the branch from the
+ * base commit to the given head.
+ * Migrated from: gitHubPullRequestVersionBaseAndCommits selectorFamily in recoil.ts
+ */
+const gitHubPullRequestVersionBaseAndCommitsAtom = atomFamily(
+  (head: GitObjectID) =>
+    atom<
+      Promise<{
+        baseParent: {oid: GitObjectID; committedDate: DateTime} | null;
+        commits: VersionCommit[];
+      }>
+    >(async get => {
+      const base = get(gitHubPullRequestBaseRefAtom);
+      if (base == null) {
+        return {
+          baseParent: null,
+          commits: [],
+        };
+      }
+
+      const commitComparison = await get(gitHubCommitComparisonAtom({base, head}));
+      if (commitComparison == null) {
+        return {
+          baseParent: null,
+          commits: [],
+        };
+      }
+
+      const {mergeBaseCommit, commits} = commitComparison;
+      return {
+        baseParent: {
+          oid: mergeBaseCommit.sha,
+          committedDate: mergeBaseCommit.commit.committer.date,
+        },
+        commits: commits.map(({author, commit, parents, sha}) => ({
+          author: author?.login ?? commit.author.name,
+          commit: sha,
+          committedDate: commit.committer.date,
+          title: commit.message.split('\n', 1)[0] ?? '',
+          parents: parents.map(({sha}) => sha),
+          version: null,
+        })),
+      };
+    }),
+  (a, b) => a === b,
+);
+
+/**
  * Migrated from: gitHubPullRequestVersions selector in recoil.ts
  *
  * The list of PR versions (each force push creates a new version).
- * This is a complex selector with many dependencies, so during migration
- * it receives its value from Recoil via JotaiRecoilSync.
+ * Now fully computed in Jotai.
  */
-export const gitHubPullRequestVersionsAtom = atom<Version[]>([]);
+export const gitHubPullRequestVersionsAtom = atom<Promise<Version[]>>(async get => {
+  const forcePushes = get(gitHubPullRequestForcePushesAtom);
+  const commits = get(gitHubPullRequestCommitsAtom);
+
+  // The "before" commit should represent the head of the latest version of
+  // the PR immediately prior to the force push.
+  const versions = forcePushes.map(({beforeCommit, beforeCommittedDate}) => ({
+    oid: beforeCommit,
+    committedDate: beforeCommittedDate,
+  }));
+
+  // The latest commit is the head of the latest version. Theoretically, it
+  // should always exist.
+  const latestCommit = commits[commits.length - 1];
+  if (latestCommit != null) {
+    versions.push(latestCommit);
+  }
+
+  // For now, we special-case Sapling stacks as each version may contain more
+  // than one commit.
+  const stackedPR = get(stackedPullRequestAtom);
+  if (stackedPR.type === 'sapling') {
+    const fragments = await get(stackedPullRequestFragmentsAtom);
+    if (fragments.length !== stackedPR.body.stack.length) {
+      // This is unexpected: bail out.
+      return [];
+    }
+    versions.reverse();
+
+    const index = stackedPR.body.currentStackEntry;
+    const parentFragment = fragments[index + 1];
+
+    const saplingStack = stackedPR.body;
+
+    // Prefetch all commits upfront to avoid await in loop
+    const allFetchedCommits = await Promise.all(
+      commits.map(c => get(gitHubCommitAtom(c.oid))),
+    );
+    const commitsByOid = new Map<GitObjectID, Commit>();
+    allFetchedCommits.forEach((commit, idx) => {
+      if (commit != null) {
+        commitsByOid.set(commits[idx].oid, commit);
+      }
+    });
+
+    let cumulativeCommits = 0;
+    let previous = commits.length;
+
+    const pr_versions: Version[] = [];
+    for (const version of versions) {
+      const {numCommits} = saplingStack.stack[saplingStack.currentStackEntry];
+      cumulativeCommits += numCommits;
+
+      // We need to separate the commits that were designed to be part of this
+      // PR from the ones below in the stack.
+      const start = commits.length - cumulativeCommits;
+      const commitFragmentsForPRVersion = commits.slice(start, previous);
+      previous = start;
+
+      // Get prefetched commits
+      const validCommits = commitFragmentsForPRVersion
+        .map(c => commitsByOid.get(c.oid))
+        .filter(notEmpty);
+
+      const versionCommits: VersionCommit[] = [];
+      for (let i = 0; i < forcePushes.length; i++) {
+        const f = forcePushes[i];
+        if (f.beforeCommit === version.oid) {
+          break;
+        }
+        versionCommits.push({
+          author: null,
+          commit: f.beforeCommit,
+          committedDate: f.beforeCommittedDate,
+          title: 'Version ' + (i + 1),
+          parents: f.beforeParents,
+          version: i + 1,
+        });
+      }
+
+      validCommits.forEach(c =>
+        versionCommits.push({
+          author: null,
+          commit: c.oid,
+          committedDate: c.committedDate,
+          title: c.messageHeadline,
+          parents: c.parents,
+          version: versionCommits.length + 1,
+        }),
+      );
+
+      let headCommittedDate: DateTime | null = null;
+      const headCommit = validCommits[validCommits.length - 1];
+      if (headCommit == null) {
+        headCommittedDate = latestCommit?.committedDate ?? null;
+      } else {
+        headCommittedDate = headCommit.committedDate;
+      }
+
+      let baseParent: GitObjectID | null = null;
+      let baseParentCommittedDate: DateTime | null = null;
+      if (parentFragment == null) {
+        // the first PR in stack case
+        if (validCommits.length > 0) {
+          baseParent = validCommits[0].parents[0];
+        } else if (forcePushes.length > 0) {
+          baseParent = forcePushes[0].beforeParents[0];
+          baseParentCommittedDate = forcePushes[0].beforeCommittedDate;
+        }
+      } else {
+        // the not first PR in stack case
+        baseParent = parentFragment.headRefOid;
+      }
+
+      pr_versions.push({
+        headCommit: version.oid,
+        headCommittedDate,
+        baseParent,
+        baseParentCommittedDate,
+        commits: versionCommits,
+      });
+    }
+
+    pr_versions.reverse();
+    return pr_versions;
+  }
+
+  // Get the base parent and all commits for each version branch.
+  const allVersionBaseAndCommits = await Promise.all(
+    versions.map(version => get(gitHubPullRequestVersionBaseAndCommitsAtom(version.oid))),
+  );
+
+  return allVersionBaseAndCommits
+    .map(({baseParent, commits}) => {
+      const versionHead = commits[commits.length - 1];
+      if (versionHead == null) {
+        return null;
+      }
+
+      return {
+        headCommit: versionHead.commit,
+        headCommittedDate: versionHead.committedDate,
+        baseParent: baseParent?.oid ?? null,
+        baseParentCommittedDate: baseParent?.committedDate ?? null,
+        commits,
+      };
+    })
+    .filter(notEmpty);
+});
 
 /**
  * Migrated from: gitHubPullRequestSelectedVersionIndex atom in recoil.ts
@@ -593,11 +1132,13 @@ export const gitHubPullRequestSelectedVersionIndexAtom = atom<number>(0);
  *
  * Derived atom that returns the commits for the currently selected version.
  */
-export const gitHubPullRequestSelectedVersionCommitsAtom = atom<VersionCommit[]>(get => {
-  const versions = get(gitHubPullRequestVersionsAtom);
-  const selectedVersionIndex = get(gitHubPullRequestSelectedVersionIndexAtom);
-  return versions[selectedVersionIndex]?.commits ?? [];
-});
+export const gitHubPullRequestSelectedVersionCommitsAtom = atom<Promise<VersionCommit[]>>(
+  async get => {
+    const versions = await get(gitHubPullRequestVersionsAtom);
+    const selectedVersionIndex = get(gitHubPullRequestSelectedVersionIndexAtom);
+    return versions[selectedVersionIndex]?.commits ?? [];
+  },
+);
 
 /**
  * Migrated from: gitHubPullRequestIsViewingLatest selector in recoil.ts
@@ -605,8 +1146,8 @@ export const gitHubPullRequestSelectedVersionCommitsAtom = atom<VersionCommit[]>
  * Determines if the user is viewing the latest version of the PR.
  * Used to show/hide the "Back to Latest" link.
  */
-export const gitHubPullRequestIsViewingLatestAtom = atom<boolean>(get => {
-  const versions = get(gitHubPullRequestVersionsAtom);
+export const gitHubPullRequestIsViewingLatestAtom = atom<Promise<boolean>>(async get => {
+  const versions = await get(gitHubPullRequestVersionsAtom);
   if (versions.length === 0) {
     return true; // Default to true during loading
   }
@@ -634,16 +1175,18 @@ export const gitHubPullRequestIsViewingLatestAtom = atom<boolean>(get => {
  *
  * Internal atom that indexes versions by commit ID.
  */
-const gitHubPullRequestVersionIndexesByCommitAtom = atom<Map<GitObjectID, number>>(get => {
-  const versions = get(gitHubPullRequestVersionsAtom);
-  const versionIndexByCommit = new Map<GitObjectID, number>();
-  versions.forEach(({commits}, index) => {
-    commits.forEach(commit => {
-      versionIndexByCommit.set(commit.commit, index);
+const gitHubPullRequestVersionIndexesByCommitAtom = atom<Promise<Map<GitObjectID, number>>>(
+  async get => {
+    const versions = await get(gitHubPullRequestVersionsAtom);
+    const versionIndexByCommit = new Map<GitObjectID, number>();
+    versions.forEach(({commits}, index) => {
+      commits.forEach(commit => {
+        versionIndexByCommit.set(commit.commit, index);
+      });
     });
-  });
-  return versionIndexByCommit;
-});
+    return versionIndexByCommit;
+  },
+);
 
 /**
  * Migrated from: gitHubPullRequestVersionIndexForCommit selectorFamily in recoil.ts
@@ -653,8 +1196,8 @@ const gitHubPullRequestVersionIndexesByCommitAtom = atom<Map<GitObjectID, number
  */
 export const gitHubPullRequestVersionIndexForCommitAtom = atomFamily(
   (commit: GitObjectID) =>
-    atom<number | null>(get => {
-      const versionIndexesByCommit = get(gitHubPullRequestVersionIndexesByCommitAtom);
+    atom<Promise<number | null>>(async get => {
+      const versionIndexesByCommit = await get(gitHubPullRequestVersionIndexesByCommitAtom);
       return versionIndexesByCommit.get(commit) ?? null;
     }),
   (a, b) => a === b,
@@ -849,6 +1392,127 @@ export type LineToPositionBySide =
  */
 export const gitHubPullRequestLineToPositionForFileAtom = atomFamily(
   (_path: string) => atom<LineToPositionBySide>(null),
+  (a, b) => a === b,
+);
+
+// =============================================================================
+// Computed Line-to-Position (Migrated from Recoil)
+// =============================================================================
+
+/**
+ * Migrated from: gitHubPullRequestDiffCommitWithBaseByPath selectorFamily in recoil.ts
+ *
+ * For a given commit, returns a map from file path to the diff change for that file.
+ * The diff is computed against the commit's base parent (merge base with main branch).
+ */
+const gitHubPullRequestDiffCommitWithBaseByPathAtom = atomFamily(
+  (commitID: GitObjectID) =>
+    atom<Promise<Map<string, CommitChange> | null>>(async get => {
+      const baseParent = await get(gitHubPullRequestCommitBaseParentAtom(commitID));
+      const baseCommitID = baseParent?.oid;
+      if (baseCommitID == null) {
+        return null;
+      }
+
+      const diffWithCommitIDs = await get(
+        gitHubDiffForCommitsAtom({baseCommitID, commitID}),
+      );
+      const diff = diffWithCommitIDs?.diff;
+      if (diff == null) {
+        return null;
+      }
+
+      const diffByPath = new Map<string, CommitChange>();
+      diff.forEach(change => diffByPath.set(getPathForChange(change), change));
+      return diffByPath;
+    }),
+  (a, b) => a === b,
+);
+
+/**
+ * Migrated from: gitHubPullRequestLineToPositionForCommitFile selectorFamily in recoil.ts
+ *
+ * For a given commit and file path, computes the line-to-position mapping.
+ * The position value is required when adding comments via the GitHub API.
+ *
+ * This function:
+ * 1. Gets the diff for the file from the commit's canonical diff (vs base parent)
+ * 2. Fetches the blobs for before/after (required for lineToPosition computation)
+ * 3. Calls the lineToPosition worker to compute the mapping
+ */
+const gitHubPullRequestLineToPositionForCommitFileAtom = atomFamily(
+  ({commitID, path}: {commitID: GitObjectID; path: string}) =>
+    atom<Promise<LineToPositionBySide | null>>(async get => {
+      const diffsByPath = await get(gitHubPullRequestDiffCommitWithBaseByPathAtom(commitID));
+      const diffForPath = diffsByPath?.get(path);
+      if (diffForPath == null) {
+        return null;
+      }
+
+      const entries = getTreeEntriesForChange(diffForPath);
+      const oldOID = entries.before?.oid ?? null;
+      const newOID = entries.after?.oid ?? null;
+
+      // Before calling the lineToPosition RPC, the Blob for any oid that is
+      // passed *must* be persisted to IndexedDB beforehand because our Web
+      // Workers are configured to read from IndexedDB but not write.
+      await Promise.all([
+        oldOID != null ? get(gitHubBlobAtom(oldOID)) : null,
+        newOID != null ? get(gitHubBlobAtom(newOID)) : null,
+      ]);
+
+      const lineToPosition = await get(lineToPositionAtom({oldOID, newOID}));
+      return lineToPosition as LineToPositionBySide;
+    }),
+  (a, b) => a.commitID === b.commitID && a.path === b.path,
+);
+
+/**
+ * Migrated from: gitHubPullRequestLineToPositionForFile selectorFamily in recoil.ts
+ *
+ * Computes the line-to-position mapping for a file in the current PR view.
+ * The mapping depends on which versions are being compared:
+ * - If no explicit "before" (comparing against base), use the "after" mappings directly
+ * - If comparing two versions, use the RIGHT side mappings from each version
+ */
+export const gitHubPullRequestComputedLineToPositionForFileAtom = atomFamily(
+  (path: string) =>
+    atom<Promise<LineToPositionBySide | null>>(async get => {
+      const comparableVersions = get(gitHubPullRequestComparableVersionsAtom);
+      if (comparableVersions == null) {
+        return null;
+      }
+
+      const {beforeCommitID, afterCommitID} = comparableVersions;
+
+      // Handle empty afterCommitID (loading state)
+      if (afterCommitID === '') {
+        return null;
+      }
+
+      const afterLineToPosition = await get(
+        gitHubPullRequestLineToPositionForCommitFileAtom({commitID: afterCommitID, path}),
+      );
+
+      // If there is no explicit "before" (i.e., the "after" is being compared
+      // against its base), directly use the "after" line mappings.
+      if (beforeCommitID == null) {
+        return afterLineToPosition;
+      }
+
+      const beforeLineToPosition = await get(
+        gitHubPullRequestLineToPositionForCommitFileAtom({commitID: beforeCommitID, path}),
+      );
+
+      // If both "before" and "after" are explicitly selected, then both commits
+      // themselves are being shown (i.e., we are comparing two `Right` sides).
+      // Therefore, we should use the mappings for the `Right` sides of their
+      // respective diffs.
+      return {
+        [DiffSide.Left]: beforeLineToPosition?.[DiffSide.Right] ?? null,
+        [DiffSide.Right]: afterLineToPosition?.[DiffSide.Right] ?? null,
+      };
+    }),
   (a, b) => a === b,
 );
 
@@ -1222,7 +1886,7 @@ export const gitHubPullRequestPositionForLineAtom = atomFamily(
  */
 export const gitHubPullRequestCanAddCommentAtom = atomFamily(
   ({lineNumber, path, side}: {lineNumber: number | null; path: string; side: DiffSide}) =>
-    atom<boolean>(get => {
+    atom<Promise<boolean>>(async get => {
       if (lineNumber == null) {
         return false;
       }
@@ -1237,7 +1901,7 @@ export const gitHubPullRequestCanAddCommentAtom = atomFamily(
         return false;
       }
 
-      const versions = get(gitHubPullRequestVersionsAtom);
+      const versions = await get(gitHubPullRequestVersionsAtom);
       const selectedVersionIndex = get(gitHubPullRequestSelectedVersionIndexAtom);
 
       // Must be viewing the latest version to add comments

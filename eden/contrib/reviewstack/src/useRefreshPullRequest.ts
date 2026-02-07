@@ -8,19 +8,16 @@
 import {
   gitHubOrgAndRepoAtom,
   gitHubPullRequestIDAtom,
+  gitHubPullRequestRefreshTriggerAtom,
   pendingScrollRestoreAtom,
 } from './jotai';
-import {gitHubPullRequestForParams} from './recoil';
-import {useAtomValue, useSetAtom} from 'jotai';
+import {useAtomValue, useSetAtom, useStore} from 'jotai';
 import {useCallback} from 'react';
-import {useRecoilCallback} from 'recoil';
 
 /**
  * @returns function that will mark the current PullRequest data to be refreshed
- *   with the latest data from the server. Rather than refresh
- *   `gitHubPullRequest` directly, this refreshes
- *   `gitHubPullRequestForParams(params)` so that `PullRequest.tsx` will derive
- *   a new value of `gitHubPullRequest` from the old one.
+ *   with the latest data from the server. This increments the refresh trigger
+ *   atom which causes the gitHubPullRequestForParamsAtom to re-evaluate.
  *
  *   The refresh preserves the current scroll position to prevent the view
  *   from jumping when the data updates.
@@ -29,23 +26,13 @@ export default function useRefreshPullRequest(): () => void {
   const number = useAtomValue(gitHubPullRequestIDAtom);
   const orgAndRepo = useAtomValue(gitHubOrgAndRepoAtom);
   const setPendingScrollRestore = useSetAtom(pendingScrollRestoreAtom);
-
-  const recoilRefresh = useRecoilCallback(
-    ({refresh}) =>
-      () => {
-        if (number == null || orgAndRepo == null) {
-          return;
-        }
-
-        const params = {number, orgAndRepo};
-        // Refreshing the selector here should trigger `PullRequest.tsx` to
-        // update the gitHubPullRequestAtom.
-        refresh(gitHubPullRequestForParams(params));
-      },
-    [number, orgAndRepo],
-  );
+  const store = useStore();
 
   return useCallback(() => {
+    if (number == null || orgAndRepo == null) {
+      return;
+    }
+
     // Save scroll position before refresh. This will be restored by
     // PullRequestWithParams after the pull request data updates.
     setPendingScrollRestore({
@@ -53,7 +40,10 @@ export default function useRefreshPullRequest(): () => void {
       scrollY: window.scrollY,
     });
 
-    recoilRefresh();
-  }, [recoilRefresh, setPendingScrollRestore]);
+    const params = {number, orgAndRepo};
+    // Increment the refresh trigger to cause the PR atom to re-fetch
+    const refreshTriggerAtom = gitHubPullRequestRefreshTriggerAtom(params);
+    const currentValue = store.get(refreshTriggerAtom);
+    store.set(refreshTriggerAtom, currentValue + 1);
+  }, [number, orgAndRepo, setPendingScrollRestore, store]);
 }
-

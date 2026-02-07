@@ -9,20 +9,20 @@ import type {UserFragment} from './generated/graphql';
 
 import FieldLabel from './FieldLabel';
 import RepoAssignableUsersInput from './RepoAssignableUsersInput';
-import {gitHubUsername} from './github/gitHubCredentials';
 import {
   gitHubClientAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestReviewersAtom,
   gitHubPullRequestViewerCanUpdateAtom,
+  gitHubUsernameAtom,
   notificationMessageAtom,
 } from './jotai';
 import useRefreshPullRequest from './useRefreshPullRequest';
 import {GearIcon} from '@primer/octicons-react';
 import {ActionMenu, AvatarToken, Box, Button} from '@primer/react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {useCallback, useEffect} from 'react';
-import {useRecoilValue} from 'recoil';
+import {loadable} from 'jotai/utils';
+import {useCallback, useEffect, useMemo} from 'react';
 
 export default function PullRequestReviewers(): React.ReactElement {
   const refreshPullRequest = useRefreshPullRequest();
@@ -30,7 +30,11 @@ export default function PullRequestReviewers(): React.ReactElement {
   const [pullRequestReviewers, setPullRequestReviewers] = useAtom(gitHubPullRequestReviewersAtom);
   const viewerCanUpdate = useAtomValue(gitHubPullRequestViewerCanUpdateAtom);
   const setNotification = useSetAtom(notificationMessageAtom);
-  const username = useRecoilValue(gitHubUsername);
+
+  // Get username via loadable to handle async state
+  const loadableUsernameAtom = useMemo(() => loadable(gitHubUsernameAtom), []);
+  const usernameLoadable = useAtomValue(loadableUsernameAtom);
+  const username = usernameLoadable.state === 'hasData' ? usernameLoadable.data : null;
 
   // Client is already loaded by the time we're modifying reviewers
   const client = useAtomValue(gitHubClientAtom);

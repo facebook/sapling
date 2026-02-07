@@ -6,10 +6,11 @@
  */
 
 /**
- * Hook for loading SplitDiffView data, bridging Recoil state to a Jotai-style API.
+ * Hook for loading SplitDiffView data using Jotai atoms.
  *
- * This hook wraps the Recoil selectors used by SplitDiffView and provides a
- * loadable-like interface that will eventually be migrated to pure Jotai.
+ * This hook is now fully migrated to Jotai. It no longer uses Recoil for
+ * line-to-position mapping - that is now computed natively in Jotai via
+ * gitHubPullRequestComputedLineToPositionForFileAtom.
  */
 
 import type {DiffAndTokenizeResponse} from '../../diffServiceWorker';
@@ -19,14 +20,11 @@ import type {GitHubPullRequestReviewThread} from '../../github/pullRequestTimeli
 import {diffAndTokenizeAtom} from '../../diffServiceClient';
 import {DiffSide} from '../../generated/graphql';
 import {
-  gitHubPullRequestLineToPositionForFile,
-  nullAtom,
-} from '../../recoil';
-import {
   gitHubDiffCommitIDsAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestCanAddCommentAtom,
   gitHubPullRequestComparableVersionsAtom,
+  gitHubPullRequestComputedLineToPositionForFileAtom,
   gitHubPullRequestLineToPositionForFileAtom,
   gitHubPullRequestNewCommentInputCellAtom,
   gitHubPullRequestSelectedVersionIndexAtom,
@@ -37,7 +35,6 @@ import {
 import {useAtomValue, useSetAtom, useStore} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useCallback, useEffect, useMemo} from 'react';
-import {useRecoilValueLoadable} from 'recoil';
 
 /**
  * Type for the new comment input callbacks.
@@ -62,15 +59,14 @@ export type SplitDiffViewLoadableState =
     };
 
 /**
- * A Jotai-style hook that wraps the Recoil selectors used by SplitDiffView.
- * This provides a migration path from useRecoilValueLoadable to a Jotai-compatible API.
+ * A fully Jotai-based hook for loading SplitDiffView data.
  *
- * Uses a hybrid approach during migration:
- * - commitIDs comes from the Jotai gitHubDiffCommitIDsAtom
- * - threads are now computed natively in Jotai
- * - Comment input callbacks are now Jotai-based
- * - diffAndTokenize is now a Jotai atom (diffAndTokenizeAtom)
- * - lineToPosition still uses Recoil (complex dependency chain)
+ * All data sources are now Jotai atoms:
+ * - commitIDs comes from gitHubDiffCommitIDsAtom
+ * - threads are computed natively in Jotai via gitHubThreadsForDiffFileAtom
+ * - Comment input callbacks use Jotai atoms
+ * - diffAndTokenize uses the Jotai diffAndTokenizeAtom
+ * - lineToPosition uses gitHubPullRequestComputedLineToPositionForFileAtom
  *
  * Returns a loadable-like object with state: 'loading' | 'hasError' | 'hasValue'
  */
@@ -86,9 +82,11 @@ export function useSplitDiffViewData(
   const loadableCommitIDsAtom = useMemo(() => loadable(gitHubDiffCommitIDsAtom), []);
   const commitIDsLoadable = useAtomValue(loadableCommitIDsAtom);
 
-  // Read Jotai atoms for versions (these are synced from Recoil in JotaiRecoilSync)
+  // Read Jotai atoms for versions - now computed natively in Jotai
   // Note: These are read to ensure they're loaded, but not directly used in the return value
-  const versions = useAtomValue(gitHubPullRequestVersionsAtom);
+  // We use loadable to avoid suspending the whole component
+  const loadableVersionsAtom = useMemo(() => loadable(gitHubPullRequestVersionsAtom), []);
+  const versionsLoadable = useAtomValue(loadableVersionsAtom);
   useAtomValue(gitHubPullRequestSelectedVersionIndexAtom);
 
   // Jotai atom for threads - now computed natively in Jotai
@@ -137,29 +135,32 @@ export function useSplitDiffViewData(
       );
       if (!canAddComment) {
         // Check why we can't add a comment and show appropriate message
-        const versions = store.get(gitHubPullRequestVersionsAtom);
-        const selectedVersionIndex = store.get(gitHubPullRequestSelectedVersionIndexAtom);
-        const comparableVersions = store.get(gitHubPullRequestComparableVersionsAtom);
+        // Only check if versions are loaded
+        if (versionsLoadable.state === 'hasData') {
+          const versions = versionsLoadable.data;
+          const selectedVersionIndex = store.get(gitHubPullRequestSelectedVersionIndexAtom);
+          const comparableVersions = store.get(gitHubPullRequestComparableVersionsAtom);
 
-        if (selectedVersionIndex !== versions.length - 1) {
-          setNotification({
-            type: 'info',
-            message:
-              'Comments can only be added when viewing the latest version of the pull request.',
-          });
-        } else if (comparableVersions?.beforeCommitID != null && side === DiffSide.Left) {
-          setNotification({
-            type: 'info',
-            message:
-              'Comments cannot be added to the left side when comparing versions. The left side shows an older revision that is no longer part of the pull request.',
-          });
+          if (selectedVersionIndex !== versions.length - 1) {
+            setNotification({
+              type: 'info',
+              message:
+                'Comments can only be added when viewing the latest version of the pull request.',
+            });
+          } else if (comparableVersions?.beforeCommitID != null && side === DiffSide.Left) {
+            setNotification({
+              type: 'info',
+              message:
+                'Comments cannot be added to the left side when comparing versions. The left side shows an older revision that is no longer part of the pull request.',
+            });
+          }
         }
         return;
       }
 
       setCellAtom({path, lineNumber, side});
     },
-    [store, setCellAtom, setNotification],
+    [store, setCellAtom, setNotification, versionsLoadable],
   );
 
   const onResetNewCommentInput = useCallback(() => {
@@ -184,48 +185,53 @@ export function useSplitDiffViewData(
   );
   const diffAndTokenizeLoadable = useAtomValue(diffAndTokenizeLoadableAtom);
 
-  // Use Recoil for lineToPosition (still depends on Recoil selectors)
-  const recoilLoadable = useRecoilValueLoadable(
-    isPullRequest ? gitHubPullRequestLineToPositionForFile(path) : nullAtom,
+  // Use Jotai for computed lineToPosition (fully migrated from Recoil)
+  const computedLineToPositionLoadableAtom = useMemo(
+    () => loadable(gitHubPullRequestComputedLineToPositionForFileAtom(path)),
+    [path],
   );
+  const lineToPositionLoadable = useAtomValue(computedLineToPositionLoadableAtom);
 
-  // Sync lineToPosition from Recoil to Jotai for this file path
+  // Sync the computed lineToPosition to the writable atom for other consumers
   useEffect(() => {
-    if (recoilLoadable.state === 'hasValue') {
-      setJotaiLineToPosition(recoilLoadable.contents);
+    if (isPullRequest && lineToPositionLoadable.state === 'hasData') {
+      setJotaiLineToPosition(lineToPositionLoadable.data);
     }
-  }, [recoilLoadable, setJotaiLineToPosition]);
+  }, [isPullRequest, lineToPositionLoadable, setJotaiLineToPosition]);
 
-  // Handle loading state from either source
+  // Handle loading state from all sources
   // Also wait for versions to be loaded for PR case
   if (
-    recoilLoadable.state === 'loading' ||
     commitIDsLoadable.state === 'loading' ||
-    diffAndTokenizeLoadable.state === 'loading'
+    diffAndTokenizeLoadable.state === 'loading' ||
+    (isPullRequest && lineToPositionLoadable.state === 'loading')
   ) {
     return {state: 'loading'};
   }
 
-  // PR case: versions haven't been synced yet from Recoil, or commitIDs aren't yet available.
-  // This handles the race condition where gitHubPullRequestComparableVersionsAtom
-  // hasn't been synced from Recoil yet, causing gitHubDiffCommitIDsAtom to return null.
+  // PR case: versions haven't loaded yet, or commitIDs aren't yet available.
+  // This handles the race condition where versions are still loading.
   if (
     isPullRequest &&
-    (versions.length === 0 ||
+    (versionsLoadable.state !== 'hasData' ||
+      versionsLoadable.data.length === 0 ||
       (commitIDsLoadable.state === 'hasData' && commitIDsLoadable.data == null))
   ) {
     return {state: 'loading'};
   }
 
-  // Handle error state from either source
-  if (recoilLoadable.state === 'hasError') {
-    return {state: 'hasError', error: recoilLoadable.contents as Error};
-  }
+  // Handle error state from all sources
   if (commitIDsLoadable.state === 'hasError') {
     return {state: 'hasError', error: commitIDsLoadable.error as Error};
   }
   if (diffAndTokenizeLoadable.state === 'hasError') {
     return {state: 'hasError', error: diffAndTokenizeLoadable.error as Error};
+  }
+  if (isPullRequest && lineToPositionLoadable.state === 'hasError') {
+    return {state: 'hasError', error: lineToPositionLoadable.error as Error};
+  }
+  if (isPullRequest && versionsLoadable.state === 'hasError') {
+    return {state: 'hasError', error: versionsLoadable.error as Error};
   }
 
   const diffAndTokenizeResult = diffAndTokenizeLoadable.data;

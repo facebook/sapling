@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {gitHubHostname, gitHubTokenPersistence} from './github/gitHubCredentials';
-import {useSetRecoilState} from 'recoil';
+import {gitHubHostnameAtom, gitHubTokenPersistenceAtom} from './jotai';
+import {useSetAtom} from 'jotai';
 
 export type CustomLoginDialogProps = {
   setTokenAndHostname(token: string, hostname: string): void;
@@ -21,8 +21,8 @@ export function setCustomLoginDialogComponent(
 }
 
 export default function LoginDialog(): React.ReactElement {
-  const setToken = useSetRecoilState(gitHubTokenPersistence);
-  const setHostname = useSetRecoilState(gitHubHostname);
+  const setToken = useSetAtom(gitHubTokenPersistenceAtom);
+  const setHostname = useSetAtom(gitHubHostnameAtom);
   function setTokenAndHostname(token: string, hostname: string): void {
     setHostname(hostname);
     setToken(token);

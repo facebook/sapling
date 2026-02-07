@@ -5,39 +5,58 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {gitHubTokenPersistence, gitHubUsername} from './github/gitHubCredentials';
+import type {GitHubTokenState} from './jotai';
+
+import {gitHubTokenPersistenceAtom, gitHubTokenStateAtom, gitHubUsernameAtom} from './jotai';
 import {Link, Text} from '@primer/react';
-import {useCallback} from 'react';
-import {useRecoilStateLoadable, useRecoilValueLoadable} from 'recoil';
+import {useAtomValue, useSetAtom} from 'jotai';
+import {loadable} from 'jotai/utils';
+import {useCallback, useMemo} from 'react';
+
+/**
+ * Get the token value from the token state.
+ */
+function getTokenValue(state: GitHubTokenState): string | null {
+  if (state.state === 'hasValue') {
+    return state.value;
+  }
+  return null;
+}
 
 export default function Username(): React.ReactElement | null {
-  const username = useRecoilValueLoadable(gitHubUsername).valueMaybe();
-  const [tokenPersistenceLoadable, setToken] = useRecoilStateLoadable(gitHubTokenPersistence);
+  // Get username via loadable to handle async state
+  const loadableUsernameAtom = useMemo(() => loadable(gitHubUsernameAtom), []);
+  const usernameLoadable = useAtomValue(loadableUsernameAtom);
+  const username = usernameLoadable.state === 'hasData' ? usernameLoadable.data : null;
+
+  // Get token state directly for checking current value
+  const tokenState = useAtomValue(gitHubTokenStateAtom);
+  const token = getTokenValue(tokenState);
+
+  const setToken = useSetAtom(gitHubTokenPersistenceAtom);
   const onLogout = useCallback(() => setToken(null), [setToken]);
 
-  switch (tokenPersistenceLoadable.state) {
-    case 'hasValue': {
-      const {contents: token} = tokenPersistenceLoadable;
-      if (username != null && token != null) {
-        return (
-          <>
-            <Text fontWeight="bold">{username}</Text>
-            {' | '}
-            <Link as="button" onClick={onLogout}>
-              Logout
-            </Link>
-          </>
-        );
-      } else if (token != null) {
-        // we have a token but no username: we still offer the logout button
-        return (
-          <>
-            <Link as="button" onClick={onLogout}>
-              Logout
-            </Link>
-          </>
-        );
-      }
+  // Show UI when we have a token (regardless of loading state)
+  if (tokenState.state === 'hasValue' && token != null) {
+    if (username != null) {
+      return (
+        <>
+          <Text fontWeight="bold">{username}</Text>
+          {' | '}
+          <Link as="button" onClick={onLogout}>
+            Logout
+          </Link>
+        </>
+      );
+    } else {
+      // we have a token but no username: we still offer the logout button
+      return (
+        <>
+          <Link as="button" onClick={onLogout}>
+            Logout
+          </Link>
+        </>
+      );
     }
   }
 

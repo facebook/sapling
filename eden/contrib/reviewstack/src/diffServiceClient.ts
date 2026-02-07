@@ -27,23 +27,7 @@ import {
 } from './broadcast';
 import {atom as jotaiAtom} from 'jotai';
 import {atomFamily} from 'jotai-family';
-import {atom, selector, selectorFamily} from 'recoil';
 import {unwrap} from 'shared/utils';
-
-export const lineToPosition = selectorFamily<LineToPosition, LineToPositionParams>({
-  key: 'lineToPosition',
-  get:
-    (params: LineToPositionParams) =>
-    ({get}) => {
-      const worker = get(diffServiceClient);
-      const message: Message = {
-        id: worker.nextID(),
-        method: 'lineToPosition',
-        params,
-      };
-      return worker.sendMessage(message) as Promise<LineToPosition>;
-    },
-});
 
 /**
  * Client that is paired with an instance of `diffServiceWorker`. Takes
@@ -239,17 +223,6 @@ class WorkerPool {
     return ++this.requestID;
   }
 }
-
-const diffServiceClient = atom<WorkerPool>({
-  key: 'diffServiceClient',
-  default: selector({
-    key: 'diffServiceClient/default',
-    get: () => new WorkerPool(),
-    dangerouslyAllowMutability: true,
-  }),
-  // WorkerPool contains mutable collections.
-  dangerouslyAllowMutability: true,
-});
 
 // =============================================================================
 // Jotai versions of the diff service selectors
