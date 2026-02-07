@@ -13,7 +13,7 @@ ascii = "1.1.0"
 bookmarks = { version = "0.1.0", path = "../../../repo_attributes/bookmarks" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 
 [dev-dependencies]
 maplit = "1.0"

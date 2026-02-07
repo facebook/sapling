@@ -33,7 +33,7 @@ quickcheck = "1.0"
 sapling-revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 sapling-types = { version = "0.1.0", path = "../../../scm/lib/types" }
 sapling-vlqencoding = { version = "0.1.0", path = "../../../scm/lib/vlqencoding" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.15", features = ["full"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

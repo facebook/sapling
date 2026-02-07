@@ -18,7 +18,7 @@ bincode = { version = "2", features = ["serde"] }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 
 [dev-dependencies]
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }

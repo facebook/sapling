@@ -19,4 +19,4 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_blobstore = { version = "0.1.0", path = "../../repo_attributes/mutable_blobstore" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"

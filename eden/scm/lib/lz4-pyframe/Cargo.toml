@@ -20,7 +20,7 @@ harness = false
 byteorder = "1.5"
 libc = "0.2.139"
 lz4-sys = "1.9.4"
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 
 [dev-dependencies]
 quickcheck = "1.0"

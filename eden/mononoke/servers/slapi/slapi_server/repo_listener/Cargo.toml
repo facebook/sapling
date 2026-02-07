@@ -56,7 +56,7 @@ slapi_service = { version = "0.1.0", path = "../../slapi_service" }
 sshrelay = { version = "0.1.0", path = "../../../sshrelay" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6.5"

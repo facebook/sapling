@@ -20,7 +20,7 @@ prefixblob = { version = "0.1.0", path = "../prefixblob" }
 redaction_set = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/redaction" }
 reloader = { version = "0.1.0", path = "../../common/reloader" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

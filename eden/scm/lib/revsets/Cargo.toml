@@ -22,4 +22,4 @@ sapling-hgplain = { version = "0.1.0", path = "../util/hgplain" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
 sapling-treestate = { version = "0.1.0", path = "../treestate" }
 sapling-types = { version = "0.1.0", path = "../types" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"

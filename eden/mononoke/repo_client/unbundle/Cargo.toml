@@ -54,7 +54,7 @@ repo_update_logger = { version = "0.1.0", path = "../../features/repo_update_log
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 synced_commit_mapping = { version = "0.1.0", path = "../../features/commit_rewriting/synced_commit_mapping" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 wirepack = { version = "0.1.0", path = "../wirepack" }

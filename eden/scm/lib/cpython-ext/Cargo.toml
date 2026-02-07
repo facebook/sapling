@@ -18,7 +18,7 @@ python3-sys = "0.7.2"
 sapling-backtrace-ext = { version = "0.1.0", path = "../backtrace-ext" }
 sapling-types = { version = "0.1.0", path = "../types" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
 [dev-dependencies]

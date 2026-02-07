@@ -22,7 +22,7 @@ shared_error = { version = "0.1.0", git = "https://github.com/facebookexperiment
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 
 [dev-dependencies]
 ascii = "1.1.0"

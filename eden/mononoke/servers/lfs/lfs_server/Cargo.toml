@@ -61,7 +61,7 @@ secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperiment
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 time_window_counter = { version = "0.1.0", path = "../../../common/time_window_counter" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

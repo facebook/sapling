@@ -36,5 +36,5 @@ repo_blobstore = { version = "0.1.0", path = "../../repo_attributes/repo_blobsto
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sha1 = "0.10.5"
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

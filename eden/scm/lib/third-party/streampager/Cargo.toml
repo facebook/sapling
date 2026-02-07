@@ -26,7 +26,7 @@ serde = { version = "1.0.219", features = ["derive"] }
 smallvec = { version = "1.15", default-features = false }
 terminfo = "0.9"
 termwiz = { version = "0.23", default-features = false }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 toml = { version = "0.9.11", features = ["preserve_order"], optional = true }
 unicode-segmentation = "1.12.0"
 unicode-width = "0.1.12"

@@ -46,7 +46,7 @@ restricted_paths = { version = "0.1.0", path = "../../restricted_paths" }
 scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../../../derived_data/skeleton_manifest" }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unodes = { version = "0.1.0", path = "../../../derived_data/unodes" }
 

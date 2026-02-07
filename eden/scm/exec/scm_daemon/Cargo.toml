@@ -12,7 +12,7 @@ env_logger = { version = "0.11.8", features = ["color"] }
 log = { version = "0.4.27", features = ["kv_unstable", "kv_unstable_std"] }
 sapling-commitcloudsubscriber = { version = "0.1.0", path = "../../lib/commitcloudsubscriber" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-thiserror = "2.0.12"
+thiserror = "2.0.18"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 toml = { version = "0.9.11", features = ["preserve_order"] }
 
