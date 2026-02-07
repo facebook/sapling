@@ -39,18 +39,14 @@ import {getPathForChange, getTreeEntriesForChange} from './utils';
 import {atom, atomFamily, constSelector, selector, selectorFamily, waitForAll} from 'recoil';
 import {notEmpty} from 'shared/utils';
 
-export type GitHubOrgAndRepo = {
+// Internal type - exported from jotai/atoms.ts for component consumers.
+type GitHubOrgAndRepo = {
   org: string;
   repo: string;
 };
 
 export const gitHubOrgAndRepo = atom<GitHubOrgAndRepo | null>({
   key: 'gitHubOrgAndRepo',
-  default: null,
-});
-
-export const gitHubCommitID = atom<GitObjectID | null>({
-  key: 'gitHubCommitID',
   default: null,
 });
 
@@ -104,7 +100,8 @@ export const gitHubPullRequest = atom<PullRequest | null>({
   default: null,
 });
 
-export const gitHubPullRequestBaseRef = selector<GitObjectID | null>({
+// Internal selector - only used by gitHubPullRequestVersionBaseAndCommits
+const gitHubPullRequestBaseRef = selector<GitObjectID | null>({
   key: 'gitHubPullRequestBaseRef',
   get: ({get}) => {
     const pullRequest = get(gitHubPullRequest);
@@ -113,7 +110,8 @@ export const gitHubPullRequestBaseRef = selector<GitObjectID | null>({
 });
 
 
-export const gitHubPullRequestCommits = selector<CommitData[]>({
+// Internal selector - only used by gitHubPullRequestVersions
+const gitHubPullRequestCommits = selector<CommitData[]>({
   key: 'gitHubPullRequestCommits',
   get: ({get}) => {
     const pullRequest = get(gitHubPullRequest);
@@ -130,7 +128,8 @@ export const gitHubPullRequestCommits = selector<CommitData[]>({
   },
 });
 
-export const gitHubPullRequestForcePushes = selector<ForcePushEvent[]>({
+// Internal selector - only used by gitHubPullRequestVersions
+const gitHubPullRequestForcePushes = selector<ForcePushEvent[]>({
   key: 'gitHubPullRequestForcePushes',
   get: ({get}) => {
     const pullRequest = get(gitHubPullRequest);
@@ -166,8 +165,9 @@ export const gitHubPullRequestForcePushes = selector<ForcePushEvent[]>({
  * For a given commit in a PR, get its merge base commit with the main branch,
  * as well as all commits on the branch from the base commit to the given head.
  * Used primarily to construct a Version with all of its associated commits.
+ * Internal - only used by gitHubPullRequestVersions and gitHubPullRequestCommitBaseParent.
  */
-export const gitHubPullRequestVersionBaseAndCommits = selectorFamily<
+const gitHubPullRequestVersionBaseAndCommits = selectorFamily<
   {
     baseParent: {oid: GitObjectID; committedDate: DateTime} | null;
     commits: VersionCommit[];
@@ -216,8 +216,9 @@ export const gitHubPullRequestVersionBaseAndCommits = selectorFamily<
  * For a given commit in a PR, get its merge base commit with the main branch.
  * Used to identify the appropriate base for comparison when generating diffs
  * across versions.
+ * Internal - only used by gitHubPullRequestDiffCommitWithBaseByPath.
  */
-export const gitHubPullRequestCommitBaseParent = selectorFamily<
+const gitHubPullRequestCommitBaseParent = selectorFamily<
   {oid: GitObjectID; committedDate: DateTime} | null,
   GitObjectID
 >({
@@ -394,8 +395,9 @@ export const gitHubPullRequestSelectedVersionIndex = atom<number>({
 /**
  * When there is no "before" explicitly selected, the view shows the Diff for
  * the selected "after" version compared to its parent.
+ * Internal type - exported from jotai/atoms.ts for component consumers.
  */
-export type ComparableVersions = {
+type ComparableVersions = {
   beforeCommitID: GitObjectID | null;
   afterCommitID: GitObjectID;
 };
@@ -452,7 +454,8 @@ const gitHubPullRequestDiffCommitWithBaseByPath = selectorFamily<
     },
 });
 
-export const gitHubCommit = selectorFamily<Commit | null, GitObjectID>({
+// Internal selector - used by gitHubPullRequestVersions and gitHubDiffForCommits
+const gitHubCommit = selectorFamily<Commit | null, GitObjectID>({
   key: 'gitHubCommit',
   get:
     (oid: GitObjectID) =>
@@ -462,7 +465,8 @@ export const gitHubCommit = selectorFamily<Commit | null, GitObjectID>({
     },
 });
 
-export const gitHubCommitComparison = selectorFamily<
+// Internal selector - used by gitHubPullRequestVersionBaseAndCommits
+const gitHubCommitComparison = selectorFamily<
   CommitComparison | null,
   {base: GitObjectID; head: GitObjectID}
 >({
@@ -476,7 +480,8 @@ export const gitHubCommitComparison = selectorFamily<
 });
 
 
-export const gitHubDiffForCommits = selectorFamily<
+// Internal selector - used by gitHubPullRequestDiffCommitWithBaseByPath
+const gitHubDiffForCommits = selectorFamily<
   DiffWithCommitIDs | null,
   {baseCommitID: GitObjectID; commitID: GitObjectID}
 >({

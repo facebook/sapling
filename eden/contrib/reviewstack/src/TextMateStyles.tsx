@@ -5,11 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import {colorMap} from './diffServiceClient';
+import {colorMapAtom} from './diffServiceClient';
 import {primerColorModeAtom} from './jotai/atoms';
 import {useAtomValue} from 'jotai';
-import React, {useEffect} from 'react';
-import {useRecoilValueLoadable} from 'recoil';
+import React, {Suspense, useEffect, useMemo} from 'react';
 import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
 
 /**
@@ -17,20 +16,24 @@ import {updateTextMateGrammarCSS} from 'shared/textmate-lib/textmateStyles';
  * the DOM. It fetches the colorMap from the diff service worker and calls
  * updateTextMateGrammarCSS() to create CSS rules for the tokenization classes
  * (e.g., .mtk1, .mtk2, etc.).
- *
- * This component must be rendered within <RecoilRoot> since it uses Recoil
- * selectors to communicate with the diff service worker.
  */
 // eslint-disable-next-line prefer-arrow-callback
 export default React.memo(function TextMateStyles(): React.ReactElement | null {
+  return (
+    <Suspense fallback={null}>
+      <TextMateStylesInner />
+    </Suspense>
+  );
+});
+
+function TextMateStylesInner(): React.ReactElement | null {
   const colorMode = useAtomValue(primerColorModeAtom);
-  const colorMapLoadable = useRecoilValueLoadable(colorMap(colorMode));
+  const colorAtom = useMemo(() => colorMapAtom(colorMode), [colorMode]);
+  const colors = useAtomValue(colorAtom);
 
   useEffect(() => {
-    if (colorMapLoadable.state === 'hasValue') {
-      updateTextMateGrammarCSS(colorMapLoadable.contents);
-    }
-  }, [colorMapLoadable]);
+    updateTextMateGrammarCSS(colors);
+  }, [colors]);
 
   return null;
-});
+}

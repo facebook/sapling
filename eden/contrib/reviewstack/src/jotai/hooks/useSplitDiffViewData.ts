@@ -16,7 +16,7 @@ import type {DiffAndTokenizeResponse} from '../../diffServiceWorker';
 import type {DiffCommitIDs} from '../../github/diffTypes';
 import type {GitHubPullRequestReviewThread} from '../../github/pullRequestTimelineTypes';
 
-import {diffAndTokenize} from '../../diffServiceClient';
+import {diffAndTokenizeAtom} from '../../diffServiceClient';
 import {DiffSide} from '../../generated/graphql';
 import {
   gitHubPullRequestLineToPositionForFile,
@@ -37,7 +37,7 @@ import {
 import {useAtomValue, useSetAtom, useStore} from 'jotai';
 import {loadable} from 'jotai/utils';
 import {useCallback, useEffect, useMemo} from 'react';
-import {useRecoilValueLoadable, waitForAll} from 'recoil';
+import {useRecoilValueLoadable} from 'recoil';
 
 /**
  * Type for the new comment input callbacks.
@@ -69,7 +69,8 @@ export type SplitDiffViewLoadableState =
  * - commitIDs comes from the Jotai gitHubDiffCommitIDsAtom
  * - threads are now computed natively in Jotai
  * - Comment input callbacks are now Jotai-based
- * - Other selectors still use Recoil (diffAndTokenize, lineToPosition)
+ * - diffAndTokenize is now a Jotai atom (diffAndTokenizeAtom)
+ * - lineToPosition still uses Recoil (complex dependency chain)
  *
  * Returns a loadable-like object with state: 'loading' | 'hasError' | 'hasValue'
  */
@@ -172,25 +173,36 @@ export function useSplitDiffViewData(
     return null;
   }, [pullRequest, onShowNewCommentInput, onResetNewCommentInput]);
 
-  // Use Recoil for remaining selectors that haven't been migrated yet
+  // Use Jotai for diffAndTokenize (migrated from Recoil)
+  const diffAndTokenizeParams = useMemo(
+    () => ({path, before, after, scopeName, colorMode}),
+    [path, before, after, scopeName, colorMode],
+  );
+  const diffAndTokenizeLoadableAtom = useMemo(
+    () => loadable(diffAndTokenizeAtom(diffAndTokenizeParams)),
+    [diffAndTokenizeParams],
+  );
+  const diffAndTokenizeLoadable = useAtomValue(diffAndTokenizeLoadableAtom);
+
+  // Use Recoil for lineToPosition (still depends on Recoil selectors)
   const recoilLoadable = useRecoilValueLoadable(
-    waitForAll([
-      diffAndTokenize({path, before, after, scopeName, colorMode}),
-      isPullRequest ? gitHubPullRequestLineToPositionForFile(path) : nullAtom,
-    ]),
+    isPullRequest ? gitHubPullRequestLineToPositionForFile(path) : nullAtom,
   );
 
   // Sync lineToPosition from Recoil to Jotai for this file path
   useEffect(() => {
     if (recoilLoadable.state === 'hasValue') {
-      const [, lineToPositionForFile] = recoilLoadable.contents;
-      setJotaiLineToPosition(lineToPositionForFile);
+      setJotaiLineToPosition(recoilLoadable.contents);
     }
   }, [recoilLoadable, setJotaiLineToPosition]);
 
   // Handle loading state from either source
   // Also wait for versions to be loaded for PR case
-  if (recoilLoadable.state === 'loading' || commitIDsLoadable.state === 'loading') {
+  if (
+    recoilLoadable.state === 'loading' ||
+    commitIDsLoadable.state === 'loading' ||
+    diffAndTokenizeLoadable.state === 'loading'
+  ) {
     return {state: 'loading'};
   }
 
@@ -212,8 +224,11 @@ export function useSplitDiffViewData(
   if (commitIDsLoadable.state === 'hasError') {
     return {state: 'hasError', error: commitIDsLoadable.error as Error};
   }
+  if (diffAndTokenizeLoadable.state === 'hasError') {
+    return {state: 'hasError', error: diffAndTokenizeLoadable.error as Error};
+  }
 
-  const [diffAndTokenizeResult] = recoilLoadable.contents;
+  const diffAndTokenizeResult = diffAndTokenizeLoadable.data;
   const commitIDs = commitIDsLoadable.data;
 
   return {

@@ -13,15 +13,15 @@ import type {
   GitHubPullRequestReviewThread,
   GitHubPullRequestReviewThreadsByLine,
 } from './github/pullRequestTimelineTypes';
-import type {NewCommentInputCallbacks} from './jotai/hooks/useSplitDiffViewData';
 import type {GitObjectID} from './github/types';
+import type {NewCommentInputCallbacks} from './jotai/hooks/useSplitDiffViewData';
 import type {Hunk, ParsedDiff} from 'diff';
 import type {HighlightedToken} from 'shared/textmate-lib/tokenize';
 
 import LargeDiffPlaceholder from './LargeDiffPlaceholder';
 import {FileHeader} from './SplitDiffFileHeader';
 import SplitDiffRow from './SplitDiffRow';
-import {lineRange} from './diffServiceClient';
+import {lineRangeAtom} from './diffServiceClient';
 import {DiffSide} from './generated/graphql';
 import {grammars, languages} from './generated/textmate/TextMateGrammarManifest';
 import {primerColorModeAtom} from './jotai/atoms';
@@ -31,8 +31,7 @@ import {UnfoldIcon} from '@primer/octicons-react';
 import {Box, Spinner, Text} from '@primer/react';
 import {diffChars} from 'diff';
 import {useAtomValue} from 'jotai';
-import React, {useCallback, useEffect, useState} from 'react';
-import {useRecoilValueLoadable} from 'recoil';
+import React, {Suspense, useCallback, useEffect, useMemo, useState} from 'react';
 import organizeLinesIntoGroups from 'shared/SplitDiffView/organizeLinesIntoGroups';
 import {
   applyTokenizationToLine,
@@ -556,25 +555,9 @@ function ExpandingSeparator({
   threads,
   tokenization,
 }: ExpandingSeparatorProps): React.ReactElement {
-  const loadable = useRecoilValueLoadable(lineRange(range));
-  switch (loadable.state) {
-    case 'hasValue': {
-      const rows: React.ReactElement[] = [];
-      const lines = loadable.contents;
-      addUnmodifiedRows(
-        lines,
-        path,
-        'expanded',
-        beforeLineStart,
-        afterLineStart,
-        threads,
-        tokenization,
-        rows,
-      );
-      return <>{rows}</>;
-    }
-    case 'loading': {
-      return (
+  return (
+    <Suspense
+      fallback={
         <SeparatorRow>
           <Box
             padding={1}
@@ -588,25 +571,41 @@ function ExpandingSeparator({
             </Box>
           </Box>
         </SeparatorRow>
-      );
-    }
-    case 'hasError': {
-      return (
-        <SeparatorRow>
-          <Box
-            padding={1}
-            display="flex"
-            flexDirection="row"
-            justifyContent="center"
-            alignItems="center">
-            <Box display="flex" alignItems="center">
-              <Text>Error: {loadable.contents.message}</Text>
-            </Box>
-          </Box>
-        </SeparatorRow>
-      );
-    }
-  }
+      }>
+      <ExpandingSeparatorInner
+        path={path}
+        range={range}
+        beforeLineStart={beforeLineStart}
+        afterLineStart={afterLineStart}
+        threads={threads}
+        tokenization={tokenization}
+      />
+    </Suspense>
+  );
+}
+
+function ExpandingSeparatorInner({
+  path,
+  range,
+  beforeLineStart,
+  afterLineStart,
+  threads,
+  tokenization,
+}: ExpandingSeparatorProps): React.ReactElement {
+  const rangeAtom = useMemo(() => lineRangeAtom(range), [range]);
+  const lines = useAtomValue(rangeAtom);
+  const rows: React.ReactElement[] = [];
+  addUnmodifiedRows(
+    lines,
+    path,
+    'expanded',
+    beforeLineStart,
+    afterLineStart,
+    threads,
+    tokenization,
+    rows,
+  );
+  return <>{rows}</>;
 }
 
 function SeparatorRow({children}: {children: React.ReactNode}): React.ReactElement {

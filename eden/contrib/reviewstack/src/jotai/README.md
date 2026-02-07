@@ -2,10 +2,85 @@
 
 This directory contains Jotai atoms that are being migrated from Recoil.
 
-## Migration Status
+## Current Migration Status
 
 The app is currently in a hybrid state where both Recoil and Jotai providers coexist.
 This allows incremental migration of atoms and their consumers.
+
+### Fully Migrated to Jotai (in `atoms.ts`)
+
+These atoms are now natively implemented in Jotai:
+
+- **Theme**: `primerColorModeAtom`
+- **Org/Repo**: `gitHubOrgAndRepoAtom`
+- **GitHub Client**: `gitHubClientAtom`, `gitHubBlobAtom`, `gitHubCommitAtom`
+- **Pull Request**: `gitHubPullRequestAtom`, `gitHubPullRequestIDAtom`, `gitHubPullRequestViewerDidAuthorAtom`, `gitHubPullRequestViewerCanUpdateAtom`
+- **Labels/Reviewers**: `gitHubPullRequestLabelsAtom`, `gitHubPullRequestReviewersAtom`, `gitHubRepoLabelsQuery`, `gitHubRepoLabels`, `gitHubRepoAssignableUsersQuery`, `gitHubRepoAssignableUsers`
+- **Versions**: `gitHubPullRequestVersionsAtom` (synced from Recoil), `gitHubPullRequestSelectedVersionIndexAtom`, `gitHubPullRequestComparableVersionsAtom`, `gitHubPullRequestIsViewingLatestAtom`
+- **Diffs**: `gitHubDiffCommitIDsAtom`, `gitHubPullRequestVersionDiffAtom`, `gitHubDiffForCommitsAtom`, `gitHubDiffForCurrentCommitAtom`
+- **Threads**: `gitHubPullRequestReviewThreadsAtom`, `gitHubThreadsForDiffFileAtom`, `gitHubPullRequestThreadsByCommitAtom`
+- **Comments**: `gitHubPullRequestNewCommentInputCellAtom`, `gitHubPullRequestCanAddCommentAtom`, `gitHubPullRequestPendingReviewIDAtom`
+- **Check Runs**: `gitHubPullRequestCheckRunsAtom`
+- **User Home Page**: `gitHubUserHomePageDataAtom`
+- **Pull Requests Search**: `gitHubPullRequestsAtom`
+- **Notifications**: `notificationMessageAtom`
+
+### Migrated in `diffServiceClient.ts`
+
+These diff service atoms are now Jotai-native:
+
+- `diffAndTokenizeAtom` - Tokenizes and diffs file contents
+- `colorMapAtom` - TextMate color maps for syntax highlighting
+- `lineRangeAtom` - Fetches line ranges for expanding collapsed sections
+- `lineToPositionAtom` - Line to position mapping for comments
+
+### Still in Recoil (in `recoil.ts`)
+
+These remain in Recoil due to complex dependencies or cross-tab effects:
+
+- **Pull Request Loading**: `gitHubPullRequestForParams` - Used by `PullRequest.tsx` for initial loading and refresh; uses Recoil's `refresh()` API
+- **Versions Computation**: `gitHubPullRequestVersions` - Complex selector with many dependencies including stack state
+- **Line-to-Position**: `gitHubPullRequestLineToPositionForFile` - Complex dependency chain involving commit comparisons
+- **GitHub Client (Recoil)**: `gitHubClient` - Used by `stackState.ts` and internal selectors
+
+### Still in Recoil (in `gitHubCredentials.ts`)
+
+Authentication atoms with complex cross-tab sync:
+
+- `gitHubTokenPersistence` - Token with localStorage persistence and cross-tab logout
+- `gitHubUsername` - Username fetching and caching
+- `gitHubHostname` - GitHub hostname configuration
+- `isConsumerGitHub` - Consumer vs enterprise GitHub detection
+
+### Still in Recoil (in `stackState.ts`)
+
+Stacked PR support:
+
+- `stackedPullRequest` - Detects Sapling/ghstack PR stacks
+- `stackedPullRequestFragments` - Fetches stack PR data
+
+### Still in Recoil (in `shared/Drawers.tsx`)
+
+The shared Drawers component uses Recoil internally:
+
+- Accepts `RecoilState<AllDrawersState>` as prop
+- Used by `PullRequestLayout.tsx`
+
+### Sync Layer
+
+`JotaiRecoilSync.tsx` synchronizes state between Jotai and Recoil:
+
+- **Jotai → Recoil**: `gitHubOrgAndRepoAtom`, `gitHubPullRequestAtom`
+- **Recoil → Jotai**: `gitHubPullRequestVersions`
+- **Bidirectional**: `gitHubPullRequestSelectedVersionIndex`, `gitHubPullRequestComparableVersions`
+
+## Next Steps for Full Migration
+
+1. **Migrate `stackState.ts`** - Convert to Jotai atoms
+2. **Migrate `gitHubPullRequestVersions`** - Complex but would eliminate Recoil→Jotai sync
+3. **Migrate `gitHubCredentials.ts`** - Requires reimplementing cross-tab effects in Jotai
+4. **Migrate `shared/Drawers.tsx`** - Update to accept Jotai atoms
+5. **Migrate `gitHubPullRequestForParams`** - Need Jotai equivalent of `refresh()`
 
 ## How to Migrate an Atom
 
@@ -181,6 +256,6 @@ Once all atoms are migrated:
 | `useRecoilValue()` | `useAtomValue()` |
 | `useSetRecoilState()` | `useSetAtom()` |
 | `useRecoilValueLoadable()` | `useAtom(loadable(atom))` |
-| `atomFamily()` | `atomFamily()` from `jotai/utils` |
+| `atomFamily()` | `atomFamily()` from `jotai-family` |
 | `selectorFamily()` | Use `atomFamily()` with derived atom pattern |
 | `waitForAll()` | Use `Promise.all()` in async atom |

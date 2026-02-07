@@ -6,7 +6,6 @@
  */
 
 import {
-  gitHubCommitID,
   gitHubOrgAndRepo,
   gitHubPullRequest,
   gitHubPullRequestComparableVersions,
@@ -14,7 +13,6 @@ import {
   gitHubPullRequestVersions,
 } from '../recoil';
 import {
-  gitHubCommitIDAtom,
   gitHubOrgAndRepoAtom,
   gitHubPullRequestAtom,
   gitHubPullRequestComparableVersionsAtom,
@@ -56,15 +54,6 @@ export function JotaiRecoilSync(): null {
   useEffect(() => {
     setPullRequest(pullRequest);
   }, [pullRequest, setPullRequest]);
-
-  // Jotai -> Recoil sync for commit ID
-  // CommitView sets via Jotai, Recoil selectors depend on Recoil atom
-  const commitID = useAtomValue(gitHubCommitIDAtom);
-  const setCommitID = useSetRecoilState(gitHubCommitID);
-
-  useEffect(() => {
-    setCommitID(commitID);
-  }, [commitID, setCommitID]);
 
   // Recoil -> Jotai sync for versions
   // gitHubPullRequestVersions is a complex computed selector that depends on many

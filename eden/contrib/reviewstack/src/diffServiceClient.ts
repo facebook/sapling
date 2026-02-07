@@ -25,6 +25,8 @@ import {
   createWorkerName,
   parseWorkerIndex,
 } from './broadcast';
+import {atom as jotaiAtom} from 'jotai';
+import {atomFamily} from 'jotai-family';
 import {atom, selector, selectorFamily} from 'recoil';
 import {unwrap} from 'shared/utils';
 
@@ -40,67 +42,6 @@ export const lineToPosition = selectorFamily<LineToPosition, LineToPositionParam
         params,
       };
       return worker.sendMessage(message) as Promise<LineToPosition>;
-    },
-});
-
-/**
- * Request the colorMap to use with the specified SupportedPrimerColorMode for
- * use with `updateTextMateGrammarCSS()`.
- */
-export const colorMap = selectorFamily<string[], SupportedPrimerColorMode>({
-  key: 'colorMap',
-  get:
-    (colorMode: SupportedPrimerColorMode) =>
-    ({get}) => {
-      const worker = get(diffServiceClient);
-      const message: Message = {
-        id: worker.nextID(),
-        method: 'colorMap',
-        params: {colorMode},
-      };
-      return worker.sendMessage(message) as Promise<string[]>;
-    },
-});
-
-export const diffAndTokenize = selectorFamily<DiffAndTokenizeResponse, DiffAndTokenizeParams>({
-  key: 'diffAndTokenize',
-  get:
-    (params: DiffAndTokenizeParams) =>
-    ({get}) => {
-      const worker = get(diffServiceClient);
-      const message: Message = {
-        id: worker.nextID(),
-        method: 'diffAndTokenize',
-        params,
-      };
-      return worker.sendMessage(message) as Promise<DiffAndTokenizeResponse>;
-    },
-});
-
-export const lineRange = selectorFamily<string[], LineRangeParams>({
-  key: 'lineRange',
-  get:
-    (params: LineRangeParams) =>
-    ({get}) => {
-      const worker = get(diffServiceClient);
-      const message: Message = {
-        id: worker.nextID(),
-        method: 'lineRange',
-        params,
-      };
-      const promise = worker.sendMessage(message) as Promise<LineRangeResponse>;
-      return promise.then(({unsplitLines, notFound, isBinary}) => {
-        if (unsplitLines != null) {
-          return unsplitLines.split('\n');
-        } else if (notFound) {
-          // eslint-disable-next-line no-console
-          console.error(`blob ${params.oid} not found for lineRange`);
-        } else if (isBinary) {
-          // eslint-disable-next-line no-console
-          console.error(`blob ${params.oid} is binary, no lineRange`);
-        }
-        return [];
-      });
     },
 });
 
@@ -309,3 +250,110 @@ const diffServiceClient = atom<WorkerPool>({
   // WorkerPool contains mutable collections.
   dangerouslyAllowMutability: true,
 });
+
+// =============================================================================
+// Jotai versions of the diff service selectors
+// =============================================================================
+
+// Singleton WorkerPool instance shared across all Jotai atoms
+let workerPoolInstance: WorkerPool | null = null;
+function getWorkerPool(): WorkerPool {
+  if (workerPoolInstance == null) {
+    workerPoolInstance = new WorkerPool();
+  }
+  return workerPoolInstance;
+}
+
+/**
+ * Jotai atom for the diff service worker pool.
+ * Uses a singleton to share the pool across all atoms.
+ */
+export const diffServiceClientAtom = jotaiAtom<WorkerPool>(getWorkerPool());
+
+/**
+ * Jotai atomFamily for diffAndTokenize requests.
+ * Migrated from the Recoil selectorFamily.
+ */
+export const diffAndTokenizeAtom = atomFamily(
+  (params: DiffAndTokenizeParams) =>
+    jotaiAtom(async () => {
+      const worker = getWorkerPool();
+      const message: Message = {
+        id: worker.nextID(),
+        method: 'diffAndTokenize',
+        params,
+      };
+      return (await worker.sendMessage(message)) as DiffAndTokenizeResponse;
+    }),
+  (a, b) =>
+    a.path === b.path &&
+    a.before === b.before &&
+    a.after === b.after &&
+    a.scopeName === b.scopeName &&
+    a.colorMode === b.colorMode,
+);
+
+/**
+ * Jotai atomFamily for colorMap requests.
+ * Migrated from the Recoil selectorFamily.
+ */
+export const colorMapAtom = atomFamily(
+  (colorMode: SupportedPrimerColorMode) =>
+    jotaiAtom(async () => {
+      const worker = getWorkerPool();
+      const message: Message = {
+        id: worker.nextID(),
+        method: 'colorMap',
+        params: {colorMode},
+      };
+      return (await worker.sendMessage(message)) as string[];
+    }),
+  (a, b) => a === b,
+);
+
+/**
+ * Jotai atomFamily for lineRange requests.
+ * Migrated from the Recoil selectorFamily.
+ */
+export const lineRangeAtom = atomFamily(
+  (params: LineRangeParams) =>
+    jotaiAtom(async () => {
+      const worker = getWorkerPool();
+      const message: Message = {
+        id: worker.nextID(),
+        method: 'lineRange',
+        params,
+      };
+      const response = (await worker.sendMessage(message)) as LineRangeResponse;
+      const {unsplitLines, notFound, isBinary} = response;
+      if (unsplitLines != null) {
+        return unsplitLines.split('\n');
+      } else if (notFound) {
+        // eslint-disable-next-line no-console
+        console.error(`blob ${params.oid} not found for lineRange`);
+      } else if (isBinary) {
+        // eslint-disable-next-line no-console
+        console.error(`blob ${params.oid} is binary, no lineRange`);
+      }
+      return [];
+    }),
+  (a, b) => a.oid === b.oid && a.start === b.start && a.numLines === b.numLines,
+);
+
+/**
+ * Jotai atomFamily for lineToPosition requests.
+ * Migrated from the Recoil selectorFamily.
+ */
+export const lineToPositionAtom = atomFamily(
+  (params: LineToPositionParams) =>
+    jotaiAtom(async () => {
+      const worker = getWorkerPool();
+      const message: Message = {
+        id: worker.nextID(),
+        method: 'lineToPosition',
+        params,
+      };
+      return (await worker.sendMessage(message)) as LineToPosition;
+    }),
+  (a, b) => a.oldOID === b.oldOID && a.newOID === b.newOID,
+);
