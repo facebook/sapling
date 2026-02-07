@@ -4720,10 +4720,10 @@ diff@^4.0.1:
   resolved "https://registry.npmjs.org/diff/-/diff-4.0.2.tgz"
   integrity sha512-58lmxKSA4BNyLz+HHMUzlOEpg09FV+ev6ZMe3vJihgdxzgcwZ8VoEEPmALCZG9LmqfVoNMMKpttIYTVG6uDY7A==
 
-diff@^5.0.0:
-  version "5.1.0"
-  resolved "https://registry.npmjs.org/diff/-/diff-5.1.0.tgz"
-  integrity sha512-D+mk+qE8VC/PAUrlAU34N+VfXev0ghe5ywmpqrawphmVZc1bEfn56uo9qpyGp1p4xpzOHkSW4ztBd6L7Xx4ACw==
+diff@^5.2.2:
+  version "5.2.2"
+  resolved "https://registry.yarnpkg.com/diff/-/diff-5.2.2.tgz#0a4742797281d09cfa699b79ea32d27723623bad"
+  integrity sha512-vtcDfH3TOjP8UekytvnHH1o1P4FcUdt4eQ1Y+Abap1tk/OB2MWQvcwS2ClCd1zuIhc3JKOx6p3kod8Vfys3E+A==
 
 dir-glob@^3.0.1:
   version "3.0.1"
@@ -5953,11 +5953,6 @@ gzip-size@^6.0.0:
   integrity sha512-ax7ZYomf6jqPTQ4+XCpUGyXKHk5WweS+e05MBO4/y3WJ5RkmPXNKvX+bx1behVILVwr6JSQvZAku021CHPXG3Q==
   dependencies:
     duplexer "^0.1.2"
-
-hamt_plus@1.0.2:
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/hamt_plus/-/hamt_plus-1.0.2.tgz"
-  integrity sha512-t2JXKaehnMb9paaYA7J0BX8QQAY8lwfQ9Gjf4pg/mk4krt+cmwmU652HOoWonf+7+EQV97ARPMhhVgU1ra2GhA==
 
 handle-thing@^2.0.0:
   version "2.0.1"
@@ -9204,13 +9199,6 @@ readdirp@~3.6.0:
   integrity sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==
   dependencies:
     picomatch "^2.2.1"
-
-recoil@^0.7.5:
-  version "0.7.5"
-  resolved "https://registry.npmjs.org/recoil/-/recoil-0.7.5.tgz"
-  integrity sha512-GVShsj5+M/2GULWBs5WBJGcsNis/d3YvDiaKjYh3mLKXftjtmk9kfaQ8jwjoIXySCwn8/RhgJ4Sshwgzj2UpFA==
-  dependencies:
-    hamt_plus "1.0.2"
 
 recursive-readdir@^2.2.2:
   version "2.2.2"
