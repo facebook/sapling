@@ -1572,19 +1572,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Controls whether eden rm command attempts to clean up mount directory
-   * recursively. eden rm currently assumes nothing exist after unmounting and
-   * directly removes the directory, which leads to ENOTEMPTY for lots of users.
-   *
-   * This will be rolled out once we have a good understanding of what exist
-   * behind our mount.
-   */
-  ConfigSetting<bool> removeMountRecursively{
-      "experimental:remove-mount-recursively",
-      false,
-      this};
-
-  /**
    * When true, no longer eagerly write directories to the overlay on read.
    * Instead, non-materialized directories are written to the overlay when they
    * are unloaded, except during checkout.
