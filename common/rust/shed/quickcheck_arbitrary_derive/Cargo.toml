@@ -20,7 +20,7 @@ name = "quickcheck_arbitrary_example"
 path = "examples/example.rs"
 
 [dependencies]
-proc-macro2 = { version = "1.0.70", features = ["span-locations"] }
+proc-macro2 = { version = "1.0.106", features = ["span-locations"] }
 quickcheck = "1.0"
 quote = "1.0.44"
 syn = { version = "2.0.110", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
