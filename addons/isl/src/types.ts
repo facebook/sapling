@@ -768,6 +768,10 @@ export type PlatformSpecificClientToServerMessages =
       commitHash?: string;
     }
   | {
+      type: 'platform/generateSummaryWithAI';
+      commitHash?: string;
+    }
+  | {
       type: 'platform/validateChangesWithAI';
     }
   | {

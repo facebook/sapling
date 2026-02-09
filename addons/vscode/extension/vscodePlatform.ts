@@ -323,6 +323,14 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           );
           break;
         }
+        case 'platform/generateSummaryWithAI': {
+          const {commitHash} = message;
+          Internal.promptAIAgent?.(
+            {type: 'generateSummary', commitHash},
+            ActionTriggerType.ISL2CommitInfoView,
+          );
+          break;
+        }
         case 'platform/validateChangesWithAI': {
           Internal.promptAIAgent?.({type: 'validateChanges'}, ActionTriggerType.ISL2SmartActions);
           break;

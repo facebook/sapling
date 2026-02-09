@@ -124,6 +124,9 @@ export function EditorToolbar({
   if (fieldName === InternalFieldName.TestPlan && Internal.RecommendTestPlanButton) {
     parts.push(<Internal.RecommendTestPlanButton key="recommend-test-plan" />);
   }
+  if (fieldName === InternalFieldName.Summary && Internal.GenerateSummaryButton) {
+    parts.push(<Internal.GenerateSummaryButton key="generate-summary" />);
+  }
   if (uploadFiles != null) {
     parts.push(<FilePicker key="picker" uploadFiles={uploadFiles} />);
   }
