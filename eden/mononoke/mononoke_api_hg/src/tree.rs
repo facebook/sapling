@@ -64,13 +64,14 @@ impl<R: MononokeRepo> HgTreeContext<R> {
         let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id).await?;
 
         let manifest_id = ManifestId::new(manifest_id.as_bytes().into());
-        restricted_paths::spawn_log_restricted_manifest_access(
+        restricted_paths::spawn_enforce_restricted_manifest_access(
             ctx,
             repo_ctx.repo_ctx().repo().restricted_paths_arc().clone(),
             manifest_id,
             ManifestType::Hg,
             "hg_tree_context_new_check_exists",
-        )?;
+        )
+        .await?;
 
         Ok(envelope.map(move |envelope| Self { repo_ctx, envelope }))
     }
@@ -105,13 +106,14 @@ impl<R: MononokeRepo> HgAugmentedTreeContext<R> {
             fetch_augmented_manifest_envelope_opt(ctx, blobstore, augmented_manifest_id).await?;
 
         let manifest_id = ManifestId::new(augmented_manifest_id.as_bytes().into());
-        restricted_paths::spawn_log_restricted_manifest_access(
+        restricted_paths::spawn_enforce_restricted_manifest_access(
             ctx,
             repo_ctx.repo_ctx().repo().restricted_paths_arc().clone(),
             manifest_id,
             ManifestType::HgAugmented,
             "hg_augmented_tree_context_new_check_exists",
-        )?;
+        )
+        .await?;
 
         if let Some(envelope) = envelope {
             let preloaded_manifest =

@@ -83,13 +83,14 @@ impl<R: MononokeRepo> TreeContext<R> {
             Ok(fsnode) => {
                 // Log restricted path access if enabled
                 let manifest_id = ManifestId::from(&id.blake2().into_inner());
-                restricted_paths::spawn_log_restricted_manifest_access(
+                restricted_paths::spawn_enforce_restricted_manifest_access(
                     repo_ctx.ctx(),
                     repo_ctx.repo().restricted_paths_arc().clone(),
                     manifest_id,
                     ManifestType::Fsnode,
                     "fsnodes_new_check_exists",
-                )?;
+                )
+                .await?;
 
                 Ok(Some(Self {
                     repo_ctx,

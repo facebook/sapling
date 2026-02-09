@@ -351,7 +351,7 @@ pub fn spawn_log_restricted_path_access(
 ///
 /// # Returns
 /// Ok(()) if the justknobs check succeeds, Err otherwise
-pub fn spawn_log_restricted_manifest_access(
+fn spawn_log_restricted_manifest_access(
     ctx: &CoreContext,
     restricted_paths: Arc<RestrictedPaths>,
     manifest_id: ManifestId,
