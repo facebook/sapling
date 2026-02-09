@@ -198,6 +198,7 @@ export type TrackEventName =
   | 'RecommendedBookmarksToggle'
   | 'RecommendedBookmarksReminderResponse'
   | 'RecommendTestPlanButtonClicked'
+  | 'GenerateSummaryButtonClicked'
   | 'PullFullRepoBranchOperation'
   | 'SubtreeMergeOperation';
 
