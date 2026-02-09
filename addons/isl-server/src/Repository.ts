@@ -31,11 +31,11 @@ import type {
   SettableConfigName,
   ShelvedChange,
   StableInfo,
-  WorktreeInfo,
   Submodule,
   SubmodulesByRoot,
   UncommittedChanges,
   ValidatedRepoInfo,
+  WorktreeInfo,
 } from 'isl/src/types';
 import type {Comparison} from 'shared/Comparison';
 import type {EjecaChildProcess, EjecaOptions} from 'shared/ejeca';
@@ -1562,13 +1562,14 @@ export class Repository {
   }
 
   public async getWorktrees(ctx: RepositoryContext): Promise<Array<WorktreeInfo>> {
-    const result = await this.runCommand(
-      ['wt', 'list', '--json'],
-      'WorktreeListCommand',
-      ctx,
-    );
+    const result = await this.runCommand(['wt', 'list', '--json'], 'WorktreeListCommand', ctx);
     try {
-      return JSON.parse(result.stdout) as Array<WorktreeInfo>;
+      const worktrees = JSON.parse(result.stdout) as Array<WorktreeInfo>;
+      // Filter out stale worktrees whose directories no longer exist on disk
+      const validated = await Promise.all(
+        worktrees.map(async wt => ({wt, pathExists: await exists(wt.path)})),
+      );
+      return validated.filter(({pathExists}) => pathExists).map(({wt}) => wt);
     } catch (err) {
       ctx.logger.error('Failed to parse worktree list output:', err);
       return [];
