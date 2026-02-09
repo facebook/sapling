@@ -169,12 +169,13 @@ impl<R: MononokeRepo> ChangesetPathContentContext<R> {
             )
             .await?;
 
-        restricted_paths::spawn_log_restricted_path_access(
+        restricted_paths::spawn_enforce_restricted_path_access(
             changeset.ctx(),
             changeset.repo_ctx().repo().restricted_paths_arc().clone(),
             &path,
             "changeset_path_content_context_new",
-        )?;
+        )
+        .await?;
 
         Ok(Self {
             changeset,
@@ -200,12 +201,13 @@ impl<R: MononokeRepo> ChangesetPathContentContext<R> {
             )
             .await?;
 
-        restricted_paths::spawn_log_restricted_path_access(
+        restricted_paths::spawn_enforce_restricted_path_access(
             changeset.ctx(),
             changeset.repo_ctx().repo().restricted_paths_arc().clone(),
             &path,
             "changeset_path_context_fsnode_new",
-        )?;
+        )
+        .await?;
 
         Ok(Self {
             changeset,
@@ -371,12 +373,13 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
             )
             .await?;
 
-        restricted_paths::spawn_log_restricted_path_access(
+        restricted_paths::spawn_enforce_restricted_path_access(
             changeset.ctx(),
             changeset.repo_ctx().repo().restricted_paths_arc().clone(),
             &path,
             "changeset_path_history_context_new",
-        )?;
+        )
+        .await?;
 
         Ok(Self {
             changeset,
@@ -403,12 +406,13 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
             )
             .await?;
 
-        restricted_paths::spawn_log_restricted_path_access(
+        restricted_paths::spawn_enforce_restricted_path_access(
             changeset.ctx(),
             changeset.repo_ctx().repo().restricted_paths_arc().clone(),
             &path,
             "changeset_path_history_context_new",
-        )?;
+        )
+        .await?;
 
         Ok(Self {
             changeset,
@@ -436,12 +440,13 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
         let ctx = changeset.ctx().clone();
         let blobstore = changeset.repo_ctx().repo().repo_blobstore().clone();
 
-        restricted_paths::spawn_log_restricted_path_access(
+        restricted_paths::spawn_enforce_restricted_path_access(
             changeset.ctx(),
             changeset.repo_ctx().repo().restricted_paths_arc().clone(),
             &path,
             "changeset_path_history_context_new",
-        )?;
+        )
+        .await?;
 
         Ok(Self {
             changeset,
@@ -829,12 +834,13 @@ impl<R: MononokeRepo> ChangesetPathContext<R> {
             )
             .await?;
 
-        restricted_paths::spawn_log_restricted_path_access(
+        restricted_paths::spawn_enforce_restricted_path_access(
             changeset.ctx(),
             changeset.repo_ctx().repo().restricted_paths_arc().clone(),
             &path,
             "changeset_path_context_new",
-        )?;
+        )
+        .await?;
 
         Ok(Self {
             changeset,

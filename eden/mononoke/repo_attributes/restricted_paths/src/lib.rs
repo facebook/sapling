@@ -333,6 +333,73 @@ pub fn spawn_log_restricted_path_access(
     Ok(None)
 }
 
+/// Spawn enforcement check for restricted path access.
+///
+/// This function:
+/// 1. Calls `spawn_log_restricted_path_access` for logging (fire-and-forget)
+/// 2. Checks if enforcement JK is enabled
+/// 3. Checks if any of the client identities match the condition enforcement ACLs
+/// 4. If match AND user lacks authorization, returns `RestrictedPathsError::AuthorizationError`
+///
+/// # Returns
+/// * `Ok(())` if access is allowed or enforcement is disabled
+/// * `Err(RestrictedPathsError::AuthorizationError)` if access is denied
+pub async fn spawn_enforce_restricted_path_access<'a, 'b>(
+    ctx: &'b CoreContext,
+    restricted_paths: Arc<RestrictedPaths>,
+    path: &'a MPath,
+    switch_value: &'b str,
+) -> Result<(), RestrictedPathsError<'a>> {
+    // Always log first, but get the task handle so we can get the access check
+    // result if needed.
+    let has_auth_task =
+        spawn_log_restricted_path_access(ctx, restricted_paths.clone(), path, switch_value)?;
+
+    // Check if enforcement JK is enabled
+    let enforcement_enabled = justknobs::eval(
+        "scm/mononoke:enable_server_side_path_acls",
+        None,
+        Some(switch_value),
+    )?;
+
+    // Early return if enforcement is disabled or there are no conditional
+    // enforcement ACLs configured
+    if !enforcement_enabled
+        || restricted_paths
+            .config()
+            .conditional_enforcement_acls
+            .is_empty()
+    {
+        return Ok(());
+    }
+
+    let should_enforce_restrictions = restricted_paths
+        .should_enforce_restriction(ctx)
+        .await
+        .context("Checking if conditional enforcement ACLs match")?;
+
+    if !should_enforce_restrictions {
+        return Ok(());
+    }
+
+    // Conditional enforcement matched - check authorization
+    let has_auth = if let Some(has_auth_handle) = has_auth_task {
+        has_auth_handle.await.map_err(anyhow::Error::from)??
+    } else {
+        // Either logging was disabled or there were no restricted paths
+        // Access logging is a pre-requisite for enforcement!
+        true
+    };
+
+    if !has_auth {
+        return Err(RestrictedPathsError::AuthorizationError(
+            RestrictedPathAccessType::Path(path),
+        ));
+    }
+
+    Ok(())
+}
+
 /// Helper function to spawn an async task that logs access to restricted paths by manifest ID.
 ///
 /// This function checks if restricted paths access logging is enabled via justknobs,
