@@ -118,6 +118,7 @@
     "scm/mononoke:cgdm_reloading_interval_secs": 5,
     "scm/mononoke:shardmanager_shutdown_timeout_secs": 10,
     "scm/mononoke:repos_manager_concurrency": 30,
-    "scm/mononoke:max_diff_file_size_mb": 64
+    "scm/mononoke:max_diff_file_size_mb": 64,
+    "scm/mononoke:streaming_clone_chunk_aggregation_factor": 4
   }
 }

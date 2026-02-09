@@ -12,6 +12,7 @@ use anyhow::format_err;
 use async_trait::async_trait;
 use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
+use bytes::BytesMut;
 use cloned::cloned;
 use context::PerfCounterType;
 use edenapi_types::BookmarkEntry;
@@ -25,11 +26,13 @@ use edenapi_types::legacy::Metadata;
 use edenapi_types::legacy::StreamingChangelogBlob;
 use edenapi_types::legacy::StreamingChangelogData;
 use futures::future::FutureExt;
+use futures::future::join_all;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures_ext::FbStreamExt;
 use futures_stats::TimedFutureExt;
+use itertools::Itertools;
 use mercurial_types::HgChangesetId;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
@@ -71,32 +74,56 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
             .fetch_changelog(ctx.clone(), request.tag.as_deref())
             .await?;
 
+        let aggregation_factor = justknobs::get_as::<usize>(
+            "scm/mononoke:streaming_clone_chunk_aggregation_factor",
+            None,
+        )?;
+
         let data_blobs: Vec<_> = changelog
             .data_blobs
             .into_iter()
+            .chunks(aggregation_factor)
+            .into_iter()
             .enumerate()
-            .map(|(chunk_id, fut)| {
+            .map(|(chunk_id, chunk_futs)| {
+                let futs: Vec<_> = chunk_futs.collect();
                 cloned!(ctx);
                 async move {
-                    let (stats, res) = fut.timed().await;
-                    ctx.perf_counters().add_to_counter(
-                        PerfCounterType::SumManifoldPollTime,
-                        stats.poll_time.as_nanos_unchecked() as i64,
-                    );
-                    if let Ok(bytes) = res.as_ref() {
-                        ctx.perf_counters()
-                            .add_to_counter(PerfCounterType::BytesSent, bytes.len() as i64)
+                    // Wrap all futures with timing and await in parallel
+                    let timed_futs: Vec<_> = futs.into_iter().map(|fut| fut.timed()).collect();
+                    let results = join_all(timed_futs).await;
+
+                    // Process results, accumulating stats
+                    let mut combined = BytesMut::new();
+                    let mut total_poll_time: i64 = 0;
+
+                    for (stats, res) in results {
+                        total_poll_time += stats.poll_time.as_nanos_unchecked() as i64;
+                        match res {
+                            Ok(bytes) => {
+                                combined.extend_from_slice(&bytes);
+                            }
+                            Err(e) => {
+                                return StreamingChangelogResponse {
+                                    data: Err(ServerError::generic(format!("{:?}", e))),
+                                };
+                            }
+                        }
                     }
 
-                    let data = res.map(|res| {
-                        StreamingChangelogData::DataBlobChunk(StreamingChangelogBlob {
-                            chunk: res.into(),
-                            chunk_id: chunk_id as u64,
-                        })
-                    });
+                    // All blobs succeeded - record stats
+                    ctx.perf_counters()
+                        .add_to_counter(PerfCounterType::SumManifoldPollTime, total_poll_time);
+                    ctx.perf_counters()
+                        .add_to_counter(PerfCounterType::BytesSent, combined.len() as i64);
 
                     StreamingChangelogResponse {
-                        data: data.map_err(|e| ServerError::generic(format!("{:?}", e))),
+                        data: Ok(StreamingChangelogData::DataBlobChunk(
+                            StreamingChangelogBlob {
+                                chunk: combined.freeze().into(),
+                                chunk_id: chunk_id as u64,
+                            },
+                        )),
                     }
                 }
                 .boxed()
@@ -106,29 +133,48 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
         let index_blobs: Vec<_> = changelog
             .index_blobs
             .into_iter()
+            .chunks(aggregation_factor)
+            .into_iter()
             .enumerate()
-            .map(|(chunk_id, fut)| {
+            .map(|(chunk_id, chunk_futs)| {
+                let futs: Vec<_> = chunk_futs.collect();
                 cloned!(ctx);
                 async move {
-                    let (stats, res) = fut.timed().await;
-                    ctx.perf_counters().add_to_counter(
-                        PerfCounterType::SumManifoldPollTime,
-                        stats.poll_time.as_nanos_unchecked() as i64,
-                    );
-                    if let Ok(bytes) = res.as_ref() {
-                        ctx.perf_counters()
-                            .add_to_counter(PerfCounterType::BytesSent, bytes.len() as i64)
+                    // Wrap all futures with timing and await in parallel
+                    let timed_futs: Vec<_> = futs.into_iter().map(|fut| fut.timed()).collect();
+                    let results = join_all(timed_futs).await;
+
+                    // Process results, accumulating stats
+                    let mut combined = BytesMut::new();
+                    let mut total_poll_time: i64 = 0;
+
+                    for (stats, res) in results {
+                        total_poll_time += stats.poll_time.as_nanos_unchecked() as i64;
+                        match res {
+                            Ok(bytes) => {
+                                combined.extend_from_slice(&bytes);
+                            }
+                            Err(e) => {
+                                return StreamingChangelogResponse {
+                                    data: Err(ServerError::generic(format!("{:?}", e))),
+                                };
+                            }
+                        }
                     }
 
-                    let data = res.map(|res| {
-                        StreamingChangelogData::IndexBlobChunk(StreamingChangelogBlob {
-                            chunk: res.into(),
-                            chunk_id: chunk_id as u64,
-                        })
-                    });
+                    // All blobs succeeded - record stats
+                    ctx.perf_counters()
+                        .add_to_counter(PerfCounterType::SumManifoldPollTime, total_poll_time);
+                    ctx.perf_counters()
+                        .add_to_counter(PerfCounterType::BytesSent, combined.len() as i64);
 
                     StreamingChangelogResponse {
-                        data: data.map_err(|e| ServerError::generic(format!("{:?}", e))),
+                        data: Ok(StreamingChangelogData::IndexBlobChunk(
+                            StreamingChangelogBlob {
+                                chunk: combined.freeze().into(),
+                                chunk_id: chunk_id as u64,
+                            },
+                        )),
                     }
                 }
                 .boxed()
