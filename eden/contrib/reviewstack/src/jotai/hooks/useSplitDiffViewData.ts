@@ -38,7 +38,6 @@ import {useCallback, useEffect, useMemo} from 'react';
 
 /**
  * Type for the new comment input callbacks.
- * Migrated from NewCommentInputCallbacks in recoil.ts
  */
 export type NewCommentInputCallbacks = {
   onShowNewCommentInput: (event: React.MouseEvent<HTMLTableElement>) => void;
@@ -174,7 +173,7 @@ export function useSplitDiffViewData(
     return null;
   }, [pullRequest, onShowNewCommentInput, onResetNewCommentInput]);
 
-  // Use Jotai for diffAndTokenize (migrated from Recoil)
+  // Diff and tokenize atom
   const diffAndTokenizeParams = useMemo(
     () => ({path, before, after, scopeName, colorMode}),
     [path, before, after, scopeName, colorMode],
@@ -185,7 +184,7 @@ export function useSplitDiffViewData(
   );
   const diffAndTokenizeLoadable = useAtomValue(diffAndTokenizeLoadableAtom);
 
-  // Use Jotai for computed lineToPosition (fully migrated from Recoil)
+  // Computed lineToPosition for this file path
   const computedLineToPositionLoadableAtom = useMemo(
     () => loadable(gitHubPullRequestComputedLineToPositionForFileAtom(path)),
     [path],

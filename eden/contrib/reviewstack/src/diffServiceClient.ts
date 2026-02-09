@@ -245,7 +245,6 @@ export const diffServiceClientAtom = jotaiAtom<WorkerPool>(getWorkerPool());
 
 /**
  * Jotai atomFamily for diffAndTokenize requests.
- * Migrated from the Recoil selectorFamily.
  */
 export const diffAndTokenizeAtom = atomFamily(
   (params: DiffAndTokenizeParams) =>
@@ -268,7 +267,6 @@ export const diffAndTokenizeAtom = atomFamily(
 
 /**
  * Jotai atomFamily for colorMap requests.
- * Migrated from the Recoil selectorFamily.
  */
 export const colorMapAtom = atomFamily(
   (colorMode: SupportedPrimerColorMode) =>
@@ -286,7 +284,6 @@ export const colorMapAtom = atomFamily(
 
 /**
  * Jotai atomFamily for lineRange requests.
- * Migrated from the Recoil selectorFamily.
  */
 export const lineRangeAtom = atomFamily(
   (params: LineRangeParams) =>
@@ -315,7 +312,6 @@ export const lineRangeAtom = atomFamily(
 
 /**
  * Jotai atomFamily for lineToPosition requests.
- * Migrated from the Recoil selectorFamily.
  */
 export const lineToPositionAtom = atomFamily(
   (params: LineToPositionParams) =>

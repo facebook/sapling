@@ -264,16 +264,24 @@ async function tokenizeSplitDiff(
   beforeContents: string,
   afterContents: string,
 ): Promise<TokenizedSplitDiff> {
-  const store = await getGrammarStore(colorMode);
-  const grammar = await store.loadGrammar(scopeName);
-  if (grammar == null) {
+  try {
+    const store = await getGrammarStore(colorMode);
+    const grammar = await store.loadGrammar(scopeName);
+    if (grammar == null) {
+      return {before: null, after: null};
+    }
+
+    return {
+      before: tokenizeFileContents(beforeContents, grammar),
+      after: tokenizeFileContents(afterContents, grammar),
+    };
+  } catch (err) {
+    // WASM tokenizer can crash with "memory access out of bounds" on large
+    // or problematic files. Fall back to no syntax highlighting.
+    // eslint-disable-next-line no-console
+    console.warn('Tokenization failed, falling back to plain text:', err);
     return {before: null, after: null};
   }
-
-  return {
-    before: tokenizeFileContents(beforeContents, grammar),
-    after: tokenizeFileContents(afterContents, grammar),
-  };
 }
 
 async function fetchLineToPosition({

@@ -8,9 +8,10 @@
 import type {LabelFragment} from './generated/graphql';
 import type {ChangeEvent} from 'react';
 
+import CenteredSpinner from './CenteredSpinner';
 import {gitHubRepoLabels, gitHubRepoLabelsQuery} from './jotai';
 import useDebounced from './useDebounced';
-import {ActionList, Box, Spinner, TextInput} from '@primer/react';
+import {ActionList, Box, TextInput} from '@primer/react';
 import {useAtom, useAtomValue} from 'jotai';
 import React, {Suspense, useCallback, useEffect, useState} from 'react';
 
@@ -18,14 +19,6 @@ type Props = {
   existingLabelIDs: Set<string>;
   onSelect: (label: LabelFragment, isExisting: boolean) => void;
 };
-
-function LoadingFallback(): React.ReactElement {
-  return (
-    <Box display="flex" justifyContent="center" padding={3}>
-      <Spinner size="medium" />
-    </Box>
-  );
-}
 
 function RepoLabelsInputInner({
   existingLabelIDs,
@@ -78,7 +71,7 @@ function RepoLabelsInputInner({
 // eslint-disable-next-line prefer-arrow-callback
 export default React.memo(function RepoLabelsInput(props: Props): React.ReactElement {
   return (
-    <Suspense fallback={<LoadingFallback />}>
+    <Suspense fallback={<CenteredSpinner message="Loading labels..." />}>
       <RepoLabelsInputInner {...props} />
     </Suspense>
   );

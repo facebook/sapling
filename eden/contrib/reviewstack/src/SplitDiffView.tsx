@@ -111,11 +111,16 @@ export default function SplitDiffView({
   }
 
   if (loadable.state === 'hasError') {
+    // Error can be either an Error object or a string (from worker)
+    const errorMessage =
+      typeof loadable.error === 'string'
+        ? loadable.error
+        : loadable.error?.message ?? 'Unknown error';
     return (
       <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
         <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />
         <Box padding={3} color="danger.fg">
-          <Text>Error loading diff: {loadable.error?.message ?? 'Unknown error'}</Text>
+          <Text>Error loading diff: {errorMessage}</Text>
         </Box>
       </Box>
     );

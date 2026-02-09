@@ -8,9 +8,10 @@
 import type {UserFragment} from './generated/graphql';
 import type {ChangeEvent} from 'react';
 
+import CenteredSpinner from './CenteredSpinner';
 import {gitHubRepoAssignableUsers, gitHubRepoAssignableUsersQuery} from './jotai';
 import useDebounced from './useDebounced';
-import {ActionList, Avatar, Box, Spinner, TextInput} from '@primer/react';
+import {ActionList, Avatar, Box, TextInput} from '@primer/react';
 import {useAtom, useAtomValue} from 'jotai';
 import React, {Suspense, useCallback, useEffect, useState} from 'react';
 
@@ -18,14 +19,6 @@ type Props = {
   existingUserIDs: ReadonlySet<string>;
   onSelect: (user: UserFragment, isExisting: boolean) => void;
 };
-
-function LoadingFallback(): React.ReactElement {
-  return (
-    <Box display="flex" justifyContent="center" padding={3}>
-      <Spinner size="medium" />
-    </Box>
-  );
-}
 
 function RepoAssignableUsersInputInner({
   existingUserIDs,
@@ -78,7 +71,7 @@ function RepoAssignableUsersInputInner({
 // eslint-disable-next-line prefer-arrow-callback
 export default React.memo(function RepoAssignableUsersInput(props: Props): React.ReactElement {
   return (
-    <Suspense fallback={<LoadingFallback />}>
+    <Suspense fallback={<CenteredSpinner message="Loading users..." />}>
       <RepoAssignableUsersInputInner {...props} />
     </Suspense>
   );

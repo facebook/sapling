@@ -7,7 +7,6 @@
 
 /**
  * This file contains Jotai atoms for the ReviewStack application.
- * These atoms are migrated from Recoil and implemented natively in Jotai.
  */
 
 import type {
@@ -68,7 +67,6 @@ import {notEmpty} from 'shared/utils';
 // =============================================================================
 
 /**
- * Migrated from: primerColorMode in themeState.ts
  *
  * See https://primer.style/react/theming#color-modes-and-color-schemes
  * Note that "day" is the default. Currently, we choose not to include "auto"
@@ -198,7 +196,6 @@ export const gitHubTokenListenerAtom = atom(
 gitHubTokenListenerAtom.onMount = setSelf => setSelf();
 
 /**
- * Migrated from: gitHubTokenPersistence selector in github/gitHubCredentials.ts
  *
  * Writable atom for getting/setting the GitHub token with proper data clearing.
  * - On get: Returns the current token value (or a promise if loading)
@@ -247,18 +244,15 @@ export const gitHubTokenPersistenceAtom = atom(
 );
 
 /**
- * Migrated from: gitHubHostname atom in github/gitHubCredentials.ts
- *
  * The hostname for the GitHub instance. Defaults to 'github.com' for consumer
  * GitHub, but can be set to an enterprise hostname.
  */
 export const gitHubHostnameAtom = atomWithStorage<string>(
   GITHUB_HOSTNAME_PROPERTY,
-  localStorage.getItem(GITHUB_HOSTNAME_PROPERTY) ?? 'github.com',
+  'github.com',
 );
 
 /**
- * Migrated from: isConsumerGitHub selector in github/gitHubCredentials.ts
  *
  * Derived atom that indicates if the current hostname is consumer GitHub.
  * Used to determine behavior differences between consumer and enterprise GitHub.
@@ -268,7 +262,6 @@ export const isConsumerGitHubAtom = atom<boolean>(get => {
 });
 
 /**
- * Migrated from: gitHubGraphQLEndpoint selector in github/gitHubCredentials.ts
  *
  * Derives the GraphQL endpoint URL from the hostname.
  */
@@ -285,7 +278,6 @@ function deriveLocalStoragePropForUsername(token: string): string {
 }
 
 /**
- * Migrated from: gitHubUsername selector in github/gitHubCredentials.ts
  *
  * Fetches the GitHub username for the current token.
  * Caches the username in localStorage to avoid repeated API calls.
@@ -368,7 +360,6 @@ export const gitHubClientAtom = atom<Promise<GitHubClient | null>>(async get => 
 
 /**
  * Type for pull request loading params.
- * Migrated from: GitHubPullRequestParams in recoil.ts
  */
 export type GitHubPullRequestParams = {
   orgAndRepo: GitHubOrgAndRepo;
@@ -387,7 +378,6 @@ export const gitHubPullRequestRefreshTriggerAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestForParams atomFamily in recoil.ts
  *
  * Fetches pull request data for the given params. The PR will be refetched
  * when gitHubPullRequestRefreshTriggerAtom is incremented.
@@ -425,14 +415,12 @@ export const gitHubPullRequestForParamsAtom = atomFamily(
 // =============================================================================
 
 /**
- * Migrated from: gitHubRepoLabelsQuery in recoil.ts
  *
  * Search query for filtering repository labels.
  */
 export const gitHubRepoLabelsQuery = atom<string>('');
 
 /**
- * Migrated from: gitHubRepoLabels in recoil.ts
  *
  * Fetches repository labels based on the search query.
  */
@@ -450,14 +438,12 @@ export const gitHubRepoLabels = atom<Promise<LabelFragment[]>>(async get => {
 // =============================================================================
 
 /**
- * Migrated from: gitHubRepoAssignableUsersQuery in recoil.ts
  *
  * Search query for filtering assignable users.
  */
 export const gitHubRepoAssignableUsersQuery = atom<string>('');
 
 /**
- * Migrated from: gitHubRepoAssignableUsers in recoil.ts
  *
  * Fetches assignable users based on the search query.
  */
@@ -479,7 +465,6 @@ export const gitHubRepoAssignableUsers = atom<Promise<UserFragment[]>>(async get
 // =============================================================================
 
 /**
- * Migrated from: gitHubPullRequestJumpToCommentID in recoil.ts
  *
  * An atom family that tracks whether a specific comment should be scrolled to.
  * When set to true, the comment will scroll into view and the atom will be
@@ -495,7 +480,6 @@ export const gitHubPullRequestJumpToCommentIDAtom = atomFamily(
 // =============================================================================
 
 /**
- * Migrated from: gitHubPullRequestLabels in recoil.ts
  *
  * Stores the labels associated with the current pull request.
  * Initialized from the pull request data and updated optimistically
@@ -516,7 +500,6 @@ export type PullRequestReviewersList = {
 };
 
 /**
- * Migrated from: gitHubPullRequestReviewers in recoil.ts
  *
  * Stores the reviewers associated with the current pull request.
  * Initialized from the pull request data and updated optimistically
@@ -532,14 +515,12 @@ export const gitHubPullRequestReviewersAtom = atom<PullRequestReviewersList>({
 // =============================================================================
 
 /**
- * Migrated from: gitHubCommitID in recoil.ts
  *
  * The current commit ID being viewed.
  */
 export const gitHubCommitIDAtom = atom<GitObjectID | null>(null);
 
 /**
- * Migrated from: gitHubPullRequestID in recoil.ts
  *
  * The current pull request number being viewed.
  */
@@ -550,14 +531,12 @@ export const gitHubPullRequestIDAtom = atom<number | null>(null);
 // =============================================================================
 
 /**
- * Migrated from: gitHubPullRequest in recoil.ts
  *
  * The current pull request data. Set when navigating to a PR.
  */
 export const gitHubPullRequestAtom = atom<PullRequest | null>(null);
 
 /**
- * Migrated from: gitHubPullRequestViewerDidAuthor in recoil.ts
  *
  * Derived atom that indicates if the current viewer authored the PR.
  * Used to determine author-specific behavior (e.g., different review actions).
@@ -583,7 +562,6 @@ export const gitHubPullRequestViewerCanUpdateAtom = atom<boolean>(get => {
 // =============================================================================
 
 /**
- * Migrated from: gitHubCurrentCommit in recoil.ts
  *
  * Fetches the current commit data based on the commit ID.
  * Used on the /commit/:oid route.
@@ -595,7 +573,6 @@ export const gitHubCurrentCommitAtom = atom<Promise<Commit | null>>(async get =>
 });
 
 /**
- * Migrated from: gitHubDiffForCurrentCommit in recoil.ts
  *
  * Computes the diff for the current commit by comparing it with its parent.
  * Used to display the commit diff view.
@@ -640,7 +617,6 @@ export const gitHubDiffCommitIDsForCommitViewAtom = atom<Promise<DiffCommitIDs |
 // =============================================================================
 
 /**
- * Migrated from: ComparableVersions type in recoil.ts
  *
  * When there is no "before" explicitly selected, the view shows the Diff for
  * the selected "after" version compared to its parent.
@@ -651,7 +627,6 @@ export type ComparableVersions = {
 };
 
 /**
- * Migrated from: gitHubPullRequestComparableVersions in recoil.ts
  *
  * Stores the currently selected versions for comparison in a PR.
  * This is a writable atom - when null, a default is computed from versions.
@@ -703,7 +678,6 @@ export const gitHubPullRequestComparableVersionsAtom = atom(
 );
 
 /**
- * Migrated from: gitHubCommit selectorFamily in recoil.ts
  *
  * Fetches a commit by its OID using the GitHub client.
  */
@@ -717,7 +691,6 @@ export const gitHubCommitAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestCommitBaseParent selectorFamily in recoil.ts
  *
  * For a given commit in a PR, get its merge base commit with the main branch.
  * Used to identify the appropriate base for comparison when generating diffs
@@ -756,7 +729,6 @@ export const gitHubPullRequestCommitBaseParentAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubDiffForCommits selectorFamily in recoil.ts
  *
  * Computes the diff between two commits (base and head).
  */
@@ -783,7 +755,6 @@ export const gitHubDiffForCommitsAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestVersionDiff selector in recoil.ts
  *
  * Returns the appropriate Diff for the current pull request. By default, it
  * shows the Diff for the head commit of the PR compared to its parent, though
@@ -861,7 +832,6 @@ export const gitHubPullRequestVersionDiffAtom = atom<Promise<DiffWithCommitIDs |
 );
 
 /**
- * Migrated from: gitHubDiffCommitIDs selector in recoil.ts
  *
  * Extracts the commit IDs from the current diff.
  * Handles both commit view (single commit) and PR view (version comparison).
@@ -885,7 +855,6 @@ export const gitHubDiffCommitIDsAtom = atom<Promise<DiffCommitIDs | null>>(async
 
 /**
  * Internal atom: extracts the base ref OID from the pull request.
- * Migrated from: gitHubPullRequestBaseRef selector in recoil.ts
  */
 const gitHubPullRequestBaseRefAtom = atom<GitObjectID | null>(get => {
   const pullRequest = get(gitHubPullRequestAtom);
@@ -894,7 +863,6 @@ const gitHubPullRequestBaseRefAtom = atom<GitObjectID | null>(get => {
 
 /**
  * Internal atom: extracts commit data from the pull request timeline.
- * Migrated from: gitHubPullRequestCommits selector in recoil.ts
  */
 const gitHubPullRequestCommitsAtom = atom<CommitData[]>(get => {
   const pullRequest = get(gitHubPullRequestAtom);
@@ -912,7 +880,6 @@ const gitHubPullRequestCommitsAtom = atom<CommitData[]>(get => {
 
 /**
  * Internal atom: extracts force push events from the pull request timeline.
- * Migrated from: gitHubPullRequestForcePushes selector in recoil.ts
  */
 const gitHubPullRequestForcePushesAtom = atom<ForcePushEvent[]>(get => {
   const pullRequest = get(gitHubPullRequestAtom);
@@ -947,7 +914,6 @@ const gitHubPullRequestForcePushesAtom = atom<ForcePushEvent[]>(get => {
 
 /**
  * Internal atom: fetches commit comparison between two commits.
- * Migrated from: gitHubCommitComparison selectorFamily in recoil.ts
  */
 const gitHubCommitComparisonAtom = atomFamily(
   ({base, head}: {base: GitObjectID; head: GitObjectID}) =>
@@ -962,7 +928,6 @@ const gitHubCommitComparisonAtom = atomFamily(
  * Internal atom: for a given commit in a PR, get its merge base commit
  * with the main branch, as well as all commits on the branch from the
  * base commit to the given head.
- * Migrated from: gitHubPullRequestVersionBaseAndCommits selectorFamily in recoil.ts
  */
 const gitHubPullRequestVersionBaseAndCommitsAtom = atomFamily(
   (head: GitObjectID) =>
@@ -1008,7 +973,6 @@ const gitHubPullRequestVersionBaseAndCommitsAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestVersions selector in recoil.ts
  *
  * The list of PR versions (each force push creates a new version).
  * Now fully computed in Jotai.
@@ -1164,7 +1128,6 @@ export const gitHubPullRequestVersionsAtom = atom<Promise<Version[]>>(async get 
 });
 
 /**
- * Migrated from: gitHubPullRequestSelectedVersionIndex atom in recoil.ts
  *
  * The currently selected version index. Defaults to the latest version.
  * This atom is writable - components can set it to change the selected version.
@@ -1172,7 +1135,6 @@ export const gitHubPullRequestVersionsAtom = atom<Promise<Version[]>>(async get 
 export const gitHubPullRequestSelectedVersionIndexAtom = atom<number>(0);
 
 /**
- * Migrated from: gitHubPullRequestSelectedVersionCommits selector in recoil.ts
  *
  * Derived atom that returns the commits for the currently selected version.
  */
@@ -1185,7 +1147,6 @@ export const gitHubPullRequestSelectedVersionCommitsAtom = atom<Promise<VersionC
 );
 
 /**
- * Migrated from: gitHubPullRequestIsViewingLatest selector in recoil.ts
  *
  * Determines if the user is viewing the latest version of the PR.
  * Used to show/hide the "Back to Latest" link.
@@ -1215,7 +1176,6 @@ export const gitHubPullRequestIsViewingLatestAtom = atom<Promise<boolean>>(async
 });
 
 /**
- * Migrated from: gitHubPullRequestVersionIndexesByCommit selector in recoil.ts
  *
  * Internal atom that indexes versions by commit ID.
  */
@@ -1233,7 +1193,6 @@ const gitHubPullRequestVersionIndexesByCommitAtom = atom<Promise<Map<GitObjectID
 );
 
 /**
- * Migrated from: gitHubPullRequestVersionIndexForCommit selectorFamily in recoil.ts
  *
  * Looks up the version index for a given commit.
  * Used to navigate to the version containing a specific commit.
@@ -1248,7 +1207,6 @@ export const gitHubPullRequestVersionIndexForCommitAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestThreadsByCommit selector in recoil.ts
  *
  * Groups review threads by commit ID.
  * Used to count comments per version.
@@ -1274,7 +1232,6 @@ export const gitHubPullRequestThreadsByCommitAtom = atom<
 });
 
 /**
- * Migrated from: gitHubPullRequestThreadsForCommit selectorFamily in recoil.ts
  *
  * Gets review threads for a specific commit.
  */
@@ -1288,7 +1245,6 @@ export const gitHubPullRequestThreadsForCommitAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestThreadsForCommitFile selectorFamily in recoil.ts
  *
  * Gets review threads for a specific commit and file path.
  */
@@ -1310,7 +1266,6 @@ export const gitHubPullRequestThreadsForCommitFileAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestThreadsForCommitFileBySide selectorFamily in recoil.ts
  *
  * `DiffSide` refers to the side of the split diff view that the thread appears
  * on. For a given commit, in the context of a pull request, the `Left` side is
@@ -1343,7 +1298,6 @@ const gitHubPullRequestThreadsForCommitFileBySideAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestThreadsForDiffFile selectorFamily in recoil.ts
  *
  * Get the appropriate threads for each side of the diff for a pull request,
  * depending on what is being compared as "before" and "after".
@@ -1395,7 +1349,6 @@ export const gitHubPullRequestThreadsForDiffFileAtom = atomFamily(
 export type ThreadsBySide = {[key in DiffSide]: GitHubPullRequestReviewThread[]};
 
 /**
- * Migrated from: gitHubThreadsForDiffFile selectorFamily in recoil.ts
  *
  * Get the appropriate threads for each side of the diff.
  * Returns threads for pull request diffs, or null for commit-only views.
@@ -1427,12 +1380,9 @@ export type LineToPositionBySide =
   | null;
 
 /**
- * Migrated from: gitHubPullRequestLineToPositionForFile selectorFamily in recoil.ts
  *
  * This atomFamily stores the line-to-position mapping for each file.
  * The position value is required when adding comments via the GitHub API.
- *
- * During migration, this receives its value from Recoil via useSplitDiffViewData.
  */
 export const gitHubPullRequestLineToPositionForFileAtom = atomFamily(
   (_path: string) => atom<LineToPositionBySide>(null),
@@ -1440,11 +1390,10 @@ export const gitHubPullRequestLineToPositionForFileAtom = atomFamily(
 );
 
 // =============================================================================
-// Computed Line-to-Position (Migrated from Recoil)
+// Computed Line-to-Position
 // =============================================================================
 
 /**
- * Migrated from: gitHubPullRequestDiffCommitWithBaseByPath selectorFamily in recoil.ts
  *
  * For a given commit, returns a map from file path to the diff change for that file.
  * The diff is computed against the commit's base parent (merge base with main branch).
@@ -1474,7 +1423,6 @@ const gitHubPullRequestDiffCommitWithBaseByPathAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestLineToPositionForCommitFile selectorFamily in recoil.ts
  *
  * For a given commit and file path, computes the line-to-position mapping.
  * The position value is required when adding comments via the GitHub API.
@@ -1512,7 +1460,6 @@ const gitHubPullRequestLineToPositionForCommitFileAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestLineToPositionForFile selectorFamily in recoil.ts
  *
  * Computes the line-to-position mapping for a file in the current PR view.
  * The mapping depends on which versions are being compared:
@@ -1572,7 +1519,6 @@ export type CheckRun = {
 } & CheckRunFragment;
 
 /**
- * Migrated from: gitHubPullRequestCheckRuns selector in recoil.ts
  *
  * Derived atom that extracts check runs from the current pull request's
  * latest commit's check suites. Each check run includes the workflow name
@@ -1602,7 +1548,6 @@ export const gitHubPullRequestCheckRunsAtom = atom<CheckRun[]>(get => {
 // =============================================================================
 
 /**
- * Migrated from: gitHubUserHomePageData selector in recoil.ts
  *
  * Async atom that fetches the viewer's home-page PR data.
  * This includes review requests and recent pull requests.
@@ -1631,7 +1576,6 @@ export const gitHubUserHomePageDataAtom = atom<Promise<UserHomePageQueryData | n
 // =============================================================================
 
 /**
- * Migrated from: gitHubPullRequests selectorFamily in recoil.ts
  *
  * Fetches search results for a (labels, states, pagination) tuple.
  * Returns pull requests matching the query criteria.
@@ -1686,7 +1630,6 @@ export const gitHubPullRequestsAtom = atomFamily(
 // =============================================================================
 
 /**
- * Migrated from: gitHubPullRequestPendingReviewID selector in recoil.ts
  *
  * A PR should have at most a single pending review per user. Any inline
  * comments made will either create a new pending review or be added to the
@@ -1705,7 +1648,6 @@ export const gitHubPullRequestPendingReviewIDAtom = atom<ID | null>(get => {
 // =============================================================================
 
 /**
- * Migrated from: gitHubPullRequestReviewThreads selector in recoil.ts
  *
  * Extracts and normalizes review threads from the pull request.
  */
@@ -1742,7 +1684,6 @@ export const gitHubPullRequestReviewThreadsAtom = atom<GitHubPullRequestReviewTh
 });
 
 /**
- * Migrated from: gitHubPullRequestReviewThreadsByFirstCommentID selector in recoil.ts
  *
  * Returns review threads indexed by the ID of their first comment.
  * Used to look up thread information when rendering inline comments.
@@ -1779,7 +1720,6 @@ const gitHubPullRequestReviewCommentsByIDAtom = atom<Map<ID, PullRequestReviewCo
 });
 
 /**
- * Migrated from: gitHubPullRequestCommentForID selectorFamily in recoil.ts
  *
  * Looks up a review comment by its ID. Returns the comment with its
  * original line number for display purposes.
@@ -1798,7 +1738,6 @@ export const gitHubPullRequestCommentForIDAtom = atomFamily(
 // =============================================================================
 
 /**
- * Migrated from: gitHubBlob selectorFamily in recoil.ts
  *
  * Fetches a blob by its OID using the GitHub client.
  */
@@ -1830,7 +1769,6 @@ export type FileMod = {
 export type FileContentsDelta = {before: Blob | null; after: Blob | null};
 
 /**
- * Migrated from: fileContentsDelta selectorFamily in recoil.ts
  *
  * Derives the before/after blob contents for a file modification.
  * Used for rendering diffs.
@@ -1876,7 +1814,6 @@ export type NewCommentInputCell = {
 } | null;
 
 /**
- * Migrated from: gitHubPullRequestNewCommentInputCell atom in recoil.ts
  *
  * Stores which cell (line number, path, side) the user is currently adding a
  * comment to. When null, no comment input is shown.
@@ -1884,7 +1821,6 @@ export type NewCommentInputCell = {
 export const gitHubPullRequestNewCommentInputCellAtom = atom<NewCommentInputCell>(null);
 
 /**
- * Migrated from: gitHubPullRequestNewCommentInputShown selectorFamily in recoil.ts
  *
  * Returns whether the new comment input is shown for a specific cell.
  */
@@ -1900,13 +1836,9 @@ export const gitHubPullRequestNewCommentInputShownAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestPositionForLine selectorFamily in recoil.ts
  *
  * Looks up the "position" value for a line in a file. The position is required
  * by the GitHub API when adding comments to diffs.
- *
- * Note: This reads from gitHubPullRequestLineToPositionForFileAtom which is
- * synced from Recoil via useSplitDiffViewData.
  */
 export const gitHubPullRequestPositionForLineAtom = atomFamily(
   ({line, path, side}: {line: number; path: string; side: DiffSide}) =>
@@ -1919,7 +1851,6 @@ export const gitHubPullRequestPositionForLineAtom = atomFamily(
 );
 
 /**
- * Migrated from: gitHubPullRequestCanAddComment selectorFamily in recoil.ts
  *
  * Determines if a comment can be added to a specific line of a pull request.
  * Requirements:
@@ -1985,7 +1916,6 @@ export const notificationMessageAtom = atom<NotificationMessage>(null);
 // =============================================================================
 
 /**
- * Migrated from: StackedPullRequest type in stackState.ts
  *
  * Represents the type of stacked PR detected (Sapling, ghstack, or none).
  */
@@ -2003,7 +1933,6 @@ export type StackedPullRequest =
     };
 
 /**
- * Migrated from: stackedPullRequest selector in stackState.ts
  *
  * Parses the pull request body to detect Sapling or ghstack stacks.
  */
@@ -2026,7 +1955,6 @@ export const stackedPullRequestAtom = atom<StackedPullRequest>(get => {
 });
 
 /**
- * Migrated from: stackedPullRequestNumbers selector in stackState.ts
  *
  * Extracts the PR numbers from the stacked PR info.
  */
@@ -2045,7 +1973,6 @@ const stackedPullRequestNumbersAtom = atom<number[]>(get => {
 });
 
 /**
- * Migrated from: stackedPullRequestFragments selector in stackState.ts
  *
  * Fetches the stack PR fragments for display.
  */
