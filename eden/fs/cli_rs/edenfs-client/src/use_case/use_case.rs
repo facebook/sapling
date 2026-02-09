@@ -52,6 +52,22 @@ pub enum UseCaseId {
     StarlarkMcp,
     #[strum(serialize = "vscode")]
     VSCode,
+    #[strum(serialize = "vscode_buck")]
+    VSCodeBuck,
+    #[strum(serialize = "vscode_doctor")]
+    VSCodeDoctor,
+    #[strum(serialize = "vscode_eslint")]
+    VSCodeEslint,
+    #[strum(serialize = "vscode_filewatcher")]
+    VSCodeFilewatcher,
+    #[strum(serialize = "vscode_hg")]
+    VSCodeHg,
+    #[strum(serialize = "vscode_ios_component_kit")]
+    VSCodeIOSComponentKit,
+    #[strum(serialize = "vscode_tests")]
+    VSCodeTests,
+    #[strum(serialize = "vscode_update_tracker")]
+    VSCodeUpdateTracker,
     #[strum(serialize = "vscode_extension")]
     VSCodeExtension,
     Unknown,
