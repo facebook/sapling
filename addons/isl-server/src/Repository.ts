@@ -54,7 +54,7 @@ import {
 } from 'isl/src/types';
 import fs from 'node:fs';
 import path from 'node:path';
-import {revsetArgsForComparison} from 'shared/Comparison';
+import {ComparisonType, revsetArgsForComparison} from 'shared/Comparison';
 import {LRU} from 'shared/LRU';
 import {RateLimiter} from 'shared/RateLimiter';
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
@@ -1195,6 +1195,21 @@ export class Repository {
   /** Return file content at a given revset, e.g. hash or `.` */
   public cat(ctx: RepositoryContext, file: AbsolutePath, rev: Revset): Promise<string> {
     return this.catLimiter.enqueueRun(async () => {
+      // For hash-based revsets (e.g. "abc123" or "abc123^"), use git directly
+      // to avoid sl's EdenFS connection overhead.
+      if (/^[0-9a-f]+\^?$/i.test(rev)) {
+        try {
+          // git show expects repo-relative paths
+          const repoRelative = path.relative(ctx.cwd, file);
+          const result = await ejeca('git', ['show', `${rev}:${repoRelative}`], {
+            cwd: ctx.cwd,
+            stripFinalNewline: false,
+          });
+          return result.stdout;
+        } catch {
+          ctx.logger.info('git show failed, falling back to sl cat');
+        }
+      }
       // For `sl cat`, we want the output of the command verbatim.
       const options = {stripFinalNewline: false};
       return (await this.runCommand(['cat', file, '--rev', rev], 'CatCommand', ctx, options))
@@ -1615,6 +1630,28 @@ export class Repository {
     comparison: Comparison,
     contextLines = 4,
   ): Promise<string> {
+    // For committed diffs (e.g. PR review), use git directly to avoid
+    // sl's EdenFS connection overhead (~26s → <1s).
+    if (comparison.type === ComparisonType.Committed) {
+      try {
+        const result = await ejeca(
+          'git',
+          [
+            'diff',
+            `${comparison.hash}^`,
+            comparison.hash,
+            '--no-prefix',
+            `--unified=${contextLines}`,
+          ],
+          {cwd: ctx.cwd},
+        );
+        return result.stdout;
+      } catch {
+        // Fall through to sl diff if git fails (e.g. root commit with no parent)
+        ctx.logger.info('git diff failed, falling back to sl diff');
+      }
+    }
+
     const output = await this.runCommand(
       [
         'diff',
