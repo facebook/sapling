@@ -316,17 +316,17 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/recommendTestPlanWithAI': {
-          const {commitHash} = message;
+          const {commitHash, userContext} = message;
           Internal.promptAIAgent?.(
-            {type: 'recommendTestPlan', commitHash},
+            {type: 'recommendTestPlan', commitHash, userContext},
             ActionTriggerType.ISL2CommitInfoView,
           );
           break;
         }
         case 'platform/generateSummaryWithAI': {
-          const {commitHash} = message;
+          const {commitHash, userContext} = message;
           Internal.promptAIAgent?.(
-            {type: 'generateSummary', commitHash},
+            {type: 'generateSummary', commitHash, userContext},
             ActionTriggerType.ISL2CommitInfoView,
           );
           break;

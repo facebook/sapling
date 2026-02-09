@@ -766,10 +766,12 @@ export type PlatformSpecificClientToServerMessages =
   | {
       type: 'platform/recommendTestPlanWithAI';
       commitHash?: string;
+      userContext?: string;
     }
   | {
       type: 'platform/generateSummaryWithAI';
       commitHash?: string;
+      userContext?: string;
     }
   | {
       type: 'platform/validateChangesWithAI';
