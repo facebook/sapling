@@ -218,7 +218,7 @@ export function CommitAvatar({username, size = 20}: {username: string; size?: nu
         username={username}
         width={size}
         height={size}
-        className="commit-author-avatar"
+        className="commit-author-avatar commit-author-avatar-loaded"
       />
     );
   }

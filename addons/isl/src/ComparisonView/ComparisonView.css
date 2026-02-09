@@ -215,6 +215,24 @@
   padding: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   background: linear-gradient(180deg, rgba(30, 34, 42, 0.5) 0%, rgba(30, 34, 42, 0.8) 100%);
+  /* Gentle expand animation */
+  animation: commentExpand 0.2s ease-out;
+  overflow: hidden;
+}
+
+@keyframes commentExpand {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 200px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
 }
 
 /* Pending comments section for a file */
@@ -278,6 +296,18 @@
   background: var(--button-primary-foreground);
   color: var(--button-primary-background);
   border-radius: 9px;
+  /* Gentle pulse to remind about unsubmitted comments */
+  animation: pendingPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes pendingPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* Merge controls section in review mode - at bottom of content */
@@ -894,4 +924,37 @@ a.pr-info-title:hover::after {
   flex-direction: column;
   gap: var(--pad);
   width: 100%;
+}
+
+/* ========================================
+   Review Polish Enhancements
+   ======================================== */
+
+/* Reviewed files fade more aggressively for stronger visual priority */
+.comparison-view-file.file-reviewed {
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+.comparison-view-file.file-reviewed:hover {
+  opacity: 0.7;
+}
+
+/* Diff line number hover state */
+.split-diff-view .line-number:hover {
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+/* File change type left border indicators */
+.comparison-view-file.file-added {
+  border-left: 3px solid var(--signal-good, #22c55e);
+}
+
+.comparison-view-file.file-modified {
+  border-left: 3px solid var(--graphite-accent, #4a90e2);
+}
+
+.comparison-view-file.file-removed {
+  border-left: 3px solid var(--signal-bad, #ef4444);
 }

@@ -27,6 +27,15 @@
   --pad: 10px;
   --halfpad: 5px;
 
+  /* Deliberate typographic scale */
+  --text-xs: 10px; /* badges, meta */
+  --text-sm: 11px; /* secondary, labels */
+  --text-base: 12px; /* body, PR rows */
+  --text-md: 13px; /* titles, emphasis */
+  --text-lg: 14px; /* section headers */
+
+  line-height: 1.5;
+
   --vscode-button-height: 26px; /* height of vscode-button */
   --vscode-icon-button-height: 22px; /* height of vscode-button with appearance="icon" */
 
@@ -150,7 +159,78 @@ vscode-button[appearance='icon']:not(:hover) {
 
 .isl-root button:active:not(:disabled),
 .isl-root [role='button']:active:not([aria-disabled='true']) {
-  transform: translateY(0.5px);
+  transform: translateY(0.5px) scale(0.97);
+}
+
+/* ========================================
+   Focus Ring System
+   ======================================== */
+
+/* Consistent focus ring for keyboard navigation */
+.isl-root *:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--graphite-accent, #4a90e2);
+}
+
+/* Don't show focus ring on mouse clicks */
+.isl-root *:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* ========================================
+   Reduced Motion Support
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .isl-root *,
+  .isl-root *::before,
+  .isl-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Keep color transitions since they're still helpful for state changes */
+  .isl-root button,
+  .isl-root [role='button'],
+  .isl-root a,
+  .isl-root input,
+  .isl-root select,
+  .isl-root textarea {
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+}
+
+/* ========================================
+   Smart Scrollbar (show on hover)
+   ======================================== */
+
+/* Show thin custom scrollbars on hover of scrollable areas */
+.isl-root .scroll-fade-container:hover::-webkit-scrollbar,
+.isl-root .drawer-main-content:hover::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  display: block;
+}
+
+.isl-root .scroll-fade-container:hover::-webkit-scrollbar-track,
+.isl-root .drawer-main-content:hover::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.isl-root .scroll-fade-container:hover::-webkit-scrollbar-thumb,
+.isl-root .drawer-main-content:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.isl-root .scroll-fade-container:hover::-webkit-scrollbar-thumb:hover,
+.isl-root .drawer-main-content:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 /* ========================================

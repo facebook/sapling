@@ -16,9 +16,9 @@
   justify-content: center;
   left: 0;
   top: 0;
-  /* Frosted glass backdrop */
-  -webkit-backdrop-filter: blur(var(--glass-blur-overlay, 12px)) saturate(0.8);
-  backdrop-filter: blur(var(--glass-blur-overlay, 12px)) saturate(0.8);
+  /* Frosted glass backdrop - stronger separation */
+  -webkit-backdrop-filter: blur(8px) saturate(0.7);
+  backdrop-filter: blur(8px) saturate(0.7);
   animation: modalBackdropFadeIn 0.2s var(--ease-out-expo, ease-out);
 }
 
@@ -30,8 +30,8 @@
   }
   to {
     opacity: 1;
-    -webkit-backdrop-filter: blur(var(--glass-blur-overlay, 12px)) saturate(0.8);
-    backdrop-filter: blur(var(--glass-blur-overlay, 12px)) saturate(0.8);
+    -webkit-backdrop-filter: blur(8px) saturate(0.7);
+    backdrop-filter: blur(8px) saturate(0.7);
   }
 }
 

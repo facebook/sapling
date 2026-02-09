@@ -137,6 +137,11 @@
   border-radius: 4px;
   margin-bottom: var(--pad);
   background: var(--background);
+  transition: border-color 0.15s ease;
+}
+
+.stack-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .stack-card-header {
@@ -216,6 +221,9 @@
 .pr-row-current {
   background: var(--selected-commit-background, rgba(74, 144, 226, 0.15));
   border-left: 2px solid var(--graphite-accent, #4a90e2);
+  transition:
+    padding-left 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .pr-row-current:hover {
@@ -253,7 +261,18 @@
   white-space: nowrap;
 }
 
-/* PR State Colors */
+/* PR State Colors - with smooth transitions for state changes */
+.pr-state-open,
+.pr-state-approved,
+.pr-state-changes-requested,
+.pr-state-review-required,
+.pr-state-merged,
+.pr-state-closed,
+.pr-state-draft,
+.pr-state-queued {
+  transition: color 0.3s ease;
+}
+
 .pr-state-open {
   color: var(--signal-good);
 }
@@ -423,18 +442,19 @@
 /* PR row review button */
 .pr-row-review-button {
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s ease;
   flex-shrink: 0;
 }
 
 .pr-row:hover .pr-row-review-button {
   opacity: 1;
+  transition-delay: 50ms;
 }
 
 /* PR row view changes button */
 .pr-row-view-changes {
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s ease;
   flex-shrink: 0;
 }
 
@@ -485,6 +505,7 @@
 /* Author filter button */
 .author-filter-active {
   background: color-mix(in srgb, var(--graphite-accent) 20%, transparent);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .author-filter-active .codicon-account {
@@ -498,6 +519,7 @@
 /* Bot filter button */
 .bot-filter-active {
   background: color-mix(in srgb, var(--signal-warning, #f59e0b) 20%, transparent);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .bot-filter-active .codicon-hubot {
@@ -583,29 +605,28 @@
 
 /* ===== SKELETON LOADING STYLES ===== */
 
-/* Pulsing animation */
-@keyframes skeleton-pulse {
+/* Shimmer animation (unified with ComparisonView) */
+@keyframes skeleton-shimmer {
   0% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 0.7;
+    background-position: -200% 0;
   }
   100% {
-    opacity: 0.4;
+    background-position: 200% 0;
   }
 }
 
-/* Base skeleton box */
+/* Base skeleton box - shimmer effect */
 .skeleton-box {
   background: linear-gradient(
-    90deg,
+    100deg,
     var(--subtle-hover-darken) 0%,
-    color-mix(in srgb, var(--foreground) 8%, var(--subtle-hover-darken)) 50%,
+    color-mix(in srgb, var(--foreground) 8%, var(--subtle-hover-darken)) 40%,
+    color-mix(in srgb, var(--foreground) 12%, var(--subtle-hover-darken)) 50%,
+    color-mix(in srgb, var(--foreground) 8%, var(--subtle-hover-darken)) 60%,
     var(--subtle-hover-darken) 100%
   );
   background-size: 200% 100%;
-  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
   border-radius: 3px;
 }
 
@@ -782,8 +803,8 @@
 }
 
 .time-range-dropdown:focus {
-  border-color: var(--button-primary-hover-background);
-  box-shadow: 0 0 0 1px var(--button-primary-hover-background);
+  border-color: var(--graphite-accent, #4a90e2);
+  box-shadow: 0 0 0 1px var(--graphite-accent, #4a90e2);
 }
 
 .time-range-dropdown option {

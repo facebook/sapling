@@ -149,15 +149,39 @@
   cursor: ew-resize;
 }
 
+.drawer .resizable-drag-handle {
+  transition:
+    background-color 0.15s var(--ease-in-out-smooth, ease),
+    border-color 0.15s var(--ease-in-out-smooth, ease),
+    box-shadow 0.2s var(--ease-in-out-smooth, ease);
+  position: relative;
+}
+
+/* Grip indicator on hover (three dots) */
+.drawer-left .resizable-drag-handle::after,
+.drawer-right .resizable-drag-handle::after {
+  content: '···';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--graphite-text-tertiary, rgba(255, 255, 255, 0.3));
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.drawer .resizable-drag-handle:hover::after {
+  opacity: 1;
+}
+
 .drawer .resizable-drag-handle:hover,
 .drawer .resizable-drag-handle.resizing {
   background-color: var(--graphite-accent);
   border-color: var(--graphite-accent);
   box-shadow: 0 0 8px var(--graphite-glow, rgba(74, 144, 226, 0.3));
-  transition:
-    background-color 0.15s var(--ease-in-out-smooth, ease) 150ms,
-    border-color 0.15s var(--ease-in-out-smooth, ease) 150ms,
-    box-shadow 0.2s var(--ease-in-out-smooth, ease) 150ms;
 }
 
 .drawer-label {

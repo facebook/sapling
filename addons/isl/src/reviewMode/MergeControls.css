@@ -119,9 +119,15 @@
 }
 
 @keyframes checkBounce {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.15); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* Merge button - GitHub-style green filled button */
@@ -135,7 +141,9 @@
   border-radius: 6px !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
   min-width: 90px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .merge-btn:hover:not(:disabled) {
@@ -143,12 +151,16 @@
   border-color: rgba(255, 255, 255, 0.15) !important;
   color: #ffffff !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(35, 134, 54, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 4px 8px rgba(35, 134, 54, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .merge-btn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .merge-btn:disabled {
@@ -161,6 +173,26 @@
 
 .merge-btn .codicon {
   font-size: 14px;
+}
+
+/* Subtle pulsing ring when merge is ready (enabled, not disabled) */
+.merge-btn:not(:disabled) {
+  animation: mergeReady 2s ease-in-out infinite;
+}
+
+@keyframes mergeReady {
+  0%,
+  100% {
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 0 3px rgba(35, 134, 54, 0.15);
+  }
 }
 
 .merge-block-reasons {
@@ -182,6 +214,20 @@
   font-size: 11px;
   color: var(--signal-warning, #f59e0b);
   line-height: 1.4;
+}
+
+.merge-block-reason .codicon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* Severity-colored block reason icons */
+.merge-block-reason-error {
+  color: var(--signal-bad, #ef4444);
+}
+
+.merge-block-reason-warning {
+  color: var(--signal-warning, #f59e0b);
 }
 
 /* Legacy sync state styles - kept for stack order issue UI */
