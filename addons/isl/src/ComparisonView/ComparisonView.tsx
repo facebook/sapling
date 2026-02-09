@@ -18,7 +18,7 @@ import {Icon} from 'isl-components/Icon';
 import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
-import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   ComparisonType,
@@ -77,15 +77,42 @@ const currentComparisonData = atomFamilyWeak((comparison: Comparison) =>
 );
 
 /**
+ * LOC stats derived from already-loaded diff data.
+ * Computed from ParsedDiff hunks - no additional API calls needed.
+ */
+type DiffStats = {
+  files: number;
+  additions: number;
+  deletions: number;
+};
+
+const currentDiffStatsAtom = atom<DiffStats | null>(null);
+
+function computeDiffStats(diffs: ParsedDiff[]): DiffStats {
+  let additions = 0;
+  let deletions = 0;
+  for (const diff of diffs) {
+    for (const hunk of diff.hunks) {
+      for (const line of hunk.lines) {
+        if (line.startsWith('+')) {
+          additions++;
+        } else if (line.startsWith('-')) {
+          deletions++;
+        }
+      }
+    }
+  }
+  return {files: diffs.length, additions, deletions};
+}
+
+/**
  * PR title and description header shown in review mode.
- * Note: LOC stats (additions/deletions) are intentionally not shown here
- * because fetching them would require additional GitHub API calls that
- * can hit node limits. The data would need to be added to GitHubDiffSummary
- * query which we want to keep lightweight.
+ * LOC stats are derived from the already-loaded diff data (zero API cost).
  */
 function PRInfoHeader({prNumber}: {prNumber: string}) {
   const prData = useAtomValue(diffSummary(prNumber));
   const pr = prData?.value;
+  const diffStats = useAtomValue(currentDiffStatsAtom);
 
   if (!pr) {
     return null;
@@ -115,11 +142,16 @@ function PRInfoHeader({prNumber}: {prNumber: string}) {
           </span>
         )}
       </div>
-      {description && (
-        <div className="pr-info-description" title={description}>
-          {description.length > 200 ? `${description.slice(0, 200)}...` : description}
+      {diffStats != null && (
+        <div className="pr-info-stats">
+          <span className="pr-stat-files">
+            {diffStats.files} {diffStats.files === 1 ? 'file' : 'files'}
+          </span>
+          <span className="pr-stat-additions">+{diffStats.additions}</span>
+          <span className="pr-stat-deletions">&minus;{diffStats.deletions}</span>
         </div>
       )}
+      {description && <div className="pr-info-description">{description}</div>}
     </div>
   );
 }
@@ -132,6 +164,7 @@ function PRCompactHeader({prNumber}: {prNumber: string}) {
   const prData = useAtomValue(diffSummary(prNumber));
   const pr = prData?.value;
   const title = pr?.title || `PR #${prNumber}`;
+  const diffStats = useAtomValue(currentDiffStatsAtom);
 
   return (
     <>
@@ -139,6 +172,12 @@ function PRCompactHeader({prNumber}: {prNumber: string}) {
       <span className="pr-compact-title" title={title}>
         {title}
       </span>
+      {diffStats != null && (
+        <span className="pr-compact-stats">
+          <span className="pr-stat-additions">+{diffStats.additions}</span>
+          <span className="pr-stat-deletions">&minus;{diffStats.deletions}</span>
+        </span>
+      )}
     </>
   );
 }
@@ -462,6 +501,16 @@ export default function ComparisonView({
   const showSkeleton = useMinimumLoadingTime(isActuallyLoading, 300);
 
   const data = !showSkeleton && compared.state === 'hasData' ? compared.data : null;
+
+  // Compute and publish diff stats from already-loaded data (zero API cost)
+  const setDiffStats = useSetAtom(currentDiffStatsAtom);
+  useEffect(() => {
+    if (data?.value) {
+      setDiffStats(computeDiffStats(data.value));
+    } else {
+      setDiffStats(null);
+    }
+  }, [data?.value, setDiffStats]);
 
   const paths = useMemo(
     () => data?.value?.map(file => file.newFileName).filter(notEmpty) ?? [],

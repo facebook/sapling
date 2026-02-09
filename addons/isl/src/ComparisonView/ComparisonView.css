@@ -665,14 +665,13 @@ a.pr-info-title:hover::after {
   font-size: 12px;
   color: var(--graphite-text-secondary);
   line-height: 1.5;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
   padding-left: 12px;
   border-left: 3px solid rgba(255, 255, 255, 0.15);
   margin-top: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 144px; /* ~8 lines at 12px * 1.5 line-height */
+  overflow-y: auto;
 }
 
 /* Stack navigation bar for multi-PR stacks */
