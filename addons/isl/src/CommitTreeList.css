@@ -117,7 +117,7 @@
   /* Gradient highlight from left to transparent - visible, extends across most of the row */
   background: linear-gradient(
     90deg,
-    rgba(74, 144, 226, 0.20) 0%,
+    rgba(74, 144, 226, 0.2) 0%,
     rgba(74, 144, 226, 0.14) 20%,
     rgba(74, 144, 226, 0.08) 45%,
     rgba(74, 144, 226, 0.03) 70%,
@@ -350,11 +350,7 @@
 
 .commit.origin-main-commit .commit-details {
   /* Very subtle background tint */
-  background: linear-gradient(
-    90deg,
-    rgba(74, 144, 226, 0.08) 0%,
-    transparent 50%
-  );
+  background: linear-gradient(90deg, rgba(74, 144, 226, 0.08) 0%, transparent 50%);
 }
 
 .origin-main-badge {
@@ -392,18 +388,52 @@
   flex-shrink: 0;
 }
 
+/* Skeleton avatar placeholder (loading state) */
+.avatar-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--subtle-hover-darken) 0%,
+    color-mix(in srgb, var(--foreground) 12%, var(--subtle-hover-darken)) 50%,
+    var(--subtle-hover-darken) 100%
+  );
+  background-size: 200% 100%;
+  animation: avatar-skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes avatar-skeleton-pulse {
+  0% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
 /* ===== COMMIT TREE LOADING ===== */
 
 /* Pulsing animation */
 @keyframes skeleton-pulse {
-  0% { opacity: 0.4; }
-  50% { opacity: 0.7; }
-  100% { opacity: 0.4; }
+  0% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0.4;
+  }
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Loading container */
@@ -459,17 +489,37 @@
 }
 
 /* Stagger animation delays */
-.top-bar-skeleton-left .skeleton-box:nth-child(1) { animation-delay: 0s; }
-.top-bar-skeleton-left .skeleton-box:nth-child(2) { animation-delay: 0.1s; }
-.top-bar-skeleton-left .skeleton-box:nth-child(3) { animation-delay: 0.2s; }
-.top-bar-skeleton-left .skeleton-box:nth-child(4) { animation-delay: 0.3s; }
-.top-bar-skeleton-left .skeleton-box:nth-child(5) { animation-delay: 0.4s; }
+.top-bar-skeleton-left .skeleton-box:nth-child(1) {
+  animation-delay: 0s;
+}
+.top-bar-skeleton-left .skeleton-box:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.top-bar-skeleton-left .skeleton-box:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.top-bar-skeleton-left .skeleton-box:nth-child(4) {
+  animation-delay: 0.3s;
+}
+.top-bar-skeleton-left .skeleton-box:nth-child(5) {
+  animation-delay: 0.4s;
+}
 
-.top-bar-skeleton-right .skeleton-box:nth-child(1) { animation-delay: 0.15s; }
-.top-bar-skeleton-right .skeleton-box:nth-child(2) { animation-delay: 0.25s; }
-.top-bar-skeleton-right .skeleton-box:nth-child(3) { animation-delay: 0.35s; }
-.top-bar-skeleton-right .skeleton-box:nth-child(4) { animation-delay: 0.45s; }
-.top-bar-skeleton-right .skeleton-box:nth-child(5) { animation-delay: 0.55s; }
+.top-bar-skeleton-right .skeleton-box:nth-child(1) {
+  animation-delay: 0.15s;
+}
+.top-bar-skeleton-right .skeleton-box:nth-child(2) {
+  animation-delay: 0.25s;
+}
+.top-bar-skeleton-right .skeleton-box:nth-child(3) {
+  animation-delay: 0.35s;
+}
+.top-bar-skeleton-right .skeleton-box:nth-child(4) {
+  animation-delay: 0.45s;
+}
+.top-bar-skeleton-right .skeleton-box:nth-child(5) {
+  animation-delay: 0.55s;
+}
 
 /* Loading spinner area */
 .commit-tree-loading-spinner {

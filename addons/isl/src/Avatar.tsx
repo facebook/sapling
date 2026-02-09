@@ -8,11 +8,13 @@
 import type {DetailedHTMLProps} from 'react';
 
 import * as stylex from '@stylexjs/stylex';
-import {useAtomValue} from 'jotai';
+import {atom, useAtomValue} from 'jotai';
 import {colors, radius} from '../../components/theme/tokens.stylex';
 import serverAPI from './ClientToServerAPI';
+import {allDiffSummaries} from './codeReview/CodeReviewInfo';
 import {t} from './i18n';
 import {atomFamilyWeak, lazyAtom} from './jotaiUtils';
+import {dagWithPreviews} from './previews';
 
 export const avatarUrl = atomFamilyWeak((author: string) => {
   // Rate limitor for the same author is by lazyAtom and atomFamilyWeak caching.
@@ -26,6 +28,34 @@ export const avatarUrl = atomFamilyWeak((author: string) => {
     );
     return result.avatars.get(author);
   }, undefined);
+});
+
+/**
+ * Shared cache mapping git author strings to GitHub avatar URLs.
+ * Built by cross-referencing diff summaries (PR data with avatar URLs)
+ * with the commit DAG (which maps hashes to git author strings).
+ */
+export const gitAuthorAvatarCache = atom(get => {
+  const summariesResult = get(allDiffSummaries);
+  const dag = get(dagWithPreviews);
+  const cache = new Map<string, string>();
+
+  if (!summariesResult?.value) {
+    return cache;
+  }
+
+  for (const summary of summariesResult.value.values()) {
+    if (summary.type !== 'github' || !summary.authorAvatarUrl) {
+      continue;
+    }
+    // Match the PR's head commit hash to a DAG commit to get the git author string
+    const commit = dag.get(summary.head);
+    if (commit?.author) {
+      cache.set(commit.author, summary.authorAvatarUrl);
+    }
+  }
+
+  return cache;
 });
 
 export function AvatarImg({
@@ -162,8 +192,24 @@ export function InitialsAvatar({username, size = 20}: {username: string; size?: 
   );
 }
 
+export function SkeletonAvatar({size = 20}: {size?: number}) {
+  return (
+    <div
+      className="avatar-skeleton"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
 export function CommitAvatar({username, size = 20}: {username: string; size?: number}) {
-  const url = useAtomValue(avatarUrl(username));
+  const fetchedUrl = useAtomValue(avatarUrl(username));
+  const cachedAvatars = useAtomValue(gitAuthorAvatarCache);
+  const url = fetchedUrl ?? cachedAvatars.get(username);
 
   if (url) {
     return (
@@ -177,5 +223,5 @@ export function CommitAvatar({username, size = 20}: {username: string; size?: nu
     );
   }
 
-  return <InitialsAvatar username={username} size={size} />;
+  return <SkeletonAvatar size={size} />;
 }
