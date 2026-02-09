@@ -825,10 +825,12 @@ async function maybeWarnAboutRebaseOffWarm(dest: CommitInfo): Promise<WarningChe
             'Do you want to continue anyway?',
       ),
     });
+    const userEnv = (await Internal.getDevEnvType?.()) ?? 'NotImplemented';
     const cwd = readAtom(repoRelativeCwd);
     tracker.track('WarnAboutRebaseOffWarm', {
       extras: {
         userAction: answer,
+        envType: userEnv,
         cwd,
       },
     });
@@ -875,10 +877,12 @@ async function maybeWarnAboutRebaseOntoMaster(commit: CommitInfo): Promise<Warni
             'Do you want to continue anyway?',
       ),
     });
+    const userEnv = (await Internal.getDevEnvType?.()) ?? 'NotImplemented';
     const cwd = readAtom(repoRelativeCwd);
     tracker.track('WarnAboutRebaseOntoMaster', {
       extras: {
         userAction: answer,
+        envType: userEnv,
         cwd,
       },
     });
@@ -1002,10 +1006,12 @@ async function maybeWarnAboutDistantRebase(commit: CommitInfo): Promise<WarningC
         },
       ),
     });
+    const userEnv = (await Internal.getDevEnvType?.()) ?? 'NotImplemented';
     const cwd = readAtom(repoRelativeCwd);
     tracker.track('WarnAboutDistantRebase', {
       extras: {
         userAction: answer,
+        envType: userEnv,
         cwd,
       },
     });
