@@ -9,41 +9,43 @@ import type {PRStack} from './codeReview/PRStacksAtom';
 import type {DiffSummary, TimeRangeDays} from './types';
 
 import {Button} from 'isl-components/Button';
-import {Dropdown} from 'isl-components/Dropdown';
 import {Icon} from 'isl-components/Icon';
 import {TextField} from 'isl-components/TextField';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtom, useAtomValue} from 'jotai';
-import {useState, useCallback, useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {ComparisonType} from 'shared/Comparison';
 import serverAPI from './ClientToServerAPI';
-import {showComparison} from './ComparisonView/atoms';
-import {enterReviewMode} from './reviewMode';
-import {currentGitHubUser, allDiffSummaries, triggerFullDiffSummariesRefresh} from './codeReview/CodeReviewInfo';
 import {
-  prStacksAtom,
-  stackLabelsAtom,
+  allDiffSummaries,
+  currentGitHubUser,
+  triggerFullDiffSummariesRefresh,
+} from './codeReview/CodeReviewInfo';
+import {
   hiddenStacksAtom,
-  hideMergedStacksAtom,
-  showOnlyMyStacksAtom,
   hideBotStacksAtom,
+  hideMergedStacksAtom,
   isBotAuthor,
+  prStacksAtom,
+  showOnlyMyStacksAtom,
+  stackLabelsAtom,
 } from './codeReview/PRStacksAtom';
-import {T} from './i18n';
 import {scrollToCommit} from './CommitTreeList';
+import {showComparison} from './ComparisonView/atoms';
+import {T, t} from './i18n';
 import {writeAtom} from './jotaiUtils';
-import {inlineProgressByHash, useRunOperation} from './operationsState';
-import {PullOperation} from './operations/PullOperation';
-import {GotoOperation} from './operations/GotoOperation';
 import {ClosePROperation} from './operations/ClosePROperation';
+import {GotoOperation} from './operations/GotoOperation';
+import {PullOperation} from './operations/PullOperation';
 import {WorktreeAddOperation} from './operations/WorktreeAddOperation';
-import {worktreesForCommit} from './worktrees';
-import {showToast} from './toast';
-import {t} from './i18n';
+import {inlineProgressByHash, useRunOperation} from './operationsState';
 import {dagWithPreviews} from './previews';
+import {enterReviewMode} from './reviewMode';
 import {selectedCommits} from './selection';
 import {selectedTimeRangeAtom, setTimeRange} from './serverAPIState';
+import {showToast} from './toast';
 import {succeedableRevset} from './types';
+import {worktreesForCommit} from './worktrees';
 
 import './PRDashboard.css';
 
@@ -135,9 +137,14 @@ function MainBranchSection({}: {isScrolled?: boolean}) {
 
   // Find main/master bookmark in the dag
   const mainCommit = dag.resolve('main') ?? dag.resolve('master');
-  const remoteName = mainCommit?.remoteBookmarks.find(b =>
-    b === 'origin/main' || b === 'origin/master' || b === 'remote/main' || b === 'remote/master'
-  ) ?? 'main';
+  const remoteName =
+    mainCommit?.remoteBookmarks.find(
+      b =>
+        b === 'origin/main' ||
+        b === 'origin/master' ||
+        b === 'remote/main' ||
+        b === 'remote/master',
+    ) ?? 'main';
 
   // Check if we're currently on main
   const currentCommit = dag.resolve('.');
@@ -161,11 +168,7 @@ function MainBranchSection({}: {isScrolled?: boolean}) {
     runOperation(new GotoOperation(succeedableRevset(remoteName)));
   }, [isOnMain, isBehind, runOperation, remoteName]);
 
-  const syncStatusText = isBehind
-    ? 'Updates available'
-    : isOnMain
-      ? 'You are here'
-      : 'Up to date';
+  const syncStatusText = isBehind ? 'Updates available' : isOnMain ? 'You are here' : 'Up to date';
 
   const statusClass = isBehind
     ? 'main-branch-status main-branch-status-behind'
@@ -182,13 +185,8 @@ function MainBranchSection({}: {isScrolled?: boolean}) {
         <Button
           className="main-branch-goto-button"
           onClick={handleGoToMain}
-          disabled={isOnMain && !isBehind || inlineProgress != null}
-        >
-          {inlineProgress ? (
-            <Icon icon="loading" />
-          ) : (
-            <Icon icon="arrow-down" />
-          )}
+          disabled={(isOnMain && !isBehind) || inlineProgress != null}>
+          {inlineProgress ? <Icon icon="loading" /> : <Icon icon="arrow-down" />}
           <T>Go to main</T>
         </Button>
       </Tooltip>
@@ -219,7 +217,9 @@ function TimeRangeDropdown() {
         value={selectedRange === undefined ? 'undefined' : String(selectedRange)}
         onChange={handleChange}>
         {TIME_RANGE_OPTIONS.map(opt => (
-          <option key={opt.value ?? 'undefined'} value={opt.value === undefined ? 'undefined' : String(opt.value)}>
+          <option
+            key={opt.value ?? 'undefined'}
+            value={opt.value === undefined ? 'undefined' : String(opt.value)}>
             {opt.label}
           </option>
         ))}
@@ -284,9 +284,7 @@ export function PRDashboard() {
         return true;
       });
 
-  const hiddenCount = stacks.filter(stack =>
-    hiddenStacks.includes(stack.id),
-  ).length;
+  const hiddenCount = stacks.filter(stack => hiddenStacks.includes(stack.id)).length;
 
   const mergedCount = stacks.filter(stack => stack.isMerged).length;
 
@@ -302,24 +300,32 @@ export function PRDashboard() {
       <div className="pr-dashboard-sticky-header">
         <div className="pr-dashboard-header">
           <span className="pr-dashboard-title">
-            <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v4.2)</span>
+            <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v4.2.1)</span>
           </span>
           <div className="pr-dashboard-header-buttons">
             <TimeRangeDropdown />
             {currentUser && (
               <Tooltip
-                title={showOnlyMine ? `Show all authors (${otherAuthorsCount} hidden)` : 'Show only my stacks'}>
+                title={
+                  showOnlyMine
+                    ? `Show all authors (${otherAuthorsCount} hidden)`
+                    : 'Show only my stacks'
+                }>
                 <Button
                   icon
                   onClick={() => setShowOnlyMine(prev => !prev)}
                   className={showOnlyMine ? 'author-filter-active' : 'author-filter-inactive'}>
                   <Icon icon="account" />
-                  {showOnlyMine && otherAuthorsCount > 0 && <span className="hidden-count">{otherAuthorsCount}</span>}
+                  {showOnlyMine && otherAuthorsCount > 0 && (
+                    <span className="hidden-count">{otherAuthorsCount}</span>
+                  )}
                 </Button>
               </Tooltip>
             )}
             <Tooltip
-              title={hideBots ? `Show ${botCount} bot PRs` : 'Hide bot PRs (renovate, dependabot, etc)'}>
+              title={
+                hideBots ? `Show ${botCount} bot PRs` : 'Hide bot PRs (renovate, dependabot, etc)'
+              }>
               <Button
                 icon
                 onClick={() => setHideBots(prev => !prev)}
@@ -328,8 +334,7 @@ export function PRDashboard() {
                 {hideBots && botCount > 0 && <span className="hidden-count">{botCount}</span>}
               </Button>
             </Tooltip>
-            <Tooltip
-              title={hideMerged ? `Show ${mergedCount} merged` : 'Hide merged stacks'}>
+            <Tooltip title={hideMerged ? `Show ${mergedCount} merged` : 'Hide merged stacks'}>
               <Button
                 icon
                 onClick={() => setHideMerged(prev => !prev)}
@@ -339,8 +344,7 @@ export function PRDashboard() {
               </Button>
             </Tooltip>
             {hiddenCount > 0 && (
-              <Tooltip
-                title={showHidden ? 'Hide hidden stacks' : 'Show hidden stacks'}>
+              <Tooltip title={showHidden ? 'Hide hidden stacks' : 'Show hidden stacks'}>
                 <Button icon onClick={() => setShowHidden(prev => !prev)}>
                   <Icon icon={showHidden ? 'eye' : 'eye-closed'} />
                   <span className="hidden-count">{hiddenCount}</span>
@@ -403,7 +407,8 @@ function StackCard({
 
   const customLabel = stackLabels[stack.id];
   // Check if this stack is from an external author (someone other than the current user)
-  const isExternal = currentUser != null && stack.mainAuthor != null && stack.mainAuthor !== currentUser;
+  const isExternal =
+    currentUser != null && stack.mainAuthor != null && stack.mainAuthor !== currentUser;
 
   // Get the top PR's head hash for checkout
   const topHeadHash = stack.prs[0]?.type === 'github' ? stack.prs[0].head : undefined;
@@ -428,16 +433,15 @@ function StackCard({
 
     setIsClosingStale(true);
     const mergedPrNumber = stack.mergedAbovePrNumber ?? stack.topPrNumber;
-    showToast(
-      t('Closing $count stale PRs...', {replace: {$count: String(stalePRs.length)}}),
-      {durationMs: 3000}
-    );
+    showToast(t('Closing $count stale PRs...', {replace: {$count: String(stalePRs.length)}}), {
+      durationMs: 3000,
+    });
 
     for (const pr of stalePRs) {
       try {
         const closeOp = new ClosePROperation(
           Number(pr.number),
-          `Closed: changes already merged via PR #${mergedPrNumber}`
+          `Closed: changes already merged via PR #${mergedPrNumber}`,
         );
         await runOperation(closeOp);
       } catch (err) {
@@ -445,7 +449,9 @@ function StackCard({
       }
     }
 
-    showToast(t('Closed $count stale PRs', {replace: {$count: String(stalePRs.length)}}), {durationMs: 3000});
+    showToast(t('Closed $count stale PRs', {replace: {$count: String(stalePRs.length)}}), {
+      durationMs: 3000,
+    });
     setIsClosingStale(false);
 
     // Refresh the PR list after a short delay to let GitHub propagate the changes
@@ -455,16 +461,19 @@ function StackCard({
     }, 1500);
   }, [stalePRs, isClosingStale, stack.mergedAbovePrNumber, stack.topPrNumber, runOperation]);
 
-  const handleStackCheckout = useCallback((e: React.MouseEvent) => {
-    // Don't interfere with child element clicks
-    if ((e.target as HTMLElement).closest('button, input, .stack-card-title')) {
-      return;
-    }
-    if (!topHeadHash || isCurrentStack) {
-      return;
-    }
-    runOperation(new GotoOperation(succeedableRevset(topHeadHash)));
-  }, [topHeadHash, isCurrentStack, runOperation]);
+  const handleStackCheckout = useCallback(
+    (e: React.MouseEvent) => {
+      // Don't interfere with child element clicks
+      if ((e.target as HTMLElement).closest('button, input, .stack-card-title')) {
+        return;
+      }
+      if (!topHeadHash || isCurrentStack) {
+        return;
+      }
+      runOperation(new GotoOperation(succeedableRevset(topHeadHash)));
+    },
+    [topHeadHash, isCurrentStack, runOperation],
+  );
 
   const toggleExpanded = () => {
     setIsExpanded(prev => !prev);
@@ -498,12 +507,16 @@ function StackCard({
     isCurrentStack ? 'stack-card-current' : '',
     inlineProgress ? 'stack-card-loading' : '',
     stack.isMerged ? 'stack-card-merged' : '',
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const headerClass = [
     'stack-card-header',
     topHeadHash && !isCurrentStack ? 'stack-card-header-clickable' : '',
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={stackCardClass}>
@@ -556,8 +569,9 @@ function StackCard({
         )}
 
         <div className="stack-card-actions">
-          {isExternal && topHeadHash && (
-            existingWorktree ? (
+          {isExternal &&
+            topHeadHash &&
+            (existingWorktree ? (
               <Tooltip title="Switch ISL to the existing worktree for this stack">
                 <Button
                   className="stack-card-worktree-button"
@@ -585,8 +599,7 @@ function StackCard({
                   <T>Open in Worktree</T>
                 </Button>
               </Tooltip>
-            )
-          )}
+            ))}
           {hasStaleStack && (
             <Tooltip
               title={`Close ${stalePRs.length} stale PR${stalePRs.length > 1 ? 's' : ''} — these PRs are still open but their changes were already merged via PR #${stack.mergedAbovePrNumber ?? '?'} on GitHub. This happens when merging directly on GitHub instead of through ISL.`}>
@@ -594,11 +607,7 @@ function StackCard({
                 className="stack-card-close-stale-button"
                 onClick={handleCloseStalePRs}
                 disabled={isClosingStale}>
-                {isClosingStale ? (
-                  <Icon icon="loading" />
-                ) : (
-                  <Icon icon="trash" />
-                )}
+                {isClosingStale ? <Icon icon="loading" /> : <Icon icon="trash" />}
                 <span>Close {stalePRs.length} stale</span>
               </Button>
             </Tooltip>
@@ -686,22 +695,30 @@ function PRRow({pr}: {pr: DiffSummary}) {
     }
   };
 
-  const handleReview = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (headHash) {
-      enterReviewMode(pr.number, headHash);
-    }
-  }, [pr.number, headHash]);
+  const handleReview = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (headHash) {
+        enterReviewMode(pr.number, headHash);
+      }
+    },
+    [pr.number, headHash],
+  );
 
   const prRowClass = [
     'pr-row',
     headHash && !isCurrentCommit ? 'pr-row-clickable' : '',
     isCurrentCommit ? 'pr-row-current' : '',
     inlineProgress ? 'pr-row-loading' : '',
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <div className={prRowClass} onClick={handleCheckout} id={headHash ? `pr-${headHash}` : undefined}>
+    <div
+      className={prRowClass}
+      onClick={handleCheckout}
+      id={headHash ? `pr-${headHash}` : undefined}>
       {inlineProgress ? (
         <Icon icon="loading" className="pr-row-status" />
       ) : (

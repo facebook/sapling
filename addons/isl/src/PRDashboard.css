@@ -110,9 +110,9 @@
 
 .pr-dashboard-content {
   padding: var(--pad);
-  /* Account for negative margins on parent */
-  padding-left: calc(var(--pad) + 16px);
-  padding-right: calc(var(--pad) + 16px);
+  /* Account for negative margins on parent, keep padding tight for more card width */
+  padding-left: calc(var(--halfpad) + 16px);
+  padding-right: calc(var(--halfpad) + 16px);
 }
 
 .pr-dashboard-empty {
@@ -162,12 +162,12 @@
 }
 
 .stack-card-title {
-  flex: 1;
   font-weight: 500;
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .stack-card-pull-button {
@@ -305,8 +305,7 @@
 .stack-card-author {
   display: flex;
   align-items: center;
-  margin-left: auto;
-  margin-right: var(--halfpad);
+  margin-left: 4px;
 }
 
 .stack-card-avatar {
@@ -320,6 +319,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
+  margin-left: auto;
 }
 
 /* Label editor */
@@ -605,26 +605,60 @@
 }
 
 /* Stagger animation delays for visual interest */
-.stack-card-skeleton:nth-child(1) { animation-delay: 0s; }
-.stack-card-skeleton:nth-child(2) { animation-delay: 0.1s; }
-.stack-card-skeleton:nth-child(3) { animation-delay: 0.2s; }
-.stack-card-skeleton:nth-child(4) { animation-delay: 0.3s; }
-.stack-card-skeleton:nth-child(5) { animation-delay: 0.4s; }
-.stack-card-skeleton:nth-child(6) { animation-delay: 0.5s; }
-.stack-card-skeleton:nth-child(7) { animation-delay: 0.6s; }
-.stack-card-skeleton:nth-child(8) { animation-delay: 0.7s; }
+.stack-card-skeleton:nth-child(1) {
+  animation-delay: 0s;
+}
+.stack-card-skeleton:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.stack-card-skeleton:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.stack-card-skeleton:nth-child(4) {
+  animation-delay: 0.3s;
+}
+.stack-card-skeleton:nth-child(5) {
+  animation-delay: 0.4s;
+}
+.stack-card-skeleton:nth-child(6) {
+  animation-delay: 0.5s;
+}
+.stack-card-skeleton:nth-child(7) {
+  animation-delay: 0.6s;
+}
+.stack-card-skeleton:nth-child(8) {
+  animation-delay: 0.7s;
+}
 
 /* Stagger skeleton boxes within each card */
-.stack-card-skeleton .skeleton-box:nth-child(1) { animation-delay: 0s; }
-.stack-card-skeleton .skeleton-box:nth-child(2) { animation-delay: 0.05s; }
-.stack-card-skeleton .skeleton-box:nth-child(3) { animation-delay: 0.1s; }
-.stack-card-skeleton .skeleton-box:nth-child(4) { animation-delay: 0.15s; }
+.stack-card-skeleton .skeleton-box:nth-child(1) {
+  animation-delay: 0s;
+}
+.stack-card-skeleton .skeleton-box:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.stack-card-skeleton .skeleton-box:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.stack-card-skeleton .skeleton-box:nth-child(4) {
+  animation-delay: 0.15s;
+}
 
-.pr-row-skeleton:nth-child(1) .skeleton-box { animation-delay: 0.1s; }
-.pr-row-skeleton:nth-child(2) .skeleton-box { animation-delay: 0.15s; }
-.pr-row-skeleton:nth-child(3) .skeleton-box { animation-delay: 0.2s; }
-.pr-row-skeleton:nth-child(4) .skeleton-box { animation-delay: 0.25s; }
-.pr-row-skeleton:nth-child(5) .skeleton-box { animation-delay: 0.3s; }
+.pr-row-skeleton:nth-child(1) .skeleton-box {
+  animation-delay: 0.1s;
+}
+.pr-row-skeleton:nth-child(2) .skeleton-box {
+  animation-delay: 0.15s;
+}
+.pr-row-skeleton:nth-child(3) .skeleton-box {
+  animation-delay: 0.2s;
+}
+.pr-row-skeleton:nth-child(4) .skeleton-box {
+  animation-delay: 0.25s;
+}
+.pr-row-skeleton:nth-child(5) .skeleton-box {
+  animation-delay: 0.3s;
+}
 
 /* Time Range Dropdown */
 .time-range-wrapper {

@@ -26,8 +26,8 @@ import {MS_PER_DAY} from 'shared/constants';
 import {useAutofocusRef} from 'shared/hooks';
 import {notEmpty, nullthrows} from 'shared/utils';
 import {spacing} from '../../components/theme/tokens.stylex';
-import {AllBookmarksTruncated, Bookmark, Bookmarks, createBookmarkAtCommit} from './Bookmark';
 import {CommitAvatar} from './Avatar';
+import {AllBookmarksTruncated, Bookmark, Bookmarks, createBookmarkAtCommit} from './Bookmark';
 import {openBrowseUrlForHash, supportsBrowseUrlForHash} from './BrowseRepo';
 import {hasUnsavedEditedCommitMessage} from './CommitInfoView/CommitInfoState';
 import {showComparison} from './ComparisonView/atoms';
@@ -41,6 +41,7 @@ import {SubmitSingleCommitButton} from './SubmitSingleCommitButton';
 import {getSuggestedRebaseOperation, suggestedRebaseDestinations} from './SuggestedRebase';
 import {UncommitButton} from './UncommitButton';
 import {UncommittedChanges} from './UncommittedChanges';
+import {WorktreeIndicator} from './WorktreeIndicator';
 import {tracker} from './analytics';
 import {clipboardLinkHtml} from './clipboard';
 import {
@@ -50,13 +51,13 @@ import {
   diffSummary,
   latestCommitMessageTitle,
 } from './codeReview/CodeReviewInfo';
+import {DiffBadge, DiffFollower, DiffInfo} from './codeReview/DiffBadge';
 import {
-  showOnlyMyStacksAtom,
   hideBotStacksAtom,
   hideMergedStacksAtom,
   isBotAuthor,
+  showOnlyMyStacksAtom,
 } from './codeReview/PRStacksAtom';
-import {DiffBadge, DiffFollower, DiffInfo} from './codeReview/DiffBadge';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {useFeatureFlagSync} from './featureFlags';
 import {FoldButton, useRunFoldPreview} from './fold';
@@ -97,7 +98,6 @@ import {latestSuccessorUnlessExplicitlyObsolete} from './successionUtils';
 import {copyAndShowToast} from './toast';
 import {showModal} from './useModal';
 import {short} from './utils';
-import {WorktreeIndicator} from './WorktreeIndicator';
 
 export const rebaseOffWarmWarningEnabled = localStorageBackedAtom<boolean>(
   'isl.rebase-off-warm-warning-enabled',
