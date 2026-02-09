@@ -84,6 +84,108 @@ ${defineStyleOnBody(theme)}
   margin-bottom: 0 !important;
 }
 
+/* GitHub suggested change styling */
+.PRT-bodyHTML .blob-code-deletion,
+.PRT-bodyHTML .blob-code-marker-deletion {
+  background-color: ${theme?.colors.diffBlob.deletion.lineBg};
+}
+
+.PRT-bodyHTML .blob-code-addition,
+.PRT-bodyHTML .blob-code-marker-addition {
+  background-color: ${theme?.colors.diffBlob.addition.lineBg};
+}
+
+.PRT-bodyHTML .blob-num-deletion {
+  background-color: ${theme?.colors.diffBlob.deletion.numBg};
+  color: ${theme?.colors.diffBlob.deletion.numText};
+}
+
+.PRT-bodyHTML .blob-num-addition {
+  background-color: ${theme?.colors.diffBlob.addition.numBg};
+  color: ${theme?.colors.diffBlob.addition.numText};
+}
+
+/* Style the suggestion container */
+.PRT-bodyHTML .js-suggested-changes-blob,
+.PRT-bodyHTML .diff-view {
+  border: 1px solid ${theme?.colors.border.default};
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 8px 0;
+  /* Use flexbox to collapse whitespace text nodes between elements */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Reduce padding in suggestion header - style like GitHub */
+.PRT-bodyHTML .js-suggested-changes-blob > div:first-child {
+  padding: 8px 10px;
+  background-color: ${theme?.colors.canvas.subtle};
+  border-bottom: 1px solid ${theme?.colors.border.default};
+  font-size: 12px;
+  color: ${theme?.colors.fg.muted};
+  /* Collapse whitespace inside header */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Collapse whitespace around "Suggested change" text */
+.PRT-bodyHTML .js-suggested-changes-blob > div:first-child .color-fg-muted {
+  display: inline;
+}
+
+/* Remove excessive padding in blob wrapper */
+.PRT-bodyHTML .js-suggested-changes-blob .blob-wrapper {
+  padding: 0;
+  /* Collapse whitespace inside blob wrapper */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hide empty js-apply-changes div */
+.PRT-bodyHTML .js-suggested-changes-blob .js-apply-changes:empty {
+  display: none;
+}
+
+/* Ensure table fills width */
+.PRT-bodyHTML .js-suggested-changes-blob table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.PRT-bodyHTML .js-suggested-changes-blob td {
+  font-family: ${theme?.fonts.mono};
+  font-size: 12px;
+  line-height: 20px;
+}
+
+/* Style line number cells */
+.PRT-bodyHTML .js-suggested-changes-blob .blob-num {
+  width: 1%;
+  min-width: 40px;
+  padding: 0 10px;
+  text-align: right;
+  vertical-align: top;
+  /* Hide the unhelpful "·" character */
+  font-size: 0;
+}
+
+/* Style code cells with proper padding */
+.PRT-bodyHTML .js-suggested-changes-blob .blob-code-inner {
+  padding: 0 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Word-level diff highlighting for changed characters */
+.PRT-bodyHTML .js-suggested-changes-blob .x {
+  background-color: ${theme?.colors.diffBlob.addition.wordBg};
+}
+
+.PRT-bodyHTML .js-suggested-changes-blob .blob-code-deletion .x {
+  background-color: ${theme?.colors.diffBlob.deletion.wordBg};
+}
+
 .reviewstack .drawer-label {
   background-color: ${theme?.colors.neutral.muted};
 }
