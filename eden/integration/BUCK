@@ -184,6 +184,16 @@ python_integration_test(
 )
 
 python_integration_test(
+    name = "cli_smoke",
+    srcs = ["eden_cli_smoke_test.py"],
+    env = artifacts["env"],
+    supports_static_listing = False,
+    deps = [
+        "//eden/integration/lib:lib",
+    ],
+)
+
+python_integration_test(
     name = "info",
     srcs = ["info_test.py"],
     env = artifacts["env"],
