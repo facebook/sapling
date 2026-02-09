@@ -265,7 +265,6 @@
   flex-direction: row;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--pad);
   font-size: 90%;
   margin-bottom: calc(-1.5 * var(--pad));
   border-radius: var(--pad);

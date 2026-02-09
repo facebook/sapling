@@ -315,6 +315,13 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           Internal.promptTestGeneration?.();
           break;
         }
+        case 'platform/recommendTestPlanWithAI': {
+          Internal.promptAIAgent?.(
+            {type: 'recommendTestPlan'},
+            ActionTriggerType.ISL2CommitInfoView,
+          );
+          break;
+        }
         case 'platform/validateChangesWithAI': {
           Internal.promptAIAgent?.({type: 'validateChanges'}, ActionTriggerType.ISL2SmartActions);
           break;

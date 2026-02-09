@@ -9,6 +9,7 @@ import type {ReactNode, RefObject} from 'react';
 
 import {TextArea} from 'isl-components/TextArea';
 import {useEffect, useRef} from 'react';
+import {InternalFieldName} from 'shared/constants';
 import {
   FilePicker,
   ImageDropZone,
@@ -119,6 +120,11 @@ export function EditorToolbar({
     parts.push(
       <PendingImageUploads fieldName={fieldName} key="pending-uploads" textAreaRef={textAreaRef} />,
     );
+  }
+  if (fieldName === InternalFieldName.TestPlan && Internal.RecommendTestPlanButton) {
+    parts.push(<Internal.RecommendTestPlanButton key="recommend-test-plan" />);
+  }
+  if (uploadFiles != null) {
     parts.push(<FilePicker key="picker" uploadFiles={uploadFiles} />);
   }
   if (parts.length === 0) {

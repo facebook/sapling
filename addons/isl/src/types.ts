@@ -764,6 +764,9 @@ export type PlatformSpecificClientToServerMessages =
       type: 'platform/createTestForModifiedCodeWithAI';
     }
   | {
+      type: 'platform/recommendTestPlanWithAI';
+    }
+  | {
       type: 'platform/validateChangesWithAI';
     }
   | {
