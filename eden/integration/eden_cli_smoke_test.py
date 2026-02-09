@@ -40,6 +40,20 @@ PACKAGING_ERROR_PATTERNS: List[Tuple[str, str]] = [
     ("Traceback (most recent call last):", "unhandled Python exception"),
 ]
 
+# Commands to test. Each tuple contains:
+# - List of command arguments to pass to eden
+# - Description for test output
+COMMANDS_TO_TEST: List[Tuple[List[str], str]] = [
+    (["doctor", "--dry-run"], "eden doctor"),
+    (["status"], "eden status"),
+    (["list"], "eden list"),
+    (["info", "--help"], "eden info"),
+    (["gc", "--help"], "eden gc"),
+    (["rage", "--help"], "eden rage"),
+    (["debug", "--help"], "eden debug"),
+    (["fsck", "--help"], "eden fsck"),
+]
+
 
 @testcase.eden_test
 class EdenCLISmokeTest(testcase.IntegrationTestCase):
@@ -51,44 +65,19 @@ class EdenCLISmokeTest(testcase.IntegrationTestCase):
     like missing Python modules that would prevent the CLI from running at all.
     """
 
-    def _assert_no_packaging_errors(
-        self, command: str, stdout_output: str, stderr_output: str
+    def _run_command_and_check(
+        self, client: edenclient.EdenFS, args: List[str], description: str
     ) -> None:
-        """Check that command output doesn't contain packaging error patterns.
-
-        Args:
-            command: The eden command that was run (for error messages)
-            stdout_output: The stdout output from the command (some errors go here)
-            stderr_output: The stderr output from the command
-        """
-        # Check both stderr and stdout since some error messages may appear in either
-        combined_output = stdout_output + stderr_output
-        for pattern, description in PACKAGING_ERROR_PATTERNS:
-            self.assertNotIn(
-                pattern,
-                combined_output,
-                f"eden {command} failed with {description}. "
-                f"This may indicate a packaging/dependency issue.\n"
-                f"Pattern found: '{pattern}'\n"
-                f"stderr: {stderr_output}\n"
-                f"stdout: {stdout_output}",
-            )
-
-    def _get_command_output(
-        self, client: edenclient.EdenFS, *args: str
-    ) -> Tuple[str, str]:
-        """Run an eden command and return its output.
-
+        """Run an eden command and verify it doesn't have packaging errors.
         Args:
             client: The EdenFS client
-            *args: Command arguments to pass to eden
-
-        Returns:
-            Tuple of (stdout_output, stderr_output)
+            args: Command arguments to pass to eden
+            description: Human-readable description for error messages
         """
         cmd_result = client.run_unchecked(
             *args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
+
         stdout_output = (
             cmd_result.stdout.decode("utf-8", errors="replace")
             if cmd_result.stdout
@@ -99,31 +88,29 @@ class EdenCLISmokeTest(testcase.IntegrationTestCase):
             if cmd_result.stderr
             else ""
         )
-        # This is a Smoke Test, and we don't want to check the
-        # cmd_result.returncode in this test
 
-        return stdout_output, stderr_output
+        # Check both stderr and stdout since some error messages may appear in either
+        combined_output = stdout_output + stderr_output
+        for pattern, error_description in PACKAGING_ERROR_PATTERNS:
+            self.assertNotIn(
+                pattern,
+                combined_output,
+                f"{description} failed with {error_description}. "
+                f"This may indicate a packaging/dependency issue.\n"
+                f"Pattern found: '{pattern}'\n"
+                f"stderr: {stderr_output}\n"
+                f"stdout: {stdout_output}",
+            )
 
-    def test_eden_doctor_loads_without_error(self) -> None:
+    def test_cli_commands_load_without_packaging_errors(self) -> None:
+        """Verify critical Eden CLI commands can be invoked without packaging errors.
+
+        This test checks multiple CLI commands to ensure they can be loaded and
+        executed without packaging errors. Commands may fail for
+        legitimate reasons (e.g., EdenFS not running), but they should not crash
+        due to missing modules or other packaging issues.
         """
-        Verify 'eden doctor' can at least load its Python code without
-        packaging errors.
-        """
         with edenclient.EdenFS() as client:
-            # Run doctor with --dry-run to avoid any actual fixes
-            # We expect this to either succeed or fail gracefully (non-zero exit)
-            # but NOT crash with an packaging error
-            stdout, stderr = self._get_command_output(client, "doctor", "--dry-run")
-            self._assert_no_packaging_errors("doctor --dry-run", stdout, stderr)
-
-    def test_eden_status_loads_without_error(self) -> None:
-        """Verify 'eden status' can be invoked without packaging errors."""
-        with edenclient.EdenFS() as client:
-            stdout, stderr = self._get_command_output(client, "status")
-            self._assert_no_packaging_errors("status", stdout, stderr)
-
-    def test_eden_list_loads_without_error(self) -> None:
-        """Verify 'eden list' can be invoked without packaging errors."""
-        with edenclient.EdenFS() as client:
-            stdout, stderr = self._get_command_output(client, "list")
-            self._assert_no_packaging_errors("list", stdout, stderr)
+            for args, description in COMMANDS_TO_TEST:
+                with self.subTest(command=description):
+                    self._run_command_and_check(client, args, description)
