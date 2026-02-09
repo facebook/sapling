@@ -663,8 +663,9 @@ function LabelEditor({
 }
 
 function PRRow({pr}: {pr: DiffSummary}) {
-  const stateIcon = getPRStateIcon(pr.state);
-  const stateClass = getPRStateClass(pr.state);
+  const reviewDecision = pr.type === 'github' ? pr.reviewDecision : undefined;
+  const stateIcon = getPRStateIcon(pr.state, reviewDecision);
+  const stateClass = getPRStateClass(pr.state, reviewDecision);
   const headHash = pr.type === 'github' ? pr.head : undefined;
   const isMerged = pr.state === 'MERGED';
 
@@ -722,7 +723,15 @@ function PRRow({pr}: {pr: DiffSummary}) {
       {inlineProgress ? (
         <Icon icon="loading" className="pr-row-status" />
       ) : (
-        <span className={`pr-row-status ${stateClass}`}>{stateIcon}</span>
+        <Tooltip
+          component={() => (
+            <PRStatusLegend currentState={pr.state} currentReviewDecision={reviewDecision} />
+          )}
+          interactive
+          delayMs={400}
+          placement="right">
+          <span className={`pr-row-status ${stateClass}`}>{stateIcon}</span>
+        </Tooltip>
       )}
       <a
         className="pr-row-number"
@@ -759,23 +768,32 @@ function PRRow({pr}: {pr: DiffSummary}) {
   );
 }
 
-function getPRStateIcon(state: DiffSummary['state']): string {
+function getPRStateIcon(state: DiffSummary['state'], reviewDecision?: string): string {
   switch (state) {
     case 'MERGED':
       return '✓';
     case 'CLOSED':
       return '✕';
     case 'DRAFT':
-      return '○';
+      return '✎';
     case 'MERGE_QUEUED':
       return '◐';
     case 'OPEN':
     default:
-      return '●';
+      switch (reviewDecision) {
+        case 'APPROVED':
+          return '✓';
+        case 'CHANGES_REQUESTED':
+          return '↻';
+        case 'REVIEW_REQUIRED':
+          return '◑';
+        default:
+          return '●';
+      }
   }
 }
 
-function getPRStateClass(state: DiffSummary['state']): string {
+function getPRStateClass(state: DiffSummary['state'], reviewDecision?: string): string {
   switch (state) {
     case 'MERGED':
       return 'pr-state-merged';
@@ -787,6 +805,85 @@ function getPRStateClass(state: DiffSummary['state']): string {
       return 'pr-state-queued';
     case 'OPEN':
     default:
-      return 'pr-state-open';
+      switch (reviewDecision) {
+        case 'APPROVED':
+          return 'pr-state-approved';
+        case 'CHANGES_REQUESTED':
+          return 'pr-state-changes-requested';
+        case 'REVIEW_REQUIRED':
+          return 'pr-state-review-required';
+        default:
+          return 'pr-state-open';
+      }
   }
+}
+
+const PR_STATUS_LEGEND = [
+  {icon: '●', label: 'Open', cssClass: 'pr-state-open', state: 'OPEN', review: undefined},
+  {icon: '✓', label: 'Approved', cssClass: 'pr-state-approved', state: 'OPEN', review: 'APPROVED'},
+  {
+    icon: '↻',
+    label: 'Changes requested',
+    cssClass: 'pr-state-changes-requested',
+    state: 'OPEN',
+    review: 'CHANGES_REQUESTED',
+  },
+  {
+    icon: '◑',
+    label: 'Review required',
+    cssClass: 'pr-state-review-required',
+    state: 'OPEN',
+    review: 'REVIEW_REQUIRED',
+  },
+  {icon: '✎', label: 'Draft', cssClass: 'pr-state-draft', state: 'DRAFT', review: undefined},
+  {
+    icon: '◐',
+    label: 'In merge queue',
+    cssClass: 'pr-state-queued',
+    state: 'MERGE_QUEUED',
+    review: undefined,
+  },
+  {icon: '✓', label: 'Merged', cssClass: 'pr-state-merged', state: 'MERGED', review: undefined},
+  {icon: '✕', label: 'Closed', cssClass: 'pr-state-closed', state: 'CLOSED', review: undefined},
+] as const;
+
+function PRStatusLegend({
+  currentState,
+  currentReviewDecision,
+}: {
+  currentState: DiffSummary['state'];
+  currentReviewDecision?: string;
+}) {
+  const currentIcon = getPRStateIcon(currentState, currentReviewDecision);
+  const currentClass = getPRStateClass(currentState, currentReviewDecision);
+  const currentLabel =
+    PR_STATUS_LEGEND.find(
+      s =>
+        s.state === currentState && (currentState !== 'OPEN' || s.review === currentReviewDecision),
+    )?.label ?? 'Open';
+
+  return (
+    <div className="pr-status-legend">
+      <div className="pr-status-legend-current">
+        <span className={`pr-status-legend-icon ${currentClass}`}>{currentIcon}</span>
+        <span className="pr-status-legend-current-label">{currentLabel}</span>
+      </div>
+      <div className="pr-status-legend-divider" />
+      <div className="pr-status-legend-grid">
+        {PR_STATUS_LEGEND.map(entry => {
+          const isCurrent =
+            entry.state === currentState &&
+            (currentState !== 'OPEN' || entry.review === currentReviewDecision);
+          return (
+            <div
+              key={`${entry.state}-${entry.review}`}
+              className={`pr-status-legend-item ${isCurrent ? 'pr-status-legend-item-active' : ''}`}>
+              <span className={`pr-status-legend-icon ${entry.cssClass}`}>{entry.icon}</span>
+              <span className="pr-status-legend-label">{entry.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

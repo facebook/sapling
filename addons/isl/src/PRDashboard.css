@@ -258,6 +258,18 @@
   color: var(--signal-good);
 }
 
+.pr-state-approved {
+  color: var(--signal-good);
+}
+
+.pr-state-changes-requested {
+  color: #f59e0b;
+}
+
+.pr-state-review-required {
+  color: var(--signal-warning);
+}
+
 .pr-state-merged {
   color: var(--scm-modified-foreground);
 }
@@ -272,6 +284,73 @@
 
 .pr-state-queued {
   color: var(--signal-warning);
+}
+
+/* ===== PR STATUS LEGEND TOOLTIP ===== */
+
+.pr-status-legend {
+  min-width: 160px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.pr-status-legend-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pr-status-legend-current-label {
+  font-weight: 600;
+  color: var(--foreground);
+  letter-spacing: 0.01em;
+}
+
+.pr-status-legend-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 6px 0;
+}
+
+.pr-status-legend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 12px;
+}
+
+.pr-status-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  opacity: 0.5;
+  transition: opacity 0.1s;
+}
+
+.pr-status-legend-item:hover {
+  opacity: 0.8;
+}
+
+.pr-status-legend-item-active {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pr-status-legend-icon {
+  font-size: 11px;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.pr-status-legend-label {
+  color: var(--foreground);
+  white-space: nowrap;
+  font-size: 11px;
 }
 
 /* Header buttons */
