@@ -25,7 +25,7 @@ export class WorktreeRemoveOperation extends Operation {
   }
 
   getArgs() {
-    const args = ['wt', 'rm'];
+    const args = ['wt', 'remove'];
     if (this.force) {
       args.push('--force');
     }
