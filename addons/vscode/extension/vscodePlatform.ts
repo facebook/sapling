@@ -316,8 +316,9 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/recommendTestPlanWithAI': {
+          const {commitHash} = message;
           Internal.promptAIAgent?.(
-            {type: 'recommendTestPlan'},
+            {type: 'recommendTestPlan', commitHash},
             ActionTriggerType.ISL2CommitInfoView,
           );
           break;

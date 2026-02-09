@@ -97,6 +97,7 @@ type ExternalVSCodeCommands = {
     title: string,
     description: string,
     mode?: 'commit' | 'amend',
+    hash?: string,
   ) => Thenable<void>;
   'sapling.open-split-view-with-commits': (
     commits: Array<PartiallySelectedDiffCommit>,

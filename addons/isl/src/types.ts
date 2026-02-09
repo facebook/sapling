@@ -765,6 +765,7 @@ export type PlatformSpecificClientToServerMessages =
     }
   | {
       type: 'platform/recommendTestPlanWithAI';
+      commitHash?: string;
     }
   | {
       type: 'platform/validateChangesWithAI';
