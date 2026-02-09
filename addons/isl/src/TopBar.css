@@ -18,12 +18,12 @@
   top: 0;
   /* Should > .changed-file z-index */
   z-index: 11;
-  /* Subtle bottom border only - no shadow */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  /* BACKDROP BLUR */
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
-  backdrop-filter: blur(24px) saturate(200%);
-  background: rgba(26, 32, 44, 0.5);
+  /* Apple-style frosted glass */
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  background: var(--glass-bg);
+  border-bottom: var(--glass-border-bottom);
+  box-shadow: var(--glass-highlight);
 }
 
 .top-bar .button-group {

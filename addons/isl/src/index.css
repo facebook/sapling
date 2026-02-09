@@ -86,6 +86,34 @@ vscode-button[appearance='icon']:not(:hover) {
 }
 
 /* ========================================
+   Glassmorphism System (Apple-inspired)
+   ======================================== */
+
+.isl-root {
+  /* Glass tiers - from most transparent to most opaque */
+  --glass-blur: 24px;
+  --glass-saturate: 180%;
+
+  /* Primary glass: topbar, dashboard headers - most see-through */
+  --glass-bg: rgba(16, 20, 30, 0.55);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.06);
+  --glass-border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  /* Secondary glass: comparison headers, stack nav */
+  --glass-bg-medium: rgba(16, 20, 30, 0.65);
+  --glass-blur-medium: 20px;
+
+  /* Tertiary glass: file headers, smaller elements */
+  --glass-bg-subtle: rgba(16, 20, 30, 0.75);
+  --glass-blur-subtle: 16px;
+
+  /* Modal/overlay glass */
+  --glass-bg-overlay: rgba(0, 0, 0, 0.4);
+  --glass-blur-overlay: 12px;
+}
+
+/* ========================================
    Global UI Polish Enhancements
    ======================================== */
 
@@ -102,7 +130,7 @@ vscode-button[appearance='icon']:not(:hover) {
 
 /* Smooth transitions for all interactive elements */
 .isl-root button,
-.isl-root [role="button"],
+.isl-root [role='button'],
 .isl-root a,
 .isl-root input,
 .isl-root select,
@@ -116,12 +144,12 @@ vscode-button[appearance='icon']:not(:hover) {
 
 /* Subtle lift on interactive element hover */
 .isl-root button:hover:not(:disabled),
-.isl-root [role="button"]:hover:not([aria-disabled="true"]) {
+.isl-root [role='button']:hover:not([aria-disabled='true']) {
   transform: translateY(-0.5px);
 }
 
 .isl-root button:active:not(:disabled),
-.isl-root [role="button"]:active:not([aria-disabled="true"]) {
+.isl-root [role='button']:active:not([aria-disabled='true']) {
   transform: translateY(0.5px);
 }
 
@@ -186,10 +214,10 @@ vscode-button[appearance='icon']:not(:hover) {
 }
 
 /* Show fades when scrollable */
-.scroll-fade-container[data-can-scroll-up="true"]::before {
+.scroll-fade-container[data-can-scroll-up='true']::before {
   opacity: 1;
 }
 
-.scroll-fade-container[data-can-scroll-down="true"]::after {
+.scroll-fade-container[data-can-scroll-down='true']::after {
   opacity: 1;
 }

@@ -90,22 +90,23 @@
   top: 0;
   z-index: 10;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--graphite-border);
-  background: var(--graphite-bg);
-  /* Subtle shadow when scrolled */
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+  /* Apple-style frosted glass */
+  -webkit-backdrop-filter: blur(var(--glass-blur-medium, 20px))
+    saturate(var(--glass-saturate, 180%));
+  backdrop-filter: blur(var(--glass-blur-medium, 20px)) saturate(var(--glass-saturate, 180%));
+  background: var(--glass-bg-medium, rgba(16, 20, 30, 0.65));
+  border-bottom: var(--glass-border-bottom, 1px solid rgba(255, 255, 255, 0.1));
+  box-shadow: var(--glass-highlight, inset 0 1px 0 rgba(255, 255, 255, 0.04));
 }
-
 
 .comparison-view-header {
   padding: 10px 16px;
   position: relative;
-  background: var(--graphite-bg);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Subtle gradient for depth */
-  background: linear-gradient(180deg, var(--graphite-bg) 0%, color-mix(in srgb, var(--graphite-bg) 97%, black) 100%);
+  /* Transparent - glass effect comes from parent sticky header */
+  background: transparent;
 }
 .comparison-view-header-group {
   display: flex;
@@ -365,8 +366,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Review actions bar - below stack navigation */
@@ -556,9 +561,9 @@ a.pr-info-title:hover::after {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: color-mix(in srgb, var(--graphite-bg) 70%, transparent);
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
+  /* Inherits glass from parent sticky header - just add subtle separator */
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .stack-navigation-bar .stack-label {
@@ -862,10 +867,18 @@ a.pr-info-title:hover::after {
 }
 
 /* Stagger animation delays for natural feel */
-.skeleton-file:nth-child(1) { animation-delay: 0s; }
-.skeleton-file:nth-child(2) { animation-delay: 0.08s; }
-.skeleton-file:nth-child(3) { animation-delay: 0.16s; }
-.skeleton-file:nth-child(n+4) { animation-delay: 0.24s; }
+.skeleton-file:nth-child(1) {
+  animation-delay: 0s;
+}
+.skeleton-file:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.skeleton-file:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.skeleton-file:nth-child(n + 4) {
+  animation-delay: 0.24s;
+}
 
 .skeleton-diff-row:nth-child(odd) .skeleton-code-bar {
   opacity: 0.7;
