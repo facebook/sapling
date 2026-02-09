@@ -30,26 +30,31 @@ import {group, notEmpty} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
 import {useGeneratedFileStatuses} from '../GeneratedFile';
+import {allDiffSummaries, diffSummary} from '../codeReview/CodeReviewInfo';
+import {currentPRStackContextAtom} from '../codeReview/PRStacksAtom';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, localStorageBackedAtom} from '../jotaiUtils';
 import platform from '../platform';
 import {
-  pendingCommentsAtom,
   CommentInput,
   PendingCommentDisplay,
   PendingCommentsBadge,
+  pendingCommentsAtom,
 } from '../reviewComments';
-import {latestHeadCommit} from '../serverAPIState';
-import {reviewModeAtom, enterReviewMode} from '../reviewMode';
+import {enterReviewMode, reviewModeAtom} from '../reviewMode';
 import {MergeControls} from '../reviewMode/MergeControls';
 import {useQuickReviewAction} from '../reviewSubmission';
-import {allDiffSummaries, diffSummary} from '../codeReview/CodeReviewInfo';
+import {latestHeadCommit} from '../serverAPIState';
 import {themeState} from '../theme';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
-import {currentComparisonMode, reviewedFilesAtom, reviewedFileKey, reviewedFileKeyForPR} from './atoms';
+import {
+  currentComparisonMode,
+  reviewedFileKey,
+  reviewedFileKeyForPR,
+  reviewedFilesAtom,
+} from './atoms';
 import {parsePatchAndFilter, sortFilesByType} from './utils';
-import {currentPRStackContextAtom} from '../codeReview/PRStacksAtom';
 
 import './ComparisonView.css';
 
@@ -101,12 +106,13 @@ function PRInfoHeader({prNumber}: {prNumber: string}) {
             target="_blank"
             rel="noopener noreferrer"
             className="pr-info-title"
-            title={title}
-          >
+            title={title}>
             {title}
           </a>
         ) : (
-          <span className="pr-info-title" title={title}>{title}</span>
+          <span className="pr-info-title" title={title}>
+            {title}
+          </span>
         )}
       </div>
       {description && (
@@ -115,6 +121,25 @@ function PRInfoHeader({prNumber}: {prNumber: string}) {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Compact PR header for collapsed state.
+ * Matches the visual style of the expanded title row for minimal visual jump.
+ */
+function PRCompactHeader({prNumber}: {prNumber: string}) {
+  const prData = useAtomValue(diffSummary(prNumber));
+  const pr = prData?.value;
+  const title = pr?.title || `PR #${prNumber}`;
+
+  return (
+    <>
+      <span className="pr-info-number">#{prNumber}</span>
+      <span className="pr-compact-title" title={title}>
+        {title}
+      </span>
+    </>
   );
 }
 
@@ -268,14 +293,18 @@ function ReviewActionsBar() {
   );
 }
 
+const headerCollapsedAtom = atom<boolean>(false);
+
 /**
  * Horizontal bar showing all PRs in a stack for navigation.
  * Shows stack direction: left = base (closest to main), right = tip (newest).
  * Only renders when in review mode with a multi-PR stack.
+ * Collapsible towards the top to maximize diff viewing space.
  */
 function StackNavigationBar() {
   const stackContext = useAtomValue(currentPRStackContextAtom);
   const reviewMode = useAtomValue(reviewModeAtom);
+  const [collapsed, setCollapsed] = useAtom(headerCollapsedAtom);
 
   // Always render PR info if in review mode with a PR number
   const showPRInfo = reviewMode.active && reviewMode.prNumber;
@@ -302,63 +331,104 @@ function StackNavigationBar() {
 
   return (
     <div className="stack-navigation-container">
-      {/* PR Info - always show in review mode */}
-      {showPRInfo && <PRInfoHeader prNumber={reviewMode.prNumber!} />}
-
-      {/* Stack Navigation - only for multi-PR stacks */}
-      {showStackNav && (
-        <div className="stack-navigation-bar">
-          <span className="stack-label">
-            <Icon icon="git-branch" />
-            <T>STACK</T>
-          </span>
-          <span className="stack-direction-hint stack-direction-base">
-            <T>main</T>
-            <Icon icon="arrow-right" />
-          </span>
-          <div className="stack-pr-pills">
-            {reversedEntries.map((entry, idx) => {
-              // Determine review status class
-              const reviewClass = entry.reviewDecision === 'APPROVED'
-                ? 'stack-pr-approved'
-                : entry.reviewDecision === 'CHANGES_REQUESTED'
-                  ? 'stack-pr-changes-requested'
-                  : '';
-
-              const pill = (
-                <Tooltip
-                  key={entry.prNumber}
-                  title={entry.title}
-                  delayMs={500}
-                >
-                  <Button
-                    className={`stack-pr-pill ${entry.isCurrent ? 'stack-pr-current' : ''} ${entry.state === 'MERGED' ? 'stack-pr-merged' : ''} ${reviewClass}`}
-                    onClick={() => handleNavigateToPR(entry.prNumber, entry.headHash)}
-                    disabled={entry.isCurrent || !entry.headHash}
-                  >
-                    {entry.reviewDecision === 'APPROVED' && !entry.isCurrent && <Icon icon="check" />}
-                    {entry.reviewDecision === 'CHANGES_REQUESTED' && !entry.isCurrent && <Icon icon="diff" />}
-                    #{entry.prNumber}
-                    {entry.state === 'MERGED' && <Icon icon="git-merge" />}
-                  </Button>
-                </Tooltip>
-              );
-              return idx > 0 ? (
-                <span key={entry.prNumber} className="stack-pill-with-arrow">
-                  <span className="stack-arrow"><Icon icon="arrow-right" /></span>
-                  {pill}
-                </span>
-              ) : pill;
-            })}
-          </div>
-          <span className="stack-position">
-            {positionFromBase} / {stackContext!.stackSize}
-          </span>
+      {/* Collapsed: compact PR row matching expanded title style */}
+      {collapsed && showPRInfo && (
+        <div
+          className="stack-nav-compact-row"
+          role="button"
+          tabIndex={0}
+          onClick={e => {
+            // Don't expand when clicking review action buttons
+            if (!(e.target as HTMLElement).closest('.review-action-btn')) {
+              setCollapsed(false);
+            }
+          }}
+          onKeyDown={e => e.key === 'Enter' && setCollapsed(false)}
+          title="Expand header">
+          <PRCompactHeader prNumber={reviewMode.prNumber!} />
+          <ReviewActionsBar />
+          <span className="codicon codicon-chevron-down" aria-hidden="true" />
         </div>
       )}
 
-      {/* Review Actions - below stack nav */}
-      <ReviewActionsBar />
+      {/* Expandable content - instant toggle */}
+      <div className={`stack-nav-collapsible ${collapsed ? 'stack-nav-collapsed' : ''}`}>
+        {/* PR Info - always show in review mode */}
+        {showPRInfo && <PRInfoHeader prNumber={reviewMode.prNumber!} />}
+
+        {/* Stack Navigation - only for multi-PR stacks */}
+        {showStackNav && (
+          <div className="stack-navigation-bar">
+            <span className="stack-label">
+              <Icon icon="git-branch" />
+              <T>STACK</T>
+            </span>
+            <span className="stack-direction-hint stack-direction-base">
+              <T>main</T>
+              <Icon icon="arrow-right" />
+            </span>
+            <div className="stack-pr-pills">
+              {reversedEntries.map((entry, idx) => {
+                // Determine review status class
+                const reviewClass =
+                  entry.reviewDecision === 'APPROVED'
+                    ? 'stack-pr-approved'
+                    : entry.reviewDecision === 'CHANGES_REQUESTED'
+                      ? 'stack-pr-changes-requested'
+                      : '';
+
+                const pill = (
+                  <Tooltip key={entry.prNumber} title={entry.title} delayMs={500}>
+                    <Button
+                      className={`stack-pr-pill ${entry.isCurrent ? 'stack-pr-current' : ''} ${entry.state === 'MERGED' ? 'stack-pr-merged' : ''} ${reviewClass}`}
+                      onClick={() => handleNavigateToPR(entry.prNumber, entry.headHash)}
+                      disabled={entry.isCurrent || !entry.headHash}>
+                      {entry.reviewDecision === 'APPROVED' && !entry.isCurrent && (
+                        <Icon icon="check" />
+                      )}
+                      {entry.reviewDecision === 'CHANGES_REQUESTED' && !entry.isCurrent && (
+                        <Icon icon="diff" />
+                      )}
+                      #{entry.prNumber}
+                      {entry.state === 'MERGED' && <Icon icon="git-merge" />}
+                    </Button>
+                  </Tooltip>
+                );
+                return idx > 0 ? (
+                  <span key={entry.prNumber} className="stack-pill-with-arrow">
+                    <span className="stack-arrow">
+                      <Icon icon="arrow-right" />
+                    </span>
+                    {pill}
+                  </span>
+                ) : (
+                  pill
+                );
+              })}
+            </div>
+            <span className="stack-position">
+              {positionFromBase} / {stackContext!.stackSize}
+            </span>
+          </div>
+        )}
+
+        {/* Bottom bar: review actions + collapse toggle (entire bar is clickable) */}
+        <div
+          className="stack-nav-bottom-bar"
+          role="button"
+          tabIndex={0}
+          onClick={e => {
+            // Don't collapse when clicking review action buttons
+            if (!(e.target as HTMLElement).closest('.review-action-btn')) {
+              setCollapsed(true);
+            }
+          }}
+          onKeyDown={e => e.key === 'Enter' && setCollapsed(true)}
+          title="Collapse header">
+          <ReviewActionsBar />
+          <span className="codicon codicon-chevron-up stack-nav-collapse-icon" aria-hidden="true" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -558,8 +628,6 @@ export default function ComparisonView({
         <div className="comparison-view-sticky-header">
           <ComparisonViewHeader
             comparison={comparison}
-            collapsedFiles={collapsedFiles}
-            setCollapsedFile={setCollapsedFile}
             dismiss={dismiss}
             currentFileIndex={currentFileIndex}
             totalFiles={filePaths.length}
@@ -614,8 +682,6 @@ const defaultComparisons = [
 ];
 function ComparisonViewHeader({
   comparison,
-  collapsedFiles,
-  setCollapsedFile,
   dismiss,
   currentFileIndex,
   totalFiles,
@@ -624,8 +690,6 @@ function ComparisonViewHeader({
   showNavigation,
 }: {
   comparison: Comparison;
-  collapsedFiles: Map<string, boolean>;
-  setCollapsedFile: (path: string, collapsed: boolean) => unknown;
   dismiss?: () => void;
   currentFileIndex?: number;
   totalFiles?: number;
@@ -635,17 +699,6 @@ function ComparisonViewHeader({
 }) {
   const setComparisonMode = useSetAtom(currentComparisonMode);
   const [compared, reloadComparison] = useAtom(currentComparisonData(comparison));
-
-  const data = compared.state === 'hasData' ? compared.data : null;
-
-  const allFilesExpanded =
-    data?.value?.every(
-      file => file.newFileName && collapsedFiles.get(file.newFileName) === false,
-    ) === true;
-  const noFilesExpanded =
-    data?.value?.every(
-      file => file.newFileName && collapsedFiles.get(file.newFileName) === true,
-    ) === true;
   const isLoading = compared.state === 'loading';
 
   return (
@@ -711,32 +764,6 @@ function ComparisonViewHeader({
               </Button>
             </span>
           )}
-          <Button
-            onClick={() => {
-              for (const file of data?.value ?? []) {
-                if (file.newFileName) {
-                  setCollapsedFile(file.newFileName, false);
-                }
-              }
-            }}
-            disabled={isLoading || allFilesExpanded}
-            icon>
-            <Icon icon="unfold" slot="start" />
-            <T>Expand all files</T>
-          </Button>
-          <Button
-            onClick={() => {
-              for (const file of data?.value ?? []) {
-                if (file.newFileName) {
-                  setCollapsedFile(file.newFileName, true);
-                }
-              }
-            }}
-            icon
-            disabled={isLoading || noFilesExpanded}>
-            <Icon icon="fold" slot="start" />
-            <T>Collapse all files</T>
-          </Button>
           <Tooltip trigger="click" component={() => <ComparisonSettingsDropdown />}>
             <Button icon>
               <Icon icon="ellipsis" />
@@ -887,9 +914,7 @@ function ComparisonViewFile({
   const [showFileComment, setShowFileComment] = useState(false);
 
   // Get pending comments for the current PR when in review mode
-  const pendingComments = useAtomValue(
-    pendingCommentsAtom(reviewMode.prNumber ?? ''),
-  );
+  const pendingComments = useAtomValue(pendingCommentsAtom(reviewMode.prNumber ?? ''));
 
   // Filter pending comments for the current file
   const filePendingComments = useMemo(() => {
@@ -983,10 +1008,7 @@ function ComparisonViewFile({
     onFileCommentClick: reviewMode.active ? onFileCommentClick : undefined,
   };
   return (
-    <div
-      className="comparison-view-file"
-      key={path}
-      ref={element => setRef?.(path, element)}>
+    <div className="comparison-view-file" key={path} ref={element => setRef?.(path, element)}>
       <ErrorBoundary>
         <SplitDiffView ctx={context} patch={diff} path={path} generatedStatus={generatedStatus} />
         {/* Inline comment input when a line is active */}
