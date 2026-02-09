@@ -16,18 +16,22 @@ mod manifest_id_store;
 
 use std::sync::Arc;
 
+use anyhow::Context;
 use anyhow::Result;
 use context::CoreContext;
 use metaconfig_types::RestrictedPathsConfig;
 use mononoke_macros::mononoke;
+use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
 use permission_checker::AclProvider;
 use permission_checker::MononokeIdentity;
 use scuba_ext::MononokeScubaSampleBuilder;
+use thiserror::Error;
 use tokio::task;
 
 pub use crate::access_log::ACCESS_LOG_SCUBA_TABLE;
 pub use crate::access_log::has_read_access_to_repo_region_acls;
+use crate::access_log::is_member_of_groups;
 use crate::access_log::log_access_to_restricted_path;
 pub use crate::cache::ManifestIdCache;
 pub use crate::cache::RestrictedPathsManifestIdCache;
@@ -39,6 +43,32 @@ pub use crate::manifest_id_store::RestrictedPathManifestIdEntry;
 pub use crate::manifest_id_store::RestrictedPathsManifestIdStore;
 pub use crate::manifest_id_store::SqlRestrictedPathsManifestIdStore;
 pub use crate::manifest_id_store::SqlRestrictedPathsManifestIdStoreBuilder;
+
+#[derive(Debug)]
+pub enum RestrictedPathAccessType<'a> {
+    Manifest(ManifestId),
+    Path(&'a MPath),
+}
+
+/// Error type for restricted paths enforcement.
+#[derive(Debug, Error)]
+pub enum RestrictedPathsError<'a> {
+    #[error("Access denied: unauthorized access to restricted path: {0}")]
+    AuthorizationError(RestrictedPathAccessType<'a>),
+    #[error("Internal error: {0}")]
+    InternalError(#[from] anyhow::Error),
+}
+
+impl<'a> std::fmt::Display for RestrictedPathAccessType<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Manifest(manifest_id) => {
+                write!(f, "ManifestId({})", manifest_id)
+            }
+            Self::Path(path) => write!(f, "{}", path),
+        }
+    }
+}
 
 /// Repository restricted paths configuration.
 #[facet::facet]
@@ -229,6 +259,22 @@ impl RestrictedPaths {
         )
         .await
     }
+
+    /// Check if any client identity matches the ones from from the enforcement
+    /// conditions config.
+    /// Returns true if enforcement should be applied.
+    async fn should_enforce_restriction(&self, ctx: &CoreContext) -> Result<bool> {
+        let enforcement_acls = self.config.conditional_enforcement_acls.clone();
+        if enforcement_acls.is_empty() {
+            // Ensure we never enforce if there are no enforcement ACLs configured
+            return Ok(false);
+        }
+
+        // Check if any of the client identities match the condition enforcement
+        // ACLs
+        let acls: Vec<_> = enforcement_acls.iter().collect();
+        is_member_of_groups(ctx, &self.acl_provider, acls.as_slice()).await
+    }
 }
 
 /// Helper function to spawn an async task that logs access to restricted paths.
@@ -339,6 +385,79 @@ pub fn spawn_log_restricted_manifest_access(
     // But return the task handle so callers can wait on the access check result
     // if needed.
     Ok(Some(spawned_task))
+}
+
+/// Spawn enforcement check for restricted manifest access.
+///
+/// This function:
+/// 1. Calls `spawn_log_restricted_manifest_access` for logging (fire-and-forget)
+/// 2. Checks if enforcement JK is enabled
+/// 3. Checks if any of the client identities match the condition enforcement ACLs
+/// 4. If match AND user lacks authorization, returns `RestrictedPathsError::AuthorizationError`
+///
+/// # Returns
+/// * `Ok(())` if access is allowed or enforcement is disabled
+/// * `Err(RestrictedPathsError::AuthorizationError)` if access is denied
+pub async fn spawn_enforce_restricted_manifest_access<'a>(
+    ctx: &'a CoreContext,
+    restricted_paths: Arc<RestrictedPaths>,
+    manifest_id: ManifestId,
+    manifest_type: ManifestType,
+    switch_value: &'a str,
+) -> Result<(), RestrictedPathsError<'a>> {
+    // Always log first, but get the task handle so we can get the access check
+    // result if needed.
+    let has_auth_task = spawn_log_restricted_manifest_access(
+        ctx,
+        restricted_paths.clone(),
+        manifest_id.clone(),
+        manifest_type.clone(),
+        switch_value,
+    )?;
+
+    // Check if enforcement JK is enabled
+    let enforcement_enabled = justknobs::eval(
+        "scm/mononoke:enable_server_side_path_acls",
+        None,
+        Some(switch_value),
+    )?;
+
+    // Early return if enforcement is disabled or there are no conditional
+    // enforcement ACLs configured
+    if !enforcement_enabled
+        || restricted_paths
+            .config()
+            .conditional_enforcement_acls
+            .is_empty()
+    {
+        return Ok(());
+    }
+
+    let should_enforce_restrictions = restricted_paths
+        .should_enforce_restriction(ctx)
+        .await
+        .context("Checking if conditional enforcement ACLs match")?;
+
+    if !should_enforce_restrictions {
+        return Ok(());
+    }
+
+    // Conditional enforcement matched - check authorization
+    let has_auth = if let Some(has_auth_handle) = has_auth_task {
+        has_auth_handle.await.map_err(anyhow::Error::from)??
+    } else {
+        // Either logging was disabled or there were no restricted paths
+        // Access logging is a pre-requisite for enforcement!
+        true
+    };
+
+    if !has_auth {
+        return Err(RestrictedPathsError::AuthorizationError(
+            RestrictedPathAccessType::Manifest(manifest_id),
+        ));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

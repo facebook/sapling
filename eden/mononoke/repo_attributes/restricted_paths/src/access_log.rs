@@ -66,6 +66,39 @@ pub async fn has_read_access_to_repo_region_acls(
         .await)
 }
 
+/// Check if the caller is a member of any of the given groups.
+/// Returns true if the caller is a member of at least one group (OR logic).
+/// If the groups list is empty, returns true (no restriction).
+pub async fn is_member_of_groups(
+    ctx: &CoreContext,
+    acl_provider: &Arc<dyn AclProvider>,
+    groups: &[&MononokeIdentity],
+) -> Result<bool> {
+    if groups.is_empty() {
+        return Ok(true);
+    }
+
+    // Run all group membership checks concurrently
+    let membership_results: Vec<bool> = stream::iter(groups.iter().cloned())
+        .map(|group| async move {
+            let membership_checker =
+                acl_provider.group(group.id_data()).await.with_context(|| {
+                    format!("Failed to create MembershipChecker for {}", group.id_data())
+                })?;
+            anyhow::Ok(
+                membership_checker
+                    .is_member(ctx.metadata().identities())
+                    .await,
+            )
+        })
+        .boxed()
+        .buffer_unordered(groups.len())
+        .try_collect()
+        .await?;
+
+    Ok(membership_results.into_iter().any(|m| m))
+}
+
 /// Check if the caller is a member of the given group.
 pub async fn is_part_of_group(
     ctx: &CoreContext,

@@ -23,6 +23,7 @@ rust_library(
         "fbsource//third-party/rust:hex",
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:strum",
+        "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:tracing",
         "//common/rust/shed/facet:facet",

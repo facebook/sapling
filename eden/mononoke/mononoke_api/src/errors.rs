@@ -28,6 +28,7 @@ use mononoke_types::path::MPath;
 use pushrebase::PushrebaseError;
 use redactedblobstore::has_redaction_root_cause;
 use repo_authorization::AuthorizationError;
+use restricted_paths::RestrictedPathsError;
 use thiserror::Error;
 use tokio::task::JoinError;
 
@@ -229,5 +230,16 @@ impl From<CommitCloudError> for MononokeError {
 impl From<JoinError> for MononokeError {
     fn from(e: JoinError) -> Self {
         MononokeError::from(anyhow::Error::from(e))
+    }
+}
+
+impl From<RestrictedPathsError<'_>> for MononokeError {
+    fn from(e: RestrictedPathsError) -> Self {
+        match e {
+            RestrictedPathsError::AuthorizationError(_) => {
+                MononokeError::AuthorizationError(e.to_string())
+            }
+            RestrictedPathsError::InternalError(err) => MononokeError::InternalError(err.into()),
+        }
     }
 }
