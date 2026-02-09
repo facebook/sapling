@@ -61,7 +61,6 @@
 }
 
 .main-content-area {
-  overflow-y: auto;
   flex-grow: 1;
 }
 

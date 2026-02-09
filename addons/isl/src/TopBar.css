@@ -11,8 +11,9 @@
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  padding: var(--halfpad) 0; /* Vertical padding only */
-  margin-left: var(--halfpad);
+  padding: var(--pad) 0;
+  /* Pull into parent padding so bar fills edge-to-edge */
+  margin: 0 calc(-1 * var(--prominent-padding));
   gap: var(--pad);
   position: sticky;
   top: 0;
@@ -34,12 +35,12 @@
   padding: 0 var(--halfpad);
 }
 
-/* First button group - extend to left edge */
+/* First button group - content inset matches parent padding */
 .top-bar .button-group:first-child {
-  padding-left: var(--pad);
+  padding-left: var(--prominent-padding);
 }
 
-/* Last button group - extend to right edge */
+/* Last button group - content inset matches parent padding */
 .top-bar .button-group:last-child {
-  padding-right: var(--pad);
+  padding-right: var(--prominent-padding);
 }

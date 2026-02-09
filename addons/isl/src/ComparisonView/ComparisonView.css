@@ -85,11 +85,17 @@
 }
 
 /* Sticky header container - holds header + stack nav */
+/* Stretches edge-to-edge by counteracting parent padding, flush to modal top */
 .comparison-view-sticky-header {
   position: sticky;
   top: 0;
   z-index: 10;
   flex-shrink: 0;
+  /* Pull into parent padding so glass fills modal edge-to-edge */
+  margin: calc(-1 * var(--pad)) calc(-1 * var(--pad)) 0 calc(-1 * var(--pad));
+  padding: var(--pad) var(--pad) 0 var(--pad);
+  /* Match modal border-radius at top corners */
+  border-radius: 12px 12px 0 0;
   /* Apple-style frosted glass */
   -webkit-backdrop-filter: blur(var(--glass-blur-medium, 20px))
     saturate(var(--glass-saturate, 180%));
@@ -168,6 +174,7 @@
 
 .comparison-view-modal {
   --border-amt: calc(2 * var(--pad));
+  --padding-amt: 0px;
 }
 
 .comparison-view-root {
@@ -410,7 +417,8 @@
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+  /* Transparent - inherits glassmorphism from parent sticky header */
+  background: transparent;
   border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
@@ -490,14 +498,14 @@
   flex-direction: column;
 }
 
-/* PR Info Header - title and description */
+/* PR Info Header - title and description (flush to modal edges) */
 .pr-info-header {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 14px 16px 16px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  background: var(--graphite-bg);
+  padding: 8px 16px 12px 16px;
+  /* Transparent - inherits glassmorphism from parent sticky header */
+  background: transparent;
   /* Fade in animation */
   animation: fadeInSlide 0.2s ease-out;
 }

@@ -58,6 +58,7 @@
 }
 
 .drawer-main-content {
+  overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -65,8 +66,8 @@
   width: 100%;
   /* Allow shrinking below content size for proper overflow/scroll behavior */
   min-height: 0;
-  /* Extra breathing room for the prominent middle column */
-  padding: var(--prominent-padding);
+  /* Extra breathing room for the prominent middle column (no top padding - top-bar fills edge) */
+  padding: 0 var(--prominent-padding) var(--prominent-padding) var(--prominent-padding);
   /* Unified Graphite background */
   background-color: var(--graphite-bg);
   /* Subtle borders for section separation */
