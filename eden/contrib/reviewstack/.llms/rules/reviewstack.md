@@ -24,6 +24,7 @@ src/
 │   ├── GitHubClient.ts    # Interface defining GitHub client methods
 │   ├── GraphQLGitHubClient.ts  # GraphQL implementation
 │   ├── CachingGitHubClient.ts  # IndexedDB caching decorator
+│   ├── gitHubCredentials.ts    # createGraphQLEndpointForHostname utility
 │   ├── types.ts           # GitHub entity types (Commit, Tree, Blob, etc.)
 │   ├── pullRequestTimelineTypes.ts
 │   └── diffTypes.ts
@@ -35,12 +36,15 @@ src/
 ├── textmate/              # TextMate grammar loading utilities
 ├── App.tsx                # Root component (assumes Provider + ThemeProvider ancestors)
 ├── jotai/                 # Jotai atoms (main state management)
-│   ├── atoms.ts           # All Jotai atoms
-│   └── index.ts           # Public exports
+│   ├── atoms.ts           # All Jotai atoms (credentials, theme, stacks, etc.)
+│   ├── index.ts           # Public exports (barrel file)
+│   └── hooks/             # Custom hooks for Jotai state
 ├── stackState.ts          # State for stacked PRs (Sapling & ghstack support)
 ├── saplingStack.ts        # Sapling stack body parsing
 ├── ghstackUtils.ts        # ghstack body parsing
 ├── themeState.ts          # Theme/color mode state management
+├── LoginDialog.tsx        # Login UI with auth error display
+├── UnauthorizedErrorHandler.tsx  # Handles 401 errors, clears token
 ├── diffServiceWorker.ts   # SharedWorker for diff computation
 ├── diffServiceClient.ts   # Client for communicating with diff worker
 └── [Component].tsx        # React components
@@ -226,15 +230,18 @@ Test files: `*.test.ts` alongside source files.
 | `PullRequestTimeline` | PR activity feed |
 | `InlineCommentThread` | Diff inline comments |
 | `PullRequestVersionSelector` | Version/commit history selector |
+| `LoginDialog` | Login form with auth error display |
+| `UnauthorizedErrorHandler` | Handles expired/revoked token errors |
 
 ## Common Patterns to Follow
 
 1. **Error handling**: Use `ErrorBoundary` component for React error boundaries
-2. **Loading states**: Use `CenteredSpinner` with descriptive message
-3. **Date formatting**: Use `formatISODate()` from `utils.ts`
-4. **Short commit hashes**: Use `shortOid()` from `utils.ts`
-5. **Grouping data**: Use `groupBy()` or `groupByDiffSide()` utilities
-6. **Path joining**: Use `joinPath()` (handles null base paths)
+2. **Auth error handling**: Use `UnauthorizedErrorHandler` for 401 errors; it sets `authErrorMessageAtom` and clears the token
+3. **Loading states**: Use `CenteredSpinner` with descriptive message
+4. **Date formatting**: Use `formatISODate()` from `utils.ts`
+5. **Short commit hashes**: Use `shortOid()` from `utils.ts`
+6. **Grouping data**: Use `groupBy()` or `groupByDiffSide()` utilities
+7. **Path joining**: Use `joinPath()` (handles null base paths)
 
 ## Styling Guidelines
 

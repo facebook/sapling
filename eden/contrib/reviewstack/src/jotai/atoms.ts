@@ -1912,6 +1912,17 @@ export type NotificationMessage = {
 export const notificationMessageAtom = atom<NotificationMessage>(null);
 
 // =============================================================================
+// Auth Error Message
+// =============================================================================
+
+/**
+ * Stores an error message to display on the login page, typically used when
+ * the user's token has expired or been revoked. This is set when a 401 error
+ * is encountered and cleared when the user successfully logs in.
+ */
+export const authErrorMessageAtom = atom<string | null>(null);
+
+// =============================================================================
 // Stacked Pull Requests
 // =============================================================================
 

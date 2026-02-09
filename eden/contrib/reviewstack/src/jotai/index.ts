@@ -70,6 +70,7 @@ export {
   gitHubBlobAtom,
   fileContentsDeltaAtom,
   notificationMessageAtom,
+  authErrorMessageAtom,
   stackedPullRequestAtom,
   stackedPullRequestFragmentsAtom,
 } from './atoms';

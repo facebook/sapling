@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import UnauthorizedErrorHandler from './UnauthorizedErrorHandler';
+import UnauthorizedError from './github/UnauthorizedError';
 import {AlertIcon} from '@primer/octicons-react';
 import {Text, Flash, StyledOcticon, Box} from '@primer/react';
 import {Component} from 'react';
@@ -37,6 +39,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.error != null) {
+      // For unauthorized errors, clear the token and redirect to login
+      if (this.state.error instanceof UnauthorizedError) {
+        return <UnauthorizedErrorHandler message={this.state.error.message} />;
+      }
       return <ErrorNotice title="Something went wrong" error={this.state.error} />;
     }
 

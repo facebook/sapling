@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import UnauthorizedError from './UnauthorizedError';
+
 export default async function queryGraphQL<TData, TVariables>(
   query: string,
   variables: TVariables,
@@ -19,10 +21,8 @@ export default async function queryGraphQL<TData, TVariables>(
 
   if (!response.ok) {
     if (response.status === 401) {
-      return Promise.reject(
-        `HTTP request error: ${response.status}: ${
-          response.statusText || 'Unauthorized'
-        }. Is your access token still valid?`,
+      throw new UnauthorizedError(
+        'Your GitHub access token has expired or been revoked. Please sign in again.',
       );
     }
     return Promise.reject(`HTTP request error: ${response.status}: ${response.statusText}`);

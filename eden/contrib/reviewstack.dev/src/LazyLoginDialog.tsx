@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {CustomLoginDialogProps} from 'reviewstack/src/LoginDialog';
+
 import React, {Suspense} from 'react';
 
 const DefaultLoginDialog = React.lazy(() => import('./DefaultLoginDialog'));
@@ -12,9 +14,8 @@ const NetlifyLoginDialog = React.lazy(() => import('./NetlifyLoginDialog'));
 
 export default function LazyLoginDialog({
   setTokenAndHostname,
-}: {
-  setTokenAndHostname: (token: string, hostname: string) => void;
-}) {
+  authError,
+}: CustomLoginDialogProps) {
   const {hostname} = window.location;
   const LoginComponent =
     hostname === 'reviewstack.netlify.app' || hostname === 'reviewstack.dev'
@@ -24,7 +25,7 @@ export default function LazyLoginDialog({
   return (
     <div>
       <Suspense fallback={<div>Loading...</div>}>
-        <LoginComponent setTokenAndHostname={setTokenAndHostname} />
+        <LoginComponent setTokenAndHostname={setTokenAndHostname} authError={authError} />
       </Suspense>
     </div>
   );

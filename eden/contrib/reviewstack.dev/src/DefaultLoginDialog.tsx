@@ -10,11 +10,12 @@ import type {CustomLoginDialogProps} from 'reviewstack/src/LoginDialog';
 
 import './DefaultLoginDialog.css';
 
-import {Box, Link, Text} from '@primer/react';
+import {Box, Flash, Link, Text} from '@primer/react';
 import {useCallback, useState} from 'react';
 
 export default function LoginDialog({
   setTokenAndHostname,
+  authError,
 }: CustomLoginDialogProps): React.ReactElement | null {
   const [token, setToken] = useState('');
   const [hostname, setHostname] = useState('github.com');
@@ -48,6 +49,13 @@ export default function LoginDialog({
           borderWidth={1}
           borderColor="border.default">
           <form onSubmit={onSubmit}>
+            {authError != null ? (
+              <Box pb={2}>
+                <Flash variant="warning">
+                  <Text>{authError}</Text>
+                </Flash>
+              </Box>
+            ) : null}
             <Box pb={2}>
               <Text>
                 This tool requires an authentication token so it can read and write data from

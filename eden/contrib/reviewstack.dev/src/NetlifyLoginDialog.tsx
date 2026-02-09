@@ -10,7 +10,7 @@ import type {CustomLoginDialogProps} from 'reviewstack/src/LoginDialog';
 
 import Footer from './Footer';
 import InlineCode from './InlineCode';
-import {Box, Button, Heading, Text, TextInput} from '@primer/react';
+import {Box, Button, Flash, Heading, Text, TextInput} from '@primer/react';
 import Authenticator from 'netlify-auth-providers';
 import React, {useCallback, useState} from 'react';
 import AppHeader from 'reviewstack/src/AppHeader';
@@ -55,7 +55,7 @@ export default function NetlifyLoginDialog(props: CustomLoginDialogProps): React
 }
 
 function EndUserInstructions(props: CustomLoginDialogProps): React.ReactElement {
-  const {setTokenAndHostname} = props;
+  const {setTokenAndHostname, authError} = props;
   const [isButtonDisabled, setButtonDisabled] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const onClick = useCallback(async () => {
@@ -95,6 +95,13 @@ function EndUserInstructions(props: CustomLoginDialogProps): React.ReactElement 
           will not delete your data from GitHub.
         </Text>
       </Box>
+      {authError != null ? (
+        <Box pb={2}>
+          <Flash variant="warning">
+            <Text>{authError}</Text>
+          </Flash>
+        </Box>
+      ) : null}
       {errorMessage != null ? (
         <Box pb={2}>
           <Text color="danger.fg">{errorMessage}</Text>
