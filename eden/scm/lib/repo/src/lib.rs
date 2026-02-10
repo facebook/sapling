@@ -7,11 +7,11 @@
 
 #![allow(dead_code)]
 
-pub mod commit;
 pub mod constants;
 pub mod core_repo;
 pub mod errors;
 mod init;
+pub mod new_commit;
 pub mod repo;
 pub mod scmstore;
 pub mod slapi_client;
@@ -19,10 +19,10 @@ pub mod slapi_repo;
 mod trait_impls;
 pub mod trees;
 
-pub use commit::Commit;
 pub use commits_trait::DagCommits;
 pub use core_repo::CoreRepo;
 pub use manifest_tree::ReadTreeManifest;
+pub use new_commit::NewCommit;
 pub use repo::Repo;
 pub use repo_minimal_info::RepoMinimalInfo;
 pub use slapi_repo::SlapiRepo;

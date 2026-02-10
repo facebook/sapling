@@ -5,17 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::BTreeMap;
-
-use format_util::HgTime;
+use format_util::HgCommitFields;
+use serde::Deserialize;
 use types::HgId;
-pub struct Commit {
-    pub manifest: HgId,
-    pub files: Vec<String>,
-    pub description: String,
-    pub user: String,
-    pub date: Option<HgTime>,
-    pub extra: BTreeMap<String, String>,
+
+#[derive(Deserialize)]
+pub struct NewCommit {
+    pub commit_fields: HgCommitFields,
+    #[serde(default)]
     pub parents: Vec<HgId>,
+    #[serde(default)]
     pub gpg_keyid: Option<String>,
 }
