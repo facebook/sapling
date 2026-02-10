@@ -170,9 +170,7 @@ fn to_index_func(
                     IndexOutput::Owned(out.to_vec().into_boxed_slice())
                 }
                 _ => match obj.extract::<(u64, u64)>(py) {
-                    Ok((start, end)) => {
-                        return IndexOutput::Reference(start..end);
-                    }
+                    Ok((start, end)) => IndexOutput::Reference(start..end),
                     _ => {
                         panic!("python index function returned unknown value")
                     }
