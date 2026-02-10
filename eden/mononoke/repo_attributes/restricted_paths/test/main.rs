@@ -65,6 +65,11 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
         .with_file_path_changes(vec![("user_project/foo/bar/a", None)])
+        .with_test_groups(vec![
+            // Group ACLs to conditionally enable enforcement of restricted paths
+            // i.e. throw AuthorizationError when trying to fetch unauthorized paths
+            ("enforcement_acl", vec!["myusername0"]),
+        ])
         .expecting_manifest_id_store_entries(vec![
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
@@ -144,6 +149,15 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
                 .with_acls(vec![project_acl.clone()])
                 .build()?,
         ])
+        .with_enforcement_scenarios(vec![
+            // Matching ACL = enforcement enabled.
+            (
+                vec![MononokeIdentity::new("GROUP", "enforcement_acl")],
+                // Enforcement is enabled, but user has access to the restricted
+                // path, so no AuthorizationError is thrown.
+                false,
+            ),
+        ])
         .build(fb)
         .await?
         .run_restricted_paths_test()
@@ -179,6 +193,11 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
         .with_file_path_changes(vec![("restricted/dir/a", None)])
+        .with_test_groups(vec![
+            // Group ACLs to conditionally enable enforcement of restricted paths
+            // i.e. throw AuthorizationError when trying to fetch unauthorized paths
+            ("enforcement_acl", vec!["myusername0"]),
+        ])
         .expecting_manifest_id_store_entries(vec![
             RestrictedPathManifestIdEntry::new(
                 ManifestType::Hg,
@@ -247,6 +266,31 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
                 .with_has_authorization(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
+        ])
+        // The test user has identity USER:myusername0 and client_main_id "user:myusername0"
+        // Enforcement is based on ACL membership via conditional_enforcement_acls
+        .with_enforcement_scenarios(vec![
+            // No ACLs = no enforcement (logging only)
+            (vec![], false),
+            // Non-matching ACL = no enforcement (user not in this ACL)
+            (
+                vec![MononokeIdentity::new("REPO_REGION", "nonexistent_acl")],
+                false,
+            ),
+            // Matching ACL = enforcement triggered
+            // The test user is a member of the "enforcement_acl" repo region
+            (
+                vec![MononokeIdentity::new("GROUP", "enforcement_acl")],
+                true,
+            ),
+            // Multiple ACLs are OR'd together: if any ACL matches, enforcement is triggered
+            (
+                vec![
+                    MononokeIdentity::new("GROUP", "nonexistent_acl"),
+                    MononokeIdentity::new("GROUP", "enforcement_acl"),
+                ],
+                true,
+            ),
         ])
         .build(fb)
         .await?
