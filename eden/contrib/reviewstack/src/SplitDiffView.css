@@ -27,6 +27,11 @@
   padding-left: 10px;
   padding-right: 10px;
   text-align: right;
+  white-space: nowrap;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .SplitDiffView-hunk-table td.separator {
