@@ -84,7 +84,7 @@ ${defineStyleOnBody(theme)}
   margin-bottom: 0 !important;
 }
 
-/* GitHub suggested change styling */
+/* Use similar styles for changes as Github's */
 .PRT-bodyHTML .blob-code-deletion,
 .PRT-bodyHTML .blob-code-marker-deletion {
   background-color: ${theme?.colors.diffBlob.deletion.lineBg};
