@@ -49,7 +49,6 @@ pub struct EdenFsClient {
     eden_config: EdenConfig,
     filter_generator: Option<Mutex<FilterGenerator>>,
     dot_dir: PathBuf,
-    sl_config: Arc<dyn Config>,
 }
 
 impl EdenFsClient {
@@ -97,7 +96,6 @@ impl EdenFsClient {
             eden_config,
             filter_generator: Some(Mutex::new(filter_generator)),
             dot_dir,
-            sl_config: config.clone(),
         })
     }
 
@@ -274,7 +272,7 @@ impl EdenFsClient {
         tree: HgId,
         mode: CheckoutMode,
     ) -> anyhow::Result<Vec<CheckoutConflict>> {
-        Self::pre_checkout_routine(mode, &self.dot_dir, &self.sl_config)?;
+        Self::pre_checkout_routine(mode, &self.dot_dir, config)?;
         let tree_vec = tree.into_byte_array().into();
         let thrift_client = block_on(self.get_async_thrift_client())?;
 
@@ -298,7 +296,7 @@ impl EdenFsClient {
             &params,
         )));
 
-        Self::post_checkout_routine(mode, &self.dot_dir, &self.sl_config, thrift_result.is_ok())?;
+        Self::post_checkout_routine(mode, &self.dot_dir, config, thrift_result.is_ok())?;
 
         hg_metrics::increment_counter(
             "edenclientcheckout_time",
