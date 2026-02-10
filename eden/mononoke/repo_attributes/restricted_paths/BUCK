@@ -54,6 +54,7 @@ rust_unittest(
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:pretty_assertions",
         "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:strum",
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:tokio",
         ":restricted_paths",

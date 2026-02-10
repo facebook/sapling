@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -23,6 +22,7 @@ use context::SessionContainer;
 use derivation_queue_thrift::DerivationPriority;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
+use futures::StreamExt;
 use futures::TryStreamExt;
 use itertools::Itertools;
 use manifest::ManifestOps;
@@ -32,6 +32,7 @@ use mercurial_derivation::derive_hg_changeset::DeriveHgChangeset;
 use mercurial_types::HgAugmentedManifestId;
 use metaconfig_types::RestrictedPathsConfig;
 use metadata::Metadata;
+use mononoke_api::MononokeError;
 use mononoke_api::Repo as TestRepo;
 use mononoke_api::RepoContext;
 use mononoke_api_hg::HgDataId;
@@ -51,6 +52,9 @@ use restricted_paths::SqlRestrictedPathsManifestIdStoreBuilder;
 use restricted_paths::*;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
+use strum::Display as EnumDisplay;
+use strum::EnumIter;
+use strum::IntoEnumIterator;
 use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
 
@@ -58,8 +62,6 @@ pub const TEST_CLIENT_MAIN_ID: &str = "user:myusername0";
 
 pub struct RestrictedPathsTestData {
     pub ctx: CoreContext,
-    pub repo: TestRepo,
-    pub log_file_path: std::path::PathBuf,
     // The changes that should be made in the test's commit. Each entry represents
     // a file to be created, along with its optional content. If no content is
     // provided, the file path itself is used as the content.
@@ -68,9 +70,16 @@ pub struct RestrictedPathsTestData {
     expected_manifest_entries: Option<Vec<RestrictedPathManifestIdEntry>>,
     // The scuba logs you expect to be logged after the test runs
     expected_scuba_logs: Option<Vec<ScubaAccessLogSample>>,
+    /// Enforcement scenarios: (conditional_enforcement_acls, expect_enforcement)
+    /// For each scenario, a new repo is built with those condition enforcement
+    /// ACLs and the `should_enforce_restriction method is called to verify behavior.
+    enforcement_scenarios: Vec<(Vec<MononokeIdentity>, bool)>,
+    /// Common fields needed to rebuild repos for enforcement scenarios
+    restricted_paths_config: Vec<(NonRootMPath, MononokeIdentity)>,
     /// Repo regions config for recreating ACLs: (region_name, usernames)
     repo_regions_config: Vec<(String, Vec<String>)>,
     groups_config: Vec<(String, Vec<String>)>,
+    tooling_allowlist_group: Option<String>,
 }
 
 pub struct RestrictedPathsTestDataBuilder {
@@ -82,6 +91,10 @@ pub struct RestrictedPathsTestDataBuilder {
     file_path_changes: Vec<(String, Option<String>)>,
     expected_manifest_entries: Option<Vec<RestrictedPathManifestIdEntry>>,
     expected_scuba_logs: Option<Vec<ScubaAccessLogSample>>,
+    /// List of (conditional_enforcement_acls, expect_enforcement) tuples.
+    /// The test will run for each scenario, applying the ACLs and verifying
+    /// if enforcement is or isn't triggered as expected.
+    enforcement_scenarios: Vec<(Vec<MononokeIdentity>, bool)>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -214,6 +227,7 @@ impl RestrictedPathsTestDataBuilder {
             file_path_changes: vec![],
             expected_manifest_entries: None,
             expected_scuba_logs: None,
+            enforcement_scenarios: Vec::new(),
         }
     }
 
@@ -289,6 +303,25 @@ impl RestrictedPathsTestDataBuilder {
     }
 
     /// Configure enforcement scenarios to test.
+    /// Each tuple is (conditional_enforcement_acls, expect_enforcement):
+    /// - conditional_enforcement_acls: The ACL identities to use for conditional enforcement
+    /// - expect_enforcement: true = expect enforcement triggered, false = expect no enforcement
+    ///
+    /// Example:
+    /// ```
+    /// .with_enforcement_scenarios(vec![
+    ///     (vec![], false),  // No ACLs = no enforcement
+    ///     (vec![MononokeIdentity::new("GROUP", "enforcement_acl")], true),  // Matching ACL = enforcement
+    /// ])
+    /// ```
+    pub fn with_enforcement_scenarios(
+        mut self,
+        scenarios: Vec<(Vec<MononokeIdentity>, bool)>,
+    ) -> Self {
+        self.enforcement_scenarios = scenarios;
+        self
+    }
+
     pub async fn build(self, fb: FacebookInit) -> Result<RestrictedPathsTestData> {
         let mut cri = ClientRequestInfo::new(ClientEntryPoint::Tests);
         cri.set_main_id(TEST_CLIENT_MAIN_ID.to_string());
@@ -306,15 +339,66 @@ impl RestrictedPathsTestDataBuilder {
             )
             .await;
             md.add_client_info(client_info);
-            md
+            Arc::new(md)
         };
-        let session_container = SessionContainer::builder(fb)
-            .metadata(Arc::new(metadata))
-            .build();
+        let session_container = SessionContainer::builder(fb).metadata(metadata).build();
         let ctx = CoreContext::test_mock_session(session_container);
 
-        let temp_file = tempfile::NamedTempFile::new()?;
-        let log_file_path = temp_file.into_temp_path().keep()?;
+        Ok(RestrictedPathsTestData {
+            ctx,
+            file_path_changes: self.file_path_changes,
+            expected_manifest_entries: self.expected_manifest_entries,
+            expected_scuba_logs: self.expected_scuba_logs,
+            enforcement_scenarios: self.enforcement_scenarios,
+            restricted_paths_config: self.restricted_paths,
+            repo_regions_config: self.repo_regions_config,
+            groups_config: self.groups_config,
+            tooling_allowlist_group: self.tooling_allowlist_group,
+        })
+    }
+}
+
+impl RestrictedPathsTestData {
+    /// Given a list of restricted paths and a list of file paths, create a changeset
+    /// modifying those paths, derive the hg manifest and fetch all the hg manifests
+    /// from the last changeset, to simulate access to all directories in the repo.
+    ///
+    /// If expectations are set via the builder, this method will automatically verify
+    /// them against the actual results. Otherwise, it will just run the test without
+    /// any assertions.
+    ///
+    /// Each file path can optionally specify content. If no content is provided,
+    /// the file path itself is used as the content.
+    pub async fn run_restricted_paths_test(&self) -> Result<()> {
+        // Run without enforcement scenarios
+        self.run_restricted_paths_test_inner(0, &[], false).await?;
+
+        // Run enforcement testing for each scenario
+        for (scenario_idx, (conditions, expect_enforcement)) in
+            self.enforcement_scenarios.iter().enumerate()
+        {
+            self.run_restricted_paths_test_inner(scenario_idx + 1, conditions, *expect_enforcement)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    /// Run restricted paths testing for a single scenario.
+    /// Creates a repo with the given conditional enforcement ACLs and runs all access operations.
+    /// If expect_enforcement is true, expects an AuthorizationError from the access operations.
+    async fn run_restricted_paths_test_inner(
+        &self,
+        scenario_idx: usize,
+        conditional_enforcement_acls: &[MononokeIdentity],
+        expect_enforcement: bool,
+    ) -> Result<()> {
+        println!(
+            "Running scenario {scenario_idx} with expect_enforcement: {expect_enforcement} and conditional_enforcement_acls: {conditional_enforcement_acls:#?}"
+        );
+        // Create temp log file for this scenario
+        let temp_log_file = tempfile::NamedTempFile::new()?;
+        let temp_log_path = temp_log_file.into_temp_path().keep()?;
 
         let groups_config: Vec<(&str, Vec<&str>)> = self
             .groups_config
@@ -339,54 +423,30 @@ impl RestrictedPathsTestDataBuilder {
             default_test_acls(groups_config)?
         };
 
-        let repo = setup_test_repo(
-            &ctx,
-            self.restricted_paths,
-            self.tooling_allowlist_group,
+        let scenario_repo = setup_test_repo(
+            &self.ctx,
+            self.restricted_paths_config.clone(),
+            self.tooling_allowlist_group.clone(),
             acls,
-            log_file_path.clone(),
+            temp_log_path.clone(),
+            conditional_enforcement_acls,
         )
         .await?;
 
-        Ok(RestrictedPathsTestData {
-            ctx,
-            repo,
-            log_file_path,
-            file_path_changes: self.file_path_changes,
-            expected_manifest_entries: self.expected_manifest_entries,
-            expected_scuba_logs: self.expected_scuba_logs,
-            repo_regions_config: self.repo_regions_config,
-            groups_config: self.groups_config,
-        })
-    }
-}
-
-impl RestrictedPathsTestData {
-    /// Given a list of restricted paths and a list of file paths, create a changeset
-    /// modifying those paths, derive the hg manifest and fetch all the hg manifests
-    /// from the last changeset, to simulate access to all directories in the repo.
-    ///
-    /// If expectations are set via the builder, this method will automatically verify
-    /// them against the actual results. Otherwise, it will just run the test without
-    /// any assertions.
-    ///
-    /// Each file path can optionally specify content. If no content is provided,
-    /// the file path itself is used as the content.
-    pub async fn run_restricted_paths_test(&self) -> Result<()> {
-        let mut commit_ctx = CreateCommitContext::new_root(&self.ctx, &self.repo);
+        // Create commits and derive data
+        let mut commit_ctx = CreateCommitContext::new_root(&self.ctx, &scenario_repo);
         for (path, content) in &self.file_path_changes {
             let file_content = content.as_deref().unwrap_or(path.as_str());
             commit_ctx = commit_ctx.add_file(path.as_str(), file_content.to_string());
         }
 
-        let blobstore = Arc::new(self.repo.repo_blobstore().clone());
-
+        let blobstore = Arc::new(scenario_repo.repo_blobstore().clone());
         let bcs_id = commit_ctx.commit().await?;
 
         // Get the hg changeset id for the commit, to trigger hg manifest derivation
-        let hg_cs_id = self.repo.derive_hg_changeset(&self.ctx, bcs_id).await?;
+        let hg_cs_id = scenario_repo.derive_hg_changeset(&self.ctx, bcs_id).await?;
 
-        let repo = Arc::new(self.repo.clone());
+        let repo = Arc::new(scenario_repo.clone());
         let repo_ctx = RepoContext::new_test(self.ctx.clone(), repo.clone()).await?;
         let cs_ctx = repo_ctx
             .changeset(bcs_id)
@@ -394,29 +454,23 @@ impl RestrictedPathsTestData {
             .ok_or(anyhow!("failed to get changeset context"))?;
         let hg_repo_ctx = repo_ctx.clone().hg();
 
-        let _files_added = self
-            .file_path_changes
-            .iter()
-            .map(|(path, _content)| NonRootMPath::new(path))
-            .collect::<Result<Vec<_>>>()?;
-
         // Derive hg changeset to add entry for restricted paths
-        let hg_cs = hg_cs_id.load(&self.ctx, self.repo.repo_blobstore()).await?;
+        let hg_cs = hg_cs_id
+            .load(&self.ctx, scenario_repo.repo_blobstore())
+            .await?;
 
         // Then get the root manifest id, get all the trees and run
         // `HgTreeContext::new_check_exists` to simulate a directory access
         let hg_mfid = hg_cs.manifestid();
 
         // Derive HgAugmentedManifest
-        let _root_hg_aug_manifest_id = self
-            .repo
+        let _root_hg_aug_manifest_id = scenario_repo
             .repo_derived_data()
             .derive::<RootHgAugmentedManifestId>(&self.ctx, bcs_id, DerivationPriority::LOW)
             .await?;
 
         // Derive Fsnode
-        let root_fsnode_id = self
-            .repo
+        let root_fsnode_id = scenario_repo
             .repo_derived_data()
             .derive::<RootFsnodeId>(&self.ctx, bcs_id, DerivationPriority::LOW)
             .await?;
@@ -424,35 +478,100 @@ impl RestrictedPathsTestData {
         // Sleep to ensure that the restricted paths cache was updated
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        let _all_directories = hg_mfid
-            // TODO(T239041722): list files as well to ensure access is logged when a file is requested
-            .list_tree_entries(self.ctx.clone(), blobstore.clone())
-            .and_then(async |(path, hg_manifest_id)| {
-                // Access HgManifest
-                let _tree_ctx = hg_manifest_id.context(hg_repo_ctx.clone()).await?;
-                let hg_aug: HgAugmentedManifestId = hg_manifest_id.into();
-                // Access HgAugmentedManifest
-                let _aug_tree_ctx = hg_aug
-                    .context(hg_repo_ctx.clone())
-                    .await?
-                    .ok_or(anyhow!("No HgAugmentedManifest for path {path:?}"))?;
-                cs_ctx.path(path.clone()).await?;
-                Ok(path)
-            })
-            .try_collect::<Vec<_>>()
-            .await?;
+        // Type representing all the ways to access the restricted paths covered
+        // in this test, so we can ensure that all of them generate AuthorizationErrors
+        // when expected.
+        #[derive(EnumIter, EnumDisplay, Debug, Eq, PartialEq, Hash, Clone, Copy)]
+        enum AccessMethod {
+            HgManifestId,
+            HgAugmentedManifestId,
+            Path,
+            Fsnode,
+            PathsWithContent,
+            PathsWithHistory,
+        }
+
+        // Run all the access operations that will trigger enforcement checks.
+        // We collect AuthorizationErrors tagged by operation instead of
+        // short-circuiting, so that all operations execute and produce their
+        // log entries even when enforcement is enabled. Non-authorization
+        // errors are propagated immediately to fail the test.
+        let mut auth_errors: Vec<(AccessMethod, MononokeError)> = Vec::new();
+
+        // Access all hg manifest tree entries
+        let hg_manifest_results: Vec<Result<Vec<(AccessMethod, MononokeError)>, MononokeError>> =
+            hg_mfid
+                // TODO(T239041722): list files as well to ensure access is logged when a file is requested
+                .list_tree_entries(self.ctx.clone(), blobstore.clone())
+                .map_err(MononokeError::from)
+                .and_then(async |(path, hg_manifest_id)| {
+                    let mut errs = Vec::new();
+                    // Access HgManifest
+                    match hg_manifest_id.context(hg_repo_ctx.clone()).await {
+                        Ok(_) => {}
+                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                            errs.push((AccessMethod::HgManifestId, e))
+                        }
+                        Err(e) => return Err(e),
+                    }
+                    let hg_aug: HgAugmentedManifestId = hg_manifest_id.into();
+                    // Access HgAugmentedManifest
+                    match hg_aug.context(hg_repo_ctx.clone()).await {
+                        Ok(Some(_)) => {}
+                        Ok(None) => {
+                            return Err(anyhow!("No HgAugmentedManifest for path {path:?}").into());
+                        }
+                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                            errs.push((AccessMethod::HgAugmentedManifestId, e))
+                        }
+                        Err(e) => return Err(e),
+                    }
+                    // Access path
+                    match cs_ctx.path(path).await {
+                        Ok(_) => {}
+                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                            errs.push((AccessMethod::Path, e))
+                        }
+                        Err(e) => return Err(e),
+                    }
+                    Ok(errs)
+                })
+                .collect()
+                .await;
+
+        for result in hg_manifest_results {
+            match result {
+                Ok(errs) => auth_errors.extend(errs),
+                Err(e) => return Err(e.into()),
+            }
+        }
 
         // Access all fsnode tree entries
         let fsnode_id = root_fsnode_id.into_fsnode_id();
-        let _all_fsnode_directories = fsnode_id
-            .list_tree_entries(self.ctx.clone(), blobstore.clone())
-            .and_then(async |(path, fsnode_id)| {
-                // Access Fsnode by loading it from blobstore
-                let _tree = repo_ctx.tree(fsnode_id).await?;
-                Ok(path)
-            })
-            .try_collect::<Vec<_>>()
-            .await?;
+        let fsnode_results: Vec<Result<Option<(AccessMethod, MononokeError)>, MononokeError>> =
+            fsnode_id
+                .list_tree_entries(self.ctx.clone(), blobstore.clone())
+                .map_err(MononokeError::from)
+                .and_then(async |(_path, fsnode_id)| {
+                    // Access Fsnode by loading it from blobstore
+                    match repo_ctx.tree(fsnode_id).await {
+                        Ok(_) => Ok(None),
+                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                            Ok(Some((AccessMethod::Fsnode, e)))
+                        }
+                        Err(e) => Err(e),
+                    }
+                })
+                .collect()
+                .await;
+
+        for result in fsnode_results {
+            match result {
+                Ok(Some(err)) => auth_errors.push(err),
+                Ok(None) => {}
+                Err(e) => return Err(e.into()),
+            }
+        }
 
         // Access path contents as we do in SCS for diffing
         let bonsai = cs_ctx.bonsai_changeset().await?;
@@ -462,31 +581,88 @@ impl RestrictedPathsTestData {
             .map(|path| MPath::from(path.clone()))
             .collect::<BTreeSet<_>>();
 
-        let _path_contexts = cs_ctx
-            .paths_with_content(paths.clone().into_iter())
-            .await?
-            .map_ok(|path_context| (path_context.path().clone(), path_context))
-            .try_collect::<HashMap<_, _>>()
-            .await?;
+        match cs_ctx.paths_with_content(paths.clone().into_iter()).await {
+            Ok(stream) => {
+                let results: Vec<Result<_, MononokeError>> = stream.collect().await;
+                for result in results {
+                    match result {
+                        Ok(_) => {}
+                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                            auth_errors.push((AccessMethod::PathsWithContent, e))
+                        }
+                        Err(e) => return Err(e.into()),
+                    }
+                }
+            }
+            Err(e @ MononokeError::AuthorizationError(_)) => {
+                auth_errors.push((AccessMethod::PathsWithContent, e))
+            }
+            Err(e) => return Err(e.into()),
+        }
 
-        let _path_last_modified = cs_ctx
-            .paths_with_history(paths.iter().cloned())
-            .await?
-            .map_ok(|context| async move {
-                let context_path = context.path().clone();
-                let last_modified = context.last_modified().await?;
-                Ok::<_, _>((context_path, last_modified))
-            })
-            .try_buffer_unordered(100)
-            .try_filter_map(|(path, maybe_last_changed)| async move {
-                Ok(maybe_last_changed.map(move |last_changed| (path, last_changed.id())))
-            })
-            .try_collect::<BTreeMap<_, _>>()
-            .await?;
+        match cs_ctx.paths_with_history(paths.iter().cloned()).await {
+            Ok(stream) => {
+                let results: Vec<Result<(), MononokeError>> = stream
+                    .map(|r| async move {
+                        match r {
+                            Err(e) => Err(e),
+                            Ok(context) => {
+                                context.last_modified().await?;
+                                Ok(())
+                            }
+                        }
+                    })
+                    .buffer_unordered(100)
+                    .collect()
+                    .await;
 
-        // Get all entries in the manifest id store
-        let manifest_id_store_entries = self
-            .repo
+                for result in results {
+                    match result {
+                        Ok(()) => {}
+                        Err(e @ MononokeError::AuthorizationError(_)) => {
+                            auth_errors.push((AccessMethod::PathsWithHistory, e))
+                        }
+                        Err(e) => return Err(e.into()),
+                    }
+                }
+            }
+            Err(e @ MononokeError::AuthorizationError(_)) => {
+                auth_errors.push((AccessMethod::PathsWithHistory, e))
+            }
+            Err(e) => return Err(e.into()),
+        }
+
+        // Check authorization errors based on whether enforcement was expected
+        if expect_enforcement {
+            let mut grouped: HashMap<AccessMethod, Vec<&MononokeError>> = HashMap::new();
+            for (op, err) in &auth_errors {
+                grouped.entry(*op).or_default().push(err);
+            }
+
+            for op in AccessMethod::iter() {
+                // Ensure that all access methods returned AuthoriationErrors
+                let auth_errors = grouped.remove(&op).unwrap_or_default();
+
+                assert!(
+                    !auth_errors.is_empty(),
+                    "Scenario {}: expected AuthorizationError for operation '{}' but got none.",
+                    scenario_idx,
+                    op,
+                )
+            }
+        } else {
+            // When enforcement is NOT expected, no errors should have occurred
+            assert!(
+                auth_errors.is_empty(),
+                "Scenario {}: expected access to succeed but got authorization errors: {:#?}",
+                scenario_idx,
+                auth_errors
+            );
+        }
+
+        // Only verify manifest entries and scuba logs when not expecting enforcement
+        // (i.e., when access is expected to succeed)
+        let manifest_id_store_entries = scenario_repo
             .restricted_paths()
             .manifest_id_store()
             .get_all_entries(&self.ctx)
@@ -496,7 +672,7 @@ impl RestrictedPathsTestData {
         // the log file
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
-        let scuba_logs = deserialize_scuba_log_file(&self.log_file_path)?;
+        let scuba_logs = deserialize_scuba_log_file(&temp_log_path)?;
 
         // Verify expectations if they were set
         if let Some(expected_manifest_entries) = self.expected_manifest_entries.clone() {
@@ -519,6 +695,9 @@ impl RestrictedPathsTestData {
         #[cfg(not(fbcode_build))]
         let _ = (scuba_logs, &self.expected_scuba_logs);
 
+        println!(
+            "Scenario {scenario_idx} finished SUCCESSFULLY with expect_enforcement: {expect_enforcement} and conditional_enforcement_acls: {conditional_enforcement_acls:#?}"
+        );
         Ok(())
     }
 }
@@ -621,6 +800,7 @@ async fn setup_test_repo(
     tooling_allowlist_group: Option<String>,
     acls: Acls,
     log_file_path: std::path::PathBuf,
+    conditional_enforcement_acls: &[MononokeIdentity],
 ) -> Result<TestRepo> {
     let repo_id = RepositoryId::new(0);
     let use_manifest_id_cache = true;
@@ -643,6 +823,7 @@ async fn setup_test_repo(
         use_manifest_id_cache,
         cache_update_interval_ms,
         tooling_allowlist_group,
+        conditional_enforcement_acls: conditional_enforcement_acls.to_vec(),
         ..Default::default()
     };
 
