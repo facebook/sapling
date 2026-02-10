@@ -11,7 +11,7 @@ import {isMac, isWindows} from './OperatingSystem';
 import './Kbd.css';
 
 /** Keyboard key, useful for rendering keyboard shortcuts */
-export function Kbd({keycode, modifiers}: {keycode: KeyCode; modifiers?: Array<Modifier>}) {
+export function Kbd({keycode, modifiers}: {keycode?: KeyCode; modifiers?: Array<Modifier>}) {
   return (
     <span className="kbd-group" title={asEntireString(keycode, modifiers)}>
       {modifiers
@@ -21,7 +21,7 @@ export function Kbd({keycode, modifiers}: {keycode: KeyCode; modifiers?: Array<M
             {modifierToIcon[modifier]}
           </kbd>
         ))}
-      <kbd>{keycodeToString(keycode)}</kbd>
+      {keycode != null && <kbd>{keycodeToString(keycode)}</kbd>}
     </span>
   );
 }
@@ -69,11 +69,13 @@ const modifierToString = {
   [Modifier.NONE]: '',
 } as const;
 
-function asEntireString(keycode: KeyCode, modifiers?: Array<Modifier>): string {
+function asEntireString(keycode?: KeyCode, modifiers?: Array<Modifier>): string {
   const result: Array<string> = [];
   for (const modifier of modifiers ?? []) {
     result.push(modifierToString[modifier]);
   }
-  result.push(keycodeToString(keycode));
+  if (keycode != null) {
+    result.push(keycodeToString(keycode));
+  }
   return result.join(' + ');
 }
