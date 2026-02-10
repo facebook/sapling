@@ -763,14 +763,10 @@ class FilteredFSConfigPersistenceTest(FilteredFSBase):
         # Perform a checkout - this exercises the Rust sync_filters path
         # which should pick up the config from repo config and enable the filter
         self.hg("checkout", ".")
-
-        # FIXME: Checkout should sync the filters
-        self.assertNotEqual(self.get_active_filter_paths(), {"filters/v1_filter1"})
-        # Verify files are filtered
-        self.assert_filtered_and_unfiltered(set(), initial_files)
-        # self.assert_filtered_and_unfiltered(
-        #     initial_files.difference(unfiltered_files), unfiltered_files
-        # )
+        self.assertEqual(self.get_active_filter_paths(), {"filters/v1_filter1"})
+        self.assert_filtered_and_unfiltered(
+            initial_files.difference(unfiltered_files), unfiltered_files
+        )
 
         # Now disable the filter - disabled config should take precedence over enabled
         self.disable_filters("filters/v1_filter1")
@@ -778,8 +774,7 @@ class FilteredFSConfigPersistenceTest(FilteredFSBase):
 
         # Verify config was written to disabled section in repo config
         _, disabled = self.get_filters_from_configs()
-        # FIXME: no filter was disabled, so it doesn't show up in the set
-        self.assertNotIn("filters/v1_filter1", disabled)
+        self.assertIn("filters/v1_filter1", disabled)
 
         # All files should now be unfiltered (visible)
         self.assert_filtered_and_unfiltered(set(), initial_files)
@@ -792,8 +787,7 @@ class FilteredFSConfigPersistenceTest(FilteredFSBase):
 
         # Verify disabled config is still in repo config
         _, disabled = self.get_filters_from_configs()
-        # FIXME: no filter was disabled, so it doesn't show up in the set
-        self.assertNotIn("filters/v1_filter1", disabled)
+        self.assertIn("filters/v1_filter1", disabled)
 
         # All files should still be unfiltered
         self.assert_filtered_and_unfiltered(set(), initial_files)
@@ -918,6 +912,10 @@ class FilteredFSInPlaceMigration(FilteredFSBase):
     ]
     active_filter_configs: Optional[List[Tuple[Optional[str], str]]] = None
     new_commit: str = ""
+
+    def apply_hg_config_variant(self, hgrc: configparser.ConfigParser) -> None:
+        super().apply_hg_config_variant(hgrc)
+        hgrc["edensparse"]["disable-filter-sync"] = "False"
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         super().populate_backing_repo(repo)

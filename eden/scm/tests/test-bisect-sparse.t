@@ -23,6 +23,7 @@
   $ eagerepo
   $ enable sparse amend
   $ setconfig clone.use-rust=true
+  $ setconfig edensparse.disable-filter-sync=True
 
 test bisect-sparse
   $ hg init server

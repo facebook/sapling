@@ -103,7 +103,6 @@ adir
         - The existence of the filter config file.
         - The SNAPSHOT file contains a valid filter id.
         - The existence of 'edensparse' in .hg/requires file.
-        - The existence of the marker file: '.hg/edensparse_migration'
         - The 'filteredfs' command is available.
         - The SCM type is 'filteredhg'.
 
@@ -199,7 +198,16 @@ adir
             self.assert_filteredfs_disabled(mount_path)
             self.assert_filter_not_applied(mount_path)
         else:
-            self.hg("filteredfs", "enable", "filter/test_filter", cwd=str(mount_path))
+            # For already-filtered repos, configure the filter via sapling config
+            # and run checkout to trigger filter sync.
+            self.hg(
+                "config",
+                "--local",
+                "clone.eden-sparse-filter.test",
+                "filter/test_filter",
+                cwd=str(mount_path),
+            )
+            self.hg("go", ".", cwd=str(mount_path))
             self.assert_filteredfs_enabled(mount_path)
             self.assert_filter_applied(mount_path)
 
@@ -208,10 +216,11 @@ adir
         # restart edenfs
         self.restart_edenfs_manually()
 
-        # check the marker file existence
-        # this should be checked before sapling checkout/rebase commands since
-        # these commands would clean up the marker file when invoking EdenFS'
-        # checkoutRevision Thrift API.
+        # Check the marker file existence.
+        # NOTE: The marker file is created by EdenFS during migration but is
+        # no longer used by Sapling to trigger filter sync. Sapling now always
+        # performs filter sync when active and config filters are out of sync.
+        # This check verifies EdenFS migration created the marker file.
         marker_file_path = os.path.join(str(mount_path), ".hg", MIGRATION_MARKER)
         if migration_did_happen:
             assert os.path.exists(marker_file_path), (
@@ -613,6 +622,7 @@ class FilteredFsMigrationFromFilteredTest(
     def apply_hg_config_variant(self, hgrc: ConfigParser) -> None:
         super().apply_hg_config_variant(hgrc)
         hgrc["experimental"]["allow-edensparse-migration"] = "true"
+        hgrc["edensparse"]["disable-filter-sync"] = "False"
 
     async def test_migrate_freshly_cloned_filtered_repo(self) -> None:
         cloned_repo = self.make_temporary_directory()
@@ -653,3 +663,72 @@ class FilteredFsMigrationWithSaplingConfigUnsetTest(
 ):
     async def test_migration_not_happen(self) -> None:
         self.migration_not_happen_common()
+
+
+class FilterSyncWithoutMigrationMarkerTest(
+    FilteredHgTestCase, FilteredFSMigrationTestBase, metaclass=abc.ABCMeta
+):
+    """
+    Test suite to verify that Sapling performs filter sync when active filters
+    and config filters are out of sync, regardless of whether the
+    .edensparse_migration marker file exists.
+
+    This tests the new behavior where Sapling always checks for filter sync
+    rather than relying on the marker file to trigger it.
+    """
+
+    def apply_hg_config_variant(self, hgrc: ConfigParser) -> None:
+        super().apply_hg_config_variant(hgrc)
+        hgrc["experimental"]["allow-edensparse-migration"] = "true"
+        hgrc["edensparse"]["disable-filter-sync"] = "False"
+
+    def get_migration_marker_path(self) -> Path:
+        return Path(os.path.join(str(self.mount_path), ".hg", MIGRATION_MARKER))
+
+    def assert_no_migration_marker(self) -> None:
+        marker_path = self.get_migration_marker_path()
+        assert not marker_path.exists(), (
+            f"Migration marker file '{marker_path}' should not exist"
+        )
+
+    def remove_migration_marker_if_exists(self) -> None:
+        marker_path = self.get_migration_marker_path()
+        if marker_path.exists():
+            marker_path.unlink()
+
+    async def test_filter_sync_without_marker_file(self) -> None:
+        """
+        Test that filter sync occurs when filters are out of sync even when
+        the .edensparse_migration marker file does not exist.
+
+        This test starts with a FilteredHgTestCase (filtered repo) and verifies
+        that configuring a new filter via sapling config and running checkout
+        will sync the filter even without a migration marker file.
+        """
+        # Start with FilteredFS enabled (from FilteredHgTestCase base class)
+        self.assert_filteredfs_enabled(self.mount_path)
+
+        # Verify no migration marker exists (we didn't go through EdenFS migration)
+        self.assert_no_migration_marker()
+
+        # Configure the test filter via sapling config (creates out-of-sync state
+        # where config filter != active filter)
+        self.hg(
+            "config",
+            "--local",
+            "clone.eden-sparse-filter.test",
+            "filter/test_filter",
+        )
+
+        # Ensure no marker file exists before the sync
+        self.remove_migration_marker_if_exists()
+        self.assert_no_migration_marker()
+
+        # Run a checkout command - this should trigger filter sync
+        # even without the marker file, because the active filters and config
+        # filters are now out of sync
+        self.hg("go", ".")
+
+        # Verify filter was applied (adir/hidden should not exist)
+        self.assert_filter_applied(self.mount_path)
+        self.assert_filteredfs_enabled(self.mount_path)

@@ -495,6 +495,12 @@ class FilteredHgTestCase(EdenHgTestCase, metaclass=abc.ABCMeta):
         hgrc["experimental"]["filter-version"] = "V1"
         hgrc["experimental"]["use-filter-storage"] = "True"
 
+        # Disable filter syncing behavior by default for tests.
+        # Tests that want to exercise the filter sync behavior can override this.
+        if not hgrc.has_section("edensparse"):
+            hgrc.add_section("edensparse")
+        hgrc["edensparse"]["disable-filter-sync"] = "True"
+
         # Add configs that insert warnings into .hg/sparse
         if not hgrc.has_section("sparse"):
             hgrc.add_section("sparse")

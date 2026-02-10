@@ -163,14 +163,20 @@ def extsetup(ui) -> None:
 def _wraprepo(ui, repo) -> None:
     class EdenSparseRepo(repo.__class__, SparseMixin):
         def writesparseconfig(self, include, exclude, profiles):
-            old_profiles = set()
-            if self.localvfs.exists("sparse"):
-                content = self.localvfs.readutf8("sparse")
-                rawconfig = readsparseconfig(self, content, filename="sparse")
-                old_profiles = set(rawconfig.profiles)
+            disable_sync = self.ui.configbool("edensparse", "disable-filter-sync")
 
-            # write to .hg/sparse file as normal
-            SparseMixin.writesparseconfig(self, include, exclude, profiles)
+            old_profiles = set()
+            # When filter sync is enabled, _applysparsetoworkingcopy will write
+            # the sparseconfig on our behalf when checkout runs.
+            if not disable_sync:
+                if self.localvfs.exists("sparse"):
+                    content = self.localvfs.readutf8("sparse")
+                    rawconfig = readsparseconfig(self, content, filename="sparse")
+                    old_profiles = set(rawconfig.profiles)
+            else:
+                # When filter sync is disabled, we manually write the sparseconfig
+                SparseMixin.writesparseconfig(self, include, exclude, profiles)
+                return
 
             # Sync filter config changes to .hg/hgrc
             new_profiles = set(profiles)

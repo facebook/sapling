@@ -21,8 +21,10 @@ use configmodel::ConfigExt;
 use fbthrift_socket::SocketTransport;
 use filters::filter::FilterGenerator;
 use filters::id::FilterId;
-use filters::migration::cleanup_migration;
-use filters::migration::prepare_migration;
+use filters::migration::FilterSyncResult;
+use filters::migration::cleanup_filter_sync_backup;
+use filters::migration::rollback_filter_sync;
+use filters::migration::sync_filters;
 use parking_lot::Mutex;
 use serde::Deserialize;
 use thrift_types::edenfs;
@@ -52,36 +54,6 @@ pub struct EdenFsClient {
 }
 
 impl EdenFsClient {
-    fn pre_checkout_routine(mode: CheckoutMode, dot_dir: &Path, config: &dyn Config) -> Result<()> {
-        // Migration is only attempted during non-dry-run checkouts
-        if config
-            .get_opt("edenfs", "edensparse-migration")?
-            .unwrap_or(true)
-        {
-            if matches!(mode, CheckoutMode::Force | CheckoutMode::Normal) {
-                prepare_migration(dot_dir, config)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn post_checkout_routine(
-        mode: CheckoutMode,
-        dot_dir: &Path,
-        config: &dyn Config,
-        success: bool,
-    ) -> Result<()> {
-        if config
-            .get_opt("edenfs", "edensparse-migration")?
-            .unwrap_or(true)
-        {
-            if matches!(mode, CheckoutMode::Force | CheckoutMode::Normal) {
-                cleanup_migration(dot_dir, success)?;
-            }
-        }
-        Ok(())
-    }
-
     /// Construct a client and FilterGenerator using the supplied working dir
     /// root. The latter is used to pass a FilterId to each thrift call.
     pub fn from_wdir(
@@ -272,7 +244,27 @@ impl EdenFsClient {
         tree: HgId,
         mode: CheckoutMode,
     ) -> anyhow::Result<Vec<CheckoutConflict>> {
-        Self::pre_checkout_routine(mode, &self.dot_dir, config)?;
+        let disable_filter_sync: bool =
+            config.get_or_default("edensparse", "disable-filter-sync")?;
+        let sync_result: Option<FilterSyncResult> =
+            if !disable_filter_sync && matches!(mode, CheckoutMode::Force | CheckoutMode::Normal) {
+                Some(sync_filters(&self.dot_dir, config)?)
+            } else {
+                None
+            };
+
+        if let Some(FilterSyncResult::Updated {
+            ref previous,
+            ref current,
+        }) = sync_result
+        {
+            tracing::info!(
+                "Filter sync: {:?} -> {:?}",
+                previous.iter().map(|p| p.as_str()).collect::<Vec<_>>(),
+                current.iter().map(|p| p.as_str()).collect::<Vec<_>>()
+            );
+        }
+
         let tree_vec = tree.into_byte_array().into();
         let thrift_client = block_on(self.get_async_thrift_client())?;
 
@@ -296,7 +288,18 @@ impl EdenFsClient {
             &params,
         )));
 
-        Self::post_checkout_routine(mode, &self.dot_dir, config, thrift_result.is_ok())?;
+        match (&sync_result, thrift_result.is_ok()) {
+            (Some(FilterSyncResult::Updated { .. }), false) => {
+                // Checkout failed, rollback filter changes so that EdenFS and
+                // Sapling sources of truth match
+                rollback_filter_sync(&self.dot_dir)?;
+            }
+            (Some(_), true) => {
+                // Checkout succeeded, cleanup filter backup and legacy migration files
+                cleanup_filter_sync_backup(&self.dot_dir)?;
+            }
+            _ => {}
+        }
 
         hg_metrics::increment_counter(
             "edenclientcheckout_time",
