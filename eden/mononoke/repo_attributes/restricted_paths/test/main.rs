@@ -900,7 +900,7 @@ async fn test_overlapping_restricted_directories(fb: FacebookInit) -> Result<()>
     // Custom ACL that gives access to project but NOT to project/restricted
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
-        .with_test_acls(vec![
+        .with_test_repo_region_acls(vec![
             ("project_acl", vec!["myusername0"]),
             ("more_restricted_acl", vec!["other_user"]),
         ])
@@ -1225,7 +1225,7 @@ async fn test_tooling_allowlist_acl_user_in_acl(fb: FacebookInit) -> Result<()> 
         .with_restricted_paths(restricted_paths)
         .with_tooling_allowlist_group("tooling_group")
         .with_test_groups(vec![("tooling_group", vec!["myusername0"])])
-        .with_test_acls(vec![("restricted_acl", vec!["other_user"])])
+        .with_test_repo_region_acls(vec![("restricted_acl", vec!["other_user"])])
         .with_file_path_changes(vec![("restricted/dir/a", None)])
         .expecting_manifest_id_store_entries(vec![
             RestrictedPathManifestIdEntry::new(
@@ -1343,7 +1343,7 @@ async fn test_tooling_allowlist_acl_user_not_in_acl(fb: FacebookInit) -> Result<
         .with_tooling_allowlist_group("tooling_group")
         // myusername0 is NOT in the tooling_group
         .with_test_groups(vec![("tooling_group", vec!["other_user"])])
-        .with_test_acls(vec![("restricted_acl", vec!["other_user"])])
+        .with_test_repo_region_acls(vec![("restricted_acl", vec!["other_user"])])
         .with_file_path_changes(vec![("restricted/dir/a", None)])
         .expecting_manifest_id_store_entries(vec![
             RestrictedPathManifestIdEntry::new(

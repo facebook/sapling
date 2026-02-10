@@ -68,13 +68,17 @@ pub struct RestrictedPathsTestData {
     expected_manifest_entries: Option<Vec<RestrictedPathManifestIdEntry>>,
     // The scuba logs you expect to be logged after the test runs
     expected_scuba_logs: Option<Vec<ScubaAccessLogSample>>,
+    /// Repo regions config for recreating ACLs: (region_name, usernames)
+    repo_regions_config: Vec<(String, Vec<String>)>,
+    groups_config: Vec<(String, Vec<String>)>,
 }
 
 pub struct RestrictedPathsTestDataBuilder {
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
     tooling_allowlist_group: Option<String>,
+    /// Store the repo regions config for recreating ACLs in enforcement scenarios
+    repo_regions_config: Vec<(String, Vec<String>)>,
     groups_config: Vec<(String, Vec<String>)>,
-    acls: Option<Acls>,
     file_path_changes: Vec<(String, Option<String>)>,
     expected_manifest_entries: Option<Vec<RestrictedPathManifestIdEntry>>,
     expected_scuba_logs: Option<Vec<ScubaAccessLogSample>>,
@@ -206,7 +210,7 @@ impl RestrictedPathsTestDataBuilder {
             restricted_paths: vec![],
             tooling_allowlist_group: None,
             groups_config: vec![],
-            acls: None,
+            repo_regions_config: vec![],
             file_path_changes: vec![],
             expected_manifest_entries: None,
             expected_scuba_logs: None,
@@ -242,22 +246,19 @@ impl RestrictedPathsTestDataBuilder {
         self
     }
 
-    pub fn with_test_acls(mut self, repo_regions_config: Vec<(&str, Vec<&str>)>) -> Self {
-        // Convert groups_config to the format expected by setup_test_acls_with_groups
-        let groups_config: Vec<(&str, Vec<&str>)> = self
-            .groups_config
-            .iter()
-            .map(|(name, users)| {
+    pub fn with_test_repo_region_acls(
+        mut self,
+        repo_regions_config: Vec<(&str, Vec<&str>)>,
+    ) -> Self {
+        self.repo_regions_config = repo_regions_config
+            .into_iter()
+            .map(|(repo_region, users)| {
                 (
-                    name.as_str(),
-                    users.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+                    repo_region.to_string(),
+                    users.into_iter().map(|s| s.to_string()).collect(),
                 )
             })
             .collect();
-        self.acls = Some(
-            setup_test_acls_with_groups(repo_regions_config, groups_config)
-                .expect("Failed to create test ACLs"),
-        );
         self
     }
 
@@ -287,6 +288,7 @@ impl RestrictedPathsTestDataBuilder {
         self
     }
 
+    /// Configure enforcement scenarios to test.
     pub async fn build(self, fb: FacebookInit) -> Result<RestrictedPathsTestData> {
         let mut cri = ClientRequestInfo::new(ClientEntryPoint::Tests);
         cri.set_main_id(TEST_CLIENT_MAIN_ID.to_string());
@@ -314,11 +316,34 @@ impl RestrictedPathsTestDataBuilder {
         let temp_file = tempfile::NamedTempFile::new()?;
         let log_file_path = temp_file.into_temp_path().keep()?;
 
+        let groups_config: Vec<(&str, Vec<&str>)> = self
+            .groups_config
+            .iter()
+            .map(|(group, users)| (group.as_str(), users.iter().map(|u| u.as_str()).collect()))
+            .collect();
+
+        // Recreate ACLs from stored config
+        let acls = if !self.repo_regions_config.is_empty() {
+            let config_refs: Vec<(&str, Vec<&str>)> = self
+                .repo_regions_config
+                .iter()
+                .map(|(region, users)| {
+                    (region.as_str(), users.iter().map(|u| u.as_str()).collect())
+                })
+                .collect();
+
+            // let groups_config = self.groups_config.clone();
+            setup_test_acls_with_groups(config_refs, groups_config)?
+            // Some(setup_test_acls(config_refs)?)
+        } else {
+            default_test_acls(groups_config)?
+        };
+
         let repo = setup_test_repo(
             &ctx,
             self.restricted_paths,
             self.tooling_allowlist_group,
-            self.acls,
+            acls,
             log_file_path.clone(),
         )
         .await?;
@@ -330,6 +355,8 @@ impl RestrictedPathsTestDataBuilder {
             file_path_changes: self.file_path_changes,
             expected_manifest_entries: self.expected_manifest_entries,
             expected_scuba_logs: self.expected_scuba_logs,
+            repo_regions_config: self.repo_regions_config,
+            groups_config: self.groups_config,
         })
     }
 }
@@ -489,15 +516,11 @@ impl RestrictedPathsTestData {
         if let Some(expected_scuba_logs) = &self.expected_scuba_logs {
             assert_eq!(*expected_scuba_logs, scuba_logs);
         }
+        #[cfg(not(fbcode_build))]
+        let _ = (scuba_logs, &self.expected_scuba_logs);
 
         Ok(())
     }
-}
-
-/// Creates an Acls structure for testing with specified repo regions and users.
-/// The ACL provides the test user access to all repos and specified repo regions.
-fn setup_test_acls(repo_regions_config: Vec<(&str, Vec<&str>)>) -> Result<Acls> {
-    setup_test_acls_with_groups(repo_regions_config, vec![])
 }
 
 /// Creates an Acls structure for testing with specified repo regions, users, and groups.
@@ -567,21 +590,23 @@ fn setup_test_acls_with_groups(
 
 /// Creates a default Acls structure for testing.
 /// The ACL provides the test user access to all repos and appropriate repo regions.
-fn default_test_acls() -> Result<Acls> {
-    setup_test_acls(vec![
-        ("myusername_project", vec!["myusername0"]),
-        ("restricted_acl", vec!["another_user"]),
-    ])
+fn default_test_acls(groups_config: Vec<(&str, Vec<&str>)>) -> Result<Acls> {
+    setup_test_acls_with_groups(
+        vec![
+            ("myusername_project", vec!["myusername0"]),
+            ("restricted_acl", vec!["another_user"]),
+        ],
+        groups_config,
+    )
 }
 
 /// Sets up an ACL file that will be used to create an ACL checker.
 /// The ACL provides the test user access to all repos and appropriate repo regions.
-fn setup_acl_file(acls: Option<Acls>) -> Result<std::path::PathBuf> {
+fn setup_acl_file(acls: Acls) -> Result<std::path::PathBuf> {
     use std::io::Write;
 
     let mut temp_file = tempfile::NamedTempFile::new()?;
 
-    let acls = acls.unwrap_or_else(|| default_test_acls().expect("Failed to create default ACLs"));
     let acl_content = serde_json::to_string_pretty(&acls)?;
 
     temp_file.write_all(acl_content.as_bytes())?;
@@ -594,7 +619,7 @@ async fn setup_test_repo(
     ctx: &CoreContext,
     restricted_paths: Vec<(NonRootMPath, MononokeIdentity)>,
     tooling_allowlist_group: Option<String>,
-    acls: Option<Acls>,
+    acls: Acls,
     log_file_path: std::path::PathBuf,
 ) -> Result<TestRepo> {
     let repo_id = RepositoryId::new(0);
