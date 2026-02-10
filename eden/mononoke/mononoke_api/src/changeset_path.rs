@@ -56,6 +56,7 @@ use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::path::MPath;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_identity::RepoIdentityRef;
 use restricted_paths::RestrictedPathsArc;
 
 use crate::MononokeRepo;
@@ -101,7 +102,7 @@ pub struct ChangesetPathContentContext<R> {
     fsnode_id: LazyShared<FsnodeResult>,
 }
 
-impl<R: MononokeRepo> fmt::Debug for ChangesetPathContentContext<R> {
+impl<R: RepoIdentityRef> fmt::Debug for ChangesetPathContentContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -149,6 +150,23 @@ impl<R: MononokeRepo> fmt::Debug for ChangesetPathContext<R> {
             self.changeset().id(),
             self.path()
         )
+    }
+}
+
+impl<R> ChangesetPathContentContext<R> {
+    /// The `RepoContext` for this query.
+    pub fn repo_ctx(&self) -> &RepoContext<R> {
+        self.changeset.repo_ctx()
+    }
+
+    /// The `ChangesetContext` for this query.
+    pub fn changeset(&self) -> &ChangesetContext<R> {
+        &self.changeset
+    }
+
+    /// The path for this query.
+    pub fn path(&self) -> &MPath {
+        &self.path
     }
 }
 
@@ -214,21 +232,6 @@ impl<R: MononokeRepo> ChangesetPathContentContext<R> {
             path,
             fsnode_id: LazyShared::new_ready(Ok(Some(fsnode_entry))),
         })
-    }
-
-    /// The `RepoContext` for this query.
-    pub fn repo_ctx(&self) -> &RepoContext<R> {
-        self.changeset.repo_ctx()
-    }
-
-    /// The `ChangesetContext` for this query.
-    pub fn changeset(&self) -> &ChangesetContext<R> {
-        &self.changeset
-    }
-
-    /// The path for this query.
-    pub fn path(&self) -> &MPath {
-        &self.path
     }
 
     async fn fsnode_id(&self) -> Result<Option<Entry<FsnodeId, FsnodeFile>>, MononokeError> {

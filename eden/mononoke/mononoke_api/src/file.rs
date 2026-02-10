@@ -21,18 +21,30 @@ use filestore::get_metadata;
 use futures::stream::TryStreamExt;
 use futures::try_join;
 use futures_lazy_shared::LazyShared;
+use metaconfig_types::RepoConfigRef;
 /// A file's ID is its content id.
 pub use mononoke_types::ContentId as FileId;
 /// Metadata about a file.
 pub use mononoke_types::ContentMetadataV2 as FileMetadata;
 /// The type of a file.
 pub use mononoke_types::FileType;
+use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
+use repo_permission_checker::RepoPermissionCheckerRef;
 
-use crate::MononokeRepo;
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
 
+/// Context for accessing a file in a repository.
+///
+/// Files are content-addressed, so if the same file occurs in multiple
+/// places in the repository, this context represents all of them. As such,
+/// it's not possible to go back to the commit or path from a `FileContext`.
+///
+/// See `ChangesetPathContentContext` if you need to refer to a specific file in a
+/// specific commit.
 #[derive(Clone)]
 pub struct FileContext<R> {
     repo_ctx: RepoContext<R>,
@@ -40,7 +52,7 @@ pub struct FileContext<R> {
     metadata: LazyShared<Result<FileMetadata, MononokeError>>,
 }
 
-impl<R: MononokeRepo> fmt::Debug for FileContext<R> {
+impl<R: RepoIdentityRef> fmt::Debug for FileContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -51,15 +63,7 @@ impl<R: MononokeRepo> fmt::Debug for FileContext<R> {
     }
 }
 
-/// Context for accessing a file in a repository.
-///
-/// Files are content-addressed, so if the same file occurs in multiple
-/// places in the repository, this context represents all of them. As such,
-/// it's not possible to go back to the commit or path from a `FileContext`.
-///
-/// See `ChangesetPathContentContext` if you need to refer to a specific file in a
-/// specific commit.
-impl<R: MononokeRepo> FileContext<R> {
+impl<R> FileContext<R> {
     /// Create a new FileContext.  The file must exist in the repository,
     /// and the user must be known to have permission to access the path
     /// the file exists at.
@@ -74,6 +78,21 @@ impl<R: MononokeRepo> FileContext<R> {
         }
     }
 
+    /// The context for this query.
+    pub(crate) fn ctx(&self) -> &CoreContext {
+        self.repo_ctx.ctx()
+    }
+
+    /// The `RepoContext` for this query.
+    pub(crate) fn repo_ctx(&self) -> &RepoContext<R> {
+        &self.repo_ctx
+    }
+}
+
+impl<
+    R: RepoBlobstoreRef + RepoPermissionCheckerRef + RepoIdentityRef + Clone + Send + Sync + 'static,
+> FileContext<R>
+{
     /// Create a new  FileContext using an ID that might not exist. Returns
     /// `None` if the file doesn't exist.
     pub(crate) async fn new_check_exists(
@@ -96,17 +115,9 @@ impl<R: MononokeRepo> FileContext<R> {
             });
         Ok(file)
     }
+}
 
-    /// The context for this query.
-    pub(crate) fn ctx(&self) -> &CoreContext {
-        self.repo_ctx.ctx()
-    }
-
-    /// The `RepoContext` for this query.
-    pub(crate) fn repo_ctx(&self) -> &RepoContext<R> {
-        &self.repo_ctx
-    }
-
+impl<R: RepoBlobstoreRef + Clone + Send + Sync + 'static> FileContext<R> {
     /// Return the ID of the file.
     pub async fn id(&self) -> Result<FileId, MononokeError> {
         let meta = self.metadata().await?;
@@ -197,7 +208,16 @@ impl<R: MononokeRepo> FileContext<R> {
 ///
 /// If `ignore_whitespace` is true, horizontal whitespace (spaces, tabs, carriage returns)
 /// will be stripped before computing the diff.
-pub async fn headerless_unified_diff<R: MononokeRepo>(
+pub async fn headerless_unified_diff<
+    R: RepoBlobstoreArc
+        + RepoBlobstoreRef
+        + RepoConfigRef
+        + RepoDerivedDataRef
+        + Clone
+        + Send
+        + Sync
+        + 'static,
+>(
     old_file: &FileContext<R>,
     new_file: &FileContext<R>,
     context_lines: usize,

@@ -71,6 +71,7 @@ use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
 use repo_derived_data::RepoDerivedDataRef;
+use repo_identity::RepoIdentityRef;
 use skeleton_manifest::RootSkeletonManifestId;
 use skeleton_manifest_v2::RootSkeletonManifestV2Id;
 use smallvec::SmallVec;
@@ -141,6 +142,7 @@ impl From<metaconfig_types::DirectoryBranchClusterFixedCluster> for DirectoryBra
     }
 }
 
+/// A context object representing a query to a particular commit in a repo.
 #[derive(Clone)]
 pub struct ChangesetContext<R> {
     repo_ctx: RepoContext<R>,
@@ -184,7 +186,7 @@ pub enum ChangesetDiffItem {
     FILES,
 }
 
-impl<R: MononokeRepo> fmt::Debug for ChangesetContext<R> {
+impl<R: RepoIdentityRef> fmt::Debug for ChangesetContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -199,8 +201,7 @@ fn to_vec1<X>(maybe_vec: Option<Vec<X>>) -> Option<Vec1<X>> {
     maybe_vec.and_then(|v| Vec1::try_from_vec(v).ok())
 }
 
-/// A context object representing a query to a particular commit in a repo.
-impl<R: MononokeRepo> ChangesetContext<R> {
+impl<R> ChangesetContext<R> {
     /// Construct a new `MononokeChangeset`.  The changeset must exist
     /// in the repo.
     pub(crate) fn new(repo_ctx: RepoContext<R>, id: ChangesetId) -> Self {
@@ -232,6 +233,24 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         self.repo_ctx.ctx()
     }
 
+    /// The `RepoContext` for this query.
+    pub fn repo_ctx(&self) -> &RepoContext<R> {
+        &self.repo_ctx
+    }
+
+    /// The canonical bonsai changeset ID for the changeset.
+    pub fn id(&self) -> ChangesetId {
+        self.id
+    }
+
+    /// Deconstruct the changeset into RepoContext and ChangesetId.
+    pub fn into_repo_ctx_and_id(self) -> (RepoContext<R>, ChangesetId) {
+        let Self { repo_ctx, id, .. } = self;
+        (repo_ctx, id)
+    }
+}
+
+impl<R: MononokeRepo> ChangesetContext<R> {
     /// Adds copy information from mutable renames as an override to replace
     /// the Bonsai copy information
     pub async fn add_mutable_renames(
@@ -260,22 +279,6 @@ impl<R: MononokeRepo> ChangesetContext<R> {
 
         self.mutable_history = Some(copy_info);
         Ok(())
-    }
-
-    /// The `RepoContext` for this query.
-    pub fn repo_ctx(&self) -> &RepoContext<R> {
-        &self.repo_ctx
-    }
-
-    /// The canonical bonsai changeset ID for the changeset.
-    pub fn id(&self) -> ChangesetId {
-        self.id
-    }
-
-    /// Deconstruct the changeset into RepoContext and ChangesetId.
-    pub fn into_repo_ctx_and_id(self) -> (RepoContext<R>, ChangesetId) {
-        let Self { repo_ctx, id, .. } = self;
-        (repo_ctx, id)
     }
 
     /// The Mercurial ID for the changeset.

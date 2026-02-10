@@ -770,6 +770,38 @@ pub struct BookmarkInfo<R> {
 }
 
 /// A context object representing a query to a particular repo.
+impl<R> RepoContext<R> {
+    /// The context for this query.
+    pub fn ctx(&self) -> &CoreContext {
+        &self.ctx
+    }
+
+    /// The authorization context of the request.
+    pub fn authorization_context(&self) -> &AuthorizationContext {
+        &self.authz
+    }
+
+    pub fn repo(&self) -> &R {
+        self.repo.as_ref()
+    }
+
+    pub fn repo_arc(&self) -> Arc<R> {
+        self.repo.clone()
+    }
+}
+
+impl<R: RepoIdentityRef> RepoContext<R> {
+    /// The name of the underlying repo.
+    pub fn name(&self) -> &str {
+        self.repo.repo_identity().name()
+    }
+
+    /// The internal id of the repo. Used for comparing the repo objects with each other.
+    pub fn repoid(&self) -> RepositoryId {
+        self.repo.repo_identity().id()
+    }
+}
+
 impl<R: MononokeRepo> RepoContext<R> {
     pub async fn new(
         ctx: CoreContext,
@@ -810,34 +842,6 @@ impl<R: MononokeRepo> RepoContext<R> {
     pub async fn new_test(ctx: CoreContext, repo: Arc<R>) -> Result<Self, MononokeError> {
         let authz = Arc::new(AuthorizationContext::new_bypass_access_control());
         RepoContext::new(ctx, authz, repo, None, None, Arc::new(MononokeRepos::new())).await
-    }
-
-    /// The context for this query.
-    pub fn ctx(&self) -> &CoreContext {
-        &self.ctx
-    }
-
-    /// The name of the underlying repo.
-    pub fn name(&self) -> &str {
-        self.repo.repo_identity().name()
-    }
-
-    /// The internal id of the repo. Used for comparing the repo objects with each other.
-    pub fn repoid(&self) -> RepositoryId {
-        self.repo.repo_identity().id()
-    }
-
-    /// The authorization context of the request.
-    pub fn authorization_context(&self) -> &AuthorizationContext {
-        &self.authz
-    }
-
-    pub fn repo(&self) -> &R {
-        self.repo.as_ref()
-    }
-
-    pub fn repo_arc(&self) -> Arc<R> {
-        self.repo.clone()
     }
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.

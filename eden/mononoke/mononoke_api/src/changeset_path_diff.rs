@@ -17,6 +17,7 @@ use diff::types::DiffSingleInput;
 use diff::types::UnifiedDiffOpts;
 use mononoke_types::MPath;
 use mononoke_types::NonRootMPath;
+use repo_identity::RepoIdentityRef;
 pub use xdiff::CopyInfo;
 
 use crate::ChangesetContext;
@@ -30,8 +31,8 @@ use crate::file::FileType;
 /// A ChangesetPathDiffContext shows the difference between a path in a
 /// commit ("new") and its corresponding location in another commit ("old").
 #[derive(Derivative)]
-#[derivative(Clone, Debug(bound = ""))]
-pub struct ChangesetPathDiffContext<R: MononokeRepo> {
+#[derivative(Clone, Debug(bound = "R: RepoIdentityRef"))]
+pub struct ChangesetPathDiffContext<R> {
     changeset: ChangesetContext<R>,
     path: MPath,
     is_tree: bool,
@@ -125,7 +126,7 @@ pub enum FileGeneratedStatus {
     NotGenerated,
 }
 
-impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
+impl<R> ChangesetPathDiffContext<R> {
     /// Create a new path diff context that compares the contents of two
     /// changeset paths.
     ///
@@ -143,8 +144,8 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
             || (new_content.is_none() && old_content.is_none())
         {
             return Err(anyhow!(
-                "Invalid changeset path diff context parameters: {:?}",
-                (new_content, old_content, copy_info)
+                "Invalid changeset path diff context parameters: has_new={}, has_old={}, copy_info={:?}",
+                new_content.is_some(), old_content.is_some(), copy_info
             )
             .into());
         }
@@ -170,8 +171,7 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
     ) -> Result<Self, MononokeError> {
         if new_content.is_none() && old_content.is_none() {
             return Err(anyhow!(
-                "Invalid changeset path diff context parameters: {:?}",
-                (new_content, old_content)
+                "Invalid changeset path diff context parameters: both new and old content are None"
             )
             .into());
         }
@@ -251,6 +251,65 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
         })
     }
 
+    fn convert_metadata_file_info(
+        diff_file_info: &diff::types::MetadataFileInfo,
+    ) -> MetadataDiffFileInfo {
+        MetadataDiffFileInfo {
+            file_type: diff_file_info
+                .file_type
+                .map(Self::convert_diff_file_type_to_api),
+            file_content_type: diff_file_info
+                .content_type
+                .map(Self::convert_diff_content_type_to_api),
+            file_generated_status: diff_file_info
+                .generated_status
+                .map(Self::convert_diff_generated_status_to_api),
+        }
+    }
+
+    fn convert_metadata_lines_count(
+        diff_lines_count: diff::types::MetadataLinesCount,
+    ) -> MetadataDiffLinesCount {
+        MetadataDiffLinesCount {
+            added_lines_count: diff_lines_count.added_lines as usize,
+            deleted_lines_count: diff_lines_count.deleted_lines as usize,
+            significant_added_lines_count: diff_lines_count.significant_added_lines as usize,
+            significant_deleted_lines_count: diff_lines_count.significant_deleted_lines as usize,
+            first_added_line_number: diff_lines_count.first_added_line_number.map(|n| n as usize),
+        }
+    }
+
+    fn convert_diff_file_type_to_api(diff_file_type: diff::types::DiffFileType) -> FileType {
+        match diff_file_type {
+            diff::types::DiffFileType::Regular => FileType::Regular,
+            diff::types::DiffFileType::Executable => FileType::Executable,
+            diff::types::DiffFileType::Symlink => FileType::Symlink,
+            diff::types::DiffFileType::GitSubmodule => FileType::GitSubmodule,
+        }
+    }
+
+    fn convert_diff_content_type_to_api(
+        diff_content_type: diff::types::DiffContentType,
+    ) -> FileContentType {
+        match diff_content_type {
+            diff::types::DiffContentType::Text => FileContentType::Text,
+            diff::types::DiffContentType::NonUtf8 => FileContentType::NonUtf8,
+            diff::types::DiffContentType::Binary => FileContentType::Binary,
+        }
+    }
+
+    fn convert_diff_generated_status_to_api(
+        diff_generated_status: diff::types::DiffGeneratedStatus,
+    ) -> FileGeneratedStatus {
+        match diff_generated_status {
+            diff::types::DiffGeneratedStatus::NonGenerated => FileGeneratedStatus::NotGenerated,
+            diff::types::DiffGeneratedStatus::Partially => FileGeneratedStatus::PartiallyGenerated,
+            diff::types::DiffGeneratedStatus::Fully => FileGeneratedStatus::FullyGenerated,
+        }
+    }
+}
+
+impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
     /// Renders the diff (in the git diff format).
     ///
     /// If `mode` is `Placeholder` then `unified_diff(...)` doesn't fetch content,
@@ -376,62 +435,5 @@ impl<R: MononokeRepo> ChangesetPathDiffContext<R> {
                 .lines_count
                 .map(Self::convert_metadata_lines_count),
         })
-    }
-
-    fn convert_metadata_file_info(
-        diff_file_info: &diff::types::MetadataFileInfo,
-    ) -> MetadataDiffFileInfo {
-        MetadataDiffFileInfo {
-            file_type: diff_file_info
-                .file_type
-                .map(Self::convert_diff_file_type_to_api),
-            file_content_type: diff_file_info
-                .content_type
-                .map(Self::convert_diff_content_type_to_api),
-            file_generated_status: diff_file_info
-                .generated_status
-                .map(Self::convert_diff_generated_status_to_api),
-        }
-    }
-
-    fn convert_metadata_lines_count(
-        diff_lines_count: diff::types::MetadataLinesCount,
-    ) -> MetadataDiffLinesCount {
-        MetadataDiffLinesCount {
-            added_lines_count: diff_lines_count.added_lines as usize,
-            deleted_lines_count: diff_lines_count.deleted_lines as usize,
-            significant_added_lines_count: diff_lines_count.significant_added_lines as usize,
-            significant_deleted_lines_count: diff_lines_count.significant_deleted_lines as usize,
-            first_added_line_number: diff_lines_count.first_added_line_number.map(|n| n as usize),
-        }
-    }
-
-    fn convert_diff_file_type_to_api(diff_file_type: diff::types::DiffFileType) -> FileType {
-        match diff_file_type {
-            diff::types::DiffFileType::Regular => FileType::Regular,
-            diff::types::DiffFileType::Executable => FileType::Executable,
-            diff::types::DiffFileType::Symlink => FileType::Symlink,
-            diff::types::DiffFileType::GitSubmodule => FileType::GitSubmodule,
-        }
-    }
-
-    fn convert_diff_content_type_to_api(
-        diff_content_type: diff::types::DiffContentType,
-    ) -> FileContentType {
-        match diff_content_type {
-            diff::types::DiffContentType::Text => FileContentType::Text,
-            diff::types::DiffContentType::NonUtf8 => FileContentType::NonUtf8,
-            diff::types::DiffContentType::Binary => FileContentType::Binary,
-        }
-    }
-
-    fn convert_diff_generated_status_to_api(
-        diff_generated_status: diff::types::DiffGeneratedStatus,
-    ) -> FileGeneratedStatus {
-        match diff_generated_status {
-            diff::types::DiffGeneratedStatus::NonGenerated => FileGeneratedStatus::NotGenerated,
-            diff::types::DiffGeneratedStatus::Partially => FileGeneratedStatus::PartiallyGenerated,
-            diff::types::DiffGeneratedStatus::Fully => FileGeneratedStatus::FullyGenerated,
-        }
     }
 }
