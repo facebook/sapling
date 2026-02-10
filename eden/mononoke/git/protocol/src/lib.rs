@@ -33,6 +33,7 @@ pub mod pack_processor;
 mod store;
 pub mod types;
 pub mod utils;
+pub mod validator;
 
 const HEAD_REF: &str = "HEAD";
 const REF_PREFIX: &str = "refs/";

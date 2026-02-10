@@ -51,6 +51,7 @@ use protocol::mapping::ref_oid_mapping;
 use protocol::types::FetchResponse;
 use protocol::types::PackfileConcurrency;
 use protocol::types::ShallowInfoResponse;
+use protocol::validator::validate_shallow_fetch_without_deepen;
 use repo_identity::RepoIdentityRef;
 use rustc_hash::FxHashSet;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -155,11 +156,23 @@ async fn acknowledgements(
     }
     Ok((Some(Bytes::from(output_buffer)), None))
 }
+
 async fn shallow_info(
     context: Arc<RepositoryRequestContext>,
     args: Arc<FetchArgs>,
 ) -> Result<(Option<Bytes>, Option<ShallowInfoResponse>), Error> {
     let request = args.into_shallow_request();
+
+    // Validate shallow fetch without deepen args to prevent broken repo state
+    let block_indirect_unshallow = justknobs::eval(
+        "scm/mononoke:git_block_indirect_unshallow_fetch",
+        None,
+        None,
+    )?;
+    if block_indirect_unshallow && !request.shallow.is_empty() && request.variant.is_none() {
+        validate_shallow_fetch_without_deepen(&context.ctx, &context.repo, &request).await?;
+    }
+
     // If the client did not request a shallow clone/fetch, then we can return early
     if !request.shallow_requested() {
         return Ok((None, None));

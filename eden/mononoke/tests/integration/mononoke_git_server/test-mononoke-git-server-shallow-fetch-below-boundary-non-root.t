@@ -4,9 +4,9 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
-# Test for shallow fetch bug: when a client with a shallow clone fetches a branch
-# pointing to a commit below the shallow boundary without specifying --depth, the
-# fetch should still work (currently fails with "bad object" error).
+# Test for shallow fetch: when a client with a shallow clone fetches a branch
+# pointing to a non-root commit below the shallow boundary without specifying --depth,
+# the fetch should still work.
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ REPOTYPE="blob_files"
@@ -18,15 +18,16 @@
   $ mkdir -p "$GIT_REPO_ORIGIN"
   $ cd "$GIT_REPO_ORIGIN"
   $ git init -q
-# Create first commit and capture its hash for later use
+# Create first commit
   $ echo "content1" > file1
   $ git add .
   $ git commit -qam "commit1"
-  $ COMMIT1=$(git rev-parse HEAD)
-# Create remaining commits
+# Create second commit and capture its hash for later use
   $ echo "content2" > file2
   $ git add .
   $ git commit -qam "commit2"
+  $ COMMIT2=$(git rev-parse HEAD)
+# Create remaining commits
   $ echo "content3" > file3
   $ git add .
   $ git commit -qam "commit3"
@@ -74,10 +75,11 @@
   $ test -f .git/shallow && echo "shallow clone confirmed"
   shallow clone confirmed
 
-# Now create a branch on the origin pointing to the first commit (below shallow boundary)
+# Now create a branch on the origin pointing to the second commit (below shallow boundary, but not root)
   $ cd "$GIT_REPO_ORIGIN"
-  $ git branch old_branch $COMMIT1
+  $ git branch old_branch $COMMIT2
   $ git log old_branch --oneline
+  2f91057 commit2
   2aff56c commit1
 
 # Re-import to pick up the new branch
@@ -105,8 +107,9 @@
 
 # Verify the commit was fetched and is accessible
   $ git log old_branch --oneline
+  2f91057 commit2
   2aff56c commit1
 
 # Verify we can read the file content from that commit
-  $ git show old_branch:file1
-  content1
+  $ git show old_branch:file2
+  content2
