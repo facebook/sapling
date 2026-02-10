@@ -14,6 +14,7 @@ use bookmarks::BookmarkKey;
 use bookmarks::Freshness;
 use bytes::BytesMut;
 use cloned::cloned;
+use context::CoreContext;
 use context::PerfCounterType;
 use edenapi_types::BookmarkEntry;
 use edenapi_types::HgId;
@@ -25,6 +26,7 @@ use edenapi_types::StreamingChangelogResponse;
 use edenapi_types::legacy::Metadata;
 use edenapi_types::legacy::StreamingChangelogBlob;
 use edenapi_types::legacy::StreamingChangelogData;
+use futures::future::BoxFuture;
 use futures::future::FutureExt;
 use futures::future::join_all;
 use futures::stream;
@@ -50,6 +52,58 @@ use crate::Error;
 use crate::errors::ErrorKind;
 
 const TIMEOUT_SECS: Duration = Duration::from_hours(4);
+
+/// Aggregates blob chunk futures by the given factor, fetching chunks within
+/// each group in parallel and concatenating the results into larger blobs.
+fn aggregate_blob_chunks(
+    blob_futs: Vec<BoxFuture<'static, Result<bytes::Bytes, anyhow::Error>>>,
+    aggregation_factor: usize,
+    ctx: &CoreContext,
+    make_variant: fn(StreamingChangelogBlob) -> StreamingChangelogData,
+) -> Vec<BoxFuture<'static, StreamingChangelogResponse>> {
+    blob_futs
+        .into_iter()
+        .chunks(aggregation_factor)
+        .into_iter()
+        .enumerate()
+        .map(|(chunk_id, chunk_futs)| {
+            let futs: Vec<_> = chunk_futs.collect();
+            cloned!(ctx);
+            async move {
+                let (stats, results) = join_all(futs).timed().await;
+
+                let mut combined = BytesMut::new();
+                for res in results {
+                    match res {
+                        Ok(bytes) => {
+                            combined.extend_from_slice(&bytes);
+                        }
+                        Err(e) => {
+                            return StreamingChangelogResponse {
+                                data: Err(ServerError::generic(format!("{:?}", e))),
+                            };
+                        }
+                    }
+                }
+
+                ctx.perf_counters().add_to_counter(
+                    PerfCounterType::SumManifoldPollTime,
+                    stats.poll_time.as_nanos_unchecked() as i64,
+                );
+                ctx.perf_counters()
+                    .add_to_counter(PerfCounterType::BytesSent, combined.len() as i64);
+
+                StreamingChangelogResponse {
+                    data: Ok(make_variant(StreamingChangelogBlob {
+                        chunk: combined.freeze().into(),
+                        chunk_id: chunk_id as u64,
+                    })),
+                }
+            }
+            .boxed()
+        })
+        .collect()
+}
 
 /// Legacy streaming changelog handler from wireproto.
 pub struct StreamingCloneHandler;
@@ -79,107 +133,19 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
             None,
         )?;
 
-        let data_blobs: Vec<_> = changelog
-            .data_blobs
-            .into_iter()
-            .chunks(aggregation_factor)
-            .into_iter()
-            .enumerate()
-            .map(|(chunk_id, chunk_futs)| {
-                let futs: Vec<_> = chunk_futs.collect();
-                cloned!(ctx);
-                async move {
-                    // Wrap all futures with timing and await in parallel
-                    let timed_futs: Vec<_> = futs.into_iter().map(|fut| fut.timed()).collect();
-                    let results = join_all(timed_futs).await;
+        let data_blobs = aggregate_blob_chunks(
+            changelog.data_blobs,
+            aggregation_factor,
+            &ctx,
+            StreamingChangelogData::DataBlobChunk,
+        );
 
-                    // Process results, accumulating stats
-                    let mut combined = BytesMut::new();
-                    let mut total_poll_time: i64 = 0;
-
-                    for (stats, res) in results {
-                        total_poll_time += stats.poll_time.as_nanos_unchecked() as i64;
-                        match res {
-                            Ok(bytes) => {
-                                combined.extend_from_slice(&bytes);
-                            }
-                            Err(e) => {
-                                return StreamingChangelogResponse {
-                                    data: Err(ServerError::generic(format!("{:?}", e))),
-                                };
-                            }
-                        }
-                    }
-
-                    // All blobs succeeded - record stats
-                    ctx.perf_counters()
-                        .add_to_counter(PerfCounterType::SumManifoldPollTime, total_poll_time);
-                    ctx.perf_counters()
-                        .add_to_counter(PerfCounterType::BytesSent, combined.len() as i64);
-
-                    StreamingChangelogResponse {
-                        data: Ok(StreamingChangelogData::DataBlobChunk(
-                            StreamingChangelogBlob {
-                                chunk: combined.freeze().into(),
-                                chunk_id: chunk_id as u64,
-                            },
-                        )),
-                    }
-                }
-                .boxed()
-            })
-            .collect();
-
-        let index_blobs: Vec<_> = changelog
-            .index_blobs
-            .into_iter()
-            .chunks(aggregation_factor)
-            .into_iter()
-            .enumerate()
-            .map(|(chunk_id, chunk_futs)| {
-                let futs: Vec<_> = chunk_futs.collect();
-                cloned!(ctx);
-                async move {
-                    // Wrap all futures with timing and await in parallel
-                    let timed_futs: Vec<_> = futs.into_iter().map(|fut| fut.timed()).collect();
-                    let results = join_all(timed_futs).await;
-
-                    // Process results, accumulating stats
-                    let mut combined = BytesMut::new();
-                    let mut total_poll_time: i64 = 0;
-
-                    for (stats, res) in results {
-                        total_poll_time += stats.poll_time.as_nanos_unchecked() as i64;
-                        match res {
-                            Ok(bytes) => {
-                                combined.extend_from_slice(&bytes);
-                            }
-                            Err(e) => {
-                                return StreamingChangelogResponse {
-                                    data: Err(ServerError::generic(format!("{:?}", e))),
-                                };
-                            }
-                        }
-                    }
-
-                    // All blobs succeeded - record stats
-                    ctx.perf_counters()
-                        .add_to_counter(PerfCounterType::SumManifoldPollTime, total_poll_time);
-                    ctx.perf_counters()
-                        .add_to_counter(PerfCounterType::BytesSent, combined.len() as i64);
-
-                    StreamingChangelogResponse {
-                        data: Ok(StreamingChangelogData::IndexBlobChunk(
-                            StreamingChangelogBlob {
-                                chunk: combined.freeze().into(),
-                                chunk_id: chunk_id as u64,
-                            },
-                        )),
-                    }
-                }
-                .boxed()
-            })
-            .collect();
+        let index_blobs = aggregate_blob_chunks(
+            changelog.index_blobs,
+            aggregation_factor,
+            &ctx,
+            StreamingChangelogData::IndexBlobChunk,
+        );
 
         debug!(
             "streaming changelog {} index bytes, {} data bytes",
