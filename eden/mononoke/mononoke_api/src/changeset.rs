@@ -473,7 +473,7 @@ impl<R: CommitGraphRef + Clone> ChangesetContext<R> {
     }
 }
 
-impl<R: MononokeRepo> ChangesetContext<R> {
+impl<R: BonsaiHgMappingRef + RepoDerivedDataRef + RepoDerivedDataArc> ChangesetContext<R> {
     /// The Mercurial ID for the changeset.
     pub async fn hg_id(&self) -> Result<Option<HgChangesetId>, MononokeError> {
         let maybe_hg_id = self
@@ -488,7 +488,9 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         }
         Ok(maybe_hg_id)
     }
+}
 
+impl<R: BonsaiGitMappingRef + RepoDerivedDataRef + RepoDerivedDataArc> ChangesetContext<R> {
     /// The git Sha1 for the changeset (if available).
     pub async fn git_sha1(&self) -> Result<Option<GitSha1>, MononokeError> {
         let maybe_git_sha1 = self
@@ -503,7 +505,303 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         }
         Ok(maybe_git_sha1)
     }
+}
 
+impl<R: RepoDerivedDataRef + RepoDerivedDataArc + RepoBlobstoreArc> ChangesetContext<R> {
+    /// Get the `ChangesetInfo` for this changeset.
+    pub async fn changeset_info(&self) -> Result<ChangesetInfo, MononokeError> {
+        if self.repo_ctx.derive_changeset_info_enabled() {
+            self.changeset_info
+                .get_or_init(|| self.derive::<ChangesetInfo>())
+                .await
+        } else {
+            let bonsai = self.bonsai_changeset().await?;
+            Ok(ChangesetInfo::new(self.id(), bonsai))
+        }
+    }
+
+    /// The IDs of the parents of the changeset.
+    pub async fn parents(&self) -> Result<Vec<ChangesetId>, MononokeError> {
+        Ok(self.changeset_info().await?.parents().collect())
+    }
+
+    /// The author of the changeset.
+    pub async fn author(&self) -> Result<String, MononokeError> {
+        Ok(self.changeset_info().await?.author().to_string())
+    }
+
+    /// The date the changeset was authored.
+    pub async fn author_date(&self) -> Result<DateTime<FixedOffset>, MononokeError> {
+        Ok(self
+            .changeset_info()
+            .await?
+            .author_date()
+            .as_chrono()
+            .clone())
+    }
+
+    /// The committer of the changeset.  May be `None` if the committer
+    /// is not tracked.
+    pub async fn committer(&self) -> Result<Option<String>, MononokeError> {
+        Ok(self
+            .changeset_info()
+            .await?
+            .committer()
+            .map(|s| s.to_string()))
+    }
+
+    /// The date the changeset was committed.  May be `None` if the
+    /// committer is not tracked.
+    pub async fn committer_date(&self) -> Result<Option<DateTime<FixedOffset>>, MononokeError> {
+        Ok(self
+            .changeset_info()
+            .await?
+            .committer_date()
+            .map(|d| d.as_chrono().clone()))
+    }
+
+    /// The commit message.
+    pub async fn message(&self) -> Result<String, MononokeError> {
+        Ok(self.changeset_info().await?.message().to_string())
+    }
+
+    /// All mercurial commit extras as (name, value) pairs.
+    pub async fn hg_extras(&self) -> Result<Vec<(String, Vec<u8>)>, MononokeError> {
+        Ok(self
+            .changeset_info()
+            .await?
+            .hg_extra()
+            .map(|(name, value)| (name.to_string(), Vec::from(value)))
+            .collect())
+    }
+
+    pub async fn git_extra_headers(
+        &self,
+    ) -> Result<Option<Vec<(SmallVec<[u8; 24]>, Bytes)>>, MononokeError> {
+        Ok(self
+            .changeset_info()
+            .await?
+            .git_extra_headers()
+            .map(|headers| {
+                headers
+                    .map(|(key, value)| (SmallVec::from(key), Bytes::copy_from_slice(value)))
+                    .collect()
+            }))
+    }
+
+    pub async fn subtree_change_count(&self) -> Result<usize, MononokeError> {
+        Ok(self.changeset_info().await?.subtree_change_count())
+    }
+}
+
+impl<R: RepoBlobstoreArc> ChangesetContext<R> {
+    /// File changes associated with the commit.
+    pub async fn file_changes(
+        &self,
+    ) -> Result<SortedVectorMap<NonRootMPath, FileChange>, MononokeError> {
+        let bonsai = self.bonsai_changeset().await?;
+        let bonsai = bonsai.into_mut();
+        Ok(bonsai.file_changes)
+    }
+
+    pub async fn subtree_changes(
+        &self,
+    ) -> Result<SortedVectorMap<MPath, SubtreeChange>, MononokeError> {
+        let bonsai = self.bonsai_changeset().await?;
+        let bonsai = bonsai.into_mut();
+        Ok(bonsai.subtree_changes)
+    }
+}
+
+impl<R: RepoDerivedDataArc + RepoBlobstoreRef> ChangesetContext<R> {
+    async fn find_entries(
+        &self,
+        prefixes: Option<Vec1<MPath>>,
+        ordering: ChangesetFileOrdering,
+    ) -> Result<
+        impl Stream<Item = Result<(MPath, ManifestEntry<SkeletonManifestId, ()>), anyhow::Error>>
+        + use<R>,
+        MononokeError,
+    > {
+        let root = self.root_skeleton_manifest_id().await?;
+        let prefixes = match prefixes {
+            Some(prefixes) => prefixes.into_iter().map(PathOrPrefix::Prefix).collect(),
+            None => vec![PathOrPrefix::Prefix(MPath::ROOT)],
+        };
+        let entries = match ordering {
+            ChangesetFileOrdering::Unordered => root
+                .skeleton_manifest_id()
+                .find_entries(
+                    self.ctx().clone(),
+                    self.repo_ctx().repo().repo_blobstore().clone(),
+                    prefixes,
+                )
+                .left_stream(),
+            ChangesetFileOrdering::Ordered { after } => root
+                .skeleton_manifest_id()
+                .find_entries_ordered(
+                    self.ctx().clone(),
+                    self.repo_ctx().repo().repo_blobstore().clone(),
+                    prefixes,
+                    after,
+                )
+                .right_stream(),
+        };
+        Ok(entries)
+    }
+
+    async fn find_entries_v2(
+        &self,
+        prefixes: Option<Vec1<MPath>>,
+        ordering: ChangesetFileOrdering,
+    ) -> Result<
+        impl Stream<Item = Result<(MPath, ManifestEntry<SkeletonManifestV2, ()>), anyhow::Error>>
+        + use<R>,
+        MononokeError,
+    > {
+        let root = self.root_skeleton_manifest_v2_id().await?;
+        let manifest = root
+            .inner_id()
+            .load(self.ctx(), self.repo_ctx().repo().repo_blobstore())
+            .await?;
+        let prefixes = match prefixes {
+            Some(prefixes) => prefixes.into_iter().map(PathOrPrefix::Prefix).collect(),
+            None => vec![PathOrPrefix::Prefix(MPath::ROOT)],
+        };
+        let entries = match ordering {
+            ChangesetFileOrdering::Unordered => manifest
+                .find_entries(
+                    self.ctx().clone(),
+                    self.repo_ctx().repo().repo_blobstore().clone(),
+                    prefixes,
+                )
+                .left_stream(),
+            ChangesetFileOrdering::Ordered { after } => manifest
+                .find_entries_ordered(
+                    self.ctx().clone(),
+                    self.repo_ctx().repo().repo_blobstore().clone(),
+                    prefixes,
+                    after,
+                )
+                .right_stream(),
+        };
+        Ok(entries)
+    }
+}
+
+impl<R: CommitGraphRef + RepoDerivedDataRef + RepoBlobstoreRef + Clone + Send + Sync + 'static>
+    ChangesetContext<R>
+{
+    /// Returns a stream of `ChangesetContext` for the history of the repository from this commit.
+    pub async fn history(
+        &self,
+        opts: ChangesetHistoryOptions,
+    ) -> Result<BoxStream<'_, Result<ChangesetContext<R>, MononokeError>>, MononokeError> {
+        let mut ancestors_stream_builder = AncestorsStreamBuilder::new(
+            Arc::new(self.repo_ctx().repo().commit_graph().parents_graph()),
+            self.ctx().clone(),
+            vec![self.id()],
+        );
+
+        if opts.until_timestamp.is_some() || opts.until_committer_timestamp.is_some() {
+            ancestors_stream_builder = ancestors_stream_builder.with({
+                let ctx = self.ctx().clone();
+                let repo_ctx = self.repo_ctx().clone();
+                let cs_info_enabled = repo_ctx.derive_changeset_info_enabled();
+                move |cs_id| {
+                    cloned!(ctx, repo_ctx, cs_info_enabled);
+                    async move {
+                        let info = if cs_info_enabled {
+                            repo_ctx
+                                .repo()
+                                .repo_derived_data()
+                                .derive::<ChangesetInfo>(&ctx, cs_id, DerivationPriority::LOW)
+                                .await?
+                        } else {
+                            let bonsai = cs_id.load(&ctx, repo_ctx.repo().repo_blobstore()).await?;
+                            ChangesetInfo::new(cs_id, bonsai)
+                        };
+
+                        if let Some(until_timestamp) = opts.until_timestamp {
+                            let date = info.author_date().as_chrono().clone();
+                            if date.timestamp() < until_timestamp {
+                                return Ok(false);
+                            }
+                        }
+                        if let Some(until_committer_timestamp) = opts.until_committer_timestamp {
+                            // Get committer_date if available, otherwise fall back to author_date
+                            let date = match info.committer_date() {
+                                Some(committer_date) => committer_date.as_chrono().clone(),
+                                None => info.author_date().as_chrono().clone(),
+                            };
+                            if date.timestamp() < until_committer_timestamp {
+                                return Ok(false);
+                            }
+                        }
+                        Ok(true)
+                    }
+                }
+            });
+        }
+
+        if let Some(descendants_of) = opts.descendants_of {
+            ancestors_stream_builder = ancestors_stream_builder.descendants_of(descendants_of);
+        }
+
+        if let Some(exclude_changeset_and_ancestors) = opts.exclude_changeset_and_ancestors {
+            ancestors_stream_builder = ancestors_stream_builder
+                .exclude_ancestors_of(vec![exclude_changeset_and_ancestors]);
+        }
+
+        let cs_ids_stream = ancestors_stream_builder.build().await?;
+
+        Ok(cs_ids_stream
+            .map_err(MononokeError::from)
+            .and_then(move |cs_id| async move {
+                Ok::<_, MononokeError>(ChangesetContext::new(self.repo_ctx().clone(), cs_id))
+            })
+            .boxed())
+    }
+}
+
+impl<R: CommitGraphArc + Clone + Send + Sync + 'static> ChangesetContext<R> {
+    pub async fn linear_history(
+        &self,
+        opts: ChangesetLinearHistoryOptions,
+    ) -> Result<BoxStream<'_, Result<ChangesetContext<R>, MononokeError>>, MononokeError> {
+        let mut linear_ancestors_stream_builder = LinearAncestorsStreamBuilder::new(
+            self.repo_ctx().repo().commit_graph_arc(),
+            self.ctx().clone(),
+            self.id(),
+        )
+        .await?;
+
+        if let Some(exclude_changeset_and_ancestors) = opts.exclude_changeset_and_ancestors {
+            linear_ancestors_stream_builder = linear_ancestors_stream_builder
+                .exclude_ancestors_of(exclude_changeset_and_ancestors)
+                .await?;
+        }
+
+        if let Some(descendants_of) = opts.descendants_of {
+            linear_ancestors_stream_builder = linear_ancestors_stream_builder
+                .descendants_of(descendants_of)
+                .await?;
+        }
+
+        linear_ancestors_stream_builder = linear_ancestors_stream_builder.skip(opts.skip);
+
+        let cs_ids_stream = linear_ancestors_stream_builder.build().await?;
+
+        Ok(cs_ids_stream
+            .map_err(MononokeError::from)
+            .and_then(move |cs_id| async move {
+                Ok::<_, MononokeError>(ChangesetContext::new(self.repo_ctx().clone(), cs_id))
+            })
+            .boxed())
+    }
+}
+
+impl<R: MononokeRepo> ChangesetContext<R> {
     /// Query the root directory in the repository at this changeset revision.
     pub async fn root(&self) -> Result<ChangesetPathContentContext<R>, MononokeError> {
         ChangesetPathContentContext::new(self.clone(), None).await
@@ -737,108 +1035,6 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         MononokeError,
     > {
         Ok(self.deleted_paths_impl(self.root_deleted_manifest_v2_id().await?, paths))
-    }
-
-    /// Get the `ChangesetInfo` for this changeset.
-    pub async fn changeset_info(&self) -> Result<ChangesetInfo, MononokeError> {
-        if self.repo_ctx.derive_changeset_info_enabled() {
-            self.changeset_info
-                .get_or_init(|| self.derive::<ChangesetInfo>())
-                .await
-        } else {
-            let bonsai = self.bonsai_changeset().await?;
-            Ok(ChangesetInfo::new(self.id(), bonsai))
-        }
-    }
-
-    /// The IDs of the parents of the changeset.
-    pub async fn parents(&self) -> Result<Vec<ChangesetId>, MononokeError> {
-        Ok(self.changeset_info().await?.parents().collect())
-    }
-
-    /// The author of the changeset.
-    pub async fn author(&self) -> Result<String, MononokeError> {
-        Ok(self.changeset_info().await?.author().to_string())
-    }
-
-    /// The date the changeset was authored.
-    pub async fn author_date(&self) -> Result<DateTime<FixedOffset>, MononokeError> {
-        Ok(self
-            .changeset_info()
-            .await?
-            .author_date()
-            .as_chrono()
-            .clone())
-    }
-
-    /// The committer of the changeset.  May be `None` if the committer
-    /// is not tracked.
-    pub async fn committer(&self) -> Result<Option<String>, MononokeError> {
-        Ok(self
-            .changeset_info()
-            .await?
-            .committer()
-            .map(|s| s.to_string()))
-    }
-
-    /// The date the changeset was committed.  May be `None` if the
-    /// committer is not tracked.
-    pub async fn committer_date(&self) -> Result<Option<DateTime<FixedOffset>>, MononokeError> {
-        Ok(self
-            .changeset_info()
-            .await?
-            .committer_date()
-            .map(|d| d.as_chrono().clone()))
-    }
-
-    /// The commit message.
-    pub async fn message(&self) -> Result<String, MononokeError> {
-        Ok(self.changeset_info().await?.message().to_string())
-    }
-
-    /// All mercurial commit extras as (name, value) pairs.
-    pub async fn hg_extras(&self) -> Result<Vec<(String, Vec<u8>)>, MononokeError> {
-        Ok(self
-            .changeset_info()
-            .await?
-            .hg_extra()
-            .map(|(name, value)| (name.to_string(), Vec::from(value)))
-            .collect())
-    }
-
-    pub async fn git_extra_headers(
-        &self,
-    ) -> Result<Option<Vec<(SmallVec<[u8; 24]>, Bytes)>>, MononokeError> {
-        Ok(self
-            .changeset_info()
-            .await?
-            .git_extra_headers()
-            .map(|headers| {
-                headers
-                    .map(|(key, value)| (SmallVec::from(key), Bytes::copy_from_slice(value)))
-                    .collect()
-            }))
-    }
-
-    /// File changes associated with the commit.
-    pub async fn file_changes(
-        &self,
-    ) -> Result<SortedVectorMap<NonRootMPath, FileChange>, MononokeError> {
-        let bonsai = self.bonsai_changeset().await?;
-        let bonsai = bonsai.into_mut();
-        Ok(bonsai.file_changes)
-    }
-
-    pub async fn subtree_change_count(&self) -> Result<usize, MononokeError> {
-        Ok(self.changeset_info().await?.subtree_change_count())
-    }
-
-    pub async fn subtree_changes(
-        &self,
-    ) -> Result<SortedVectorMap<MPath, SubtreeChange>, MononokeError> {
-        let bonsai = self.bonsai_changeset().await?;
-        let bonsai = bonsai.into_mut();
-        Ok(bonsai.subtree_changes)
     }
 
     pub async fn diff_unordered(
@@ -1381,186 +1577,6 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .try_collect::<Vec<_>>()
             .await?;
         Ok(change_contexts)
-    }
-
-    async fn find_entries(
-        &self,
-        prefixes: Option<Vec1<MPath>>,
-        ordering: ChangesetFileOrdering,
-    ) -> Result<
-        impl Stream<Item = Result<(MPath, ManifestEntry<SkeletonManifestId, ()>), anyhow::Error>>
-        + use<R>,
-        MononokeError,
-    > {
-        let root = self.root_skeleton_manifest_id().await?;
-        let prefixes = match prefixes {
-            Some(prefixes) => prefixes.into_iter().map(PathOrPrefix::Prefix).collect(),
-            None => vec![PathOrPrefix::Prefix(MPath::ROOT)],
-        };
-        let entries = match ordering {
-            ChangesetFileOrdering::Unordered => root
-                .skeleton_manifest_id()
-                .find_entries(
-                    self.ctx().clone(),
-                    self.repo_ctx().repo().repo_blobstore().clone(),
-                    prefixes,
-                )
-                .left_stream(),
-            ChangesetFileOrdering::Ordered { after } => root
-                .skeleton_manifest_id()
-                .find_entries_ordered(
-                    self.ctx().clone(),
-                    self.repo_ctx().repo().repo_blobstore().clone(),
-                    prefixes,
-                    after,
-                )
-                .right_stream(),
-        };
-        Ok(entries)
-    }
-
-    async fn find_entries_v2(
-        &self,
-        prefixes: Option<Vec1<MPath>>,
-        ordering: ChangesetFileOrdering,
-    ) -> Result<
-        impl Stream<Item = Result<(MPath, ManifestEntry<SkeletonManifestV2, ()>), anyhow::Error>>
-        + use<R>,
-        MononokeError,
-    > {
-        let root = self.root_skeleton_manifest_v2_id().await?;
-        let manifest = root
-            .inner_id()
-            .load(self.ctx(), self.repo_ctx().repo().repo_blobstore())
-            .await?;
-        let prefixes = match prefixes {
-            Some(prefixes) => prefixes.into_iter().map(PathOrPrefix::Prefix).collect(),
-            None => vec![PathOrPrefix::Prefix(MPath::ROOT)],
-        };
-        let entries = match ordering {
-            ChangesetFileOrdering::Unordered => manifest
-                .find_entries(
-                    self.ctx().clone(),
-                    self.repo_ctx().repo().repo_blobstore().clone(),
-                    prefixes,
-                )
-                .left_stream(),
-            ChangesetFileOrdering::Ordered { after } => manifest
-                .find_entries_ordered(
-                    self.ctx().clone(),
-                    self.repo_ctx().repo().repo_blobstore().clone(),
-                    prefixes,
-                    after,
-                )
-                .right_stream(),
-        };
-        Ok(entries)
-    }
-
-    /// Returns a stream of `ChangesetContext` for the history of the repository from this commit.
-    pub async fn history(
-        &self,
-        opts: ChangesetHistoryOptions,
-    ) -> Result<BoxStream<'_, Result<ChangesetContext<R>, MononokeError>>, MononokeError> {
-        let mut ancestors_stream_builder = AncestorsStreamBuilder::new(
-            Arc::new(self.repo_ctx().repo().commit_graph().parents_graph()),
-            self.ctx().clone(),
-            vec![self.id()],
-        );
-
-        if opts.until_timestamp.is_some() || opts.until_committer_timestamp.is_some() {
-            ancestors_stream_builder = ancestors_stream_builder.with({
-                let ctx = self.ctx().clone();
-                let repo_ctx = self.repo_ctx().clone();
-                let cs_info_enabled = repo_ctx.derive_changeset_info_enabled();
-                move |cs_id| {
-                    cloned!(ctx, repo_ctx, cs_info_enabled);
-                    async move {
-                        let info = if cs_info_enabled {
-                            repo_ctx
-                                .repo()
-                                .repo_derived_data()
-                                .derive::<ChangesetInfo>(&ctx, cs_id, DerivationPriority::LOW)
-                                .await?
-                        } else {
-                            let bonsai = cs_id.load(&ctx, repo_ctx.repo().repo_blobstore()).await?;
-                            ChangesetInfo::new(cs_id, bonsai)
-                        };
-
-                        if let Some(until_timestamp) = opts.until_timestamp {
-                            let date = info.author_date().as_chrono().clone();
-                            if date.timestamp() < until_timestamp {
-                                return Ok(false);
-                            }
-                        }
-                        if let Some(until_committer_timestamp) = opts.until_committer_timestamp {
-                            // Get committer_date if available, otherwise fall back to author_date
-                            let date = match info.committer_date() {
-                                Some(committer_date) => committer_date.as_chrono().clone(),
-                                None => info.author_date().as_chrono().clone(),
-                            };
-                            if date.timestamp() < until_committer_timestamp {
-                                return Ok(false);
-                            }
-                        }
-                        Ok(true)
-                    }
-                }
-            });
-        }
-
-        if let Some(descendants_of) = opts.descendants_of {
-            ancestors_stream_builder = ancestors_stream_builder.descendants_of(descendants_of);
-        }
-
-        if let Some(exclude_changeset_and_ancestors) = opts.exclude_changeset_and_ancestors {
-            ancestors_stream_builder = ancestors_stream_builder
-                .exclude_ancestors_of(vec![exclude_changeset_and_ancestors]);
-        }
-
-        let cs_ids_stream = ancestors_stream_builder.build().await?;
-
-        Ok(cs_ids_stream
-            .map_err(MononokeError::from)
-            .and_then(move |cs_id| async move {
-                Ok::<_, MononokeError>(ChangesetContext::new(self.repo_ctx().clone(), cs_id))
-            })
-            .boxed())
-    }
-
-    pub async fn linear_history(
-        &self,
-        opts: ChangesetLinearHistoryOptions,
-    ) -> Result<BoxStream<'_, Result<ChangesetContext<R>, MononokeError>>, MononokeError> {
-        let mut linear_ancestors_stream_builder = LinearAncestorsStreamBuilder::new(
-            self.repo_ctx().repo().commit_graph_arc(),
-            self.ctx().clone(),
-            self.id(),
-        )
-        .await?;
-
-        if let Some(exclude_changeset_and_ancestors) = opts.exclude_changeset_and_ancestors {
-            linear_ancestors_stream_builder = linear_ancestors_stream_builder
-                .exclude_ancestors_of(exclude_changeset_and_ancestors)
-                .await?;
-        }
-
-        if let Some(descendants_of) = opts.descendants_of {
-            linear_ancestors_stream_builder = linear_ancestors_stream_builder
-                .descendants_of(descendants_of)
-                .await?;
-        }
-
-        linear_ancestors_stream_builder = linear_ancestors_stream_builder.skip(opts.skip);
-
-        let cs_ids_stream = linear_ancestors_stream_builder.build().await?;
-
-        Ok(cs_ids_stream
-            .map_err(MononokeError::from)
-            .and_then(move |cs_id| async move {
-                Ok::<_, MononokeError>(ChangesetContext::new(self.repo_ctx().clone(), cs_id))
-            })
-            .boxed())
     }
 
     pub async fn diff_root_unordered(

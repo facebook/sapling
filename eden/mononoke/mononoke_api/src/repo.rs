@@ -145,11 +145,13 @@ use repo_identity::RepoIdentity;
 use repo_identity::RepoIdentityRef;
 use repo_lock::RepoLock;
 use repo_permission_checker::RepoPermissionChecker;
+use repo_permission_checker::RepoPermissionCheckerRef;
 use repo_sparse_profiles::ArcRepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfiles;
 use repo_sparse_profiles::RepoSparseProfilesArc;
 use repo_stats_logger::RepoStatsLogger;
 use restricted_paths::RestrictedPaths;
+use restricted_paths::RestrictedPathsArc;
 use sql_commit_graph_storage::CommitGraphBulkFetcher;
 use sql_query_config::SqlQueryConfig;
 use stats::prelude::*;
@@ -1523,7 +1525,87 @@ impl<R: MononokeRepo> RepoContext<R> {
             .boxed())
         }
     }
+}
 
+impl<
+    R: RepoBlobstoreRef
+        + RestrictedPathsArc
+        + RepoPermissionCheckerRef
+        + RepoIdentityRef
+        + Clone
+        + Send
+        + Sync
+        + 'static,
+> RepoContext<R>
+{
+    /// Get a Tree by id.  Returns `None` if the tree doesn't exist.
+    pub async fn tree(&self, tree_id: TreeId) -> Result<Option<TreeContext<R>>, MononokeError> {
+        TreeContext::new_check_exists(self.clone(), tree_id).await
+    }
+}
+
+impl<
+    R: RepoBlobstoreRef + RepoPermissionCheckerRef + RepoIdentityRef + Clone + Send + Sync + 'static,
+> RepoContext<R>
+{
+    /// Get a File by id.  Returns `None` if the file doesn't exist.
+    pub async fn file(&self, file_id: FileId) -> Result<Option<FileContext<R>>, MononokeError> {
+        FileContext::new_check_exists(self.clone(), FetchKey::Canonical(file_id)).await
+    }
+
+    /// Get a File by content sha-1.  Returns `None` if the file doesn't exist.
+    pub async fn file_by_content_sha1(
+        &self,
+        hash: Sha1,
+    ) -> Result<Option<FileContext<R>>, MononokeError> {
+        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha1(hash))).await
+    }
+
+    /// Get a File by content sha-256.  Returns `None` if the file doesn't exist.
+    pub async fn file_by_content_sha256(
+        &self,
+        hash: Sha256,
+    ) -> Result<Option<FileContext<R>>, MononokeError> {
+        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha256(hash))).await
+    }
+
+    /// Get a File by content git-sha-1.  Returns `None` if the file doesn't exist.
+    pub async fn file_by_content_gitsha1(
+        &self,
+        hash: GitSha1,
+    ) -> Result<Option<FileContext<R>>, MononokeError> {
+        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::GitSha1(hash))).await
+    }
+
+    /// Get a File by content seeded-blake3. Returns `None` if the file doesn't exist.
+    pub async fn file_by_content_seeded_blake3(
+        &self,
+        hash: Blake3,
+    ) -> Result<Option<FileContext<R>>, MononokeError> {
+        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::SeededBlake3(hash)))
+            .await
+    }
+}
+
+impl<R: RepoBlobstoreRef + FilestoreConfigRef> RepoContext<R> {
+    pub async fn upload_file_content(
+        &self,
+        content: Bytes,
+        store_request: &StoreRequest,
+    ) -> Result<ContentId, MononokeError> {
+        let metadata = filestore::store(
+            self.repo.repo_blobstore(),
+            *self.repo.filestore_config(),
+            &self.ctx,
+            store_request,
+            stream::once(async move { Ok(content) }),
+        )
+        .await?;
+        Ok(metadata.content_id)
+    }
+}
+
+impl<R: PhasesRef + CommitGraphRef + Clone> RepoContext<R> {
     /// Get a stack for the list of heads (up to the first public commit).
     ///
     /// Limit constrains the number of draft commits returned.
@@ -1601,81 +1683,9 @@ impl<R: MononokeRepo> RepoContext<R> {
             leftover_heads: queue,
         })
     }
+}
 
-    /// Get a Tree by id.  Returns `None` if the tree doesn't exist.
-    pub async fn tree(&self, tree_id: TreeId) -> Result<Option<TreeContext<R>>, MononokeError>
-    where
-        R: Clone,
-    {
-        TreeContext::new_check_exists(self.clone(), tree_id).await
-    }
-
-    /// Get a File by id.  Returns `None` if the file doesn't exist.
-    pub async fn file(&self, file_id: FileId) -> Result<Option<FileContext<R>>, MononokeError>
-    where
-        R: Clone,
-    {
-        FileContext::new_check_exists(self.clone(), FetchKey::Canonical(file_id)).await
-    }
-
-    /// Get a File by content sha-1.  Returns `None` if the file doesn't exist.
-    pub async fn file_by_content_sha1(
-        &self,
-        hash: Sha1,
-    ) -> Result<Option<FileContext<R>>, MononokeError>
-    where
-        R: Clone,
-    {
-        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha1(hash))).await
-    }
-
-    /// Get a File by content sha-256.  Returns `None` if the file doesn't exist.
-    pub async fn file_by_content_sha256(
-        &self,
-        hash: Sha256,
-    ) -> Result<Option<FileContext<R>>, MononokeError>
-    where
-        R: Clone,
-    {
-        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha256(hash))).await
-    }
-
-    /// Get a File by content git-sha-1.  Returns `None` if the file doesn't exist.
-    pub async fn file_by_content_gitsha1(
-        &self,
-        hash: GitSha1,
-    ) -> Result<Option<FileContext<R>>, MononokeError>
-    where
-        R: Clone,
-    {
-        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::GitSha1(hash))).await
-    }
-
-    pub async fn upload_file_content(
-        &self,
-        content: Bytes,
-        store_request: &StoreRequest,
-    ) -> Result<ContentId, MononokeError> {
-        let metadata = filestore::store(
-            self.repo.repo_blobstore(),
-            *self.repo.filestore_config(),
-            &self.ctx,
-            store_request,
-            stream::once(async move { Ok(content) }),
-        )
-        .await?;
-        Ok(metadata.content_id)
-    }
-
-    /// Get a File by content seeded-blake3. Returns `None` if the file doesn't exist.
-    pub async fn file_by_content_seeded_blake3(
-        &self,
-        hash: Blake3,
-    ) -> Result<Option<FileContext<R>>, MononokeError> {
-        FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::SeededBlake3(hash)))
-            .await
-    }
-
+impl<R: MononokeRepo> RepoContext<R> {
     async fn build_candidate_selection_hint(
         &self,
         maybe_args: Option<CandidateSelectionHintArgs>,
