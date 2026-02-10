@@ -10,7 +10,6 @@ use std::env;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -30,7 +29,6 @@ use stats::prelude::*;
 use tokio::runtime::Handle;
 use tokio::sync::RwLock;
 use tokio::sync::oneshot::Receiver;
-use tokio::sync::oneshot::Sender;
 use tokio::task::JoinHandle;
 use tokio::time;
 use tracing::error;
@@ -49,8 +47,6 @@ define_stats! {
     restored_connection_to_shardmanager: timeseries(Rate, Sum),
     lost_connection_to_shardmanager: timeseries(Rate, Sum),
     shard_setup_failures: timeseries(Rate, Sum),
-    manual_shard_eviction_by_timeout: timeseries(Rate, Sum),
-    manual_shard_eviction_by_repomap: timeseries(Rate, Sum),
 }
 
 /// Enum representing the states in which the repo-add
@@ -847,10 +843,6 @@ impl ShardedProcessHandler {
             })
         }
     }
-
-    pub async fn repo_map_len(&self) -> usize {
-        self.repo_map.read().await.len()
-    }
 }
 
 impl sm::ShardManagerHandler for ShardedProcessHandler {
@@ -1126,16 +1118,9 @@ impl ShardedProcessExecutor {
 
     /// Blocking call to begin execution of the underlying process based on the repos
     /// assigned by ShardManager
-    pub async fn block_and_execute(self, terminate_signal_receiver: Receiver<bool>) -> Result<()> {
-        self.block_and_execute_with_quiesce_timeout(terminate_signal_receiver, None, None)
-            .await
-    }
-
-    pub async fn block_and_execute_with_quiesce_timeout(
+    pub async fn block_and_execute(
         mut self,
         terminate_signal_receiver: Receiver<bool>,
-        quiesce_timeout: Option<Duration>,
-        quiesce_completion_sender: Option<Sender<bool>>,
     ) -> Result<()> {
         info!("Initiating sharded execution for service");
         let shards = self.client.get_my_shards()?;
@@ -1154,30 +1139,7 @@ impl ShardedProcessExecutor {
         terminate_signal_receiver.await?;
         match self.client.request_failover_and_remove_handler() {
             Ok(_) => {
-                if let Some(timeout) = quiesce_timeout {
-                    let sleep = tokio::time::sleep(timeout);
-                    tokio::pin!(sleep);
-                    loop {
-                        tokio::select! {
-                            _ = &mut sleep => {
-                                info!("Wait timeout expired evicting...");
-                                STATS::manual_shard_eviction_by_timeout.add_value(1);
-                                break;
-                            }
-                            repo_count = self.handler.repo_map_len() => {
-                                if repo_count == 0 {
-                                    info!("All repos moved, evicting...");
-                                    STATS::manual_shard_eviction_by_repomap.add_value(1);
-                                    break;
-                                } else {
-                                    info!("repos present count={}, not evicting...", repo_count);
-                                    // Sleep a bit before next check to avoid busy loop
-                                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                                }
-                            }
-                        }
-                    }
-                }
+                info!("Successfully requested failover from shard manager");
             }
             Err(err) => {
                 error!(
@@ -1185,10 +1147,6 @@ impl ShardedProcessExecutor {
                     err
                 );
             }
-        }
-
-        if let Some(quiesce_completion_sender) = quiesce_completion_sender {
-            let _ = quiesce_completion_sender.send(true);
         }
         Ok(())
     }

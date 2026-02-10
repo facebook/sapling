@@ -6,14 +6,11 @@
  */
 
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
-use std::time::Duration;
 
 use anyhow::Result;
 use fbinit::FacebookInit;
 use tokio::runtime::Handle;
 use tokio::sync::oneshot::Receiver;
-use tokio::sync::oneshot::Sender;
 
 use crate::RepoShardedProcess;
 
@@ -33,15 +30,6 @@ impl ShardedProcessExecutor {
     }
 
     pub async fn block_and_execute(self, _terminate_signal_receiver: Receiver<bool>) -> Result<()> {
-        unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
-    }
-
-    pub async fn block_and_execute_with_quiesce_timeout(
-        mut self,
-        _terminate_signal_receiver: Receiver<bool>,
-        _quiesce_timeout: Option<Duration>,
-        _quiesce_completion_sender: Option<Sender<bool>>,
-    ) -> Result<()> {
         unimplemented!("ShardedProcessExecutor is supported only for fbcode build")
     }
 

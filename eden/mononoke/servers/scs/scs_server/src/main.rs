@@ -66,7 +66,6 @@ use srserver::service_framework::ThriftStatsModule;
 use thrift_factory::ThriftFactoryBuilder;
 use tokio::task;
 use tracing::info;
-use tracing::warn;
 
 mod facebook;
 mod metadata;
@@ -273,7 +272,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let will_exit = Arc::new(AtomicBool::new(false));
     let (sm_shutdown_sender, sm_shutdown_receiver) = tokio::sync::oneshot::channel::<bool>();
-    let (quiesce_sender, quiesce_receiver) = tokio::sync::oneshot::channel::<bool>();
 
     if let Some(max_memory) = args.max_memory {
         memory::set_max_memory(max_memory);
@@ -382,13 +380,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         writer.write_all(b"\n")?;
     }
 
-    let timeout_secs = justknobs::get_as::<u64>(
-        "scm/mononoke:shardmanager_shutdown_timeout_secs",
-        Some("scs_server"),
-    )
-    .unwrap();
-    let quiesce_timeout = std::time::Duration::from_secs(timeout_secs);
-
     if let Some(executor) = args.sharded_executor_args.build_executor(
         fb,
         runtime.clone(),
@@ -398,11 +389,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     )? {
         // The Sharded Process Executor needs to branch off and execute
         // on its own dedicated task spawned off the common tokio runtime.
-        runtime.spawn(executor.block_and_execute_with_quiesce_timeout(
-            sm_shutdown_receiver,
-            Some(quiesce_timeout),
-            Some(quiesce_sender),
-        ));
+        runtime.spawn(executor.block_and_execute(sm_shutdown_receiver));
     }
 
     // Monitoring is provided by the `Fb303Module`, but we must still start
@@ -416,18 +403,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         },
         args.shutdown_timeout_args.shutdown_grace_period,
         async {
-            // Note that async blocks are lazy, so this isn't called until first poll
-            match quiesce_receiver.await {
-                Ok(_) => info!("received signal from quiesce sender"),
-                Err(_) => warn!("quiesce sender dropped"),
-            };
             let _ = task::spawn_blocking(move || {
                 // Calling `stop` blocks until the service has completed all requests.
                 service_framework.stop();
             })
             .await;
         },
-        args.shutdown_timeout_args.shutdown_timeout + quiesce_timeout,
+        args.shutdown_timeout_args.shutdown_timeout,
         None,
     )?;
 
