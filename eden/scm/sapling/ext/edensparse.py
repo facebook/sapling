@@ -90,6 +90,7 @@ from .sparse import (
     _showsubcmdlogic,
     getcommonopts,
     normalizeprofile,
+    readsparseconfig,
     SparseMixin,
 )
 
@@ -161,6 +162,31 @@ def extsetup(ui) -> None:
 
 def _wraprepo(ui, repo) -> None:
     class EdenSparseRepo(repo.__class__, SparseMixin):
+        def writesparseconfig(self, include, exclude, profiles):
+            old_profiles = set()
+            if self.localvfs.exists("sparse"):
+                content = self.localvfs.readutf8("sparse")
+                rawconfig = readsparseconfig(self, content, filename="sparse")
+                old_profiles = set(rawconfig.profiles)
+
+            # write to .hg/sparse file as normal
+            SparseMixin.writesparseconfig(self, include, exclude, profiles)
+
+            # Sync filter config changes to .hg/hgrc
+            new_profiles = set(profiles)
+            added_profiles = new_profiles - old_profiles
+            removed_profiles = old_profiles - new_profiles
+
+            for profile in added_profiles:
+                _set_filter_config(self, profile, enabled=True)
+
+            for profile in removed_profiles:
+                _set_filter_config(self, profile, enabled=False)
+
+            # Reload config so Rust code picks up the new filter values
+            if added_profiles or removed_profiles:
+                self.ui.reloadconfigs(self.root)
+
         def _applysparsetoworkingcopy(
             self, force, origsparsematch, sparsematch, pending
         ):

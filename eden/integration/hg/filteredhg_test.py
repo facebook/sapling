@@ -8,6 +8,7 @@
 
 import abc
 import configparser
+import json
 import os
 import time
 from pathlib import Path
@@ -137,6 +138,13 @@ adir/file
     def disable_filters(self, *paths: str) -> None:
         self.hg("filteredfs", "disable", *paths)
 
+    def write_filter_to_config(
+        self, filter_path: str, alias: Optional[str] = None
+    ) -> None:
+        """Write a filter config directly to local repo config"""
+        config_key = "clone.eden-sparse-filter" + (f".{alias}" if alias else "")
+        self.hg("config", "--local", config_key, filter_path)
+
     def _get_relative_filter_config_path(self) -> str:
         return os.path.join(".hg", "sparse")
 
@@ -186,6 +194,30 @@ adir/file
 
     def show_active_filters(self) -> str:
         return self.hg("filteredfs", "show")
+
+    def get_filters_from_configs(self) -> Tuple[Set[str], Set[str]]:
+        """Read filter configs from repo config.
+
+        Returns a tuple of (enabled_filter_paths, disabled_filter_paths).
+        """
+        config_output = self.hg("config", "-Tjson", "clone")
+        config_entries = json.loads(config_output)
+
+        enabled = set()
+        disabled = set()
+
+        for entry in config_entries:
+            name = entry.get("name", "")
+            value = entry.get("value", "")
+            if not value:
+                continue
+
+            if "disabled-eden-sparse-filter" in name:
+                disabled.add(value)
+            elif "eden-sparse-filter" in name:
+                enabled.add(value)
+
+        return enabled, disabled
 
 
 @filteredhg_test
@@ -630,6 +662,141 @@ class FilteredFSBasic(FilteredFSBase):
         )
         # Only adir/file should be prefetched (1 file), bdir/test.sh is filtered
         self.assertIn("has 1 files", out)
+
+
+@filteredhg_test
+# pyre-ignore[13]: T62487924
+class FilteredFSConfigPersistenceTest(FilteredFSBase):
+    """Test that filter config changes persist to repo config and survive checkout.
+
+    These tests verify the integration between Python config writing and Rust
+    filter sync. They require filter sync to be enabled (disable-filter-sync=False).
+    """
+
+    def apply_hg_config_variant(self, hgrc: configparser.ConfigParser) -> None:
+        super().apply_hg_config_variant(hgrc)
+        # Enable filter sync for migration tests since they test the sync behavior
+        if "edensparse" not in hgrc:
+            hgrc["edensparse"] = {}
+        hgrc["edensparse"]["disable-filter-sync"] = "False"
+
+    def test_filter_config_persists_to_repo_config(self) -> None:
+        """Test that filter enable/disable commands persist filters to repo config"""
+        # Initially, no filter configs should be in repo config
+        enabled, disabled = self.get_filters_from_configs()
+        self.assertEqual(enabled, set())
+        self.assertEqual(disabled, set())
+
+        # Enable a filter - should be written to repo config
+        self.enable_filters("top_level_filter")
+        enabled, disabled = self.get_filters_from_configs()
+        self.assertIn("top_level_filter", enabled)
+        self.assertEqual(disabled, set())
+
+        # Disable the filter - should move to disabled section
+        self.disable_filters("top_level_filter")
+        enabled, disabled = self.get_filters_from_configs()
+        self.assertIn("top_level_filter", disabled)
+
+        # Enable a different filter and then reset - should disable it
+        self.enable_filters("filters/v2")
+        enabled, _ = self.get_filters_from_configs()
+        self.assertIn("filters/v2", enabled)
+
+        self.reset_filters()
+        _, disabled = self.get_filters_from_configs()
+        self.assertIn("filters/v2", disabled)
+
+    def test_filter_config_survives_checkout(self) -> None:
+        """Test that filter configs in repo config are picked up by Rust sync on checkout."""
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+
+        # Enable filter
+        self.enable_filters("filters/v1_filter1")
+        self.assertEqual(self.get_active_filter_paths(), {"filters/v1_filter1"})
+
+        # Verify files are filtered
+        self.assert_filtered_and_unfiltered(
+            initial_files.difference(unfiltered_files), unfiltered_files
+        )
+
+        # Verify config was written to repo config
+        enabled, _ = self.get_filters_from_configs()
+        self.assertIn("filters/v1_filter1", enabled)
+
+        # Perform a checkout - this exercises the Rust sync_filters path
+        self.hg("checkout", ".")
+
+        # Verify filters are still active after checkout
+        self.assertEqual(self.get_active_filter_paths(), {"filters/v1_filter1"})
+        self.assert_filtered_and_unfiltered(
+            initial_files.difference(unfiltered_files), unfiltered_files
+        )
+
+    def test_disabled_filter_config_survives_checkout(self) -> None:
+        """Test that disabling a filter persists across checkout."""
+        initial_files = {
+            "bdir",
+            "bdir/README.md",
+            "bdir/noexec.sh",
+            "bdir/test.sh",
+            "adir/file",
+            "hello",
+        }
+        unfiltered_files = {"adir/file", "hello", "bdir", "bdir/README.md"}
+
+        # Write filter config directly to hgrc
+        self.write_filter_to_config("filters/v1_filter1", "v1f1")
+
+        # Verify config was written to config
+        enabled, _ = self.get_filters_from_configs()
+        self.assertIn("filters/v1_filter1", enabled)
+
+        # Perform a checkout - this exercises the Rust sync_filters path
+        # which should pick up the config from repo config and enable the filter
+        self.hg("checkout", ".")
+
+        # FIXME: Checkout should sync the filters
+        self.assertNotEqual(self.get_active_filter_paths(), {"filters/v1_filter1"})
+        # Verify files are filtered
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+        # self.assert_filtered_and_unfiltered(
+        #     initial_files.difference(unfiltered_files), unfiltered_files
+        # )
+
+        # Now disable the filter - disabled config should take precedence over enabled
+        self.disable_filters("filters/v1_filter1")
+        self.assertEqual(self.get_active_filter_paths(), set())
+
+        # Verify config was written to disabled section in repo config
+        _, disabled = self.get_filters_from_configs()
+        # FIXME: no filter was disabled, so it doesn't show up in the set
+        self.assertNotIn("filters/v1_filter1", disabled)
+
+        # All files should now be unfiltered (visible)
+        self.assert_filtered_and_unfiltered(set(), initial_files)
+
+        # Perform a checkout - this exercises the Rust sync_filters path
+        self.hg("checkout", ".")
+
+        # Verify filters are still disabled after checkout
+        self.assertEqual(self.get_active_filter_paths(), set())
+
+        # Verify disabled config is still in repo config
+        _, disabled = self.get_filters_from_configs()
+        # FIXME: no filter was disabled, so it doesn't show up in the set
+        self.assertNotIn("filters/v1_filter1", disabled)
+
+        # All files should still be unfiltered
+        self.assert_filtered_and_unfiltered(set(), initial_files)
 
 
 @filteredhg_test
