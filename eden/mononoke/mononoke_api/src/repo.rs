@@ -913,6 +913,219 @@ impl<R: CommitGraphRef> RepoContext<R> {
     }
 }
 
+impl<R: CommitGraphRef + Clone> RepoContext<R> {
+    pub async fn many_changeset_parents(
+        &self,
+        changesets: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, MononokeError> {
+        let parents = self
+            .commit_graph()
+            .many_changeset_parents(&self.ctx, &changesets)
+            .await?
+            .into_iter()
+            .map(|(cs_id, parents)| (cs_id, parents.to_vec()))
+            .collect();
+        Ok(parents)
+    }
+
+    pub async fn difference_of_unions_of_ancestors<'a>(
+        &'a self,
+        includes: Vec<ChangesetId>,
+        excludes: Vec<ChangesetId>,
+    ) -> Result<impl Stream<Item = Result<ChangesetContext<R>, MononokeError>> + 'a, MononokeError>
+    {
+        let repo = self.clone();
+
+        Ok(self
+            .commit_graph()
+            .ancestors_difference_stream(&self.ctx, includes, excludes)
+            .await?
+            .map_ok(move |cs_id| ChangesetContext::new(repo.clone(), cs_id))
+            .map_err(|err| err.into()))
+    }
+
+    /// A SegmentedChangelog client repository has a compressed shape of the commit graph but
+    /// doesn't know the identifiers for all the commits in the graph. It only knows the
+    /// identifiers for select commits called "known" commits. These repositories can query
+    /// the server to get the identifiers of the commits they don't have using the location
+    /// of the desired commit relative to one of the "known" commits.
+    /// The current version has all parents of merge commits downloaded to clients so that
+    /// locations can be expressed using only the unique descendant distance to one of these
+    /// commits. The heads of the repo are also known.
+    /// Let's assume our graph is `0 - a - b - c`.
+    /// In this example our initial commit is `0`, then we have `a` the first commit, `b` second,
+    /// `c` third.
+    /// For `descendant = c` and `distance = 2` we want to return `a`.
+    pub async fn location_to_changeset_id(
+        &self,
+        location: Location<ChangesetId>,
+        count: u64,
+    ) -> Result<Vec<ChangesetId>, MononokeError> {
+        let ancestors = self
+            .commit_graph()
+            .locations_to_changeset_ids(self.ctx(), location.descendant, location.distance, count)
+            .await?;
+
+        Ok(ancestors)
+    }
+
+    /// A Segmented Changelog client needs to know how to translate between a commit hash,
+    /// for example one that is provided by the user, and the information that it has locally,
+    /// the shape of the graph, i.e. a location in the graph.
+    pub async fn many_changeset_ids_to_locations(
+        &self,
+        master_heads: Vec<ChangesetId>,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Result<Location<ChangesetId>, MononokeError>>, MononokeError>
+    {
+        self.commit_graph()
+            .changeset_ids_to_locations(self.ctx(), master_heads, cs_ids)
+            .await
+            .map(|ok| {
+                ok.into_iter()
+                    .map(|(k, v)| {
+                        (
+                            k,
+                            Ok(Location {
+                                descendant: v.cs_id,
+                                distance: v.distance,
+                            }),
+                        )
+                    })
+                    .collect::<HashMap<ChangesetId, Result<_, MononokeError>>>()
+            })
+            .map_err(MononokeError::from)
+    }
+}
+
+impl<R: BonsaiGitMappingRef> RepoContext<R> {
+    /// Similar to many_changeset_hg_ids, but returning Git-SHA1s.
+    pub async fn many_changeset_git_sha1s(
+        &self,
+        changesets: Vec<ChangesetId>,
+    ) -> Result<Vec<(ChangesetId, GitSha1)>, MononokeError> {
+        let mapping = self
+            .repo()
+            .bonsai_git_mapping()
+            .get(&self.ctx, changesets.into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.bcs_id, entry.git_sha1))
+            .collect();
+        Ok(mapping)
+    }
+
+    /// Get changeset ID from Git-SHA1 for multiple changesets
+    pub async fn many_changeset_ids_from_git_sha1(
+        &self,
+        changesets: Vec<GitSha1>,
+    ) -> Result<Vec<(GitSha1, ChangesetId)>, MononokeError> {
+        let mapping = self
+            .repo()
+            .bonsai_git_mapping()
+            .get(&self.ctx, changesets.into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.git_sha1, entry.bcs_id))
+            .collect();
+        Ok(mapping)
+    }
+}
+
+impl<R: BonsaiGlobalrevMappingRef> RepoContext<R> {
+    /// Similar to many_changeset_hg_ids, but returning Globalrevs.
+    pub async fn many_changeset_globalrev_ids(
+        &self,
+        changesets: Vec<ChangesetId>,
+    ) -> Result<Vec<(ChangesetId, Globalrev)>, MononokeError> {
+        let mapping = self
+            .repo()
+            .bonsai_globalrev_mapping()
+            .get(&self.ctx, changesets.into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.bcs_id, entry.globalrev))
+            .collect();
+        Ok(mapping)
+    }
+
+    /// Get changeset ID from Globalrev for multiple changesets
+    pub async fn many_changeset_ids_from_globalrev(
+        &self,
+        changesets: Vec<Globalrev>,
+    ) -> Result<Vec<(Globalrev, ChangesetId)>, MononokeError> {
+        let mapping = self
+            .repo()
+            .bonsai_globalrev_mapping()
+            .get(&self.ctx, changesets.into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.globalrev, entry.bcs_id))
+            .collect();
+        Ok(mapping)
+    }
+}
+
+impl<R: BonsaiSvnrevMappingRef> RepoContext<R> {
+    /// Similar to many_changeset_hg_ids, but returning Svnrevs.
+    pub async fn many_changeset_svnrev_ids(
+        &self,
+        changesets: Vec<ChangesetId>,
+    ) -> Result<Vec<(ChangesetId, Svnrev)>, MononokeError> {
+        let mapping = self
+            .repo()
+            .bonsai_svnrev_mapping()
+            .get(&self.ctx, changesets.into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.bcs_id, entry.svnrev))
+            .collect();
+        Ok(mapping)
+    }
+}
+
+impl<R: RepoConfigRef> RepoContext<R> {
+    /// Start a write to the repo.
+    pub fn start_write(&self) -> Result<(), MononokeError> {
+        if self.authz.is_service() {
+            if !self.config().source_control_service.permit_service_writes {
+                return Err(MononokeError::InvalidRequest(String::from(
+                    "Service writes are disabled in configuration for this repo",
+                )));
+            }
+        } else if !self.config().source_control_service.permit_writes {
+            return Err(MononokeError::InvalidRequest(String::from(
+                "Writes are disabled in configuration for this repo",
+            )));
+        }
+
+        self.ctx
+            .scuba()
+            .clone()
+            .log_with_msg("Write request start", None);
+
+        Ok(())
+    }
+
+    /// Reads a value out of the underlying config, indicating if we support writes without parents in this repo.
+    pub fn allow_no_parent_writes(&self) -> bool {
+        self.config()
+            .source_control_service
+            .permit_commits_without_parents
+    }
+}
+
+impl<R: Clone> RepoContext<R> {
+    /// Create changeset context from known existing changeset id.
+    pub fn changeset_from_existing_id(&self, cs_id: ChangesetId) -> ChangesetContext<R> {
+        ChangesetContext::new(self.clone(), cs_id)
+    }
+
+    fn target_repo(&self) -> Target<R> {
+        Target(self.repo().clone())
+    }
+}
+
 impl<R: MononokeRepo> RepoContext<R> {
     pub async fn new(
         ctx: CoreContext,
@@ -1120,27 +1333,6 @@ impl<R: MononokeRepo> RepoContext<R> {
         Ok(changeset)
     }
 
-    /// Create changeset context from known existing changeset id.
-    pub fn changeset_from_existing_id(&self, cs_id: ChangesetId) -> ChangesetContext<R> {
-        ChangesetContext::new(self.clone(), cs_id)
-    }
-
-    pub async fn difference_of_unions_of_ancestors<'a>(
-        &'a self,
-        includes: Vec<ChangesetId>,
-        excludes: Vec<ChangesetId>,
-    ) -> Result<impl Stream<Item = Result<ChangesetContext<R>, MononokeError>> + 'a, MononokeError>
-    {
-        let repo = self.clone();
-
-        Ok(self
-            .commit_graph()
-            .ancestors_difference_stream(&self.ctx, includes, excludes)
-            .await?
-            .map_ok(move |cs_id| ChangesetContext::new(repo.clone(), cs_id))
-            .map_err(|err| err.into()))
-    }
-
     /// Get Mercurial ID for multiple changesets
     ///
     /// This is a more efficient version of:
@@ -1178,100 +1370,6 @@ impl<R: MononokeRepo> RepoContext<R> {
             .get_hg_bonsai_mapping(self.ctx.clone(), changesets)
             .await?;
         Ok(mapping)
-    }
-
-    /// Similar to many_changeset_hg_ids, but returning Git-SHA1s.
-    pub async fn many_changeset_git_sha1s(
-        &self,
-        changesets: Vec<ChangesetId>,
-    ) -> Result<Vec<(ChangesetId, GitSha1)>, MononokeError> {
-        let mapping = self
-            .repo()
-            .bonsai_git_mapping()
-            .get(&self.ctx, changesets.into())
-            .await?
-            .into_iter()
-            .map(|entry| (entry.bcs_id, entry.git_sha1))
-            .collect();
-        Ok(mapping)
-    }
-
-    /// Get changeset ID from Git-SHA1 for multiple changesets
-    pub async fn many_changeset_ids_from_git_sha1(
-        &self,
-        changesets: Vec<GitSha1>,
-    ) -> Result<Vec<(GitSha1, ChangesetId)>, MononokeError> {
-        let mapping = self
-            .repo()
-            .bonsai_git_mapping()
-            .get(&self.ctx, changesets.into())
-            .await?
-            .into_iter()
-            .map(|entry| (entry.git_sha1, entry.bcs_id))
-            .collect();
-        Ok(mapping)
-    }
-
-    /// Similar to many_changeset_hg_ids, but returning Globalrevs.
-    pub async fn many_changeset_globalrev_ids(
-        &self,
-        changesets: Vec<ChangesetId>,
-    ) -> Result<Vec<(ChangesetId, Globalrev)>, MononokeError> {
-        let mapping = self
-            .repo()
-            .bonsai_globalrev_mapping()
-            .get(&self.ctx, changesets.into())
-            .await?
-            .into_iter()
-            .map(|entry| (entry.bcs_id, entry.globalrev))
-            .collect();
-        Ok(mapping)
-    }
-
-    /// Get changeset ID from Globalrev for multiple changesets
-    pub async fn many_changeset_ids_from_globalrev(
-        &self,
-        changesets: Vec<Globalrev>,
-    ) -> Result<Vec<(Globalrev, ChangesetId)>, MononokeError> {
-        let mapping = self
-            .repo()
-            .bonsai_globalrev_mapping()
-            .get(&self.ctx, changesets.into())
-            .await?
-            .into_iter()
-            .map(|entry| (entry.globalrev, entry.bcs_id))
-            .collect();
-        Ok(mapping)
-    }
-
-    /// Similar to many_changeset_hg_ids, but returning Svnrevs.
-    pub async fn many_changeset_svnrev_ids(
-        &self,
-        changesets: Vec<ChangesetId>,
-    ) -> Result<Vec<(ChangesetId, Svnrev)>, MononokeError> {
-        let mapping = self
-            .repo()
-            .bonsai_svnrev_mapping()
-            .get(&self.ctx, changesets.into())
-            .await?
-            .into_iter()
-            .map(|entry| (entry.bcs_id, entry.svnrev))
-            .collect();
-        Ok(mapping)
-    }
-
-    pub async fn many_changeset_parents(
-        &self,
-        changesets: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, MononokeError> {
-        let parents = self
-            .commit_graph()
-            .many_changeset_parents(&self.ctx, &changesets)
-            .await?
-            .into_iter()
-            .map(|(cs_id, parents)| (cs_id, parents.to_vec()))
-            .collect();
-        Ok(parents)
     }
 
     /// Return comprehensive bookmark info including last update time
@@ -1578,10 +1676,6 @@ impl<R: MononokeRepo> RepoContext<R> {
             .await
     }
 
-    fn target_repo(&self) -> Target<R> {
-        Target(self.repo().clone())
-    }
-
     async fn build_candidate_selection_hint(
         &self,
         maybe_args: Option<CandidateSelectionHintArgs>,
@@ -1741,65 +1835,6 @@ impl<R: MononokeRepo> RepoContext<R> {
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }
 
-    /// Start a write to the repo.
-    pub fn start_write(&self) -> Result<(), MononokeError> {
-        if self.authz.is_service() {
-            if !self.config().source_control_service.permit_service_writes {
-                return Err(MononokeError::InvalidRequest(String::from(
-                    "Service writes are disabled in configuration for this repo",
-                )));
-            }
-        } else if !self.config().source_control_service.permit_writes {
-            return Err(MononokeError::InvalidRequest(String::from(
-                "Writes are disabled in configuration for this repo",
-            )));
-        }
-
-        self.ctx
-            .scuba()
-            .clone()
-            .log_with_msg("Write request start", None);
-
-        Ok(())
-    }
-
-    /// Reads a value out of the underlying config, indicating if we support writes without parents in this repo.
-    pub fn allow_no_parent_writes(&self) -> bool {
-        self.config()
-            .source_control_service
-            .permit_commits_without_parents
-    }
-
-    /// A SegmentedChangelog client repository has a compressed shape of the commit graph but
-    /// doesn't know the identifiers for all the commits in the graph. It only knows the
-    /// identifiers for select commits called "known" commits. These repositories can query
-    /// the server to get the identifiers of the commits they don't have using the location
-    /// of the desired commit relative to one of the "known" commits.
-    /// The current version has all parents of merge commits downloaded to clients so that
-    /// locations can be expressed using only the unique descendant distance to one of these
-    /// commits. The heads of the repo are also known.
-    /// Let's assume our graph is `0 - a - b - c`.
-    /// In this example our initial commit is `0`, then we have `a` the first commit, `b` second,
-    /// `c` third.
-    /// For `descendant = c` and `distance = 2` we want to return `a`.
-    pub async fn location_to_changeset_id(
-        &self,
-        location: Location<ChangesetId>,
-        count: u64,
-    ) -> Result<Vec<ChangesetId>, MononokeError> {
-        let ancestors = self
-            .commit_graph()
-            .locations_to_changeset_ids(self.ctx(), location.descendant, location.distance, count)
-            .await?;
-
-        Ok(ancestors)
-    }
-
-    // TODO(mbthomas): get_git_from_bonsai -> derive_git_changeset
-    pub async fn get_git_from_bonsai(&self, cs_id: ChangesetId) -> Result<GitSha1, MononokeError> {
-        Ok(derive_git_changeset(self.ctx(), self.repo().repo_derived_data(), cs_id).await?)
-    }
-
     /// This provides the same functionality as
     /// `mononoke_api::RepoContext::location_to_changeset_id`. It just wraps the request and
     /// response using Git specific types.
@@ -1828,34 +1863,6 @@ impl<R: MononokeRepo> RepoContext<R> {
         });
         future::try_join_all(git_id_futures)
             .await
-            .map_err(MononokeError::from)
-    }
-
-    /// A Segmented Changelog client needs to know how to translate between a commit hash,
-    /// for example one that is provided by the user, and the information that it has locally,
-    /// the shape of the graph, i.e. a location in the graph.
-    pub async fn many_changeset_ids_to_locations(
-        &self,
-        master_heads: Vec<ChangesetId>,
-        cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Result<Location<ChangesetId>, MononokeError>>, MononokeError>
-    {
-        self.commit_graph()
-            .changeset_ids_to_locations(self.ctx(), master_heads, cs_ids)
-            .await
-            .map(|ok| {
-                ok.into_iter()
-                    .map(|(k, v)| {
-                        (
-                            k,
-                            Ok(Location {
-                                descendant: v.cs_id,
-                                distance: v.distance,
-                            }),
-                        )
-                    })
-                    .collect::<HashMap<ChangesetId, Result<_, MononokeError>>>()
-            })
             .map_err(MononokeError::from)
     }
 
@@ -1941,6 +1948,13 @@ impl<R: MononokeRepo> RepoContext<R> {
             .collect::<HashMap<GitSha1, Result<Location<GitSha1>, MononokeError>>>();
 
         Ok(response)
+    }
+}
+
+impl<R: RepoDerivedDataRef> RepoContext<R> {
+    // TODO(mbthomas): get_git_from_bonsai -> derive_git_changeset
+    pub async fn get_git_from_bonsai(&self, cs_id: ChangesetId) -> Result<GitSha1, MononokeError> {
+        Ok(derive_git_changeset(self.ctx(), self.repo().repo_derived_data(), cs_id).await?)
     }
 
     pub async fn derive_bulk_locally(

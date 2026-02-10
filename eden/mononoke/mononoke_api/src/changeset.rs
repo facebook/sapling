@@ -67,6 +67,7 @@ use mononoke_types::SubtreeChange;
 use mononoke_types::Svnrev;
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
+use mutable_renames::MutableRenamesArc;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataArc;
@@ -266,7 +267,7 @@ impl<R> ChangesetContext<R> {
     }
 }
 
-impl<R: MononokeRepo> ChangesetContext<R> {
+impl<R: MutableRenamesArc> ChangesetContext<R> {
     /// Adds copy information from mutable renames as an override to replace
     /// the Bonsai copy information
     pub async fn add_mutable_renames(
@@ -296,22 +297,9 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         self.mutable_history = Some(copy_info);
         Ok(())
     }
+}
 
-    /// The Mercurial ID for the changeset.
-    pub async fn hg_id(&self) -> Result<Option<HgChangesetId>, MononokeError> {
-        let maybe_hg_id = self
-            .repo_ctx()
-            .repo()
-            .bonsai_hg_mapping()
-            .get_hg_from_bonsai(self.ctx(), self.id)
-            .await?;
-        if maybe_hg_id.is_none() && self.repo_ctx().derive_hgchangesets_enabled() {
-            let mapped_hg_id = self.derive::<MappedHgChangesetId>().await?;
-            return Ok(Some(mapped_hg_id.hg_changeset_id()));
-        }
-        Ok(maybe_hg_id)
-    }
-
+impl<R: BonsaiGlobalrevMappingRef> ChangesetContext<R> {
     /// The Globalrev for the changeset.
     pub async fn globalrev(&self) -> Result<Option<Globalrev>, MononokeError> {
         let mapping = self
@@ -322,7 +310,9 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .await?;
         Ok(mapping.into_iter().next())
     }
+}
 
+impl<R: BonsaiSvnrevMappingRef> ChangesetContext<R> {
     /// The SVN revision number for the changeset.
     pub async fn svnrev(&self) -> Result<Option<Svnrev>, MononokeError> {
         let mapping = self
@@ -333,22 +323,9 @@ impl<R: MononokeRepo> ChangesetContext<R> {
             .await?;
         Ok(mapping)
     }
+}
 
-    /// The git Sha1 for the changeset (if available).
-    pub async fn git_sha1(&self) -> Result<Option<GitSha1>, MononokeError> {
-        let maybe_git_sha1 = self
-            .repo_ctx()
-            .repo()
-            .bonsai_git_mapping()
-            .get_git_sha1_from_bonsai(self.ctx(), self.id)
-            .await?;
-        if maybe_git_sha1.is_none() && self.repo_ctx().derive_gitcommit_enabled() {
-            let mapped_git_commit_id = self.derive::<MappedGitCommitId>().await?;
-            return Ok(Some(*mapped_git_commit_id.oid()));
-        }
-        Ok(maybe_git_sha1)
-    }
-
+impl<R: RepoDerivedDataArc> ChangesetContext<R> {
     /// Derive a derivable data type for this changeset.
     // Desugared async syntax so we can return a future with static lifetime.
     fn derive<Derivable: BonsaiDerivable>(
@@ -410,6 +387,121 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         self.root_deleted_manifest_v2_id
             .get_or_init(|| self.derive::<RootDeletedManifestV2Id>())
             .await
+    }
+}
+
+impl<R: RepoBlobstoreArc> ChangesetContext<R> {
+    /// Get the `BonsaiChangeset` information for this changeset.
+    pub async fn bonsai_changeset(&self) -> Result<BonsaiChangeset, MononokeError> {
+        self.bonsai_changeset
+            .get_or_init(|| {
+                let ctx = self.ctx().clone();
+                let blobstore = self.repo_ctx.repo().repo_blobstore_arc();
+                let id = self.id;
+                async move { id.load(&ctx, &blobstore).await.map_err(MononokeError::from) }
+            })
+            .await
+    }
+}
+
+impl<R: CommitGraphRef + Clone> ChangesetContext<R> {
+    /// The generation number of the given changeset
+    pub async fn generation(&self) -> Result<Generation, MononokeError> {
+        self.repo_ctx
+            .commit_graph()
+            .changeset_generation(self.ctx(), self.id)
+            .await
+            .map_err(|_| {
+                MononokeError::NotAvailable(format!("Generation number missing for {:?}", &self.id))
+            })
+    }
+
+    /// The linear depth of the given changeset
+    pub async fn linear_depth(&self) -> Result<u64, MononokeError> {
+        self.repo_ctx
+            .commit_graph()
+            .changeset_linear_depth(self.ctx(), self.id)
+            .await
+            .map_err(|_| {
+                MononokeError::NotAvailable(format!("Linear depth missing for {:?}", &self.id))
+            })
+    }
+
+    /// Returns `true` if this commit is an ancestor of `other_commit`.  A commit is considered its
+    /// own ancestor for the purpose of this call.
+    pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
+        Ok(self
+            .repo_ctx()
+            .repo()
+            .commit_graph()
+            .is_ancestor(self.ctx(), self.id, other_commit)
+            .await?)
+    }
+
+    /// Returns the lowest common ancestor of two commits.
+    ///
+    /// In case of ambiguity (can happen with multiple merges of the same branches) returns the
+    /// common ancestor with lowest id out of those with highest generation number.
+    pub async fn common_base_with(
+        &self,
+        other_commit: ChangesetId,
+    ) -> Result<Option<ChangesetContext<R>>, MononokeError> {
+        let lca = self
+            .repo_ctx()
+            .repo()
+            .commit_graph()
+            .common_base(self.ctx(), self.id, other_commit)
+            .watched()
+            .await?;
+        Ok(lca.first().map(|id| Self::new(self.repo_ctx.clone(), *id)))
+    }
+
+    /// Returns the lowest common ancestor of two commits in the p1 linear graph, ignoring merge parents.
+    pub async fn linear_common_base_with(
+        &self,
+        other_commit: ChangesetId,
+    ) -> Result<Option<ChangesetContext<R>>, MononokeError> {
+        let lca = self
+            .repo_ctx()
+            .repo()
+            .commit_graph()
+            .p1_linear_graph()
+            .skip_tree_lowest_common_ancestor(self.ctx(), self.id, other_commit)
+            .watched()
+            .await?;
+        Ok(lca.map(|node| Self::new(self.repo_ctx.clone(), node.cs_id)))
+    }
+}
+
+impl<R: MononokeRepo> ChangesetContext<R> {
+    /// The Mercurial ID for the changeset.
+    pub async fn hg_id(&self) -> Result<Option<HgChangesetId>, MononokeError> {
+        let maybe_hg_id = self
+            .repo_ctx()
+            .repo()
+            .bonsai_hg_mapping()
+            .get_hg_from_bonsai(self.ctx(), self.id)
+            .await?;
+        if maybe_hg_id.is_none() && self.repo_ctx().derive_hgchangesets_enabled() {
+            let mapped_hg_id = self.derive::<MappedHgChangesetId>().await?;
+            return Ok(Some(mapped_hg_id.hg_changeset_id()));
+        }
+        Ok(maybe_hg_id)
+    }
+
+    /// The git Sha1 for the changeset (if available).
+    pub async fn git_sha1(&self) -> Result<Option<GitSha1>, MononokeError> {
+        let maybe_git_sha1 = self
+            .repo_ctx()
+            .repo()
+            .bonsai_git_mapping()
+            .get_git_sha1_from_bonsai(self.ctx(), self.id)
+            .await?;
+        if maybe_git_sha1.is_none() && self.repo_ctx().derive_gitcommit_enabled() {
+            let mapped_git_commit_id = self.derive::<MappedGitCommitId>().await?;
+            return Ok(Some(*mapped_git_commit_id.oid()));
+        }
+        Ok(maybe_git_sha1)
     }
 
     /// Query the root directory in the repository at this changeset revision.
@@ -647,18 +739,6 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         Ok(self.deleted_paths_impl(self.root_deleted_manifest_v2_id().await?, paths))
     }
 
-    /// Get the `BonsaiChangeset` information for this changeset.
-    pub async fn bonsai_changeset(&self) -> Result<BonsaiChangeset, MononokeError> {
-        self.bonsai_changeset
-            .get_or_init(|| {
-                let ctx = self.ctx().clone();
-                let blobstore = self.repo_ctx.repo().repo_blobstore_arc();
-                let id = self.id;
-                async move { id.load(&ctx, &blobstore).await.map_err(MononokeError::from) }
-            })
-            .await
-    }
-
     /// Get the `ChangesetInfo` for this changeset.
     pub async fn changeset_info(&self) -> Result<ChangesetInfo, MononokeError> {
         if self.repo_ctx.derive_changeset_info_enabled() {
@@ -716,28 +796,6 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         Ok(self.changeset_info().await?.message().to_string())
     }
 
-    /// The generation number of the given changeset
-    pub async fn generation(&self) -> Result<Generation, MononokeError> {
-        self.repo_ctx
-            .commit_graph()
-            .changeset_generation(self.ctx(), self.id)
-            .await
-            .map_err(|_| {
-                MononokeError::NotAvailable(format!("Generation number missing for {:?}", &self.id))
-            })
-    }
-
-    /// The linear depth of the given changeset
-    pub async fn linear_depth(&self) -> Result<u64, MononokeError> {
-        self.repo_ctx
-            .commit_graph()
-            .changeset_linear_depth(self.ctx(), self.id)
-            .await
-            .map_err(|_| {
-                MononokeError::NotAvailable(format!("Linear depth missing for {:?}", &self.id))
-            })
-    }
-
     /// All mercurial commit extras as (name, value) pairs.
     pub async fn hg_extras(&self) -> Result<Vec<(String, Vec<u8>)>, MononokeError> {
         Ok(self
@@ -781,51 +839,6 @@ impl<R: MononokeRepo> ChangesetContext<R> {
         let bonsai = self.bonsai_changeset().await?;
         let bonsai = bonsai.into_mut();
         Ok(bonsai.subtree_changes)
-    }
-
-    /// Returns `true` if this commit is an ancestor of `other_commit`.  A commit is considered its
-    /// own ancestor for the purpose of this call.
-    pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
-        Ok(self
-            .repo_ctx()
-            .repo()
-            .commit_graph()
-            .is_ancestor(self.ctx(), self.id, other_commit)
-            .await?)
-    }
-
-    /// Returns the lowest common ancestor of two commits.
-    ///
-    /// In case of ambiguity (can happen with multiple merges of the same branches) returns the
-    /// common ancestor with lowest id out of those with highest generation number.
-    pub async fn common_base_with(
-        &self,
-        other_commit: ChangesetId,
-    ) -> Result<Option<ChangesetContext<R>>, MononokeError> {
-        let lca = self
-            .repo_ctx()
-            .repo()
-            .commit_graph()
-            .common_base(self.ctx(), self.id, other_commit)
-            .watched()
-            .await?;
-        Ok(lca.first().map(|id| Self::new(self.repo_ctx.clone(), *id)))
-    }
-
-    /// Returns the lowest common ancestor of two commits in the p1 linear graph, ignoring merge parents.
-    pub async fn linear_common_base_with(
-        &self,
-        other_commit: ChangesetId,
-    ) -> Result<Option<ChangesetContext<R>>, MononokeError> {
-        let lca = self
-            .repo_ctx()
-            .repo()
-            .commit_graph()
-            .p1_linear_graph()
-            .skip_tree_lowest_common_ancestor(self.ctx(), self.id, other_commit)
-            .watched()
-            .await?;
-        Ok(lca.map(|node| Self::new(self.repo_ctx.clone(), node.cs_id)))
     }
 
     pub async fn diff_unordered(
