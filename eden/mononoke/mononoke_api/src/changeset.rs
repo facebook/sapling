@@ -248,6 +248,22 @@ impl<R> ChangesetContext<R> {
         let Self { repo_ctx, id, .. } = self;
         (repo_ctx, id)
     }
+
+    /// The IDs of mutable parents of the changeset, if any.
+    ///
+    /// The value can be `None` to indicate that we were given a path
+    /// to check, but it had no mutable parents of its own.
+    ///
+    /// Only returns a non-empty set if add_mutable_renames has been called
+    pub fn mutable_parents(&self) -> HashSet<Option<ChangesetId>> {
+        self.mutable_history
+            .as_ref()
+            .map_or(HashSet::new(), |info| {
+                info.values()
+                    .map(PathMutableHistory::get_parent_cs_id)
+                    .collect()
+            })
+    }
 }
 
 impl<R: MononokeRepo> ChangesetContext<R> {
@@ -658,22 +674,6 @@ impl<R: MononokeRepo> ChangesetContext<R> {
     /// The IDs of the parents of the changeset.
     pub async fn parents(&self) -> Result<Vec<ChangesetId>, MononokeError> {
         Ok(self.changeset_info().await?.parents().collect())
-    }
-
-    /// The IDs of mutable parents of the changeset, if any.
-    ///
-    /// The value can be `None` to indicate that we were given a path
-    /// to check, but it had no mutable parents of its own.
-    ///
-    /// Only returns a non-empty set if add_mutable_renames has been called
-    pub fn mutable_parents(&self) -> HashSet<Option<ChangesetId>> {
-        self.mutable_history
-            .as_ref()
-            .map_or(HashSet::new(), |info| {
-                info.values()
-                    .map(PathMutableHistory::get_parent_cs_id)
-                    .collect()
-            })
     }
 
     /// The author of the changeset.

@@ -110,7 +110,7 @@ pub struct Mononoke<R> {
     pub repo_names_in_tier: HashMap<String, CommitIdentityScheme>,
 }
 
-impl<R: MononokeRepo> Mononoke<R> {
+impl<R> Mononoke<R> {
     /// Create a MononokeAPI instance for MononokeRepos
     ///
     /// Takes extra argument containing list of all available repos
@@ -125,6 +125,48 @@ impl<R: MononokeRepo> Mononoke<R> {
         })
     }
 
+    /// Return the raw underlying repo corresponding to the provided
+    /// repo name.
+    pub fn raw_repo(&self, name: impl AsRef<str>) -> Option<Arc<R>> {
+        self.repos.get_by_name(name.as_ref())
+    }
+
+    /// Return the raw underlying repo corresponding to the provided
+    /// repo id.
+    pub fn raw_repo_by_id(&self, id: i32) -> Option<Arc<R>> {
+        self.repos.get_by_id(id)
+    }
+
+    /// Get all known repository ids
+    pub fn known_repo_ids(&self) -> Vec<RepositoryId> {
+        self.repos.iter_ids().map(RepositoryId::new).collect()
+    }
+
+    /// Returns an `Iterator` over all repo names.
+    pub fn repo_names(&self) -> impl Iterator<Item = String> + use<R> {
+        self.repos.iter_names()
+    }
+
+    pub fn repos(&self) -> impl Iterator<Item = Arc<R>> + use<R> {
+        self.repos.iter()
+    }
+}
+
+impl<R: RepoIdentityRef> Mononoke<R> {
+    pub fn repo_name_from_id(&self, repo_id: RepositoryId) -> Option<String> {
+        self.repos
+            .get_by_id(repo_id.id())
+            .map(|repo| repo.repo_identity().name().to_string())
+    }
+
+    pub fn repo_id_from_name(&self, name: impl AsRef<str>) -> Option<RepositoryId> {
+        self.repos
+            .get_by_name(name.as_ref())
+            .map(|repo| repo.repo_identity().id())
+    }
+}
+
+impl<R: MononokeRepo> Mononoke<R> {
     /// Start a request on a repository by name.
     // Method is async and fallible as in the future this may involve
     // instantiating the repo lazily.
@@ -155,44 +197,6 @@ impl<R: MononokeRepo> Mononoke<R> {
                 RepoContextBuilder::new(ctx, repo, self.repos.clone()).await?,
             )),
         }
-    }
-
-    /// Return the raw underlying repo corresponding to the provided
-    /// repo name.
-    pub fn raw_repo(&self, name: impl AsRef<str>) -> Option<Arc<R>> {
-        self.repos.get_by_name(name.as_ref())
-    }
-
-    /// Return the raw underlying repo corresponding to the provided
-    /// repo id.
-    pub fn raw_repo_by_id(&self, id: i32) -> Option<Arc<R>> {
-        self.repos.get_by_id(id)
-    }
-
-    /// Get all known repository ids
-    pub fn known_repo_ids(&self) -> Vec<RepositoryId> {
-        self.repos.iter_ids().map(RepositoryId::new).collect()
-    }
-
-    /// Returns an `Iterator` over all repo names.
-    pub fn repo_names(&self) -> impl Iterator<Item = String> + use<R> {
-        self.repos.iter_names()
-    }
-
-    pub fn repos(&self) -> impl Iterator<Item = Arc<R>> + use<R> {
-        self.repos.iter()
-    }
-
-    pub fn repo_name_from_id(&self, repo_id: RepositoryId) -> Option<String> {
-        self.repos
-            .get_by_id(repo_id.id())
-            .map(|repo| repo.repo_identity().name().to_string())
-    }
-
-    pub fn repo_id_from_name(&self, name: impl AsRef<str>) -> Option<RepositoryId> {
-        self.repos
-            .get_by_name(name.as_ref())
-            .map(|repo| repo.repo_identity().id())
     }
 
     /// Report configured monitoring stats

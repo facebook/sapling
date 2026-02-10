@@ -431,6 +431,13 @@ async fn maybe_push_redirector<'a, R: MononokeRepo>(
     }
 }
 
+impl<R> RepoContextBuilder<R> {
+    pub fn with_authorization_context(mut self, authz: AuthorizationContext) -> Self {
+        self.authz = Some(authz);
+        self
+    }
+}
+
 impl<R: MononokeRepo> RepoContextBuilder<R> {
     pub async fn new(
         ctx: CoreContext,
@@ -458,11 +465,6 @@ impl<R: MononokeRepo> RepoContextBuilder<R> {
     {
         self.bubble_id = bubble_fetcher(self.repo.repo_ephemeral_store().clone()).await?;
         Ok(self)
-    }
-
-    pub fn with_authorization_context(mut self, authz: AuthorizationContext) -> Self {
-        self.authz = Some(authz);
-        self
     }
 
     pub async fn build(self) -> Result<RepoContext<R>, MononokeError> {
@@ -788,6 +790,13 @@ impl<R> RepoContext<R> {
     pub fn repo_arc(&self) -> Arc<R> {
         self.repo.clone()
     }
+
+    pub fn push_redirector(&self) -> Option<&PushRedirector<R>> {
+        match &self.push_redirector {
+            Some(prd) => Some(prd.as_ref()),
+            None => None,
+        }
+    }
 }
 
 impl<R: RepoIdentityRef> RepoContext<R> {
@@ -799,6 +808,108 @@ impl<R: RepoIdentityRef> RepoContext<R> {
     /// The internal id of the repo. Used for comparing the repo objects with each other.
     pub fn repoid(&self) -> RepositoryId {
         self.repo.repo_identity().id()
+    }
+}
+
+impl<R: RepoCrossRepoRef> RepoContext<R> {
+    /// `LiveCommitSyncConfig` instance to query current state of sync configs.
+    pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
+        self.repo
+            .repo_cross_repo()
+            .live_commit_sync_config()
+            .clone()
+    }
+
+    /// The commit sync mapping for the referenced repository
+    pub fn synced_commit_mapping(&self) -> &ArcSyncedCommitMapping {
+        self.repo.repo_cross_repo().synced_commit_mapping()
+    }
+}
+
+impl<R: RepoEphemeralStoreArc> RepoContext<R> {
+    /// The ephemeral store for the referenced repository
+    pub fn repo_ephemeral_store_arc(&self) -> ArcRepoEphemeralStore {
+        self.repo.repo_ephemeral_store_arc()
+    }
+}
+
+impl<R: BookmarksCacheRef> RepoContext<R> {
+    /// The warm bookmarks cache for the referenced repository.
+    pub fn warm_bookmarks_cache(&self) -> &(dyn BookmarksCache + Send + Sync) {
+        self.repo.bookmarks_cache()
+    }
+}
+
+impl<R: RepoBlobstoreArc> RepoContext<R> {
+    /// The repo blobstore for the referenced repository.
+    pub fn repo_blobstore(&self) -> ArcRepoBlobstore {
+        self.repo.repo_blobstore_arc()
+    }
+}
+
+impl<R: HookManagerArc> RepoContext<R> {
+    /// The hook manager for the referenced repository.
+    pub fn hook_manager(&self) -> Arc<HookManager> {
+        self.repo.hook_manager_arc()
+    }
+}
+
+impl<R: RepoHandlerBaseRef> RepoContext<R> {
+    /// The base for push redirection logic for this repo
+    pub fn maybe_push_redirector_base(&self) -> Option<&PushRedirectorBase> {
+        self.repo
+            .repo_handler_base()
+            .maybe_push_redirector_base
+            .as_ref()
+            .map(AsRef::as_ref)
+    }
+}
+
+impl<R: RepoConfigRef> RepoContext<R> {
+    /// The configuration for the referenced repository.
+    pub fn config(&self) -> &RepoConfig {
+        self.repo.repo_config()
+    }
+}
+
+impl<R: MutableRenamesArc> RepoContext<R> {
+    pub fn mutable_renames(&self) -> ArcMutableRenames {
+        self.repo.mutable_renames_arc()
+    }
+}
+
+impl<R: RepoSparseProfilesArc> RepoContext<R> {
+    pub fn sparse_profiles(&self) -> ArcRepoSparseProfiles {
+        self.repo.repo_sparse_profiles_arc()
+    }
+}
+
+impl<R: RepoDerivedDataRef> RepoContext<R> {
+    pub fn derive_changeset_info_enabled(&self) -> bool {
+        self.repo()
+            .repo_derived_data()
+            .config()
+            .is_enabled(ChangesetInfo::VARIANT)
+    }
+
+    pub fn derive_gitcommit_enabled(&self) -> bool {
+        self.repo()
+            .repo_derived_data()
+            .config()
+            .is_enabled(MappedGitCommitId::VARIANT)
+    }
+
+    pub fn derive_hgchangesets_enabled(&self) -> bool {
+        self.repo()
+            .repo_derived_data()
+            .config()
+            .is_enabled(MappedHgChangesetId::VARIANT)
+    }
+}
+
+impl<R: CommitGraphRef> RepoContext<R> {
+    pub fn commit_graph(&self) -> &CommitGraph {
+        self.repo.commit_graph()
     }
 }
 
@@ -842,89 +953,6 @@ impl<R: MononokeRepo> RepoContext<R> {
     pub async fn new_test(ctx: CoreContext, repo: Arc<R>) -> Result<Self, MononokeError> {
         let authz = Arc::new(AuthorizationContext::new_bypass_access_control());
         RepoContext::new(ctx, authz, repo, None, None, Arc::new(MononokeRepos::new())).await
-    }
-
-    /// `LiveCommitSyncConfig` instance to query current state of sync configs.
-    pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
-        self.repo
-            .repo_cross_repo()
-            .live_commit_sync_config()
-            .clone()
-    }
-
-    /// The ephemeral store for the referenced repository
-    pub fn repo_ephemeral_store_arc(&self) -> ArcRepoEphemeralStore {
-        self.repo.repo_ephemeral_store_arc()
-    }
-
-    /// The commit sync mapping for the referenced repository
-    pub fn synced_commit_mapping(&self) -> &ArcSyncedCommitMapping {
-        self.repo.repo_cross_repo().synced_commit_mapping()
-    }
-
-    /// The warm bookmarks cache for the referenced repository.
-    pub fn warm_bookmarks_cache(&self) -> &(dyn BookmarksCache + Send + Sync) {
-        self.repo.bookmarks_cache()
-    }
-
-    /// The repo blobstore for the referenced repository.
-    pub fn repo_blobstore(&self) -> ArcRepoBlobstore {
-        self.repo.repo_blobstore_arc()
-    }
-
-    /// The hook manager for the referenced repository.
-    pub fn hook_manager(&self) -> Arc<HookManager> {
-        self.repo.hook_manager_arc()
-    }
-
-    /// The base for push redirection logic for this repo
-    pub fn maybe_push_redirector_base(&self) -> Option<&PushRedirectorBase> {
-        self.repo
-            .repo_handler_base()
-            .maybe_push_redirector_base
-            .as_ref()
-            .map(AsRef::as_ref)
-    }
-
-    pub fn push_redirector(&self) -> Option<&PushRedirector<R>> {
-        match &self.push_redirector {
-            Some(prd) => Some(prd.as_ref()),
-            None => None,
-        }
-    }
-
-    /// The configuration for the referenced repository.
-    pub fn config(&self) -> &RepoConfig {
-        self.repo.repo_config()
-    }
-
-    pub fn mutable_renames(&self) -> ArcMutableRenames {
-        self.repo.mutable_renames_arc()
-    }
-
-    pub fn sparse_profiles(&self) -> ArcRepoSparseProfiles {
-        self.repo.repo_sparse_profiles_arc()
-    }
-
-    pub fn derive_changeset_info_enabled(&self) -> bool {
-        self.repo()
-            .repo_derived_data()
-            .config()
-            .is_enabled(ChangesetInfo::VARIANT)
-    }
-
-    pub fn derive_gitcommit_enabled(&self) -> bool {
-        self.repo()
-            .repo_derived_data()
-            .config()
-            .is_enabled(MappedGitCommitId::VARIANT)
-    }
-
-    pub fn derive_hgchangesets_enabled(&self) -> bool {
-        self.repo()
-            .repo_derived_data()
-            .config()
-            .is_enabled(MappedHgChangesetId::VARIANT)
     }
 
     /// Load bubble from id
@@ -971,10 +999,6 @@ impl<R: MononokeRepo> RepoContext<R> {
             .await?
             .exists(&self.ctx, changeset_id)
             .await?)
-    }
-
-    pub fn commit_graph(&self) -> &CommitGraph {
-        self.repo.commit_graph()
     }
 
     /// Look up a changeset specifier to find the canonical bonsai changeset
