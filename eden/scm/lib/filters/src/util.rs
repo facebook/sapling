@@ -15,6 +15,7 @@ use configmodel::Config;
 use configmodel::Text;
 use types::RepoPathBuf;
 use util::file::atomic_write;
+use util::fs_err;
 
 pub fn filter_paths_from_config(config: &dyn Config) -> Option<HashSet<Text>> {
     // Get unique set of filter paths
@@ -120,6 +121,22 @@ pub(crate) fn write_filter_config(
 
 pub(crate) fn filter_config_path(dot_dir: &Path) -> PathBuf {
     dot_dir.join("sparse")
+}
+
+pub(crate) fn backup_filter_config(dot_dir: &Path) -> anyhow::Result<()> {
+    let sparse_path = filter_config_path(dot_dir);
+    let backup_path = dot_dir.join("sparse.bak");
+    if sparse_path.exists() {
+        let contents = fs_err::read(&sparse_path)?;
+        atomic_write(&backup_path, |f| f.write_all(&contents)).with_context(|| {
+            format!(
+                "backing up filter config from {} to {}",
+                sparse_path.display(),
+                backup_path.display()
+            )
+        })?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
