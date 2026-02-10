@@ -12,6 +12,7 @@ use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::convert::Serde;
+use pyconfigloader::config as PyConfig;
 use types::HgId;
 use types::RepoPathBuf;
 use types::workingcopy_client::CheckoutConflict;
@@ -44,13 +45,14 @@ py_class!(pub class WorkingCopyClient |py| {
         Ok(PyNone)
     }
 
-    /// checkout(node, tree_node, mode: 'NORMAL' | 'FORCE' | 'DRY_RUN')
+    /// checkout(config, node, tree_node, mode: 'NORMAL' | 'FORCE' | 'DRY_RUN')
     ///   -> [{'path': str, 'conflict_type': 'ERROR' | 'MODIFIED_REMOVED' | ..., 'message': str}]
     /// All conflict types: "ERROR", "MODIFIED_REMOVED", "UNTRACKED_ADDED", "REMOVED_MODIFIED",
     /// "MISSING_REMOVED", "MODIFIED_MODIFIED", "DIRECTORY_NOT_EMPTY".
-    def checkout(&self, node: Serde<HgId>, tree_node: Serde<HgId>, mode: Serde<CheckoutMode>) -> PyResult<Serde<Vec<CheckoutConflict>>> {
+    def checkout(&self, config: PyConfig, node: Serde<HgId>, tree_node: Serde<HgId>, mode: Serde<CheckoutMode>) -> PyResult<Serde<Vec<CheckoutConflict>>> {
         let inner = self.inner(py);
-        let result = py.allow_threads(|| inner.checkout(node.0, tree_node.0, mode.0)).map_pyerr(py)?;
+        let config = &config.get_cfg(py);
+        let result = py.allow_threads(|| inner.checkout(config, node.0, tree_node.0, mode.0)).map_pyerr(py)?;
         Ok(Serde(result))
     }
 });

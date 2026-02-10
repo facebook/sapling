@@ -62,6 +62,7 @@ def update(
             if updatecheck == "noconflict":
                 with progress.spinner(repo.ui, _("conflict check")):
                     conflicts = repo.dirstate.eden_client.checkout(
+                        repo.ui._rcfg,
                         destctx.node(),
                         "DRY_RUN",
                         manifest=destctx.manifestnode(),
@@ -93,6 +94,7 @@ def update(
             # those conflict types.
             with progress.spinner(repo.ui, _("updating")):
                 conflicts = repo.dirstate.eden_client.checkout(
+                    repo.ui._rcfg,
                     destctx.node(),
                     "FORCE",
                     manifest=destctx.manifestnode(),
@@ -110,6 +112,7 @@ def update(
         else:
             with progress.spinner(repo.ui, _("updating")):
                 conflicts = repo.dirstate.eden_client.checkout(
+                    repo.ui._rcfg,
                     destctx.node(),
                     "NORMAL",
                     manifest=destctx.manifestnode(),

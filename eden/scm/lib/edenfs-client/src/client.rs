@@ -266,9 +266,10 @@ impl EdenFsClient {
     /// The client might want to write pending draft changes to disk
     /// so edenfs can find the new files during checkout.
     /// Normalize to non-Thrift types.
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self, config))]
     pub fn checkout(
         &self,
+        config: &dyn Config,
         node: HgId,
         tree: HgId,
         mode: CheckoutMode,

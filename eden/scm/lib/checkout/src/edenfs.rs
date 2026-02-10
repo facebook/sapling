@@ -406,7 +406,7 @@ fn get_conflicts_with_progress(
                 Ok(())
             })?;
         }
-        client.checkout(node, tree_node, mode)
+        client.checkout(&ctx.config, node, tree_node, mode)
     })
 }
 

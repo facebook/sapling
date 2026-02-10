@@ -39,11 +39,11 @@ class EdenThriftClient:
         return self._client.get_status(parent, list_ignored)
 
     @util.timefunction("edenclientcheckout", 0, "_ui")
-    def checkout(self, node, checkout_mode, need_flush=True, manifest=None):
+    def checkout(self, config, node, checkout_mode, need_flush=True, manifest=None):
         if need_flush:
             self._repo.flushpendingtransaction()
 
         if manifest is None:
             manifest = self._repo[node].manifestnode()
 
-        return self._client.checkout(node, manifest, checkout_mode)
+        return self._client.checkout(config, node, manifest, checkout_mode)

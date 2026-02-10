@@ -19,5 +19,6 @@ rust_python_library(
         "//eden/scm/lib/edenfs-client:edenfs-client",
         "//eden/scm/lib/types:types",
         "//eden/scm/lib/workingcopy:workingcopy",
+        "//eden/scm/saplingnative/bindings/modules/pyconfigloader:pyconfigloader",
     ],
 )
