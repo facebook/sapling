@@ -146,6 +146,19 @@ impl MononokeScubaSampleBuilder {
             consistent_hashing: Option<&'a str>,
         }
 
+        let path_acls_switches = vec![
+            "hg_manifest_write",
+            "hg_tree_context_new_check_exists",
+            "hg_tree_context_new_check_exists",
+            "changeset_path_context_new",
+            "changeset_path_content_context_new",
+            "changeset_path_history_context_new",
+            "hg_augmented_manifest_write",
+            "hg_augmented_tree_context_new_check_exists",
+            "fsnodes_write",
+            "fsnodes_new_check_exists",
+        ];
+
         // Add all the JKs (with their switches) that are hashed consistently
         // against client correlator, so all Scuba logs can be split by
         // feature being enabled or disabled.
@@ -195,17 +208,7 @@ impl MononokeScubaSampleBuilder {
             },
             ExperimentJKData {
                 jk_name: "scm/mononoke:enabled_restricted_paths_access_logging",
-                switch_values: vec![
-                    "hg_manifest_write",
-                    "hg_tree_context_new_check_exists",
-                    "changeset_path_context_new",
-                    "changeset_path_content_context_new",
-                    "changeset_path_history_context_new",
-                    "hg_augmented_manifest_write",
-                    "hg_augmented_tree_context_new_check_exists",
-                    "fsnodes_write",
-                    "fsnodes_new_check_exists",
-                ],
+                switch_values: path_acls_switches.clone(),
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
             ExperimentJKData {
@@ -216,6 +219,11 @@ impl MononokeScubaSampleBuilder {
             ExperimentJKData {
                 jk_name: "scm/mononoke:rendezvous_bonsai_tag_mapping",
                 switch_values: vec![],
+                consistent_hashing: Some(client_info.correlator.as_str()),
+            },
+            ExperimentJKData {
+                jk_name: "scm/mononoke:enable_server_side_path_acls",
+                switch_values: path_acls_switches,
                 consistent_hashing: Some(client_info.correlator.as_str()),
             },
         ];
