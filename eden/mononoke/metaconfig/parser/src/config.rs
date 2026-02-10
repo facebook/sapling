@@ -1355,6 +1355,7 @@ mod test {
                     blocked_derivation: hashmap! {
                         THREES_CSID => Some(hashset! { DerivableType::Unodes, }),
                     },
+                    extra_types_available_for_read: hashset! {},
                 },
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: true,

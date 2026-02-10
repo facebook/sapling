@@ -643,6 +643,12 @@ impl Convert for RawDerivedDataConfig {
                 .map(|blocked_derivation| blocked_derivation.convert())
                 .transpose()?
                 .unwrap_or_default(),
+            extra_types_available_for_read: self
+                .extra_types_available_for_read
+                .unwrap_or_default()
+                .into_iter()
+                .map(|s| DerivableType::from_name(&s))
+                .collect::<Result<_, _>>()?,
         })
     }
 }

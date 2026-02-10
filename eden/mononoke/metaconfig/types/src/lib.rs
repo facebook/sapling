@@ -386,6 +386,9 @@ pub struct DerivedDataConfig {
 
     /// Commits with blocked derivation
     pub blocked_derivation: HashMap<ChangesetId, Option<HashSet<DerivableType>>>,
+
+    /// Extra derived data types that are available for read but not necessarily enabled for derivation.
+    pub extra_types_available_for_read: HashSet<DerivableType>,
 }
 
 impl DerivedDataConfig {
@@ -435,6 +438,14 @@ impl DerivedDataConfig {
                     .as_ref()
                     .is_none_or(|types| types.contains(&derivable_type))
             })
+    }
+
+    /// Returns whether the named derived data type is readable.
+    /// A type is readable if it's either in the active config's types or in extra_types_available_for_read.
+    pub fn is_readable(&self, derivable_type: DerivableType) -> bool {
+        self.extra_types_available_for_read
+            .contains(&derivable_type)
+            || self.is_enabled(derivable_type)
     }
 }
 
