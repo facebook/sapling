@@ -122,7 +122,7 @@ pub struct ChangesetPathHistoryContext<R> {
     linknode: LazyShared<LinknodeResult>,
 }
 
-impl<R: MononokeRepo> fmt::Debug for ChangesetPathHistoryContext<R> {
+impl<R: RepoIdentityRef> fmt::Debug for ChangesetPathHistoryContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -141,7 +141,7 @@ pub struct ChangesetPathContext<R> {
     entry_kind: LazyShared<Result<Option<Entry<(), ()>>, MononokeError>>,
 }
 
-impl<R: MononokeRepo> fmt::Debug for ChangesetPathContext<R> {
+impl<R: RepoIdentityRef> fmt::Debug for ChangesetPathContext<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -359,6 +359,23 @@ impl<R: MononokeRepo> ChangesetPathContentContext<R> {
     }
 }
 
+impl<R> ChangesetPathHistoryContext<R> {
+    /// The `RepoContext` for this query.
+    pub fn repo_ctx(&self) -> &RepoContext<R> {
+        self.changeset.repo_ctx()
+    }
+
+    /// The `ChangesetContext` for this query.
+    pub fn changeset(&self) -> &ChangesetContext<R> {
+        &self.changeset
+    }
+
+    /// The path for this query.
+    pub fn path(&self) -> &MPath {
+        &self.path
+    }
+}
+
 impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
     pub(crate) async fn new(
         changeset: ChangesetContext<R>,
@@ -460,21 +477,6 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
                 Ok(deleted_manifest.linknode().cloned())
             }),
         })
-    }
-
-    /// The `RepoContext` for this query.
-    pub fn repo_ctx(&self) -> &RepoContext<R> {
-        self.changeset.repo_ctx()
-    }
-
-    /// The `ChangesetContext` for this query.
-    pub fn changeset(&self) -> &ChangesetContext<R> {
-        &self.changeset
-    }
-
-    /// The path for this query.
-    pub fn path(&self) -> &MPath {
-        &self.path
     }
 
     // pub(crate) for testing
@@ -820,6 +822,23 @@ impl<R: MononokeRepo> ChangesetPathHistoryContext<R> {
     }
 }
 
+impl<R> ChangesetPathContext<R> {
+    /// The `RepoContext` for this query.
+    pub fn repo_ctx(&self) -> &RepoContext<R> {
+        self.changeset.repo_ctx()
+    }
+
+    /// The `ChangesetContext` for this query.
+    pub fn changeset(&self) -> &ChangesetContext<R> {
+        &self.changeset
+    }
+
+    /// The path for this query.
+    pub fn path(&self) -> &MPath {
+        &self.path
+    }
+}
+
 impl<R: MononokeRepo> ChangesetPathContext<R> {
     pub(crate) async fn new(
         changeset: ChangesetContext<R>,
@@ -873,21 +892,6 @@ impl<R: MononokeRepo> ChangesetPathContext<R> {
             path,
             entry_kind: LazyShared::new_ready(Ok(Some(entry))),
         })
-    }
-
-    /// The `RepoContext` for this query.
-    pub fn repo_ctx(&self) -> &RepoContext<R> {
-        self.changeset.repo_ctx()
-    }
-
-    /// The `ChangesetContext` for this query.
-    pub fn changeset(&self) -> &ChangesetContext<R> {
-        &self.changeset
-    }
-
-    /// The path for this query.
-    pub fn path(&self) -> &MPath {
-        &self.path
     }
 
     async fn entry_kind(&self) -> Result<Option<Entry<(), ()>>, MononokeError> {

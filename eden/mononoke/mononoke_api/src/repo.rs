@@ -1963,14 +1963,14 @@ impl<R: MononokeRepo> RepoContext<R> {
     }
 }
 
-impl<R: MononokeRepo> PartialEq for RepoContext<R> {
+impl<R: RepoIdentityRef> PartialEq for RepoContext<R> {
     fn eq(&self, other: &Self) -> bool {
         self.repoid() == other.repoid()
     }
 }
-impl<R: MononokeRepo> Eq for RepoContext<R> {}
+impl<R: RepoIdentityRef> Eq for RepoContext<R> {}
 
-impl<R: MononokeRepo> Hash for RepoContext<R> {
+impl<R: RepoIdentityRef> Hash for RepoContext<R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.repoid().hash(state);
     }
