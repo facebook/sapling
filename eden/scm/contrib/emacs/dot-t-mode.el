@@ -151,15 +151,12 @@ Add prefix arg to run with --fix.
   (interactive)
 
   (let (args (file (buffer-file-name)))
-    (when (file-remote-p file)
-      (setq file (tramp-file-name-localname (tramp-dissect-file-name file))))
-
     (if (save-excursion (goto-char (point-min)) (search-forward-regexp "#debugruntest-incompatible\\|#require fsmonitor" nil t))
-        (let ((run-tests-py (concat (locate-dominating-file file "run-tests.py") "run-tests.py")))
+        (let ((run-tests-py (file-local-name (concat (locate-dominating-file file "run-tests.py") "run-tests.py"))))
           (setq args (list run-tests-py
                            "--noprogress"
                            "--maxdifflines" "10000"
-                           "--with-hg" (executable-find dot-t-sl-command)
+                           "--with-hg" (executable-find dot-t-sl-command t)
                            ;; "--chg" ; makes tests hang for some reason
                            ))
           (when (save-excursion (goto-char (point-min)) (search-forward "#require fsmonitor" nil t))
@@ -171,7 +168,7 @@ Add prefix arg to run with --fix.
     (when current-prefix-arg
       (setq args (append args '("--fix"))))
 
-    (setq args (append args (list file)))
+    (setq args (append args (list (file-local-name file))))
 
     (let ((process-environment (cons "TERM=xterm-256color" process-environment)))
       (compilation-start (string-join args " ") 'dot-t-compilation-mode))))
