@@ -28,10 +28,8 @@ use anyhow::bail;
 #[cfg(unix)]
 use anyhow::ensure;
 use anyhow::format_err;
-use clap::App;
-use clap::AppSettings;
 use clap::Arg;
-use clap::SubCommand;
+use clap::Command;
 use mkscratch::hashencode;
 use mkscratch::zzencode;
 use serde::Deserialize;
@@ -205,38 +203,40 @@ impl Config {
 }
 
 fn run() -> Result<()> {
-    let matches = App::new("Scratch")
-        .setting(AppSettings::SubcommandRequired)
-        .setting(AppSettings::ColoredHelp)
+    let matches = Command::new("Scratch")
+        .subcommand_required(true)
         .version("1.0")
         .author("Source Control <oncall+source_control@xmail.facebook.com")
         .arg(
-            Arg::with_name("no-create")
+            Arg::new("no-create")
                 .long("no-create")
                 .short('n')
+                .action(clap::ArgAction::SetTrue)
                 .help("Do not create files or directories"),
         )
         .subcommand(
-            SubCommand::with_name("path")
+            Command::new("path")
                 .about("create and display the scratch path corresponding to the input path")
                 .arg(
-                    Arg::with_name("subdir")
+                    Arg::new("subdir")
                         .long("subdir")
                         .help("generate an isolated subdir based off this string")
                         .value_name("PATH"),
                 )
                 .arg(
-                    Arg::with_name("hash")
+                    Arg::new("hash")
                         .long("hash")
+                        .action(clap::ArgAction::SetTrue)
                         .help("don't zzencode the path, and use a hash instead (for shorter but less intelligible paths)"),
                 )
                 .arg(
-                    Arg::with_name("watchable")
+                    Arg::new("watchable")
                         .long("watchable")
+                        .action(clap::ArgAction::SetTrue)
                         .help("the returned scratch space needs to be watchable by watchman"),
                 )
                 .arg(
-                    Arg::with_name("REPO")
+                    Arg::new("REPO")
                         .help(
                             "Specifies the path to the repo. \
                              If omitted, infer the path from the current working directory",
@@ -246,23 +246,23 @@ fn run() -> Result<()> {
         )
         .get_matches();
 
-    let no_create = matches.is_present("no-create");
+    let no_create = matches.get_flag("no-create");
 
     let config = Config::load()?;
 
     match matches.subcommand() {
         Some(("path", cmd)) => {
-            let subdir = cmd.value_of("subdir");
-            let watchable = cmd.is_present("watchable");
-            let repo = cmd.value_of("REPO");
-            let encoder = if cmd.is_present("hash") {
+            let subdir = cmd.get_one::<String>("subdir").map(|s| s.as_str());
+            let watchable = cmd.get_flag("watchable");
+            let repo = cmd.get_one::<String>("REPO").map(|s| s.as_str());
+            let encoder = if cmd.get_flag("hash") {
                 &hashencode as _
             } else {
                 &zzencode as _
             };
             path_command(&config, no_create, subdir, watchable, repo, encoder)
         }
-        // AppSettings::SubcommandRequired should mean that this is unpossible
+        // subcommand_required(true) should mean that this is unpossible
         _ => unreachable!("wut?"),
     }
 }
