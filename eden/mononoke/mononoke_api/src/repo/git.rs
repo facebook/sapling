@@ -70,6 +70,39 @@ const GIT_OBJECT_PREFIX: &str = "git_object";
 const SEPARATOR: &str = ".";
 const BUNDLE_HEAD: &str = "BUNDLE_HEAD";
 
+impl<R: RepoBlobstoreRef> RepoContext<R> {
+    /// Upload serialized git objects. Applies for all git object types except git blobs.
+    pub async fn upload_non_blob_git_object(
+        &self,
+        git_hash: &gix_hash::oid,
+        raw_content: Vec<u8>,
+    ) -> anyhow::Result<(), GitError> {
+        upload_non_blob_git_object(
+            &self.ctx,
+            self.repo().repo_blobstore(),
+            git_hash,
+            raw_content,
+        )
+        .await
+    }
+
+    /// Upload the packfile base item corresponding to the raw git object with the
+    /// input git hash
+    pub async fn repo_upload_packfile_base_item(
+        &self,
+        git_hash: &gix_hash::oid,
+        raw_content: Vec<u8>,
+    ) -> anyhow::Result<(), GitError> {
+        upload_packfile_base_item(
+            &self.ctx,
+            self.repo().repo_blobstore(),
+            git_hash,
+            raw_content,
+        )
+        .await
+    }
+}
+
 impl<R: MononokeRepo> RepoContext<R> {
     /// Set the bonsai to git mapping based on the changeset
     /// If the user is trusted, this will use the hggit extra
@@ -107,21 +140,6 @@ impl<R: MononokeRepo> RepoContext<R> {
             }
         }
         Ok(())
-    }
-
-    /// Upload serialized git objects. Applies for all git object types except git blobs.
-    pub async fn upload_non_blob_git_object(
-        &self,
-        git_hash: &gix_hash::oid,
-        raw_content: Vec<u8>,
-    ) -> anyhow::Result<(), GitError> {
-        upload_non_blob_git_object(
-            &self.ctx,
-            self.repo().repo_blobstore(),
-            git_hash,
-            raw_content,
-        )
-        .await
     }
 
     /// Create Mononoke counterpart of Git tree object
@@ -167,22 +185,6 @@ impl<R: MononokeRepo> RepoContext<R> {
         base: ChangesetId,
     ) -> Result<Bytes, GitError> {
         repo_stack_git_bundle(self.ctx(), self.repo(), head, base).await
-    }
-
-    /// Upload the packfile base item corresponding to the raw git object with the
-    /// input git hash
-    pub async fn repo_upload_packfile_base_item(
-        &self,
-        git_hash: &gix_hash::oid,
-        raw_content: Vec<u8>,
-    ) -> anyhow::Result<(), GitError> {
-        upload_packfile_base_item(
-            &self.ctx,
-            self.repo().repo_blobstore(),
-            git_hash,
-            raw_content,
-        )
-        .await
     }
 }
 

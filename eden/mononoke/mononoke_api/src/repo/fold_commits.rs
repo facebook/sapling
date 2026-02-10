@@ -739,7 +739,9 @@ impl<R: MononokeRepo> RepoContext<R> {
 
         Ok(merged)
     }
+}
 
+impl<R> RepoContext<R> {
     /// Apply file changes to the working tree, tracking copy chains and replaced directories.
     ///
     /// Converts FileChange to CreateChange and delegates to apply_create_changes.

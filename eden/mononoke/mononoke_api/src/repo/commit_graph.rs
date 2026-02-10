@@ -22,7 +22,6 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use mononoke_types::hash::GitSha1;
 
-use super::MononokeRepo;
 use super::RepoContext;
 use crate::MononokeError;
 
@@ -64,7 +63,7 @@ impl<Id> ChangesetSegmentParent<Id> {
     }
 }
 
-impl<R: MononokeRepo> RepoContext<R> {
+impl<R> RepoContext<R> {
     fn make_graph_segments_stream<Id: Copy + 'static>(
         &self,
         segments: Vec<CommitGraphSegment>,
@@ -107,7 +106,9 @@ impl<R: MononokeRepo> RepoContext<R> {
             })
         }))
     }
+}
 
+impl<R: BonsaiHgMappingRef + CommitGraphRef> RepoContext<R> {
     /// Get a stream of the linear segments of the commit graph between the common and heads as HgChangesetIds.
     pub async fn graph_segments_hg(
         &self,
@@ -150,7 +151,9 @@ impl<R: MononokeRepo> RepoContext<R> {
             .buffered(25)
             .try_flatten())
     }
+}
 
+impl<R: BonsaiGitMappingRef + CommitGraphRef> RepoContext<R> {
     /// Get a stream of the linear segments of the commit graph between the common and heads as GitSha1.
     pub async fn graph_segments_git(
         &self,
