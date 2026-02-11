@@ -27,18 +27,16 @@ cpp_unittest(
 cpp_unittest(
     name = "eden_error_test",
     srcs = ["EdenErrorTest.cpp"],
-    os_deps = [
-        # Needed for building RocksException on Windows
-        (
-            "windows",
-            ["fbsource//third-party/toolchains/win:RpcRT4.Lib"],
-        ),
-    ],
     supports_static_listing = False,
     deps = [
         "fbsource//third-party/googletest:gtest",
         "//eden/fs/utils:eden_error",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/toolchains/win:RpcRT4.Lib",
+        ],
+    }),
 )
 
 cpp_unittest(
