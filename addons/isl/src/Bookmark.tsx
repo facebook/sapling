@@ -27,6 +27,7 @@ import {
   REMOTE_MASTER_BOOKMARK,
 } from './BookmarksData';
 import {Row} from './ComponentUtils';
+import {hiddenMasterFeatureAvailableAtom, shouldHideMasterAtom} from './HiddenMasterData';
 import {T, t} from './i18n';
 import {Internal} from './Internal';
 import {BookmarkCreateOperation} from './operations/BookmarkCreateOperation';
@@ -55,6 +56,26 @@ const styles = stylex.create({
 });
 
 export type BookmarkKind = 'remote' | 'local' | 'stable';
+
+function useShouldShowBookmark(): (bookmarkValue: string) => boolean {
+  const bookmarksData = useAtomValue(bookmarksDataStorage);
+  const shouldHideMaster = useAtomValue(shouldHideMasterAtom);
+  const hiddenMasterFeatureAvailable = useAtomValue(hiddenMasterFeatureAvailableAtom);
+  return (bookmarkValue: string): boolean => {
+    if (bookmarkValue === REMOTE_MASTER_BOOKMARK && hiddenMasterFeatureAvailable) {
+      const visibility = bookmarksData.masterBookmarkVisibility;
+      if (visibility === 'show') {
+        return true;
+      }
+      if (visibility === 'hide') {
+        return false;
+      }
+      // visibility === 'auto' or undefined - use sitevar config
+      return !shouldHideMaster;
+    }
+    return !bookmarksData.hiddenRemoteBookmarks.includes(bookmarkValue);
+  };
+}
 
 const logged = new Set<string>();
 function logExposureOncePerSession(location: string) {
@@ -140,9 +161,9 @@ export function AllBookmarksTruncated({
   local: ReadonlyArray<string>;
   fullRepoBranch?: InternalTypes['FullRepoBranch'] | undefined;
 }) {
-  const bookmarksData = useAtomValue(bookmarksDataStorage);
   const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
   const showWarningOnMaster = Internal.shouldCheckRebase?.() ?? false;
+  const shouldShowBookmark = useShouldShowBookmark();
 
   const FullRepoBranchBookmark = Internal.FullRepoBranchBookmark;
   const compareFullRepoBranch = Internal.compareFullRepoBranch;
@@ -156,11 +177,8 @@ export function AllBookmarksTruncated({
   )
     .map(([kind, bookmarks]) =>
       bookmarks
-        .filter(
-          bookmark =>
-            !bookmarksData.hiddenRemoteBookmarks.includes(
-              typeof bookmark === 'string' ? bookmark : bookmark.value,
-            ),
+        .filter(bookmark =>
+          shouldShowBookmark(typeof bookmark === 'string' ? bookmark : bookmark.value),
         )
         .filter(bookmark =>
           compareFullRepoBranch ? compareFullRepoBranch(fullRepoBranch, bookmark) : true,
@@ -224,15 +242,13 @@ export function Bookmarks({
   bookmarks: ReadonlyArray<string | {value: string; description: string}>;
   kind: BookmarkKind;
 }) {
-  const bookmarksData = useAtomValue(bookmarksDataStorage);
+  const shouldShowBookmark = useShouldShowBookmark();
+
   return (
     <>
       {bookmarks
-        .filter(
-          bookmark =>
-            !bookmarksData.hiddenRemoteBookmarks.includes(
-              typeof bookmark === 'string' ? bookmark : bookmark.value,
-            ),
+        .filter(bookmark =>
+          shouldShowBookmark(typeof bookmark === 'string' ? bookmark : bookmark.value),
         )
         .map(bookmark => {
           const value = typeof bookmark === 'string' ? bookmark : bookmark.value;

@@ -48,6 +48,18 @@ export const shouldHideMasterAtom = atom(get => {
 });
 
 /**
+ * Computed atom that indicates if the hidden master feature is available.
+ * This is true when the sitevar config has been fetched and the current OD type
+ * is enabled in the config.
+ */
+export const hiddenMasterFeatureAvailableAtom = atom(get => {
+  const config = get(hiddenMasterBranchConfigAtom);
+  const odType = get(odTypeAtom);
+  // Feature is available if config exists and current OD type is in the config
+  return config != null && odType != null && odType in config;
+});
+
+/**
  * Check if master branch should be hidden based on sitevar config and repo path.
  */
 function checkShouldHideMaster(

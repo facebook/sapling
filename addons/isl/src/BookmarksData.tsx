@@ -16,6 +16,8 @@ import {registerDisposable} from './utils';
 
 export const REMOTE_MASTER_BOOKMARK = 'remote/master';
 
+export type MasterBookmarkVisibility = 'auto' | 'show' | 'hide';
+
 export type BookmarksData = {
   /** These bookmarks should be hidden from the automatic set of remote bookmarks */
   hiddenRemoteBookmarks: Array<string>;
@@ -23,6 +25,13 @@ export type BookmarksData = {
   additionalStables?: Array<string>;
   /** Whether to use the recommended bookmark instead of user-selected bookmarks */
   useRecommendedBookmark?: boolean;
+  /**
+   * Master bookmark visibility setting.
+   * - 'auto': Use sitevar config to decide (default when GK enabled)
+   * - 'show': Always show master bookmark (user override)
+   * - 'hide': Always hide master bookmark (user override)
+   */
+  masterBookmarkVisibility?: MasterBookmarkVisibility;
 };
 export const bookmarksDataStorage = localStorageBackedAtom<BookmarksData>('isl.bookmarks', {
   hiddenRemoteBookmarks: [],

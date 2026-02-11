@@ -35,7 +35,7 @@ import {
   REMOTE_MASTER_BOOKMARK,
 } from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
-import {shouldHideMasterAtom} from './HiddenMasterData';
+import {hiddenMasterFeatureAvailableAtom, shouldHideMasterAtom} from './HiddenMasterData';
 import type {InternalTypes} from './InternalTypes';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
@@ -310,6 +310,7 @@ export const latestDag = atom(get => {
   const enableRecommended = bookmarksData.useRecommendedBookmark && recommendedBookmarksAvailable;
   const recommendedBookmarks = get(recommendedBookmarksAtom);
   const shouldHideMaster = get(shouldHideMasterAtom);
+  const hiddenMasterFeatureAvailable = get(hiddenMasterFeatureAvailableAtom);
   const commitDag = undefined; // will be populated from `commits`
 
   const dag = Dag.fromDag(commitDag, successorMap)
@@ -322,6 +323,7 @@ export const latestDag = atom(get => {
             Boolean(enableRecommended),
             recommendedBookmarks,
             shouldHideMaster,
+            hiddenMasterFeatureAvailable,
           ),
         );
       }),
@@ -336,6 +338,7 @@ function filterBookmarks(
   enableRecommended: boolean,
   recommendedBookmarks: Set<string>,
   shouldHideMaster: boolean,
+  hiddenMasterFeatureAvailable: boolean,
 ): CommitInfo {
   if (commit.phase !== 'public') {
     return commit;
@@ -344,13 +347,21 @@ function filterBookmarks(
   const hiddenBookmarks = new Set(bookmarksData.hiddenRemoteBookmarks);
 
   const bookmarkFilter = (b: string) => {
-    // Always hide hidden bookmarks
-    if (hiddenBookmarks.has(b)) {
-      return false;
+    // When hidden master feature is available, handle remote/master visibility separately
+    if (b === REMOTE_MASTER_BOOKMARK && hiddenMasterFeatureAvailable) {
+      const visibility = bookmarksData.masterBookmarkVisibility;
+      if (visibility === 'show') {
+        return true;
+      }
+      if (visibility === 'hide') {
+        return false;
+      }
+      // visibility === 'auto' or undefined - use sitevar config
+      return !shouldHideMaster;
     }
 
-    // Hide master if sitevar config says to hide it
-    if (b === REMOTE_MASTER_BOOKMARK && shouldHideMaster) {
+    // For all other bookmarks (and remote/master when feature is not available), hide if in hidden list
+    if (hiddenBookmarks.has(b)) {
       return false;
     }
 

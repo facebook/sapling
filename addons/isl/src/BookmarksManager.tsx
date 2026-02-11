@@ -14,6 +14,7 @@ import * as stylex from '@stylexjs/stylex';
 import {Banner, BannerKind} from 'isl-components/Banner';
 import {Button} from 'isl-components/Button';
 import {Checkbox} from 'isl-components/Checkbox';
+import {Dropdown} from 'isl-components/Dropdown';
 import {InlineErrorBadge} from 'isl-components/ErrorNotice';
 import {Icon} from 'isl-components/Icon';
 import {Kbd} from 'isl-components/Kbd';
@@ -31,6 +32,7 @@ import {
   addManualStable,
   bookmarksDataStorage,
   fetchedStablesAtom,
+  type MasterBookmarkVisibility,
   recommendedBookmarksAtom,
   recommendedBookmarksAvailableAtom,
   REMOTE_MASTER_BOOKMARK,
@@ -40,6 +42,7 @@ import {
 import serverAPI from './ClientToServerAPI';
 import {Column, Row, ScrollY} from './ComponentUtils';
 import {DropdownFields} from './DropdownFields';
+import {hiddenMasterFeatureAvailableAtom, shouldHideMasterAtom} from './HiddenMasterData';
 import {useCommandEvent} from './ISLShortcuts';
 import {Internal} from './Internal';
 import {T, t} from './i18n';
@@ -60,6 +63,15 @@ const styles = stylex.create({
   },
   description: {
     marginBottom: spacing.half,
+  },
+  masterBookmarkRow: {
+    alignItems: 'center',
+    gap: '8px',
+  },
+  masterBookmarkDropdown: {
+    fontSize: '11px',
+    padding: '1px 2px',
+    height: '20px',
   },
 });
 
@@ -346,6 +358,8 @@ function BookmarksList({
   const recommendedBookmarks = useAtomValue(recommendedBookmarksAtom);
   const recommendedBookmarksAvailable = useAtomValue(recommendedBookmarksAvailableAtom);
   const showWarningOnMaster = Internal.shouldCheckRebase?.() ?? false;
+  const hiddenMasterFeatureAvailable = useAtomValue(hiddenMasterFeatureAvailableAtom);
+  const shouldAutoHideMaster = useAtomValue(shouldHideMasterAtom);
 
   if (bookmarks.length == 0) {
     return null;
@@ -376,6 +390,37 @@ function BookmarksList({
             !isRecommended &&
             name !== REMOTE_MASTER_BOOKMARK;
 
+          // For remote/master when hidden master feature is available, show 3-state dropdown
+          if (name === REMOTE_MASTER_BOOKMARK && hiddenMasterFeatureAvailable) {
+            const currentVisibility = bookmarksData.masterBookmarkVisibility ?? 'auto';
+            // Determine the label for "Auto" based on whether this repo would be auto-hidden
+            const autoLabel = shouldAutoHideMaster ? t('Auto (hide)') : t('Auto (show)');
+            return (
+              <Row key={name} xstyle={styles.masterBookmarkRow}>
+                <Bookmark fullLength kind={kind} tooltip={tooltip} icon={icon}>
+                  {name}
+                </Bookmark>
+                <Dropdown<{value: MasterBookmarkVisibility; name: string}>
+                  value={currentVisibility}
+                  xstyle={styles.masterBookmarkDropdown}
+                  options={[
+                    {value: 'auto', name: autoLabel},
+                    {value: 'show', name: t('Show')},
+                    {value: 'hide', name: t('Hide')},
+                  ]}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                    const newVisibility = e.target.value as MasterBookmarkVisibility;
+                    setBookmarksData({
+                      ...bookmarksData,
+                      masterBookmarkVisibility: newVisibility,
+                    });
+                  }}
+                />
+                {extra}
+              </Row>
+            );
+          }
+
           return (
             <Checkbox
               key={name}
@@ -383,11 +428,13 @@ function BookmarksList({
               disabled={disabled}
               onChange={checked => {
                 let hiddenRemoteBookmarks = bookmarksData.hiddenRemoteBookmarks;
+
                 if (!checked) {
                   hiddenRemoteBookmarks = [...hiddenRemoteBookmarks, name];
                 } else {
                   hiddenRemoteBookmarks = hiddenRemoteBookmarks.filter(b => b !== name);
                 }
+
                 setBookmarksData({...bookmarksData, hiddenRemoteBookmarks});
               }}>
               <Bookmark fullLength key={name} kind={kind} tooltip={tooltip} icon={icon}>
