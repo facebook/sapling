@@ -1,8 +1,6 @@
 
 #require no-eden
 
-  $ export RUST_BACKTRACE=0
-
 Use hgrc within $TESTTMP
 
   $ cp $HGRCPATH orig.hgrc

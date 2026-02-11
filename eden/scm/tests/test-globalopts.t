@@ -1,8 +1,6 @@
 
 #require no-eden
 
-  $ export RUST_BACKTRACE=0
-
   $ setconfig devel.collapse-traceback=true
 
   $ newclientrepo server

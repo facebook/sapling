@@ -2,7 +2,6 @@
 
 Test that we validate certain username errors.
 
-  $ export RUST_BACKTRACE=0
   $ configure modern
   $ . $TESTDIR/git.sh
 

@@ -1,8 +1,6 @@
 
 #require no-eden
 
-  $ export RUST_BACKTRACE=0
-
 test command parsing and dispatch
 
   $ hg init a
