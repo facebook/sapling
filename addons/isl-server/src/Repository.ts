@@ -1058,6 +1058,40 @@ export class Repository {
     }
   }
 
+  public async fetchAndSetHiddenMasterConfig(
+    onFetched?: (config: Record<string, Array<string>> | null, odType: string | null) => void,
+  ) {
+    if (!Internal.fetchHiddenMasterBranchConfig) {
+      return;
+    }
+
+    try {
+      const [config, odType] = await Promise.all([
+        Internal.fetchHiddenMasterBranchConfig(this.initialConnectionContext).catch(
+          (err: unknown) => {
+            this.initialConnectionContext.logger.warn(
+              'Failed to fetch hidden master branch config:',
+              err,
+            );
+            return null;
+          },
+        ),
+        Internal.getDevEnvType?.().catch((err: unknown) => {
+          this.initialConnectionContext.logger.warn('Failed to fetch OD type:', err);
+          return null;
+        }),
+      ]);
+
+      onFetched?.(config ?? {}, odType ?? '');
+    } catch (err) {
+      this.initialConnectionContext.logger.error(
+        'Error fetching hidden master branch config:',
+        err,
+      );
+      onFetched?.({}, '');
+    }
+  }
+
   async pullRecommendedBookmarks(ctx: RepositoryContext): Promise<void> {
     if (!this.recommendedBookmarks || !this.recommendedBookmarks.length) {
       return;

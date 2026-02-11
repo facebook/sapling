@@ -35,6 +35,7 @@ import {
   REMOTE_MASTER_BOOKMARK,
 } from './BookmarksData';
 import serverAPI from './ClientToServerAPI';
+import {shouldHideMasterAtom} from './HiddenMasterData';
 import type {InternalTypes} from './InternalTypes';
 import {latestSuccessorsMapAtom, successionTracker} from './SuccessionTracker';
 import {Dag, DagCommitInfo} from './dag/dag';
@@ -308,13 +309,20 @@ export const latestDag = atom(get => {
   const recommendedBookmarksAvailable = get(recommendedBookmarksAvailableAtom);
   const enableRecommended = bookmarksData.useRecommendedBookmark && recommendedBookmarksAvailable;
   const recommendedBookmarks = get(recommendedBookmarksAtom);
+  const shouldHideMaster = get(shouldHideMasterAtom);
   const commitDag = undefined; // will be populated from `commits`
 
   const dag = Dag.fromDag(commitDag, successorMap)
     .add(
       commits.map(c => {
         return DagCommitInfo.fromCommitInfo(
-          filterBookmarks(bookmarksData, c, Boolean(enableRecommended), recommendedBookmarks),
+          filterBookmarks(
+            bookmarksData,
+            c,
+            Boolean(enableRecommended),
+            recommendedBookmarks,
+            shouldHideMaster,
+          ),
         );
       }),
     )
@@ -327,6 +335,7 @@ function filterBookmarks(
   commit: CommitInfo,
   enableRecommended: boolean,
   recommendedBookmarks: Set<string>,
+  shouldHideMaster: boolean,
 ): CommitInfo {
   if (commit.phase !== 'public') {
     return commit;
@@ -337,6 +346,11 @@ function filterBookmarks(
   const bookmarkFilter = (b: string) => {
     // Always hide hidden bookmarks
     if (hiddenBookmarks.has(b)) {
+      return false;
+    }
+
+    // Hide master if sitevar config says to hide it
+    if (b === REMOTE_MASTER_BOOKMARK && shouldHideMaster) {
       return false;
     }
 

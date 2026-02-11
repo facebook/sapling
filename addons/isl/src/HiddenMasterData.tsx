@@ -8,7 +8,10 @@
 import type {RepoInfo} from './types';
 
 import {atom} from 'jotai';
+import serverAPI from './ClientToServerAPI';
+import {writeAtom} from './jotaiUtils';
 import {repositoryInfo} from './serverAPIState';
+import {registerDisposable} from './utils';
 
 /**
  * Hidden master branch config fetched from sitevar.
@@ -84,3 +87,15 @@ function checkShouldHideMaster(
 
   return shouldHide;
 }
+
+// Listen for config from server and store it
+registerDisposable(
+  serverAPI,
+  serverAPI.onMessageOfType('fetchedHiddenMasterBranchConfig', data => {
+    // Store the config, OD type, and cwd in atoms for quick access
+    writeAtom(hiddenMasterBranchConfigAtom, data.config || {});
+    writeAtom(odTypeAtom, data.odType || '');
+    writeAtom(cwdAtom, data.cwd);
+  }),
+  import.meta.hot,
+);

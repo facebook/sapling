@@ -1139,6 +1139,12 @@ export type ServerToClientMessage =
   | {type: 'fetchedCommitCloudState'; state: Result<CommitCloudSyncState>}
   | {type: 'fetchedStables'; stables: StableLocationData}
   | {type: 'fetchedRecommendedBookmarks'; bookmarks: Array<string>}
+  | {
+      type: 'fetchedHiddenMasterBranchConfig';
+      config: Record<string, Array<string>> | null;
+      odType: string | null;
+      cwd: string;
+    }
   | {type: 'fetchedStableLocationAutocompleteOptions'; result: Result<Array<TypeaheadResult>>}
   | {type: 'renderedMarkup'; html: string; id: number}
   | {type: 'gotSuggestedReviewers'; reviewers: Array<string>; key: string}

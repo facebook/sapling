@@ -146,6 +146,16 @@ export default class ServerToClientAPI {
       this.postMessage({type: 'fetchedRecommendedBookmarks', bookmarks});
     });
 
+    repo.fetchAndSetHiddenMasterConfig(async (config, odType) => {
+      await this.connection.readySignal?.promise;
+      this.postMessage({
+        type: 'fetchedHiddenMasterBranchConfig',
+        config,
+        odType,
+        cwd: ctx.cwd,
+      });
+    });
+
     this.processQueuedMessages();
   }
 
