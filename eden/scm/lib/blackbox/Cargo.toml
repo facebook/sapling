@@ -25,7 +25,7 @@ sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
 sapling-indexedlog = { version = "0.1.0", path = "../indexedlog" }
 sapling-serde_alt = { version = "0.1.0", path = "serde_alt" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
-serde_cbor = "0.11"
+serde_cbor = "0.11.2"
 serde_derive = "1.0.185"
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 

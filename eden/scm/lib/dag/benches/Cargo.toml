@@ -13,5 +13,5 @@ sapling-dev-logger = { version = "0.1.0", path = "../../dev-logger" }
 sapling-mincode = { version = "0.1.0", path = "../../mincode" }
 sapling-minibench = { version = "0.1.0", path = "../../minibench" }
 sapling-nonblocking = { version = "0.1.0", path = "../../nonblocking" }
-serde_cbor = "0.11"
+serde_cbor = "0.11.2"
 tempfile = "3.22"

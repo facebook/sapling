@@ -19,7 +19,7 @@ humantime = "2.1"
 serde = { version = "1.0.219", features = ["derive", "rc"], optional = true }
 
 [dev-dependencies]
-serde_cbor = "0.11"
+serde_cbor = "0.11.2"
 
 [features]
 default = ["serde"]
