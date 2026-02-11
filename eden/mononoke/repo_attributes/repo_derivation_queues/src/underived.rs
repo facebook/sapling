@@ -54,9 +54,9 @@ pub async fn build_underived_batched_graph<'a>(
     let repo_id = ddm.repo_id();
     let config_name = ddm.config_name();
     let commit_graph = ddm.commit_graph_arc();
-    let watch = Arc::new(Mutex::new(Some(EnqueueResponse::new(Box::new(
-        future::ok(false),
-    )))));
+    let watch = Arc::new(Mutex::new(Some(EnqueueResponse::new(
+        future::ok(false).boxed(),
+    ))));
     let _ = bounded_traversal::bounded_traversal_dag(
         100,
         head,
@@ -202,7 +202,7 @@ pub async fn build_underived_batched_graph<'a>(
                                         err_msg = Some(err_msg_str);
                                         // derived, update ready watch and return no dependency
                                         *watch.lock() =
-                                            Some(EnqueueResponse::new(Box::new(future::ok(true))));
+                                            Some(EnqueueResponse::new(future::ok(true).boxed()));
                                         None
                                     }
                                     // None of the changesets in the batch were derived, but enqueuing failed

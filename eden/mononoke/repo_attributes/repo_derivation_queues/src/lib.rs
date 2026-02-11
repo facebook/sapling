@@ -20,6 +20,7 @@ pub use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::DerivedDataManager;
 use ephemeral_blobstore::Bubble;
 use ephemeral_blobstore::BubbleId;
+use futures::future::BoxFuture;
 use futures::stream::BoxStream;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
@@ -98,16 +99,11 @@ pub trait DerivationQueue {
 }
 
 pub struct EnqueueResponse {
-    pub(crate) watch:
-        Box<dyn futures::future::Future<Output = anyhow::Result<bool>> + Unpin + Send + Sync>,
+    pub(crate) watch: BoxFuture<'static, anyhow::Result<bool>>,
 }
 
 impl EnqueueResponse {
-    pub fn new(
-        watch: Box<
-            dyn futures::future::Future<Output = anyhow::Result<bool>> + Unpin + Send + Sync,
-        >,
-    ) -> Self {
+    pub fn new(watch: BoxFuture<'static, anyhow::Result<bool>>) -> Self {
         Self { watch }
     }
 
