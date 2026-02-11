@@ -39,7 +39,7 @@ gotham = "0.7.4"
 gotham_derive = "0.7.0"
 gotham_ext = { version = "0.1.0", path = "../../../common/gotham_ext" }
 http = "0.2"
-hyper = { version = "0.14.26", features = ["client", "http1", "http2", "stream"] }
+hyper = { version = "0.14.32", features = ["client", "http1", "http2", "stream"] }
 import_direct = { version = "0.1.0", path = "../../../git/import_direct" }
 import_tools = { version = "0.1.0", path = "../../../git/import_tools" }
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
