@@ -400,22 +400,27 @@ function BookmarksList({
                 <Bookmark fullLength kind={kind} tooltip={tooltip} icon={icon}>
                   {name}
                 </Bookmark>
-                <Dropdown<{value: MasterBookmarkVisibility; name: string}>
-                  value={currentVisibility}
-                  xstyle={styles.masterBookmarkDropdown}
-                  options={[
-                    {value: 'auto', name: autoLabel},
-                    {value: 'show', name: t('Show')},
-                    {value: 'hide', name: t('Hide')},
-                  ]}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                    const newVisibility = e.target.value as MasterBookmarkVisibility;
-                    setBookmarksData({
-                      ...bookmarksData,
-                      masterBookmarkVisibility: newVisibility,
-                    });
-                  }}
-                />
+                <Tooltip
+                  title={t(
+                    'Control master branch visibility. "Auto" derives from the current repo checkout whether it should be shown or hidden.',
+                  )}>
+                  <Dropdown<{value: MasterBookmarkVisibility; name: string}>
+                    value={currentVisibility}
+                    xstyle={styles.masterBookmarkDropdown}
+                    options={[
+                      {value: 'auto', name: autoLabel},
+                      {value: 'show', name: t('Show')},
+                      {value: 'hide', name: t('Hide')},
+                    ]}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                      const newVisibility = e.target.value as MasterBookmarkVisibility;
+                      setBookmarksData({
+                        ...bookmarksData,
+                        masterBookmarkVisibility: newVisibility,
+                      });
+                    }}
+                  />
+                </Tooltip>
                 {extra}
               </Row>
             );
