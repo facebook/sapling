@@ -130,6 +130,9 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
       ),
       onClick: () => {
         setSelectedAction(actionItem);
+        // Run the action immediately on click instead of requiring a second click
+        runSmartAction(actionItem.config, context);
+        bumpSmartAction(actionItem.id);
       },
       tooltip: actionItem.config.description ? t(actionItem.config.description) : undefined,
     })),
