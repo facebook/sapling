@@ -31,6 +31,7 @@ use slapi_service::handlers::handler::BasicPathExtractor;
 use slapi_service::handlers::handler::PathExtractorWithRepo;
 
 use super::error_formatter::GitErrorFormatter;
+use super::lfs_redirect::lfs_redirect_handler;
 use crate::model::GitServerContext;
 use crate::model::RepositoryParams;
 use crate::model::ServiceType;
@@ -178,6 +179,11 @@ pub fn build_router(context: GitServerContext) -> Router {
             .get("/repos/git/:server_type/*repository/clone.bundle")
             .with_path_extractor::<RepositoryParams>()
             .to(clone_bundle_handler);
+
+        route
+            .post("/repos/git/:server_type/*repository/info/lfs/objects/batch")
+            .with_path_extractor::<RepositoryParams>()
+            .to(lfs_redirect_handler);
 
         route.get("/health_check").to(health_handler);
         route.get("/flamegraph").to(flamegraph_handler);

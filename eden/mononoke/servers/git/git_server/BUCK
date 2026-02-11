@@ -85,6 +85,7 @@ rust_binary(
         "//eden/mononoke/servers/slapi/slapi_service:slapi_service",
         "//eden/scm/lib/clientinfo:clientinfo",
         "//eden/scm/lib/edenapi/types:edenapi_types",
+        "//eden/scm/lib/repo/url:repourl",
     ] + ([] if rust_oss.is_oss_build() else [
         "fbsource//third-party/rust:lazy_static",
         "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rs_bindings",

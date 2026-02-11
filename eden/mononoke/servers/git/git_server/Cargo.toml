@@ -68,6 +68,7 @@ repo_update_logger = { version = "0.1.0", path = "../../../features/repo_update_
 rustc-hash = "2.1.1"
 sapling-clientinfo = { version = "0.1.0", path = "../../../../scm/lib/clientinfo" }
 sapling-edenapi_types = { version = "0.1.0", path = "../../../../scm/lib/edenapi/types" }
+sapling-repourl = { version = "0.1.0", path = "../../../../scm/lib/repo/url" }
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }

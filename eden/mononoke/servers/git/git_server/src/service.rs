@@ -7,6 +7,7 @@
 
 mod bookmark_mover;
 mod error_formatter;
+mod lfs_redirect;
 mod reader;
 mod router;
 mod slapi_compat;
