@@ -31,6 +31,7 @@ sapling-format-util = { version = "0.1.0", path = "../util/format-util" }
 sapling-identity = { version = "0.1.0", path = "../identity" }
 sapling-manifest-tree = { version = "0.1.0", path = "../manifest-tree" }
 sapling-metalog = { version = "0.1.0", path = "../metalog" }
+sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 sapling-pathmatcher = { version = "0.1.0", path = "../pathmatcher" }
 sapling-repo-minimal-info = { version = "0.1.0", path = "repo-minimal-info" }
 sapling-repolock = { version = "0.1.0", path = "../repolock" }
