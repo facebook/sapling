@@ -88,6 +88,7 @@ pub struct RestrictedPathsTestDataBuilder {
     /// Store the repo regions config for recreating ACLs in enforcement scenarios
     repo_regions_config: Vec<(String, Vec<String>)>,
     groups_config: Vec<(String, Vec<String>)>,
+    client_identity: Option<MononokeIdentity>,
     file_path_changes: Vec<(String, Option<String>)>,
     expected_manifest_entries: Option<Vec<RestrictedPathManifestIdEntry>>,
     expected_scuba_logs: Option<Vec<ScubaAccessLogSample>>,
@@ -224,6 +225,7 @@ impl RestrictedPathsTestDataBuilder {
             tooling_allowlist_group: None,
             groups_config: vec![],
             repo_regions_config: vec![],
+            client_identity: None,
             file_path_changes: vec![],
             expected_manifest_entries: None,
             expected_scuba_logs: None,
@@ -246,7 +248,16 @@ impl RestrictedPathsTestDataBuilder {
         self
     }
 
+    /// Set the client identity for the test context.
+    /// Defaults to USER:myusername0 if not specified.
+    pub fn with_client_identity(mut self, identity: &str) -> Result<Self> {
+        self.client_identity = Some(MononokeIdentity::from_str(identity)?);
+        Ok(self)
+    }
+
     /// Set up test groups for membership checking.
+    /// Each member should be a full identity string (e.g., "SERVICE_IDENTITY:service_foo"
+    /// or "USER:username").
     pub fn with_test_groups(mut self, groups_config: Vec<(&str, Vec<&str>)>) -> Self {
         self.groups_config = groups_config
             .into_iter()
@@ -323,11 +334,21 @@ impl RestrictedPathsTestDataBuilder {
     }
 
     pub async fn build(self, fb: FacebookInit) -> Result<RestrictedPathsTestData> {
+        // Use custom client identity or default to USER:myusername0
+        let client_identity = self
+            .client_identity
+            .unwrap_or_else(|| MononokeIdentity::new("USER", "myusername0"));
+        let client_main_id = format!(
+            "{}:{}",
+            client_identity.id_type().to_lowercase(),
+            client_identity.id_data()
+        );
+
         let mut cri = ClientRequestInfo::new(ClientEntryPoint::Tests);
-        cri.set_main_id(TEST_CLIENT_MAIN_ID.to_string());
+        cri.set_main_id(client_main_id);
         let client_info = ClientInfo::new_with_client_request_info(cri);
 
-        let identities = BTreeSet::from([MononokeIdentity::new("USER", "myusername0")]);
+        let identities = BTreeSet::from([client_identity]);
         let metadata = {
             let mut md = Metadata::new(
                 Some(&"restricted_paths_test".to_string()),
@@ -729,12 +750,12 @@ fn setup_test_acls_with_groups(
 
     // Add each configured group
     let mut groups = HashMap::new();
-    for (group_name, usernames) in groups_config {
-        let mut users = MononokeIdentitySet::new();
-        for username in usernames {
-            users.insert(MononokeIdentity::from_str(&format!("USER:{}", username))?);
+    for (group_name, identities) in groups_config {
+        let mut members = MononokeIdentitySet::new();
+        for identity in identities {
+            members.insert(MononokeIdentity::from_str(identity)?);
         }
-        groups.insert(group_name.to_string(), Arc::new(users));
+        groups.insert(group_name.to_string(), Arc::new(members));
     }
 
     let default_user = MononokeIdentity::from_str("USER:myusername0")?;

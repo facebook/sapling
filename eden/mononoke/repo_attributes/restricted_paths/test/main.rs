@@ -68,7 +68,7 @@ async fn test_change_to_restricted_with_access_is_logged(fb: FacebookInit) -> Re
         .with_test_groups(vec![
             // Group ACLs to conditionally enable enforcement of restricted paths
             // i.e. throw AuthorizationError when trying to fetch unauthorized paths
-            ("enforcement_acl", vec!["myusername0"]),
+            ("enforcement_acl", vec!["USER:myusername0"]),
         ])
         .expecting_manifest_id_store_entries(vec![
             RestrictedPathManifestIdEntry::new(
@@ -196,7 +196,7 @@ async fn test_single_dir_single_restricted_change(fb: FacebookInit) -> Result<()
         .with_test_groups(vec![
             // Group ACLs to conditionally enable enforcement of restricted paths
             // i.e. throw AuthorizationError when trying to fetch unauthorized paths
-            ("enforcement_acl", vec!["myusername0"]),
+            ("enforcement_acl", vec!["USER:myusername0"]),
         ])
         .expecting_manifest_id_store_entries(vec![
             RestrictedPathManifestIdEntry::new(
@@ -1239,11 +1239,11 @@ async fn test_same_manifest_id_restricted_and_unrestricted_paths(fb: FacebookIni
     Ok(())
 }
 
-// Test that is_allowlisted_tooling is set to true when the user is in the
+// Test that is_allowlisted_tooling is set to true when the client is in the
 // tooling allowlist group.
 #[mononoke::fbinit_test]
 async fn test_tooling_allowlist_acl_user_in_acl(fb: FacebookInit) -> Result<()> {
-    // User myusername0 has access to the tooling_group
+    // Service myservice0 has access to the tooling_group
     let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
@@ -1258,17 +1258,18 @@ async fn test_tooling_allowlist_acl_user_in_acl(fb: FacebookInit) -> Result<()> 
     let base_sample = ScubaAccessLogSampleBuilder::new()
         .with_repo_id(RepositoryId::new(0))
         .with_client_identities(
-            vec!["USER:myusername0"]
+            vec!["SERVICE_IDENTITY:myservice0"]
                 .into_iter()
                 .map(String::from)
                 .collect::<Vec<_>>(),
         )
-        .with_client_main_id(TEST_CLIENT_MAIN_ID.to_string());
+        .with_client_main_id("service_identity:myservice0".to_string());
 
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
+        .with_client_identity("SERVICE_IDENTITY:myservice0")?
         .with_tooling_allowlist_group("tooling_group")
-        .with_test_groups(vec![("tooling_group", vec!["myusername0"])])
+        .with_test_groups(vec![("tooling_group", vec!["SERVICE_IDENTITY:myservice0"])])
         .with_test_repo_region_acls(vec![("restricted_acl", vec!["other_user"])])
         .with_file_path_changes(vec![("restricted/dir/a", None)])
         .expecting_manifest_id_store_entries(vec![
@@ -1295,9 +1296,9 @@ async fn test_tooling_allowlist_acl_user_in_acl(fb: FacebookInit) -> Result<()> 
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
                 .with_manifest_id(expected_manifest_id.clone())
                 .with_manifest_type(ManifestType::Hg)
-                // User HAS authorization because they are in the tooling allowlist
+                // Client HAS authorization because they are in the tooling allowlist
                 .with_has_authorization(true)
-                // User IS in the tooling allowlist
+                // Client IS in the tooling allowlist
                 .with_is_allowlisted_tooling(true)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
@@ -1356,11 +1357,11 @@ async fn test_tooling_allowlist_acl_user_in_acl(fb: FacebookInit) -> Result<()> 
     Ok(())
 }
 
-// Test that is_allowlisted_tooling is set to false when the user is NOT in the
+// Test that is_allowlisted_tooling is set to false when the client is NOT in the
 // tooling allowlist group.
 #[mononoke::fbinit_test]
 async fn test_tooling_allowlist_acl_user_not_in_acl(fb: FacebookInit) -> Result<()> {
-    // User myusername0 does NOT have access to the tooling_group (only other_user does)
+    // Service myservice0 does NOT have access to the tooling_group (only other_service does)
     let restricted_acl = MononokeIdentity::from_str("REPO_REGION:restricted_acl")?;
     let restricted_paths = vec![(
         NonRootMPath::new("restricted/dir").unwrap(),
@@ -1375,18 +1376,22 @@ async fn test_tooling_allowlist_acl_user_not_in_acl(fb: FacebookInit) -> Result<
     let base_sample = ScubaAccessLogSampleBuilder::new()
         .with_repo_id(RepositoryId::new(0))
         .with_client_identities(
-            vec!["USER:myusername0"]
+            vec!["SERVICE_IDENTITY:myservice0"]
                 .into_iter()
                 .map(String::from)
                 .collect::<Vec<_>>(),
         )
-        .with_client_main_id(TEST_CLIENT_MAIN_ID.to_string());
+        .with_client_main_id("service_identity:myservice0".to_string());
 
     RestrictedPathsTestDataBuilder::new()
         .with_restricted_paths(restricted_paths)
+        .with_client_identity("SERVICE_IDENTITY:myservice0")?
         .with_tooling_allowlist_group("tooling_group")
-        // myusername0 is NOT in the tooling_group
-        .with_test_groups(vec![("tooling_group", vec!["other_user"])])
+        // myservice0 is NOT in the tooling_group
+        .with_test_groups(vec![(
+            "tooling_group",
+            vec!["SERVICE_IDENTITY:other_service"],
+        )])
         .with_test_repo_region_acls(vec![("restricted_acl", vec!["other_user"])])
         .with_file_path_changes(vec![("restricted/dir/a", None)])
         .expecting_manifest_id_store_entries(vec![
@@ -1413,9 +1418,9 @@ async fn test_tooling_allowlist_acl_user_not_in_acl(fb: FacebookInit) -> Result<
                 .with_restricted_paths(cast_to_non_root_mpaths(vec!["restricted/dir"]))
                 .with_manifest_id(expected_manifest_id.clone())
                 .with_manifest_type(ManifestType::Hg)
-                // User does NOT have authorization to the restricted path
+                // Client does NOT have authorization to the restricted path
                 .with_has_authorization(false)
-                // User is NOT in the tooling allowlist
+                // Client is NOT in the tooling allowlist
                 .with_is_allowlisted_tooling(false)
                 .with_acls(vec![restricted_acl.clone()])
                 .build()?,
