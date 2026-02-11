@@ -62,7 +62,6 @@ use anyhow::Result;
 use anyhow::format_err;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
 use blobstore::Loadable;
-use bonsai_hg_mapping::BonsaiHgMappingRef;
 use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
@@ -161,15 +160,6 @@ pub enum PushrebaseError {
     #[error("Root is too far behind")]
     RootTooFarBehind,
     #[error(
-        "Pushrebase validation failed to validate commit {source_cs_id} (rebased to {rebased_cs_id})"
-    )]
-    ValidationError {
-        source_cs_id: ChangesetId,
-        rebased_cs_id: ChangesetId,
-        #[source]
-        err: Error,
-    },
-    #[error(
         "Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is {0})"
     )]
     ForceFailPushrebase(ChangesetId),
@@ -213,12 +203,6 @@ fn rebased_changesets_into_pairs(
 #[derive(Debug, Clone, Copy)]
 pub struct PushrebaseRetryNum(pub usize);
 
-impl PushrebaseRetryNum {
-    fn is_first(&self) -> bool {
-        self.0 == 0
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct PushrebaseDistance(pub usize);
 
@@ -239,8 +223,7 @@ pub struct PushrebaseOutcome {
     pub log_id: BookmarkUpdateLogId,
 }
 
-pub trait Repo = BonsaiHgMappingRef
-    + BookmarksRef
+pub trait Repo = BookmarksRef
     + RepoBlobstoreArc
     + RepoDerivedDataRef
     + RepoIdentityRef
@@ -402,7 +385,6 @@ async fn rebase_in_loop(
             old_bookmark_value,
             onto_bookmark,
             hooks,
-            retry_num,
         )
         .await?;
         // CRITICAL SECTION END: Right after writing new value of bookmark
@@ -457,7 +439,6 @@ async fn do_rebase(
     old_bookmark_value: Option<ChangesetId>,
     onto_bookmark: &BookmarkKey,
     mut hooks: Vec<Box<dyn PushrebaseCommitHook>>,
-    retry_num: PushrebaseRetryNum,
 ) -> Result<
     Option<(
         ChangesetId,
@@ -477,10 +458,6 @@ async fn do_rebase(
     )
     .await?;
 
-    for (old_id, (new_id, _)) in &rebased_changesets {
-        maybe_validate_commit(ctx, repo, old_id, new_id, retry_num).await?;
-    }
-
     let hooks = try_join_all(
         hooks
             .into_iter()
@@ -498,52 +475,6 @@ async fn do_rebase(
         hooks,
     )
     .await
-}
-
-async fn maybe_validate_commit(
-    ctx: &CoreContext,
-    repo: &impl Repo,
-    old_id: &ChangesetId,
-    bcs_id: &ChangesetId,
-    retry_num: PushrebaseRetryNum,
-) -> Result<(), PushrebaseError> {
-    if justknobs::eval(
-        "scm/mononoke:pushrebase_disable_commit_validation",
-        None,
-        Some(repo.repo_identity().name()),
-    )? {
-        return Ok(());
-    }
-
-    // Validation is expensive, so do it only once
-    if !retry_num.is_first() {
-        return Ok(());
-    }
-
-    let bcs = bcs_id
-        .load(ctx, repo.repo_blobstore())
-        .map_err(Error::from)
-        .await?;
-    if !bcs.is_merge() {
-        return Ok(());
-    }
-
-    // Generate hg changeset to check that this rebased bonsai commit
-    // is valid.
-    repo.derive_hg_changeset(ctx, *bcs_id)
-        .map_err(|err| PushrebaseError::ValidationError {
-            source_cs_id: *old_id,
-            rebased_cs_id: *bcs_id,
-            err,
-        })
-        .await?;
-
-    // FIXME: it would also be great to do a manifest diff for old_id
-    // and rebased bcs_id and check that this diffs are the same.
-    // However the caveat here is that we are not sure if diffs are the same
-    // in practice - in some cases Mononoke generates hg filenodes
-    // that are different from what mercurial would have generated.
-    Ok(())
 }
 
 // There should only be one head in the pushed set
@@ -1291,6 +1222,7 @@ mod tests {
     use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
     use bonsai_hg_mapping::BonsaiHgMapping;
+    use bonsai_hg_mapping::BonsaiHgMappingRef;
     use bookmarks::BookmarkTransactionError;
     use bookmarks::Bookmarks;
     use cloned::cloned;
@@ -1369,7 +1301,7 @@ mod tests {
 
     async fn fetch_bonsai_changesets(
         ctx: &CoreContext,
-        repo: &impl Repo,
+        repo: &(impl Repo + BonsaiHgMappingRef),
         commit_ids: &HashSet<HgChangesetId>,
     ) -> Result<HashSet<BonsaiChangeset>, PushrebaseError> {
         let futs = commit_ids.iter().map(async |hg_cs_id| {
@@ -1397,7 +1329,7 @@ mod tests {
 
     async fn do_pushrebase(
         ctx: &CoreContext,
-        repo: &impl Repo,
+        repo: &(impl Repo + BonsaiHgMappingRef),
         config: &PushrebaseFlags,
         onto_bookmark: &BookmarkKey,
         pushed_set: &HashSet<HgChangesetId>,
@@ -1411,7 +1343,7 @@ mod tests {
 
     async fn set_bookmark(
         ctx: CoreContext,
-        repo: &impl Repo,
+        repo: &(impl Repo + BonsaiHgMappingRef),
         book: &BookmarkKey,
         cs_id: &str,
     ) -> Result<(), Error> {
@@ -1439,7 +1371,7 @@ mod tests {
 
     async fn push_and_verify(
         ctx: &CoreContext,
-        repo: &(impl Repo + FilestoreConfigRef),
+        repo: &(impl Repo + BonsaiHgMappingRef + FilestoreConfigRef),
         parent: ChangesetId,
         bookmark: &BookmarkKey,
         content: BTreeMap<&str, Option<&str>>,
@@ -2400,7 +2332,7 @@ mod tests {
 
     async fn count_commits_between(
         ctx: CoreContext,
-        repo: &impl Repo,
+        repo: &(impl Repo + BonsaiHgMappingRef),
         ancestor: HgChangesetId,
         descendant: BookmarkKey,
     ) -> Result<usize, Error> {
@@ -3136,111 +3068,6 @@ mod tests {
         .await?;
 
         Ok(())
-    }
-
-    #[mononoke::fbinit_test]
-    async fn test_commit_validation(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo: PushrebaseTestRepo = test_repo_factory::build_empty(ctx.fb).await?;
-
-        // Pushrebase hook that deletes "base" file from the list of file changes
-        struct InvalidPushrebaseHook {}
-
-        #[async_trait]
-        impl PushrebaseHook for InvalidPushrebaseHook {
-            async fn in_critical_section(
-                &self,
-                _ctx: &CoreContext,
-                _old_bookmark_value: Option<ChangesetId>,
-            ) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
-                Ok(Box::new(InvalidPushrebaseHook {}))
-            }
-        }
-
-        #[async_trait]
-        impl PushrebaseCommitHook for InvalidPushrebaseHook {
-            fn post_rebase_changeset(
-                &mut self,
-                _bcs_old: ChangesetId,
-                bcs_new: &mut BonsaiChangesetMut,
-            ) -> Result<(), Error> {
-                bcs_new.file_changes.remove(&NonRootMPath::new("base")?);
-                Ok(())
-            }
-
-            async fn into_transaction_hook(
-                self: Box<Self>,
-                _ctx: &CoreContext,
-                _changesets: &RebasedChangesets,
-            ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
-                Ok(self)
-            }
-        }
-
-        #[async_trait]
-        impl PushrebaseTransactionHook for InvalidPushrebaseHook {
-            async fn populate_transaction(
-                &self,
-                _ctx: &CoreContext,
-                txn: Transaction,
-            ) -> Result<Transaction, BookmarkTransactionError> {
-                Ok(txn)
-            }
-        }
-
-        // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
-        // on top of master
-        let bcs_id_base = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file("base", "base")
-            .commit()
-            .await?;
-
-        let bcs_id_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
-            .add_file("p1", "p1")
-            .commit()
-            .await?;
-
-        let bcs_id_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
-            .add_file("p2", "p2")
-            .commit()
-            .await?;
-
-        let bcs_id_merge = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1, bcs_id_p2])
-            .add_file("merge", "merge")
-            .commit()
-            .await?;
-
-        // Modify base file again
-        let bcs_id_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1])
-            .add_file("base", "base2")
-            .commit()
-            .await?;
-
-        bookmark(&ctx, &repo, "master")
-            .set_to(bcs_id_master)
-            .await?;
-
-        let hook: Box<dyn PushrebaseHook> = Box::new(InvalidPushrebaseHook {});
-        let hooks = [hook];
-
-        let bcs_merge = bcs_id_merge.load(&ctx, repo.repo_blobstore()).await?;
-
-        let book = master_bookmark();
-        let res = do_pushrebase_bonsai(
-            &ctx,
-            &repo,
-            &Default::default(),
-            &book,
-            &hashset![bcs_merge.clone()],
-            &hooks,
-        )
-        .await;
-
-        match res {
-            Err(PushrebaseError::ValidationError { .. }) => Ok(()),
-            Err(err) => Err(err.into()),
-            Ok(_) => Err(format_err!("should have failed")),
-        }
     }
 
     #[mononoke::fbinit_test]
