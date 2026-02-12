@@ -17,6 +17,7 @@ from sapling import (
     registrar,
     revsetlang,
     scmutil,
+    smartset,
 )
 from sapling.i18n import _
 from sapling.node import hex, nullrev, short
@@ -580,6 +581,24 @@ def _bottom(repo, subset, x):
     revsetlang.getargs(x, 0, 0, _("bottom takes no arguments"))
     node = _findstackbottom(repo.ui, repo)
     return _torevset(repo, subset, node)
+
+
+@revsetpredicate("stack()")
+def _stack(repo, subset, x):
+    """``stack()``
+    Linear draft stack containing the working directory parent.
+    """
+    revsetlang.getargs(x, 0, 0, _("stack takes no arguments"))
+
+    if repo["."].ispublic():
+        return smartset.baseset(repo=repo)
+
+    top = _findstacktop(repo.ui, repo, hint=None)
+    bottom = _findstackbottom(repo.ui, repo)
+
+    cl = repo.changelog
+    nodes = cl.dag.range([bottom], [top])
+    return subset & cl.torevset(nodes)
 
 
 def _torevset(repo, subset, node):
