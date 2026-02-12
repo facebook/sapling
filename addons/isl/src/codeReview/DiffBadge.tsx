@@ -18,20 +18,20 @@ import {Component, lazy, Suspense, useState} from 'react';
 import {useShowConfirmSubmitStack} from '../ConfirmSubmitStack';
 import {Internal} from '../Internal';
 import {Link} from '../Link';
+import {clipboardCopyLink, clipboardCopyText} from '../clipboard';
+import {useFeatureFlagSync} from '../featureFlags';
 import {T, t} from '../i18n';
+import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
+import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
 import {configBackedAtom, useAtomGet} from '../jotaiUtils';
 import {PullRevOperation} from '../operations/PullRevOperation';
 import {useRunOperation} from '../operationsState';
 import platform from '../platform';
 import {exactRevset} from '../types';
 import {codeReviewProvider, diffSummary} from './CodeReviewInfo';
+import './DiffBadge.css';
 import {openerUrlForDiffUrl} from './github/GitHubUrlOpener';
 import {SyncStatus, syncStatusAtom} from './syncStatus';
-
-import {clipboardCopyLink, clipboardCopyText} from '../clipboard';
-import {CircleEllipsisIcon} from '../icons/CircleEllipsisIcon';
-import {CircleExclamationIcon} from '../icons/CircleExclamationIcon';
-import './DiffBadge.css';
 
 const DiffCommentsDetails = lazy(() => import('./DiffComments'));
 
@@ -148,6 +148,7 @@ function DiffInfoInner({
 }) {
   const diffInfoResult = useAtomValue(diffSummary(diffId));
   const syncStatus = useAtomGet(syncStatusAtom, commit.hash);
+  const startTestsEnabled = useFeatureFlagSync(Internal.featureFlags?.StartTestsButton);
   if (diffInfoResult.error) {
     return <DiffLoadError number={provider.formatDiffNumber(diffId)} provider={provider} />;
   }
@@ -156,6 +157,24 @@ function DiffInfoInner({
   }
   const info = diffInfoResult.value;
   const shouldHideActions = hideActions || provider.isDiffClosed(info);
+  // deferredTestingInfo is fb-only (phabricator). Use 'in' check to avoid OSS type errors.
+  const deferredTestingInfo:
+    | {
+        submitQueueRequestFBID?: string | null;
+        explanation?: string | null;
+        isDeferred?: boolean;
+      }
+    | undefined =
+    'deferredTestingInfo' in info
+      ? (info.deferredTestingInfo as {
+          submitQueueRequestFBID?: string | null;
+          explanation?: string | null;
+          isDeferred?: boolean;
+        })
+      : undefined;
+  // Use version-level isDeferred from deferredTestingInfo for accurate detection
+  const isDeferred = deferredTestingInfo?.isDeferred === true || info.signalSummary === 'deferred';
+
   return (
     <div
       className={`diff-info ${provider.name}-diff-info`}
@@ -165,6 +184,19 @@ function DiffInfoInner({
       {provider.DiffLandButtonContent && (
         <provider.DiffLandButtonContent diff={info} commit={commit} />
       )}
+      {/* Show Start Tests button when deferred (fb-only) */}
+      {startTestsEnabled &&
+        isDeferred &&
+        Internal.StartDeferredTestsButton != null &&
+        deferredTestingInfo?.submitQueueRequestFBID && (
+          <Suspense fallback={null}>
+            <Internal.StartDeferredTestsButton
+              diffId={diffId}
+              submitQueueRequestFBID={deferredTestingInfo.submitQueueRequestFBID}
+              explanation={deferredTestingInfo?.explanation}
+            />
+          </Suspense>
+        )}
       <DiffComments diffId={diffId} diff={info} />
       <DiffNumber url={info.url}>{provider.formatDiffNumber(diffId)}</DiffNumber>
       {shouldHideActions ? null : syncStatus === SyncStatus.RemoteIsNewer ? (
@@ -336,6 +368,10 @@ function DiffSignalSummary({diff}: {diff: DiffSummary}) {
     case 'land-cancelled':
       icon = <CircleExclamationIcon />;
       tooltip = t('Land is cancelled for this Diff. See Diff for more details.');
+      break;
+    case 'deferred':
+      icon = 'debug-pause';
+      tooltip = t('Tests are deferred for this Diff. Click "Start Tests" to run them.');
       break;
   }
   return (

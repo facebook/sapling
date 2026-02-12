@@ -200,6 +200,9 @@ export type TrackEventName =
   | 'RecommendTestPlanButtonClicked'
   | 'GenerateSummaryButtonClicked'
   | 'PullFullRepoBranchOperation'
+  | 'StartDeferredTestsClicked'
+  | 'StartDeferredTestsFailed'
+  | 'StartDeferredTestsSuccess'
   | 'SubtreeMergeOperation';
 
 export type TrackErrorName =

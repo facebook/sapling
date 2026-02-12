@@ -173,6 +173,7 @@ export type DiffComment = {
  * Summary of CI test results for a Diff.
  * 'pass' if ALL signals succeed and not still running.
  * 'failed' if ANY signal doesn't succeed, even if some are still running.
+ * 'deferred' if tests are deferred and waiting to be started.
  */
 export type DiffSignalSummary =
   | 'running'
@@ -180,7 +181,8 @@ export type DiffSignalSummary =
   | 'failed'
   | 'warning'
   | 'no-signal'
-  | 'land-cancelled';
+  | 'land-cancelled'
+  | 'deferred';
 
 /**
  * Information about a land request, specific to each Code Review Provider.
