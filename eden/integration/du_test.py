@@ -5,7 +5,7 @@
 # GNU General Public License version 2.
 
 
-# pyre-unsafe
+# pyre-strict
 
 
 """Integration tests for the `eden du` (disk usage) command."""

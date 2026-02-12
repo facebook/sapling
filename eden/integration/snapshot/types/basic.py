@@ -4,7 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# pyre-unsafe
+# pyre-strict
 
 from eden.integration.lib import edenclient
 from eden.integration.snapshot import verify as verify_mod
