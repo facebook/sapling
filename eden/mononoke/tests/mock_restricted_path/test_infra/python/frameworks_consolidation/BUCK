@@ -1,0 +1,64 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:python_pytest.bzl", "python_pytest")
+load("@fbcode_macros//build_defs:python_testslide.bzl", "python_testslide")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+
+oncall("testing_frameworks")
+
+python_pytest(
+    name = "pytest_test_migration_example",
+    srcs = ["test_pytest_migration_example.py"],
+    deps = [
+        "fbsource//third-party/pypi/pytest:pytest",
+        "//eden/mononoke/tests/mock_restricted_path/test_infra/python/simple:simple",
+    ],
+)
+
+python_unittest(
+    name = "unittest_test",
+    srcs = ["unittest_test.py"],
+    deps = [
+        "fbsource//third-party/pypi/parameterized:parameterized",
+        "//eden/mononoke/tests/mock_restricted_path/test_infra/python/simple:simple",
+    ],
+)
+
+# An unittest test that runs with the testslide macro
+# this should be automatically migrated to unittest
+python_testslide(
+    name = "unittest_run_with_testslide",
+    srcs = ["unittest_test.py"],
+    supports_static_listing = False,  # Usage of parameterized blocks static listing
+    deps = [
+        "fbsource//third-party/pypi/parameterized:parameterized",
+        "//eden/mononoke/tests/mock_restricted_path/test_infra/python/simple:simple",
+    ],
+)
+
+python_unittest(
+    name = "unittest_strictmock_test",
+    srcs = ["unittest_strictmock_test.py"],
+    labels = ["autodeps2_generated"],
+    uses_legacy_listing = False,  # use snapper
+    deps = [
+        "//testslide/testslide:testslide",
+    ],
+)
+
+python_unittest(
+    name = "strict_mock_test",
+    srcs = ["strict_mock_test.py"],
+    labels = ["autodeps2_generated"],
+    uses_legacy_listing = False,  # use snapper
+    deps = [
+        ":storage",
+        "//later:lib",
+        "//strictmock:strictmock",
+    ],
+)
+
+python_library(
+    name = "storage",
+    srcs = ["storage.py"],
+    labels = ["autodeps2_generated"],
+)

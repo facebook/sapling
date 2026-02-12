@@ -1,0 +1,9 @@
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+
+oncall("testing_frameworks")
+
+python_unittest(
+    name = "ignore_sigterm_test",
+    srcs = ["ignore_sigterm_test.py"],
+    labels = ["use-testpilot-adapter"],
+)

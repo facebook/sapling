@@ -1,0 +1,19 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+
+oncall("testing_frameworks")
+
+python_library(
+    name = "break_loader",
+    srcs = ["platform.py"],
+)
+
+python_unittest(
+    name = "break_loader_test",
+    srcs = ["platform_test.py"],
+    needed_coverage = [(66, ":break_loader")],
+    # note: par style fastzip is important to trigger the bug
+    par_style = "fastzip",
+    uses_legacy_listing = True,
+    deps = [":break_loader"],
+)

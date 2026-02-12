@@ -1,0 +1,62 @@
+load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbcode_macros//build_defs:python_pytest.bzl", "python_pytest")
+load("@fbsource//tools/build_defs:testpilot_defs.bzl", "tpx_labels")
+
+oncall("testing_frameworks")
+
+python_pytest(
+    name = "pytest_test",
+    srcs = [
+        "conftest.py",
+        "test_pytest.py",
+    ],
+    deps = [
+        "fbsource//third-party/pypi/pytest:pytest",
+        "//eden/mononoke/tests/mock_restricted_path/test_infra/python/simple:simple",
+    ],
+)
+
+python_pytest(
+    name = "pytest_test_bundled",
+    srcs = [
+        "conftest.py",
+        "test_pytest.py",
+    ],
+    labels = [tpx_labels.run_as_bundle],
+    deps = [
+        "fbsource//third-party/pypi/pytest:pytest",
+        "//eden/mononoke/tests/mock_restricted_path/test_infra/python/simple:simple",
+    ],
+)
+
+python_pytest(
+    name = "pytest_test_needed_coverage",
+    srcs = [
+        "test_needed_coverage.py",
+    ],
+    labels = [tpx_labels.run_as_bundle],
+    needed_coverage = [(100, ":test_lib")],
+    deps = [
+        ":test_lib",
+    ],
+)
+
+python_library(
+    name = "test_lib",
+    srcs = ["test_lib.py"],
+)
+
+python_pytest(
+    name = "pytest_test_test_output_spec",
+    srcs = [
+        "conftest.py",
+        "test_pytest.py",
+    ],
+    labels = [
+        "tpx:supports-test-result-output-spec",
+    ],
+    deps = [
+        "fbsource//third-party/pypi/pytest:pytest",
+        "//eden/mononoke/tests/mock_restricted_path/test_infra/python/simple:simple",
+    ],
+)

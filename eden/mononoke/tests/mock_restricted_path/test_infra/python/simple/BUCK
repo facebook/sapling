@@ -1,0 +1,166 @@
+load("@fbcode_macros//build_defs:python_testslide.bzl", "python_testslide")
+load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load(
+    "@fbcode_macros//build_defs:python_unittest_remote_gpu.bzl",
+    "python_unittest_remote_gpu",
+)
+load("@fbsource//tools/build_defs:testpilot_defs.bzl", "tpx_labels")
+load(":simple.bzl", "py_tests_and_libs")
+
+oncall("testing_frameworks")
+
+py_tests_and_libs(
+    name = "simple",
+    srcs = [
+        "more.py",
+        "simple.py",
+    ],
+    test_srcs = ["simple_test.py"],
+)
+
+python_unittest(
+    name = "simple_test",
+    srcs = [
+        "simple_test.py",
+    ],
+    enable_native_python = False,
+    needed_coverage = [(50, ":simple")],
+    # Add it explicitly here to sanity check that the macro handles all cases
+    tests = [":simple_test_needed_coverage"],
+    deps = [
+        ":simple",
+        ":simple_base_module_mapped",
+    ],
+)
+
+python_unittest(
+    name = "simple_standalone_test",
+    srcs = [
+        "simple_test.py",
+    ],
+    package_style = "standalone",
+    par_style = "zip",
+    uses_legacy_listing = True,
+    deps = [
+        ":simple",
+        ":simple_base_module_mapped",
+    ],
+)
+
+python_unittest(
+    name = "simple_standalone_xar_test",
+    srcs = [
+        "simple_test.py",
+    ],
+    package_style = "standalone",
+    par_style = "xar",
+    deps = [
+        ":simple",
+        ":simple_base_module_mapped",
+    ],
+)
+
+python_unittest(
+    name = "simple_test_tp_adapter",
+    srcs = [
+        "simple_test.py",
+    ],
+    labels = ["use-testpilot-adapter"],
+    needed_coverage = [(50, ":simple")],
+    deps = [
+        ":simple",
+        ":simple_base_module_mapped",
+    ],
+)
+
+python_unittest(
+    name = "simple_test_bundled",
+    srcs = [
+        "simple_test.py",
+    ],
+    labels = [
+        tpx_labels.run_as_bundle,
+    ],
+    deps = [
+        ":simple",
+        ":simple_base_module_mapped",
+    ],
+)
+
+python_unittest(
+    name = "simple_test_bundled_test_output_dryrun",
+    srcs = [
+        "simple_test.py",
+    ],
+    labels = [
+        tpx_labels.run_as_bundle,
+        "tpx:dryrun-test-result-output-spec",
+        "tpx:supports-test-result-output-spec",
+    ],
+    deps = [
+        ":simple",
+        ":simple_base_module_mapped",
+    ],
+)
+
+python_unittest(
+    name = "simple_extended_tests",
+    srcs = ["simple_test.py"],
+    labels = ["extended"],
+    deps = [
+        ":simple",
+        ":simple_base_module_mapped",
+    ],
+)
+
+python_testslide(
+    name = "simple_testslide",
+    srcs = ["simple_test.py"],
+    needed_coverage = [(50, ":simple")],
+    deps = [
+        ":simple",
+        ":simple_base_module_mapped",
+    ],
+)
+
+python_unittest_remote_gpu(
+    name = "re_gpu_test",
+    srcs = ["re_gpu_test.py"],
+    fail_if_no_gpu_used = False,  # legacy, do not use in new targets https://fburl.com/wiki/cg9kb3dk
+    deps = [],
+)
+
+python_unittest_remote_gpu(
+    name = "re_gpu_test_dynamic_listing",
+    srcs = ["re_gpu_test.py"],
+    fail_if_no_gpu_used = False,  # legacy, do not use in new targets https://fburl.com/wiki/cg9kb3dk
+    supports_static_listing = False,
+    deps = [],
+)
+
+python_unittest(
+    name = "simple_testslide_with_metrics",
+    srcs = ["metrics_test.py"],
+    labels = [tpx_labels.enable_metrics_reporting],
+)
+
+python_unittest(
+    name = "artifacts_test",
+    srcs = [
+        "artifacts_test.py",
+    ],
+    labels = [
+        tpx_labels.run_as_bundle,
+        tpx_labels.enable_artifact_reporting,
+    ],
+)
+
+python_unittest(
+    name = "simple_cinder_unittest",
+    srcs = ["simple_test.py"],
+    bundle_runtime = True,
+    deps = [
+        ":simple",
+        ":simple_base_module_mapped",
+    ],
+)

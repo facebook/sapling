@@ -1,0 +1,11 @@
+load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+
+oncall("www_hack_test_infra")
+
+cpp_library(
+    name = "example",
+    srcs = ["Example.cpp"],
+    headers = [
+        "Example.h",
+    ],
+)

@@ -1,0 +1,245 @@
+load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbcode_macros//build_defs/lib:re_test_utils.bzl", "re_test_utils")
+load("@fbsource//tools/build_defs:testpilot_defs.bzl", "tpx_labels")
+
+oncall("testing_frameworks")
+
+cpp_unittest(
+    name = "test_cpp_with_args",
+    srcs = [
+        "with_arguments/main.cc",
+    ],
+    headers = [
+        "with_arguments/TestWithArguments.h",
+    ],
+    args = [
+        "hello world",
+    ],
+    supports_static_listing = True,
+    deps = ["fbsource//third-party/googletest:gtest"],
+)
+
+cpp_unittest(
+    name = "test_cpp_listed",
+    srcs = [
+        "SimpleUnitTest.cpp",
+    ],
+    supports_static_listing = False,
+    deps = ["fbsource//third-party/googletest:gtest"],
+    external_deps = [("boost", None, "boost_filesystem")],
+)
+
+cpp_unittest(
+    name = "test_cpp_namespaced",
+    srcs = [
+        "SimpleUnitTestInNamespace.cpp",
+    ],
+    supports_static_listing = False,
+    deps = ["fbsource//third-party/googletest:gtest"],
+    external_deps = [("boost", None, "boost_filesystem")],
+)
+
+cpp_unittest(
+    name = "test_cpp_bundled",
+    srcs = [
+        "SimpleUnitTest.cpp",
+    ],
+    labels = [tpx_labels.run_as_bundle],
+    supports_static_listing = False,
+    deps = ["fbsource//third-party/googletest:gtest"],
+    external_deps = [("boost", None, "boost_filesystem")],
+)
+
+cpp_unittest(
+    name = "test_cpp_serialized",
+    srcs = [
+        "SimpleUnitTest.cpp",
+    ],
+    labels = [tpx_labels.serialize],
+    supports_static_listing = False,
+    deps = ["fbsource//third-party/googletest:gtest"],
+    external_deps = [("boost", None, "boost_filesystem")],
+)
+
+cpp_unittest(
+    name = "test_cpp_serialized_by_test_case",
+    srcs = [
+        "SimpleUnitTest.cpp",
+    ],
+    labels = [tpx_labels.serialize_test_cases],
+    supports_static_listing = False,
+    deps = ["fbsource//third-party/googletest:gtest"],
+    external_deps = [("boost", None, "boost_filesystem")],
+)
+
+cpp_unittest(
+    name = "test_cpp_on_re",
+    srcs = [
+        "SimpleUnitTest.cpp",
+    ],
+    labels = [tpx_labels.run_as_bundle],
+    remote_execution = re_test_utils.remote_execution_linux_default(),
+    supports_static_listing = False,
+    deps = ["fbsource//third-party/googletest:gtest"],
+    external_deps = [("boost", None, "boost_filesystem")],
+)
+
+cpp_unittest(
+    name = "test_cpp_on_re_no_timeout_multiplier",
+    srcs = [
+        "SimpleUnitTest.cpp",
+    ],
+    labels = [
+        tpx_labels.run_as_bundle,
+        "tpx:no-timeout-multiplier",
+    ],
+    remote_execution = re_test_utils.remote_execution_linux_default(),
+    supports_static_listing = False,
+    deps = ["fbsource//third-party/googletest:gtest"],
+    external_deps = [("boost", None, "boost_filesystem")],
+)
+
+cpp_unittest(
+    name = "test_cpp_bundled_with_artifacts",
+    srcs = [
+        "UnitTestWithAnnotations.cpp",
+    ],
+    labels = [
+        tpx_labels.run_as_bundle,
+        tpx_labels.enable_artifact_reporting,
+    ],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//testinfra/if:test_result_artifacts-cpp2-types",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+)
+
+cpp_unittest(
+    name = "test_cpp_bundled_with_artifacts_cas",
+    srcs = [
+        "UnitTestWithAnnotations.cpp",
+    ],
+    labels = [
+        tpx_labels.run_as_bundle,
+        tpx_labels.enable_artifact_reporting,
+        tpx_labels.enable_artifact_cas_store,
+    ],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//testinfra/if:test_result_artifacts-cpp2-types",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+)
+
+cpp_unittest(
+    name = "test_cpp_bundled_with_artifacts_on_re",
+    srcs = [
+        "UnitTestWithAnnotations.cpp",
+    ],
+    labels = [
+        tpx_labels.run_as_bundle,
+        tpx_labels.enable_artifact_reporting,
+    ],
+    remote_execution = re_test_utils.remote_execution_linux_default(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//testinfra/if:test_result_artifacts-cpp2-types",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+)
+
+cpp_unittest(
+    name = "test_cpp_bundled_with_artifacts_on_re_cas",
+    srcs = [
+        "UnitTestWithAnnotations.cpp",
+    ],
+    labels = [
+        tpx_labels.run_as_bundle,
+        tpx_labels.enable_artifact_reporting,
+        tpx_labels.enable_artifact_cas_store,
+    ],
+    remote_execution = re_test_utils.remote_execution_linux_default(),
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//testinfra/if:test_result_artifacts-cpp2-types",
+        "//thrift/lib/cpp2/protocol:protocol",
+    ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
+)
+
+cpp_unittest(
+    name = "test_cpp_bundled_exceptions_in_scopeguard",
+    srcs = [
+        "WithExceptionInScopeGuardTest.cpp",
+    ],
+    args = ["--gtest_catch_exceptions=1"],
+    labels = [tpx_labels.run_as_bundle],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//folly:scope_guard",
+    ],
+)
+
+cpp_unittest(
+    name = "test_cpp_exceptions_in_scopeguard",
+    srcs = [
+        "WithExceptionInScopeGuardTest.cpp",
+    ],
+    args = ["--gtest_catch_exceptions=1"],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//folly:scope_guard",
+    ],
+)
+
+cpp_unittest(
+    name = "test_broken_init",
+    srcs = [
+        "BrokenInitUnitTest.cpp",
+    ],
+    deps = ["fbsource//third-party/googletest:gtest"],
+)
+
+cpp_unittest(
+    name = "test_cpp_bundled_with_shards",
+    srcs = [
+        "SimpleUnitTest.cpp",
+    ],
+    labels = [
+        tpx_labels.run_as_bundle,
+        "tpx:experimental-shard-size-for-bundle=2",
+    ],
+    supports_static_listing = False,
+    deps = ["fbsource//third-party/googletest:gtest"],
+    external_deps = [("boost", None, "boost_filesystem")],
+)
+
+cpp_unittest(
+    name = "test_example",
+    srcs = [
+        "ExampleTest.cpp",
+    ],
+    supports_static_listing = False,
+    deps = [
+        "fbsource//third-party/googletest:gtest",
+        "//eden/mononoke/tests/mock_restricted_path/test_infra/cpp:example",
+    ],
+)
