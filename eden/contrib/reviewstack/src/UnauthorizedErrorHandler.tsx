@@ -7,8 +7,8 @@
 
 import CenteredSpinner from './CenteredSpinner';
 import {authErrorMessageAtom, gitHubTokenPersistenceAtom} from './jotai';
-import {useEffect} from 'react';
 import {useSetAtom} from 'jotai';
+import {useEffect} from 'react';
 
 type Props = {
   message: string;

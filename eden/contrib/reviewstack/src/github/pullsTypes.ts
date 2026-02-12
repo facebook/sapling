@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {PageInfo, PullRequestState, PullsPullRequestFragment} from '../generated/graphql';
 import type {PaginationParams} from './types';
+import type {PageInfo, PullRequestState, PullsPullRequestFragment} from '../generated/graphql';
 
 export type PullsQueryInput = PaginationParams & {
   labels: string[];

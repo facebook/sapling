@@ -22,7 +22,8 @@
     "vscode-textmate": "^6.0.0"
   },
   "scripts": {
-    "eslint": "eslint src --ext .ts --ext .tsx",
+    "eslint": "eslint src",
+    "eslint:fix": "eslint src --fix",
     "test": "react-scripts test",
     "codegen": "node ./codegen.js",
     "graphql": "graphql-codegen --config codegen.yml",

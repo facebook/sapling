@@ -115,7 +115,7 @@ export default function SplitDiffView({
     const errorMessage =
       typeof loadable.error === 'string'
         ? loadable.error
-        : loadable.error?.message ?? 'Unknown error';
+        : (loadable.error?.message ?? 'Unknown error');
     return (
       <Box borderWidth="1px" borderStyle="solid" borderColor="border.default" borderRadius={2}>
         <FileHeader path={path} open={open} onChangeOpen={open => setOpen(open)} />

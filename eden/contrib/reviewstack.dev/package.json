@@ -17,7 +17,8 @@
     "start": "node ./start.js",
     "build": "node ./build.js",
     "release": "node ./release.js",
-    "eslint": "eslint src --ext .ts --ext .tsx"
+    "eslint": "eslint src",
+    "eslint:fix": "eslint src --fix"
   },
   "browserslist": {
     "production": [

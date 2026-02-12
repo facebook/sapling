@@ -66,7 +66,7 @@ export function minimalDisambiguousPaths(paths: string[], options: Options = {})
       : options.maxDepth;
 
   const pathObjectsToProcess = new Set(pathObjects);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Please fix as you edit this code
+   
   const groupedPathObjects: Map<string, Set<PathObject>> = new Map();
 
   for (let currentDepth = 1; currentDepth <= maxDepth; currentDepth++) {
@@ -77,7 +77,7 @@ export function minimalDisambiguousPaths(paths: string[], options: Options = {})
       if (!groupedPathObjects.has(path)) {
         groupedPathObjects.set(path, new Set());
       }
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Please fix as you edit this code
+       
       groupedPathObjects.get(path)!.add(pathObject);
     }
 

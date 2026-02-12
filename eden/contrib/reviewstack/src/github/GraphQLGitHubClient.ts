@@ -5,6 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type GitHubClient from './GitHubClient';
+import type {PullRequest} from './pullRequestTimelineTypes';
+import type {PullsQueryInput, PullsWithPageInfo} from './pullsTypes';
+import type {CommitComparison} from './restApiTypes';
+import type {Blob, Commit, GitObjectID, ID, Tree} from './types';
 import type {
   AddCommentMutationData,
   AddCommentMutationVariables,
@@ -44,12 +49,10 @@ import type {
   TreeQueryVariables,
   UserFragment,
 } from '../generated/graphql';
-import type GitHubClient from './GitHubClient';
-import type {PullRequest} from './pullRequestTimelineTypes';
-import type {PullsQueryInput, PullsWithPageInfo} from './pullsTypes';
-import type {CommitComparison} from './restApiTypes';
-import type {Blob, Commit, GitObjectID, ID, Tree} from './types';
 
+import {globalCacheStats} from './GitHubClientStats';
+import {createGraphQLEndpointForHostname} from './gitHubCredentials';
+import queryGraphQL from './queryGraphQL';
 import {
   AddCommentMutation,
   AddLabelsToLabelableMutation,
@@ -66,9 +69,6 @@ import {
   SubmitPullRequestReviewMutation,
   TreeQuery,
 } from '../generated/graphql';
-import {globalCacheStats} from './GitHubClientStats';
-import {createGraphQLEndpointForHostname} from './gitHubCredentials';
-import queryGraphQL from './queryGraphQL';
 import {createRequestHeaders} from 'shared/github/auth';
 import {notEmpty} from 'shared/utils';
 

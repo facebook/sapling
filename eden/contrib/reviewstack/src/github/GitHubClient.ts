@@ -5,6 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {PullRequest} from './pullRequestTimelineTypes';
+import type {PullsQueryInput, PullsWithPageInfo} from './pullsTypes';
+import type {CommitComparison} from './restApiTypes';
+import type {Blob, Commit, GitObjectID, ID, Tree} from './types';
 import type {
   AddCommentMutationData,
   AddLabelsToLabelableInput,
@@ -23,10 +27,6 @@ import type {
   SubmitPullRequestReviewMutationData,
   UserFragment,
 } from '../generated/graphql';
-import type {PullRequest} from './pullRequestTimelineTypes';
-import type {PullsQueryInput, PullsWithPageInfo} from './pullsTypes';
-import type {CommitComparison} from './restApiTypes';
-import type {Blob, Commit, GitObjectID, ID, Tree} from './types';
 
 /**
  * Client for fetching data from GitHub. Intended to abstract away

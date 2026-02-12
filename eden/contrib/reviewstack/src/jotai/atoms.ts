@@ -56,8 +56,8 @@ import queryGraphQL from '../github/queryGraphQL';
 import {parseSaplingStackBody} from '../saplingStack';
 import {getPathForChange, getTreeEntriesForChange} from '../utils';
 import {atom} from 'jotai';
-import {atomFamily} from 'jotai-family';
 import {atomWithStorage} from 'jotai/utils';
+import {atomFamily} from 'jotai-family';
 import {createRequestHeaders} from 'shared/github/auth';
 import rejectAfterTimeout from 'shared/rejectAfterTimeout';
 import {notEmpty} from 'shared/utils';
@@ -393,7 +393,7 @@ export const gitHubPullRequestForParamsAtom = atomFamily(
       const token = localStorage.getItem('github.token');
       if (token == null) {
         // Return a never-settling promise to indicate we're waiting for auth
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
+         
         return new Promise<PullRequest | null>(() => {});
       }
 

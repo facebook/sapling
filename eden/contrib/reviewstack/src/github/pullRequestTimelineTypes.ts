@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type {GitObject, ID} from './types';
 import type {
   ActorFragment,
   CommitFragment,
@@ -24,7 +25,6 @@ import type {
   PullRequestTimelineItemFragment_ReviewRequestRemovedEvent_,
   PullRequestTimelineItemFragment_ReviewRequestedEvent_,
 } from '../generated/graphql';
-import type {GitObject, ID} from './types';
 
 export type Actor = ActorFragment;
 
