@@ -41,14 +41,21 @@ pub fn unblock_signal(sig: libc::c_int) {
     sigmask_sigprof(sig, false);
 }
 
+/// Thread identifier type: Linux uses kernel tid, others use pthread_t.
+#[cfg(target_os = "linux")]
+pub type ThreadId = libc::pid_t;
+
+#[cfg(all(unix, not(target_os = "linux")))]
+pub type ThreadId = libc::pthread_t;
+
 // Get the current thread id. Must be async-signal-safe.
 #[cfg(target_os = "linux")]
-pub fn get_thread_id() -> libc::pid_t {
-    unsafe { libc::syscall(libc::SYS_gettid) as libc::pid_t }
+pub fn get_thread_id() -> ThreadId {
+    unsafe { libc::syscall(libc::SYS_gettid) as ThreadId }
 }
 
 #[cfg(all(unix, not(target_os = "linux")))]
-pub fn get_thread_id() -> libc::pthread_t {
+pub fn get_thread_id() -> ThreadId {
     unsafe { libc::pthread_self() }
 }
 
@@ -197,19 +204,16 @@ impl OwnedTimer {
         }
     }
 }
-#[cfg(target_os = "linux")]
-use libc::timer_t;
-
 /// Send `sig` to `tid` at the specified interval.
 /// On Linux, uses kernel timer_create with SIGEV_THREAD_ID.
 /// Returns the timer handle that can be used to stop the timer later.
 #[cfg(target_os = "linux")]
 pub fn setup_signal_timer(
     sig: libc::c_int,
-    tid: libc::pid_t,
+    tid: ThreadId,
     interval: Duration,
     sigev_value: isize,
-) -> io::Result<OwnedTimer> {
+) -> anyhow::Result<OwnedTimer> {
     unsafe {
         let mut sev: libc::sigevent = mem::zeroed();
         sev.sigev_notify = libc::SIGEV_THREAD_ID;
@@ -223,7 +227,7 @@ pub fn setup_signal_timer(
 
         // CLOCK_MONOTONIC does not include system suspend time.
         if libc::timer_create(libc::CLOCK_MONOTONIC, &mut sev, &mut timer) != 0 {
-            return Err(io::Error::last_os_error());
+            return Err(io::Error::last_os_error().into());
         }
 
         let mut spec: libc::itimerspec = mem::zeroed();
@@ -235,7 +239,7 @@ pub fn setup_signal_timer(
         if libc::timer_settime(timer, 0, &spec, std::ptr::null_mut()) != 0 {
             let err = io::Error::last_os_error();
             libc::timer_delete(timer);
-            return Err(err);
+            return Err(err.into());
         }
 
         Ok(OwnedTimer(timer))
@@ -250,7 +254,7 @@ pub fn setup_signal_timer(
 #[cfg(all(unix, not(target_os = "linux")))]
 pub fn setup_signal_timer(
     sig: libc::c_int,
-    target_thread: libc::pthread_t,
+    target_thread: ThreadId,
     interval: Duration,
     sigev_value: isize,
 ) -> anyhow::Result<OwnedTimer> {
@@ -324,7 +328,7 @@ pub fn setup_signal_timer(
 
 /// Stop and delete a signal timer created by `setup_signal_timer`.
 #[cfg(target_os = "linux")]
-fn stop_signal_timer(timer: timer_t) -> io::Result<()> {
+fn stop_signal_timer(timer: libc::timer_t) -> io::Result<()> {
     unsafe {
         if libc::timer_delete(timer) != 0 {
             return Err(io::Error::last_os_error());
