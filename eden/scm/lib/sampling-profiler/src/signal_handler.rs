@@ -55,6 +55,9 @@ pub extern "C" fn signal_handler(
         payload as i32
     };
 
+    // libc::write (and other syscalls) may clobber errno.
+    let saved_errno = unsafe { get_errno() };
+
     let backtrace_id: usize = {
         static BACKTRACE_ID: AtomicUsize = AtomicUsize::new(0);
         BACKTRACE_ID.fetch_add(1, Ordering::AcqRel)
@@ -101,6 +104,8 @@ pub extern "C" fn signal_handler(
         frame: end_frame,
     };
     let _ = write_frame(&payload, write_fd);
+
+    unsafe { set_errno(saved_errno) };
 }
 
 /// Write a `MaybeFrame`. Handles EINTR.
@@ -118,20 +123,7 @@ fn write_frame(frame: &FramePayload, fd: libc::c_int) -> libc::c_int {
         // It is okay to write its raw bytes to "serialize" within the same process.
         let written_bytes = unsafe { libc::write(fd, pos, remaining_bytes) };
         if written_bytes < 0 {
-            let errno = {
-                #[cfg(target_os = "macos")]
-                unsafe {
-                    *libc::__error()
-                }
-
-                #[cfg(target_os = "linux")]
-                unsafe {
-                    *libc::__errno_location()
-                }
-
-                #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-                libc::EINVAL
-            };
+            let errno = unsafe { get_errno() };
             if errno == libc::EINTR {
                 // Retry
                 continue;
@@ -154,5 +146,37 @@ fn write_frame(frame: &FramePayload, fd: libc::c_int) -> libc::c_int {
             pos = unsafe { pos.offset(written_bytes) };
             continue;
         }
+    }
+}
+
+/// Read `errno` for the current thread. Async-signal-safe.
+unsafe fn get_errno() -> libc::c_int {
+    #[cfg(target_os = "macos")]
+    unsafe {
+        *libc::__error()
+    }
+    #[cfg(target_os = "linux")]
+    unsafe {
+        *libc::__errno_location()
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        0
+    }
+}
+
+/// Write `errno` for the current thread. Async-signal-safe.
+unsafe fn set_errno(value: libc::c_int) {
+    #[cfg(target_os = "macos")]
+    unsafe {
+        *libc::__error() = value;
+    }
+    #[cfg(target_os = "linux")]
+    unsafe {
+        *libc::__errno_location() = value;
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        let _ = value;
     }
 }
