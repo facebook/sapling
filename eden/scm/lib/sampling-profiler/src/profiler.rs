@@ -71,15 +71,7 @@ impl Profiler {
             })?;
 
         // Start a timer that sends signals to the target thread periodically.
-        let secs = interval.as_secs();
-        let nsecs = interval.subsec_nanos();
-        let timer_id = osutil::setup_signal_timer(
-            SIG,
-            thread_id,
-            secs.try_into()?,
-            nsecs.try_into()?,
-            write_fd.0 as isize,
-        )?;
+        let timer_id = osutil::setup_signal_timer(SIG, thread_id, interval, write_fd.0 as isize)?;
 
         Ok(Self {
             timer_id,

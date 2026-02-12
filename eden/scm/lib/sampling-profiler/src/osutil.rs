@@ -10,6 +10,7 @@
 use std::io;
 use std::mem;
 use std::ptr;
+use std::time::Duration;
 
 // Block `sig` signals. Explicitly opt-out profiling for the current thread
 // and new threads spawned from the current thread.
@@ -155,8 +156,7 @@ pub(crate) type timer_t = *mut libc::c_void;
 pub fn setup_signal_timer(
     sig: libc::c_int,
     tid: libc::pid_t,
-    interval_secs: i64,
-    interval_nsecs: i64,
+    interval: Duration,
     sigev_value: isize,
 ) -> io::Result<OwnedTimer> {
     #[cfg(target_os = "linux")]
@@ -178,10 +178,10 @@ pub fn setup_signal_timer(
         let timer = OwnedTimer(timer);
 
         let mut spec: libc::itimerspec = mem::zeroed();
-        spec.it_interval.tv_sec = interval_secs;
-        spec.it_interval.tv_nsec = interval_nsecs;
-        spec.it_value.tv_sec = interval_secs;
-        spec.it_value.tv_nsec = interval_nsecs;
+        spec.it_interval.tv_sec = interval.as_secs() as _;
+        spec.it_interval.tv_nsec = interval.subsec_nanos() as _;
+        spec.it_value.tv_sec = interval.as_secs() as _;
+        spec.it_value.tv_nsec = interval.subsec_nanos() as _;
 
         if libc::timer_settime(timer.0, 0, &spec, std::ptr::null_mut()) != 0 {
             return Err(io::Error::last_os_error());
@@ -192,7 +192,7 @@ pub fn setup_signal_timer(
 
     #[cfg(not(target_os = "linux"))]
     {
-        let _ = (sig, tid, interval_secs, interval_nsecs, sigev_value);
+        let _ = (sig, tid, interval, sigev_value);
         Err(io::ErrorKind::Unsupported.into())
     }
 }
