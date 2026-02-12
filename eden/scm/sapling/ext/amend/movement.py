@@ -157,7 +157,7 @@ def next_(ui, repo, *args, **opts):
 
 
 def _moverelative(ui, repo, args, opts, reverse=False):
-    """Update to a changeset relative to the current changeset.
+    """Update to a commit relative to the current commit.
     Implements both `@prog@ previous` and `@prog@ next`.
 
     Takes in a list of positional arguments and a dict of command line
@@ -215,7 +215,7 @@ def _moverelative(ui, repo, args, opts, reverse=False):
         movebookmark = opts.get("move_bookmark", False)
 
         with repo.transaction("moverelative") as tr:
-            # Find the desired changeset. May potentially perform rebase.
+            # Find the desired commit. May potentially perform rebase.
             try:
                 target = _findtarget(ui, repo, n, opts, reverse)
             except error.InterventionRequired:
@@ -229,7 +229,7 @@ def _moverelative(ui, repo, args, opts, reverse=False):
             if movebookmark and bookmark is not None:
                 _setbookmark(repo, tr, bookmark, target)
 
-            # Update to the target changeset.
+            # Update to the target commit.
             commands.update(
                 ui,
                 repo,
@@ -239,18 +239,18 @@ def _moverelative(ui, repo, args, opts, reverse=False):
                 check=opts.get("check", False),
             )
 
-            # Print out the changeset we landed on.
+            # Print out the commit we landed on.
             _showchangesets(ui, repo, nodes=[target])
 
-            # Activate the bookmark on the new changeset.
+            # Activate the bookmark on the new commit.
             if not noactivate and not movebookmark:
                 _activate(ui, repo, target)
 
 
 def _findtarget(ui, repo, n, opts, reverse):
-    """Find the appropriate target changeset for `@prog@ previous` and
+    """Find the appropriate target commit for `@prog@ previous` and
     `@prog@ next` based on the provided options. May rebase the traversed
-    changesets if the rebase option is given in the opts dict.
+    commits if the rebase option is given in the opts dict.
     """
     towards = opts.get("towards")
     newest = opts.get("newest", False)
@@ -287,7 +287,7 @@ def _findtarget(ui, repo, n, opts, reverse):
 
 def _findprevtarget(ui, repo, n=None, bookmark=False, newest=False):
     """Get the revision n levels down the stack from the current revision.
-    If newest is True, if a changeset has multiple parents the newest
+    If newest is True, if a commit has multiple parents the newest
     will always be chosen. Otherwise, throws an exception.
     """
     ctx = repo["."]
@@ -311,14 +311,14 @@ def _findprevtarget(ui, repo, n=None, bookmark=False, newest=False):
         # Is this the root of the current branch?
         if not parents or parents[0].rev() == nullrev:
             if ctx.rev() == repo["."].rev():
-                raise error.Abort(_("current changeset has no parents"))
-            ui.status(_("reached root changeset\n"))
+                raise error.Abort(_("current commit has no parents"))
+            ui.status(_("reached root commit\n"))
             break
 
         # Are there multiple parents?
         if len(parents) > 1 and not newest:
             ui.status(
-                _("changeset %s has multiple parents, namely:\n") % short(ctx.node())
+                _("commit %s has multiple parents, namely:\n") % short(ctx.node())
             )
             parents = _showchangesets(
                 ui, repo, contexts=parents, indices=ui.interactive()
@@ -327,7 +327,7 @@ def _findprevtarget(ui, repo, n=None, bookmark=False, newest=False):
                 ctx = _choosenode(ui, parents)
             else:
                 raise error.Abort(
-                    _("ambiguous previous changeset"),
+                    _("ambiguous previous commit"),
                     hint=_(
                         "use the --newest flag to always "
                         "pick the newest parent at each step"
@@ -352,7 +352,7 @@ def _findnexttarget(
     preferdraft=False,
 ):
     """Get the revision n levels up the stack from the current revision.
-    If newest is True, if a changeset has multiple children the newest
+    If newest is True, if a commit has multiple children the newest
     will always be chosen. Otherwise, throws an exception. If the rebase
     option is specified, potentially rebase unstable children as we
     walk up the stack.
@@ -369,12 +369,12 @@ def _findnexttarget(
     if towards:
         towardsrevs = scmutil.revrange(repo, [towards])
         if len(towardsrevs) > 1:
-            raise error.Abort(_("'%s' refers to multiple changesets") % towards)
+            raise error.Abort(_("'%s' refers to multiple commits") % towards)
         towardsrev = towardsrevs.first()
         line = set(repo.nodes(".::%d", towardsrev))
         if not line:
             raise error.Abort(
-                _("the current changeset is not an ancestor of '%s'") % towards
+                _("the current commit is not an ancestor of '%s'") % towards
             )
 
     for i in count(0):
@@ -399,14 +399,14 @@ def _findnexttarget(
         # Have we reached a head?
         if not children:
             if node == repo["."].node():
-                raise error.Abort(_("current changeset has no children"))
+                raise error.Abort(_("current commit has no children"))
             if not top:
-                ui.status(_("reached head changeset\n"))
+                ui.status(_("reached head commit\n"))
             break
 
         # Are there multiple children?
         if len(children) > 1 and not newest:
-            ui.status(_("changeset %s has multiple children, namely:\n") % short(node))
+            ui.status(_("commit %s has multiple children, namely:\n") % short(node))
             children = [
                 c.node()
                 for c in _showchangesets(
@@ -426,7 +426,7 @@ def _findnexttarget(
                 node = _choosenode(ui, children)
             else:
                 raise error.Abort(
-                    _("ambiguous next changeset"),
+                    _("ambiguous next commit"),
                     hint=_(
                         "use the --newest or --towards flags "
                         "to specify which child to pick"
@@ -446,7 +446,7 @@ def _choosenode(ui, nodes):
     cancel = _("(c)ancel")
     cancelclean = _("cancel")
     options = f" [1-{n}/{cancel}]? $$ &{cancelclean}{options}"
-    choice = ui.promptchoice(_("which changeset to select{}").format(options))
+    choice = ui.promptchoice(_("which commit to select{}").format(options))
     if choice == 0:
         raise error.Abort(
             _("cancelling as requested"),
@@ -465,14 +465,14 @@ def _findstacktop(ui, repo, newest=False):
             # _findnexttarget(), which picks the child with the greatest
             # revision number at each step. This would be confusing, since
             # it would mean that `hg next --top` and `hg next --top --rebase`
-            # would result in different destination changesets.
+            # would result in different destination commits.
             return _findnexttarget(ui, repo, newest=True, top=True)
         ui.warn(_("current stack has multiple heads, namely:\n"))
         _showchangesets(ui, repo, nodes=heads, indices=ui.interactive())
         if ui.interactive():
             return _choosenode(ui, heads)
         raise error.Abort(
-            _("ambiguous next changeset"),
+            _("ambiguous next commit"),
             hint=_(
                 "use the --newest flag to always pick the newest child at each step"
             ),
@@ -482,24 +482,24 @@ def _findstacktop(ui, repo, newest=False):
 
 
 def _findstackbottom(ui, repo):
-    """Find the lowest non-public ancestor of the current changeset."""
+    """Find the lowest non-public ancestor of the current commit."""
     if repo["."].ispublic():
-        raise error.Abort(_("current changeset is public"))
+        raise error.Abort(_("current commit is public"))
     bottoms = list(repo.nodes("roots(draft() & ::.)"))
     if len(bottoms) > 1:
-        ui.warn(_("current stack has multiple bottom changesets, namely:\n"))
+        ui.warn(_("current stack has multiple bottom commits, namely:\n"))
         _showchangesets(ui, repo, nodes=bottoms, indices=ui.interactive())
         if ui.interactive():
             return _choosenode(ui, bottoms)
         raise error.Abort(
-            _("ambiguous bottom changeset"),
+            _("ambiguous bottom commit"),
         )
     else:
         return next(iter(bottoms), None)
 
 
 def _showchangesets(ui, repo, contexts=None, revs=None, nodes=None, indices=False):
-    """Pretty print a list of changesets. Can take a list of
+    """Pretty print a list of commits. Can take a list of
     change contexts, a list of revision numbers, or a list of
     commit hashes.
     """

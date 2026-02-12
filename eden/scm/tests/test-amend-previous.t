@@ -90,7 +90,7 @@ With positional argument.
 
 Overshoot bottom of repo.
   $ hg previous 5
-  reached root changeset
+  reached root commit
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [*] r0 (glob)
 
@@ -182,29 +182,29 @@ Test multiple parents
   │
   o  fdaccbb26270 r0
   $ hg previous
-  changeset 55f23eb33584 has multiple parents, namely:
+  commit 55f23eb33584 has multiple parents, namely:
   [f2987e] (top) r5
   [830512] a
-  abort: ambiguous previous changeset
+  abort: ambiguous previous commit
   (use the --newest flag to always pick the newest parent at each step)
   [255]
   $ hg --config ui.interactive=true previous 3 <<EOF
   > 1
   > EOF
-  changeset 55f23eb33584 has multiple parents, namely:
+  commit 55f23eb33584 has multiple parents, namely:
   (1) [f2987e] (top) r5
   (2) [830512] a
-  which changeset to select [1-2/(c)ancel]?  1
+  which commit to select [1-2/(c)ancel]?  1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [cb14eb] r3
   $ hg up 'desc(merge)' -q
   $ hg --config ui.interactive=true previous 3 <<EOF
   > 2
   > EOF
-  changeset 55f23eb33584 has multiple parents, namely:
+  commit 55f23eb33584 has multiple parents, namely:
   (1) [f2987e] (top) r5
   (2) [830512] a
-  which changeset to select [1-2/(c)ancel]?  2
+  which commit to select [1-2/(c)ancel]?  2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [f07e66] (bookmark) r2
   (activating bookmark bookmark)
@@ -213,17 +213,17 @@ Mix with bottom:
   $ hg debugmakepublic 'desc(r4)'
   $ hg up 'desc(merge)' -q
   $ hg prev --bottom
-  current stack has multiple bottom changesets, namely:
+  current stack has multiple bottom commits, namely:
   [f2987e] (top) r5
   [830512] a
-  abort: ambiguous bottom changeset
+  abort: ambiguous bottom commit
   [255]
   $ hg --config ui.interactive=true previous --bottom <<EOF
   > 2
   > EOF
-  current stack has multiple bottom changesets, namely:
+  current stack has multiple bottom commits, namely:
   (1) [f2987e] (top) r5
   (2) [830512] a
-  which changeset to select [1-2/(c)ancel]?  2
+  which commit to select [1-2/(c)ancel]?  2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [830512] a

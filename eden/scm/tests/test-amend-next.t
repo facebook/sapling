@@ -107,7 +107,7 @@ With positional argument.
 
 Overshoot top of repo.
   $ hg next 5
-  reached head changeset
+  reached head commit
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [*] r5 (glob)
 
@@ -230,7 +230,7 @@ Test --newest flag.
   current stack has multiple heads, namely:
   [*] (top) r5 (glob)
   [*] (other) test (glob)
-  abort: ambiguous next changeset
+  abort: ambiguous next commit
   (use the --newest flag to always pick the newest child at each step)
   [255]
   $ hg log -r .
@@ -265,21 +265,21 @@ Test --towards flag.
   │
   @  bottom r0
   $ hg next 4 --towards 'desc(r1)'
-  changeset * has multiple children, namely: (glob)
+  commit cb14eba0ad9c has multiple children, namely:
   [*] r4 (glob)
   [*] (other) test (glob)
-  abort: ambiguous next changeset
+  abort: ambiguous next commit
   (use the --newest or --towards flags to specify which child to pick)
   [255]
   $ hg next 4 --towards 'top+other'
-  abort: 'top+other' refers to multiple changesets
+  abort: 'top+other' refers to multiple commits
   [255]
   $ hg next 4 --towards top
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bottom)
   [*] r4 (glob)
   $ hg next --towards other
-  abort: the current changeset is not an ancestor of 'other'
+  abort: the current commit is not an ancestor of 'other'
   [255]
 
 Test interactive:
@@ -308,14 +308,14 @@ Test interactive:
   > 2
   > 1
   > EOF
-  changeset cb14eba0ad9c has multiple children, namely:
+  commit cb14eba0ad9c has multiple children, namely:
   (1) [aa70f0] r4
   (2) [2341c6] (other) test
-  which changeset to select [1-2/(c)ancel]?  2
-  changeset 2341c6305f4b has multiple children, namely:
+  which commit to select [1-2/(c)ancel]?  2
+  commit 2341c6305f4b has multiple children, namely:
   (1) [ae9b2b] branch a
   (2) [9913ce] branch b
-  which changeset to select [1-2/(c)ancel]?  1
+  which commit to select [1-2/(c)ancel]?  1
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bottom)
   [ae9b2b] branch a
@@ -327,7 +327,7 @@ Test interactive:
   (1) [f2987e] (top) r5
   (2) [ae9b2b] branch a
   (3) [9913ce] branch b
-  which changeset to select [1-3/(c)ancel]?  3
+  which commit to select [1-3/(c)ancel]?  3
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bottom)
   [9913ce] branch b
@@ -343,7 +343,7 @@ Test interactive >= 10 choices:
   $ hg --config ui.interactive=true next << EOS
   > 10
   > EOS
-  changeset 9913ce0137a4 has multiple children, namely:
+  commit 9913ce0137a4 has multiple children, namely:
   (1) [3f9bda] a
   (2) [64b9b8] b
   (3) [95297f] c
@@ -354,7 +354,7 @@ Test interactive >= 10 choices:
   (8) [f09214] h
   (9) [23284c] i
   (10) [1e290b] j
-  which changeset to select [1-10/(c)ancel]?  10
+  which commit to select [1-10/(c)ancel]?  10
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [1e290b] j
   $ hg up bottom -q
@@ -374,7 +374,7 @@ Test interactive >= 10 choices:
   (10) [f09214] h
   (11) [23284c] i
   (12) [1e290b] j
-  which changeset to select [1-12/(c)ancel]?  10
+  which commit to select [1-12/(c)ancel]?  10
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bottom)
   [f09214] h
@@ -392,17 +392,17 @@ Test next prefer draft commit.
   ~
 Here we have 2 draft children.
   $ hg next
-  changeset * has multiple children, namely: (glob)
+  commit cb14eba0ad9c has multiple children, namely:
   [*] r4 (glob)
   [*] (other) test (glob)
-  abort: ambiguous next changeset
+  abort: ambiguous next commit
   (use the --newest or --towards flags to specify which child to pick)
   [255]
 Let's make one of child commits public.
   $ hg debugmakepublic top
 Now we have only 1 draft child.
   $ hg next
-  changeset * has multiple children, namely: (glob)
+  commit cb14eba0ad9c has multiple children, namely:
   [*] r4 (glob)
   [*] (other) test (glob)
   choosing the only draft child: * (glob)

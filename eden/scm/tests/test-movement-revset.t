@@ -24,7 +24,7 @@ Linear stack:
   $ sl log -r 'next(2)'
   I
   $ sl log -r 'next(10)'
-  reached head changeset
+  reached head commit
   K
 
   $ sl log -r 'previous()'
@@ -32,7 +32,7 @@ Linear stack:
   $ sl log -r 'previous(2)'
   E
   $ sl log -r 'previous(10)'
-  reached root changeset
+  reached root commit
   A
 
   $ sl log -r 'top()'
@@ -75,34 +75,34 @@ Multiple choices:
 Next:
 
   $ sl log -r 'next()' --config ui.interactive=1
-  changeset 190ba9608152 has multiple children, namely:
+  commit 190ba9608152 has multiple children, namely:
   (1) [9ad522] I
   (2) [6a87f2] M
-  which changeset to select [1-2/(c)ancel]?  abort: response expected
+  which commit to select [1-2/(c)ancel]?  abort: response expected
   [255]
 
   $ sl log -r 'next()'
-  changeset 190ba9608152 has multiple children, namely:
+  commit 190ba9608152 has multiple children, namely:
   [9ad522] I
   [6a87f2] M
-  abort: ambiguous next changeset
+  abort: ambiguous next commit
   (use the --newest or --towards flags to specify which child to pick)
   [255]
 
 Previous:
 
   $ sl log -r 'previous()' --config ui.interactive=1
-  changeset 190ba9608152 has multiple parents, namely:
+  commit 190ba9608152 has multiple parents, namely:
   (1) [f58535] D
   (2) [a9ca93] H
-  which changeset to select [1-2/(c)ancel]?  abort: response expected
+  which commit to select [1-2/(c)ancel]?  abort: response expected
   [255]
 
   $ sl log -r 'previous()'
-  changeset 190ba9608152 has multiple parents, namely:
+  commit 190ba9608152 has multiple parents, namely:
   [f58535] D
   [a9ca93] H
-  abort: ambiguous previous changeset
+  abort: ambiguous previous commit
   (use the --newest flag to always pick the newest parent at each step)
   [255]
 
@@ -112,29 +112,29 @@ Top:
   current stack has multiple heads, namely:
   (1) [c6dcbf] L
   (2) [72a71a] P
-  which changeset to select [1-2/(c)ancel]?  abort: response expected
+  which commit to select [1-2/(c)ancel]?  abort: response expected
   [255]
 
   $ sl log -r 'top()'
   current stack has multiple heads, namely:
   [c6dcbf] L
   [72a71a] P
-  abort: ambiguous next changeset
+  abort: ambiguous next commit
   (use the --newest flag to always pick the newest child at each step)
   [255]
 
 Bottom:
 
   $ sl log -r 'bottom()' --config ui.interactive=1
-  current stack has multiple bottom changesets, namely:
+  current stack has multiple bottom commits, namely:
   (1) [426bad] A
   (2) [e8e0a8] E
-  which changeset to select [1-2/(c)ancel]?  abort: response expected
+  which commit to select [1-2/(c)ancel]?  abort: response expected
   [255]
 
   $ sl log -r 'bottom()'
-  current stack has multiple bottom changesets, namely:
+  current stack has multiple bottom commits, namely:
   [426bad] A
   [e8e0a8] E
-  abort: ambiguous bottom changeset
+  abort: ambiguous bottom commit
   [255]

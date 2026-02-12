@@ -53,7 +53,7 @@ Check the next behaviour in case of ambiguity between obsolete and non-obsolete
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [612462] r0
   $ hg next
-  changeset 61246295ee1e has multiple children, namely:
+  commit 61246295ee1e has multiple children, namely:
   [e8ec16] r1
   [12d1da] amended
   choosing the only non-obsolete child: 12d1da2fcedd
@@ -62,7 +62,7 @@ Check the next behaviour in case of ambiguity between obsolete and non-obsolete
 
 Rebasing single changeset.
   $ hg next
-  abort: current changeset has no children
+  abort: current commit has no children
   [255]
   $ hg next --rebase
   rebasing 776c07fa2b12 "r2"
@@ -351,12 +351,12 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   
   $ hg next --rebase
   rebasing 776c07fa2b12 "r2"
-  changeset 12d1da2fcedd has multiple children, namely:
+  commit 12d1da2fcedd has multiple children, namely:
   [ee3138] add a
   [08e8e1] r2
   transaction abort!
   rollback completed
-  abort: ambiguous next changeset
+  abort: ambiguous next commit
   (use the --newest or --towards flags to specify which child to pick)
   [255]
   $ showgraph
