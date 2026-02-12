@@ -84,8 +84,18 @@ fn extract_id(
     spanned: &impl Spanned,
     ids: &mut HashSet<u16>,
 ) -> Result<(u16, Vec<Attribute>)> {
-    let (id, other_attrs): (Vec<_>, Vec<_>) =
-        attrs.into_iter().partition(|attr| attr.path.is_ident(ID));
+    let mut id = Vec::new();
+    let mut other_attrs = Vec::new();
+    for attr in attrs {
+        if attr.path.is_ident(ID) {
+            id.push(attr);
+        } else if !attr.path.is_ident("default") {
+            // Omit #[default] from the wire data structure when it is present
+            // on a variant of the original data structure, because we do not
+            // derive Default for the wire one.
+            other_attrs.push(attr);
+        }
+    }
     if id.len() != 1 {
         return Err(Error::new(
             spanned.span(),
