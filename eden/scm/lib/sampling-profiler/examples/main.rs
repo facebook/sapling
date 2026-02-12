@@ -86,9 +86,28 @@ fn main() {
         }),
     )
     .unwrap();
+
+    let collector2 = Arc::new(Mutex::new(BacktraceCollector::default()));
+    let profiler2 = Profiler::new(
+        Duration::from_millis(50),
+        Box::new({
+            let collector = collector2.clone();
+            move |bt| {
+                let mut bt: Vec<String> = bt.iter().filter(|n| !is_boring(n)).cloned().collect();
+                bt.reverse();
+                collector.lock().unwrap().push_backtrace(bt);
+            }
+        }),
+    )
+    .unwrap();
+
     do_some_work(py);
     drop(profiler);
+    drop(profiler2);
 
     let summary = collector.lock().unwrap().ascii_summary();
-    println!("\nASCII tree summary:\n{}", summary)
+    println!("\nASCII tree summary (Profiler 1 at 2hz):\n{}", summary);
+
+    let summary = collector2.lock().unwrap().ascii_summary();
+    println!("\nASCII tree summary (Profiler 2 at 20hz):\n{}", summary);
 }
