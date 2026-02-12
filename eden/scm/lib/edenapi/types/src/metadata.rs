@@ -105,21 +105,16 @@ blake2_hash!(ContentId);
 blake2_hash!(FsnodeId);
 
 #[auto_wire]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum FileType {
     #[id(1)]
+    #[default]
     Regular,
     #[id(2)]
     Executable,
     #[id(3)]
     Symlink,
-}
-
-impl Default for FileType {
-    fn default() -> Self {
-        Self::Regular
-    }
 }
 
 #[auto_wire]
