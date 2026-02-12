@@ -64,7 +64,7 @@ impl Profiler {
         // Spawn a thread to read the pipe. The thread exits on pipe EOF.
         let thread_id = osutil::get_thread_id();
         let handle = thread::Builder::new()
-            .name(format!("profiler-consumer-{thread_id}"))
+            .name(format!("profiler-consumer-{thread_id:?}"))
             .spawn(move || {
                 osutil::block_signal(SIG);
                 frame_handler::frame_reader_loop(read_fd, backtrace_process_func);

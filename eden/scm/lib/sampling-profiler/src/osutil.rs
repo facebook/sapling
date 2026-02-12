@@ -9,6 +9,7 @@
 
 use std::io;
 use std::mem;
+#[cfg(target_os = "linux")]
 use std::ptr;
 #[cfg(all(unix, not(target_os = "linux")))]
 use std::sync::Arc;

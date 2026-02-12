@@ -10,16 +10,16 @@
 //! - Sample the main thread periodically (ex. every second)
 //! - Resolve Python frames (by backtrace-python)
 //!
-//! Currently implemented for Linux.
+//! Currently implemented for Unix (Linux, macOS, etc.).
 
 mod backtrace_collector;
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 mod frame_handler;
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 mod osutil;
-#[cfg_attr(not(target_os = "linux"), path = "profiler_dummy.rs")]
+#[cfg_attr(not(unix), path = "profiler_dummy.rs")]
 mod profiler;
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 mod signal_handler;
 
 pub use backtrace_collector::BacktraceCollector;
