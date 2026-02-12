@@ -61,10 +61,20 @@ pub extern "C" fn signal_handler(
     };
     let mut depth = 0;
 
-    // Skip the first 2 frames:
-    // - This signal handler frame.
-    // - __sigaction
-    const SKIP_FRAMES: usize = 2;
+    // Skip the first frames.
+    const SKIP_FRAMES: usize = if cfg!(target_os = "linux") {
+        // - signal_handler (this function)
+        // - __sigaction
+        2
+    } else if cfg!(target_os = "macos") {
+        // - backtrace::trace_unsynchronized
+        // - signal_handler (this function)
+        // - __sigtramp
+        3
+    } else {
+        // Guess
+        2
+    };
     trace_unsynchronized!(|frame| {
         if depth >= SKIP_FRAMES {
             let maybe_frame = MaybeFrame::Present(frame);
