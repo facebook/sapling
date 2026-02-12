@@ -28,7 +28,7 @@ sql_common = { version = "0.1.0", git = "https://github.com/facebookexperimental
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 uuid = { version = "1.17", features = ["rng-getrandom", "serde", "v4", "v5", "v6", "v7", "v8"] }
-vec1 = { version = "1", features = ["serde"] }
+vec1 = { version = "1.12.1", features = ["serde"] }
 
 [dev-dependencies]
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

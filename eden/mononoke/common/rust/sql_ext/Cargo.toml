@@ -49,7 +49,7 @@ time_measuring = { version = "0.1.0", path = "../../time_measuring" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 twox-hash = "1.6.1"
-vec1 = { version = "1", features = ["serde"] }
+vec1 = { version = "1.12.1", features = ["serde"] }
 
 [dev-dependencies]
 assert_matches = "1.5"

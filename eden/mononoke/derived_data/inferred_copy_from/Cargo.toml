@@ -27,7 +27,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 similar = { version = "2.2.0", features = ["bytes", "inline"] }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
-vec1 = { version = "1", features = ["serde"] }
+vec1 = { version = "1.12.1", features = ["serde"] }
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"

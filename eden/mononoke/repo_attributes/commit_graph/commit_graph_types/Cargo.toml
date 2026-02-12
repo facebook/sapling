@@ -21,4 +21,4 @@ mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 repo_identity = { version = "0.1.0", path = "../../repo_identity" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specialization", "union"] }
-vec1 = { version = "1", features = ["serde"] }
+vec1 = { version = "1.12.1", features = ["serde"] }

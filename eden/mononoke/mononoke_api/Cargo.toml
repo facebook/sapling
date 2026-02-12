@@ -119,7 +119,7 @@ tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
-vec1 = { version = "1", features = ["serde"] }
+vec1 = { version = "1.12.1", features = ["serde"] }
 wireproto_handler = { version = "0.1.0", path = "../servers/slapi/wireproto_handler" }
 
 [dev-dependencies]

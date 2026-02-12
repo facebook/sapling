@@ -78,7 +78,7 @@ time_window_counter = { version = "0.1.0", path = "../../../common/time_window_c
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.15", features = ["full"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
-vec1 = { version = "1", features = ["serde"] }
+vec1 = { version = "1.12.1", features = ["serde"] }
 
 [dev-dependencies]
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
