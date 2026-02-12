@@ -276,26 +276,25 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/resolveAllCommentsWithAI': {
-          const {diffId, comments, filePaths, repoPath} = message;
+          const {diffId, comments, filePaths, repoPath, userContext} = message;
           Internal.promptAIAgent?.(
-            {type: 'resolveAllComments', diffId, comments, filePaths, repoPath},
+            {type: 'resolveAllComments', diffId, comments, filePaths, repoPath, userContext},
             ActionTriggerType.ISL2SmartActions,
           );
           break;
         }
         case 'platform/resolveFailedSignalsWithAI': {
-          const {diffId, diffVersionNumber, repoPath} = message;
+          const {diffId, diffVersionNumber, repoPath, userContext} = message;
           Internal.promptAIAgent?.(
-            {type: 'resolveFailedSignals', diffId, diffVersionNumber, repoPath},
+            {type: 'resolveFailedSignals', diffId, diffVersionNumber, repoPath, userContext},
             ActionTriggerType.ISL2SmartActions,
           );
           break;
         }
         case 'platform/fillCommitMessageWithAI': {
-          const {source} = message;
-          // Prompt AI to generate a commit message based on the current changes
+          const {source, userContext} = message;
           Internal.promptAIAgent?.(
-            {type: 'fillCommitMessage'},
+            {type: 'fillCommitMessage', userContext},
             source === 'commitInfoView'
               ? ActionTriggerType.ISL2CommitInfoView
               : ActionTriggerType.ISL2SmartActions,
@@ -303,10 +302,9 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/splitCommitWithAI': {
-          const {diffCommit, args, repoPath} = message;
-          // Prompt AI to split a commit based on the changes
+          const {diffCommit, args, repoPath, userContext} = message;
           Internal.promptAIAgent?.(
-            {type: 'splitCommit', diffCommit, args, repoPath},
+            {type: 'splitCommit', diffCommit, args, repoPath, userContext},
             ActionTriggerType.ISL2SplitCommit,
           );
           break;
@@ -332,13 +330,17 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/validateChangesWithAI': {
-          Internal.promptAIAgent?.({type: 'validateChanges'}, ActionTriggerType.ISL2SmartActions);
+          const {userContext} = message;
+          Internal.promptAIAgent?.(
+            {type: 'validateChanges', userContext},
+            ActionTriggerType.ISL2SmartActions,
+          );
           break;
         }
         case 'platform/resolveAllConflictsWithAI': {
-          const {conflicts} = message;
+          const {conflicts, userContext} = message;
           Internal.promptAIAgent?.(
-            {type: 'resolveAllConflicts', conflicts, repository: repo, context: ctx},
+            {type: 'resolveAllConflicts', conflicts, repository: repo, context: ctx, userContext},
             ActionTriggerType.ISL2MergeConflictView,
           );
           break;
@@ -372,9 +374,9 @@ export const getVSCodePlatform = (context: vscode.ExtensionContext): VSCodeServe
           break;
         }
         case 'platform/runAICodeReviewChat': {
-          const {source, reviewScope} = message;
+          const {source, reviewScope, userContext} = message;
           await Internal.promptAIAgent?.(
-            {type: 'reviewCode', repoPath: repo?.info.repoRoot, reviewScope},
+            {type: 'reviewCode', repoPath: repo?.info.repoRoot, reviewScope, userContext},
             source === 'commitInfoView'
               ? ActionTriggerType.ISL2CommitInfoView
               : ActionTriggerType.ISL2SmartActions,

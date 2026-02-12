@@ -742,23 +742,27 @@ export type PlatformSpecificClientToServerMessages =
       comments: Array<DiffComment>;
       filePaths: Array<RepoRelativePath>;
       repoPath?: string;
+      userContext?: string;
     }
   | {
       type: 'platform/resolveFailedSignalsWithAI';
       diffId: string;
       diffVersionNumber: number;
       repoPath?: string;
+      userContext?: string;
     }
   | {
       type: 'platform/fillCommitMessageWithAI';
       id: string;
       source: 'commitInfoView' | 'smartAction';
+      userContext?: string;
     }
   | {
       type: 'platform/splitCommitWithAI';
       diffCommit: string;
       args?: string;
       repoPath?: string;
+      userContext?: string;
     }
   | {
       type: 'platform/createTestForModifiedCodeWithAI';
@@ -775,10 +779,12 @@ export type PlatformSpecificClientToServerMessages =
     }
   | {
       type: 'platform/validateChangesWithAI';
+      userContext?: string;
     }
   | {
       type: 'platform/resolveAllConflictsWithAI';
       conflicts: MergeConflicts;
+      userContext?: string;
     }
   | {
       type: 'platform/runAICodeReviewPlatform';
@@ -788,6 +794,7 @@ export type PlatformSpecificClientToServerMessages =
       type: 'platform/runAICodeReviewChat';
       source: 'commitInfoView' | 'smartAction';
       reviewScope: CodeReviewScope;
+      userContext?: string;
     }
   | {
       type: 'platform/subscribeToAIReviewComments';
