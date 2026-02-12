@@ -200,6 +200,7 @@ impl OwnedTimer {
     pub fn stop(&mut self) {
         self.stop_flag.store(true, Ordering::Release);
         if let Some(h) = self.handle.take() {
+            h.thread().unpark();
             let _ = h.join();
         }
     }
@@ -270,7 +271,7 @@ pub fn setup_signal_timer(
                 // Block the profiling signal in the timer thread itself.
                 block_signal(sig);
                 loop {
-                    std::thread::sleep(interval);
+                    std::thread::park_timeout(interval);
                     if stop_flag.load(Ordering::Acquire) {
                         break;
                     }
@@ -294,10 +295,10 @@ pub fn setup_signal_timer(
                                 }
                                 // Is signal handling or delivery stuck? If so, avoid burning CPU.
                                 if wait_count >= 0x10000 {
-                                    std::thread::sleep(Duration::from_millis(16));
+                                    std::thread::park_timeout(Duration::from_millis(16));
                                 } else if wait_count >= 0x1000 {
                                     wait_count += 0x1000;
-                                    std::thread::sleep(Duration::from_millis(1));
+                                    std::thread::park_timeout(Duration::from_millis(1));
                                 } else {
                                     wait_count += 1;
                                     std::hint::spin_loop();
@@ -357,5 +358,37 @@ fn sigmask_sigprof(sig: libc::c_int, block: bool) {
             _ => libc::SIG_UNBLOCK,
         };
         libc::pthread_sigmask(how, &set, std::ptr::null_mut());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Instant;
+
+    use super::*;
+
+    #[test]
+    fn test_timer_drop_is_fast() {
+        setup_signal_handler(libc::SIGUSR1, noop_handler).unwrap();
+
+        let interval = Duration::from_secs(5);
+        let start = Instant::now();
+        let timer = setup_signal_timer(libc::SIGUSR1, get_thread_id(), interval, 42).unwrap();
+        std::thread::sleep(Duration::from_millis(10));
+        drop(timer);
+        let elapsed = start.elapsed();
+
+        assert!(
+            elapsed < Duration::from_secs(2),
+            "drop took {:?}, expected < 2s",
+            elapsed,
+        );
+
+        extern "C" fn noop_handler(
+            _: libc::c_int,
+            _: *const libc::siginfo_t,
+            _: *const libc::c_void,
+        ) {
+        }
     }
 }
