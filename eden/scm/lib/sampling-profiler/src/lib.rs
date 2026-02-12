@@ -21,6 +21,8 @@ mod osutil;
 mod profiler;
 #[cfg(unix)]
 mod signal_handler;
+#[cfg(all(test, unix))]
+mod tests;
 
 pub use backtrace_collector::BacktraceCollector;
 pub use backtrace_ext; // re-export
