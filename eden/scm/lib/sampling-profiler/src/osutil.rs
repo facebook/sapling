@@ -150,7 +150,7 @@ pub fn setup_signal_handler(
         sa.sa_sigaction = signal_handler as usize;
         sa.sa_flags = libc::SA_RESTART | libc::SA_SIGINFO;
         libc::sigemptyset(&mut sa.sa_mask);
-
+        libc::sigaddset(&mut sa.sa_mask, sig); // Prevents re-entrancy
         if libc::sigaction(sig, &sa, std::ptr::null_mut()) != 0 {
             return Err(io::Error::last_os_error());
         }
