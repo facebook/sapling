@@ -82,11 +82,14 @@ impl Drop for OwnedFd {
 /// Create a pipe for SIGPROF signal handler use.
 /// The SIGPROF handler sends raw stack trace info to the pipe.
 /// The other end of the pipe consumes the data and might resolve symbols.
-/// The pipe is configured with:
+///
+/// On Linux the pipe is configured with:
 /// - O_DIRECT: Enables "packet-mode". No need to deal with payload boundaries.
 /// - O_NONBLOCK on write: Slow reader won't block writers.
-/// - have a larger buffer to reduce changes data gets dropped (on supported
-///   platforms like Linux).
+/// - A larger buffer to reduce chances data gets dropped.
+///
+/// On other Unix systems a regular blocking pipe is used.
+///
 /// Returns `[read_fd, write_fd]`.
 pub fn setup_pipe() -> io::Result<[OwnedFd; 2]> {
     #[cfg(target_os = "linux")]
@@ -123,7 +126,16 @@ pub fn setup_pipe() -> io::Result<[OwnedFd; 2]> {
         Ok([rfd, wfd])
     }
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(all(unix, not(target_os = "linux")))]
+    unsafe {
+        let mut pipe_fds: [libc::c_int; 2] = [0; 2];
+        if libc::pipe(pipe_fds.as_mut_ptr()) != 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok([OwnedFd(pipe_fds[0]), OwnedFd(pipe_fds[1])])
+    }
+
+    #[cfg(not(unix))]
     Err(io::ErrorKind::Unsupported.into())
 }
 

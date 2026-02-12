@@ -101,6 +101,7 @@ pub fn frame_reader_loop(read_fd: OwnedFd, mut process_func: ResolvedBacktracePr
 mod tests {
     use super::*;
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn test_frame_size() {
         // See `man pipe2`. We use `O_DIRECT` for "packet-mode" pipes.
