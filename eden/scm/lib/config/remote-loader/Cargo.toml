@@ -15,7 +15,7 @@ name = "remote_loader"
 [dependencies]
 anyhow = { version = "1.0.98", optional = true }
 base64 = { version = "0.22.1", features = ["alloc"], optional = true }
-filetime = { version = "0.2.25", optional = true }
+filetime = { version = "0.2.27", optional = true }
 sapling-http-client = { version = "0.1.0", path = "../../http-client", optional = true }
 sapling-io = { version = "0.1.0", path = "../../io", optional = true }
 sapling-types = { version = "0.1.0", path = "../../types", optional = true }
