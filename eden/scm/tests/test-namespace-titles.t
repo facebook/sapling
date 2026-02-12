@@ -14,6 +14,10 @@ Prepare a repo
   $ hg go -q 'desc("A: foo")'
   $ hg ci -m "$(printf 'C: multi line\nfoo bar baz 2nd line')"
   $ hg ci -m 'D: not public'
+  $ hg ci -m 'E: not top() commit'
+  $ hg ci -m 'F: not bottom() commit'
+
+  $ hg go -q 'desc("D: not public")'
 
   $ function log() {
   >   hg log -T '{desc|firstline}\n' -r "$@"
@@ -92,6 +96,12 @@ Embed in a revset expression
   A: foo bar
   B: bar-baz
 
+Tofix: Do not conflict with revsets
+  $ log 'top()'
+  E: not top() commit
+  $ log 'bottom()'
+  F: not bottom() commit
+
 Can be disabled
 
   $ log foo --config experimental.titles-namespace=false
@@ -122,4 +132,3 @@ Disable autopull by disabling remote, then the titles namespace works again
 
   $ log 'remote/foo' --config paths.default=
   E: remote/foo
-
