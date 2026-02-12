@@ -153,11 +153,16 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
 
   let buttonComponent;
 
+  const description = selectedAction.config.description
+    ? t(selectedAction.config.description)
+    : undefined;
+  const tooltip =
+    description != null && Internal.smartActions?.renderModifierContextTooltip != null
+      ? Internal.smartActions.renderModifierContextTooltip(description)
+      : description;
+
   if (sortedActionItems.length === 1) {
     const singleAction = sortedActionItems[0];
-    const tooltip = selectedAction.config.description
-      ? t(selectedAction.config.description)
-      : undefined;
     buttonComponent = (
       <SmartActionWithContext config={singleAction.config} context={context} tooltip={tooltip}>
         <Button
@@ -176,9 +181,6 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
       </SmartActionWithContext>
     );
   } else {
-    const tooltip = selectedAction.config.description
-      ? t(selectedAction.config.description)
-      : undefined;
     buttonComponent = (
       <SmartActionWithContext config={selectedAction.config} context={context} tooltip={tooltip}>
         <ButtonDropdown
@@ -283,7 +285,9 @@ function shouldShowSmartAction(
 }
 
 function runSmartAction(config: SmartActionConfig, context: ActionContext): void {
-  tracker.track('SmartActionClicked', {extras: {action: config.trackEventName}});
+  tracker.track('SmartActionClicked', {
+    extras: {action: config.trackEventName, withUserContext: context.userContext != null},
+  });
   if (config.getMessagePayload) {
     const payload = config.getMessagePayload(context);
     serverAPI.postMessage({
