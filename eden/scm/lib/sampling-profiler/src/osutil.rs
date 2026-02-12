@@ -24,13 +24,14 @@ pub fn unblock_signal(sig: libc::c_int) {
 }
 
 // Get the current thread id. Must be async-signal-safe.
+#[cfg(target_os = "linux")]
 pub fn get_thread_id() -> libc::pid_t {
-    #[cfg(target_os = "linux")]
-    unsafe {
-        libc::syscall(libc::SYS_gettid) as libc::pid_t
-    }
-    #[cfg(not(target_os = "linux"))]
-    unimplemented!()
+    unsafe { libc::syscall(libc::SYS_gettid) as libc::pid_t }
+}
+
+#[cfg(target_os = "macos")]
+pub fn get_thread_id() -> libc::pthread_t {
+    unsafe { libc::pthread_self() }
 }
 
 /// Similar to stdlib `OwnedFd`.
