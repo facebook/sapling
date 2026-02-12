@@ -10,7 +10,24 @@
 use std::io;
 use std::mem;
 use std::ptr;
+#[cfg(all(unix, not(target_os = "linux")))]
+use std::sync::Arc;
+#[cfg(all(unix, not(target_os = "linux")))]
+use std::sync::atomic::AtomicBool;
+#[cfg(all(unix, not(target_os = "linux")))]
+use std::sync::atomic::AtomicIsize;
+#[cfg(all(unix, not(target_os = "linux")))]
+use std::sync::atomic::Ordering;
+#[cfg(all(unix, not(target_os = "linux")))]
+use std::thread::JoinHandle;
 use std::time::Duration;
+
+/// Atomic payload for passing data from the timer thread to the signal handler
+/// on non-Linux Unix, where `sigevent`/`si_value` is unavailable. The timer
+/// thread CAS's from -1 to the payload, sends the signal, and the signal
+/// handler reads and resets it to -1.
+#[cfg(all(unix, not(target_os = "linux")))]
+pub static SIGNAL_PAYLOAD: AtomicIsize = AtomicIsize::new(-1);
 
 // Block `sig` signals. Explicitly opt-out profiling for the current thread
 // and new threads spawned from the current thread.
@@ -29,7 +46,7 @@ pub fn get_thread_id() -> libc::pid_t {
     unsafe { libc::syscall(libc::SYS_gettid) as libc::pid_t }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(all(unix, not(target_os = "linux")))]
 pub fn get_thread_id() -> libc::pthread_t {
     unsafe { libc::pthread_self() }
 }
@@ -129,7 +146,18 @@ pub fn setup_signal_handler(
     Ok(())
 }
 
-pub struct OwnedTimer(*mut libc::c_void);
+/// Represents an owned timer that can be stopped.
+/// On Linux, uses POSIX timer_create with SIGEV_THREAD_ID.
+#[cfg(target_os = "linux")]
+pub struct OwnedTimer(libc::timer_t);
+
+/// Represents an owned timer that can be stopped.
+/// On non-Linux Unix, uses a pthread-based timer thread.
+#[cfg(all(unix, not(target_os = "linux")))]
+pub struct OwnedTimer {
+    stop_flag: Arc<AtomicBool>,
+    handle: Option<JoinHandle<()>>,
+}
 
 impl Drop for OwnedTimer {
     fn drop(&mut self) {
@@ -137,6 +165,7 @@ impl Drop for OwnedTimer {
     }
 }
 
+#[cfg(target_os = "linux")]
 impl OwnedTimer {
     pub fn stop(&mut self) {
         if !self.0.is_null() {
@@ -145,22 +174,29 @@ impl OwnedTimer {
         }
     }
 }
+
+#[cfg(all(unix, not(target_os = "linux")))]
+impl OwnedTimer {
+    pub fn stop(&mut self) {
+        self.stop_flag.store(true, Ordering::Release);
+        if let Some(h) = self.handle.take() {
+            let _ = h.join();
+        }
+    }
+}
 #[cfg(target_os = "linux")]
-pub(crate) use libc::timer_t;
+use libc::timer_t;
 
-#[cfg(not(target_os = "linux"))]
-#[allow(non_camel_case_types)]
-pub(crate) type timer_t = *mut libc::c_void;
-
-/// Send `sig` to `tid` at the specified interval. This is a Linux-only feature.
+/// Send `sig` to `tid` at the specified interval.
+/// On Linux, uses kernel timer_create with SIGEV_THREAD_ID.
 /// Returns the timer handle that can be used to stop the timer later.
+#[cfg(target_os = "linux")]
 pub fn setup_signal_timer(
     sig: libc::c_int,
     tid: libc::pid_t,
     interval: Duration,
     sigev_value: isize,
 ) -> io::Result<OwnedTimer> {
-    #[cfg(target_os = "linux")]
     unsafe {
         let mut sev: libc::sigevent = mem::zeroed();
         sev.sigev_notify = libc::SIGEV_THREAD_ID;
@@ -176,7 +212,6 @@ pub fn setup_signal_timer(
         if libc::timer_create(libc::CLOCK_MONOTONIC, &mut sev, &mut timer) != 0 {
             return Err(io::Error::last_os_error());
         }
-        let timer = OwnedTimer(timer);
 
         let mut spec: libc::itimerspec = mem::zeroed();
         spec.it_interval.tv_sec = interval.as_secs() as _;
@@ -184,34 +219,104 @@ pub fn setup_signal_timer(
         spec.it_value.tv_sec = interval.as_secs() as _;
         spec.it_value.tv_nsec = interval.subsec_nanos() as _;
 
-        if libc::timer_settime(timer.0, 0, &spec, std::ptr::null_mut()) != 0 {
-            return Err(io::Error::last_os_error());
+        if libc::timer_settime(timer, 0, &spec, std::ptr::null_mut()) != 0 {
+            let err = io::Error::last_os_error();
+            libc::timer_delete(timer);
+            return Err(err);
         }
 
-        Ok(timer)
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = (sig, tid, interval, sigev_value);
-        Err(io::ErrorKind::Unsupported.into())
+        Ok(OwnedTimer(timer))
     }
 }
 
+/// Setup a pthread-based timer that sends `sig` to `target_thread` at the specified interval.
+/// On non-Linux Unix, uses pthread_kill since SIGEV_THREAD_ID is not available.
+/// The `sigev_value` is passed to the signal handler via `SIGNAL_PAYLOAD` atomic:
+/// the timer thread CAS's from -1 to `sigev_value`, then sends the signal.
+/// The signal handler reads and resets `SIGNAL_PAYLOAD` to -1.
+#[cfg(all(unix, not(target_os = "linux")))]
+pub fn setup_signal_timer(
+    sig: libc::c_int,
+    target_thread: libc::pthread_t,
+    interval: Duration,
+    sigev_value: isize,
+) -> anyhow::Result<OwnedTimer> {
+    anyhow::ensure!(sigev_value != -1, "sigev_value must not be -1 (sentinel)");
+
+    let stop_flag = Arc::new(AtomicBool::new(false));
+
+    let handle = std::thread::Builder::new()
+        .name("profiler-timer-{target_thread:?}".into())
+        .spawn({
+            let stop_flag = stop_flag.clone();
+            move || {
+                // Block the profiling signal in the timer thread itself.
+                block_signal(sig);
+                loop {
+                    std::thread::sleep(interval);
+                    if stop_flag.load(Ordering::Acquire) {
+                        break;
+                    }
+                    // Spin until the signal handler has consumed the previous payload.
+                    loop {
+                        match SIGNAL_PAYLOAD.compare_exchange(
+                            -1,
+                            sigev_value,
+                            Ordering::AcqRel,
+                            Ordering::Acquire,
+                        ) {
+                            Ok(_) => break,
+                            Err(_) => {
+                                if SIGNAL_PAYLOAD.load(Ordering::Acquire) == sigev_value {
+                                    // Already have the desired value.
+                                    break;
+                                }
+                                if stop_flag.load(Ordering::Acquire) {
+                                    break;
+                                }
+                                std::hint::spin_loop();
+                            }
+                        }
+                    }
+                    if stop_flag.load(Ordering::Acquire) {
+                        // Restore SIGNAL_PAYLOAD. Do not call signal handler.
+                        // If this fails, the value might be restored by the signal handler.
+                        let _ = SIGNAL_PAYLOAD.compare_exchange(
+                            sigev_value,
+                            -1,
+                            Ordering::AcqRel,
+                            Ordering::Acquire,
+                        );
+                        break;
+                    }
+                    unsafe {
+                        libc::pthread_kill(target_thread, sig);
+                    }
+                }
+                // Stopped. Clean up if the signal handler hasn't consumed our payload.
+                let _ = SIGNAL_PAYLOAD.compare_exchange(
+                    sigev_value,
+                    -1,
+                    Ordering::AcqRel,
+                    Ordering::Relaxed,
+                );
+            }
+        })?;
+
+    Ok(OwnedTimer {
+        stop_flag,
+        handle: Some(handle),
+    })
+}
+
 /// Stop and delete a signal timer created by `setup_signal_timer`.
-pub fn stop_signal_timer(timer: timer_t) -> io::Result<()> {
-    #[cfg(target_os = "linux")]
+#[cfg(target_os = "linux")]
+fn stop_signal_timer(timer: timer_t) -> io::Result<()> {
     unsafe {
         if libc::timer_delete(timer) != 0 {
             return Err(io::Error::last_os_error());
         }
         Ok(())
-    }
-
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = timer;
-        Err(io::ErrorKind::Unsupported.into())
     }
 }
 

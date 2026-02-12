@@ -24,11 +24,17 @@ pub extern "C" fn signal_handler(
     info: *const libc::siginfo_t,
     _data: *const libc::c_void,
 ) {
-    if info.is_null() || sig != libc::SIGPROF {
+    if sig != libc::SIGPROF {
         return;
     }
 
+    // On Linux, the payload (write fd) is delivered via sigevent's si_value.
+    // On macOS, it's passed via an atomic (no si_value support with pthread_kill).
+    #[cfg(target_os = "linux")]
     let write_fd = {
+        if info.is_null() {
+            return;
+        }
         let write_fd: isize = unsafe {
             let sigev = (*info).si_value();
             std::mem::transmute(sigev)
@@ -37,6 +43,16 @@ pub extern "C" fn signal_handler(
             return;
         }
         write_fd as i32
+    };
+
+    #[cfg(all(unix, not(target_os = "linux")))]
+    let write_fd = {
+        let _ = info;
+        let payload = crate::osutil::SIGNAL_PAYLOAD.swap(-1, Ordering::AcqRel);
+        if payload < 0 {
+            return;
+        }
+        payload as i32
     };
 
     let backtrace_id: usize = {
@@ -102,7 +118,7 @@ fn write_frame(frame: &FramePayload, fd: libc::c_int) -> libc::c_int {
                     *libc::__errno_location()
                 }
 
-                #[cfg(all(not(target_os = "linux"), not(target_os = "macos")))]
+                #[cfg(not(any(target_os = "linux", target_os = "macos")))]
                 libc::EINVAL
             };
             if errno == libc::EINTR {
