@@ -48,18 +48,13 @@ struct ComplexObj {
 }
 
 #[auto_wire]
-#[derive(Arbitrary, Clone, Debug, PartialEq, Eq)]
+#[derive(Arbitrary, Clone, Debug, PartialEq, Eq, Default)]
 enum MyEnum {
     #[id(1)]
+    #[default]
     A,
     #[id(2)]
     B(u32),
-}
-
-impl Default for MyEnum {
-    fn default() -> Self {
-        Self::A
-    }
 }
 
 #[test]
