@@ -15,7 +15,7 @@ use cpython_ext::cpython::*;
 use sampling_profiler::BacktraceCollector;
 use sampling_profiler::Profiler;
 
-fn native_fib(py: Python, n: u64) -> PyResult<u64> {
+fn py_native_fib(py: Python, n: u64) -> PyResult<u64> {
     py.allow_threads(|| std::thread::sleep(Duration::from_millis(10)));
     let v = if n <= 1 {
         n
@@ -28,7 +28,7 @@ fn native_fib(py: Python, n: u64) -> PyResult<u64> {
     Ok(v)
 }
 
-fn do_some_work(py: Python) {
+fn do_rust_and_python_work(py: Python) {
     let code = r#"
 import time, sys
 def py_fib(n):
@@ -40,7 +40,7 @@ def py_fib(n):
 print(f"{py_fib(11)=}")
 "#;
     let sys = py.import("sys").unwrap();
-    sys.add(py, "native_fib", py_fn!(py, native_fib(n: u64)))
+    sys.add(py, "native_fib", py_fn!(py, py_native_fib(n: u64)))
         .unwrap();
     py.run(code, None, None).unwrap();
 }
@@ -59,6 +59,35 @@ fn print_traceback(bt: &[String]) {
 
 fn is_boring(name: &str) -> bool {
     name.contains("cpython[") || name == "__rust_try"
+}
+
+fn sleepy_fib(n: u64) -> u64 {
+    std::thread::sleep(Duration::from_millis(10));
+    if n <= 1 {
+        n
+    } else {
+        sleepy_fib(n - 1) + sleepy_fib(n - 2)
+    }
+}
+
+fn do_rust_work() -> String {
+    let collector = Arc::new(Mutex::new(BacktraceCollector::default()));
+    let profiler = Profiler::new(
+        Duration::from_millis(500),
+        Box::new({
+            let collector = collector.clone();
+            move |bt| {
+                let mut bt: Vec<String> = bt.iter().filter(|n| !is_boring(n)).cloned().collect();
+                bt.reverse();
+                collector.lock().unwrap().push_backtrace(bt);
+            }
+        }),
+    )
+    .unwrap();
+    sleepy_fib(11);
+    drop(profiler);
+
+    collector.lock().unwrap().ascii_summary()
 }
 
 fn main() {
@@ -101,7 +130,9 @@ fn main() {
     )
     .unwrap();
 
-    do_some_work(py);
+    let handle = std::thread::spawn(do_rust_work);
+
+    do_rust_and_python_work(py);
     drop(profiler);
     drop(profiler2);
 
@@ -110,4 +141,17 @@ fn main() {
 
     let summary = collector2.lock().unwrap().ascii_summary();
     println!("\nASCII tree summary (Profiler 2 at 20hz):\n{}", summary);
+
+    let summary = handle.join().unwrap();
+    println!(
+        "\nASCII tree summary (Profiler 3 at 2hz in a separate thread):\n{}",
+        summary
+    );
+
+    println!(
+        r#"Check:
+- Profiler 1 and 2 outputs mix Python (py_fib) and Rust function (py_native_fib) names, if Python frame resolution is supported.
+- Profiler 2 has a high frequency than Profiler 1 and is more detailed.
+- Profiler 3 (do_rust_work in a separate thread) has separate output (sleepy_fib) not containing Python frames."#
+    );
 }
