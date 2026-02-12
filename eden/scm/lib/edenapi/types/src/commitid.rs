@@ -16,10 +16,11 @@ use type_macros::auto_wire;
 use types::HgId;
 
 #[auto_wire]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum CommitIdScheme {
     #[id(1)]
+    #[default]
     Hg,
     #[id(2)]
     Bonsai,
@@ -27,12 +28,6 @@ pub enum CommitIdScheme {
     Globalrev,
     #[id(4)]
     GitSha1,
-}
-
-impl Default for CommitIdScheme {
-    fn default() -> Self {
-        Self::Hg
-    }
 }
 
 sized_hash!(GitSha1, 20);
