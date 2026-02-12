@@ -23,6 +23,8 @@ use std::sync::atomic::Ordering;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
+use anyhow::Context;
+
 /// Atomic payload for passing data from the timer thread to the signal handler
 /// on non-Linux Unix, where `sigevent`/`si_value` is unavailable. The timer
 /// thread CAS's from -1 to the payload, sends the signal, and the signal
@@ -99,13 +101,13 @@ impl Drop for OwnedFd {
 /// On other Unix systems a regular blocking pipe is used.
 ///
 /// Returns `[read_fd, write_fd]`.
-pub fn setup_pipe() -> io::Result<[OwnedFd; 2]> {
+pub fn setup_pipe() -> anyhow::Result<[OwnedFd; 2]> {
     #[cfg(target_os = "linux")]
     unsafe {
         let mut pipe_fds: [libc::c_int; 2] = [0; 2];
 
         if libc::pipe2(pipe_fds.as_mut_ptr(), libc::O_DIRECT) != 0 {
-            return Err(io::Error::last_os_error());
+            return Err(io::Error::last_os_error()).context("pipe2(O_DIRECT)");
         }
         let (rfd, wfd) = (OwnedFd(pipe_fds[0]), OwnedFd(pipe_fds[1]));
 
@@ -114,21 +116,22 @@ pub fn setup_pipe() -> io::Result<[OwnedFd; 2]> {
         let buffer_size = 1 << 20;
         let ret = libc::fcntl(pipe_fds[1], libc::F_SETPIPE_SZ, buffer_size);
         if ret == -1 {
-            return Err(io::Error::last_os_error());
+            return Err(io::Error::last_os_error()).context("fcntl(F_SETPIPE_SZ)");
         } else if ret < buffer_size {
-            return Err(io::Error::other(format!(
-                "pipe buffer {} is too small",
-                ret
-            )));
+            anyhow::bail!(
+                "pipe buffer {} is too small (requested {})",
+                ret,
+                buffer_size
+            );
         }
 
         // Set the write end as non-blocking.
         let flags = libc::fcntl(pipe_fds[1], libc::F_GETFL, 0);
         if flags == -1 {
-            return Err(io::Error::last_os_error());
+            return Err(io::Error::last_os_error()).context("fcntl(F_GETFL)");
         }
         if libc::fcntl(pipe_fds[1], libc::F_SETFL, flags | libc::O_NONBLOCK) == -1 {
-            return Err(io::Error::last_os_error());
+            return Err(io::Error::last_os_error()).context("fcntl(F_SETFL, O_NONBLOCK)");
         }
 
         Ok([rfd, wfd])
@@ -138,20 +141,20 @@ pub fn setup_pipe() -> io::Result<[OwnedFd; 2]> {
     unsafe {
         let mut pipe_fds: [libc::c_int; 2] = [0; 2];
         if libc::pipe(pipe_fds.as_mut_ptr()) != 0 {
-            return Err(io::Error::last_os_error());
+            return Err(io::Error::last_os_error()).context("pipe");
         }
         Ok([OwnedFd(pipe_fds[0]), OwnedFd(pipe_fds[1])])
     }
 
     #[cfg(not(unix))]
-    Err(io::ErrorKind::Unsupported.into())
+    anyhow::bail!("unsupported platform")
 }
 
 /// Setup the signal handler. This is POSIX-only.
 pub fn setup_signal_handler(
     sig: libc::c_int,
     signal_handler: extern "C" fn(libc::c_int, *const libc::siginfo_t, *const libc::c_void),
-) -> io::Result<()> {
+) -> anyhow::Result<()> {
     unsafe {
         let mut sa: libc::sigaction = std::mem::zeroed();
         sa.sa_sigaction = signal_handler as usize;
@@ -159,7 +162,7 @@ pub fn setup_signal_handler(
         libc::sigemptyset(&mut sa.sa_mask);
         libc::sigaddset(&mut sa.sa_mask, sig); // Prevents re-entrancy
         if libc::sigaction(sig, &sa, std::ptr::null_mut()) != 0 {
-            return Err(io::Error::last_os_error());
+            return Err(io::Error::last_os_error()).context("sigaction");
         }
     }
 
@@ -228,7 +231,7 @@ pub fn setup_signal_timer(
 
         // CLOCK_MONOTONIC does not include system suspend time.
         if libc::timer_create(libc::CLOCK_MONOTONIC, &mut sev, &mut timer) != 0 {
-            return Err(io::Error::last_os_error().into());
+            return Err(io::Error::last_os_error()).context("timer_create");
         }
 
         let mut spec: libc::itimerspec = mem::zeroed();
@@ -240,7 +243,7 @@ pub fn setup_signal_timer(
         if libc::timer_settime(timer, 0, &spec, std::ptr::null_mut()) != 0 {
             let err = io::Error::last_os_error();
             libc::timer_delete(timer);
-            return Err(err.into());
+            return Err(err).context("timer_settime");
         }
 
         Ok(OwnedTimer(timer))
@@ -339,10 +342,10 @@ pub fn setup_signal_timer(
 
 /// Stop and delete a signal timer created by `setup_signal_timer`.
 #[cfg(target_os = "linux")]
-fn stop_signal_timer(timer: libc::timer_t) -> io::Result<()> {
+fn stop_signal_timer(timer: libc::timer_t) -> anyhow::Result<()> {
     unsafe {
         if libc::timer_delete(timer) != 0 {
-            return Err(io::Error::last_os_error());
+            return Err(io::Error::last_os_error()).context("timer_delete");
         }
         Ok(())
     }
