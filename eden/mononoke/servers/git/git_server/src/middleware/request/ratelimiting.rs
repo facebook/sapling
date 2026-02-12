@@ -20,6 +20,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use tracing::error;
 
 use crate::scuba::MononokeGitScubaHandler;
+use crate::scuba::MononokeGitScubaKey;
 
 const GIT_UPLOAD_PACK: &str = "/git-upload-pack";
 const SERVER_PATH_PREFIX: &str = "/repos/git/";
@@ -70,6 +71,11 @@ impl Middleware for UploadPackRateLimitingMiddleware {
                 .and_then(|request_info| request_info.main_id);
             let atlas = metadata.clientinfo_atlas();
             let mut scuba = self.scuba.clone();
+            // Enrich scuba before check_load_shed() so that Tracked (shadow)
+            // mode logs include per-request context when logging via scuba.
+            scuba.add(MononokeGitScubaKey::Repo, repo_name.to_string());
+            scuba.add_opt(MononokeGitScubaKey::ClientMainId, main_client_id.clone());
+            scuba.unsampled();
             if let LoadShedResult::Fail(err) = rate_limiter.check_load_shed(
                 metadata.identities(),
                 main_client_id.as_deref(),
