@@ -336,6 +336,23 @@ fn stop_signal_timer(timer: libc::timer_t) -> anyhow::Result<()> {
     }
 }
 
+/// Consume all pending instances of `sig` for the current thread.
+/// The signal must be blocked before calling this function (see `block_signal`),
+/// otherwise signals may be delivered to the handler instead of being drained.
+pub fn drain_pending_signals(sig: libc::c_int) {
+    unsafe {
+        let mut set: libc::sigset_t = mem::zeroed();
+        libc::sigemptyset(&mut set);
+        libc::sigaddset(&mut set, sig);
+
+        let mut pending: libc::sigset_t = mem::zeroed();
+        while libc::sigpending(&mut pending) == 0 && libc::sigismember(&pending, sig) == 1 {
+            let mut caught: libc::c_int = 0;
+            libc::sigwait(&set, &mut caught);
+        }
+    }
+}
+
 fn sigmask_sigprof(sig: libc::c_int, block: bool) {
     unsafe {
         let mut set: libc::sigset_t = mem::zeroed();

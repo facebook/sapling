@@ -87,6 +87,10 @@ impl Drop for Profiler {
         // Stop timer before dropping fds.
         self.timer_id.stop();
         osutil::block_signal(SIG);
+        // Consume pending signals previously queued by the timer to avoid
+        // surprises. This might cancel unrelated signal queues from nested
+        // profilers, losing some profiling accuracy.
+        osutil::drain_pending_signals(SIG);
         self.pipe_write_fd.close();
         // Wait for `backtrace_process_func` to complete.
         if let Some(handle) = self.handle.take() {
