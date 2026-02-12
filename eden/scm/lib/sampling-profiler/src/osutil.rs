@@ -275,6 +275,7 @@ pub fn setup_signal_timer(
                         break;
                     }
                     // Spin until the signal handler has consumed the previous payload.
+                    let mut wait_count: u32 = 0;
                     loop {
                         match SIGNAL_PAYLOAD.compare_exchange(
                             -1,
@@ -291,7 +292,16 @@ pub fn setup_signal_timer(
                                 if stop_flag.load(Ordering::Acquire) {
                                     break;
                                 }
-                                std::hint::spin_loop();
+                                // Is signal handling or delivery stuck? If so, avoid burning CPU.
+                                if wait_count >= 0x10000 {
+                                    std::thread::sleep(Duration::from_millis(16));
+                                } else if wait_count >= 0x1000 {
+                                    wait_count += 0x1000;
+                                    std::thread::sleep(Duration::from_millis(1));
+                                } else {
+                                    wait_count += 1;
+                                    std::hint::spin_loop();
+                                }
                             }
                         }
                     }
