@@ -95,7 +95,6 @@ impl Drop for OwnedFd {
 ///
 /// On Linux the pipe is configured with:
 /// - O_DIRECT: Enables "packet-mode". No need to deal with payload boundaries.
-/// - O_NONBLOCK on write: Slow reader won't block writers.
 /// - A larger buffer to reduce chances data gets dropped.
 ///
 /// On other Unix systems a regular blocking pipe is used.
@@ -111,28 +110,14 @@ pub fn setup_pipe() -> anyhow::Result<[OwnedFd; 2]> {
         }
         let (rfd, wfd) = (OwnedFd(pipe_fds[0]), OwnedFd(pipe_fds[1]));
 
-        // The default pipe buffer is 4KB. It only fits 4 frames, too small for
-        // a backtrace. Increase it to 1MB, which might fit 900 frames.
-        let buffer_size = 1 << 20;
-        let ret = libc::fcntl(pipe_fds[1], libc::F_SETPIPE_SZ, buffer_size);
-        if ret == -1 {
-            return Err(io::Error::last_os_error()).context("fcntl(F_SETPIPE_SZ)");
-        } else if ret < buffer_size {
-            anyhow::bail!(
-                "pipe buffer {} is too small (requested {})",
-                ret,
-                buffer_size
-            );
-        }
-
-        // Set the write end as non-blocking.
-        let flags = libc::fcntl(pipe_fds[1], libc::F_GETFL, 0);
-        if flags == -1 {
-            return Err(io::Error::last_os_error()).context("fcntl(F_GETFL)");
-        }
-        if libc::fcntl(pipe_fds[1], libc::F_SETFL, flags | libc::O_NONBLOCK) == -1 {
-            return Err(io::Error::last_os_error()).context("fcntl(F_SETFL, O_NONBLOCK)");
-        }
+        // The default pipe buffer is 4KB. It fits ~100 frames. Try to use a larger
+        // buffer so the signal handler is less likely blocking.
+        // Linux has a per-user pipe pages limit /proc/sys/fs/pipe-user-pages-soft
+        // (and -hard). Try to not use too much. 16x the original size gives us
+        // ~1.6k frames.
+        // If this fails, that's okay too. It's just an optimization.
+        let buffer_size = 65536;
+        let _ret = libc::fcntl(pipe_fds[1], libc::F_SETPIPE_SZ, buffer_size);
 
         Ok([rfd, wfd])
     }
