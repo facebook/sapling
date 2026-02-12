@@ -180,7 +180,7 @@ pub struct GetSmartlogParams {
 }
 
 #[auto_wire]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum GetSmartlogFlag {
     #[id(1)]
@@ -188,14 +188,8 @@ pub enum GetSmartlogFlag {
     #[id(2)]
     AddRemoteBookmarks,
     #[id(3)]
+    #[default] // Wire requires a default value, shouldn't be used
     AddAllBookmarks,
-}
-
-// Wire requires a default value, shouldn't be used
-impl Default for GetSmartlogFlag {
-    fn default() -> Self {
-        Self::AddAllBookmarks
-    }
 }
 
 #[auto_wire]
