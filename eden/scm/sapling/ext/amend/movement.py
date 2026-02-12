@@ -446,7 +446,7 @@ def _choosenode(ui, nodes):
     cancel = _("(c)ancel")
     cancelclean = _("cancel")
     options = f" [1-{n}/{cancel}]? $$ &{cancelclean}{options}"
-    choice = ui.promptchoice(_("which changeset to move to{}").format(options))
+    choice = ui.promptchoice(_("which changeset to select{}").format(options))
     if choice == 0:
         raise error.Abort(
             _("cancelling as requested"),

@@ -78,7 +78,7 @@ Next:
   changeset 190ba9608152 has multiple children, namely:
   (1) [9ad522] I
   (2) [6a87f2] M
-  which changeset to move to [1-2/(c)ancel]?  abort: response expected
+  which changeset to select [1-2/(c)ancel]?  abort: response expected
   [255]
 
   $ sl log -r 'next()'
@@ -95,7 +95,7 @@ Previous:
   changeset 190ba9608152 has multiple parents, namely:
   (1) [f58535] D
   (2) [a9ca93] H
-  which changeset to move to [1-2/(c)ancel]?  abort: response expected
+  which changeset to select [1-2/(c)ancel]?  abort: response expected
   [255]
 
   $ sl log -r 'previous()'
@@ -112,7 +112,7 @@ Top:
   current stack has multiple heads, namely:
   (1) [c6dcbf] L
   (2) [72a71a] P
-  which changeset to move to [1-2/(c)ancel]?  abort: response expected
+  which changeset to select [1-2/(c)ancel]?  abort: response expected
   [255]
 
   $ sl log -r 'top()'
@@ -129,7 +129,7 @@ Bottom:
   current stack has multiple bottom changesets, namely:
   (1) [426bad] A
   (2) [e8e0a8] E
-  which changeset to move to [1-2/(c)ancel]?  abort: response expected
+  which changeset to select [1-2/(c)ancel]?  abort: response expected
   [255]
 
   $ sl log -r 'bottom()'
@@ -138,4 +138,3 @@ Bottom:
   [e8e0a8] E
   abort: ambiguous bottom changeset
   [255]
-

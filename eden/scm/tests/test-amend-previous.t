@@ -194,7 +194,7 @@ Test multiple parents
   changeset 55f23eb33584 has multiple parents, namely:
   (1) [f2987e] (top) r5
   (2) [830512] a
-  which changeset to move to [1-2/(c)ancel]?  1
+  which changeset to select [1-2/(c)ancel]?  1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [cb14eb] r3
   $ hg up 'desc(merge)' -q
@@ -204,7 +204,7 @@ Test multiple parents
   changeset 55f23eb33584 has multiple parents, namely:
   (1) [f2987e] (top) r5
   (2) [830512] a
-  which changeset to move to [1-2/(c)ancel]?  2
+  which changeset to select [1-2/(c)ancel]?  2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [f07e66] (bookmark) r2
   (activating bookmark bookmark)
@@ -224,6 +224,6 @@ Mix with bottom:
   current stack has multiple bottom changesets, namely:
   (1) [f2987e] (top) r5
   (2) [830512] a
-  which changeset to move to [1-2/(c)ancel]?  2
+  which changeset to select [1-2/(c)ancel]?  2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [830512] a

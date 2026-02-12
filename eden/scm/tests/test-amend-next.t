@@ -311,11 +311,11 @@ Test interactive:
   changeset cb14eba0ad9c has multiple children, namely:
   (1) [aa70f0] r4
   (2) [2341c6] (other) test
-  which changeset to move to [1-2/(c)ancel]?  2
+  which changeset to select [1-2/(c)ancel]?  2
   changeset 2341c6305f4b has multiple children, namely:
   (1) [ae9b2b] branch a
   (2) [9913ce] branch b
-  which changeset to move to [1-2/(c)ancel]?  1
+  which changeset to select [1-2/(c)ancel]?  1
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bottom)
   [ae9b2b] branch a
@@ -327,7 +327,7 @@ Test interactive:
   (1) [f2987e] (top) r5
   (2) [ae9b2b] branch a
   (3) [9913ce] branch b
-  which changeset to move to [1-3/(c)ancel]?  3
+  which changeset to select [1-3/(c)ancel]?  3
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bottom)
   [9913ce] branch b
@@ -354,7 +354,7 @@ Test interactive >= 10 choices:
   (8) [f09214] h
   (9) [23284c] i
   (10) [1e290b] j
-  which changeset to move to [1-10/(c)ancel]?  10
+  which changeset to select [1-10/(c)ancel]?  10
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [1e290b] j
   $ hg up bottom -q
@@ -374,7 +374,7 @@ Test interactive >= 10 choices:
   (10) [f09214] h
   (11) [23284c] i
   (12) [1e290b] j
-  which changeset to move to [1-12/(c)ancel]?  10
+  which changeset to select [1-12/(c)ancel]?  10
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bottom)
   [f09214] h
