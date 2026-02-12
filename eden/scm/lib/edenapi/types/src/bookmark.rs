@@ -79,19 +79,14 @@ pub struct BookmarkResult {
 }
 
 #[auto_wire]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum Freshness {
     #[id(1)]
     MostRecent,
     #[id(2)]
+    #[default]
     MaybeStale,
-}
-
-impl Default for Freshness {
-    fn default() -> Self {
-        Self::MaybeStale
-    }
 }
 
 /// Request to list bookmarks matching patterns (replacement for wireproto listkeyspatterns).
