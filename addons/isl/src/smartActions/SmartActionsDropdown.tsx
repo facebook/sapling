@@ -154,63 +154,116 @@ export function SmartActionsDropdown({commit}: {commit?: CommitInfo}) {
   let buttonComponent;
 
   if (sortedActionItems.length === 1) {
-    const singleButton = (
-      <Button kind="icon" onClick={() => runSmartAction(sortedActionItems[0].config, context)}>
-        <Icon icon="lightbulb-sparkle" />
-        {sortedActionItems[0].label}
-      </Button>
-    );
-    buttonComponent = selectedAction.config.description ? (
-      <Tooltip title={t(selectedAction.config.description)}>{singleButton}</Tooltip>
-    ) : (
-      singleButton
+    const singleAction = sortedActionItems[0];
+    const tooltip = selectedAction.config.description
+      ? t(selectedAction.config.description)
+      : undefined;
+    buttonComponent = (
+      <SmartActionWithContext config={singleAction.config} context={context} tooltip={tooltip}>
+        <Button
+          kind="icon"
+          onClick={e => {
+            if (e.altKey) {
+              return;
+            }
+            e.stopPropagation();
+            runSmartAction(singleAction.config, context);
+            bumpSmartAction(singleAction.id);
+          }}>
+          <Icon icon="lightbulb-sparkle" />
+          {singleAction.label}
+        </Button>
+      </SmartActionWithContext>
     );
   } else {
+    const tooltip = selectedAction.config.description
+      ? t(selectedAction.config.description)
+      : undefined;
     buttonComponent = (
-      <ButtonDropdown
-        kind="icon"
-        options={[]}
-        selected={selectedAction}
-        icon={<Icon icon="lightbulb-sparkle" />}
-        onClick={action => {
-          runSmartAction(action.config, context);
-          // Update the cache with the most recent action
-          bumpSmartAction(action.id);
-        }}
-        onChangeSelected={() => {}}
-        customSelectComponent={
-          <Button
-            {...stylex.props(styles.select, buttonStyles.icon, styles.iconSelect)}
-            onClick={e => {
-              if (dropdownButtonRef.current) {
-                const rect = dropdownButtonRef.current.getBoundingClientRect();
-                const zoom = getZoomLevel();
-                const xOffset = 4 * zoom;
-                const centerX = rect.left + rect.width / 2 - xOffset;
-                // Position arrow at the top or bottom edge of button depending on which half of screen we're in
-                const isTopHalf =
-                  (rect.top + rect.height / 2) / zoom <= window.innerHeight / zoom / 2;
-                const yOffset = 5 * zoom;
-                const edgeY = isTopHalf ? rect.bottom - yOffset : rect.top + yOffset;
-                Object.defineProperty(e, 'clientX', {value: centerX, configurable: true});
-                Object.defineProperty(e, 'clientY', {value: edgeY, configurable: true});
-              }
-              contextMenu(e);
-              e.stopPropagation();
-            }}
-            ref={dropdownButtonRef}
-          />
-        }
-        primaryTooltip={
-          selectedAction.config.description
-            ? {title: t(selectedAction.config.description)}
-            : undefined
-        }
-      />
+      <SmartActionWithContext config={selectedAction.config} context={context} tooltip={tooltip}>
+        <ButtonDropdown
+          kind="icon"
+          options={[]}
+          selected={selectedAction}
+          icon={<Icon icon="lightbulb-sparkle" />}
+          onClick={(action, e) => {
+            if (e.altKey) {
+              return;
+            }
+            e.stopPropagation();
+            runSmartAction(action.config, context);
+            // Update the cache with the most recent action
+            bumpSmartAction(action.id);
+          }}
+          onChangeSelected={() => {}}
+          customSelectComponent={
+            <Button
+              {...stylex.props(styles.select, buttonStyles.icon, styles.iconSelect)}
+              onClick={e => {
+                if (dropdownButtonRef.current) {
+                  const rect = dropdownButtonRef.current.getBoundingClientRect();
+                  const zoom = getZoomLevel();
+                  const xOffset = 4 * zoom;
+                  const centerX = rect.left + rect.width / 2 - xOffset;
+                  // Position arrow at the top or bottom edge of button depending on which half of screen we're in
+                  const isTopHalf =
+                    (rect.top + rect.height / 2) / zoom <= window.innerHeight / zoom / 2;
+                  const yOffset = 5 * zoom;
+                  const edgeY = isTopHalf ? rect.bottom - yOffset : rect.top + yOffset;
+                  Object.defineProperty(e, 'clientX', {value: centerX, configurable: true});
+                  Object.defineProperty(e, 'clientY', {value: edgeY, configurable: true});
+                }
+                contextMenu(e);
+                e.stopPropagation();
+              }}
+              ref={dropdownButtonRef}
+            />
+          }
+        />
+      </SmartActionWithContext>
     );
   }
 
   return buttonComponent;
+}
+
+function SmartActionWithContext({
+  config,
+  context,
+  tooltip,
+  children,
+}: {
+  config: SmartActionConfig;
+  context: ActionContext;
+  tooltip?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const ContextInput = Internal.smartActions?.ContextInput;
+
+  if (!ContextInput) {
+    if (tooltip) {
+      return <Tooltip title={tooltip}>{children}</Tooltip>;
+    }
+    return <>{children}</>;
+  }
+
+  return (
+    <Tooltip
+      trigger="click"
+      component={dismiss => (
+        <ContextInput
+          onSubmit={(userContext: string) => {
+            runSmartAction(config, {...context, userContext});
+            bumpSmartAction(config.id);
+            dismiss();
+          }}
+        />
+      )}
+      title={tooltip}
+      group="smart-action-context-input">
+      {children}
+    </Tooltip>
+  );
 }
 
 function shouldShowSmartAction(

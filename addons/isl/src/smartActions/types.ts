@@ -34,6 +34,7 @@ export type ActionContext = {
   commit?: CommitInfo;
   repoPath?: string;
   conflicts?: MergeConflicts;
+  userContext?: string;
 };
 
 export type ActionMenuItem = {

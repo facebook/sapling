@@ -102,7 +102,7 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
 }: {
   options: ReadonlyArray<T>;
   kind?: 'primary' | 'icon' | undefined;
-  onClick: (selected: T) => unknown;
+  onClick: (selected: T, event: React.MouseEvent<HTMLButtonElement>) => unknown;
   selected: T;
   onChangeSelected: (newSelected: T) => unknown;
   buttonDisabled?: boolean;
@@ -123,7 +123,7 @@ export function ButtonDropdown<T extends {label: ReactNode; id: string}>({
   const buttonComponent = (
     <Button
       kind={kind}
-      onClick={buttonDisabled ? undefined : () => onClick(selected)}
+      onClick={buttonDisabled ? undefined : e => onClick(selected, e)}
       disabled={buttonDisabled}
       xstyle={[styles.button, kind === 'icon' && styles.iconButton]}
       {...rest}>
