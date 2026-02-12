@@ -11,7 +11,6 @@ use context::CoreContext;
 use diff_service_client::DiffInput;
 use diff_service_client::DiffServiceClient;
 use diff_service_client::RepoDiffServiceClient;
-use diff_service_if_clients::errors::DiffBlocksError;
 use diff_service_if_clients::errors::DiffHunksError;
 use diff_service_if_clients::errors::DiffUnifiedError;
 use diff_service_if_clients::errors::DiffUnifiedHeaderlessError;
@@ -72,15 +71,6 @@ impl DiffServiceError for DiffHunksError {
     }
 }
 
-impl DiffServiceError for DiffBlocksError {
-    fn request_error(&self) -> Option<&diff_service_if::RequestError> {
-        match self {
-            Self::ex(req_err) => Some(req_err),
-            _ => None,
-        }
-    }
-}
-
 impl DiffServiceError for MetadataDiffError {
     fn request_error(&self) -> Option<&diff_service_if::RequestError> {
         match self {
@@ -95,7 +85,7 @@ impl DiffServiceError for MetadataDiffError {
 /// during shard reallocation, repo initialization, etc.).
 ///
 /// This function works with any diff service error type (DiffUnifiedError,
-/// DiffUnifiedHeaderlessError, DiffHunksError, DiffBlocksError, MetadataDiffError)
+/// DiffUnifiedHeaderlessError, DiffHunksError, MetadataDiffError)
 /// since they all throw the same RequestError exception type.
 fn is_transient_diff_error<E: DiffServiceError>(e: &E) -> bool {
     if let Some(request_error) = e.request_error() {
