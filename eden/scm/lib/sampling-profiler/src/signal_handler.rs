@@ -101,11 +101,12 @@ pub extern "C" fn signal_handler(
 /// async-signal-safety.
 fn write_frame(frame: &FramePayload, fd: libc::c_int) -> libc::c_int {
     let size = std::mem::size_of::<FramePayload>();
-    let pos = frame as *const FramePayload as *const libc::c_void;
+    let mut remaining_bytes = size;
+    let mut pos = frame as *const FramePayload as *const libc::c_void;
     loop {
         // safety: FramePayload is `repr(C)` and contains only `usize` fields.
         // It is okay to write its raw bytes to "serialize" within the same process.
-        let written_bytes = unsafe { libc::write(fd, pos, size) };
+        let written_bytes = unsafe { libc::write(fd, pos, remaining_bytes) };
         if written_bytes < 0 {
             let errno = {
                 #[cfg(target_os = "macos")]
@@ -127,10 +128,21 @@ fn write_frame(frame: &FramePayload, fd: libc::c_int) -> libc::c_int {
             } else {
                 return errno;
             }
-        } else if written_bytes as usize == size {
+        }
+        remaining_bytes = remaining_bytes.saturating_sub(written_bytes as usize);
+        if remaining_bytes == 0 {
             return 0;
-        } else {
+        } else if cfg!(target_os = "linux") {
+            // On Linux, the pipe is in "packet" mode (O_DIRECT).
+            // Discard this packet.
             return libc::EINVAL;
+        } else if written_bytes == 0 {
+            return libc::EINVAL;
+        } else {
+            // On other unix systems, the pipe is not in packet mode.
+            // Continue writing the rest of the data.
+            pos = unsafe { pos.offset(written_bytes) };
+            continue;
         }
     }
 }
