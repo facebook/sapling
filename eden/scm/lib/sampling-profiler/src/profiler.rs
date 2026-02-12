@@ -58,10 +58,9 @@ impl Profiler {
         //   will be closed when dropping `Profiler`.
         let [read_fd, write_fd] = osutil::setup_pipe()?;
 
-        osutil::setup_signal_handler(SIG, signal_handler::signal_handler)?;
-        osutil::unblock_signal(SIG);
-
         // Spawn a thread to read the pipe. The thread exits on pipe EOF.
+        // The thread should be spawned before the signal handler got a chance
+        // to run to avoid potential deadlock on signal handler `write`.
         let thread_id = osutil::get_thread_id();
         let handle = thread::Builder::new()
             .name(format!("profiler-consumer-{thread_id:?}"))
@@ -69,6 +68,9 @@ impl Profiler {
                 osutil::block_signal(SIG);
                 frame_handler::frame_reader_loop(read_fd, backtrace_process_func);
             })?;
+
+        osutil::setup_signal_handler(SIG, signal_handler::signal_handler)?;
+        osutil::unblock_signal(SIG);
 
         // Start a timer that sends signals to the target thread periodically.
         let timer_id = osutil::setup_signal_timer(SIG, thread_id, interval, write_fd.0 as isize)?;
