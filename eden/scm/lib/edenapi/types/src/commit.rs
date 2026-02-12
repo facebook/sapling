@@ -679,11 +679,13 @@ pub struct HgInfo {
     PartialEq,
     PartialOrd,
     Serialize,
-    Deserialize
+    Deserialize,
+    Default
 )]
 #[cfg_attr(any(test, feature = "for-tests"), derive(Arbitrary))]
 pub enum BonsaiParents {
     #[id(1)]
+    #[default]
     None,
     #[id(2)]
     One(BonsaiChangesetId),
@@ -707,12 +709,6 @@ impl BonsaiParents {
             Self::One(p1) => vec![p1.clone()],
             Self::Two((p1, p2)) => vec![p1.clone(), p2.clone()],
         }
-    }
-}
-
-impl Default for BonsaiParents {
-    fn default() -> Self {
-        Self::None
     }
 }
 
