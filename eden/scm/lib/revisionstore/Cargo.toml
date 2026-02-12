@@ -68,7 +68,7 @@ url = "2.5.4"
 
 [dev-dependencies]
 maplit = "1.0"
-mockito = "1.4.0"
+mockito = "1.7.2"
 rand_chacha = "0.3"
 tempfile = "3.22"
 
