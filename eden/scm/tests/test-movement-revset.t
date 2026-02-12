@@ -120,7 +120,6 @@ Top:
   [c6dcbf] L
   [72a71a] P
   abort: ambiguous next commit
-  (use the --newest flag to always pick the newest child at each step)
   [255]
 
 Bottom:

@@ -23,6 +23,9 @@ from sapling.node import hex, nullrev, short
 
 from . import common, revsets
 
+_MULTI_CHILDREN_HINT = _(
+    "use the --newest flag to always pick the newest child at each step"
+)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -455,7 +458,7 @@ def _choosenode(ui, nodes):
         return nodes[choice - 1]
 
 
-def _findstacktop(ui, repo, newest=False):
+def _findstacktop(ui, repo, newest=False, hint=_MULTI_CHILDREN_HINT):
     """Find the head of the current stack."""
     heads = list(repo.nodes("heads(.::)"))
     if len(heads) > 1:
@@ -473,9 +476,7 @@ def _findstacktop(ui, repo, newest=False):
             return _choosenode(ui, heads)
         raise error.Abort(
             _("ambiguous next commit"),
-            hint=_(
-                "use the --newest flag to always pick the newest child at each step"
-            ),
+            hint=hint,
         )
     else:
         return next(iter(heads), None)
@@ -567,7 +568,7 @@ def _top(repo, subset, x):
     Top of the draft stack.
     """
     revsetlang.getargs(x, 0, 0, _("top takes no arguments"))
-    node = _findstacktop(repo.ui, repo)
+    node = _findstacktop(repo.ui, repo, hint=None)
     return _torevset(repo, subset, node)
 
 
