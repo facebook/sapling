@@ -332,8 +332,8 @@ impl<'a> DiffRouter<'a> {
     ) -> Result<DiffInput, MononokeError> {
         let path = NonRootMPath::try_from(content.path().clone())?.to_string();
         let changeset_id = content.changeset().id();
-        Ok(diff_service_client::DiffInput::ChangesetPath {
-            changeset_id,
+        Ok(diff_service_client::DiffInput::CommitPath {
+            commit_id: diff_service_if::CommitId::bonsai(changeset_id.as_ref().to_vec()),
             path,
             replacement_path,
         })
