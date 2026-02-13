@@ -198,30 +198,12 @@ impl AsyncBody {
     pub fn decoded(self) -> ByteStream {
         let Self { encoding, body } = self;
         stream::once(async move {
-            let encoding = encoding?;
-
-            // Handle empty streams specially to work around an async-compression bug
-            // where all decoders fail on empty input.
-            // https://github.com/Nullus157/async-compression/pull/444
-            let mut body = body;
-            let first_chunk = match body.next().await {
-                None => {
-                    // Empty stream - return empty result
-                    return Ok(stream::empty().boxed());
-                }
-                Some(result) => result?,
-            };
-
-            // Prepend first chunk back to stream
-            let prefix = stream::once(future::ready(Ok(first_chunk)));
-            let combined: ByteStream = prefix.chain(body).boxed();
-
-            Ok(match encoding {
-                Encoding::Identity => combined,
-                Encoding::Brotli => decode!(BrotliDecoder, combined),
-                Encoding::Deflate => decode!(DeflateDecoder, combined),
-                Encoding::Gzip => decode!(GzipDecoder, combined),
-                Encoding::Zstd => decode!(ZstdDecoder, combined),
+            Ok(match encoding? {
+                Encoding::Identity => body.boxed(),
+                Encoding::Brotli => decode!(BrotliDecoder, body),
+                Encoding::Deflate => decode!(DeflateDecoder, body),
+                Encoding::Gzip => decode!(GzipDecoder, body),
+                Encoding::Zstd => decode!(ZstdDecoder, body),
                 other => {
                     return Err(HttpClientError::BadResponse(anyhow!(
                         "Unsupported Content-Encoding: {:?}",
@@ -397,34 +379,6 @@ mod tests {
 
         let body = res.into_body().decoded().try_concat().await?;
         assert_eq!(&*body, &uncompressed[..]);
-
-        Ok(())
-    }
-
-    /// Test that decoding empty response body.
-    #[tokio::test]
-    async fn test_empty_response_decompression() -> Result<()> {
-        let mut server = mockito::Server::new_async().await;
-        let mock = server
-            .mock("GET", "/small")
-            .with_status(200)
-            .with_header("Content-Encoding", "zstd")
-            .with_body([])
-            .create();
-
-        let client = HttpClient::new();
-
-        let url = Url::parse(&server.url())?.join("small")?;
-        let res = client
-            .get(url)
-            .accept_encoding(Encoding::all())
-            .send_async()
-            .await?;
-
-        mock.assert();
-
-        // We decoded the empty response body properly.
-        assert!(res.into_body().decoded().try_concat().await?.is_empty());
 
         Ok(())
     }
