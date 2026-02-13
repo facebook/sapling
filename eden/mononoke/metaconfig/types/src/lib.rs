@@ -28,6 +28,7 @@ use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::bail;
 use ascii::AsciiString;
 use bookmarks_types::BookmarkKey;
 use derive_more::From;
@@ -2264,20 +2265,49 @@ impl RestrictedPathsConfig {
 pub struct RestrictedPathsAclFile {
     /// REPO_REGION ACL protecting this directory
     /// e.x. "repos/hg/fbsource/=project1"
-    pub repo_region_acl: MononokeIdentity,
+    repo_region_acl: MononokeIdentity,
     /// In most cases, we don't want to expose the name of the REPO_REGION ACL
     /// when we enforce access. Instead, we redirect the client to an AMP group
     /// that transitively provides access to the ACL.
     /// If not specified, will default to `repo_region_acl`.
-    pub permission_request_group: Option<MononokeIdentity>,
+    permission_request_group: Option<MononokeIdentity>,
     // TODO(T248660053): possibly add dry-run mode
 }
 
 impl RestrictedPathsAclFile {
-    /// Run all the necessary validations on the ACL file
-    pub fn validate(&self) -> Result<()> {
-        // TODO(T248660053): ensure the ACL is REPO_REGION.
+    /// Create a new RestrictedPathsAclFile and ensure it meets all the requirements
+    pub fn new(
+        repo_region_acl: MononokeIdentity,
+        permission_request_group: Option<MononokeIdentity>,
+    ) -> Result<Self> {
+        Self {
+            repo_region_acl,
+            permission_request_group,
+        }
+        .validate()
+    }
 
-        Ok(())
+    /// REPO_REGION ACL protecting this directory
+    /// e.x. "repos/hg/fbsource/=project1"
+    pub fn repo_region_acl(&self) -> &MononokeIdentity {
+        &self.repo_region_acl
+    }
+
+    /// In most cases, we don't want to expose the name of the REPO_REGION ACL
+    /// when we enforce access. Instead, we redirect the client to an AMP group
+    /// that transitively provides access to the ACL.
+    /// If not specified, will default to `repo_region_acl`.
+    pub fn permission_request_group(&self) -> Option<&MononokeIdentity> {
+        self.permission_request_group.as_ref()
+    }
+
+    /// Run all the necessary validations on the ACL file
+    fn validate(self) -> Result<Self> {
+        match self.repo_region_acl().id_type() {
+            "REPO_REGION" => {}
+            acl_type => bail!("ACL must be of type REPO_REGION, got {}", acl_type),
+        };
+
+        Ok(self)
     }
 }
