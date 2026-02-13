@@ -65,14 +65,24 @@
   margin: calc(-1 * var(--halfpad));
 }
 
+.commit-info-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--pad);
+}
+
+.commit-info-title-wrapper:hover .hover-edit-button,
+.commit-info-title-wrapper:focus-within .hover-edit-button {
+  opacity: 1;
+}
+
 .commit-info-rendered-field {
   cursor: pointer;
   white-space: pre-wrap;
-  margin: calc(-1 * var(--pad));
   margin-bottom: var(--pad);
   transition: background-color 0.1s;
   border-radius: var(--pad);
-  padding: var(--pad);
+  padding-top: 0;
 }
 
 .commit-info-rendered-textarea,
@@ -81,6 +91,8 @@
   white-space: pre-wrap;
   transition: background-color 0.1s;
   border-radius: var(--pad);
+  margin-inline: calc(-1 * var(--pad));
+  margin-bottom: var(--pad);
   padding: var(--pad);
   word-break: break-word;
 }
@@ -95,6 +107,7 @@
 
 .commit-info-section .see-more-container {
   margin: calc(-1 * var(--pad));
+  margin-left: 0;
   margin-bottom: var(--pad);
 }
 
@@ -178,15 +191,18 @@
   opacity: 0;
   transition: opacity 0.1s;
   display: flex;
+  cursor: pointer;
+  border-radius: var(--halfpad);
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
 }
-.commit-info-rendered-title:focus-within .hover-edit-button,
-.commit-info-rendered-field:focus-within .hover-edit-button,
-.commit-info-rendered-textarea:focus-within .hover-edit-button,
-.commit-info-rendered-custom:focus-within .hover-edit-button,
-.commit-info-rendered-title:hover .hover-edit-button,
-.commit-info-rendered-field:hover .hover-edit-button,
-.commit-info-rendered-textarea:hover .hover-edit-button,
-.commit-info-rendered-custom:hover .hover-edit-button {
+.hover-edit-button:hover {
+  background: var(--tooltip-background);
+}
+.commit-info-section:focus-within .hover-edit-button,
+.commit-info-section:hover .hover-edit-button {
   opacity: 1;
 }
 

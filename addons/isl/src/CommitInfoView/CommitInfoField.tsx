@@ -61,17 +61,15 @@ export function CommitInfoField({
             />
           </Section>
         ) : (
-          <ClickToEditField
-            startEditingField={readonly ? undefined : startEditingField}
-            kind={field.type}
-            fieldKey={field.key}>
-            <span>{content}</span>
-            {readonly ? null : (
-              <span className="hover-edit-button">
-                <Icon icon="edit" />
-              </span>
-            )}
-          </ClickToEditField>
+          <div className="commit-info-title-wrapper">
+            <ClickToEditField
+              startEditingField={readonly ? undefined : startEditingField}
+              kind={field.type}
+              fieldKey={field.key}>
+              <span>{content}</span>
+            </ClickToEditField>
+            {readonly ? null : <EditFieldButton onClick={startEditingField} />}
+          </div>
         )}
         {extra}
       </>
@@ -175,19 +173,15 @@ export function CommitInfoField({
     return (
       <Section>
         <Wrapper>
+          <SmallCapsTitle>
+            <Icon icon={field.icon} />
+            <T>{field.key}</T>
+            {readonly ? null : <EditFieldButton onClick={startEditingField} />}
+          </SmallCapsTitle>
           <ClickToEditField
             startEditingField={readonly ? undefined : startEditingField}
             kind={field.type}
             fieldKey={field.key}>
-            <SmallCapsTitle>
-              <Icon icon={field.icon} />
-              <T>{field.key}</T>
-              {readonly ? null : (
-                <span className="hover-edit-button">
-                  <Icon icon="edit" />
-                </span>
-              )}
-            </SmallCapsTitle>
             {renderedContent}
           </ClickToEditField>
           {extra}
@@ -240,5 +234,13 @@ function ClickToEditField({
       tabIndex={0}>
       {children}
     </div>
+  );
+}
+
+function EditFieldButton({onClick}: {onClick: () => void}) {
+  return (
+    <button className="hover-edit-button" onClick={onClick}>
+      <Icon icon="edit" />
+    </button>
   );
 }

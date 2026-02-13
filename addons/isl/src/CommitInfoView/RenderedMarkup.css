@@ -24,10 +24,6 @@
   --quote-fg: #8c98b8;
 }
 
-.commit-info-view .rendered-markup div {
-  margin-block: calc(2 * var(--pad));
-}
-
 .rendered-markup > p {
   margin: 0;
 }
