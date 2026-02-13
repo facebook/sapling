@@ -1021,9 +1021,7 @@ impl RepoFactory {
             "scm/mononoke:enable_bonsai_tag_mapping_caching",
             None,
             Some(repo_name),
-        )
-        .unwrap_or(false)
-        {
+        )? {
             match repo_event_publisher.subscribe_for_tag_updates(&repo_name.to_string()) {
                 Ok(update_notification_receiver) => {
                     let cached_bonsai_tag_mapping = CachedBonsaiTagMapping::new(
@@ -1059,9 +1057,7 @@ impl RepoFactory {
             "scm/mononoke:enable_git_ref_content_mapping_caching",
             None,
             Some(repo_name),
-        )
-        .unwrap_or(false)
-        {
+        )? {
             match repo_event_publisher.subscribe_for_content_refs_updates(&repo_name.to_string()) {
                 Ok(update_notification_receiver) => {
                     let cached_git_ref_content_mapping = CachedGitRefContentMapping::new(
@@ -1121,9 +1117,7 @@ impl RepoFactory {
             "scm/mononoke:disable_git_symbolic_refs_caching",
             None,
             Some(repo_name),
-        )
-        .unwrap_or(false)
-        {
+        )? {
             Ok(Arc::new(git_symbolic_refs))
         } else {
             let cached_git_symbolic_refs =
@@ -1233,12 +1227,11 @@ impl RepoFactory {
             .open_sql::<SqlHgMutationStoreBuilder>(repo_config)
             .await
             .context(RepoFactoryError::HgMutationStore)?;
-        if let Ok(mutation_limit) = justknobs::get_as::<usize>(
+        let mutation_limit = justknobs::get_as::<usize>(
             "scm/mononoke:mutation_chain_length_limit",
             Some(repo_identity.name()),
-        ) {
-            builder = builder.with_mutation_limit(mutation_limit);
-        }
+        )?;
+        builder = builder.with_mutation_limit(mutation_limit);
         let hg_mutation_store = builder.with_repo_id(repo_identity.id());
 
         if let Some(cache_handler_factory) = self.cache_handler_factory("hg_mutation_store")? {

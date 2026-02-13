@@ -173,11 +173,11 @@ impl CommitRemappingState {
     ) -> Result<Option<Self>, Error> {
         let path = MPath::new(REMAPPING_STATE_FILE)?;
 
-        let root_id: ContentManifestId = if let Ok(true) = justknobs::eval(
+        let root_id: ContentManifestId = if justknobs::eval(
             "scm/mononoke:derived_data_use_content_manifests",
             None,
             Some(repo.repo_identity().name()),
-        ) {
+        )? {
             repo.repo_derived_data()
                 .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
                 .await?

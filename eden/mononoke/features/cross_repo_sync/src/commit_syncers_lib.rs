@@ -384,11 +384,11 @@ where
     );
 
     // Killswitch to disable this logic altogether.
-    if let Ok(true) = justknobs::eval(
+    if justknobs::eval(
         "scm/mononoke:xrepo_disable_forward_sync_over_mapping_change",
         None,
         None,
-    ) {
+    )? {
         return Ok((parent_version, HashMap::new()));
     }
     let target_repo = commit_sync_data.get_target_repo();

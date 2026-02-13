@@ -414,11 +414,11 @@ pub trait MegarepoOp<R> {
     where
         R: Repo,
     {
-        let root_id: ContentManifestId = if let Ok(true) = justknobs::eval(
+        let root_id: ContentManifestId = if justknobs::eval(
             "scm/mononoke:derived_data_use_content_manifests",
             None,
             Some(repo.repo_identity().name()),
-        ) {
+        )? {
             repo.repo_derived_data()
                 .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
                 .await
@@ -1267,11 +1267,11 @@ pub async fn save_sync_target_config_in_changeset(
     config: &SyncTargetConfig,
     bcs: &mut BonsaiChangesetMut,
 ) -> Result<(), Error> {
-    if let Ok(false) = justknobs::eval(
+    if !justknobs::eval(
         "scm/mononoke:megarepo_serialize_target_config_into_working_copy",
         None,
         Some(repo.repo_identity().name()),
-    ) {
+    )? {
         return Ok(());
     }
 

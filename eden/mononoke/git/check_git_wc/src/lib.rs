@@ -122,11 +122,11 @@ async fn check_receiver(
     rx: mpsc::Receiver<CheckNode>,
     scheduled_max: usize,
 ) -> Result<()> {
-    let root_content_mf = if let Ok(true) = justknobs::eval(
+    let root_content_mf = if justknobs::eval(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         Some(hg_repo.repo_identity().name()),
-    ) {
+    )? {
         Either::Left(
             hg_repo
                 .repo_derived_data()
