@@ -23,7 +23,6 @@ use futures::future;
 use futures::future::BoxFuture;
 use futures::stream;
 use futures::stream::BoxStream;
-use futures::stream::FuturesUnordered;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_revlog::manifest::Details;
 use mercurial_revlog::manifest::ManifestContent;
@@ -126,19 +125,10 @@ impl NewBlobs {
             }
         };
 
-        let mb_buffer_size =
-            justknobs::get_as::<usize>("scm/mononoke:repo_client_concurrent_blob_uploads", None);
+        let buffer_size =
+            justknobs::get_as::<usize>("scm/mononoke:repo_client_concurrent_blob_uploads", None)?;
 
-        let s = if let Ok(buffer_size) = mb_buffer_size {
-            stream::iter(entries)
-                .buffer_unordered(buffer_size)
-                .right_stream()
-        } else {
-            entries
-                .into_iter()
-                .collect::<FuturesUnordered<_>>()
-                .left_stream()
-        };
+        let s = stream::iter(entries).buffer_unordered(buffer_size);
 
         Ok(Self {
             root_manifest,

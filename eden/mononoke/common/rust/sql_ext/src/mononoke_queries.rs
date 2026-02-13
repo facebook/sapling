@@ -24,8 +24,6 @@ use maplit::hashset;
 use memcache::KeyGen;
 use mononoke_types::RepositoryId;
 use mononoke_types::Timestamp;
-#[cfg(fbcode_build)]
-use mysql_client::MysqlError;
 use sql::QueryTelemetry;
 use sql_query_config::CachingConfig;
 use sql_query_telemetry::SqlQueryTelemetry;
@@ -985,7 +983,7 @@ where
     T: Send + 'static,
     Fut: Future<Output = Result<T>>,
 {
-    if let Ok(true) = justknobs::eval("scm/mononoke:sql_disable_auto_retries", None, None) {
+    if justknobs::eval("scm/mononoke:sql_disable_auto_retries", None, None)? {
         return do_query().await;
     }
     Ok(retry(|_| do_query(), Duration::from_secs(10))
@@ -1022,7 +1020,7 @@ where
     CachedQueryResult<Vec<T>>: MemcacheEntity,
     Fut: Future<Output = Result<CachedQueryResult<Vec<T>>>> + Send,
 {
-    if let Ok(true) = justknobs::eval("scm/mononoke:sql_disable_auto_cache", None, None) {
+    if justknobs::eval("scm/mononoke:sql_disable_auto_cache", None, None)? {
         return query_with_retry_no_cache(
             &do_query,
             shard_name,

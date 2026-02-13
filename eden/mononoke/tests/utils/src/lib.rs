@@ -155,11 +155,11 @@ pub async fn list_working_copy_with_types(
     repo: &impl Repo,
     cs_id: ChangesetId,
 ) -> Result<HashMap<NonRootMPath, (Bytes, FileType)>, Error> {
-    if let Ok(true) = justknobs::eval(
+    if justknobs::eval(
         "scm/mononoke:derived_data_use_content_manifests",
         None,
         None,
-    ) {
+    )? {
         let root = repo
             .repo_derived_data()
             .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)

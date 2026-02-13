@@ -166,8 +166,7 @@ impl SourceControlServiceImpl {
             "scm/mononoke:scs_force_local_pushrebase",
             None,
             Some(repo.repo().repo_identity().name()),
-        )
-        .unwrap_or(true);
+        )?;
 
         let pushrebase_outcome = repo
             .land_stack(

@@ -224,7 +224,7 @@ impl SourceControlServiceImpl {
             None,
             Some(repo.name()),
         )
-        .unwrap_or(false)
+        .map_err(scs_errors::internal_error)?
         {
             false
         } else {

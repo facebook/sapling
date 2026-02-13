@@ -68,13 +68,12 @@ pub enum MergeMode<R> {
     },
 }
 
-fn get_squashing_overrides(repo_name: &str, target_bookmark: &str) -> (Option<i64>, bool) {
+fn get_squashing_overrides(repo_name: &str, target_bookmark: &str) -> Result<(Option<i64>, bool)> {
     let switchval = format!("{}:{}", repo_name, target_bookmark);
     let squashing_limit = justknobs::get(
         "scm/mononoke:megarepo_override_squashing_limit",
         Some(&switchval),
-    )
-    .unwrap_or(0);
+    )?;
 
     let maybe_squashing_limit = if squashing_limit == 0 {
         None
@@ -86,9 +85,8 @@ fn get_squashing_overrides(repo_name: &str, target_bookmark: &str) -> (Option<i6
         "scm/mononoke:megarepo_override_author_check",
         None,
         Some(&switchval),
-    )
-    .unwrap_or(true);
-    (maybe_squashing_limit, author_check)
+    )?;
+    Ok((maybe_squashing_limit, author_check))
 }
 
 pub struct SquashingConfig {
@@ -173,7 +171,7 @@ impl<'a, R: MononokeRepo> SyncChangeset<'a, R> {
         let maybe_squashing_config = match &source_config.merge_mode {
             Some(megarepo_config::MergeMode::squashed(sq)) => {
                 let (maybe_squash_limit, check_author) =
-                    get_squashing_overrides(target_repo.name(), &target.bookmark);
+                    get_squashing_overrides(target_repo.name(), &target.bookmark)?;
                 Some(SquashingConfig {
                     squash_limit: maybe_squash_limit
                         .unwrap_or(sq.squash_limit)

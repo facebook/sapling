@@ -80,6 +80,11 @@
     "scm/mononoke:wireproto_force_local_pushrebase": false,
     "scm/mononoke:wireproto_log_only_write_acl": false,
     "rl_source_control/mgs_super_safe_lands:mgs_symbolic_manifest_read_from_top_level_ssl_jk": true,
+    "scm/mononoke:defer_to_backsyncer_for_backsync": false,
+    "scm/mononoke:edenapi_disable_mutable_blame": false,
+    "scm/mononoke:edenapi_force_local_pushrebase": false,
+    "scm/mononoke:scs_disable_mutable_blame": false,
+    "scm/mononoke:scs_force_local_pushrebase": true,
     "scm/mononoke:git_block_indirect_unshallow_fetch": false
   },
   "ints": {
