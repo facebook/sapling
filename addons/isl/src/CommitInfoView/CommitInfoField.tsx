@@ -10,6 +10,7 @@ import type {FieldConfig} from './types';
 
 import {Icon} from 'isl-components/Icon';
 import {extractTokens, TokensList} from 'isl-components/Tokens';
+import {DOCUMENTATION_DELAY, Tooltip} from 'isl-components/Tooltip';
 import {Fragment} from 'react';
 import {tracker} from '../analytics';
 import {Copyable} from '../Copyable';
@@ -251,16 +252,20 @@ function ClickToEditField({
 
 function EditFieldButton({onClick}: {onClick: () => void}) {
   return (
-    <button className="hover-edit-button" onClick={onClick}>
-      <Icon icon="edit" />
-    </button>
+    <Tooltip title="Edit field" delayMs={DOCUMENTATION_DELAY}>
+      <button className="hover-edit-button" onClick={onClick}>
+        <Icon icon="edit" />
+      </button>
+    </Tooltip>
   );
 }
 
 function CopyFromParentButton({onClick}: {onClick: () => void}) {
   return (
-    <button className="hover-edit-button" onClick={onClick}>
-      <Icon icon="clippy" />
-    </button>
+    <Tooltip title="Copy from previous commit" delayMs={DOCUMENTATION_DELAY}>
+      <button className="hover-edit-button" onClick={onClick}>
+        <Icon icon="clippy" />
+      </button>
+    </Tooltip>
   );
 }

@@ -341,6 +341,7 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 copyFromParent={
                   parentVal != null
                     ? () => {
+                        tracker.track('CopyCommitFieldsFromParent');
                         const val = Array.isArray(parentVal) ? parentVal.join(',') : parentVal;
                         setField(field.type === 'field' ? val + ',' : val);
                       }

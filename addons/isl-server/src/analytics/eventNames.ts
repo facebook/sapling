@@ -37,6 +37,7 @@ export type TrackEventName =
   | 'CommitOperation'
   | 'CommitFileSubsetOperation'
   | 'ContinueMergeOperation'
+  | 'CopyCommitFieldsFromParent'
   | 'CommitCloudStatusCommand'
   | 'CommitCloudListCommand'
   | 'CommitCloudSyncBackupStatusCommand'
