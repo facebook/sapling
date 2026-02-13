@@ -9,6 +9,7 @@
 
 import argparse
 import asyncio
+import concurrent
 import concurrent.futures
 import enum
 import errno
@@ -42,6 +43,53 @@ CHEF_RUN_AGE_PROBLEM = timedelta(days=14)
 DEFAULT_STOP_TIMEOUT = 20
 # Timeout for stopping aux processes
 AUX_PROCESSES_STOP_TIMEOUT = 60
+
+
+def _get_aux_processes_stop_timeout() -> float:
+    """Get the timeout for stopping aux processes.
+
+    Can be overridden via EDENFS_AUX_PROCESSES_TIMEOUT_SECS environment variable for testing.
+    """
+    env_timeout = os.environ.get("EDENFS_AUX_PROCESSES_TIMEOUT_SECS")
+    if env_timeout:
+        try:
+            return float(env_timeout)
+        except ValueError:
+            pass
+    return AUX_PROCESSES_STOP_TIMEOUT
+
+
+def _get_test_delay() -> Optional[float]:
+    """Get delay to inject for testing.
+
+    Returns the delay in seconds if EDENFS_AUX_PROCESSES_TEST_DELAY_SECS is set, else None.
+    """
+    env_delay = os.environ.get("EDENFS_AUX_PROCESSES_TEST_DELAY_SECS")
+    if env_delay:
+        try:
+            return float(env_delay)
+        except ValueError:
+            pass
+    return None
+
+
+# Global event for cancelling test delays.
+import threading
+
+_test_cancel_event = threading.Event()
+
+
+def _cancel_test_delays() -> None:
+    """Cancel any in-progress test delays by setting the cancel event.
+
+    This wakes up any threads blocked on _test_cancel_event.wait().
+    """
+    _test_cancel_event.set()
+
+
+def _reset_test_cancel_event() -> None:
+    """Reset the test cancel event for the next operation."""
+    _test_cancel_event.clear()
 
 
 class ForegroundColor(Enum):
@@ -2382,10 +2430,29 @@ def unmount_redirections_for_path(
 
 
 def _stop_aux_processes_for_path_impl(
-    repo_path: str, complain_about_failing_to_unmount_redirs: bool
+    repo_path: str,
+    complain_about_failing_to_unmount_redirs: bool,
+    current_step: List[str],
 ) -> None:
-    """Internal implementation for stopping aux processes."""
+    """Internal implementation for stopping aux processes.
+
+    Args:
+        repo_path: Path to the repository.
+        complain_about_failing_to_unmount_redirs: Whether to log warnings about
+            failing to unmount redirections.
+        current_step: Mutable list to track the current step being executed.
+            Will be updated with the current step name so that on timeout
+            the caller can report which step was running.
+    """
+    # Inject test delay if env var is set (for integration testing)
+    test_delay = _get_test_delay()
+    if test_delay is not None:
+        _test_cancel_event.wait(timeout=test_delay)
+
+    current_step[0] = "unmounting redirections"
     unmount_redirections_for_path(repo_path, complain_about_failing_to_unmount_redirs)
+
+    current_step[0] = "stopping internal processes (e.g., Myles)"
     stop_internal_processes(repo_path)
 
 
@@ -2409,18 +2476,23 @@ def stop_aux_processes_for_path(
         AuxProcessTimeoutError: If stopping aux processes exceeds the timeout.
         Exception: Any exception raised by the underlying implementation.
     """
+    # Track the current step so we can report which step timed out
+    current_step: List[str] = ["initializing"]
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(
             _stop_aux_processes_for_path_impl,
             repo_path,
             complain_about_failing_to_unmount_redirs,
+            current_step,
         )
         try:
             future.result(timeout=timeout)
         except concurrent.futures.TimeoutError:
+            step_name = current_step[0]
             raise AuxProcessTimeoutError(
                 f"Stopping aux processes for {repo_path} timed out after "
-                f"{timeout} seconds"
+                f"{timeout} seconds while {step_name}"
             )
 
 
