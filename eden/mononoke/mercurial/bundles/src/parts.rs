@@ -324,8 +324,7 @@ where
     builder.add_mparam("category", "manifests")?;
 
     let buffer_size =
-        justknobs::get_as::<usize>("scm/mononoke:repo_client_gettreepack_buffer_size", None)
-            .unwrap_or(1000);
+        justknobs::get_as::<usize>("scm/mononoke:repo_client_gettreepack_buffer_size", None)?;
 
     let wirepack_parts = entries
         .try_buffered(buffer_size)

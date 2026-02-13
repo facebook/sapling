@@ -469,43 +469,40 @@ pub enum ConsistentReadError {
 pub fn consistent_read_options(
     client_correlator: Option<&str>,
     callsite: Option<&str>,
-) -> Option<ConsistentReadOptions> {
+) -> Result<Option<ConsistentReadOptions>> {
     // Callsites that don't require the most recent bookmark value should
     // read from a replica. More context on D81212709.
     let should_query_with_consistency = justknobs::eval(
         "scm/mononoke:retry_query_from_replica_with_consistency_check",
         client_correlator,
         callsite,
-    )
-    .unwrap_or(false);
+    )?;
 
     if !should_query_with_consistency {
-        return None;
+        return Ok(None);
     }
 
     let max_attempts = justknobs::get_as::<usize>(
         "scm/mononoke:retry_query_from_replica_with_consistency_check_max_attempts",
         callsite,
-    )
-    .unwrap_or(10);
+    )?;
 
     let interval = justknobs::get_as::<u64>(
         "scm/mononoke:retry_query_from_replica_with_consistency_check_interval_ms",
         callsite,
     )
-    .map_or(Duration::from_millis(50), Duration::from_millis);
+    .map(Duration::from_millis)?;
 
     let jitter = justknobs::get_as::<u64>(
         "scm/mononoke:retry_query_from_replica_with_consistency_check_jitter",
         callsite,
     )
-    .map_or(Duration::from_millis(10), Duration::from_millis);
+    .map(Duration::from_millis)?;
 
     let hlc_drift_tolerance_ns = justknobs::get_as::<i64>(
         "scm/mononoke:retry_query_from_replica_with_consistency_check_hlc_drift_tolerance_ns",
         callsite,
-    )
-    .unwrap_or(0);
+    )?;
 
     let cons_read_opts = ConsistentReadOptions {
         interval,
@@ -515,5 +512,5 @@ pub fn consistent_read_options(
         ..ConsistentReadOptions::default()
     };
 
-    Some(cons_read_opts)
+    Ok(Some(cons_read_opts))
 }

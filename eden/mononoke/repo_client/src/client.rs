@@ -574,8 +574,7 @@ impl<R: Repo> RepoClient<R> {
                     let max_nodes = justknobs::get_as::<usize>(
                         "scm/mononoke:repo_client_max_nodes_in_known_method",
                         None,
-                    )
-                    .unwrap_or(100000);
+                    )?;
 
                     if max_nodes > 0 {
                         if nodes_len > max_nodes {

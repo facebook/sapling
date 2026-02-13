@@ -417,25 +417,21 @@ async fn shared_read<T: Blobstore + 'static>(
     Ok(inflight_read.await?)
 }
 
-fn report_deduplicated_put(ctx: &CoreContext, key: &str) {
+fn report_deduplicated_put(ctx: &CoreContext, key: &str) -> Result<()> {
     STATS::puts_deduped.add_value(1);
     let mut scuba = ctx.scuba().clone();
 
-    const DEFAULT_SAMPLING_RATE: u64 = 100000;
-
-    if let Some(sampling_rate) = NonZeroU64::new(
-        justknobs::get_as::<u64>(
-            "scm/mononoke:blobstore_deduplicated_put_sampling_rate",
-            None,
-        )
-        .unwrap_or(DEFAULT_SAMPLING_RATE),
-    ) {
+    if let Some(sampling_rate) = NonZeroU64::new(justknobs::get_as::<u64>(
+        "scm/mononoke:blobstore_deduplicated_put_sampling_rate",
+        None,
+    )?) {
         scuba.sampled(sampling_rate);
     }
     scuba.add("key", key).log_with_msg("Put deduplicated", None);
 
     ctx.perf_counters()
         .increment_counter(PerfCounterType::BlobPutsDeduplicated);
+    Ok(())
 }
 
 #[async_trait]
@@ -544,7 +540,7 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
         // Only deduplicate if we're not forcing an overwrite
         if !put_behaviour.should_overwrite() {
             if let Ok(Some(KnownToExist)) = inner.cache.check_presence(&cache_key, presence) {
-                report_deduplicated_put(&ctx, &key);
+                report_deduplicated_put(&ctx, &key)?;
                 return Ok(OverwriteStatus::Prevented);
             }
         }
@@ -565,7 +561,7 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
 
             let permit = match acq {
                 SemaphoreAcquisition::Cancelled(KnownToExist, ticket) => {
-                    report_deduplicated_put(&ctx, &key);
+                    report_deduplicated_put(&ctx, &key)?;
                     ticket.cancel();
                     return Ok(OverwriteStatus::Prevented);
                 }
@@ -601,7 +597,7 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
         let presence = PresenceData::from_put(&value);
 
         if let Ok(Some(KnownToExist)) = inner.cache.check_presence(&cache_key, presence) {
-            report_deduplicated_put(&ctx, &key);
+            report_deduplicated_put(&ctx, &key)?;
             return Ok(OverwriteStatus::Prevented);
         }
 
@@ -617,7 +613,7 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
 
             let permit = match acq {
                 SemaphoreAcquisition::Cancelled(KnownToExist, ticket) => {
-                    report_deduplicated_put(&ctx, &key);
+                    report_deduplicated_put(&ctx, &key)?;
                     ticket.cancel();
                     return Ok(OverwriteStatus::Prevented);
                 }

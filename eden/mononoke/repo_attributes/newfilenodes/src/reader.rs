@@ -233,7 +233,8 @@ impl FilenodesReader {
                     let cons_read_opts = consistent_read_options(
                         ctx.client_correlator(),
                         Some("newfilenodes::reader"),
-                    );
+                    )
+                    .map_err(ErrorKind::SqlError)?;
 
                     let used_consistent_reads = cons_read_opts.is_some();
 

@@ -93,16 +93,16 @@ fn read_header_value(state: &State, name: &str) -> Option<String> {
         .map(|s| s.to_string())
 }
 
-fn should_route_to_mononoke_lfs(state: &State, repo_name: &str) -> bool {
+fn should_route_to_mononoke_lfs(state: &State, repo_name: &str) -> anyhow::Result<bool> {
     if let Some(header_value) = read_header_value(state, ROUTE_TO_MONONOKE_GIT_LFS) {
         match header_value.as_str() {
-            "1" => return true,
-            "0" => return false,
+            "1" => return Ok(true),
+            "0" => return Ok(false),
             _ => {}
         }
     }
 
-    justknobs::eval("scm/metagit:mononoke_git_lfs", None, Some(repo_name)).unwrap_or(false)
+    justknobs::eval("scm/metagit:mononoke_git_lfs", None, Some(repo_name))
 }
 
 async fn handle_lfs_redirect(state: &mut State) -> Result<Response<Body>, HttpError> {
@@ -131,7 +131,7 @@ async fn handle_lfs_redirect(state: &mut State) -> Result<Response<Body>, HttpEr
             ))
         })?;
 
-    let to_mononoke = should_route_to_mononoke_lfs(state, &repo_name);
+    let to_mononoke = should_route_to_mononoke_lfs(state, &repo_name).map_err(HttpError::e500)?;
     let redirect_url = build_redirect_url(network_env, &repo_name, to_mononoke);
 
     ScubaMiddlewareState::try_borrow_add(state, "lfs_redirect_url", redirect_url.as_str());

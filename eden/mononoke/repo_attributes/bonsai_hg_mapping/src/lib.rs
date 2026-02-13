@@ -498,7 +498,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         ids: BonsaiOrHgChangesetIds,
     ) -> Result<Vec<BonsaiHgMappingEntry>> {
         let cons_read_opts =
-            consistent_read_options(ctx.client_correlator(), Some("bonsai_hg_mapping"));
+            consistent_read_options(ctx.client_correlator(), Some("bonsai_hg_mapping"))?;
 
         let used_consistent_reads = cons_read_opts.is_some();
         let timed_res = async move {

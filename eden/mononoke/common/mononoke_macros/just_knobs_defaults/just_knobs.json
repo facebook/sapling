@@ -85,7 +85,8 @@
     "scm/mononoke:edenapi_force_local_pushrebase": false,
     "scm/mononoke:scs_disable_mutable_blame": false,
     "scm/mononoke:scs_force_local_pushrebase": true,
-    "scm/mononoke:git_block_indirect_unshallow_fetch": false
+    "scm/mononoke:git_block_indirect_unshallow_fetch": false,
+    "scm/metagit:mononoke_git_lfs": false
   },
   "ints": {
     "scm/mononoke_timeouts:repo_client_clone_timeout_secs": 14400,
@@ -146,6 +147,8 @@
     "scm/mononoke:commitcloud_history_gc_chunk_size": 0,
     "scm/mononoke:commit_graph_storage_sql_retries_num": 1,
     "scm/mononoke:scribe_backlog_for_metadata_cache_updater": 500,
-    "scm/mononoke:manifold_weak_consistency_max_age_ms": 0
+    "scm/mononoke:manifold_weak_consistency_max_age_ms": 0,
+    "scm/mononoke:modern_sync_edenapi_timeout": 300,
+    "scm/mononoke:blobstore_deduplicated_put_sampling_rate": 100000
   }
 }

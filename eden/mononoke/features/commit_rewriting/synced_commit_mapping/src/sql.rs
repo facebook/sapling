@@ -609,7 +609,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                 .client_request_info()
                 .map(|cri| cri.correlator.as_str()),
             Some("synced_commit_mapping.get_equivalent_working_copy"),
-        );
+        )?;
         let used_consistent_reads = cons_read_opts.is_some();
 
         let timed_res = async {
