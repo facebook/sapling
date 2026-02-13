@@ -30,6 +30,7 @@ import {
   applyEditedFields,
   commitMessageFieldsSchema,
   mergeCommitMessageFields,
+  mergeOnlyEmptyMessageFields,
   parseCommitMessageFields,
 } from './CommitMessageFields';
 
@@ -129,9 +130,11 @@ registerDisposable(
       writeAtom(editedCommitMessages('head'), fields);
     } else {
       const currentMessage = readAtom(editedCommitMessages(hash));
+      // For amend mode: non-empty fields replace existing values, empty fields preserve current values
+      // By passing fields first, mergeOnlyEmptyMessageFields will prefer the new fields when non-empty
       writeAtom(
         editedCommitMessages(hash),
-        mergeCommitMessageFields(schema, currentMessage as CommitMessageFields, fields),
+        mergeOnlyEmptyMessageFields(schema, fields, currentMessage as CommitMessageFields),
       );
     }
 
