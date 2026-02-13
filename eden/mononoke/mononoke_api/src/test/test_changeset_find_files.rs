@@ -423,28 +423,27 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .try_collect()
         .await?;
     // BSSM have different but consistent orders. BSSMv3 produces the same order as BSSM.
-    let expected_files =
-        if justknobs::eval("scm/mononoke:enable_bssm_v3", None, None).unwrap_or_default() {
-            vec![
-                MPath::try_from("1")?,
-                MPath::try_from("dir1/subdir1/file_1")?,
-                MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-                MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-                MPath::try_from("dir1/file_1_in_dir1")?,
-                MPath::try_from("dir1/file_2_in_dir1")?,
-                MPath::try_from("dir2/file_1_in_dir2")?,
-            ]
-        } else {
-            vec![
-                MPath::try_from("1")?,
-                MPath::try_from("dir1/file_1_in_dir1")?,
-                MPath::try_from("dir1/file_2_in_dir1")?,
-                MPath::try_from("dir1/subdir1/file_1")?,
-                MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
-                MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-                MPath::try_from("dir2/file_1_in_dir2")?,
-            ]
-        };
+    let expected_files = if justknobs::eval("scm/mononoke:enable_bssm_v3", None, None)? {
+        vec![
+            MPath::try_from("1")?,
+            MPath::try_from("dir1/subdir1/file_1")?,
+            MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+            MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+            MPath::try_from("dir1/file_1_in_dir1")?,
+            MPath::try_from("dir1/file_2_in_dir1")?,
+            MPath::try_from("dir2/file_1_in_dir2")?,
+        ]
+    } else {
+        vec![
+            MPath::try_from("1")?,
+            MPath::try_from("dir1/file_1_in_dir1")?,
+            MPath::try_from("dir1/file_2_in_dir1")?,
+            MPath::try_from("dir1/subdir1/file_1")?,
+            MPath::try_from("dir1/subdir1/subsubdir1/file_1")?,
+            MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+            MPath::try_from("dir2/file_1_in_dir2")?,
+        ]
+    };
 
     assert_eq!(files, expected_files);
     // Suffixes, basenames, ordered after
@@ -460,20 +459,19 @@ async fn commit_find_files_impl(fb: FacebookInit) -> Result<(), Error> {
         .await?
         .try_collect()
         .await?;
-    let expected_files =
-        if justknobs::eval("scm/mononoke:enable_bssm_v3", None, None).unwrap_or_default() {
-            vec![
-                MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-                MPath::try_from("dir1/file_1_in_dir1")?,
-                MPath::try_from("dir1/file_2_in_dir1")?,
-                MPath::try_from("dir2/file_1_in_dir2")?,
-            ]
-        } else {
-            vec![
-                MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
-                MPath::try_from("dir2/file_1_in_dir2")?,
-            ]
-        };
+    let expected_files = if justknobs::eval("scm/mononoke:enable_bssm_v3", None, None)? {
+        vec![
+            MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+            MPath::try_from("dir1/file_1_in_dir1")?,
+            MPath::try_from("dir1/file_2_in_dir1")?,
+            MPath::try_from("dir2/file_1_in_dir2")?,
+        ]
+    } else {
+        vec![
+            MPath::try_from("dir1/subdir1/subsubdir2/file_1")?,
+            MPath::try_from("dir2/file_1_in_dir2")?,
+        ]
+    };
     assert_eq!(files, expected_files);
     // Suffixes, basenames, prefixes
     let mut files: Vec<_> = cs

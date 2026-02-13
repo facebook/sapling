@@ -133,9 +133,7 @@ fn get_version_impl<'a>(
 pub fn get_mapping_change_version_from_hg_extra<'a>(
     mut hg_extra: impl Iterator<Item = (&'a str, &'a [u8])>,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
-    if justknobs::eval("scm/mononoke:ignore_change_xrepo_mapping_extra", None, None)
-        .unwrap_or(false)
-    {
+    if justknobs::eval("scm/mononoke:ignore_change_xrepo_mapping_extra", None, None)? {
         return Ok(None);
     }
     let maybe_mapping = hg_extra.find(|(name, _)| name == &CHANGE_XREPO_MAPPING_EXTRA);

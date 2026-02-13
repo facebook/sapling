@@ -66,6 +66,15 @@
     "scm/mononoke:scs_restricted_paths_use_mock_api": false,
     "scm/mononoke:restricted_paths_use_schematized_logger": false,
     "scm/mononoke:enable_server_side_path_acls": true,
+    "scm/mononoke:best_effort_shard_setup": false,
+    "scm/mononoke:load_limiter_always_unblocked": true,
+    "scm/mononoke:log_sql_factory_init": false,
+    "scm/mononoke:megarepo_derive_remotely": false,
+    "scm/mononoke:scs_use_authenticated_identities_struct": false,
+    "scm/mononoke:xrepo_sync_disable_all_syncs": false,
+    "scm/mononoke:enable_bssm_v3": true,
+    "scm/mononoke:wireproto_force_local_pushrebase": false,
+    "scm/mononoke:wireproto_log_only_write_acl": false,
     "rl_source_control/mgs_super_safe_lands:mgs_symbolic_manifest_read_from_top_level_ssl_jk": true,
     "scm/mononoke:git_block_indirect_unshallow_fetch": false
   },
@@ -118,6 +127,11 @@
     "scm/mononoke:cgdm_reloading_interval_secs": 5,
     "scm/mononoke:repos_manager_concurrency": 30,
     "scm/mononoke:max_diff_file_size_mb": 64,
-    "scm/mononoke:streaming_clone_chunk_aggregation_factor": 4
+    "scm/mononoke:max_diff_string_size_mb": 32,
+    "scm/mononoke:streaming_clone_chunk_aggregation_factor": 4,
+    "scm/mononoke:megarepo_override_num_heads_to_derive_at_once": 10,
+    "scm/mononoke:scs_rss_min_free_bytes": 0,
+    "scm/mononoke:scs_rss_min_free_pct": 0,
+    "scm/mononoke:scs_factory_queue_for_method": 0
   }
 }

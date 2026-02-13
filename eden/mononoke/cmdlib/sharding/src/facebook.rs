@@ -1131,7 +1131,7 @@ impl ShardedProcessExecutor {
             .join(", ");
         info!("Got initial Shard Set: {}", shard_ids);
         let best_effort_setup =
-            justknobs::eval("scm/mononoke:best_effort_shard_setup", None, None).unwrap_or(false);
+            justknobs::eval("scm/mononoke:best_effort_shard_setup", None, None)?;
         self.handler.set_shards(shards, best_effort_setup).await?;
         self.client.start_callbacks_server();
         // Keep running until the terminate signal is received. Once the signal is received,

@@ -401,8 +401,7 @@ where
         version_name: CommitSyncConfigVersion,
     ) -> Result<(), Error> {
         let xrepo_sync_disable_all_syncs =
-            justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None)
-                .unwrap_or_default();
+            justknobs::eval("scm/mononoke:xrepo_sync_disable_all_syncs", None, None)?;
         if xrepo_sync_disable_all_syncs {
             return Err(ErrorKind::XRepoSyncDisabled.into());
         }
@@ -783,8 +782,7 @@ async fn sync_commit_impl<R: Repo>(
             Ok(())
         };
         let xrepo_disable_commit_sync_lease =
-            justknobs::eval("scm/mononoke:xrepo_disable_commit_sync_lease", None, None)
-                .unwrap_or_default();
+            justknobs::eval("scm/mononoke:xrepo_disable_commit_sync_lease", None, None)?;
         if xrepo_disable_commit_sync_lease || disable_lease {
             sync().await?;
         } else {

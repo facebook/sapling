@@ -278,8 +278,7 @@ async fn run_pushrebase(
                 "scm/mononoke:wireproto_force_local_pushrebase",
                 None,
                 Some(repo.repo_identity().name()),
-            )
-            .unwrap_or(false);
+            )?;
 
             let outcome = normal_pushrebase(
                 ctx,
@@ -485,8 +484,7 @@ async fn plain_push_bookmark(
         !matches!(
             authz,
             AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity,
-        ) && justknobs::eval("scm/mononoke:wireproto_log_only_write_acl", None, None)
-            .unwrap_or_default();
+        ) && justknobs::eval("scm/mononoke:wireproto_log_only_write_acl", None, None)?;
     match (bookmark_push.old, bookmark_push.new) {
         (None, Some(new_target)) => {
             let res = bookmarks_movement::CreateBookmarkOp::new(
@@ -595,8 +593,7 @@ async fn infinitepush_scratch_bookmark(
         !matches!(
             authz,
             AuthorizationContext::ReadOnlyIdentity | AuthorizationContext::DraftOnlyIdentity,
-        ) && justknobs::eval("scm/mononoke:wireproto_log_only_write_acl", None, None)
-            .unwrap_or_default();
+        ) && justknobs::eval("scm/mononoke:wireproto_log_only_write_acl", None, None)?;
     if bookmark_push.old.is_none() && bookmark_push.create {
         bookmarks_movement::CreateBookmarkOp::new(
             bookmark_push.name.clone(),

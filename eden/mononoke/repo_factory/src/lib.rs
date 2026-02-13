@@ -419,8 +419,7 @@ impl RepoFactory {
                 })
                 .context("initializing DB connection")?;
 
-                if justknobs::eval("scm/mononoke:log_sql_factory_init", None, None).unwrap_or(false)
-                {
+                if justknobs::eval("scm/mononoke:log_sql_factory_init", None, None)? {
                     debug!(
                         "initializing DB connection succeeded for config: {:?}",
                         config

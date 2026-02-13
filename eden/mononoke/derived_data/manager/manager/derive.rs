@@ -393,7 +393,7 @@ impl DerivedDataManager {
             .map_err(Error::from)?;
 
         let ctx = ctx.clone_and_reset();
-        let ctx = self.set_derivation_session_class(ctx);
+        let ctx = self.set_derivation_session_class(ctx)?;
 
         let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
         derived_data_scuba.add_changeset(&bonsai);
@@ -506,9 +506,7 @@ impl DerivedDataManager {
                     "scm/mononoke:derived_data_disable_remote_derivation",
                     None,
                     Some(self.repo_name()),
-                )
-                .unwrap_or_default()
-                {
+                )? {
                     // Remote derivation has been disabled, fall back to local derivation.
                     return Ok(None);
                 }
@@ -591,9 +589,7 @@ impl DerivedDataManager {
                 "scm/mononoke:derived_data_enable_remote_derivation_local_fallback",
                 None,
                 Some(self.repo_name()),
-            )
-            .unwrap_or_default()
-            {
+            )? {
                 // Discard the error and fall back to local derivation.
                 Ok(None)
             } else {
@@ -797,7 +793,7 @@ impl DerivedDataManager {
                 .context("a batch dependency has not been derived")?;
 
             let ctx = ctx.clone_and_reset();
-            let ctx = self.set_derivation_session_class(ctx.clone());
+            let ctx = self.set_derivation_session_class(ctx.clone())?;
             borrowed!(ctx);
 
             let csid_range = if let (Some(first), Some(last)) = (bonsais.first(), bonsais.last()) {

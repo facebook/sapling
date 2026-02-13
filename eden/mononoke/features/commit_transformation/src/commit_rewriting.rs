@@ -40,7 +40,6 @@ use repo_blobstore::RepoBlobstoreRef;
 use repo_identity::RepoIdentityRef;
 use sorted_vector_map::SortedVectorMap;
 use tracing::debug;
-use tracing::error;
 
 use crate::git_submodules::SubmoduleExpansionData;
 use crate::git_submodules::sync_commit_with_submodule_expansion;
@@ -443,13 +442,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
     }
 
     let enable_commit_extra_stripping =
-        justknobs::eval("scm/mononoke:strip_commit_extras_in_xrepo_sync", None, None)
-            .unwrap_or_else(|err| {
-                error!(
-                    "Failed to read just knob scm/mononoke:strip_commit_extras_in_xrepo_sync: {err}"
-                );
-                false
-            });
+        justknobs::eval("scm/mononoke:strip_commit_extras_in_xrepo_sync", None, None)?;
 
     if enable_commit_extra_stripping {
         match rewrite_opts.strip_commit_extras {
@@ -471,11 +464,7 @@ pub fn rewrite_commit_with_implicit_deletes<'a>(
         "scm/mononoke:should_set_committer_info_to_author_info_if_empty",
         None,
         None,
-    )
-    .unwrap_or_else(|err| {
-        error!("Failed to read just knob scm/mononoke:should_set_committer_info_to_author_info_if_empty: {err}");
-        false
-    });
+    )?;
 
     // Hg doesn't have a concept of committer and committer date, so commits
     // that are originally created in Hg have these fields empty when synced

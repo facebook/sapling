@@ -16,18 +16,19 @@ use crate::error::DerivationError;
 impl DerivedDataManager {
     /// Returns the passed-in `CoreContext` with the session class modified to
     /// the one that should be used for derivation.
-    pub(super) fn set_derivation_session_class(&self, mut ctx: CoreContext) -> CoreContext {
+    pub(super) fn set_derivation_session_class(
+        &self,
+        mut ctx: CoreContext,
+    ) -> Result<CoreContext, DerivationError> {
         if justknobs::eval(
             "scm/mononoke:derived_data_use_background_session_class",
             None,
             Some(self.repo_name()),
-        )
-        .unwrap_or_default()
-        {
+        )? {
             ctx.session_mut()
                 .override_session_class(SessionClass::BackgroundUnlessTooSlow);
         }
-        ctx
+        Ok(ctx)
     }
 
     pub(super) fn check_enabled<Derivable>(&self) -> Result<(), DerivationError>

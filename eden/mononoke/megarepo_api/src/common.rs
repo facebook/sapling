@@ -86,7 +86,6 @@ pub struct SourceAndMovedChangesets {
 }
 
 const MAX_BOOKMARK_MOVE_ATTEMPTS: usize = 5;
-const DEFAULT_NUM_HEADS_TO_DERIVE_AT_ONCE: usize = 10;
 
 #[async_trait]
 pub trait MegarepoOp<R> {
@@ -1316,8 +1315,7 @@ pub(crate) async fn derive_all_types_locally(
         "scm/mononoke:megarepo_override_num_heads_to_derive_at_once",
         None,
     )
-    .map(|jk| jk.max(1) as usize)
-    .unwrap_or(DEFAULT_NUM_HEADS_TO_DERIVE_AT_ONCE);
+    .map(|jk| jk.max(1) as usize)?;
 
     let override_batch_size =
         justknobs::get("scm/mononoke:megarepo_override_derivation_batch_size", None)
@@ -1364,8 +1362,7 @@ pub(crate) async fn derive_all_types_remotely(
         "scm/mononoke:megarepo_override_num_heads_to_derive_at_once",
         None,
     )
-    .map(|jk| jk.max(1) as usize)
-    .unwrap_or(DEFAULT_NUM_HEADS_TO_DERIVE_AT_ONCE);
+    .map(|jk| jk.max(1) as usize)?;
 
     let override_concurrency = justknobs::get(
         "scm/mononoke:megarepo_override_remote_derivation_concurrency",
@@ -1412,8 +1409,7 @@ pub(crate) async fn derive_all_types(
     repo: &impl Repo,
     csids: &[ChangesetId],
 ) -> Result<(), Error> {
-    let derive_remotely =
-        justknobs::eval("scm/mononoke:megarepo_derive_remotely", None, None).unwrap_or(false);
+    let derive_remotely = justknobs::eval("scm/mononoke:megarepo_derive_remotely", None, None)?;
 
     let derived_data_types = repo
         .repo_derived_data()

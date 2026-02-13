@@ -309,7 +309,7 @@ impl SourceControlServiceImpl {
             None,
             None,
         )
-        .unwrap_or(false)
+        .map_err(scs_errors::internal_error)?
         {
             // Use authenticated_identities_struct to get full AuthenticatedIdentity thrift structs
             let auth_idents_vec = req_ctxt
@@ -1107,9 +1107,10 @@ fn check_memory_usage(
     };
     let rss_min_free_bytes =
         justknobs::get_as::<usize>("scm/mononoke:scs_rss_min_free_bytes", Some(method))
-            .unwrap_or(0);
+            .map_err(scs_errors::internal_error)?;
     let rss_min_free_pct =
-        justknobs::get_as::<i32>("scm/mononoke:scs_rss_min_free_pct", Some(method)).unwrap_or(0);
+        justknobs::get_as::<i32>("scm/mononoke:scs_rss_min_free_pct", Some(method))
+            .map_err(scs_errors::internal_error)?;
 
     if rss_min_free_bytes > 0 || rss_min_free_pct > 0 {
         debug!(
@@ -1219,7 +1220,7 @@ macro_rules! impl_thrift_methods {
                     if let Some(factory_group) = &self.0.factory_group {
                         let group = factory_group.clone();
                         let queue: usize =
-                            justknobs::get_as::<u64>("scm/mononoke:scs_factory_queue_for_method", Some(stringify!($method_name))).unwrap_or(0) as usize;
+                            justknobs::get_as::<u64>("scm/mononoke:scs_factory_queue_for_method", Some(stringify!($method_name))).map_err(scs_errors::internal_error)? as usize;
                         group.execute(queue, handler, None).await.map_err(|e| scs_errors::internal_error(e.to_string()))?
                     } else {
                         let res: Result<$ok_type, $err_type> = handler.await;
@@ -1304,7 +1305,7 @@ macro_rules! impl_thrift_stream_methods {
                     if let Some(factory_group) = &self.0.factory_group {
                         let group = factory_group.clone();
                         let queue: usize =
-                            justknobs::get_as::<u64>("scm/mononoke:scs_factory_queue_for_method", Some(stringify!($method_name))).unwrap_or(0) as usize;
+                            justknobs::get_as::<u64>("scm/mononoke:scs_factory_queue_for_method", Some(stringify!($method_name))).map_err(scs_errors::internal_error)? as usize;
                         group.execute(queue, handler, None).await.map_err(|e| scs_errors::internal_error(e.to_string()))?
                     } else {
                         let res: Result<$ok_type, $err_type> = handler.await;

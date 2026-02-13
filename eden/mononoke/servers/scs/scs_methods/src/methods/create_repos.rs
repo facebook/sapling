@@ -742,7 +742,8 @@ async fn create_repos_in_mononoke(
             .await?;
 
             let spawn_task =
-                justknobs::eval("scm/mononoke:spawn_mutation_polling_task", None, None).unwrap();
+                justknobs::eval("scm/mononoke:spawn_mutation_polling_task", None, None)
+                    .map_err(scs_errors::internal_error)?;
             if spawn_task {
                 // Clone necessary data for the spawned task
                 let poll_ctx = ctx.clone();
