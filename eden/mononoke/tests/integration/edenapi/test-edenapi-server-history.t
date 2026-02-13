@@ -96,3 +96,39 @@ Create and send file data request.
                              {"node": bin("0000000000000000000000000000000000000000"),
                               "path": ""}],
                  "linknode": bin("b2b730938b82e2edcb09957d2610f1ebc77d4d43")}}]
+
+Test querying for a non-existent key with zstd encoding.
+FIXME: invalid empty zstd response
+  $ cat > bad_req << EOF
+  > [
+  >     ("nonexistent.txt", "0000000000000000000000000000000000000001")
+  > ]
+  > EOF
+
+  $ hg debugapi mono:repo -e history -f bad_req --config edenapi.encoding=zstd
+  abort: Could not decode response: zstd stream did not finish
+  [255]
+
+Test querying where first item errors, second succeeds.
+  $ cat > first_bad_req << EOF
+  > [
+  >     ("nonexistent.txt", "0000000000000000000000000000000000000001"),
+  >     ("test.txt", "$TEST_FILENODE")
+  > ]
+  > EOF
+
+  $ hg debugapi mono:repo -e history -f first_bad_req --config edenapi.encoding=zstd --sort
+  abort: Could not decode response: zstd stream did not finish
+  [255]
+
+Test querying where first item succeeds, second errors.
+  $ cat > second_bad_req << EOF
+  > [
+  >     ("test.txt", "$TEST_FILENODE"),
+  >     ("nonexistent.txt", "0000000000000000000000000000000000000001")
+  > ]
+  > EOF
+
+  $ hg debugapi mono:repo -e history -f second_bad_req --config edenapi.encoding=zstd --sort
+  abort: Could not decode response: zstd stream did not finish
+  [255]
