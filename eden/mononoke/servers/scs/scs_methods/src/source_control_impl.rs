@@ -260,10 +260,10 @@ impl SourceControlServiceImpl {
             scuba.add("config_store_last_updated_at", config_info.last_updated_at);
         }
 
-        let sampling_rate =
+        let sampling_rate = NonZeroU64::new(
             justknobs::get_as::<u64>("scm/mononoke:scs_method_sampling_rate", Some(name))
-                .ok()
-                .and_then(NonZeroU64::new);
+                .map_err(scs_errors::internal_error)?,
+        );
         if let Some(sampling_rate) = sampling_rate {
             scuba.sampled(sampling_rate);
         } else {

@@ -8,6 +8,7 @@
 use std::str::FromStr;
 
 use anyhow::Context;
+use anyhow::Result;
 use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
@@ -33,9 +34,8 @@ use crate::types::DiffSingleInput;
 use crate::types::LfsPointer;
 use crate::types::Repo;
 
-fn max_diff_file_size_mb() -> u64 {
+fn max_diff_file_size_mb() -> Result<u64> {
     justknobs::get_as::<u64>("scm/mononoke:max_diff_file_size_mb", None)
-        .expect("JustKnob scm/mononoke:max_diff_file_size_mb is not configured")
 }
 
 pub async fn load_content(
@@ -67,7 +67,7 @@ pub async fn load_content(
         let fetch_key = FetchKey::Canonical(content_id);
 
         // Check file size before loading to prevent OOM on large files
-        let max_size_mb = max_diff_file_size_mb();
+        let max_size_mb = max_diff_file_size_mb().map_err(DiffError::internal)?;
         let max_size_bytes = max_size_mb * 1024 * 1024;
 
         let metadata = filestore::get_metadata(&blobstore, ctx, &fetch_key)

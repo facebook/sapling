@@ -1404,8 +1404,7 @@ impl SqlCommitGraphStorage {
 
         if let Some(target) = prefetch.target() {
             let steps_limit =
-                justknobs::get_as::<u64>("scm/mononoke:commit_graph_prefetch_step_limit", None)
-                    .unwrap_or(DEFAULT_PREFETCH_STEP_LIMIT);
+                justknobs::get_as::<u64>("scm/mononoke:commit_graph_prefetch_step_limit", None)?;
 
             let fetched_edges = match target {
                 PrefetchTarget::LinearAncestors { steps, generation } => {
@@ -1890,18 +1889,14 @@ impl CommitGraphStorage for SqlCommitGraphStorage {
     }
 
     async fn add_many(&self, ctx: &CoreContext, many_edges: Vec1<ChangesetEdges>) -> Result<usize> {
+        let max_retry_attempts =
+            justknobs::get_as::<usize>("scm/mononoke:commit_graph_storage_sql_retries_num", None)?;
         Ok(
             retry(|_| self._add_many(ctx, &many_edges), Duration::from_secs(1))
                 .exponential_backoff(1.2)
                 .jitter(Duration::from_secs(2))
                 .retry_if(|_attempt, err| should_retry_query(err))
-                .max_attempts(
-                    justknobs::get_as::<usize>(
-                        "scm/mononoke:commit_graph_storage_sql_retries_num",
-                        None,
-                    )
-                    .unwrap_or(1),
-                )
+                .max_attempts(max_retry_attempts)
                 .await?
                 .0,
         )

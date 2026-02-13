@@ -68,7 +68,6 @@ define_stats! {
 // Both of these are pretty conservative, and collected experimentally. They're here to ensure one
 // bad query doesn't lock down an entire shard for an extended period of time.
 const REMOTE_CACHE_TIMEOUT_MILLIS: u64 = 100;
-const DEFAULT_SQL_TIMEOUT_MILLIS: u64 = 5_000;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -750,18 +749,13 @@ where
         return fut.await.map_err(ErrorKind::SqlError);
     }
 
-    match timeout(
-        Duration::from_millis(
-            justknobs::get_as::<u64>(
-                "scm/mononoke_timeouts:remote_derivation_client_timeout_ms",
-                None,
-            )
-            .unwrap_or(DEFAULT_SQL_TIMEOUT_MILLIS),
-        ),
-        fut,
+    let sql_timeout_ms = justknobs::get_as::<u64>(
+        "scm/mononoke_timeouts:remote_derivation_client_timeout_ms",
+        None,
     )
-    .await
-    {
+    .map_err(ErrorKind::SqlError)?;
+
+    match timeout(Duration::from_millis(sql_timeout_ms), fut).await {
         Ok(Ok(r)) => Ok(r),
         Ok(Err(e)) => Err(ErrorKind::SqlError(e)),
         Err(e) => {

@@ -141,6 +141,11 @@
     "scm/mononoke:megarepo_override_num_heads_to_derive_at_once": 10,
     "scm/mononoke:scs_rss_min_free_bytes": 0,
     "scm/mononoke:scs_rss_min_free_pct": 0,
-    "scm/mononoke:scs_factory_queue_for_method": 0
+    "scm/mononoke:scs_factory_queue_for_method": 0,
+    "scm/mononoke:scs_method_sampling_rate": 0,
+    "scm/mononoke:commitcloud_history_gc_chunk_size": 0,
+    "scm/mononoke:commit_graph_storage_sql_retries_num": 1,
+    "scm/mononoke:scribe_backlog_for_metadata_cache_updater": 500,
+    "scm/mononoke:manifold_weak_consistency_max_age_ms": 0
   }
 }
