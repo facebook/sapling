@@ -34,7 +34,6 @@ pub trait PushrebaseClient: Sync + Send {
     async fn pushrebase(
         &self,
         bookmark: &BookmarkKey,
-        // Must be a stack
         changesets: &[BonsaiChangeset],
         pushvars: Option<&HashMap<String, Bytes>>,
         cross_repo_push_source: CrossRepoPushSource,
