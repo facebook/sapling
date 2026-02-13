@@ -42,12 +42,14 @@ import {UncommittedChanges} from './UncommittedChanges';
 import {tracker} from './analytics';
 import {clipboardLinkHtml} from './clipboard';
 import {
+  allDiffSummaries,
   branchingDiffInfos,
   codeReviewProvider,
   diffSummary,
   latestCommitMessageTitle,
 } from './codeReview/CodeReviewInfo';
 import {DiffBadge, DiffFollower, DiffInfo} from './codeReview/DiffBadge';
+import {submitAsDraft} from './codeReview/DraftCheckbox';
 import {SyncStatus, syncStatusAtom} from './codeReview/syncStatus';
 import {useFeatureFlagSync} from './featureFlags';
 import {FoldButton, useRunFoldPreview} from './fold';
@@ -248,6 +250,42 @@ export const Commit = memo(
           onClick: () => showComparison({type: ComparisonType.Committed, hash: commit.hash}),
           loggingLabel: 'View Changes in Commit',
         });
+
+        const provider = readAtom(codeReviewProvider);
+        if (provider != null) {
+          const selectedInfos = readAtom(selectedCommitInfos);
+          const diffSummaries = readAtom(allDiffSummaries);
+          const dag = readAtom(dagWithPreviews);
+
+          const isMultiSelect =
+            selectedInfos.length > 1 && selectedInfos.some(c => c.hash === commit.hash);
+          const commits = isMultiSelect
+            ? dag.getBatch(dag.sortAsc(dag.present(new Set(selectedInfos.map(c => c.hash)))))
+            : [commit];
+          const submittable =
+            (diffSummaries?.value != null
+              ? provider.getSubmittableDiffs(commits, diffSummaries.value)
+              : undefined) ?? [];
+
+          if (submittable.length > 0) {
+            items.push({
+              label:
+                submittable.length > 1 ? (
+                  <T replace={{$count: submittable.length}}>Submit $count Commits</T>
+                ) : (
+                  <T>Submit Commit</T>
+                ),
+              onClick: () => {
+                runOperation(
+                  provider.submitOperation(submittable, {
+                    draft: readAtom(submitAsDraft),
+                  }),
+                );
+              },
+              loggingLabel: submittable.length > 1 ? 'Submit Multiple Commits' : 'Submit Commit',
+            });
+          }
+        }
       }
       if (!isPublic && syncStatus != null && syncStatus !== SyncStatus.InSync) {
         const provider = readAtom(codeReviewProvider);
