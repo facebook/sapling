@@ -1515,6 +1515,8 @@ class localrepository:
         The revset is specified as a string ``expr`` that may contain
         %-formatting to escape certain types. See ``revsetlang.formatspec``.
 
+        Note that `repo.revs(expr)` is equivalent to `repo.revs("%r", expr).
+
         Revset aliases from the configuration are not expanded. To expand
         user aliases, consider calling ``scmutil.revrange()`` or
         ``repo.anyrevs([expr], user=True)``.
@@ -1522,7 +1524,8 @@ class localrepository:
         Returns a revset.abstractsmartset, which is a list-like interface
         that contains integer revisions.
         """
-        expr = revsetlang.formatspec(expr, *args)
+        if args:
+            expr = revsetlang.formatspec(expr, *args)
         m = revset.match(None, expr)
         subset = kwargs.get("subset", None)
         return m(self, subset=subset)

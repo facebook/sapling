@@ -132,6 +132,21 @@ Whitespace only
   hg: parse error: invalid date: ' '
   [255]
 
+Date containing percent format specifiers (should not crash with IndexError)
+
+  $ hg log -d "+%s"
+  hg: parse error: invalid date: '+%s'
+  [255]
+  $ hg log -d "+%YY%dd%mm"
+  hg: parse error: invalid date: '+%YY%dd%mm'
+  [255]
+  $ hg log -d "%d"
+  hg: parse error: invalid date: '%d'
+  [255]
+  $ hg log -d "+%s" -T '{date|date}\n'
+  hg: parse error: invalid date: '+%s'
+  [255]
+
 Test date formats with '>' or '<' accompanied by space characters
 
   $ hg log -d '>' --template '{date|date}\n'
