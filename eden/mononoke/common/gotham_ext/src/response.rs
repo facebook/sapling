@@ -32,5 +32,6 @@ pub use response_meta::ResponseMeta;
 pub use stream::CompressedResponseStream;
 pub use stream::ResponseStream;
 pub use stream::encode_stream;
+pub use stream_ext::EncodedCaptureFirstErr;
 pub use stream_ext::ResponseTryStreamExt;
 pub use stream_stats::PendingStreamStats;

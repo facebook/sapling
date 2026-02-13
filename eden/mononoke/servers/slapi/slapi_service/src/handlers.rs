@@ -46,7 +46,6 @@ use gotham_ext::response::ResponseTryStreamExt;
 use gotham_ext::response::StreamBody;
 use gotham_ext::response::TryIntoResponse;
 use gotham_ext::response::build_response;
-use gotham_ext::response::encode_stream;
 use gotham_ext::state_ext::StateExt;
 use hyper::Body;
 use hyper::Response;
@@ -468,7 +467,7 @@ where
     T: ToWire + Send + 'static,
 {
     let stream = stream.and_then(|item| async move { to_cbor_bytes(&item.to_wire()) });
-    let stream = encode_stream(stream, encoding, None).capture_first_err();
+    let stream = stream.capture_first_err().encode(encoding);
     StreamBody::new(stream, cbor_mime())
 }
 

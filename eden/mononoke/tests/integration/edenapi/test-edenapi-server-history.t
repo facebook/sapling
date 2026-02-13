@@ -98,7 +98,7 @@ Create and send file data request.
                  "linknode": bin("b2b730938b82e2edcb09957d2610f1ebc77d4d43")}}]
 
 Test querying for a non-existent key with zstd encoding.
-FIXME: invalid empty zstd response
+Error is captured server-side; client receives empty response.
   $ cat > bad_req << EOF
   > [
   >     ("nonexistent.txt", "0000000000000000000000000000000000000001")
@@ -106,10 +106,10 @@ FIXME: invalid empty zstd response
   > EOF
 
   $ hg debugapi mono:repo -e history -f bad_req --config edenapi.encoding=zstd
-  abort: Could not decode response: zstd stream did not finish
-  [255]
+  []
 
 Test querying where first item errors, second succeeds.
+Error is captured server-side; client receives only successful items.
   $ cat > first_bad_req << EOF
   > [
   >     ("nonexistent.txt", "0000000000000000000000000000000000000001"),
@@ -118,10 +118,30 @@ Test querying where first item errors, second succeeds.
   > EOF
 
   $ hg debugapi mono:repo -e history -f first_bad_req --config edenapi.encoding=zstd --sort
-  abort: Could not decode response: zstd stream did not finish
-  [255]
+  [{"key": {"node": bin("b6fe30270546463f3630fd41fec2cd113e7a8acf"),
+            "path": "test.txt"},
+    "nodeinfo": {"parents": [{"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
+                              "path": "test.txt"},
+                             {"node": bin("0000000000000000000000000000000000000000"),
+                              "path": ""}],
+                 "linknode": bin("023ad793609257f0812cb444cd653d0b24785836")}},
+   {"key": {"node": bin("596c909aab726d7f8b3766795239cd20ede8e125"),
+            "path": "test.txt"},
+    "nodeinfo": {"parents": [{"node": bin("b6fe30270546463f3630fd41fec2cd113e7a8acf"),
+                              "path": "test.txt"},
+                             {"node": bin("0000000000000000000000000000000000000000"),
+                              "path": ""}],
+                 "linknode": bin("89104e8c826c2a9df135001de239b0447da94867")}},
+   {"key": {"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
+            "path": "test.txt"},
+    "nodeinfo": {"parents": [{"node": bin("0000000000000000000000000000000000000000"),
+                              "path": ""},
+                             {"node": bin("0000000000000000000000000000000000000000"),
+                              "path": ""}],
+                 "linknode": bin("b2b730938b82e2edcb09957d2610f1ebc77d4d43")}}]
 
 Test querying where first item succeeds, second errors.
+Error is captured server-side; client receives only successful items.
   $ cat > second_bad_req << EOF
   > [
   >     ("test.txt", "$TEST_FILENODE"),
@@ -130,5 +150,24 @@ Test querying where first item succeeds, second errors.
   > EOF
 
   $ hg debugapi mono:repo -e history -f second_bad_req --config edenapi.encoding=zstd --sort
-  abort: Could not decode response: zstd stream did not finish
-  [255]
+  [{"key": {"node": bin("b6fe30270546463f3630fd41fec2cd113e7a8acf"),
+            "path": "test.txt"},
+    "nodeinfo": {"parents": [{"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
+                              "path": "test.txt"},
+                             {"node": bin("0000000000000000000000000000000000000000"),
+                              "path": ""}],
+                 "linknode": bin("023ad793609257f0812cb444cd653d0b24785836")}},
+   {"key": {"node": bin("596c909aab726d7f8b3766795239cd20ede8e125"),
+            "path": "test.txt"},
+    "nodeinfo": {"parents": [{"node": bin("b6fe30270546463f3630fd41fec2cd113e7a8acf"),
+                              "path": "test.txt"},
+                             {"node": bin("0000000000000000000000000000000000000000"),
+                              "path": ""}],
+                 "linknode": bin("89104e8c826c2a9df135001de239b0447da94867")}},
+   {"key": {"node": bin("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
+            "path": "test.txt"},
+    "nodeinfo": {"parents": [{"node": bin("0000000000000000000000000000000000000000"),
+                              "path": ""},
+                             {"node": bin("0000000000000000000000000000000000000000"),
+                              "path": ""}],
+                 "linknode": bin("b2b730938b82e2edcb09957d2610f1ebc77d4d43")}}]
