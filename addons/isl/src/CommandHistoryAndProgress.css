@@ -86,6 +86,7 @@
 
 .progress-command-tooltip {
   max-width: min(700px, 50vw);
+  overflow-wrap: anywhere;
 }
 
 .progress-command-tooltip pre {
