@@ -103,10 +103,7 @@ def titles(repo):
 
     def namemap(repo, name):
         name = name.lower()
-        if not name or (_is_symbol(name[0]) and _is_symbol(name[-1])):
-            return []
-        # Do not conflict with revsetalias
-        if repo.ui.config("revsetalias", name):
+        if not name or _maybe_revset(repo.ui, name):
             return []
         # PERF: This runs a linear string match scan of up to 1k commits.
         # If called repetitively, it might need caching or indexing.
@@ -357,6 +354,24 @@ def loadpredicate(ui, extname, registrarobj):
         namespacetable[name] = ns
 
 
-def _is_symbol(name):
-    # symbols in revsetlang
-    return name in "()[]#~^-:.!&%|+=,"
+# symbols in revsetlang
+_REVSET_SYMBOLS = set("()[]#~^-:.!&%|+=,")
+
+
+def _maybe_revset(ui, name: str) -> bool:
+    from . import revsetlang
+
+    if name[0] in _REVSET_SYMBOLS and name[-1] in _REVSET_SYMBOLS:
+        return True
+
+    # Do not conflict with revsetalias
+    if ui.config("revsetalias", name):
+        return True
+
+    # handle revsets like 'top()'
+    if name[-1] == ")":
+        i = name.find("(")
+        if i > 0:
+            prefix = name[:i]
+            return prefix in revsetlang.symbols
+    return False

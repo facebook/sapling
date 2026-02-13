@@ -16,6 +16,7 @@ Prepare a repo
   $ hg ci -m 'D: not public'
   $ hg ci -m 'E: not top() commit'
   $ hg ci -m 'F: not bottom() commit'
+  $ hg ci -m 'G: stack() commit'
 
   $ hg go -q 'desc("D: not public")'
 
@@ -96,10 +97,23 @@ Embed in a revset expression
   A: foo bar
   B: bar-baz
 
-Tofix: Do not conflict with revsets
+Do not conflict with revsets
   $ log 'top()'
-  E: not top() commit
+  G: stack() commit
   $ log 'bottom()'
+  A: foo bar
+  $ log 'stack()'
+  A: foo bar
+  C: multi line
+  D: not public
+  E: not top() commit
+  F: not bottom() commit
+  G: stack() commit
+  $ log 'stack() - top()'
+  A: foo bar
+  C: multi line
+  D: not public
+  E: not top() commit
   F: not bottom() commit
 
 Can be disabled
