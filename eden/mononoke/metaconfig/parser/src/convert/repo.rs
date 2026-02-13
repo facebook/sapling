@@ -1228,6 +1228,9 @@ impl Convert for RawRestrictedPathsConfig {
             soft_path_acls,
             conditional_enforcement_acls,
             tooling_allowlist_group,
+            acl_file_name: self
+                .acl_file_name
+                .unwrap_or(RestrictedPathsConfig::default().acl_file_name.to_string()),
         })
     }
 }

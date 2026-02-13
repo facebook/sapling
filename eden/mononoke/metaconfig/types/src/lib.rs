@@ -2227,7 +2227,11 @@ pub struct RestrictedPathsConfig {
     pub conditional_enforcement_acls: Vec<MononokeIdentity>,
     /// Group name for tooling that should be allowlisted for all restricted paths.
     pub tooling_allowlist_group: Option<String>,
+    /// Name of the ACL files (default: ".slacl")
+    pub acl_file_name: String,
 }
+
+const DEFAULT_ACL_FILE_NAME: &str = ".slacl";
 
 impl Default for RestrictedPathsConfig {
     fn default() -> Self {
@@ -2238,6 +2242,7 @@ impl Default for RestrictedPathsConfig {
             soft_path_acls: Vec::new(),
             conditional_enforcement_acls: Vec::new(),
             tooling_allowlist_group: None,
+            acl_file_name: DEFAULT_ACL_FILE_NAME.to_string(),
         }
     }
 }
@@ -2246,5 +2251,33 @@ impl RestrictedPathsConfig {
     /// Checks if the config has any restricted paths
     pub fn is_empty(&self) -> bool {
         self.path_acls.is_empty()
+    }
+
+    /// Get the ACL file name, defaulting to ".slacl"
+    pub fn acl_file_name(&self) -> &str {
+        self.acl_file_name.as_str()
+    }
+}
+
+/// Parsed contents of a restricted paths ACL file (.slacl)
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RestrictedPathsAclFile {
+    /// REPO_REGION ACL protecting this directory
+    /// e.x. "repos/hg/fbsource/=project1"
+    pub repo_region_acl: MononokeIdentity,
+    /// In most cases, we don't want to expose the name of the REPO_REGION ACL
+    /// when we enforce access. Instead, we redirect the client to an AMP group
+    /// that transitively provides access to the ACL.
+    /// If not specified, will default to `repo_region_acl`.
+    pub permission_request_group: Option<MononokeIdentity>,
+    // TODO(T248660053): possibly add dry-run mode
+}
+
+impl RestrictedPathsAclFile {
+    /// Run all the necessary validations on the ACL file
+    pub fn validate(&self) -> Result<()> {
+        // TODO(T248660053): ensure the ACL is REPO_REGION.
+
+        Ok(())
     }
 }

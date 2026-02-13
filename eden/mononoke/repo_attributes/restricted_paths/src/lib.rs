@@ -602,6 +602,7 @@ mod tests {
             soft_path_acls: Vec::new(),
             conditional_enforcement_acls: Vec::new(),
             tooling_allowlist_group: None,
+            acl_file_name: RestrictedPathsConfig::default().acl_file_name,
         };
 
         let scuba = MononokeScubaSampleBuilder::with_discard();
@@ -640,6 +641,7 @@ mod tests {
             soft_path_acls: Vec::new(),
             conditional_enforcement_acls: Vec::new(),
             tooling_allowlist_group: None,
+            acl_file_name: RestrictedPathsConfig::default().acl_file_name,
         };
 
         let scuba = MononokeScubaSampleBuilder::with_discard();

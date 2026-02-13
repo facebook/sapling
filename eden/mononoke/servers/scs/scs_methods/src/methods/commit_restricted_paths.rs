@@ -285,6 +285,7 @@ mod tests {
             soft_path_acls: Vec::new(),
             tooling_allowlist_group: None,
             conditional_enforcement_acls: Vec::new(),
+            acl_file_name: RestrictedPathsConfig::default().acl_file_name,
         };
 
         let manifest_id_store = Arc::new(
