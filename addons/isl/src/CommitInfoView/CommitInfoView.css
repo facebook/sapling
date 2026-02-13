@@ -187,19 +187,28 @@
   display: none;
 }
 
+.commit-info-field-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
 .hover-edit-button {
   opacity: 0;
-  transition: opacity 0.1s;
+  transition:
+    opacity 0.1s,
+    background-color 0.1s,
+    transform 0.1s;
   display: flex;
   cursor: pointer;
   border-radius: var(--halfpad);
   background: none;
   border: none;
-  padding: 0;
+  padding: 2px;
   color: inherit;
 }
 .hover-edit-button:hover {
-  background: var(--tooltip-background);
+  transform: scale(1.1);
 }
 .commit-info-section:focus-within .hover-edit-button,
 .commit-info-section:hover .hover-edit-button {

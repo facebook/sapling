@@ -49,7 +49,7 @@ import {getCachedGeneratedFileStatuses, useGeneratedFileStatuses} from '../Gener
 import {t, T} from '../i18n';
 import {IrrelevantCwdIcon} from '../icons/IrrelevantCwdIcon';
 import {numPendingImageUploads} from '../ImageUpload';
-import {readAtom, writeAtom} from '../jotaiUtils';
+import {readAtom, useAtomGet, writeAtom} from '../jotaiUtils';
 import {Link} from '../Link';
 import {
   messageSyncingEnabledState,
@@ -244,6 +244,12 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
 
   const parsedFields = useAtomValue(latestCommitMessageFields(hashOrHead));
 
+  const parentCommit = useAtomGet(dagWithPreviews, isCommitMode ? commit.hash : commit.parents[0]);
+  const parentFields =
+    parentCommit && parentCommit.phase !== 'public'
+      ? parseCommitMessageFields(schema, parentCommit.title, parentCommit.description)
+      : undefined;
+
   const provider = useAtomValue(codeReviewProvider);
   const startEditingField = (field: string) => {
     const original = parsedFields[field];
@@ -319,6 +325,8 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
               editedFieldValue = parsedFields[field.key];
             }
 
+            const parentVal = parentFields?.[field.key];
+
             return (
               <CommitInfoField
                 key={field.key}
@@ -330,6 +338,14 @@ export function CommitInfoDetails({commit}: {commit: CommitInfo}) {
                 startEditingField={() => startEditingField(field.key)}
                 editedField={editedFieldValue}
                 setEditedField={setField}
+                copyFromParent={
+                  parentVal != null
+                    ? () => {
+                        const val = Array.isArray(parentVal) ? parentVal.join(',') : parentVal;
+                        setField(field.type === 'field' ? val + ',' : val);
+                      }
+                    : undefined
+                }
                 extra={
                   field.key === 'Title' ? (
                     <>

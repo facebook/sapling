@@ -28,6 +28,7 @@ export function CommitInfoField({
   editedField,
   startEditingField,
   setEditedField,
+  copyFromParent,
   extra,
   autofocus,
 }: {
@@ -38,6 +39,7 @@ export function CommitInfoField({
   content?: string | Array<string>;
   editedField: string | Array<string> | undefined;
   setEditedField: (value: string) => unknown;
+  copyFromParent?: () => void;
   extra?: JSX.Element;
   autofocus?: boolean;
 }): JSX.Element | null {
@@ -68,7 +70,12 @@ export function CommitInfoField({
               fieldKey={field.key}>
               <span>{content}</span>
             </ClickToEditField>
-            {readonly ? null : <EditFieldButton onClick={startEditingField} />}
+            <div className="commit-info-field-buttons">
+              {readonly ? null : <EditFieldButton onClick={startEditingField} />}
+              {readonly || copyFromParent == null ? null : (
+                <CopyFromParentButton onClick={copyFromParent} />
+              )}
+            </div>
           </div>
         )}
         {extra}
@@ -176,7 +183,12 @@ export function CommitInfoField({
           <SmallCapsTitle>
             <Icon icon={field.icon} />
             <T>{field.key}</T>
-            {readonly ? null : <EditFieldButton onClick={startEditingField} />}
+            <div className="commit-info-field-buttons">
+              {readonly ? null : <EditFieldButton onClick={startEditingField} />}
+              {readonly || copyFromParent == null ? null : (
+                <CopyFromParentButton onClick={copyFromParent} />
+              )}
+            </div>
           </SmallCapsTitle>
           <ClickToEditField
             startEditingField={readonly ? undefined : startEditingField}
@@ -241,6 +253,14 @@ function EditFieldButton({onClick}: {onClick: () => void}) {
   return (
     <button className="hover-edit-button" onClick={onClick}>
       <Icon icon="edit" />
+    </button>
+  );
+}
+
+function CopyFromParentButton({onClick}: {onClick: () => void}) {
+  return (
+    <button className="hover-edit-button" onClick={onClick}>
+      <Icon icon="clippy" />
     </button>
   );
 }
