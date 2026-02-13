@@ -15,8 +15,6 @@ use mononoke_types::Timestamp;
 
 pub use crate::sql::SqlRepoMetadataCheckpoint;
 pub use crate::sql::SqlRepoMetadataCheckpointBuilder;
-pub use crate::sql::SqlRepoMetadataFullRunInfo;
-pub use crate::sql::SqlRepoMetadataFullRunInfoBuilder;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct RepoMetadataCheckpointEntry {
@@ -56,16 +54,6 @@ pub trait RepoMetadataCheckpoint: Send + Sync {
 
     /// Add new or update existing repo metadata entries for the given repo
     async fn add_or_update_entries(&self, entries: Vec<RepoMetadataCheckpointEntry>) -> Result<()>;
-}
-
-#[facet::facet]
-#[async_trait]
-/// Facet trait for tracking when a repo last had a full mode run.
-/// This is separate from per-bookmark checkpoints because full mode runs
-/// are a repo-level operation.
-pub trait RepoMetadataFullRunInfo: Send + Sync {
-    /// The repository for which this info applies
-    fn repo_id(&self) -> RepositoryId;
 
     /// Get the timestamp of the last successful full mode run for this repo.
     /// Returns None if no full run has ever completed.
@@ -73,4 +61,17 @@ pub trait RepoMetadataFullRunInfo: Send + Sync {
 
     /// Record that a full mode run completed successfully at the given timestamp.
     async fn set_last_full_run_timestamp(&self, timestamp: Timestamp) -> Result<()>;
+}
+
+/// Check whether a full run should be skipped based on the last run timestamp.
+/// Returns true if the last run was within `interval_secs` of now.
+pub async fn should_skip_full_run(
+    checkpoint: &dyn RepoMetadataCheckpoint,
+    interval_secs: i64,
+) -> Result<bool> {
+    let last_run = checkpoint.get_last_full_run_timestamp().await?;
+    match last_run {
+        None => Ok(false),
+        Some(ts) => Ok(ts.since_seconds() < interval_secs),
+    }
 }

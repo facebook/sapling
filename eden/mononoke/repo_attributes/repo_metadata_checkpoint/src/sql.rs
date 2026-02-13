@@ -23,7 +23,6 @@ use sql_query_telemetry::SqlQueryTelemetry;
 
 use super::RepoMetadataCheckpoint;
 use super::RepoMetadataCheckpointEntry;
-use super::RepoMetadataFullRunInfo;
 
 mononoke_queries! {
     write AddOrUpdateRepoMetadataCheckpoint(values: (
@@ -85,7 +84,10 @@ pub struct SqlRepoMetadataCheckpointBuilder {
 impl SqlConstruct for SqlRepoMetadataCheckpointBuilder {
     const LABEL: &'static str = "repo_metadata_info";
 
-    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-repo-metadata-info.sql");
+    const CREATION_QUERY: &'static str = concat!(
+        include_str!("../schemas/sqlite-repo-metadata-info.sql"),
+        include_str!("../schemas/sqlite-repo-metadata-full-run-info.sql"),
+    );
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self { connections }
@@ -213,64 +215,6 @@ impl RepoMetadataCheckpoint for SqlRepoMetadataCheckpoint {
             )
         })?;
         Ok(())
-    }
-}
-
-// Full run info implementation
-
-pub struct SqlRepoMetadataFullRunInfo {
-    connections: SqlConnections,
-    repo_id: RepositoryId,
-    sql_query_tel: SqlQueryTelemetry,
-}
-
-#[derive(Clone)]
-pub struct SqlRepoMetadataFullRunInfoBuilder {
-    connections: SqlConnections,
-}
-
-impl SqlConstruct for SqlRepoMetadataFullRunInfoBuilder {
-    const LABEL: &'static str = "repo_metadata_full_run_info";
-
-    const CREATION_QUERY: &'static str =
-        include_str!("../schemas/sqlite-repo-metadata-full-run-info.sql");
-
-    fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self { connections }
-    }
-}
-
-impl SqlConstructFromMetadataDatabaseConfig for SqlRepoMetadataFullRunInfoBuilder {
-    fn remote_database_config(
-        remote: &RemoteMetadataDatabaseConfig,
-    ) -> Option<&RemoteDatabaseConfig> {
-        remote.repo_metadata.as_ref()
-    }
-    fn oss_remote_database_config(
-        remote: &OssRemoteMetadataDatabaseConfig,
-    ) -> Option<&OssRemoteDatabaseConfig> {
-        Some(&remote.production)
-    }
-}
-
-impl SqlRepoMetadataFullRunInfoBuilder {
-    pub fn build(
-        self,
-        repo_id: RepositoryId,
-        sql_query_tel: SqlQueryTelemetry,
-    ) -> SqlRepoMetadataFullRunInfo {
-        SqlRepoMetadataFullRunInfo {
-            connections: self.connections,
-            repo_id,
-            sql_query_tel,
-        }
-    }
-}
-
-#[async_trait]
-impl RepoMetadataFullRunInfo for SqlRepoMetadataFullRunInfo {
-    fn repo_id(&self) -> RepositoryId {
-        self.repo_id
     }
 
     async fn get_last_full_run_timestamp(&self) -> Result<Option<Timestamp>> {
