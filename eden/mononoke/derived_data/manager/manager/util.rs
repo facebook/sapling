@@ -45,6 +45,29 @@ impl DerivedDataManager {
         }
     }
 
+    pub(super) fn check_readable<Derivable>(&self) -> Result<(), DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        // A type is readable if it's enabled in this manager's config
+        // OR if it's in extra_types_available_for_read
+        if self.config().types.contains(&Derivable::VARIANT)
+            || self
+                .repo_config()
+                .derived_data_config
+                .extra_types_available_for_read
+                .contains(&Derivable::VARIANT)
+        {
+            Ok(())
+        } else {
+            Err(DerivationError::Disabled(
+                Derivable::NAME,
+                self.repo_id(),
+                self.repo_name().to_string(),
+            ))
+        }
+    }
+
     pub(super) fn check_blocked_derivation<Derivable>(
         &self,
         csids: &[ChangesetId],

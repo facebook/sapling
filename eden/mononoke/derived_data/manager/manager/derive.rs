@@ -926,7 +926,7 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        self.check_enabled::<Derivable>()?;
+        self.check_readable::<Derivable>()?;
         let derivation_ctx = self.derivation_context(rederivation);
         let derived = derivation_ctx.fetch_derived::<Derivable>(ctx, csid).await?;
         Ok(derived)
@@ -958,7 +958,7 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        self.check_enabled::<Derivable>()?;
+        self.check_readable::<Derivable>()?;
         let derivation_ctx = self.derivation_context(rederivation);
         let derived = derivation_ctx
             .fetch_derived_direct::<Derivable>(ctx, csid)
@@ -997,7 +997,7 @@ impl DerivedDataManager {
         } else {
             (csids, future::ready(Ok(HashMap::new())).right_future())
         };
-        self.check_enabled::<Derivable>()?;
+        self.check_readable::<Derivable>()?;
         let derivation_ctx = self.derivation_context(rederivation);
         let mut derived = derivation_ctx
             .fetch_derived_batch::<Derivable>(ctx, csids)

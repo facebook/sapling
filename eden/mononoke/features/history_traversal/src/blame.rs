@@ -362,8 +362,11 @@ async fn fetch_inferred_copy_from(
 ) -> Result<Option<InferredCopyFromEntry>, Error> {
     let root_inferred_copy_from_id = repo
         .repo_derived_data()
-        .derive::<RootInferredCopyFromId>(ctx, csid, DerivationPriority::LOW)
+        .fetch_derived::<RootInferredCopyFromId>(ctx, csid)
         .await?;
+    let Some(root_inferred_copy_from_id) = root_inferred_copy_from_id else {
+        return Ok(None);
+    };
     let inferred_copy_from = root_inferred_copy_from_id
         .into_inner_id()
         .load(ctx, repo.repo_blobstore())
@@ -377,13 +380,7 @@ async fn fetch_inferred_copy_from(
 fn can_use_inferred_copy_from(repo: &impl Repo) -> bool {
     repo.repo_derived_data()
         .config()
-        .is_enabled(DerivableType::InferredCopyFrom)
-        && justknobs::eval(
-            "scm/mononoke:blame_with_inferred_copy_from",
-            None,
-            Some(repo.repo_identity().name()),
-        )
-        .unwrap_or(false)
+        .is_readable(DerivableType::InferredCopyFrom)
 }
 
 async fn fetch_immutable_blame(
