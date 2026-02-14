@@ -5767,7 +5767,7 @@ EdenServiceHandler::semifuture_debugInvalidateNonMaterialized(
 }
 
 folly::SemiFuture<std::unique_ptr<GetFileContentResponse>>
-EdenServiceHandler::semifuture_getFileContent(
+EdenServiceHandler::semifuture_getFileContentImpl(
     std::unique_ptr<GetFileContentRequest> request) {
   // Read from request
   auto sync = request->sync();
@@ -5825,6 +5825,12 @@ EdenServiceHandler::semifuture_getFileContent(
                    return response;
                  }))
       .semi();
+}
+
+folly::SemiFuture<std::unique_ptr<GetFileContentResponse>>
+EdenServiceHandler::semifuture_getFileContent(
+    std::unique_ptr<GetFileContentRequest> request) {
+  return semifuture_getFileContentImpl(std::move(request));
 }
 
 folly::coro::Task<std::unique_ptr<::facebook::eden::GetActiveRequestsResponse>>

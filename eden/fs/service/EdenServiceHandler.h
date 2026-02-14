@@ -526,6 +526,9 @@ class EdenServiceHandler
   semifuture_getFileContent(
       std::unique_ptr<GetFileContentRequest> request) override;
 
+  folly::SemiFuture<std::unique_ptr<GetFileContentResponse>>
+  semifuture_getFileContentImpl(std::unique_ptr<GetFileContentRequest> request);
+
   folly::coro::Task<std::unique_ptr<::facebook::eden::CancelRequestsResponse>>
   co_cancelRequests(
       apache::thrift::RequestParams params,
