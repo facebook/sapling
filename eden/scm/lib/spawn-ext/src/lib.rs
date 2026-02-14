@@ -15,6 +15,7 @@ use std::error::Error;
 use std::ffi::OsStr;
 use std::fmt;
 use std::io;
+use std::io::Write as _;
 use std::process::Child;
 use std::process::Command;
 use std::process::ExitStatus;
@@ -49,6 +50,10 @@ pub trait CommandExt {
 
     /// Similar to `status` but reports an error for non-zero exits.
     fn checked_run(&mut self) -> io::Result<ExitStatus>;
+
+    /// Similar to `checked_run` but pipes `stdin_data` to the process's stdin.
+    /// Useful for passing long args into commands that support piping.
+    fn checked_run_with_stdin(&mut self, stdin_data: &[u8]) -> io::Result<ExitStatus>;
 
     /// Create a `Command` to run `shell_cmd` through system's shell. This uses "cmd.exe"
     /// on Windows and "/bin/sh" otherwise. Do not add more args to the returned
@@ -224,6 +229,28 @@ impl CommandExt for Command {
     fn checked_run(&mut self) -> io::Result<ExitStatus> {
         let status = self
             .status()
+            .map_err(|e| CommandError::new(self, Some(e)).into_io_error())?;
+        if !status.success() {
+            return Err(CommandError::new(self, None)
+                .with_status(&status)
+                .into_io_error());
+        }
+        Ok(status)
+    }
+
+    fn checked_run_with_stdin(&mut self, stdin_data: &[u8]) -> io::Result<ExitStatus> {
+        self.stdin(Stdio::piped());
+        let mut child = self
+            .spawn()
+            .map_err(|e| CommandError::new(self, Some(e)).into_io_error())?;
+        child
+            .stdin
+            .take()
+            .expect("stdin was piped")
+            .write_all(stdin_data)
+            .map_err(|e| CommandError::new(self, Some(e)).into_io_error())?;
+        let status = child
+            .wait()
             .map_err(|e| CommandError::new(self, Some(e)).into_io_error())?;
         if !status.success() {
             return Err(CommandError::new(self, None)
@@ -432,8 +459,6 @@ mod unix {
 #[cfg(test)]
 mod tests {
     use std::path::Path;
-
-    use io::Write as _;
 
     use super::*;
 
