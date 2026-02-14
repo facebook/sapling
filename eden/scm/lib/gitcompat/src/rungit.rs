@@ -19,6 +19,7 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use identity::dotgit::follow_dotgit_path;
 use spawn_ext::CommandExt;
+use types::HgId;
 
 /// Run `git` outside a repo.
 #[derive(Default, Clone)]
@@ -173,6 +174,27 @@ impl RepoGit {
     /// The working copy root, without ".git".
     pub fn root(&self) -> &Path {
         &self.root
+    }
+
+    /// TODO: implement parsing
+    fn diff_index_to_index_info(_raw: &[u8]) -> io::Result<Vec<u8>> {
+        let result = Vec::new();
+        Ok(result)
+    }
+
+    /// Update git index for mutated paths compared to given commit.
+    /// Uses `--index-info` to avoid command-line argument length limits.
+    pub fn update_diff_index(&self, treeish: HgId) -> io::Result<ExitStatus> {
+        let hex = treeish.to_hex();
+        let output = self.call(
+            "diff-index",
+            &["--cached", "--no-renames", "--raw", "-z", &hex],
+        )?;
+
+        let index_info = Self::diff_index_to_index_info(&output.stdout)?;
+
+        let mut cmd = self.git_cmd("update-index", &["-z", "--index-info"]);
+        cmd.checked_run_with_stdin(&index_info)
     }
 }
 
