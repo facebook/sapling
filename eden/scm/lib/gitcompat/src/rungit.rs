@@ -45,6 +45,8 @@ pub struct RepoGit {
     /// This is the working copy root.
     root: PathBuf,
     pub(crate) parent: BareGit,
+    /// TODO: remove after fast path rollout
+    pub index_fast_path: bool,
 }
 
 /// Config related to run git.
@@ -143,7 +145,11 @@ impl BareGit {
 
     /// Associate with a working copy.
     pub fn with_working_copy(self, root: PathBuf) -> RepoGit {
-        RepoGit { root, parent: self }
+        RepoGit {
+            root,
+            parent: self,
+            index_fast_path: false,
+        }
     }
 
     /// The bare repo root, usually ".git" or "<name>.git".
@@ -159,6 +165,9 @@ impl RepoGit {
         Self {
             root,
             parent: BareGit::from_git_dir_and_config(git_dir, config),
+            index_fast_path: config
+                .get_or_default("experimental", "git-index-fast-path")
+                .unwrap_or_default(),
         }
     }
 
@@ -168,6 +177,7 @@ impl RepoGit {
         Self {
             root,
             parent: BareGit::from_git_dir(git_dir),
+            index_fast_path: false,
         }
     }
 
