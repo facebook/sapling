@@ -73,3 +73,40 @@ Changed in the staging area, but not changed in the working copy
   $ sl diff
   $ git status --porcelain
   MM b
+
+Clean stage after commiting modified, added, and removed files
+
+  $ echo 3 >> a
+  $ echo 3 > d
+  $ rm b
+  $ sl addremove --quiet
+  $ sl status
+  M a
+  A d
+  R b
+  $ sl commit -m "commit3" 
+  $ git ls-files --debug c | grep "mtime: 0:0"
+    mtime: 0:0
+  $ sl status
+  $ git status --porcelain
+
+Handle Tree Changes
+
+  $ mkdir -p some/dir
+  $ touch some/dir/file1 some/dir/file2 some/dir/file3
+  $ sl add some --quiet 
+  $ sl commit -m "add some/dir/*"
+  $ sl status
+  $ git status --porcelain
+
+  $ echo 1 >> some/dir/file1
+  $ sl commit -m "update some/dir/file1"
+  $ sl status
+  $ git status --porcelain
+
+  $ rm -rf some
+  $ echo 1 > some
+  $ sl addremove --quiet
+  $ sl commit -m "replace dir with file of the same name"
+  $ sl status
+  $ git status --porcelain
