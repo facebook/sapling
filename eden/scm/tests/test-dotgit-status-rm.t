@@ -1,7 +1,7 @@
 #require git
 
   $ . $TESTDIR/git.sh
-  $ setconfig diff.git=true
+  $ setconfig diff.git=true experimental.git-index-fast-path=true
 
 Prepare git repo
 

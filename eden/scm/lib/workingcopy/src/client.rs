@@ -157,8 +157,12 @@ impl WorkingCopyClient for RepoGit {
                 if p1_tree.is_null() {
                     p1_tree = GIT_EMPTY_TREE_ID;
                 }
-                let p1_tree_hex = p1_tree.to_hex();
-                self.call("read-tree", &["--no-recurse-submodules", &p1_tree_hex])?;
+                if self.index_fast_path {
+                    self.update_diff_index(p1_tree)?;
+                } else {
+                    let p1_tree_hex = p1_tree.to_hex();
+                    self.call("read-tree", &["--no-recurse-submodules", &p1_tree_hex])?;
+                }
             }
         }
         Ok(())

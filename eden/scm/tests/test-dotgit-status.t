@@ -1,7 +1,7 @@
 #require git no-eden
 
   $ . $TESTDIR/git.sh
-  $ setconfig diff.git=true ui.allowemptycommit=true
+  $ setconfig diff.git=true ui.allowemptycommit=true experimental.git-index-fast-path=true
 
 Prepare git repo
 
@@ -86,7 +86,8 @@ Clean stage after commiting modified, added, and removed files
   R b
   $ sl commit -m "commit3" 
   $ git ls-files --debug c | grep "mtime: 0:0"
-    mtime: 0:0
+  [1]
+  >>> assert "mtime: 0:0" not in _, "cache entry of unchanged file c should not have been invalidated"
   $ sl status
   $ git status --porcelain
 

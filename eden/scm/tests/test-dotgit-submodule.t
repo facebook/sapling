@@ -1,7 +1,7 @@
 #require git no-windows no-eden
 
   $ . $TESTDIR/git.sh
-  $ setconfig diff.git=1
+  $ setconfig diff.git=1 experimental.git-index-fast-path=true
 
 Prepare git repo with submodules
 

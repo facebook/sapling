@@ -1,7 +1,7 @@
 #require git no-windows
 
   $ . $TESTDIR/git.sh
-  $ setconfig diff.git=true ui.allowemptycommit=true
+  $ setconfig diff.git=true ui.allowemptycommit=true experimental.git-index-fast-path=true
 
   $ enable rebase
 
