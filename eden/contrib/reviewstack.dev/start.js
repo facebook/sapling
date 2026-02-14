@@ -17,7 +17,6 @@ defaults.__set__('configFactory', env => {
   config.externals = {
     react: 'React',
     'react-dom': 'ReactDOM',
-    recoil: 'Recoil',
   };
   config.output.library = 'ReviewStack';
   config.module.rules.shift({

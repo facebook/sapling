@@ -39,7 +39,6 @@ function replaceDevelopmentJavaScriptURLsWithProductionURLs(htmlFile) {
     'react@18.2.0/umd/react.development.min.js': 'react/umd/react.production.min.js',
     'react-dom@18.2.0/umd/react-dom.development.min.js':
       'react-dom/umd/react-dom.production.min.js',
-    'recoil@0.7.5/umd/index.js': 'recoil/umd/index.min.js',
     'history@5.3.0/umd/history.production.min.js': 'history/umd/history.production.min.js',
     'react-router@6.2.2/umd/react-router.development.js':
       'react-router/umd/react-router.production.min.js',
@@ -100,7 +99,7 @@ function replaceDevelopmentJavaScriptURLsWithProductionURLs(htmlFile) {
 }
 
 function moduleHasSourceMap(moduleName) {
-  // Unclear why react, react-dom, and recoil do not ship with source maps.
+  // Unclear why react and react-dom do not ship with source maps.
   // history has one, but it does not appear to have real data.
   return moduleName === 'react-router' || moduleName === 'react-router-dom';
 }

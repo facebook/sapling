@@ -18,7 +18,6 @@ config.experiments = {
 config.externals = {
   react: 'React',
   'react-dom': 'ReactDOM',
-  recoil: 'Recoil',
 };
 config.output.library = 'ReviewStack';
 config.output.libraryTarget = 'umd';
