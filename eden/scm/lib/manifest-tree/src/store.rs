@@ -347,7 +347,7 @@ fn next_git_ref<'a>(position: &mut usize, bytes: &'a Bytes) -> Option<Result<Ele
 
     let mut offset = mode_len + 1;
     let name = &slice[offset..offset + name_len];
-    let component = match PathComponent::from_utf8(name) {
+    let component = match PathComponent::from_utf8_git(name) {
         Ok(p) => p,
         Err(e) => return Some(Err(e.into())),
     };
@@ -623,6 +623,33 @@ mod tests {
                 "Element { component: PathComponentBuf(\"symlink\"), hgid: HgId(\"5ae034634e8d382c8646068b8b52381815edabf0\"), flag: File(Symlink) }",
             ]
         );
+    }
+
+    #[test]
+    fn test_deserialize_git_tree_with_newline_in_name() {
+        let hgid_newline = HgId::from_hex(b"587be6b4c3f93f93c489c0111bba5596147a26cb").unwrap();
+        let hgid_normal = HgId::from_hex(b"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391").unwrap();
+
+        let mut data = Vec::new();
+        data.extend_from_slice(b"100644 bad\nname.txt\0");
+        data.extend_from_slice(hgid_newline.as_ref());
+        data.extend_from_slice(b"100644 normal.txt\0");
+        data.extend_from_slice(hgid_normal.as_ref());
+
+        let entry = Entry(Bytes::from(data), SerializationFormat::Git);
+        let mut elements = entry.elements();
+
+        let first = elements.next().unwrap().unwrap();
+        assert_eq!(first.component.as_path_component().as_str(), "bad\nname.txt");
+        assert_eq!(first.hgid, hgid_newline);
+        assert_eq!(first.flag, Flag::File(FileType::Regular));
+
+        let second = elements.next().unwrap().unwrap();
+        assert_eq!(second.component.as_path_component().as_str(), "normal.txt");
+        assert_eq!(second.hgid, hgid_normal);
+        assert_eq!(second.flag, Flag::File(FileType::Regular));
+
+        assert!(elements.next().is_none());
     }
 
     #[test]

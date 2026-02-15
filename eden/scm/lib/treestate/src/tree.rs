@@ -620,8 +620,9 @@ where
     /// Add a file to the node.  The name may contain a path, in which case sufficient
     /// subdirectories are updated to add or update the file.
     fn add(&mut self, store: &dyn StoreView, name: KeyRef, info: &T) -> Result<bool> {
-        // Construct a RepoPath so we match the core path validation logic.
-        let _ = RepoPath::from_utf8(name)?;
+        // Construct a RepoPath so we match core path validation logic.
+        // Git-backed repos can contain '\n' and '\r' in path components.
+        let _ = RepoPath::from_utf8_git(name)?;
         let (new_entry, file_added) = match self.path_recurse(store, name)? {
             PathRecurse::Directory(_dir, path, node) => {
                 // The file is in a subdirectory.  Add it to the subdirectory.

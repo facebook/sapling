@@ -320,10 +320,23 @@ impl RepoPath {
         RepoPath::from_str(utf8_str)
     }
 
+    /// Constructs a `RepoPath` from bytes using Git path validation rules.
+    pub fn from_utf8_git<S: AsRef<[u8]> + ?Sized>(s: &S) -> Result<&RepoPath, ParseError> {
+        let utf8_str = std::str::from_utf8(s.as_ref())
+            .map_err(|e| ParseError::InvalidUtf8(s.as_ref().to_vec(), e))?;
+        RepoPath::from_str_git(utf8_str)
+    }
+
     /// Constructs a `RepoPath` from a `str` slice. It will fail when the string does not respect
     /// the `RepoPath` rules.
     pub fn from_str(s: &str) -> Result<&RepoPath, ParseError> {
         validate_path(s).map_err(|e| ParseError::ValidationError(s.to_string(), e))?;
+        Ok(unsafe { RepoPath::from_str_unchecked(s) })
+    }
+
+    /// Constructs a `RepoPath` from `str` using Git path validation rules.
+    pub fn from_str_git(s: &str) -> Result<&RepoPath, ParseError> {
+        validate_path_git(s).map_err(|e| ParseError::ValidationError(s.to_string(), e))?;
         Ok(unsafe { RepoPath::from_str_unchecked(s) })
     }
 
@@ -727,10 +740,29 @@ impl PathComponent {
         PathComponent::from_str(utf8_str)
     }
 
+    /// Constructs a `PathComponent` from a byte slice using Git path validation rules.
+    ///
+    /// Git paths allow bytes such as '\n' and '\r' (only NUL and '/' are prohibited), so this
+    /// parser is intended for git tree entry decoding.
+    pub fn from_utf8_git(s: &[u8]) -> Result<&PathComponent, ParseError> {
+        let utf8_str =
+            std::str::from_utf8(s).map_err(|e| ParseError::InvalidUtf8(s.to_vec(), e))?;
+        PathComponent::from_str_git(utf8_str)
+    }
+
     /// Constructs a `PathComponent` from a `str` slice. It will fail when the string does not
     /// respect the `PathComponent` rules.
     pub fn from_str(s: &str) -> Result<&PathComponent, ParseError> {
         validate_component(s.as_bytes())
+            .map_err(|e| ParseError::ValidationError(s.to_string(), e))?;
+        Ok(PathComponent::from_str_unchecked(s))
+    }
+
+    /// Constructs a `PathComponent` from a `str` slice using Git path validation rules.
+    ///
+    /// This accepts '\n' and '\r' in path components to match git tree semantics.
+    pub fn from_str_git(s: &str) -> Result<&PathComponent, ParseError> {
+        validate_component_git(s.as_bytes())
             .map_err(|e| ParseError::ValidationError(s.to_string(), e))?;
         Ok(PathComponent::from_str_unchecked(s))
     }
@@ -834,6 +866,32 @@ const fn validate_path(s: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
+const fn validate_path_git(s: &str) -> Result<(), ValidationError> {
+    if s.is_empty() {
+        return Ok(());
+    }
+
+    let bytes = s.as_bytes();
+    if !bytes.is_empty() && bytes[bytes.len() - 1] == SEPARATOR_BYTE {
+        return Err(ValidationError::TrailingSlash);
+    }
+
+    let mut i = 0;
+    let mut start = 0;
+    while i <= bytes.len() {
+        if i == bytes.len() || bytes[i] == SEPARATOR_BYTE {
+            let component = bytes.split_at(start).1.split_at(i - start).0;
+            if let Err(e) = validate_component_git(component) {
+                return Err(e);
+            }
+            start = i + 1;
+        }
+        i += 1;
+    }
+
+    Ok(())
+}
+
 const fn validate_component(bytes: &[u8]) -> Result<(), ValidationError> {
     match bytes.len() {
         0 => {
@@ -858,6 +916,38 @@ const fn validate_component(bytes: &[u8]) -> Result<(), ValidationError> {
     while i < bytes.len() {
         let b = bytes[i];
         if b == 0u8 || b == 1u8 || b == b'\n' || b == b'\r' || b == b'/' {
+            return Err(ValidationError::InvalidByte(b));
+        }
+        i += 1;
+    }
+
+    Ok(())
+}
+
+const fn validate_component_git(bytes: &[u8]) -> Result<(), ValidationError> {
+    match bytes.len() {
+        0 => {
+            return Err(ValidationError::InvalidPathComponent(
+                InvalidPathComponent::Empty,
+            ));
+        }
+        1 if bytes[0] == b'.' => {
+            return Err(ValidationError::InvalidPathComponent(
+                InvalidPathComponent::Current,
+            ));
+        }
+        2 if bytes[0] == b'.' && bytes[1] == b'.' => {
+            return Err(ValidationError::InvalidPathComponent(
+                InvalidPathComponent::Parent,
+            ));
+        }
+        _ => {}
+    }
+
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
+        if b == 0u8 || b == 1u8 || b == b'/' {
             return Err(ValidationError::InvalidByte(b));
         }
         i += 1;
@@ -1349,6 +1439,54 @@ mod tests {
         assert_eq!(
             format!("{}", PathComponent::from_str("").unwrap_err()),
             "Failed to validate \"\". Invalid component: \"\"."
+        );
+    }
+
+    #[test]
+    fn test_validate_component_git() {
+        assert_eq!(
+            PathComponent::from_str_git("line\nbreak")
+                .unwrap()
+                .as_str(),
+            "line\nbreak"
+        );
+        assert_eq!(
+            PathComponent::from_str_git("line\rbreak")
+                .unwrap()
+                .as_str(),
+            "line\rbreak"
+        );
+        assert_eq!(
+            format!("{}", PathComponent::from_str_git("foo/bar").unwrap_err()),
+            "Failed to validate \"foo/bar\". Invalid byte: 47."
+        );
+        assert_eq!(
+            format!("{}", PathComponent::from_str_git("").unwrap_err()),
+            "Failed to validate \"\". Invalid component: \"\"."
+        );
+    }
+
+    #[test]
+    fn test_validate_path_git() {
+        assert_eq!(
+            RepoPath::from_str_git("dir/line\nbreak.txt")
+                .unwrap()
+                .as_str(),
+            "dir/line\nbreak.txt"
+        );
+        assert_eq!(
+            RepoPath::from_str_git("line\rbreak.txt")
+                .unwrap()
+                .as_str(),
+            "line\rbreak.txt"
+        );
+        assert_eq!(
+            format!("{}", RepoPath::from_str_git("foo/").unwrap_err()),
+            "Failed to validate \"foo/\". Trailing slash."
+        );
+        assert_eq!(
+            format!("{}", RepoPath::from_str_git("foo//bar").unwrap_err()),
+            "Failed to validate \"foo//bar\". Invalid component: \"\"."
         );
     }
 
