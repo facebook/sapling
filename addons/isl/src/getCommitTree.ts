@@ -84,11 +84,18 @@ export function getCommitTree(
     };
   };
 
+  // Commits whose first parent is not in the set are tree roots.
+  // This includes public commits (traditional roots), parentless commits,
+  // and commits whose parent was not fetched (e.g. worktrees without public phase data).
+  const commitHashes = new Set(commits.map(c => c.hash));
   const initialCommits = commits.filter(
-    commit => commit.phase === 'public' || commit.parents.length === 0,
+    commit =>
+      commit.phase === 'public' ||
+      commit.parents.length === 0 ||
+      !commitHashes.has(commit.parents[0]),
   );
 
-  // build tree starting from public revisions
+  // build tree starting from root revisions
   return initialCommits.sort(byTimeDecreasing).map(makeTree);
 }
 
