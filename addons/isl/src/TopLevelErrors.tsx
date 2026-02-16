@@ -13,6 +13,7 @@ import type {RepoInfo} from './types';
 import {Button} from 'isl-components/Button';
 import {ErrorNotice} from 'isl-components/ErrorNotice';
 import {useAtomValue} from 'jotai';
+import React from 'react';
 import {useThrottledEffect} from 'shared/hooks';
 import {Internal} from './Internal';
 import {tracker} from './analytics';
@@ -109,8 +110,31 @@ function computeTopLevelError(
   return undefined;
 }
 
+/**
+ * Debounce the 'reconnecting' status to avoid flashing an error banner
+ * for brief transient disconnects (e.g. during worktree operations).
+ * Shows the banner only after the connection has been lost for 2+ seconds.
+ * Permanent 'error' states are shown immediately.
+ */
+function useDebouncedReconnectStatus(status: MessageBusStatus): MessageBusStatus {
+  const [debouncedStatus, setDebouncedStatus] = React.useState(status);
+
+  React.useEffect(() => {
+    if (status.type === 'reconnecting') {
+      const timer = setTimeout(() => setDebouncedStatus(status), 2000);
+      return () => clearTimeout(timer);
+    }
+    // Non-reconnecting states (open, error) apply immediately
+    setDebouncedStatus(status);
+    return undefined;
+  }, [status]);
+
+  return debouncedStatus;
+}
+
 export function TopLevelErrors() {
-  const reconnectStatus = useAtomValue(reconnectingStatus);
+  const rawReconnectStatus = useAtomValue(reconnectingStatus);
+  const reconnectStatus = useDebouncedReconnectStatus(rawReconnectStatus);
   const repoInfo = useAtomValue(repositoryInfoOrError);
   const diffFetchError = useAtomValue(allDiffSummaries).error;
 
