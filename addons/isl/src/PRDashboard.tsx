@@ -42,7 +42,7 @@ import {inlineProgressByHash, useRunOperation} from './operationsState';
 import {dagWithPreviews} from './previews';
 import {enterReviewMode} from './reviewMode';
 import {selectedCommits} from './selection';
-import {selectedTimeRangeAtom, setTimeRange} from './serverAPIState';
+import {repositoryInfo, selectedTimeRangeAtom, setTimeRange} from './serverAPIState';
 import {showToast} from './toast';
 import {succeedableRevset} from './types';
 import {worktreesForCommit} from './worktrees';
@@ -404,6 +404,8 @@ function StackCard({
   const runOperation = useRunOperation();
   const currentUser = useAtomValue(currentGitHubUser);
   const dag = useAtomValue(dagWithPreviews);
+  const repoInfo = useAtomValue(repositoryInfo);
+  const currentRepoRoot = repoInfo?.repoRoot;
 
   const customLabel = stackLabels[stack.id];
   // Check if this stack is from an external author (someone other than the current user)
@@ -418,6 +420,9 @@ function StackCard({
   // Check if a worktree already exists for this commit
   const existingWorktrees = useAtomValue(worktreesForCommit(topHeadHash ?? ''));
   const existingWorktree = existingWorktrees.length > 0 ? existingWorktrees[0] : undefined;
+  // Don't show worktree button if we're already in that worktree
+  const isInExistingWorktree =
+    existingWorktree != null && existingWorktree.path === currentRepoRoot;
 
   // Detect "stale" stacks: the true top PR (from stackInfo) was merged via GitHub
   // but the lower PRs are still open. All visible PRs in this stack are stale.
@@ -571,6 +576,7 @@ function StackCard({
         <div className="stack-card-actions">
           {isExternal &&
             topHeadHash &&
+            !isInExistingWorktree &&
             (existingWorktree ? (
               <Tooltip title="Switch ISL to the existing worktree for this stack">
                 <Button
