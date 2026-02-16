@@ -17,9 +17,9 @@ import type {
   SubmodulesByRoot,
   SubscriptionKind,
   SubscriptionResultsData,
+  TimeRangeDays,
   UncommittedChanges,
   ValidatedRepoInfo,
-  TimeRangeDays,
 } from './types';
 
 import {Set as ImSet} from 'immutable';
@@ -47,10 +47,34 @@ import {registerCleanup, registerDisposable} from './utils';
 
 export {repositoryData};
 
+const PERSISTED_CWD_KEY = 'isl.lastSelectedCwd';
+let hasRestoredPersistedCwd = false;
+
 registerDisposable(
   repositoryData,
   serverAPI.onMessageOfType('repoInfo', event => {
     writeAtom(repositoryData, {info: event.info, cwd: event.cwd});
+    // Persist cwd so it survives page reloads (e.g. worktree switches)
+    if (event.cwd) {
+      try {
+        localStorage.setItem(PERSISTED_CWD_KEY, event.cwd);
+      } catch {
+        // localStorage may be unavailable
+      }
+    }
+    // On first repoInfo response, check if we need to restore a different cwd
+    if (!hasRestoredPersistedCwd) {
+      hasRestoredPersistedCwd = true;
+      try {
+        const savedCwd = localStorage.getItem(PERSISTED_CWD_KEY);
+        if (savedCwd && savedCwd !== event.cwd) {
+          serverAPI.postMessage({type: 'changeCwd', cwd: savedCwd});
+          serverAPI.cwdChanged();
+        }
+      } catch {
+        // localStorage may be unavailable
+      }
+    }
   }),
   import.meta.hot,
 );
