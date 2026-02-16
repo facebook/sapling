@@ -179,6 +179,22 @@ class RepositoryCache {
         return newlyFound.value;
       }
 
+      // For git worktrees, the dotdir is <main-repo>/.git/worktrees/<name>.
+      // Try to reuse the main repo's Repository to avoid slow re-initialization.
+      if (repoInfo.dotdir != null) {
+        const worktreeMatch = repoInfo.dotdir.match(/^(.+\/\.git)\/worktrees\//);
+        if (worktreeMatch) {
+          const mainDotdir = worktreeMatch[1];
+          for (const cachedRepo of this.repoMap.values()) {
+            if (!cachedRepo.isDisposed && cachedRepo.value.info.dotdir === mainDotdir) {
+              cachedRepo.ref();
+              ref.internalReference = cachedRepo;
+              return cachedRepo.value;
+            }
+          }
+        }
+      }
+
       // This is where we actually start new subscriptions and trigger work, so we should only do this
       // once we're sure we don't have a repository to reuse.
       const repo = new this.RepositoryType(
