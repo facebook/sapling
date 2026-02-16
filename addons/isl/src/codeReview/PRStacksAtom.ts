@@ -7,55 +7,39 @@
 
 import type {DiffSummary} from '../types';
 
-import {PullRequestState} from 'isl-server/src/github/generated/graphql';
 import {atom} from 'jotai';
 import {atomWithStorage} from 'jotai/utils';
-import {allDiffSummaries} from './CodeReviewInfo';
 import {reviewModeAtom} from '../reviewMode';
+import {allDiffSummaries} from './CodeReviewInfo';
 
 /**
  * Stack labels stored in localStorage.
  * Maps stack ID to custom label.
  */
-export const stackLabelsAtom = atomWithStorage<Record<string, string>>(
-  'isl.prStackLabels',
-  {},
-);
+export const stackLabelsAtom = atomWithStorage<Record<string, string>>('isl.prStackLabels', {});
 
 /**
  * Hidden stacks stored in localStorage.
  * Set of stack IDs that are hidden.
  */
-export const hiddenStacksAtom = atomWithStorage<string[]>(
-  'isl.hiddenPrStacks',
-  [],
-);
+export const hiddenStacksAtom = atomWithStorage<string[]>('isl.hiddenPrStacks', []);
 
 /**
  * Whether to auto-hide merged stacks.
  */
-export const hideMergedStacksAtom = atomWithStorage<boolean>(
-  'isl.hideMergedStacks',
-  true,
-);
+export const hideMergedStacksAtom = atomWithStorage<boolean>('isl.hideMergedStacks', true);
 
 /**
  * Whether to show only stacks authored by the current user.
  * When true, hides stacks from other authors.
  */
-export const showOnlyMyStacksAtom = atomWithStorage<boolean>(
-  'isl.showOnlyMyStacks',
-  false,
-);
+export const showOnlyMyStacksAtom = atomWithStorage<boolean>('isl.showOnlyMyStacks', false);
 
 /**
  * Whether to hide stacks from bot authors (renovate, dependabot, etc).
  * Default true - bots are hidden by default.
  */
-export const hideBotStacksAtom = atomWithStorage<boolean>(
-  'isl.hideBotStacks',
-  true,
-);
+export const hideBotStacksAtom = atomWithStorage<boolean>('isl.hideBotStacks', true);
 
 /**
  * List of known bot author patterns (case-insensitive).
@@ -186,6 +170,20 @@ export const prStacksAtom = atom<PRStack[]>(get => {
         const prSummary = diffsMap.get(prDiffId);
 
         if (prSummary) {
+          // Skip closed (abandoned) PRs — they create duplicate stacks
+          // when a PR is closed and re-created with a new number.
+          if (prSummary.state === 'CLOSED') {
+            processedPrNumbers.add(prDiffId);
+            continue;
+          }
+
+          // Skip PRs already claimed by another stack to prevent duplicates.
+          // This happens when a closed PR's stackInfo still references
+          // all the same open PRs as the replacement stack.
+          if (processedPrNumbers.has(prDiffId)) {
+            continue;
+          }
+
           stackPrs.push(prSummary);
           processedPrNumbers.add(prDiffId);
 
@@ -202,10 +200,8 @@ export const prStacksAtom = atom<PRStack[]>(get => {
       if (stackPrs.length > 0 && topPrNumber !== null) {
         // Get main author from the first PR (top of stack)
         const firstPr = stackPrs[0];
-        const mainAuthor =
-          firstPr.type === 'github' ? firstPr.author : undefined;
-        const mainAuthorAvatarUrl =
-          firstPr.type === 'github' ? firstPr.authorAvatarUrl : undefined;
+        const mainAuthor = firstPr.type === 'github' ? firstPr.author : undefined;
+        const mainAuthorAvatarUrl = firstPr.type === 'github' ? firstPr.authorAvatarUrl : undefined;
 
         // Check merge/close status
         const mergedCount = stackPrs.filter(pr => pr.state === 'MERGED').length;
@@ -234,8 +230,7 @@ export const prStacksAtom = atom<PRStack[]>(get => {
 
       // Get author from the PR
       const mainAuthor = summary.type === 'github' ? summary.author : undefined;
-      const mainAuthorAvatarUrl =
-        summary.type === 'github' ? summary.authorAvatarUrl : undefined;
+      const mainAuthorAvatarUrl = summary.type === 'github' ? summary.authorAvatarUrl : undefined;
 
       // Check merge/close status
       const isMerged = summary.state === 'MERGED';
@@ -318,7 +313,7 @@ export const currentPRStackContextAtom = atom<StackNavigationContext | null>(get
       // Use string comparison to avoid type mismatches
       const prNumStr = pr.type === 'github' ? String(pr.number) : String(pr);
       return prNumStr === currentPrNumberStr;
-    })
+    }),
   );
 
   if (!containingStack || !containingStack.isStack) {
@@ -330,32 +325,36 @@ export const currentPRStackContextAtom = atom<StackNavigationContext | null>(get
       isSinglePr: true,
       currentIndex: 0,
       stackSize: 1,
-      entries: [{
-        prNumber: Number(currentPrNumberStr),
-        headHash: currentPR.head,
-        title: currentPR.title,
-        isCurrent: true,
-        state: currentPR.state,
-      }],
+      entries: [
+        {
+          prNumber: Number(currentPrNumberStr),
+          headHash: currentPR.head,
+          title: currentPR.title,
+          isCurrent: true,
+          state: currentPR.state,
+        },
+      ],
     };
   }
 
   // Build entries from the stack PRs (ordered top-to-bottom, same as left column)
-  const entries = containingStack.prs.map(pr => {
-    if (pr.type !== 'github') {
-      return null;
-    }
-    // Use string comparison for isCurrent to avoid type mismatches
-    const prNumStr = String(pr.number);
-    return {
-      prNumber: Number(pr.number),
-      headHash: pr.head,
-      title: pr.title,
-      isCurrent: prNumStr === currentPrNumberStr,
-      state: pr.state,
-      reviewDecision: pr.reviewDecision,
-    };
-  }).filter((e): e is NonNullable<typeof e> => e !== null);
+  const entries = containingStack.prs
+    .map(pr => {
+      if (pr.type !== 'github') {
+        return null;
+      }
+      // Use string comparison for isCurrent to avoid type mismatches
+      const prNumStr = String(pr.number);
+      return {
+        prNumber: Number(pr.number),
+        headHash: pr.head,
+        title: pr.title,
+        isCurrent: prNumStr === currentPrNumberStr,
+        state: pr.state,
+        reviewDecision: pr.reviewDecision,
+      };
+    })
+    .filter((e): e is NonNullable<typeof e> => e !== null);
 
   const currentIndex = entries.findIndex(e => e.isCurrent);
 
