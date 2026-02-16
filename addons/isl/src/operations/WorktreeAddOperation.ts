@@ -35,9 +35,10 @@ export class WorktreeAddOperation extends Operation {
 
   getArgs() {
     const args = ['wt', 'add'];
-    if (this.name) {
-      args.push(this.name);
-    }
+    // sl wt add [NAME] [COMMIT] — both positional args required.
+    // Without NAME, the commit hash is misinterpreted as the name
+    // and the worktree checks out the current commit instead.
+    args.push(this.name ?? this.commit.slice(0, 8));
     args.push(this.commit);
     return args;
   }
