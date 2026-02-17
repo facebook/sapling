@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 ascii = "1.1.0"
 async-recursion = "1.1.1"
 async-trait = "0.1.86"
@@ -66,5 +66,5 @@ mononoke_macros = { version = "0.1.0", path = "../common/mononoke_macros" }
 paste = "1.0.14"
 pretty_assertions = { version = "1.2", features = ["alloc"], default-features = false }
 rand = { version = "0.8", features = ["small_rng"] }
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }

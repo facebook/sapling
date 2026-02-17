@@ -6,7 +6,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 cpython = { version = "0.7.2", features = ["python3-sys"], default-features = false }
 pyconfigloader = { version = "0.1.0", path = "../pyconfigloader" }
 pydag = { version = "0.1.0", path = "../pydag" }

@@ -13,7 +13,7 @@ license = "MIT"
 name = "clone"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 fs-err = { version = "3", features = ["tokio"] }
 sapling-async-runtime = { version = "0.1.0", path = "../async-runtime" }
 sapling-checkout = { version = "0.1.0", path = "../checkout" }

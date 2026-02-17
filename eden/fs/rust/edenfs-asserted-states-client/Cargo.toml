@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 fs-err = { version = "3", features = ["tokio"] }
 sapling-util = { version = "0.1.0", path = "../../../scm/lib/util" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }

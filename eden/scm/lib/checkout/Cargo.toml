@@ -13,7 +13,7 @@ license = "MIT"
 name = "checkout"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 edenfs-asserted-states-client = { version = "0.1.0", path = "../../../fs/rust/edenfs-asserted-states-client" }
 fail = { version = "0.4", features = ["failpoints"] }
 flume = "0.11.1"

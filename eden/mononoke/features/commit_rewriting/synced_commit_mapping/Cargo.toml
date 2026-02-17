@@ -12,7 +12,7 @@ name = "synced_commit_mapping_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 async-trait = "0.1.86"
 auto_impl = "1.2.1"
 bincode = { version = "2", features = ["serde"] }

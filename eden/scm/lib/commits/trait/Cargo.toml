@@ -13,7 +13,7 @@ license = "MIT"
 name = "commits_trait"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 async-trait = "0.1.86"
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 sapling-dag = { version = "0.1.0", path = "../../dag" }

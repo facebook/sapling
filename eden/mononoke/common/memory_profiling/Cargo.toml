@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 http = "0.2.12"
 jemalloc_pprof = { version = "0.7", features = ["flamegraph"] }

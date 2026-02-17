@@ -13,7 +13,7 @@ license = "MIT"
 name = "hook"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 erased-serde = "0.4.9"
 sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
 sapling-configmodel = { version = "0.1.0", path = "../config/model" }
@@ -24,5 +24,5 @@ sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 sapling-repo = { version = "0.1.0", path = "../repo" }
 sapling-spawn-ext = { version = "0.1.0", path = "../spawn-ext" }
 sapling-sysutil = { version = "0.1.0", path = "../util/sysutil" }
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }

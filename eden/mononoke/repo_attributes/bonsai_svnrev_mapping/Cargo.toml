@@ -12,7 +12,7 @@ name = "bonsai_svnrev_mapping_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 async-trait = "0.1.86"
 bincode = { version = "2", features = ["serde"] }
 bonsai_svnrev_mapping_thrift = { version = "0.1.0", path = "if" }

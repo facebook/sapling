@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 async-stream = "0.3"
 async-trait = "0.1.86"
 async_requests = { version = "0.1.0", path = "../../../features/async_requests" }
@@ -69,7 +69,7 @@ sapling-clientinfo = { version = "0.1.0", path = "../../../../scm/lib/clientinfo
 scribe_ext = { version = "0.1.0", path = "../../../common/scribe_ext" }
 scs_errors = { version = "0.1.0", path = "../scs_errors" }
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 source_control = { version = "0.1.0", path = "../../../scs/if" }
 source_control_services = { version = "0.1.0", path = "../../../scs/if/services" }
