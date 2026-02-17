@@ -16,6 +16,7 @@ import {onOperationExited} from './operationsState';
 import platform from './platform';
 import {registerCleanup, registerDisposable} from './utils';
 import {showToast} from './toast';
+import {showWorktreeOpenInIDEModal} from './WorktreeIDEModal';
 
 /**
  * Atom holding the list of worktrees for the current repository.
@@ -51,12 +52,15 @@ export const worktreesForCommit = atomFamilyWeak((hash: Hash) =>
  * Updates the worktreesAtom with the result.
  */
 export async function fetchWorktrees(): Promise<WorktreeInfo[]> {
+  console.log('[WORKTREE-DEBUG] fetchWorktrees: requesting from server');
   serverAPI.postMessage({type: 'fetchWorktrees'});
   const response = await serverAPI.nextMessageMatching('fetchedWorktrees', () => true);
   if (response.worktrees.error) {
+    console.error('[WORKTREE-DEBUG] fetchWorktrees: server returned error', response.worktrees.error);
     throw response.worktrees.error;
   }
   const worktrees = response.worktrees.value;
+  console.log('[WORKTREE-DEBUG] fetchWorktrees: received', worktrees.length, 'worktrees', worktrees.map(w => ({name: w.name, path: w.path, commit: w.commit?.slice(0, 8), isMain: w.isMain})));
   writeAtom(worktreesAtom, worktrees);
   return worktrees;
 }
@@ -90,8 +94,10 @@ registerDisposable(
   worktreesAtom,
   onOperationExited(async (message, operation) => {
     if (operation instanceof WorktreeAddOperation && message.exitCode === 0) {
+      console.log('[WORKTREE-DEBUG] WorktreeAddOperation completed successfully');
       const expectedName = operation.getWorktreeName();
       const expectedCommit = operation.getCommit();
+      console.log('[WORKTREE-DEBUG] expected worktree:', {expectedName, expectedCommit: expectedCommit.slice(0, 8)});
 
       // Get worktrees before refresh to compare
       const worktreesBefore = new Set(readAtom(worktreesAtom).map(wt => wt.path));
@@ -117,8 +123,12 @@ registerDisposable(
             // Direct integration when running inside VSCode
             openWorktreeInVSCode(newWorktree.path);
           } else {
-            // Show toast with command to open in VSCode for browser platforms
-            showWorktreeCreatedToast(newWorktree.path, newWorktree.name ?? expectedName);
+            // Auto-switch ISL cwd to the new worktree
+            console.log('[WORKTREE-DEBUG] auto-switching cwd to new worktree:', newWorktree.path);
+            serverAPI.postMessage({type: 'changeCwd', cwd: newWorktree.path});
+            serverAPI.cwdChanged();
+            // Show modal with IDE open command
+            showWorktreeOpenInIDEModal(newWorktree.path, newWorktree.name ?? expectedName);
           }
         }
       } catch {
@@ -157,12 +167,3 @@ function openWorktreeInVSCode(worktreePath: string) {
   });
 }
 
-/**
- * Show a toast notification when worktree is created.
- * Used when running in browser (not inside VSCode extension).
- */
-function showWorktreeCreatedToast(_worktreePath: string, worktreeName: string) {
-  showToast(`Worktree "${worktreeName}" created`, {
-    durationMs: 5000,
-  });
-}

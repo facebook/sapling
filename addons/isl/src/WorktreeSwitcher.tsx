@@ -19,6 +19,8 @@ import {WorktreeRemoveOperation} from './operations/WorktreeRemoveOperation';
 import {repositoryInfo} from './serverAPIState';
 import {worktreesAtom} from './worktrees';
 import serverAPI from './ClientToServerAPI';
+import platform from './platform';
+import {showWorktreeOpenInIDEModal} from './WorktreeIDEModal';
 
 const styles = stylex.create({
   container: {
@@ -199,17 +201,30 @@ function WorktreeDropdown({
   const runOperation = useRunOperation();
 
   const handleWorktreeClick = (worktree: WorktreeInfo) => {
+    console.log('[WORKTREE-DEBUG] handleWorktreeClick:', {
+      clicked: worktree.path,
+      name: worktree.name,
+      commit: worktree.commit?.slice(0, 8),
+      isMain: worktree.isMain,
+      currentPath,
+      isSamePath: worktree.path === currentPath,
+    });
     if (worktree.path === currentPath) {
+      console.log('[WORKTREE-DEBUG] same path, dismissing');
       dismiss();
       return;
     }
     // Change the cwd to the worktree path
+    console.log('[WORKTREE-DEBUG] sending changeCwd to:', worktree.path);
     serverAPI.postMessage({
       type: 'changeCwd',
       cwd: worktree.path,
     });
     serverAPI.cwdChanged();
     dismiss();
+    if (platform.platformName !== 'vscode') {
+      showWorktreeOpenInIDEModal(worktree.path, worktree.name);
+    }
   };
 
   const handleDeleteWorktree = (e: React.MouseEvent, worktree: WorktreeInfo) => {
