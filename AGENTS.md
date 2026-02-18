@@ -58,6 +58,49 @@ yarn test             # Run Jest tests
 yarn eslint           # Lint TypeScript/React code
 ```
 
+### Building ISL for `sl web` (IMPORTANT after ISL changes)
+
+The `sl web` command serves ISL from a pre-built `isl-dist.tar.xz`. After making changes
+to ISL code in `addons/`, you **must rebuild the tar** for `sl web` to pick them up.
+
+**Rebuild steps** (from `addons/`):
+
+```bash
+yarn install
+python3 build-tar.py -o ../eden/lib/isl-dist.tar.xz
+```
+
+This builds the client (Vite) and server (rollup), then packages everything into a tar at
+`eden/lib/isl-dist.tar.xz` — where the `sl` binary automatically finds it.
+
+After rebuilding, `sl web` in **any local repo** will serve the fork's ISL.
+
+**How `sl web` finds the tar** (in `eden/scm/sapling/commands/isl.py`):
+1. Config: `[web] isl-dist-path` in `.sl/config` or `~/.sapling/sapling.conf`
+2. `../lib/isl-dist.tar.xz` relative to the `sl` binary
+3. `isl-dist.tar.xz` in the `sl` binary's directory
+
+### ISL Local Development with Hot Reload
+
+For active development with instant feedback (no rebuild needed):
+
+```bash
+# Step 1: build ISL server (one-time, re-run if server code changes)
+cd addons/isl-server && yarn build
+
+# Step 2: start Vite dev server (hot reload on port 3000)
+cd addons/isl && yarn start
+
+# Step 3: launch ISL server pointing at your repo
+cd addons/isl-server && yarn serve --dev --foreground --force --cwd ~/your-repo
+```
+
+Steps 2 and 3 run in separate terminals. Changes to ISL React code reflect instantly in the browser.
+
+**Note:** `sl web --dev` does NOT work with this repo layout — it resolves the addons path
+relative to the `sl` binary incorrectly (`eden/addons/` instead of `addons/`). Use the
+`yarn serve` approach above instead.
+
 ### Website
 
 From `website/`:
