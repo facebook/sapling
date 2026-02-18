@@ -15,6 +15,9 @@
 Cargo.lock
 target/
 
+# ISL build artifact
+/eden/lib/isl-dist.tar.xz
+
 # Getdeps
 /eden/mononoke/tests/integration/getdeps_build.log
 /build/Testing/Temporary/LastTest.log
