@@ -12,7 +12,7 @@ test = false
 doctest = false
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 async-trait = "0.1.86"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
@@ -47,7 +47,7 @@ sapling-clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 serde_regex = "1"
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 source_control = { version = "0.1.0", path = "../../scs/if" }

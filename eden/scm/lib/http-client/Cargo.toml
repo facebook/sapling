@@ -13,7 +13,7 @@ license = "MIT"
 name = "http_client"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 async-compression = { version = "0.4.9", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 auto_impl = "1.2.1"
 curl = { version = "0.4.41", features = ["http2", "static-ssl"] }
@@ -34,7 +34,7 @@ sapling-clientinfo = { version = "0.1.0", path = "../clientinfo" }
 sapling-minibytes = { version = "0.1.0", path = "../minibytes" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_cbor = "0.11.2"
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 thiserror = "2.0.18"
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tokio-util = { version = "0.7.15", features = ["full"] }

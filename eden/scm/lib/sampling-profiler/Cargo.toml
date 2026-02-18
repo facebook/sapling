@@ -15,7 +15,7 @@ autoexamples = false
 name = "sampling_profiler"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 indexmap = { version = "2.13.0", features = ["arbitrary", "rayon", "serde"] }
 libc = "0.2.139"
 sapling-ascii-tree = { version = "0.1.0", path = "../util/ascii-tree" }

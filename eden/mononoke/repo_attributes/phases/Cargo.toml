@@ -12,7 +12,7 @@ name = "tests"
 path = "tests/src/main.rs"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 async-trait = "0.1.86"
 bincode = { version = "2", features = ["serde"] }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }

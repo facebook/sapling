@@ -13,7 +13,7 @@ license = "MIT"
 name = "types"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 bitflags = { version = "2.9", features = ["serde", "std"], default-features = false }
 bytecount = "0.6.8"
 byteorder = "1.5"
@@ -33,7 +33,7 @@ thiserror = "2.0.18"
 quickcheck = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }
 serde_cbor = "0.11.2"
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 
 [features]
 default = ["for-tests"]

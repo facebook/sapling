@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 async-trait = "0.1.86"
 async_requests_types_thrift = { version = "0.1.0", path = "if" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
@@ -36,5 +36,5 @@ fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperiment
 maplit = "1.0"
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }

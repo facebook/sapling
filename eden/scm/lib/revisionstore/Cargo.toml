@@ -13,7 +13,7 @@ license = "MIT"
 name = "revisionstore"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 async-trait = "0.1.86"
 blob = { version = "0.1.0", path = "../blob" }
 byteorder = "1.5"
@@ -57,7 +57,7 @@ sapling-version = { version = "0.1.0", path = "../version" }
 sapling-vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_derive = "1.0.185"
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 sha1 = "0.10.5"
 sha2 = "0.10.6"
 thiserror = "2.0.18"

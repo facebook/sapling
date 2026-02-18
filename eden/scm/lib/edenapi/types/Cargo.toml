@@ -17,7 +17,7 @@ name = "macro_test"
 path = "test/basic_test.rs"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 blob = { version = "0.1.0", path = "../../blob" }
 bytes = { version = "1.11.1", features = ["serde"] }
 manifest-augmented-tree = { version = "0.1.0", path = "../../manifest-augmented-tree" }
@@ -38,7 +38,7 @@ thiserror = "2.0.18"
 [dev-dependencies]
 quickcheck_macros = "1.1.0"
 sapling-insta_ext = { version = "0.1.0", path = "../../insta_ext" }
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 
 [features]
 default = ["for-tests"]

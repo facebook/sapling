@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
 filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

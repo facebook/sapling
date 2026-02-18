@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 async-compression = { version = "0.4.9", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 async-stream = "0.3"
 async-trait = "0.1.86"
@@ -66,7 +66,7 @@ sapling-types = { version = "0.1.0", path = "../../../../scm/lib/types" }
 scuba_ext = { version = "0.1.0", path = "../../../common/scuba_ext" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_cbor = "0.11.2"
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 sha2 = "0.10.6"
 smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specialization", "union"] }
 sorted_vector_map = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

@@ -13,7 +13,7 @@ license = "MIT"
 name = "vfs"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 blob = { version = "0.1.0", path = "../blob" }
 dashmap = { version = "5.5.3", features = ["rayon", "serde"] }
 flume = "0.11.1"

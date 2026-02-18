@@ -8,7 +8,7 @@ edition = "2024"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 ascii = "1.1.0"
 bookmarks_types = { version = "0.1.0", path = "../../repo_attributes/bookmarks/bookmarks_types" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -23,7 +23,7 @@ rusoto_core = "0.48.0"
 sapling-repourl = { version = "0.1.0", path = "../../../scm/lib/repo/url" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_ignored = "0.1.14"
-serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
+serde_json = { version = "1.0.145", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 thiserror = "2.0.18"
 toml = { version = "0.9.11", features = ["preserve_order"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
