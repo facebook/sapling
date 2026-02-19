@@ -122,7 +122,7 @@ export function MergeControls({prNumber}: MergeControlsProps) {
     try {
       // Always use rebase merge strategy
       const op = new MergePROperation(Number(prNumber), 'rebase', deleteBranch);
-      await runOperation(op);
+      await runOperation(op, /* throwOnError */ true);
 
       // Get PRs below to close
       const prsBelow = getPRsBelowInStack();
@@ -140,7 +140,7 @@ export function MergeControls({prNumber}: MergeControlsProps) {
               belowPrNumber,
               `Closed automatically - changes were included in PR #${prNumber} which was merged.`
             );
-            await runOperation(closeOp);
+            await runOperation(closeOp, /* throwOnError */ true);
           } catch (err) {
             // Log but don't fail the whole operation if one close fails
             // eslint-disable-next-line no-console
@@ -200,7 +200,7 @@ export function MergeControls({prNumber}: MergeControlsProps) {
             Number(stalePR.number),
             `Closed: changes already merged via PR #${mergedAbovePrNumber}`
           );
-          await runOperation(closeOp);
+          await runOperation(closeOp, /* throwOnError */ true);
         }
         showToast(t('Closed $count stale PRs', {replace: {$count: String(stalePRCount)}}), {durationMs: 3000});
         exitReviewMode();
