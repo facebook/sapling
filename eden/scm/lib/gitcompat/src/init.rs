@@ -64,11 +64,13 @@ pub fn maybe_init_inside_dotgit(root_path: &Path, ident: Identity) -> Result<()>
     // Skip if file mtime is up to date (since shelling out to `git config` might take time).
     let user_config_path = translated_git_user_config_path(&dot_dir, ident);
     let repo_config_path = translated_git_repo_config_path(&dot_dir, ident);
-    let git_repo_mtime = git_repo_config_mtime(&dot_git_path);
-    let git_user_mtime = git_user_config_mtime();
-
     // NOTE: At this point no sapling config is loaded. For simplicity, this does not respect `ui.git`.
     let git = BareGit::from_git_dir_and_config(dot_git_path, &BTreeMap::<String, String>::new());
+
+    // Use common_git_dir() for config mtime: in a worktree, `.git/config` lives
+    // in the main repo's `.git/`, not in the worktree-specific dir.
+    let git_repo_mtime = git_repo_config_mtime(git.common_git_dir());
+    let git_user_mtime = git_user_config_mtime();
 
     if git_repo_mtime != try_mtime(&repo_config_path)
         || git_user_mtime != try_mtime(&user_config_path)

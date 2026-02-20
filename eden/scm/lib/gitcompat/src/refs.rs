@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::io::BufWriter;
 use std::io::Write as _;
+use std::path::Path;
 use std::process::Stdio;
 
 use anyhow::Context;
@@ -218,6 +219,17 @@ fn is_refname_component_valid(name: &str) -> bool {
 
 // Implementation details used by list_references().
 impl BareGit {
+    /// Return the directory to use for a given ref name.
+    /// Worktree-specific refs (HEAD, MERGE_HEAD, etc.) use `git_dir()`.
+    /// Shared refs (refs/*, packed-refs) use `common_git_dir()`.
+    fn ref_dir(&self, name: &str) -> &Path {
+        match name {
+            "HEAD" | "FETCH_HEAD" | "ORIG_HEAD" | "MERGE_HEAD" | "CHERRY_PICK_HEAD"
+            | "REVERT_HEAD" | "BISECT_HEAD" => self.git_dir(),
+            _ => self.common_git_dir(),
+        }
+    }
+
     fn populate_loose_file_reference(
         &self,
         matcher: &dyn Matcher,
@@ -227,7 +239,7 @@ impl BareGit {
         if !matcher.matches_file(RepoPath::from_str(name.as_ref())?)? {
             return Ok(());
         }
-        let path = self.git_dir().join(name.as_ref());
+        let path = self.ref_dir(&name).join(name.as_ref());
         let content = return_ok_if_not_found!(fs::read_to_string(path))?;
         let value = ReferenceValue::from_content(&content)
             .with_context(|| format!("Resolving loose reference {name:?}"))?;
@@ -244,7 +256,7 @@ impl BareGit {
         if let DirectoryMatch::Nothing = matcher.matches_directory(RepoPath::from_str(prefix)?)? {
             return Ok(());
         }
-        let dir = return_ok_if_not_found!(fs::read_dir(self.git_dir().join(prefix)))?;
+        let dir = return_ok_if_not_found!(fs::read_dir(self.common_git_dir().join(prefix)))?;
         for entry in dir {
             let entry = entry?;
             let file_name = match entry.file_name().into_string() {
@@ -270,7 +282,7 @@ impl BareGit {
         insert: &mut dyn FnMut(String, ReferenceValue),
     ) -> Result<()> {
         let content =
-            return_ok_if_not_found!(fs::read_to_string(self.git_dir().join("packed-refs")))?;
+            return_ok_if_not_found!(fs::read_to_string(self.common_git_dir().join("packed-refs")))?;
 
         // To support "peeled" refs.
         let mut last_inserted_name: Option<&str> = None;
@@ -550,5 +562,90 @@ mod tests {
         let config: BTreeMap<&str, &str> = BTreeMap::new();
         let git_dir = dir.path().to_owned();
         (dir, BareGit::from_git_dir_and_config(git_dir, &config))
+    }
+
+    /// Set up a simulated worktree layout:
+    /// - `main_git/` acts as the main `.git/` dir (with shared refs and packed-refs)
+    /// - `main_git/worktrees/wt/` acts as the worktree-specific git dir
+    /// - `main_git/worktrees/wt/commondir` points back to `main_git/`
+    /// - `main_git/worktrees/wt/HEAD` is worktree-specific
+    fn setup_worktree(
+        main_loose: &[&str],
+        main_packed: Option<&str>,
+        wt_head: &str,
+    ) -> (TempDir, BareGit) {
+        let dir = tempfile::tempdir().unwrap();
+        let main_git = dir.path().join("main_git");
+        let wt_dir = main_git.join("worktrees").join("wt");
+        fs::create_dir_all(&wt_dir).unwrap();
+
+        // Write shared loose refs into main_git
+        for entry in main_loose {
+            let (name, value) = entry.split_once(' ').unwrap();
+            let path = main_git.join(name);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, value).unwrap();
+        }
+        // Write shared packed-refs into main_git
+        if let Some(data) = main_packed {
+            fs::write(main_git.join("packed-refs"), data).unwrap();
+        }
+        // Write worktree-specific HEAD
+        fs::write(wt_dir.join("HEAD"), wt_head).unwrap();
+        // Write commondir pointing to main_git
+        fs::write(wt_dir.join("commondir"), "../..").unwrap();
+
+        let config: BTreeMap<&str, &str> = BTreeMap::new();
+        (dir, BareGit::from_git_dir_and_config(wt_dir, &config))
+    }
+
+    #[test]
+    fn test_worktree_references() {
+        let (_dir, git) = setup_worktree(
+            &[
+                "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "refs/heads/feature bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            ],
+            Some(concat!(
+                "# pack-refs with: peeled fully-peeled sorted\n",
+                "cccccccccccccccccccccccccccccccccccccccc refs/remotes/origin/main\n",
+            )),
+            "ref: refs/heads/feature",
+        );
+
+        // HEAD should come from the worktree dir
+        assert_eq!(
+            git.debug_lookup_reference("HEAD"),
+            "refs/heads/feature => bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        );
+
+        // Shared refs should be found
+        assert_eq!(
+            git.debug_lookup_reference("refs/heads/main"),
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        );
+        assert_eq!(
+            git.debug_lookup_reference("refs/remotes/origin/main"),
+            "cccccccccccccccccccccccccccccccccccccccc"
+        );
+
+        // list_references should combine worktree HEAD + shared refs
+        let refs = git.debug_list_references(None);
+        assert_eq!(
+            refs,
+            [
+                "HEAD => refs/heads/feature",
+                "refs/heads/feature bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "refs/remotes/origin/main cccccccccccccccccccccccccccccccccccccccc",
+            ]
+        );
+
+        // resolve_head should work (follow HEAD -> refs/heads/feature -> hash)
+        let head = git.resolve_head().unwrap();
+        assert_eq!(
+            head.to_hex(),
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        );
     }
 }

@@ -18,6 +18,7 @@ use std::sync::RwLock;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use identity::dotgit::follow_dotgit_path;
+use identity::dotgit::resolve_common_dir;
 use spawn_ext::CommandExt;
 
 /// Run `git` outside a repo.
@@ -35,6 +36,10 @@ pub struct BareGit {
     /// This is usually `root/.git`. When `.git` is a "symlink" ("gitdir: ..."),
     /// this is the "symlink" destination.
     pub(crate) git_dir: PathBuf,
+    /// The "common dir" for shared resources (refs, packed-refs, objects).
+    /// In a worktree, this points to the main `.git/` directory.
+    /// For non-worktree repos, this equals `git_dir`.
+    pub(crate) common_dir: PathBuf,
     pub(crate) parent: GlobalGit,
 }
 
@@ -105,8 +110,11 @@ impl GlobalGit {
 
     /// Associate with a bare repo.
     pub fn with_bare(self, git_dir: PathBuf) -> BareGit {
+        let git_dir = follow_dotgit_path(git_dir);
+        let common_dir = resolve_common_dir(&git_dir);
         BareGit {
-            git_dir: follow_dotgit_path(git_dir),
+            git_dir,
+            common_dir,
             parent: self,
         }
     }
@@ -126,16 +134,22 @@ impl GlobalGit {
 impl BareGit {
     /// Construct from git_dir (".git" path) and config.
     pub fn from_git_dir_and_config(git_dir: PathBuf, config: &dyn Config) -> Self {
+        let git_dir = follow_dotgit_path(git_dir);
+        let common_dir = resolve_common_dir(&git_dir);
         Self {
-            git_dir: follow_dotgit_path(git_dir),
+            git_dir,
+            common_dir,
             parent: GlobalGit::from_config(config),
         }
     }
 
     /// Construct from git_dir (".git" path) and default config.
     pub fn from_git_dir(git_dir: PathBuf) -> Self {
+        let git_dir = follow_dotgit_path(git_dir);
+        let common_dir = resolve_common_dir(&git_dir);
         Self {
-            git_dir: follow_dotgit_path(git_dir),
+            git_dir,
+            common_dir,
             parent: GlobalGit::default(),
         }
     }
@@ -148,6 +162,13 @@ impl BareGit {
     /// The bare repo root, usually ".git" or "<name>.git".
     pub fn git_dir(&self) -> &Path {
         &self.git_dir
+    }
+
+    /// The common dir for shared resources.
+    /// In a worktree, this is the main `.git/` directory.
+    /// For non-worktree repos, this equals `git_dir()`.
+    pub fn common_git_dir(&self) -> &Path {
+        &self.common_dir
     }
 }
 
