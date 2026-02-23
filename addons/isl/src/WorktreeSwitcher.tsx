@@ -15,7 +15,10 @@ import {useAtomValue} from 'jotai';
 import {Column, ScrollY} from './ComponentUtils';
 import {T, t} from './i18n';
 import {useRunOperation} from './operationsState';
+import {WorktreeAddOperation} from './operations/WorktreeAddOperation';
 import {WorktreeRemoveOperation} from './operations/WorktreeRemoveOperation';
+import {dagWithPreviews} from './previews';
+import {readAtom} from './jotaiUtils';
 import {repositoryInfo} from './serverAPIState';
 import {worktreesAtom} from './worktrees';
 import serverAPI from './ClientToServerAPI';
@@ -143,6 +146,21 @@ const styles = stylex.create({
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+  },
+  newWorktreeButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--halfpad)',
+    padding: 'var(--halfpad) var(--pad)',
+    cursor: 'pointer',
+    borderTop: '1px solid var(--subtle-hover-darken)',
+    width: '100%',
+    fontSize: '12px',
+    color: 'var(--foreground-sub)',
+    ':hover': {
+      backgroundColor: 'var(--subtle-hover-darken)',
+      color: 'var(--foreground)',
+    },
   },
 });
 
@@ -309,6 +327,23 @@ function WorktreeDropdown({
           )}
         </div>
       </ScrollY>
+      <div
+        {...stylex.props(styles.newWorktreeButton)}
+        onClick={() => {
+          const dag = readAtom(dagWithPreviews);
+          const mainCommit = dag.resolve('main') ?? dag.resolve('master');
+          if (!mainCommit) {
+            return;
+          }
+          runOperation(new WorktreeAddOperation(mainCommit.hash, 'new-worktree'));
+          dismiss();
+        }}
+        data-testid="new-worktree-button">
+        <Icon icon="add" />
+        <span>
+          <T>New Worktree</T>
+        </span>
+      </div>
     </Column>
   );
 }
