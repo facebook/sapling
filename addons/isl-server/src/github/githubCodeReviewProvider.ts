@@ -541,14 +541,16 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
       if (result.stderr) {
         onProgress('stderr', result.stderr);
       }
+      onProgress('exit', result.exitCode ?? 0);
     } catch (error) {
-      const err = error as Error & {stderr?: string; stdout?: string};
+      const err = error as Error & {stderr?: string; stdout?: string; exitCode?: number};
       if (err.stderr) {
         onProgress('stderr', err.stderr);
       }
       if (err.stdout) {
         onProgress('stdout', err.stdout);
       }
+      onProgress('exit', err.exitCode ?? 1);
       throw error;
     }
   }
