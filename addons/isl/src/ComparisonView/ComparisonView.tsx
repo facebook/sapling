@@ -30,7 +30,7 @@ import {group, notEmpty} from 'shared/utils';
 import serverAPI from '../ClientToServerAPI';
 import {EmptyState} from '../EmptyState';
 import {useGeneratedFileStatuses} from '../GeneratedFile';
-import {allDiffSummaries, diffSummary} from '../codeReview/CodeReviewInfo';
+import {allDiffSummaries, currentGitHubUser, diffSummary, triggerFullDiffSummariesRefresh} from '../codeReview/CodeReviewInfo';
 import {currentPRStackContextAtom} from '../codeReview/PRStacksAtom';
 import {T, t} from '../i18n';
 import {atomFamilyWeak, atomLoadableWithRefresh, localStorageBackedAtom} from '../jotaiUtils';
@@ -46,6 +46,7 @@ import {MergeControls} from '../reviewMode/MergeControls';
 import {useQuickReviewAction} from '../reviewSubmission';
 import {latestHeadCommit} from '../serverAPIState';
 import {themeState} from '../theme';
+import {showToast} from '../toast';
 import {GeneratedStatus} from '../types';
 import {SplitDiffView} from './SplitDiffView';
 import {
@@ -281,15 +282,18 @@ function DiffSkeleton({fileCount = 3}: {fileCount?: number}) {
 }
 
 /**
- * Review action buttons bar (Approve / Request Changes).
- * Shown below stack navigation in review mode.
+ * Review action buttons bar.
+ * - Own draft PR: shows "Publish" button
+ * - Own non-draft PR: shows nothing
+ * - Someone else's PR: shows Approve / Request Changes
  */
 function ReviewActionsBar() {
   const reviewMode = useAtomValue(reviewModeAtom);
   const allDiffs = useAtomValue(allDiffSummaries);
+  const currentUser = useAtomValue(currentGitHubUser);
 
-  // Get nodeId from diff summaries when in review mode
-  const nodeId = useMemo(() => {
+  // Get PR summary from diff summaries when in review mode
+  const prSummary = useMemo(() => {
     if (!reviewMode.active || !reviewMode.prNumber) {
       return undefined;
     }
@@ -301,15 +305,64 @@ function ReviewActionsBar() {
     if (summary?.type !== 'github') {
       return undefined;
     }
-    return summary.nodeId;
+    return summary;
   }, [reviewMode.active, reviewMode.prNumber, allDiffs]);
 
+  const nodeId = prSummary?.nodeId;
+  const isOwnPR = currentUser != null && prSummary?.author != null && prSummary.author === currentUser;
+  const isDraft = prSummary?.state === 'DRAFT';
+
   const {approve, requestChanges, canSubmit} = useQuickReviewAction(nodeId);
+
+  const handlePublish = useCallback(async () => {
+    if (!nodeId) {
+      return;
+    }
+    serverAPI.postMessage({
+      type: 'publishPullRequest',
+      pullRequestId: nodeId,
+    });
+
+    const response = await serverAPI.nextMessageMatching(
+      'publishedPullRequest',
+      () => true,
+    );
+
+    if (response.result.error) {
+      showToast(t('Failed to publish PR: $error', {replace: {$error: response.result.error.message}}), {
+        durationMs: 5000,
+      });
+      return;
+    }
+
+    showToast(t('PR published and ready for review'));
+    triggerFullDiffSummariesRefresh();
+  }, [nodeId]);
 
   if (!reviewMode.active) {
     return null;
   }
 
+  // Own PR: show Publish if draft, nothing if not
+  if (isOwnPR) {
+    if (!isDraft) {
+      return null;
+    }
+    return (
+      <div className="review-actions-bar">
+        <Button
+          className="review-action-btn review-action-approve"
+          onClick={handlePublish}
+          disabled={!nodeId}
+          data-testid="quick-publish-button">
+          <Icon icon="cloud-upload" slot="start" />
+          <T>Publish</T>
+        </Button>
+      </div>
+    );
+  }
+
+  // Someone else's PR: show Approve / Request Changes
   return (
     <div className="review-actions-bar">
       <Button
