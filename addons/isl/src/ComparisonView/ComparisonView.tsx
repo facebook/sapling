@@ -423,104 +423,88 @@ function StackNavigationBar() {
 
   return (
     <div className="stack-navigation-container">
-      {/* Collapsed: compact PR row matching expanded title style */}
-      {collapsed && showPRInfo && (
-        <div
-          className="stack-nav-compact-row"
-          role="button"
-          tabIndex={0}
-          onClick={e => {
-            // Don't expand when clicking review action buttons
-            if (!(e.target as HTMLElement).closest('.review-action-btn')) {
-              setCollapsed(false);
-            }
-          }}
-          onKeyDown={e => e.key === 'Enter' && setCollapsed(false)}
-          title="Expand header">
-          <PRCompactHeader prNumber={reviewMode.prNumber!} />
-          <ReviewActionsBar />
-          <span className="codicon codicon-chevron-down" aria-hidden="true" />
+      {/* Review actions — always visible at the top */}
+      <ReviewActionsBar />
+
+      {/* Stack Navigation — always visible, above PR title */}
+      {showStackNav && (
+        <div className="stack-navigation-bar">
+          <span className="stack-label">
+            <Icon icon="git-branch" />
+            <T>STACK</T>
+          </span>
+          <span className="stack-direction-hint stack-direction-base">
+            <T>main</T>
+            <Icon icon="arrow-right" />
+          </span>
+          <div className="stack-pr-pills">
+            {reversedEntries.map((entry, idx) => {
+              const reviewClass =
+                entry.reviewDecision === 'APPROVED'
+                  ? 'stack-pr-approved'
+                  : entry.reviewDecision === 'CHANGES_REQUESTED'
+                    ? 'stack-pr-changes-requested'
+                    : '';
+
+              const pill = (
+                <Tooltip key={entry.prNumber} title={entry.title} delayMs={500}>
+                  <Button
+                    className={`stack-pr-pill ${entry.isCurrent ? 'stack-pr-current' : ''} ${entry.state === 'MERGED' ? 'stack-pr-merged' : ''} ${reviewClass}`}
+                    onClick={() => handleNavigateToPR(entry.prNumber, entry.headHash)}
+                    disabled={entry.isCurrent || !entry.headHash}>
+                    {entry.reviewDecision === 'APPROVED' && !entry.isCurrent && (
+                      <Icon icon="check" />
+                    )}
+                    {entry.reviewDecision === 'CHANGES_REQUESTED' && !entry.isCurrent && (
+                      <Icon icon="diff" />
+                    )}
+                    #{entry.prNumber}
+                    {entry.state === 'MERGED' && <Icon icon="git-merge" />}
+                  </Button>
+                </Tooltip>
+              );
+              return idx > 0 ? (
+                <span key={entry.prNumber} className="stack-pill-with-arrow">
+                  <span className="stack-arrow">
+                    <Icon icon="arrow-right" />
+                  </span>
+                  {pill}
+                </span>
+              ) : (
+                pill
+              );
+            })}
+          </div>
+          <span className="stack-position">
+            {positionFromBase} / {stackContext!.stackSize}
+          </span>
         </div>
       )}
 
-      {/* Expandable content - instant toggle */}
-      <div className={`stack-nav-collapsible ${collapsed ? 'stack-nav-collapsed' : ''}`}>
-        {/* PR Info - always show in review mode */}
-        {showPRInfo && <PRInfoHeader prNumber={reviewMode.prNumber!} />}
-
-        {/* Stack Navigation - only for multi-PR stacks */}
-        {showStackNav && (
-          <div className="stack-navigation-bar">
-            <span className="stack-label">
-              <Icon icon="git-branch" />
-              <T>STACK</T>
-            </span>
-            <span className="stack-direction-hint stack-direction-base">
-              <T>main</T>
-              <Icon icon="arrow-right" />
-            </span>
-            <div className="stack-pr-pills">
-              {reversedEntries.map((entry, idx) => {
-                // Determine review status class
-                const reviewClass =
-                  entry.reviewDecision === 'APPROVED'
-                    ? 'stack-pr-approved'
-                    : entry.reviewDecision === 'CHANGES_REQUESTED'
-                      ? 'stack-pr-changes-requested'
-                      : '';
-
-                const pill = (
-                  <Tooltip key={entry.prNumber} title={entry.title} delayMs={500}>
-                    <Button
-                      className={`stack-pr-pill ${entry.isCurrent ? 'stack-pr-current' : ''} ${entry.state === 'MERGED' ? 'stack-pr-merged' : ''} ${reviewClass}`}
-                      onClick={() => handleNavigateToPR(entry.prNumber, entry.headHash)}
-                      disabled={entry.isCurrent || !entry.headHash}>
-                      {entry.reviewDecision === 'APPROVED' && !entry.isCurrent && (
-                        <Icon icon="check" />
-                      )}
-                      {entry.reviewDecision === 'CHANGES_REQUESTED' && !entry.isCurrent && (
-                        <Icon icon="diff" />
-                      )}
-                      #{entry.prNumber}
-                      {entry.state === 'MERGED' && <Icon icon="git-merge" />}
-                    </Button>
-                  </Tooltip>
-                );
-                return idx > 0 ? (
-                  <span key={entry.prNumber} className="stack-pill-with-arrow">
-                    <span className="stack-arrow">
-                      <Icon icon="arrow-right" />
-                    </span>
-                    {pill}
-                  </span>
-                ) : (
-                  pill
-                );
-              })}
-            </div>
-            <span className="stack-position">
-              {positionFromBase} / {stackContext!.stackSize}
-            </span>
-          </div>
-        )}
-
-        {/* Bottom bar: review actions + collapse toggle (entire bar is clickable) */}
+      {/* Collapsible PR info (title, description) */}
+      {showPRInfo && (
         <div
-          className="stack-nav-bottom-bar"
+          className="stack-nav-collapsible-toggle"
           role="button"
           tabIndex={0}
-          onClick={e => {
-            // Don't collapse when clicking review action buttons
-            if (!(e.target as HTMLElement).closest('.review-action-btn')) {
-              setCollapsed(true);
-            }
-          }}
-          onKeyDown={e => e.key === 'Enter' && setCollapsed(true)}
-          title="Collapse header">
-          <ReviewActionsBar />
-          <span className="codicon codicon-chevron-up stack-nav-collapse-icon" aria-hidden="true" />
+          onClick={() => setCollapsed(!collapsed)}
+          onKeyDown={e => e.key === 'Enter' && setCollapsed(!collapsed)}
+          title={collapsed ? 'Expand PR details' : 'Collapse PR details'}>
+          {collapsed ? (
+            <div className="stack-nav-compact-row">
+              <PRCompactHeader prNumber={reviewMode.prNumber!} />
+              <span className="codicon codicon-chevron-down" aria-hidden="true" />
+            </div>
+          ) : (
+            <>
+              <PRInfoHeader prNumber={reviewMode.prNumber!} />
+              <div className="stack-nav-collapse-hint">
+                <span className="codicon codicon-chevron-up stack-nav-collapse-icon" aria-hidden="true" />
+              </div>
+            </>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
