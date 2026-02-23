@@ -17,6 +17,7 @@ import {currentPRStackContextAtom, prStacksAtom} from '../codeReview/PRStacksAto
 import {useRunOperation} from '../operationsState';
 import {MergePROperation} from '../operations/MergePROperation';
 import {ClosePROperation} from '../operations/ClosePROperation';
+import {SyncPROperation} from '../operations/SyncPROperation';
 import {
   deriveMergeability,
   formatMergeBlockReasons,
@@ -26,6 +27,7 @@ import {writeAtom} from '../jotaiUtils';
 import {showToast} from '../toast';
 import {T, t} from '../i18n';
 import {exitReviewMode} from '../reviewMode';
+import serverAPI from '../ClientToServerAPI';
 import './MergeControls.css';
 
 export type MergeControlsProps = {
@@ -50,6 +52,7 @@ function isGitHubDiffSummary(pr: DiffSummary): pr is DiffSummary & {type: 'githu
  */
 export function MergeControls({prNumber}: MergeControlsProps) {
   const [deleteBranch, setDeleteBranch] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const runOperation = useRunOperation();
   const mergeInProgress = useAtomValue(mergeInProgressAtom);
   const stackContext = useAtomValue(currentPRStackContextAtom);
@@ -73,8 +76,13 @@ export function MergeControls({prNumber}: MergeControlsProps) {
   const mergeStateStatus = pr && isGitHubDiffSummary(pr) ? pr.mergeStateStatus : undefined;
   const hasConflicts = mergeStateStatus === 'DIRTY' || mergeable === 'CONFLICTING';
 
+  // Check if PR is a draft (use pr.state which is always accurate, unlike mergeStateStatus)
+  const prState = pr && isGitHubDiffSummary(pr) ? pr.state : undefined;
+  const isDraft = prState === 'DRAFT';
+
   // Get PR URL for GitHub link
   const prUrl = pr && isGitHubDiffSummary(pr) ? pr.url : null;
+  const prNodeId = pr && isGitHubDiffSummary(pr) ? pr.nodeId : null;
 
   // Get PRs below this one in the stack (to close after merge)
   const getPRsBelowInStack = useCallback((): number[] => {
@@ -97,7 +105,10 @@ export function MergeControls({prNumber}: MergeControlsProps) {
     return prsBelow;
   }, [stackContext, prNumber, diffs.value]);
 
-  // Derive mergeability (but exclude "behind" as a blocking reason - we use rebase merge)
+  // Check if branch is behind base branch
+  const isBehind = mergeStateStatus === 'BEHIND';
+
+  // Derive mergeability
   const mergeability = pr
     ? deriveMergeability({
         signalSummary: pr.signalSummary,
@@ -108,9 +119,9 @@ export function MergeControls({prNumber}: MergeControlsProps) {
       })
     : {canMerge: false, reasons: ['Loading PR data...']};
 
-  // Filter out "behind" reason since we always use rebase merge
-  const filteredReasons = mergeability.reasons.filter(r => !r.includes('behind'));
-  const canMerge = filteredReasons.length === 0 && !hasConflicts;
+  // Filter out "behind" and "draft" reasons from the general list since we handle them with dedicated UI
+  const filteredReasons = mergeability.reasons.filter(r => !r.includes('behind') && !r.includes('draft'));
+  const canMerge = filteredReasons.length === 0 && !hasConflicts && !isBehind && !isDraft;
 
   const handleMerge = useCallback(async () => {
     if (!canMerge || isMerging) {
@@ -163,6 +174,51 @@ export function MergeControls({prNumber}: MergeControlsProps) {
     }
   }, [prNumber, deleteBranch, canMerge, isMerging, runOperation, getPRsBelowInStack]);
 
+  const handleUpdateBranch = useCallback(async () => {
+    if (isSyncing) {
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      const syncOp = new SyncPROperation(prNumber);
+      await runOperation(syncOp, /* throwOnError */ true);
+      showToast(t('Branch updated successfully'), {durationMs: 3000});
+      triggerFullDiffSummariesRefresh();
+    } catch (error) {
+      showToast(t('Failed to update branch: $error', {replace: {$error: String(error)}}), {durationMs: 8000});
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [prNumber, isSyncing, runOperation]);
+
+  const [isPublishing, setIsPublishing] = useState(false);
+  const handlePublish = useCallback(async () => {
+    if (isPublishing || !prNodeId) {
+      return;
+    }
+    setIsPublishing(true);
+    try {
+      serverAPI.postMessage({
+        type: 'publishPullRequest',
+        pullRequestId: prNodeId,
+      });
+      const response = await serverAPI.nextMessageMatching(
+        'publishedPullRequest',
+        () => true,
+      );
+      if (response.result.error) {
+        showToast(t('Failed to publish PR: $error', {replace: {$error: response.result.error.message}}), {durationMs: 8000});
+      } else {
+        showToast(t('PR published and ready for review'), {durationMs: 3000});
+        triggerFullDiffSummariesRefresh();
+      }
+    } catch (error) {
+      showToast(t('Failed to publish PR: $error', {replace: {$error: String(error)}}), {durationMs: 8000});
+    } finally {
+      setIsPublishing(false);
+    }
+  }, [prNodeId, isPublishing]);
+
   if (!pr) {
     return (
       <div className="merge-controls merge-controls-loading">
@@ -172,7 +228,6 @@ export function MergeControls({prNumber}: MergeControlsProps) {
   }
 
   // Check if PR is already merged - show success state
-  const prState = isGitHubDiffSummary(pr) ? pr.state : undefined;
   if (prState === 'MERGED') {
     return (
       <div className="merge-controls merge-controls-merged">
@@ -275,6 +330,92 @@ export function MergeControls({prNumber}: MergeControlsProps) {
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // If PR is a draft, show publish button instead of merge
+  if (isDraft) {
+    return (
+      <div className="merge-controls">
+        <div className="merge-controls-row">
+          <div className="merge-controls-actions">
+            <div className="merge-strategy-group">
+              <div className="merge-sync-status merge-sync-draft">
+                <Icon icon="edit" />
+                <span><T>This pull request is still a draft</T></span>
+              </div>
+              <div className="merge-strategy-row">
+                <Tooltip title={t('Mark this PR as ready for review')} placement="top">
+                  <Button
+                    className="publish-pr-btn"
+                    disabled={isPublishing || !prNodeId}
+                    onClick={handlePublish}>
+                    {isPublishing ? (
+                      <>
+                        <Icon icon="loading" slot="start" />
+                        <T>Publishing...</T>
+                      </>
+                    ) : (
+                      <>
+                        <Icon icon="cloud-upload" slot="start" />
+                        <T>Ready for review</T>
+                      </>
+                    )}
+                  </Button>
+                </Tooltip>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If branch is behind base, show update branch button instead of merge
+  if (isBehind) {
+    return (
+      <div className="merge-controls">
+        <div className="merge-controls-row">
+          <div className="merge-controls-actions">
+            <div className="merge-strategy-group">
+              <div className="merge-sync-status merge-sync-behind">
+                <Icon icon="warning" />
+                <span><T>This branch is out of date with the base branch</T></span>
+              </div>
+              <div className="merge-strategy-row">
+                <Tooltip title={t('Update this branch by rebasing onto the base branch')} placement="top">
+                  <Button
+                    className="update-branch-btn"
+                    disabled={isSyncing}
+                    onClick={handleUpdateBranch}>
+                    {isSyncing ? (
+                      <>
+                        <Icon icon="loading" slot="start" />
+                        <T>Updating...</T>
+                      </>
+                    ) : (
+                      <>
+                        <Icon icon="sync" slot="start" />
+                        <T>Update branch</T>
+                      </>
+                    )}
+                  </Button>
+                </Tooltip>
+              </div>
+            </div>
+          </div>
+        </div>
+        {filteredReasons.length > 0 && (
+          <div className="merge-block-reasons">
+            {filteredReasons.map((reason, i) => (
+              <div key={i} className="merge-block-reason">
+                <Icon icon="warning" size="S" />
+                {reason}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

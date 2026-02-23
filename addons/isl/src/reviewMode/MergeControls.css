@@ -471,3 +471,103 @@
 .close-stale-btn:disabled {
   opacity: 0.6;
 }
+
+/* Draft PR status badge */
+.merge-sync-draft {
+  background: color-mix(in srgb, #8b5cf6 12%, transparent);
+  color: #8b5cf6;
+}
+
+.merge-sync-draft .codicon {
+  font-size: 12px;
+}
+
+/* Publish/ready-for-review button - purple style for draft state */
+.publish-pr-btn {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 8px 20px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  min-width: 90px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.publish-pr-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 8px rgba(124, 58, 237, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.publish-pr-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.publish-pr-btn:disabled {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--graphite-text-tertiary) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.publish-pr-btn .codicon {
+  font-size: 14px;
+}
+
+/* Update branch button - blue/info style for "behind" state */
+.update-branch-btn {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 8px 20px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  min-width: 90px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.update-branch-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 8px rgba(37, 99, 235, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.update-branch-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.update-branch-btn:disabled {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--graphite-text-tertiary) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.update-branch-btn .codicon {
+  font-size: 14px;
+}
