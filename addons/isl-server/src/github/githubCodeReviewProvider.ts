@@ -53,6 +53,7 @@ import {
 } from './generated/graphql';
 import {parseStackInfo, type StackEntry} from './parseStackInfo';
 import queryGraphQL from './queryGraphQL';
+import {publishPullRequest} from './publishPullRequest';
 import {submitPullRequestReview} from './submitPullRequestReview';
 
 export type GitHubDiffSummary = {
@@ -458,6 +459,10 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
       this.handleSubmitPullRequestReview(message, postMessage);
       return true;
     }
+    if (message.type === 'publishPullRequest') {
+      this.handlePublishPullRequest(message, postMessage);
+      return true;
+    }
     return false;
   }
 
@@ -486,6 +491,30 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     } catch (error) {
       postMessage({
         type: 'submittedPullRequestReview',
+        result: {error: error as Error},
+      });
+    }
+  }
+
+  private async handlePublishPullRequest(
+    message: {
+      type: 'publishPullRequest';
+      pullRequestId: string;
+    },
+    postMessage: (message: ServerToClientMessage) => void,
+  ): Promise<void> {
+    try {
+      const pullRequestId = await publishPullRequest(
+        this.codeReviewSystem.hostname,
+        message.pullRequestId,
+      );
+      postMessage({
+        type: 'publishedPullRequest',
+        result: {value: {pullRequestId}},
+      });
+    } catch (error) {
+      postMessage({
+        type: 'publishedPullRequest',
         result: {error: error as Error},
       });
     }

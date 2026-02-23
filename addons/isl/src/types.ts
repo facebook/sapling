@@ -1050,6 +1050,10 @@ export type ClientToServerMessage =
       body?: string;
       threads?: DraftPullRequestReviewThread[];
     }
+  | {
+      type: 'publishPullRequest';
+      pullRequestId: string;
+    }
   | {type: 'fetchLandInfo'; topOfStack: DiffId}
   | {type: 'fetchAndSetStables'; additionalStables: Array<string>}
   | {type: 'fetchStableLocationAutocompleteOptions'}
@@ -1216,6 +1220,10 @@ export type ServerToClientMessage =
   | {
       type: 'submittedPullRequestReview';
       result: Result<{reviewId: string}>;
+    }
+  | {
+      type: 'publishedPullRequest';
+      result: Result<{pullRequestId: string}>;
     }
   | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
   | {type: 'confirmedLand'; result: Result<undefined>}
