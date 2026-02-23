@@ -94,6 +94,13 @@ export class SuccessionTracker {
                   new: commit.title + '\n' + commit.description,
                 },
               });
+              // eslint-disable-next-line no-console
+              console.warn(
+                '[SuccessionTracker] Skipped succession: diffId changed across amend.',
+                'Old commit', oldHash.slice(0, 8), 'had diffId', previousCommit.diffId,
+                'but new commit', newHash.slice(0, 8), 'has diffId', commit.diffId,
+                '— this may cause stale PR state in the UI.',
+              );
               continue;
             }
 
