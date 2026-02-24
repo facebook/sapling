@@ -138,9 +138,11 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     }
 
     const variables: CombinedPRQueryVariables = {openQuery, closedQuery, numToFetch: 100};
-    const query = this.hasMergeQueueSupport === false
-      ? CombinedPRQueryWithoutMergeQueue
-      : CombinedPRQueryWithMergeQueue;
+    // Only include mergeQueueEntry fields after we've confirmed support via __type introspection.
+    // On first call (null), use WithoutMergeQueue to avoid schema errors on repos without merge queues.
+    const query = this.hasMergeQueueSupport === true
+      ? CombinedPRQueryWithMergeQueue
+      : CombinedPRQueryWithoutMergeQueue;
 
     const result = await this.query<CombinedPRQueryData, CombinedPRQueryVariables>(
       query,
@@ -158,9 +160,6 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     }
     this.hasMergeQueueSupport = hasMergeQueue;
 
-    // If we used the wrong query variant (first call used WithMergeQueue but it's not supported,
-    // causing a GraphQL error), the catch in triggerDiffSummariesFetch handles it.
-    // On retry, hasMergeQueueSupport will be set correctly.
     return result;
   }
 

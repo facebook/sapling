@@ -76,6 +76,15 @@ export default async function queryGraphQL<TData, TVariables>(
         throw new Error(`GhNotInstalledError: ${(error as Error).stack}`);
       }
     } else if (isEjecaError(error)) {
+      // Log stderr/stdout from gh for debugging intermittent failures
+      if (error.stderr) {
+        // eslint-disable-next-line no-console
+        console.error(`[queryGraphQL] gh stderr: ${error.stderr}`);
+      }
+      if (error.stdout) {
+        // eslint-disable-next-line no-console
+        console.error(`[queryGraphQL] gh stdout: ${error.stdout}`);
+      }
       // FIXME: we're never setting `code` in ejeca, so this is always false!
       if (error.exitCode === 4) {
         // `gh` CLI exit code 4 => authentication issue
