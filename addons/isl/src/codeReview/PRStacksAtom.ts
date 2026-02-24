@@ -262,6 +262,7 @@ export const prStacksAtom = atom<PRStack[]>(get => {
   // Sort stacks by top PR number (descending - newest first)
   stacks.sort((a, b) => b.topPrNumber - a.topPrNumber);
 
+
   return stacks;
 });
 
