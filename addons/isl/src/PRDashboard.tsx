@@ -624,7 +624,7 @@ function StackCard({
             !isInExistingWorktree && (
               <Tooltip title="Switch ISL to the existing worktree for this stack">
                 <Button
-                  className="stack-card-worktree-button"
+                  icon
                   onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
                     serverAPI.postMessage({
@@ -637,7 +637,6 @@ function StackCard({
                     }
                   }}>
                   <Icon icon="go-to-file" />
-                  <T>Switch to Worktree</T>
                 </Button>
               </Tooltip>
             )}
@@ -648,7 +647,7 @@ function StackCard({
             !existingWorktree && (
               <Tooltip title="Open this stack in a new worktree">
                 <Button
-                  className="stack-card-worktree-button"
+                  icon
                   onClick={async (e: React.MouseEvent) => {
                     e.stopPropagation();
                     // Pull the commit first so it exists locally, then create worktree
@@ -656,7 +655,6 @@ function StackCard({
                     runOperation(new WorktreeAddOperation(topHeadHash));
                   }}>
                   <Icon icon="folder-opened" />
-                  <T>Open in Worktree</T>
                 </Button>
               </Tooltip>
             )}

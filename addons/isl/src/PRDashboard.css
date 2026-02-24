@@ -403,12 +403,14 @@
 .stack-card-author {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   margin-left: 4px;
 }
 
 .stack-card-avatar {
   width: 20px;
   height: 20px;
+  min-width: 20px;
   border-radius: 50%;
 }
 
@@ -607,8 +609,8 @@
 .stack-card-worktree-button {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
+  justify-content: center;
+  padding: 2px 5px;
   font-size: 11px;
   background: color-mix(in srgb, var(--graphite-accent, #4a90e2) 15%, transparent);
   color: var(--graphite-accent, #4a90e2);

@@ -27,30 +27,23 @@ import type {
 import type {CodeReviewProvider} from '../CodeReviewProvider';
 import type {Logger} from '../logger';
 import type {
-  MergeQueueSupportQueryData,
-  MergeQueueSupportQueryVariables,
   PullRequestCommentsQueryData,
   PullRequestCommentsQueryVariables,
   PullRequestReviewComment,
   PullRequestReviewDecision,
   ReactionContent,
-  YourPullRequestsQueryData,
-  YourPullRequestsQueryVariables,
-  YourPullRequestsWithoutMergeQueueQueryData,
-  YourPullRequestsWithoutMergeQueueQueryVariables,
 } from './generated/graphql';
 
 import {TypedEventEmitter} from 'shared/TypedEventEmitter';
 import {debounce} from 'shared/debounce';
 import {notEmpty} from 'shared/utils';
 import {
-  MergeQueueSupportQuery,
   PullRequestCommentsQuery,
   PullRequestState,
   StatusState,
-  YourPullRequestsQuery,
-  YourPullRequestsWithoutMergeQueueQuery,
 } from './generated/graphql';
+import type {CombinedPRQueryData, CombinedPRQueryVariables} from './CombinedPRQuery';
+import {CombinedPRQueryWithMergeQueue, CombinedPRQueryWithoutMergeQueue} from './CombinedPRQuery';
 import {parseStackInfo, type StackEntry} from './parseStackInfo';
 import queryGraphQL from './queryGraphQL';
 import {publishPullRequest} from './publishPullRequest';
@@ -105,7 +98,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     private logger: Logger,
   ) {}
   private diffSummaries = new TypedEventEmitter<'data', DiffSummariesData>();
-  private hasMergeQueueSupport: Promise<boolean> | null = null;
+  private hasMergeQueueSupport: boolean | null = null;
   /** Time range in days for filtering PRs. undefined means "all time". */
   private timeRangeDays: number | undefined = 7;
 
@@ -129,92 +122,84 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     };
   }
 
-  private detectMergeQueueSupport(): Promise<boolean> {
-    if (this.hasMergeQueueSupport == null) {
-      this.hasMergeQueueSupport = (async (): Promise<boolean> => {
-        this.logger.info('detecting if merge queue is supported');
-        const data = await this.query<MergeQueueSupportQueryData, MergeQueueSupportQueryVariables>(
-          MergeQueueSupportQuery,
-          {},
-          10_000,
-        ).catch(err => {
-          this.logger.info('failed to detect merge queue support', err);
-          return undefined;
-        });
-        const hasMergeQueueSupport = data?.__type != null;
-        this.logger.info('set merge queue support to ' + hasMergeQueueSupport);
-        return hasMergeQueueSupport;
-      })();
-    }
-    return this.hasMergeQueueSupport;
-  }
-
-  private fetchYourPullRequestsGraphQL(
-    includeMergeQueue: boolean,
-  ): Promise<YourPullRequestsQueryData | undefined> {
-    // Build search query with optional date filter
-    let searchQuery = `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo} is:pr`;
-
+  /**
+   * Fetch all PR data in a single GraphQL request using aliases.
+   * Combines merge queue detection, open PRs, and closed PRs into one gh call.
+   */
+  private async fetchAllPRData(): Promise<CombinedPRQueryData | undefined> {
+    const repoFilter = `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}`;
+    const openQuery = `${repoFilter} is:pr is:open sort:updated-desc`;
+    let closedQuery = `${repoFilter} is:pr -is:open sort:updated-desc`;
     if (this.timeRangeDays != null) {
       const dateAgo = new Date();
       dateAgo.setDate(dateAgo.getDate() - this.timeRangeDays);
       const dateFilter = dateAgo.toISOString().split('T')[0];
-      searchQuery += ` updated:>=${dateFilter}`;
+      closedQuery += ` updated:>=${dateFilter}`;
     }
 
-    const variables = {
-      // Fetch all PRs (open, merged, closed) within the selected time range
-      // This allows "hide merged" filtering to work properly
-      searchQuery,
-      // With commits(last:1) optimization: 100 PRs × 1 commit × 100 contexts = 10k nodes (well under 500k limit)
-      numToFetch: 100,
-    };
-    if (includeMergeQueue) {
-      return this.query<YourPullRequestsQueryData, YourPullRequestsQueryVariables>(
-        YourPullRequestsQuery,
-        variables,
-      );
-    } else {
-      return this.query<
-        YourPullRequestsWithoutMergeQueueQueryData,
-        YourPullRequestsWithoutMergeQueueQueryVariables
-      >(YourPullRequestsWithoutMergeQueueQuery, variables);
+    const variables: CombinedPRQueryVariables = {openQuery, closedQuery, numToFetch: 100};
+    // Only include mergeQueueEntry fields after we've confirmed support via __type introspection.
+    // On first call (null), use WithoutMergeQueue to avoid schema errors on repos without merge queues.
+    const query = this.hasMergeQueueSupport === true
+      ? CombinedPRQueryWithMergeQueue
+      : CombinedPRQueryWithoutMergeQueue;
+
+    const result = await this.query<CombinedPRQueryData, CombinedPRQueryVariables>(
+      query,
+      variables,
+    );
+
+    if (result == null) {
+      return undefined;
     }
+
+    // Cache merge queue support for future queries
+    const hasMergeQueue = result.__type != null;
+    if (this.hasMergeQueueSupport == null) {
+      this.logger.info('set merge queue support to ' + hasMergeQueue);
+    }
+    this.hasMergeQueueSupport = hasMergeQueue;
+
+    return result;
   }
 
   triggerDiffSummariesFetch = debounce(
     async () => {
       try {
-        const hasMergeQueueSupport = await this.detectMergeQueueSupport();
         this.logger.info('fetching github PR summaries');
-        const allSummaries = await this.fetchYourPullRequestsGraphQL(hasMergeQueueSupport);
-        if (allSummaries?.search.nodes == null) {
+        const result = await this.fetchAllPRData();
+
+        // Merge open + closed nodes, deduplicate by PR number
+        const openNodes = result?.open?.nodes ?? [];
+        const closedNodes = result?.closed?.nodes ?? [];
+        if (openNodes.length === 0 && closedNodes.length === 0) {
           this.diffSummaries.emit('data', {summaries: new Map()});
           return;
         }
-        const currentUser = allSummaries.viewer?.login;
-
+        const currentUser = result?.viewer?.login;
+        const seen = new Set<number>();
         const map = new Map<DiffId, GitHubDiffSummary>();
-        for (const summary of allSummaries.search.nodes) {
+
+        for (const summary of [...openNodes, ...closedNodes]) {
           if (summary != null && summary.__typename === 'PullRequest') {
+            if (seen.has(summary.number)) {
+              continue;
+            }
+            seen.add(summary.number);
             const id = String(summary.number);
             const commitMessage = summary.body.slice(summary.title.length + 1);
             const hasMissingRefs =
               summary.baseRef?.target == null || summary.headRef?.target == null;
             if (hasMissingRefs && summary.state === PullRequestState.Open) {
-              // Open PRs with missing refs are broken — skip them
               this.logger.warn(`PR #${id} is open but missing base or head ref, skipping.`);
               continue;
             }
-            // Parse stack info from the PR body (Sapling footer format)
             const stackInfo = parseStackInfo(summary.body) ?? undefined;
 
             map.set(id, {
               type: 'github',
               title: summary.title,
               commitMessage,
-              // For some reason, `isDraft` is a separate boolean and not a state,
-              // but we generally treat it as its own state in the UI.
               state:
                 summary.isDraft && summary.state === PullRequestState.Open
                   ? 'DRAFT'
@@ -222,7 +207,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
                     ? 'MERGE_QUEUED'
                     : summary.state,
               number: id,
-              nodeId: summary.id,
+              nodeId: '',
               url: summary.url,
               commentCount: summary.comments.totalCount,
               anyUnresolvedComments: false,
@@ -230,14 +215,12 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
                 summary.commits.nodes?.[0]?.commit.statusCheckRollup?.state,
               ),
               reviewDecision: summary.reviewDecision ?? undefined,
-              // Use empty strings for missing refs on merged/closed PRs (branch deleted)
               base: summary.baseRef?.target?.oid ?? '',
               head: summary.headRef?.target?.oid ?? '',
               branchName: summary.headRef?.name ?? '',
               stackInfo,
               author: summary.author?.login ?? undefined,
               authorAvatarUrl: summary.author?.avatarUrl ?? undefined,
-              // Merge + CI status fields (Phase 12)
               mergeable: summary.mergeable as MergeableState | undefined,
               mergeStateStatus: summary.mergeStateStatus as MergeStateStatus | undefined,
               ciChecks: extractCIChecks(summary),
@@ -249,6 +232,10 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         this.diffSummaries.emit('data', {summaries: map, currentUser});
       } catch (error) {
         this.logger.info('error fetching github PR summaries: ', error);
+        // If the merge queue query variant failed (unsupported schema), retry with the other
+        if (this.hasMergeQueueSupport == null) {
+          this.hasMergeQueueSupport = false;
+        }
         this.diffSummaries.emit('error', error as Error);
       }
     },

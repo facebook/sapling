@@ -20,9 +20,6 @@ export default async function queryGraphQL<TData, TVariables>(
   }
 
   const args = ['api', 'graphql'];
-  // DEBUG: Log the query
-  // eslint-disable-next-line no-console
-  console.log('[queryGraphQL] hostname:', hostname, 'variables:', JSON.stringify(variables).slice(0, 200));
   for (const [key, value] of Object.entries(variables as unknown as {[key: string]: unknown})) {
     const type = typeof value;
     switch (type) {
@@ -73,15 +70,21 @@ export default async function queryGraphQL<TData, TVariables>(
 
     return json.data;
   } catch (error: unknown) {
-    // DEBUG: Log the error
-    // eslint-disable-next-line no-console
-    console.error('[queryGraphQL] Error:', error);
     if (isEjecaSpawnError(error)) {
       if (error.code === 'ENOENT' || error.code === 'EACCES') {
         // `gh` not installed on path
         throw new Error(`GhNotInstalledError: ${(error as Error).stack}`);
       }
     } else if (isEjecaError(error)) {
+      // Log stderr/stdout from gh for debugging intermittent failures
+      if (error.stderr) {
+        // eslint-disable-next-line no-console
+        console.error(`[queryGraphQL] gh stderr: ${error.stderr}`);
+      }
+      if (error.stdout) {
+        // eslint-disable-next-line no-console
+        console.error(`[queryGraphQL] gh stdout: ${error.stdout}`);
+      }
       // FIXME: we're never setting `code` in ejeca, so this is always false!
       if (error.exitCode === 4) {
         // `gh` CLI exit code 4 => authentication issue
