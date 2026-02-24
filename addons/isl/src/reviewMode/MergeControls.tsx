@@ -98,7 +98,7 @@ export function MergeControls({prNumber}: MergeControlsProps) {
     for (let i = currentIndex + 1; i < stackContext.entries.length; i++) {
       const entry = stackContext.entries[i];
       const prData = diffs.value.get(String(entry.prNumber));
-      if (prData && prData.state !== 'MERGED') {
+      if (prData && prData.state !== 'MERGED' && prData.state !== 'CLOSED') {
         prsBelow.push(entry.prNumber);
       }
     }

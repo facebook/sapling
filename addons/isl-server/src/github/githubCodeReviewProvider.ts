@@ -199,8 +199,11 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
           if (summary != null && summary.__typename === 'PullRequest') {
             const id = String(summary.number);
             const commitMessage = summary.body.slice(summary.title.length + 1);
-            if (summary.baseRef?.target == null || summary.headRef?.target == null) {
-              this.logger.warn(`PR #${id} is missing base or head ref, skipping.`);
+            const hasMissingRefs =
+              summary.baseRef?.target == null || summary.headRef?.target == null;
+            if (hasMissingRefs && summary.state === PullRequestState.Open) {
+              // Open PRs with missing refs are broken — skip them
+              this.logger.warn(`PR #${id} is open but missing base or head ref, skipping.`);
               continue;
             }
             // Parse stack info from the PR body (Sapling footer format)
@@ -227,9 +230,10 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
                 summary.commits.nodes?.[0]?.commit.statusCheckRollup?.state,
               ),
               reviewDecision: summary.reviewDecision ?? undefined,
-              base: summary.baseRef.target.oid,
-              head: summary.headRef.target.oid,
-              branchName: summary.headRef.name,
+              // Use empty strings for missing refs on merged/closed PRs (branch deleted)
+              base: summary.baseRef?.target?.oid ?? '',
+              head: summary.headRef?.target?.oid ?? '',
+              branchName: summary.headRef?.name ?? '',
               stackInfo,
               author: summary.author?.login ?? undefined,
               authorAvatarUrl: summary.author?.avatarUrl ?? undefined,

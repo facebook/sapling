@@ -91,6 +91,8 @@ export type PRStack = {
   isClosed: boolean;
   /** Count of merged PRs in the stack */
   mergedCount: number;
+  /** Count of closed (abandoned) PRs in the stack */
+  closedCount: number;
   /**
    * True if this stack has "stale" PRs - PRs that are still open but whose
    * changes were already merged via a higher PR (merged directly on GitHub).
@@ -144,8 +146,17 @@ export const prStacksAtom = atom<PRStack[]>(get => {
   const stacks: PRStack[] = [];
   const processedPrNumbers = new Set<string>();
 
+  // Process non-closed PRs first so they claim stack slots before closed PRs.
+  // This prevents a closed (replaced) PR from stealing stack members that belong
+  // to a newer replacement stack with different stackInfo.
+  const sortedEntries = [...diffsMap.entries()].sort(([, a], [, b]) => {
+    if (a.state === 'CLOSED' && b.state !== 'CLOSED') return 1;
+    if (a.state !== 'CLOSED' && b.state === 'CLOSED') return -1;
+    return 0;
+  });
+
   // Process each PR and group by stack
-  for (const [diffId, summary] of diffsMap.entries()) {
+  for (const [diffId, summary] of sortedEntries) {
     if (processedPrNumbers.has(diffId)) {
       continue;
     }
@@ -170,16 +181,10 @@ export const prStacksAtom = atom<PRStack[]>(get => {
         const prSummary = diffsMap.get(prDiffId);
 
         if (prSummary) {
-          // Skip closed (abandoned) PRs — they create duplicate stacks
-          // when a PR is closed and re-created with a new number.
-          if (prSummary.state === 'CLOSED') {
-            processedPrNumbers.add(prDiffId);
-            continue;
-          }
-
           // Skip PRs already claimed by another stack to prevent duplicates.
-          // This happens when a closed PR's stackInfo still references
-          // all the same open PRs as the replacement stack.
+          // Since we process non-closed PRs first (see sort above), open/merged
+          // PRs always claim slots before closed PRs. This prevents a closed
+          // (replaced) PR from stealing members of a newer replacement stack.
           if (processedPrNumbers.has(prDiffId)) {
             continue;
           }
@@ -206,8 +211,9 @@ export const prStacksAtom = atom<PRStack[]>(get => {
         // Check merge/close status
         const mergedCount = stackPrs.filter(pr => pr.state === 'MERGED').length;
         const closedCount = stackPrs.filter(pr => pr.state === 'CLOSED').length;
-        const isMerged = mergedCount === stackPrs.length;
-        const isClosed = closedCount === stackPrs.length;
+        const doneCount = mergedCount + closedCount;
+        const isMerged = mergedCount > 0 && doneCount === stackPrs.length;
+        const isClosed = closedCount > 0 && closedCount === stackPrs.length;
 
         stacks.push({
           id: `stack-${topPrNumber}`,
@@ -219,6 +225,7 @@ export const prStacksAtom = atom<PRStack[]>(get => {
           isMerged,
           isClosed,
           mergedCount,
+          closedCount,
           hasStaleAbove,
           mergedAbovePrNumber,
         });
@@ -246,6 +253,7 @@ export const prStacksAtom = atom<PRStack[]>(get => {
         isMerged,
         isClosed,
         mergedCount: isMerged ? 1 : 0,
+        closedCount: isClosed ? 1 : 0,
         hasStaleAbove: false,
       });
     }
