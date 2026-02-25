@@ -7,11 +7,13 @@
 
 import type {DiffSummary} from '../types';
 
+import type {MergeableState, MergeStateStatus} from '../types';
+
 import {Button} from 'isl-components/Button';
 import {Icon} from 'isl-components/Icon';
 import {Tooltip} from 'isl-components/Tooltip';
 import {useAtomValue} from 'jotai';
-import {useState, useCallback} from 'react';
+import {useState, useCallback, useEffect} from 'react';
 import {diffSummary, allDiffSummaries, triggerFullDiffSummariesRefresh} from '../codeReview/CodeReviewInfo';
 import {currentPRStackContextAtom, prStacksAtom} from '../codeReview/PRStacksAtom';
 import {useRunOperation} from '../operationsState';
@@ -71,9 +73,32 @@ export function MergeControls({prNumber}: MergeControlsProps) {
   const isStaleStack = currentStack?.hasStaleAbove ?? false;
   const mergedAbovePrNumber = currentStack?.mergedAbovePrNumber;
 
-  // Check sync status - has conflicts?
-  const mergeable = pr && isGitHubDiffSummary(pr) ? pr.mergeable : undefined;
-  const mergeStateStatus = pr && isGitHubDiffSummary(pr) ? pr.mergeStateStatus : undefined;
+  // Lazy-load merge state fields (mergeable, mergeStateStatus, viewerCanMergeAsAdmin)
+  // for this single PR. These are too expensive to fetch in bulk for all PRs.
+  const [mergeState, setMergeState] = useState<{
+    mergeable?: MergeableState;
+    mergeStateStatus?: MergeStateStatus;
+    viewerCanMergeAsAdmin?: boolean;
+    loading: boolean;
+  }>({loading: true});
+
+  useEffect(() => {
+    setMergeState({loading: true});
+    const disposable = serverAPI.onMessageOfType('fetchedPRMergeState', msg => {
+      if (msg.prNumber === prNumber) {
+        if (msg.result.error) {
+          setMergeState({loading: false});
+        } else {
+          setMergeState({...msg.result.value, loading: false});
+        }
+      }
+    });
+    serverAPI.postMessage({type: 'fetchPRMergeState', prNumber});
+    return () => disposable.dispose();
+  }, [prNumber]);
+
+  const mergeable = mergeState.mergeable;
+  const mergeStateStatus = mergeState.mergeStateStatus;
   const hasConflicts = mergeStateStatus === 'DIRTY' || mergeable === 'CONFLICTING';
 
   // Check if PR is a draft (use pr.state which is always accurate, unlike mergeStateStatus)
@@ -108,20 +133,20 @@ export function MergeControls({prNumber}: MergeControlsProps) {
   // Check if branch is behind base branch
   const isBehind = mergeStateStatus === 'BEHIND';
 
-  // Derive mergeability
+  // Derive mergeability using lazy-loaded merge state
   const mergeability = pr
     ? deriveMergeability({
         signalSummary: pr.signalSummary,
         reviewDecision: isGitHubDiffSummary(pr) ? pr.reviewDecision : undefined,
-        mergeable: isGitHubDiffSummary(pr) ? pr.mergeable : undefined,
-        mergeStateStatus: isGitHubDiffSummary(pr) ? pr.mergeStateStatus : undefined,
+        mergeable,
+        mergeStateStatus,
         state: isGitHubDiffSummary(pr) ? pr.state : undefined,
       })
     : {canMerge: false, reasons: ['Loading PR data...']};
 
   // Filter out "behind" and "draft" reasons from the general list since we handle them with dedicated UI
   const filteredReasons = mergeability.reasons.filter(r => !r.includes('behind') && !r.includes('draft'));
-  const canMerge = filteredReasons.length === 0 && !hasConflicts && !isBehind && !isDraft;
+  const canMerge = !mergeState.loading && filteredReasons.length === 0 && !hasConflicts && !isBehind && !isDraft;
 
   const handleMerge = useCallback(async () => {
     if (!canMerge || isMerging) {
@@ -219,7 +244,7 @@ export function MergeControls({prNumber}: MergeControlsProps) {
     }
   }, [prNodeId, isPublishing]);
 
-  if (!pr) {
+  if (!pr || mergeState.loading) {
     return (
       <div className="merge-controls merge-controls-loading">
         <Icon icon="loading" /> Loading...

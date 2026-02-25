@@ -6,11 +6,7 @@
  */
 
 import type {
-  CheckConclusionState,
-  CheckStatusState,
   Exact,
-  MergeableState,
-  MergeStateStatus,
   PullRequestReviewDecision,
   PullRequestState,
   Scalars,
@@ -18,8 +14,7 @@ import type {
 } from './generated/graphql';
 
 // PR node shape shared by both open and closed search results.
-// Includes mergeQueueEntry optionally (null when merge queues not supported).
-type PRNode = {
+export type PRNode = {
   __typename: 'PullRequest';
   number: number;
   title: string;
@@ -28,12 +23,8 @@ type PRNode = {
   isDraft: boolean;
   url: string;
   reviewDecision?: PullRequestReviewDecision | null;
-  mergeable: MergeableState;
-  mergeStateStatus: MergeStateStatus;
-  viewerCanMergeAsAdmin: boolean;
   author?: {login: string; avatarUrl: string} | null;
   comments: {totalCount: number};
-  mergeQueueEntry?: {estimatedTimeToMerge?: number | null} | null;
   baseRef?: {
     name: string;
     target?: {oid: string} | null;
@@ -45,27 +36,8 @@ type PRNode = {
   commits: {
     nodes?: Array<{
       commit: {
-        oid: string;
         statusCheckRollup?: {
           state: StatusState;
-          contexts: {
-            nodes?: Array<
-              | {
-                  __typename: 'CheckRun';
-                  name: string;
-                  status: CheckStatusState;
-                  conclusion?: CheckConclusionState | null;
-                  detailsUrl?: string | null;
-                }
-              | {
-                  __typename: 'StatusContext';
-                  context: string;
-                  state: StatusState;
-                  targetUrl?: string | null;
-                }
-              | null
-            > | null;
-          };
         } | null;
       };
     } | null> | null;
@@ -90,102 +62,103 @@ export type CombinedPRQueryVariables = Exact<{
 }>;
 
 export type CombinedPRQueryData = {
-  __type?: {__typename: '__Type'} | null;
   viewer: {login: string};
   open: {nodes?: Array<SearchNode> | null};
   closed: {nodes?: Array<SearchNode> | null};
 };
 
-const PR_FIELDS = `
-        __typename
-        number
-        title
-        body
-        state
-        isDraft
-        author {
-          login
-          avatarUrl
-        }
-        url
-        reviewDecision
-        comments {
-          totalCount
-        }
-        mergeable
-        mergeStateStatus
-        viewerCanMergeAsAdmin
-        baseRef {
-          target {
-            oid
+// Combined query fetches open + closed PRs in a single GraphQL request.
+// Expensive fields (mergeable, mergeStateStatus, viewerCanMergeAsAdmin, CI check
+// contexts) are omitted to avoid GitHub 502 timeouts on large result sets.
+// Those fields are only needed in merge/review mode and can be lazy-loaded.
+export const CombinedPRQuery = `
+  query CombinedPRQuery($openQuery: String!, $closedQuery: String!, $numToFetch: Int!) {
+    viewer {
+      login
+    }
+    open: search(query: $openQuery, type: ISSUE, first: $numToFetch) {
+      nodes {
+        ... on PullRequest {
+          __typename
+          number
+          title
+          body
+          state
+          isDraft
+          author {
+            login
+            avatarUrl
           }
-          name
-        }
-        headRef {
-          target {
-            oid
+          url
+          reviewDecision
+          comments {
+            totalCount
           }
-          name
-        }
-        commits(last: 1) {
-          nodes {
-            commit {
+          baseRef {
+            target {
               oid
-              statusCheckRollup {
-                state
-                contexts(first: 100) {
-                  nodes {
-                    __typename
-                    ... on CheckRun {
-                      name
-                      status
-                      conclusion
-                      detailsUrl
-                    }
-                    ... on StatusContext {
-                      context
-                      state
-                      targetUrl
-                    }
-                  }
+            }
+            name
+          }
+          headRef {
+            target {
+              oid
+            }
+            name
+          }
+          commits(last: 1) {
+            nodes {
+              commit {
+                statusCheckRollup {
+                  state
                 }
               }
             }
           }
-        }`;
-
-const MERGE_QUEUE_FIELDS = `
-        mergeQueueEntry {
-          estimatedTimeToMerge
-        }`;
-
-function buildCombinedQuery(includeMergeQueue: boolean): string {
-  const mqFields = includeMergeQueue ? MERGE_QUEUE_FIELDS : '';
-  return `
-    query CombinedPRQuery($openQuery: String!, $closedQuery: String!, $numToFetch: Int!) {
-  __type(name: "MergeQueueEntry") {
-    __typename
-  }
-  viewer {
-    login
-  }
-  open: search(query: $openQuery, type: ISSUE, first: $numToFetch) {
-    nodes {
-      ... on PullRequest {
-${PR_FIELDS}${mqFields}
+        }
+      }
+    }
+    closed: search(query: $closedQuery, type: ISSUE, first: $numToFetch) {
+      nodes {
+        ... on PullRequest {
+          __typename
+          number
+          title
+          body
+          state
+          isDraft
+          author {
+            login
+            avatarUrl
+          }
+          url
+          reviewDecision
+          comments {
+            totalCount
+          }
+          baseRef {
+            target {
+              oid
+            }
+            name
+          }
+          headRef {
+            target {
+              oid
+            }
+            name
+          }
+          commits(last: 1) {
+            nodes {
+              commit {
+                statusCheckRollup {
+                  state
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
-  closed: search(query: $closedQuery, type: ISSUE, first: $numToFetch) {
-    nodes {
-      ... on PullRequest {
-${PR_FIELDS}${mqFields}
-      }
-    }
-  }
-}
-    `;
-}
-
-export const CombinedPRQueryWithMergeQueue = buildCombinedQuery(true);
-export const CombinedPRQueryWithoutMergeQueue = buildCombinedQuery(false);
+`;

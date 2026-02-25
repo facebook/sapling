@@ -6,7 +6,6 @@
  */
 
 import type {
-  CICheckRun,
   ClientToServerMessage,
   CodeReviewSystem,
   CommandArg,
@@ -43,7 +42,7 @@ import {
   StatusState,
 } from './generated/graphql';
 import type {CombinedPRQueryData, CombinedPRQueryVariables} from './CombinedPRQuery';
-import {CombinedPRQueryWithMergeQueue, CombinedPRQueryWithoutMergeQueue} from './CombinedPRQuery';
+import {CombinedPRQuery} from './CombinedPRQuery';
 import {parseStackInfo, type StackEntry} from './parseStackInfo';
 import queryGraphQL from './queryGraphQL';
 import {publishPullRequest} from './publishPullRequest';
@@ -53,7 +52,7 @@ export type GitHubDiffSummary = {
   type: 'github';
   title: string;
   commitMessage: string;
-  state: PullRequestState | 'DRAFT' | 'MERGE_QUEUED';
+  state: PullRequestState | 'DRAFT';
   number: DiffId;
   /** GitHub GraphQL node ID, required for mutations like addPullRequestReview */
   nodeId: string;
@@ -78,8 +77,6 @@ export type GitHubDiffSummary = {
   mergeable?: MergeableState;
   /** Detailed merge state status */
   mergeStateStatus?: MergeStateStatus;
-  /** Individual CI check runs for detailed status display */
-  ciChecks?: CICheckRun[];
   /** Whether viewer can bypass branch protection to merge */
   viewerCanMergeAsAdmin?: boolean;
 };
@@ -98,7 +95,6 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     private logger: Logger,
   ) {}
   private diffSummaries = new TypedEventEmitter<'data', DiffSummariesData>();
-  private hasMergeQueueSupport: boolean | null = null;
   /** Time range in days for filtering PRs. undefined means "all time". */
   private timeRangeDays: number | undefined = 7;
 
@@ -122,10 +118,6 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     };
   }
 
-  /**
-   * Fetch all PR data in a single GraphQL request using aliases.
-   * Combines merge queue detection, open PRs, and closed PRs into one gh call.
-   */
   private async fetchAllPRData(): Promise<CombinedPRQueryData | undefined> {
     const repoFilter = `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}`;
     const openQuery = `${repoFilter} is:pr is:open sort:updated-desc`;
@@ -138,29 +130,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     }
 
     const variables: CombinedPRQueryVariables = {openQuery, closedQuery, numToFetch: 100};
-    // Only include mergeQueueEntry fields after we've confirmed support via __type introspection.
-    // On first call (null), use WithoutMergeQueue to avoid schema errors on repos without merge queues.
-    const query = this.hasMergeQueueSupport === true
-      ? CombinedPRQueryWithMergeQueue
-      : CombinedPRQueryWithoutMergeQueue;
-
-    const result = await this.query<CombinedPRQueryData, CombinedPRQueryVariables>(
-      query,
-      variables,
-    );
-
-    if (result == null) {
-      return undefined;
-    }
-
-    // Cache merge queue support for future queries
-    const hasMergeQueue = result.__type != null;
-    if (this.hasMergeQueueSupport == null) {
-      this.logger.info('set merge queue support to ' + hasMergeQueue);
-    }
-    this.hasMergeQueueSupport = hasMergeQueue;
-
-    return result;
+    return this.query<CombinedPRQueryData, CombinedPRQueryVariables>(CombinedPRQuery, variables);
   }
 
   triggerDiffSummariesFetch = debounce(
@@ -169,7 +139,6 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         this.logger.info('fetching github PR summaries');
         const result = await this.fetchAllPRData();
 
-        // Merge open + closed nodes, deduplicate by PR number
         const openNodes = result?.open?.nodes ?? [];
         const closedNodes = result?.closed?.nodes ?? [];
         if (openNodes.length === 0 && closedNodes.length === 0) {
@@ -203,9 +172,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               state:
                 summary.isDraft && summary.state === PullRequestState.Open
                   ? 'DRAFT'
-                  : summary.mergeQueueEntry != null
-                    ? 'MERGE_QUEUED'
-                    : summary.state,
+                  : summary.state,
               number: id,
               nodeId: '',
               url: summary.url,
@@ -221,10 +188,9 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               stackInfo,
               author: summary.author?.login ?? undefined,
               authorAvatarUrl: summary.author?.avatarUrl ?? undefined,
-              mergeable: summary.mergeable as MergeableState | undefined,
-              mergeStateStatus: summary.mergeStateStatus as MergeStateStatus | undefined,
-              ciChecks: extractCIChecks(summary),
-              viewerCanMergeAsAdmin: summary.viewerCanMergeAsAdmin ?? undefined,
+              // mergeable, mergeStateStatus, and viewerCanMergeAsAdmin are omitted
+              // from the bulk query to avoid GitHub 502 timeouts. They are only
+              // needed in merge/review mode and can be lazy-loaded per-PR.
             });
           }
         }
@@ -232,10 +198,6 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         this.diffSummaries.emit('data', {summaries: map, currentUser});
       } catch (error) {
         this.logger.info('error fetching github PR summaries: ', error);
-        // If the merge queue query variant failed (unsupported schema), retry with the other
-        if (this.hasMergeQueueSupport == null) {
-          this.hasMergeQueueSupport = false;
-        }
         this.diffSummaries.emit('error', error as Error);
       }
     },
@@ -454,6 +416,10 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
       this.handlePublishPullRequest(message, postMessage);
       return true;
     }
+    if (message.type === 'fetchPRMergeState') {
+      this.handleFetchPRMergeState(message, postMessage);
+      return true;
+    }
     return false;
   }
 
@@ -506,6 +472,53 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     } catch (error) {
       postMessage({
         type: 'publishedPullRequest',
+        result: {error: error as Error},
+      });
+    }
+  }
+
+  private async handleFetchPRMergeState(
+    message: {type: 'fetchPRMergeState'; prNumber: string},
+    postMessage: (message: ServerToClientMessage) => void,
+  ): Promise<void> {
+    const mergeStateQuery = `
+      query PRMergeState($url: URI!) {
+        resource(url: $url) {
+          ... on PullRequest {
+            mergeable
+            mergeStateStatus
+            viewerCanMergeAsAdmin
+          }
+        }
+      }
+    `;
+    type MergeStateData = {
+      resource?: {
+        mergeable?: string;
+        mergeStateStatus?: string;
+        viewerCanMergeAsAdmin?: boolean;
+      } | null;
+    };
+
+    try {
+      const response = await this.query<MergeStateData, {url: string}>(mergeStateQuery, {
+        url: this.getPrUrl(message.prNumber),
+      });
+      postMessage({
+        type: 'fetchedPRMergeState',
+        prNumber: message.prNumber,
+        result: {
+          value: {
+            mergeable: response?.resource?.mergeable as any,
+            mergeStateStatus: response?.resource?.mergeStateStatus as any,
+            viewerCanMergeAsAdmin: response?.resource?.viewerCanMergeAsAdmin,
+          },
+        },
+      });
+    } catch (error) {
+      postMessage({
+        type: 'fetchedPRMergeState',
+        prNumber: message.prNumber,
         result: {error: error as Error},
       });
     }
@@ -748,45 +761,6 @@ function githubStatusRollupStateToCIStatus(state: StatusState | undefined): Diff
     case StatusState.Success:
       return 'pass';
   }
-}
-
-/**
- * Extract CI check runs from the GraphQL PR data.
- * Handles both CheckRun (GitHub Checks API) and StatusContext (legacy status API).
- */
-function extractCIChecks(pr: any): CICheckRun[] | undefined {
-  const contexts = pr.commits?.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes;
-  if (!contexts || contexts.length === 0) {
-    return undefined;
-  }
-
-  return contexts
-    .filter(notEmpty)
-    .map(context => {
-      if (context.__typename === 'CheckRun') {
-        return {
-          name: context.name ?? 'Unknown',
-          status: (context.status ?? 'QUEUED') as CICheckRun['status'],
-          conclusion: context.conclusion as CICheckRun['conclusion'],
-          detailsUrl: context.detailsUrl,
-        };
-      } else {
-        // StatusContext (legacy status API)
-        return {
-          name: context.context ?? 'Unknown',
-          status: context.state === 'PENDING' ? 'PENDING' : 'COMPLETED',
-          conclusion:
-            context.state === 'SUCCESS'
-              ? 'SUCCESS'
-              : context.state === 'FAILURE'
-                ? 'FAILURE'
-                : context.state === 'ERROR'
-                  ? 'FAILURE'
-                  : undefined,
-          detailsUrl: context.targetUrl,
-        } as CICheckRun;
-      }
-    });
 }
 
 type GitHubNotificationResponse = {
