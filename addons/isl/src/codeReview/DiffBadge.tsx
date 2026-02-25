@@ -65,7 +65,7 @@ export function DiffInfo({commit, hideActions}: {commit: CommitInfo; hideActions
 
 const styles = stylex.create({
   diffBadge: {
-    color: 'white',
+    color: 'inherit',
     cursor: 'pointer',
     textDecoration: {
       default: 'none',

@@ -6,25 +6,32 @@
  */
 
 .github-diff-status-OPEN {
-  background-color: var(--github-open-bg);
+  background: color-mix(in srgb, var(--github-open-bg) 20%, transparent);
+  color: var(--github-open-bg);
 }
 .github-diff-status-MERGED {
-  background-color: var(--github-merged-bg);
+  background: color-mix(in srgb, var(--github-merged-bg) 20%, transparent);
+  color: var(--github-merged-bg);
 }
 .github-diff-status-CLOSED {
-  background-color: var(--github-closed-bg);
+  background: color-mix(in srgb, var(--github-closed-bg) 20%, transparent);
+  color: var(--github-closed-bg);
 }
 .github-diff-status-none {
-  background-color: var(--github-neutral-bg);
+  background: color-mix(in srgb, var(--github-neutral-bg) 20%, transparent);
+  color: var(--github-neutral-bg);
 }
 .github-diff-status-ERROR {
-  background-color: var(--github-closed-bg);
+  background: color-mix(in srgb, var(--github-closed-bg) 20%, transparent);
+  color: var(--github-closed-bg);
 }
 .github-diff-status-DRAFT {
-  background-color: var(--github-neutral-bg);
+  background: color-mix(in srgb, var(--github-neutral-bg) 20%, transparent);
+  color: var(--github-neutral-bg);
 }
 .github-diff-status-MERGE_QUEUED {
-  background-color: #966600;
+  background: color-mix(in srgb, #966600 20%, transparent);
+  color: #966600;
 }
 
 .github-diff-info {
@@ -36,25 +43,18 @@
 
 .github-diff-status {
   font-weight: bold;
-  border-radius: 10px;
-  padding: 3px 8px;
-  font-size: 70%;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
   white-space: nowrap;
-  transition:
-    transform 0.15s var(--ease-out-back, ease),
-    box-shadow 0.15s var(--ease-in-out-smooth, ease);
 }
 
-.github-diff-status:hover {
-  transform: scale(1.03);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-}
 .github-diff-info a {
-  color: white;
+  color: inherit;
 }
 .github-diff-badge-icon.codicon {
   font-size: 100%;
-  margin-right: var(--halfpad);
+  margin-right: 3px;
   font-weight: bold;
   text-decoration: none;
 }
@@ -64,18 +64,21 @@
 }
 
 .github-review-decision {
-  border-radius: 10px;
-  padding: 3px 8px;
-  font-size: 70%;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
 .github-review-decision-APPROVED {
-  background-color: var(--github-open-bg);
+  background: color-mix(in srgb, var(--github-open-bg) 20%, transparent);
+  color: var(--github-open-bg);
 }
 .github-review-decision-CHANGES_REQUESTED {
-  background-color: var(--github-closed-bg);
+  background: color-mix(in srgb, var(--github-closed-bg) 20%, transparent);
+  color: var(--github-closed-bg);
 }
 .github-review-decision-REVIEW_REQUIRED {
-  background-color: var(--github-neutral-bg);
+  background: color-mix(in srgb, var(--github-neutral-bg) 20%, transparent);
+  color: var(--github-neutral-bg);
 }

@@ -6,7 +6,7 @@
  */
 
 .diff-badge {
-  color: white;
+  color: inherit;
   cursor: pointer;
   text-decoration: none;
 }
