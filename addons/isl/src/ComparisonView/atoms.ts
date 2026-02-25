@@ -25,7 +25,7 @@ export const currentComparisonMode = atom<ComparisonMode>(
         visible: true,
       }
     : {
-        comparison: {type: ComparisonType.UncommittedChanges},
+        comparison: {type: ComparisonType.HeadChanges},
         visible: false,
       },
 );
