@@ -1,0 +1,133 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/* File list overview - collapsible panel between header and diffs */
+.file-list-overview {
+  border: 1px solid var(--graphite-border);
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+  background: var(--graphite-bg);
+}
+
+/* Clickable header with chevron toggle */
+.file-list-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  background: var(--graphite-bg-subtle);
+  border: none;
+  width: 100%;
+  text-align: left;
+  color: var(--graphite-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+  user-select: none;
+}
+
+.file-list-header:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.file-list-header .codicon {
+  font-size: 12px;
+  color: var(--graphite-text-secondary);
+  transition: transform 0.15s ease;
+}
+
+.file-list-header-label {
+  flex: 1;
+}
+
+.file-list-header-count {
+  font-size: 12px;
+  color: var(--graphite-text-secondary);
+  font-weight: 400;
+}
+
+/* File list items container */
+.file-list-items {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--graphite-border);
+}
+
+/* Individual file row */
+.file-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.file-list-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.file-list-item:active {
+  border-left-color: #5c7cfa;
+  background: rgba(92, 124, 250, 0.08);
+}
+
+/* File type icon colors */
+.file-list-item .file-list-icon-added {
+  color: var(--scm-added-foreground, #22c55e);
+}
+
+.file-list-item .file-list-icon-removed {
+  color: var(--scm-removed-foreground, #ef4444);
+}
+
+.file-list-item .file-list-icon-modified {
+  color: var(--scm-modified-foreground, #e2b93d);
+}
+
+.file-list-item .file-list-icon-renamed {
+  color: var(--scm-modified-foreground, #e2b93d);
+}
+
+/* File path - monospace */
+.file-list-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--monospace-fontFamily);
+  font-size: 12px;
+  color: var(--graphite-text-primary);
+}
+
+/* Stats: +N / -M */
+.file-list-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-family: var(--monospace-fontFamily);
+  font-size: 12px;
+}
+
+.file-stat-add {
+  color: #22c55e;
+  font-weight: 500;
+}
+
+.file-stat-del {
+  color: #ef4444;
+  font-weight: 500;
+}

@@ -48,6 +48,7 @@ import {latestHeadCommit} from '../serverAPIState';
 import {themeState} from '../theme';
 import {showToast} from '../toast';
 import {GeneratedStatus} from '../types';
+import {FileListOverview} from './FileListOverview';
 import {SplitDiffView} from './SplitDiffView';
 import {
   currentComparisonMode,
@@ -615,6 +616,19 @@ export default function ComparisonView({
     }
   }, [currentFileIndex, filePaths, collapsedFiles, setCollapsedFile]);
 
+  const handleFileListClick = useCallback(
+    (path: string) => {
+      const element = fileRefs.current.get(path);
+      if (element) {
+        element.scrollIntoView({behavior: 'smooth', block: 'start'});
+        if (collapsedFiles.get(path)) {
+          setCollapsedFile(path, false);
+        }
+      }
+    },
+    [collapsedFiles, setCollapsedFile],
+  );
+
   // Scroll to file when scrollToFile is set and data is loaded
   useEffect(() => {
     if (scrollToFile && data?.value) {
@@ -723,6 +737,12 @@ export default function ComparisonView({
           />
           <StackNavigationBar />
         </div>
+        {reviewMode.active && data?.value && (
+          <FileListOverview
+            diffs={data.value}
+            onFileClick={handleFileListClick}
+          />
+        )}
         {/* Content area */}
         <div className="comparison-view-details">
           {content}
