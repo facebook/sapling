@@ -19,6 +19,9 @@ import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {CommentSidebar, CommentSidebarToggle} from '../codeReview/CommentSidebar';
+import {FileCommentSection} from '../codeReview/FileCommentSection';
+import {commentSidebarOpenAtom} from '../codeReview/CommentSidebarState';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   ComparisonType,
@@ -563,6 +566,7 @@ export default function ComparisonView({
   // File navigation state for review mode
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const reviewMode = useAtomValue(reviewModeAtom);
+  const sidebarOpen = useAtomValue(commentSidebarOpenAtom);
 
   // State for PR-level comment input
   const [showPrComment, setShowPrComment] = useState(false);
@@ -721,7 +725,7 @@ export default function ComparisonView({
   }
 
   return (
-    <div data-testid="comparison-view" className="comparison-view">
+    <div data-testid="comparison-view" className={`comparison-view ${sidebarOpen && reviewMode.active ? 'comparison-view-with-sidebar' : ''}`}>
       {/* Scrollable container - holds sticky header + content */}
       <div className="comparison-view-scrollable">
         {/* Sticky header: header + stack navigation */}
@@ -734,6 +738,11 @@ export default function ComparisonView({
             onPrevFile={handlePrevFile}
             onNextFile={handleNextFile}
             showNavigation={reviewMode.active && filePaths.length > 1}
+            commentToggle={
+              reviewMode.active && reviewMode.prNumber ? (
+                <CommentSidebarToggle commentCount={0} />
+              ) : undefined
+            }
           />
           <StackNavigationBar />
         </div>
@@ -777,6 +786,9 @@ export default function ComparisonView({
           )}
         </div>
       </div>
+      {reviewMode.active && reviewMode.prNumber && (
+        <CommentSidebar diffId={reviewMode.prNumber} />
+      )}
     </div>
   );
 }
@@ -794,6 +806,7 @@ function ComparisonViewHeader({
   onPrevFile,
   onNextFile,
   showNavigation,
+  commentToggle,
 }: {
   comparison: Comparison;
   dismiss?: () => void;
@@ -802,6 +815,7 @@ function ComparisonViewHeader({
   onPrevFile?: () => void;
   onNextFile?: () => void;
   showNavigation?: boolean;
+  commentToggle?: React.ReactNode;
 }) {
   const setComparisonMode = useSetAtom(currentComparisonMode);
   const [compared, reloadComparison] = useAtom(currentComparisonData(comparison));
@@ -870,6 +884,7 @@ function ComparisonViewHeader({
               </Button>
             </span>
           )}
+          {commentToggle}
           <Tooltip trigger="click" component={() => <ComparisonSettingsDropdown />}>
             <Button icon>
               <Icon icon="ellipsis" />
@@ -1152,6 +1167,12 @@ function ComparisonViewFile({
               />
             ))}
           </div>
+        )}
+        {reviewMode.active && reviewMode.prNumber && (
+          <FileCommentSection
+            diffId={reviewMode.prNumber}
+            filePath={path}
+          />
         )}
       </ErrorBoundary>
     </div>
