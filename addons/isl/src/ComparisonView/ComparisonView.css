@@ -1005,3 +1005,112 @@ a.pr-info-title:hover::after {
 .comparison-view-file.file-removed {
   border-left: 3px solid var(--signal-bad, #ef4444);
 }
+
+/* Comment sidebar layout */
+.comparison-view-with-sidebar {
+  flex-direction: row;
+}
+
+.comparison-view-with-sidebar .comparison-view-scrollable {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Per-file comment section */
+.file-comment-section {
+  border-top: 1px solid var(--graphite-border);
+  background: rgba(30, 34, 42, 0.5);
+}
+
+.file-comment-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--graphite-text-secondary);
+  transition: background 0.1s ease;
+}
+
+.file-comment-section-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.file-comment-unresolved {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.file-comment-section-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 16px 12px;
+}
+
+.file-comment {
+  padding: 12px;
+  border-left: 2px solid rgba(255, 255, 255, 0.1);
+  margin-left: 4px;
+}
+
+.file-comment-resolved {
+  opacity: 0.6;
+}
+
+.file-comment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.file-comment-line {
+  font-family: var(--monospace-fontFamily);
+  font-size: 11px;
+  color: var(--graphite-text-tertiary);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.file-comment-body {
+  font-size: 13px;
+  line-height: 1.5;
+  padding-left: 32px;
+  word-break: break-word;
+}
+
+.file-comment-actions {
+  display: flex;
+  gap: 8px;
+  padding-left: 32px;
+  margin-top: 4px;
+}
+
+.file-comment-reply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--graphite-text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.file-comment-reply-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--graphite-text-secondary);
+}
+
+.file-comment-replies {
+  margin-left: 20px;
+  margin-top: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}

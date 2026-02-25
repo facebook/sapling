@@ -1003,6 +1003,7 @@ export type LocalStorageName =
   | 'isl.first-pass-comments:'
   | 'isl.reviewed-files:'
   | 'isl.pending-comments:'
+  | 'isl.comment-sidebar-open'
   | 'isl.dismissed-notification-ids';
 
 export type ClientToServerMessage =
