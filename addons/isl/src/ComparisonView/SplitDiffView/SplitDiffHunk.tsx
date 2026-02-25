@@ -98,6 +98,7 @@ export const SplitDiffTable = React.memo(
           ctx.openFileToLine,
           displayLineNumbers,
           ctx.onCommentClick,
+          ctx.activeLineSelection,
         );
 
         const isLast = index === lastHunkIndex;
@@ -146,7 +147,8 @@ export const SplitDiffTable = React.memo(
           className={
             'split-diff-view-hunk-table display-unified ' + (tableSelectionClassName ?? '')
           }
-          {...tableSelectionProps}>
+          {...tableSelectionProps}
+          {...ctx.tableMouseHandlers}>
           <colgroup>
             {displayLineNumbers && <col width={50} />}
             {displayLineNumbers && <col width={50} />}
@@ -159,7 +161,8 @@ export const SplitDiffTable = React.memo(
     return (
       <table
         className={'split-diff-view-hunk-table display-split ' + (tableSelectionClassName ?? '')}
-        {...tableSelectionProps}>
+        {...tableSelectionProps}
+        {...ctx.tableMouseHandlers}>
         <colgroup>
           {displayLineNumbers && <col width={50} />}
           <col width={'50%'} />
@@ -196,6 +199,7 @@ function addRowsForHunk(
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
   displayLineNumbers: boolean = true,
   onCommentClick?: (lineNumber: number, side: 'LEFT' | 'RIGHT', path: string) => void,
+  activeLineSelection?: {startLine: number; endLine: number; side: 'LEFT' | 'RIGHT'},
 ): void {
   const {oldStart, newStart, lines} = hunk;
   const groups = organizeLinesIntoGroups(lines);
@@ -220,6 +224,7 @@ function addRowsForHunk(
       openFileToLine,
       displayLineNumbers,
       onCommentClick,
+      activeLineSelection,
     );
     beforeLineNumber += common.length;
     afterLineNumber += common.length;
@@ -260,6 +265,7 @@ function addRowsForHunk(
           unified,
           openFileToLine,
           onCommentClick,
+          activeLineSelection,
         });
 
         if (unified) {
@@ -305,6 +311,7 @@ function addRowsForHunk(
           unified,
           openFileToLine,
           onCommentClick,
+          activeLineSelection,
         });
 
         if (unified) {
@@ -341,6 +348,7 @@ function addRowsForHunk(
           unified,
           openFileToLine,
           onCommentClick,
+          activeLineSelection,
         });
 
         if (unified) {
@@ -397,6 +405,7 @@ function addUnmodifiedRows(
   openFileToLine?: (line: OneIndexedLineNumber) => unknown,
   displayLineNumbers: boolean = true,
   onCommentClick?: (lineNumber: number, side: 'LEFT' | 'RIGHT', path: string) => void,
+  activeLineSelection?: {startLine: number; endLine: number; side: 'LEFT' | 'RIGHT'},
 ): void {
   let beforeLineNumber = initialBeforeLineNumber;
   let afterLineNumber = initialAfterLineNumber;
@@ -417,6 +426,7 @@ function addUnmodifiedRows(
       unified,
       openFileToLine,
       onCommentClick,
+      activeLineSelection,
     });
     if (unified) {
       rows.push(

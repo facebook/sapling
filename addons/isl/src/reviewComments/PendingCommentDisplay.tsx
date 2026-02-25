@@ -161,8 +161,11 @@ export function PendingCommentDisplay({
 
   const getLocationText = () => {
     if (comment.type === 'inline' && comment.path && comment.line) {
-      // Show just filename:line for brevity
+      // Show just filename:line for brevity, or filename:startLine-endLine for ranges
       const filename = comment.path.split('/').pop() ?? comment.path;
+      if (comment.endLine != null && comment.endLine !== comment.line) {
+        return `${filename}:${comment.line}-${comment.endLine}`;
+      }
       return `${filename}:${comment.line}`;
     }
     if (comment.type === 'file' && comment.path) {

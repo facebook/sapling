@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type React from 'react';
 import type {Comparison} from 'shared/Comparison';
 import type {ThemeColor} from '../../theme';
 import type {Result} from '../../types';
@@ -47,12 +48,20 @@ export type Context = {
    * Optional callback for when a line number is clicked to add a comment.
    * Used in review mode to open the comment input for inline comments.
    */
-  onCommentClick?: (lineNumber: number, side: 'LEFT' | 'RIGHT', path: string) => void;
+  onCommentClick?: (lineNumber: number, side: 'LEFT' | 'RIGHT', path: string, endLine?: number) => void;
   /**
    * Optional callback for when the file-level comment button is clicked.
    * Used in review mode to open the comment input for file-level comments.
    */
   onFileCommentClick?: (path: string) => void;
+  /** Mouse handlers for line range drag selection on the table */
+  tableMouseHandlers?: {
+    onMouseDown: (e: React.MouseEvent) => void;
+    onMouseMove: (e: React.MouseEvent) => void;
+    onMouseUp: (e: React.MouseEvent) => void;
+  };
+  /** Active line range selection for visual highlighting during drag */
+  activeLineSelection?: {startLine: number; endLine: number; side: 'LEFT' | 'RIGHT'};
 };
 
 export type OneIndexedLineNumber = Exclude<number, 0>;

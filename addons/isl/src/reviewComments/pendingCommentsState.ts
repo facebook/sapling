@@ -22,8 +22,10 @@ export type PendingComment = {
   body: string;
   /** File path for inline/file comments */
   path?: string;
-  /** Line number for inline comments */
+  /** Line number for inline comments (start line for range comments) */
   line?: number;
+  /** End line for multi-line range comments */
+  endLine?: number;
   /** Which side of the diff (LEFT = old, RIGHT = new) */
   side?: 'LEFT' | 'RIGHT';
   /** Timestamp when the comment was created */

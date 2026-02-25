@@ -8,6 +8,8 @@
 import type {ExclusiveOr} from 'shared/typeUtils';
 import type {OneIndexedLineNumber} from './types';
 
+import {isLineInSelection} from './useLineRangeSelection';
+
 type Props = {
   beforeLineNumber: number | null;
   before: React.ReactFragment | null;
@@ -19,6 +21,8 @@ type Props = {
   openFileToLine?: (lineNumber: OneIndexedLineNumber) => unknown;
   /** Optional callback when a line number is clicked for commenting (in review mode) */
   onCommentClick?: (lineNumber: number, side: 'LEFT' | 'RIGHT', path: string) => void;
+  /** Active line range selection for visual highlighting during drag */
+  activeLineSelection?: {startLine: number; endLine: number; side: 'LEFT' | 'RIGHT'};
 };
 
 type SplitDiffRowType = 'add' | 'common' | 'modify' | 'remove' | 'expanded';
@@ -33,6 +37,7 @@ export default function SplitDiffRow({
   unified,
   openFileToLine,
   onCommentClick,
+  activeLineSelection,
 }: Props): [JSX.Element, JSX.Element, JSX.Element, JSX.Element] {
   let beforeClass;
   let afterClass;
@@ -79,6 +84,7 @@ export default function SplitDiffRow({
       column: 0,
       canComment,
       onCommentClick,
+      activeLineSelection: activeLineSelection ?? null,
     }),
     <td data-column={unified ? 2 : 1} className={beforeClass}>
       {before}
@@ -92,6 +98,7 @@ export default function SplitDiffRow({
       canComment,
       openFileToLine, // opening to a line number only makes sense on the "right" comparison side
       onCommentClick,
+      activeLineSelection: activeLineSelection ?? null,
     }),
     <td data-column={unified ? 2 : 3} className={afterClass}>
       {after}
@@ -108,6 +115,7 @@ type LineNumberProps = {
   canComment: boolean;
   openFileToLine?: (lineNumber: OneIndexedLineNumber) => unknown;
   onCommentClick?: (lineNumber: number, side: 'LEFT' | 'RIGHT', path: string) => void;
+  activeLineSelection?: {startLine: number; endLine: number; side: 'LEFT' | 'RIGHT'} | null;
 };
 
 function LineNumber({
@@ -119,14 +127,17 @@ function LineNumber({
   canComment,
   openFileToLine,
   onCommentClick,
+  activeLineSelection,
 }: LineNumberProps): JSX.Element {
   const clickableLineNumber = openFileToLine != null && lineNumber != null;
   const commentable = onCommentClick != null && canComment && lineNumber != null;
+  const inSelection = isLineInSelection(lineNumber, side, activeLineSelection ?? null);
 
   const extraClassName =
     (className != null ? ` ${className}-number` : '') +
     (clickableLineNumber ? ' clickable' : '') +
-    (commentable ? ' lineNumber-commentable' : '');
+    (commentable ? ' lineNumber-commentable' : '') +
+    (inSelection ? ' lineNumber-in-selection' : '');
 
   const handleClick = () => {
     if (lineNumber == null) {

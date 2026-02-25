@@ -150,6 +150,8 @@ export type PullRequestReviewEvent = 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
 export type DraftPullRequestReviewThread = {
   path: string;
   line: number;
+  /** Start line for multi-line range comments. When set, 'line' is the end line. */
+  startLine?: number;
   body: string;
   side?: 'LEFT' | 'RIGHT';
 };
