@@ -244,5 +244,31 @@ describe('pendingCommentsState', () => {
       expect(comment.line).toBeUndefined();
       expect(comment.side).toBeUndefined();
     });
+
+    it('range comment has correct structure with endLine', () => {
+      const prNumber = '800';
+
+      addPendingComment(prNumber, {
+        type: 'inline',
+        body: 'Range comment',
+        path: 'src/component.tsx',
+        line: 10,
+        endLine: 15,
+        side: 'RIGHT',
+      });
+
+      const comment = readAtom(pendingCommentsAtom(prNumber))[0];
+
+      expect(comment).toEqual({
+        id: expect.any(String),
+        type: 'inline',
+        body: 'Range comment',
+        path: 'src/component.tsx',
+        line: 10,
+        endLine: 15,
+        side: 'RIGHT',
+        createdAt: expect.any(Number),
+      });
+    });
   });
 });

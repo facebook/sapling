@@ -40,11 +40,13 @@ export function useSubmitReview(nodeId: string | undefined) {
     }
 
     // Convert pending comments to GraphQL thread format
+    // GitHub convention: 'line' is the end line, 'startLine' is the first line of a range
     const threads: DraftPullRequestReviewThread[] = pendingComments
       .filter(c => c.type === 'inline' && c.path && c.line)
       .map(c => ({
         path: c.path!,
-        line: c.line!,
+        line: c.endLine ?? c.line!,
+        ...(c.endLine != null && c.endLine !== c.line && {startLine: c.line!}),
         body: c.body,
         side: c.side,
       }));
@@ -129,11 +131,13 @@ export function useQuickReviewAction(nodeId: string | undefined) {
     }
 
     // Convert pending comments to GraphQL thread format
+    // GitHub convention: 'line' is the end line, 'startLine' is the first line of a range
     const threads = pendingComments
       .filter(c => c.type === 'inline' && c.path && c.line)
       .map(c => ({
         path: c.path!,
-        line: c.line!,
+        line: c.endLine ?? c.line!,
+        ...(c.endLine != null && c.endLine !== c.line && {startLine: c.line!}),
         body: c.body,
         side: c.side,
       }));

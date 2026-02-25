@@ -20,6 +20,8 @@ export type CommentInputProps = {
   path?: string;
   /** Line number - required for inline comments */
   line?: number;
+  /** End line for range comments */
+  endLine?: number;
   /** Which side of the diff (LEFT = old, RIGHT = new) */
   side?: 'LEFT' | 'RIGHT';
   /** Called when the comment input is cancelled or submitted */
@@ -188,6 +190,7 @@ export function CommentInput({
   type,
   path,
   line,
+  endLine,
   side,
   onCancel,
   onSubmit,
@@ -210,13 +213,14 @@ export function CommentInput({
       body: body.trim(),
       ...(path != null && {path}),
       ...(line != null && {line}),
+      ...(endLine != null && {endLine}),
       ...(side != null && {side}),
     };
 
     addPendingComment(prNumber, comment);
     onSubmit?.();
     onCancel();
-  }, [body, prNumber, type, path, line, side, onSubmit, onCancel]);
+  }, [body, prNumber, type, path, line, endLine, side, onSubmit, onCancel]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -259,6 +263,9 @@ export function CommentInput({
   const getSublabel = () => {
     switch (type) {
       case 'inline':
+        if (endLine != null && endLine !== line) {
+          return `Lines ${line}-${endLine}${side === 'LEFT' ? ' (old)' : side === 'RIGHT' ? ' (new)' : ''}`;
+        }
         return `Line ${line}${side === 'LEFT' ? ' (old)' : side === 'RIGHT' ? ' (new)' : ''}`;
       case 'file':
         return path ? path.split('/').pop() : undefined;

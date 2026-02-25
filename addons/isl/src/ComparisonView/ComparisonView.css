@@ -1114,3 +1114,9 @@ a.pr-info-title:hover::after {
   margin-top: 8px;
   border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
+
+/* Line range selection highlighting during drag */
+.lineNumber-in-selection {
+  background: rgba(92, 124, 250, 0.2) !important;
+  border-left: 2px solid #5c7cfa;
+}
