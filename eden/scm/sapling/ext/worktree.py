@@ -378,13 +378,15 @@ def _copy_untracked_files(ui, repo, dest):
             ui.note(_("copied %s\n") % pattern)
             copied_any = True
 
-    # Copy directories (node_modules, etc.) with CoW
+    # Copy directories (node_modules, etc.) with CoW in the background.
+    # These can be large and slow, so we spawn background processes to avoid
+    # blocking the command (and ISL's UI) while copying.
     for dirname in _get_copy_dirs(ui):
         src = os.path.join(source, dirname)
         if os.path.isdir(src):
             dst = os.path.join(dest, dirname)
-            ui.status(_("copying %s (CoW)...\n") % dirname)
-            _cp_cow(src, dst)
+            ui.status(_("copying %s in the background (CoW)...\n") % dirname)
+            _cp_cow_background(src, dst)
             copied_any = True
 
     if copied_any:
@@ -418,6 +420,28 @@ def _cp_cow(src, dst):
         shutil.copytree(src, dst)
     else:
         shutil.copy2(src, dst)
+
+
+def _cp_cow_background(src, dst):
+    """Spawn a background copy-on-write process without waiting for it.
+
+    Like _cp_cow but non-blocking — the cp process runs in the background
+    so the caller can return immediately. This is used for large directories
+    like node_modules where blocking would make the UI unresponsive.
+    """
+    devnull = open(os.devnull, "w")
+    if platform.system() == "Darwin":
+        subprocess.Popen(
+            ["cp", "-Rc", src, dst],
+            stdout=devnull,
+            stderr=devnull,
+        )
+    else:
+        subprocess.Popen(
+            ["cp", "-R", "--reflink=auto", src, dst],
+            stdout=devnull,
+            stderr=devnull,
+        )
 
 
 def create_worktree_for_commit(ui, repo, commit_hex, name=None, no_copy=False):
