@@ -406,8 +406,40 @@
   color: #5c7cfa;
 }
 
+/* Conflicts card - unified container for conflict status + action */
+.merge-conflicts-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--signal-bad, #ef4444) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--signal-bad, #ef4444) 20%, transparent);
+  border-radius: 8px;
+  margin: 0 12px;
+}
+
+.merge-conflicts-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--signal-bad, #ef4444);
+}
+
+.merge-conflicts-card-header .codicon {
+  font-size: 14px;
+}
+
+.merge-conflicts-card-body {
+  font-size: 12px;
+  color: var(--graphite-text-secondary);
+  line-height: 1.4;
+}
+
 /* Resolve conflicts button - red/warning style */
 .resolve-conflicts-btn {
+  align-self: flex-start;
   background: transparent !important;
   color: var(--signal-bad, #ef4444) !important;
   border: 1.5px solid var(--signal-bad, #ef4444) !important;
@@ -470,6 +502,54 @@
 
 .close-stale-btn:disabled {
   opacity: 0.6;
+}
+
+/* Shared status card layout — used by conflicts, draft, behind states */
+.merge-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  margin: 0 12px;
+}
+
+.merge-status-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.merge-status-card-header .codicon {
+  font-size: 14px;
+}
+
+.merge-status-card .resolve-conflicts-btn,
+.merge-status-card .publish-pr-btn,
+.merge-status-card .update-branch-btn {
+  align-self: flex-start;
+}
+
+/* Draft variant */
+.merge-status-card-draft {
+  background: color-mix(in srgb, #8b5cf6 6%, transparent);
+  border: 1px solid color-mix(in srgb, #8b5cf6 20%, transparent);
+}
+
+.merge-status-draft-color {
+  color: #8b5cf6;
+}
+
+/* Behind variant */
+.merge-status-card-behind {
+  background: color-mix(in srgb, var(--signal-warning, #f59e0b) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--signal-warning, #f59e0b) 20%, transparent);
+}
+
+.merge-status-behind-color {
+  color: var(--signal-warning, #f59e0b);
 }
 
 /* Draft PR status badge */

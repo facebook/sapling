@@ -87,6 +87,12 @@ export interface CodeReviewProvider {
   /** Unresolve a previously resolved comment thread */
   unresolveThread?(threadId: string): Promise<void>;
 
+  /** Post an immediate issue comment on a PR (not part of a review) */
+  addIssueComment?(subjectId: string, body: string): Promise<void>;
+
+  /** Edit an existing comment (issue or review) */
+  editComment?(commentId: string, body: string): Promise<void>;
+
   renderMarkup?: (markup: string) => Promise<string>;
 
   fetchLandInfo?(topOfStack: DiffId): Promise<LandInfo>;

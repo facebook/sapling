@@ -16,6 +16,7 @@ import type {
 // PR node shape shared by both open and closed search results.
 export type PRNode = {
   __typename: 'PullRequest';
+  id: string;
   number: number;
   title: string;
   body: string;
@@ -80,6 +81,7 @@ export const CombinedPRQuery = `
       nodes {
         ... on PullRequest {
           __typename
+          id
           number
           title
           body
@@ -122,6 +124,7 @@ export const CombinedPRQuery = `
       nodes {
         ... on PullRequest {
           __typename
+          id
           number
           title
           body

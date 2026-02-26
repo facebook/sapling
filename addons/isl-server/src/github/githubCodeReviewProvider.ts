@@ -174,7 +174,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
                   ? 'DRAFT'
                   : summary.state,
               number: id,
-              nodeId: '',
+              nodeId: summary.id,
               url: summary.url,
               commentCount: summary.comments.totalCount,
               anyUnresolvedComments: false,
@@ -240,9 +240,11 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         const threadKey = `${reviewComment.path ?? ''}:${reviewComment.line ?? ''}`;
         const threadInfo = threadMap.get(threadKey);
         return {
+          id: (comment as {id?: string}).id,
           author: comment.author?.login ?? '',
           authorAvatarUri: comment.author?.avatarUrl,
           html: comment.bodyHTML,
+          content: (comment as {body?: string}).body,
           created: new Date(comment.createdAt),
           filename: reviewComment.path ?? undefined,
           line: reviewComment.line ?? undefined,
@@ -392,6 +394,71 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
 
     if (response?.addPullRequestReviewThreadReply?.comment?.id == null) {
       throw new Error('Failed to add reply to thread');
+    }
+  }
+
+  /**
+   * Post an immediate issue comment on a PR (not part of a review).
+   * Uses GitHub's addComment mutation with the PR's node ID.
+   */
+  public async addIssueComment(subjectId: string, body: string): Promise<void> {
+    const mutation = `
+      mutation AddComment($subjectId: ID!, $body: String!) {
+        addComment(input: {subjectId: $subjectId, body: $body}) {
+          commentEdge {
+            node { id }
+          }
+        }
+      }
+    `;
+
+    const response = await this.query<
+      {addComment?: {commentEdge?: {node?: {id: string} | null} | null} | null},
+      {subjectId: string; body: string}
+    >(mutation, {subjectId, body});
+
+    if (response?.addComment?.commentEdge?.node?.id == null) {
+      throw new Error('Failed to add comment');
+    }
+  }
+
+  /**
+   * Edit an existing comment (issue comment or review comment).
+   * Detects type from the node ID prefix: IC_ = issue comment, else review comment.
+   */
+  public async editComment(commentId: string, body: string): Promise<void> {
+    const isIssueComment = commentId.startsWith('IC_');
+
+    if (isIssueComment) {
+      const mutation = `
+        mutation UpdateIssueComment($id: ID!, $body: String!) {
+          updateIssueComment(input: {id: $id, body: $body}) {
+            issueComment { id }
+          }
+        }
+      `;
+      const response = await this.query<
+        {updateIssueComment?: {issueComment?: {id: string} | null} | null},
+        {id: string; body: string}
+      >(mutation, {id: commentId, body});
+      if (response?.updateIssueComment?.issueComment?.id == null) {
+        throw new Error('Failed to edit issue comment');
+      }
+    } else {
+      const mutation = `
+        mutation UpdateReviewComment($id: ID!, $body: String!) {
+          updatePullRequestReviewComment(input: {pullRequestReviewCommentId: $id, body: $body}) {
+            pullRequestReviewComment { id }
+          }
+        }
+      `;
+      const response = await this.query<
+        {updatePullRequestReviewComment?: {pullRequestReviewComment?: {id: string} | null} | null},
+        {id: string; body: string}
+      >(mutation, {id: commentId, body});
+      if (response?.updatePullRequestReviewComment?.pullRequestReviewComment?.id == null) {
+        throw new Error('Failed to edit review comment');
+      }
     }
   }
 
