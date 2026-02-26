@@ -1044,6 +1044,8 @@ export type ClientToServerMessage =
   | {type: 'fetchDiffSummaries'; diffIds?: Array<DiffId>}
   | {type: 'fetchDiffComments'; diffId: DiffId}
   | {type: 'graphqlReply'; threadId: string; body: string}
+  | {type: 'graphqlAddComment'; subjectId: string; body: string}
+  | {type: 'graphqlEditComment'; commentId: string; body: string}
   | {type: 'resolveThread'; threadId: string}
   | {type: 'unresolveThread'; threadId: string}
   | {
@@ -1223,6 +1225,8 @@ export type ServerToClientMessage =
   | {type: 'fetchedDiffSummaries'; summaries: Result<Map<DiffId, DiffSummary>>; currentUser?: string}
   | {type: 'fetchedDiffComments'; diffId: DiffId; comments: Result<Array<DiffComment>>}
   | {type: 'graphqlReplyResult'; threadId: string; success?: boolean; error?: string}
+  | {type: 'graphqlAddCommentResult'; success?: boolean; error?: string}
+  | {type: 'graphqlEditCommentResult'; commentId: string; success?: boolean; error?: string}
   | {type: 'threadResolutionResult'; threadId: string; isResolved?: boolean; success?: boolean; error?: string}
   | {
       type: 'submittedPullRequestReview';

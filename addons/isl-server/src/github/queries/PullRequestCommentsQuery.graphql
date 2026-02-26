@@ -1,4 +1,6 @@
 fragment CommentParts on Comment {
+  id
+  body
   bodyHTML
   author {
     login

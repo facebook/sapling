@@ -910,6 +910,42 @@ export default class ServerToClientAPI {
           });
         break;
       }
+      case 'graphqlAddComment': {
+        repo.codeReviewProvider
+          ?.addIssueComment?.(data.subjectId, data.body)
+          ?.then(() => {
+            this.postMessage({
+              type: 'graphqlAddCommentResult',
+              success: true,
+            });
+          })
+          .catch((error: Error) => {
+            this.postMessage({
+              type: 'graphqlAddCommentResult',
+              error: error.message,
+            });
+          });
+        break;
+      }
+      case 'graphqlEditComment': {
+        repo.codeReviewProvider
+          ?.editComment?.(data.commentId, data.body)
+          ?.then(() => {
+            this.postMessage({
+              type: 'graphqlEditCommentResult',
+              commentId: data.commentId,
+              success: true,
+            });
+          })
+          .catch((error: Error) => {
+            this.postMessage({
+              type: 'graphqlEditCommentResult',
+              commentId: data.commentId,
+              error: error.message,
+            });
+          });
+        break;
+      }
       case 'resolveThread': {
         repo.codeReviewProvider
           ?.resolveThread?.(data.threadId)

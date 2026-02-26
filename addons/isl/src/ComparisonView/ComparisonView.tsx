@@ -19,7 +19,7 @@ import {RadioGroup} from 'isl-components/Radio';
 import {Subtle} from 'isl-components/Subtle';
 import {Tooltip} from 'isl-components/Tooltip';
 import {atom, useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {CommentSidebar, CommentSidebarToggle} from '../codeReview/CommentSidebar';
+import {CommentSidebar, SidebarToggleButtons} from '../codeReview/CommentSidebar';
 import {FileCommentSection} from '../codeReview/FileCommentSection';
 import {commentSidebarOpenAtom} from '../codeReview/CommentSidebarState';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
@@ -51,7 +51,6 @@ import {latestHeadCommit} from '../serverAPIState';
 import {themeState} from '../theme';
 import {showToast} from '../toast';
 import {GeneratedStatus} from '../types';
-import {FileListOverview} from './FileListOverview';
 import {SplitDiffView} from './SplitDiffView';
 import {useLineRangeSelection} from './SplitDiffView/useLineRangeSelection';
 import {
@@ -572,6 +571,16 @@ export default function ComparisonView({
   // State for PR-level comment input
   const [showPrComment, setShowPrComment] = useState(false);
 
+  // Get PR node ID for posting comments
+  const allDiffs = useAtomValue(allDiffSummaries);
+  const prNodeId = useMemo(() => {
+    if (!reviewMode.active || !reviewMode.prNumber) {
+      return undefined;
+    }
+    const summary = allDiffs.value?.get(reviewMode.prNumber);
+    return summary?.type === 'github' ? summary.nodeId : undefined;
+  }, [reviewMode.active, reviewMode.prNumber, allDiffs]);
+
   // Get list of file paths for navigation
   const filePaths = useMemo(
     () =>
@@ -621,17 +630,35 @@ export default function ComparisonView({
     }
   }, [currentFileIndex, filePaths, collapsedFiles, setCollapsedFile]);
 
+  const setHeaderCollapsed = useSetAtom(headerCollapsedAtom);
   const handleFileListClick = useCallback(
     (path: string) => {
-      const element = fileRefs.current.get(path);
-      if (element) {
-        element.scrollIntoView({behavior: 'smooth', block: 'start'});
-        if (collapsedFiles.get(path)) {
-          setCollapsedFile(path, false);
-        }
+      // Collapse the PR details section to maximize diff visibility
+      setHeaderCollapsed(true);
+      if (collapsedFiles.get(path)) {
+        setCollapsedFile(path, false);
       }
+      // Delay so collapse finishes before we measure positions
+      setTimeout(() => {
+        const element = fileRefs.current.get(path);
+        if (!element) {
+          return;
+        }
+        // Find the scrollable container and sticky header to offset correctly
+        const scrollable = element.closest('.comparison-view-scrollable');
+        const stickyHeader = scrollable?.querySelector('.comparison-view-sticky-header');
+        if (scrollable && stickyHeader) {
+          const headerHeight = stickyHeader.getBoundingClientRect().height;
+          const elementTop = element.getBoundingClientRect().top;
+          const scrollableTop = scrollable.getBoundingClientRect().top;
+          const offset = elementTop - scrollableTop - headerHeight + scrollable.scrollTop;
+          scrollable.scrollTo({top: offset, behavior: 'smooth'});
+        } else {
+          element.scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+      }, 80);
     },
-    [collapsedFiles, setCollapsedFile],
+    [collapsedFiles, setCollapsedFile, setHeaderCollapsed],
   );
 
   // Scroll to file when scrollToFile is set and data is loaded
@@ -727,6 +754,14 @@ export default function ComparisonView({
 
   return (
     <div data-testid="comparison-view" className={`comparison-view ${sidebarOpen && reviewMode.active ? 'comparison-view-with-sidebar' : ''}`}>
+      {reviewMode.active && reviewMode.prNumber && (
+        <CommentSidebar
+          diffId={reviewMode.prNumber}
+          diffs={data?.value ?? undefined}
+          onFileClick={handleFileListClick}
+          nodeId={prNodeId}
+        />
+      )}
       {/* Scrollable container - holds sticky header + content */}
       <div className="comparison-view-scrollable">
         {/* Sticky header: header + stack navigation */}
@@ -741,18 +776,12 @@ export default function ComparisonView({
             showNavigation={reviewMode.active && filePaths.length > 1}
             commentToggle={
               reviewMode.active && reviewMode.prNumber ? (
-                <CommentSidebarToggle commentCount={0} />
+                <SidebarToggleButtons commentCount={0} />
               ) : undefined
             }
           />
           <StackNavigationBar />
         </div>
-        {reviewMode.active && data?.value && (
-          <FileListOverview
-            diffs={data.value}
-            onFileClick={handleFileListClick}
-          />
-        )}
         {/* Content area */}
         <div className="comparison-view-details">
           {content}
@@ -787,9 +816,6 @@ export default function ComparisonView({
           )}
         </div>
       </div>
-      {reviewMode.active && reviewMode.prNumber && (
-        <CommentSidebar diffId={reviewMode.prNumber} />
-      )}
     </div>
   );
 }

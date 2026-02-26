@@ -333,27 +333,24 @@ export function MergeControls({prNumber}: MergeControlsProps) {
   if (hasConflicts) {
     return (
       <div className="merge-controls">
-        <div className="merge-controls-row">
-          <div className="merge-controls-actions">
-            <div className="merge-strategy-group">
-              <div className="merge-sync-status merge-sync-conflicts">
-                <Icon icon="warning" />
-                <span><T>Merge conflicts detected</T></span>
-              </div>
-              <div className="merge-strategy-row">
-                {prUrl && (
-                  <Tooltip title={t('Open GitHub to resolve conflicts')} placement="top">
-                    <Button
-                      className="resolve-conflicts-btn"
-                      onClick={() => window.open(prUrl, '_blank')}>
-                      <Icon icon="link-external" slot="start" />
-                      <T>Resolve on GitHub</T>
-                    </Button>
-                  </Tooltip>
-                )}
-              </div>
-            </div>
+        <div className="merge-conflicts-card">
+          <div className="merge-conflicts-card-header">
+            <Icon icon="warning" />
+            <span><T>Merge conflicts detected</T></span>
           </div>
+          <div className="merge-conflicts-card-body">
+            <T>This branch has conflicts that must be resolved before merging.</T>
+          </div>
+          {prUrl && (
+            <Tooltip title={t('Open GitHub to resolve conflicts')} placement="top">
+              <Button
+                className="resolve-conflicts-btn"
+                onClick={() => window.open(prUrl, '_blank')}>
+                <Icon icon="link-external" slot="start" />
+                <T>Resolve on GitHub</T>
+              </Button>
+            </Tooltip>
+          )}
         </div>
       </div>
     );
@@ -363,35 +360,29 @@ export function MergeControls({prNumber}: MergeControlsProps) {
   if (isDraft) {
     return (
       <div className="merge-controls">
-        <div className="merge-controls-row">
-          <div className="merge-controls-actions">
-            <div className="merge-strategy-group">
-              <div className="merge-sync-status merge-sync-draft">
-                <Icon icon="edit" />
-                <span><T>This pull request is still a draft</T></span>
-              </div>
-              <div className="merge-strategy-row">
-                <Tooltip title={t('Mark this PR as ready for review')} placement="top">
-                  <Button
-                    className="publish-pr-btn"
-                    disabled={isPublishing || !prNodeId}
-                    onClick={handlePublish}>
-                    {isPublishing ? (
-                      <>
-                        <Icon icon="loading" slot="start" />
-                        <T>Publishing...</T>
-                      </>
-                    ) : (
-                      <>
-                        <Icon icon="cloud-upload" slot="start" />
-                        <T>Ready for review</T>
-                      </>
-                    )}
-                  </Button>
-                </Tooltip>
-              </div>
-            </div>
+        <div className="merge-status-card merge-status-card-draft">
+          <div className="merge-status-card-header merge-status-draft-color">
+            <Icon icon="edit" />
+            <span><T>This pull request is still a draft</T></span>
           </div>
+          <Tooltip title={t('Mark this PR as ready for review')} placement="top">
+            <Button
+              className="publish-pr-btn"
+              disabled={isPublishing || !prNodeId}
+              onClick={handlePublish}>
+              {isPublishing ? (
+                <>
+                  <Icon icon="loading" slot="start" />
+                  <T>Publishing...</T>
+                </>
+              ) : (
+                <>
+                  <Icon icon="cloud-upload" slot="start" />
+                  <T>Ready for review</T>
+                </>
+              )}
+            </Button>
+          </Tooltip>
         </div>
       </div>
     );
@@ -401,35 +392,29 @@ export function MergeControls({prNumber}: MergeControlsProps) {
   if (isBehind) {
     return (
       <div className="merge-controls">
-        <div className="merge-controls-row">
-          <div className="merge-controls-actions">
-            <div className="merge-strategy-group">
-              <div className="merge-sync-status merge-sync-behind">
-                <Icon icon="warning" />
-                <span><T>This branch is out of date with the base branch</T></span>
-              </div>
-              <div className="merge-strategy-row">
-                <Tooltip title={t('Update this branch by rebasing onto the base branch')} placement="top">
-                  <Button
-                    className="update-branch-btn"
-                    disabled={isSyncing}
-                    onClick={handleUpdateBranch}>
-                    {isSyncing ? (
-                      <>
-                        <Icon icon="loading" slot="start" />
-                        <T>Updating...</T>
-                      </>
-                    ) : (
-                      <>
-                        <Icon icon="sync" slot="start" />
-                        <T>Update branch</T>
-                      </>
-                    )}
-                  </Button>
-                </Tooltip>
-              </div>
-            </div>
+        <div className="merge-status-card merge-status-card-behind">
+          <div className="merge-status-card-header merge-status-behind-color">
+            <Icon icon="warning" />
+            <span><T>This branch is out of date with the base branch</T></span>
           </div>
+          <Tooltip title={t('Update this branch by rebasing onto the base branch')} placement="top">
+            <Button
+              className="update-branch-btn"
+              disabled={isSyncing}
+              onClick={handleUpdateBranch}>
+              {isSyncing ? (
+                <>
+                  <Icon icon="loading" slot="start" />
+                  <T>Updating...</T>
+                </>
+              ) : (
+                <>
+                  <Icon icon="sync" slot="start" />
+                  <T>Update branch</T>
+                </>
+              )}
+            </Button>
+          </Tooltip>
         </div>
         {filteredReasons.length > 0 && (
           <div className="merge-block-reasons">

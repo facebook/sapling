@@ -7,7 +7,10 @@
 
 import type {DiffComment} from '../types';
 
+import {atom} from 'jotai';
 import {localStorageBackedAtom} from '../jotaiUtils';
+
+export type SidebarTab = 'comments' | 'files';
 
 /**
  * Whether the comment sidebar is open.
@@ -17,6 +20,9 @@ export const commentSidebarOpenAtom = localStorageBackedAtom<boolean>(
   'isl.comment-sidebar-open',
   false,
 );
+
+/** Which tab is active in the sidebar. */
+export const sidebarActiveTabAtom = atom<SidebarTab>('files');
 
 export type GroupedComments = {
   /** PR-level comments (no filename) */
