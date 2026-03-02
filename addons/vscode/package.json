@@ -152,13 +152,6 @@
         "when": "!isl.openInteractiveSmartlogShortcutEnabled"
       },
       {
-        "command": "sapling.open-isl",
-        "title": "%sapling.open-isl-command%",
-        "category": "%sapling.command-category%",
-        "icon": "resources/Smartlog_viewContainer.svg",
-        "when": "isl.openInteractiveSmartlogShortcutEnabled"
-      },
-      {
         "command": "sapling.open-file-diff-uncommitted",
         "title": "%sapling.open-diff-uncommitted-command%",
         "category": "%sapling.command-category%",
