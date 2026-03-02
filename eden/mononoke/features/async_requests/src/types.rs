@@ -808,6 +808,30 @@ impl_async_svc_method_types! {
     }
 }
 
+// Params and result types for derive_backfill_repo
+
+impl_async_svc_method_types! {
+    method_name => "derive_backfill_repo",
+    request_struct => DeriveBackfillRepo,
+
+    params_value_thrift_type => DeriveBackfillRepoParams,
+    params_union_variant => derive_backfill_repo_params,
+
+    response_type => DeriveBackfillRepoResponse,
+    result_union_variant => derive_backfill_repo_result,
+
+    poll_response_type => DeriveBackfillRepoPollResponse,
+    token_type => DeriveBackfillRepoToken,
+    token_thrift_type => DeriveBackfillRepoToken,
+
+    fn target(&self: ThriftParams) -> String {
+        format!(
+            "repo_id: {}, type: {}, changesets: {}",
+            self.repo_id, self.derived_data_type, self.cs_ids.len()
+        )
+    }
+}
+
 impl_async_svc_stored_type! {
     handle_type => AsynchronousRequestParamsId,
     handle_thrift_type => ThriftAsynchronousRequestParamsId,
@@ -869,6 +893,9 @@ impl AsynchronousRequestParams {
             }
             ThriftAsynchronousRequestParams::derive_slice_params(params) => Ok(params.target()),
             ThriftAsynchronousRequestParams::derive_backfill_params(params) => Ok(params.target()),
+            ThriftAsynchronousRequestParams::derive_backfill_repo_params(params) => {
+                Ok(params.target())
+            }
             ThriftAsynchronousRequestParams::UnknownField(union_tag) => {
                 Err(AsyncRequestsError::internal(anyhow!(
                     "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!",

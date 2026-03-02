@@ -39,6 +39,7 @@ use stats::prelude::TimeseriesStatic;
 use crate::AsyncRequestsError;
 use crate::types::AsynchronousRequestParams;
 use crate::types::AsynchronousRequestResult;
+use crate::types::DeriveBackfillRepo;
 use crate::types::DeriveBoundaries;
 use crate::types::DeriveSlice;
 use crate::types::Request;
@@ -59,9 +60,15 @@ const JK_MAX_CONCURRENT: &str = "scm/mononoke:async_requests_max_concurrent";
 /// concurrency limiting. Grouped types share a switch and count across
 /// all members; ungrouped types use their own name.
 fn concurrency_key(request_type: &str) -> (&str, Vec<&str>) {
-    const DERIVE_BACKFILL: &[&str] = &[DeriveBoundaries::NAME, DeriveSlice::NAME];
+    const DERIVE_BACKFILL: &[&str] = &[
+        DeriveBoundaries::NAME,
+        DeriveSlice::NAME,
+        DeriveBackfillRepo::NAME,
+    ];
     match request_type {
-        DeriveBoundaries::NAME | DeriveSlice::NAME => ("derive_backfill", DERIVE_BACKFILL.to_vec()),
+        DeriveBoundaries::NAME | DeriveSlice::NAME | DeriveBackfillRepo::NAME => {
+            ("derive_backfill", DERIVE_BACKFILL.to_vec())
+        }
         name => (name, vec![name]),
     }
 }

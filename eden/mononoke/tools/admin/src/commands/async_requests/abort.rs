@@ -82,6 +82,7 @@ async fn abort_single_request(
         ThriftAsynchronousRequestParams::derive_boundaries_params(_) => default_err,
         ThriftAsynchronousRequestParams::derive_slice_params(_) => default_err,
         ThriftAsynchronousRequestParams::derive_backfill_params(_) => default_err,
+        ThriftAsynchronousRequestParams::derive_backfill_repo_params(_) => default_err,
         ThriftAsynchronousRequestParams::UnknownField(_) => {
             return Err(anyhow!("unknown request type!"));
         }

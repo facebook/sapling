@@ -65,6 +65,10 @@ typedef id.Id DeriveSliceResultId
 typedef id.Id DeriveBackfillParamsId
 @rust.NewType
 typedef id.Id DeriveBackfillResultId
+@rust.NewType
+typedef id.Id DeriveBackfillRepoParamsId
+@rust.NewType
+typedef id.Id DeriveBackfillRepoResultId
 
 @rust.NewType
 typedef id.Id AsynchronousRequestResultId
@@ -81,6 +85,7 @@ union AsynchronousRequestResult {
   10: source_control.DeriveBoundariesResponse derive_boundaries_result;
   11: source_control.DeriveSliceResponse derive_slice_result;
   12: source_control.DeriveBackfillResponse derive_backfill_result;
+  13: source_control.DeriveBackfillRepoResponse derive_backfill_repo_result;
 }
 
 @rust.NewType
@@ -97,4 +102,5 @@ union AsynchronousRequestParams {
   9: source_control.DeriveBoundariesParams derive_boundaries_params;
   10: source_control.DeriveSliceParams derive_slice_params;
   11: source_control.DeriveBackfillParams derive_backfill_params;
+  12: source_control.DeriveBackfillRepoParams derive_backfill_repo_params;
 }

@@ -344,6 +344,11 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
                 .await
                 .into())
         }
+        async_requests_types_thrift::AsynchronousRequestParams::derive_backfill_repo_params(_) => {
+            bail!(
+                "derive_backfill_repo is not yet implemented in this worker"
+            )
+        }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
              bail!(
                 "this type of request (AsynchronousRequestParams tag {}) not supported by this worker!", union_tag

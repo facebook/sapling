@@ -2892,6 +2892,38 @@ union DeriveBackfillPollResponse {
   2: DeriveBackfillResponse response;
 }
 
+/// Token for derive_backfill_repo async request
+struct DeriveBackfillRepoToken {
+  1: i64 id;
+}
+
+/// Request to backfill derived data for a single repository.
+/// Enqueued by DeriveBackfill, computes slices and boundaries for one repo
+/// and enqueues DeriveBoundaries/DeriveSlice sub-requests.
+struct DeriveBackfillRepoParams {
+  1: i64 repo_id;
+  2: string derived_data_type;
+  3: list<binary> cs_ids;
+  4: i64 slice_size;
+  5: i32 boundaries_concurrency;
+  6: bool rederive;
+  7: optional string config_name;
+  8: bool reslice;
+}
+
+/// Result for derive_backfill_repo request
+struct DeriveBackfillRepoResponse {
+  /// Total number of sub-requests enqueued (boundaries + slices)
+  1: i64 total_sub_requests;
+  2: optional string error_message;
+}
+
+@hack.MigrationBlockingLegacyJSONSerialization
+union DeriveBackfillRepoPollResponse {
+  1: PollPending poll_pending;
+  2: DeriveBackfillRepoResponse response;
+}
+
 /// Exceptions
 
 enum RequestErrorKind {
