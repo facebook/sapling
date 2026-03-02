@@ -358,7 +358,7 @@ impl<R: MononokeRepo> HgAugmentedTreeRestrictionContext<R> {
                 let restricted_paths = restricted_paths.clone();
                 async move { self.check_path_restriction(restricted_paths, &path).await }
             })
-            .try_filter_map(|info| futures::future::ok(info))
+            .try_filter_map(futures::future::ok)
             .boxed()
             .try_next()
             .await
