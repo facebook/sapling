@@ -491,6 +491,7 @@ async fn move_bookmark(
                 Box::new(future::ready(())),
             )
             .await?
+            .1
             .await;
             let small_repo_cs_id = small_repo_back_sync_vars
                 .small_repo

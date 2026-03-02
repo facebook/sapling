@@ -180,7 +180,7 @@ async fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
     let small_repo_dbs = Arc::new(small_repo_dbs);
     // Backsync a few entries
     let ctx = CoreContext::test_mock(fb);
-    let fut = backsync_latest(
+    let (_delay_info, fut) = backsync_latest(
         ctx.clone(),
         commit_sync_data.clone(),
         small_repo_dbs.clone(),
@@ -427,6 +427,7 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
         )
         .map_err(Error::from)
         .await?
+        .1
         .await;
 
         println!("verifying small repo#{}", small_repo_id.id());
@@ -655,7 +656,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     )
     .await?;
 
-    let fut = backsync_latest(
+    let (_delay_info, fut) = backsync_latest(
         ctx.clone(),
         commit_sync_data.clone(),
         small_repo_dbs.clone(),
@@ -699,6 +700,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         fut,
     )
     .await?
+    .1
     .await;
     let maybe_outcome = commit_sync_data
         .get_commit_sync_outcome(&ctx, new_master)
@@ -844,7 +846,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         false,
         Box::new(future::ready(())),
     );
-    with_just_knobs_async(jk, f.boxed()).await?.await;
+    with_just_knobs_async(jk, f.boxed()).await?.1.await;
 
     let commit_sync_outcome = commit_sync_data
         .get_commit_sync_outcome(&ctx, before_mapping_change)
@@ -969,7 +971,8 @@ async fn backsync_and_verify_master_wc(
         futs.push(f);
     }
 
-    futures::future::join_all(futures::future::try_join_all(futs).await?).await;
+    let results = futures::future::try_join_all(futs).await?;
+    futures::future::join_all(results.into_iter().map(|(_di, f)| f)).await;
 
     // Check that counter was moved
     let fetched_value = small_repo_dbs

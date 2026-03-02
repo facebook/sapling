@@ -149,6 +149,12 @@ pub enum BacksyncLimit {
     Limit(u64),
 }
 
+#[derive(Debug, Clone)]
+pub struct BacksyncDelayInfo {
+    pub delay_secs: i64,
+    pub remaining_entries: u64,
+}
+
 /// Block until a specific bookmark transaction (identified by its log id) is confirmed to be
 /// backsynced.
 ///
@@ -217,7 +223,13 @@ pub async fn backsync_latest<R>(
     sync_context: CommitSyncContext,
     disable_lease: bool,
     commit_only_backsync_future: Box<dyn Future<Output = ()> + Send + Unpin>,
-) -> Result<Box<dyn Future<Output = ()> + Send + Unpin>, Error>
+) -> Result<
+    (
+        BacksyncDelayInfo,
+        Box<dyn Future<Output = ()> + Send + Unpin>,
+    ),
+    Error,
+>
 where
     R: RepoLike + Send + Sync + Clone + 'static,
 {
@@ -254,18 +266,25 @@ where
         .try_collect()
         .await?;
 
+    let delay_info = BacksyncDelayInfo {
+        delay_secs: next_entries
+            .first()
+            .map_or(0, |entry| entry.timestamp.since_seconds()),
+        remaining_entries: next_entries.len() as u64,
+    };
+
     // Before syncing entries, check if cancellation has been
     // requested. If yes, then exit early.
     if cancellation_requested.load(Ordering::Relaxed) {
         info!("sync stopping due to cancellation request");
-        return Ok(commit_only_backsync_future);
+        return Ok((delay_info, commit_only_backsync_future));
     }
 
     if next_entries.is_empty() {
         debug!("nothing to sync");
-        Ok(commit_only_backsync_future)
+        Ok((delay_info, commit_only_backsync_future))
     } else {
-        sync_entries(
+        let future = sync_entries(
             ctx,
             &commit_sync_data,
             target_repo_dbs,
@@ -277,7 +296,8 @@ where
             commit_only_backsync_future,
         )
         .boxed()
-        .await
+        .await?;
+        Ok((delay_info, future))
     }
 }
 

@@ -518,22 +518,21 @@ impl<R: Repo> PushRedirector<R> {
     async fn backsync_latest(&self, ctx: &CoreContext) -> Result<(), Error> {
         // backsync_latest returns a tokio-spawned future which contains the
         // non-blocking extra syncing done. We don't need to wait for it.
-        std::mem::drop(
-            backsync_latest(
-                ctx.clone(),
-                self.large_to_small_commit_syncer.clone(),
-                self.target_repo_dbs.clone(),
-                BacksyncLimit::NoLimit,
-                Arc::new(AtomicBool::new(false)),
-                CommitSyncContext::PushRedirector,
-                // Disable leases because this is the push path and we want
-                // it as fast as possible
-                true,
-                // We don't chain successive backsyncs here.
-                Box::new(future::ready(())),
-            )
-            .await?,
-        );
+        let (_delay_info, future) = backsync_latest(
+            ctx.clone(),
+            self.large_to_small_commit_syncer.clone(),
+            self.target_repo_dbs.clone(),
+            BacksyncLimit::NoLimit,
+            Arc::new(AtomicBool::new(false)),
+            CommitSyncContext::PushRedirector,
+            // Disable leases because this is the push path and we want
+            // it as fast as possible
+            true,
+            // We don't chain successive backsyncs here.
+            Box::new(future::ready(())),
+        )
+        .await?;
+        std::mem::drop(future);
         Ok(())
     }
 
