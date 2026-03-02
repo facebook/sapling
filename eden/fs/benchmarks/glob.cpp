@@ -6,11 +6,9 @@
  */
 
 #include <folly/io/async/EventBaseThread.h>
-#include <thrift/lib/cpp2/async/HeaderClientChannel.h>
-#include <filesystem>
-#include <fstream>
 #include "eden/common/utils/PathFuncs.h"
 #include "eden/common/utils/benchharness/Bench.h"
+#include "eden/fs/benchmarks/bench_utils.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"
 #include "watchman/cppclient/WatchmanClient.h"
 
@@ -22,63 +20,8 @@ DEFINE_string(watchman_socket, "", "Socket to the watchman daemon");
 namespace {
 
 using namespace facebook::eden;
+using namespace facebook::eden::benchmarks;
 using namespace watchman;
-
-#ifdef _WIN32
-std::optional<AbsolutePath> getSocketPathFromConfig(
-    const AbsolutePath& mountPath) {
-  auto configPath = mountPath + ".eden/config"_relpath;
-
-  if (!std::filesystem::exists(configPath.asString())) {
-    return std::nullopt;
-  }
-
-  std::ifstream configFile(configPath.asString());
-  if (!configFile.is_open()) {
-    return std::nullopt;
-  }
-
-  std::string line;
-  while (std::getline(configFile, line)) {
-    line.erase(0, line.find_first_not_of(" \t\r\n"));
-    line.erase(line.find_last_not_of(" \t\r\n") + 1);
-
-    if (line.find("socket = ") == 0) {
-      std::string socketPart = line.substr(9); // Remove "socket = "
-
-      if (!socketPart.empty() &&
-          ((socketPart.front() == '"' && socketPart.back() == '"') ||
-           (socketPart.front() == '\'' && socketPart.back() == '\''))) {
-        socketPart = socketPart.substr(1, socketPart.length() - 2);
-      }
-
-      try {
-        return canonicalPath(socketPart);
-      } catch (const std::exception&) {
-        return std::nullopt;
-      }
-    }
-  }
-
-  return std::nullopt;
-}
-#endif
-
-AbsolutePath getEdenSocketPath(const AbsolutePath& mountPath) {
-#ifdef _WIN32
-  // On Windows, always read from .eden/config
-  auto socketPath = getSocketPathFromConfig(mountPath);
-  if (socketPath) {
-    return *socketPath;
-  }
-  throw std::runtime_error(
-      "Could not find socket path in .eden/config file for Windows mount: " +
-      mountPath.asString());
-#else
-  // On Linux and Mac, we can assume the default socket path
-  return mountPath + ".eden/socket"_relpath;
-#endif
-}
 
 AbsolutePath validateArguments() {
   if (FLAGS_query.empty()) {
@@ -101,11 +44,7 @@ void eden_glob(benchmark::State& state) {
   auto evbThread = folly::EventBaseThread();
   auto eventBase = evbThread.getEventBase();
 
-  auto socket = folly::AsyncSocket::newSocket(
-      eventBase, folly::SocketAddress::makeFromPath(socketPath.view()));
-  auto channel =
-      apache::thrift::HeaderClientChannel::newChannel(std::move(socket));
-  auto client = std::make_unique<EdenServiceAsyncClient>(std::move(channel));
+  auto client = createEdenThriftClient(eventBase, socketPath);
 
   GlobParams param;
   param.mountPoint() = path.view();
