@@ -39,7 +39,7 @@ python_unittest(
     name = "unittest_strictmock_test",
     srcs = ["unittest_strictmock_test.py"],
     labels = ["autodeps2_generated"],
-    uses_legacy_listing = False,  # use snapper
+    supports_static_listing = False,
     deps = [
         "//testslide/testslide:testslide",
     ],
