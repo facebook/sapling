@@ -65,7 +65,8 @@
     "committer_date": "2023-05-23T11:15:49-07:00",
     "message": "C",
     "hg_extra": {},
-    "file_changes": {}
+    "file_changes": {},
+    "subtree_changes": {}
   }
   $ cd ..
 
@@ -100,5 +101,6 @@ $ Verify that the destination repo has the same commit hashes as the source repo
     "committer_date": "2023-05-23T11:15:49-07:00",
     "message": "C",
     "hg_extra": {},
-    "file_changes": {}
+    "file_changes": {},
+    "subtree_changes": {}
   }

@@ -54,7 +54,8 @@ setup configuration
       ]
     },
     "message": "A",
-    "parents": []
+    "parents": [],
+    "subtree_changes": {}
   }
 
   $ mononoke_admin fetch -R repo -B main -p "" -k hg
