@@ -114,7 +114,7 @@
     "views": {
       "fbRunCommand__sapling_DOT_open-isl": [
         {
-          "id": "empty-view-isl",
+          "id": "empty-view-sapling",
           "name": "%isl.title%",
           "icon": "resources/Smartlog_viewContainer.svg",
           "when": "isl.openInteractiveSmartlogShortcutEnabled && !config.sapling.isl.showInSidebar"
