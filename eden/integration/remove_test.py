@@ -102,7 +102,6 @@ class RemoveTest(RemoveTestBase):
             msg="should be able to re-clone after eden rm",
         )
 
-    @unittest.skip("Timing assertion too strict for Windows")
     @parameterized.expand(
         [
             ("rust", {"EDENFSCTL_ONLY_RUST": "1"}),
@@ -118,6 +117,7 @@ class RemoveTest(RemoveTestBase):
         2. The timeout message includes the step name to help identify what was stuck
         3. Both mounts are removed despite the timeouts
         """
+        self.skipTest("flakiness")
         # Create a second mount
         mount2 = os.path.join(self.tmp_dir, "mount2")
         self.eden.clone(self.repo.path, mount2)
