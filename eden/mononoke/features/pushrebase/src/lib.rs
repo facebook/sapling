@@ -65,10 +65,13 @@ use bookmarks::BookmarkKey;
 use bookmarks::BookmarkUpdateLogId;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks::BookmarksRef;
+use bytes::Bytes;
 use commit_graph::CommitGraphRef;
 use commit_graph::CommitGraphWriterRef;
 use context::CoreContext;
+use derivation_queue_thrift::DerivationPriority;
 use filenodes_derivation::FilenodesOnlyPublic;
+use fsnodes::RootFsnodeId;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryFutureExt;
@@ -90,6 +93,7 @@ use mercurial_types::NonRootMPath;
 use metaconfig_types::PushrebaseFlags;
 use mononoke_types::BonsaiChangeset;
 use mononoke_types::ChangesetId;
+use mononoke_types::ContentId;
 use mononoke_types::DateTime;
 use mononoke_types::DerivableType;
 use mononoke_types::FileChange;
@@ -99,6 +103,7 @@ use mononoke_types::MPath;
 use mononoke_types::Timestamp;
 use mononoke_types::check_case_conflicts;
 use mononoke_types::find_path_conflicts;
+use mononoke_types::fsnode::FsnodeFile;
 use pushrebase_hook::PushrebaseCommitHook;
 use pushrebase_hook::PushrebaseHook;
 use pushrebase_hook::PushrebaseTransactionHook;
@@ -109,6 +114,8 @@ use repo_identity::RepoIdentityRef;
 use shared_error::std::SharedError;
 use stats::prelude::*;
 use thiserror::Error;
+use three_way_merge::MergeResult;
+use three_way_merge::merge_text;
 use tokio::sync::oneshot;
 use tracing::info;
 
@@ -348,7 +355,21 @@ pub async fn do_batched_pushrebase(
     requests: Vec<PushrebaseRequest>,
 ) -> Vec<PushrebaseRequest> {
     let should_log = config.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());
-    let repo_args = (repo.repo_identity().name().to_string(),);
+    let reponame = repo.repo_identity().name();
+    let max_merge_conflicts: usize = match justknobs::get_as::<usize>(
+        "scm/mononoke:pushrebase_max_merge_conflicts",
+        Some(reponame),
+    ) {
+        Ok(v) => v,
+        Err(e) => {
+            let shared = SharedError::from(PushrebaseError::Error(e));
+            for req in requests {
+                let _ = req.response_tx.send(Err(shared.clone()));
+            }
+            return vec![];
+        }
+    };
+    let repo_args = (reponame.to_string(),);
     let start_critical_section = Instant::now();
 
     // CRITICAL SECTION START: Read the current bookmark value.
@@ -398,10 +419,12 @@ pub async fn do_batched_pushrebase(
             ctx,
             repo,
             config,
+            request.root,
             request.conflict_check_base,
             bookmark_val,
             &request.changesets,
             &request.changed_files,
+            max_merge_conflicts,
         )
         .await
         {
@@ -608,10 +631,12 @@ async fn check_pushrebase_conflicts(
     ctx: &CoreContext,
     repo: &impl Repo,
     config: &PushrebaseFlags,
+    root: ChangesetId,
     ancestor: ChangesetId,
     descendant: ChangesetId,
     client_bcs: &[BonsaiChangeset],
     client_cf: &[MPath],
+    max_merge_conflicts: usize,
 ) -> Result<usize, PushrebaseError> {
     let server_bcs =
         fetch_bonsai_range_ancestor_not_included(ctx, repo, ancestor, descendant).await?;
@@ -633,7 +658,35 @@ async fn check_pushrebase_conflicts(
 
     let mut server_cf = find_changed_files(ctx, repo, ancestor, descendant).await?;
     server_cf.extend(find_subtree_changes(&server_bcs)?);
-    intersect_changed_files(server_cf, client_cf.to_vec(), repo.repo_identity().name())?;
+
+    match intersect_changed_files(server_cf, client_cf.to_vec()) {
+        Ok(()) => {} // No conflicts, proceed
+        Err(PushrebaseError::Conflicts(conflicts)) => {
+            let reponame = repo.repo_identity().name();
+            STATS::conflict_rejections.add_value(1, (reponame.to_string(),));
+            STATS::conflict_files_count.add_value(conflicts.len() as i64, (reponame.to_string(),));
+
+            let dry_run_enabled = justknobs::eval(
+                "scm/mononoke:pushrebase_dry_run_merge_resolution",
+                None,
+                Some(reponame),
+            )?;
+            if dry_run_enabled {
+                dry_run_merge_resolution(
+                    ctx,
+                    repo,
+                    &conflicts,
+                    root,
+                    &server_bcs,
+                    client_bcs,
+                    max_merge_conflicts,
+                )
+                .await;
+            }
+            return Err(PushrebaseError::Conflicts(conflicts));
+        }
+        Err(e) => return Err(e),
+    }
 
     Ok(server_bcs_len)
 }
@@ -653,6 +706,12 @@ async fn rebase_in_loop(
     let mut latest_rebase_attempt = root;
     let mut pushrebase_distance = PushrebaseDistance(0);
 
+    let reponame = repo.repo_identity().name();
+    let max_merge_conflicts: usize = justknobs::get_as::<usize>(
+        "scm/mononoke:pushrebase_max_merge_conflicts",
+        Some(reponame),
+    )?;
+
     let repo_args = (repo.repo_identity().name().to_string(),);
     for retry_num in 0..MAX_REBASE_ATTEMPTS {
         let retry_num = PushrebaseRetryNum(retry_num);
@@ -670,10 +729,12 @@ async fn rebase_in_loop(
             ctx,
             repo,
             config,
+            root,
             latest_rebase_attempt,
             old_bookmark_value.unwrap_or(root),
             client_bcs,
             &client_cf,
+            max_merge_conflicts,
         )
         .await?;
         pushrebase_distance = pushrebase_distance.add(server_bcs_count);
@@ -1082,11 +1143,7 @@ fn find_subtree_changes(changesets: &[BonsaiChangeset]) -> Result<Vec<MPath>, Pu
 
 /// `left` and `right` are considerered to be conflict free, if none of the element from `left`
 /// is prefix of element from `right`, and vice versa.
-fn intersect_changed_files(
-    left: Vec<MPath>,
-    right: Vec<MPath>,
-    reponame: &str,
-) -> Result<(), PushrebaseError> {
+fn intersect_changed_files(left: Vec<MPath>, right: Vec<MPath>) -> Result<(), PushrebaseError> {
     let conflicts: Vec<PushrebaseConflict> = find_path_conflicts(left, right)
         .into_iter()
         .map(|(l, r)| PushrebaseConflict::new(l, r))
@@ -1095,10 +1152,217 @@ fn intersect_changed_files(
     if conflicts.is_empty() {
         Ok(())
     } else {
-        STATS::conflict_rejections.add_value(1, (reponame.to_string(),));
-        STATS::conflict_files_count.add_value(conflicts.len() as i64, (reponame.to_string(),));
         Err(PushrebaseError::Conflicts(conflicts))
     }
+}
+
+/// Fetch fsnode file entry for a given path from a changeset's fsnode manifest.
+/// Returns the FsnodeFile which provides access to content_id and file_type.
+async fn fetch_fsnode_file(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    cs_id: ChangesetId,
+    path: &NonRootMPath,
+) -> Result<Option<FsnodeFile>> {
+    use manifest::Entry;
+
+    let root_fsnode_id = repo
+        .repo_derived_data()
+        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+        .await?;
+
+    let mf_id = root_fsnode_id.fsnode_id().clone();
+    let entry = mf_id
+        .find_entry(
+            ctx.clone(),
+            repo.repo_blobstore().clone(),
+            path.clone().into(),
+        )
+        .await?;
+
+    match entry {
+        Some(Entry::Leaf(fsnode_file)) => Ok(Some(fsnode_file)),
+        _ => Ok(None),
+    }
+}
+
+/// Outcome of attempting a three-way merge on a single file.
+#[allow(dead_code)]
+enum FileMergeOutcome {
+    /// Successfully merged content.
+    Clean(Bytes),
+    /// True content conflict.
+    Conflict(String),
+    /// Cannot attempt merge (file missing, type mismatch, etc.).
+    Skipped(String),
+    /// Internal error during fetch.
+    Error(anyhow::Error),
+}
+
+/// Attempt a 3-way merge on a single file at `path`.
+///
+/// Fetches the base (root) version from fsnode manifests. The other
+/// (server-side) content is passed directly as `other_content_id` to avoid
+/// expensive fsnode derivation in the critical section — callers obtain it
+/// from the bonsai changesets instead.
+///
+/// If `expected_file_type` is `Some`, validates that the base file type
+/// matches (strict mode for actual merge resolution). If `None`, skips type
+/// checking (used by dry-run).
+async fn try_merge_file(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    root: ChangesetId,
+    path: &NonRootMPath,
+    local_content_id: ContentId,
+    other_content_id: ContentId,
+    expected_file_type: Option<FileType>,
+) -> FileMergeOutcome {
+    // Fetch base fsnode entry (only derivation needed — root is pre-derived)
+    let base_fsnode = match fetch_fsnode_file(ctx, repo, root, path).await {
+        Ok(Some(f)) => f,
+        Ok(None) => {
+            return FileMergeOutcome::Skipped(format!("file {} not found in base", path));
+        }
+        Err(e) => return FileMergeOutcome::Error(e),
+    };
+
+    // Validate file types if expected type is provided
+    if let Some(local_type) = expected_file_type {
+        let base_type = *base_fsnode.file_type();
+        if base_type != local_type {
+            return FileMergeOutcome::Skipped(format!(
+                "file {} has type mismatch: base={:?}, local={:?}",
+                path, base_type, local_type,
+            ));
+        }
+    }
+
+    // Fetch all three file contents concurrently
+    let (base_bytes, local_bytes, other_bytes) = futures::join!(
+        filestore::fetch_concat(repo.repo_blobstore(), ctx, *base_fsnode.content_id()),
+        filestore::fetch_concat(repo.repo_blobstore(), ctx, local_content_id),
+        filestore::fetch_concat(repo.repo_blobstore(), ctx, other_content_id),
+    );
+
+    match (base_bytes, local_bytes, other_bytes) {
+        (Ok(base), Ok(local), Ok(other)) => match merge_text(&base, &local, &other) {
+            MergeResult::Clean(merged) => FileMergeOutcome::Clean(Bytes::from(merged)),
+            MergeResult::Conflict(desc) => {
+                FileMergeOutcome::Conflict(format!("file {}: {}", path, desc))
+            }
+        },
+        (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => FileMergeOutcome::Error(e),
+    }
+}
+
+/// Attempt a dry-run 3-way merge on conflicting files, logging outcomes
+/// to Scuba without changing pushrebase behavior.
+///
+/// This fetches file content for each conflicting path from the common
+/// ancestor, pushed changeset, and bookmark head, then runs merge_text
+/// to determine if the conflict would be resolvable.
+async fn dry_run_merge_resolution(
+    ctx: &CoreContext,
+    repo: &impl Repo,
+    conflicts: &[PushrebaseConflict],
+    root: ChangesetId,
+    server_bcs: &[BonsaiChangeset],
+    client_bcs: &[BonsaiChangeset],
+    max_conflicts: usize,
+) {
+    // Only attempt on exact path matches (left == right), skip prefix conflicts
+    let exact_conflicts: Vec<_> = conflicts.iter().filter(|c| c.left == c.right).collect();
+
+    if exact_conflicts.is_empty() {
+        return;
+    }
+
+    // Build a map of path -> FileChange from the client changesets
+    let client_changes: HashMap<&NonRootMPath, &FileChange> = client_bcs
+        .iter()
+        .flat_map(|bcs| bcs.file_changes_map().iter())
+        .collect();
+
+    // Build a map of path -> FileChange from the server changesets
+    // (latest-wins semantics since server_bcs is oldest-to-newest)
+    let server_changes: HashMap<&NonRootMPath, &FileChange> = server_bcs
+        .iter()
+        .flat_map(|bcs| bcs.file_changes_map().iter())
+        .collect();
+
+    let mut all_clean = true;
+    let mut resolved_count: i64 = 0;
+    let mut conflict_count: i64 = 0;
+    let mut error_count: i64 = 0;
+
+    for conflict in exact_conflicts.iter().take(max_conflicts) {
+        let path = &conflict.left;
+
+        // Get the NonRootMPath version for file lookups
+        let non_root_path = match path.clone().into_optional_non_root_path() {
+            Some(nrp) => nrp,
+            None => continue,
+        };
+
+        // Get local (pushed) content from the client file change
+        let local_content_id = match client_changes.get(&non_root_path) {
+            Some(FileChange::Change(tc)) => tc.content_id(),
+            _ => {
+                all_clean = false;
+                error_count += 1;
+                continue;
+            }
+        };
+
+        // Get server (bookmark head) content from the server bonsai changesets
+        let other_content_id = match server_changes.get(&non_root_path) {
+            Some(FileChange::Change(tc)) => tc.content_id(),
+            _ => {
+                all_clean = false;
+                error_count += 1;
+                continue;
+            }
+        };
+
+        match try_merge_file(
+            ctx,
+            repo,
+            root,
+            &non_root_path,
+            local_content_id,
+            other_content_id,
+            None,
+        )
+        .await
+        {
+            FileMergeOutcome::Clean(_) => resolved_count += 1,
+            FileMergeOutcome::Conflict(_) => {
+                all_clean = false;
+                conflict_count += 1;
+            }
+            FileMergeOutcome::Skipped(_) | FileMergeOutcome::Error(_) => {
+                all_clean = false;
+                error_count += 1;
+            }
+        }
+    }
+
+    let outcome = if all_clean && error_count == 0 {
+        "all_clean"
+    } else if conflict_count > 0 {
+        "some_conflicts"
+    } else {
+        "error"
+    };
+
+    ctx.scuba()
+        .clone()
+        .add("merge_dry_run_outcome", outcome)
+        .add("merge_dry_run_resolved", resolved_count)
+        .add("merge_dry_run_conflicts", conflict_count)
+        .add("merge_dry_run_errors", error_count)
+        .log_with_msg("Pushrebase dry-run merge resolution", None);
 }
 
 async fn get_bookmark_value(
@@ -1517,6 +1781,9 @@ mod tests {
     use futures::future::try_join_all;
     use futures::stream;
     use futures::stream::TryStreamExt;
+    use justknobs::test_helpers::JustKnobsInMemory;
+    use justknobs::test_helpers::KnobVal;
+    use justknobs::test_helpers::override_just_knobs;
     use manifest::Entry;
     use manifest::ManifestOps;
     use maplit::btreemap;
@@ -1545,6 +1812,12 @@ mod tests {
     use tests_utils::resolve_cs_id;
 
     use super::*;
+
+    fn init_just_knobs_for_test() {
+        override_just_knobs(JustKnobsInMemory::new(hashmap! {
+            "scm/mononoke:pushrebase_dry_run_merge_resolution".to_string() => KnobVal::Bool(false),
+        }));
+    }
 
     #[facet::container]
     #[derive(Clone)]
@@ -1612,6 +1885,7 @@ mod tests {
         onto_bookmark: &BookmarkKey,
         pushed_set: &HashSet<HgChangesetId>,
     ) -> Result<PushrebaseOutcome, PushrebaseError> {
+        init_just_knobs_for_test();
         let pushed = fetch_bonsai_changesets(ctx, repo, pushed_set).await?;
 
         let res = do_pushrebase_bonsai(ctx, repo, config, onto_bookmark, &pushed, &[]).await?;
@@ -2490,7 +2764,6 @@ mod tests {
         match intersect_changed_files(
             make_paths(&["a/b/c", "c", "a/b/d", "d/d", "b", "e/c"]),
             make_paths(&["d/f", "a/b/d/f", "c", "e"]),
-            "test_repo",
         ) {
             Err(PushrebaseError::Conflicts(conflicts)) => assert_eq!(
                 *conflicts,
@@ -2513,6 +2786,25 @@ mod tests {
         };
 
         Ok(())
+    }
+
+    #[mononoke::test]
+    fn pushrebase_intersect_changed_with_reponame() -> Result<(), Error> {
+        // Verifies intersect_changed_files detects exact path conflicts
+        match intersect_changed_files(make_paths(&["a/b/c"]), make_paths(&["a/b/c"])) {
+            Err(PushrebaseError::Conflicts(conflicts)) => {
+                assert_eq!(conflicts.len(), 1);
+                assert_eq!(
+                    conflicts[0],
+                    PushrebaseConflict {
+                        left: MPath::new("a/b/c")?,
+                        right: MPath::new("a/b/c")?,
+                    }
+                );
+                Ok(())
+            }
+            _ => Err(Error::msg("expected conflict")),
+        }
     }
 
     #[mononoke::fbinit_test]

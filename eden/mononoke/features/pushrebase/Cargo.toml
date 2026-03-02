@@ -12,11 +12,16 @@ anyhow = "1.0.101"
 blobrepo_utils = { version = "0.1.0", path = "../../blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../repo_attributes/bookmarks" }
+bytes = { version = "1.11.1", features = ["serde"] }
 changesets_creation = { version = "0.1.0", path = "../changesets_creation" }
 commit_graph = { version = "0.1.0", path = "../../repo_attributes/commit_graph/commit_graph" }
 context = { version = "0.1.0", path = "../../servers/slapi/slapi_server/context" }
+derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
 filenodes_derivation = { version = "0.1.0", path = "../../derived_data/filenodes_derivation" }
+filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
+fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
+justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mercurial_derivation = { version = "0.1.0", path = "../../derived_data/mercurial_derivation" }
@@ -30,6 +35,7 @@ repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity
 shared_error = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "2.0.18"
+three_way_merge = { version = "0.1.0", path = "../../common/three_way_merge" }
 tokio = { version = "1.47.1", features = ["full", "test-util", "tracing"] }
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 
@@ -41,7 +47,6 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.2", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-filestore = { version = "0.1.0", path = "../../repo_attributes/filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mononoke_macros = { version = "0.1.0", path = "../../common/mononoke_macros" }
 mutable_counters = { version = "0.1.0", path = "../../repo_attributes/mutable_counters" }
