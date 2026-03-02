@@ -326,11 +326,15 @@ mod facebook {
         ];
 
         // Assert both Scuba file and mock transport have the same expected logs
-        pretty_assertions::assert_eq!(expected_logs, scuba_file_logs, "Raw scuba logs don't match");
         pretty_assertions::assert_eq!(
             expected_logs,
             scuba_file_logs,
-            "Schematized logger logs don't match"
+            "Scuba file logs don't match"
+        );
+        pretty_assertions::assert_eq!(
+            expected_logs,
+            mock_transport_logs,
+            "Mock transport logs don't match"
         );
 
         Ok(())
@@ -438,11 +442,15 @@ mod facebook {
         ];
 
         // Assert both Scuba file and mock transport have the same expected logs
-        pretty_assertions::assert_eq!(expected_logs, scuba_file_logs, "Raw scuba logs don't match");
         pretty_assertions::assert_eq!(
             expected_logs,
             scuba_file_logs,
-            "Schematized logger logs don't match"
+            "Scuba file logs don't match"
+        );
+        pretty_assertions::assert_eq!(
+            expected_logs,
+            mock_transport_logs,
+            "Mock transport logs don't match"
         );
 
         Ok(())
@@ -522,20 +530,46 @@ mod facebook {
             attempt: Some(1),
         };
 
-        let expected_logs = vec![
-            // All attempts generate the exact same log
-            expected_log_for_each_attempt.clone(),
-            expected_log_for_each_attempt.clone(),
-            expected_log_for_each_attempt,
-        ];
+        let scuba_query_logs: Vec<_> = scuba_file_logs
+            .iter()
+            .filter(|log| log.granularity == TelemetryGranularity::ConsistentReadQuery)
+            .collect();
 
-        // Assert both Scuba file and mock transport have the same expected logs
-        pretty_assertions::assert_eq!(expected_logs, scuba_file_logs, "Raw scuba logs don't match");
-        pretty_assertions::assert_eq!(
-            expected_logs,
-            scuba_file_logs,
-            "Schematized logger logs don't match"
+        let mock_transport_query_logs: Vec<_> = mock_transport_logs
+            .iter()
+            .filter(|log| log.granularity == TelemetryGranularity::ConsistentReadQuery)
+            .collect();
+
+        // We expect exactly 3 query attempts (max_attempts: 3)
+        assert_eq!(
+            scuba_query_logs.len(),
+            3,
+            "Expected 3 ConsistentReadQuery logs from Scuba file, got {}",
+            scuba_query_logs.len()
         );
+        assert_eq!(
+            mock_transport_query_logs.len(),
+            3,
+            "Expected 3 ConsistentReadQuery logs from mock transport, got {}",
+            mock_transport_query_logs.len()
+        );
+
+        // Verify each query log matches expected format
+        for log in &scuba_query_logs {
+            pretty_assertions::assert_eq!(
+                &expected_log_for_each_attempt,
+                *log,
+                "Scuba file query log doesn't match expectation"
+            );
+        }
+
+        for log in &mock_transport_query_logs {
+            pretty_assertions::assert_eq!(
+                &expected_log_for_each_attempt,
+                *log,
+                "Mock transport query log doesn't match expectation"
+            );
+        }
 
         Ok(())
     }
