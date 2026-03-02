@@ -575,6 +575,49 @@ mononoke_queries! {
               AND request_type IN {request_types}
         ")
     }
+
+    read GetRequestsByRootRequestId(root_request_id: RowId) -> (
+        RowId,
+        RequestType,
+        Option<RepositoryId>,
+        BlobstoreKey,
+        Option<BlobstoreKey>,
+        Timestamp,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        Option<Timestamp>,
+        RequestStatus,
+        Option<ClaimedBy>,
+        Option<u8>,
+        Option<Timestamp>,
+        Option<RowId>,
+    ) {
+        "SELECT id,
+            request_type,
+            repo_id,
+            args_blobstore_key,
+            result_blobstore_key,
+            created_at,
+            started_processing_at,
+            inprogress_last_updated_at,
+            ready_at,
+            polled_at,
+            status,
+            claimed_by,
+            num_retries,
+            failed_at,
+            root_request_id
+        FROM long_running_request_queue
+        WHERE root_request_id = {root_request_id}"
+    }
+
+    write FailNewRequestsByRootId(root_request_id: RowId, failed_at: Timestamp) {
+        none,
+        "UPDATE long_running_request_queue
+         SET status = 'failed', failed_at = {failed_at}
+         WHERE root_request_id = {root_request_id} AND status = 'new'"
+    }
 }
 
 fn row_to_entry(
@@ -1220,6 +1263,35 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
         txn.commit().await?;
 
         Ok(row_id)
+    }
+
+    async fn get_requests_by_root_id(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<Vec<LongRunningRequestEntry>> {
+        let rows = GetRequestsByRootRequestId::query(
+            &self.connections.read_connection,
+            ctx.sql_query_telemetry(),
+            root_request_id,
+        )
+        .await?;
+        Ok(rows.into_iter().map(row_to_entry).collect())
+    }
+
+    async fn fail_new_requests_by_root_id(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<u64> {
+        let res = FailNewRequestsByRootId::query(
+            &self.connections.write_connection,
+            ctx.sql_query_telemetry(),
+            root_request_id,
+            &Timestamp::now(),
+        )
+        .await?;
+        Ok(res.affected_rows())
     }
 }
 

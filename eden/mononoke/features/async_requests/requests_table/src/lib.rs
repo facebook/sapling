@@ -203,4 +203,19 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         depends_on: &[RowId],
         root_request_id: &RowId,
     ) -> Result<RowId>;
+
+    /// Get all requests that share a given root_request_id.
+    async fn get_requests_by_root_id(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<Vec<LongRunningRequestEntry>>;
+
+    /// Mark all 'new' requests with the given root_request_id as 'failed'.
+    /// Returns the number of requests affected.
+    async fn fail_new_requests_by_root_id(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<u64>;
 }

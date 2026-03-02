@@ -613,6 +613,64 @@ impl AsyncMethodRequestQueue {
         }
     }
 
+    /// Get all requests that share a given root_request_id, with their params loaded.
+    pub async fn get_requests_by_root_id(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<
+        Vec<(
+            RequestId,
+            LongRunningRequestEntry,
+            AsynchronousRequestParams,
+            Option<AsynchronousRequestResult>,
+        )>,
+        Error,
+    > {
+        let entries = self
+            .table
+            .get_requests_by_root_id(ctx, root_request_id)
+            .await?;
+
+        stream::iter(entries)
+            .map(|entry| async {
+                let thrift_params = AsynchronousRequestParams::load_from_key(
+                    ctx,
+                    &self.blobstore,
+                    &entry.args_blobstore_key.0,
+                )
+                .await?;
+                let req_id = RequestId(entry.id.clone(), entry.request_type.clone());
+                let thrift_result = if let Some(ref result_key) = entry.result_blobstore_key {
+                    Some(
+                        AsynchronousRequestResult::load_from_key(
+                            ctx,
+                            &self.blobstore,
+                            &result_key.0,
+                        )
+                        .await?,
+                    )
+                } else {
+                    None
+                };
+                Ok::<_, Error>((req_id, entry, thrift_params, thrift_result))
+            })
+            .buffer_unordered(100)
+            .try_collect()
+            .await
+    }
+
+    /// Mark all 'new' requests with the given root_request_id as 'failed'.
+    pub async fn fail_new_requests_by_root_id(
+        &self,
+        ctx: &CoreContext,
+        root_request_id: &RowId,
+    ) -> Result<u64, Error> {
+        self.table
+            .fail_new_requests_by_root_id(ctx, root_request_id)
+            .await
+    }
+
     pub async fn get_queue_stats(&self, ctx: &CoreContext) -> Result<QueueStats, Error> {
         self.table.get_queue_stats(ctx, self.repos.as_deref()).await
     }
@@ -1111,5 +1169,132 @@ mod tests {
             .boxed(),
         )
         .await
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_get_and_fail_requests_by_root_id(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: Repo = test_repo_factory::build_empty(ctx.fb).await?;
+        let repo_id = repo.repo_identity().id();
+        let q = AsyncMethodRequestQueue::new_test_in_memory(Some(vec![repo_id])).unwrap();
+        let claimed_by = ClaimedBy("test_worker".to_string());
+
+        // Use a fixed root_request_id for all test requests
+        let root_row_id = RowId(999999);
+
+        // Create three child requests with the same root_request_id
+        let child1_params = ThriftMegarepoSyncChangesetParams {
+            target: ThriftMegarepoTarget {
+                bookmark: "child1".to_string(),
+                repo: Some(RepoSpecifier {
+                    name: "test".to_string(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let child1_token = q
+            .enqueue_with_root(&ctx, Some(&repo_id), child1_params, &root_row_id)
+            .await?;
+        let child1_row_id = child1_token.to_db_id()?;
+
+        let child2_params = ThriftMegarepoSyncChangesetParams {
+            target: ThriftMegarepoTarget {
+                bookmark: "child2".to_string(),
+                repo: Some(RepoSpecifier {
+                    name: "test".to_string(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let child2_token = q
+            .enqueue_with_root(&ctx, Some(&repo_id), child2_params, &root_row_id)
+            .await?;
+        let child2_row_id = child2_token.to_db_id()?;
+
+        let child3_params = ThriftMegarepoSyncChangesetParams {
+            target: ThriftMegarepoTarget {
+                bookmark: "child3".to_string(),
+                repo: Some(RepoSpecifier {
+                    name: "test".to_string(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let child3_token = q
+            .enqueue_with_root(&ctx, Some(&repo_id), child3_params, &root_row_id)
+            .await?;
+        let child3_row_id = child3_token.to_db_id()?;
+
+        // Mark child2 as in-progress
+        let child2_entry = q
+            .table
+            .test_get_request_entry_by_id(&ctx, &child2_row_id)
+            .await?
+            .expect("Child2 request missing");
+        let child2_req_id = RequestId(child2_row_id.clone(), child2_entry.request_type.clone());
+        q.table
+            .mark_in_progress(&ctx, &child2_req_id, &claimed_by)
+            .await?;
+
+        // Test get_requests_by_root_id - should return all 3 children
+        let requests = q.get_requests_by_root_id(&ctx, &root_row_id).await?;
+        assert_eq!(
+            requests.len(),
+            3,
+            "Should find 3 requests with the same root_request_id"
+        );
+
+        // Verify the requests are the ones we created
+        let request_ids: Vec<_> = requests.iter().map(|(req_id, _, _, _)| &req_id.0).collect();
+        assert!(
+            request_ids.contains(&&child1_row_id),
+            "Should include child1 request"
+        );
+        assert!(
+            request_ids.contains(&&child2_row_id),
+            "Should include child2 request"
+        );
+        assert!(
+            request_ids.contains(&&child3_row_id),
+            "Should include child3 request"
+        );
+
+        // Test fail_new_requests_by_root_id - should fail only 'new' requests
+        let failed_count = q.fail_new_requests_by_root_id(&ctx, &root_row_id).await?;
+        assert_eq!(
+            failed_count, 2,
+            "Should fail 2 'new' requests (child1 and child3)"
+        );
+
+        // Verify child1 and child3 are now failed
+        let child1_entry = q
+            .table
+            .test_get_request_entry_by_id(&ctx, &child1_row_id)
+            .await?
+            .expect("Child1 request missing");
+        assert_eq!(child1_entry.status, RequestStatus::Failed);
+
+        let child3_entry = q
+            .table
+            .test_get_request_entry_by_id(&ctx, &child3_row_id)
+            .await?
+            .expect("Child3 request missing");
+        assert_eq!(child3_entry.status, RequestStatus::Failed);
+
+        // Verify child2 is still in-progress (not affected by fail_new_requests_by_root_id)
+        let child2_entry_after = q
+            .table
+            .test_get_request_entry_by_id(&ctx, &child2_row_id)
+            .await?
+            .expect("Child2 request missing");
+        assert_eq!(child2_entry_after.status, RequestStatus::InProgress);
+
+        Ok(())
     }
 }
