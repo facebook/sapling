@@ -21,6 +21,9 @@ export default async function queryGraphQL<TData, TVariables>(
 
   const args = ['api', 'graphql'];
   for (const [key, value] of Object.entries(variables as unknown as {[key: string]: unknown})) {
+    if (value === undefined) {
+      continue;
+    }
     const type = typeof value;
     switch (type) {
       case 'boolean':
