@@ -177,10 +177,10 @@ cpp_binary(
         "//eden/common/utils:path",
         "//eden/common/utils:process",
         "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/benchmarks:bench_utils",
         "//eden/fs/service:thrift-cpp2-services",
         "//eden/fs/service:thrift_get_object_impl",
         "//folly/io/async:event_base_thread",
-        "//thrift/lib/cpp2/async:header_client_channel",
     ],
 )
 
