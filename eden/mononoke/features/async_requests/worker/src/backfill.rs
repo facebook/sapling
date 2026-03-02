@@ -388,7 +388,7 @@ async fn process_repo_backfill(
     // all ancestors too.
     let skip_filtering = reslice || rederive;
 
-    // Filter to only underived changesets (unless reslice/rederive is set)
+    // Filter to only underived changesets (unless skip_filtering is set)
     let mut cs_ids = cs_ids;
     if !skip_filtering {
         cs_ids = manager
@@ -430,7 +430,7 @@ async fn process_repo_backfill(
         frontier
     };
 
-    // Compute slices and boundary changesets
+    // Compute segmented slices and boundary changesets
     let (slices_stats, (slices, boundary_changesets)) = inner_repo
         .commit_graph()
         .segmented_slice_ancestors(ctx, cs_ids, excluded_ancestors, slice_size)
@@ -449,36 +449,44 @@ async fn process_repo_backfill(
         return Ok(0);
     }
 
-    // Enqueue boundary derivation request (no dependencies)
-    let boundary_cs_bytes: Vec<Vec<u8>> = boundary_changesets
-        .iter()
-        .map(|cs_id| cs_id.as_ref().to_vec())
-        .collect();
+    let serial_slices = requires_serial_slice_processing(derived_data_type);
 
-    let boundary_params = thrift::DeriveBoundariesParams {
-        repo_id: repo_id.id() as i64,
-        derived_data_type: derived_data_type.name().to_string(),
-        boundary_cs_ids: boundary_cs_bytes,
-        concurrency: boundaries_concurrency,
-        use_predecessor_derivation: !requires_serial_slice_processing(derived_data_type),
-        ..Default::default()
+    // For parallel types, enqueue boundary derivation so slices can
+    // proceed independently. Serial types ignore boundaries.
+    let boundary_row_id = if !serial_slices && !boundary_changesets.is_empty() {
+        let boundary_cs_bytes: Vec<Vec<u8>> = boundary_changesets
+            .iter()
+            .map(|cs_id| cs_id.as_ref().to_vec())
+            .collect();
+
+        let boundary_params = thrift::DeriveBoundariesParams {
+            repo_id: repo_id.id() as i64,
+            derived_data_type: derived_data_type.name().to_string(),
+            boundary_cs_ids: boundary_cs_bytes,
+            concurrency: boundaries_concurrency,
+            use_predecessor_derivation: true,
+            ..Default::default()
+        };
+
+        let boundary_token = queue
+            .enqueue_with_root(ctx, Some(repo_id), boundary_params, root_request_id)
+            .await
+            .map_err(AsyncRequestsError::internal)?;
+        let id = boundary_token.id();
+        info!(
+            "Enqueued boundary derivation request (id={}, {} changesets)",
+            id.0,
+            boundary_changesets.len(),
+        );
+        Some(id)
+    } else {
+        None
     };
 
-    let boundary_token = queue
-        .enqueue_with_root(ctx, Some(repo_id), boundary_params, root_request_id)
-        .await
-        .map_err(AsyncRequestsError::internal)?;
-    let boundary_row_id = boundary_token.id();
-    info!(
-        "Enqueued boundary derivation request (id={}, {} changesets)",
-        boundary_row_id.0,
-        boundary_changesets.len(),
-    );
-
-    // Enqueue slice derivation requests with dependency on boundaries
-    let serial_slices = requires_serial_slice_processing(derived_data_type);
+    // Enqueue slice derivation requests.
+    // Serial types: each slice depends on the previous (topological order).
+    // Parallel types: all slices depend on the boundary request.
     let mut prev_slice_row_id: Option<RowId> = None;
-
     for (i, slice) in slices.iter().enumerate() {
         let segments: Vec<thrift::DeriveSliceSegment> = slice
             .segments
@@ -497,12 +505,11 @@ async fn process_repo_backfill(
             ..Default::default()
         };
 
-        let mut depends_on = vec![boundary_row_id.clone()];
-        if serial_slices {
-            if let Some(prev_id) = &prev_slice_row_id {
-                depends_on.push(prev_id.clone());
-            }
-        }
+        let depends_on: Vec<RowId> = if serial_slices {
+            prev_slice_row_id.iter().cloned().collect()
+        } else {
+            boundary_row_id.iter().cloned().collect()
+        };
 
         let slice_token = queue
             .enqueue_with_dependencies_and_root(
@@ -528,11 +535,13 @@ async fn process_repo_backfill(
         }
     }
 
-    let total = 1 + slices.len() as i64;
+    let boundary_count = if boundary_row_id.is_some() { 1i64 } else { 0 };
+    let total = boundary_count + slices.len() as i64;
     info!(
-        "Enqueued {} sub-requests for repo {} (1 boundary + {} slices)",
+        "Enqueued {} sub-requests for repo {} ({} boundary + {} slices)",
         total,
         repo_id.id(),
+        boundary_count,
         slices.len(),
     );
 
