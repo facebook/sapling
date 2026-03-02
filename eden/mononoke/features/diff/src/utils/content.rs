@@ -41,7 +41,7 @@ fn max_diff_file_size_mb() -> Result<u64> {
 pub async fn load_content(
     ctx: &CoreContext,
     repo: &impl Repo,
-    input: &DiffSingleInput,
+    input: DiffSingleInput,
 ) -> Result<Option<Bytes>, DiffError> {
     let content_id = match input {
         DiffSingleInput::Content(content_input) => Some(content_input.content_id),
@@ -50,15 +50,12 @@ pub async fn load_content(
                 ctx,
                 repo,
                 changeset_input.changeset_id,
-                changeset_input.path.clone(),
+                changeset_input.path,
             )
             .await?
         }
         DiffSingleInput::String(string_input) => {
-            // For string inputs, convert the string directly to Bytes and return early
-            return Ok(Some(Bytes::copy_from_slice(
-                string_input.content.as_bytes(),
-            )));
+            return Ok(Some(Bytes::from(string_input.content.into_bytes())));
         }
     };
 
@@ -334,14 +331,13 @@ pub struct DiffFileOpts {
 pub async fn load_diff_file(
     ctx: &CoreContext,
     repo: &impl Repo,
-    input: &DiffSingleInput,
+    input: DiffSingleInput,
     default_path: NonRootMPath,
     options: &DiffFileOpts,
 ) -> Result<Option<xdiff::DiffFile<String, Bytes>>, DiffError> {
     // Handle String input specially since it doesn't have a content_id
     if let DiffSingleInput::String(string_input) = input {
-        // Validate string input size
-        let bytes = Bytes::copy_from_slice(string_input.content.as_bytes());
+        let bytes = Bytes::from(string_input.content.into_bytes());
         return Ok(Some(xdiff::DiffFile {
             path: default_path.to_string(),
             contents: xdiff::FileContent::Inline(bytes),
@@ -350,7 +346,7 @@ pub async fn load_diff_file(
     }
 
     let (content_id, _changeset_id, path, lfs_pointer) =
-        extract_input_data(ctx, repo, input, default_path).await?;
+        extract_input_data(ctx, repo, &input, default_path).await?;
 
     if let Some(id) = content_id {
         let contents = if options.file_type == DiffFileType::GitSubmodule {

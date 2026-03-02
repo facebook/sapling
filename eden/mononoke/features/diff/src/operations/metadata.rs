@@ -8,7 +8,6 @@
 use std::ops::Range;
 
 use anyhow::Context;
-use anyhow::anyhow;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::try_join;
@@ -31,7 +30,6 @@ use crate::types::MetadataDiff;
 use crate::types::MetadataFileInfo;
 use crate::types::MetadataLinesCount;
 use crate::utils::content::get_file_info_from_changeset_path;
-use crate::utils::content::load_content;
 use crate::utils::whitespace::strip_horizontal_whitespace;
 
 // This logic comes from `mononoke_api/src/changeset_path_diff.rs`
@@ -326,7 +324,7 @@ fn create_file_info(
 async fn get_file_details_from_input(
     ctx: &CoreContext,
     repo: &impl Repo,
-    input: &DiffSingleInput,
+    input: DiffSingleInput,
 ) -> Result<(Option<DiffFileType>, Option<ParsedFileContent>), DiffError> {
     match input {
         DiffSingleInput::ChangesetPath(changeset_input) => {
@@ -361,11 +359,8 @@ async fn get_file_details_from_input(
             // For content-only inputs, we don't have file type information
             Ok((None, parsed_file_content))
         }
-        DiffSingleInput::String(_string_input) => {
-            let file_content = load_content(ctx, repo, input)
-                .await?
-                // For string inputs we will never get None here
-                .ok_or_else(|| DiffError::internal(anyhow!("Failed to load content from String input")))?;
+        DiffSingleInput::String(string_input) => {
+            let file_content = Bytes::from(string_input.content.into_bytes());
 
             let is_binary = file_content.contains(&0u8);
             let is_utf8 = std::str::from_utf8(&file_content).is_ok();
@@ -425,15 +420,15 @@ pub async fn metadata(
     // Get file information directly from inputs
     let (base_file_details, other_file_details) = try_join!(
         async {
-            if let Some((base_input, base_repo)) = &base_pair {
-                get_file_details_from_input(ctx, *base_repo, base_input).await.map(Some)
+            if let Some((base_input, base_repo)) = base_pair {
+                get_file_details_from_input(ctx, base_repo, base_input).await.map(Some)
             } else {
                 Ok(Some((None, None)))
             }
         },
         async {
-            if let Some((other_input, other_repo)) = &other_pair {
-                get_file_details_from_input(ctx, *other_repo, other_input).await.map(Some)
+            if let Some((other_input, other_repo)) = other_pair {
+                get_file_details_from_input(ctx, other_repo, other_input).await.map(Some)
             } else {
                 Ok(Some((None, None)))
             }

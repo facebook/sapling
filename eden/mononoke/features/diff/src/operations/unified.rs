@@ -39,19 +39,19 @@ pub async fn unified(
 
     let (base_file, other_file) = try_join!(
         async {
-            if let Some((base_input, base_repo)) = &base_pair {
+            if let Some((base_input, base_repo)) = base_pair {
                 let default_path =
                     to_non_root_path("base_path").context("The hardcoded path was not valid")?;
-                load_diff_file(ctx, *base_repo, base_input, default_path, &diff_file_opts).await
+                load_diff_file(ctx, base_repo, base_input, default_path, &diff_file_opts).await
             } else {
                 Ok(None)
             }
         },
         async {
-            if let Some((other_input, other_repo)) = &other_pair {
+            if let Some((other_input, other_repo)) = other_pair {
                 let default_path =
                     to_non_root_path("other_path").expect("The hardcoded path was not valid");
-                load_diff_file(ctx, *other_repo, other_input, default_path, &diff_file_opts).await
+                load_diff_file(ctx, other_repo, other_input, default_path, &diff_file_opts).await
             } else {
                 Ok(None)
             }

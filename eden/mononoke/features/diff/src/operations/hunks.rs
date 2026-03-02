@@ -30,14 +30,14 @@ pub async fn hunks(
 ) -> Result<Vec<HunkData>, DiffError> {
     let (base_bytes, other_bytes) = try_join!(
         async {
-            if let Some(base_input) = &base {
+            if let Some(base_input) = base {
                 load_content(ctx, base_repo, base_input).await
             } else {
                 Ok(None)
             }
         },
         async {
-            if let Some(other_input) = &other {
+            if let Some(other_input) = other {
                 load_content(ctx, other_repo, other_input).await
             } else {
                 Ok(None)
