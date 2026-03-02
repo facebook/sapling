@@ -50,6 +50,14 @@ const INITIAL_POLL_DELAY_MS: u64 = 1000;
 const MAX_POLL_DURATION: Duration = Duration::from_mins(1);
 const JK_RETRY_LIMIT: &str = "scm/mononoke:async_requests_retry_limit";
 
+/// A request that has been dequeued from the queue and is ready to be processed.
+#[derive(Debug, PartialEq)]
+pub struct DequeuedRequest {
+    pub id: RequestId,
+    pub params: AsynchronousRequestParams,
+    pub root_request_id: Option<RowId>,
+}
+
 /// JustKnob for maximum concurrent requests across all workers.
 /// The switch/entity determines the limit: types in a concurrency group
 /// share a switch (and thus a limit), while ungrouped types use their
@@ -315,7 +323,7 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: &CoreContext,
         claimed_by: &ClaimedBy,
-    ) -> Result<Option<(RequestId, AsynchronousRequestParams)>, Error> {
+    ) -> Result<Option<DequeuedRequest>, Error> {
         STATS::dequeue_called.add_value(1);
         self.dequeue_inner(ctx, claimed_by)
             .await
@@ -331,7 +339,7 @@ impl AsyncMethodRequestQueue {
         &self,
         ctx: &CoreContext,
         claimed_by: &ClaimedBy,
-    ) -> Result<Option<(RequestId, AsynchronousRequestParams)>, Error> {
+    ) -> Result<Option<DequeuedRequest>, Error> {
         let entry = self
             .table
             .claim_and_get_new_request(ctx, claimed_by, self.repos.as_deref())
@@ -344,8 +352,13 @@ impl AsyncMethodRequestQueue {
                 &entry.args_blobstore_key.0,
             )
             .await?;
+            let root_request_id = entry.root_request_id.clone();
             let req_id = RequestId(entry.id, entry.request_type);
-            Ok(Some((req_id, thrift_params)))
+            Ok(Some(DequeuedRequest {
+                id: req_id,
+                params: thrift_params,
+                root_request_id,
+            }))
         } else {
             // empty queue
             Ok(None)
@@ -772,7 +785,8 @@ mod tests {
                     Some(res) => res,
                     None => panic!("Unexpected None"),
                 };
-                let (req_id, params_from_store) = res;
+                let req_id = res.id;
+                let params_from_store = res.params;
 
                 // Verify that request params from blobstore match what we put there
                 assert_eq!(params_from_store, params.into());

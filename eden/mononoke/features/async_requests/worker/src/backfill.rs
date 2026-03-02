@@ -269,12 +269,73 @@ pub(crate) async fn compute_derive_slice(
     })
 }
 
-/// Handles a DeriveBackfill request by iterating over repo_entries,
-/// computing slices for each repo, and enqueueing boundary/slice
-/// sub-requests with proper dependencies.
-pub(crate) async fn compute_derive_backfill(
+/// Compute derive_backfill_repo request - computes slices and boundaries for a single repo and enqueues sub-requests.
+pub(crate) async fn compute_derive_backfill_repo(
     ctx: &CoreContext,
     mononoke: Arc<Mononoke<Repo>>,
+    queue: &AsyncMethodRequestQueue,
+    params: thrift::DeriveBackfillRepoParams,
+    root_request_id: RowId,
+) -> Result<thrift::DeriveBackfillRepoResponse, AsyncRequestsError> {
+    let repo_id = RepositoryId::new(
+        params
+            .repo_id
+            .try_into()
+            .map_err(|e| AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {}", e)))?,
+    );
+
+    let repo = mononoke
+        .repo_by_id(ctx.clone(), repo_id)
+        .await
+        .map_err(AsyncRequestsError::internal)?
+        .ok_or_else(|| {
+            AsyncRequestsError::request(anyhow::anyhow!("Repo not found: {}", params.repo_id))
+        })?
+        .with_authorization_context(AuthorizationContext::new_bypass_access_control())
+        .build()
+        .await
+        .map_err(AsyncRequestsError::internal)?;
+
+    let cs_ids: Vec<ChangesetId> = params
+        .cs_ids
+        .iter()
+        .map(ChangesetId::from_bytes)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(AsyncRequestsError::request)?;
+
+    let derived_data_type =
+        DerivableType::from_name(&params.derived_data_type).map_err(AsyncRequestsError::request)?;
+
+    let slice_size = params.slice_size.max(1) as u64;
+
+    let total_sub_requests = process_repo_backfill(
+        ctx,
+        &repo,
+        queue,
+        derived_data_type,
+        cs_ids,
+        slice_size,
+        params.rederive,
+        params.reslice,
+        params.boundaries_concurrency,
+        params.config_name.as_deref(),
+        &repo_id,
+        &root_request_id,
+    )
+    .await?;
+
+    Ok(thrift::DeriveBackfillRepoResponse {
+        total_sub_requests,
+        error_message: None,
+        ..Default::default()
+    })
+}
+
+/// Handles a DeriveBackfill request by iterating over repo_entries
+/// and enqueueing a DeriveBackfillRepo sub-request for each repo.
+pub(crate) async fn compute_derive_backfill(
+    ctx: &CoreContext,
+    _mononoke: Arc<Mononoke<Repo>>,
     queue: &AsyncMethodRequestQueue,
     params: thrift::DeriveBackfillParams,
     root_request_id: RowId,
@@ -285,58 +346,53 @@ pub(crate) async fn compute_derive_backfill(
         )));
     }
 
-    let derived_data_type =
-        DerivableType::from_name(&params.derived_data_type).map_err(AsyncRequestsError::request)?;
+    // Validate derived_data_type upfront
+    DerivableType::from_name(&params.derived_data_type).map_err(AsyncRequestsError::request)?;
 
-    let slice_size = params.slice_size.max(1) as u64;
-    let mut total_sub_requests: i64 = 0;
+    let total_sub_requests = params.repo_entries.len() as i64;
 
-    for entry in &params.repo_entries {
-        let repo_id =
-            RepositoryId::new(entry.repo_id.try_into().map_err(|e| {
-                AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {}", e))
-            })?);
+    stream::iter(&params.repo_entries)
+        .map(Ok::<_, AsyncRequestsError>)
+        .try_for_each_concurrent(Some(1000), |entry| {
+            let ctx = ctx.clone();
+            let derived_data_type = params.derived_data_type.clone();
+            let config_name = params.config_name.clone();
+            let slice_size = params.slice_size;
+            let boundaries_concurrency = params.boundaries_concurrency;
+            let rederive = params.rederive;
+            let reslice = params.reslice;
+            let entry_repo_id = entry.repo_id;
+            let cs_ids = entry.cs_ids.clone();
+            let root_request_id = root_request_id.clone();
+            async move {
+                let repo_id = RepositoryId::new(entry_repo_id.try_into().map_err(|e| {
+                    AsyncRequestsError::request(anyhow::anyhow!("Invalid repo_id: {}", e))
+                })?);
 
-        let repo = mononoke
-            .repo_by_id(ctx.clone(), repo_id)
-            .await
-            .map_err(AsyncRequestsError::internal)?
-            .ok_or_else(|| {
-                AsyncRequestsError::request(anyhow::anyhow!("Repo not found: {}", entry.repo_id))
-            })?
-            .with_authorization_context(AuthorizationContext::new_bypass_access_control())
-            .build()
-            .await
-            .map_err(AsyncRequestsError::internal)?;
+                let repo_params = thrift::DeriveBackfillRepoParams {
+                    repo_id: entry_repo_id,
+                    derived_data_type,
+                    cs_ids,
+                    slice_size,
+                    boundaries_concurrency,
+                    rederive,
+                    config_name,
+                    reslice,
+                    ..Default::default()
+                };
 
-        let cs_ids: Vec<ChangesetId> = entry
-            .cs_ids
-            .iter()
-            .map(ChangesetId::from_bytes)
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(AsyncRequestsError::request)?;
+                queue
+                    .enqueue_with_root(&ctx, Some(&repo_id), repo_params, &root_request_id)
+                    .await
+                    .map_err(AsyncRequestsError::internal)?;
 
-        let sub_requests = process_repo_backfill(
-            ctx,
-            &repo,
-            queue,
-            derived_data_type,
-            cs_ids,
-            slice_size,
-            params.rederive,
-            params.reslice,
-            params.boundaries_concurrency,
-            params.config_name.as_deref(),
-            &repo_id,
-            &root_request_id,
-        )
+                Ok(())
+            }
+        })
         .await?;
 
-        total_sub_requests += sub_requests;
-    }
-
     info!(
-        "DeriveBackfill complete: {} total sub-requests across {} repos",
+        "DeriveBackfill enqueued {} DeriveBackfillRepo sub-requests across {} repos",
         total_sub_requests,
         params.repo_entries.len(),
     );

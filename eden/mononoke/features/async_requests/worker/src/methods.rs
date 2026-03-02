@@ -250,6 +250,7 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
     megarepo_api: &MegarepoApi<R>,
     queue: &AsyncMethodRequestQueue,
     request_row_id: &RowId,
+    root_request_id: Option<RowId>,
     params: AsynchronousRequestParams,
 ) -> Result<AsynchronousRequestResult> {
     match params.into() {
@@ -344,10 +345,14 @@ pub(crate) async fn megarepo_async_request_compute<R: MononokeRepo>(
                 .await
                 .into())
         }
-        async_requests_types_thrift::AsynchronousRequestParams::derive_backfill_repo_params(_) => {
-            bail!(
-                "derive_backfill_repo is not yet implemented in this worker"
-            )
+        async_requests_types_thrift::AsynchronousRequestParams::derive_backfill_repo_params(params) => {
+            let effective_root = root_request_id.unwrap_or_else(|| request_row_id.clone());
+            Ok(crate::backfill::compute_derive_backfill_repo(ctx, mononoke, queue, params, effective_root)
+                .watched()
+                .with_max_poll(METHOD_MAX_POLL_TIME_MS)
+                .with_label("derive_backfill_repo")
+                .await
+                .into())
         }
         async_requests_types_thrift::AsynchronousRequestParams::UnknownField(union_tag) => {
              bail!(

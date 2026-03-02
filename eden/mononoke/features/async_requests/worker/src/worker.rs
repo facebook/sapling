@@ -23,8 +23,10 @@ use anyhow::Result;
 use async_requests::AsyncMethodRequestQueue;
 use async_requests::AsyncRequestsError;
 use async_requests::ClaimedBy;
+use async_requests::DequeuedRequest;
 use async_requests::RequestId;
 use async_requests::types::AsynchronousRequestParams;
+use async_requests::types::RowId;
 use async_stream::stream;
 use async_trait::async_trait;
 use cloned::cloned;
@@ -153,19 +155,20 @@ impl RepoShardedProcessExecutor for AsyncMethodRequestWorker {
         info!("Worker initialization complete, starting request processing loop.",);
 
         request_stream
-            .for_each_concurrent(
-                Some(self.concurrency_limit),
-                |(req_id, params)| async move {
-                    let worker = self.clone();
-                    let ctx = CoreContext::clone(&self.ctx);
-                    if let Err(e) =
-                        mononoke::spawn_task(worker.compute_and_mark_completed(ctx, req_id, params))
-                            .await
-                    {
-                        warn!("Error spawning request: {:?}", e);
-                    }
-                },
-            )
+            .for_each_concurrent(Some(self.concurrency_limit), |dequeued| async move {
+                let worker = self.clone();
+                let ctx = CoreContext::clone(&self.ctx);
+                if let Err(e) = mononoke::spawn_task(worker.compute_and_mark_completed(
+                    ctx,
+                    dequeued.id,
+                    dequeued.params,
+                    dequeued.root_request_id,
+                ))
+                .await
+                {
+                    warn!("Error spawning request: {:?}", e);
+                }
+            })
             .await;
 
         info!("Worker exiting");
@@ -188,7 +191,7 @@ impl AsyncMethodRequestWorker {
         ctx: &CoreContext,
         queue: Arc<AsyncMethodRequestQueue>,
         will_exit: Arc<AtomicBool>,
-    ) -> impl Stream<Item = (RequestId, AsynchronousRequestParams)> + use<> {
+    ) -> impl Stream<Item = DequeuedRequest> + use<> {
         let claimed_by = ClaimedBy(self.name.clone());
         let sleep_time = Duration::from_millis(DEQUEUE_STREAM_SLEEP_TIME);
         Self::request_stream_inner(
@@ -208,7 +211,7 @@ impl AsyncMethodRequestWorker {
         will_exit: Arc<AtomicBool>,
         sleep_time: Duration,
         abandoned_threshold_secs: i64,
-    ) -> impl Stream<Item = (RequestId, AsynchronousRequestParams)> {
+    ) -> impl Stream<Item = DequeuedRequest> {
         stream! {
             loop {
                 STATS::dequeue_called.add_value(1);
@@ -230,8 +233,8 @@ impl AsyncMethodRequestWorker {
                         warn!("error while dequeueing, skipping: {:?}", e);
                         tokio::time::sleep(sleep_time).await;
                     }
-                    Ok(Some((request_id, params))) => {
-                        yield (request_id, params);
+                    Ok(Some(dequeued)) => {
+                        yield dequeued;
                     }
                     Ok(None) => {
                         // No requests in the queues, sleep before trying again.
@@ -283,6 +286,7 @@ impl AsyncMethodRequestWorker {
         ctx: CoreContext,
         req_id: RequestId,
         params: AsynchronousRequestParams,
+        root_request_id: Option<RowId>,
     ) {
         let target = match params.target() {
             Ok(target) => target,
@@ -326,6 +330,7 @@ impl AsyncMethodRequestWorker {
             &self.megarepo,
             &self.queue,
             &req_id.0,
+            root_request_id,
             params,
         )
         .timed();
@@ -496,7 +501,7 @@ mod test {
         let res = s.await?;
         assert_eq!(res.len(), 1);
         assert_eq!(
-            res[0].0.1,
+            res[0].id.1,
             RequestType("megarepo_sync_changeset".to_string())
         );
         Ok(())
