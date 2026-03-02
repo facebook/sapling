@@ -92,6 +92,6 @@ rust_binary(
         "//eden/mononoke/clients/facebook/multi_repo_land_service_client:multi_repo_land_service_client",
         "//eden/mononoke/facebook/ods3_schemas:MononokeGitRequest_ods3-rs_bindings",
         "//eden/mononoke/scs/if:source_control-rust",
-        "//eden/mononoke/servers/multi_repo_land/if:multi_repo_land_if-rust",
+        "//eden/mononoke/facebook/multi_repo_land_service/if:multi_repo_land_if-rust",
     ]),
 )
