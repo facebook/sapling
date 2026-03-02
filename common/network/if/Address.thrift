@@ -23,13 +23,16 @@ enum AddressType {
 }
 
 struct Address {
+  @thrift.AllowUnsafeRequiredFieldQualifier
   1: required string addr;
+  @thrift.AllowUnsafeRequiredFieldQualifier
   2: required AddressType type;
   @thrift.AllowUnsafeOptionalCustomDefaultValue
   3: optional i64 port = 0;
 }
 
 struct BinaryAddress {
+  @thrift.AllowUnsafeRequiredFieldQualifier
   1: required fbbinary addr;
   @thrift.AllowUnsafeOptionalCustomDefaultValue
   2: optional i64 port = 0;
@@ -37,6 +40,8 @@ struct BinaryAddress {
 }
 
 struct IPPrefix {
+  @thrift.AllowUnsafeRequiredFieldQualifier
   1: required BinaryAddress prefixAddress;
+  @thrift.AllowUnsafeRequiredFieldQualifier
   2: required i16 prefixLength;
 }
