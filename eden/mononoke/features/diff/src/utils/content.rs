@@ -11,6 +11,7 @@ use anyhow::Context;
 use anyhow::Result;
 use blobstore::Loadable;
 use bytes::Bytes;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
 use filestore::FetchKey;
@@ -24,6 +25,7 @@ use mononoke_types::ContentMetadataV2;
 use mononoke_types::FileChange::Change;
 use mononoke_types::FileType;
 use mononoke_types::NonRootMPath;
+use mononoke_types::content_manifest::compat;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::path::MPath;
 use unodes::RootUnodeManifestId;
@@ -126,23 +128,40 @@ pub async fn get_file_info_from_changeset_path(
     changeset_id: ChangesetId,
     path: NonRootMPath,
 ) -> Result<Option<(ContentId, FileType)>, DiffError> {
-    let root_fsnode_id = repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, changeset_id, DerivationPriority::LOW)
-        .await
-        .map_err(DiffError::internal)?;
+    let use_content_manifests = justknobs::eval(
+        "scm/mononoke:derived_data_use_content_manifests",
+        None,
+        None,
+    )
+    .map_err(DiffError::internal)?;
+
+    let root_manifest_id: compat::ContentManifestId = if use_content_manifests {
+        repo.repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, changeset_id, DerivationPriority::LOW)
+            .await
+            .map_err(DiffError::internal)?
+            .into_content_manifest_id()
+            .into()
+    } else {
+        repo.repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, changeset_id, DerivationPriority::LOW)
+            .await
+            .map_err(DiffError::internal)?
+            .into_fsnode_id()
+            .into()
+    };
 
     let blobstore = repo.repo_blobstore();
     let mpath = MPath::from(path);
 
-    match root_fsnode_id
-        .fsnode_id()
+    match root_manifest_id
         .find_entry(ctx.clone(), blobstore.clone(), mpath)
         .await
         .map_err(DiffError::internal)?
     {
-        Some(Entry::Leaf(fsnode_file)) => {
-            Ok(Some((*fsnode_file.content_id(), *fsnode_file.file_type())))
+        Some(Entry::Leaf(leaf)) => {
+            let file: compat::ContentManifestFile = leaf.into();
+            Ok(Some((file.content_id(), file.file_type())))
         }
         Some(Entry::Tree(_)) => Ok(None), // Path exists but is a directory, not a file
         None => Ok(None),                 // Path does not exist
