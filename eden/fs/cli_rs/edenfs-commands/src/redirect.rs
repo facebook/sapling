@@ -434,7 +434,7 @@ impl RedirectCmd {
                 #[cfg(fbcode_build)]
                 {
                     let sample = edenfs_telemetry::redirect::build_fixup_result(
-                        &checkout.path().to_string_lossy().to_string(),
+                        checkout.path().to_string_lossy().as_ref(),
                         &redir.repo_path.to_string_lossy(),
                         &redir.redir_type.to_string(),
                         &redir.state.to_string(),
