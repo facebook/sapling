@@ -20,6 +20,7 @@ use deleted_manifest::RootDeletedManifestV2Id;
 use derivation_queue_thrift::DerivationPriority;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_manager::DerivedDataManager;
+use directory_branch_cluster_manifest::RootDirectoryBranchClusterManifestId;
 use fsnodes::RootFsnodeId;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
@@ -51,6 +52,8 @@ use mononoke_types::SkeletonManifestId;
 use mononoke_types::content_manifest::ContentManifestFile;
 use mononoke_types::deleted_manifest_common::DeletedManifestCommon;
 use mononoke_types::deleted_manifest_v2::DeletedManifestV2;
+use mononoke_types::directory_branch_cluster_manifest::DirectoryBranchClusterManifest;
+use mononoke_types::directory_branch_cluster_manifest::DirectoryBranchClusterManifestFile;
 use mononoke_types::fsnode::FsnodeFile;
 use mononoke_types::path::MPath;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
@@ -68,6 +71,7 @@ enum ListManifestType {
     SkeletonManifests,
     SkeletonManifests2,
     ContentManifests,
+    DirectoryBranchClusterManifests,
     Fsnodes,
     Unodes,
     DeletedManifests,
@@ -173,6 +177,47 @@ impl Listable for Entry<SkeletonManifestV2, ()> {
         match self {
             Entry::Tree(tree) => format!("tree\tcount={}", tree.rollup_count().into_inner()),
             Entry::Leaf(()) => String::from("file"),
+        }
+    }
+}
+
+fn format_cluster_info(primary: &Option<MPath>, secondaries: &Option<Vec<MPath>>) -> String {
+    let mut parts = Vec::new();
+    if let Some(p) = primary {
+        parts.push(format!("primary={}", p));
+    }
+    if let Some(s) = secondaries {
+        if !s.is_empty() {
+            let paths: Vec<_> = s.iter().map(|p| p.to_string()).collect();
+            parts.push(format!("secondaries=[{}]", paths.join(", ")));
+        }
+    }
+    if parts.is_empty() {
+        String::new()
+    } else {
+        parts.join("\t")
+    }
+}
+
+impl Listable for Entry<DirectoryBranchClusterManifest, DirectoryBranchClusterManifestFile> {
+    fn list_item(self) -> String {
+        match self {
+            Entry::Tree(tree) => {
+                let cluster = format_cluster_info(&tree.primary, &tree.secondaries);
+                if cluster.is_empty() {
+                    String::from("tree")
+                } else {
+                    format!("tree\t{}", cluster)
+                }
+            }
+            Entry::Leaf(file) => {
+                let cluster = format_cluster_info(&file.primary, &file.secondaries);
+                if cluster.is_empty() {
+                    String::from("file")
+                } else {
+                    format!("file\t{}", cluster)
+                }
+            }
         }
     }
 }
@@ -297,6 +342,121 @@ where
             }
         }
     }
+}
+
+/// Special listing function for DirectoryBranchClusterManifest (DBCM).
+/// DBCM is a sparse manifest that doesn't store all directory entries, so we need
+/// to traverse the tree manually rather than using list_leaf_entries.
+async fn list_dbcm(
+    ctx: &CoreContext,
+    repo: &Repo,
+    root: DirectoryBranchClusterManifest,
+    path: MPath,
+    directory: bool,
+    recursive: bool,
+) -> Result<BoxStream<'static, Result<ListItem>>> {
+    if directory {
+        let entry = root
+            .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path.clone())
+            .await?
+            .ok_or_else(|| anyhow!("No manifest for path '{}'", path))?;
+        let item = ListItem::new(path, entry);
+        Ok(futures::stream::once(async move { Ok(item) }).boxed())
+    } else if recursive {
+        // For recursive listing, we traverse only existing entries in the manifest
+        // This is important for sparse manifests like DBCM that don't store all directories
+        list_dbcm_recursive(ctx, repo, root, path).await
+    } else {
+        let entry = root
+            .find_entry(ctx.clone(), repo.repo_blobstore().clone(), path.clone())
+            .await?
+            .ok_or_else(|| anyhow!("No manifest for path '{}'", path))?;
+
+        match entry {
+            Entry::Tree(tree_id) => {
+                cloned!(ctx);
+                let blobstore = repo.repo_blobstore().clone();
+                Ok(try_stream! {
+                    let tree = tree_id.load(&ctx, &blobstore).await?;
+                    let mut subentries = tree.list(&ctx, &blobstore).await?;
+                    while let Some((elem, subentry)) = subentries.try_next().await? {
+                        yield ListItem::new(path.join_element(Some(&elem)), subentry);
+                    }
+                }
+                .boxed())
+            }
+            Entry::Leaf(..) => {
+                Ok(futures::stream::once(async move { Ok(ListItem::new(path, entry)) }).boxed())
+            }
+        }
+    }
+}
+
+/// Recursively list all entries in a manifest by traversing only existing subentries.
+/// This is specifically designed for sparse manifests like DBCM that don't store all directories.
+/// Unlike the standard recursive listing that uses list_leaf_entries (which only returns files),
+/// this function yields both directories and files by manually traversing the tree structure.
+async fn list_dbcm_recursive<TreeId>(
+    ctx: &CoreContext,
+    repo: &Repo,
+    root_id: TreeId,
+    start_path: MPath,
+) -> Result<BoxStream<'static, Result<ListItem>>>
+where
+    TreeId: StoreLoadable<RepoBlobstore> + Clone + Send + Sync + Eq + Unpin + 'static,
+    <TreeId as StoreLoadable<RepoBlobstore>>::Value:
+        Manifest<RepoBlobstore, TreeId = TreeId> + Send + Sync,
+    <<TreeId as StoreLoadable<RepoBlobstore>>::Value as Manifest<RepoBlobstore>>::Leaf:
+        Clone + Send + Eq + Unpin,
+    Entry<
+        TreeId,
+        <<TreeId as StoreLoadable<RepoBlobstore>>::Value as Manifest<RepoBlobstore>>::Leaf,
+    >: Listable,
+{
+    cloned!(ctx);
+    let blobstore = repo.repo_blobstore().clone();
+
+    Ok(try_stream! {
+        // Start at the given path
+        let entry = root_id
+            .find_entry(ctx.clone(), blobstore.clone(), start_path.clone())
+            .await?
+            .ok_or_else(|| anyhow!("No manifest for path '{}'", start_path))?;
+
+        match entry {
+            Entry::Tree(tree_id) => {
+                // Use a stack to traverse the tree iteratively
+                let mut stack = vec![(start_path.clone(), tree_id)];
+
+                while let Some((current_path, current_tree_id)) = stack.pop() {
+                    let tree = current_tree_id.load(&ctx, &blobstore).await?;
+                    let mut subentries = tree.list(&ctx, &blobstore).await?;
+
+                    while let Some((elem, subentry)) = subentries.try_next().await? {
+                        let subpath = current_path.join_element(Some(&elem));
+
+                        match subentry {
+                            Entry::Tree(subtree_id) => {
+                                // Add to stack for further traversal
+                                stack.push((subpath.clone(), subtree_id.clone()));
+                                // Yield this directory
+                                yield ListItem::new(subpath, Entry::Tree(subtree_id));
+                            }
+                            Entry::Leaf(leaf) => {
+                                // Yield this leaf
+                                yield ListItem::new(subpath, Entry::Leaf(leaf));
+                            }
+                        }
+                    }
+                }
+            }
+            Entry::Leaf(leaf) => {
+                // Just a single leaf
+                yield ListItem::new(start_path, Entry::Leaf(leaf));
+            }
+        }
+    }
+    .boxed())
 }
 
 /// Same as `list`, but for deleted manifests, which are structured differently and have their own `Ops`.
@@ -432,6 +592,19 @@ pub(super) async fn list_manifest(
                     .await?
                     .into_content_manifest_id();
             list(ctx, repo, root_id, path, args.directory, args.recursive).await?
+        }
+        ListManifestType::DirectoryBranchClusterManifests => {
+            let root = fetch_or_derive_root::<RootDirectoryBranchClusterManifestId>(
+                ctx,
+                manager,
+                cs_id,
+                args.derive,
+            )
+            .await?
+            .into_inner_id()
+            .load(ctx, repo.repo_blobstore())
+            .await?;
+            list_dbcm(ctx, repo, root, path, args.directory, args.recursive).await?
         }
         ListManifestType::Fsnodes => {
             let root_id = fetch_or_derive_root::<RootFsnodeId>(ctx, manager, cs_id, args.derive)

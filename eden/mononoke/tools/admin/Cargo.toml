@@ -55,6 +55,7 @@ deleted_manifest = { version = "0.1.0", path = "../../derived_data/deleted_manif
 deletion_log = { version = "0.1.0", path = "../../repo_attributes/deletion_log" }
 derivation_queue_thrift = { version = "0.1.0", path = "../../repo_attributes/repo_derivation_queues/if" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
+directory_branch_cluster_manifest = { version = "0.1.0", path = "../../derived_data/directory_branch_cluster_manifest" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
