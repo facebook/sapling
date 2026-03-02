@@ -9,11 +9,11 @@ use std::collections::HashMap;
 use std::env;
 
 use anyhow::Error;
+use gotham::helpers::http::Body;
 use gotham::helpers::http::header::X_REQUEST_ID;
 use gotham::state::State;
-use hyper::Body;
-use hyper::Response;
-use hyper::header::HeaderValue;
+use http::Response;
+use http::header::HeaderValue;
 
 use super::Middleware;
 use crate::state_ext::StateExt;

@@ -13,10 +13,10 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use anyhow::Error;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
-use hyper::Body;
-use hyper::Response;
+use http::Response;
 
 use super::Middleware;
 use crate::socket_data::TlsSessionData;

@@ -35,7 +35,7 @@ impl SaplingRemoteApiHandler for SuffixQueryHandler {
     type Request = SuffixQueryRequest;
     type Response = SuffixQueryResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::SuffixQuery;
     const ENDPOINT: &'static str = "/suffix_query";
 

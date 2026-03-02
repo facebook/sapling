@@ -6,12 +6,12 @@
  */
 
 use anyhow::anyhow;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_ext::error::HttpError;
 use gotham_ext::middleware::request_context::RequestContext;
-use hyper::Body;
-use hyper::Response;
+use http::Response;
 use memory_profiling::check_acl_access;
 use memory_profiling::generate_flamegraph;
 

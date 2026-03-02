@@ -36,7 +36,10 @@ use futures_util::future::FutureExt;
 use futures_util::stream::StreamExt;
 use futures_util::stream::TryStreamExt;
 use hostname::get_hostname;
-use hyper::server::conn::Http;
+use hyper_util::rt::TokioExecutor;
+use hyper_util::rt::TokioIo;
+use hyper_util::server::conn::auto::Builder as ServerBuilder;
+use hyper_util::service::TowerToHyperService;
 use lazy_static::lazy_static;
 use metaconfig_types::CommonConfig;
 use metadata::Metadata;
@@ -327,11 +330,12 @@ async fn handle_connection(conn: PendingConnection, sock: TcpStream) -> Result<(
 async fn handle_http<S: MononokeStream>(conn: AcceptedConnection, stream: S) -> Result<()> {
     STATS::http_accepted.add_value(1);
     let svc = MononokeHttpService::<S>::new(conn);
-    Http::new()
-        .http2_enable_connect_protocol()
-        .serve_connection(stream, svc)
-        .with_upgrades()
+    ServerBuilder::new(TokioExecutor::new())
+        .http2()
+        .enable_connect_protocol()
+        .serve_connection_with_upgrades(TokioIo::new(stream), TowerToHyperService::new(svc))
         .await
+        .map_err(anyhow::Error::from_boxed)
         .context("Failed to serve_connection")?;
 
     Ok(())

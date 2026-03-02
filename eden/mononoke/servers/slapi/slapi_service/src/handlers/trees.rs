@@ -415,7 +415,7 @@ impl SaplingRemoteApiHandler for UploadTreesHandler {
     type Request = Batch<UploadTreeRequest>;
     type Response = UploadTreeResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::UploadTrees;
     const ENDPOINT: &'static str = "/upload/trees";
 
@@ -442,7 +442,7 @@ impl SaplingRemoteApiHandler for CheckPermissionHandler {
     type Request = CheckPermissionRequest;
     type Response = CheckPermissionResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CheckPermission;
     const ENDPOINT: &'static str = "/check_permission";
 

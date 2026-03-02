@@ -13,15 +13,16 @@ use clientinfo::CLIENT_INFO_HEADER;
 use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use fbinit::FacebookInit;
+use gotham::handler::IntoBody as _;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham::state::client_addr;
 use gotham_derive::StateData;
-use hyper::Body;
-use hyper::Response;
-use hyper::StatusCode;
-use hyper::Uri;
-use hyper::header::HeaderMap;
+use http::Response;
+use http::StatusCode;
+use http::Uri;
+use http::header::HeaderMap;
 use metaconfig_types::Identity;
 use metadata::Metadata;
 use percent_encoding::percent_decode;
@@ -178,7 +179,7 @@ impl Middleware for MetadataMiddleware {
                                         msg,
                                         state.short_request_id()
                                     )
-                                    .into(),
+                                    .into_body(),
                                 )
                                 .expect("Couldn't build http response");
 
@@ -215,7 +216,7 @@ impl Middleware for MetadataMiddleware {
                 error!("{}", &msg,);
                 let response = Response::builder()
                     .status(StatusCode::UNAUTHORIZED)
-                    .body(format!("{{\"message:\"{}\"}}", msg,).into())
+                    .body(format!("{{\"message:\"{}\"}}", msg).into_body())
                     .expect("Couldn't build http response");
                 return Some(response);
             }

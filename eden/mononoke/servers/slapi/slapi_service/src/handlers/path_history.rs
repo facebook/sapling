@@ -49,7 +49,7 @@ impl SaplingRemoteApiHandler for PathHistoryHandler {
     type Request = PathHistoryRequest;
     type Response = PathHistoryResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::PathHistory;
     const ENDPOINT: &'static str = "/path_history";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[

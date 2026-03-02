@@ -14,7 +14,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:faster-hex",
-        "fbsource//third-party/rust:http-0-2",
+        "fbsource//third-party/rust:http",
         "fbsource//third-party/rust:mime",
         "fbsource//third-party/rust:once_cell",
         "fbsource//third-party/rust:quickcheck",

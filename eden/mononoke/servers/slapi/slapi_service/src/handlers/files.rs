@@ -40,6 +40,7 @@ use futures::Stream;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::stream;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
@@ -48,7 +49,7 @@ use gotham_ext::error::HttpError;
 use gotham_ext::handler::SlapiCommitIdentityScheme;
 use gotham_ext::middleware::request_context::RequestContext;
 use gotham_ext::response::TryIntoResponse;
-use hyper::Body;
+use http_body_util::BodyExt as _;
 use mercurial_types::HgFileNodeId;
 use mercurial_types::HgNodeHash;
 use mercurial_types::blobs::File;
@@ -109,7 +110,7 @@ impl SaplingRemoteApiHandler for Files2Handler {
     type Request = FileRequest;
     type Response = FileResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Files2;
     const ENDPOINT: &'static str = "/files2";
 
@@ -305,7 +306,9 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse + use
     let id = AnyFileContentId::from_str(&format!("{}/{}", &params.idtype, &params.id))
         .map_err(HttpError::e400)?;
 
-    let body = Body::take_from(state).map_err(Error::from);
+    let body = Body::take_from(state)
+        .into_data_stream()
+        .map_err(Error::from);
     let content_size = query_string.content_size;
     let compression = query_string.compression;
 
@@ -427,7 +430,7 @@ impl SaplingRemoteApiHandler for UploadHgFilenodesHandler {
     type Request = Batch<UploadHgFilenodeRequest>;
     type Response = UploadTokensResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::UploadHgFilenodes;
     const ENDPOINT: &'static str = "/upload/filenodes";
 
@@ -454,7 +457,7 @@ impl SaplingRemoteApiHandler for DownloadFileHandler {
     type Request = UploadToken;
     type Response = Bytes;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::DownloadFile;
     const ENDPOINT: &'static str = "/download/file";
 

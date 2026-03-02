@@ -14,7 +14,10 @@ use cloned::cloned;
 use connection_security_checker::ConnectionSecurityChecker;
 use futures::future::TryFutureExt;
 use gotham::handler::Handler;
-use hyper::server::conn::Http;
+use hyper_util::rt::TokioExecutor;
+use hyper_util::rt::TokioIo;
+use hyper_util::server::conn::auto::Builder as ServerBuilder;
+use hyper_util::service::TowerToHyperService;
 use mononoke_macros::mononoke;
 use openssl::ssl::Ssl;
 use openssl::ssl::SslAcceptor;
@@ -76,15 +79,16 @@ where
 
             let ssl_socket = QuietShutdownStream::new(ssl_socket);
 
-            let mut http = Http::new();
+            let mut http = ServerBuilder::new(TokioExecutor::new());
             // Use vectored writes (Queue strategy) instead of Flatten to avoid
             // copying all response body data into a single growing Vec<u8>.
             // This prevents multi-GB allocations for large streaming responses.
             if http1_vectored_writes {
-                http.http1_writev(true);
+                http.http1().writev(true);
             }
-            http.serve_connection(ssl_socket, service)
+            http.serve_connection(TokioIo::new(ssl_socket), TowerToHyperService::new(service))
                 .await
+                .map_err(anyhow::Error::from_boxed)
                 .context("Error serving connection")?;
 
             Result::<_, Error>::Ok(())
@@ -118,15 +122,16 @@ where
 
             let socket = QuietShutdownStream::new(socket);
 
-            let mut http = Http::new();
+            let mut http = ServerBuilder::new(TokioExecutor::new());
             // Use vectored writes (Queue strategy) instead of Flatten to avoid
             // copying all response body data into a single growing Vec<u8>.
             // This prevents multi-GB allocations for large streaming responses.
             if http1_vectored_writes {
-                http.http1_writev(true);
+                http.http1().writev(true);
             }
-            http.serve_connection(socket, service)
+            http.serve_connection(TokioIo::new(socket), TowerToHyperService::new(service))
                 .await
+                .map_err(anyhow::Error::from_boxed)
                 .context("Error serving connection")?;
 
             Result::<_, Error>::Ok(())

@@ -5,15 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use gotham::helpers::http::Body;
 use gotham::prelude::FromState;
 use gotham::state::State;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::middleware::PostResponseCallbacks;
 use gotham_ext::middleware::RequestLoad;
-use hyper::Body;
-use hyper::Response;
-use hyper::StatusCode;
+use http::Response;
+use http::StatusCode;
 use permission_checker::MononokeIdentitySetExt;
 use stats::prelude::*;
 

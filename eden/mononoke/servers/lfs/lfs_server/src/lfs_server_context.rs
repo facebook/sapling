@@ -25,23 +25,26 @@ use futures::future;
 use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
+use gotham::handler::IntoBody as _;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
-use gotham_ext::body_ext::BodyExt;
+use gotham_ext::body_ext::BodyExt as _;
 use hostname::get_hostname;
+use http::Request;
+use http::header;
 use http::header::HeaderMap;
 use http::uri::Authority;
 use http::uri::Parts;
 use http::uri::PathAndQuery;
 use http::uri::Scheme;
 use http::uri::Uri;
-use hyper::Body;
-use hyper::Client;
-use hyper::Request;
-use hyper::client::HttpConnector;
-use hyper::header;
-use hyper_openssl::HttpsConnector;
+use http_body_util::BodyExt as _;
+use hyper_openssl::client::legacy::HttpsConnector;
+use hyper_util::client::legacy::Client;
+use hyper_util::client::legacy::connect::HttpConnector;
+use hyper_util::rt::TokioExecutor;
 use lfs_protocol::RequestBatch;
 use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseBatch;
@@ -69,7 +72,7 @@ use crate::errors::LfsServerContextErrorKind;
 use crate::middleware::LfsMethod;
 use crate::middleware::RequestContext;
 
-pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
+pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>, Body>;
 
 // The user agent string presented to upstream
 const CLIENT_USER_AGENT: &str = "mononoke-lfs-server/0.1.0 git/2.15.1";
@@ -117,7 +120,7 @@ impl LfsServerContext {
         .map_err(Error::from)
         .context(ErrorKind::HttpClientInitializationFailed)?;
 
-        let client = Client::builder().build(connector);
+        let client = Client::builder(TokioExecutor::new()).build(connector);
         let server_hostname =
             Arc::new(get_hostname().unwrap_or_else(|_| "UNKNOWN_HOSTNAME".to_string()));
 
@@ -396,7 +399,10 @@ impl RepositoryRequestContext {
             let (head, body) = res.into_parts();
 
             if !head.status.is_success() {
-                let body = body.try_concat_body(&head.headers)?.await?;
+                let body = body
+                    .into_data_stream()
+                    .try_concat_body(&head.headers)?
+                    .await?;
                 return Err(ErrorKind::UpstreamError(
                     head.status,
                     String::from_utf8_lossy(&body).to_string(),
@@ -409,7 +415,7 @@ impl RepositoryRequestContext {
             // our own wrapper type that wraps the response and the headers.
             Ok(HttpClientResponse {
                 headers: head.headers,
-                body: Some(body.map_err(Error::from)),
+                body: Some(body.into_data_stream().map_err(Error::from)),
                 handle: Handle::current(),
             })
         };
@@ -437,7 +443,7 @@ impl RepositoryRequestContext {
             .into();
 
         let req = Request::post(uri)
-            .body(body.into())
+            .body(body.into_body())
             .map_err(|e| ErrorKind::Error(e.into()))?;
 
         let res = self

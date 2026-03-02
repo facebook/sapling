@@ -50,7 +50,7 @@ impl SaplingRemoteApiHandler for BlameHandler {
     type Request = BlameRequest;
     type Response = BlameResult;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Blame;
     const ENDPOINT: &'static str = "/blame";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[

@@ -19,19 +19,20 @@ use futures::future;
 use futures::future::FutureExt;
 use futures::pin_mut;
 use futures::select;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
-use gotham_ext::body_ext::BodyExt;
+use gotham_ext::body_ext::BodyExt as _;
 use gotham_ext::error::HttpError;
 use gotham_ext::middleware::RequestStartTime;
 use gotham_ext::middleware::ScubaMiddlewareState;
 use gotham_ext::response::BytesBody;
 use gotham_ext::response::TryIntoResponse;
+use http::StatusCode;
 use http::header::HeaderMap;
-use hyper::Body;
-use hyper::StatusCode;
+use http_body_util::BodyExt as _;
 use lfs_protocol::ObjectAction;
 use lfs_protocol::ObjectError;
 use lfs_protocol::ObjectStatus;
@@ -637,6 +638,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse + use<>, Ht
     let headers = HeaderMap::try_borrow_from(state);
 
     let body = body
+        .into_data_stream()
         .try_concat_body_opt(headers)
         .map_err(HttpError::e400)?
         .await
@@ -706,7 +708,7 @@ mod test {
     use filestore::FilestoreConfigRef;
     use filestore::StoreRequest;
     use futures::stream;
-    use hyper::Uri;
+    use http::Uri;
     use memblob::Memblob;
     use mononoke_macros::mononoke;
     use mononoke_types::ContentMetadataV2Id;

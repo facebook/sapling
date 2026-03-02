@@ -75,7 +75,7 @@ impl SaplingRemoteApiHandler for SetBookmarkHandler {
     type Request = SetBookmarkRequest;
     type Response = SetBookmarkResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::SetBookmark;
     const ENDPOINT: &'static str = "/bookmarks/set";
 
@@ -205,7 +205,7 @@ impl SaplingRemoteApiHandler for Bookmarks2Handler {
     type Request = Bookmark2Request;
     type Response = BookmarkResult;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Bookmarks2;
     const ENDPOINT: &'static str = "/bookmarks2";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[

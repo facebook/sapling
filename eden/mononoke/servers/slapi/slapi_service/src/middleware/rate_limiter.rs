@@ -6,15 +6,16 @@
  */
 
 use context::CoreContext;
+use gotham::handler::IntoBody as _;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::middleware::request_context::RequestContext;
-use hyper::Body;
-use hyper::Response;
-use hyper::StatusCode;
-use hyper::Uri;
+use http::Response;
+use http::StatusCode;
+use http::Uri;
 use maplit::hashmap;
 use rate_limiting::Metric;
 use rate_limiting::RateLimitStatus;
@@ -106,7 +107,7 @@ impl Middleware for ThrottleMiddleware {
                 // always 429, this client specifically is the offender.
                 let res = Response::builder()
                     .status(StatusCode::TOO_MANY_REQUESTS)
-                    .body(response.to_string().into())
+                    .body(response.to_string().into_body())
                     .expect("Couldn't build http response");
                 Some(res)
             }

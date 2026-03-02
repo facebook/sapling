@@ -7,9 +7,9 @@
 
 use std::panic::RefUnwindSafe;
 
+use gotham::helpers::http::Body;
 use gotham::state::State;
-use hyper::Body;
-use hyper::Response;
+use http::Response;
 
 pub mod config_info;
 pub mod load;

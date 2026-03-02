@@ -14,15 +14,18 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures_stats::TimedStreamExt;
 use gotham::handler::HandlerError;
+use gotham::handler::IntoBody as _;
+use gotham::helpers::http::Body;
 use gotham::helpers::http::response::create_response;
 use gotham::state::State;
-use hyper::Body;
-use hyper::Response;
-use hyper::StatusCode;
-use hyper::header::CONTENT_ENCODING;
-use hyper::header::CONTENT_LENGTH;
-use hyper::header::CONTENT_TYPE;
-use hyper::header::HeaderValue;
+use http::Response;
+use http::StatusCode;
+use http::header::CONTENT_ENCODING;
+use http::header::CONTENT_LENGTH;
+use http::header::CONTENT_TYPE;
+use http::header::HeaderValue;
+use http_body::Frame;
+use http_body_util::combinators::UnsyncBoxBody;
 use mime::Mime;
 
 use super::content_meta::ContentMetaProvider;
@@ -103,7 +106,7 @@ impl TryIntoResponse for EmptyBody {
         Response::builder()
             .status(StatusCode::OK)
             .header(CONTENT_LENGTH, 0)
-            .body(Body::empty())
+            .body(Body::default())
             .map_err(Error::from)
     }
 }
@@ -134,7 +137,7 @@ where
         Response::builder()
             .header(CONTENT_TYPE, mime_header)
             .status(StatusCode::OK)
-            .body(bytes.into())
+            .body(bytes.into_body())
             .map_err(Error::from)
     }
 }
@@ -207,8 +210,8 @@ where
         });
 
         // Turn the stream into a TryStream, as expected by hyper::Body.
-        let stream = stream.map(<Result<_, Error>>::Ok);
+        let stream = stream.map(|data| Ok(Frame::data(data)));
 
-        Ok(res.body(Body::wrap_stream(stream))?)
+        Ok(res.body(UnsyncBoxBody::new(http_body_util::StreamBody::new(stream)))?)
     }
 }

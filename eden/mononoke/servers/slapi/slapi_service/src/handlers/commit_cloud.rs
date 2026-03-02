@@ -74,7 +74,7 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspace {
     type Request = CloudWorkspaceRequest;
     type Response = WorkspaceDataResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudWorkspace;
     const ENDPOINT: &'static str = "/cloud/workspace";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -123,7 +123,7 @@ impl SaplingRemoteApiHandler for CommitCloudWorkspaces {
     type Request = CloudWorkspacesRequest;
     type Response = WorkspacesDataResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudWorkspaces;
     const ENDPOINT: &'static str = "/cloud/workspaces";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -175,7 +175,7 @@ impl SaplingRemoteApiHandler for CommitCloudReferences {
     type Request = GetReferencesParams;
     type Response = ReferencesDataResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudReferences;
     const ENDPOINT: &'static str = "/cloud/references";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -245,7 +245,7 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateReferences {
     type Request = UpdateReferencesParams;
     type Response = ReferencesDataResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudUpdateReferences;
     const ENDPOINT: &'static str = "/cloud/update_references";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -300,7 +300,7 @@ impl SaplingRemoteApiHandler for CommitCloudSmartlog {
     type Request = GetSmartlogParams;
     type Response = SmartlogDataResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudSmartlog;
     const ENDPOINT: &'static str = "/cloud/smartlog";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -357,7 +357,7 @@ impl SaplingRemoteApiHandler for CommitCloudShareWorkspace {
     type Request = CloudShareWorkspaceRequest;
     type Response = CloudShareWorkspaceResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudShareWorkspace;
     const ENDPOINT: &'static str = "/cloud/share_workspace";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -405,7 +405,7 @@ impl SaplingRemoteApiHandler for CommitCloudUpdateArchive {
     type Request = UpdateArchiveParams;
     type Response = UpdateArchiveResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudUpdateArchive;
     const ENDPOINT: &'static str = "/cloud/update_archive";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -453,7 +453,7 @@ impl SaplingRemoteApiHandler for CommitCloudRenameWorkspace {
     type Request = RenameWorkspaceRequest;
     type Response = RenameWorkspaceResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudRenameWorkspace;
     const ENDPOINT: &'static str = "/cloud/rename_workspace";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -501,7 +501,7 @@ impl SaplingRemoteApiHandler for CommitCloudSmartlogByVersion {
     type Request = GetSmartlogByVersionParams;
     type Response = SmartlogDataResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudSmartlogByVersion;
     const ENDPOINT: &'static str = "/cloud/smartlog_by_version";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -560,7 +560,7 @@ impl SaplingRemoteApiHandler for CommitCloudHistoricalVersions {
     type Request = HistoricalVersionsParams;
     type Response = HistoricalVersionsResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudHistoricalVersions;
     const ENDPOINT: &'static str = "/cloud/historical_versions";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -614,7 +614,7 @@ impl SaplingRemoteApiHandler for CommitCloudRollbackWorkspace {
     type Request = RollbackWorkspaceRequest;
     type Response = RollbackWorkspaceResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudRollbackWorkspace;
     const ENDPOINT: &'static str = "/cloud/rollback_workspace";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -662,7 +662,7 @@ impl SaplingRemoteApiHandler for CommitCloudOtherRepoWorkspaces {
     type Request = OtherRepoWorkspacesRequest;
     type Response = WorkspacesDataResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CloudOtherRepoWorkspaces;
     const ENDPOINT: &'static str = "/cloud/other_repo_workspaces";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[

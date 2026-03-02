@@ -14,6 +14,7 @@ use filestore::FilestoreConfigRef;
 use filestore::StoreRequest;
 use futures::Stream;
 use futures::TryStreamExt;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
@@ -25,7 +26,7 @@ use gotham_ext::response::EmptyBody;
 use gotham_ext::response::TryIntoResponse;
 use gotham_ext::util::read_header_value;
 use http::header::CONTENT_LENGTH;
-use hyper::Body;
+use http_body_util::BodyExt as _;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use repo_blobstore::RepoBlobstoreRef;
@@ -114,7 +115,7 @@ pub async fn git_upload_blob(state: &mut State) -> Result<impl TryIntoResponse +
     }
 
     let oid = RichGitSha1::from_sha1(oid, "blob", size);
-    let body = Body::take_from(state).map_err(|_| ());
+    let body = Body::take_from(state).into_data_stream().map_err(drop);
     upload_blob(&ctx, oid, size, body)
         .await
         .map_err(HttpError::e500)?;

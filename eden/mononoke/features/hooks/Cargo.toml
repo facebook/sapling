@@ -25,8 +25,10 @@ fbinit = { version = "0.2.0", git = "https://github.com/facebookexperimental/rus
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 hook_manager = { version = "0.1.0", path = "../../repo_attributes/hook_manager/hook_manager" }
-hyper = { version = "0.14.32", features = ["client", "http1", "http2", "stream"] }
-hyper-tls = "0.5"
+http = "1.4.0"
+http-body-util = "0.1.0"
+hyper-tls = "0.6"
+hyper-util = "0.1.20"
 ipnetwork = "0.20.0"
 itertools = "0.14.0"
 justknobs = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

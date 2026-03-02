@@ -8,10 +8,10 @@
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use gotham::helpers::http::Body;
 use gotham::state::State;
 use gotham::state::StateData;
-use hyper::Response;
-use hyper::body::Body;
+use http::Response;
 use mononoke_configs::MononokeConfigs;
 
 use crate::middleware::Middleware;

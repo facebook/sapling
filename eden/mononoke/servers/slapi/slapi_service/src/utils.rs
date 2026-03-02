@@ -7,13 +7,14 @@
 
 use anyhow::Context;
 use bytes::Bytes;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_ext::body_ext::BodyExt;
 use gotham_ext::error::HttpError;
 use gotham_ext::middleware::request_context::RequestContext;
 use http::HeaderMap;
-use hyper::Body;
+use http_body_util::BodyExt as _;
 use mononoke_api::MononokeRepo;
 use mononoke_api_hg::HgRepoContext;
 use mononoke_api_hg::RepoContextHgExt;
@@ -77,6 +78,7 @@ pub async fn get_request_body(state: &mut State) -> Result<Bytes, HttpError> {
     let body = Body::take_from(state);
     let headers = HeaderMap::try_borrow_from(state);
     let body = body
+        .into_data_stream()
         .try_concat_body_opt(headers)
         .context(ErrorKind::InvalidContentLength)
         .map_err(HttpError::e400)?

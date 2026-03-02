@@ -11,7 +11,6 @@ use std::collections::HashSet;
 use anyhow::anyhow;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkKey;
-use bookmarks_types::BookmarkKind;
 use bytes::Bytes;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;

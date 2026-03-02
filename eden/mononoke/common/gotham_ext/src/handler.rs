@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
 use std::net::SocketAddr;
 use std::panic::RefUnwindSafe;
 use std::pin::Pin;
@@ -17,12 +18,15 @@ use gotham::handler::Handler;
 use gotham::handler::HandlerFuture;
 use gotham::handler::IntoResponse;
 use gotham::handler::NewHandler;
+use gotham::helpers::http::Body;
 use gotham::state::State;
 use gotham_derive::StateData;
-use hyper::Body;
-use hyper::Request;
-use hyper::Response;
-use hyper::service::Service;
+use http::Request;
+use http::Response;
+use http_body_util::BodyExt as _;
+use http_body_util::combinators::UnsyncBoxBody;
+use hyper::body::Incoming;
+use tower_service::Service;
 
 use crate::middleware::Middleware;
 use crate::socket_data::TlsSocketData;
@@ -175,10 +179,10 @@ pub struct MononokeHttpHandlerAsService<H, T> {
     state: Option<T>,
 }
 
-impl<
+impl<H, T> MononokeHttpHandlerAsService<H, T>
+where
     H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe,
     T: gotham::state::StateData + Clone,
-> MononokeHttpHandlerAsService<H, T>
 {
     pub async fn call_gotham(self, req: Request<Body>) -> Response<Body> {
         let mut state = State::from_request(req, self.addr);
@@ -197,10 +201,10 @@ impl<
     }
 }
 
-impl<
+impl<H, T> Service<Request<Incoming>> for MononokeHttpHandlerAsService<H, T>
+where
     H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe,
     T: gotham::state::StateData + Clone,
-> Service<Request<Body>> for MononokeHttpHandlerAsService<H, T>
 {
     type Response = Response<Body>;
     type Error = anyhow::Error;
@@ -210,11 +214,13 @@ impl<
         task::Poll::Ready(Ok(()))
     }
 
-    fn call(&mut self, req: Request<Body>) -> Self::Future {
+    fn call(&mut self, req: Request<Incoming>) -> Self::Future {
         let this = self.clone();
 
         async move {
-            let res = this.call_gotham(req).await;
+            let res = this
+                .call_gotham(req.map(|body| UnsyncBoxBody::new(body.map_err(io::Error::other))))
+                .await;
             Ok(res)
         }
         .boxed()
@@ -226,8 +232,7 @@ mod test {
     use futures::future;
     use gotham::test::TestServer;
     use gotham_derive::StateData;
-    use hyper::Body;
-    use hyper::http::StatusCode;
+    use http::StatusCode;
     use mononoke_macros::mononoke;
 
     use super::*;
@@ -241,7 +246,7 @@ mod test {
         fn handle(self, state: State) -> Pin<Box<HandlerFuture>> {
             let response = Response::builder()
                 .status(StatusCode::OK)
-                .body(Body::empty())
+                .body(Body::default())
                 .unwrap();
 
             future::ready(Ok((state, response))).boxed()
@@ -300,7 +305,7 @@ mod test {
         async fn inbound(&self, _state: &mut State) -> Option<Response<Body>> {
             let response = Response::builder()
                 .status(StatusCode::NOT_FOUND)
-                .body(Body::empty())
+                .body(Body::default())
                 .unwrap();
             Some(response)
         }

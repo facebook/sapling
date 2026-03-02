@@ -10,15 +10,15 @@ use std::fmt::Debug;
 use std::fmt::Display;
 use std::time::Duration;
 
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use http::HeaderMap;
-use hyper::Body;
-use hyper::Method;
-use hyper::Response;
-use hyper::StatusCode;
-use hyper::Uri;
-use hyper::Version;
+use http::Method;
+use http::Response;
+use http::StatusCode;
+use http::Uri;
+use http::Version;
 use time_ext::DurationExt;
 use tracing::info;
 

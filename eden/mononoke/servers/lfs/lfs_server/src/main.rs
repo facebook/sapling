@@ -42,7 +42,7 @@ use gotham_ext::middleware::ServerIdentityMiddleware;
 use gotham_ext::middleware::TimerMiddleware;
 use gotham_ext::middleware::TlsSessionDataMiddleware;
 use gotham_ext::serve;
-use hyper::header::HeaderValue;
+use http::header::HeaderValue;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::ShardedService;
 use mononoke_app::MononokeApp;

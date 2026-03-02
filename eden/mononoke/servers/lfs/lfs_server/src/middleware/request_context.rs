@@ -12,15 +12,16 @@ use std::sync::Arc;
 use context::CoreContext;
 use context::SessionContainer;
 use fbinit::FacebookInit;
+use gotham::handler::IntoBody;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
 use gotham_ext::state_ext::StateExt;
-use hyper::Response;
-use hyper::StatusCode;
-use hyper::body::Body;
+use http::Response;
+use http::StatusCode;
 use metadata::Metadata;
 use permission_checker::MononokeIdentitySetExt;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -125,7 +126,7 @@ impl Middleware for RequestContextMiddleware {
                         msg,
                         state.short_request_id()
                     )
-                    .into(),
+                    .into_body(),
                 )
                 .expect("Couldn't build http response");
 

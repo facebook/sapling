@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::io;
 use std::str;
 use std::str::FromStr;
 
@@ -22,6 +23,7 @@ use futures::StreamExt;
 use futures::TryStreamExt;
 use futures::channel::mpsc::channel;
 use futures_util::try_join;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_derive::StateData;
@@ -32,9 +34,12 @@ use gotham_ext::middleware::ScubaMiddlewareState;
 use gotham_ext::response::EmptyBody;
 use gotham_ext::response::TryIntoResponse;
 use gotham_ext::util::read_header_value;
+use http::Request;
 use http::header::CONTENT_LENGTH;
-use hyper::Body;
-use hyper::Request;
+use http_body::Frame;
+use http_body_util::BodyExt as _;
+use http_body_util::StreamBody;
+use http_body_util::combinators::UnsyncBoxBody;
 use lfs_protocol::ObjectAction;
 use lfs_protocol::ObjectStatus;
 use lfs_protocol::Operation;
@@ -224,10 +229,10 @@ where
         STATS::upstream_uploads.add_value(1);
         let ObjectAction { href, .. } = action;
 
-        let body = Body::wrap_stream(data);
+        let body = StreamBody::new(data.map_ok(Frame::data).map_err(io::Error::other));
         let req = Request::put(href)
             .header("Content-Length", &size.to_string())
-            .body(body)?;
+            .body(UnsyncBoxBody::new(body))?;
 
         // NOTE: We read the response body here, otherwise Hyper will not allow this connection to
         // be reused.
@@ -350,7 +355,7 @@ async fn sync_internal_and_upstream(
                 .remove(&Operation::Download)
                 .ok_or(ErrorKind::ObjectCannotBeSynced(object))?;
 
-            let req = Request::get(action.href).body(Body::empty())?;
+            let req = Request::get(action.href).body(Body::default())?;
 
             let stream = ctx
                 .dispatch(req)
@@ -421,7 +426,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse + use<>, H
         }
         _ => {
             // TODO: More appropriate status codes here
-            let body = Body::take_from(state).map_err(|_| ());
+            let body = Body::take_from(state).into_data_stream().map_err(|_| ());
             let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
             upload_from_client(&ctx, oid, size, body, &mut scuba)
                 .await

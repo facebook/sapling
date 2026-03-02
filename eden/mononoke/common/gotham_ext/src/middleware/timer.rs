@@ -8,10 +8,10 @@
 use std::time::Duration;
 use std::time::Instant;
 
+use gotham::helpers::http::Body;
 use gotham::state::State;
 use gotham_derive::StateData;
-use hyper::Body;
-use hyper::Response;
+use http::Response;
 
 use super::Middleware;
 

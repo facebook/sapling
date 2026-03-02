@@ -15,17 +15,17 @@
 use std::pin::Pin;
 
 use futures::FutureExt;
-use futures::StreamExt;
 use gotham::handler::HandlerFuture;
+use gotham::helpers::http::Body;
 use gotham::helpers::http::response::create_temporary_redirect;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_ext::error::HttpError;
 use gotham_ext::middleware::ScubaMiddlewareState;
 use gotham_ext::response::build_error_response;
-use hyper::Body;
-use hyper::Response;
-use hyper::header::HOST;
+use http::Response;
+use http::header::HOST;
+use http_body_util::BodyExt as _;
 use repourl::encode_repo_name;
 use stats::prelude::*;
 
@@ -86,7 +86,7 @@ fn build_redirect_url(network_env: NetworkEnv, repo_name: &str, to_mononoke: boo
 }
 
 fn read_header_value(state: &State, name: &str) -> Option<String> {
-    let headers = hyper::HeaderMap::borrow_from(state);
+    let headers = http::HeaderMap::borrow_from(state);
     headers
         .get(name)
         .and_then(|h| h.to_str().ok())
@@ -110,7 +110,7 @@ async fn handle_lfs_redirect(state: &mut State) -> Result<Response<Body>, HttpEr
     // a JSON body with the list of objects, but we don't need it for routing decisions.
     // Failing to consume the body can cause the client connection to be dropped.
     if let Some(mut body) = Body::try_take_from(state) {
-        while body.next().await.is_some() {}
+        while body.frame().await.is_some() {}
     }
 
     let repo_name = RepositoryParams::borrow_from(state).repo_name();

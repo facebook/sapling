@@ -6,12 +6,12 @@
  */
 
 use bytes::Bytes;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_ext::middleware::Middleware;
 use http::HeaderMap;
 use http::Response;
-use hyper::Body;
 
 use crate::model::Pushvars;
 

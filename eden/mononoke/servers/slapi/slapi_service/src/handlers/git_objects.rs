@@ -38,7 +38,7 @@ impl SaplingRemoteApiHandler for GitObjectsHandler {
     type Request = GitObjectsRequest;
     type Response = GitObjectsResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::GitObjects;
     const ENDPOINT: &'static str = "/git_objects";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] =

@@ -12,6 +12,7 @@ use git_source_of_truth::GitSourceOfTruth;
 use git_source_of_truth::GitSourceOfTruthConfigRef;
 use git_source_of_truth::RepositoryName;
 use git_source_of_truth::Staleness;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_ext::body_ext::BodyExt;
@@ -20,13 +21,14 @@ use gotham_ext::response::EmptyBody;
 use gotham_ext::response::TryIntoResponse;
 use http::HeaderMap;
 use http::Response;
-use hyper::Body;
+use http_body_util::BodyExt as _;
 use mononoke_api::CoreContext;
 use mononoke_api::Repo;
 use repo_identity::RepoIdentityRef;
 
 pub async fn get_body(state: &mut State) -> Result<Bytes, HttpError> {
     Body::take_from(state)
+        .into_data_stream()
         .try_concat_body(&HeaderMap::new())
         .map_err(HttpError::e500)?
         .await

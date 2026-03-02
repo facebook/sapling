@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use gotham::helpers::http::Body;
 use gotham::state::State;
 use gotham_ext::middleware::Middleware;
 use http::HeaderValue;
+use http::Response;
 use http::header::CONTENT_TYPE;
-use hyper::Response;
-use hyper::body::Body;
 
 use crate::model::ResponseType;
 use crate::model::Service;

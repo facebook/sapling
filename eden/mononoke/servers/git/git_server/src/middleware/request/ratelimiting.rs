@@ -5,16 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use gotham::handler::IntoBody as _;
+use gotham::helpers::http::Body;
 use gotham::state::FromState;
 use gotham::state::State;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::middleware::Middleware;
+use http::HeaderMap;
 use http::Response;
+use http::StatusCode;
 use http::Uri;
 use http::header::USER_AGENT;
-use hyper::Body;
-use hyper::HeaderMap;
-use hyper::StatusCode;
 use metadata::Metadata;
 use rate_limiting::LoadShedResult;
 use rate_limiting::RateLimitEnvironment;
@@ -126,7 +127,7 @@ impl Middleware for UploadPackRateLimitingMiddleware {
                                 "Upload pack request rejected due to load shedding / rate limiting: {:?}",
                                 err
                             )
-                            .into(),
+                            .into_body(),
                         )
                         .expect("Failed to build a response"),
                 );

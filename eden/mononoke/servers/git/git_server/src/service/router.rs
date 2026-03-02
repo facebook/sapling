@@ -25,7 +25,7 @@ use gotham_ext::middleware::ScubaMiddlewareState;
 use gotham_ext::response::BytesBody;
 use gotham_ext::response::build_error_response;
 use gotham_ext::response::build_response;
-use hyper::HeaderMap;
+use http::HeaderMap;
 use slapi_service::handlers::JsonErrorFormatter;
 use slapi_service::handlers::handler::BasicPathExtractor;
 use slapi_service::handlers::handler::PathExtractorWithRepo;

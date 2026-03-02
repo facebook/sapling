@@ -223,7 +223,7 @@ impl SaplingRemoteApiHandler for LookupHandler {
     type Request = Batch<LookupRequest>;
     type Response = LookupResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::Lookup;
     const ENDPOINT: &'static str = "/lookup";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[

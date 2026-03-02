@@ -113,7 +113,7 @@ impl SaplingRemoteApiHandler for StreamingCloneHandler {
     type Request = StreamingChangelogRequest;
     type Response = StreamingChangelogResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::StreamingClone;
     const ENDPOINT: &'static str = "/streaming_clone";
 
@@ -186,7 +186,7 @@ impl SaplingRemoteApiHandler for ListBookmarkPatternsHandler {
     type Request = ListBookmarkPatternsRequest;
     type Response = ListBookmarkPatternsResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::ListBookmarkPatterns;
     const ENDPOINT: &'static str = "/bookmarks/list_patterns";
 

@@ -7,7 +7,7 @@
 
 use filestore::FetchKey;
 use gotham_ext::error::HttpError;
-use hyper::StatusCode;
+use http::StatusCode;
 use lfs_protocol::RequestObject;
 use lfs_protocol::ResponseObject;
 use thiserror::Error;

@@ -6,14 +6,14 @@
  */
 
 use anyhow::Error;
+use gotham::handler::IntoBody;
 use gotham::state::State;
-use hyper::Body;
-use hyper::StatusCode;
+use http::StatusCode;
 use mime::Mime;
 use rate_limiting::RateLimitReason;
 
 pub trait ErrorFormatter {
-    type Body: Into<Body>;
+    type Body: IntoBody;
 
     fn format(&self, error: &Error, state: &State) -> Result<(Self::Body, Mime), Error>;
 }

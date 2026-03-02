@@ -265,7 +265,7 @@ impl SaplingRemoteApiHandler for LocationToHashHandler {
     type Request = CommitLocationToHashRequestBatch;
     type Response = CommitLocationToHashResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitLocationToHash;
     const ENDPOINT: &'static str = "/commit/location_to_hash";
 
@@ -350,7 +350,7 @@ impl SaplingRemoteApiHandler for HashToLocationHandler {
     type Request = CommitHashToLocationRequestBatch;
     type Response = CommitHashToLocationResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitHashToLocation;
     const ENDPOINT: &'static str = "/commit/hash_to_location";
 
@@ -489,7 +489,7 @@ impl SaplingRemoteApiHandler for HashLookupHandler {
     type Request = Batch<CommitHashLookupRequest>;
     type Response = CommitHashLookupResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitHashLookup;
     const ENDPOINT: &'static str = "/commit/hash_lookup";
 
@@ -525,7 +525,7 @@ impl SaplingRemoteApiHandler for UploadHgChangesetsHandler {
     type Request = UploadHgChangesetsRequest;
     type Response = UploadTokensResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::UploadHgChangesets;
     const ENDPOINT: &'static str = "/upload/changesets";
 
@@ -586,7 +586,7 @@ impl SaplingRemoteApiHandler for UploadBonsaiChangesetHandler {
     type Request = UploadBonsaiChangesetRequest;
     type Response = UploadTokensResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::UploadBonsaiChangeset;
     const ENDPOINT: &'static str = "/upload/changeset/bonsai";
 
@@ -683,7 +683,7 @@ impl SaplingRemoteApiHandler for FetchSnapshotHandler {
     type Request = FetchSnapshotRequest;
     type Response = FetchSnapshotResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::FetchSnapshot;
     const ENDPOINT: &'static str = "/snapshot";
 
@@ -810,7 +810,7 @@ impl SaplingRemoteApiHandler for AlterSnapshotHandler {
     type Request = AlterSnapshotRequest;
     type Response = AlterSnapshotResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::AlterSnapshot;
     const ENDPOINT: &'static str = "/snapshot/alter";
 
@@ -868,7 +868,7 @@ impl SaplingRemoteApiHandler for EphemeralPrepareHandler {
     type Request = EphemeralPrepareRequest;
     type Response = EphemeralPrepareResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::EphemeralPrepare;
     const ENDPOINT: &'static str = "/ephemeral/prepare";
 
@@ -901,7 +901,7 @@ impl SaplingRemoteApiHandler for EphemeralExtendHandler {
     type Request = EphemeralExtendRequest;
     type Response = EphemeralExtendResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::EphemeralExtend;
     const ENDPOINT: &'static str = "/ephemeral/extend";
 
@@ -964,7 +964,7 @@ impl SaplingRemoteApiHandler for GraphHandlerV2 {
     type Request = CommitGraphRequest;
     type Response = CommitGraphEntry;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitGraphV2;
     const ENDPOINT: &'static str = "/commit/graph_v2";
 
@@ -1042,7 +1042,7 @@ impl SaplingRemoteApiHandler for GraphSegmentsHandler {
     type Request = CommitGraphSegmentsRequest;
     type Response = CommitGraphSegmentsEntry;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitGraphSegments;
     const ENDPOINT: &'static str = "/commit/graph_segments";
     const SUPPORTED_FLAVOURS: &'static [SlapiCommitIdentityScheme] = &[
@@ -1123,7 +1123,7 @@ impl SaplingRemoteApiHandler for CommitMutationsHandler {
     type Request = CommitMutationsRequest;
     type Response = CommitMutationsResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitMutations;
     const ENDPOINT: &'static str = "/commit/mutations";
 
@@ -1160,7 +1160,7 @@ impl SaplingRemoteApiHandler for CommitTranslateId {
     type Request = CommitTranslateIdRequest;
     type Response = CommitTranslateIdResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::CommitTranslateId;
     const ENDPOINT: &'static str = "/commit/translate_id";
 
@@ -1305,7 +1305,7 @@ impl SaplingRemoteApiHandler for UploadIdenticalChangesetsHandler {
     type Request = UploadIdenticalChangesetsRequest;
     type Response = UploadTokensResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::UploadIdenticalChangesets;
     const ENDPOINT: &'static str = "/upload/changesets/identical";
 

@@ -12,12 +12,12 @@ use edenapi_types::ToWire;
 use futures::stream::BoxStream;
 use gotham::extractor::PathExtractor;
 use gotham::extractor::QueryStringExtractor;
+use gotham::helpers::http::Body;
 use gotham_derive::StateData;
 use gotham_derive::StaticResponseExtender;
 use gotham_ext::error::HttpError;
 use gotham_ext::handler::SlapiCommitIdentityScheme;
 use gotham_ext::middleware::request_context::RequestContext;
-use hyper::body::Body;
 use mononoke_api::MononokeError;
 use mononoke_api::MononokeRepo;
 use mononoke_api::Repo;
@@ -149,7 +149,7 @@ pub trait SaplingRemoteApiHandler: 'static {
     type Request: ToWire + Send;
     type Response: ToWire + Send + 'static;
 
-    const HTTP_METHOD: hyper::Method;
+    const HTTP_METHOD: http::Method;
     const API_METHOD: SaplingRemoteApiMethod;
     /// DON'T include the /:repo prefix.
     /// Example: "/ephemeral/prepare"

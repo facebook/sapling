@@ -42,7 +42,7 @@ impl SaplingRemoteApiHandler for HistoryHandler {
     type Request = HistoryRequest;
     type Response = HistoryResponseChunk;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::History;
     const ENDPOINT: &'static str = "/history";
 

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
 use std::io::Cursor;
 use std::marker::PhantomData;
 use std::str::FromStr;
@@ -17,6 +18,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use base64::Engine;
 use bookmarks::BookmarksRef;
+use bytes::Bytes;
 #[cfg(fbcode_build)]
 use clientinfo::CLIENT_INFO_HEADER;
 #[cfg(fbcode_build)]
@@ -35,9 +37,12 @@ use http::Method;
 use http::Request;
 use http::Response;
 use http::Uri;
-use hyper::Body;
+use http_body_util::BodyExt as _;
+use http_body_util::Full;
+use http_body_util::combinators::UnsyncBoxBody;
+use hyper::body::Incoming;
 use hyper::ext;
-use hyper::service::Service;
+use hyper_util::rt::TokioIo;
 use metadata::Metadata;
 use mononoke_api::Repo;
 use percent_encoding::percent_decode;
@@ -47,6 +52,7 @@ use sha1::Digest;
 use sha1::Sha1;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
+use tower_service::Service;
 use tracing::debug;
 use tracing::error;
 use tracing::trace;
@@ -91,7 +97,7 @@ impl HttpError {
         Self::InternalServerError(e.into())
     }
 
-    pub fn http_response(&self) -> http::Result<Response<Body>> {
+    pub fn http_response(&self) -> http::Result<Response<UnsyncBoxBody<Bytes, io::Error>>> {
         let status = match self {
             Self::BadRequest(..) => http::StatusCode::BAD_REQUEST,
             Self::Forbidden => http::StatusCode::FORBIDDEN,
@@ -101,11 +107,15 @@ impl HttpError {
         };
 
         let body = match self {
-            Self::BadRequest(e) => Body::from(format!("{:#}", e)),
-            Self::Forbidden => Body::empty(),
-            Self::NotFound => Body::empty(),
-            Self::MethodNotAllowed => Body::empty(),
-            Self::InternalServerError(e) => Body::from(format!("{:#}", e)),
+            Self::BadRequest(e) => {
+                UnsyncBoxBody::new(Full::from(format!("{:#}", e)).map_err(|never| match never {}))
+            }
+            Self::Forbidden => UnsyncBoxBody::default(),
+            Self::NotFound => UnsyncBoxBody::default(),
+            Self::MethodNotAllowed => UnsyncBoxBody::default(),
+            Self::InternalServerError(e) => {
+                UnsyncBoxBody::new(Full::from(format!("{:#}", e)).map_err(|never| match never {}))
+            }
         };
 
         Response::builder().status(status).body(body)
@@ -154,7 +164,7 @@ fn bump_qps(headers: &HeaderMap, qps: Option<&Qps>) -> Result<()> {
  *  – http/1.1 (RFC6455) uses "upgrade" header
  *  – http/2 (RFC8441) uses CONNECT method & :protocol pseudo header
  */
-fn is_websocket_req(is_h2: bool, req: &Request<Body>) -> Result<bool, HttpError> {
+fn is_websocket_req(is_h2: bool, req: &Request<Incoming>) -> Result<bool, HttpError> {
     let upgrade_protocol: &str = if is_h2 {
         req.extensions()
             .get::<ext::Protocol>()
@@ -182,19 +192,24 @@ impl<S> MononokeHttpService<S>
 where
     S: MononokeStream,
 {
-    async fn handle(&self, req: Request<Body>) -> Result<Response<Body>, HttpError> {
+    async fn handle(
+        &self,
+        req: Request<Incoming>,
+    ) -> Result<Response<UnsyncBoxBody<Bytes, io::Error>>, HttpError> {
         if req.method() == Method::GET
             && (req.uri().path() == "/" || req.uri().path() == "/health_check")
         {
-            let res = if self.acceptor().will_exit.load(Ordering::Relaxed) {
-                "EXITING"
+            let res: &[u8] = if self.acceptor().will_exit.load(Ordering::Relaxed) {
+                b"EXITING"
             } else {
-                "I_AM_ALIVE"
+                b"I_AM_ALIVE"
             };
 
             let res = Response::builder()
                 .status(http::StatusCode::OK)
-                .body(res.into())
+                .body(UnsyncBoxBody::new(
+                    Full::new(Bytes::from_static(res)).map_err(|never| match never {}),
+                ))
                 .map_err(HttpError::internal)?;
 
             return Ok(res);
@@ -247,8 +262,8 @@ where
 
     async fn handle_websocket_request(
         &self,
-        mut req: Request<Body>,
-    ) -> Result<Response<Body>, HttpError> {
+        mut req: Request<Incoming>,
+    ) -> Result<Response<UnsyncBoxBody<Bytes, io::Error>>, HttpError> {
         let reponame_urlencoded = req.uri().path().trim_matches('/').to_string();
 
         let reponame = percent_decode(reponame_urlencoded.as_bytes())
@@ -297,7 +312,9 @@ where
             _ => {}
         };
 
-        let res = builder.body(Body::empty()).map_err(HttpError::internal)?;
+        let res = builder
+            .body(UnsyncBoxBody::default())
+            .map_err(HttpError::internal)?;
 
         let this = self.clone();
 
@@ -306,7 +323,7 @@ where
                 .await
                 .context("Failed to upgrade connection")?;
 
-            let (mut rx, tx) = tokio::io::split(io);
+            let (mut rx, tx) = tokio::io::split(TokioIo::new(io));
 
             // Sometimes server rejects client's request quickly. So quickly,
             // that right after sending 101 Switching Protocols, it immediately
@@ -352,7 +369,7 @@ where
         &self,
         method: Method,
         path: &str,
-    ) -> Result<Response<Body>, HttpError> {
+    ) -> Result<Response<UnsyncBoxBody<Bytes, io::Error>>, HttpError> {
         if method != Method::POST {
             return Err(HttpError::MethodNotAllowed);
         }
@@ -363,7 +380,7 @@ where
 
         let ok = Response::builder()
             .status(http::StatusCode::OK)
-            .body(Body::empty())
+            .body(UnsyncBoxBody::default())
             .map_err(HttpError::internal)?;
 
         if path == "/drop_bookmarks_cache" {
@@ -386,9 +403,9 @@ where
         &self,
         mut req: http::request::Parts,
         pq: http::uri::PathAndQuery,
-        body: Body,
+        body: Incoming,
         flavour: SlapiCommitIdentityScheme,
-    ) -> Result<Response<Body>, HttpError> {
+    ) -> Result<Response<UnsyncBoxBody<Bytes, io::Error>>, HttpError> {
         let mut uri_parts = req.uri.into_parts();
 
         uri_parts.path_and_query = Some(pq);
@@ -407,7 +424,7 @@ where
             TlsSocketData::authenticated_identities((*self.conn.identities).clone())
         };
 
-        let req = Request::from_parts(req, body);
+        let req = Request::from_parts(req, UnsyncBoxBody::new(body.map_err(io::Error::other)));
 
         let res = self
             .acceptor()
@@ -425,11 +442,11 @@ where
     }
 }
 
-impl<S> Service<Request<Body>> for MononokeHttpService<S>
+impl<S> Service<Request<Incoming>> for MononokeHttpService<S>
 where
     S: MononokeStream,
 {
-    type Response = Response<Body>;
+    type Response = Response<UnsyncBoxBody<Bytes, io::Error>>;
     type Error = http::Error;
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
@@ -437,7 +454,7 @@ where
         task::Poll::Ready(Ok(()))
     }
 
-    fn call(&mut self, req: Request<Body>) -> Self::Future {
+    fn call(&mut self, req: Request<Incoming>) -> Self::Future {
         let this = self.clone();
 
         async move {

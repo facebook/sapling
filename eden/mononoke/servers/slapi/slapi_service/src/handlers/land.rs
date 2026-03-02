@@ -42,7 +42,7 @@ impl SaplingRemoteApiHandler for LandStackHandler {
     type Request = LandStackRequest;
     type Response = LandStackResponse;
 
-    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const HTTP_METHOD: http::Method = http::Method::POST;
     const API_METHOD: SaplingRemoteApiMethod = SaplingRemoteApiMethod::LandStack;
     const ENDPOINT: &'static str = "/land";
 

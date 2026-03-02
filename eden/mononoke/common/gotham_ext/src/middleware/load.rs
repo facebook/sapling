@@ -12,10 +12,10 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
 
+use gotham::helpers::http::Body;
 use gotham::state::State;
 use gotham_derive::StateData;
-use hyper::Body;
-use hyper::Response;
+use http::Response;
 
 use super::Middleware;
 use super::PostResponseCallbacks;

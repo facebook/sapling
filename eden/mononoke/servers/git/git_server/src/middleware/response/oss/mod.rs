@@ -6,7 +6,7 @@
  */
 
 use gotham_ext::middleware::post_request::PostResponseInfo;
-use hyper::StatusCode;
+use http::StatusCode;
 
 pub fn log_ods3(
     _info: &PostResponseInfo,

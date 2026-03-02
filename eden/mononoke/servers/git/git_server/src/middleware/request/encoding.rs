@@ -9,15 +9,17 @@ use std::io::Write;
 
 use anyhow::Context;
 use flate2::write::GzDecoder;
+use gotham::handler::IntoBody as _;
+use gotham::helpers::http::Body;
 use gotham::prelude::FromState;
 use gotham::state::State;
-use gotham_ext::body_ext::BodyExt;
+use gotham_ext::body_ext::BodyExt as _;
 use gotham_ext::middleware::Middleware;
+use http::HeaderMap;
+use http::Response;
+use http::StatusCode;
 use http::header::CONTENT_ENCODING;
-use hyper::HeaderMap;
-use hyper::Response;
-use hyper::StatusCode;
-use hyper::body::Body;
+use http_body_util::BodyExt as _;
 
 const GZIP_ENCODING: &str = "gzip";
 
@@ -35,6 +37,7 @@ async fn decode_body(state: &mut State) -> anyhow::Result<DecodingResponse> {
     match encoding {
         Some(GZIP_ENCODING) => {
             let body_bytes = Body::take_from(state)
+                .into_data_stream()
                 .try_concat_body(&HeaderMap::new())
                 .context("Failure in generating body from state")?
                 .await?;
@@ -51,7 +54,7 @@ async fn decode_body(state: &mut State) -> anyhow::Result<DecodingResponse> {
             decoded_bytes = decoder
                 .finish()
                 .context("Failure in finishing gzip decoding")?;
-            state.put(Body::from(decoded_bytes));
+            state.put(decoded_bytes.into_body());
             Ok(DecodingResponse::Success)
         }
         Some(encoding) => Ok(DecodingResponse::UnsupportedEncoding(encoding.to_string())),
@@ -71,7 +74,7 @@ impl Middleware for RequestContentEncodingMiddleware {
                 return Some(
                     Response::builder()
                         .status(StatusCode::BAD_REQUEST)
-                        .body(format!("Unsupported Content-Encoding: {}", encoding).into())
+                        .body(format!("Unsupported Content-Encoding: {}", encoding).into_body())
                         .expect("Failed to build a response"),
                 );
             }
@@ -79,7 +82,7 @@ impl Middleware for RequestContentEncodingMiddleware {
                 return Some(
                     Response::builder()
                         .status(StatusCode::INTERNAL_SERVER_ERROR)
-                        .body(format!("Error decoding request body: {:?}", err).into())
+                        .body(format!("Error decoding request body: {:?}", err).into_body())
                         .expect("Failed to build a response"),
                 );
             }

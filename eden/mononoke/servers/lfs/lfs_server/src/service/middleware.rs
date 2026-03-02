@@ -18,7 +18,7 @@ use gotham_derive::NewMiddleware;
 use gotham_ext::error::HttpError;
 use gotham_ext::middleware::MetadataState;
 use gotham_ext::response::build_error_response;
-use hyper::Uri;
+use http::Uri;
 use ods_counters::OdsCounterManager;
 use rate_limiting::LoadShedResult;
 use scuba_ext::MononokeScubaSampleBuilder;

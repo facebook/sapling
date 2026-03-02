@@ -5,12 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
 use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Error;
 use anyhow::Result;
 use anyhow::anyhow;
+use bytes::Bytes;
+use bytes::BytesMut;
 use futures::stream::TryStreamExt;
 use futures_ext::FbStreamExt;
 use futures_ext::FbTryStreamExt;
@@ -19,7 +22,11 @@ use http::HeaderMap;
 use http::HeaderValue;
 use http::Method;
 use http::Response;
-use hyper::Body;
+use http_body::Frame;
+use http_body_util::BodyExt as _;
+use http_body_util::StreamBody;
+use http_body_util::combinators::UnsyncBoxBody;
+use hyper::body::Incoming;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
 use tokio_util::codec::BytesCodec;
@@ -62,8 +69,8 @@ impl From<RequestError> for HttpError {
 pub async fn handle(
     method: Method,
     headers: &HeaderMap<HeaderValue>,
-    body: Body,
-) -> Result<Response<Body>, HttpError> {
+    body: Incoming,
+) -> Result<Response<UnsyncBoxBody<Bytes, io::Error>>, HttpError> {
     if method == Method::GET {
         return download(headers);
     }
@@ -75,7 +82,9 @@ pub async fn handle(
     Err(HttpError::MethodNotAllowed)
 }
 
-fn download(headers: &HeaderMap<HeaderValue>) -> Result<Response<Body>, HttpError> {
+fn download(
+    headers: &HeaderMap<HeaderValue>,
+) -> Result<Response<UnsyncBoxBody<Bytes, io::Error>>, HttpError> {
     fn read_byte_count(headers: &HeaderMap<HeaderValue>) -> Result<u64, Error> {
         headers
             .get(HEADER_DOWNLOAD_NBYTES)
@@ -92,22 +101,25 @@ fn download(headers: &HeaderMap<HeaderValue>) -> Result<Response<Body>, HttpErro
     let repeat = tokio::io::repeat(0x42).take(byte_count);
     let stream = FramedRead::new(repeat, BytesCodec::new());
     let stream = stream
+        .map_ok(|data: BytesMut| Frame::data(Bytes::from(data)))
         .map_err(Error::from)
         .whole_stream_timeout(NETSPEEDTEST_TIMEOUT)
-        .flatten_err();
+        .flatten_err()
+        .map_err(io::Error::other);
 
     let res = Response::builder()
         .status(http::StatusCode::OK)
         .header(http::header::CONTENT_LENGTH, byte_count.to_string())
-        .body(Body::wrap_stream(stream))
+        .body(UnsyncBoxBody::new(StreamBody::new(stream)))
         .map_err(HttpError::internal)?;
 
     Ok(res)
 }
 
-async fn upload(body: Body) -> Result<Response<Body>, HttpError> {
+async fn upload(body: Incoming) -> Result<Response<UnsyncBoxBody<Bytes, io::Error>>, HttpError> {
     let mut size = 0;
     let body = body
+        .into_data_stream()
         .map_err(RequestError::Hangup)
         .whole_stream_timeout(NETSPEEDTEST_TIMEOUT)
         .flatten_err();
@@ -135,7 +147,7 @@ async fn upload(body: Body) -> Result<Response<Body>, HttpError> {
 
     let res = Response::builder()
         .status(http::StatusCode::OK)
-        .body(Body::empty())
+        .body(UnsyncBoxBody::default())
         .map_err(HttpError::internal)?;
 
     Ok(res)

@@ -25,13 +25,14 @@ use git_types::git_lfs::parse_lfs_pointer;
 use gix_hash::ObjectId;
 use http::HeaderValue;
 use http::Request;
+use http::StatusCode;
 use http::Uri;
-use hyper::Body;
-use hyper::Client;
-use hyper::StatusCode;
-use hyper::body;
-use hyper::client::connect::HttpConnector;
-use hyper_openssl::HttpsConnector;
+use http_body_util::BodyExt as _;
+use http_body_util::Full;
+use hyper_openssl::client::legacy::HttpsConnector;
+use hyper_util::client::legacy::Client;
+use hyper_util::client::legacy::connect::HttpConnector;
+use hyper_util::rt::TokioExecutor;
 use mononoke_macros::mononoke;
 use mononoke_types::hash;
 use openssl::ssl::SslConnector;
@@ -67,7 +68,7 @@ pub struct GitImportLfsInner {
     /// Limit the amount of simultaneous connections.
     conn_limit_sem: Option<Arc<Semaphore>>,
     /// Hyperium client we use to connect with
-    client: Client<HttpsConnector<HttpConnector>>,
+    client: Client<HttpsConnector<HttpConnector>, Full<Bytes>>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -112,7 +113,7 @@ impl GitImportLfs {
         let connector =
             HttpsConnector::with_connector(http_connector, ssl_connector).map_err(Error::from)?;
 
-        let client: Client<_, body::Body> = Client::builder().build(connector);
+        let client = Client::builder(TokioExecutor::new()).build(connector);
         let inner = GitImportLfsInner {
             lfs_server,
             allow_not_found,
@@ -157,7 +158,7 @@ impl GitImportLfs {
             .concat()
             .parse::<Uri>()?;
         let mut req = Request::get(uri.clone())
-            .body(Body::empty())
+            .body(Full::new(Bytes::new()))
             .context("creating LFS fetch request")?;
         let client_info = ctx
             .metadata()
@@ -175,7 +176,7 @@ impl GitImportLfs {
             .with_context(|| format!("fetch_bytes_internal {}", uri))?;
 
         if resp.status().is_success() {
-            let bytes = resp.into_body().map_err(Error::from);
+            let bytes = resp.into_body().into_data_stream().map_err(Error::from);
             let sr = StoreRequest::with_sha256(metadata.size, metadata.sha256);
             return Ok((sr, bytes.left_stream(), GitLfsFetchResult::Fetched));
         }
