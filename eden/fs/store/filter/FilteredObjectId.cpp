@@ -7,6 +7,7 @@
 
 #include "eden/fs/store/filter/FilteredObjectId.h"
 
+#include <folly/Conv.h>
 #include <folly/Varint.h>
 #include <folly/logging/xlog.h>
 
@@ -31,6 +32,22 @@ std::string foidTypeToString(FilteredObjectIdType foidType) {
       return "unfiltered_tree";
   }
   XLOGF(FATAL, "Invalid FilteredObjectIdType: {}", enumValue(foidType));
+}
+
+bool FilteredObjectId::isFilteredObjectIdString(folly::StringPiece objectId) {
+  auto colonPos = objectId.find(':');
+  if (colonPos == folly::StringPiece::npos) {
+    return false;
+  }
+  auto prefix = objectId.subpiece(0, colonPos);
+  auto parsed = folly::tryTo<uint8_t>(prefix);
+  if (parsed.hasError()) {
+    return false;
+  }
+  auto val = parsed.value();
+  return val == FilteredObjectIdType::OBJECT_TYPE_BLOB ||
+      val == FilteredObjectIdType::OBJECT_TYPE_TREE ||
+      val == FilteredObjectIdType::OBJECT_TYPE_UNFILTERED_TREE;
 }
 
 namespace {

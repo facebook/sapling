@@ -10,6 +10,7 @@ cpp_library(
         "//eden/common/utils:enum",
         "//eden/common/utils:throw",
         "//eden/fs/store:backing_store_interface",
+        "//folly:conv",
         "//folly:varint",
         "//folly/logging:logging",
     ],

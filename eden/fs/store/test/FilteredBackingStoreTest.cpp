@@ -1143,4 +1143,31 @@ TEST_F(FakeSubstringFilteredBackingStoreTest, testCompareRootsById) {
       filteredStore_->compareRootsById(rootId1V1, rootId3),
       ObjectComparison::Different);
 }
+
+TEST_F(FakeSubstringFilteredBackingStoreTest, parseObjectIdRawHex) {
+  // A raw 40-char hex string without a colon should be delegated to the
+  // underlying backing store instead of throwing.
+  auto rawHex = "a8767dadf91caaaabfb7c95597df28f77f13516e";
+  auto result = filteredStore_->parseObjectId(rawHex);
+  EXPECT_EQ(rawHex, result.asString());
+}
+
+TEST_F(FakeSubstringFilteredBackingStoreTest, parseObjectIdHashColonPath) {
+  // A SaplingBackingStore rendered ID in "hash:path" format has the colon at
+  // position 40, which is too far to be a FilteredObjectId type prefix.
+  // It should be delegated to the underlying backing store.
+  auto hashColonPath =
+      "f22e7e2b0624e5d287f24bab7021f1af5e71fc73:fbcode/eden/fs/service/Foo.h";
+  auto result = filteredStore_->parseObjectId(hashColonPath);
+  EXPECT_EQ(hashColonPath, result.asString());
+}
+
+TEST_F(FakeSubstringFilteredBackingStoreTest, parseObjectIdFilteredFormat) {
+  auto rawHex = "a8767dadf91caaaabfb7c95597df28f77f13516e";
+  auto filteredStr = std::string("16:") + rawHex;
+  auto result = filteredStore_->parseObjectId(filteredStr);
+  auto foid = FilteredObjectId::fromObjectId(result);
+  EXPECT_EQ(FilteredObjectIdType::OBJECT_TYPE_BLOB, foid.objectType());
+}
+
 } // namespace facebook::eden

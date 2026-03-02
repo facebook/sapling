@@ -623,6 +623,9 @@ std::string FilteredBackingStore::displayRootId(const RootId& rootId) {
 }
 
 ObjectId FilteredBackingStore::parseObjectId(folly::StringPiece objectId) {
+  if (!FilteredObjectId::isFilteredObjectIdString(objectId)) {
+    return backingStore_->parseObjectId(objectId);
+  }
   auto foid = FilteredObjectId::parseFilteredObjectId(objectId, backingStore_);
   return ObjectId{foid.getValue()};
 }

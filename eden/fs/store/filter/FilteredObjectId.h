@@ -191,6 +191,13 @@ class FilteredObjectId {
   }
 
   /**
+   * Return whether the given string looks like a rendered FilteredObjectId.
+   * Checks that the prefix before the first ':' parses as a valid
+   * FilteredObjectIdType value.
+   */
+  static bool isFilteredObjectIdString(folly::StringPiece objectId);
+
+  /**
    * Render a FilteredObjectId for consumption by users. Takes a string that
    * corresponds to the pre-rendered underlying ObjectId.
    * The format of rendered FilteredObjectIds varies by FilteredObjectIdType.
