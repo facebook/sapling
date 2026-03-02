@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 fbcode/eden/scm/.claude/skills/diagnose-sapling/hooks/log_usage.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
