@@ -337,14 +337,14 @@ pub async fn load_diff_file(
     input: &DiffSingleInput,
     default_path: NonRootMPath,
     options: &DiffFileOpts,
-) -> Result<Option<xdiff::DiffFile<String, Vec<u8>>>, DiffError> {
+) -> Result<Option<xdiff::DiffFile<String, Bytes>>, DiffError> {
     // Handle String input specially since it doesn't have a content_id
     if let DiffSingleInput::String(string_input) = input {
         // Validate string input size
         let bytes = Bytes::copy_from_slice(string_input.content.as_bytes());
         return Ok(Some(xdiff::DiffFile {
             path: default_path.to_string(),
-            contents: xdiff::FileContent::Inline(bytes.to_vec()),
+            contents: xdiff::FileContent::Inline(bytes),
             file_type: options.file_type.into(),
         }));
     }
@@ -386,7 +386,7 @@ pub async fn load_diff_file(
                     id
                 ))
             })?;
-            xdiff::FileContent::Inline(bytes.to_vec())
+            xdiff::FileContent::Inline(bytes)
         };
 
         Ok(Some(xdiff::DiffFile {

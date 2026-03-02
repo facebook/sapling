@@ -6,6 +6,7 @@
  */
 
 use anyhow::Context;
+use bytes::Bytes;
 use context::CoreContext;
 use futures::try_join;
 use mononoke_types::MPath;
@@ -92,13 +93,12 @@ fn to_non_root_path(path: &str) -> Result<NonRootMPath, DiffError> {
 
 /// Strip horizontal whitespace from inline content in a DiffFile
 fn strip_whitespace_from_diff_file(
-    file: xdiff::DiffFile<String, Vec<u8>>,
-) -> xdiff::DiffFile<String, Vec<u8>> {
+    file: xdiff::DiffFile<String, Bytes>,
+) -> xdiff::DiffFile<String, Bytes> {
     let contents = match file.contents {
         xdiff::FileContent::Inline(bytes) => {
-            let bytes_ref = bytes::Bytes::from(bytes);
-            let stripped = strip_horizontal_whitespace(&bytes_ref);
-            xdiff::FileContent::Inline(stripped.to_vec())
+            let stripped = strip_horizontal_whitespace(&bytes);
+            xdiff::FileContent::Inline(stripped)
         }
         // For Omitted and Submodule, no whitespace stripping needed
         other => other,
