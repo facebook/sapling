@@ -19,8 +19,10 @@ use anyhow::anyhow;
 use blobstore::Storable;
 use changesets_creation::save_changesets;
 use cloned::cloned;
+use content_manifest_derivation::RootContentManifestId;
 use context::CoreContext;
 use derivation_queue_thrift::DerivationPriority;
+use either::Either;
 use fsnodes::RootFsnodeId;
 use futures::future;
 use futures::stream;
@@ -40,11 +42,11 @@ use mononoke_types::ContentId;
 use mononoke_types::FileChange;
 use mononoke_types::FileContents;
 use mononoke_types::FileType;
-use mononoke_types::FsnodeId;
 use mononoke_types::GitLfs;
 use mononoke_types::MPathElement;
 use mononoke_types::NonRootMPath;
 use mononoke_types::RepositoryId;
+use mononoke_types::content_manifest::compat;
 use mononoke_types::hash::GitSha1;
 use mononoke_types::hash::RichGitSha1;
 use movers::Mover;
@@ -293,26 +295,37 @@ where
         }))
 }
 
-/// Gets the root directory's fsnode id from a submodule commit provided as
+/// Gets the root directory's manifest id from a submodule commit provided as
 /// as a git hash. This is used for working copy validation of submodule
 /// expansion.
-pub async fn root_fsnode_id_from_submodule_git_commit(
+/// When `use_content_manifests` is true, derives `RootContentManifestId`
+/// instead of `RootFsnodeId`.
+pub async fn root_manifest_id_from_submodule_git_commit(
     ctx: &CoreContext,
     repo: &impl Repo,
     git_hash: GitSha1,
     dangling_submodule_pointers: &[GitSha1],
-) -> Result<FsnodeId> {
+    use_content_manifests: bool,
+) -> Result<compat::ContentManifestId> {
     let cs_id = get_submodule_bonsai_changeset_id(ctx, repo, git_hash, dangling_submodule_pointers)
         .await
         .context("Failed to get submodule bonsai changeset id")?;
 
-    let submodule_root_fsnode_id: RootFsnodeId = repo
-        .repo_derived_data()
-        .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
-        .await
-        .context("Failed to derive RootFsnodeId")?;
-
-    Ok(submodule_root_fsnode_id.into_fsnode_id())
+    if use_content_manifests {
+        let root_id = repo
+            .repo_derived_data()
+            .derive::<RootContentManifestId>(ctx, cs_id, DerivationPriority::LOW)
+            .await
+            .context("Failed to derive RootContentManifestId")?;
+        Ok(Either::Left(root_id.into_content_manifest_id()))
+    } else {
+        let root_id = repo
+            .repo_derived_data()
+            .derive::<RootFsnodeId>(ctx, cs_id, DerivationPriority::LOW)
+            .await
+            .context("Failed to derive RootFsnodeId")?;
+        Ok(Either::Right(root_id.into_fsnode_id()))
+    }
 }
 
 /// Build a new submodule dependency map to expand/validate recursive submodules

@@ -44,6 +44,7 @@ rust_library(
         "//eden/mononoke/derived_data:derived_data",
         "//eden/mononoke/derived_data:fsnodes",
         "//eden/mononoke/derived_data:skeleton_manifest",
+        "//eden/mononoke/derived_data/content_manifest_derivation:content_manifest_derivation",
         "//eden/mononoke/features/changesets_creation:changesets_creation",
         "//eden/mononoke/features/commit_rewriting/movers:movers",
         "//eden/mononoke/features/commit_rewriting/reporting:reporting",

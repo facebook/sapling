@@ -30,6 +30,7 @@ rust_library(
     deps = [
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:ascii",
+        "fbsource//third-party/rust:either",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:maplit",
         "fbsource//third-party/rust:rand",
@@ -55,6 +56,7 @@ rust_library(
         "//eden/mononoke/derived_data:bulk_derivation",
         "//eden/mononoke/derived_data:changeset_info",
         "//eden/mononoke/derived_data:fsnodes",
+        "//eden/mononoke/derived_data/content_manifest_derivation:content_manifest_derivation",
         "//eden/mononoke/features/commit_rewriting/bookmark_renaming:bookmark_renaming",
         "//eden/mononoke/features/commit_rewriting/live_commit_sync_config:live_commit_sync_config",
         "//eden/mononoke/features/commit_rewriting/movers:movers",
