@@ -13,6 +13,7 @@
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
 #include <folly/concurrency/memory/ReadMostlySharedPtr.h>
+#include <folly/coro/safe/NowTask.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <folly/futures/SharedPromise.h>
@@ -524,6 +525,19 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * This can be called from any thread/executor.
    */
   ImmediateFuture<folly::Unit> waitForPendingWrites() const;
+
+  /**
+   * Coroutine version of waitForPendingWrites.
+   *
+   * Wait for all the pending notifications to be processed.
+   *
+   * This ensures that all pending notifications have completed.
+   *
+   * On macOS and Linux, this immediately return.
+   *
+   * This can be called from any thread/executor.
+   */
+  folly::coro::now_task<folly::Unit> co_waitForPendingWrites() const;
 
   /**
    * Test if the working copy persist on disk after this mount will be

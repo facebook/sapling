@@ -1033,9 +1033,46 @@ int64_t getSyncTimeout(const SyncBehavior& sync) {
  * When the SyncBehavior is unset, this default to a timeout of 60 seconds. A
  * negative SyncBehavior mean to wait indefinitely.
  */
+folly::coro::now_task<void> co_waitForPendingWrites(
+    const EdenMount& mount,
+    const SyncBehavior& sync) {
+  auto seconds = getSyncTimeout(sync);
+  if (seconds == 0) {
+    co_return;
+  }
+  if (seconds > 0) {
+    co_await folly::coro::timeout(
+        mount.co_waitForPendingWrites(), std::chrono::seconds{seconds});
+  } else {
+    co_await mount.co_waitForPendingWrites();
+  }
+  co_return;
+}
+
+/**
+ * Wait for all the pending notifications to be processed.
+ *
+ * When the SyncBehavior is unset, this default to a timeout of 60 seconds. A
+ * negative SyncBehavior mean to wait indefinitely.
+ */
 ImmediateFuture<folly::Unit> waitForPendingWrites(
     const EdenMount& mount,
     const SyncBehavior& sync) {
+  if (mount.getEdenConfig()->enableCoroutinesInGetFileContent.getValue()) {
+    auto mountHandle = EdenMountHandle{
+        std::const_pointer_cast<EdenMount>(mount.shared_from_this()),
+        mount.getRootInode()};
+    // Capture sync by value to ensure its lifetime, mount is kept alive by
+    // mountHandle
+    return ImmediateFuture{
+        // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+        folly::coro::co_invoke([&mount, sync = sync]() {
+          // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+          return co_waitForPendingWrites(mount, sync).as_unsafe();
+        }).semi()}
+        .ensure([mountHandle = std::move(mountHandle)]() {});
+  }
+
   auto seconds = getSyncTimeout(sync);
   if (seconds == 0) {
     return folly::unit;
@@ -1047,6 +1084,7 @@ ImmediateFuture<folly::Unit> waitForPendingWrites(
   }
   return std::move(future);
 }
+
 } // namespace
 
 folly::SemiFuture<folly::Unit>
@@ -5848,8 +5886,8 @@ EdenServiceHandler::co_getFileContentImpl(
 
   // Ensure Eden has its internal state updated.
   // See SyncBehavior struct in eden.thrift for details.
-  co_await waitForPendingWrites(mountHandle.getEdenMount(), *request->sync())
-      .semi();
+  co_await co_waitForPendingWrites(
+      mountHandle.getEdenMount(), *request->sync());
 
   ScmBlobOrError blobOrError;
   try {

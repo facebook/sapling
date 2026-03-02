@@ -12,6 +12,8 @@
 #include <folly/FBString.h>
 #include <folly/File.h>
 #include <folly/chrono/Conv.h>
+#include <folly/coro/Invoke.h>
+#include <folly/coro/safe/NowTask.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/Logger.h>
@@ -1398,6 +1400,14 @@ ImmediateFuture<VirtualInode> EdenMount::getVirtualInode(
 }
 
 ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
+  if (getEdenConfig()->enableCoroutinesInGetFileContent.getValue()) {
+    // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+    return ImmediateFuture{folly::coro::co_invoke([this]() {
+                             // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+                             return co_waitForPendingWrites().as_unsafe();
+                           }).semi()};
+  }
+
   // TODO: This is a race condition since channel_ can be destroyed
   // concurrently. We need to change EdenMount to never unset channel_.
   if (channel_) {
@@ -1405,6 +1415,15 @@ ImmediateFuture<folly::Unit> EdenMount::waitForPendingWrites() const {
   } else {
     return folly::unit;
   }
+}
+
+folly::coro::now_task<folly::Unit> EdenMount::co_waitForPendingWrites() const {
+  // TODO: This is a race condition since channel_ can be destroyed
+  // concurrently. We need to change EdenMount to never unset channel_.
+  if (channel_) {
+    co_await channel_->waitForPendingWrites().semi();
+  }
+  co_return folly::unit;
 }
 
 constexpr const char* interruptedCheckoutAdvice =
