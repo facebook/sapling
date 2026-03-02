@@ -853,10 +853,6 @@ fn log_result<T: AddScubaResponse>(
         }
         scuba.add("error", error.as_str());
     }
-    scuba.add_opt(
-        "client_identity_variant",
-        ctx.metadata().identities().first().map(|i| i.variant()),
-    );
     scuba.log_with_msg(tag, None);
 
     #[cfg(fbcode_build)]
@@ -1054,10 +1050,6 @@ fn log_stream_complete(
         }
         scuba.add("error", error.as_str());
     }
-    scuba.add_opt(
-        "client_identity_variant",
-        ctx.metadata().identities().first().map(|i| i.variant()),
-    );
     scuba.log_with_msg("Request complete", None);
 
     #[cfg(fbcode_build)]
@@ -1090,10 +1082,6 @@ fn log_cancelled(
     ctx.perf_counters().insert_perf_counters(&mut scuba);
     scuba.add_future_stats(stats);
     scuba.add("status", "CANCELLED");
-    scuba.add_opt(
-        "client_identity_variant",
-        ctx.metadata().identities().first().map(|i| i.variant()),
-    );
     scuba.log_with_msg("Request cancelled", None);
 
     #[cfg(fbcode_build)]

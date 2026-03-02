@@ -126,7 +126,6 @@ pub struct CommonMetadata {
     pub session_uuid: String,
     pub client_identities: Vec<String>,
     pub client_identities_typed: Vec<String>,
-    pub client_identity_variant: Option<String>,
     pub source_hostname: Option<String>,
     pub client_ip: Option<String>,
     pub unix_username: Option<String>,
@@ -165,11 +164,6 @@ impl CommonMetadata {
             fetch_from_cas_attempted: metadata.fetch_from_cas_attempted(),
             ..Default::default()
         };
-
-        // Client identity variant
-        if let Some(first_identity) = metadata.identities().first() {
-            data.client_identity_variant = Some(first_identity.variant().to_string());
-        }
 
         // Source hostname or client IP (mutually exclusive)
         if let Some(client_hostname) = metadata.client_hostname() {

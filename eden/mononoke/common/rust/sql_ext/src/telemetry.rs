@@ -979,9 +979,6 @@ mod facebook {
         logger.set_session_uuid(data.session_uuid.clone());
         logger.set_client_identities(data.client_identities.clone());
 
-        if let Some(ref variant) = data.client_identity_variant {
-            logger.set_client_identity_variant(variant.clone());
-        }
         if let Some(ref hostname) = data.source_hostname {
             logger.set_source_hostname(hostname.clone());
         }

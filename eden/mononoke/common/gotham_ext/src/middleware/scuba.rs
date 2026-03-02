@@ -330,9 +330,6 @@ fn populate_scuba(scuba: &mut MononokeScubaSampleBuilder, state: &mut State) {
         scuba.add(HttpScubaKey::ClientIdentities, identities);
         scuba.add(HttpScubaKey::ClientIdentitiesTyped, identities_typed);
 
-        let client_identity_variant = metadata.identities().first().map(|i| i.variant());
-        scuba.add_opt("client_identity_variant", client_identity_variant);
-
         let sandcastle_alias = metadata.sandcastle_alias();
         scuba.add(HttpScubaKey::SandcastleAlias, sandcastle_alias);
 
