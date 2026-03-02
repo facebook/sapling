@@ -185,6 +185,20 @@ cpp_binary(
 )
 
 cpp_binary(
+    name = "get_file_content",
+    srcs = ["get_file_content.cpp"],
+    deps = [
+        "//eden/common/utils:path",
+        "//eden/common/utils/benchharness:benchharness",
+        "//eden/fs/benchmarks:bench_utils",
+        "//eden/fs/service:thrift-cpp2-services",
+        "//folly/futures:core",
+        "//folly/io/async:event_base_thread",
+        "//folly/synchronization:call_once",
+    ],
+)
+
+cpp_binary(
     name = "set_path_object_id",
     srcs = ["set_path_object_id.cpp"],
     compatible_with = [
