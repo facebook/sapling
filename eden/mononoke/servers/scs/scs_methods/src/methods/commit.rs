@@ -18,7 +18,6 @@ use context::CoreContext;
 use futures::pin_mut;
 use futures::stream;
 use futures::stream::BoxStream;
-use futures::stream::FuturesOrdered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use futures::try_join;
@@ -998,10 +997,9 @@ impl SourceControlServiceImpl {
                             .await?
                     }
                 };
-                let diff_items = diff
-                    .into_iter()
+                let diff_items = stream::iter(diff)
                     .map(|diff| CommitComparePath::from_path_diff(diff, &params.identity_schemes))
-                    .collect::<FuturesOrdered<_>>()
+                    .buffered(CONCURRENCY_LIMIT)
                     .try_collect::<Vec<_>>()
                     .watched()
                     .await?;
