@@ -8,6 +8,7 @@
 import type {
   Exact,
   PullRequestReviewDecision,
+  PullRequestReviewState,
   PullRequestState,
   Scalars,
   StatusState,
@@ -24,6 +25,13 @@ export type PRNode = {
   isDraft: boolean;
   url: string;
   reviewDecision?: PullRequestReviewDecision | null;
+  latestReviews?: {
+    nodes?: Array<{
+      state: PullRequestReviewState;
+      author?: {login: string} | null;
+      publishedAt?: string | null;
+    } | null> | null;
+  } | null;
   author?: {login: string; avatarUrl: string} | null;
   comments: {totalCount: number};
   baseRef?: {
@@ -93,6 +101,15 @@ export const CombinedPRQuery = `
           }
           url
           reviewDecision
+          latestReviews(last: 10) {
+            nodes {
+              state
+              author {
+                login
+              }
+              publishedAt
+            }
+          }
           comments {
             totalCount
           }
@@ -136,6 +153,15 @@ export const CombinedPRQuery = `
           }
           url
           reviewDecision
+          latestReviews(last: 10) {
+            nodes {
+              state
+              author {
+                login
+              }
+              publishedAt
+            }
+          }
           comments {
             totalCount
           }

@@ -46,7 +46,7 @@ import {
 } from '../reviewComments';
 import {enterReviewMode, reviewModeAtom} from '../reviewMode';
 import {MergeControls} from '../reviewMode/MergeControls';
-import {useQuickReviewAction} from '../reviewSubmission';
+import {useQuickReviewAction, reviewSubmittedAtom} from '../reviewSubmission';
 import {latestHeadCommit} from '../serverAPIState';
 import {themeState} from '../theme';
 import {showToast} from '../toast';
@@ -295,6 +295,7 @@ function ReviewActionsBar() {
   const reviewMode = useAtomValue(reviewModeAtom);
   const allDiffs = useAtomValue(allDiffSummaries);
   const currentUser = useAtomValue(currentGitHubUser);
+  const reviewSubmitted = useAtomValue(reviewSubmittedAtom);
 
   // Get PR summary from diff summaries when in review mode
   const prSummary = useMemo(() => {
@@ -339,7 +340,7 @@ function ReviewActionsBar() {
       return;
     }
 
-    showToast(t('PR published and ready for review'));
+    showToast(t('PR published and ready for review'), {durationMs: 5000});
     triggerFullDiffSummariesRefresh();
   }, [nodeId]);
 
@@ -366,6 +367,84 @@ function ReviewActionsBar() {
     );
   }
 
+  // Determine review status: local submission (immediate) or server-side (persisted)
+  const reviewStatus = useMemo(() => {
+    const reviews = prSummary?.latestReviews;
+
+    // Helper to extract reviewer names and most recent timestamp for a given state
+    function getReviewDetails(state: string): {authors: string[]; timestamp: Date | null} {
+      const authors: string[] = [];
+      let latestTime: Date | null = null;
+      if (reviews != null) {
+        for (const r of reviews) {
+          if (r.state === state && r.author) {
+            authors.push(r.author);
+            if (r.publishedAt) {
+              const d = new Date(r.publishedAt);
+              if (latestTime == null || d > latestTime) {
+                latestTime = d;
+              }
+            }
+          }
+        }
+      }
+      return {authors, timestamp: latestTime};
+    }
+
+    // Local state takes priority (immediate feedback after clicking Approve)
+    if (reviewSubmitted != null) {
+      const decision = reviewSubmitted.event === 'APPROVE' ? 'APPROVED' : reviewSubmitted.event === 'REQUEST_CHANGES' ? 'CHANGES_REQUESTED' : null;
+      return {
+        decision,
+        timestamp: reviewSubmitted.timestamp,
+        authors: [] as string[],
+      } as const;
+    }
+    // Fall back to server-side reviewDecision from GitHub API
+    const decision = prSummary?.reviewDecision;
+    if (decision === 'APPROVED' || decision === 'CHANGES_REQUESTED') {
+      const details = getReviewDetails(decision);
+      return {decision, timestamp: details.timestamp, authors: details.authors} as const;
+    }
+    // reviewDecision is null when no branch protection requires reviews.
+    // Check latestReviews for any APPROVED or CHANGES_REQUESTED state.
+    if (reviews != null) {
+      const changesDetails = getReviewDetails('CHANGES_REQUESTED');
+      if (changesDetails.authors.length > 0) {
+        return {decision: 'CHANGES_REQUESTED' as const, timestamp: changesDetails.timestamp, authors: changesDetails.authors};
+      }
+      const approvalDetails = getReviewDetails('APPROVED');
+      if (approvalDetails.authors.length > 0) {
+        return {decision: 'APPROVED' as const, timestamp: approvalDetails.timestamp, authors: approvalDetails.authors};
+      }
+    }
+    return null;
+  }, [reviewSubmitted, prSummary?.reviewDecision, prSummary?.latestReviews]);
+
+  // Show status banner when PR has been reviewed
+  if (reviewStatus != null) {
+    const isApproval = reviewStatus.decision === 'APPROVED';
+    const statusClass = isApproval ? 'review-status-approved' : 'review-status-changes-requested';
+    const icon = isApproval ? 'check' : 'warning';
+    const label = isApproval
+      ? t('Approved')
+      : t('Changes requested');
+    const byLine = reviewStatus.authors.length > 0
+      ? ' by ' + reviewStatus.authors.join(', ')
+      : '';
+
+    return (
+      <div className={`review-actions-bar review-status-banner ${statusClass}`}
+        data-testid="review-status-banner">
+        <Icon icon={icon} />
+        <span className="review-status-text">{label}{byLine}</span>
+        {reviewStatus.timestamp != null && (
+          <span className="review-status-time">{formatRelativeTime(reviewStatus.timestamp)}</span>
+        )}
+      </div>
+    );
+  }
+
   // Someone else's PR: show Approve / Request Changes
   return (
     <div className="review-actions-bar">
@@ -387,6 +466,26 @@ function ReviewActionsBar() {
       </Button>
     </div>
   );
+}
+
+function formatRelativeTime(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) {
+    return t('just now');
+  }
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return t('$count min ago', {replace: {$count: String(minutes)}});
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return t('$count hr ago', {replace: {$count: String(hours)}});
+  }
+  const days = Math.floor(hours / 24);
+  if (days === 1) {
+    return t('yesterday');
+  }
+  return t('$count days ago', {replace: {$count: String(days)}});
 }
 
 const headerCollapsedAtom = atom<boolean>(false);

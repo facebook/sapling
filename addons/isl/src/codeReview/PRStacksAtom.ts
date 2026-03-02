@@ -354,13 +354,24 @@ export const currentPRStackContextAtom = atom<StackNavigationContext | null>(get
       }
       // Use string comparison for isCurrent to avoid type mismatches
       const prNumStr = String(pr.number);
+      // reviewDecision is null without branch protection; fall back to latestReviews
+      let effectiveDecision: string | undefined = pr.reviewDecision;
+      if (effectiveDecision == null && pr.type === 'github' && pr.latestReviews) {
+        const hasChanges = pr.latestReviews.some(r => r.state === 'CHANGES_REQUESTED');
+        const hasApproval = pr.latestReviews.some(r => r.state === 'APPROVED');
+        if (hasChanges) {
+          effectiveDecision = 'CHANGES_REQUESTED';
+        } else if (hasApproval) {
+          effectiveDecision = 'APPROVED';
+        }
+      }
       return {
         prNumber: Number(pr.number),
         headHash: pr.head,
         title: pr.title,
         isCurrent: prNumStr === currentPrNumberStr,
         state: pr.state,
-        reviewDecision: pr.reviewDecision,
+        reviewDecision: effectiveDecision ?? undefined,
       };
     })
     .filter((e): e is NonNullable<typeof e> => e !== null);

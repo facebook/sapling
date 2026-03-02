@@ -61,6 +61,8 @@ export type GitHubDiffSummary = {
   anyUnresolvedComments: false;
   signalSummary?: DiffSignalSummary;
   reviewDecision?: PullRequestReviewDecision;
+  /** Latest review state per reviewer (from latestReviews query) */
+  latestReviews?: Array<{state: string; author?: string; publishedAt?: string}>;
   /** Base of the Pull Request (public parent), as it is on GitHub (may be out of date) */
   base: Hash;
   /** Head of the Pull Request (topmost commit), as it is on GitHub (may be out of date) */
@@ -182,6 +184,9 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
                 summary.commits.nodes?.[0]?.commit.statusCheckRollup?.state,
               ),
               reviewDecision: summary.reviewDecision ?? undefined,
+              latestReviews: summary.latestReviews?.nodes
+                ?.filter((r): r is NonNullable<typeof r> => r != null)
+                .map(r => ({state: r.state, author: r.author?.login, publishedAt: r.publishedAt ?? undefined})),
               base: summary.baseRef?.target?.oid ?? '',
               head: summary.headRef?.target?.oid ?? '',
               branchName: summary.headRef?.name ?? '',

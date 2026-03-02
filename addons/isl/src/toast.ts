@@ -23,8 +23,8 @@ import platform from './platform';
  * Note the internals use O(N) scans in various places.
  * Do not push too many toasts.
  */
-export function showToast(message: ReactNode, props?: {durationMs?: number; key?: string}) {
-  const {durationMs = DEFAULT_DURATION_MS, key} = props ?? {};
+export function showToast(message: ReactNode, props?: {durationMs?: number; key?: string; className?: string}) {
+  const {durationMs = DEFAULT_DURATION_MS, key, className} = props ?? {};
   writeAtom(toastQueueAtom, oldValue => {
     let nextValue = oldValue;
     const hideAt = new Date(Date.now() + durationMs);
@@ -32,7 +32,7 @@ export function showToast(message: ReactNode, props?: {durationMs?: number; key?
       // Remove an existing toast with the same key.
       nextValue = nextValue.filter(({key: k}) => k !== key);
     }
-    return nextValue.push({message, disapparAt: hideAt, key: key ?? hideAt.getTime().toString()});
+    return nextValue.push({message, disapparAt: hideAt, key: key ?? hideAt.getTime().toString(), className});
   });
 }
 
@@ -56,6 +56,7 @@ type ToastProps = {
   message: ReactNode;
   key: string;
   disapparAt: Date;
+  className?: string;
 };
 
 const DEFAULT_DURATION_MS = 2000;

@@ -61,19 +61,32 @@ yarn eslint           # Lint TypeScript/React code
 ### Building ISL for `sl web` (IMPORTANT after ISL changes)
 
 The `sl web` command serves ISL from a pre-built `isl-dist.tar.xz`. After making changes
-to ISL code in `addons/`, you **must rebuild the tar** for `sl web` to pick them up.
+to ISL code in `addons/`, you **must rebuild and deploy the tar** for `sl web` to pick them up.
 
-**Rebuild steps** (from `addons/`):
+**Full rebuild + deploy steps** (from `addons/`):
 
 ```bash
+# 1. Build the tar (use rm -f to force rebuild if build-tar.py skips due to hash cache)
 yarn install
+rm -f ../eden/lib/isl-dist.tar.xz
 python3 build-tar.py -o ../eden/lib/isl-dist.tar.xz
+
+# 2. Copy to where the installed sl binary actually loads from
+cp ../eden/lib/isl-dist.tar.xz ~/.local/lib/isl-dist.tar.xz
+
+# 3. Kill running sl web and clear its extraction cache (it caches in ~/Library)
+pkill -f 'isl-server/dist/child' 2>/dev/null
+rm -rf ~/Library/Application\ Support/Sapling/ISL/
+
+# 4. Restart sl web — it will re-extract the fresh tar
 ```
 
-This builds the client (Vite) and server (rollup), then packages everything into a tar at
-`eden/lib/isl-dist.tar.xz` — where the `sl` binary automatically finds it.
-
-After rebuilding, `sl web` in **any local repo** will serve the fork's ISL.
+**Why all 3 steps are needed:**
+- `build-tar.py` has a source hash cache — it may skip rebuilds. Delete the tar to force it.
+- The installed `sl` binary (`~/.local/bin/sl`) loads from `~/.local/lib/isl-dist.tar.xz`,
+  NOT from `eden/lib/`. Building alone doesn't update the installed copy.
+- `sl web` extracts the tar to `~/Library/Application Support/Sapling/ISL/` and caches it.
+  Even after copying a new tar, the old extraction is served until cleared.
 
 **How `sl web` finds the tar** (in `eden/scm/sapling/commands/isl.py`):
 1. Config: `[web] isl-dist-path` in `.sl/config` or `~/.sapling/sapling.conf`

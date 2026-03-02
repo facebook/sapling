@@ -5,13 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type {DraftPullRequestReviewThread} from '../types';
+import type {DraftPullRequestReviewThread, PullRequestReviewEvent} from '../types';
 import type {ReviewSubmissionResult} from './ReviewSubmissionModal';
 
 import {useAtomValue} from 'jotai';
 import {useCallback} from 'react';
 import serverAPI from '../ClientToServerAPI';
+import {triggerFullDiffSummariesRefresh} from '../codeReview/CodeReviewInfo';
 import {t} from '../i18n';
+import {writeAtom} from '../jotaiUtils';
 import {
   pendingCommentsAtom,
   clearPendingComments,
@@ -20,6 +22,7 @@ import {exitReviewMode, reviewModeAtom} from '../reviewMode';
 import {showToast} from '../toast';
 import {useModal} from '../useModal';
 import {ReviewSubmissionModal} from './ReviewSubmissionModal';
+import {reviewSubmittedAtom} from './reviewSubmittedState';
 
 /**
  * Hook that provides a function to initiate the review submission flow.
@@ -93,17 +96,14 @@ export function useSubmitReview(nodeId: string | undefined) {
 
     // Success! Clear pending comments and exit review mode
     clearPendingComments(prNumber);
+    writeAtom(reviewSubmittedAtom, {event: result.event, timestamp: new Date()});
+    triggerFullDiffSummariesRefresh();
 
-    const actionText =
-      result.event === 'APPROVE'
-        ? t('approved')
-        : result.event === 'REQUEST_CHANGES'
-          ? t('requested changes on')
-          : t('commented on');
-
+    const actionText = toastActionText(result.event);
+    const toastClass = result.event === 'APPROVE' ? 'toast-review-approved' : result.event === 'REQUEST_CHANGES' ? 'toast-review-changes' : undefined;
     showToast(t('Review submitted: $action PR #$pr', {
       replace: {$action: actionText, $pr: prNumber},
-    }));
+    }), {durationMs: 5000, className: toastClass});
 
     exitReviewMode();
   }, [nodeId, prNumber, pendingComments, showModal]);
@@ -164,13 +164,16 @@ export function useQuickReviewAction(nodeId: string | undefined) {
       return;
     }
 
-    // Success! Clear pending comments
+    // Success! Update local state, clear comments, refresh data
     clearPendingComments(prNumber);
+    writeAtom(reviewSubmittedAtom, {event, timestamp: new Date()});
+    triggerFullDiffSummariesRefresh();
 
-    const actionText = event === 'APPROVE' ? t('approved') : t('requested changes on');
+    const actionText = toastActionText(event);
+    const toastClass = event === 'APPROVE' ? 'toast-review-approved' : event === 'REQUEST_CHANGES' ? 'toast-review-changes' : undefined;
     showToast(t('Review submitted: $action PR #$pr', {
       replace: {$action: actionText, $pr: prNumber},
-    }));
+    }), {durationMs: 5000, className: toastClass});
   }, [nodeId, prNumber, pendingComments]);
 
   return {
@@ -178,4 +181,15 @@ export function useQuickReviewAction(nodeId: string | undefined) {
     requestChanges: useCallback(() => submitQuickReview('REQUEST_CHANGES'), [submitQuickReview]),
     canSubmit: !!nodeId && !!prNumber,
   };
+}
+
+function toastActionText(event: PullRequestReviewEvent): string {
+  switch (event) {
+    case 'APPROVE':
+      return t('approved');
+    case 'REQUEST_CHANGES':
+      return t('requested changes on');
+    default:
+      return t('commented on');
+  }
 }

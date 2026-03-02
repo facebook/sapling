@@ -335,7 +335,7 @@ export function PRDashboard() {
       <div className="pr-dashboard-sticky-header">
         <div className="pr-dashboard-header">
           <span className="pr-dashboard-title">
-            <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v4.2.1)</span>
+            <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v4.2.3-fix2)</span>
           </span>
           <div className="pr-dashboard-header-buttons">
             <TimeRangeDropdown />
@@ -721,7 +721,17 @@ function LabelEditor({
 }
 
 function PRRow({pr}: {pr: DiffSummary}) {
-  const reviewDecision = pr.type === 'github' ? pr.reviewDecision : undefined;
+  // reviewDecision is null without branch protection; fall back to latestReviews
+  let reviewDecision: string | undefined = pr.type === 'github' ? pr.reviewDecision : undefined;
+  if (reviewDecision == null && pr.type === 'github' && pr.latestReviews) {
+    const hasChanges = pr.latestReviews.some(r => r.state === 'CHANGES_REQUESTED');
+    const hasApproval = pr.latestReviews.some(r => r.state === 'APPROVED');
+    if (hasChanges) {
+      reviewDecision = 'CHANGES_REQUESTED';
+    } else if (hasApproval) {
+      reviewDecision = 'APPROVED';
+    }
+  }
   const stateIcon = getPRStateIcon(pr.state, reviewDecision);
   const stateClass = getPRStateClass(pr.state, reviewDecision);
   const headHash = pr.type === 'github' && pr.head !== '' ? pr.head : undefined;

@@ -8,3 +8,5 @@
 export {ReviewSubmissionModal} from './ReviewSubmissionModal';
 export type {ReviewSubmissionResult} from './ReviewSubmissionModal';
 export {useSubmitReview, useQuickReviewAction} from './useSubmitReview';
+export {reviewSubmittedAtom, resetReviewSubmitted} from './reviewSubmittedState';
+export type {ReviewSubmittedState} from './reviewSubmittedState';
