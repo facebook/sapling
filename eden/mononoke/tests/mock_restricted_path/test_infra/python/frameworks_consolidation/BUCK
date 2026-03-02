@@ -49,7 +49,7 @@ python_unittest(
     name = "strict_mock_test",
     srcs = ["strict_mock_test.py"],
     labels = ["autodeps2_generated"],
-    uses_legacy_listing = False,  # use snapper
+    supports_static_listing = False,
     deps = [
         ":storage",
         "//later:lib",
