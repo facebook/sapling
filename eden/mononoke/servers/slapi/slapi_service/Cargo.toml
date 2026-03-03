@@ -29,8 +29,8 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_types = { version = "0.1.0", path = "../../../git/git_types" }
-gotham = { git = "https://github.com/gotham-rs/gotham", rev = "ba1535853e6e777dab7f487ec9020f6a32e73b1e" }
-gotham_derive = { git = "https://github.com/gotham-rs/gotham", rev = "ba1535853e6e777dab7f487ec9020f6a32e73b1e" }
+gotham = "0.8"
+gotham_derive = "0.8"
 gotham_ext = { version = "0.1.0", path = "../../../common/gotham_ext" }
 hex = { version = "0.4.3", features = ["alloc"] }
 hooks = { version = "0.1.0", path = "../../../features/hooks" }

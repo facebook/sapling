@@ -9,7 +9,7 @@ rust_library(
     ]),
     deps = [
         "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:gotham-0-8",
+        "fbsource//third-party/rust:gotham",
         "//eden/mononoke/common/gotham_ext:gotham_ext",
     ],
 )
