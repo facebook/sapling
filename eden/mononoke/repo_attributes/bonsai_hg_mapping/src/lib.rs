@@ -127,6 +127,12 @@ pub trait BonsaiHgMapping: Send + Sync {
 
     async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error>;
 
+    async fn bulk_add(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiHgMappingEntry],
+    ) -> Result<u64, Error>;
+
     async fn get(
         &self,
         ctx: &CoreContext,
@@ -463,32 +469,44 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
     }
 
     async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
-        STATS::adds.add_value(1);
+        self.bulk_add(ctx, &[entry]).await.map(|rows| rows >= 1)
+    }
+
+    async fn bulk_add(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiHgMappingEntry],
+    ) -> Result<u64, Error> {
+        STATS::adds.add_value(entries.len() as i64);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
-        let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry.clone();
+        let rows: Vec<_> = entries
+            .iter()
+            .map(|e| (&self.repo_id, &e.hg_cs_id, &e.bcs_id))
+            .collect();
+
         if self.overwrite {
             let result = ReplaceMapping::query(
                 &self.write_connection,
                 ctx.sql_query_telemetry(),
-                &[(&self.repo_id, &hg_cs_id, &bcs_id)],
+                rows.as_slice(),
             )
             .await?;
-            Ok(result.affected_rows() >= 1)
+            Ok(result.affected_rows())
         } else {
             let result = InsertMapping::query(
                 &self.write_connection,
                 ctx.sql_query_telemetry(),
-                &[(&self.repo_id, &hg_cs_id, &bcs_id)],
+                rows.as_slice(),
             )
             .await?;
-            if result.affected_rows() == 1 {
-                Ok(true)
-            } else {
-                self.verify_consistency(ctx, entry).await?;
-                Ok(false)
+            if result.affected_rows() != entries.len() as u64 {
+                for entry in entries {
+                    self.verify_consistency(ctx, entry.clone()).await?;
+                }
             }
+            Ok(result.affected_rows())
         }
     }
 

@@ -187,6 +187,14 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
         self.mapping.add(ctx, entry).await
     }
 
+    async fn bulk_add(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiHgMappingEntry],
+    ) -> Result<u64, Error> {
+        self.mapping.bulk_add(ctx, entries).await
+    }
+
     async fn get(
         &self,
         ctx: &CoreContext,

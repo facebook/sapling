@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -106,24 +107,45 @@ impl BonsaiHgMapping for MemWritesBonsaiHgMapping {
     }
 
     async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
+        self.bulk_add(ctx, &[entry]).await.map(|rows| rows >= 1)
+    }
+
+    async fn bulk_add(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiHgMappingEntry],
+    ) -> Result<u64, Error> {
         if self.readonly.load(Ordering::Relaxed) {
             return Err(anyhow!(
                 "cannot write to a readonly MemWritesBonsaiHgMapping"
             ));
         }
 
-        let BonsaiHgMappingEntry { hg_cs_id, bcs_id } = entry;
+        let save_noop_writes = self.save_noop_writes.load(Ordering::Relaxed);
 
-        let entry = self.get_hg_from_bonsai(ctx, bcs_id).await?;
-        if entry.is_some() && !self.save_noop_writes.load(Ordering::Relaxed) {
-            Ok(false)
+        let to_insert = if save_noop_writes {
+            entries.to_vec()
         } else {
-            self.cache.with(|cache| {
-                cache.0.insert(bcs_id, hg_cs_id);
-                cache.1.insert(hg_cs_id, bcs_id);
-            });
-            Ok(true)
-        }
+            let bcs_ids: Vec<_> = entries.iter().map(|e| e.bcs_id).collect();
+            let existing = self
+                .get(ctx, BonsaiOrHgChangesetIds::Bonsai(bcs_ids))
+                .await?;
+            let existing_bcs_ids: HashSet<_> = existing.iter().map(|e| e.bcs_id).collect();
+            entries
+                .iter()
+                .filter(|e| !existing_bcs_ids.contains(&e.bcs_id))
+                .cloned()
+                .collect()
+        };
+
+        let added = to_insert.len() as u64;
+        self.cache.with(|cache| {
+            for entry in to_insert {
+                cache.0.insert(entry.bcs_id, entry.hg_cs_id);
+                cache.1.insert(entry.hg_cs_id, entry.bcs_id);
+            }
+        });
+        Ok(added)
     }
 
     async fn get(
