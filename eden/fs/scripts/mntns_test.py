@@ -31,8 +31,8 @@ Usage:
 
     # auto-builds binaries
     python3 mntns_test.py
-    # explicit path
-    python3 mntns_test.py --edenfsctl PATH
+    # explicit paths
+    python3 mntns_test.py --edenfsctl PATH --privhelper PATH
 """
 
 import argparse
@@ -364,6 +364,10 @@ def main():
         "--edenfsctl",
         help="Path to edenfsctl (auto-built if omitted)",
     )
+    parser.add_argument(
+        "--privhelper",
+        help="Path to a setuid-root edenfs_privhelper (auto-built if omitted)",
+    )
     parser.add_argument("--keep", action="store_true", help="Keep temp dir on exit")
     parser.add_argument(
         "-o", "--output", metavar="FILE", help="Save results (sees columns) to JSON"
@@ -398,9 +402,12 @@ def main():
         base_dir = Path(base_dir)
         print(f"Testing temporary directory: {base_dir} ({keep=})")
 
-        privhelper = base_dir / "edenfs_privhelper"
-        build_binary("fbcode//eden/fs/service:edenfs_privhelper", out=privhelper)
-        make_setuid_root(privhelper)
+        if args.privhelper:
+            privhelper = Path(args.privhelper)
+        else:
+            privhelper = base_dir / "edenfs_privhelper"
+            build_binary("fbcode//eden/fs/service:edenfs_privhelper", out=privhelper)
+            make_setuid_root(privhelper)
 
         env = EdenTestEnv(edenfsctl, str(privhelper), base_dir)
         env.init_backing_repo()
