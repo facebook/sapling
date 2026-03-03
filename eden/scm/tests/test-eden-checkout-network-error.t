@@ -105,9 +105,11 @@ Set up another interrupted checkout to test filter ID mismatch:
 Change the filterdfs config while in interrupted checkout state.
   $ setconfig clone.eden-sparse-filter=profile2
 
-FIXME: Can't resume checkout because filter ids mismatch.
+Can resume checkout even though filter ids mismatch.
   $ hg go -qC $C
-  abort: EdenError: a previous checkout was interrupted - please run `sl go *` to resume it. (glob)
-  If there are conflicts, run `sl go --clean *` to discard changes, or `sl go --merge *` to merge. (glob)
-  [255]
+
+  $ hg st
+
+  $ cat dir/file
+  changed again
 #endif

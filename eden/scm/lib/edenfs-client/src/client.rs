@@ -265,36 +265,62 @@ impl EdenFsClient {
             );
         }
 
-        let tree_vec = tree.into_byte_array().into();
+        let tree_bytes: Vec<u8> = tree.into_byte_array().into();
         let thrift_client = block_on(self.get_async_thrift_client())?;
 
         let root_id_options = Self::root_options_from_filter(self.get_active_filter_id(node)?);
         let params = edenfs::CheckOutRevisionParams {
-            hgRootManifest: Some(tree_vec),
+            hgRootManifest: Some(tree_bytes.clone()),
             cri: Some(self.get_client_request_info()),
             rootIdOptions: Some(root_id_options),
             ..Default::default()
         };
         let root_vec = self.root_vec();
-        let node_vec = node.into_byte_array().into();
+        let node_vec: Vec<u8> = node.into_byte_array().into();
         let thrift_mode = edenfs::CheckoutMode::local_from(mode);
 
         let start_time = Instant::now();
 
-        let thrift_result = extract_error(block_on(thrift_client.checkOutRevision(
+        let mut thrift_result = extract_error(block_on(thrift_client.checkOutRevision(
             &root_vec,
             &node_vec,
             &thrift_mode,
             &params,
         )));
 
-        match (&sync_result, thrift_result.is_ok()) {
-            (Some(FilterSyncResult::Updated { .. }), false) => {
+        match (&sync_result, &thrift_result) {
+            (Some(FilterSyncResult::Updated { .. }), Err(err)) => {
                 // Checkout failed, rollback filter changes so that EdenFS and
                 // Sapling sources of truth match
                 rollback_filter_sync(&self.dot_dir)?;
+
+                // If the error is CHECKOUT_IN_PROGRESS for the same commit,
+                // the filter sync changed the filter ID causing a mismatch
+                // with the interrupted checkout's stored destination. Now that
+                // we've rolled back .hg/sparse, retry with the original
+                // filter ID.
+                if is_interrupted_checkout_error(err, &node) {
+                    let root_id_options =
+                        Self::root_options_from_filter(self.get_active_filter_id(node)?);
+                    let retry_params = edenfs::CheckOutRevisionParams {
+                        hgRootManifest: Some(tree_bytes),
+                        cri: Some(self.get_client_request_info()),
+                        rootIdOptions: Some(root_id_options),
+                        ..Default::default()
+                    };
+                    let retry_result = extract_error(block_on(thrift_client.checkOutRevision(
+                        &root_vec,
+                        &node_vec,
+                        &thrift_mode,
+                        &retry_params,
+                    )));
+                    if retry_result.is_ok() {
+                        cleanup_filter_sync_backup(&self.dot_dir)?;
+                    }
+                    thrift_result = retry_result;
+                }
             }
-            (Some(_), true) => {
+            (Some(_), Ok(_)) => {
                 // Checkout succeeded, cleanup filter backup and legacy migration files
                 cleanup_filter_sync_backup(&self.dot_dir)?;
             }
@@ -331,6 +357,15 @@ pub(crate) fn extract_error<V, E: std::error::Error + Send + Sync + 'static>(
         }
         Ok(v) => Ok(v),
     }
+}
+
+/// Check if an error is an EdenFS CHECKOUT_IN_PROGRESS error for a specific commit.
+fn is_interrupted_checkout_error(err: &anyhow::Error, node: &HgId) -> bool {
+    if let Some(eden_err) = err.downcast_ref::<EdenError>() {
+        return eden_err.error_type == "CHECKOUT_IN_PROGRESS"
+            && eden_err.message.contains(&node.to_hex());
+    }
+    false
 }
 
 async fn get_socket_transport(sock_path: &Path) -> Result<SocketTransport<UnixStream>> {
