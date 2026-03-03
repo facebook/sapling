@@ -36,6 +36,7 @@ Root changesets cannot be dropped.
 
 from sapling import cmdutil, error, extensions, registrar, scmutil
 from sapling.i18n import _
+from sapling.node import hex
 
 
 cmdtable = {}
@@ -94,7 +95,7 @@ def drop(ui, repo, *revs, **opts) -> None:
         raise error.Abort(_("public changeset which landed cannot be dropped"))
 
     node = changectx.node()
-    parents = repo.revs("parents(%n)", node)
+    parents = list(repo.nodes("parents(%n)", node))
     if len(parents) > 1:
         raise error.Abort(_("merge changeset cannot be dropped"))
     elif len(parents) == 0:
@@ -102,14 +103,16 @@ def drop(ui, repo, *revs, **opts) -> None:
 
     _showrev(ui, repo, node)
 
-    descendants = repo.revs("(%n::) - %n", node, node)
-    parent = parents.first()
+    descendants = list(repo.nodes("(%n::) - %n", node, node))
+    parent = parents[0]
     with repo.wlock():
         with repo.lock():
             with repo.transaction("drop"):
                 if len(descendants) > 0:
                     try:
-                        rebasemod.rebase(ui, repo, dest=str(parent), rev=descendants)
+                        rebasemod.rebase(
+                            ui, repo, dest=hex(parent), rev=list(map(hex, descendants))
+                        )
                     except error.InterventionRequired:
                         ui.warn(
                             _(
