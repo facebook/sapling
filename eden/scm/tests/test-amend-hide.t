@@ -8,7 +8,6 @@
 # GNU General Public License version 2.
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > amend=
@@ -40,16 +39,16 @@
   $ hg goto $A
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  4 E
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  E
   │
-  │ o  3 D
+  │ o  D
   │ │
-  o │  2 C cat
+  o │  C cat
   ├─╯
-  o  1 B dog
+  o  B dog
   │
-  @  0 A
+  @  A
 
 # Hide a single commit
 
@@ -58,14 +57,14 @@
   1 changeset hidden
   hint[undo]: you can undo this using the `hg undo` command
   hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  4 E
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  E
   │
-  o  2 C cat
+  o  C cat
   │
-  o  1 B dog
+  o  B dog
   │
-  @  0 A
+  @  A
 
 # Hide multiple commits with bookmarks on them, hide wc parent
 
@@ -83,29 +82,29 @@
   2 bookmarks removed
   hint[undo]: you can undo this using the `hg undo` command
   hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  @  0 A
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  @  A
 
 # Unhide stuff
 
-  $ hg unhide 2
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  2 C
+  $ hg unhide 'desc(C)'
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  C
   │
-  o  1 B
+  o  B
   │
-  @  0 A
-  $ hg unhide -r 4 -r 3
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  4 E
+  @  A
+  $ hg unhide -r 'desc(E)' -r 'desc(D)'
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  E
   │
-  │ o  3 D
+  │ o  D
   │ │
-  o │  2 C
+  o │  C
   ├─╯
-  o  1 B
+  o  B
   │
-  @  0 A
+  @  A
 
 # hg hide --cleanup tests
 
@@ -119,45 +118,45 @@
   $ hg amend --no-rebase -m E2 -d '0 0'
   hint[amend-restack]: descendants of 78d2dca436b2 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  @  6 E2
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  @  E2
   │
-  │ o  5 F
+  │ o  F
   │ │
-  │ x  4 E
+  │ x  E
   ├─╯
-  │ o  3 D
+  │ o  D
   │ │
-  o │  2 C
+  o │  C
   ├─╯
-  o  1 B
+  o  B
   │
-  o  0 A
+  o  A
   $ hg hide -c
   abort: nothing to hide
   [255]
   $ hg hide -c -r .
   abort: --rev and --cleanup are incompatible
   [255]
-  $ hg --config 'extensions.rebase=' rebase -s 5 -d 6
+  $ hg --config 'extensions.rebase=' rebase -s 'desc(F)' -d 'desc(E2)'
   rebasing 1f7934a9b4de "F"
-  $ hg book -r 5 alive --hidden
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  7 F
+  $ hg book -r 1f7934a9b4de alive --hidden
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  F
   │
-  @  6 E2
+  @  E2
   │
-  │ x  5 F alive
+  │ x  F alive
   │ │
-  │ x  4 E
+  │ x  E
   ├─╯
-  │ o  3 D
+  │ o  D
   │ │
-  o │  2 C
+  o │  C
   ├─╯
-  o  1 B
+  o  B
   │
-  o  0 A
+  o  A
   $ hg hide --cleanup
   hiding commit 78d2dca436b2 "E"
   hiding commit 1f7934a9b4de "F"
@@ -166,22 +165,22 @@
   1 bookmark removed
   hint[undo]: you can undo this using the `hg undo` command
   hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  7 F
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  F
   │
-  @  6 E2
+  @  E2
   │
-  │ o  3 D
+  │ o  D
   │ │
-  o │  2 C
+  o │  C
   ├─╯
-  o  1 B
+  o  B
   │
-  o  0 A
+  o  A
 
 # Hiding the head bookmark of a stack hides the stack.
 
-  $ hg book -r 3 somebookmark
+  $ hg book -r 'desc(D)' somebookmark
   $ hg hide -B somebookmark
   hiding commit be0ef73c17ad "D"
   1 changeset hidden
@@ -189,30 +188,30 @@
   1 bookmark removed
   hint[undo]: you can undo this using the `hg undo` command
   hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  7 F
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  F
   │
-  @  6 E2
+  @  E2
   │
-  o  2 C
+  o  C
   │
-  o  1 B
+  o  B
   │
-  o  0 A
+  o  A
 
 # Hiding a bookmark in the middle of a stack just deletes the bookmark.
 
-  $ hg book -r 2 stackmidbookmark
+  $ hg book -r 'desc(C)' stackmidbookmark
   $ hg hide -B stackmidbookmark
   removing bookmark 'stackmidbookmark' (was at: 26805aba1e60)
   1 bookmark removed
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  7 F
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  F
   │
-  @  6 E2
+  @  E2
   │
-  o  2 C
+  o  C
   │
-  o  1 B
+  o  B
   │
-  o  0 A
+  o  A

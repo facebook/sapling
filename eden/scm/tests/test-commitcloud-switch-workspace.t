@@ -1,7 +1,5 @@
 #require no-eden
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
-
   $ showgraph() {
   >    hg log -G -T "{desc}: {phase} {bookmarks} {remotenames}" -r "all()"
   > }
@@ -379,24 +377,24 @@ Testing switching workspace with different remote bookmarks
   $ hg pull -B feature -q
   $ hg pull -B master -q
   $ showgraph
-  o  M: public  remote/master
+  o  F: public  remote/feature
   │
-  │ o  F: public  remote/feature
-  ├─╯
   │ o  B (W1): draft book (W1)
   │ │
   │ o  A (W1): draft
+  ├─╯
+  │ o  M: public  remote/master
   ├─╯
   @  base: public
  
 Bookmark feature should disappear in w2 but master will stay as it is a protected bookmark in this configuration. 
   $ hg cloud join -w w2 --switch -q 
   $ showgraph
-  o  M: public  remote/master
+  o  D (W2): draft book (W2)
   │
-  │ o  D (W2): draft book (W2)
-  │ │
-  │ o  C (W2): draft
+  o  C (W2): draft
+  │
+  │ o  M: public  remote/master
   ├─╯
   @  base: public
 
@@ -404,24 +402,24 @@ Bookmark feature should disappear in w2 but master will stay as it is a protecte
   $ showgraph
   o  S: public  remote/stable
   │
-  │ o  M: public  remote/master
-  ├─╯
   │ o  D (W2): draft book (W2)
   │ │
   │ o  C (W2): draft
+  ├─╯
+  │ o  M: public  remote/master
   ├─╯
   @  base: public
 
 Switch back. Bookmark stable should disappear.
   $ hg cloud join -w w1 --switch -q
   $ showgraph
-  o  M: public  remote/master
+  o  F: public  remote/feature
   │
-  │ o  F: public  remote/feature
-  ├─╯
   │ o  B (W1): draft book (W1)
   │ │
   │ o  A (W1): draft
+  ├─╯
+  │ o  M: public  remote/master
   ├─╯
   @  base: public
 
@@ -430,11 +428,11 @@ Switch one more time. Bookmark stable should return and feature disappear.
   $ showgraph
   o  S: public  remote/stable
   │
-  │ o  M: public  remote/master
-  ├─╯
   │ o  D (W2): draft book (W2)
   │ │
   │ o  C (W2): draft
+  ├─╯
+  │ o  M: public  remote/master
   ├─╯
   @  base: public
 
@@ -443,13 +441,13 @@ Pull a commit from another workspace
   $ showgraph
   o  S: public  remote/stable
   │
-  │ o  M: public  remote/master
-  ├─╯
   │ o  D (W2): draft book (W2)
   │ │
   │ o  C (W2): draft
   ├─╯
   │ o  A (W1): draft
+  ├─╯
+  │ o  M: public  remote/master
   ├─╯
   @  base: public
 
@@ -457,13 +455,13 @@ Switch back to W1
 
   $ hg cloud join -w w1 --switch -q
   $ showgraph
-  o  M: public  remote/master
+  o  F: public  remote/feature
   │
-  │ o  F: public  remote/feature
-  ├─╯
   │ o  B (W1): draft book (W1)
   │ │
   │ o  A (W1): draft
+  ├─╯
+  │ o  M: public  remote/master
   ├─╯
   @  base: public
 
@@ -472,13 +470,13 @@ Switch back to W2 and check that the pulled commit is there.
   $ showgraph
   o  S: public  remote/stable
   │
-  │ o  M: public  remote/master
-  ├─╯
   │ o  D (W2): draft book (W2)
   │ │
   │ o  C (W2): draft
   ├─╯
   │ o  A (W1): draft
+  ├─╯
+  │ o  M: public  remote/master
   ├─╯
   @  base: public
  

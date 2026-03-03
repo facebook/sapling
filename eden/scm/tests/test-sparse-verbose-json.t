@@ -9,7 +9,6 @@
 # test sparse with --verbose and -T json
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ enable sparse
   $ hg init myrepo
   $ cd myrepo
@@ -26,7 +25,7 @@
 
 # Verify basic --include and reset
 
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ hg sparse --include hide -Tjson
   [
    {

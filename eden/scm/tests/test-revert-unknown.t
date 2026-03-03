@@ -7,7 +7,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ eagerepo
   $ hg init repo
   $ cd repo
@@ -15,17 +14,17 @@
 
   $ touch a
   $ hg add a
-  $ hg ci -m 1
+  $ hg ci -m initial
 
   $ touch b
   $ hg add b
-  $ hg ci -m 2
+  $ hg ci -m second
 
 # Should show unknown
 
   $ hg status
   ? unknown
-  $ hg revert -r 0 --all
+  $ hg revert -r 'desc(initial)' --all
   removing b
 
 # Should show unknown and b removed

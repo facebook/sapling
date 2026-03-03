@@ -10,7 +10,6 @@
 # Set up test environment.
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ mkcommit() {
   >   echo $1 > $1
   >   hg ci -m "add $1" -A $1
@@ -427,7 +426,7 @@
   $ echo b >> b
   $ hg amend -m Unamended
   $ hg unamend
-  $ hg up -C 1
+  $ hg up -C 'desc("add b")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   o  173e12a9f067 Amended

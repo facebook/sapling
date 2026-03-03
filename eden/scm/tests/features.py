@@ -14,8 +14,6 @@ tests.
 """
 
 ignorerevnumincompatiblelist = """
-    test-amend-hide.t
-    test-amend-restack.t
     test-annotate.t
     test-bisect.t
     test-bookmarks.t
@@ -27,7 +25,6 @@ ignorerevnumincompatiblelist = """
     test-command-template.t
     test-commitcloud-hide.t
     test-commitcloud-move.t
-    test-commitcloud-switch-workspace.t
     test-commit-interactive.t
     test-context-metadata.t
     test-contrib-perf.t
@@ -40,18 +37,12 @@ ignorerevnumincompatiblelist = """
     test-eol-hook.t
     test-eol-update.t
     test-export.t
-    test-drop.t
-    test-fastlog.t
-    test-pushrebase-remotenames.t
     test-remotefilelog-wireproto.t
-    test-reset.t
-    test-treemanifest-noflat.t
     test-treemanifest-prefetch.t
     test-treemanifest.t
     test-tweakdefaults-pullrebaseremotenames.t
     test-tweakdefaults-remotenames.t
     test-tweakdefaults.t
-    test-tweakdefaults-update.t
     test-fileset.t
     test-git-export.t
     test-glog-topological.t
@@ -63,7 +54,6 @@ ignorerevnumincompatiblelist = """
     test-import-bypass.t
     test-import-merge.t
     test-import.t
-    test-import-unknown.t
     test-log.t
     test-manifest.t
     test-merge10-t.py
@@ -74,7 +64,6 @@ ignorerevnumincompatiblelist = """
     test-mv-cp-st-diff.t
     test-pager.t
     test-parse-date.t
-    test-patch.t
     test-perftweaks-remotenames.t
     test-pull-pull-corruption.t
     test-pull-r.t
@@ -88,24 +77,29 @@ ignorerevnumincompatiblelist = """
     test-remotenames-pull-rebase.t
     test-remotenames-push.t
     test-remotenames-shared-repo.t
-    test-remotenames-strip.t
     test-remotenames-tracking.t
-    test-remotenames-update.t
-    test-rename-merge2.t
     test-revert.t
-    test-revert-unknown.t
     test-revnum-deprecate.t
     test-revset2.t
     test-revset.t
     test-shelve.t
     test-sparse.t
-    test-sparse-verbose-json.t
     test-ssh-clone-r.t
     test-template-revf64.t
     test-url-rev.t
     test-casecollision-merge.t
-    test-casefolding.t
     test-commitcloud-backup-sql2.t
+
+    # drop internally uses rev numbers for rebase
+    test-drop.t
+    # clone -u doesn't support revset
+    test-patch.t
+    # pull -r with revset fails on remote repos
+    test-pushrebase-remotenames.t
+    test-treemanifest-noflat.t
+    # times out without ignorerevnum=False
+    test-fastlog.t
+    test-rename-merge2.t
 """
 
 

@@ -7,7 +7,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init test
   $ cd test
   $ echo a > changed
@@ -26,7 +25,7 @@
 
 # Test adding on top of an unknown file
 
-  $ hg up -qC 0
+  $ hg up -qC 'desc(addfiles)'
   $ hg purge
   $ echo a > added
   $ hg import --no-commit ../unknown.diff
@@ -50,7 +49,7 @@
 
 # Test removing an unknown file
 
-  $ hg up -qC 0
+  $ hg up -qC 'desc(addfiles)'
   $ hg purge
   $ hg rm removed
   $ hg ci -m removeremoved
@@ -62,7 +61,7 @@
 
 # Test copying onto an unknown file
 
-  $ hg up -qC 0
+  $ hg up -qC 'desc(addfiles)'
   $ hg purge
   $ echo a > copied
   $ hg import --no-commit ../unknown.diff

@@ -8,7 +8,6 @@
 # GNU General Public License version 2.
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > reset=
@@ -178,11 +177,11 @@
 # Reset to the commit your on is a no-op
 
   $ hg status
-  $ hg log -r . -T '{rev}\n'
-  4
+  $ hg log -r . -T '{node|short}\n'
+  7f3a02b3e388
   $ hg reset .
-  $ hg log -r . -T '{rev}\n'
-  4
+  $ hg log -r . -T '{node|short}\n'
+  7f3a02b3e388
   $ hg debugdirstate
   n 644          0 * a (glob)
   n 644          0 * tobeadded (glob)

@@ -3,7 +3,6 @@
 
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
 Set up repo
 
   $ hg init repo
@@ -40,7 +39,7 @@ Testing update -B feature
   o
   
   $ hg bookmarks -v
-   * bar                       661086655130            [foo]
+   * bar                       661086655130[foo]
      foo                       661086655130
 
   $ hg goto -B foo bar

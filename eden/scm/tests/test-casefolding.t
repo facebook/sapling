@@ -6,7 +6,6 @@
 
 test file addition with bad case
 
-  $ setconfig devel.segmented-changelog-rev-compat=True
   $ newclientrepo
   $ echo a > a
   $ hg add A
@@ -87,10 +86,10 @@ test case collision between revisions (issue912)
 
   $ newclientrepo
   $ echo a > a
-  $ hg ci -Am adda
+  $ hg ci -Am add-lower-a
   adding a
   $ hg rm a
-  $ hg ci -Am removea
+  $ hg ci -Am remove-a
   $ echo B > B
   $ echo A > A
 
@@ -98,20 +97,20 @@ on linux hfs keeps the old case stored, force it
 
   $ mv a aa
   $ mv aa A
-  $ hg ci -Am addA
+  $ hg ci -Am add-upper-A
   adding A
   adding B
 
 used to fail under case insensitive fs
 
-  $ hg up -C 0
+  $ hg up -C 'desc("add-lower-a")'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg up -C tip
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 no clobbering of untracked files with wrong casing
 
-  $ hg up -r 0
+  $ hg up -r 'desc("add-lower-a")'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo gold > b
   $ hg up tip
