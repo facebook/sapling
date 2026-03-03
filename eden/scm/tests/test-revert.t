@@ -278,7 +278,7 @@
 
   $ hg revert -rtip
   abort: no files or directories specified
-  (use --all to revert all files, or 'hg goto 72057594037927937' to update)
+  (use --all to revert all files, or 'hg goto e655737eacaa' to update)
   [255]
 
 # call `hg revert` with -I

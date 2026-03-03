@@ -5362,12 +5362,12 @@ def revert(ui, repo, *pats, **opts):
                         "uncommitted changes, use --all to discard all"
                         " changes, or '@prog@ goto %s' to update"
                     )
-                    % ctx.rev()
+                    % ctx
                 )
             else:
                 hint = (
                     _("use --all to revert all files, or '@prog@ goto %s' to update")
-                    % ctx.rev()
+                    % ctx
                 )
         elif dirty:
             hint = _("uncommitted changes, use --all to discard all changes")
