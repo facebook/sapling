@@ -399,12 +399,18 @@
   background: var(--external-stack-header-bg, rgba(107, 114, 128, 0.15));
 }
 
-/* Stack card author */
-.stack-card-author {
+/* Stack card authors (overlapping avatars) */
+.stack-card-authors {
   display: flex;
   align-items: center;
   flex-shrink: 0;
   margin-left: 4px;
+}
+
+.stack-card-author {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .stack-card-avatar {
@@ -412,6 +418,7 @@
   height: 20px;
   min-width: 20px;
   border-radius: 50%;
+  border: 1.5px solid var(--panel-view-background, #1e1e1e);
 }
 
 /* Stack card actions */

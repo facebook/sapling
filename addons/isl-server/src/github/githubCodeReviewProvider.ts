@@ -69,6 +69,8 @@ export type GitHubDiffSummary = {
   head: Hash;
   /** Name of the branch on GitHub, which should match the local bookmark */
   branchName?: string;
+  /** Name of the base branch this PR targets (e.g., "main" or "pr4565" for stacked PRs) */
+  baseRefName?: string;
   /** Stack info parsed from PR body Sapling footer. Top-to-bottom order (first = top of stack). */
   stackInfo?: StackEntry[];
   /** Author login (GitHub username) */
@@ -190,6 +192,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               base: summary.baseRef?.target?.oid ?? '',
               head: summary.headRef?.target?.oid ?? '',
               branchName: summary.headRef?.name ?? '',
+              baseRefName: summary.baseRef?.name ?? undefined,
               stackInfo,
               author: summary.author?.login ?? undefined,
               authorAvatarUrl: summary.author?.avatarUrl ?? undefined,
