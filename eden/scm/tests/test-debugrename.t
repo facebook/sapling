@@ -8,7 +8,6 @@
 # GNU General Public License version 2 or any later version.
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init repo
   $ cd repo
   $ echo a > a
@@ -25,5 +24,5 @@
   $ hg debugrename a
   a renamed from b:37d9b5d994eab34eda9c16b195ace52c7b129980
 
-  $ hg debugrename --rev 1 b
+  $ hg debugrename --rev 'desc(t1)' b
   b renamed from a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3

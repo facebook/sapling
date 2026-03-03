@@ -9,13 +9,12 @@
 
 # https://bz.mercurial-scm.org/612
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ eagerepo
   $ hg init repo
   $ cd repo
   $ mkdir src
   $ echo a > src/a.c
-  $ hg ci -Ama
+  $ hg ci -Am 'init'
   adding src/a.c
 
   $ hg mv src source
@@ -23,7 +22,7 @@
 
   $ hg ci -Ammove
 
-  $ hg co -C 0
+  $ hg co -C 'desc(init)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ echo new > src/a.c

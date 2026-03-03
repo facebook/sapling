@@ -8,7 +8,6 @@
 
 # https://bz.mercurial-scm.org/1438
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ eagerepo
   $ hg init repo
   $ cd repo
@@ -18,9 +17,9 @@
   $ hg ci -mbad link
   $ hg rm link
   $ hg ci -mok
-  $ hg diff -g -r '0:1' > bad.patch
+  $ hg diff -g -r 'desc(bad)' -r 'desc(ok)' > bad.patch
 
-  $ hg up 0
+  $ hg up 'desc(bad)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg import --no-commit bad.patch

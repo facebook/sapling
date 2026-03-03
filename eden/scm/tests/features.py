@@ -14,12 +14,10 @@ tests.
 """
 
 ignorerevnumincompatiblelist = """
-    test-alias.t
     test-amend-hide.t
     test-amend-rebase.t
     test-amend-restack.t
     test-annotate.t
-    test-backwards-remove.t
     test-bisect.t
     test-bookmarks.t
     test-bookmark-strip.t
@@ -32,18 +30,13 @@ ignorerevnumincompatiblelist = """
     test-commitcloud-move.t
     test-commitcloud-switch-workspace.t
     test-commit-interactive.t
-    test-confused-revert.t
     test-context-metadata.t
     test-contrib-perf.t
     test-debugbuilddag.t
     test-debugcheckcasecollisions.t
     test-debugindexdot-t.py
     test-debugmetalog.t
-    test-debugrename.t
     test-debugstrip.t
-    test-diff-change.t
-    test-diffdir.t
-    test-diff-issue2761.t
     test-diff-only-files-in-revs.t
     test-dirstate-race.t
     test-empty-group-t.py
@@ -85,10 +78,6 @@ ignorerevnumincompatiblelist = """
     test-import-merge.t
     test-import.t
     test-import-unknown.t
-    test-issue1438.t
-    test-issue612.t
-    test-issue660.t
-    test-locate.t
     test-log.t
     test-manifest-merging.t
     test-manifest.t

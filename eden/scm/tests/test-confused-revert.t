@@ -7,7 +7,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ eagerepo
   $ hg init repo
   $ cd repo
@@ -36,17 +35,17 @@
 
   $ rm b
 
-  $ hg co -C 0
+  $ hg co -C 'desc(1)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo foo-a > a
   $ hg commit -m 2a
 
-  $ hg co -C 0
+  $ hg co -C 'desc(1)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo foo-b > a
   $ hg commit -m 2b
 
-  $ HGMERGE=true hg merge 1
+  $ HGMERGE=true hg merge 'desc(2a)'
   merging a
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -76,7 +75,7 @@
 
 # Revert should be ok now:
 
-  $ hg revert -r2 --all
+  $ hg revert -r 'desc(2b)' --all
   undeleting a
   forgetting b
 

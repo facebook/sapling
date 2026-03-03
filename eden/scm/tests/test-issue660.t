@@ -10,7 +10,6 @@
 # https://bz.mercurial-scm.org/660 and:
 # https://bz.mercurial-scm.org/322
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig commands.update.check=none
   $ eagerepo
 
@@ -151,7 +150,7 @@
 # Update should work at least with clean working directory:
 
   $ rm -r a b d
-  $ hg up -r 0
+  $ hg up -r 'desc("a is file, b is dir")'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg st --all
@@ -159,7 +158,7 @@
   C b/b
 
   $ rm -r a b
-  $ hg up -r 1
+  $ hg up -r 'desc("a is dir, b is file")'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg st --all

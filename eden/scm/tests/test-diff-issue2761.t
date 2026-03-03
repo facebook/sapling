@@ -10,7 +10,6 @@
 # Test issue2761
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init repo
   $ cd repo
 
@@ -21,7 +20,7 @@
   $ echo a > to-be-deleted
   $ hg ci -m second
   $ rm to-be-deleted
-  $ hg diff -r 0
+  $ hg diff -r 'desc(first)'
 
 # Same issue, different code path
 
@@ -32,4 +31,4 @@
   adding does-not-exist-in-1
   $ hg ci -m third
   $ rm does-not-exist-in-1
-  $ hg diff -r 1
+  $ hg diff -r 'desc(second)'

@@ -8,8 +8,6 @@
 
 # Copyright (c) Mercurial Contributors.
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
-
   $ setconfig hint.ack-match-full-traversal=true
   $ hg init repo
   $ cd repo
@@ -23,7 +21,7 @@
   $ mkdir dir.h
   $ echo 0 > dir.h/foo
 
-  $ hg ci -A -m m
+  $ hg ci -A -m 'initial'
   adding a
   adding b
   adding dir.h/foo
@@ -50,7 +48,7 @@
   t/x
 
   $ hg rm a
-  $ hg ci -m m
+  $ hg ci -m 'remove a'
 
   $ hg locate a
   [1]
@@ -65,13 +63,13 @@
   t/b
   t/e.h
   t/x
-  $ hg locate -r 0 a
+  $ hg locate -r 'desc(initial)' a
   a
-  $ hg locate -r 0 NONEXISTENT
+  $ hg locate -r 'desc(initial)' NONEXISTENT
   [1]
-  $ hg locate -r 0 'relpath:NONEXISTENT'
+  $ hg locate -r 'desc(initial)' 'relpath:NONEXISTENT'
   [1]
-  $ hg locate -r 0
+  $ hg locate -r 'desc(initial)'
   a
   b
   t.h
@@ -143,15 +141,15 @@
   $ hg locate 're:.*\.h$'
   ../t.h
   ../t/e.h
-  $ hg locate -r 0 b
+  $ hg locate -r 'desc(initial)' b
   ../b
   ../t/b
-  $ hg locate -r 0 '*.h'
+  $ hg locate -r 'desc(initial)' '*.h'
   ../t.h
   ../t/e.h
-  $ hg locate -r 0 'path:t/x'
+  $ hg locate -r 'desc(initial)' 'path:t/x'
   ../t/x
-  $ hg locate -r 0 're:.*\.h$'
+  $ hg locate -r 'desc(initial)' 're:.*\.h$'
   ../t.h
   ../t/e.h
 
