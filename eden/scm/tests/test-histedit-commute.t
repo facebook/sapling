@@ -273,7 +273,7 @@ keep prevents stripping dead revs
   
 
 try with --rev
-  $ hg histedit --commands - --rev -2 2>&1 <<EOF | fixbundle
+  $ hg histedit --commands - --rev '.~2' 2>&1 <<EOF | fixbundle
   > pick de71b079d9ce e
   > pick 38b92f448761 c
   > EOF

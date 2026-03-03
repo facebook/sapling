@@ -59,7 +59,7 @@ Test prefetch with base node (subdir/ shouldn't show up in the pack)
 Multiple trees are fetched in this case because the file prefetching code path
 requires tree manifest for the base commit.
 
-  $ hg prefetch -r '2' --base '1'
+  $ hg prefetch -r 'desc("modify x")' --base $(hg log -r 'desc("add subdir/z")' -T '{node}')
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and add back output here.
 
@@ -148,7 +148,7 @@ TODO(meyer): Fix debugindexedlogdatastore and debugindexedloghistorystore and ad
 
 - Prefetch commit 1 then minimally prefetch commit 2
   $ rm -rf $CACHEDIR/master
-  $ hg prefetch -r 1
+  $ hg prefetch -r 'desc("add subdir/z")'
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
   pulling from ssh://user@dummy/master
@@ -191,7 +191,7 @@ Test prefetch non-parent commits with no base node (should fetch minimal
 trees - in this case 3 trees for commit 2, and 2 for commit 4 despite it having
 3 directories)
   $ rm -rf $CACHEDIR/master
-  $ hg prefetch -r '2 + 4'
+  $ hg prefetch -r 'desc("modify x") + desc("modify dir/x a fourth time")'
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)
 
 Test prefetching with no options works. The expectation is to prefetch the stuff

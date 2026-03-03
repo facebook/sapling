@@ -14,10 +14,9 @@
 # This test file aims at test topological iteration and the various configuration it can has.
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [ui]
-  > logtemplate={rev}\n
+  > logtemplate={desc|firstline}\n
   > allowemptycommit=True
   > EOF
 
@@ -31,12 +30,12 @@
   $ hg commit -qm 1
   $ hg commit -qm 2
   $ hg commit -qm 3
-  $ hg up -q 0
+  $ hg up -q 'desc(0)'
   $ hg commit -qm 4
   $ hg commit -qm 5
   $ hg commit -qm 6
   $ hg commit -qm 7
-  $ hg up -q 3
+  $ hg up -q 'desc(3)'
   $ hg commit -qm 8
   $ hg up -q null
 
@@ -82,7 +81,7 @@
 
 # (revset skipping nodes)
 
-  $ hg log -G --rev 'sort(not (2+6), topo)'
+  $ hg log -G --rev 'sort(not (desc(2)+desc(6)), topo)'
   o  8
   │
   o  3
@@ -99,7 +98,7 @@
 
 # (begin) from the other branch
 
-  $ hg log -G -r 'sort(all(), topo, topo.firstbranch=5)'
+  $ hg log -G -r 'sort(all(), topo, topo.firstbranch=desc(5))'
   o  7
   │
   o  6

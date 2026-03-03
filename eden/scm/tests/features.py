@@ -14,31 +14,13 @@ tests.
 """
 
 ignorerevnumincompatiblelist = """
-    test-debugbuilddag.t
-    test-treemanifest-prefetch.t
-    test-treemanifest.t
-    test-tweakdefaults-pullrebaseremotenames.t
-    test-tweakdefaults.t
-    test-fileset.t
-    test-git-export.t
-    test-glog-topological.t
-    test-glog.t
-    test-graft.t
-    test-histedit-commute.t
-    test-histedit-edit.t
-    test-histedit-no-change.t
     test-import-bypass.t
-    test-import-merge.t
     test-import.t
     test-log.t
     test-merge1.t
     test-merge-ancestor-mergestate.t
     test-merge-tools.t
     test-mv-cp-st-diff.t
-    test-pager.t
-    test-parse-date.t
-    test-perftweaks-remotenames.t
-    test-pull-pull-corruption.t
     test-pull-r.t
     test-push.t
     test-rebase-issue-noparam-single-rev.t
@@ -60,10 +42,14 @@ ignorerevnumincompatiblelist = """
 
     # drop internally uses rev numbers for rebase
     test-drop.t
+    # coupled with rev numbers
+    test-debugbuilddag.t
     # clone -u doesn't support revset
     test-patch.t
+    test-pull-pull-corruption.t
     # pull -r with revset fails on remote repos
     test-pushrebase-remotenames.t
+    test-perftweaks-remotenames.t
     test-treemanifest-noflat.t
     # times out without ignorerevnum=False
     test-fastlog.t
@@ -80,6 +66,18 @@ ignorerevnumincompatiblelist = """
     test-debugstrip.t
     # output changed significantly with ignorerevnum
     test-commit-interactive.t
+    # times out without ignorerevnum=False
+    test-tweakdefaults.t
+    # many revision number references throughout (in fileset queries and -r arguments)
+    test-fileset.t
+    # 29+ revision number references across multiple commits
+    test-git-export.t
+    # 2742 lines with 29 revision references and 18 {rev} templates
+    test-glog.t
+    # 1181 lines with 33+ revision references
+    test-graft.t
+    # uses negative revision numbers in histedit commands
+    test-histedit-no-change.t
 """
 
 

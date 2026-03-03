@@ -4,7 +4,6 @@
 #inprocess-hg-incompatible
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> fakepager.py <<EOF
   > import sys
   > printed = False
@@ -232,7 +231,7 @@ Pager works with hg aliases including environment variables.
 
   $ cat >> $HGRCPATH <<'EOF'
   > [alias]
-  > printa = log -T "$A\n" -r 0
+  > printa = log -T "$A\n" -r 'desc("add a")'
   > EOF
 
   $ A=1 hg --config pager.attend-printa=yes printa
@@ -280,18 +279,18 @@ A command that asks for paging using ui.pager() directly works:
   paged! '6dd8ea7dd621: a 9\n'
   paged! '46106edeeb38: a 10\n'
 but not with HGPLAIN
-  $ HGPLAIN=1 hg blame a
-   0: a
-   1: a 1
-   2: a 2
-   3: a 3
-   4: a 4
-   5: a 5
-   6: a 6
-   7: a 7
-   8: a 8
-   9: a 9
-  10: a 10
+  $ HGPLAIN=1 hg blame -c a
+  1f0dee641bb7: a
+  f4be7687d414: a 1
+  bce265549556: a 2
+  e5baa915639e: a 3
+  64d06b3cd986: a 4
+  1656f9ff0378: a 5
+  d0767a268e61: a 6
+  d92a10dd26e4: a 7
+  cff05a6312fe: a 8
+  6dd8ea7dd621: a 9
+  46106edeeb38: a 10
 explicit flags work too:
   $ hg blame --pager=no --color=no a
   1f0dee641bb7: a
@@ -357,7 +356,7 @@ Environment variables like LESS and LV are set automatically:
 
   $ cat >> $HGRCPATH <<EOF
   > [alias]
-  > noop = log -r 0 -T ''
+  > noop = log -r 'desc("add a")' -T ''
   > [ui]
   > formatted=1
   > [pager]

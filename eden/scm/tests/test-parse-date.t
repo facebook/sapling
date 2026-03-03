@@ -2,7 +2,6 @@
 #require no-eden
 
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
 This runs with TZ="GMT"
 
   $ hg init repo
@@ -14,7 +13,7 @@ This runs with TZ="GMT"
   $ hg ci -d "2006-02-01 13:00:30 -0500" -m "rev 1"
   $ echo >> .hgtags
   $ hg ci -Aq -d "2006-04-15 13:30" -m "Hi"
-  $ hg backout --merge -d "2006-04-15 13:30 +0200" -m "rev 3" 1
+  $ hg backout --merge -d "2006-04-15 13:30 +0200" -m "rev 3" 'desc(1)'
   reverting a
   changeset cac74e007661 backs out changeset 25a1420a55f8
   merging with changeset cac74e007661
