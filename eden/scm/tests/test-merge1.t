@@ -333,8 +333,8 @@ Test for issue2364
   $ hg up -qC .
   $ hg rm b
   $ hg ci -md
-  $ hg revert -r -2 b
-  $ hg up -q -- -2
+  $ hg revert -r tip~2 b
+  $ hg up -q -- tip~2
 
 Test that updated files are treated as "modified", when
 'merge.goto()' is aborted before 'merge.recordupdates()' (= parents

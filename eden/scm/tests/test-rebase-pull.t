@@ -11,7 +11,6 @@
 # GNU General Public License version 2 or any later version.
 
   $ setconfig remotenames.selectivepulldefault=master,norebase
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > rebase=
@@ -115,11 +114,11 @@
   @  783333faa078 'C2'
   │
   o  05d58a0c15dd 'C1'
-  $ hg goto --quiet 0
+  $ hg goto --quiet 'desc(C1)'
   $ echo M1 > M1
   $ hg commit --quiet -Am M1
-  $ hg goto --quiet 1
-  $ hg merge 2
+  $ hg goto --quiet 'desc(C2)'
+  $ hg merge 'desc(M1)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg pull -q --rebase -d tip
@@ -148,7 +147,7 @@
 
 # pull --rebase doesn't update if nothing has been pulled:
 
-  $ hg up -q 1
+  $ hg up -q 'desc(C2)'
 
   $ hg pull --rebase -d tip
   pulling from $TESTTMP/a
@@ -301,11 +300,11 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   nothing to rebase - fast-forwarded to tip
   $ tglog
-  @  65bc164c1d9b 'R6'
+  o  7ca39666ab9f 'L2' norebase
   │
-  │ o  7ca39666ab9f 'L2' norebase
-  │ │
-  │ o  d8edd0f176f6 'L1'
+  o  d8edd0f176f6 'L1'
+  │
+  │ @  65bc164c1d9b 'R6'
   ├─╯
   o  88dd24261747 'R5'
   │

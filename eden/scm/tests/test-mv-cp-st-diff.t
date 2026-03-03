@@ -1,6 +1,5 @@
 #chg-compatible
 #debugruntest-incompatible
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ configure modernclient
 
   $ add()

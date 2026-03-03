@@ -14,18 +14,6 @@ tests.
 """
 
 ignorerevnumincompatiblelist = """
-    test-import-bypass.t
-    test-import.t
-    test-log.t
-    test-merge1.t
-    test-merge-ancestor-mergestate.t
-    test-merge-tools.t
-    test-mv-cp-st-diff.t
-    test-pull-r.t
-    test-push.t
-    test-rebase-issue-noparam-single-rev.t
-    test-rebase-parameters.t
-    test-rebase-pull.t
     test-rebase-scenario-global.t
     test-remotenames-bookmarks.t
     test-remotenames-pull-rebase.t
@@ -78,6 +66,10 @@ ignorerevnumincompatiblelist = """
     test-graft.t
     # uses negative revision numbers in histedit commands
     test-histedit-no-change.t
+    # 43 revision number references throughout
+    test-log.t
+    # 42 revision number references throughout
+    test-merge-tools.t
 """
 
 

@@ -12,7 +12,6 @@
 # TODO: Make this test compatibile with obsstore enabled.
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig 'experimental.evolution='
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
@@ -37,7 +36,7 @@
   $ hg ci -Am l1
   adding l1
 
-  $ hg up -q -C 1
+  $ hg up -q -C 'desc(c2)'
 
   $ echo r1 > r1
   $ hg ci -Am r1
@@ -60,7 +59,7 @@
 
 # Rebase with no arguments - single revision in source branch:
 
-  $ hg up -q -C 2
+  $ hg up -q -C 'desc(l1)'
 
   $ hg rebase -d 'desc(r2)'
   rebasing 87c180a611f2 "l1"
@@ -96,7 +95,7 @@
   $ hg ci -Am l2
   adding l2
 
-  $ hg up -q -C 1
+  $ hg up -q -C 'desc(c2)'
 
   $ echo r1 > r1
   $ hg ci -Am r1

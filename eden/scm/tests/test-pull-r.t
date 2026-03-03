@@ -3,8 +3,6 @@
 #require no-eden
 
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
-
   $ configure dummyssh
   $ hg init repo
   $ cd repo
@@ -54,8 +52,8 @@ don't show "(+1 heads)" message when pulling closed head
   adding manifests
   adding file changes
   $ hg heads -q --closed
-  1a1aa123db21
   effea6de0384
+  1a1aa123db21
 
   $ cd ..
 
@@ -72,19 +70,19 @@ Pull multiple revisions with update:
 
   $ cp -R . $TESTTMP/copy1
   $ cd $TESTTMP/copy1
-  $ hg pull -qu -r 0 -r 1 ../repo
+  $ hg pull -qu -r bbd179dfa0a7 -r ed1b79f46b9a ../repo
   $ hg -q parents
   bbd179dfa0a7
 
   $ cd $TESTTMP/copy
-  $ hg pull -qr 0 ../repo
+  $ hg pull -qr bbd179dfa0a7 ../repo
   $ hg log
   commit:      bbd179dfa0a7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo
   
-  $ hg pull -qr 1 ../repo
+  $ hg pull -qr ed1b79f46b9a ../repo
   $ hg log
   commit:      ed1b79f46b9a
   user:        test
@@ -99,4 +97,4 @@ Pull multiple revisions with update:
 
 This used to abort: received changelog group is empty:
 
-  $ hg pull -qr 1 ../repo
+  $ hg pull -qr ed1b79f46b9a ../repo

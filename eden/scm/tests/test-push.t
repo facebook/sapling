@@ -3,7 +3,6 @@
 #require no-eden
 
 #chg-compatible
-  $ setconfig devel.segmented-changelog-rev-compat=true
 
 ==================================
 Basic testing for the push command
@@ -18,11 +17,12 @@ Testing of the '--rev' flag
   adding manifests
   adding file changes
 
-  $ for i in 0 1 2 3 4 5 6 7 8; do
+  $ i=0; for rev in bfaf4b5cbf01 c70afb1ee985 f03ae5a9b979 095cb14b1b4d faa2e4234c7a 21f32785131f 4ce51a113780 93ee6ab32777 916f1afdef90; do
   >    echo
   >    hg init test-revflag-"$i"
-  >    hg -R test-revflag push -r "$i" test-revflag-"$i" --allow-anon
+  >    hg -R test-revflag push -r "$rev" test-revflag-"$i" --allow-anon
   >    hg -R test-revflag-"$i" verify
+  >    i=$((i+1))
   > done
   
   pushing to test-revflag-0
