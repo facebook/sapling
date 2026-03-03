@@ -29,6 +29,7 @@ use clientinfo::ClientEntryPoint;
 use clientinfo::ClientInfo;
 use cloned::cloned;
 use context::CoreContext;
+use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::TryStreamExt;
 use futures::future;
@@ -67,6 +68,8 @@ use mononoke_app::monitoring::MonitoringAppExtension;
 use mononoke_types::ChangesetId;
 use mononoke_types::DerivableType;
 use mononoke_types::hash::GitSha1;
+#[allow(unused_imports)]
+use permission_checker::MononokeIdentity;
 use repo_authorization::AuthorizationContext;
 use repo_blobstore::RepoBlobstoreArc;
 use repo_derived_data::RepoDerivedDataRef;
@@ -246,11 +249,37 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 }
 
 async fn async_main(app: MononokeApp) -> Result<(), Error> {
-    let ctx = CoreContext::new_with_client_info(
-        app.fb,
-        ClientInfo::default_with_entry_point(ClientEntryPoint::GitImport),
-    );
     let args: GitimportArgs = app.args()?;
+
+    let ctx = {
+        let mut metadata = metadata::Metadata::default();
+        metadata.add_client_info(ClientInfo::default_with_entry_point(
+            ClientEntryPoint::GitImport,
+        ));
+
+        // When bypassing hooks, we need real identities from the local machine's
+        // certificate so that the hook bypass authorization check can validate
+        // that this caller is permitted to bypass hooks.
+        #[cfg(fbcode_build)]
+        if args.bypass_all_hooks {
+            let local_idents = identity_ext::x509::get_locally_available_identities().context(
+                "Failed to read local certificate identities. \
+                     --bypass-all-hooks requires valid identities from the machine's \
+                     x509 certificate (THRIFT_TLS_CL_CERT_PATH)",
+            )?;
+            let identities = local_idents
+                .iter()
+                .map(MononokeIdentity::from_identity)
+                .collect();
+            metadata = metadata.set_identities(identities);
+        }
+
+        let session = SessionContainer::builder(app.fb)
+            .metadata(Arc::new(metadata))
+            .build();
+        session.new_context(scuba_ext::MononokeScubaSampleBuilder::with_discard())
+    };
+
     let path = Path::new(&args.git_repository_path);
 
     let reupload = if args.reupload_commits {
