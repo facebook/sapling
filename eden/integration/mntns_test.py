@@ -10,8 +10,9 @@ Test Linux mntns (mount namespace) for Eden.
 Requires passwordless sudo. Not suitable for automated test environments.
 
 Tests a matrix of:
-- child mntns propagation: [shared, slave, private]
-- edenfs (and privhelper) in mntns: [child, parent]
+- ns_prop:   child mount namespace propagation [shared, slave, private]
+- fuse_prop: propagation of the FUSE mount's parent [shared, slave, private]
+- eden_in:   which namespace runs edenfs+privhelper [parent, child]
 
 Usage:
 
@@ -66,7 +67,18 @@ def is_eden_mounted(mount_point) -> bool:
         return False
 
 
-def _ns_cmd(propagation):
+def get_mount_propagation(path, ns_cmd_prefix=None):
+    """Return the propagation flags for a mount point (e.g. 'shared:123'), or None."""
+    # --mountpoint: match only the exact mount point, not parent mounts
+    cmd = ["findmnt", "-n", "-o", "PROPAGATION", "--mountpoint", str(path)]
+    if ns_cmd_prefix:
+        cmd = ns_cmd_prefix + cmd
+    r = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    # Collapse multi-line output (one line per peer group) into a single value
+    return " ".join(r.stdout.split()) or None
+
+
+def _ns_cmd(ns_prop):
     """sudo unshare prefix: enters a mount namespace, re-exports env vars, drops to current user."""
     uid, gid = os.getuid(), os.getgid()
     # sudo clears the environment; re-inject via prefix assignments on exec
@@ -78,7 +90,7 @@ def _ns_cmd(propagation):
         "unshare",
         "--mount",
         "--propagation",
-        propagation,
+        ns_prop,
         "--",
         "setpriv",
         f"--reuid={uid}",
@@ -92,8 +104,25 @@ def _ns_cmd(propagation):
     ]
 
 
+def setup_fuse_propagation(mnt_parent: Path, fuse_prop: str):
+    """Bind-mount directory to itself and set its mount propagation.
+
+    The FUSE mount point lives inside mnt_parent, so the FUSE mount
+    inherits mnt_parent's propagation type.
+    """
+    mnt_parent.mkdir(parents=True, exist_ok=True)
+    run(["sudo", "mount", "--bind", str(mnt_parent), str(mnt_parent)])
+    run(["sudo", "mount", f"--make-{fuse_prop}", str(mnt_parent)])
+
+
 class EdenTestEnv:
-    def __init__(self, edenfsctl: str, privhelper: str, base_dir: Path):
+    def __init__(
+        self,
+        edenfsctl: str,
+        privhelper: str,
+        base_dir: Path,
+        mount_point: Path | None = None,
+    ):
         self.edenfsctl = edenfsctl
         self.privhelper = privhelper
         self.base = base_dir
@@ -101,7 +130,7 @@ class EdenTestEnv:
         self.etc_dir = base_dir / "etc_eden"
         self.home_dir = base_dir / "home"
         self.backing_repo = base_dir / "backing_repo"
-        self.mount_point = base_dir / "mnt"
+        self.mount_point = mount_point or base_dir / "mnt"
 
         for d in [self.state_dir, self.etc_dir, self.home_dir]:
             d.mkdir(parents=True, exist_ok=True)
@@ -176,30 +205,37 @@ class EdenTestEnv:
         self.state_dir.mkdir(parents=True, exist_ok=True)
 
 
-def test_eden_in_parent(env: EdenTestEnv, propagation: str):
+def test_eden_in_parent(env: EdenTestEnv, ns_prop: str):
     """Start eden (and privhelper) from parent mntns"""
     env.start_daemon()
     try:
         env.clone()
+        parent_prop = get_mount_propagation(env.mount_point)
+        child_prefix = _ns_cmd(ns_prop)
         r = subprocess.run(
-            _ns_cmd(propagation) + ["test", "-d", str(env.mount_point / ".eden")],
+            child_prefix + ["test", "-d", str(env.mount_point / ".eden")],
             check=False,
         )
+        child_prop = get_mount_propagation(env.mount_point, ns_cmd_prefix=child_prefix)
         return {
             "parent_sees": is_eden_mounted(env.mount_point),
             "child_sees": r.returncode == 0,
+            "parent_fuse_prop": parent_prop,
+            "child_fuse_prop": child_prop,
         }
     finally:
         env.stop()
 
 
-def test_eden_in_child(env: EdenTestEnv, propagation: str):
+def test_eden_in_child(env: EdenTestEnv, ns_prop: str):
     """Start eden (and privhelper) from child mntns"""
     result_file = env.base / "child_sees"
     result_file.unlink(missing_ok=True)
+    child_prop_file = env.base / "child_fuse_prop"
+    child_prop_file.unlink(missing_ok=True)
 
     subprocess.run(
-        _ns_cmd(propagation)
+        _ns_cmd(ns_prop)
         + [
             sys.executable,
             __file__,
@@ -207,6 +243,7 @@ def test_eden_in_child(env: EdenTestEnv, propagation: str):
             str(env.base),
             env.edenfsctl,
             env.privhelper,
+            str(env.mount_point),
         ],
         check=False,
     )
@@ -217,6 +254,10 @@ def test_eden_in_child(env: EdenTestEnv, propagation: str):
         return {
             "parent_sees": is_eden_mounted(env.mount_point),
             "child_sees": result_file.read_text().strip() == "True",
+            "parent_fuse_prop": get_mount_propagation(env.mount_point),
+            "child_fuse_prop": child_prop_file.read_text().strip()
+            if child_prop_file.exists()
+            else None,
         }
     finally:
         env.stop()
@@ -225,13 +266,16 @@ def test_eden_in_child(env: EdenTestEnv, propagation: str):
 # -- Child entry point (internal, run inside namespace) --
 
 
-def _child_eden(base_str, edenfsctl, privhelper):
+def _child_eden(base_str, edenfsctl, privhelper, mount_point_str):
     base = Path(base_str)
-    env = EdenTestEnv(edenfsctl, privhelper, base)
+    mount_point = Path(mount_point_str)
+    env = EdenTestEnv(edenfsctl, privhelper, base, mount_point=mount_point)
     try:
         env.start_daemon()
         env.clone()
-        (base / "child_sees").write_text(str(is_eden_mounted(env.mount_point)))
+        (base / "child_sees").write_text(str(is_eden_mounted(mount_point)))
+        prop = get_mount_propagation(mount_point)
+        (base / "child_fuse_prop").write_text(prop or "")
     except subprocess.CalledProcessError as e:
         print(
             f"child failed: {e}\nstdout: {e.stdout}\nstderr: {e.stderr}",
@@ -253,8 +297,8 @@ def main():
     # Internal: child process entry point (run inside mount namespace)
     parser.add_argument(
         "--_child",
-        nargs=3,
-        metavar=("BASE", "EDENFSCTL", "PRIVHELPER"),
+        nargs=4,
+        metavar=("BASE", "EDENFSCTL", "PRIVHELPER", "MOUNT_POINT"),
         help=argparse.SUPPRESS,
     )
     args = parser.parse_args()
@@ -281,65 +325,98 @@ def main():
         env = EdenTestEnv(edenfsctl, str(privhelper), base_dir)
         env.init_backing_repo()
 
-        propagations = ["shared", "slave", "private"]
+        ns_props = ["shared", "slave", "private"]
+        fuse_props = ["shared", "slave", "private"]
         locations = ["parent", "child"]
         results = {}
 
-        def run_one_test(prop, loc):
-            test_base = base_dir / f"t-{prop}-{loc}"
+        def run_one_test(ns, fuse, loc):
+            test_base = base_dir / f"t-{ns}-{fuse}-{loc}"
             test_base.mkdir(parents=True)
-            # Symlink shared backing repo so each test has an isolated env
             (test_base / "backing_repo").symlink_to(env.backing_repo)
-            test_env = EdenTestEnv(edenfsctl, str(privhelper), test_base)
+
+            # Bind-mount a parent directory and set its propagation so the
+            # FUSE mount inside it inherits the desired fuse_prop.
+            mnt_parent = test_base / "mnt_parent"
+            setup_fuse_propagation(mnt_parent, fuse)
+            mount_point = mnt_parent / "checkout"
+
+            test_env = EdenTestEnv(
+                edenfsctl, str(privhelper), test_base, mount_point=mount_point
+            )
             try:
                 test_fn = test_eden_in_parent if loc == "parent" else test_eden_in_child
-                return test_fn(test_env, prop)
+                return test_fn(test_env, ns)
             except Exception as e:
                 return {"parent_sees": f"error({e})", "child_sees": f"error({e})"}
             finally:
                 test_env.clean()
+                subprocess.run(
+                    ["sudo", "umount", "-l", str(mnt_parent)],
+                    check=False,
+                    capture_output=True,
+                )
 
         try:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=9) as pool:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=18) as pool:
                 futures = {
-                    pool.submit(run_one_test, prop, loc): (prop, loc)
-                    for prop in propagations
+                    pool.submit(run_one_test, ns, fuse, loc): (ns, fuse, loc)
+                    for ns in ns_props
+                    for fuse in fuse_props
                     for loc in locations
                 }
                 for fut in concurrent.futures.as_completed(futures):
-                    prop, loc = futures[fut]
+                    key = futures[fut]
                     try:
-                        results[(prop, loc)] = fut.result()
+                        results[key] = fut.result()
                     except Exception as e:
-                        results[(prop, loc)] = {
+                        results[key] = {
                             "parent_sees": f"error({e})",
                             "child_sees": f"error({e})",
                         }
         finally:
-            for prop in propagations:
-                for loc in locations:
-                    subprocess.run(
-                        [
-                            "sudo",
-                            "umount",
-                            "-l",
-                            str(base_dir / f"t-{prop}-{loc}" / "mnt"),
-                        ],
-                        check=False,
-                        capture_output=True,
-                    )
+            for ns in ns_props:
+                for fuse in fuse_props:
+                    for loc in locations:
+                        for path in [
+                            base_dir
+                            / f"t-{ns}-{fuse}-{loc}"
+                            / "mnt_parent"
+                            / "checkout",
+                            base_dir / f"t-{ns}-{fuse}-{loc}" / "mnt_parent",
+                        ]:
+                            subprocess.run(
+                                ["sudo", "umount", "-l", str(path)],
+                                check=False,
+                                capture_output=True,
+                            )
 
-        print(f"\n\n{'=' * 72}")
+        setup_w = 12 + 12 + 10  # NS Prop + FUSE Prop + Eden in
+        obs_w = 14 + 14 + 20 + 20 + 2  # results columns + separator padding
+        print(f"\n\n{'=' * (setup_w + 6 + obs_w)}")
+        print(f"{'Test setup':<{setup_w}}   | {'Test observation'}")
         print(
-            f"{'Propagation':<12} {'Eden in':<10} {'Parent sees':<16} {'Child sees':<16}"
+            f"{'NS Prop':<12} {'FUSE Prop':<12} {'Eden in':<10} | "
+            f"{'Parent sees':<14} {'Child sees':<14} "
+            f"{'Parent FUSE prop':<20} {'Child FUSE prop':<20}"
         )
-        print(f"{'-' * 12} {'-' * 10} {'-' * 16} {'-' * 16}")
-        for prop in propagations:
-            for loc in locations:
-                r = results.get((prop, loc), {})
-                p = str(r.get("parent_sees", "?"))
-                c = str(r.get("child_sees", "?"))
-                print(f"{prop:<12} {loc:<10} {p:<16} {c:<16}")
+        print(
+            f"{'-' * 12} {'-' * 12} {'-' * 10} + "
+            f"{'-' * 14} {'-' * 14} "
+            f"{'-' * 20} {'-' * 20}"
+        )
+        for ns in ns_props:
+            for fuse in fuse_props:
+                for loc in locations:
+                    r = results.get((ns, fuse, loc), {})
+                    p = str(r.get("parent_sees", "?"))
+                    c = str(r.get("child_sees", "?"))
+                    pp = str(r.get("parent_fuse_prop", "?") or "-")
+                    cp = str(r.get("child_fuse_prop", "?") or "-")
+                    print(
+                        f"{ns:<12} {fuse:<12} {loc:<10} | "
+                        f"{p:<14} {c:<14} {pp:<20} {cp:<20}"
+                    )
 
     if args.keep:
         print(f"\nKept: {base_dir}")
