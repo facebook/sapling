@@ -149,6 +149,9 @@ struct GitimportArgs {
     /// When set, the gitimport tool would bypass the read-only check while creating and moving bookmarks.
     #[clap(long)]
     bypass_readonly: bool,
+    /// When set, the gitimport tool would bypass all hooks while creating and moving bookmarks.
+    #[clap(long)]
+    bypass_all_hooks: bool,
     /// The concurrency to be used while importing commits in Mononoke
     #[clap(long, default_value_t = 20)]
     concurrency: usize,
@@ -435,13 +438,15 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 .into_iter()
                 .map(|entry| (entry.tag_name, entry.tag_hash))
                 .collect::<HashMap<_, _>>();
-            let pushvars = if args.bypass_readonly {
-                Some(HashMap::from_iter([(
-                    "BYPASS_READONLY".to_string(),
-                    bytes::Bytes::from("true"),
-                )]))
-            } else {
-                None
+            let pushvars = {
+                let mut pvs = HashMap::new();
+                if args.bypass_readonly {
+                    pvs.insert("BYPASS_READONLY".to_string(), bytes::Bytes::from("true"));
+                }
+                if args.bypass_all_hooks {
+                    pvs.insert("BYPASS_ALL_HOOKS".to_string(), bytes::Bytes::from("true"));
+                }
+                if pvs.is_empty() { None } else { Some(pvs) }
             };
             // We can make the below loop concurrent but since refs pointing to content is an anomaly,
             // we will only optimize its upload if we see a need.
