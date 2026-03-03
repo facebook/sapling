@@ -386,11 +386,11 @@ incompatible options
   abort: --delete and --rename are incompatible
   [255]
 
-  $ hg bookmark -r 1 -d Z
+  $ hg bookmark -r 'desc(1)' -d Z
   abort: --rev is incompatible with --delete
   [255]
 
-  $ hg bookmark -r 1 -m Z Y
+  $ hg bookmark -r 'desc(1)' -m Z Y
   abort: --rev is incompatible with --rename
   [255]
 

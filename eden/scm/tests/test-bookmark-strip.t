@@ -10,7 +10,6 @@
 # Test bookmark -D
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init book-D
   $ cd book-D
   $ cat >> .hg/hgrc << 'EOF'
@@ -21,40 +20,40 @@
   > evolution=all
   > EOF
   $ hg debugbuilddag '+4*2*2*2'
-  $ hg bookmark -i -r 1 master
-  $ hg bookmark -i -r 5 feature1
-  $ hg bookmark -i -r 6 feature2
-  $ hg log -G -T '{rev} {bookmarks}' -r 'all()'
-  o  6 feature2
+  $ hg bookmark -i -r 'desc(r1)' master
+  $ hg bookmark -i -r 'desc(r5)' feature1
+  $ hg bookmark -i -r 'desc(r6)' feature2
+  $ hg log -G -T '{desc} {bookmarks}' -r 'all()'
+  o  r5 feature1
   │
-  │ o  5 feature1
+  o  r3
+  │
+  │ o  r6 feature2
   │ │
-  o │  4
-  │ │
-  │ o  3
+  │ o  r4
   ├─╯
-  o  2
+  o  r2
   │
-  o  1 master
+  o  r1 master
   │
-  o  0
+  o  r0
   $ hg bookmark -D feature1
   hiding commit 2dc09a01254d "r3"
   hiding commit 191de46dc8b9 "r5"
   2 changesets hidden
   removing bookmark 'feature1' (was at: 191de46dc8b9)
   1 bookmark removed
-  $ hg log -G -T '{rev} {bookmarks}' -r 'all()' --hidden
-  o  6 feature2
+  $ hg log -G -T '{desc} {bookmarks}' -r 'all()' --hidden
+  o  r5
   │
-  │ o  5
+  o  r3
+  │
+  │ o  r6 feature2
   │ │
-  o │  4
-  │ │
-  │ o  3
+  │ o  r4
   ├─╯
-  o  2
+  o  r2
   │
-  o  1 master
+  o  r1 master
   │
-  o  0
+  o  r0

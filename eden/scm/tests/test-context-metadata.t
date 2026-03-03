@@ -3,7 +3,6 @@
 
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
 Tests about metadataonlyctx
 
   $ hg init
@@ -40,7 +39,8 @@ Tests about metadataonlyctx
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Changed
   
-  $ hg --config extensions.metaedit=$TESTTMP/metaedit.py metaedit 'parents=0' 2>&1 | egrep '^RuntimeError'
+  $ NODE_ADD_A=$(hg log -r 'desc("Add A")' -T '{node}')
+  $ hg --config extensions.metaedit=$TESTTMP/metaedit.py metaedit "parents=$NODE_ADD_A" 2>&1 | egrep '^RuntimeError'
   RuntimeError: new p1 manifest (007d8c9d88841325f5c6b06371b35b4e8a2b1a83) is not the old p1 manifest (cb5cbbc1bfbf24cc34b9e8c16914e9caa2d2a7fd)
 
   $ hg --config extensions.metaedit=$TESTTMP/metaedit.py metaedit 'user=foo <foo@example.com>'

@@ -14,34 +14,20 @@ tests.
 """
 
 ignorerevnumincompatiblelist = """
-    test-annotate.t
-    test-bisect.t
-    test-bookmarks.t
-    test-bookmark-strip.t
     test-bundle-r.t
-    test-bundle.t
-    test-bundle-vs-outgoing.t
     test-clone-r.t
-    test-command-template.t
-    test-commitcloud-hide.t
-    test-commitcloud-move.t
-    test-commit-interactive.t
-    test-context-metadata.t
     test-contrib-perf.t
     test-debugbuilddag.t
     test-debugindexdot-t.py
-    test-debugstrip.t
     test-dirstate-race.t
     test-empty-group-t.py
     test-eol-clone.t
     test-eol-hook.t
     test-eol-update.t
-    test-export.t
     test-remotefilelog-wireproto.t
     test-treemanifest-prefetch.t
     test-treemanifest.t
     test-tweakdefaults-pullrebaseremotenames.t
-    test-tweakdefaults-remotenames.t
     test-tweakdefaults.t
     test-fileset.t
     test-git-export.t
@@ -100,6 +86,18 @@ ignorerevnumincompatiblelist = """
     # times out without ignorerevnum=False
     test-fastlog.t
     test-rename-merge2.t
+    # annotate -n output heavily relies on rev numbers
+    test-annotate.t
+    # many rev number references with ambiguous commit messages (msg 0..31)
+    test-bisect.t
+    # 135+ revision number references throughout
+    test-command-template.t
+    # heavily uses rev numbers in export ranges and %r/%R output format
+    test-export.t
+    # times out without ignorerevnum=False
+    test-debugstrip.t
+    # output changed significantly with ignorerevnum
+    test-commit-interactive.t
 """
 
 

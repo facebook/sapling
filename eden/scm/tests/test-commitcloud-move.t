@@ -18,7 +18,7 @@ hg cloud move uses the smartlog data from the cloud service.  We must generate t
 manually.
   $ gensmartlogdata() {
   >   echo '{ "smartlog": { "nodes": [' > $TESTTMP/usersmartlogdata
-  >   hg log -r "sort(0 + draft() + parents(draft()))" \
+  >   hg log -r "sort(roots(all()) + draft() + parents(draft()))" \
   >     -T '{ifeq(rev,0,"",",")}\{"node": "{node}", "phase": "{phase}", "author": "test", "date": "{rev}", "message": "{desc}", "parents": [{join(parents % "\"{node}\"", ", ")}], "bookmarks": [{join(bookmarks % "\"{bookmark}\"", ", ")}]}\n' \
   >     >> $TESTTMP/usersmartlogdata
   > echo "]}}" >> $TESTTMP/usersmartlogdata
