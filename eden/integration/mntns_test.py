@@ -14,6 +14,19 @@ Tests a matrix of:
 - fuse_prop: propagation of the FUSE mount's parent [shared, slave, private]
 - eden_in:   which namespace runs edenfs+privhelper [parent, child]
 
+Order of operations per test (important for correctness):
+  1. Set up FUSE propagation: Set MS_SHARED | MS_SLAVE | MS_PRIVATE on
+     the parent of the (to-be-created) eden mount. So the fuse mount
+     will inherit it.
+  2. Create a persistent child mount namespace (unshare --mount=FILE cat).
+     The child inherits the mount table INCLUDING the above setup.
+  3. Perform the FUSE mount (eden clone) in the designated namespace.
+  4. Check visibility from BOTH namespaces via nsenter.
+
+Step 2 must happen BEFORE step 3. If the child namespace were created
+AFTER the FUSE mount, it would always see the mount (mount table copy at
+unshare time), making the test trivially pass without testing propagation.
+
 Usage:
 
     # auto-builds binaries
@@ -74,23 +87,30 @@ def get_mount_propagation(path, ns_cmd_prefix=None):
     if ns_cmd_prefix:
         cmd = ns_cmd_prefix + cmd
     r = subprocess.run(cmd, check=False, capture_output=True, text=True)
-    # Collapse multi-line output (one line per peer group) into a single value
     return " ".join(r.stdout.split()) or None
 
 
-def _ns_cmd(ns_prop):
-    """sudo unshare prefix: enters a mount namespace, re-exports env vars, drops to current user."""
+def setup_fuse_propagation(mnt_parent: Path, fuse_prop: str):
+    """Bind-mount directory to itself and set its mount propagation.
+
+    The FUSE mount point lives inside mnt_parent, so the FUSE mount
+    inherits mnt_parent's propagation type.
+    """
+    mnt_parent.mkdir(parents=True, exist_ok=True)
+    run(["sudo", "mount", "--bind", str(mnt_parent), str(mnt_parent)])
+    run(["sudo", "mount", f"--make-{fuse_prop}", str(mnt_parent)])
+
+
+def _nsenter_cmd(ns_file):
+    """Command prefix: enter a persistent namespace, re-export env, drop to current user."""
     uid, gid = os.getuid(), os.getgid()
-    # sudo clears the environment; re-inject via prefix assignments on exec
     env_prefix = " ".join(
         f"{k}={shlex.quote(v)}" for k, v in os.environ.items() if k.isidentifier()
     )
     return [
         "sudo",
-        "unshare",
-        "--mount",
-        "--propagation",
-        ns_prop,
+        "nsenter",
+        f"--mount={ns_file}",
         "--",
         "setpriv",
         f"--reuid={uid}",
@@ -104,15 +124,65 @@ def _ns_cmd(ns_prop):
     ]
 
 
-def setup_fuse_propagation(mnt_parent: Path, fuse_prop: str):
-    """Bind-mount directory to itself and set its mount propagation.
+class MountNamespace:
+    """A persistent mount namespace for testing propagation.
 
-    The FUSE mount point lives inside mnt_parent, so the FUSE mount
-    inherits mnt_parent's propagation type.
+    Created via ``unshare --mount=FILE --propagation=PROP cat``.
+    ``cat`` blocks on stdin, giving us explicit lifetime control: closing
+    the pipe lets cat exit.  The ``--mount=FILE`` flag bind-mounts the
+    namespace to a file so we can ``nsenter --mount=FILE`` from other
+    processes at any time.
     """
-    mnt_parent.mkdir(parents=True, exist_ok=True)
-    run(["sudo", "mount", "--bind", str(mnt_parent), str(mnt_parent)])
-    run(["sudo", "mount", f"--make-{fuse_prop}", str(mnt_parent)])
+
+    def __init__(self, ns_file: Path, ns_prop: str):
+        self.ns_file = ns_file
+        self.ns_file.touch()
+        self._proc = subprocess.Popen(
+            [
+                "sudo",
+                "unshare",
+                f"--mount={ns_file}",
+                "--propagation",
+                ns_prop,
+                "--",
+                "cat",
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        self._wait_ready()
+
+    def _wait_ready(self, timeout=5):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if self._proc.poll() is not None:
+                raise RuntimeError(f"unshare exited with code {self._proc.returncode}")
+            r = subprocess.run(
+                ["sudo", "nsenter", f"--mount={self.ns_file}", "--", "true"],
+                check=False,
+                capture_output=True,
+            )
+            if r.returncode == 0:
+                return
+            time.sleep(0.1)
+        raise RuntimeError(
+            f"Mount namespace at {self.ns_file} not ready after {timeout}s"
+        )
+
+    def enter_cmd(self):
+        """Command prefix to run as current user inside this namespace."""
+        return _nsenter_cmd(self.ns_file)
+
+    def close(self):
+        if self._proc.stdin:
+            self._proc.stdin.close()
+        self._proc.wait()
+        subprocess.run(
+            ["sudo", "umount", str(self.ns_file)],
+            check=False,
+            capture_output=True,
+        )
 
 
 class EdenTestEnv:
@@ -205,18 +275,18 @@ class EdenTestEnv:
         self.state_dir.mkdir(parents=True, exist_ok=True)
 
 
-def test_eden_in_parent(env: EdenTestEnv, ns_prop: str):
-    """Start eden (and privhelper) from parent mntns"""
+def test_eden_in_parent(env: EdenTestEnv, child_ns: MountNamespace):
+    """FUSE mount in parent ns, check if child ns sees it."""
     env.start_daemon()
     try:
         env.clone()
         parent_prop = get_mount_propagation(env.mount_point)
-        child_prefix = _ns_cmd(ns_prop)
+        enter = child_ns.enter_cmd()
         r = subprocess.run(
-            child_prefix + ["test", "-d", str(env.mount_point / ".eden")],
+            enter + ["test", "-d", str(env.mount_point / ".eden")],
             check=False,
         )
-        child_prop = get_mount_propagation(env.mount_point, ns_cmd_prefix=child_prefix)
+        child_prop = get_mount_propagation(env.mount_point, ns_cmd_prefix=enter)
         return {
             "parent_sees": is_eden_mounted(env.mount_point),
             "child_sees": r.returncode == 0,
@@ -227,15 +297,15 @@ def test_eden_in_parent(env: EdenTestEnv, ns_prop: str):
         env.stop()
 
 
-def test_eden_in_child(env: EdenTestEnv, ns_prop: str):
-    """Start eden (and privhelper) from child mntns"""
+def test_eden_in_child(env: EdenTestEnv, child_ns: MountNamespace):
+    """FUSE mount in child ns, check if parent ns sees it."""
     result_file = env.base / "child_sees"
-    result_file.unlink(missing_ok=True)
     child_prop_file = env.base / "child_fuse_prop"
+    result_file.unlink(missing_ok=True)
     child_prop_file.unlink(missing_ok=True)
 
     subprocess.run(
-        _ns_cmd(ns_prop)
+        child_ns.enter_cmd()
         + [
             sys.executable,
             __file__,
@@ -335,22 +405,31 @@ def main():
             test_base.mkdir(parents=True)
             (test_base / "backing_repo").symlink_to(env.backing_repo)
 
-            # Bind-mount a parent directory and set its propagation so the
-            # FUSE mount inside it inherits the desired fuse_prop.
+            # Step 1: set up FUSE propagation on the mount's parent dir.
             mnt_parent = test_base / "mnt_parent"
             setup_fuse_propagation(mnt_parent, fuse)
             mount_point = mnt_parent / "checkout"
+
+            # Step 2: create the child namespace BEFORE any FUSE mount.
+            # It inherits mnt_parent's propagation from step 1. If we
+            # created it after the FUSE mount, the child would always see
+            # the mount (copied mount table), not testing propagation.
+            ns_file = test_base / "child_ns"
+            child_ns = MountNamespace(ns_file, ns)
 
             test_env = EdenTestEnv(
                 edenfsctl, str(privhelper), test_base, mount_point=mount_point
             )
             try:
+                # Step 3: FUSE mount in the designated namespace.
+                # Step 4: check visibility from both namespaces.
                 test_fn = test_eden_in_parent if loc == "parent" else test_eden_in_child
-                return test_fn(test_env, ns)
+                return test_fn(test_env, child_ns)
             except Exception as e:
                 return {"parent_sees": f"error({e})", "child_sees": f"error({e})"}
             finally:
                 test_env.clean()
+                child_ns.close()
                 subprocess.run(
                     ["sudo", "umount", "-l", str(mnt_parent)],
                     check=False,
@@ -378,12 +457,11 @@ def main():
             for ns in ns_props:
                 for fuse in fuse_props:
                     for loc in locations:
+                        test_dir = base_dir / f"t-{ns}-{fuse}-{loc}"
                         for path in [
-                            base_dir
-                            / f"t-{ns}-{fuse}-{loc}"
-                            / "mnt_parent"
-                            / "checkout",
-                            base_dir / f"t-{ns}-{fuse}-{loc}" / "mnt_parent",
+                            test_dir / "mnt_parent" / "checkout",
+                            test_dir / "mnt_parent",
+                            test_dir / "child_ns",
                         ]:
                             subprocess.run(
                                 ["sudo", "umount", "-l", str(path)],
