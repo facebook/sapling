@@ -315,7 +315,12 @@ export function PRDashboard() {
         if (hiddenStacks.includes(stack.id)) return false;
         if (hideMerged && stack.isMerged) return false;
         if (hideBots && isBotAuthor(stack.mainAuthor)) return false;
-        if (showOnlyMine && currentUser && stack.mainAuthor !== currentUser) return false;
+        if (
+          showOnlyMine &&
+          currentUser &&
+          !stack.authors.some(a => a.login === currentUser)
+        )
+          return false;
         return true;
       });
 
@@ -326,7 +331,7 @@ export function PRDashboard() {
   const botCount = stacks.filter(stack => isBotAuthor(stack.mainAuthor)).length;
 
   const otherAuthorsCount = currentUser
-    ? stacks.filter(stack => stack.mainAuthor && stack.mainAuthor !== currentUser).length
+    ? stacks.filter(stack => !stack.authors.some(a => a.login === currentUser)).length
     : 0;
 
   return (
@@ -335,7 +340,7 @@ export function PRDashboard() {
       <div className="pr-dashboard-sticky-header">
         <div className="pr-dashboard-header">
           <span className="pr-dashboard-title">
-            <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v4.2.1)</span>
+            <T>PR Stacks</T> <span style={{fontSize: '10px', opacity: 0.5}}>(v4.2.3-fix2)</span>
           </span>
           <div className="pr-dashboard-header-buttons">
             <TimeRangeDropdown />
@@ -601,20 +606,26 @@ function StackCard({
           </span>
         ) : null}
 
-        {stack.mainAuthor && (
-          <Tooltip title={stack.mainAuthor}>
-            <span className="stack-card-author">
-              {stack.mainAuthorAvatarUrl ? (
-                <img
-                  src={stack.mainAuthorAvatarUrl}
-                  alt={stack.mainAuthor}
-                  className="stack-card-avatar"
-                />
-              ) : (
-                <Icon icon="account" />
-              )}
-            </span>
-          </Tooltip>
+        {stack.authors.length > 0 && (
+          <span className="stack-card-authors">
+            {stack.authors.map((author, i) => (
+              <Tooltip key={author.login} title={author.login}>
+                <span
+                  className="stack-card-author"
+                  style={i > 0 ? {marginLeft: -6} : undefined}>
+                  {author.avatarUrl ? (
+                    <img
+                      src={author.avatarUrl}
+                      alt={author.login}
+                      className="stack-card-avatar"
+                    />
+                  ) : (
+                    <Icon icon="account" />
+                  )}
+                </span>
+              </Tooltip>
+            ))}
+          </span>
         )}
 
         <div className="stack-card-actions">
@@ -721,7 +732,17 @@ function LabelEditor({
 }
 
 function PRRow({pr}: {pr: DiffSummary}) {
-  const reviewDecision = pr.type === 'github' ? pr.reviewDecision : undefined;
+  // reviewDecision is null without branch protection; fall back to latestReviews
+  let reviewDecision: string | undefined = pr.type === 'github' ? pr.reviewDecision : undefined;
+  if (reviewDecision == null && pr.type === 'github' && pr.latestReviews) {
+    const hasChanges = pr.latestReviews.some(r => r.state === 'CHANGES_REQUESTED');
+    const hasApproval = pr.latestReviews.some(r => r.state === 'APPROVED');
+    if (hasChanges) {
+      reviewDecision = 'CHANGES_REQUESTED';
+    } else if (hasApproval) {
+      reviewDecision = 'APPROVED';
+    }
+  }
   const stateIcon = getPRStateIcon(pr.state, reviewDecision);
   const stateClass = getPRStateClass(pr.state, reviewDecision);
   const headHash = pr.type === 'github' && pr.head !== '' ? pr.head : undefined;

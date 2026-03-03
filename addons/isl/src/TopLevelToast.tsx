@@ -17,8 +17,9 @@ export function TopLevelToast() {
 
   const toastDivs = toastQueue.toArray().map(t => {
     const handleClick = () => hideToast([t.key]);
+    const className = ['toast', 'tooltip', t.className].filter(Boolean).join(' ');
     return (
-      <div className="toast tooltip" key={t.key} data-reorder-id={t.key} onClick={handleClick}>
+      <div className={className} key={t.key} data-reorder-id={t.key} onClick={handleClick}>
         {t.message}
       </div>
     );

@@ -21,6 +21,9 @@ export default async function queryGraphQL<TData, TVariables>(
 
   const args = ['api', 'graphql'];
   for (const [key, value] of Object.entries(variables as unknown as {[key: string]: unknown})) {
+    if (value === undefined) {
+      continue;
+    }
     const type = typeof value;
     switch (type) {
       case 'boolean':
@@ -31,6 +34,12 @@ export default async function queryGraphQL<TData, TVariables>(
         break;
       case 'string':
         args.push('-f', `${key}=${value}`);
+        break;
+      case 'object':
+        // Arrays and objects (e.g. DraftPullRequestReviewThread[]) are
+        // serialized as JSON.  The gh CLI's -F flag parses the value,
+        // so JSON arrays/objects are passed through to GraphQL correctly.
+        args.push('-F', `${key}=${JSON.stringify(value)}`);
         break;
       default:
         throw Error(`unexpected type: ${type} for ${key}: ${value}`);

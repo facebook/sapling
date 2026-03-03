@@ -85,6 +85,8 @@ export type PRStack = {
   mainAuthor?: string;
   /** Avatar URL of the main contributor */
   mainAuthorAvatarUrl?: string;
+  /** All unique authors in this stack (for multi-author display) */
+  authors: Array<{login: string; avatarUrl?: string}>;
   /** Whether all PRs in this stack are merged */
   isMerged: boolean;
   /** Whether all PRs in this stack are closed (abandoned, not merged) */
@@ -222,6 +224,7 @@ export const prStacksAtom = atom<PRStack[]>(get => {
           isStack: stackPrs.length > 1,
           mainAuthor,
           mainAuthorAvatarUrl,
+          authors: [],
           isMerged,
           isClosed,
           mergedCount,
@@ -250,6 +253,7 @@ export const prStacksAtom = atom<PRStack[]>(get => {
         isStack: false,
         mainAuthor,
         mainAuthorAvatarUrl,
+        authors: [],
         isMerged,
         isClosed,
         mergedCount: isMerged ? 1 : 0,
@@ -259,11 +263,160 @@ export const prStacksAtom = atom<PRStack[]>(get => {
     }
   }
 
+  // === Branch-chain detection ===
+  // Detect PRs connected by branch targeting (baseRefName matches another PR's
+  // branchName) and merge them into existing stacks or form new chain-based stacks.
+  // This handles PRs stacked on top of a Sapling-managed stack without footers.
+
+  // Build branchName → diffId lookup for all PRs
+  const branchToDiffId = new Map<string, string>();
+  for (const [diffId, summary] of diffsMap) {
+    if (summary.type === 'github' && summary.branchName) {
+      branchToDiffId.set(summary.branchName, diffId);
+    }
+  }
+
+  // Build child → parent and parent → children maps via baseRefName matching.
+  const childToParent = new Map<string, string>();
+  const parentToChildren = new Map<string, string[]>();
+  for (const [diffId, summary] of diffsMap) {
+    if (summary.type !== 'github' || !summary.baseRefName) continue;
+    const parentId = branchToDiffId.get(summary.baseRefName);
+    if (parentId != null && parentId !== diffId) {
+      childToParent.set(diffId, parentId);
+      const children = parentToChildren.get(parentId) ?? [];
+      children.push(diffId);
+      parentToChildren.set(parentId, children);
+    }
+  }
+
+  // Walk descendants from a starting point in chain order.
+  // Returns [immediate child, grandchild, ...].
+  function collectDescendants(startId: string): string[] {
+    const result: string[] = [];
+    let currentId = startId;
+    const visited = new Set<string>([startId]);
+    while (true) {
+      const children = (parentToChildren.get(currentId) ?? []).filter(
+        id => !visited.has(id),
+      );
+      if (children.length === 0) break;
+      const nextId = children[0];
+      visited.add(nextId);
+      result.push(nextId);
+      currentId = nextId;
+    }
+    return result;
+  }
+
+  // Build set of diffIds already in footer-based (multi-PR) stacks
+  const inFooterStack = new Set<string>();
+  for (const stack of stacks) {
+    if (stack.isStack) {
+      for (const pr of stack.prs) {
+        if (pr.type === 'github') {
+          inFooterStack.add(String(pr.number));
+        }
+      }
+    }
+  }
+
+  // Phase 1: Extend footer-based multi-PR stacks with branch-chained descendants.
+  // Only process existing multi-PR stacks (not singles) so they claim descendants first.
+  const alreadyMerged = new Set<string>();
+  for (const stack of stacks) {
+    if (!stack.isStack) continue;
+    const topPr = stack.prs[0];
+    if (topPr.type !== 'github') continue;
+    const topDiffId = String(topPr.number);
+
+    const descendantIds = collectDescendants(topDiffId).filter(
+      id => !inFooterStack.has(id),
+    );
+    if (descendantIds.length === 0) continue;
+
+    const descendants = descendantIds
+      .map(id => diffsMap.get(id))
+      .filter((s): s is DiffSummary => s != null);
+
+    if (descendants.length > 0) {
+      // Prepend in reverse: newest/outermost descendant at top of stack
+      stack.prs.unshift(...descendants.reverse());
+      for (const id of descendantIds) {
+        alreadyMerged.add(id);
+      }
+    }
+  }
+
+  // Phase 2: Form new stacks from orphan chains (singles chaining together
+  // that don't connect to any footer-based stack).
+  // Walk UP from each unclaimed single to find its chain root, then build
+  // the full chain from that root. This avoids duplicates because each PR
+  // has exactly one parent, so each root is processed exactly once.
+  const processedRoots = new Set<string>();
+  for (const stack of stacks) {
+    if (stack.prs.length !== 1) continue;
+    const pr = stack.prs[0];
+    if (pr.type !== 'github') continue;
+    const diffId = String(pr.number);
+    if (alreadyMerged.has(diffId)) continue;
+
+    // Walk up to find the chain root (the PR with no parent in the system)
+    let root = diffId;
+    const visited = new Set<string>();
+    while (childToParent.has(root) && !visited.has(root)) {
+      visited.add(root);
+      const parent = childToParent.get(root)!;
+      if (inFooterStack.has(parent) || alreadyMerged.has(parent)) break;
+      root = parent;
+    }
+    if (processedRoots.has(root)) continue;
+    processedRoots.add(root);
+
+    // Build full chain from root downward
+    const fullChain = [root, ...collectDescendants(root)];
+    // Filter out any already-merged PRs
+    const chain = fullChain.filter(id => !alreadyMerged.has(id) && !inFooterStack.has(id));
+    if (chain.length <= 1) continue;
+
+    // Find the stack entry for the root single and extend it
+    const rootStackIdx = stacks.findIndex(s => {
+      const p = s.prs[0];
+      return s.prs.length === 1 && p.type === 'github' && String(p.number) === root;
+    });
+    if (rootStackIdx === -1) continue;
+
+    const rootStack = stacks[rootStackIdx];
+    const chainAboveRoot = chain.filter(id => id !== root);
+    const chainSummaries = chainAboveRoot
+      .map(id => diffsMap.get(id))
+      .filter((s): s is DiffSummary => s != null);
+
+    if (chainSummaries.length > 0) {
+      rootStack.prs.unshift(...chainSummaries.reverse());
+      for (const id of chainAboveRoot) {
+        alreadyMerged.add(id);
+      }
+    }
+  }
+
+  // Remove single-PR stacks that were merged into other stacks
+  const finalStacks = stacks.filter(stack => {
+    if (stack.prs.length > 1) return true;
+    const pr = stack.prs[0];
+    const diffId = pr.type === 'github' ? String(pr.number) : '';
+    return !alreadyMerged.has(diffId);
+  });
+
+  // Recalculate derived fields for all stacks (some were modified by branch-chain merging)
+  for (const stack of finalStacks) {
+    recomputeStackMetadata(stack);
+  }
+
   // Sort stacks by top PR number (descending - newest first)
-  stacks.sort((a, b) => b.topPrNumber - a.topPrNumber);
+  finalStacks.sort((a, b) => b.topPrNumber - a.topPrNumber);
 
-
-  return stacks;
+  return finalStacks;
 });
 
 /**
@@ -277,6 +430,38 @@ function getStackInfo(
     return summary.stackInfo;
   }
   return undefined;
+}
+
+/**
+ * Recompute derived metadata fields on a PRStack from its current prs list.
+ */
+function recomputeStackMetadata(stack: PRStack): void {
+  const firstPr = stack.prs[0];
+  stack.topPrNumber = parseInt(
+    firstPr.type === 'github' ? String(firstPr.number) : '0',
+    10,
+  );
+  stack.id = stack.prs.length > 1 ? `stack-${stack.topPrNumber}` : `single-${stack.topPrNumber}`;
+  stack.isStack = stack.prs.length > 1;
+  stack.mainAuthor = firstPr.type === 'github' ? firstPr.author : undefined;
+  stack.mainAuthorAvatarUrl =
+    firstPr.type === 'github' ? firstPr.authorAvatarUrl : undefined;
+  // Collect unique authors across all PRs in the stack
+  const seenAuthors = new Set<string>();
+  stack.authors = [];
+  for (const pr of stack.prs) {
+    if (pr.type === 'github' && pr.author && !seenAuthors.has(pr.author)) {
+      seenAuthors.add(pr.author);
+      stack.authors.push({login: pr.author, avatarUrl: pr.authorAvatarUrl});
+    }
+  }
+  const mergedCount = stack.prs.filter(pr => pr.state === 'MERGED').length;
+  const closedCount = stack.prs.filter(pr => pr.state === 'CLOSED').length;
+  stack.mergedCount = mergedCount;
+  stack.closedCount = closedCount;
+  const doneCount = mergedCount + closedCount;
+  stack.isMerged = mergedCount > 0 && doneCount === stack.prs.length;
+  stack.isClosed = closedCount > 0 && closedCount === stack.prs.length;
 }
 
 /**
@@ -354,13 +539,24 @@ export const currentPRStackContextAtom = atom<StackNavigationContext | null>(get
       }
       // Use string comparison for isCurrent to avoid type mismatches
       const prNumStr = String(pr.number);
+      // reviewDecision is null without branch protection; fall back to latestReviews
+      let effectiveDecision: string | undefined = pr.reviewDecision;
+      if (effectiveDecision == null && pr.type === 'github' && pr.latestReviews) {
+        const hasChanges = pr.latestReviews.some(r => r.state === 'CHANGES_REQUESTED');
+        const hasApproval = pr.latestReviews.some(r => r.state === 'APPROVED');
+        if (hasChanges) {
+          effectiveDecision = 'CHANGES_REQUESTED';
+        } else if (hasApproval) {
+          effectiveDecision = 'APPROVED';
+        }
+      }
       return {
         prNumber: Number(pr.number),
         headHash: pr.head,
         title: pr.title,
         isCurrent: prNumStr === currentPrNumberStr,
         state: pr.state,
-        reviewDecision: pr.reviewDecision,
+        reviewDecision: effectiveDecision ?? undefined,
       };
     })
     .filter((e): e is NonNullable<typeof e> => e !== null);

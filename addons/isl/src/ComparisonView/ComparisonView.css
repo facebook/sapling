@@ -481,6 +481,52 @@
   font-size: 14px;
 }
 
+/* Review status banner - shown after successful approve/request changes */
+.review-status-banner {
+  gap: 10px;
+  animation: reviewStatusFadeIn 0.3s ease-out;
+}
+
+.review-status-banner .codicon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.review-status-text {
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.review-status-time {
+  font-size: 11px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.review-status-approved {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+  border-top-color: rgba(34, 197, 94, 0.2) !important;
+}
+
+.review-status-changes-requested {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+  border-top-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+@keyframes reviewStatusFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Stack navigation container - holds PR info + stack nav */
 .stack-navigation-container {
   display: flex;

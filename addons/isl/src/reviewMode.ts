@@ -9,6 +9,7 @@ import {atom} from 'jotai';
 import {ComparisonType} from 'shared/Comparison';
 import {showComparison, dismissComparison} from './ComparisonView/atoms';
 import {writeAtom} from './jotaiUtils';
+import {resetReviewSubmitted} from './reviewSubmission/reviewSubmittedState';
 
 /**
  * State for tracking review mode.
@@ -34,6 +35,7 @@ export const reviewModeAtom = atom<ReviewModeState>({
  * Opens the comparison view for the PR's head commit.
  */
 export function enterReviewMode(prNumber: string, headHash: string): void {
+  resetReviewSubmitted();
   writeAtom(reviewModeAtom, {
     active: true,
     prNumber,
