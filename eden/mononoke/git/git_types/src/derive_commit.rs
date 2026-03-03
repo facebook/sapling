@@ -181,6 +181,22 @@ impl BonsaiDerivable for MappedGitCommitId {
         Ok(())
     }
 
+    async fn store_mapping_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        derived: Vec<(ChangesetId, Self)>,
+    ) -> Result<()> {
+        let entries: Vec<_> = derived
+            .into_iter()
+            .map(|(bcs_id, derived)| BonsaiGitMappingEntry::new(derived.oid().clone(), bcs_id))
+            .collect();
+        derivation_ctx
+            .bonsai_git_mapping()?
+            .bulk_add(ctx, &entries)
+            .await?;
+        Ok(())
+    }
+
     async fn fetch(
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,

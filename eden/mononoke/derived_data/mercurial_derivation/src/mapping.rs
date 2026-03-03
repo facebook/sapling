@@ -222,6 +222,25 @@ impl BonsaiDerivable for MappedHgChangesetId {
         Ok(())
     }
 
+    async fn store_mapping_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        derived: Vec<(ChangesetId, Self)>,
+    ) -> Result<()> {
+        let entries: Vec<_> = derived
+            .into_iter()
+            .map(|(bcs_id, hg_cs_id)| BonsaiHgMappingEntry {
+                hg_cs_id: hg_cs_id.0,
+                bcs_id,
+            })
+            .collect();
+        derivation_ctx
+            .bonsai_hg_mapping()?
+            .bulk_add(ctx, &entries)
+            .await?;
+        Ok(())
+    }
+
     async fn fetch(
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
