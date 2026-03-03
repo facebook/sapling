@@ -14,17 +14,7 @@ tests.
 """
 
 ignorerevnumincompatiblelist = """
-    test-bundle-r.t
-    test-clone-r.t
-    test-contrib-perf.t
     test-debugbuilddag.t
-    test-debugindexdot-t.py
-    test-dirstate-race.t
-    test-empty-group-t.py
-    test-eol-clone.t
-    test-eol-hook.t
-    test-eol-update.t
-    test-remotefilelog-wireproto.t
     test-treemanifest-prefetch.t
     test-treemanifest.t
     test-tweakdefaults-pullrebaseremotenames.t
@@ -41,11 +31,8 @@ ignorerevnumincompatiblelist = """
     test-import-merge.t
     test-import.t
     test-log.t
-    test-manifest.t
-    test-merge10-t.py
     test-merge1.t
     test-merge-ancestor-mergestate.t
-    test-merge-commit.t
     test-merge-tools.t
     test-mv-cp-st-diff.t
     test-pager.t
@@ -53,7 +40,6 @@ ignorerevnumincompatiblelist = """
     test-perftweaks-remotenames.t
     test-pull-pull-corruption.t
     test-pull-r.t
-    test-pull-update.t
     test-push.t
     test-rebase-issue-noparam-single-rev.t
     test-rebase-parameters.t
@@ -62,7 +48,6 @@ ignorerevnumincompatiblelist = """
     test-remotenames-bookmarks.t
     test-remotenames-pull-rebase.t
     test-remotenames-push.t
-    test-remotenames-shared-repo.t
     test-remotenames-tracking.t
     test-revert.t
     test-revnum-deprecate.t
@@ -70,11 +55,8 @@ ignorerevnumincompatiblelist = """
     test-revset.t
     test-shelve.t
     test-sparse.t
-    test-ssh-clone-r.t
     test-template-revf64.t
     test-url-rev.t
-    test-casecollision-merge.t
-    test-commitcloud-backup-sql2.t
 
     # drop internally uses rev numbers for rebase
     test-drop.t
