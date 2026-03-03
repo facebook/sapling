@@ -311,7 +311,7 @@ function ReviewActionsBar() {
       return undefined;
     }
     return summary;
-  }, [reviewMode.active, reviewMode.prNumber, allDiffs]);
+  }, [reviewMode.active, reviewMode.prNumber, allDiffs.value]);
 
   const nodeId = prSummary?.nodeId;
   const isOwnPR = currentUser != null && prSummary?.author != null && prSummary.author === currentUser;
@@ -678,7 +678,7 @@ export default function ComparisonView({
     }
     const summary = allDiffs.value?.get(reviewMode.prNumber);
     return summary?.type === 'github' ? summary.nodeId : undefined;
-  }, [reviewMode.active, reviewMode.prNumber, allDiffs]);
+  }, [reviewMode.active, reviewMode.prNumber, allDiffs.value]);
 
   // Get list of file paths for navigation
   const filePaths = useMemo(
