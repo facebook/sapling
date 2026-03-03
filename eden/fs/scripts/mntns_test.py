@@ -193,6 +193,7 @@ class EdenTestEnv:
         privhelper: str,
         base_dir: Path,
         mount_point: Path | None = None,
+        debug: bool = False,
     ):
         self.edenfsctl = edenfsctl
         self.privhelper = privhelper
@@ -202,6 +203,10 @@ class EdenTestEnv:
         self.home_dir = base_dir / "home"
         self.backing_repo = base_dir / "backing_repo"
         self.mount_point = mount_point or base_dir / "mnt"
+        self.debug = debug
+        # Logs land in <state_dir>/logs/edenfs.log by default.
+        # With --debug we also bump the level to DBG5.
+        self.log_dir = self.state_dir / "logs"
 
         for d in [self.state_dir, self.etc_dir, self.home_dir]:
             d.mkdir(parents=True, exist_ok=True)
@@ -237,7 +242,10 @@ class EdenTestEnv:
         }
 
     def start_daemon(self, timeout=60):
-        run(self._edenfsctl_cmd("start"), env=self._env())
+        start_cmd = list(self._edenfsctl_cmd("start"))
+        if self.debug:
+            start_cmd += ["--", "--edenLogLevel", "DBG5"]
+        run(start_cmd, env=self._env())
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             r = run(self._edenfsctl_cmd("status"), env=self._env(), check=False)
@@ -271,9 +279,10 @@ class EdenTestEnv:
             check=False,
             capture_output=True,
         )
-        for d in [self.state_dir, self.mount_point]:
-            shutil.rmtree(d, ignore_errors=True)
-        self.state_dir.mkdir(parents=True, exist_ok=True)
+        if not self.debug:
+            for d in [self.state_dir, self.mount_point]:
+                shutil.rmtree(d, ignore_errors=True)
+            self.state_dir.mkdir(parents=True, exist_ok=True)
 
 
 def test_eden_in_parent(env: EdenTestEnv, child_ns: MountNamespace):
@@ -315,7 +324,8 @@ def test_eden_in_child(env: EdenTestEnv, child_ns: MountNamespace):
             env.edenfsctl,
             env.privhelper,
             str(env.mount_point),
-        ],
+        ]
+        + (["--_debug"] if env.debug else []),
         check=False,
     )
 
@@ -337,10 +347,10 @@ def test_eden_in_child(env: EdenTestEnv, child_ns: MountNamespace):
 # -- Child entry point (internal, run inside namespace) --
 
 
-def _child_eden(base_str, edenfsctl, privhelper, mount_point_str):
+def _child_eden(base_str, edenfsctl, privhelper, mount_point_str, debug=False):
     base = Path(base_str)
     mount_point = Path(mount_point_str)
-    env = EdenTestEnv(edenfsctl, privhelper, base, mount_point=mount_point)
+    env = EdenTestEnv(edenfsctl, privhelper, base, mount_point=mount_point, debug=debug)
     try:
         env.start_daemon()
         env.clone()
@@ -370,6 +380,11 @@ def main():
     )
     parser.add_argument("--keep", action="store_true", help="Keep temp dir on exit")
     parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logs (DBG5) written to <tmpdir>/*/eden/logs/edenfs.log, implies --keep",
+    )
+    parser.add_argument(
         "-o", "--output", metavar="FILE", help="Save results (sees columns) to JSON"
     )
     parser.add_argument(
@@ -385,14 +400,16 @@ def main():
         metavar=("BASE", "EDENFSCTL", "PRIVHELPER", "MOUNT_POINT"),
         help=argparse.SUPPRESS,
     )
+    parser.add_argument("--_debug", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     if args._child:
-        _child_eden(*args._child)
+        _child_eden(*args._child, debug=args._debug)
         return
 
     edenfsctl = args.edenfsctl or build_binary("fbcode//eden/fs/cli_rs:edenfsctl-run")
-    keep = args.keep
+    debug = args.debug
+    keep = args.keep or debug
 
     with tempfile.TemporaryDirectory(
         prefix="eden-mntns-test-",
@@ -409,7 +426,7 @@ def main():
             build_binary("fbcode//eden/fs/service:edenfs_privhelper", out=privhelper)
             make_setuid_root(privhelper)
 
-        env = EdenTestEnv(edenfsctl, str(privhelper), base_dir)
+        env = EdenTestEnv(edenfsctl, str(privhelper), base_dir, debug=debug)
         env.init_backing_repo()
 
         ns_props = ["shared", "slave", "private"]
@@ -435,7 +452,11 @@ def main():
             child_ns = MountNamespace(ns_file, ns)
 
             test_env = EdenTestEnv(
-                edenfsctl, str(privhelper), test_base, mount_point=mount_point
+                edenfsctl,
+                str(privhelper),
+                test_base,
+                mount_point=mount_point,
+                debug=debug,
             )
             try:
                 # Step 3: FUSE mount in the designated namespace.
@@ -557,8 +578,10 @@ def main():
             else:
                 print(f"\nNo differences from {args.compare}")
 
-    if args.keep:
+    if keep:
         print(f"\nKept: {base_dir}")
+        if debug:
+            print(f"Eden logs (DBG5): {base_dir}/t-*/eden/logs/edenfs.log")
 
 
 if __name__ == "__main__":
