@@ -7,7 +7,6 @@
 # GNU General Public License version 2.
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
 
 # Setup repo
 
@@ -27,7 +26,7 @@
   $ hg bookmark --track a
   $ hg bookmark -v
      a                         2dcb9139ea49
-   * b                         2dcb9139ea49            [a]
+   * b                         2dcb9139ea49[a]
   $ hg bookmark --untrack
   $ hg bookmark -v
      a                         2dcb9139ea49

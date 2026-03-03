@@ -14,16 +14,6 @@ tests.
 """
 
 ignorerevnumincompatiblelist = """
-    test-rebase-scenario-global.t
-    test-remotenames-bookmarks.t
-    test-remotenames-pull-rebase.t
-    test-remotenames-push.t
-    test-remotenames-tracking.t
-    test-revert.t
-    test-revnum-deprecate.t
-    test-revset2.t
-    test-revset.t
-    test-shelve.t
     test-sparse.t
     test-template-revf64.t
     test-url-rev.t
@@ -70,6 +60,17 @@ ignorerevnumincompatiblelist = """
     test-log.t
     # 42 revision number references throughout
     test-merge-tools.t
+    # times out at 30s timeout limit
+    test-rebase-scenario-global.t
+    test-remotenames-tracking.t
+    # intentionally tests rev number deprecation warnings; uses rev numbers by design
+    test-revnum-deprecate.t
+    # many rev number references across a large test file
+    test-revset2.t
+    # very complex, 2784 lines with many rev number references
+    test-revset.t
+    # complex unshelve state management
+    test-shelve.t
 """
 
 

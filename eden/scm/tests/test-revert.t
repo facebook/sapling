@@ -9,7 +9,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ eagerepo
 
 # Prepare test functions
@@ -163,7 +162,7 @@
 # revert to another revision (--rev)
 # ----------------------------------
 
-  $ hg revert --all -r0
+  $ hg revert --all -r 'desc(first)'
   adding a
   removing d
   forgetting z
@@ -180,7 +179,7 @@
 # --------------------------------------------------
 # exact match are more silent
 
-  $ hg revert -r0 a
+  $ hg revert -r 'desc(first)' a
   $ hg st a
   A a
   $ hg rm d
@@ -189,7 +188,7 @@
 
 # should keep d removed
 
-  $ hg revert -r0 d
+  $ hg revert -r 'desc(first)' d
   no changes needed to d
   $ hg st d
   R d
@@ -245,7 +244,7 @@
   > [extensions]
   > fakedirstatewritetime = $TESTDIR/fakedirstatewritetime.py
   > EOF
-  $ hg revert -r 0 e
+  $ hg revert -r 'desc(first)' e
   $ cat >> .hg/hgrc << 'EOF'
   > [extensions]
   > fakedirstatewritetime = !
@@ -265,11 +264,11 @@
   $ hg init a
   $ cd a
   $ echo a >> a
-  $ hg commit -A -d '1 0' -m a
+  $ hg commit -A -d '1 0' -m issue241-first
   adding a
   $ echo a >> a
-  $ hg commit -d '2 0' -m a
-  $ hg goto 0
+  $ hg commit -d '2 0' -m issue241-second
+  $ hg goto 'desc("issue241-first")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkdir b
   $ echo b > b/b
@@ -279,7 +278,7 @@
 
   $ hg revert -rtip
   abort: no files or directories specified
-  (use --all to revert all files, or 'hg goto 1' to update)
+  (use --all to revert all files, or 'hg goto 72057594037927937' to update)
   [255]
 
 # call `hg revert` with -I
@@ -1421,19 +1420,19 @@
   $ hg ci -qAm C1
   $ echo 1 >> A
   $ hg ci -qm C2
-  $ hg up -q 0
+  $ hg up -q 'desc(C0)'
   $ echo 1 > B
   $ hg ci -qAm C3
-  $ hg status --rev 'ancestor(.,2)' --rev 2
+  $ hg status --rev 'ancestor(.,desc(C2))' --rev 'desc(C2)'
   A A
-  $ hg log -G -T '{rev} ({files})\n'
-  @  3 (B)
+  $ hg log -G -T '{desc|firstline} ({files})\n'
+  @  C3 (B)
   │
-  │ o  2 (A)
+  │ o  C2 (A)
   │ │
-  │ o  1 (A)
+  │ o  C1 (A)
   ├─╯
-  o  0 (.gitignore root)
+  o  C0 (.gitignore root)
 
 # actual tests: reverting to something else than a merge parent
 
@@ -1445,13 +1444,13 @@
   M A
   $ hg status --rev 'p2()'
   A B
-  $ hg status --rev 1
+  $ hg status --rev 'desc(C1)'
   M A
   A B
-  $ hg revert --rev 1 --all
+  $ hg revert --rev 'desc(C1)' --all
   reverting A
   removing B
-  $ hg status --rev 1
+  $ hg status --rev 'desc(C1)'
 
 # From the other parents
 
@@ -1465,13 +1464,13 @@
   M B
   $ hg status --rev 'p2()'
   A A
-  $ hg status --rev 1
+  $ hg status --rev 'desc(C1)'
   M A
   A B
-  $ hg revert --rev 1 --all
+  $ hg revert --rev 'desc(C1)' --all
   reverting A
   removing B
-  $ hg status --rev 1
+  $ hg status --rev 'desc(C1)'
 
 #if symlink
 
