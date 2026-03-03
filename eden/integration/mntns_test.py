@@ -38,6 +38,7 @@ Usage:
 import argparse
 import concurrent.futures
 import functools
+import json
 import os
 import shlex
 import shutil
@@ -364,6 +365,15 @@ def main():
         help="Path to edenfsctl (auto-built if omitted)",
     )
     parser.add_argument("--keep", action="store_true", help="Keep temp dir on exit")
+    parser.add_argument(
+        "-o", "--output", metavar="FILE", help="Save results (sees columns) to JSON"
+    )
+    parser.add_argument(
+        "-c",
+        "--compare",
+        metavar="FILE",
+        help="Compare results against a baseline JSON (from --output)",
+    )
     # Internal: child process entry point (run inside mount namespace)
     parser.add_argument(
         "--_child",
@@ -495,6 +505,50 @@ def main():
                         f"{ns:<12} {fuse:<12} {loc:<10} | "
                         f"{p:<14} {c:<14} {pp:<20} {cp:<20}"
                     )
+
+        # -- Serialize results for --output / --compare --
+        # Key: "ns/fuse/loc", value: {parent_sees, child_sees} as bools
+        serializable = {}
+        for (ns, fuse, loc), r in results.items():
+            key = f"{ns}/{fuse}/{loc}"
+            serializable[key] = {
+                "parent_sees": r.get("parent_sees"),
+                "child_sees": r.get("child_sees"),
+            }
+
+        if args.output:
+            Path(args.output).write_text(json.dumps(serializable, indent=2) + "\n")
+            print(f"\nResults saved to {args.output}")
+
+        if args.compare:
+            baseline = json.loads(Path(args.compare).read_text())
+            diffs = []
+            for ns in ns_props:
+                for fuse in fuse_props:
+                    for loc in locations:
+                        key = f"{ns}/{fuse}/{loc}"
+                        old = baseline.get(key, {})
+                        new = serializable.get(key, {})
+                        op = old.get("parent_sees")
+                        np = new.get("parent_sees")
+                        oc = old.get("child_sees")
+                        nc = new.get("child_sees")
+                        if op != np or oc != nc:
+                            # CAPS for changed values, lowercase for unchanged
+                            ps = str(np).upper() if op != np else str(np)
+                            cs = str(nc).upper() if oc != nc else str(nc)
+                            diffs.append((ns, fuse, loc, ps, cs))
+            if diffs:
+                print(f"\n\nDifferences from {args.compare}:")
+                print(
+                    f"{'NS Prop':<12} {'FUSE Prop':<12} {'Eden in':<10} | "
+                    f"{'Parent sees':<14} {'Child sees':<14}"
+                )
+                print(f"{'-' * 12} {'-' * 12} {'-' * 10} + {'-' * 14} {'-' * 14}")
+                for ns, fuse, loc, ps, cs in diffs:
+                    print(f"{ns:<12} {fuse:<12} {loc:<10} | {ps:<14} {cs:<14}")
+            else:
+                print(f"\nNo differences from {args.compare}")
 
     if args.keep:
         print(f"\nKept: {base_dir}")
