@@ -1458,7 +1458,9 @@ ImmediateFuture<CheckoutResult> EdenMount::checkout(
         auto& interruptedCheckout =
             std::get<ParentCommitState::InterruptedCheckout>(
                 parentLock->checkoutState);
-        if (interruptedCheckout.toCommit != snapshotId) {
+        if (objectStore_->compareRootsById(
+                interruptedCheckout.toCommit, snapshotId) !=
+            ObjectComparison::Identical) {
           return makeFuture<CheckoutResult>(newEdenError(
               EdenErrorType::CHECKOUT_IN_PROGRESS,
               fmt::format(
