@@ -8,7 +8,6 @@
 # GNU General Public License version 2 or any later version.
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ hg init repo
   $ cd repo
   $ echo This is file a1 > a
@@ -17,22 +16,22 @@
   $ hg commit -m 'commit #0'
   $ echo This is file b22 > b
   $ hg commit -m 'comment #1'
-  $ hg goto 0
+  $ hg goto 'desc("commit #0")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm b
   $ hg commit -A -m 'comment #2'
   removing b
-  $ hg goto 1
+  $ hg goto 'desc("comment #1")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm b
-  $ hg goto -c 2
+  $ hg goto -c 'desc("comment #2")'
   abort: uncommitted changes
   [255]
   $ hg revert b
-  $ hg goto -c 2
+  $ hg goto -c 'desc("comment #2")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 # Should succeed:
 
-  $ hg goto 1
+  $ hg goto 'desc("comment #1")'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

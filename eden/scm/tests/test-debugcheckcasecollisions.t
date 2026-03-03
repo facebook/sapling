@@ -7,7 +7,6 @@
 # GNU General Public License version 2 or any later version.
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
 
   $ newrepo
   $ mkdir -p dirA/subdirA dirA/subdirB dirB
@@ -43,6 +42,6 @@
 
 # Check against a particular revision
 
-  $ hg debugcheckcasecollisions -r 0 FILE4
+  $ hg debugcheckcasecollisions -r 'desc(base)' FILE4
   FILE4 conflicts with file4
   [1]

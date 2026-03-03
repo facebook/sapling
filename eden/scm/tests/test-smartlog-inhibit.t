@@ -7,7 +7,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
   > amend=
@@ -21,29 +20,29 @@
   $ hg init repo
   $ cd repo
   $ hg debugbuilddag +4
-  $ hg book -r 3 test
-  $ hg up 1
+  $ hg book -r 'desc(r3)' test
+  $ hg up 'desc(r1)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m amended --no-rebase
   hint[amend-restack]: descendants of 66f7d451a68b are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ hg smartlog -T '{rev} {bookmarks}'
-  o  3 test
+  $ hg smartlog -T '{desc|firstline} {bookmarks}'
+  o  r3 test
   │
-  o  2
+  o  r2
   │
-  x  1
+  x  r1
   │
-  │ @  4
+  │ @  amended
   ├─╯
-  o  0
+  o  r0
   $ hg unamend
-  $ hg up 2
+  $ hg up 'desc(r2)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugmakepublic -r .
-  $ hg smartlog -T '{rev} {bookmarks}'
-  o  3 test
+  $ hg smartlog -T '{desc|firstline} {bookmarks}'
+  o  r3 test
   │
-  @  2
+  @  r2
   │
   ~

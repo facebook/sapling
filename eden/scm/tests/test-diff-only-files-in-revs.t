@@ -4,7 +4,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ newclientrepo repo
 
   $ echo file1version1 > file1
@@ -21,7 +20,7 @@
 
 # Normal diff shows the unrelated change in the intervening commit.
 
-  $ hg diff -r 1 -r 3 --nodates
+  $ hg diff -r 'desc("file1 change1")' -r 'desc("file1 change2")' --nodates
   diff -r b586868a82b9 -r 362c080b3cff file1
   --- a/file1
   +++ b/file1
@@ -37,7 +36,7 @@
 
 # With --only-files-in-revs, that is excluded.
 
-  $ hg diff -r 1 -r 3 --nodates --only-files-in-revs
+  $ hg diff -r 'desc("file1 change1")' -r 'desc("file1 change2")' --nodates --only-files-in-revs
   diff -r b586868a82b9 -r 362c080b3cff file1
   --- a/file1
   +++ b/file1
@@ -47,7 +46,7 @@
 
 # Similarly, with a single rev, only consider files modified in that rev and the working copy.
 
-  $ hg diff -r 1 --nodates --only-files-in-revs
+  $ hg diff -r 'desc("file1 change1")' --nodates --only-files-in-revs
   diff -r b586868a82b9 file1
   --- a/file1
   +++ b/file1

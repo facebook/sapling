@@ -10,7 +10,6 @@
 # test that we don't interrupt the merge session if
 # a file-level merge failed
 
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig commands.update.check=none
 
   $ eagerepo
@@ -29,7 +28,7 @@
   $ hg ci -Am 'mv foo baz'
   adding quux1
 
-  $ hg up -qC 0
+  $ hg up -qC 'desc("add foo")'
   $ echo >> foo
   $ echo c >> bar
   $ echo quux > quux2
@@ -51,7 +50,7 @@
 
 # test with the rename on the local side
 
-  $ hg up -C 1
+  $ hg up -C 'desc("mv foo")'
   3 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ HGMERGE=false hg merge
   merging bar

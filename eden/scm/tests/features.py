@@ -15,7 +15,6 @@ tests.
 
 ignorerevnumincompatiblelist = """
     test-amend-hide.t
-    test-amend-rebase.t
     test-amend-restack.t
     test-annotate.t
     test-bisect.t
@@ -33,35 +32,22 @@ ignorerevnumincompatiblelist = """
     test-context-metadata.t
     test-contrib-perf.t
     test-debugbuilddag.t
-    test-debugcheckcasecollisions.t
     test-debugindexdot-t.py
-    test-debugmetalog.t
     test-debugstrip.t
-    test-diff-only-files-in-revs.t
     test-dirstate-race.t
     test-empty-group-t.py
     test-eol-clone.t
     test-eol-hook.t
     test-eol-update.t
     test-export.t
-    test-copytrace-errormsg.t
     test-drop.t
     test-fastlog.t
-    test-fbhistedit-rebase-interactive.t
-    test-morestatus.t
-    test-phrevset.t
     test-pushrebase-remotenames.t
-    test-remotefilelog-prefetch.t
-    test-remotefilelog-sparse.t
     test-remotefilelog-wireproto.t
-    test-reset-remotenames.t
     test-reset.t
-    test-smartlog-inhibit.t
-    test-smartlog-remotenames.t
     test-treemanifest-noflat.t
     test-treemanifest-prefetch.t
     test-treemanifest.t
-    test-tweakdefaults-ordering.t
     test-tweakdefaults-pullrebaseremotenames.t
     test-tweakdefaults-remotenames.t
     test-tweakdefaults.t
@@ -79,17 +65,11 @@ ignorerevnumincompatiblelist = """
     test-import.t
     test-import-unknown.t
     test-log.t
-    test-manifest-merging.t
     test-manifest.t
     test-merge10-t.py
     test-merge1.t
-    test-merge4.t
-    test-merge5.t
-    test-merge9.t
     test-merge-ancestor-mergestate.t
     test-merge-commit.t
-    test-merge-revert2.t
-    test-merge-revert.t
     test-merge-tools.t
     test-mv-cp-st-diff.t
     test-pager.t
@@ -121,11 +101,8 @@ ignorerevnumincompatiblelist = """
     test-sparse.t
     test-sparse-verbose-json.t
     test-ssh-clone-r.t
-    test-status-rev.t
     test-template-revf64.t
-    test-update-empty.t
     test-url-rev.t
-    test-visibility-reset.t
     test-casecollision-merge.t
     test-casefolding.t
     test-commitcloud-backup-sql2.t

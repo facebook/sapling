@@ -10,7 +10,6 @@
 # Set up test environment.
 
   $ eagerepo
-  $ setconfig devel.segmented-changelog-rev-compat=true
   $ setconfig workingcopy.rust-checkout=true
   $ cat >> $HGRCPATH << 'EOF'
   > [extensions]
@@ -38,7 +37,7 @@
   │ o  22094967a90d r1
   ├─╯
   o  1ad88bca4140 r0
-  $ hg rebase -r 1 -d 3
+  $ hg rebase -r 'desc(r1)' -d 'desc(r3)'
   rebasing 22094967a90d "r1"
   merging mf
   $ showgraph
