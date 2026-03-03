@@ -850,14 +850,31 @@ impl DerivedDataManager {
                 // are persisted.
                 let (persist_stats, persisted) = async {
                     let derivation_ctx_ref = &derivation_ctx;
-                    let csids = stream::iter(derived.into_iter())
-                        .map(|(csid, derived)| async move {
-                            derived.store_mapping(ctx, derivation_ctx_ref, csid).await?;
-                            Ok::<_, Error>(csid)
-                        })
-                        .buffer_unordered(100)
-                        .try_collect::<Vec<_>>()
+                    let csids = if justknobs::eval(
+                        "scm/mononoke:derived_data_use_store_mapping_batch",
+                        None,
+                        None,
+                    )? {
+                        let csids: Vec<_> = derived.keys().copied().collect();
+                        Derivable::store_mapping_batch(
+                            ctx,
+                            derivation_ctx_ref,
+                            derived.into_iter().collect(),
+                        )
                         .await?;
+                        csids
+                    } else {
+                        stream::iter(derived.into_iter())
+                            .map(|(csid, derived)| async move {
+                                derived
+                                    .store_mapping(ctx, derivation_ctx_ref, csid)
+                                    .await?;
+                                Ok::<_, Error>(csid)
+                            })
+                            .buffer_unordered(100)
+                            .try_collect::<Vec<_>>()
+                            .await?
+                    };
 
                     derivation_ctx.flush(ctx).await?;
                     if let Some(rederivation) = rederivation {

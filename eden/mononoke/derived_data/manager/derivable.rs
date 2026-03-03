@@ -136,6 +136,25 @@ pub trait BonsaiDerivable: Sized + Send + Sync + Clone + Debug + 'static {
         csid: ChangesetId,
     ) -> Result<()>;
 
+    /// Store mappings for a batch of changesets.
+    ///
+    /// The default implementation stores each mapping concurrently.
+    /// Implementations that use SQL-backed storage may override this
+    /// to perform a single batched query.
+    async fn store_mapping_batch(
+        ctx: &CoreContext,
+        derivation: &DerivationContext,
+        derived: Vec<(ChangesetId, Self)>,
+    ) -> Result<()> {
+        stream::iter(derived)
+            .map(
+                |(csid, derived)| async move { derived.store_mapping(ctx, derivation, csid).await },
+            )
+            .buffer_unordered(100)
+            .try_collect::<()>()
+            .await
+    }
+
     /// Fetch previously derived and persisted data.
     ///
     /// Returns None if the given changeset has not had derived data
