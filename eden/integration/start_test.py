@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 import psutil
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
-from fb303_core.ttypes import fb303_status
+from fb303_core.thrift_types import fb303_status
 
 from .lib import start, testcase
 from .lib.fake_edenfs import get_fake_edenfs_argv
