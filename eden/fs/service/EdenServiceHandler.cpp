@@ -5920,6 +5920,20 @@ EdenServiceHandler::co_getFileContentImpl(
 folly::SemiFuture<std::unique_ptr<GetFileContentResponse>>
 EdenServiceHandler::semifuture_getFileContent(
     std::unique_ptr<GetFileContentRequest> request) {
+  if (server_->getServerState()
+          ->getEdenConfig()
+          ->enableCoroutinesInGetFileContent.getValue()) {
+    // @lint-ignore CLANGTIDY facebook-folly-coro-return-captures-local-var
+    return folly::coro::co_invoke(
+               [this](auto&&... args) {
+                 // @lint-ignore CLANGTIDY facebook-hte-Deprecated
+                 return co_getFileContentImpl(
+                            std::forward<decltype(args)>(args)...)
+                     .as_unsafe();
+               },
+               std::move(request))
+        .semi();
+  }
   return semifuture_getFileContentImpl(std::move(request));
 }
 
