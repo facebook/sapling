@@ -22,6 +22,7 @@ Usage:
 """
 
 import argparse
+import concurrent.futures
 import functools
 import os
 import shlex
@@ -205,6 +206,7 @@ def test_eden_in_child(env: EdenTestEnv, propagation: str):
             "--_child",
             str(env.base),
             env.edenfsctl,
+            env.privhelper,
         ],
         check=False,
     )
@@ -223,10 +225,8 @@ def test_eden_in_child(env: EdenTestEnv, propagation: str):
 # -- Child entry point (internal, run inside namespace) --
 
 
-def _child_eden(base_str, edenfsctl):
+def _child_eden(base_str, edenfsctl, privhelper):
     base = Path(base_str)
-    # Privhelper lives in the shared temp dir
-    privhelper = str(base / "edenfs_privhelper")
     env = EdenTestEnv(edenfsctl, privhelper, base)
     try:
         env.start_daemon()
@@ -253,8 +253,8 @@ def main():
     # Internal: child process entry point (run inside mount namespace)
     parser.add_argument(
         "--_child",
-        nargs=2,
-        metavar=("BASE", "EDENFSCTL"),
+        nargs=3,
+        metavar=("BASE", "EDENFSCTL", "PRIVHELPER"),
         help=argparse.SUPPRESS,
     )
     args = parser.parse_args()
@@ -285,35 +285,49 @@ def main():
         locations = ["parent", "child"]
         results = {}
 
+        def run_one_test(prop, loc):
+            test_base = base_dir / f"t-{prop}-{loc}"
+            test_base.mkdir(parents=True)
+            # Symlink shared backing repo so each test has an isolated env
+            (test_base / "backing_repo").symlink_to(env.backing_repo)
+            test_env = EdenTestEnv(edenfsctl, str(privhelper), test_base)
+            try:
+                test_fn = test_eden_in_parent if loc == "parent" else test_eden_in_child
+                return test_fn(test_env, prop)
+            except Exception as e:
+                return {"parent_sees": f"error({e})", "child_sees": f"error({e})"}
+            finally:
+                test_env.clean()
+
         try:
-            for prop in propagations:
-                for loc in locations:
-                    print(
-                        f"\n{'=' * 60}\nTesting: prop={prop}, eden_in={loc}\n{'=' * 60}"
-                    )
-                    env.clean()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=9) as pool:
+                futures = {
+                    pool.submit(run_one_test, prop, loc): (prop, loc)
+                    for prop in propagations
+                    for loc in locations
+                }
+                for fut in concurrent.futures.as_completed(futures):
+                    prop, loc = futures[fut]
                     try:
-                        test = (
-                            test_eden_in_parent
-                            if loc == "parent"
-                            else test_eden_in_child
-                        )
-                        r = test(env, prop)
-                        results[(prop, loc)] = r
-                        print(f"  parent sees: {r['parent_sees']}")
-                        print(f"  child sees:  {r['child_sees']}")
+                        results[(prop, loc)] = fut.result()
                     except Exception as e:
                         results[(prop, loc)] = {
                             "parent_sees": f"error({e})",
                             "child_sees": f"error({e})",
                         }
-                        print(f"  ERROR: {e}")
         finally:
-            subprocess.run(
-                ["sudo", "umount", "-l", str(base_dir / "mnt")],
-                check=False,
-                capture_output=True,
-            )
+            for prop in propagations:
+                for loc in locations:
+                    subprocess.run(
+                        [
+                            "sudo",
+                            "umount",
+                            "-l",
+                            str(base_dir / f"t-{prop}-{loc}" / "mnt"),
+                        ],
+                        check=False,
+                        capture_output=True,
+                    )
 
         print(f"\n\n{'=' * 72}")
         print(
