@@ -4,8 +4,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-# This is a terribly anemic fake implementation of the biggrep client
+# This is a fake implementation of the biggrep client for testing.
+#
+# Environment variables:
+#   BIGGREP_ARGS_FILE: If set, save the command-line arguments to this file
+#   BIGGREP_CORPUS_REV: If set, use this revision as the corpus revision
+#                       (otherwise uses current working directory parent)
+#   BIGGREP_FILES: JSON object mapping filenames to their content (required)
+
 import argparse
+import json
 import os
 import re
 import subprocess
@@ -16,9 +24,6 @@ args_file = os.environ.get("BIGGREP_ARGS_FILE")
 if args_file:
     with open(args_file, "w") as f:
         f.write(" ".join(sys.argv[1:]) + "\n")
-
-# The null commit
-NULL = "0" * 40
 
 # Escape sequences used by biggrep_client
 MAGENTA = "\x1b[35m\x1b[K"
@@ -62,7 +67,7 @@ def result_line(filename, line, col, context):
         if not re.match(args.f, filename):
             return
 
-    if not re.match(args.expression.replace(r"\-", "-"), context):
+    if not re.search(args.expression.replace(r"\-", "-"), context):
         return
 
     print(
@@ -79,22 +84,31 @@ def result_line(filename, line, col, context):
     )
 
 
-# Report the current commit as the corpus revision so that `hg grep` doesn't
-# then need to go and run grep for itself over the files
-p = subprocess.Popen(["hg", "log", "-r", ".", "-T{node}"], stdout=subprocess.PIPE)
-out, err = p.communicate()
-rev = out.rstrip()
-print("#fake=%s:0" % rev.decode("utf-8"))
+# If BIGGREP_CORPUS_REV is set, use that as the corpus revision.
+# Otherwise, use the current commit so that `hg grep` doesn't
+# need to run local grep.
+corpus_rev = os.environ.get("BIGGREP_CORPUS_REV")
+if corpus_rev:
+    # Resolve the revision to a full node
+    p = subprocess.Popen(
+        ["hg", "log", "-r", corpus_rev, "-T{node}"], stdout=subprocess.PIPE
+    )
+    out, err = p.communicate()
+    rev = out.rstrip().decode("utf-8")
+else:
+    p = subprocess.Popen(["hg", "log", "-r", ".", "-T{node}"], stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    rev = out.rstrip().decode("utf-8")
 
-# This list is coupled with the "Set up the repository with some simple files"
-# section of eden/scm/tests/test-tweakdefaults-grep.t
-files = {
-    "grepdir/grepfile1": "foobarbaz",
-    "grepdir/grepfile2": "foobarboo",
-    "grepdir/grepfile3": "-g",
-    "grepdir/subdir1/subfile1": "foobar_subdir",
-    "grepdir/subdir2/subfile2": "foobar_dirsub",
-}
+print("#fake=%s:0" % rev)
+
+# BIGGREP_FILES is required - JSON object mapping filenames to content
+files_env = os.environ.get("BIGGREP_FILES")
+if not files_env:
+    print("error: BIGGREP_FILES environment variable is required", file=sys.stderr)
+    sys.exit(1)
+
+files = json.loads(files_env)
 
 for filename, context in files.items():
     result_line(filename, 1, 1, context)

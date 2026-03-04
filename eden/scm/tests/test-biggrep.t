@@ -26,11 +26,16 @@ Set up the repository with files that match fake-biggrep-client.py:
   adding grepdir/subdir1/subfile1
   adding grepdir/subdir2/subfile2
   $ hg commit -m "Initial commit"
+  $ COMMIT1=$(hg log -r . -T'{node}')
 
   $ setconfig grep.biggrepclient=$TESTDIR/fake-biggrep-client.py
   $ setconfig grep.usebiggrep=True
   $ setconfig grep.biggrepcorpus=fake
   $ setconfig grep.biggreptier=test.tier
+
+Define the biggrep files JSON for tests:
+  $ BGFILES='{"grepdir/grepfile1": "foobarbaz", "grepdir/grepfile2": "foobarboo", "grepdir/grepfile3": "-g", "grepdir/subdir1/subfile1": "foobar_subdir", "grepdir/subdir2/subfile2": "foobar_dirsub"}'
+  $ export BIGGREP_FILES="$BGFILES"
 
 Helper to capture biggrep args:
   $ capture_args() {

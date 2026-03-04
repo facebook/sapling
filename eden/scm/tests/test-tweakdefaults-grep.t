@@ -109,37 +109,45 @@ Test symlinks
   $ setconfig grep.biggrepclient=$TESTDIR/fake-biggrep-client.py grep.usebiggrep=True grep.biggrepcorpus=fake grep.biggreptier=biggrep.master
 
 Test with context
-  $ hg grep --color=off -n foobar | sort
+  $ BIGGREP_FILES='{"grepdir/grepfile1": "foobarbaz", "grepdir/grepfile2": "foobarboo", "grepdir/subdir1/subfile1": "foobar_subdir", "grepdir/subdir2/subfile2": "foobar_dirsub"}' \
+  > hg grep --color=off -n foobar | sort
   grepfile1:1:foobarbaz_bg
   grepfile2:1:foobarboo_bg
   subdir1/subfile1:1:foobar_subdir_bg
   subdir2/subfile2:1:foobar_dirsub_bg
 
 Test basic biggrep client in subdir1
-  $ hg grep --cwd subdir1 foobar | sort
+  $ BIGGREP_FILES='{"grepdir/subdir1/subfile1": "foobar_subdir"}' \
+  > hg grep --cwd subdir1 foobar | sort
   subfile1:foobar_subdir_bg
 
 Test basic biggrep client with subdir2 matcher
-  $ hg grep foobar subdir2 | sort
+  $ BIGGREP_FILES='{"grepdir/subdir2/subfile2": "foobar_dirsub"}' \
+  > hg grep foobar subdir2 | sort
   subdir2/subfile2:foobar_dirsub_bg
 
 Test biggrep searching in a sibling subdirectory, using a relative path
   $ cd subdir1
-  $ hg grep foobar ../subdir2 -n | sort
+  $ BIGGREP_FILES='{"grepdir/subdir2/subfile2": "foobar_dirsub"}' \
+  > hg grep foobar ../subdir2 -n | sort
   ../subdir2/subfile2:1:foobar_dirsub_bg
-  $ hg grep -n foobar | sort
+  $ BIGGREP_FILES='{"grepdir/subdir1/subfile1": "foobar_subdir"}' \
+  > hg grep -n foobar | sort
   subfile1:1:foobar_subdir_bg
-  $ hg grep -n foobar . | sort
+  $ BIGGREP_FILES='{"grepdir/subdir1/subfile1": "foobar_subdir"}' \
+  > hg grep -n foobar . | sort
   subfile1:1:foobar_subdir_bg
   $ cd ..
 
 Test escaping of dashes in biggrep expression:
-  $ hg grep -- -g | sort
+  $ BIGGREP_FILES='{"grepdir/grepfile3": "-g"}' \
+  > hg grep -- -g | sort
   grepfile3:-g_bg
 
 Test biggrep command debug info
   $ cd subdir1
-  $ hg grep foobar -n --debug
+  $ BIGGREP_FILES='{"grepdir/subdir1/subfile1": "foobar_subdir"}' \
+  > hg grep foobar -n --debug
   biggrep command: ['*/fake-biggrep-client.py', 'biggrep.master', 'fake', 're2', '--stripdir', '-r', '--expression', 'foobar', '-f', '(grepdir/subdir1)'] (glob)
   subfile1:1:foobar_subdir_bg
   $ cd ..
