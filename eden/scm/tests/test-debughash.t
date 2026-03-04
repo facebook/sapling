@@ -81,7 +81,6 @@ Test that modifying an excluded file does NOT change the hash:
   $ HASH_A_EXCLUDE=$(hg debughash . -X foo/bar/file1)
   $ test "$HASH_B_EXCLUDE" = "$HASH_A_EXCLUDE"
 
-
 Test file name is included in hash:
   $ newclientrepo
   $ drawdag <<EOS
@@ -91,3 +90,35 @@ Test file name is included in hash:
   >    # A/dir2/exclude = exclude\n
   > EOS
   $ test $(hg debughash -r $A dir1 -X 'glob:**/exclude') != $(hg debughash -r $A dir2 -X 'glob:**/exclude')
+
+Test debughash with uncommitted changes (wdir):
+  $ newclientrepo wdir_test
+  $ mkdir -p foo/bar foo/baz
+  $ echo content1 > foo/bar/file1
+  $ echo content2 > foo/bar/file2
+  $ echo content3 > foo/baz/file3
+  $ hg commit -Aqm 'initial'
+  $ HASH_COMMITTED=$(hg debughash .)
+
+Modify a file and verify wdir hash changes:
+  $ echo modified > foo/bar/file1
+  $ HASH_WDIR=$(hg debughash .)
+  $ test "$HASH_WDIR" != "$HASH_COMMITTED"
+
+Test that wdir hash is deterministic:
+  $ test "$HASH_WDIR" = "$(hg debughash .)"
+
+Test that excluding the modified file gives same hash as committed:
+  $ HASH_WDIR_EXCLUDE=$(hg debughash . -X foo/bar/file1)
+  $ HASH_COMMITTED_EXCLUDE=$(hg debughash . -X foo/bar/file1 -r .)
+  $ test "$HASH_WDIR_EXCLUDE" = "$HASH_COMMITTED_EXCLUDE"
+
+Test that unmodified subtree hash is unchanged:
+  $ HASH_BAZ_WDIR=$(hg debughash foo/baz)
+  $ HASH_BAZ_COMMITTED=$(hg debughash foo/baz -r .)
+  $ test "$HASH_BAZ_WDIR" = "$HASH_BAZ_COMMITTED"
+
+Revert the uncommitted change and verify hash returns to committed:
+  $ hg revert foo/bar/file1
+  $ HASH_REVERTED=$(hg debughash .)
+  $ test "$HASH_REVERTED" = "$HASH_COMMITTED"
