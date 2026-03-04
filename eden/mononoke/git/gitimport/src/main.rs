@@ -155,6 +155,10 @@ struct GitimportArgs {
     /// When set, the gitimport tool would bypass all hooks while creating and moving bookmarks.
     #[clap(long)]
     bypass_all_hooks: bool,
+    /// When set, the gitimport tool would bypass the non-fast-forward check while moving bookmarks.
+    /// This is useful for re-importing repos where bookmarks may already exist from a prior import.
+    #[clap(long)]
+    bypass_non_fast_forward: bool,
     /// The concurrency to be used while importing commits in Mononoke
     #[clap(long, default_value_t = 20)]
     concurrency: usize,
@@ -474,6 +478,12 @@ async fn async_main(app: MononokeApp) -> Result<(), Error> {
                 }
                 if args.bypass_all_hooks {
                     pvs.insert("BYPASS_ALL_HOOKS".to_string(), bytes::Bytes::from("true"));
+                }
+                if args.bypass_non_fast_forward {
+                    pvs.insert(
+                        "x-git-allow-non-ffwd-push".to_string(),
+                        bytes::Bytes::from("true"),
+                    );
                 }
                 if pvs.is_empty() { None } else { Some(pvs) }
             };
