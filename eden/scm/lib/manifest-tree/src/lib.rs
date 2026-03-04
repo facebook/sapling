@@ -273,58 +273,19 @@ impl Manifest for TreeManifest {
 
     /// Write dirty trees using specified format to disk. Return the root tree id.
     fn flush(&mut self) -> Result<HgId> {
-        fn do_flush<'a, 'b, 'c>(
-            store: &'a InnerStore,
-            pathbuf: &'b mut RepoPathBuf,
-            cursor: &'c mut Link,
-            format: SerializationFormat,
-        ) -> Result<(HgId, store::Flag)> {
-            loop {
-                let new_cursor = match cursor.as_mut_ref()? {
-                    Leaf(file_metadata) => {
-                        return Ok((
-                            file_metadata.hgid.clone(),
-                            store::Flag::File(file_metadata.file_type.clone()),
-                        ));
-                    }
-                    Durable(entry) => return Ok((entry.hgid.clone(), store::Flag::Directory)),
-                    Ephemeral(links) => {
-                        let iter = links.iter_mut().map(|(component, link)| {
-                            pathbuf.push(component.as_path_component());
-                            let (hgid, flag) = do_flush(store, pathbuf, link, format)?;
-                            pathbuf.pop();
-                            Ok(store::Element::new(
-                                component.to_owned(),
-                                hgid.clone(),
-                                flag,
-                            ))
-                        });
-                        let elements: Vec<_> = iter.collect::<Result<Vec<_>>>()?;
-                        let entry = store::Entry::from_elements(elements, format);
-                        let hgid = store.insert_entry(pathbuf, entry)?;
-
-                        let cell = OnceCell::new();
-                        // TODO: remove clone
-                        cell.set(links.clone()).unwrap();
-
-                        let durable_entry = DurableEntry { hgid, links: cell };
-                        Link::new(Durable(Arc::new(durable_entry)))
-                    }
-                };
-                *cursor = new_cursor;
+        for (path, id, text, _p1, _p2) in self.finalize(Vec::new())? {
+            let got_id = self
+                .store
+                .insert_entry(&path, store::Entry(text, self.store.format()))?;
+            if id != got_id {
+                bail!("mismatching tree node ids on insert: {id} != {got_id}");
             }
         }
-        let mut path = RepoPathBuf::new();
-        let format = self.store.format();
-        #[cfg(not(test))]
-        assert_eq!(
-            format,
-            SerializationFormat::Git,
-            "flush() cannot be used with hg store, use finalize() instead (store: {})",
-            self.store.type_name(),
-        );
-        let (hgid, _) = do_flush(&self.store, &mut path, &mut self.root, format)?;
-        Ok(hgid)
+
+        match self.root.as_ref() {
+            Leaf(_) | Ephemeral(_) => bail!("invalid root tree after flushing"),
+            Durable(entry) => Ok(entry.hgid),
+        }
     }
 
     #[tracing::instrument(skip_all)]
@@ -655,31 +616,42 @@ fn finalize_trees<P: ParentTreeTracker>(
 }
 
 impl TreeManifest {
-    /// Produces new trees to write in hg format (path, id, text, p1, p2).
+    /// Produces new trees to write (path, id, text, p1, p2).
     /// Does not write to the tree store directly.
     pub fn finalize(
         &mut self,
         parent_trees: Vec<&TreeManifest>,
     ) -> Result<impl Iterator<Item = (RepoPathBuf, HgId, Bytes, HgId, HgId)> + use<>> {
-        assert_eq!(
-            self.store.format(),
-            SerializationFormat::Hg,
-            "finalize() can only be used for hg store, use flush() instead"
-        );
-        let mut tracker = HgParents::new(&parent_trees)?;
-        let active = tracker.initial_active();
         let mut converted_nodes = Vec::new();
         let mut path = RepoPathBuf::new();
         let format = self.store.format();
-        finalize_trees(
-            &self.store,
-            &mut path,
-            &mut self.root,
-            format,
-            &mut tracker,
-            active,
-            &mut converted_nodes,
-        )?;
+        match format {
+            SerializationFormat::Hg => {
+                let mut tracker = HgParents::new(&parent_trees)?;
+                let active = tracker.initial_active();
+                finalize_trees(
+                    &self.store,
+                    &mut path,
+                    &mut self.root,
+                    format,
+                    &mut tracker,
+                    active,
+                    &mut converted_nodes,
+                )?;
+            }
+            SerializationFormat::Git => {
+                let mut tracker = NoParents;
+                finalize_trees(
+                    &self.store,
+                    &mut path,
+                    &mut self.root,
+                    format,
+                    &mut tracker,
+                    (),
+                    &mut converted_nodes,
+                )?;
+            }
+        }
         Ok(converted_nodes.into_iter())
     }
 

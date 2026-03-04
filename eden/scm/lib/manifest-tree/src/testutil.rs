@@ -19,6 +19,7 @@ use storemodel::BoxIterator;
 use storemodel::FileStore;
 use storemodel::InsertOpts;
 use storemodel::KeyStore;
+use storemodel::Kind;
 use storemodel::SerializationFormat;
 use types::FetchContext;
 use types::HgId;
@@ -94,10 +95,6 @@ impl TestStore {
     }
 }
 
-fn compute_sha1(content: &[u8]) -> HgId {
-    format_util::hg_sha1_digest(content, HgId::null_id(), HgId::null_id())
-}
-
 impl KeyStore for TestStore {
     fn get_content_iter(
         &self,
@@ -133,17 +130,26 @@ impl KeyStore for TestStore {
     fn insert_data(&self, opts: InsertOpts, _path: &RepoPath, data: Blob) -> anyhow::Result<HgId> {
         let mut inner = self.inner.write();
         inner.insert_count.fetch_add(1, Ordering::Relaxed);
-        let underlying = &mut inner.entries;
+        let format = inner.format;
         let data_bytes = data.to_bytes();
         let hgid = match opts.forced_id {
             Some(id) => *id,
-            None => {
-                let p1 = opts.parents.first().unwrap_or(HgId::null_id());
-                let p2 = opts.parents.get(1).unwrap_or(HgId::null_id());
-                format_util::hg_sha1_digest(&data_bytes, p1, p2)
-            }
+            None => match format {
+                SerializationFormat::Hg => {
+                    let p1 = opts.parents.first().unwrap_or(HgId::null_id());
+                    let p2 = opts.parents.get(1).unwrap_or(HgId::null_id());
+                    format_util::hg_sha1_digest(&data_bytes, p1, p2)
+                }
+                SerializationFormat::Git => {
+                    let kind = match opts.kind {
+                        Kind::Tree => "tree",
+                        Kind::File => "blob",
+                    };
+                    format_util::git_sha1_digest(&data_bytes, kind)
+                }
+            },
         };
-        underlying.insert(hgid, data_bytes);
+        inner.entries.insert(hgid, data_bytes);
         Ok(hgid)
     }
 
