@@ -242,7 +242,7 @@ def uisetup(ui):
         else:
             orig(self, dpack, hpack, nname, nnode, ntext, np1, np2, linknode)
 
-    extensions.wrapfunction(basetreemanifestlog, "_addtreeentry", addtreeentry)
+    extensions.wrapfunction(treemanifestlog, "_addtreeentry", addtreeentry)
 
     def changelogadd(orig, self, *args):
         oldlen = len(self)
@@ -388,8 +388,8 @@ def setuptreestores(repo, mfl):
         mfl.makeruststore()
 
 
-class basetreemanifestlog:
-    def __init__(self, repo):
+class treemanifestlog:
+    def __init__(self, opener, repo):
         self.recentlinknode = None
         cachesize = 4
         self._treemanifestcache = util.lrucachedict(cachesize)
@@ -397,6 +397,25 @@ class basetreemanifestlog:
         self._raw_store = None
         # whether to use the "storemodel" abstraction for write paths
         self._use_abstraction = False
+
+        self._repo = repo
+        self._opener = opener
+        self.ui = repo.ui
+
+        setuptreestores(repo, self)
+
+    def clearcaches(self):
+        pass
+
+    def _maplinknode(self, linknode):
+        """Turns a linknode into a linkrev. Only needed for revlog backed
+        manifestlogs."""
+        return self._repo.changelog.rev(linknode)
+
+    def _maplinkrev(self, linkrev):
+        """Turns a linkrev into a linknode. Only needed for revlog backed
+        manifestlogs."""
+        return self._repo.changelog.node(linkrev)
 
     def abstract_store(self):
         """returns storemodel.TreeStore backed by Rust trait object"""
@@ -566,27 +585,6 @@ class basetreemanifestlog:
             os.umask(mask)
 
 
-class treeonlymanifestlog(basetreemanifestlog):
-    def __init__(self, opener, repo):
-        self._repo = repo
-        super(treeonlymanifestlog, self).__init__(self._repo)
-        self._opener = opener
-        self.ui = repo.ui
-
-    def clearcaches(self):
-        pass
-
-    def _maplinknode(self, linknode):
-        """Turns a linknode into a linkrev. Only needed for revlog backed
-        manifestlogs."""
-        return self._repo.changelog.rev(linknode)
-
-    def _maplinkrev(self, linkrev):
-        """Turns a linkrev into a linknode. Only needed for revlog backed
-        manifestlogs."""
-        return self._repo.changelog.node(linkrev)
-
-
 def _buildtree(manifestlog, node=None):
     # this code seems to belong in manifestlog but I have no idea how
     # manifestlog objects work
@@ -737,10 +735,8 @@ class memtreemanifestctx:
         return node
 
 
-def getmanifestlog(orig, self):
-    mfl = treeonlymanifestlog(self.svfs, self)
-    setuptreestores(self, mfl)
-    return mfl
+def getmanifestlog(orig, repo):
+    return treemanifestlog(repo.svfs, repo)
 
 
 def getbundlemanifestlog(orig, self):
