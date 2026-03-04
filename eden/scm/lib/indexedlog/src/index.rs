@@ -1536,7 +1536,7 @@ impl MemChecksum {
                 result.start = previous_offset;
                 result.end = offset as u64;
 
-                let checked_needed = (result.xxhash_list.len() + 63) / 64;
+                let checked_needed = result.xxhash_list.len().div_ceil(64);
                 result.checked.resize_with(checked_needed, Default::default);
             }
             result.chain_len = result.chain_len.saturating_add(1);
