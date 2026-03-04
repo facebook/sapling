@@ -85,19 +85,19 @@
   $ cat gclone_git_b/file_b.txt
   content B
 
--- Test gclone repo (upload) --
+-- Test gclone grepo (upload) --
 
   $ cd "$TESTTMP"
-  $ quiet "$GCLONE" repo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_upload -b master --require-cached-repo-url --upload
+  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_upload -b master --require-cached-repo-url --upload
   $ cat gclone_repo_upload/a/file_a.txt
   content A
   $ cat gclone_repo_upload/b/file_b.txt
   content B
 
--- Test gclone repo (download) --
+-- Test gclone grepo (download) --
 
   $ cd "$TESTTMP"
-  $ quiet "$GCLONE" repo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo -b master --require-cached-repo-url
+  $ quiet "$GCLONE" grepo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo -b master --require-cached-repo-url
   $ cat gclone_repo/a/file_a.txt
   content A
   $ cat gclone_repo/b/file_b.txt
