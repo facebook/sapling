@@ -205,7 +205,7 @@ impl fmt::Display for PyErr {
                 .inner
                 .pvalue
                 .as_ref()
-                .unwrap_or_else(|| &self.inner.ptype)
+                .unwrap_or(&self.inner.ptype)
                 .repr(py)
                 .map(|s| s.to_string_lossy(py).to_string())
                 .unwrap_or_else(|_| "<error in repr>".into());
