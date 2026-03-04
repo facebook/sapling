@@ -13,6 +13,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use blob::Blob;
 use clidispatch::ReqCtx;
 use clidispatch::abort;
 use clidispatch::abort_if;
@@ -22,6 +23,7 @@ use cmdutil::Result;
 use cmdutil::WalkOpts;
 use cmdutil::define_flags;
 use filewalk::walk_and_fetch;
+use grep::regex::RegexMatcher;
 use grep::regex::RegexMatcherBuilder;
 use grep::searcher::Searcher;
 use grep::searcher::SearcherBuilder;
@@ -31,7 +33,210 @@ use grep::searcher::SinkMatch;
 use pathmatcher::DynMatcher;
 use pathmatcher::IntersectMatcher;
 use repo::CoreRepo;
+use types::RepoPathBuf;
 use types::path::RepoPathRelativizer;
+
+/// A grepper that searches file contents for matches.
+pub(crate) struct Grepper<'a, W: Write> {
+    regex_matcher: RegexMatcher,
+    searcher: Searcher,
+    relativizer: &'a RepoPathRelativizer,
+    sink: GrepSink<W>,
+}
+
+/// Sink for grep operations that handles output formatting.
+struct GrepSink<W: Write> {
+    path: String,
+    out: W,
+    match_count: usize,
+    file_matched: bool,
+    files_with_matches: bool,
+    print_line_number: bool,
+}
+
+impl<'a, W: Write> Grepper<'a, W> {
+    /// Build a Grepper from GrepOpts, a pattern, relativizer, and output writer.
+    pub(crate) fn new(
+        opts: &GrepOpts,
+        pattern: &str,
+        relativizer: &'a RepoPathRelativizer,
+        out: W,
+    ) -> Result<Self> {
+        // Build the regex matcher with appropriate options
+        let mut matcher_builder = RegexMatcherBuilder::new();
+
+        // -i: ignore case when matching
+        if opts.ignore_case {
+            matcher_builder.case_insensitive(true);
+        }
+
+        // -w: match whole words only
+        if opts.word_regexp {
+            matcher_builder.word(true);
+        }
+
+        // -F: interpret pattern as fixed string
+        if opts.fixed_strings {
+            matcher_builder.fixed_strings(true);
+        }
+
+        let regex_matcher = match matcher_builder.build(pattern) {
+            Ok(m) => m,
+            Err(e) => abort!("invalid grep pattern '{}': {:?}", pattern, e),
+        };
+
+        // Build the searcher with appropriate options
+        let mut searcher_builder = SearcherBuilder::new();
+
+        // -n: print matching line numbers (enabled on searcher so sink receives correct line numbers)
+        if opts.line_number {
+            searcher_builder.line_number(true);
+        }
+
+        // -V: select non-matching lines (invert match)
+        if opts.invert_match {
+            searcher_builder.invert_match(true);
+        }
+
+        // -A: print NUM lines of trailing context
+        if let Some(after_context) = opts.after_context {
+            let after_context = match after_context.try_into() {
+                Ok(v) => v,
+                Err(err) => abort!("invalid --after-context value '{}': {}", after_context, err),
+            };
+            searcher_builder.after_context(after_context);
+        }
+
+        // -B: print NUM lines of leading context
+        if let Some(before_context) = opts.before_context {
+            let before_context = match before_context.try_into() {
+                Ok(v) => v,
+                Err(err) => abort!(
+                    "invalid --before-context value '{}': {}",
+                    before_context,
+                    err
+                ),
+            };
+            searcher_builder.before_context(before_context);
+        }
+
+        // -C: print NUM lines of output context (both before and after)
+        if let Some(context) = opts.context {
+            let context = match context.try_into() {
+                Ok(v) => v,
+                Err(err) => abort!("invalid --context value '{}': {}", context, err),
+            };
+            searcher_builder.before_context(context);
+            searcher_builder.after_context(context);
+        }
+
+        let searcher = searcher_builder.build();
+
+        Ok(Self {
+            regex_matcher,
+            searcher,
+            relativizer,
+            sink: GrepSink {
+                path: String::new(),
+                out,
+                match_count: 0,
+                file_matched: false,
+                files_with_matches: opts.files_with_matches,
+                print_line_number: opts.line_number,
+            },
+        })
+    }
+
+    /// Grep a file's contents for matches.
+    pub(crate) fn grep_file(&mut self, path: &RepoPathBuf, data: &Blob) -> std::io::Result<()> {
+        self.sink.path = self.relativizer.relativize(path);
+        self.sink.file_matched = false;
+
+        data.each_chunk(|chunk| {
+            // For -l mode, stop searching this file once we have a match
+            if self.sink.files_with_matches && self.sink.file_matched {
+                return Ok(());
+            }
+
+            self.searcher
+                .search_slice(&self.regex_matcher, chunk, &mut self.sink)
+                .map_err(|e| std::io::Error::other(e.to_string()))?;
+
+            Ok(())
+        })
+    }
+
+    /// Get the total number of matches found.
+    pub(crate) fn match_count(&self) -> usize {
+        self.sink.match_count
+    }
+}
+
+impl<W: Write> Sink for GrepSink<W> {
+    type Error = std::io::Error;
+
+    fn matched(
+        &mut self,
+        _searcher: &Searcher,
+        mat: &SinkMatch<'_>,
+    ) -> std::result::Result<bool, Self::Error> {
+        self.match_count += 1;
+
+        // -l: print only filenames that match
+        if self.files_with_matches {
+            if !self.file_matched {
+                self.file_matched = true;
+                writeln!(self.out, "{}", self.path)?;
+            }
+            return Ok(true);
+        }
+
+        let line = String::from_utf8_lossy(mat.bytes());
+        if self.print_line_number {
+            if let Some(line_num) = mat.line_number() {
+                write!(self.out, "{}:{}:{}", self.path, line_num, line)?;
+            } else {
+                write!(self.out, "{}:{}", self.path, line)?;
+            }
+        } else {
+            write!(self.out, "{}:{}", self.path, line)?;
+        }
+        Ok(true)
+    }
+
+    fn context(
+        &mut self,
+        _searcher: &Searcher,
+        context: &SinkContext<'_>,
+    ) -> std::result::Result<bool, Self::Error> {
+        // Don't print context for files_with_matches mode
+        if self.files_with_matches {
+            return Ok(true);
+        }
+
+        let line = String::from_utf8_lossy(context.bytes());
+        // Context lines use '-' separator instead of ':'
+        if self.print_line_number {
+            if let Some(line_num) = context.line_number() {
+                write!(self.out, "{}-{}-{}", self.path, line_num, line)?;
+            } else {
+                write!(self.out, "{}-{}", self.path, line)?;
+            }
+        } else {
+            write!(self.out, "{}-{}", self.path, line)?;
+        }
+        Ok(true)
+    }
+
+    fn context_break(&mut self, _searcher: &Searcher) -> std::result::Result<bool, Self::Error> {
+        // Don't print context break for files_with_matches mode
+        if self.files_with_matches {
+            return Ok(true);
+        }
+        writeln!(self.out, "--")?;
+        Ok(true)
+    }
+}
 
 define_flags! {
     pub struct GrepOpts {
@@ -108,76 +313,6 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
     }
 
     let pattern = &ctx.opts.grep_pattern;
-
-    // Build the regex matcher with appropriate options
-    let mut matcher_builder = RegexMatcherBuilder::new();
-
-    // -i: ignore case when matching
-    if ctx.opts.ignore_case {
-        matcher_builder.case_insensitive(true);
-    }
-
-    // -w: match whole words only
-    if ctx.opts.word_regexp {
-        matcher_builder.word(true);
-    }
-
-    // -F: interpret pattern as fixed string
-    if ctx.opts.fixed_strings {
-        matcher_builder.fixed_strings(true);
-    }
-
-    let regex_matcher = match matcher_builder.build(pattern) {
-        Ok(m) => m,
-        Err(e) => abort!("invalid grep pattern '{}': {:?}", pattern, e),
-    };
-
-    // Build the searcher with appropriate options
-    let mut searcher_builder = SearcherBuilder::new();
-
-    // -n: print matching line numbers (enabled on searcher so sink receives correct line numbers)
-    if ctx.opts.line_number {
-        searcher_builder.line_number(true);
-    }
-
-    // -V: select non-matching lines (invert match)
-    if ctx.opts.invert_match {
-        searcher_builder.invert_match(true);
-    }
-
-    // -A: print NUM lines of trailing context
-    if let Some(after_context) = ctx.opts.after_context {
-        let after_context = match after_context.try_into() {
-            Ok(v) => v,
-            Err(err) => abort!("invalid --after-context value '{}': {}", after_context, err),
-        };
-        searcher_builder.after_context(after_context);
-    }
-
-    // -B: print NUM lines of leading context
-    if let Some(before_context) = ctx.opts.before_context {
-        let before_context = match before_context.try_into() {
-            Ok(v) => v,
-            Err(err) => abort!(
-                "invalid --before-context value '{}': {}",
-                before_context,
-                err
-            ),
-        };
-        searcher_builder.before_context(before_context);
-    }
-
-    // -C: print NUM lines of output context (both before and after)
-    if let Some(context) = ctx.opts.context {
-        let context = match context.try_into() {
-            Ok(v) => v,
-            Err(err) => abort!("invalid --context value '{}': {}", context, err),
-        };
-        searcher_builder.before_context(context);
-        searcher_builder.after_context(context);
-    }
-
-    let mut searcher = searcher_builder.build();
 
     let (repo_root, case_sensitive, cwd, sl_patterns, relativizer, rev) = match repo {
         CoreRepo::Disk(repo) => {
@@ -259,124 +394,23 @@ pub fn run(ctx: ReqCtx<GrepOpts>, repo: &CoreRepo) -> Result<u8> {
 
     let (file_rx, first_error) = walk_and_fetch(&manifest, matcher, &file_store);
 
-    let mut match_count = 0;
-    let io = ctx.io();
-    let files_with_matches = ctx.opts.files_with_matches;
-    let print_line_number = ctx.opts.line_number;
-    let mut file_matched = false;
-
-    let mut sink = GrepSink {
-        path: String::new(),
-        out: io.output(),
-        match_count: &mut match_count,
-        file_matched: &mut file_matched,
-        files_with_matches,
-        print_line_number,
-    };
+    // Build the grepper
+    let mut grepper = Grepper::new(&ctx.opts, pattern, &relativizer, ctx.io().output())?;
 
     for file_result in file_rx {
         if first_error.has_error() {
             break;
         }
 
-        sink.path = relativizer.relativize(&file_result.path);
-        *sink.file_matched = false;
-
-        let _ = file_result.data.each_chunk(|chunk| {
-            // For -l mode, stop searching this file once we have a match
-            if files_with_matches && *sink.file_matched {
-                return Ok(());
-            }
-
-            let result = searcher.search_slice(&regex_matcher, chunk, &mut sink);
-
-            if let Err(e) = result {
-                first_error.send_error(e.into());
-                Err(std::io::Error::other("break"))
-            } else {
-                Ok(())
-            }
-        });
+        if let Err(e) = grepper.grep_file(&file_result.path, &file_result.data) {
+            first_error.send_error(e.into());
+            break;
+        }
     }
 
     first_error.wait()?;
 
-    Ok(if match_count > 0 { 0 } else { 1 })
-}
-
-struct GrepSink<'a, W: Write> {
-    path: String,
-    out: W,
-    match_count: &'a mut usize,
-    file_matched: &'a mut bool,
-    files_with_matches: bool,
-    print_line_number: bool,
-}
-
-impl<W: Write> Sink for GrepSink<'_, W> {
-    type Error = std::io::Error;
-
-    fn matched(
-        &mut self,
-        _searcher: &Searcher,
-        mat: &SinkMatch<'_>,
-    ) -> std::result::Result<bool, Self::Error> {
-        *self.match_count += 1;
-
-        // -l: print only filenames that match
-        if self.files_with_matches {
-            if !*self.file_matched {
-                *self.file_matched = true;
-                writeln!(self.out, "{}", self.path)?;
-            }
-            return Ok(true);
-        }
-
-        let line = String::from_utf8_lossy(mat.bytes());
-        if self.print_line_number {
-            if let Some(line_num) = mat.line_number() {
-                write!(self.out, "{}:{}:{}", self.path, line_num, line)?;
-            } else {
-                write!(self.out, "{}:{}", self.path, line)?;
-            }
-        } else {
-            write!(self.out, "{}:{}", self.path, line)?;
-        }
-        Ok(true)
-    }
-
-    fn context(
-        &mut self,
-        _searcher: &Searcher,
-        context: &SinkContext<'_>,
-    ) -> std::result::Result<bool, Self::Error> {
-        // Don't print context for files_with_matches mode
-        if self.files_with_matches {
-            return Ok(true);
-        }
-
-        let line = String::from_utf8_lossy(context.bytes());
-        // Context lines use '-' separator instead of ':'
-        if self.print_line_number {
-            if let Some(line_num) = context.line_number() {
-                write!(self.out, "{}-{}-{}", self.path, line_num, line)?;
-            } else {
-                write!(self.out, "{}-{}", self.path, line)?;
-            }
-        } else {
-            write!(self.out, "{}-{}", self.path, line)?;
-        }
-        Ok(true)
-    }
-
-    fn context_break(&mut self, _searcher: &Searcher) -> std::result::Result<bool, Self::Error> {
-        // Don't print context break for files_with_matches mode
-        if self.files_with_matches {
-            return Ok(true);
-        }
-        writeln!(self.out, "--")?;
-        Ok(true)
-    }
+    Ok(if grepper.match_count() > 0 { 0 } else { 1 })
 }
 
 pub fn aliases() -> &'static str {

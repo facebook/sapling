@@ -23,6 +23,7 @@ rust_library(
     features = ["fb"],
     deps = [
         "fbsource//third-party/rust:grep",
+        "//eden/scm/lib/blob:blob",
         "//eden/scm/lib/clidispatch:clidispatch",
         "//eden/scm/lib/commands/cmdutil:cmdutil",
         "//eden/scm/lib/filewalk:filewalk",
