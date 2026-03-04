@@ -1629,7 +1629,7 @@ SaplingBackingStore::getRootTree(
               std::move(ew));
         }
         XLOGF(
-            DBG2,
+            DBG3,
             "commit {} has manifest node {}",
             commitId,
             manifestNode.value());
