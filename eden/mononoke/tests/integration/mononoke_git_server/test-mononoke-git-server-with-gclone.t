@@ -61,7 +61,19 @@
   $ git config --global http.sslCert "$TEST_CERTDIR/client0.crt"
   $ git config --global http.sslKey "$TEST_CERTDIR/client0.key"
 
--- Test gclone git --
+-- Test gclone git (upload) --
+
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a_upload -b master --upload
+  $ cat gclone_git_a_upload/file_a.txt
+  content A
+
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_b.git" gclone_git_b_upload -b master --upload
+  $ cat gclone_git_b_upload/file_b.txt
+  content B
+
+-- Test gclone git (download) --
 
   $ cd "$TESTTMP"
   $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/repo_a.git" gclone_git_a -b master
@@ -73,7 +85,16 @@
   $ cat gclone_git_b/file_b.txt
   content B
 
--- Test gclone repo --
+-- Test gclone repo (upload) --
+
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" repo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo_upload -b master --require-cached-repo-url --upload
+  $ cat gclone_repo_upload/a/file_a.txt
+  content A
+  $ cat gclone_repo_upload/b/file_b.txt
+  content B
+
+-- Test gclone repo (download) --
 
   $ cd "$TESTTMP"
   $ quiet "$GCLONE" repo "$MONONOKE_GIT_SERVICE_BASE_URL/manifest.git" gclone_repo -b master --require-cached-repo-url
