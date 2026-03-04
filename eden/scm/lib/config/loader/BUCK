@@ -97,7 +97,10 @@ rust_library(
         "//infrasec/authorization/if:if-aclchecker-rust-x2pclients",
     ]) + select({
         "DEFAULT": [],
-        "ovr_config//os:linux": ["//infrasec/authorization/if:if-aclchecker-rust-srclients"],
+        "ovr_config//os:linux": [
+            "//devinfra/lib/rust/platform_cats:platform_cats_lib",
+            "//infrasec/authorization/if:if-aclchecker-rust-srclients",
+        ],
     }),
 )
 
