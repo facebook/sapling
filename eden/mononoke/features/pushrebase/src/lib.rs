@@ -420,7 +420,7 @@ pub async fn do_batched_pushrebase(
         )
         .await
         {
-            Ok((_server_bcs_count, overrides)) => overrides,
+            Ok(result) => result.merged_file_overrides,
             Err(e) => {
                 let _ = request.response_tx.send(Err(SharedError::from(e)));
                 continue;
@@ -622,9 +622,18 @@ async fn check_filenodes_backfilled(
     }
 }
 
+/// Result of conflict checking in pushrebase.
+struct ConflictCheckResult {
+    /// Number of server-side changesets (used for pushrebase_distance tracking).
+    server_changeset_count: usize,
+    /// If merge resolution succeeded, the merged file changes to apply.
+    /// `None` means no conflicts or merge resolution was not attempted.
+    merged_file_overrides: Option<Vec<(NonRootMPath, FileChange)>>,
+}
+
 /// Checks for server-side conflicts against the client's pushed stack.
-/// Returns the number of server-side changesets and optionally merged file
-/// overrides if live merge resolution succeeds.
+/// Returns conflict check results including the number of server-side changesets
+/// and optionally merged file overrides if live merge resolution succeeds.
 async fn check_pushrebase_conflicts(
     ctx: &CoreContext,
     repo: &impl Repo,
@@ -634,7 +643,7 @@ async fn check_pushrebase_conflicts(
     descendant: ChangesetId,
     client_bcs: &[BonsaiChangeset],
     client_cf: &[MPath],
-) -> Result<(usize, Option<Vec<(NonRootMPath, FileChange)>>), PushrebaseError> {
+) -> Result<ConflictCheckResult, PushrebaseError> {
     let server_bcs =
         fetch_bonsai_range_ancestor_not_included(ctx, repo, ancestor, descendant).await?;
     let server_bcs_len = server_bcs.len();
@@ -657,7 +666,10 @@ async fn check_pushrebase_conflicts(
     server_cf.extend(find_subtree_changes(&server_bcs)?);
 
     match intersect_changed_files(server_cf, client_cf.to_vec()) {
-        Ok(()) => Ok((server_bcs_len, None)),
+        Ok(()) => Ok(ConflictCheckResult {
+            server_changeset_count: server_bcs_len,
+            merged_file_overrides: None,
+        }),
         Err(PushrebaseError::Conflicts(conflicts)) => {
             let reponame = repo.repo_identity().name();
             STATS::conflict_rejections.add_value(1, (reponame.to_string(),));
@@ -696,10 +708,10 @@ async fn check_pushrebase_conflicts(
             };
 
             match merge_result {
-                Some(Ok(merged_changes)) => {
-                    // Merge succeeded — return overrides and proceed with rebase
-                    Ok((server_bcs_len, Some(merged_changes)))
-                }
+                Some(Ok(merged_changes)) => Ok(ConflictCheckResult {
+                    server_changeset_count: server_bcs_len,
+                    merged_file_overrides: Some(merged_changes),
+                }),
                 _ => {
                     // Log merge failure reason if merge was attempted
                     if let Some(Err(ref err)) = merge_result {
@@ -763,7 +775,7 @@ async fn rebase_in_loop(
         }))
         .await?;
 
-        let (server_bcs_count, merged_file_overrides) = check_pushrebase_conflicts(
+        let conflict_result = check_pushrebase_conflicts(
             ctx,
             repo,
             config,
@@ -774,10 +786,11 @@ async fn rebase_in_loop(
             &client_cf,
         )
         .await?;
-        pushrebase_distance = pushrebase_distance.add(server_bcs_count);
+        pushrebase_distance = pushrebase_distance.add(conflict_result.server_changeset_count);
 
         // Extract merged paths for observability before overrides are consumed
-        let merge_resolved_paths = merged_file_overrides
+        let merge_resolved_paths = conflict_result
+            .merged_file_overrides
             .as_ref()
             .map(|overrides| overrides.iter().map(|(path, _)| path.clone()).collect());
 
@@ -790,7 +803,7 @@ async fn rebase_in_loop(
             old_bookmark_value,
             onto_bookmark,
             hooks,
-            merged_file_overrides,
+            conflict_result.merged_file_overrides,
         )
         .await?;
         // CRITICAL SECTION END: Right after writing new value of bookmark
@@ -1321,39 +1334,24 @@ async fn dry_run_merge_resolution(
     let exact_conflicts: Vec<_> = conflicts.iter().filter(|c| c.left == c.right).collect();
     let prefix_conflict_count = conflicts.len() - exact_conflicts.len();
 
-    if exact_conflicts.is_empty() {
-        if prefix_conflict_count > 0 {
-            ctx.scuba()
-                .clone()
-                .add("merge_dry_run_outcome", "skipped_prefix_conflicts")
-                .add(
-                    "merge_dry_run_prefix_conflicts",
-                    prefix_conflict_count as i64,
-                )
-                .log_with_msg("Pushrebase dry-run merge resolution", None);
-        }
-        return;
-    }
-
-    // Mirror the live merge behavior: skip if too many conflicts
-    if exact_conflicts.len() > max_conflicts || prefix_conflict_count > 0 {
-        let outcome = if prefix_conflict_count > 0 {
-            "skipped_prefix_conflicts"
-        } else {
-            "skipped_too_many_conflicts"
-        };
+    // Skip if there are any prefix conflicts (e.g. dir vs dir/file from subtree copies)
+    if prefix_conflict_count > 0 {
         ctx.scuba()
             .clone()
-            .add("merge_dry_run_outcome", outcome)
-            .add(
-                "merge_dry_run_exact_conflicts",
-                exact_conflicts.len() as i64,
-            )
+            .add("merge_dry_run_outcome", "skipped_prefix_conflicts")
             .add(
                 "merge_dry_run_prefix_conflicts",
                 prefix_conflict_count as i64,
             )
+            .add(
+                "merge_dry_run_exact_conflicts",
+                exact_conflicts.len() as i64,
+            )
             .log_with_msg("Pushrebase dry-run merge resolution", None);
+        return;
+    }
+
+    if exact_conflicts.is_empty() {
         return;
     }
 
