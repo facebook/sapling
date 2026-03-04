@@ -93,6 +93,7 @@ use http::StatusCode;
 use http::Version;
 use manifest::DiffType;
 use manifest::Manifest;
+use manifest::PersistOpts;
 use manifest_augmented_tree::AugmentedTreeWithDigest;
 use manifest_tree::Flag;
 use manifest_tree::TreeManifest;
@@ -1317,7 +1318,7 @@ impl SaplingRemoteApi for EagerRepo {
                 SerializationFormat::Hg => {
                     let new_parents = vec![&dest_manifest];
                     let mut manifest_id: Option<HgId> = None;
-                    for (path, hgid, raw, p1, p2) in new_manifest.persist(new_parents)? {
+                    for (path, hgid, raw, p1, p2) in new_manifest.persist(&new_parents)? {
                         let insert_opts = InsertOpts {
                             parents: vec![p1, p2],
                             kind: Kind::Tree,
@@ -1338,7 +1339,9 @@ impl SaplingRemoteApi for EagerRepo {
                         }
                     }
                 }
-                SerializationFormat::Git => Manifest::persist(&mut new_manifest)?,
+                SerializationFormat::Git => {
+                    Manifest::persist(&mut new_manifest, PersistOpts { parents: &[] })?
+                }
             };
 
             // generate new commit

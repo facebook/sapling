@@ -24,6 +24,7 @@ use dag::ops::DagAlgorithm;
 use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::Manifest;
+use manifest::PersistOpts;
 use manifest_tree::TreeManifest;
 use sha1::Digest;
 use sha1::Sha1;
@@ -85,11 +86,11 @@ impl TestHistory {
         let mut last_commit_int = 0;
         let mut tree = TreeManifest::ephemeral(Arc::new(this.clone()));
         // Write empty tree.
-        let empty_tree_id = Manifest::persist(&mut tree).unwrap();
+        let empty_tree_id = Manifest::persist(&mut tree, PersistOpts { parents: &[] }).unwrap();
         for (commit_int, path, content_int, file_type) in input {
             if commit_int > last_commit_int {
                 // Commit last_commit.
-                let tree_id = Manifest::persist(&mut tree).unwrap();
+                let tree_id = Manifest::persist(&mut tree, PersistOpts { parents: &[] }).unwrap();
                 let mut inner = this.inner.lock().unwrap();
                 inner.commit_to_tree.insert(last_commit_int, tree_id);
                 last_commit_int = commit_int;
@@ -103,7 +104,7 @@ impl TestHistory {
             }
         }
 
-        let tree_id = Manifest::persist(&mut tree).unwrap();
+        let tree_id = Manifest::persist(&mut tree, PersistOpts { parents: &[] }).unwrap();
         {
             let mut inner = this.inner.lock().unwrap();
             inner.commit_to_tree.insert(last_commit_int, tree_id);

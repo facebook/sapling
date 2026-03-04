@@ -442,6 +442,7 @@ mod tests {
     use std::sync::Arc;
 
     use manifest::Manifest;
+    use manifest::PersistOpts;
     use manifest::testutil::*;
     use pathmatcher::AlwaysMatcher;
     use pathmatcher::TreeMatcher;
@@ -503,7 +504,7 @@ mod tests {
             .unwrap();
         tree.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
-        let hgid = Manifest::persist(&mut tree).unwrap();
+        let hgid = Manifest::persist(&mut tree, PersistOpts { parents: &[] }).unwrap();
         let tree = TreeManifest::durable(store, hgid);
 
         assert_eq!(
@@ -613,11 +614,11 @@ mod tests {
 
         let mut tree1 = TreeManifest::ephemeral(store.clone());
         tree1.insert(repo_path_buf("a/b"), make_meta("1")).unwrap();
-        let tree1_hgid = Manifest::persist(&mut tree1).unwrap();
+        let tree1_hgid = Manifest::persist(&mut tree1, PersistOpts { parents: &[] }).unwrap();
 
         let mut tree2 = TreeManifest::ephemeral(store.clone());
         tree2.insert(repo_path_buf("c/d"), make_meta("2")).unwrap();
-        let tree2_hgid = Manifest::persist(&mut tree2).unwrap();
+        let tree2_hgid = Manifest::persist(&mut tree2, PersistOpts { parents: &[] }).unwrap();
 
         prefetch(
             store.clone(),

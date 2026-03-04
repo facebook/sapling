@@ -858,7 +858,7 @@ mod test {
 
         // Finalize and store tree data, capturing tree hgids by path
         let mut tree_hgids: HashMap<RepoPathBuf, HgId> = HashMap::new();
-        for (path, id, text, _p1, _p2) in mf.persist(Vec::new())? {
+        for (path, id, text, _p1, _p2) in mf.persist(&[])? {
             store.insert_data(Default::default(), &path, text.into())?;
             tree_hgids.insert(path, id);
         }
@@ -1049,7 +1049,7 @@ mod test {
 
         // Finalize and store tree data
         let mut root_hgid = None;
-        for (path, id, text, _p1, _p2) in mf.persist(Vec::new())? {
+        for (path, id, text, _p1, _p2) in mf.persist(&[])? {
             tree_store.insert_data(Default::default(), &path, text.into())?;
             if path.is_empty() {
                 root_hgid = Some(id);
@@ -1178,7 +1178,7 @@ mod test {
 
         // Finalize and store tree data, capturing tree hgids by path
         let mut tree_hgids: HashMap<RepoPathBuf, HgId> = HashMap::new();
-        for (path, id, text, _p1, _p2) in mf.persist(Vec::new())? {
+        for (path, id, text, _p1, _p2) in mf.persist(&[])? {
             tree_store.insert_data(Default::default(), &path, text.into())?;
             tree_hgids.insert(path, id);
         }

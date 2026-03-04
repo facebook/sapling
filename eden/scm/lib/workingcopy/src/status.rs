@@ -337,7 +337,7 @@ mod tests {
             unimplemented!()
         }
 
-        fn persist(&mut self) -> Result<types::HgId> {
+        fn persist(&mut self, _opts: manifest::PersistOpts<'_, Self>) -> Result<types::HgId> {
             unimplemented!()
         }
 

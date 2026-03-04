@@ -30,6 +30,7 @@ use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
+use manifest::PersistOpts;
 use manifest_tree::TreeManifest;
 use manifest_tree::TreeStore;
 use manifest_tree::apply_diff_grafts;
@@ -647,8 +648,9 @@ py_class!(pub class treemanifest |py| {
         if let Some(m2) = p2tree {
             parents.push(m2.underlying(py).read());
         }
+        let parent_refs: Vec<&TreeManifest> = parents.iter().map(|x| x.deref()).collect();
         let entries = tree.persist(
-            parents.iter().map(|x| x.deref()).collect()
+            &parent_refs
         ).map_pyerr(py)?;
         for entry in entries {
             let (repo_path, node, raw, p1node, p2node) = entry;
@@ -673,7 +675,7 @@ py_class!(pub class treemanifest |py| {
     /// Only works for git store. Use finalize() for hg store instead.
     def flush(&self) -> PyResult<PyBytes> {
         let mut tree = self.underlying(py).write();
-        let hgid = Manifest::persist(&mut *tree).map_pyerr(py)?;
+        let hgid = Manifest::persist(&mut *tree, PersistOpts { parents: &[] }).map_pyerr(py)?;
         Ok(PyBytes::new(py, hgid.as_ref()))
     }
 

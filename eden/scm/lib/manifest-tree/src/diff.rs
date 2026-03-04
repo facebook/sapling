@@ -546,6 +546,7 @@ mod tests {
     use manifest::FileMetadata;
     use manifest::FileType;
     use manifest::Manifest;
+    use manifest::PersistOpts;
     use manifest::testutil::*;
     use pathmatcher::AlwaysMatcher;
     use pathmatcher::TreeMatcher;
@@ -775,8 +776,8 @@ mod tests {
             )
         );
 
-        Manifest::persist(&mut left).unwrap();
-        Manifest::persist(&mut right).unwrap();
+        Manifest::persist(&mut left, PersistOpts { parents: &[] }).unwrap();
+        Manifest::persist(&mut right, PersistOpts { parents: &[] }).unwrap();
 
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())
@@ -890,8 +891,8 @@ mod tests {
             )
         );
 
-        Manifest::persist(&mut left).unwrap();
-        Manifest::persist(&mut right).unwrap();
+        Manifest::persist(&mut left, PersistOpts { parents: &[] }).unwrap();
+        Manifest::persist(&mut right, PersistOpts { parents: &[] }).unwrap();
 
         assert_eq!(
             left.diff(&right, AlwaysMatcher::new())

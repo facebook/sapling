@@ -503,7 +503,7 @@ inc
             unimplemented!()
         }
 
-        fn persist(&mut self) -> anyhow::Result<HgId> {
+        fn persist(&mut self, _opts: manifest::PersistOpts<'_, Self>) -> anyhow::Result<HgId> {
             unimplemented!()
         }
 
