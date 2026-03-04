@@ -16,6 +16,8 @@ use futures::stream::TryStreamExt;
 use mononoke_types::ContentManifestId;
 use mononoke_types::SortedVectorTrieMap;
 use mononoke_types::TrieMap;
+use mononoke_types::acl_manifest::AclManifestEntry;
+use mononoke_types::acl_manifest::AclManifestRestriction;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
 use mononoke_types::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
 use mononoke_types::case_conflict_skeleton_manifest::CaseConflictSkeletonManifest;
@@ -30,6 +32,7 @@ use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2;
 use mononoke_types::skeleton_manifest_v2::SkeletonManifestV2Entry;
 use mononoke_types::test_sharded_manifest::TestShardedManifestDirectory;
 use mononoke_types::test_sharded_manifest::TestShardedManifestEntry;
+use mononoke_types::typed_hash::AclManifestId;
 use smallvec::SmallVec;
 
 use crate::types::Entry;
@@ -322,6 +325,48 @@ impl<Store: KeyedBlobstore>
             .await?
             .into_entries(ctx, blobstore)
             .map_ok(|(k, v)| (k, crate::types::dbcm_to_mf_entry(v)))
+            .boxed())
+    }
+
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+}
+
+#[async_trait]
+impl<Store: KeyedBlobstore> TrieMapOps<Store, Entry<AclManifestId, AclManifestRestriction>>
+    for LoadableShardedMapV2Node<AclManifestEntry>
+{
+    async fn expand(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<(
+        Option<Entry<AclManifestId, AclManifestRestriction>>,
+        Vec<(u8, Self)>,
+    )> {
+        let (entry, children) = self.expand(ctx, blobstore).await?;
+        Ok((entry.map(crate::types::convert_acl_manifest), children))
+    }
+
+    async fn into_stream(
+        self,
+        ctx: &CoreContext,
+        blobstore: &Store,
+    ) -> Result<
+        BoxStream<
+            'async_trait,
+            Result<(
+                SmallVec<[u8; 24]>,
+                Entry<AclManifestId, AclManifestRestriction>,
+            )>,
+        >,
+    > {
+        Ok(self
+            .load(ctx, blobstore)
+            .await?
+            .into_entries(ctx, blobstore)
+            .map_ok(|(k, v)| (k, crate::types::convert_acl_manifest(v)))
             .boxed())
     }
 
