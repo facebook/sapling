@@ -356,19 +356,6 @@ pub async fn do_batched_pushrebase(
 ) -> Vec<PushrebaseRequest> {
     let should_log = config.monitoring_bookmark.as_deref() == Some(onto_bookmark.as_str());
     let reponame = repo.repo_identity().name();
-    let max_merge_conflicts: usize = match justknobs::get_as::<usize>(
-        "scm/mononoke:pushrebase_max_merge_conflicts",
-        Some(reponame),
-    ) {
-        Ok(v) => v,
-        Err(e) => {
-            let shared = SharedError::from(PushrebaseError::Error(e));
-            for req in requests {
-                let _ = req.response_tx.send(Err(shared.clone()));
-            }
-            return vec![];
-        }
-    };
     let repo_args = (reponame.to_string(),);
     let start_critical_section = Instant::now();
 
@@ -424,7 +411,6 @@ pub async fn do_batched_pushrebase(
             bookmark_val,
             &request.changesets,
             &request.changed_files,
-            max_merge_conflicts,
         )
         .await
         {
@@ -636,7 +622,6 @@ async fn check_pushrebase_conflicts(
     descendant: ChangesetId,
     client_bcs: &[BonsaiChangeset],
     client_cf: &[MPath],
-    max_merge_conflicts: usize,
 ) -> Result<usize, PushrebaseError> {
     let server_bcs =
         fetch_bonsai_range_ancestor_not_included(ctx, repo, ancestor, descendant).await?;
@@ -672,6 +657,14 @@ async fn check_pushrebase_conflicts(
                 Some(reponame),
             )?;
             if dry_run_enabled {
+                let max_merge_conflicts: usize = justknobs::get_as::<usize>(
+                    "scm/mononoke:pushrebase_max_merge_conflicts",
+                    Some(reponame),
+                )?;
+                let max_merge_file_size: u64 = justknobs::get_as::<u64>(
+                    "scm/mononoke:pushrebase_max_merge_file_size",
+                    Some(reponame),
+                )?;
                 dry_run_merge_resolution(
                     ctx,
                     repo,
@@ -680,6 +673,7 @@ async fn check_pushrebase_conflicts(
                     &server_bcs,
                     client_bcs,
                     max_merge_conflicts,
+                    max_merge_file_size,
                 )
                 .await;
             }
@@ -706,12 +700,6 @@ async fn rebase_in_loop(
     let mut latest_rebase_attempt = root;
     let mut pushrebase_distance = PushrebaseDistance(0);
 
-    let reponame = repo.repo_identity().name();
-    let max_merge_conflicts: usize = justknobs::get_as::<usize>(
-        "scm/mononoke:pushrebase_max_merge_conflicts",
-        Some(reponame),
-    )?;
-
     let repo_args = (repo.repo_identity().name().to_string(),);
     for retry_num in 0..MAX_REBASE_ATTEMPTS {
         let retry_num = PushrebaseRetryNum(retry_num);
@@ -734,7 +722,6 @@ async fn rebase_in_loop(
             old_bookmark_value.unwrap_or(root),
             client_bcs,
             &client_cf,
-            max_merge_conflicts,
         )
         .await?;
         pushrebase_distance = pushrebase_distance.add(server_bcs_count);
@@ -1270,11 +1257,27 @@ async fn dry_run_merge_resolution(
     server_bcs: &[BonsaiChangeset],
     client_bcs: &[BonsaiChangeset],
     max_conflicts: usize,
+    max_file_size: u64,
 ) {
     // Only attempt on exact path matches (left == right), skip prefix conflicts
     let exact_conflicts: Vec<_> = conflicts.iter().filter(|c| c.left == c.right).collect();
 
     if exact_conflicts.is_empty() {
+        return;
+    }
+
+    // Fail early if there are more conflicts than the limit — processing only a
+    // subset would give a misleading signal about merge-resolvability.
+    if exact_conflicts.len() > max_conflicts {
+        ctx.scuba()
+            .clone()
+            .add("merge_dry_run_outcome", "too_many_conflicts")
+            .add(
+                "merge_dry_run_total_conflicts",
+                exact_conflicts.len() as i64,
+            )
+            .add("merge_dry_run_max_conflicts", max_conflicts as i64)
+            .log_with_msg("Pushrebase dry-run merge resolution", None);
         return;
     }
 
@@ -1296,7 +1299,7 @@ async fn dry_run_merge_resolution(
     let mut conflict_count: i64 = 0;
     let mut error_count: i64 = 0;
 
-    for conflict in exact_conflicts.iter().take(max_conflicts) {
+    for conflict in &exact_conflicts {
         let path = &conflict.left;
 
         // Get the NonRootMPath version for file lookups
@@ -1306,8 +1309,8 @@ async fn dry_run_merge_resolution(
         };
 
         // Get local (pushed) content from the client file change
-        let local_content_id = match client_changes.get(&non_root_path) {
-            Some(FileChange::Change(tc)) => tc.content_id(),
+        let local_tc = match client_changes.get(&non_root_path) {
+            Some(FileChange::Change(tc)) => tc,
             _ => {
                 all_clean = false;
                 error_count += 1;
@@ -1316,8 +1319,8 @@ async fn dry_run_merge_resolution(
         };
 
         // Get server (bookmark head) content from the server bonsai changesets
-        let other_content_id = match server_changes.get(&non_root_path) {
-            Some(FileChange::Change(tc)) => tc.content_id(),
+        let other_tc = match server_changes.get(&non_root_path) {
+            Some(FileChange::Change(tc)) => tc,
             _ => {
                 all_clean = false;
                 error_count += 1;
@@ -1325,13 +1328,29 @@ async fn dry_run_merge_resolution(
             }
         };
 
+        // Fail early if any file exceeds the size limit — we can't resolve
+        // all conflicts if we have to skip a file, so the entire merge would fail.
+        if local_tc.size() > max_file_size || other_tc.size() > max_file_size {
+            ctx.scuba()
+                .clone()
+                .add("merge_dry_run_outcome", "file_too_large")
+                .add("merge_dry_run_file", non_root_path.to_string())
+                .add(
+                    "merge_dry_run_file_size",
+                    std::cmp::max(local_tc.size(), other_tc.size()) as i64,
+                )
+                .add("merge_dry_run_max_file_size", max_file_size as i64)
+                .log_with_msg("Pushrebase dry-run merge resolution", None);
+            return;
+        }
+
         match try_merge_file(
             ctx,
             repo,
             root,
             &non_root_path,
-            local_content_id,
-            other_content_id,
+            local_tc.content_id(),
+            other_tc.content_id(),
             None,
         )
         .await
