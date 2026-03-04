@@ -47,6 +47,7 @@ members = [
   "lib/commands/debugcommands/cmddebugfilterid",
   "lib/commands/debugcommands/cmddebugfsync",
   "lib/commands/debugcommands/cmddebuggitmodules",
+  "lib/commands/debugcommands/cmddebughash",
   "lib/commands/debugcommands/cmddebughttp",
   "lib/commands/debugcommands/cmddebuglfsreceive",
   "lib/commands/debugcommands/cmddebuglfssend",

@@ -46,6 +46,7 @@ external_commands![
     cmddebugdumpinternalconfig,
     cmddebugfilterid,
     cmddebugfsync,
+    cmddebughash,
     cmddebuggitmodules,
     cmddebughttp,
     cmddebuglfsreceive,
