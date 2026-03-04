@@ -110,7 +110,7 @@ impl Hooks {
         // we need to either fall back to Python, or warn that we aren't running the
         // hooks.
         if !python_names.is_empty() {
-            if CAN_FALLBACK_TO_PYTHON.iter().any(|c| *c == command) {
+            if CAN_FALLBACK_TO_PYTHON.contains(&command) {
                 fallback!("python hooks");
             } else {
                 let _ = writeln!(
