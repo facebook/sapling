@@ -261,3 +261,40 @@ Verify manifest repo bookmark has moved from the original commit
   $ MANIFEST_HEAD=$(scsc lookup -R manifest_repo -B master_bookmark -S bonsai 2>/dev/null)
   $ [[ "$MANIFEST_HEAD" != "$M1" ]] && echo "manifest bookmark moved to new commit"
   manifest bookmark moved to new commit
+
+-- Verify: gclone git subcommand --
+
+Configure git SSL for gclone (gclone spawns git clone as a subprocess, inherits env)
+  $ git config --global http.sslCAInfo "$TEST_CERTDIR/root-ca.crt"
+  $ git config --global http.sslCert "$TEST_CERTDIR/client0.crt"
+  $ git config --global http.sslKey "$TEST_CERTDIR/client0.key"
+
+Test gclone git on aosp/platform_build
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/aosp/platform_build.git" gclone_git_1 -b master_bookmark --partial-clone false
+  $ test -f gclone_git_1/new_build.mk && echo "gclone git: new_build.mk exists"
+  gclone git: new_build.mk exists
+
+Test gclone git on aosp/platform_frameworks
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/aosp/platform_frameworks.git" gclone_git_2 -b master_bookmark --partial-clone false
+  $ test -f gclone_git_2/NewFeature.java && echo "gclone git: NewFeature.java exists"
+  gclone git: NewFeature.java exists
+
+Test gclone git on aosp/platform_packages
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/aosp/platform_packages.git" gclone_git_3 -b master_bookmark --partial-clone false
+  $ test -f gclone_git_3/Installer.java && echo "gclone git: Installer.java exists"
+  gclone git: Installer.java exists
+
+Test gclone git on aosp/device_meta_common
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/aosp/device_meta_common.git" gclone_git_4 -b master_bookmark --partial-clone false
+  $ test -f gclone_git_4/overlay.mk && echo "gclone git: overlay.mk exists"
+  gclone git: overlay.mk exists
+
+Test gclone git on aosp/device_meta_stanley
+  $ cd "$TESTTMP"
+  $ quiet "$GCLONE" git "$MONONOKE_GIT_SERVICE_BASE_URL/aosp/device_meta_stanley.git" gclone_git_5 -b master_bookmark --partial-clone false
+  $ test -f gclone_git_5/sensors.mk && echo "gclone git: sensors.mk exists"
+  gclone git: sensors.mk exists

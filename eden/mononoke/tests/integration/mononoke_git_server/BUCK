@@ -61,5 +61,6 @@ dott_test(
         "//eden/mononoke/servers/scs/scs_server:scs_server",
         "//eden/mononoke/tools/admin:admin",
         "//eden/mononoke/tools/testtool:testtool",
+        "//scm/gclone:gclone",
     ],
 )
