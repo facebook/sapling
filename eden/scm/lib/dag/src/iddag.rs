@@ -1732,7 +1732,7 @@ pub trait IdDagAlgorithm: IdDagStore {
         trace!(target: "dag::algo::suggest_bisect", " untested = {:?}", untested);
 
         let total = untested.count();
-        let ideal = (total + 1) / 2;
+        let ideal = total.div_ceil(2);
 
         // Consider each linear ranges (flat segments).
         let flat_segments =
