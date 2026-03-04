@@ -104,7 +104,7 @@ impl<W: WeakSlice> WeakBuffers<W> {
 
     pub(crate) fn track(&mut self, value: W) {
         self.buffers.push(value);
-        self.gc_tick = self.gc_tick + 1;
+        self.gc_tick += 1;
         if self.gc_tick > crate::config::WEAK_BUFFER_GC_THRESHOLD.load(Ordering::Acquire) {
             self.for_each_alive_buffer(None); // side effect: gc
             self.gc_tick = 0;
