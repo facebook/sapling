@@ -10,6 +10,7 @@
 //! This module provides integration with BigGrep, an external search index
 //! that can speed up grep operations in large repositories.
 
+use std::collections::HashSet;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
@@ -17,12 +18,17 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 use std::process::Stdio;
+use std::sync::Arc;
 
 use clidispatch::ReqCtx;
 use clidispatch::abort;
 use cmdutil::ConfigExt;
 use cmdutil::Result;
+use manifest::DiffType;
+use manifest::Manifest;
 use pathmatcher::DynMatcher;
+use pathmatcher::ExactMatcher;
+use pathmatcher::IntersectMatcher;
 use pathmatcher::Matcher;
 use repo::CoreRepo;
 use types::RepoPath;
@@ -30,6 +36,7 @@ use types::RepoPathBuf;
 use types::path::RepoPathRelativizer;
 
 use crate::GrepOpts;
+use crate::Grepper;
 
 /// Check if biggrep should be used and run it if so.
 /// Returns Some(exit_code) if biggrep was used, None if we should fall back to local grep.
@@ -176,18 +183,35 @@ pub fn try_biggrep(
         }
     };
 
-    // Parse the corpus revision (we don't use it for now since we're skipping the status check)
-    let _corpus_rev = parse_corpus_revision(&first_line[1..]);
+    // Parse the corpus revision and compute changed files before processing results
+    let corpus_rev = parse_corpus_revision(&first_line[1..]);
+    let target_rev = ctx.opts.rev.as_deref().unwrap_or("wdir");
+
+    let (files_to_grep, files_to_exclude) = match corpus_rev.as_ref() {
+        Some(corpus_rev) => {
+            match compute_changed_files(ctx, repo, corpus_rev, target_rev, matcher) {
+                Ok((to_grep, to_exclude)) => (to_grep, to_exclude),
+                Err(e) => {
+                    ctx.logger().warn(format!(
+                        "Could not check for changes since corpus revision {}: {}. Results may be stale.",
+                        corpus_rev, e
+                    ));
+                    (HashSet::new(), HashSet::new())
+                }
+            }
+        }
+        None => (HashSet::new(), HashSet::new()),
+    };
 
     ctx.maybe_start_pager(config.as_ref())?;
 
-    let mut match_count = 0;
     let files_with_matches = ctx.opts.files_with_matches;
     let include_line_number = ctx.opts.line_number;
+    let mut match_count = 0;
 
     let mut out = ctx.io().output();
 
-    // Process results as they stream in
+    // Process and output biggrep results, filtering changed/removed files
     for line_result in lines {
         let line = line_result?;
 
@@ -214,17 +238,18 @@ pub fn try_biggrep(
             None
         };
 
-        let (filename, lineno, context) = match parsed {
+        let (filename, lineno, context, is_binary) = match parsed {
             Some((f, l, c)) => (
                 f.to_string(),
                 l.map(|s| s.to_string()),
                 c.map(|s| s.to_string()),
+                false,
             ),
             None => {
                 // Check for binary file match
                 if line.starts_with("Binary file ") && line.ends_with(" matches") {
                     let filename = &line[12..line.len() - 8];
-                    (filename.to_string(), None, None)
+                    (filename.to_string(), None, None, true)
                 } else {
                     // Unparsable line, just output as-is
                     writeln!(out, "{}", line)?;
@@ -238,17 +263,22 @@ pub fn try_biggrep(
 
         // Filter to files matching the matcher (includes sparse profile)
         let repo_path = match RepoPath::from_str(&plain_filename) {
-            Ok(p) => p,
+            Ok(p) => p.to_owned(),
             Err(_) => continue,
         };
-        if !matcher.matches_file(repo_path)? {
+        if !matcher.matches_file(&repo_path)? {
+            continue;
+        }
+
+        // Skip files that have changed (will be grepped locally) or been removed
+        if files_to_grep.contains(&repo_path) || files_to_exclude.contains(&repo_path) {
             continue;
         }
 
         match_count += 1;
 
         // Relativize the path
-        let rel_path = relativizer.relativize(repo_path);
+        let rel_path = relativizer.relativize(&repo_path);
 
         // Replace the plain filename with the relativized one in the output
         // (preserving any ANSI escape sequences)
@@ -257,8 +287,7 @@ pub fn try_biggrep(
         // Output the result
         if files_with_matches {
             writeln!(out, "{}", display_filename)?;
-        } else if context.is_none() {
-            // Binary file match
+        } else if is_binary {
             writeln!(out, "Binary file {} matches", display_filename)?;
         } else if include_line_number {
             writeln!(
@@ -289,7 +318,96 @@ pub fn try_biggrep(
         );
     }
 
+    // Run local grep on changed files
+    if !files_to_grep.is_empty() {
+        let matcher = Arc::new(IntersectMatcher::new(vec![
+            matcher.clone(),
+            Arc::new(ExactMatcher::new(files_to_grep.iter(), true)),
+        ]));
+
+        let local_matches = run_local_grep(ctx, repo, pattern, matcher, relativizer, target_rev)?;
+        match_count += local_matches;
+    }
+
     Ok(Some(if match_count > 0 { 0 } else { 1 }))
+}
+
+/// Compute what files have changed between the corpus revision and the target revision.
+/// Returns (files_to_grep, files_to_exclude) where:
+/// - files_to_grep: files that were added or modified (need local grep)
+/// - files_to_exclude: files that were removed (skip biggrep results)
+fn compute_changed_files(
+    ctx: &ReqCtx<GrepOpts>,
+    repo: &CoreRepo,
+    corpus_rev: &str,
+    target_rev: &str,
+    matcher: &DynMatcher,
+) -> Result<(HashSet<RepoPathBuf>, HashSet<RepoPathBuf>)> {
+    // Get the corpus manifest
+    let (_corpus_id, corpus_manifest) =
+        repo.resolve_manifest(&ctx.core, corpus_rev, matcher.clone())?;
+
+    // Get the target revision manifest
+    let (_target_id, target_manifest) =
+        repo.resolve_manifest(&ctx.core, target_rev, matcher.clone())?;
+
+    let mut files_to_grep = HashSet::new();
+    let mut files_to_exclude = HashSet::new();
+
+    // Diff corpus (left) vs target (right)
+    // LeftOnly = in corpus but not in target = removed (exclude)
+    // RightOnly = in target but not in corpus = added (grep)
+    // Changed = in both but different = modified (grep)
+    for diff_result in corpus_manifest.diff(&target_manifest, matcher.clone())? {
+        let entry = diff_result?;
+        match entry.diff_type {
+            DiffType::LeftOnly(_) => {
+                files_to_exclude.insert(entry.path);
+            }
+            DiffType::RightOnly(_) | DiffType::Changed(_, _) => {
+                files_to_grep.insert(entry.path);
+            }
+        }
+    }
+
+    Ok((files_to_grep, files_to_exclude))
+}
+
+/// Run local grep on a set of files.
+fn run_local_grep(
+    ctx: &ReqCtx<GrepOpts>,
+    repo: &CoreRepo,
+    pattern: &str,
+    matcher: DynMatcher,
+    relativizer: &RepoPathRelativizer,
+    rev: &str,
+) -> Result<usize> {
+    // Build the grepper
+    let mut grepper = Grepper::new(&ctx.opts, pattern, relativizer, ctx.io().output())?;
+
+    // Get the file store for reading file contents
+    let file_store = repo.file_store()?;
+
+    // Get the manifest for fetching files
+    let (_, manifest) = repo.resolve_manifest(&ctx.core, rev, matcher.clone())?;
+
+    // Walk and fetch the files
+    let (file_rx, first_error) = filewalk::walk_and_fetch(&manifest, matcher, &file_store);
+
+    for file_result in file_rx {
+        if first_error.has_error() {
+            break;
+        }
+
+        if let Err(e) = grepper.grep_file(&file_result.path, &file_result.data) {
+            first_error.send_error(e.into());
+            break;
+        }
+    }
+
+    first_error.wait()?;
+
+    Ok(grepper.match_count())
 }
 
 /// Parse the corpus revision from the biggrep revision line.
