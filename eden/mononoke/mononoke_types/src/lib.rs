@@ -8,6 +8,7 @@
 //! Base types used throughout Mononoke.
 #![feature(debug_closure_helpers)]
 
+pub mod acl_manifest;
 pub mod basename_suffix_skeleton_manifest_v3;
 pub mod blame_v2;
 pub mod blob;
@@ -136,6 +137,7 @@ mod macros;
 
 pub mod thrift {
     pub use derived_data_type_if::DerivedDataType;
+    pub use mononoke_types_serialization::acl_manifest;
     pub use mononoke_types_serialization::blame;
     pub use mononoke_types_serialization::bonsai;
     pub use mononoke_types_serialization::bssm;

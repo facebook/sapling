@@ -26,6 +26,9 @@ use sql::mysql;
 pub use tracing;
 
 use crate::ThriftConvert;
+use crate::acl_manifest::AclManifest;
+use crate::acl_manifest::AclManifestEntry;
+use crate::acl_manifest::AclManifestEntryBlob;
 use crate::basename_suffix_skeleton_manifest_v3::BssmV3Directory;
 use crate::basename_suffix_skeleton_manifest_v3::BssmV3Entry;
 use crate::blob::Blob;
@@ -202,6 +205,17 @@ pub struct DirectoryBranchClusterManifestId(Blake2);
 /// An identifier for a sharded map node used in directory branch cluster manifest
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ShardedMapV2NodeDbcmId(Blake2);
+/// An identifier for an ACL manifest
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct AclManifestId(Blake2);
+
+/// An identifier for a sharded map node used in ACL manifest
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct ShardedMapV2NodeAclManifestId(Blake2);
+
+/// An identifier for a content-addressed ACL manifest entry blob
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct AclManifestEntryBlobId(Blake2);
 
 /// An identifier for an fsnode
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
@@ -704,6 +718,30 @@ impl_typed_hash! {
     value_type => ShardedMapV2Node<DirectoryBranchClusterManifestEntry>,
     context_type => ShardedMapV2NodeDbcmContext,
     context_key => "dbcm.map2node",
+}
+
+impl_typed_hash! {
+    hash_type => AclManifestId,
+    thrift_hash_type => thrift::id::AclManifestId,
+    value_type => AclManifest,
+    context_type => AclManifestContext,
+    context_key => "aclmf",
+}
+
+impl_typed_hash! {
+    hash_type => ShardedMapV2NodeAclManifestId,
+    thrift_hash_type => thrift::id::ShardedMapV2NodeId,
+    value_type => ShardedMapV2Node<AclManifestEntry>,
+    context_type => ShardedMapV2NodeAclManifestContext,
+    context_key => "aclmf.map2node",
+}
+
+impl_typed_hash! {
+    hash_type => AclManifestEntryBlobId,
+    thrift_hash_type => thrift::id::AclManifestEntryBlobId,
+    value_type => AclManifestEntryBlob,
+    context_type => AclManifestEntryBlobContext,
+    context_key => "aclmf.entry",
 }
 
 impl_typed_hash! {
