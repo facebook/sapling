@@ -2397,7 +2397,7 @@ commit 3"#
                     _ => {}
                 }
             }
-            result += &"     ".repeat(8 - (chunk.len() + 1) / 2);
+            result += &"     ".repeat(8 - chunk.len().div_ceil(2));
             result += " ";
             for &byte in chunk {
                 let ch = match byte {
