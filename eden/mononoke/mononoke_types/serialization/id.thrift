@@ -102,3 +102,7 @@ typedef Id SkeletonManifestId
 typedef Id TestManifestId
 @rust.NewType
 typedef Id TestShardedManifestId
+@rust.NewType
+typedef Id AclManifestId
+@rust.NewType
+typedef Id AclManifestEntryBlobId
