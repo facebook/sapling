@@ -107,6 +107,8 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   private timeRangeDays: number | undefined = 7;
   private cache = new GitHubCache();
   private forceNextFetch = false;
+  /** Track in-flight fetchAllPRData promise to deduplicate concurrent requests. */
+  private inFlightPRFetch: Promise<CombinedPRQueryData | undefined> | null = null;
 
   setTimeRange(days: number | undefined): void {
     this.timeRangeDays = days;
@@ -135,6 +137,12 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   }
 
   private async fetchAllPRData(): Promise<CombinedPRQueryData | undefined> {
+    // Deduplicate: if a fetch is already in-flight, reuse it
+    if (this.inFlightPRFetch != null) {
+      this.logger.info('reusing in-flight PR fetch');
+      return this.inFlightPRFetch;
+    }
+
     const repoFilter = `repo:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}`;
     const openQuery = `${repoFilter} is:pr is:open sort:updated-desc`;
     let closedQuery = `${repoFilter} is:pr -is:open sort:updated-desc`;
@@ -146,7 +154,13 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     }
 
     const variables: CombinedPRQueryVariables = {openQuery, closedQuery, numToFetch: 100};
-    return this.query<CombinedPRQueryData, CombinedPRQueryVariables>(CombinedPRQuery, variables);
+    this.inFlightPRFetch = this.query<CombinedPRQueryData, CombinedPRQueryVariables>(
+      CombinedPRQuery,
+      variables,
+    ).finally(() => {
+      this.inFlightPRFetch = null;
+    });
+    return this.inFlightPRFetch;
   }
 
   triggerDiffSummariesFetch = debounce(
