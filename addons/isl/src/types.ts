@@ -1063,6 +1063,15 @@ export type ClientToServerMessage =
       type: 'fetchPRMergeState';
       prNumber: DiffId;
     }
+  | {
+      type: 'enableAutoMerge';
+      pullRequestId: string;
+      mergeMethod?: 'MERGE' | 'SQUASH' | 'REBASE';
+    }
+  | {
+      type: 'disableAutoMerge';
+      pullRequestId: string;
+    }
   | {type: 'fetchLandInfo'; topOfStack: DiffId}
   | {type: 'fetchAndSetStables'; additionalStables: Array<string>}
   | {type: 'fetchStableLocationAutocompleteOptions'}
@@ -1243,7 +1252,20 @@ export type ServerToClientMessage =
         mergeable?: MergeableState;
         mergeStateStatus?: MergeStateStatus;
         viewerCanMergeAsAdmin?: boolean;
+        ciChecks?: CICheckRun[];
+        autoMergeRequest?: {
+          enabledAt: string;
+          mergeMethod: string;
+        } | null;
       }>;
+    }
+  | {
+      type: 'enabledAutoMerge';
+      result: Result<{pullRequestId: string}>;
+    }
+  | {
+      type: 'disabledAutoMerge';
+      result: Result<{pullRequestId: string}>;
     }
   | {type: 'fetchedLandInfo'; topOfStack: DiffId; landInfo: Result<LandInfo>}
   | {type: 'confirmedLand'; result: Result<undefined>}

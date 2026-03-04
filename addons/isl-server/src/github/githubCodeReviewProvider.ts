@@ -495,6 +495,14 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
       this.handleFetchPRMergeState(message, postMessage);
       return true;
     }
+    if (message.type === 'enableAutoMerge') {
+      this.handleEnableAutoMerge(message, postMessage);
+      return true;
+    }
+    if (message.type === 'disableAutoMerge') {
+      this.handleDisableAutoMerge(message, postMessage);
+      return true;
+    }
     return false;
   }
 
@@ -563,15 +571,72 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
             mergeable
             mergeStateStatus
             viewerCanMergeAsAdmin
+            autoMergeRequest {
+              enabledAt
+              mergeMethod
+            }
+            commits(last: 1) {
+              nodes {
+                commit {
+                  statusCheckRollup {
+                    contexts(first: 25) {
+                      nodes {
+                        ... on CheckRun {
+                          __typename
+                          name
+                          status
+                          conclusion
+                          detailsUrl
+                        }
+                        ... on StatusContext {
+                          __typename
+                          context
+                          state
+                          targetUrl
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     `;
+    type CheckRunNode = {
+      __typename: 'CheckRun';
+      name: string;
+      status: string;
+      conclusion?: string | null;
+      detailsUrl?: string | null;
+    };
+    type StatusContextNode = {
+      __typename: 'StatusContext';
+      context: string;
+      state: string;
+      targetUrl?: string | null;
+    };
     type MergeStateData = {
       resource?: {
         mergeable?: string;
         mergeStateStatus?: string;
         viewerCanMergeAsAdmin?: boolean;
+        autoMergeRequest?: {
+          enabledAt: string;
+          mergeMethod: string;
+        } | null;
+        commits?: {
+          nodes?: Array<{
+            commit: {
+              statusCheckRollup?: {
+                contexts?: {
+                  nodes?: Array<CheckRunNode | StatusContextNode | null>;
+                };
+              } | null;
+            };
+          } | null>;
+        };
       } | null;
     };
 
@@ -579,6 +644,34 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
       const response = await this.query<MergeStateData, {url: string}>(mergeStateQuery, {
         url: this.getPrUrl(message.prNumber),
       });
+
+      // Convert check run nodes to CICheckRun format
+      const contextNodes =
+        response?.resource?.commits?.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes;
+      const ciChecks = contextNodes
+        ?.filter((n): n is CheckRunNode | StatusContextNode => n != null)
+        .map(node => {
+          if (node.__typename === 'CheckRun') {
+            return {
+              name: node.name,
+              status: node.status as any,
+              conclusion: node.conclusion as any,
+              detailsUrl: node.detailsUrl ?? undefined,
+            };
+          }
+          // StatusContext → map to CICheckRun shape
+          return {
+            name: node.context,
+            status: node.state === 'PENDING' ? 'PENDING' as const : 'COMPLETED' as const,
+            conclusion: node.state === 'SUCCESS'
+              ? 'SUCCESS' as const
+              : node.state === 'FAILURE' || node.state === 'ERROR'
+                ? 'FAILURE' as const
+                : undefined,
+            detailsUrl: node.targetUrl ?? undefined,
+          };
+        });
+
       postMessage({
         type: 'fetchedPRMergeState',
         prNumber: message.prNumber,
@@ -587,6 +680,8 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
             mergeable: response?.resource?.mergeable as any,
             mergeStateStatus: response?.resource?.mergeStateStatus as any,
             viewerCanMergeAsAdmin: response?.resource?.viewerCanMergeAsAdmin,
+            ciChecks,
+            autoMergeRequest: response?.resource?.autoMergeRequest ?? null,
           },
         },
       });
@@ -594,6 +689,65 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
       postMessage({
         type: 'fetchedPRMergeState',
         prNumber: message.prNumber,
+        result: {error: error as Error},
+      });
+    }
+  }
+
+  private async handleEnableAutoMerge(
+    message: {type: 'enableAutoMerge'; pullRequestId: string; mergeMethod?: string},
+    postMessage: (message: ServerToClientMessage) => void,
+  ): Promise<void> {
+    const mutation = `
+      mutation EnableAutoMerge($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod) {
+        enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: $mergeMethod}) {
+          pullRequest {
+            id
+          }
+        }
+      }
+    `;
+    try {
+      await this.query(mutation, {
+        pullRequestId: message.pullRequestId,
+        mergeMethod: message.mergeMethod ?? 'REBASE',
+      });
+      postMessage({
+        type: 'enabledAutoMerge',
+        result: {value: {pullRequestId: message.pullRequestId}},
+      });
+    } catch (error) {
+      postMessage({
+        type: 'enabledAutoMerge',
+        result: {error: error as Error},
+      });
+    }
+  }
+
+  private async handleDisableAutoMerge(
+    message: {type: 'disableAutoMerge'; pullRequestId: string},
+    postMessage: (message: ServerToClientMessage) => void,
+  ): Promise<void> {
+    const mutation = `
+      mutation DisableAutoMerge($pullRequestId: ID!) {
+        disablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId}) {
+          pullRequest {
+            id
+          }
+        }
+      }
+    `;
+    try {
+      await this.query(mutation, {
+        pullRequestId: message.pullRequestId,
+      });
+      postMessage({
+        type: 'disabledAutoMerge',
+        result: {value: {pullRequestId: message.pullRequestId}},
+      });
+    } catch (error) {
+      postMessage({
+        type: 'disabledAutoMerge',
         result: {error: error as Error},
       });
     }
