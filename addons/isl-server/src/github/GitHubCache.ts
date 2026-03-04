@@ -56,6 +56,15 @@ export class GitHubCache {
     this.store.delete(key);
   }
 
+  /** Remove all entries whose key starts with the given prefix. */
+  invalidateByPrefix(prefix: string): void {
+    for (const key of this.store.keys()) {
+      if (key.startsWith(prefix)) {
+        this.store.delete(key);
+      }
+    }
+  }
+
   /** Remove all entries. */
   clear(): void {
     this.store.clear();

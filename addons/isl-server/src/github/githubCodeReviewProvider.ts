@@ -120,6 +120,15 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     this.triggerDiffSummariesFetch();
   }
 
+  /** Invalidate cached comments for a specific PR. Called after mutations. */
+  invalidateCommentCache(diffId?: string): void {
+    if (diffId != null) {
+      this.cache.invalidate(`pr-comments:${diffId}`);
+    } else {
+      this.cache.invalidateByPrefix('pr-comments:');
+    }
+  }
+
   onChangeDiffSummaries(
     callback: (result: Result<Map<DiffId, GitHubDiffSummary>>, currentUser?: string) => unknown,
   ): Disposable {

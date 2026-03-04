@@ -76,4 +76,14 @@ describe('GitHubCache', () => {
     expect(cache.get('a')).toBeUndefined();
     expect(cache.get('b')).toBeUndefined();
   });
+
+  it('invalidateByPrefix removes matching keys', () => {
+    cache.set('pr-comments:1', 'a', 5000);
+    cache.set('pr-comments:2', 'b', 5000);
+    cache.set('pr-merge:1', 'c', 5000);
+    cache.invalidateByPrefix('pr-comments:');
+    expect(cache.get('pr-comments:1')).toBeUndefined();
+    expect(cache.get('pr-comments:2')).toBeUndefined();
+    expect(cache.get('pr-merge:1')).toBe('c');
+  });
 });
