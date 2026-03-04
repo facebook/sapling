@@ -30,7 +30,7 @@ pub fn register_sigbus_handler() {
     }
     crate::page_out::NEED_FIND_REGION.store(true, Ordering::Release);
     let mut new_action: libc::sigaction = unsafe { mem::zeroed() };
-    new_action.sa_sigaction = signal_handler as usize;
+    new_action.sa_sigaction = signal_handler as *const () as usize;
     new_action.sa_flags = libc::SA_SIGINFO;
     tracing::debug!("registering SIGBUS handler");
     unsafe {
