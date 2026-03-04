@@ -618,7 +618,11 @@ export default class ServerToClientAPI {
         repo.fetchSubmoduleMap();
         repo.checkForMergeConflicts();
         repo.fullRepoBranchModule?.pullSubscribedFullRepoBranches();
-        repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
+        if (repo.codeReviewProvider?.forceRefresh != null) {
+          repo.codeReviewProvider.forceRefresh();
+        } else {
+          repo.codeReviewProvider?.triggerDiffSummariesFetch(repo.getAllDiffIds());
+        }
         repo.initialConnectionContext.tracker.track('DiffFetchSource', {
           extras: {source: 'manual_refresh'},
         });

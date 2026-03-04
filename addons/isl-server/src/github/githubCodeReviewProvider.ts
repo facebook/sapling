@@ -43,6 +43,7 @@ import {
 } from './generated/graphql';
 import type {CombinedPRQueryData, CombinedPRQueryVariables} from './CombinedPRQuery';
 import {CombinedPRQuery} from './CombinedPRQuery';
+import {GitHubCache} from './GitHubCache';
 import {parseStackInfo, type StackEntry} from './parseStackInfo';
 import queryGraphQL from './queryGraphQL';
 import {publishPullRequest} from './publishPullRequest';
@@ -86,6 +87,9 @@ export type GitHubDiffSummary = {
 };
 
 const DEFAULT_GH_FETCH_TIMEOUT = 60_000; // 1 minute
+const CACHE_TTL_PR_SUMMARIES = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_COMMENTS = 10 * 60 * 1000; // 10 minutes
+const CACHE_TTL_MERGE_STATE = 2 * 60 * 1000; // 2 minutes
 
 export type DiffSummariesData = {
   summaries: Map<DiffId, GitHubDiffSummary>;
@@ -101,9 +105,17 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   private diffSummaries = new TypedEventEmitter<'data', DiffSummariesData>();
   /** Time range in days for filtering PRs. undefined means "all time". */
   private timeRangeDays: number | undefined = 7;
+  private cache = new GitHubCache();
+  private forceNextFetch = false;
 
   setTimeRange(days: number | undefined): void {
     this.timeRangeDays = days;
+  }
+
+  /** Force the next fetch to bypass cache (e.g., user-triggered refresh). */
+  forceRefresh(): void {
+    this.forceNextFetch = true;
+    this.triggerDiffSummariesFetch();
   }
 
   onChangeDiffSummaries(
@@ -140,6 +152,20 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   triggerDiffSummariesFetch = debounce(
     async () => {
       try {
+        const cacheKey = `pr-summaries:${this.codeReviewSystem.owner}/${this.codeReviewSystem.repo}`;
+
+        // Bypass cache if force-refresh was requested
+        if (this.forceNextFetch) {
+          this.forceNextFetch = false;
+        } else {
+          const cached = this.cache.get<DiffSummariesData>(cacheKey);
+          if (cached != null) {
+            this.logger.info('serving PR summaries from cache');
+            this.diffSummaries.emit('data', cached);
+            return;
+          }
+        }
+
         this.logger.info('fetching github PR summaries');
         const result = await this.fetchAllPRData();
 
@@ -155,7 +181,9 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
         const openNodes = result?.open?.nodes ?? [];
         const closedNodes = result?.closed?.nodes ?? [];
         if (openNodes.length === 0 && closedNodes.length === 0) {
-          this.diffSummaries.emit('data', {summaries: new Map()});
+          const emptyData: DiffSummariesData = {summaries: new Map()};
+          this.cache.set(cacheKey, emptyData, CACHE_TTL_PR_SUMMARIES);
+          this.diffSummaries.emit('data', emptyData);
           return;
         }
         const currentUser = result?.viewer?.login;
@@ -205,14 +233,13 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
               stackInfo,
               author: summary.author?.login ?? undefined,
               authorAvatarUrl: summary.author?.avatarUrl ?? undefined,
-              // mergeable, mergeStateStatus, and viewerCanMergeAsAdmin are omitted
-              // from the bulk query to avoid GitHub 502 timeouts. They are only
-              // needed in merge/review mode and can be lazy-loaded per-PR.
             });
           }
         }
         this.logger.info(`fetched ${map.size} github PR summaries`);
-        this.diffSummaries.emit('data', {summaries: map, currentUser});
+        const data: DiffSummariesData = {summaries: map, currentUser};
+        this.cache.set(cacheKey, data, CACHE_TTL_PR_SUMMARIES);
+        this.diffSummaries.emit('data', data);
       } catch (error) {
         this.logger.info('error fetching github PR summaries: ', error);
         this.diffSummaries.emit('error', error as Error);
@@ -224,6 +251,13 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
   );
 
   public async fetchComments(diffId: string): Promise<DiffComment[]> {
+    const cacheKey = `pr-comments:${diffId}`;
+    const cached = this.cache.get<DiffComment[]>(cacheKey);
+    if (cached != null) {
+      this.logger.info(`serving comments for PR ${diffId} from cache`);
+      return cached;
+    }
+
     const response = await this.query<
       PullRequestCommentsQueryData,
       PullRequestCommentsQueryVariables
@@ -250,7 +284,7 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     // Fetch thread IDs separately via reviewThreads query
     const threadMap = await this.fetchThreadInfo(diffId);
 
-    return (
+    const result =
       [...comments, ...inline]?.filter(notEmpty).map(comment => {
         const reviewComment = comment as PullRequestReviewComment;
         // Match thread by path and line to get the threadId
@@ -279,8 +313,10 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
           threadId: threadInfo?.id,
           isResolved: threadInfo?.isResolved,
         };
-      }) ?? []
-    );
+      }) ?? [];
+
+    this.cache.set(cacheKey, result, CACHE_TTL_COMMENTS);
+    return result;
   }
 
   /**
@@ -585,19 +621,31 @@ export class GitHubCodeReviewProvider implements CodeReviewProvider {
     };
 
     try {
+      const cacheKey = `pr-merge:${message.prNumber}`;
+      const cached = this.cache.get<{mergeable?: string; mergeStateStatus?: string; viewerCanMergeAsAdmin?: boolean}>(cacheKey);
+      if (cached != null) {
+        this.logger.info(`serving merge state for PR ${message.prNumber} from cache`);
+        postMessage({
+          type: 'fetchedPRMergeState',
+          prNumber: message.prNumber,
+          result: {value: cached as any},
+        });
+        return;
+      }
+
       const response = await this.query<MergeStateData, {url: string}>(mergeStateQuery, {
         url: this.getPrUrl(message.prNumber),
       });
+      const value = {
+        mergeable: response?.resource?.mergeable as any,
+        mergeStateStatus: response?.resource?.mergeStateStatus as any,
+        viewerCanMergeAsAdmin: response?.resource?.viewerCanMergeAsAdmin,
+      };
+      this.cache.set(cacheKey, value, CACHE_TTL_MERGE_STATE);
       postMessage({
         type: 'fetchedPRMergeState',
         prNumber: message.prNumber,
-        result: {
-          value: {
-            mergeable: response?.resource?.mergeable as any,
-            mergeStateStatus: response?.resource?.mergeStateStatus as any,
-            viewerCanMergeAsAdmin: response?.resource?.viewerCanMergeAsAdmin,
-          },
-        },
+        result: {value},
       });
     } catch (error) {
       postMessage({
