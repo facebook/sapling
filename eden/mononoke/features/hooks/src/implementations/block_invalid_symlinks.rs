@@ -45,6 +45,18 @@ pub struct BlockInvalidSymlinksConfig {
     /// Allow empty symlinks.
     #[serde(default)]
     allow_empty: bool,
+
+    /// Block symlinks that point to absolute paths in paths matching these
+    /// regexes. If empty, absolute symlink blocking is disabled. Use ".*" to
+    /// block absolute symlinks in all paths (subject to ignore_path_regexes).
+    #[serde(default, with = "serde_regex")]
+    block_absolute_symlinks_path_regexes: Vec<Regex>,
+
+    /// Dry run mode for block_absolute_symlinks_path_regexes. When enabled,
+    /// absolute symlinks will be logged to Scuba but not rejected. This allows
+    /// testing the hook's behavior before fully enabling it.
+    #[serde(default)]
+    block_absolute_symlinks_dry_run: bool,
 }
 
 /// Hook to block commits with invalid symlinks.
@@ -60,6 +72,24 @@ impl BlockInvalidSymlinksHook {
 
     pub fn with_config(config: BlockInvalidSymlinksConfig) -> Result<Self> {
         Ok(Self { config })
+    }
+}
+
+/// Check if a symlink target is an absolute path.
+/// Handles both Unix ("/foo") and Windows ("C:\foo", "\\server\share") styles.
+fn is_absolute_symlink(target: &[u8]) -> bool {
+    match target {
+        // Unix absolute path
+        [b'/', ..] => true,
+        // Windows drive letter (e.g., C:\foo or C:/foo)
+        [drive, b':', sep, ..]
+            if drive.is_ascii_alphabetic() && (*sep == b'\\' || *sep == b'/') =>
+        {
+            true
+        }
+        // Windows UNC path (e.g., \\server\share)
+        [b'\\', b'\\', ..] => true,
+        _ => false,
     }
 }
 
@@ -119,6 +149,41 @@ impl FileHook for BlockInvalidSymlinksHook {
                             format!("symlink '{path}' contents contain a null byte"),
                         )));
                     }
+
+                    // Check if this path should be checked for absolute symlinks.
+                    // Only call is_absolute_symlink when the path matches a regex,
+                    // to avoid unnecessary work when blocking is not applicable.
+                    let path_matches_absolute_check =
+                        !self.config.block_absolute_symlinks_path_regexes.is_empty()
+                            && self
+                                .config
+                                .block_absolute_symlinks_path_regexes
+                                .iter()
+                                .any(|regex| regex.is_match(&path));
+
+                    if path_matches_absolute_check && is_absolute_symlink(&text) {
+                        if self.config.block_absolute_symlinks_dry_run {
+                            // Dry run mode: log absolute symlinks to Scuba without blocking
+                            ctx.scuba().clone().log_with_msg(
+                                "block_absolute_symlinks dry run: would reject",
+                                format!(
+                                    "symlink '{}' points to an absolute path which will break builds. \
+                                     Use a relative path instead.",
+                                    path
+                                ),
+                            );
+                        } else {
+                            // Blocking mode: reject absolute symlinks
+                            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                                "symlink uses absolute path",
+                                format!(
+                                    "symlink '{}' points to an absolute path which will break builds. \
+                                     Use a relative path instead.",
+                                    path
+                                ),
+                            )));
+                        }
+                    }
                 }
 
                 Ok(HookExecution::Accepted)
@@ -170,6 +235,8 @@ mod tests {
             allow_newlines: false,
             allow_nulls: false,
             allow_empty: false,
+            block_absolute_symlinks_dry_run: false,
+            block_absolute_symlinks_path_regexes: vec![],
         })?;
 
         // Hooks with each setting toggled separately.
@@ -349,6 +416,201 @@ mod tests {
             )
             .await?,
             vec![("E".try_into()?, HookExecution::Accepted)],
+        );
+
+        Ok(())
+    }
+
+    #[mononoke::fbinit_test]
+    async fn test_block_absolute_symlinks(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: HookTestRepo = test_repo_factory::build_empty(fb).await?;
+
+        let changesets = create_from_dag_with_changes(
+            &ctx,
+            &repo,
+            r##"
+                A-B-C-D-E-F
+            "##,
+            changes! {
+                "A" => |c| c.add_file_with_type("www/foo/link", "/absolute/target", FileType::Symlink),
+                "B" => |c| c.add_file_with_type("www/bar/link", "../relative/target", FileType::Symlink),
+                "C" => |c| c.add_file_with_type("ignored/link", "/absolute/target", FileType::Symlink),
+                "D" => |c| c.add_file_with_type("www/win/link", "C:\\Windows\\target", FileType::Symlink),
+                "E" => |c| c.add_file_with_type("www/unc/link", "\\\\server\\share", FileType::Symlink),
+                "F" => |c| c.add_file_with_type("fbcode/link", "/absolute/target", FileType::Symlink),
+            },
+        )
+        .await?;
+        bookmark(&ctx, &repo, "main")
+            .create_publishing(changesets["F"])
+            .await?;
+
+        // Hook that blocks absolute symlinks everywhere
+        let hook = BlockInvalidSymlinksHook::with_config(BlockInvalidSymlinksConfig {
+            block_absolute_symlinks_path_regexes: vec![Regex::new(r".*")?],
+            ..Default::default()
+        })?;
+
+        // Hook that blocks absolute symlinks with ignore_path_regexes
+        let hook_with_ignore = BlockInvalidSymlinksHook::with_config(BlockInvalidSymlinksConfig {
+            block_absolute_symlinks_path_regexes: vec![Regex::new(r".*")?],
+            ignore_path_regexes: vec![Regex::new(r"^ignored/")?],
+            ..Default::default()
+        })?;
+
+        // Hook that only blocks absolute symlinks in www/ paths
+        let hook_www_only = BlockInvalidSymlinksHook::with_config(BlockInvalidSymlinksConfig {
+            block_absolute_symlinks_path_regexes: vec![Regex::new(r"^www/")?],
+            ..Default::default()
+        })?;
+
+        // Absolute symlink -> rejected
+        let results = test_file_hook(
+            &ctx,
+            &repo,
+            &hook,
+            changesets["A"],
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )
+        .await?;
+        assert!(
+            results.contains(&(
+                "www/foo/link".try_into()?,
+                HookExecution::Rejected(HookRejectionInfo {
+                    description: "symlink uses absolute path".into(),
+                    long_description:
+                        "symlink 'www/foo/link' points to an absolute path which will break builds. \
+                         Use a relative path instead."
+                            .into(),
+                }),
+            )),
+            "absolute symlink should be rejected, got: {:?}",
+            results
+        );
+
+        // Relative symlink -> accepted
+        let results = test_file_hook(
+            &ctx,
+            &repo,
+            &hook,
+            changesets["B"],
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )
+        .await?;
+        assert!(
+            results.contains(&("www/bar/link".try_into()?, HookExecution::Accepted)),
+            "relative symlink should be accepted, got: {:?}",
+            results
+        );
+
+        // Absolute symlink in ignored path -> accepted
+        let results = test_file_hook(
+            &ctx,
+            &repo,
+            &hook_with_ignore,
+            changesets["C"],
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )
+        .await?;
+        assert!(
+            results.contains(&("ignored/link".try_into()?, HookExecution::Accepted)),
+            "absolute symlink in ignored path should be accepted, got: {:?}",
+            results
+        );
+
+        // Windows drive letter absolute symlink -> rejected
+        let results = test_file_hook(
+            &ctx,
+            &repo,
+            &hook,
+            changesets["D"],
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )
+        .await?;
+        assert!(
+            results.contains(&(
+                "www/win/link".try_into()?,
+                HookExecution::Rejected(HookRejectionInfo {
+                    description: "symlink uses absolute path".into(),
+                    long_description:
+                        "symlink 'www/win/link' points to an absolute path which will break builds. \
+                         Use a relative path instead."
+                            .into(),
+                }),
+            )),
+            "Windows drive letter absolute symlink should be rejected, got: {:?}",
+            results
+        );
+
+        // Windows UNC path absolute symlink -> rejected
+        let results = test_file_hook(
+            &ctx,
+            &repo,
+            &hook,
+            changesets["E"],
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )
+        .await?;
+        assert!(
+            results.contains(&(
+                "www/unc/link".try_into()?,
+                HookExecution::Rejected(HookRejectionInfo {
+                    description: "symlink uses absolute path".into(),
+                    long_description:
+                        "symlink 'www/unc/link' points to an absolute path which will break builds. \
+                         Use a relative path instead."
+                            .into(),
+                }),
+            )),
+            "Windows UNC absolute symlink should be rejected, got: {:?}",
+            results
+        );
+
+        // Absolute symlink in www/ with path regex -> rejected
+        let results = test_file_hook(
+            &ctx,
+            &repo,
+            &hook_www_only,
+            changesets["A"],
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )
+        .await?;
+        assert!(
+            results.contains(&(
+                "www/foo/link".try_into()?,
+                HookExecution::Rejected(HookRejectionInfo {
+                    description: "symlink uses absolute path".into(),
+                    long_description:
+                        "symlink 'www/foo/link' points to an absolute path which will break builds. \
+                         Use a relative path instead."
+                            .into(),
+                }),
+            )),
+            "absolute symlink in www/ should be rejected with path regex, got: {:?}",
+            results
+        );
+
+        // Absolute symlink outside www/ with path regex -> accepted
+        let results = test_file_hook(
+            &ctx,
+            &repo,
+            &hook_www_only,
+            changesets["F"],
+            CrossRepoPushSource::NativeToThisRepo,
+            PushAuthoredBy::User,
+        )
+        .await?;
+        assert!(
+            results.contains(&("fbcode/link".try_into()?, HookExecution::Accepted)),
+            "absolute symlink outside www/ should be accepted with path regex, got: {:?}",
+            results
         );
 
         Ok(())
