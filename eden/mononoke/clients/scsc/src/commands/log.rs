@@ -86,6 +86,9 @@ pub(super) struct CommandArgs {
     #[clap(long)]
     /// Follow mutable overrides to the history that make it more user friendly and 'correct'
     follow_mutable_history: bool,
+    #[clap(long, short = 'u')]
+    /// Filter commits by author (case-insensitive substring match)
+    user: Option<String>,
     /// Show only the linear history of the commit, ignoring merge commits.
     #[clap(
         long,
@@ -188,6 +191,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                 descendants_of,
                 exclude_changeset_and_ancestors,
                 follow_mutable_file_history,
+                author: args.user.clone(),
                 ..Default::default()
             };
             conn.commit_path_history(&commit_and_path, &params)
@@ -204,6 +208,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                     identity_schemes,
                     descendants_of,
                     exclude_changeset_and_ancestors,
+                    author: args.user.clone(),
                     ..Default::default()
                 };
                 conn.commit_linear_history(&commit, &params)
@@ -220,6 +225,7 @@ pub(super) async fn run(app: ScscApp, args: CommandArgs) -> Result<()> {
                     identity_schemes,
                     descendants_of,
                     exclude_changeset_and_ancestors,
+                    author: args.user.clone(),
                     ..Default::default()
                 };
                 conn.commit_history(&commit, &params)
