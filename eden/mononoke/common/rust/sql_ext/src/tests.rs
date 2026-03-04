@@ -248,13 +248,15 @@ mod facebook {
         txn.commit().await?;
 
         // Verify logs from Scuba file
-        let scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
+        let mut scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
+        clear_instance_type(&mut scuba_file_logs);
 
         println!("scuba_file_logs: {:#?}", scuba_file_logs);
 
         // Verify logs from mock transport
-        let mock_transport_logs =
+        let mut mock_transport_logs =
             parse_captured_logs(&mock_transport).context("Parsing logger samples")?;
+        clear_instance_type(&mut mock_transport_logs);
 
         println!("mock_transport_logs: {:#?}", mock_transport_logs);
 
@@ -399,13 +401,15 @@ mod facebook {
         .await?;
 
         // Verify logs from Scuba file
-        let scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
+        let mut scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
+        clear_instance_type(&mut scuba_file_logs);
 
         println!("scuba_file_logs: {:#?}", scuba_file_logs);
 
         // Verify logs from mock transport
-        let mock_transport_logs =
+        let mut mock_transport_logs =
             parse_captured_logs(&mock_transport).context("Parsing logger samples")?;
+        clear_instance_type(&mut mock_transport_logs);
 
         println!("mock_transport_logs: {:#?}", mock_transport_logs);
 
@@ -505,13 +509,15 @@ mod facebook {
         };
 
         // Verify logs from Scuba file
-        let scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
+        let mut scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
+        clear_instance_type(&mut scuba_file_logs);
 
         println!("scuba_file_logs: {:#?}", scuba_file_logs);
 
         // Verify logs from mock transport
-        let mock_transport_logs =
+        let mut mock_transport_logs =
             parse_captured_logs(&mock_transport).context("Parsing logger samples")?;
+        clear_instance_type(&mut mock_transport_logs);
 
         println!("mock_transport_logs: {:#?}", mock_transport_logs);
 
@@ -617,13 +623,15 @@ mod facebook {
         assert_eq!(res.len(), 10, "query should return 10 rows");
 
         // Verify logs from Scuba file
-        let scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
+        let mut scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
+        clear_instance_type(&mut scuba_file_logs);
 
         println!("scuba_file_logs: {:#?}", scuba_file_logs);
 
         // Verify logs from mock transport
-        let mock_transport_logs =
+        let mut mock_transport_logs =
             parse_captured_logs(&mock_transport).context("Parsing logger samples")?;
+        clear_instance_type(&mut mock_transport_logs);
 
         println!("mock_transport_logs: {:#?}", mock_transport_logs);
 
@@ -723,12 +731,14 @@ mod facebook {
 
         // Verify logs from Scuba file
         let mut scuba_file_logs = deserialize_scuba_log_file(&temp_path)?;
+        clear_instance_type(&mut scuba_file_logs);
 
         println!("scuba_file_logs: {:#?}", scuba_file_logs);
 
         // Verify logs from mock transport
         let mut mock_transport_logs =
             parse_captured_logs(&mock_transport).context("Parsing logger samples")?;
+        clear_instance_type(&mut mock_transport_logs);
 
         println!("mock_transport_logs: {:#?}", mock_transport_logs);
 
@@ -888,6 +898,16 @@ mod facebook {
             temp_path,
             mock_transport,
         })
+    }
+
+    /// Clears the `instance_type` field from all samples.
+    /// Whether the test XDB tier returns `instance_type` in MySQL response
+    /// attributes depends on infra configuration that has historically been
+    /// unstable (see T223577767), so we normalize it away before comparing.
+    fn clear_instance_type(logs: &mut [ScubaTelemetryLogSample]) {
+        for log in logs.iter_mut() {
+            log.mysql_telemetry.instance_type = None;
+        }
     }
 
     /// Parse MononokeXdbTelemetryWrappedLoggerScubaStruct samples from mock transport
