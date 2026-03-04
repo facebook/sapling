@@ -719,12 +719,11 @@ impl IO {
         // Only use the pager for error stream if error stream is a tty.
         // This makes `hg 2>foo` works as expected.
         if err_is_tty {
-            pre_pager_error = Some(std::mem::replace(
-                &mut inner.error,
-                Some(
+            pre_pager_error = Some(
+                inner.error.replace(
                     Box::new(WriterWithTty::new(Box::new(err_write), err_is_tty)) as Box<dyn Write>,
                 ),
-            ));
+            );
             let separate =
                 config.get_opt::<bool>("pager", "separate-stderr").ok() == Some(Some(true));
             inner.redirect_err_to_out = !separate;
