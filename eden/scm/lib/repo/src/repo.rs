@@ -562,7 +562,7 @@ impl Repo {
             anyhow::bail!("not compiled with 'wdir' support");
         }
 
-        let commit_id = self.resolve_commit(change_id)?.local()?;
+        let commit_id = self.resolve_commit(change_id)?.any()?;
         let tree_resolver = self.tree_resolver()?;
         Ok((commit_id, tree_resolver.get(&commit_id)?))
     }
