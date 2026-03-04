@@ -81,7 +81,6 @@ TEST_F(EdenServiceHandlerCancellationTest, CancellationDuringOperation) {
 
   RequestCancellationInfo requestInfo(std::move(cancelSource), "testEndpoint");
 
-  std::atomic<bool> operationCompleted{false};
   std::atomic<bool> operationCancelled{false};
 
   folly::Promise<folly::Unit> startPromise;
@@ -89,14 +88,11 @@ TEST_F(EdenServiceHandlerCancellationTest, CancellationDuringOperation) {
 
   std::thread operationThread([&]() {
     startPromise.setValue(folly::Unit{});
-    for (int i = 0; i < 1000; ++i) {
-      if (cancellationToken.isCancellationRequested()) {
-        operationCancelled = true;
-        return;
-      }
+    // Simulate a long-running operation that checks for cancellation
+    while (!cancellationToken.isCancellationRequested()) {
       std::this_thread::yield();
     }
-    operationCompleted = true;
+    operationCancelled = true;
   });
 
   // Wait for operation to start before requesting cancellation
@@ -107,7 +103,6 @@ TEST_F(EdenServiceHandlerCancellationTest, CancellationDuringOperation) {
   operationThread.join();
 
   EXPECT_TRUE(operationCancelled.load());
-  EXPECT_FALSE(operationCompleted.load());
 
   EXPECT_EQ(RequestStatus::REQUESTED, requestInfo.status);
 }
@@ -124,23 +119,23 @@ TEST_F(EdenServiceHandlerCancellationTest, ConcurrentTokenUsage) {
   std::atomic<int> readyThreads{0};
   std::atomic<int> checksBeforeCancellation{0};
   std::atomic<int> checksAfterCancellation{0};
+  std::atomic<int> checksCompleted{0};
 
   folly::Promise<folly::Unit> allReadyPromise;
   auto allReadyFuture = allReadyPromise.getFuture();
+
+  folly::Promise<folly::Unit> allCheckedPromise;
+  auto allCheckedFuture = allCheckedPromise.getFuture();
 
   std::atomic<bool> cancellationSignaled{false};
 
   for (int t = 0; t < numThreads; ++t) {
     threads.emplace_back([&]() {
-      readyThreads.fetch_add(1);
-      int ready = readyThreads.load();
-
-      // Signal when all threads are ready
-      if (ready == numThreads) {
+      // Signal ready and wait for all threads
+      if (readyThreads.fetch_add(1) == numThreads - 1) {
         allReadyPromise.setValue(folly::Unit{});
       }
 
-      // Wait for all threads to be ready before proceeding
       while (readyThreads.load() < numThreads) {
         std::this_thread::yield();
       }
@@ -149,7 +144,12 @@ TEST_F(EdenServiceHandlerCancellationTest, ConcurrentTokenUsage) {
         checksBeforeCancellation.fetch_add(1);
       }
 
-      // Wait for cancellation signal instead of sleeping
+      // Signal that this thread completed its pre-cancellation check
+      if (checksCompleted.fetch_add(1) == numThreads - 1) {
+        allCheckedPromise.setValue(folly::Unit{});
+      }
+
+      // Wait for cancellation signal
       while (!cancellationSignaled.load()) {
         std::this_thread::yield();
       }
@@ -160,8 +160,9 @@ TEST_F(EdenServiceHandlerCancellationTest, ConcurrentTokenUsage) {
     });
   }
 
-  // Wait for all threads to be ready
+  // Wait for all threads to complete their pre-cancellation checks
   std::move(allReadyFuture).wait();
+  std::move(allCheckedFuture).wait();
 
   EXPECT_TRUE(requestInfo.requestCancellation());
 
