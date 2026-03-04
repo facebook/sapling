@@ -115,7 +115,7 @@ impl EdenFsClient {
     }
 
     fn root_options_from_filter(filter: Option<FilterId>) -> RootIdOptions {
-        let fid = filter.map(|filt| filt.id().ok()).flatten();
+        let fid = filter.and_then(|filt| filt.id().ok());
         edenfs::RootIdOptions {
             fid,
             ..Default::default()
