@@ -33,6 +33,7 @@ use grep::printer::SummaryBuilder;
 use grep::printer::SummaryKind;
 use grep::regex::RegexMatcher;
 use grep::regex::RegexMatcherBuilder;
+use grep::searcher::BinaryDetection;
 use grep::searcher::Searcher;
 use grep::searcher::SearcherBuilder;
 use grep::searcher::Sink;
@@ -213,6 +214,9 @@ fn build_regex_matcher(opts: &GrepOpts, pattern: &str) -> Result<RegexMatcher> {
 /// Build a searcher from grep options.
 fn build_searcher(opts: &GrepOpts) -> Result<Searcher> {
     let mut searcher_builder = SearcherBuilder::new();
+
+    // Skip binary files (files containing NUL bytes).
+    searcher_builder.binary_detection(BinaryDetection::quit(0));
 
     // Set line numbers based on -n flag (default is true in grep-searcher, so we must explicitly set)
     searcher_builder.line_number(opts.line_number);

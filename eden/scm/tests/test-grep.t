@@ -288,3 +288,12 @@ Can grep unpulled revisions from on-disk repo:
   $ newclientrepo unpulled-client server
   $ hg grep -r $A foo
   foo:foo content
+
+
+Test grep skips binary files:
+  $ newclientrepo binary-test
+  $ printf 'text match\n' > text_file
+  $ printf 'binary match\0 here\n' > binary_file
+  $ hg commit -Aqm 'add files'
+  $ hg grep match
+  text_file:text match
