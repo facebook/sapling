@@ -32,8 +32,6 @@ use edenapi_types::TreeAuxData;
 use fetch::FetchState;
 use flume::bounded;
 use flume::unbounded;
-use manifest_augmented_tree::AugmentedTree;
-use manifest_augmented_tree::AugmentedTreeEntry;
 use metrics::TREE_STORE_FETCH_METRICS;
 use minibytes::Bytes;
 use once_cell::sync::OnceCell;
@@ -865,6 +863,14 @@ impl storemodel::KeyStore for TreeStore {
         let data = data.to_bytes();
         let id = sha1_digest(&opts, &data, self.format());
 
+        if opts.read_before_write {
+            if let Some(ref indexedlog_local) = self.indexedlog_local {
+                if IndexedLogHgIdDataStore::contains(indexedlog_local, &id)? {
+                    return Ok(id);
+                }
+            }
+        }
+
         // PERF: Ideally there is no need to clone path or data.
         let key = Key::new(path.to_owned(), id);
         self.write_batch(std::iter::once((key, data, Default::default())))?;
@@ -1018,5 +1024,83 @@ impl storemodel::TreeStore for TreeStore {
         id: HgId,
     ) -> anyhow::Result<Option<TreeAuxData>> {
         self.get_local_aux_direct(&id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+    use std::sync::Arc;
+
+    use storemodel::InsertOpts;
+    use storemodel::KeyStore;
+    use storemodel::Kind;
+    use storemodel::SerializationFormat;
+    use tempfile::TempDir;
+    use types::RepoPathBuf;
+
+    use crate::StoreType;
+    use crate::ToKeys;
+    use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+    use crate::indexedlogdatastore::IndexedLogHgIdDataStoreConfig;
+    use crate::scmstore::tree::TreeStore;
+
+    #[test]
+    fn test_insert_data_read_before_write() {
+        let tempdir = TempDir::new().unwrap();
+        let config = IndexedLogHgIdDataStoreConfig {
+            max_log_count: None,
+            max_bytes_per_log: None,
+            max_bytes: None,
+            btrfs_compression: false,
+        };
+        let indexedlog = Arc::new(
+            IndexedLogHgIdDataStore::new(
+                &BTreeMap::<&str, &str>::new(),
+                &tempdir,
+                &config,
+                StoreType::Rotated,
+                SerializationFormat::Hg,
+            )
+            .unwrap(),
+        );
+
+        let mut store = TreeStore::empty();
+        store.indexedlog_local = Some(indexedlog.clone());
+
+        let path = RepoPathBuf::from_string("foo".to_string()).unwrap();
+        let data: &'static [u8] = b"tree data";
+
+        // First insert without read_before_write.
+        let opts = InsertOpts {
+            kind: Kind::Tree,
+            ..Default::default()
+        };
+        let id1 = store.insert_data(opts, &path, data.into()).unwrap();
+
+        assert!(indexedlog.contains(&id1).unwrap());
+        assert_eq!(indexedlog.to_keys().len(), 1);
+
+        // Second insert with read_before_write=true should skip the write.
+        let opts = InsertOpts {
+            kind: Kind::Tree,
+            read_before_write: true,
+            ..Default::default()
+        };
+        let id2 = store.insert_data(opts, &path, data.into()).unwrap();
+
+        assert_eq!(id1, id2);
+        assert_eq!(indexedlog.to_keys().len(), 1);
+
+        // Third insert with read_before_write=false writes a duplicate.
+        let opts = InsertOpts {
+            kind: Kind::Tree,
+            read_before_write: false,
+            ..Default::default()
+        };
+        let id3 = store.insert_data(opts, &path, data.into()).unwrap();
+
+        assert_eq!(id1, id3);
+        assert_eq!(indexedlog.to_keys().len(), 2);
     }
 }
