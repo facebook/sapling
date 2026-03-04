@@ -369,10 +369,8 @@ def wraprepo(repo):
 
 def setuptreestores(repo, mfl):
     if git.isgitstore(repo):
-        mfl._use_abstraction = True
         mfl.datastore = git.openstore(repo)
     elif eagerepo.iseagerepo(repo) or repo.storage_format() == "revlog":
-        mfl._use_abstraction = True
         store = repo.fileslog.filestore
         mfl._raw_store = store
         mfl.datastore = EagerDataStore(store)
@@ -382,10 +380,13 @@ def setuptreestores(repo, mfl):
                 "incompatible eagerrepo store: %r (expect EagerRepoStore)" % store
             )
     else:
-        # "historystore" related logic does not yet have confident
-        # abstraction-friendly alternative yet.
-        mfl._use_abstraction = False
-        mfl.makeruststore()
+        mask = os.umask(0o002)
+        try:
+            mfl.treescmstore = repo._rsrepo.treescmstore()
+            mfl.datastore = mfl.treescmstore
+            mfl.historystore = mfl.treescmstore.metadatastore()
+        finally:
+            os.umask(mask)
 
 
 class treemanifestlog:
@@ -395,8 +396,6 @@ class treemanifestlog:
         self._treemanifestcache = util.lrucachedict(cachesize)
         # store object used to construct storemodel.TreeStore
         self._raw_store = None
-        # whether to use the "storemodel" abstraction for write paths
-        self._use_abstraction = False
 
         self._repo = repo
         self._opener = opener
@@ -485,32 +484,16 @@ class treemanifestlog:
     ):
         newtreeiter = _finalize(self, newtree, p1node, p2node)
 
-        if self._use_abstraction:
-            rootnode = None
-            for nname, nnode, _ntext, _np1text, _np1, _np2 in newtreeiter:
-                if rootnode is None and nname == "":
-                    rootnode = nnode
-            return rootnode
-
-        dpack, hpack = self._getmutablelocalpacks()
-
-        node = None
+        rootnode = None
         for nname, nnode, _ntext, _np1text, _np1, _np2 in newtreeiter:
-            if node is None and nname == "":
-                node = nnode
+            if nname == "":
+                rootnode = nnode
 
-        return node
+        return rootnode
 
     def commitsharedpacks(self):
         """Persist the dirty trees written to the shared packs."""
-        if self._use_abstraction:
-            self.abstract_store().flush()
-            return
-
-        self.datastore.markforrefresh()
-        self.historystore.markforrefresh()
-        self.datastore.flush()
-        self.historystore.flush()
+        self.abstract_store().flush()
 
     def commitpending(self):
         self.commitsharedpacks()
@@ -535,8 +518,9 @@ class treemanifestlog:
         # git store does not have the Python `.get(path, node)` method.
         # it can only be accessed via the Rust treemanifest.
         # eager store does not require remote lookup.
-        if node == nullid or self._use_abstraction:
+        if node == nullid or "remotefilelog" not in self._repo.requirements:
             return treemanifestctx(self, dir, node)
+
         if node in self._treemanifestcache:
             m = self._treemanifestcache[node]
             if m.dirty():
@@ -573,16 +557,6 @@ class treemanifestlog:
         if usehttpfetching(repo) and edenapi:
             return edenapi.treestore()
         return None
-
-    def makeruststore(self):
-        assert not self._use_abstraction
-        mask = os.umask(0o002)
-        try:
-            self.treescmstore = self._repo._rsrepo.treescmstore()
-            self.datastore = self.treescmstore
-            self.historystore = self.treescmstore.metadatastore()
-        finally:
-            os.umask(mask)
 
 
 def _buildtree(manifestlog, node=None):
