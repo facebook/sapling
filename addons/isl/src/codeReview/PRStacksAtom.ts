@@ -122,6 +122,8 @@ export type StackNavigationContext = {
     state: DiffSummary['state'];
     /** Review decision: APPROVED, CHANGES_REQUESTED, REVIEW_REQUIRED, or undefined */
     reviewDecision?: string;
+    /** CI signal: pass, failed, running, warning, no-signal, or undefined */
+    signalSummary?: string;
   }>;
   /** Whether this is a single PR (no stack navigation needed) */
   isSinglePr: boolean;
@@ -526,6 +528,7 @@ export const currentPRStackContextAtom = atom<StackNavigationContext | null>(get
           title: currentPR.title,
           isCurrent: true,
           state: currentPR.state,
+          signalSummary: currentPR.signalSummary,
         },
       ],
     };
@@ -557,6 +560,7 @@ export const currentPRStackContextAtom = atom<StackNavigationContext | null>(get
         isCurrent: prNumStr === currentPrNumberStr,
         state: pr.state,
         reviewDecision: effectiveDecision ?? undefined,
+        signalSummary: pr.signalSummary,
       };
     })
     .filter((e): e is NonNullable<typeof e> => e !== null);

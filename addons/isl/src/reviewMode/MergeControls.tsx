@@ -569,47 +569,31 @@ export function MergeControls({prNumber}: MergeControlsProps) {
       )}
 
       {autoMergeEnabled ? (
-        <div className="merge-auto-merge-status">
-          <div className="merge-auto-merge-badge">
-            <Icon icon="rocket" />
-            <span><T>Auto-merge enabled</T></span>
-          </div>
-          <span className="merge-auto-merge-detail">
-            <T>Will merge automatically when all requirements are met</T>
-          </span>
-          <Tooltip title={t('Disable auto-merge')} placement="top">
-            <Button
-              className="auto-merge-disable-btn"
-              disabled={isTogglingAutoMerge}
-              onClick={handleDisableAutoMerge}>
-              {isTogglingAutoMerge ? (
-                <Icon icon="loading" />
-              ) : (
-                <T>Disable auto-merge</T>
-              )}
-            </Button>
-          </Tooltip>
+        <div className="merge-auto-merge-row">
+          <Icon icon="rocket" />
+          <span className="merge-auto-merge-label"><T>Auto-merge enabled</T></span>
+          <Button
+            className="auto-merge-toggle-btn auto-merge-toggle-off"
+            disabled={isTogglingAutoMerge}
+            onClick={handleDisableAutoMerge}>
+            {isTogglingAutoMerge ? <Icon icon="loading" /> : <T>Disable</T>}
+          </Button>
         </div>
       ) : !canMerge && filteredReasons.length > 0 && prNodeId ? (
-        <div className="merge-auto-merge-offer">
-          <Tooltip title={t('Enable auto-merge to merge automatically when all checks pass and reviews are approved')} placement="top">
-            <Button
-              className="auto-merge-enable-btn"
-              disabled={isTogglingAutoMerge}
-              onClick={handleEnableAutoMerge}>
-              {isTogglingAutoMerge ? (
-                <>
-                  <Icon icon="loading" slot="start" />
-                  <T>Enabling...</T>
-                </>
-              ) : (
-                <>
-                  <Icon icon="rocket" slot="start" />
-                  <T>Enable auto-merge</T>
-                </>
-              )}
-            </Button>
-          </Tooltip>
+        <div className="merge-auto-merge-row">
+          <Button
+            className="auto-merge-toggle-btn auto-merge-toggle-on"
+            disabled={isTogglingAutoMerge}
+            onClick={handleEnableAutoMerge}>
+            {isTogglingAutoMerge ? (
+              <Icon icon="loading" slot="start" />
+            ) : (
+              <>
+                <Icon icon="rocket" slot="start" />
+                <T>Auto-merge</T>
+              </>
+            )}
+          </Button>
         </div>
       ) : null}
     </div>

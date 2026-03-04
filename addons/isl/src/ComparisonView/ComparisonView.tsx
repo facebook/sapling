@@ -128,10 +128,20 @@ function PRInfoHeader({prNumber}: {prNumber: string}) {
   const description = pr.type === 'github' ? pr.commitMessage : undefined;
   const prUrl = pr.type === 'github' ? pr.url : null;
 
+  const prState = pr.type === 'github' ? pr.state : undefined;
+
   return (
     <div className="pr-info-header">
       <div className="pr-info-title-row">
         <span className="pr-info-number">#{prNumber}</span>
+        {prState && prState !== 'OPEN' && (
+          <span className={`pr-state-badge pr-state-${prState.toLowerCase()}`}>
+            {prState === 'MERGED' && <Icon icon="git-merge" />}
+            {prState === 'CLOSED' && <Icon icon="circle-slash" />}
+            {prState === 'DRAFT' && <Icon icon="edit" />}
+            {prState}
+          </span>
+        )}
         {prUrl ? (
           <a
             href={prUrl}
@@ -170,10 +180,18 @@ function PRCompactHeader({prNumber}: {prNumber: string}) {
   const pr = prData?.value;
   const title = pr?.title || `PR #${prNumber}`;
   const diffStats = useAtomValue(currentDiffStatsAtom);
+  const prState = pr?.type === 'github' ? pr.state : undefined;
 
   return (
     <>
       <span className="pr-info-number">#{prNumber}</span>
+      {prState && prState !== 'OPEN' && (
+        <span className={`pr-state-badge pr-state-badge-compact pr-state-${prState.toLowerCase()}`}>
+          {prState === 'MERGED' && <Icon icon="git-merge" />}
+          {prState === 'CLOSED' && <Icon icon="circle-slash" />}
+          {prState === 'DRAFT' && <Icon icon="edit" />}
+        </span>
+      )}
       <span className="pr-compact-title" title={title}>
         {title}
       </span>
@@ -548,11 +566,27 @@ function StackNavigationBar() {
                   : entry.reviewDecision === 'CHANGES_REQUESTED'
                     ? 'stack-pr-changes-requested'
                     : '';
+              const stateClass =
+                entry.state === 'MERGED'
+                  ? 'stack-pr-merged'
+                  : entry.state === 'CLOSED'
+                    ? 'stack-pr-closed'
+                    : entry.state === 'DRAFT'
+                      ? 'stack-pr-draft'
+                      : '';
+              const ciClass =
+                entry.signalSummary === 'pass'
+                  ? 'stack-pr-ci-pass'
+                  : entry.signalSummary === 'failed'
+                    ? 'stack-pr-ci-failed'
+                    : entry.signalSummary === 'running'
+                      ? 'stack-pr-ci-running'
+                      : '';
 
               const pill = (
                 <Tooltip key={entry.prNumber} title={entry.title} delayMs={500}>
                   <Button
-                    className={`stack-pr-pill ${entry.isCurrent ? 'stack-pr-current' : ''} ${entry.state === 'MERGED' ? 'stack-pr-merged' : ''} ${reviewClass}`}
+                    className={`stack-pr-pill ${entry.isCurrent ? 'stack-pr-current' : ''} ${stateClass} ${reviewClass} ${ciClass}`}
                     onClick={() => handleNavigateToPR(entry.prNumber, entry.headHash)}
                     disabled={entry.isCurrent || !entry.headHash}>
                     {entry.reviewDecision === 'APPROVED' && !entry.isCurrent && (
@@ -560,6 +594,12 @@ function StackNavigationBar() {
                     )}
                     {entry.reviewDecision === 'CHANGES_REQUESTED' && !entry.isCurrent && (
                       <Icon icon="diff" />
+                    )}
+                    {entry.state === 'DRAFT' && !entry.isCurrent && (
+                      <Icon icon="edit" />
+                    )}
+                    {entry.state === 'CLOSED' && !entry.isCurrent && (
+                      <Icon icon="circle-slash" />
                     )}
                     #{entry.prNumber}
                     {entry.state === 'MERGED' && <Icon icon="git-merge" />}

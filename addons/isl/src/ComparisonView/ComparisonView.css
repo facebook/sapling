@@ -642,6 +642,48 @@ a.pr-info-title:hover::after {
   opacity: 0.7;
 }
 
+/* PR state badges — shown in header for non-open PRs */
+.pr-state-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.pr-state-badge .codicon {
+  font-size: 11px;
+}
+
+.pr-state-badge-compact {
+  padding: 1px 6px;
+  font-size: 0;
+}
+
+.pr-state-badge-compact .codicon {
+  font-size: 12px;
+}
+
+.pr-state-merged {
+  background: rgba(168, 85, 247, 0.15);
+  color: #a855f7;
+}
+
+.pr-state-closed {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.pr-state-draft {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+}
+
 /* File count and LOC stats row */
 .pr-info-stats {
   display: flex;
@@ -682,8 +724,8 @@ a.pr-info-title:hover::after {
 .stack-navigation-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 10px 16px;
   /* Inherits glass from parent sticky header - just add subtle separator */
   background: rgba(255, 255, 255, 0.02);
   border-top: 1px solid rgba(255, 255, 255, 0.04);
@@ -693,14 +735,15 @@ a.pr-info-title:hover::after {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #5c7cfa;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 6px 12px;
+  padding: 5px 10px;
   background: rgba(92, 124, 250, 0.1);
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .stack-navigation-bar .stack-label .codicon {
@@ -710,8 +753,21 @@ a.pr-info-title:hover::after {
 .stack-navigation-bar .stack-pr-pills {
   display: flex;
   gap: 0;
-  flex-wrap: wrap;
   align-items: center;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  /* Fade hint at edges when scrollable */
+  mask-image: linear-gradient(to right, transparent 0, black 4px, black calc(100% - 4px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 4px, black calc(100% - 4px), transparent 100%);
+  padding: 2px 0;
+}
+
+.stack-navigation-bar .stack-pr-pills::-webkit-scrollbar {
+  display: none;
 }
 
 /* Override Button component styles for stack pills */
@@ -801,10 +857,49 @@ a.pr-info-title:hover::after {
   box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.4) !important;
 }
 
+/* Closed PR pill — red tint, reduced opacity */
+.stack-navigation-bar .stack-pr-closed {
+  opacity: 0.5 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  text-decoration: line-through;
+}
+
+.stack-navigation-bar .stack-pr-closed .codicon {
+  color: #ef4444;
+  font-size: 10px;
+}
+
+/* Draft PR pill — grey/dashed border */
+.stack-navigation-bar .stack-pr-draft {
+  opacity: 0.7 !important;
+  border-style: dashed !important;
+  border-color: rgba(139, 92, 246, 0.4) !important;
+}
+
+.stack-navigation-bar .stack-pr-draft .codicon {
+  color: #8b5cf6;
+  font-size: 10px;
+}
+
+/* CI status indicators — subtle colored bottom border on pills */
+.stack-navigation-bar .stack-pr-ci-pass {
+  border-bottom: 2px solid #22c55e !important;
+}
+
+.stack-navigation-bar .stack-pr-ci-failed {
+  border-bottom: 2px solid #ef4444 !important;
+}
+
+.stack-navigation-bar .stack-pr-ci-running {
+  border-bottom: 2px solid #f59e0b !important;
+}
+
 .stack-navigation-bar .stack-pill-with-arrow {
   display: inline-flex;
   align-items: center;
   gap: 0;
+  flex-shrink: 0;
 }
 
 .stack-navigation-bar .stack-arrow {
@@ -813,7 +908,7 @@ a.pr-info-title:hover::after {
   color: var(--graphite-text-secondary);
   font-size: 10px;
   opacity: 0.5;
-  margin: 0 6px;
+  margin: 0 4px;
 }
 
 .stack-navigation-bar .stack-arrow .codicon {
@@ -827,6 +922,7 @@ a.pr-info-title:hover::after {
   font-size: 10px;
   color: var(--graphite-text-secondary);
   opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .stack-navigation-bar .stack-direction-hint .codicon {
@@ -845,6 +941,7 @@ a.pr-info-title:hover::after {
   color: var(--graphite-text-secondary);
   margin-left: auto;
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 /* ========================================
