@@ -53,6 +53,7 @@ Test diff command against a commit that updated files excluded by the sparse pro
    eden-sparse |  4 ++++
    2 files changed, 5 insertions(+), 1 deletions(-)
 
-FIXME: don't crash with extensions in this state
-  $ hg diff -r 'desc(b)' --stat --config extensions.sparse= --config extensions.edensparse=! 2>&1 | grep AttributeError
-  AttributeError: 'treerepository' object has no attribute 'sparsematch'. Did you mean: 'maybesparsematch'?
+Don't crash with extensions in this state
+  $ hg diff -r 'desc(b)' --stat --config extensions.sparse= --config extensions.edensparse=!
+  abort: *$ENOENT$* (glob)
+  [255]

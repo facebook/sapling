@@ -249,9 +249,9 @@ def _abortifnotregularsparse(repo) -> None:
 
 
 def _hassparse(repo):
-    return (
-        "eden" not in repo.requirements and hasattr(repo, "sparsematch")
-    ) or "edensparse" in repo.requirements
+    return hasattr(repo, "sparsematch") and (
+        "eden" not in repo.requirements or "edensparse" in repo.requirements
+    )
 
 
 def _setupupdates(_ui) -> None:
