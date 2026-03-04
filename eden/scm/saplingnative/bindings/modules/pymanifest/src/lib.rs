@@ -656,15 +656,6 @@ py_class!(pub class treemanifest |py| {
         Ok(node_to_pybytes(py, hgid))
     }
 
-    /// flush() -> node.
-    /// Write pending trees to store. Return root node.
-    /// Only works for git store. Use finalize() for hg store instead.
-    def flush(&self) -> PyResult<PyBytes> {
-        let mut tree = self.underlying(py).write();
-        let hgid = Manifest::persist(&mut *tree, PersistOpts { parents: &[] }).map_pyerr(py)?;
-        Ok(PyBytes::new(py, hgid.as_ref()))
-    }
-
     @classmethod def applydiffgrafts(_cls, m1: &treemanifest, m2: &treemanifest) -> PyResult<(Self, Self)> {
         let (m1, m2) = apply_diff_grafts(
             &m1.underlying(py).read(),
